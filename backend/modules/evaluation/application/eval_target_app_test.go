@@ -15,7 +15,7 @@ import (
 
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
+	evaltargetapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -52,17 +52,17 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.CreateEvalTargetRequest
+		req         *evaltargetapi.CreateEvalTargetRequest
 		mockSetup   func()
-		wantResp    *eval_target.CreateEvalTargetResponse
+		wantResp    *evaltargetapi.CreateEvalTargetResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &eval_target.CreateEvalTargetRequest{
+			req: &evaltargetapi.CreateEvalTargetRequest{
 				WorkspaceID: validSpaceID,
-				Param: &eval_target.CreateEvalTargetParam{
+				Param: &evaltargetapi.CreateEvalTargetParam{
 					SourceTargetID:      &validSourceTargetID,
 					SourceTargetVersion: &validSourceTargetVersion,
 					EvalTargetType:      &validEvalTargetType,
@@ -91,7 +91,7 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 					gomock.Any(), // options
 				).Return(int64(1), int64(2), nil)
 			},
-			wantResp: &eval_target.CreateEvalTargetResponse{
+			wantResp: &evaltargetapi.CreateEvalTargetResponse{
 				ID:        gptr.Of(int64(1)),
 				VersionID: gptr.Of(int64(2)),
 			},
@@ -107,7 +107,7 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - nil param",
-			req: &eval_target.CreateEvalTargetRequest{
+			req: &evaltargetapi.CreateEvalTargetRequest{
 				WorkspaceID: validSpaceID,
 				Param:       nil,
 			},
@@ -118,9 +118,9 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - missing source target id",
-			req: &eval_target.CreateEvalTargetRequest{
+			req: &evaltargetapi.CreateEvalTargetRequest{
 				WorkspaceID: validSpaceID,
-				Param: &eval_target.CreateEvalTargetParam{
+				Param: &evaltargetapi.CreateEvalTargetParam{
 					SourceTargetVersion: &validSourceTargetVersion,
 					EvalTargetType:      &validEvalTargetType,
 				},
@@ -132,9 +132,9 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - missing source target version",
-			req: &eval_target.CreateEvalTargetRequest{
+			req: &evaltargetapi.CreateEvalTargetRequest{
 				WorkspaceID: validSpaceID,
-				Param: &eval_target.CreateEvalTargetParam{
+				Param: &evaltargetapi.CreateEvalTargetParam{
 					SourceTargetID: &validSourceTargetID,
 					EvalTargetType: &validEvalTargetType,
 				},
@@ -157,7 +157,7 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 					gomock.Any(), // options
 				).Return(int64(1), int64(2), nil)
 			},
-			wantResp: &eval_target.CreateEvalTargetResponse{
+			wantResp: &evaltargetapi.CreateEvalTargetResponse{
 				ID:        gptr.Of(int64(1)),
 				VersionID: gptr.Of(int64(2)),
 			},
@@ -165,9 +165,9 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - missing eval target type",
-			req: &eval_target.CreateEvalTargetRequest{
+			req: &evaltargetapi.CreateEvalTargetRequest{
 				WorkspaceID: validSpaceID,
-				Param: &eval_target.CreateEvalTargetParam{
+				Param: &evaltargetapi.CreateEvalTargetParam{
 					SourceTargetID:      &validSourceTargetID,
 					SourceTargetVersion: &validSourceTargetVersion,
 				},
@@ -179,9 +179,9 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-			req: &eval_target.CreateEvalTargetRequest{
+			req: &evaltargetapi.CreateEvalTargetRequest{
 				WorkspaceID: validSpaceID,
-				Param: &eval_target.CreateEvalTargetParam{
+				Param: &evaltargetapi.CreateEvalTargetParam{
 					SourceTargetID:      &validSourceTargetID,
 					SourceTargetVersion: &validSourceTargetVersion,
 					EvalTargetType:      &validEvalTargetType,
@@ -197,9 +197,9 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - service failure",
-			req: &eval_target.CreateEvalTargetRequest{
+			req: &evaltargetapi.CreateEvalTargetRequest{
 				WorkspaceID: validSpaceID,
-				Param: &eval_target.CreateEvalTargetParam{
+				Param: &evaltargetapi.CreateEvalTargetParam{
 					SourceTargetID:      &validSourceTargetID,
 					SourceTargetVersion: &validSourceTargetVersion,
 					EvalTargetType:      &validEvalTargetType,
@@ -237,6 +237,16 @@ func TestEvalTargetApplicationImpl_CreateEvalTarget(t *testing.T) {
 	}
 }
 
+func TestNewEvalTargetHandlerImpl(t *testing.T) {
+	handler := NewEvalTargetHandlerImpl(nil, nil, nil, nil)
+	if handler == nil {
+		t.Fatalf("handler is nil")
+	}
+	if handler2 := NewEvalTargetHandlerImpl(nil, nil, nil, nil); handler2 != handler {
+		t.Fatalf("handler should be singleton")
+	}
+}
+
 func TestEvalTargetApplicationImpl_BatchGetEvalTargetsBySource(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -269,15 +279,15 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetsBySource(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.BatchGetEvalTargetsBySourceRequest
+		req         *evaltargetapi.BatchGetEvalTargetsBySourceRequest
 		mockSetup   func()
-		wantResp    *eval_target.BatchGetEvalTargetsBySourceResponse
+		wantResp    *evaltargetapi.BatchGetEvalTargetsBySourceResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &eval_target.BatchGetEvalTargetsBySourceRequest{
+			req: &evaltargetapi.BatchGetEvalTargetsBySourceRequest{
 				WorkspaceID:     validSpaceID,
 				SourceTargetIds: validSourceTargetIDs,
 				EvalTargetType:  &validEvalTargetType,
@@ -298,7 +308,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetsBySource(t *testing.T) {
 
 				mockTypedOperator.EXPECT().PackSourceInfo(gomock.Any(), validSpaceID, validEvalTargets).Return(nil)
 			},
-			wantResp: &eval_target.BatchGetEvalTargetsBySourceResponse{
+			wantResp: &evaltargetapi.BatchGetEvalTargetsBySourceResponse{
 				EvalTargets: []*domain_eval_target.EvalTarget{
 					{
 						ID:             gptr.Of(int64(1)),
@@ -320,7 +330,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetsBySource(t *testing.T) {
 		},
 		{
 			name: "error - empty source target ids",
-			req: &eval_target.BatchGetEvalTargetsBySourceRequest{
+			req: &evaltargetapi.BatchGetEvalTargetsBySourceRequest{
 				WorkspaceID:     validSpaceID,
 				SourceTargetIds: []string{},
 				EvalTargetType:  &validEvalTargetType,
@@ -332,7 +342,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetsBySource(t *testing.T) {
 		},
 		{
 			name: "error - nil eval target type",
-			req: &eval_target.BatchGetEvalTargetsBySourceRequest{
+			req: &evaltargetapi.BatchGetEvalTargetsBySourceRequest{
 				WorkspaceID:     validSpaceID,
 				SourceTargetIds: validSourceTargetIDs,
 				EvalTargetType:  nil,
@@ -344,7 +354,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetsBySource(t *testing.T) {
 		},
 		{
 			name: "error - auth failure",
-			req: &eval_target.BatchGetEvalTargetsBySourceRequest{
+			req: &evaltargetapi.BatchGetEvalTargetsBySourceRequest{
 				WorkspaceID:     validSpaceID,
 				SourceTargetIds: validSourceTargetIDs,
 				EvalTargetType:  &validEvalTargetType,
@@ -359,7 +369,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetsBySource(t *testing.T) {
 		},
 		{
 			name: "error - service failure",
-			req: &eval_target.BatchGetEvalTargetsBySourceRequest{
+			req: &evaltargetapi.BatchGetEvalTargetsBySourceRequest{
 				WorkspaceID:     validSpaceID,
 				SourceTargetIds: validSourceTargetIDs,
 				EvalTargetType:  &validEvalTargetType,
@@ -375,7 +385,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetsBySource(t *testing.T) {
 		},
 		{
 			name: "error - pack source info failure",
-			req: &eval_target.BatchGetEvalTargetsBySourceRequest{
+			req: &evaltargetapi.BatchGetEvalTargetsBySourceRequest{
 				WorkspaceID:     validSpaceID,
 				SourceTargetIds: validSourceTargetIDs,
 				EvalTargetType:  &validEvalTargetType,
@@ -446,15 +456,15 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.GetEvalTargetVersionRequest
+		req         *evaltargetapi.GetEvalTargetVersionRequest
 		mockSetup   func()
-		wantResp    *eval_target.GetEvalTargetVersionResponse
+		wantResp    *evaltargetapi.GetEvalTargetVersionResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &eval_target.GetEvalTargetVersionRequest{
+			req: &evaltargetapi.GetEvalTargetVersionRequest{
 				WorkspaceID:         validSpaceID,
 				EvalTargetVersionID: &validVersionID,
 			},
@@ -471,7 +481,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 					}).
 					Return(nil)
 			},
-			wantResp: &eval_target.GetEvalTargetVersionResponse{
+			wantResp: &evaltargetapi.GetEvalTargetVersionResponse{
 				EvalTarget: target.EvalTargetDO2DTO(validEvalTarget),
 			},
 			wantErr: false,
@@ -486,7 +496,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 		},
 		{
 			name: "error - nil version id",
-			req: &eval_target.GetEvalTargetVersionRequest{
+			req: &evaltargetapi.GetEvalTargetVersionRequest{
 				WorkspaceID: validSpaceID,
 			},
 			mockSetup:   func() {},
@@ -496,7 +506,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 		},
 		{
 			name: "success - eval target not found",
-			req: &eval_target.GetEvalTargetVersionRequest{
+			req: &evaltargetapi.GetEvalTargetVersionRequest{
 				WorkspaceID:         validSpaceID,
 				EvalTargetVersionID: &validVersionID,
 			},
@@ -505,12 +515,12 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 					GetEvalTargetVersion(gomock.Any(), validSpaceID, validVersionID, false).
 					Return(nil, nil)
 			},
-			wantResp: &eval_target.GetEvalTargetVersionResponse{},
+			wantResp: &evaltargetapi.GetEvalTargetVersionResponse{},
 			wantErr:  false,
 		},
 		{
 			name: "error - service failure",
-			req: &eval_target.GetEvalTargetVersionRequest{
+			req: &evaltargetapi.GetEvalTargetVersionRequest{
 				WorkspaceID:         validSpaceID,
 				EvalTargetVersionID: &validVersionID,
 			},
@@ -525,7 +535,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetVersion(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-			req: &eval_target.GetEvalTargetVersionRequest{
+			req: &evaltargetapi.GetEvalTargetVersionRequest{
 				WorkspaceID:         validSpaceID,
 				EvalTargetVersionID: &validVersionID,
 			},
@@ -610,15 +620,15 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetVersions(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.BatchGetEvalTargetVersionsRequest
+		req         *evaltargetapi.BatchGetEvalTargetVersionsRequest
 		mockSetup   func()
-		wantResp    *eval_target.BatchGetEvalTargetVersionsResponse
+		wantResp    *evaltargetapi.BatchGetEvalTargetVersionsResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &eval_target.BatchGetEvalTargetVersionsRequest{
+			req: &evaltargetapi.BatchGetEvalTargetVersionsRequest{
 				WorkspaceID:          validSpaceID,
 				EvalTargetVersionIds: validVersionIDs,
 			},
@@ -631,7 +641,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetVersions(t *testing.T) {
 					Authorization(gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
-			wantResp: &eval_target.BatchGetEvalTargetVersionsResponse{
+			wantResp: &evaltargetapi.BatchGetEvalTargetVersionsResponse{
 				EvalTargets: []*domain_eval_target.EvalTarget{
 					target.EvalTargetDO2DTO(validEvalTargets[0]),
 					target.EvalTargetDO2DTO(validEvalTargets[1]),
@@ -649,7 +659,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetVersions(t *testing.T) {
 		},
 		{
 			name: "error - empty version ids",
-			req: &eval_target.BatchGetEvalTargetVersionsRequest{
+			req: &evaltargetapi.BatchGetEvalTargetVersionsRequest{
 				WorkspaceID:          validSpaceID,
 				EvalTargetVersionIds: []int64{},
 			},
@@ -660,7 +670,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetVersions(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-			req: &eval_target.BatchGetEvalTargetVersionsRequest{
+			req: &evaltargetapi.BatchGetEvalTargetVersionsRequest{
 				WorkspaceID:          validSpaceID,
 				EvalTargetVersionIds: validVersionIDs,
 			},
@@ -675,7 +685,7 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetVersions(t *testing.T) {
 		},
 		{
 			name: "error - service failure",
-			req: &eval_target.BatchGetEvalTargetVersionsRequest{
+			req: &evaltargetapi.BatchGetEvalTargetVersionsRequest{
 				WorkspaceID:          validSpaceID,
 				EvalTargetVersionIds: validVersionIDs,
 			},
@@ -757,15 +767,15 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargets(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.ListSourceEvalTargetsRequest
+		req         *evaltargetapi.ListSourceEvalTargetsRequest
 		mockSetup   func()
-		wantResp    *eval_target.ListSourceEvalTargetsResponse
+		wantResp    *evaltargetapi.ListSourceEvalTargetsResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &eval_target.ListSourceEvalTargetsRequest{
+			req: &evaltargetapi.ListSourceEvalTargetsRequest{
 				WorkspaceID: validSpaceID,
 				TargetType:  &validEvalTargetType,
 			},
@@ -788,7 +798,7 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargets(t *testing.T) {
 						EvalTargetType: 1,
 					}}, "", false, nil)
 			},
-			wantResp: &eval_target.ListSourceEvalTargetsResponse{
+			wantResp: &evaltargetapi.ListSourceEvalTargetsResponse{
 				EvalTargets: []*domain_eval_target.EvalTarget{
 					target.EvalTargetDO2DTO(validEvalTargets[0]),
 					target.EvalTargetDO2DTO(validEvalTargets[1]),
@@ -806,7 +816,7 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargets(t *testing.T) {
 		},
 		{
 			name: "error - nil eval target type",
-			req: &eval_target.ListSourceEvalTargetsRequest{
+			req: &evaltargetapi.ListSourceEvalTargetsRequest{
 				WorkspaceID: validSpaceID,
 			},
 			mockSetup:   func() {},
@@ -892,15 +902,15 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.ListSourceEvalTargetVersionsRequest
+		req         *evaltargetapi.ListSourceEvalTargetVersionsRequest
 		mockSetup   func()
-		wantResp    *eval_target.ListSourceEvalTargetVersionsResponse
+		wantResp    *evaltargetapi.ListSourceEvalTargetVersionsResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &eval_target.ListSourceEvalTargetVersionsRequest{
+			req: &evaltargetapi.ListSourceEvalTargetVersionsRequest{
 				WorkspaceID: validSpaceID,
 				TargetType:  &validEvalTargetType,
 			},
@@ -936,7 +946,7 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {
 						},
 					}}, "", false, nil)
 			},
-			wantResp: &eval_target.ListSourceEvalTargetVersionsResponse{
+			wantResp: &evaltargetapi.ListSourceEvalTargetVersionsResponse{
 				Versions: []*domain_eval_target.EvalTargetVersion{
 					target.EvalTargetVersionDO2DTO(validEvalTargets[0]),
 					target.EvalTargetVersionDO2DTO(validEvalTargets[1]),
@@ -955,7 +965,7 @@ func TestEvalTargetApplicationImpl_ListSourceEvalTargetVersions(t *testing.T) {
 		},
 		{
 			name: "error - nil target type",
-			req: &eval_target.ListSourceEvalTargetVersionsRequest{
+			req: &evaltargetapi.ListSourceEvalTargetVersionsRequest{
 				WorkspaceID: validSpaceID,
 			},
 			mockSetup:   func() {},
@@ -1023,15 +1033,15 @@ func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.BatchGetSourceEvalTargetsRequest
+		req         *evaltargetapi.BatchGetSourceEvalTargetsRequest
 		mockSetup   func()
-		wantResp    *eval_target.BatchGetSourceEvalTargetsResponse
+		wantResp    *evaltargetapi.BatchGetSourceEvalTargetsResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+			req: &evaltargetapi.BatchGetSourceEvalTargetsRequest{
 				WorkspaceID:     validSpaceID,
 				TargetType:      &validEvalTargetType,
 				SourceTargetIds: validSourceTargetIDs,
@@ -1042,7 +1052,7 @@ func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
 					BatchGetSource(gomock.Any(), validSpaceID, validSourceTargetIDs).
 					Return(validEvalTargets, nil)
 			},
-			wantResp: &eval_target.BatchGetSourceEvalTargetsResponse{
+			wantResp: &evaltargetapi.BatchGetSourceEvalTargetsResponse{
 				EvalTargets: []*domain_eval_target.EvalTarget{
 					target.EvalTargetDO2DTO(validEvalTargets[0]),
 					target.EvalTargetDO2DTO(validEvalTargets[1]),
@@ -1052,7 +1062,7 @@ func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
 		},
 		{
 			name: "error - nil target type",
-			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+			req: &evaltargetapi.BatchGetSourceEvalTargetsRequest{
 				WorkspaceID:     validSpaceID,
 				SourceTargetIds: validSourceTargetIDs,
 			},
@@ -1063,7 +1073,7 @@ func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+			req: &evaltargetapi.BatchGetSourceEvalTargetsRequest{
 				WorkspaceID:     validSpaceID,
 				TargetType:      &validEvalTargetType,
 				SourceTargetIds: validSourceTargetIDs,
@@ -1079,7 +1089,7 @@ func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
 		},
 		{
 			name: "error - unsupported target type",
-			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+			req: &evaltargetapi.BatchGetSourceEvalTargetsRequest{
 				WorkspaceID:     validSpaceID,
 				TargetType:      &unsupportedEvalTargetType,
 				SourceTargetIds: validSourceTargetIDs,
@@ -1093,7 +1103,7 @@ func TestEvalTargetApplicationImpl_BatchGetSourceEvalTargets(t *testing.T) {
 		},
 		{
 			name: "error - service failure",
-			req: &eval_target.BatchGetSourceEvalTargetsRequest{
+			req: &evaltargetapi.BatchGetSourceEvalTargetsRequest{
 				WorkspaceID:     validSpaceID,
 				TargetType:      &validEvalTargetType,
 				SourceTargetIds: validSourceTargetIDs,
@@ -1184,15 +1194,15 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.SearchCustomEvalTargetRequest
+		req         *evaltargetapi.SearchCustomEvalTargetRequest
 		mockSetup   func()
-		wantResp    *eval_target.SearchCustomEvalTargetResponse
+		wantResp    *evaltargetapi.SearchCustomEvalTargetResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request with applicationID",
-			req: &eval_target.SearchCustomEvalTargetRequest{
+			req: &evaltargetapi.SearchCustomEvalTargetRequest{
 				WorkspaceID:   &validSpaceID,
 				Keyword:       &validKeyword,
 				ApplicationID: &validApplicationID,
@@ -1219,7 +1229,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 					PageToken:       &validPageToken,
 				}).Return(validCustomEvalTargets, "next-token", true, nil)
 			},
-			wantResp: &eval_target.SearchCustomEvalTargetResponse{
+			wantResp: &evaltargetapi.SearchCustomEvalTargetResponse{
 				CustomEvalTargets: []*domain_eval_target.CustomEvalTarget{
 					{
 						ID:        gptr.Of("target-1"),
@@ -1241,7 +1251,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 		},
 		{
 			name: "success - normal request with customRPCServer",
-			req: &eval_target.SearchCustomEvalTargetRequest{
+			req: &evaltargetapi.SearchCustomEvalTargetRequest{
 				WorkspaceID:     &validSpaceID,
 				Keyword:         &validKeyword,
 				CustomRPCServer: validCustomRPCServer,
@@ -1259,7 +1269,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 
 				mockTypedOperator.EXPECT().SearchCustomEvalTarget(gomock.Any(), gomock.Any()).Return(validCustomEvalTargets, "next-token", true, nil)
 			},
-			wantResp: &eval_target.SearchCustomEvalTargetResponse{
+			wantResp: &evaltargetapi.SearchCustomEvalTargetResponse{
 				CustomEvalTargets: []*domain_eval_target.CustomEvalTarget{
 					{
 						ID:        gptr.Of("target-1"),
@@ -1289,7 +1299,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - nil workspaceID",
-			req: &eval_target.SearchCustomEvalTargetRequest{
+			req: &evaltargetapi.SearchCustomEvalTargetRequest{
 				Keyword:       &validKeyword,
 				ApplicationID: &validApplicationID,
 				Region:        &validRegion,
@@ -1301,7 +1311,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - both applicationID and customRPCServer are nil",
-			req: &eval_target.SearchCustomEvalTargetRequest{
+			req: &evaltargetapi.SearchCustomEvalTargetRequest{
 				WorkspaceID: &validSpaceID,
 				Keyword:     &validKeyword,
 				Region:      &validRegion,
@@ -1313,7 +1323,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - nil region",
-			req: &eval_target.SearchCustomEvalTargetRequest{
+			req: &evaltargetapi.SearchCustomEvalTargetRequest{
 				WorkspaceID:   &validSpaceID,
 				Keyword:       &validKeyword,
 				ApplicationID: &validApplicationID,
@@ -1325,7 +1335,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - target type not support",
-			req: &eval_target.SearchCustomEvalTargetRequest{
+			req: &evaltargetapi.SearchCustomEvalTargetRequest{
 				WorkspaceID:   &validSpaceID,
 				Keyword:       &validKeyword,
 				ApplicationID: &validApplicationID,
@@ -1341,7 +1351,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-			req: &eval_target.SearchCustomEvalTargetRequest{
+			req: &evaltargetapi.SearchCustomEvalTargetRequest{
 				WorkspaceID:   &validSpaceID,
 				Keyword:       &validKeyword,
 				ApplicationID: &validApplicationID,
@@ -1357,7 +1367,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 		},
 		{
 			name: "error - service failure",
-			req: &eval_target.SearchCustomEvalTargetRequest{
+			req: &evaltargetapi.SearchCustomEvalTargetRequest{
 				WorkspaceID:   &validSpaceID,
 				Keyword:       &validKeyword,
 				ApplicationID: &validApplicationID,
@@ -1374,7 +1384,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 		},
 		{
 			name: "success - empty results",
-			req: &eval_target.SearchCustomEvalTargetRequest{
+			req: &evaltargetapi.SearchCustomEvalTargetRequest{
 				WorkspaceID:   &validSpaceID,
 				Keyword:       &validKeyword,
 				ApplicationID: &validApplicationID,
@@ -1398,7 +1408,7 @@ func TestEvalTargetApplicationImpl_SearchCustomEvalTarget(t *testing.T) {
 					PageToken:       nil,
 				}).Return([]*entity.CustomEvalTarget{}, "", false, nil)
 			},
-			wantResp: &eval_target.SearchCustomEvalTargetResponse{
+			wantResp: &evaltargetapi.SearchCustomEvalTargetResponse{
 				CustomEvalTargets: []*domain_eval_target.CustomEvalTarget{},
 				NextPageToken:     gptr.Of(""),
 				HasMore:           gptr.Of(false),
@@ -1478,15 +1488,15 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.MockEvalTargetOutputRequest
+		req         *evaltargetapi.MockEvalTargetOutputRequest
 		mockSetup   func()
-		wantResp    *eval_target.MockEvalTargetOutputResponse
+		wantResp    *evaltargetapi.MockEvalTargetOutputResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &eval_target.MockEvalTargetOutputRequest{
+			req: &evaltargetapi.MockEvalTargetOutputRequest{
 				WorkspaceID:       validSpaceID,
 				SourceTargetID:    validSourceTargetID,
 				EvalTargetVersion: validEvalTargetVersion,
@@ -1507,7 +1517,7 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 					GenerateMockOutputData(validEvalTarget.EvalTargetVersion.OutputSchema).
 					Return(map[string]string{"output": "mock output"}, nil)
 			},
-			wantResp: &eval_target.MockEvalTargetOutputResponse{
+			wantResp: &evaltargetapi.MockEvalTargetOutputResponse{
 				EvalTarget: target.EvalTargetDO2DTO(validEvalTarget),
 				MockOutput: map[string]string{"output": "mock output"},
 			},
@@ -1523,7 +1533,7 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 		},
 		{
 			name: "error - unsupported target type",
-			req: &eval_target.MockEvalTargetOutputRequest{
+			req: &evaltargetapi.MockEvalTargetOutputRequest{
 				WorkspaceID:       validSpaceID,
 				SourceTargetID:    validSourceTargetID,
 				EvalTargetVersion: validEvalTargetVersion,
@@ -1536,7 +1546,7 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-			req: &eval_target.MockEvalTargetOutputRequest{
+			req: &evaltargetapi.MockEvalTargetOutputRequest{
 				WorkspaceID:       validSpaceID,
 				SourceTargetID:    validSourceTargetID,
 				EvalTargetVersion: validEvalTargetVersion,
@@ -1557,7 +1567,7 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 		},
 		{
 			name: "error - build by source failed",
-			req: &eval_target.MockEvalTargetOutputRequest{
+			req: &evaltargetapi.MockEvalTargetOutputRequest{
 				WorkspaceID:       validSpaceID,
 				SourceTargetID:    validSourceTargetID,
 				EvalTargetVersion: validEvalTargetVersion,
@@ -1574,7 +1584,7 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 		},
 		{
 			name: "error - build by source returns nil",
-			req: &eval_target.MockEvalTargetOutputRequest{
+			req: &evaltargetapi.MockEvalTargetOutputRequest{
 				WorkspaceID:       validSpaceID,
 				SourceTargetID:    validSourceTargetID,
 				EvalTargetVersion: validEvalTargetVersion,
@@ -1591,7 +1601,7 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 		},
 		{
 			name: "error - generate mock data failed",
-			req: &eval_target.MockEvalTargetOutputRequest{
+			req: &evaltargetapi.MockEvalTargetOutputRequest{
 				WorkspaceID:       validSpaceID,
 				SourceTargetID:    validSourceTargetID,
 				EvalTargetVersion: validEvalTargetVersion,
@@ -1614,7 +1624,7 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 		},
 		{
 			name: "success - no output schema",
-			req: &eval_target.MockEvalTargetOutputRequest{
+			req: &evaltargetapi.MockEvalTargetOutputRequest{
 				WorkspaceID:       validSpaceID,
 				SourceTargetID:    validSourceTargetID,
 				EvalTargetVersion: validEvalTargetVersion,
@@ -1641,7 +1651,7 @@ func TestEvalTargetApplicationImpl_MockEvalTargetOutput(t *testing.T) {
 
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			wantResp: &eval_target.MockEvalTargetOutputResponse{
+			wantResp: &evaltargetapi.MockEvalTargetOutputResponse{
 				EvalTarget: target.EvalTargetDO2DTO(&entity.EvalTarget{
 					ID:             1,
 					SpaceID:        validSpaceID,
@@ -1707,14 +1717,14 @@ func TestEvalTargetApplicationImpl_AsyncExecuteEvalTarget(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.AsyncExecuteEvalTargetRequest
+		req         *evaltargetapi.AsyncExecuteEvalTargetRequest
 		mockSetup   func()
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success",
-			req: &eval_target.AsyncExecuteEvalTargetRequest{
+			req: &evaltargetapi.AsyncExecuteEvalTargetRequest{
 				WorkspaceID:         workspaceID,
 				EvalTargetID:        targetID,
 				EvalTargetVersionID: versionID,
@@ -1738,7 +1748,7 @@ func TestEvalTargetApplicationImpl_AsyncExecuteEvalTarget(t *testing.T) {
 		},
 		{
 			name: "auth failure",
-			req: &eval_target.AsyncExecuteEvalTargetRequest{
+			req: &evaltargetapi.AsyncExecuteEvalTargetRequest{
 				WorkspaceID:         workspaceID,
 				EvalTargetID:        targetID,
 				EvalTargetVersionID: versionID,
@@ -1752,7 +1762,7 @@ func TestEvalTargetApplicationImpl_AsyncExecuteEvalTarget(t *testing.T) {
 		},
 		{
 			name: "service failure",
-			req: &eval_target.AsyncExecuteEvalTargetRequest{
+			req: &evaltargetapi.AsyncExecuteEvalTargetRequest{
 				WorkspaceID:         workspaceID,
 				EvalTargetID:        targetID,
 				EvalTargetVersionID: versionID,
@@ -1827,14 +1837,14 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.DebugEvalTargetRequest
+		req         *evaltargetapi.DebugEvalTargetRequest
 		mockSetup   func()
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success",
-			req: &eval_target.DebugEvalTargetRequest{
+			req: &evaltargetapi.DebugEvalTargetRequest{
 				WorkspaceID:    &workspaceID,
 				EvalTargetType: &targetType,
 				Param:          gptr.Of(string(paramBytes)),
@@ -1849,7 +1859,7 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 		},
 		{
 			name: "invalid json",
-			req: &eval_target.DebugEvalTargetRequest{
+			req: &evaltargetapi.DebugEvalTargetRequest{
 				WorkspaceID:    &workspaceID,
 				EvalTargetType: &targetType,
 				Param:          gptr.Of("{"),
@@ -1860,7 +1870,7 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 		},
 		{
 			name: "service failure",
-			req: &eval_target.DebugEvalTargetRequest{
+			req: &evaltargetapi.DebugEvalTargetRequest{
 				WorkspaceID:        &workspaceID,
 				EvalTargetType:     &targetType,
 				Param:              gptr.Of(string(paramBytes)),
@@ -1876,7 +1886,7 @@ func TestEvalTargetApplicationImpl_DebugEvalTarget(t *testing.T) {
 		},
 		{
 			name: "unsupported type",
-			req: &eval_target.DebugEvalTargetRequest{
+			req: &evaltargetapi.DebugEvalTargetRequest{
 				WorkspaceID:    &workspaceID,
 				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType(0)),
 				Param:          gptr.Of(string(paramBytes)),
@@ -1945,14 +1955,14 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *eval_target.AsyncDebugEvalTargetRequest
+		req         *evaltargetapi.AsyncDebugEvalTargetRequest
 		mockSetup   func()
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success",
-			req: &eval_target.AsyncDebugEvalTargetRequest{
+			req: &evaltargetapi.AsyncDebugEvalTargetRequest{
 				WorkspaceID:    &workspaceID,
 				EvalTargetType: &targetType,
 				Param:          gptr.Of(string(paramBytes)),
@@ -1968,7 +1978,7 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 		},
 		{
 			name: "invalid json",
-			req: &eval_target.AsyncDebugEvalTargetRequest{
+			req: &evaltargetapi.AsyncDebugEvalTargetRequest{
 				WorkspaceID:    &workspaceID,
 				EvalTargetType: &targetType,
 				Param:          gptr.Of("{"),
@@ -1979,7 +1989,7 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 		},
 		{
 			name: "service failure",
-			req: &eval_target.AsyncDebugEvalTargetRequest{
+			req: &evaltargetapi.AsyncDebugEvalTargetRequest{
 				WorkspaceID:        &workspaceID,
 				EvalTargetType:     &targetType,
 				Param:              gptr.Of(string(paramBytes)),
@@ -1995,7 +2005,7 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 		},
 		{
 			name: "set async ctx failure",
-			req: &eval_target.AsyncDebugEvalTargetRequest{
+			req: &evaltargetapi.AsyncDebugEvalTargetRequest{
 				WorkspaceID:        &workspaceID,
 				EvalTargetType:     &targetType,
 				Param:              gptr.Of(string(paramBytes)),
@@ -2012,7 +2022,7 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 		},
 		{
 			name: "unsupported type",
-			req: &eval_target.AsyncDebugEvalTargetRequest{
+			req: &evaltargetapi.AsyncDebugEvalTargetRequest{
 				WorkspaceID:    &workspaceID,
 				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType(0)),
 				Param:          gptr.Of(string(paramBytes)),
@@ -2045,6 +2055,338 @@ func TestEvalTargetApplicationImpl_AsyncDebugEvalTarget(t *testing.T) {
 				assert.Equal(t, gptr.Of("callee"), resp.Callee)
 				assert.NotNil(t, resp.BaseResp)
 			}
+		})
+	}
+}
+
+func TestEvalTargetApplicationImpl_ExecuteEvalTarget(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		auth:              mockAuth,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	workspaceID := int64(100)
+	targetID := int64(200)
+	versionID := int64(300)
+	inputData := &domain_eval_target.EvalTargetInputData{}
+	record := &entity.EvalTargetRecord{ID: 1, SpaceID: workspaceID, TargetID: targetID, BaseInfo: &entity.BaseInfo{}}
+
+	tests := []struct {
+		name        string
+		req         *evaltargetapi.ExecuteEvalTargetRequest
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success",
+			req: &evaltargetapi.ExecuteEvalTargetRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetID:        targetID,
+				EvalTargetVersionID: versionID,
+				InputData:           inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(targetID, 10),
+					SpaceID:       workspaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+				}).Return(nil)
+				mockEvalTargetService.EXPECT().ExecuteTarget(
+					gomock.Any(),
+					workspaceID,
+					targetID,
+					versionID,
+					gomock.AssignableToTypeOf(&entity.ExecuteTargetCtx{}),
+					gomock.AssignableToTypeOf(&entity.EvalTargetInputData{}),
+				).Return(record, nil)
+			},
+		},
+		{
+			name:        "nil request",
+			req:         nil,
+			mockSetup:   func() {},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "nil input data",
+			req: &evaltargetapi.ExecuteEvalTargetRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetID:        targetID,
+				EvalTargetVersionID: versionID,
+			},
+			mockSetup:   func() {},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "auth failure",
+			req: &evaltargetapi.ExecuteEvalTargetRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetID:        targetID,
+				EvalTargetVersionID: versionID,
+				InputData:           inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "service failure",
+			req: &evaltargetapi.ExecuteEvalTargetRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetID:        targetID,
+				EvalTargetVersionID: versionID,
+				InputData:           inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvalTargetService.EXPECT().ExecuteTarget(gomock.Any(), workspaceID, targetID, versionID, gomock.Any(), gomock.Any()).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.mockSetup != nil {
+				tc.mockSetup()
+			}
+
+			resp, err := app.ExecuteEvalTarget(context.Background(), tc.req)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErrCode, statusErr.Code())
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+			assert.NotNil(t, resp.EvalTargetRecord)
+		})
+	}
+}
+
+func TestEvalTargetApplicationImpl_GetEvalTargetRecord(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		auth:              mockAuth,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	workspaceID := int64(111)
+	recordID := int64(222)
+	record := &entity.EvalTargetRecord{TargetID: 333, ID: recordID, BaseInfo: &entity.BaseInfo{}}
+
+	tests := []struct {
+		name        string
+		req         *evaltargetapi.GetEvalTargetRecordRequest
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name:        "nil request",
+			req:         nil,
+			mockSetup:   func() {},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "service failure",
+			req: &evaltargetapi.GetEvalTargetRecordRequest{
+				WorkspaceID:        workspaceID,
+				EvalTargetRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), workspaceID, recordID).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "record not found",
+			req: &evaltargetapi.GetEvalTargetRecordRequest{
+				WorkspaceID:        workspaceID,
+				EvalTargetRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), workspaceID, recordID).Return(nil, nil)
+			},
+		},
+		{
+			name: "auth failure",
+			req: &evaltargetapi.GetEvalTargetRecordRequest{
+				WorkspaceID:        workspaceID,
+				EvalTargetRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), workspaceID, recordID).Return(record, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "success",
+			req: &evaltargetapi.GetEvalTargetRecordRequest{
+				WorkspaceID:        workspaceID,
+				EvalTargetRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), workspaceID, recordID).Return(record, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(record.TargetID, 10),
+					SpaceID:       workspaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+				}).Return(nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.mockSetup != nil {
+				tc.mockSetup()
+			}
+
+			resp, err := app.GetEvalTargetRecord(context.Background(), tc.req)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErrCode, statusErr.Code())
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+		})
+	}
+}
+
+func TestEvalTargetApplicationImpl_BatchGetEvalTargetRecords(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		auth:              mockAuth,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	workspaceID := int64(777)
+	recordIDs := []int64{1, 2}
+	records := []*entity.EvalTargetRecord{{ID: 1, BaseInfo: &entity.BaseInfo{}}, {ID: 2, BaseInfo: &entity.BaseInfo{}}}
+
+	tests := []struct {
+		name        string
+		req         *evaltargetapi.BatchGetEvalTargetRecordsRequest
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name:        "nil request",
+			req:         nil,
+			mockSetup:   func() {},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "auth failure",
+			req: &evaltargetapi.BatchGetEvalTargetRecordsRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetRecordIds: recordIDs,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "service failure",
+			req: &evaltargetapi.BatchGetEvalTargetRecordsRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetRecordIds: recordIDs,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), workspaceID, recordIDs).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "success",
+			req: &evaltargetapi.BatchGetEvalTargetRecordsRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetRecordIds: recordIDs,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(workspaceID, 10),
+					SpaceID:       workspaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
+				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), workspaceID, recordIDs).Return(records, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.mockSetup != nil {
+				tc.mockSetup()
+			}
+
+			resp, err := app.BatchGetEvalTargetRecords(context.Background(), tc.req)
+
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErrCode, statusErr.Code())
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+			assert.Len(t, resp.EvalTargetRecords, len(recordIDs))
 		})
 	}
 }

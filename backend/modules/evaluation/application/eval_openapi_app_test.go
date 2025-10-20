@@ -205,3 +205,8 @@ func newFailedInvokeResultReq(workspaceID, invokeID int64, errorMessage string) 
 		ErrorMessage: gptr.Of(errorMessage),
 	}
 }
+
+func TestNewEvalOpenAPIApplication(t *testing.T) {
+	app := NewEvalOpenAPIApplication(nil, nil, nil)
+	assert.NotNil(t, app)
+}
