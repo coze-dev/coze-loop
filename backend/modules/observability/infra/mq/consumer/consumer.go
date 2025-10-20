@@ -12,7 +12,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 const (
@@ -41,6 +40,5 @@ func NewConsumerWorkers(
 			newBackFillConsumer(taskConsumer, loader),
 		)
 	}
-	logs.CtxInfo(context.Background(), "consumer workers: %v,len: %d", workers, len(workers))
 	return workers, nil
 }

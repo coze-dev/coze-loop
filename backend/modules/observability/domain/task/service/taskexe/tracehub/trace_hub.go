@@ -59,6 +59,7 @@ func NewTraceHubImpl(
 		aid:                 aid,
 		backfillProducer:    backfillProducer,
 		locker:              locker,
+		loader:              loader,
 	}
 
 	// Start the scheduled tasks immediately
