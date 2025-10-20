@@ -181,7 +181,6 @@ func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields
 			FilterFields: basicFilter,
 		}
 		filters.FilterFields = append(filters.FilterFields, convertor.FilterFieldsDO2DTO(basicFilterFields, true)...)
-		//filters := combineFilters(convertor.FilterFieldsDO2DTO(basicFilterFields, true), spanFilterFields.Filters)
 		return &filter.SpanFilterFields{
 			Filters:      filters,
 			PlatformType: spanFilterFields.PlatformType,
