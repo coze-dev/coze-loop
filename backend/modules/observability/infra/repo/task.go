@@ -352,6 +352,11 @@ func (v *TaskRepoImpl) GetTaskByRedis(ctx context.Context, taskID int64) (*entit
 			return nil, nil
 		}
 		taskDO = convertor.TaskPO2DO(taskPO)
+		err = v.TaskRedisDao.SetTask(ctx, taskDO)
+		if err != nil {
+			logs.CtxError(ctx, "Failed to set task", "err", err)
+			return nil, err
+		}
 	}
 	return taskDO, nil
 }

@@ -267,6 +267,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		}
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
+		repoMock.EXPECT().RemoveNonFinalTask(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		repoMock.EXPECT().UpdateTask(gomock.Any(), taskDO).Return(nil)
 
 		proc := &fakeProcessor{}
@@ -370,7 +371,7 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 			Sampler:       &entity.Sampler{},
 		}
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{taskDO}, int64(1), nil)
-		userMock.EXPECT().GetUserInfo(gomock.Any(), []string{"user1", "user2"}).Return(nil, map[string]*entitycommon.UserInfo{}, nil)
+		userMock.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, map[string]*entitycommon.UserInfo{}, nil)
 
 		svc := &TaskServiceImpl{TaskRepo: repoMock, userProvider: userMock}
 		resp, err := svc.ListTasks(context.Background(), &ListTasksReq{WorkspaceID: 2, TaskFilters: &filter.TaskFilterFields{}})
@@ -431,7 +432,7 @@ func TestTaskServiceImpl_GetTask(t *testing.T) {
 		}
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
-		userMock.EXPECT().GetUserInfo(gomock.Any(), []string{"user1", "user2"}).Return(nil, map[string]*entitycommon.UserInfo{}, nil)
+		userMock.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, map[string]*entitycommon.UserInfo{}, nil)
 
 		svc := &TaskServiceImpl{TaskRepo: repoMock, userProvider: userMock}
 		resp, err := svc.GetTask(context.Background(), &GetTaskReq{TaskID: 1, WorkspaceID: 2})
