@@ -72,7 +72,7 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loop_span.Span) ([]*spanSubscriber, error) {
 	const key = "consumer_listening"
 	cfg := &config.ConsumerListening{}
-	if err := h.loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
+	if err := h.loader.UnmarshalKey(ctx, key, cfg); err != nil {
 		return nil, err
 	}
 
