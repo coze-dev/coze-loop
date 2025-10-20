@@ -337,15 +337,23 @@ func (v *TaskRepoImpl) RemoveNonFinalTask(ctx context.Context, spaceID string, t
 }
 
 func (v *TaskRepoImpl) GetTaskByRedis(ctx context.Context, taskID int64) (*entity.ObservabilityTask, error) {
-	taskPO, err := v.TaskRedisDao.GetTask(ctx, taskID)
+	taskDO, err := v.TaskRedisDao.GetTask(ctx, taskID)
 	if err != nil {
 		logs.CtxError(ctx, "Failed to get task", "err", err)
 		return nil, err
 	}
-	if taskPO == nil {
-		return nil, nil
+	if taskDO == nil {
+		taskPO, err := v.TaskDao.GetTask(ctx, taskID, nil, nil)
+		if err != nil {
+			logs.CtxError(ctx, "Failed to get task", "err", err)
+			return nil, err
+		}
+		if taskPO == nil {
+			return nil, nil
+		}
+		taskDO = convertor.TaskPO2DO(taskPO)
 	}
-	return taskPO, nil
+	return taskDO, nil
 }
 func (v *TaskRepoImpl) SetTask(ctx context.Context, task *entity.ObservabilityTask) error {
 	return v.TaskRedisDao.SetTask(ctx, task)
