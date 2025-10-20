@@ -54,7 +54,9 @@ func (c *configer) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *e
 }
 
 func (c *configer) GetCKDBName(ctx context.Context) *entity.CKDBConfig {
-	return nil
+	const key = "clickhouse_config"
+	ckdb := &entity.CKDBConfig{}
+	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, ckdb) == nil, ckdb, &entity.CKDBConfig{})
 }
 
 func (c *configer) GetExptExportWhiteList(ctx context.Context) (eec *entity.ExptExportWhiteList) {

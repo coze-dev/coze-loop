@@ -1,11 +1,8 @@
 -- Copyright (c) 2025 coze-dev Authors
 -- SPDX-License-Identifier: Apache-2.0
 
--- Create database if not exists
-CREATE DATABASE IF NOT EXISTS cozeloop_evaluation;
-
--- Create expt_turn_result_filter_local table for docker environment
-CREATE TABLE IF NOT EXISTS cozeloop_evaluation.expt_turn_result_filter_local
+-- Create expt_turn_result_filter table for docker environment
+CREATE TABLE IF NOT EXISTS expt_turn_result_filter
 (
     `space_id` String,
     `expt_id` String,
@@ -28,8 +25,7 @@ CREATE TABLE IF NOT EXISTS cozeloop_evaluation.expt_turn_result_filter_local
     INDEX idx_item_id item_id TYPE bloom_filter() GRANULARITY 1,
     INDEX idx_turn_id turn_id TYPE bloom_filter() GRANULARITY 1
 )
-ENGINE = MergeTree()
+ENGINE = ReplacingMergeTree(updated_at)
 PARTITION BY created_date
-ORDER BY (expt_id, cityHash64(item_id), turn_id)
-SAMPLE BY cityHash64(item_id)
+ORDER BY (expt_id, item_id, turn_id)
 SETTINGS index_granularity = 8192;
