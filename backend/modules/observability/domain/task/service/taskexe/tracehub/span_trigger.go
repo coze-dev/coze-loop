@@ -64,7 +64,7 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 	if err = h.dispatch(ctx, span, subs); err != nil {
 		logs.CtxError(ctx, "dispatch flow span failed, %s, err: %v", logSuffix, err)
 		// Dispatch failed, continue to the next span
-		return nil
+		return err
 	}
 	return nil
 }
