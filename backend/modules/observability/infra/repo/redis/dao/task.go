@@ -13,7 +13,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	redisconvert "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/convert"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/samber/lo"
 )
 
 //go:generate mockgen -destination=mocks/Task_dao.go -package=mocks . ITaskDAO
@@ -123,32 +125,27 @@ func (p *TaskDAOImpl) SetTask(ctx context.Context, task *entity.ObservabilityTas
 // ListNonFinalTask 获取非终态任务ID列表
 func (p *TaskDAOImpl) ListNonFinalTask(ctx context.Context, spaceID string) ([]int64, error) {
 	key := p.makeNonFinalTaskCacheKey(spaceID)
-	members, err := p.cmdable.HKeys(ctx, key).Result()
+	bytes, err := p.cmdable.Get(ctx, key).Bytes()
 	if err != nil {
 		if redis.IsNilError(err) {
-			return []int64{}, nil
+			return nil, nil
 		}
-		logs.CtxError(ctx, "redis list non final tasks failed", "key", key, "err", err)
-		return nil, errorx.Wrapf(err, "redis hkeys non final task key: %v", key)
+		logs.CtxError(ctx, "redis get task failed", "key", key, "err", err)
+		return nil, errorx.Wrapf(err, "redis get task fail, key: %v", key)
+	}
+	if len(bytes) == 0 {
+		return nil, nil
+	}
+	var tasks []int64
+	if err := lo.TernaryF(
+		len(bytes) > 0,
+		func() error { return json.Unmarshal(bytes, tasks) },
+		func() error { return nil },
+	); err != nil {
+		return nil, errorx.Wrapf(err, "TaskExpt json unmarshal failed")
 	}
 
-	results := make([]int64, 0, len(members))
-	for _, member := range members {
-		id, parseErr := strconv.ParseInt(member, 10, 64)
-		if parseErr != nil {
-			logs.CtxWarn(ctx, "parse non final task id failed", "value", member, "key", key, "err", parseErr)
-			continue
-		}
-		results = append(results, id)
-	}
-
-	if len(members) > 0 {
-		if err := p.cmdable.Expire(ctx, key, nonFinalTaskCacheTTL).Err(); err != nil {
-			logs.CtxWarn(ctx, "failed to refresh ttl for non final task list", "key", key, "err", err)
-		}
-	}
-
-	return results, nil
+	return tasks, nil
 }
 
 // AddNonFinalTask 将任务加入非终态列表
