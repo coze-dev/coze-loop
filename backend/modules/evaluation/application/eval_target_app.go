@@ -487,6 +487,7 @@ func (e EvalTargetApplicationImpl) SearchCustomEvalTarget(ctx context.Context, r
 		HasMore:           &hasMore,
 	}, nil
 }
+
 func (e EvalTargetApplicationImpl) MockEvalTargetOutput(ctx context.Context, request *eval_target.MockEvalTargetOutputRequest) (r *eval_target.MockEvalTargetOutputResponse, err error) {
 	// 参数验证
 	if request == nil {
