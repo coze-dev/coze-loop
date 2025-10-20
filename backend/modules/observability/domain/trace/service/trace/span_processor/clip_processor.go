@@ -14,8 +14,9 @@ import (
 type ClipProcessor struct{}
 
 const (
-	clipProcessorMaxLength = 1 * 1024
-	clipProcessorSuffix    = "..."
+	clipProcessorPlainTextMaxLength = 10 * 1024
+	clipProcessorJSONValueMaxLength = 1 * 1024
+	clipProcessorSuffix             = "..."
 )
 
 func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
@@ -40,7 +41,7 @@ func NewClipProcessorFactory() Factory {
 }
 
 func clipSpanField(content string) string {
-	if content == "" || len(content) <= clipProcessorMaxLength {
+	if content == "" || len(content) <= clipProcessorPlainTextMaxLength {
 		return content
 	}
 	if clipped, ok := clipJSONContent(content); ok {
@@ -50,10 +51,17 @@ func clipSpanField(content string) string {
 }
 
 func clipPlainText(content string) string {
-	if len(content) <= clipProcessorMaxLength {
+	if len(content) <= clipProcessorPlainTextMaxLength {
 		return content
 	}
-	return clipByByteLimit(content, clipProcessorMaxLength) + clipProcessorSuffix
+	return clipByByteLimit(content, clipProcessorPlainTextMaxLength) + clipProcessorSuffix
+}
+
+func clipJSONValueString(content string) string {
+	if len(content) <= clipProcessorJSONValueMaxLength {
+		return content
+	}
+	return clipByByteLimit(content, clipProcessorJSONValueMaxLength) + clipProcessorSuffix
 }
 
 func clipByByteLimit(content string, limit int) string {
@@ -115,7 +123,7 @@ func clipJSONValue(value interface{}) (interface{}, bool) {
 		}
 		return val, changed
 	case string:
-		clipped := clipPlainText(val)
+		clipped := clipJSONValueString(val)
 		if clipped != val {
 			return clipped, true
 		}

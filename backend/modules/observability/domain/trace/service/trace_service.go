@@ -309,9 +309,9 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if err != nil {
 		return nil, err
 	}
-	selectColumns := make([]string, 0)
+	omitColumns := make([]string, 0)
 	if !req.WithDetail {
-		selectColumns = r.traceConfig.GetKeyColumns(ctx)
+		omitColumns = []string{"input", "output"}
 	}
 	st := time.Now()
 	limit := int32(1000)
@@ -319,15 +319,15 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		limit = 10000
 	}
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
-		Tenants:       tenants,
-		LogID:         req.LogID,
-		TraceID:       req.TraceID,
-		StartAt:       req.StartTime,
-		EndAt:         req.EndTime,
-		Limit:         limit,
-		SpanIDs:       req.SpanIDs,
-		Filters:       req.Filters,
-		SelectColumns: selectColumns,
+		Tenants:     tenants,
+		LogID:       req.LogID,
+		TraceID:     req.TraceID,
+		StartAt:     req.StartTime,
+		EndAt:       req.EndTime,
+		Limit:       limit,
+		SpanIDs:     req.SpanIDs,
+		Filters:     req.Filters,
+		OmitColumns: omitColumns,
 	})
 	r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 	if err != nil {
@@ -415,9 +415,9 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 }
 
 func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error) {
-	selectColumns := make([]string, 0)
-	if req.WithDetail {
-		selectColumns = r.traceConfig.GetKeyColumns(ctx)
+	omitColumns := make([]string, 0)
+	if !req.WithDetail {
+		omitColumns = []string{"input", "output"}
 	}
 
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
@@ -430,7 +430,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		Limit:              req.Limit,
 		NotQueryAnnotation: false,
 		Filters:            req.Filters,
-		SelectColumns:      selectColumns,
+		OmitColumns:        omitColumns,
 	})
 	if err != nil {
 		return nil, err

@@ -17,19 +17,19 @@ import (
 
 func TestClipProcessor_TransformPlainText(t *testing.T) {
 	processor := &ClipProcessor{}
-	content := strings.Repeat("a", clipProcessorMaxLength+5)
+	content := strings.Repeat("a", clipProcessorPlainTextMaxLength+5)
 	spans := loop_span.SpanList{{Input: content}}
 
 	res, err := processor.Transform(context.Background(), spans)
 	require.NoError(t, err)
 	require.Len(t, res, 1)
-	require.Equal(t, clipProcessorMaxLength+len(clipProcessorSuffix), len(res[0].Input))
+	require.Equal(t, clipProcessorPlainTextMaxLength+len(clipProcessorSuffix), len(res[0].Input))
 	require.True(t, strings.HasSuffix(res[0].Input, clipProcessorSuffix))
 }
 
 func TestClipProcessor_TransformJSONObject(t *testing.T) {
 	processor := &ClipProcessor{}
-	largeValue := strings.Repeat("b", clipProcessorMaxLength+10)
+	largeValue := strings.Repeat("b", clipProcessorPlainTextMaxLength+clipProcessorJSONValueMaxLength+10)
 	data := map[string]interface{}{
 		"large":  largeValue,
 		"normal": "ok",
@@ -44,13 +44,17 @@ func TestClipProcessor_TransformJSONObject(t *testing.T) {
 
 	var result map[string]interface{}
 	require.NoError(t, json.Unmarshal([]byte(res[0].Input), &result))
-	require.Equal(t, clipPlainText(largeValue), result["large"])
+	clippedLarge, ok := result["large"].(string)
+	require.True(t, ok)
+	require.Equal(t, clipProcessorJSONValueMaxLength+len(clipProcessorSuffix), len(clippedLarge))
+	require.True(t, strings.HasSuffix(clippedLarge, clipProcessorSuffix))
+	require.True(t, strings.HasPrefix(clippedLarge, "b"))
 	require.Equal(t, "ok", result["normal"])
 }
 
 func TestClipProcessor_TransformJSONNestedObject(t *testing.T) {
 	processor := &ClipProcessor{}
-	largeValue := strings.Repeat("c", clipProcessorMaxLength+20)
+	largeValue := strings.Repeat("c", clipProcessorPlainTextMaxLength+clipProcessorJSONValueMaxLength+20)
 	data := map[string]interface{}{
 		"nested": map[string]interface{}{
 			"inner": largeValue,
@@ -68,12 +72,16 @@ func TestClipProcessor_TransformJSONNestedObject(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(res[0].Input), &result))
 	nested, ok := result["nested"].(map[string]interface{})
 	require.True(t, ok)
-	require.Equal(t, clipPlainText(largeValue), nested["inner"])
+	inner, ok := nested["inner"].(string)
+	require.True(t, ok)
+	require.Equal(t, clipProcessorJSONValueMaxLength+len(clipProcessorSuffix), len(inner))
+	require.True(t, strings.HasSuffix(inner, clipProcessorSuffix))
+	require.True(t, strings.HasPrefix(inner, "c"))
 }
 
 func TestClipProcessor_TransformJSONArray(t *testing.T) {
 	processor := &ClipProcessor{}
-	largeValue := strings.Repeat("d", clipProcessorMaxLength+30)
+	largeValue := strings.Repeat("d", clipProcessorPlainTextMaxLength+clipProcessorJSONValueMaxLength+30)
 	data := []interface{}{largeValue, "ok"}
 	content, err := json.MarshalString(data)
 	require.NoError(t, err)
@@ -85,13 +93,17 @@ func TestClipProcessor_TransformJSONArray(t *testing.T) {
 
 	var result []interface{}
 	require.NoError(t, json.Unmarshal([]byte(res[0].Input), &result))
-	require.Equal(t, clipPlainText(largeValue), result[0])
+	first, ok := result[0].(string)
+	require.True(t, ok)
+	require.Equal(t, clipProcessorJSONValueMaxLength+len(clipProcessorSuffix), len(first))
+	require.True(t, strings.HasSuffix(first, clipProcessorSuffix))
+	require.True(t, strings.HasPrefix(first, "d"))
 	require.Equal(t, "ok", result[1])
 }
 
 func TestClipProcessor_TransformJSONString(t *testing.T) {
 	processor := &ClipProcessor{}
-	largeValue := strings.Repeat("e", clipProcessorMaxLength+40)
+	largeValue := strings.Repeat("e", clipProcessorPlainTextMaxLength+clipProcessorJSONValueMaxLength+40)
 	content, err := json.MarshalString(largeValue)
 	require.NoError(t, err)
 	spans := loop_span.SpanList{{Input: content}}
@@ -102,12 +114,14 @@ func TestClipProcessor_TransformJSONString(t *testing.T) {
 
 	var result string
 	require.NoError(t, json.Unmarshal([]byte(res[0].Input), &result))
-	require.Equal(t, clipPlainText(largeValue), result)
+	require.Equal(t, clipProcessorJSONValueMaxLength+len(clipProcessorSuffix), len(result))
+	require.True(t, strings.HasSuffix(result, clipProcessorSuffix))
+	require.True(t, strings.HasPrefix(result, "e"))
 }
 
 func TestClipProcessor_TransformJSONDeepNested(t *testing.T) {
 	processor := &ClipProcessor{}
-	largeValue := strings.Repeat("g", clipProcessorMaxLength+60)
+	largeValue := strings.Repeat("g", clipProcessorPlainTextMaxLength+clipProcessorJSONValueMaxLength+60)
 	data := map[string]interface{}{
 		"levels": []interface{}{
 			map[string]interface{}{
@@ -133,19 +147,22 @@ func TestClipProcessor_TransformJSONDeepNested(t *testing.T) {
 	innerArr, ok := innerMap["inner"].([]interface{})
 	require.True(t, ok)
 	require.Len(t, innerArr, 2)
-	require.Equal(t, clipPlainText(largeValue), innerArr[0])
+	clippedInner, ok := innerArr[0].(string)
+	require.True(t, ok)
+	require.Equal(t, clipProcessorJSONValueMaxLength+len(clipProcessorSuffix), len(clippedInner))
+	require.True(t, strings.HasSuffix(clippedInner, clipProcessorSuffix))
 	require.Equal(t, "ok", innerArr[1])
 }
 
 func TestClipProcessor_TransformOutputPlainText(t *testing.T) {
 	processor := &ClipProcessor{}
-	content := strings.Repeat("f", clipProcessorMaxLength+50)
+	content := strings.Repeat("f", clipProcessorPlainTextMaxLength+50)
 	spans := loop_span.SpanList{{Output: content}}
 
 	res, err := processor.Transform(context.Background(), spans)
 	require.NoError(t, err)
 	require.Len(t, res, 1)
-	require.Equal(t, clipProcessorMaxLength+len(clipProcessorSuffix), len(res[0].Output))
+	require.Equal(t, clipProcessorPlainTextMaxLength+len(clipProcessorSuffix), len(res[0].Output))
 	require.True(t, strings.HasSuffix(res[0].Output, clipProcessorSuffix))
 }
 
@@ -160,7 +177,7 @@ func TestClipByByteLimit_EdgeCases(t *testing.T) {
 }
 
 func TestClipPlainText_UTF8Validity(t *testing.T) {
-	content := strings.Repeat("只能制定计划让执行代理分析代码仓库结构并根据实际情况进行分析。", 40)
+	content := strings.Repeat("只能制定计划让执行代理分析代码仓库结构并根据实际情况进行分析。", 400)
 	clipped := clipPlainText(content)
 	require.True(t, strings.HasSuffix(clipped, clipProcessorSuffix))
 	require.False(t, strings.Contains(clipped, "\ufffd"))
@@ -170,7 +187,7 @@ func TestClipPlainText_UTF8Validity(t *testing.T) {
 
 func TestClipSpanField_JSONFallback(t *testing.T) {
 	data := map[string]interface{}{
-		"message": strings.Repeat("好", clipProcessorMaxLength/3+20),
+		"message": strings.Repeat("好", clipProcessorPlainTextMaxLength+clipProcessorJSONValueMaxLength+20),
 	}
 	raw, err := json.MarshalString(data)
 	require.NoError(t, err)
@@ -185,7 +202,7 @@ func TestClipSpanField_JSONFallback(t *testing.T) {
 }
 
 func TestClipSpanField_NonJSON(t *testing.T) {
-	content := strings.Repeat("目标风", 400)
+	content := strings.Repeat("目标风", 4000)
 	result := clipSpanField(content)
 	require.True(t, strings.HasSuffix(result, clipProcessorSuffix))
 	require.NotContains(t, result, "\ufffd")

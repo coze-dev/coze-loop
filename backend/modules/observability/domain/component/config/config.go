@@ -125,7 +125,6 @@ type ITraceConfig interface {
 	GetAnnotationSourceCfg(ctx context.Context) (*AnnotationSourceConfig, error)
 	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
 	GetKeySpanTypes(ctx context.Context) map[string][]string
-	GetKeyColumns(ctx context.Context) []string
 	GetBackfillMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 
 	conf.IConfigLoader

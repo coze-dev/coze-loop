@@ -115,20 +115,6 @@ func (mr *MockITraceConfigMockRecorder) GetDefaultTraceTenant(ctx any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultTraceTenant", reflect.TypeOf((*MockITraceConfig)(nil).GetDefaultTraceTenant), ctx)
 }
 
-// GetKeyColumns mocks base method.
-func (m *MockITraceConfig) GetKeyColumns(ctx context.Context) []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetKeyColumns", ctx)
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// GetKeyColumns indicates an expected call of GetKeyColumns.
-func (mr *MockITraceConfigMockRecorder) GetKeyColumns(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyColumns", reflect.TypeOf((*MockITraceConfig)(nil).GetKeyColumns), ctx)
-}
-
 // GetKeySpanTypes mocks base method.
 func (m *MockITraceConfig) GetKeySpanTypes(ctx context.Context) map[string][]string {
 	m.ctrl.T.Helper()

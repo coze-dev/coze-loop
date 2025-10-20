@@ -110,7 +110,7 @@ type FieldOptions struct {
 }
 
 type FilterObject interface {
-	GetFieldValue(fieldName string, isSystem bool) any
+	GetFieldValue(fieldName string, isSystem, isCustom bool) any
 }
 
 type FilterFields struct {
@@ -260,7 +260,7 @@ func (f *FilterField) Satisfied(obj FilterObject) bool {
 	// 检测是否满足筛选条件
 	if f.FieldName != "" {
 		// 不满足field过滤条件
-		if !f.CheckValue(obj.GetFieldValue(f.FieldName, f.IsSystem)) {
+		if !f.CheckValue(obj.GetFieldValue(f.FieldName, f.IsSystem, f.IsCustom)) {
 			if op == QueryAndOrEnumAnd {
 				return false
 			}

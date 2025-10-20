@@ -2425,7 +2425,6 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 					},
 				}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
-				confMock.EXPECT().GetKeyColumns(gomock.Any()).Return([]string{}).AnyTimes()
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
@@ -2469,7 +2468,6 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 					},
 				}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
-				confMock.EXPECT().GetKeyColumns(gomock.Any()).Return([]string{}).AnyTimes()
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
@@ -2535,7 +2533,6 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("failed"))
 				confMock := confmocks.NewMockITraceConfig(ctrl)
-				confMock.EXPECT().GetKeyColumns(gomock.Any()).Return([]string{}).AnyTimes()
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
@@ -2716,7 +2713,7 @@ func TestTraceServiceImpl_SearchTraceOApi(t *testing.T) {
 					Limit:              100,
 					NotQueryAnnotation: false,
 					Filters:            nil,
-					SelectColumns:      []string{},
+					OmitColumns:        []string{"input", "output"},
 				}).Return(loop_span.SpanList{
 					{
 						TraceID:   "trace-123",
