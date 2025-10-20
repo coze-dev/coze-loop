@@ -52,15 +52,8 @@ func fieldTypeDTO2DO(fieldType *filter.FieldType) loop_span.FieldType {
 	return loop_span.FieldType(*fieldType)
 }
 
-func FilterFieldsDO2DTO(f *loop_span.FilterFields, isHidden bool) *filter.FilterFields {
-	if f == nil {
-		return nil
-	}
-	ret := &filter.FilterFields{}
-	if f.QueryAndOr != nil {
-		ret.QueryAndOr = ptr.Of(filter.QueryRelation(*f.QueryAndOr))
-	}
-	ret.FilterFields = make([]*filter.FilterField, 0)
+func FilterFieldsDO2DTO(f *loop_span.FilterFields, isHidden bool) []*filter.FilterField {
+	var ret []*filter.FilterField
 	for _, field := range f.FilterFields {
 		if field == nil {
 			continue
@@ -78,9 +71,9 @@ func FilterFieldsDO2DTO(f *loop_span.FilterFields, isHidden bool) *filter.Filter
 			fField.QueryType = ptr.Of(filter.QueryType(*field.QueryType))
 		}
 		if field.SubFilter != nil {
-			fField.SubFilter = FilterFieldsDO2DTO(field.SubFilter, isHidden)
+			fField.SubFilter.FilterFields = FilterFieldsDO2DTO(field.SubFilter, isHidden)
 		}
-		ret.FilterFields = append(ret.FilterFields, fField)
+		ret = append(ret, fField)
 	}
 	return ret
 }

@@ -143,6 +143,24 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 }
 
 func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*filter.SpanFilterFields, error) {
+	filtersDO := make([]*filter.FilterField, 0, len(spanFilterFields.GetFilters().GetFilterFields()))
+	if spanFilterFields.GetFilters() != nil {
+		for _, v := range spanFilterFields.GetFilters().GetFilterFields() {
+			filtersDO = append(filtersDO, &filter.FilterField{
+				FieldName:  v.FieldName,
+				FieldType:  v.FieldType,
+				Values:     v.Values,
+				QueryType:  v.QueryType,
+				QueryAndOr: v.QueryAndOr,
+				SubFilter:  v.SubFilter,
+				Hidden:     v.Hidden,
+			})
+		}
+	}
+	filters := &filter.FilterFields{
+		QueryAndOr:   ptr.Of(filter.QueryRelationAnd),
+		FilterFields: filtersDO,
+	}
 	switch spanFilterFields.GetPlatformType() {
 	case common.PlatformTypeCozeBot, common.PlatformTypeProject, common.PlatformTypeWorkflow, common.PlatformTypeInnerCozeBot:
 		platformFilter, err := t.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(spanFilterFields.GetPlatformType()))
@@ -162,7 +180,8 @@ func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields
 			QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
 			FilterFields: basicFilter,
 		}
-		filters := combineFilters(convertor.FilterFieldsDO2DTO(basicFilterFields, true), spanFilterFields.Filters)
+		filters.FilterFields = append(filters.FilterFields, convertor.FilterFieldsDO2DTO(basicFilterFields, true)...)
+		//filters := combineFilters(convertor.FilterFieldsDO2DTO(basicFilterFields, true), spanFilterFields.Filters)
 		return &filter.SpanFilterFields{
 			Filters:      filters,
 			PlatformType: spanFilterFields.PlatformType,
@@ -175,16 +194,24 @@ func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields
 
 func combineFilters(filters ...*filter.FilterFields) *filter.FilterFields {
 	filterAggr := &filter.FilterFields{
-		QueryAndOr: ptr.Of(filter.QueryRelationAnd),
+		QueryAndOr:   ptr.Of(filter.QueryRelationAnd),
+		FilterFields: make([]*filter.FilterField, 0),
 	}
 	for _, f := range filters {
 		if f == nil {
 			continue
 		}
+		if len(f.GetFilterFields()) == 0 {
+			continue
+		}
+
 		filterAggr.FilterFields = append(filterAggr.FilterFields, &filter.FilterField{
 			QueryAndOr: ptr.Of(filter.QueryRelationAnd),
 			SubFilter:  f,
 		})
+	}
+	if len(filterAggr.FilterFields) == 0 {
+		return nil
 	}
 	return filterAggr
 }
