@@ -64,6 +64,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -138,8 +139,8 @@ var (
 		domainservice.NewEvaluatorRecordServiceImpl,
 		NewEvaluatorSourceServices,
 		llm.NewLLMRPCProvider,
-		NewStubRuntimeFactory,
-		NewStubRuntimeManagerFromFactory,
+		NewRuntimeFactory,
+		NewRuntimeManagerFromFactory,
 		NewSandboxConfig,
 		NewLogger,
 
@@ -322,14 +323,14 @@ func NewLogger() *logrus.Logger {
 	return logger
 }
 
-// NewStubRuntimeFactory 创建存根运行时工厂
-func NewStubRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
-	return service.NewStubRuntimeFactory(logger, sandboxConfig)
+// NewRuntimeFactory 创建运行时工厂
+func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
+	return runtime.NewRuntimeFactory(logger, sandboxConfig)
 }
 
-// NewStubRuntimeManagerFromFactory 从工厂创建存根运行时管理器
-func NewStubRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
-	return service.NewStubRuntimeManager(factory, logger)
+// NewRuntimeManagerFromFactory 从工厂创建运行时管理器
+func NewRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
+	return runtime.NewRuntimeManager(factory, logger)
 }
 
 func NewEvaluatorSourceServices(
