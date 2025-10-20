@@ -304,9 +304,17 @@ func filterVisibleFilterFields(fields []*filter.FilterField) []*filter.FilterFie
 		}
 		sub := f.GetSubFilter()
 		if sub != nil {
-			sub.FilterFields = filterVisibleFilterFields(sub.GetFilterFields())
+			filteredSub := filterVisibleFilterFields(sub.GetFilterFields())
+			if len(filteredSub) == 0 {
+				sub.FilterFields = nil
+			} else {
+				sub.FilterFields = filteredSub
+			}
 		}
 		res = append(res, f)
+	}
+	if len(res) == 0 {
+		return nil
 	}
 	return res
 }
