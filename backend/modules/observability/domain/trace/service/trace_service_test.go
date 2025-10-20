@@ -43,6 +43,36 @@ import (
 
 const defaultUserID = "user-1"
 
+type taskRepoMock struct {
+	*taskRepomocks.MockITaskRepo
+}
+
+func newTaskRepoMock(ctrl *gomock.Controller) *taskRepoMock {
+	return &taskRepoMock{MockITaskRepo: taskRepomocks.NewMockITaskRepo(ctrl)}
+}
+
+func (m *taskRepoMock) ListNonFinalTask(context.Context) ([]int64, error) {
+	panic("unexpected call to ListNonFinalTask in taskRepoMock")
+}
+
+func (m *taskRepoMock) AddNonFinalTask(context.Context, int64) error {
+	panic("unexpected call to AddNonFinalTask in taskRepoMock")
+}
+
+func (m *taskRepoMock) RemoveNonFinalTask(context.Context, int64) error {
+	panic("unexpected call to RemoveNonFinalTask in taskRepoMock")
+}
+
+func (m *taskRepoMock) GetTaskByRedis(context.Context, int64) (*taskentity.ObservabilityTask, error) {
+	panic("unexpected call to GetTaskByRedis in taskRepoMock")
+}
+
+func (m *taskRepoMock) SetTask(context.Context, *taskentity.ObservabilityTask) error {
+	panic("unexpected call to SetTask in taskRepoMock")
+}
+
+var _ taskRepo.ITaskRepo = (*taskRepoMock)(nil)
+
 func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 	type fields struct {
 		traceRepo          repo.ITraceRepo
@@ -3455,7 +3485,7 @@ func TestTraceServiceImpl_ListAnnotationEvaluators(t *testing.T) {
 		{
 			name: "name nil success",
 			fieldsGetter: func(ctrl *gomock.Controller, req *ListAnnotationEvaluatorsRequest) fields {
-				taskRepoMock := taskRepomocks.NewMockITaskRepo(ctrl)
+				taskRepoMock := newTaskRepoMock(ctrl)
 				returnTasks := []*taskentity.ObservabilityTask{
 					{TaskConfig: &taskentity.TaskConfig{AutoEvaluateConfigs: []*taskentity.AutoEvaluateConfig{{EvaluatorVersionID: 101}}}},
 				}
@@ -3489,7 +3519,7 @@ func TestTraceServiceImpl_ListAnnotationEvaluators(t *testing.T) {
 		{
 			name: "name nil list tasks error",
 			fieldsGetter: func(ctrl *gomock.Controller, _ *ListAnnotationEvaluatorsRequest) fields {
-				taskRepoMock := taskRepomocks.NewMockITaskRepo(ctrl)
+				taskRepoMock := newTaskRepoMock(ctrl)
 				taskRepoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return(nil, int64(0), fmt.Errorf("list error"))
 				return fields{taskRepo: taskRepoMock}
 			},
@@ -3502,7 +3532,7 @@ func TestTraceServiceImpl_ListAnnotationEvaluators(t *testing.T) {
 		{
 			name: "name nil tasks empty",
 			fieldsGetter: func(ctrl *gomock.Controller, _ *ListAnnotationEvaluatorsRequest) fields {
-				taskRepoMock := taskRepomocks.NewMockITaskRepo(ctrl)
+				taskRepoMock := newTaskRepoMock(ctrl)
 				taskRepoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*taskentity.ObservabilityTask{}, int64(0), nil)
 				return fields{
 					taskRepo: taskRepoMock,
@@ -3521,7 +3551,7 @@ func TestTraceServiceImpl_ListAnnotationEvaluators(t *testing.T) {
 		{
 			name: "name nil batch get error",
 			fieldsGetter: func(ctrl *gomock.Controller, _ *ListAnnotationEvaluatorsRequest) fields {
-				taskRepoMock := taskRepomocks.NewMockITaskRepo(ctrl)
+				taskRepoMock := newTaskRepoMock(ctrl)
 				taskRepoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*taskentity.ObservabilityTask{
 					{TaskConfig: &taskentity.TaskConfig{AutoEvaluateConfigs: []*taskentity.AutoEvaluateConfig{{EvaluatorVersionID: 202}}}},
 				}, int64(1), nil)
