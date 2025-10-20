@@ -97,63 +97,6 @@ function EvaluatorCreatePage() {
       })
       .catch(e => console.warn(e));
 
-  const renderContent = () => (
-    <>
-      <Form
-        initValues={
-          sourceService.data || {
-            evaluator_type: EvaluatorType.Prompt,
-          }
-        }
-        className="flex-1 w-[800px] mx-auto form-default"
-        ref={formRef}
-        onValueChange={(values, changeValues) => {
-          setBlockLeave(true);
-        }}
-      >
-        <div className="h-[28px] mb-3 text-[16px] leading-7 font-medium coz-fg-plus">
-          {I18n.t('basic_info')}
-        </div>
-        <FormInput
-          label={I18n.t('name')}
-          field="name"
-          placeholder={I18n.t('please_input', { field: '' })}
-          required
-          maxLength={50}
-          trigger="blur"
-          rules={[
-            { required: true, message: I18n.t('please_input_name') },
-            { max: 50 },
-            { validator: sourceNameRuleValidator },
-            {
-              asyncValidator: async (_, value: string) => {
-                if (value) {
-                  const { pass } = await StoneEvaluationApi.CheckEvaluatorName({
-                    workspace_id: spaceID,
-                    name: value,
-                  });
-                  if (pass === false) {
-                    throw new Error(I18n.t('name_already_exists'));
-                  }
-                }
-              },
-            },
-          ]}
-        />
-        <FormTextArea
-          label={I18n.t('description')}
-          field="description"
-          placeholder={I18n.t('please_input_description')}
-          fieldStyle={{ paddingTop: 8 }}
-          maxCount={200}
-          maxLength={200}
-        />
-        <div className="h-7 mt-[10px]" />
-        <PromptConfigField refreshEditorModelKey={refreshEditorModelKey} />
-      </Form>
-    </>
-  );
-
   return (
     <div className="flex flex-col h-full">
       <div className="px-6 flex-shrink-0 py-3 h-[56px] flex flex-row items-center">
@@ -169,7 +112,61 @@ function EvaluatorCreatePage() {
       ) : (
         <>
           <div className="p-6 pt-[12px] flex-1 overflow-y-auto styled-scrollbar pr-[18px]">
-            {renderContent()}
+            <Form
+              initValues={
+                sourceService.data || {
+                  evaluator_type: EvaluatorType.Prompt,
+                }
+              }
+              className="flex-1 w-[800px] mx-auto form-default"
+              ref={formRef}
+              onValueChange={(values, changeValues) => {
+                setBlockLeave(true);
+              }}
+            >
+              <div className="h-[28px] mb-3 text-[16px] leading-7 font-medium coz-fg-plus">
+                {I18n.t('basic_info')}
+              </div>
+              <FormInput
+                label={I18n.t('name')}
+                field="name"
+                placeholder={I18n.t('please_input', { field: '' })}
+                required
+                maxLength={50}
+                trigger="blur"
+                rules={[
+                  { required: true, message: I18n.t('please_input_name') },
+                  { max: 50 },
+                  { validator: sourceNameRuleValidator },
+                  {
+                    asyncValidator: async (_, value: string) => {
+                      if (value) {
+                        const { pass } =
+                          await StoneEvaluationApi.CheckEvaluatorName({
+                            workspace_id: spaceID,
+                            name: value,
+                          });
+                        if (pass === false) {
+                          throw new Error(I18n.t('name_already_exists'));
+                        }
+                      }
+                    },
+                  },
+                ]}
+              />
+              <FormTextArea
+                label={I18n.t('description')}
+                field="description"
+                placeholder={I18n.t('please_input_description')}
+                fieldStyle={{ paddingTop: 8 }}
+                maxCount={200}
+                maxLength={200}
+              />
+              <div className="h-7 mt-[10px]" />
+              <PromptConfigField
+                refreshEditorModelKey={refreshEditorModelKey}
+              />
+            </Form>
           </div>
           <div className="flex-shrink-0 p-6">
             <div className="w-[800px] mx-auto flex flex-row justify-end gap-2">
