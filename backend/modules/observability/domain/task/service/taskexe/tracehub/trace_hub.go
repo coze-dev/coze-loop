@@ -87,6 +87,7 @@ type TraceHubServiceImpl struct {
 	benefitSvc          benefit.IBenefitService
 	backfillProducer    mq.IBackfillProducer
 	locker              lock.ILocker
+	loader              conf.IConfigLoader
 
 	flushErrLock sync.Mutex
 	flushErr     []error

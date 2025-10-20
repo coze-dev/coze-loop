@@ -12,6 +12,7 @@ import (
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -61,13 +62,20 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(subs), subs)
 	// 4、Dispatch
 	if err = h.dispatch(ctx, span, subs); err != nil {
-		logs.CtxWarn(ctx, "dispatch flow span failed, %s, err: %v", logSuffix, err)
-		return err
+		logs.CtxError(ctx, "dispatch flow span failed, %s, err: %v", logSuffix, err)
+		// Dispatch failed, continue to the next span
+		return nil
 	}
 	return nil
 }
 
 func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loop_span.Span) ([]*spanSubscriber, error) {
+	const key = "consumer_listening"
+	cfg := &config.ConsumerListening{}
+	if err := h.loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
+		return nil, err
+	}
+
 	var subscribers []*spanSubscriber
 	taskDOs, err := h.listNonFinalTask(ctx)
 	if err != nil {
@@ -76,6 +84,9 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 	}
 	taskList := tconv.TaskDOs2DTOs(ctx, taskDOs, nil)
 	for _, taskDO := range taskList {
+		if !cfg.IsAllSpace && !gslice.Contains(cfg.SpaceList, taskDO.GetWorkspaceID()) {
+			continue
+		}
 		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
 		subscribers = append(subscribers, &spanSubscriber{
 			taskID:           taskDO.GetID(),
