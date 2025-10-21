@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	entity_common "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -397,35 +398,8 @@ func SpanFilterDTO2DO(spanFilterFields *filter.SpanFilterFields) *entity.SpanFil
 	return &entity.SpanFilterFields{
 		PlatformType: *spanFilterFields.PlatformType,
 		SpanListType: *spanFilterFields.SpanListType,
-		Filters:      *SpanFilterFieldsDTO2DO(spanFilterFields.Filters),
+		Filters:      *convertor.FilterFieldsDTO2DO(spanFilterFields.Filters),
 	}
-}
-
-func SpanFilterFieldsDTO2DO(spanFilterFields *filter.FilterFields) *loop_span.FilterFields {
-	if spanFilterFields == nil {
-		return nil
-	}
-	return &loop_span.FilterFields{
-		QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
-		FilterFields: FilterFieldsDTO2DO(spanFilterFields.FilterFields),
-	}
-}
-func FilterFieldsDTO2DO(filterFields []*filter.FilterField) []*loop_span.FilterField {
-	if filterFields == nil {
-		return nil
-	}
-	filtersDO := make([]*loop_span.FilterField, 0, len(filterFields))
-	for _, v := range filterFields {
-		filtersDO = append(filtersDO, &loop_span.FilterField{
-			FieldName:  *v.FieldName,
-			FieldType:  loop_span.FieldType(*v.FieldType),
-			Values:     v.Values,
-			QueryType:  ptr.Of(loop_span.QueryTypeEnum(*v.QueryType)),
-			QueryAndOr: ptr.Of(loop_span.QueryAndOrEnum(*v.QueryAndOr)),
-			SubFilter:  SpanFilterFieldsDTO2DO(v.SubFilter),
-		})
-	}
-	return filtersDO
 }
 
 func RunDetailDTO2DO(runDetail *task.RunDetail) *entity.RunDetail {
