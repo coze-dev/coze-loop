@@ -84,3 +84,16 @@ struct RuntimeParam {
     1: optional string json_value
     2: optional string json_demo
 }
+
+// 消息角色
+typedef string Role(ts.enum="true")
+const Role Role_System = "system"
+const Role Role_User = "user"
+const Role Role_Assistant = "assistant"
+
+// 消息结构
+struct Message {
+    1: optional Role role
+    2: optional Content content
+    3: optional map<string, string> ext
+}

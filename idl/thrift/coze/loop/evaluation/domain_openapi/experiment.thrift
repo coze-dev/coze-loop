@@ -3,6 +3,7 @@ namespace go coze.loop.evaluation.domain_openapi.experiment
 include "common.thrift"
 include "eval_set.thrift"
 include "evaluator.thrift"
+include "eval_target.thrift"
 
 // 实验状态
 typedef string ExperimentStatus(ts.enum="true")
@@ -55,35 +56,40 @@ struct EvaluatorAggregateResult {
 
 // 实验统计
 struct ExperimentStatistics {
-    1: optional list<EvaluatorAggregateResult> evaluator_aggregate_results
-    2: optional TokenUsage token_usage
-    3: optional double credit_cost
-    4: optional i32 pending_turn_count
-    5: optional i32 success_turn_count
-    6: optional i32 failed_turn_count
-    7: optional i32 terminated_turn_count
-    8: optional i32 processing_turn_count
+    1: optional i32 pending_turn_count
+    2: optional i32 success_turn_count
+    3: optional i32 failed_turn_count
+    4: optional i32 terminated_turn_count
+    5: optional i32 processing_turn_count
 }
 
 // 评测实验
 struct Experiment {
+    // 基本信息
     1: optional string experiment_id
     2: optional string name
     3: optional string description
-    4: optional ExperimentStatus status
-    5: optional string status_message
-    6: optional string start_time  // ISO 8601格式
-    7: optional string end_time    // ISO 8601格式
-    8: optional string eval_set_version_id
-    9: optional string target_version_id
-    10: optional list<string> evaluator_version_ids
-    11: optional TargetFieldMapping target_field_mapping
-    12: optional list<EvaluatorFieldMapping> evaluator_field_mapping
-    13: optional i32 item_concur_num
-    14: optional i32 evaluators_concur_num
-    15: optional ExperimentType experiment_type
-    16: optional ExperimentStatistics experiment_statistics
-    17: optional common.BaseInfo base_info
+
+    // 运行信息
+    10: optional ExperimentStatus status // 实验状态
+    11: optional string status_message
+    12: optional string start_time  // ISO 8601格式
+    13: optional string end_time    // ISO 8601格式
+    14: optional i32 item_concur_num // 评测集并发数
+    15: optional i32 evaluators_concur_num // 评估器并发数
+    16: optional common.RuntimeParam target_runtime_param   // 运行时参数
+
+    // 三元组信息
+    30: optional string eval_set_version_id
+    31: optional string target_version_id
+    32: optional list<string> evaluator_version_ids
+    33: optional TargetFieldMapping target_field_mapping
+    34: optional list<EvaluatorFieldMapping> evaluator_field_mapping
+
+    // 统计信息
+    50: optional ExperimentStatistics expt_stats
+
+    100: optional common.BaseInfo base_info
 }
 
 // 列定义 - 评测集字段
@@ -92,12 +98,13 @@ struct ColumnEvalSetField {
     2: optional string name
     3: optional string description
     4: optional common.ContentType content_type
+    6: optional string text_schema
 }
 
 // 列定义 - 评估器
 struct ColumnEvaluator {
-    1: optional string evaluator_version_id
-    2: optional string evaluator_id
+    1: optional i64 evaluator_version_id (api.js_conv='true', go.tag='json:"evaluator_version_id"')
+    2: optional i64 evaluator_id (api.js_conv='true', go.tag='json:"evaluator_id"')
     3: optional evaluator.EvaluatorType evaluator_type
     4: optional string name
     5: optional string version
@@ -118,28 +125,22 @@ struct EvaluatorOutput {
     1: optional map<string, evaluator.EvaluatorRecord> evaluator_records  // key为evaluator_version_id
 }
 
-// 实验结果载荷
-struct ExperimentResultPayload {
-    1: optional string turn_id
+// 结果payload
+struct ResultPayload {
+    1: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"')
     2: optional eval_set.Turn eval_set_turn
-    3: optional TargetOutput target_output
+    3: optional eval_target.EvalTargetRecord target_output
     4: optional EvaluatorOutput evaluator_output
 }
 
 // 轮次结果
 struct TurnResult {
-    1: optional string turn_id
-    2: optional list<ExperimentResult> experiment_results
-}
-
-// 实验结果
-struct ExperimentResult {
-    1: optional string experiment_id
-    2: optional ExperimentResultPayload payload
+    1: optional string turn_id (api.js_conv='true', go.tag='json:"turn_id"')
+    2: optional ResultPayload payload
 }
 
 // 数据项结果
 struct ItemResult {
-    1: optional string item_id
+    1: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"')
     2: optional list<TurnResult> turn_results
 }

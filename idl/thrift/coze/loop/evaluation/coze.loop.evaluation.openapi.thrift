@@ -218,50 +218,28 @@ struct UpdateEvaluationSetSchemaOApiResponse {
 }
 
 // ===============================
-// 评估器相关接口 (1个接口)
-// ===============================
-
-// 2.1 执行评估器
-struct RunEvaluatorOApiRequest {
-    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string evaluator_version_id (api.path='evaluator_version_id')
-
-    10: optional evaluator.EvaluatorInputData input_data (api.body="input_data")
-
-    255: optional base.Base Base
-}
-
-struct RunEvaluatorOApiResponse {
-    1: optional i32 code
-    2: optional string msg
-    3: optional RunEvaluatorOpenAPIData data
-
-    255: base.BaseResp BaseResp
-}
-
-struct RunEvaluatorOpenAPIData {
-    1: optional evaluator.EvaluatorOutputData evaluator_output_data  // 输出数据
-}
-
-// ===============================
 // 评测实验相关接口 (2个接口)
 // ===============================
 
 // 3.1 创建评测实验
 struct CreateExperimentOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string eval_set_version_id
-    3: optional string target_version_id
-    4: optional list<string> evaluator_version_ids
-    5: optional string name
-    6: optional string description
+    // 基础信息
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional string name (api.body = 'name')
+    3: optional string description (api.body = 'description')
 
-    20: optional experiment.TargetFieldMapping target_field_mapping
-    21: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping
-    22: optional eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
-    23: optional i32 item_concur_num
-    24: optional i32 evaluators_concur_num
-    25: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
+    // 三元组信息
+    4: optional string eval_set_version_id (api.body = 'eval_set_version_id')
+    5: optional string target_version_id (api.body = 'target_version_id')
+    6: optional list<string> evaluator_version_ids (api.body = 'evaluator_version_ids')
+    7: optional experiment.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
+    8: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
+    9: optional eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
+
+    // 运行信息
+    20: optional i32 item_concur_num (api.body = 'item_concur_num')
+    21: optional i32 evaluators_concur_num (api.body = 'evaluators_concur_num')
+    22: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
 
     255: optional base.Base Base
 }
@@ -279,44 +257,52 @@ struct CreateExperimentOpenAPIData {
 }
 
 // 3.2 获取评测实验详情
-struct BatchGetExperimentsRequest {
+struct GetExperimentsOApiRequest {
     1: required i64 workspace_id (api.query='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
 
     255: optional base.Base Base
 }
 
-struct BatchGetExperimentsResponse {
+struct GetExperimentsOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional GetExperimentsOpenAPIDataData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct GetExperimentsOpenAPIDataData {
     1: optional experiment.Experiment experiment
 
     255: base.BaseResp BaseResp
 }
 
-// 3.2 获取评测实验结果
-struct GetExperimentResultOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string experiment_id (api.path = "experiment_id")
-    3: optional string page_token
-    4: optional i32 page_size (vt.gt = "0", vt.le = "200")
+// 3.3 获取评测实验结果
+struct ListExperimentResultOApiRequest {
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
+
+    100: optional i32 page_number (api.body = 'page_number')
+    101: optional i32 page_size (api.body = 'page_size')
 
     255: optional base.Base Base
 }
 
-struct GetExperimentResultOApiResponse {
+struct ListExperimentResultOApiResponse {
     1: optional i32 code
     2: optional string msg
-    3: optional GetExperimentResultOpenAPIData data
+    3: optional ListExperimentResultOpenAPIData data
 
     255: base.BaseResp BaseResp
 }
 
-struct GetExperimentResultOpenAPIData {
+struct ListExperimentResultOpenAPIData {
     1: optional list<experiment.ColumnEvalSetField> column_eval_set_fields
     2: optional list<experiment.ColumnEvaluator> column_evaluators
     3: optional list<experiment.ItemResult> item_results
-    4: optional bool has_more
-    5: optional string next_page_token
-    6: optional i64 total
+
+    100: optional i64 total
 }
 
 // ===============================
@@ -347,8 +333,8 @@ service EvaluationOpenAPIService {
     // 评测实验接口 (2个)
     // 3.1 创建评测实验
     CreateExperimentOApiResponse CreateExperimentOApi(1: CreateExperimentOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/experiments")
-    GetExperimentsResponse BatchGetExperiments(1: GetExperimentsRequest req) (api.get = '/api/evaluation/v1/experiments/:expt_id')
-
-    // 3.2 获取评测实验结果
-    GetExperimentResultOApiResponse GetExperimentResultOApi(1: GetExperimentResultOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/experiments/:experiment_id/results")
+    // 3.2 获取评测实验
+    GetExperimentsOApiResponse GetExperimentsOApi(1: GetExperimentsOApiRequest req) (api.get = '/api/evaluation/v1/experiments/:experiment_id')
+    // 3.3 查询评测实验结果
+    ListExperimentResultOApiResponse ListExperimentResultOApi(1: ListExperimentResultOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/results")
 }

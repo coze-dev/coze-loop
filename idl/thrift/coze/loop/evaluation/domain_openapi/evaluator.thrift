@@ -18,22 +18,10 @@ const EvaluatorRunStatus EvaluatorRunStatus_Success = "success"
 const EvaluatorRunStatus EvaluatorRunStatus_Failed = "failed"
 const EvaluatorRunStatus EvaluatorRunStatus_Processing = "processing"
 
-// 消息角色
-typedef string Role(ts.enum="true")
-const Role Role_System = "system"
-const Role Role_User = "user"
-const Role Role_Assistant = "assistant"
-
-// 消息结构
-struct Message {
-    1: optional Role role
-    2: optional common.Content content
-    3: optional map<string, string> ext
-}
 
 // Prompt评估器
 struct PromptEvaluator {
-    1: optional list<Message> message_list
+    1: optional list<common.Message> message_list
     2: optional common.ModelConfig model_config
 }
 
