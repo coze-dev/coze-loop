@@ -79,3 +79,8 @@ struct OrderBy {
     1: optional string field,
     2: optional bool is_asc,
 }
+
+struct RuntimeParam {
+    1: optional string json_value
+    2: optional string json_demo
+}
