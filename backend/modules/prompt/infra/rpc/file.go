@@ -45,3 +45,19 @@ func (f *FileRPCAdapter) MGetFileURL(ctx context.Context, keys []string) (urls m
 	}
 	return urls, nil
 }
+
+func (f *FileRPCAdapter) UploadFileForServer(ctx context.Context, mimeType string, body []byte, workspaceID int64) (key string, err error) {
+	req := &file.UploadFileForServerRequest{
+		MimeType:    mimeType,
+		Body:        body,
+		WorkspaceID: workspaceID,
+	}
+	resp, err := f.client.UploadFileForServer(ctx, req)
+	if err != nil {
+		return "", err
+	}
+	if resp.Data == nil || resp.Data.FileName == nil {
+		return "", errorx.New("upload file response invalid: missing file name")
+	}
+	return *resp.Data.FileName, nil
+}
