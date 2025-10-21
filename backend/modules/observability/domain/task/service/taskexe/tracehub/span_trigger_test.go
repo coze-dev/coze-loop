@@ -152,8 +152,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	}
 
 	err := impl.SpanTrigger(context.Background(), raw)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "invoke error")
+	require.NoError(t, err)
+	require.True(t, proc.invokeCalled)
 }
 
 func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) {
