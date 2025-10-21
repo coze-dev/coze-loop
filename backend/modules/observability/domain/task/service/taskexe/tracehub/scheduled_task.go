@@ -12,6 +12,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
@@ -75,6 +76,15 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 }
 
 func (h *TraceHubServiceImpl) transformTaskStatus() {
+	const key = "consumer_listening"
+	cfg := &config.ConsumerListening{}
+	if err := h.loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
+		return
+	}
+	if !cfg.IsEnabled || !cfg.IsAllSpace {
+		return
+	}
+
 	if slices.Contains([]string{TracehubClusterName, InjectClusterName}, os.Getenv(TceCluster)) {
 		return
 	}
@@ -91,11 +101,6 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			logs.CtxInfo(ctx, "transformTaskStatus lock held by others, skip execution")
 			return
 		}
-		defer func() {
-			if _, err := h.locker.Unlock(transformTaskStatusLockKey); err != nil {
-				logs.CtxWarn(ctx, "transformTaskStatus release lock failed", "err", err)
-			}
-		}()
 	}
 	logs.CtxInfo(ctx, "Scheduled task started...")
 
@@ -264,11 +269,6 @@ func (h *TraceHubServiceImpl) syncTaskRunCounts() {
 			logs.CtxInfo(ctx, "syncTaskRunCounts lock held by others, skip execution")
 			return
 		}
-		defer func() {
-			if _, err := h.locker.Unlock(syncTaskRunCountsLockKey); err != nil {
-				logs.CtxWarn(ctx, "syncTaskRunCounts release lock failed", "err", err)
-			}
-		}()
 	}
 	logs.CtxInfo(ctx, "Start syncing TaskRunCounts to database...")
 	// 1. Retrieve non-final task list
