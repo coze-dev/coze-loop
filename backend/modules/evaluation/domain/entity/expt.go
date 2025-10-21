@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -125,6 +126,21 @@ func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
 	return refs
 }
 
+func (e *Experiment) AsyncExec() bool {
+	return e.AsyncCallTarget() || e.AsyncCallEvaluators()
+}
+
+func (e *Experiment) AsyncCallTarget() bool {
+	if e == nil || e.Target == nil || e.Target.EvalTargetVersion == nil || e.Target.EvalTargetVersion.CustomRPCServer == nil {
+		return false
+	}
+	return gptr.Indirect(e.Target.EvalTargetVersion.CustomRPCServer.IsAsync)
+}
+
+func (e *Experiment) AsyncCallEvaluators() bool {
+	return false
+}
+
 type ExptEvaluatorVersionRef struct {
 	EvaluatorID        int64
 	EvaluatorVersionID int64
@@ -153,7 +169,7 @@ func (t *TargetConf) Valid(ctx context.Context, targetType EvalTargetType) error
 	if t == nil || t.TargetVersionID == 0 {
 		return fmt.Errorf("invalid TargetConf: %v", json.Jsonify(t))
 	}
-	if targetType == EvalTargetTypeLoopPrompt { // prompt target might receive no input
+	if targetType == EvalTargetTypeLoopPrompt || targetType == EvalTargetTypeCustomRPCServer { // prompt target might receive no input
 		return nil
 	}
 	if t.IngressConf != nil && t.IngressConf.EvalSetAdapter != nil && len(t.IngressConf.EvalSetAdapter.FieldConfs) > 0 {
@@ -295,6 +311,9 @@ type CreateEvalTargetParam struct {
 	EvalTargetType      *EvalTargetType
 	BotInfoType         *CozeBotInfoType
 	BotPublishVersion   *string
+	CustomEvalTarget    *CustomEvalTarget // 搜索对象返回的信息
+	Region              *Region
+	Env                 *string
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {

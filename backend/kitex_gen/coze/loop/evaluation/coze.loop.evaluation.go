@@ -8,6 +8,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 )
 
 type EvaluationSetService interface {
@@ -114,6 +116,58 @@ func NewEvalTargetServiceClient(c thrift.TClient) *EvalTargetServiceClient {
 	}
 }
 
+type EvalOpenAPIService interface {
+	openapi.EvaluationOpenAPIService
+}
+
+type EvalOpenAPIServiceClient struct {
+	*openapi.EvaluationOpenAPIServiceClient
+}
+
+func NewEvalOpenAPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
+		EvaluationOpenAPIServiceClient: openapi.NewEvaluationOpenAPIServiceClientFactory(t, f),
+	}
+}
+
+func NewEvalOpenAPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
+		EvaluationOpenAPIServiceClient: openapi.NewEvaluationOpenAPIServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewEvalOpenAPIServiceClient(c thrift.TClient) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
+		EvaluationOpenAPIServiceClient: openapi.NewEvaluationOpenAPIServiceClient(c),
+	}
+}
+
+type EvalSPIService interface {
+	spi.EvaluationSPIService
+}
+
+type EvalSPIServiceClient struct {
+	*spi.EvaluationSPIServiceClient
+}
+
+func NewEvalSPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *EvalSPIServiceClient {
+	return &EvalSPIServiceClient{
+		EvaluationSPIServiceClient: spi.NewEvaluationSPIServiceClientFactory(t, f),
+	}
+}
+
+func NewEvalSPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *EvalSPIServiceClient {
+	return &EvalSPIServiceClient{
+		EvaluationSPIServiceClient: spi.NewEvaluationSPIServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewEvalSPIServiceClient(c thrift.TClient) *EvalSPIServiceClient {
+	return &EvalSPIServiceClient{
+		EvaluationSPIServiceClient: spi.NewEvaluationSPIServiceClient(c),
+	}
+}
+
 type EvaluationSetServiceProcessor struct {
 	*eval_set.EvaluationSetServiceProcessor
 }
@@ -147,5 +201,23 @@ type EvalTargetServiceProcessor struct {
 
 func NewEvalTargetServiceProcessor(handler EvalTargetService) *EvalTargetServiceProcessor {
 	self := &EvalTargetServiceProcessor{eval_target.NewEvalTargetServiceProcessor(handler)}
+	return self
+}
+
+type EvalOpenAPIServiceProcessor struct {
+	*openapi.EvaluationOpenAPIServiceProcessor
+}
+
+func NewEvalOpenAPIServiceProcessor(handler EvalOpenAPIService) *EvalOpenAPIServiceProcessor {
+	self := &EvalOpenAPIServiceProcessor{openapi.NewEvaluationOpenAPIServiceProcessor(handler)}
+	return self
+}
+
+type EvalSPIServiceProcessor struct {
+	*spi.EvaluationSPIServiceProcessor
+}
+
+func NewEvalSPIServiceProcessor(handler EvalSPIService) *EvalSPIServiceProcessor {
+	self := &EvalSPIServiceProcessor{spi.NewEvaluationSPIServiceProcessor(handler)}
 	return self
 }
