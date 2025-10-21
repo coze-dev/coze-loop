@@ -37,6 +37,11 @@ const App = () => {
         <Route path="evaluators" element={<EvaluatorListPage />} />
 
         <Route path="evaluators/create/llm" element={<EvaluatorCreatePage />} />
+
+        <Route
+          path="evaluators/create/llm/:id"
+          element={<EvaluatorCreatePage />}
+        />
         <Route
           path="evaluators/create/code"
           element={<CodeEvaluatorCreatePage />}

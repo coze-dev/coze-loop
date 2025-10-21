@@ -115,6 +115,9 @@ export function PromptField({
   const afterTemplateSelect = (payload: PromptEvaluator) => {
     promptEvaluatorFieldApi.setValue({
       ...promptEvaluator,
+      model_config:
+        formValues?.current_version?.evaluator_content?.prompt_evaluator
+          ?.model_config,
       message_list: payload.message_list,
       prompt_source_type: PromptSourceType.BuiltinTemplate,
       prompt_template_key: payload.prompt_template_key,
