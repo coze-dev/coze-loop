@@ -266,10 +266,12 @@ enum ItemErrorType {
     ExceedMaxImageSize = 11   // 图片大小超限
     GetImageFailed = 12       // 图片获取失败（例如图片不存在/访问不在白名单内的内网链接）
     IllegalExtension = 13     // 文件扩展名不合法
+    ExceedMaxPartCount = 14   // 多模态节点数量超限
 
     /* system error*/
     InternalError = 100
-
+    ClearDatasetFailed = 101  // 清空数据集失败
+    RWFileFailed = 102        // 读写文件失败
     UploadImageFailed = 103   // 上传图片失败
 }
 
