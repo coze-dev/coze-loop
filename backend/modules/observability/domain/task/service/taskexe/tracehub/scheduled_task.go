@@ -46,6 +46,7 @@ const (
 
 // startScheduledTask launches the scheduled task goroutine
 func (h *TraceHubServiceImpl) startScheduledTask() {
+	h.syncTaskCache()
 	go func() {
 		for {
 			select {
