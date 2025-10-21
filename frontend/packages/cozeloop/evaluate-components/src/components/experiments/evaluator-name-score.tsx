@@ -1,24 +1,30 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import classNames from 'classnames';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { IconButtonContainer, JumpIconButton } from '@cozeloop/components';
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
 import {
   type EvaluatorResult,
   type UserInfo,
   type Experiment,
   type ColumnEvaluator,
+  EvaluatorType,
 } from '@cozeloop/api-schema/evaluation';
-import { IconCozPencil } from '@coze-arch/coze-design/icons';
+import {
+  IconCozAiFill,
+  IconCozCode,
+  IconCozPencil,
+} from '@coze-arch/coze-design/icons';
 import { Divider, Popover, Tag, Toast, Tooltip } from '@coze-arch/coze-design';
 
 import { useGlobalEvalConfig } from '@/stores/eval-global-config';
 
 import { TypographyText } from '../text-ellipsis';
+import { getEvaluatorJumpUrl } from '../evaluator/utils';
 import { CozeUser } from '../common/coze-user';
 import { TraceTrigger } from './trace-trigger';
 import {
@@ -29,6 +35,7 @@ import {
 
 interface NameScoreTagProps {
   name: string | undefined;
+  type?: EvaluatorType;
   evaluatorResult: EvaluatorResult | undefined;
   updateUser?: UserInfo;
   version: string | undefined;
@@ -96,36 +103,59 @@ export function EvaluatorResultPanel({
 }
 
 // eslint-disable-next-line complexity
-export function EvaluatorNameScoreTag({
-  name,
-  evaluatorResult,
-  updateUser,
-  version,
-  showVersion = true,
-  evaluatorID,
-  evaluatorVersionID,
-  evaluatorRecordID,
-  spaceID = '',
-  traceID,
-  startTime,
-  endTime,
-  enableLinkJump,
-  enableTrace,
-  enableEditScore,
-  enableCorrectScorePopover,
-  defaultShowAction = false,
-  border = true,
-  onSuccess,
-  onReportCalibration,
-  onReportEvaluatorTrace,
-  customSubmitManualScore,
-}: NameScoreTagProps) {
+export function EvaluatorNameScoreTag(props: NameScoreTagProps) {
+  const {
+    name,
+    type,
+    evaluatorResult,
+    updateUser,
+    version,
+    showVersion = true,
+    evaluatorID,
+    evaluatorVersionID,
+    evaluatorRecordID,
+    spaceID = '',
+    traceID,
+    startTime,
+    endTime,
+    enableLinkJump,
+    enableTrace,
+    enableEditScore,
+    enableCorrectScorePopover,
+    defaultShowAction = false,
+    border = true,
+    onSuccess,
+    onReportCalibration,
+    onReportEvaluatorTrace,
+    customSubmitManualScore,
+  } = props;
   const [visible, setVisible] = useState(false);
   const [panelVisible, setPanelVisible] = useState(false);
-  const { baseURL } = useBaseURL();
+  const { openBlank } = useOpenWindow();
   const scoreRef = useRef<HTMLDivElement>(null);
   const { traceEvaluatorPlatformType } = useGlobalEvalConfig();
   const { score, correction } = evaluatorResult ?? {};
+
+  const icon = useMemo(() => {
+    if (type === EvaluatorType.Code) {
+      return <IconCozCode color="var(--coz-fg-secondary)" />;
+    }
+    if (type === EvaluatorType.Prompt) {
+      return <IconCozAiFill color="var(--coz-fg-secondary)" />;
+    }
+    return null;
+  }, [type]);
+
+  const jumpUrl = useMemo(() => {
+    if (!enableLinkJump) {
+      return '';
+    }
+    return getEvaluatorJumpUrl({
+      evaluatorType: type,
+      evaluatorId: evaluatorID,
+      evaluatorVersionId: evaluatorVersionID,
+    });
+  }, [type, evaluatorID, evaluatorVersionID, enableLinkJump]);
 
   const borderClass = border
     ? 'border border-solid border-[var(--coz-stroke-primary)] cursor-pointer hover:bg-[var(--coz-mg-primary)] hover:border-[var(--coz-stroke-plus)]'
@@ -140,8 +170,9 @@ export function EvaluatorNameScoreTag({
   return (
     <div className={'group flex items-center text-[var(--coz-fg-primary)]'}>
       <div
-        className={`flex items-center h-5 px-2 rounded-[3px] gap-1 text-xs font-medium ${borderClass}`}
+        className={`flex items-center h-5 px-2 max-w-full rounded-[3px] gap-1 text-xs font-medium ${borderClass}`}
       >
+        {icon}
         <TypographyText className="max-w-10">{name ?? '-'}</TypographyText>
         {showVersion ? (
           <>
@@ -195,9 +226,7 @@ export function EvaluatorNameScoreTag({
               <JumpIconButton
                 className={defaultShowAction ? '' : 'hidden group-hover:flex'}
                 onClick={() => {
-                  window.open(
-                    `${baseURL}/evaluation/evaluators/${evaluatorID}?version=${evaluatorVersionID}`,
-                  );
+                  openBlank(jumpUrl);
                 }}
               />
             </div>
@@ -301,12 +330,14 @@ export function EvaluatorNameScore({
     name,
     version,
     evaluator_version_id: versionId,
+    evaluator_type,
   } = evaluator ?? {};
 
   if (!enablePopover) {
     return (
       <EvaluatorNameScoreTag
         name={name}
+        type={evaluator_type}
         evaluatorResult={evaluatorResult}
         updateUser={updateUser}
         version={version}
@@ -339,6 +370,7 @@ export function EvaluatorNameScore({
         <div className="p-1" style={{ color: 'var(--coz-fg-secondary)' }}>
           <EvaluatorNameScoreTag
             name={name}
+            type={evaluator_type}
             evaluatorResult={evaluatorResult}
             updateUser={updateUser}
             version={version}
@@ -366,6 +398,7 @@ export function EvaluatorNameScore({
       <div>
         <EvaluatorNameScoreTag
           name={name}
+          type={evaluator_type}
           evaluatorResult={evaluatorResult}
           updateUser={updateUser}
           version={version}

@@ -67,15 +67,17 @@ services:
       COZE_LOOP_RMQ_NAMESRV_DOMAIN: "${COZE_LOOP_RMQ_NAMESRV_DOMAIN}"
       COZE_LOOP_RMQ_NAMESRV_PORT: "${COZE_LOOP_RMQ_NAMESRV_PORT}"
       # faas
-      COZE_LOOP_PYTHON_FAAS_URL: "http://coze-loop-python-faas:8000"
-      COZE_LOOP_JS_FAAS_URL: "http://coze-loop-js-faas:8000"
+      COZE_LOOP_PYTHON_FAAS_DOMAIN: "${COZE_LOOP_PYTHON_FAAS_DOMAIN}"
+      COZE_LOOP_PYTHON_FAAS_PORT: "${COZE_LOOP_PYTHON_FAAS_PORT}"
+      COZE_LOOP_JS_FAAS_DOMAIN: "${COZE_LOOP_JS_FAAS_DOMAIN}"
+      COZE_LOOP_JS_FAAS_PORT: "${COZE_LOOP_JS_FAAS_PORT}"
     entrypoint: [ "sh", "/coze-loop/bootstrap/entrypoint.sh" ]
     healthcheck:
       test: [ "CMD", "sh", "/coze-loop/bootstrap/healthcheck.sh" ]
       interval: 15s
-      timeout: 10s
-      retries: 50
-      start_period: 30s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
 
   redis:
     profiles: [ "redis" ]
@@ -302,104 +304,50 @@ services:
       retries: 5
       start_period: 10s
 
-  # Python FaaS服务 - 增强版实现 (Deno + 真实 Python 执行)
+  # Python FaaS服务 - 增强版系统Python执行
   coze-loop-python-faas:
     profiles: [ "faas", "app" ]
     container_name: "coze-loop-python-faas"
-    image: "denoland/deno:1.45.5"
+    image: "${COZE_LOOP_PYTHON_FAAS_IMAGE_REGISTRY}/${COZE_LOOP_PYTHON_FAAS_IMAGE_REPOSITORY}/${COZE_LOOP_PYTHON_FAAS_IMAGE_NAME}:${COZE_LOOP_PYTHON_FAAS_IMAGE_TAG}"
     restart: always
     networks:
       - coze-loop-network
-    ports:
-      - "${COZE_LOOP_PYTHON_FAAS_PORT:-8890}:8000"
     volumes:
-      - ./bootstrap/python-faas:/app/bootstrap:ro  # 只读挂载
+      - python_faas_workspace:/tmp/faas-workspace
+      - ./bootstrap/python-faas:/coze-loop-python-faas/bootstrap:ro  # 只读挂载
     environment:
       # Deno 配置
-      DENO_DIR: "/tmp/.deno"
-      DENO_NO_UPDATE_CHECK: "1"
-      DENO_V8_FLAGS: "--max-old-space-size=2048"
-      
-      # Python 配置
-      PYTHONUNBUFFERED: "1"
-      PYTHONDONTWRITEBYTECODE: "1"
-      PYTHONPATH: ""
-      
+      DENO_DIR: "${DENO_DIR}"
+      DENO_NO_UPDATE_CHECK: "${DENO_NO_UPDATE_CHECK}"
+      DENO_V8_FLAGS: "${DENO_V8_FLAGS}"
       # FaaS 基础配置
-      FAAS_WORKSPACE: "/tmp/faas-workspace"
-      FAAS_PORT: "8000"
-      FAAS_TIMEOUT: "30000"
-      FAAS_LANGUAGE: "python"
-      
-      # 安全配置
-      FAAS_SECURITY_LEVEL: "production"
-      
+      FAAS_WORKSPACE: "${FAAS_WORKSPACE}"
+      FAAS_PORT: "${FAAS_PORT}"
+      FAAS_TIMEOUT: "${FAAS_TIMEOUT}"
+      FAAS_LANGUAGE: "${FAAS_LANGUAGE}"
+      # 预装Python包版本配置（使用兼容版本）
+      NUMPY_VERSION: "${NUMPY_VERSION}"
+      PANDAS_VERSION: "${PANDAS_VERSION}"
+      JSONSCHEMA_VERSION: "${JSONSCHEMA_VERSION}"
+      SCIPY_VERSION: "${SCIPY_VERSION}"
+      SKLEARN_VERSION: "${SKLEARN_VERSION}"
     working_dir: /app
-    command: [
-      "sh", "-c",
-      "apt-get update && apt-get install -y python3 python3-pip && pip3 install --break-system-packages numpy pandas matplotlib requests && exec deno run --allow-net=0.0.0.0:8000 --allow-env --allow-read=/app --allow-write=/tmp --allow-run=python3 /app/bootstrap/enhanced_python_faas_server.ts"
-    ]
-    deploy:
-      resources:
-        limits:
-          memory: "${PYTHON_FAAS_MEMORY_LIMIT:-4G}"  # 生产级内存配置
-          cpus: "${PYTHON_FAAS_CPU_LIMIT:-2.0}"
-        reservations:
-          memory: "${PYTHON_FAAS_MEMORY_RESERVE:-2G}"
-          cpus: "${PYTHON_FAAS_CPU_RESERVE:-1.0}"
-    # read_only: true  # 暂时禁用只读文件系统以安装包
+    entrypoint: [ "sh", "/coze-loop-python-faas/bootstrap/entrypoint.sh" ]
     tmpfs:
       - /tmp:noexec,nosuid,size=1g,mode=1777
     security_opt:
       - no-new-privileges:true
-      - seccomp:unconfined  # 允许 WebAssembly
     cap_drop:
       - ALL
     cap_add:
       - SETUID
       - SETGID
-    # user: "1000:1000"  # 暂时使用 root 用户来安装包
     healthcheck:
-      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { const data = await resp.json(); if (data.status === 'healthy') { console.log('Health: OK'); Deno.exit(0); } else { console.log('Health: Degraded'); Deno.exit(1); } } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 10s  # 稳定版本快速启动
-
-  # Python FaaS服务 - 原有实现 (备份，已禁用)
-  # coze-loop-python-faas-legacy:
-  #   profiles: [ "faas-legacy" ]  # 使用不同的 profile
-  #   container_name: "coze-loop-python-faas-legacy"
-  #   image: "python:3.11-slim"
-  #   restart: always
-  #   networks:
-  #     - coze-loop-network
-  #   ports:
-  #     - "8891:8000"  # 使用不同端口避免冲突
-  #   volumes:
-  #     - python_faas_workspace:/tmp/faas-workspace
-  #     - ./bootstrap/python-faas:/app/bootstrap
-  #   environment:
-  #     FAAS_WORKSPACE: "/tmp/faas-workspace"
-  #     FAAS_PORT: "8000"
-  #     FAAS_TIMEOUT: "30000"
-  #     FAAS_LANGUAGE: "python"
-  #   working_dir: /app
-  #   command: ["python3", "/app/bootstrap/python_faas_server.py"]
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: "${PYTHON_FAAS_MEMORY_LIMIT:-1G}"
-  #         cpus: "${PYTHON_FAAS_CPU_LIMIT:-0.5}"
-  #       reservations:
-  #         memory: "${PYTHON_FAAS_MEMORY_RESERVE:-256M}"
-  #         cpus: "${PYTHON_FAAS_CPU_RESERVE:-0.25}"
-  #   healthcheck:
-  #     test: ["CMD", "python3", "-c", "import urllib.request; import json; resp = urllib.request.urlopen('http://localhost:8000/health'); data = json.loads(resp.read().decode()); print('Health:', data['status']); exit(0 if data['status'] == 'healthy' else 1)"]
-  #     interval: 15s
-  #     timeout: 10s
-  #     retries: 5
-  #     start_period: 30s
+      test: [ "CMD", "sh", "/coze-loop-python-faas/bootstrap/healthcheck.sh" ]
+      interval: 60s
+      timeout: 20s
+      retries: 20
+      start_period: 120s
 
   # JavaScript FaaS服务
   coze-loop-js-faas:
@@ -409,11 +357,9 @@ services:
     restart: always
     networks:
       - coze-loop-network
-    ports:
-      - "${COZE_LOOP_JS_FAAS_PORT:-8891}:8000"
     volumes:
       - js_faas_workspace:/tmp/faas-workspace
-      - ./bootstrap/js-faas:/app/bootstrap
+      - ./bootstrap/js-faas:/coze-loop-js-faas/bootstrap
     environment:
       DENO_DIR: "/tmp/.deno"
       DENO_NO_UPDATE_CHECK: "1"
@@ -422,21 +368,13 @@ services:
       FAAS_TIMEOUT: "30000"
       FAAS_LANGUAGE: "javascript"
     working_dir: /app
-    command: ["deno", "run", "--allow-all", "/app/bootstrap/js_faas_server.ts"]
-    deploy:
-      resources:
-        limits:
-          memory: "${JS_FAAS_MEMORY_LIMIT:-1G}"
-          cpus: "${JS_FAAS_CPU_LIMIT:-0.5}"
-        reservations:
-          memory: "${JS_FAAS_MEMORY_RESERVE:-256M}"
-          cpus: "${JS_FAAS_CPU_RESERVE:-0.25}"
+    entrypoint: [ "sh", "/coze-loop-js-faas/bootstrap/entrypoint.sh" ]
     healthcheck:
-      test: ["CMD", "deno", "eval", "try { const resp = await fetch('http://localhost:8000/health'); if (resp.ok) { const data = await resp.json(); console.log('Health:', data.status); Deno.exit(0); } else { Deno.exit(1); } } catch (e) { console.error(e); Deno.exit(1); }"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+      test: [ "CMD", "sh", "/coze-loop-js-faas/bootstrap/healthcheck.sh" ]
+      interval: 60s
+      timeout: 20s
+      retries: 20
+      start_period: 120s
 
 volumes:
   redis_data:
@@ -454,7 +392,7 @@ volumes:
   rmq_broker_data:
     name: coze-loop_rocketmq_broker_data
   nginx_data:
-    name: coze-loop_nginx_data
+    name: ${COZE_LOOP_NGINX_DATA_VOLUME_NAME}
   python_faas_workspace:
     name: coze-loop_python_faas_workspace
   js_faas_workspace:

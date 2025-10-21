@@ -53,6 +53,12 @@ const (
 	openInferenceAttributeToolInput = "tool"
 )
 
+// springAI attribute key
+const (
+	springAIAttributeToolInput  = "spring.ai.tool.call.arguments"
+	springAIAttributeToolOutput = "spring.ai.tool.call.result"
+)
+
 // otel event name
 const (
 	// model

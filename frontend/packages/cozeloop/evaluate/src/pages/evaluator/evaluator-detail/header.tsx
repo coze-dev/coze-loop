@@ -21,15 +21,7 @@ import {
 } from '../evaluator-create/debug-button';
 import { type BaseInfo, BaseInfoModal } from './base-info-modal';
 
-export function Header({
-  evaluator,
-  selectedVersion,
-  autoSaveService,
-  onChangeBaseInfo,
-  onOpenVersionList,
-  onSubmitVersion,
-  debugButtonProps,
-}: {
+interface HeaderProps {
   evaluator?: Evaluator;
   selectedVersion?: EvaluatorVersion;
   autoSaveService: Result<
@@ -43,9 +35,20 @@ export function Header({
   onChangeBaseInfo: (values: BaseInfo) => void;
   onOpenVersionList: () => void;
   onSubmitVersion: () => void;
+  customDebugButton?: React.ReactNode;
+  debugButtonProps?: DebugButtonProps;
+}
 
-  debugButtonProps: DebugButtonProps;
-}) {
+export function Header({
+  evaluator,
+  selectedVersion,
+  autoSaveService,
+  onChangeBaseInfo,
+  onOpenVersionList,
+  onSubmitVersion,
+  debugButtonProps,
+  customDebugButton,
+}: HeaderProps) {
   const [editVisible, setEditVisible] = useState(false);
 
   const renderAutoSave = () => {
@@ -121,6 +124,10 @@ export function Header({
     );
   };
 
+  const DebugButtonComponent =
+    customDebugButton ||
+    (debugButtonProps ? <DebugButton {...debugButtonProps} /> : null);
+
   return (
     <>
       <div className="px-6 py-2 h-[64px] flex-shrink-0 flex flex-row items-center border-0 border-b border-solid coz-stroke-primary">
@@ -147,14 +154,14 @@ export function Header({
           <Button color="primary" onClick={onOpenVersionList}>
             {I18n.t('version_record')}
           </Button>
-          {selectedVersion ? null : <DebugButton {...debugButtonProps} />}
-          {selectedVersion ? null : (
+          {!selectedVersion ? DebugButtonComponent : null}
+          {!selectedVersion ? (
             <Guard point={GuardPoint['eval.evaluator.commit']}>
               <Button color="brand" onClick={onSubmitVersion}>
                 {I18n.t('submit_new_version')}
               </Button>
             </Guard>
-          )}
+          ) : null}
         </div>
       </div>
       <BaseInfoModal

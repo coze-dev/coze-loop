@@ -20,7 +20,7 @@ type CreateEvaluationSetRequest struct {
 	EvaluationSetSchema *eval_set.EvaluationSetSchema `thrift:"evaluation_set_schema,4,optional" frugal:"4,optional,eval_set.EvaluationSetSchema" form:"evaluation_set_schema" json:"evaluation_set_schema,omitempty" query:"evaluation_set_schema"`
 	// 业务分类
 	BizCategory *eval_set.BizCategory `thrift:"biz_category,5,optional" frugal:"5,optional,string" form:"biz_category" json:"biz_category,omitempty" query:"biz_category"`
-	Session     *common.Session       `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Session     *common.Session       `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"-" json:"-" query:"-"`
 	Base        *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -8488,9 +8488,10 @@ func (p *BatchCreateEvaluationSetItemsRequest) Field255DeepEqual(src *base.Base)
 
 type BatchCreateEvaluationSetItemsResponse struct {
 	// key: item 在 items 中的索引
-	AddedItems map[int64]int64           `thrift:"added_items,1,optional" frugal:"1,optional,map<i64:i64>" json:"added_items" form:"added_items" query:"added_items"`
-	Errors     []*dataset.ItemErrorGroup `thrift:"errors,2,optional" frugal:"2,optional,list<dataset.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
-	BaseResp   *base.BaseResp            `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	AddedItems  map[int64]int64                    `thrift:"added_items,1,optional" frugal:"1,optional,map<i64:i64>" json:"added_items" form:"added_items" query:"added_items"`
+	Errors      []*dataset.ItemErrorGroup          `thrift:"errors,2,optional" frugal:"2,optional,list<dataset.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
+	ItemOutputs []*dataset.CreateDatasetItemOutput `thrift:"item_outputs,3,optional" frugal:"3,optional,list<dataset.CreateDatasetItemOutput>" form:"item_outputs" json:"item_outputs,omitempty" query:"item_outputs"`
+	BaseResp    *base.BaseResp                     `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewBatchCreateEvaluationSetItemsResponse() *BatchCreateEvaluationSetItemsResponse {
@@ -8524,6 +8525,18 @@ func (p *BatchCreateEvaluationSetItemsResponse) GetErrors() (v []*dataset.ItemEr
 	return p.Errors
 }
 
+var BatchCreateEvaluationSetItemsResponse_ItemOutputs_DEFAULT []*dataset.CreateDatasetItemOutput
+
+func (p *BatchCreateEvaluationSetItemsResponse) GetItemOutputs() (v []*dataset.CreateDatasetItemOutput) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemOutputs() {
+		return BatchCreateEvaluationSetItemsResponse_ItemOutputs_DEFAULT
+	}
+	return p.ItemOutputs
+}
+
 var BatchCreateEvaluationSetItemsResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *BatchCreateEvaluationSetItemsResponse) GetBaseResp() (v *base.BaseResp) {
@@ -8541,6 +8554,9 @@ func (p *BatchCreateEvaluationSetItemsResponse) SetAddedItems(val map[int64]int6
 func (p *BatchCreateEvaluationSetItemsResponse) SetErrors(val []*dataset.ItemErrorGroup) {
 	p.Errors = val
 }
+func (p *BatchCreateEvaluationSetItemsResponse) SetItemOutputs(val []*dataset.CreateDatasetItemOutput) {
+	p.ItemOutputs = val
+}
 func (p *BatchCreateEvaluationSetItemsResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -8548,6 +8564,7 @@ func (p *BatchCreateEvaluationSetItemsResponse) SetBaseResp(val *base.BaseResp) 
 var fieldIDToName_BatchCreateEvaluationSetItemsResponse = map[int16]string{
 	1:   "added_items",
 	2:   "errors",
+	3:   "item_outputs",
 	255: "BaseResp",
 }
 
@@ -8557,6 +8574,10 @@ func (p *BatchCreateEvaluationSetItemsResponse) IsSetAddedItems() bool {
 
 func (p *BatchCreateEvaluationSetItemsResponse) IsSetErrors() bool {
 	return p.Errors != nil
+}
+
+func (p *BatchCreateEvaluationSetItemsResponse) IsSetItemOutputs() bool {
+	return p.ItemOutputs != nil
 }
 
 func (p *BatchCreateEvaluationSetItemsResponse) IsSetBaseResp() bool {
@@ -8592,6 +8613,14 @@ func (p *BatchCreateEvaluationSetItemsResponse) Read(iprot thrift.TProtocol) (er
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8686,6 +8715,29 @@ func (p *BatchCreateEvaluationSetItemsResponse) ReadField2(iprot thrift.TProtoco
 	p.Errors = _field
 	return nil
 }
+func (p *BatchCreateEvaluationSetItemsResponse) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.CreateDatasetItemOutput, 0, size)
+	values := make([]dataset.CreateDatasetItemOutput, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ItemOutputs = _field
+	return nil
+}
 func (p *BatchCreateEvaluationSetItemsResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -8707,6 +8759,10 @@ func (p *BatchCreateEvaluationSetItemsResponse) Write(oprot thrift.TProtocol) (e
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -8786,6 +8842,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *BatchCreateEvaluationSetItemsResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemOutputs() {
+		if err = oprot.WriteFieldBegin("item_outputs", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ItemOutputs)); err != nil {
+			return err
+		}
+		for _, v := range p.ItemOutputs {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 func (p *BatchCreateEvaluationSetItemsResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -8823,6 +8905,9 @@ func (p *BatchCreateEvaluationSetItemsResponse) DeepEqual(ano *BatchCreateEvalua
 	if !p.Field2DeepEqual(ano.Errors) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.ItemOutputs) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -8848,6 +8933,19 @@ func (p *BatchCreateEvaluationSetItemsResponse) Field2DeepEqual(src []*dataset.I
 		return false
 	}
 	for i, v := range p.Errors {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchCreateEvaluationSetItemsResponse) Field3DeepEqual(src []*dataset.CreateDatasetItemOutput) bool {
+
+	if len(p.ItemOutputs) != len(src) {
+		return false
+	}
+	for i, v := range p.ItemOutputs {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

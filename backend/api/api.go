@@ -11,6 +11,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/app/server/binding"
 	"github.com/cloudwego/hertz/pkg/app/server/render"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 
 	"github.com/coze-dev/coze-loop/backend/api/handler/coze/loop/apis"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
@@ -29,6 +30,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/data/lotag"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loeval_set"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loevaluator"
+	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loexpt"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/lofile"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/louser"
@@ -115,6 +117,10 @@ func Init(
 		lotag.NewLocalTagService(dataHandler.TagService),
 		limiterFactory,
 		lodataset.NewLocalDatasetService(dataHandler.IDatasetApplication),
+		cmdable,
+		loexpt.NewLocalExperimentService(evaluationHandler.IExperimentApplication),
+		processor.TaskProcessor{},
+		0,
 	)
 	if err != nil {
 		return nil, err

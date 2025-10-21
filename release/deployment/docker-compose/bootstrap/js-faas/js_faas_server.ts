@@ -35,54 +35,60 @@ class JavaScriptExecutor {
 
   async executeJavaScript(code: string, timeout = 30000): Promise<ExecutionResult> {
     this.executionCount++;
-    
-    // 预处理用户代码，移除用户定义的return_val函数（包括多行注释）
-    const processedCode = code.replace(/function\s+return_val[^}]*\}[^}]*\}/g, '');
-    
+
+    // 保留用户代码原样，避免移除由后端注入的 return_val 实现
+    const processedCode = code;
+    // 将用户代码写入独立临时文件，避免任何模板拼接/转义问题
+    const userCodeFile = await this.createUserCodeFile(processedCode);
+
     // 直接构造包装代码，不使用模板字符串的嵌套
-    const wrappedCode = `
-let userStdout = '';
-let userStderr = '';
-let returnValue = '';
-
-// 重定向console输出
-const originalLog = console.log;
-const originalError = console.error;
-
-console.log = (...args) => {
-  userStdout += args.join(' ') + '\\n';
-};
-
-console.error = (...args) => {
-  userStderr += args.join(' ') + '\\n';
-};
-
-try {
-  // 先定义系统的return_val捕获函数
-  function return_val(value) {
-    returnValue = typeof value === 'string' ? value : JSON.stringify(value);
-  }
-  
-  // 直接执行用户代码，用户代码中的return_val调用会被我们的函数捕获
-  ` + processedCode + `
-  
-  // 使用原始console.log输出结果
-  originalLog(JSON.stringify({
-    stdout: userStdout,
-    stderr: userStderr,
-    ret_val: returnValue
-  }));
-} catch (error) {
-  originalLog(JSON.stringify({
-    stdout: userStdout,
-    stderr: userStderr + error.message + '\\n',
-    ret_val: ''
-  }));
-}
-    `;
+    // 不再添加return_val函数定义，使用runtime中提供的实现
+    const wrappedLines: string[] = [];
+    wrappedLines.push("let userStdout = '';");
+    wrappedLines.push("let userStderr = '';");
+    wrappedLines.push("let returnValue = '';");
+    wrappedLines.push("");
+    wrappedLines.push("const originalLog = console.log;");
+    wrappedLines.push("const originalError = console.error;");
+    wrappedLines.push("");
+    wrappedLines.push("console.log = (...args) => {");
+    wrappedLines.push("  userStdout += args.join(' ') + \"\\n\";");
+    wrappedLines.push("};");
+    wrappedLines.push("");
+    wrappedLines.push("console.error = (...args) => {");
+    wrappedLines.push("  userStderr += args.join(' ') + \"\\n\";");
+    wrappedLines.push("};");
+    wrappedLines.push("");
+    wrappedLines.push("try {");
+    wrappedLines.push("  const __userCode = await Deno.readTextFile(" + JSON.stringify(userCodeFile) + ");");
+    wrappedLines.push("  (new Function('__code', 'return (function(){ \"use strict\"; return eval(__code); })();'))(__userCode);");
+    wrappedLines.push("");
+    wrappedLines.push("  if (!returnValue && userStdout.trim()) {");
+    wrappedLines.push("    const lines = userStdout.trim().split('\\n');");
+    wrappedLines.push("    for (let i = lines.length - 1; i >= 0; i--) {");
+    wrappedLines.push("      const line = lines[i].trim();");
+    wrappedLines.push("      if (line.startsWith('{') && line.endsWith('}')) {");
+    wrappedLines.push("        try {");
+    wrappedLines.push("          JSON.parse(line);");
+    wrappedLines.push("          returnValue = line;");
+    wrappedLines.push("          lines.splice(i, 1);");
+    wrappedLines.push("          userStdout = lines.join('\\n');");
+    wrappedLines.push("          break;");
+    wrappedLines.push("        } catch (_) {");
+    wrappedLines.push("        }");
+    wrappedLines.push("      }");
+    wrappedLines.push("    }");
+    wrappedLines.push("  }");
+    wrappedLines.push("");
+    wrappedLines.push("  originalLog(JSON.stringify({ stdout: userStdout, stderr: userStderr, ret_val: returnValue }));");
+    wrappedLines.push("} catch (error) {");
+    wrappedLines.push("  const msg = (error && error.stack) ? String(error.stack) : String((error && error.message) || error);");
+    wrappedLines.push("  originalLog(JSON.stringify({ stdout: userStdout, stderr: userStderr + msg + \"\\n\", ret_val: '' }));");
+    wrappedLines.push("}");
+    const wrappedCode = wrappedLines.join('\n');
 
     const tempFile = await this.createTempFile(wrappedCode);
-    
+
     try {
       return await this.executeCode(tempFile, timeout);
     } finally {
@@ -93,16 +99,24 @@ try {
   private async createTempFile(code: string): Promise<string> {
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substr(2, 9);
-    const tempFile = `/tmp/faas-workspace/temp_${timestamp}_${randomId}.ts`;
-    
+    const tempFile = `/tmp/faas-workspace/temp_${timestamp}_${randomId}.js`;
+
     await Deno.writeTextFile(tempFile, code);
     return tempFile;
+  }
+
+  private async createUserCodeFile(code: string): Promise<string> {
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substr(2, 9);
+    const userFile = `/tmp/faas-workspace/user_${timestamp}_${randomId}.js`;
+    await Deno.writeTextFile(userFile, code);
+    return userFile;
   }
 
   private async executeCode(tempFile: string, timeout: number): Promise<ExecutionResult> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
+
     try {
       const command = new Deno.Command("deno", {
         args: ["run", "--allow-all", "--quiet", tempFile],
@@ -110,12 +124,12 @@ try {
         stderr: "piped",
         signal: controller.signal,
       });
-      
+
       const { code: exitCode, stdout, stderr } = await command.output();
-      
+
       const stdoutText = new TextDecoder().decode(stdout);
       const stderrText = new TextDecoder().decode(stderr);
-      
+
       if (exitCode === 0 && stdoutText.trim()) {
         // 按行分割，找到最后一个有效的JSON行
         const lines = stdoutText.trim().split('\n');
@@ -135,7 +149,7 @@ try {
           }
         }
       }
-      
+
       // 回退逻辑：直接返回所有输出
       return {
         stdout: stdoutText,
@@ -177,9 +191,9 @@ class JavaScriptFaaSServer {
   async handleRunCode(request: Request): Promise<Response> {
     try {
       const body: ExecutionRequest = await request.json();
-      const { 
-        language, 
-        code, 
+      const {
+        language,
+        code,
         timeout = 30000
       } = body;
 
@@ -209,6 +223,10 @@ class JavaScriptFaaSServer {
           stdout: result.stdout,
           stderr: result.stderr,
           ret_val: result.returnValue
+        },
+        workload_info: {
+          id: "e6008730-9475-4b7d-9fc6-19511e1b2785",
+          status: "Used"
         },
         metadata: {
           language: "javascript",
@@ -240,8 +258,8 @@ class JavaScriptFaaSServer {
       version: "js-faas-v1.0.0",
       execution_count: this.executor.getExecutionCount()
     };
-    
-    return new Response(JSON.stringify(healthData), { 
+
+    return new Response(JSON.stringify(healthData), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
@@ -253,7 +271,7 @@ class JavaScriptFaaSServer {
       execution_count: this.executor.getExecutionCount(),
       timestamp: new Date().toISOString()
     };
-    
+
     return new Response(JSON.stringify(metrics), {
       status: 200,
       headers: { "Content-Type": "application/json" }
@@ -301,7 +319,7 @@ async function main() {
       return await faasServer.handleRunCode(request);
     }
 
-    return new Response("Not Found", { 
+    return new Response("Not Found", {
       status: 404,
       headers: { "Content-Type": "text/plain" }
     });

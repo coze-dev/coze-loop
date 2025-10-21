@@ -23,7 +23,6 @@ import (
 type MockTraceFilterProcessorBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockTraceFilterProcessorBuilderMockRecorder
-	isgomock struct{}
 }
 
 // MockTraceFilterProcessorBuilderMockRecorder is the mock recorder for MockTraceFilterProcessorBuilder.

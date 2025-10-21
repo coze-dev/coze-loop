@@ -208,7 +208,7 @@ func (l *LocalEvaluationOpenAPIService) ListEvaluationSetVersionItemsOApi(ctx co
 }
 
 // UpdateEvaluationSetSchemaOApi
-// 1.9 更新评测集字段
+// 1.9 更新评测集字段信息
 func (l *LocalEvaluationOpenAPIService) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (*openapi.UpdateEvaluationSetSchemaOApiResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs)

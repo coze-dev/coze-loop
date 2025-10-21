@@ -6216,6 +6216,20 @@ func (p *BatchCreateEvaluationSetItemsResponse) FastRead(buf []byte) (int, error
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -6305,6 +6319,31 @@ func (p *BatchCreateEvaluationSetItemsResponse) FastReadField2(buf []byte) (int,
 	return offset, nil
 }
 
+func (p *BatchCreateEvaluationSetItemsResponse) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*dataset.CreateDatasetItemOutput, 0, size)
+	values := make([]dataset.CreateDatasetItemOutput, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.ItemOutputs = _field
+	return offset, nil
+}
+
 func (p *BatchCreateEvaluationSetItemsResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -6326,6 +6365,7 @@ func (p *BatchCreateEvaluationSetItemsResponse) FastWriteNocopy(buf []byte, w th
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -6337,6 +6377,7 @@ func (p *BatchCreateEvaluationSetItemsResponse) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -6376,6 +6417,22 @@ func (p *BatchCreateEvaluationSetItemsResponse) fastWriteField2(buf []byte, w th
 	return offset
 }
 
+func (p *BatchCreateEvaluationSetItemsResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetItemOutputs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 3)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.ItemOutputs {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
 func (p *BatchCreateEvaluationSetItemsResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -6400,6 +6457,19 @@ func (p *BatchCreateEvaluationSetItemsResponse) field2Length() int {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.ListBeginLength()
 		for _, v := range p.Errors {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *BatchCreateEvaluationSetItemsResponse) field3Length() int {
+	l := 0
+	if p.IsSetItemOutputs() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.ItemOutputs {
 			_ = v
 			l += v.BLength()
 		}
@@ -6445,6 +6515,21 @@ func (p *BatchCreateEvaluationSetItemsResponse) DeepCopy(s interface{}) error {
 			}
 
 			p.Errors = append(p.Errors, _elem)
+		}
+	}
+
+	if src.ItemOutputs != nil {
+		p.ItemOutputs = make([]*dataset.CreateDatasetItemOutput, 0, len(src.ItemOutputs))
+		for _, elem := range src.ItemOutputs {
+			var _elem *dataset.CreateDatasetItemOutput
+			if elem != nil {
+				_elem = &dataset.CreateDatasetItemOutput{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.ItemOutputs = append(p.ItemOutputs, _elem)
 		}
 	}
 

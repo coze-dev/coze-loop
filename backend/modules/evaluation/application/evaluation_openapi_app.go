@@ -293,7 +293,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItemsOApi(ctx
 		return nil, err
 	}
 	// 调用domain服务
-	idMap, errors, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
+	idMap, errors, _, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
 		SpaceID:          req.GetWorkspaceID(),
 		EvaluationSetID:  req.GetEvaluationSetID(),
 		Items:            evaluation_set.OpenAPIItemDTO2DOs(req.Items),

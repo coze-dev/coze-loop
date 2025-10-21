@@ -9231,7 +9231,7 @@ func (p *ListEvaluationSetVersionItemsOpenAPIData) Field102DeepEqual(src *int64)
 }
 
 type UpdateEvaluationSetSchemaOApiRequest struct {
-	WorkspaceID     *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" query:"workspace_id" `
+	WorkspaceID     *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
 	EvaluationSetID *int64 `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
 	// fieldSchema.key 为空时：插入新的一列
 	// fieldSchema.key 不为空时：更新对应的列
@@ -18019,7 +18019,7 @@ type EvaluationOpenAPIService interface {
 	BatchDeleteEvaluationSetItemsOApi(ctx context.Context, req *BatchDeleteEvaluationSetItemsOApiRequest) (r *BatchDeleteEvaluationSetItemsOApiResponse, err error)
 	// 1.8 查询评测集特定版本数据
 	ListEvaluationSetVersionItemsOApi(ctx context.Context, req *ListEvaluationSetVersionItemsOApiRequest) (r *ListEvaluationSetVersionItemsOApiResponse, err error)
-	// 1.9 更新评测集字段
+	// 1.9 更新评测集字段信息
 	UpdateEvaluationSetSchemaOApi(ctx context.Context, req *UpdateEvaluationSetSchemaOApiRequest) (r *UpdateEvaluationSetSchemaOApiResponse, err error)
 	// 评估器接口 (5个)
 	// 2.1 创建评估器
