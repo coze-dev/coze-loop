@@ -66,7 +66,7 @@ func NewMetricsService(
 		metrics := []entity.IMetricDefinition{}
 		if mAdapter, ok := def.(entity.IMetricAdapter); ok {
 			for _, wrapper := range mAdapter.Wrappers() {
-				metrics = append(metricDefs, wrapper.Wrap(def))
+				metrics = append(metrics, wrapper.Wrap(def))
 			}
 		} else {
 			metrics = append(metrics, def)
