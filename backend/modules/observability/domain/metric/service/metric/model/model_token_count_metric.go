@@ -40,6 +40,7 @@ func (m *ModelTokenCountMetric) GroupBy() []*entity.Dimension {
 
 func (m *ModelTokenCountMetric) Wrappers() []entity.IMetricWrapper {
 	return []entity.IMetricWrapper{
+		wrapper.NewSelfWrapper(),
 		wrapper.NewTimeSeriesWrapper(),
 	}
 }
