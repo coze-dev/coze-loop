@@ -305,6 +305,10 @@ type TraceServiceImpl struct {
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
+	if err := req.Filters.Traverse(processSpecificFilter); err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+	}
+
 	tenants, err := r.getTenants(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
@@ -417,6 +421,10 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 }
 
 func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error) {
+	if err := req.Filters.Traverse(processSpecificFilter); err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+	}
+
 	omitColumns := make([]string, 0)
 	if !req.WithDetail {
 		omitColumns = []string{"input", "output"}
