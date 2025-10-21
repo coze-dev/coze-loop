@@ -276,14 +276,14 @@ func (h *TraceHubServiceImpl) getObjListWithTaskFromCache(ctx context.Context) (
 	objListWithTask, ok := h.taskCache.Load("ObjListWithTask")
 	if !ok {
 		// Cache is empty, fallback to the database
-		logs.CtxInfo(ctx, "Cache is empty, retrieving task list from database")
-		return h.taskRepo.GetObjListWithTask(ctx)
+		logs.CtxError(ctx, "Cache is empty, retrieving task list from database")
+		return nil, nil, nil
 	}
 
 	cacheInfo, ok := objListWithTask.(*TaskCacheInfo)
 	if !ok {
 		logs.CtxError(ctx, "Cache data type mismatch")
-		return h.taskRepo.GetObjListWithTask(ctx)
+		return nil, nil, nil
 	}
 
 	logs.CtxInfo(ctx, "Retrieve task list from cache, taskCount=%d, spaceCount=%d, botCount=%d", len(cacheInfo.Tasks), len(cacheInfo.WorkspaceIDs), len(cacheInfo.BotIDs))
