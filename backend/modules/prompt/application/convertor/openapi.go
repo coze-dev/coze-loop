@@ -43,7 +43,7 @@ func OpenAPIPromptTemplateDO2DTO(do *entity.PromptTemplate) *openapi.PromptTempl
 		TemplateType: ptr.Of(prompt.TemplateType(do.TemplateType)),
 		Messages:     OpenAPIBatchMessageDO2DTO(do.Messages),
 		VariableDefs: OpenAPIBatchVariableDefDO2DTO(do.VariableDefs),
-        Metadata:     do.Metadata,
+		Metadata:     do.Metadata,
 	}
 }
 
@@ -72,7 +72,7 @@ func OpenAPIMessageDO2DTO(do *entity.Message) *openapi.Message {
 		Parts:            OpenAPIBatchContentPartDO2DTO(do.Parts),
 		ToolCallID:       do.ToolCallID,
 		ToolCalls:        OpenAPIBatchToolCallDO2DTO(do.ToolCalls),
-        Metadata:         do.Metadata,
+		Metadata:         do.Metadata,
 	}
 }
 
@@ -229,7 +229,7 @@ func OpenAPIMessageDTO2DO(dto *openapi.Message) *entity.Message {
 		Parts:            OpenAPIBatchContentPartDTO2DO(dto.Parts),
 		ToolCallID:       dto.ToolCallID,
 		ToolCalls:        OpenAPIBatchToolCallDTO2DO(dto.ToolCalls),
-        Metadata:         dto.Metadata,
+		Metadata:         dto.Metadata,
 	}
 }
 

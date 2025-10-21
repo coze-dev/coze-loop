@@ -345,17 +345,22 @@ func mockPromptCases() []promptTestCase {
 		{
 			name: "prompt template metadata",
 			dto: &prompt.Prompt{
+				ID:          ptr.Of(int64(0)),
+				WorkspaceID: ptr.Of(int64(0)),
+				PromptKey:   ptr.Of(""),
 				PromptCommit: &prompt.PromptCommit{
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
-							Metadata: map[string]string{"commit-meta": "value"},
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							Metadata:     map[string]string{"commit-meta": "value"},
 						},
 					},
 				},
 				PromptDraft: &prompt.PromptDraft{
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
-							Metadata: map[string]string{"draft-meta": "value"},
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							Metadata:     map[string]string{"draft-meta": "value"},
 						},
 					},
 				},
@@ -364,14 +369,16 @@ func mockPromptCases() []promptTestCase {
 				PromptCommit: &entity.PromptCommit{
 					PromptDetail: &entity.PromptDetail{
 						PromptTemplate: &entity.PromptTemplate{
-							Metadata: map[string]string{"commit-meta": "value"},
+							TemplateType: entity.TemplateTypeNormal,
+							Metadata:     map[string]string{"commit-meta": "value"},
 						},
 					},
 				},
 				PromptDraft: &entity.PromptDraft{
 					PromptDetail: &entity.PromptDetail{
 						PromptTemplate: &entity.PromptTemplate{
-							Metadata: map[string]string{"draft-meta": "value"},
+							TemplateType: entity.TemplateTypeNormal,
+							Metadata:     map[string]string{"draft-meta": "value"},
 						},
 					},
 				},
