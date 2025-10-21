@@ -277,7 +277,6 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 }
 
 func filterHiddenFilters(tasks []*entity.ObservabilityTask) []*entity.ObservabilityTask {
-	filteredTasks := make([]*entity.ObservabilityTask, 0, len(tasks))
 	for _, t := range tasks {
 		if t == nil {
 			continue
@@ -300,7 +299,7 @@ func filterHiddenFilters(tasks []*entity.ObservabilityTask) []*entity.Observabil
 		}
 		filters.FilterFields = resFilters
 	}
-	return filteredTasks
+	return tasks
 }
 
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {
