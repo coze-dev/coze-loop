@@ -365,7 +365,7 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					},
 				},
 			},
-			want: &openapi.Prompt{
+			dto: &openapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
