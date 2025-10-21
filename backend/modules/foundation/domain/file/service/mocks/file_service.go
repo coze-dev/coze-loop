@@ -73,6 +73,21 @@ func (mr *MockFileServiceMockRecorder) SignUploadFile(ctx, req any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignUploadFile", reflect.TypeOf((*MockFileService)(nil).SignUploadFile), ctx, req)
 }
 
+// UploadFileForServer mocks base method.
+func (m *MockFileService) UploadFileForServer(ctx context.Context, mimeType string, body []byte, spaceID string, customMimeTypeExtMap map[string]string, fileName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadFileForServer", ctx, mimeType, body, spaceID, customMimeTypeExtMap, fileName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadFileForServer indicates an expected call of UploadFileForServer.
+func (mr *MockFileServiceMockRecorder) UploadFileForServer(ctx, mimeType, body, spaceID, customMimeTypeExtMap, fileName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFileForServer", reflect.TypeOf((*MockFileService)(nil).UploadFileForServer), ctx, mimeType, body, spaceID, customMimeTypeExtMap, fileName)
+}
+
 // UploadLoopFile mocks base method.
 func (m *MockFileService) UploadLoopFile(ctx context.Context, fileHeader *multipart.FileHeader, spaceID string) (string, error) {
 	m.ctrl.T.Helper()
