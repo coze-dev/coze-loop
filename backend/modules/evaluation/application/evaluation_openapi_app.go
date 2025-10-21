@@ -13,8 +13,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
-
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
@@ -301,7 +299,7 @@ func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItemsOApi(ctx
 		return nil, err
 	}
 	// 调用domain服务
-	idMap, errors, _, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
+	_, errors, itemOutputs, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
 		SpaceID:          req.GetWorkspaceID(),
 		EvaluationSetID:  req.GetEvaluationSetID(),
 		Items:            evaluation_set.OpenAPIItemDTO2DOs(req.Items),
@@ -315,8 +313,8 @@ func (e *EvaluationOpenApiApplicationImpl) BatchCreateEvaluationSetItemsOApi(ctx
 	// 构建响应
 	return &openapi.BatchCreateEvaluationSetItemsOApiResponse{
 		Data: &openapi.BatchCreateEvaluationSetItemsOpenAPIData{
-			AddedItems: idMap,
-			Errors:     evaluation_set.OpenAPIItemErrorGroupDO2DTOs(errors),
+			ItemOutputs: evaluation_set.OpenAPIDatasetItemOutputDO2DTOs(itemOutputs),
+			Errors:      evaluation_set.OpenAPIItemErrorGroupDO2DTOs(errors),
 		},
 	}, nil
 }
@@ -356,17 +354,24 @@ func (e *EvaluationOpenApiApplicationImpl) BatchUpdateEvaluationSetItemsOApi(ctx
 	if err != nil {
 		return nil, err
 	}
-	// 批量更新评测集项目
-	for _, item := range req.Items {
-		err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), item.GetID(), evaluation_set.OpenAPITurnDTO2DOs(item.Turns))
-		if err != nil {
-			logs.CtxError(ctx, "UpdateEvaluationSetItem, err=%v", err)
-		}
+
+	// 调用domain服务
+	errors, itemOutputs, err := e.evaluationSetItemService.BatchUpdateEvaluationSetItems(ctx, &entity.BatchUpdateEvaluationSetItemsParam{
+		SpaceID:          req.GetWorkspaceID(),
+		EvaluationSetID:  req.GetEvaluationSetID(),
+		Items:            evaluation_set.OpenAPIItemDTO2DOs(req.Items),
+		SkipInvalidItems: req.IsSkipInvalidItems,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	// 构建响应
 	return &openapi.BatchUpdateEvaluationSetItemsOApiResponse{
-		Data: &openapi.BatchUpdateEvaluationSetItemsOpenAPIData{},
+		Data: &openapi.BatchUpdateEvaluationSetItemsOpenAPIData{
+			ItemOutputs: evaluation_set.OpenAPIDatasetItemOutputDO2DTOs(itemOutputs),
+			Errors:      evaluation_set.OpenAPIItemErrorGroupDO2DTOs(errors),
+		},
 	}, nil
 }
 

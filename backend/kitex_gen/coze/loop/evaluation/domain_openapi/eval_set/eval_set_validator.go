@@ -81,3 +81,6 @@ func (p *ItemErrorGroup) IsValid() error {
 func (p *ItemErrorDetail) IsValid() error {
 	return nil
 }
+func (p *DatasetItemOutput) IsValid() error {
+	return nil
+}

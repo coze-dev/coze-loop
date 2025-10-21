@@ -47,10 +47,11 @@ struct BaseInfo {
 
 // 模型配置
 struct ModelConfig {
-    1: optional string model_name
-    2: optional double temperature
-    3: optional i32 max_tokens
-    4: optional double top_p
+    1: optional i64 model_id (api.js_conv="true", go.tag = 'json:"model_id"') // 模型id
+    2: optional string model_name // 模型名称
+    3: optional double temperature
+    4: optional i32 max_tokens
+    5: optional double top_p
 }
 
 // 参数Schema

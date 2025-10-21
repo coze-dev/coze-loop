@@ -3922,7 +3922,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) FastRead(buf []byte) (int, er
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
@@ -3970,32 +3970,25 @@ SkipFieldError:
 func (p *BatchCreateEvaluationSetItemsOpenAPIData) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
 	offset += l
 	if err != nil {
 		return offset, err
 	}
-	_field := make(map[int64]int64, size)
+	_field := make([]*eval_set.DatasetItemOutput, 0, size)
+	values := make([]eval_set.DatasetItemOutput, size)
 	for i := 0; i < size; i++ {
-		var _key int64
-		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
 			return offset, err
 		} else {
 			offset += l
-			_key = v
 		}
 
-		var _val int64
-		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_val = v
-		}
-
-		_field[_key] = _val
+		_field = append(_field, _elem)
 	}
-	p.AddedItems = _field
+	p.ItemOutputs = _field
 	return offset, nil
 }
 
@@ -4050,17 +4043,16 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) BLength() int {
 
 func (p *BatchCreateEvaluationSetItemsOpenAPIData) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetAddedItems() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 1)
-		mapBeginOffset := offset
-		offset += thrift.Binary.MapBeginLength()
+	if p.IsSetItemOutputs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
 		var length int
-		for k, v := range p.AddedItems {
+		for _, v := range p.ItemOutputs {
 			length++
-			offset += thrift.Binary.WriteI64(buf[offset:], k)
-			offset += thrift.Binary.WriteI64(buf[offset:], v)
+			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I64, thrift.I64, length)
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -4083,11 +4075,13 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) fastWriteField2(buf []byte, w
 
 func (p *BatchCreateEvaluationSetItemsOpenAPIData) field1Length() int {
 	l := 0
-	if p.IsSetAddedItems() {
+	if p.IsSetItemOutputs() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.MapBeginLength()
-		l += (thrift.Binary.I64Length() +
-			thrift.Binary.I64Length()) * len(p.AddedItems)
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.ItemOutputs {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -4111,16 +4105,18 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) DeepCopy(s interface{}) error
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.AddedItems != nil {
-		p.AddedItems = make(map[int64]int64, len(src.AddedItems))
-		for key, val := range src.AddedItems {
-			var _key int64
-			_key = key
+	if src.ItemOutputs != nil {
+		p.ItemOutputs = make([]*eval_set.DatasetItemOutput, 0, len(src.ItemOutputs))
+		for _, elem := range src.ItemOutputs {
+			var _elem *eval_set.DatasetItemOutput
+			if elem != nil {
+				_elem = &eval_set.DatasetItemOutput{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
 
-			var _val int64
-			_val = val
-
-			p.AddedItems[_key] = _val
+			p.ItemOutputs = append(p.ItemOutputs, _elem)
 		}
 	}
 
@@ -4802,7 +4798,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) FastRead(buf []byte) (int, er
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
@@ -4850,32 +4846,25 @@ SkipFieldError:
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
 	offset += l
 	if err != nil {
 		return offset, err
 	}
-	_field := make(map[int64]int64, size)
+	_field := make([]*eval_set.DatasetItemOutput, 0, size)
+	values := make([]eval_set.DatasetItemOutput, size)
 	for i := 0; i < size; i++ {
-		var _key int64
-		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
 			return offset, err
 		} else {
 			offset += l
-			_key = v
 		}
 
-		var _val int64
-		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_val = v
-		}
-
-		_field[_key] = _val
+		_field = append(_field, _elem)
 	}
-	p.UpdatedItems = _field
+	p.ItemOutputs = _field
 	return offset, nil
 }
 
@@ -4930,17 +4919,16 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) BLength() int {
 
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetUpdatedItems() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 1)
-		mapBeginOffset := offset
-		offset += thrift.Binary.MapBeginLength()
+	if p.IsSetItemOutputs() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
 		var length int
-		for k, v := range p.UpdatedItems {
+		for _, v := range p.ItemOutputs {
 			length++
-			offset += thrift.Binary.WriteI64(buf[offset:], k)
-			offset += thrift.Binary.WriteI64(buf[offset:], v)
+			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I64, thrift.I64, length)
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -4963,11 +4951,13 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) fastWriteField2(buf []byte, w
 
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) field1Length() int {
 	l := 0
-	if p.IsSetUpdatedItems() {
+	if p.IsSetItemOutputs() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.MapBeginLength()
-		l += (thrift.Binary.I64Length() +
-			thrift.Binary.I64Length()) * len(p.UpdatedItems)
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.ItemOutputs {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -4991,16 +4981,18 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) DeepCopy(s interface{}) error
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.UpdatedItems != nil {
-		p.UpdatedItems = make(map[int64]int64, len(src.UpdatedItems))
-		for key, val := range src.UpdatedItems {
-			var _key int64
-			_key = key
+	if src.ItemOutputs != nil {
+		p.ItemOutputs = make([]*eval_set.DatasetItemOutput, 0, len(src.ItemOutputs))
+		for _, elem := range src.ItemOutputs {
+			var _elem *eval_set.DatasetItemOutput
+			if elem != nil {
+				_elem = &eval_set.DatasetItemOutput{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
 
-			var _val int64
-			_val = val
-
-			p.UpdatedItems[_key] = _val
+			p.ItemOutputs = append(p.ItemOutputs, _elem)
 		}
 	}
 

@@ -40,36 +40,42 @@ struct PromptEvaluator {
 // 代码评估器
 struct CodeEvaluator {
     1: optional LanguageType language_type
-    2: optional string code
+    2: optional string code_content
 }
 
 // 评估器内容
 struct EvaluatorContent {
     1: optional bool receive_chat_history
     2: optional list<common.ArgsSchema> input_schemas
-    3: optional PromptEvaluator prompt_evaluator
-    4: optional CodeEvaluator code_evaluator
+
+    // 101-200 Evaluator类型
+    101: optional PromptEvaluator prompt_evaluator
+    102: optional CodeEvaluator code_evaluator
 }
 
 // 评估器版本
 struct EvaluatorVersion {
-    1: optional string evaluator_version_id
+    1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')  // 版本ID
     2: optional string version
     3: optional string description
-    4: optional EvaluatorContent evaluator_content
-    5: optional common.BaseInfo base_info
+
+    20: optional EvaluatorContent evaluator_content
+
+    100: optional common.BaseInfo base_info
 }
 
 // 评估器
 struct Evaluator {
-    1: optional string evaluator_id
+    1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
     2: optional string name
     3: optional string description
     4: optional EvaluatorType evaluator_type
     5: optional bool draft_submitted
     6: optional string latest_version
-    7: optional EvaluatorVersion current_version
-    8: optional common.BaseInfo base_info
+
+    20: optional EvaluatorVersion current_version
+
+    100: optional common.BaseInfo base_info
 }
 
 // 评估器结果

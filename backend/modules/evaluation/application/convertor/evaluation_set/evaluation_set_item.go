@@ -165,7 +165,7 @@ func ItemErrorGroupDO2DTOs(dos []*entity.ItemErrorGroup) []*dataset.ItemErrorGro
 	return result
 }
 
-func CreateDatasetItemOutputDO2DTOs(dos []*entity.CreateDatasetItemOutput) []*dataset.CreateDatasetItemOutput {
+func CreateDatasetItemOutputDO2DTOs(dos []*entity.DatasetItemOutput) []*dataset.CreateDatasetItemOutput {
 	if dos == nil {
 		return nil
 	}
@@ -176,7 +176,7 @@ func CreateDatasetItemOutputDO2DTOs(dos []*entity.CreateDatasetItemOutput) []*da
 	return result
 }
 
-func CreateDatasetItemOutputDO2DTO(do *entity.CreateDatasetItemOutput) *dataset.CreateDatasetItemOutput {
+func CreateDatasetItemOutputDO2DTO(do *entity.DatasetItemOutput) *dataset.CreateDatasetItemOutput {
 	if do == nil {
 		return nil
 	}

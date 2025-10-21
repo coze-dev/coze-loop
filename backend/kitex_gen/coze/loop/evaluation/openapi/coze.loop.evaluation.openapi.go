@@ -5500,9 +5500,8 @@ func (p *BatchCreateEvaluationSetItemsOApiResponse) Field255DeepEqual(src *base.
 }
 
 type BatchCreateEvaluationSetItemsOpenAPIData struct {
-	// key: item 在 items 中的索引，value: item_id
-	AddedItems map[int64]int64            `thrift:"added_items,1,optional" frugal:"1,optional,map<i64:i64>" json:"added_items" form:"added_items" query:"added_items"`
-	Errors     []*eval_set.ItemErrorGroup `thrift:"errors,2,optional" frugal:"2,optional,list<eval_set.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
+	ItemOutputs []*eval_set.DatasetItemOutput `thrift:"itemOutputs,1,optional" frugal:"1,optional,list<eval_set.DatasetItemOutput>" form:"itemOutputs" json:"itemOutputs,omitempty" query:"itemOutputs"`
+	Errors      []*eval_set.ItemErrorGroup    `thrift:"errors,2,optional" frugal:"2,optional,list<eval_set.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
 }
 
 func NewBatchCreateEvaluationSetItemsOpenAPIData() *BatchCreateEvaluationSetItemsOpenAPIData {
@@ -5512,16 +5511,16 @@ func NewBatchCreateEvaluationSetItemsOpenAPIData() *BatchCreateEvaluationSetItem
 func (p *BatchCreateEvaluationSetItemsOpenAPIData) InitDefault() {
 }
 
-var BatchCreateEvaluationSetItemsOpenAPIData_AddedItems_DEFAULT map[int64]int64
+var BatchCreateEvaluationSetItemsOpenAPIData_ItemOutputs_DEFAULT []*eval_set.DatasetItemOutput
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIData) GetAddedItems() (v map[int64]int64) {
+func (p *BatchCreateEvaluationSetItemsOpenAPIData) GetItemOutputs() (v []*eval_set.DatasetItemOutput) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetAddedItems() {
-		return BatchCreateEvaluationSetItemsOpenAPIData_AddedItems_DEFAULT
+	if !p.IsSetItemOutputs() {
+		return BatchCreateEvaluationSetItemsOpenAPIData_ItemOutputs_DEFAULT
 	}
-	return p.AddedItems
+	return p.ItemOutputs
 }
 
 var BatchCreateEvaluationSetItemsOpenAPIData_Errors_DEFAULT []*eval_set.ItemErrorGroup
@@ -5535,20 +5534,20 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) GetErrors() (v []*eval_set.It
 	}
 	return p.Errors
 }
-func (p *BatchCreateEvaluationSetItemsOpenAPIData) SetAddedItems(val map[int64]int64) {
-	p.AddedItems = val
+func (p *BatchCreateEvaluationSetItemsOpenAPIData) SetItemOutputs(val []*eval_set.DatasetItemOutput) {
+	p.ItemOutputs = val
 }
 func (p *BatchCreateEvaluationSetItemsOpenAPIData) SetErrors(val []*eval_set.ItemErrorGroup) {
 	p.Errors = val
 }
 
 var fieldIDToName_BatchCreateEvaluationSetItemsOpenAPIData = map[int16]string{
-	1: "added_items",
+	1: "itemOutputs",
 	2: "errors",
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIData) IsSetAddedItems() bool {
-	return p.AddedItems != nil
+func (p *BatchCreateEvaluationSetItemsOpenAPIData) IsSetItemOutputs() bool {
+	return p.ItemOutputs != nil
 }
 
 func (p *BatchCreateEvaluationSetItemsOpenAPIData) IsSetErrors() bool {
@@ -5574,7 +5573,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) Read(iprot thrift.TProtocol) 
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -5619,32 +5618,26 @@ ReadStructEndError:
 }
 
 func (p *BatchCreateEvaluationSetItemsOpenAPIData) ReadField1(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
+	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
 	}
-	_field := make(map[int64]int64, size)
+	_field := make([]*eval_set.DatasetItemOutput, 0, size)
+	values := make([]eval_set.DatasetItemOutput, size)
 	for i := 0; i < size; i++ {
-		var _key int64
-		if v, err := iprot.ReadI64(); err != nil {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
 			return err
-		} else {
-			_key = v
 		}
 
-		var _val int64
-		if v, err := iprot.ReadI64(); err != nil {
-			return err
-		} else {
-			_val = v
-		}
-
-		_field[_key] = _val
+		_field = append(_field, _elem)
 	}
-	if err := iprot.ReadMapEnd(); err != nil {
+	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.AddedItems = _field
+	p.ItemOutputs = _field
 	return nil
 }
 func (p *BatchCreateEvaluationSetItemsOpenAPIData) ReadField2(iprot thrift.TProtocol) error {
@@ -5704,22 +5697,19 @@ WriteStructEndError:
 }
 
 func (p *BatchCreateEvaluationSetItemsOpenAPIData) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAddedItems() {
-		if err = oprot.WriteFieldBegin("added_items", thrift.MAP, 1); err != nil {
+	if p.IsSetItemOutputs() {
+		if err = oprot.WriteFieldBegin("itemOutputs", thrift.LIST, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.I64, thrift.I64, len(p.AddedItems)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ItemOutputs)); err != nil {
 			return err
 		}
-		for k, v := range p.AddedItems {
-			if err := oprot.WriteI64(k); err != nil {
-				return err
-			}
-			if err := oprot.WriteI64(v); err != nil {
+		for _, v := range p.ItemOutputs {
+			if err := v.Write(oprot); err != nil {
 				return err
 			}
 		}
-		if err := oprot.WriteMapEnd(); err != nil {
+		if err := oprot.WriteListEnd(); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -5773,7 +5763,7 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) DeepEqual(ano *BatchCreateEva
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.AddedItems) {
+	if !p.Field1DeepEqual(ano.ItemOutputs) {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Errors) {
@@ -5782,14 +5772,14 @@ func (p *BatchCreateEvaluationSetItemsOpenAPIData) DeepEqual(ano *BatchCreateEva
 	return true
 }
 
-func (p *BatchCreateEvaluationSetItemsOpenAPIData) Field1DeepEqual(src map[int64]int64) bool {
+func (p *BatchCreateEvaluationSetItemsOpenAPIData) Field1DeepEqual(src []*eval_set.DatasetItemOutput) bool {
 
-	if len(p.AddedItems) != len(src) {
+	if len(p.ItemOutputs) != len(src) {
 		return false
 	}
-	for k, v := range p.AddedItems {
-		_src := src[k]
-		if v != _src {
+	for i, v := range p.ItemOutputs {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
 			return false
 		}
 	}
@@ -6707,9 +6697,8 @@ func (p *BatchUpdateEvaluationSetItemsOApiResponse) Field255DeepEqual(src *base.
 }
 
 type BatchUpdateEvaluationSetItemsOpenAPIData struct {
-	// key: item 在 items 中的索引，value: item_id
-	UpdatedItems map[int64]int64            `thrift:"updated_items,1,optional" frugal:"1,optional,map<i64:i64>" json:"updated_items" form:"updated_items" query:"updated_items"`
-	Errors       []*eval_set.ItemErrorGroup `thrift:"errors,2,optional" frugal:"2,optional,list<eval_set.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
+	ItemOutputs []*eval_set.DatasetItemOutput `thrift:"itemOutputs,1,optional" frugal:"1,optional,list<eval_set.DatasetItemOutput>" form:"itemOutputs" json:"itemOutputs,omitempty" query:"itemOutputs"`
+	Errors      []*eval_set.ItemErrorGroup    `thrift:"errors,2,optional" frugal:"2,optional,list<eval_set.ItemErrorGroup>" form:"errors" json:"errors,omitempty" query:"errors"`
 }
 
 func NewBatchUpdateEvaluationSetItemsOpenAPIData() *BatchUpdateEvaluationSetItemsOpenAPIData {
@@ -6719,16 +6708,16 @@ func NewBatchUpdateEvaluationSetItemsOpenAPIData() *BatchUpdateEvaluationSetItem
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) InitDefault() {
 }
 
-var BatchUpdateEvaluationSetItemsOpenAPIData_UpdatedItems_DEFAULT map[int64]int64
+var BatchUpdateEvaluationSetItemsOpenAPIData_ItemOutputs_DEFAULT []*eval_set.DatasetItemOutput
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIData) GetUpdatedItems() (v map[int64]int64) {
+func (p *BatchUpdateEvaluationSetItemsOpenAPIData) GetItemOutputs() (v []*eval_set.DatasetItemOutput) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetUpdatedItems() {
-		return BatchUpdateEvaluationSetItemsOpenAPIData_UpdatedItems_DEFAULT
+	if !p.IsSetItemOutputs() {
+		return BatchUpdateEvaluationSetItemsOpenAPIData_ItemOutputs_DEFAULT
 	}
-	return p.UpdatedItems
+	return p.ItemOutputs
 }
 
 var BatchUpdateEvaluationSetItemsOpenAPIData_Errors_DEFAULT []*eval_set.ItemErrorGroup
@@ -6742,20 +6731,20 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) GetErrors() (v []*eval_set.It
 	}
 	return p.Errors
 }
-func (p *BatchUpdateEvaluationSetItemsOpenAPIData) SetUpdatedItems(val map[int64]int64) {
-	p.UpdatedItems = val
+func (p *BatchUpdateEvaluationSetItemsOpenAPIData) SetItemOutputs(val []*eval_set.DatasetItemOutput) {
+	p.ItemOutputs = val
 }
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) SetErrors(val []*eval_set.ItemErrorGroup) {
 	p.Errors = val
 }
 
 var fieldIDToName_BatchUpdateEvaluationSetItemsOpenAPIData = map[int16]string{
-	1: "updated_items",
+	1: "itemOutputs",
 	2: "errors",
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIData) IsSetUpdatedItems() bool {
-	return p.UpdatedItems != nil
+func (p *BatchUpdateEvaluationSetItemsOpenAPIData) IsSetItemOutputs() bool {
+	return p.ItemOutputs != nil
 }
 
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) IsSetErrors() bool {
@@ -6781,7 +6770,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) Read(iprot thrift.TProtocol) 
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -6826,32 +6815,26 @@ ReadStructEndError:
 }
 
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) ReadField1(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
+	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
 	}
-	_field := make(map[int64]int64, size)
+	_field := make([]*eval_set.DatasetItemOutput, 0, size)
+	values := make([]eval_set.DatasetItemOutput, size)
 	for i := 0; i < size; i++ {
-		var _key int64
-		if v, err := iprot.ReadI64(); err != nil {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
 			return err
-		} else {
-			_key = v
 		}
 
-		var _val int64
-		if v, err := iprot.ReadI64(); err != nil {
-			return err
-		} else {
-			_val = v
-		}
-
-		_field[_key] = _val
+		_field = append(_field, _elem)
 	}
-	if err := iprot.ReadMapEnd(); err != nil {
+	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.UpdatedItems = _field
+	p.ItemOutputs = _field
 	return nil
 }
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) ReadField2(iprot thrift.TProtocol) error {
@@ -6911,22 +6894,19 @@ WriteStructEndError:
 }
 
 func (p *BatchUpdateEvaluationSetItemsOpenAPIData) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetUpdatedItems() {
-		if err = oprot.WriteFieldBegin("updated_items", thrift.MAP, 1); err != nil {
+	if p.IsSetItemOutputs() {
+		if err = oprot.WriteFieldBegin("itemOutputs", thrift.LIST, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.I64, thrift.I64, len(p.UpdatedItems)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ItemOutputs)); err != nil {
 			return err
 		}
-		for k, v := range p.UpdatedItems {
-			if err := oprot.WriteI64(k); err != nil {
-				return err
-			}
-			if err := oprot.WriteI64(v); err != nil {
+		for _, v := range p.ItemOutputs {
+			if err := v.Write(oprot); err != nil {
 				return err
 			}
 		}
-		if err := oprot.WriteMapEnd(); err != nil {
+		if err := oprot.WriteListEnd(); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -6980,7 +6960,7 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) DeepEqual(ano *BatchUpdateEva
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.UpdatedItems) {
+	if !p.Field1DeepEqual(ano.ItemOutputs) {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Errors) {
@@ -6989,14 +6969,14 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) DeepEqual(ano *BatchUpdateEva
 	return true
 }
 
-func (p *BatchUpdateEvaluationSetItemsOpenAPIData) Field1DeepEqual(src map[int64]int64) bool {
+func (p *BatchUpdateEvaluationSetItemsOpenAPIData) Field1DeepEqual(src []*eval_set.DatasetItemOutput) bool {
 
-	if len(p.UpdatedItems) != len(src) {
+	if len(p.ItemOutputs) != len(src) {
 		return false
 	}
-	for k, v := range p.UpdatedItems {
-		_src := src[k]
-		if v != _src {
+	for i, v := range p.ItemOutputs {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
 			return false
 		}
 	}

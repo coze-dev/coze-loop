@@ -443,3 +443,56 @@ export interface ExptResultExportRecord {
   expired?: boolean,
   error?: RunError,
 }
+/** 分析任务状态 */
+export enum InsightAnalysisStatus {
+  Unknown = "Unknown",
+  Running = "Running",
+  Success = "Success",
+  Failed = "Failed",
+}
+/** 投票类型 */
+export enum InsightAnalysisReportVoteType {
+  /** 未投票 */
+  None = "None",
+  /** 点赞 */
+  Upvote = "Upvote",
+  /** 点踩 */
+  Downvote = "Downvote",
+}
+/** 洞察分析记录 */
+export interface ExptInsightAnalysisRecord {
+  record_id: string,
+  workspace_id: string,
+  expt_id: string,
+  analysis_status: InsightAnalysisStatus,
+  analysis_report_id?: string,
+  analysis_report_content?: string,
+  expt_insight_analysis_feedback?: ExptInsightAnalysisFeedback,
+  base_info?: common.BaseInfo,
+}
+/** 洞察分析反馈统计 */
+export interface ExptInsightAnalysisFeedback {
+  upvote_cnt?: number,
+  downvote_cnt?: number,
+  /** 当前用户点赞状态，用于展示用户是否已点赞点踩 */
+  current_user_vote_type?: InsightAnalysisReportVoteType,
+}
+/** 洞察分析反馈评论 */
+export interface ExptInsightAnalysisFeedbackComment {
+  comment_id: string,
+  workspace_id: string,
+  expt_id: string,
+  record_id: string,
+  content: string,
+  base_info?: common.BaseInfo,
+}
+/** 反馈动作 */
+export enum FeedbackActionType {
+  Upvote = "Upvote",
+  Cancel_Upvote = "Cancel_Upvote",
+  Downvote = "Downvote",
+  Cancel_Downvote = "Cancel_Downvote",
+  Create_Comment = "Create_Comment",
+  Update_Comment = "Update_Comment",
+  Delete_Comment = "Delete_Comment",
+}

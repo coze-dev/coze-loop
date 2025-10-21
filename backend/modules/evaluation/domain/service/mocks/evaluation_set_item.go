@@ -42,12 +42,12 @@ func (m *MockEvaluationSetItemService) EXPECT() *MockEvaluationSetItemServiceMoc
 }
 
 // BatchCreateEvaluationSetItems mocks base method.
-func (m *MockEvaluationSetItemService) BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, []*entity.CreateDatasetItemOutput, error) {
+func (m *MockEvaluationSetItemService) BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, []*entity.DatasetItemOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BatchCreateEvaluationSetItems", ctx, param)
 	ret0, _ := ret[0].(map[int64]int64)
 	ret1, _ := ret[1].([]*entity.ItemErrorGroup)
-	ret2, _ := ret[2].([]*entity.CreateDatasetItemOutput)
+	ret2, _ := ret[2].([]*entity.DatasetItemOutput)
 	ret3, _ := ret[3].(error)
 	return ret0, ret1, ret2, ret3
 }

@@ -98,3 +98,10 @@ struct ItemErrorDetail {
     3: optional i32 start_index // [startIndex, endIndex] 表示区间错误范围, 如 ExceedDatasetCapacity 错误时
     4: optional i32 end_index
 }
+
+struct DatasetItemOutput {
+    1: optional i32 item_index                    // item 在 入参 中的索引
+    2: optional string item_key
+    3: optional i64 item_id (api.js_conv="true", go.tag = 'json:"item_id"')
+    4: optional bool is_new_item                   // 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
+}

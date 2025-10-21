@@ -164,7 +164,7 @@ type ItemSnapshotFieldMapping struct {
 	MappingSubKey string `json:"mapping_subKey"`
 }
 
-type CreateDatasetItemOutput struct {
+type DatasetItemOutput struct {
 	// item 在 BatchCreateDatasetItemsReq.items 中的索引
 	ItemIndex *int32
 	ItemKey   *string

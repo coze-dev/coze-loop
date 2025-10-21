@@ -567,3 +567,26 @@ func OpenAPIItemErrorDetailDO2DTO(do *entity.ItemErrorDetail) *openapi_eval_set.
 		EndIndex:   do.EndIndex,
 	}
 }
+
+func OpenAPIDatasetItemOutputDO2DTOs(dos []*entity.DatasetItemOutput) []*openapi_eval_set.DatasetItemOutput {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.DatasetItemOutput, 0)
+	for _, do := range dos {
+		result = append(result, OpenAPIDatasetItemOutputDO2DTO(do))
+	}
+	return result
+}
+
+func OpenAPIDatasetItemOutputDO2DTO(do *entity.DatasetItemOutput) *openapi_eval_set.DatasetItemOutput {
+	if do == nil {
+		return nil
+	}
+	return &openapi_eval_set.DatasetItemOutput{
+		ItemIndex: do.ItemIndex,
+		ItemKey:   do.ItemKey,
+		ItemID:    do.ItemID,
+		IsNewItem: do.IsNewItem,
+	}
+}
