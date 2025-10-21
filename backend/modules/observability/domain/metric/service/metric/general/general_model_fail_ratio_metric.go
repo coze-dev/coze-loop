@@ -36,10 +36,6 @@ func (m *GeneralModelFailRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *GeneralModelFailRatioMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewGeneralModelFailRatioMetric() entity.IMetricDefinition {
 	return &GeneralModelFailRatioMetric{}
 }

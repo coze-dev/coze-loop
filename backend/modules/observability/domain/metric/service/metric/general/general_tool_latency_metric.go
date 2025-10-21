@@ -44,10 +44,6 @@ func (m *GeneralToolLatencyMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *GeneralToolLatencyMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewGeneralToolLatencyMetric() entity.IMetricDefinition {
 	return &GeneralToolLatencyMetric{}
 }

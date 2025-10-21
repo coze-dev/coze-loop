@@ -34,10 +34,6 @@ func (m *ServiceMessageCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ServiceMessageCountMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewServiceMessageCountMetric() entity.IMetricDefinition {
 	return &ServiceMessageCountMetric{}
 }

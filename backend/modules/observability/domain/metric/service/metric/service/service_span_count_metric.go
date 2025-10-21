@@ -34,10 +34,6 @@ func (m *ServiceSpanCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ServiceSpanCountMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewServiceSpanCountMetric() entity.IMetricDefinition {
 	return &ServiceSpanCountMetric{}
 }

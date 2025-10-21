@@ -39,10 +39,6 @@ func (m *ModelSuccessRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ModelSuccessRatioMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewModelSuccessRatioMetric() entity.IMetricDefinition {
 	return &ModelSuccessRatioMetric{}
 }

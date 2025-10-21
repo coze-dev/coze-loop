@@ -47,10 +47,6 @@ func (a *TimeSeriesWrapper) GroupBy() []*entity.Dimension {
 	return a.originalMetric.GroupBy()
 }
 
-func (a *TimeSeriesWrapper) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 type TimeSeriesWrapperOption func(*TimeSeriesWrapper)
 
 func NewTimeSeriesWrapper() entity.IMetricWrapper {

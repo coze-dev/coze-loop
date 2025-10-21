@@ -34,10 +34,6 @@ func (m *GeneralTotalCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *GeneralTotalCountMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewGeneralTotalCountMetric() entity.IMetricDefinition {
 	return &GeneralTotalCountMetric{}
 }

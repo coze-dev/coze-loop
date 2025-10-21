@@ -46,10 +46,6 @@ func (a *AvgWrapper) GroupBy() []*entity.Dimension {
 	return a.originalMetric.GroupBy()
 }
 
-func (a *AvgWrapper) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewAvgWrapper() entity.IMetricWrapper {
 	return &AvgWrapper{}
 }

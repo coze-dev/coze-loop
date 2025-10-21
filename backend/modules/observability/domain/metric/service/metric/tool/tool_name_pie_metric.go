@@ -50,10 +50,6 @@ func (m *ToolNamePieMetric) GroupBy() []*entity.Dimension {
 	}
 }
 
-func (m *ToolNamePieMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewToolNamePieMetric() entity.IMetricDefinition {
 	return &ToolNamePieMetric{}
 }

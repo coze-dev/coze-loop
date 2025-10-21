@@ -63,11 +63,22 @@ func NewMetricsService(
 ) (IMetricsService, error) {
 	metricDefMap := make(map[string]entity.IMetricDefinition)
 	for _, def := range metricDefs {
-		if metricDefMap[def.Name()] != nil {
-			return nil, fmt.Errorf("duplicate metric name %s", def.Name())
+		metrics := []entity.IMetricDefinition{}
+		if mAdapter, ok := def.(entity.IMetricAdapter); ok {
+			for _, wrapper := range mAdapter.Wrappers() {
+				metrics = append(metricDefs, wrapper.Wrap(def))
+			}
+		} else {
+			metrics = append(metrics, def)
 		}
-		metricDefMap[def.Name()] = def
+		for _, def := range metrics {
+			if metricDefMap[def.Name()] != nil {
+				return nil, fmt.Errorf("duplicate metric name %s", def.Name())
+			}
+			metricDefMap[def.Name()] = def
+		}
 	}
+	logs.Info("%d metrics registered", len(metricDefMap))
 	return &MetricsService{
 		metricRepo:     metricRepo,
 		metricDefMap:   metricDefMap,

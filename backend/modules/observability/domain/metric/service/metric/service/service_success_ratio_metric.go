@@ -36,10 +36,6 @@ func (m *ServiceSuccessRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ServiceSuccessRatioMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewServiceSuccessRatioMetric() entity.IMetricDefinition {
 	return &ServiceSuccessRatioMetric{}
 }

@@ -36,10 +36,6 @@ func (m *GeneralModelLatencyMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *GeneralModelLatencyMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewGeneralModelLatencyMetric() entity.IMetricDefinition {
 	return &GeneralModelLatencyMetric{}
 }

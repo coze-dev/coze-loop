@@ -44,10 +44,6 @@ func (m *ToolSuccessRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ToolSuccessRatioMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewToolSuccessRatioMetric() entity.IMetricDefinition {
 	return &ToolSuccessRatioMetric{}
 }

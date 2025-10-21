@@ -46,10 +46,6 @@ func (m *MaxWrapper) GroupBy() []*entity.Dimension {
 	return m.originalMetric.GroupBy()
 }
 
-func (m *MaxWrapper) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewMaxWrapper() entity.IMetricWrapper {
 	return &MaxWrapper{}
 }

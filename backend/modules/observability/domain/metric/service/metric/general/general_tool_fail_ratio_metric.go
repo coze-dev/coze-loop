@@ -44,10 +44,6 @@ func (m *GeneralToolFailRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *GeneralToolFailRatioMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewGeneralToolFailRatioMetric() entity.IMetricDefinition {
 	return &GeneralToolFailRatioMetric{}
 }

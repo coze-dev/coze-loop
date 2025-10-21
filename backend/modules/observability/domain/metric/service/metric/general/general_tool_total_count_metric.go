@@ -42,10 +42,6 @@ func (m *GeneralToolTotalCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *GeneralToolTotalCountMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewGeneralToolTotalCountMetric() entity.IMetricDefinition {
 	return &GeneralToolTotalCountMetric{}
 }

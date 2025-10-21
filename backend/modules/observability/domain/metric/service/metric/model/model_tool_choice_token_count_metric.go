@@ -37,10 +37,6 @@ func (m *ModelToolChoiceTokenCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ModelToolChoiceTokenCountMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewModelToolChoiceTokenCountMetric() entity.IMetricDefinition {
 	return &ModelToolChoiceTokenCountMetric{}
 }

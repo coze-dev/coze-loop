@@ -45,10 +45,6 @@ func (m *ModelTokenCountPieMetric) GroupBy() []*entity.Dimension {
 	}
 }
 
-func (m *ModelTokenCountPieMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewModelTokenCountPieMetric() entity.IMetricDefinition {
 	return &ModelTokenCountPieMetric{}
 }

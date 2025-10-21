@@ -43,10 +43,6 @@ func (a *SelfWrapper) GroupBy() []*entity.Dimension {
 	return a.originalMetric.GroupBy()
 }
 
-func (a *SelfWrapper) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewSelfWrapper() entity.IMetricWrapper {
 	return &SelfWrapper{}
 }

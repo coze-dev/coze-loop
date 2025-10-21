@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric_new/wrapper"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"

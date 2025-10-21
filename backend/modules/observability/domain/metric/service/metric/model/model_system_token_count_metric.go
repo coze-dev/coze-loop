@@ -37,10 +37,6 @@ func (m *ModelSystemTokenCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ModelSystemTokenCountMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewModelSystemTokenCountMetric() entity.IMetricDefinition {
 	return &ModelSystemTokenCountMetric{}
 }

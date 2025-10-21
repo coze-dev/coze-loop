@@ -34,10 +34,6 @@ func (m *GeneralModelTotalTokensMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *GeneralModelTotalTokensMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewGeneralModelTotalTokensMetric() entity.IMetricDefinition {
 	return &GeneralModelTotalTokensMetric{}
 }

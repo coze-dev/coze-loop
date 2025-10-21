@@ -42,10 +42,6 @@ func (m *ServiceExecutionStepCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ServiceExecutionStepCountMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewServiceExecutionStepCountMetric() entity.IMetricDefinition {
 	return &ServiceExecutionStepCountMetric{}
 }

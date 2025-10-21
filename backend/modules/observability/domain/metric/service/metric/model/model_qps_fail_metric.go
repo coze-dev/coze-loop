@@ -38,10 +38,6 @@ func (m *ModelQPSFailMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ModelQPSFailMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewModelQPSFailMetric() entity.IMetricDefinition {
 	return &ModelQPSFailMetric{}
 }

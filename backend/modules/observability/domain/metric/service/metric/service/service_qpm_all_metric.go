@@ -35,10 +35,6 @@ func (m *ServiceQPMAllMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ServiceQPMAllMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewServiceQPMAllMetric() entity.IMetricDefinition {
 	return &ServiceQPMAllMetric{}
 }

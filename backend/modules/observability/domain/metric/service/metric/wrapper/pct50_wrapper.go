@@ -46,10 +46,6 @@ func (p *Pct50Wrapper) GroupBy() []*entity.Dimension {
 	return p.originalMetric.GroupBy()
 }
 
-func (p *Pct50Wrapper) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewPct50Wrapper() entity.IMetricWrapper {
 	return &Pct50Wrapper{}
 }

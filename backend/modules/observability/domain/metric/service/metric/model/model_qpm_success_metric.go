@@ -38,10 +38,6 @@ func (m *ModelQPMSuccessMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ModelQPMSuccessMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewModelQPMSuccessMetric() entity.IMetricDefinition {
 	return &ModelQPMSuccessMetric{}
 }

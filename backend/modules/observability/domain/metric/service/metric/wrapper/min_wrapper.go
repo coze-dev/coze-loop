@@ -46,10 +46,6 @@ func (m *MinWrapper) GroupBy() []*entity.Dimension {
 	return m.originalMetric.GroupBy()
 }
 
-func (m *MinWrapper) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewMinWrapper() entity.IMetricWrapper {
 	return &MinWrapper{}
 }

@@ -38,10 +38,6 @@ func (m *ModelQPMAllMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ModelQPMAllMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewModelQPMAllMetric() entity.IMetricDefinition {
 	return &ModelQPMAllMetric{}
 }

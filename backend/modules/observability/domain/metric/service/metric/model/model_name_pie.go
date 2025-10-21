@@ -57,10 +57,6 @@ func (m *ModelNamePieMetric) GroupBy() []*entity.Dimension {
 	}
 }
 
-func (m *ModelNamePieMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func NewModelNamePieMetric() entity.IMetricDefinition {
 	return &ModelNamePieMetric{}
 }
