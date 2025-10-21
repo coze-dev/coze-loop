@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -31,16 +32,19 @@ type ExptItemTurnEvaluation interface {
 	Eval(ctx context.Context, etec *entity.ExptTurnEvalCtx) *entity.ExptTurnRunResult
 }
 
-func NewExptTurnEvaluation(metric metrics.ExptMetric,
+func NewExptTurnEvaluation(
+	metric metrics.ExptMetric,
 	evalTargetService IEvalTargetService,
 	evaluatorService EvaluatorService,
 	benefitService benefit.IBenefitService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
 ) ExptItemTurnEvaluation {
 	return &DefaultExptTurnEvaluationImpl{
 		metric:            metric,
 		evalTargetService: evalTargetService,
 		evaluatorService:  evaluatorService,
 		benefitService:    benefitService,
+		evalAsyncRepo:     evalAsyncRepo,
 	}
 }
 
@@ -49,6 +53,7 @@ type DefaultExptTurnEvaluationImpl struct {
 	evalTargetService IEvalTargetService
 	evaluatorService  EvaluatorService
 	benefitService    benefit.IBenefitService
+	evalAsyncRepo     repo.IEvalAsyncRepo
 }
 
 func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.ExptTurnEvalCtx) (trr *entity.ExptTurnRunResult) {
@@ -63,24 +68,16 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 	}()
 	defer goroutine.Recover(ctx, &trr.EvalErr)
 
-	var targetResult *entity.EvalTargetRecord
-	var err error
-	targetResult, err = e.CallTarget(ctx, etec)
+	targetResult, err := e.CallTarget(ctx, etec)
 	if err != nil {
 		logs.CtxError(ctx, "[ExptTurnEval] call target fail, err: %v", err)
 		return trr.SetEvalErr(err)
 	}
+
 	logs.CtxInfo(ctx, "[ExptTurnEval] call target success, target_result: %v", json.Jsonify(targetResult))
 
-	trr.SetTargetResult(targetResult)
-	if targetResult != nil && targetResult.EvalTargetOutputData != nil && targetResult.EvalTargetOutputData.EvalTargetRunError != nil {
+	if trr.SetTargetResult(targetResult).AbortWithTargetResult(etec.Expt) {
 		return trr
-	}
-
-	if targetResult == nil {
-		err = errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result is nil"))
-		return trr.SetEvalErr(err)
-
 	}
 
 	evaluatorResults, err := e.CallEvaluators(ctx, etec, targetResult)
@@ -88,21 +85,20 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 		logs.CtxError(ctx, "[ExptTurnEval] call evaluators fail, err: %v", err)
 		return trr.SetEvaluatorResults(evaluatorResults).SetEvalErr(err)
 	}
-	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators success, evaluator_results: %v", json.Jsonify(evaluatorResults))
-	trr.SetEvaluatorResults(evaluatorResults)
 
-	return trr
+	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators success, evaluator_results: %v", json.Jsonify(evaluatorResults))
+
+	return trr.SetEvaluatorResults(evaluatorResults)
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *entity.ExptTurnEvalCtx) (*entity.EvalTargetRecord, error) {
-	// Whether target is called is determined by the target info bound in expt;
-	// ConnectorConf.TargetConf serves as the config info for executing the target, and CheckConnector completes the validity check when creating experiment.
 	if e.skipTargetNode(etec.Expt) {
 		return &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: make(map[string]*entity.Content)}}, nil
 	}
 
-	if existResult := etec.ExptTurnRunResult.TargetResult; existResult != nil && existResult.Status != nil && *existResult.Status == entity.EvalTargetRunStatusSuccess {
-		return existResult, nil
+	if existRecord := e.existedTargetRecord(etec); existRecord != nil {
+		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", existRecord.ID)
+		return existRecord, nil
 	}
 
 	if err := e.CheckBenefit(ctx, etec.Event.ExptID, etec.Event.SpaceID, etec.Expt.CreditCost == entity.CreditCostFree, etec.Event.Session); err != nil {
@@ -112,6 +108,8 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 	return e.callTarget(ctx, etec, etec.History, etec.Event.SpaceID)
 }
 
+// skipTargetNode Whether target is called is determined by the target info bound in expt;
+// ConnectorConf.TargetConf serves as the config info for executing the target, and CheckConnector completes the validity check when creating experiment.
 func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) bool {
 	if expt.TargetVersionID == 0 {
 		return true
@@ -120,6 +118,16 @@ func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) 
 		return true
 	}
 	return false
+}
+
+func (e *DefaultExptTurnEvaluationImpl) existedTargetRecord(etec *entity.ExptTurnEvalCtx) *entity.EvalTargetRecord {
+	if etec == nil || etec.ExptTurnRunResult.TargetResult == nil {
+		return nil
+	}
+	if gptr.Indirect(etec.ExptTurnRunResult.TargetResult.Status) == entity.EvalTargetRunStatusSuccess {
+		return etec.ExptTurnRunResult.TargetResult
+	}
+	return nil
 }
 
 func (e *DefaultExptTurnEvaluationImpl) skipEvaluatorNode(expt *entity.Experiment) bool {
@@ -148,8 +156,7 @@ func (e *DefaultExptTurnEvaluationImpl) CheckBenefit(ctx context.Context, exptID
 }
 
 func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *entity.ExptTurnEvalCtx, history []*entity.Message, spaceID int64) (record *entity.EvalTargetRecord, err error) {
-	logs.CtxInfo(ctx, "[ExptTurnEval] call target, etec: %v", etec)
-	defer e.metric.EmitTurnExecTargetResult(etec.Event.SpaceID, err != nil)
+	defer func() { e.metric.EmitTurnExecTargetResult(etec.Event.SpaceID, err != nil) }()
 
 	turn := etec.Turn
 	targetConf := etec.Expt.EvalConf.ConnectorConf.TargetConf
@@ -162,30 +169,42 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		return t.Name, t.Content
 	})
 
-	if targetConf.IngressConf == nil || targetConf.IngressConf.EvalSetAdapter == nil {
-		return nil, errorx.New("target config ingress conf or eval set adapter is nil")
+	buildInputFields := func(fieldConfs []*entity.FieldConf) (map[string]*entity.Content, error) {
+		fields := make(map[string]*entity.Content, len(fieldConfs))
+		switch etec.Expt.Target.EvalTargetType {
+		case entity.EvalTargetTypeCustomRPCServer:
+			return turnFields, nil
+		default:
+			for _, fc := range fieldConfs {
+				firstField, err := json.GetFirstJSONPathField(fc.FromField)
+				if err != nil {
+					return nil, err
+				}
+				if firstField == fc.FromField { // 没有下钻字段
+					fields[fc.FieldName] = turnFields[fc.FromField]
+				} else {
+					content, err := e.getContentByJsonPath(turnFields[firstField], fc.FromField)
+					if err != nil {
+						return nil, err
+					}
+					fields[fc.FieldName] = content
+				}
+			}
+
+		}
+		return fields, nil
 	}
 
-	fieldConfs := targetConf.IngressConf.EvalSetAdapter.FieldConfs
-	fields := make(map[string]*entity.Content, len(fieldConfs))
-	for _, fc := range fieldConfs {
-		firstField, err := json.GetFirstJSONPathField(fc.FromField)
+	var inputFields map[string]*entity.Content
+	if targetConf.IngressConf != nil && targetConf.IngressConf.EvalSetAdapter != nil {
+		inputFields, err = buildInputFields(targetConf.IngressConf.EvalSetAdapter.FieldConfs)
 		if err != nil {
 			return nil, err
 		}
-		if firstField == fc.FromField { // 没有下钻字段
-			fields[fc.FieldName] = turnFields[fc.FromField]
-			continue
-		}
-		content, err := e.getContentByJsonPath(turnFields[firstField], fc.FromField)
-		if err != nil {
-			return nil, err
-		}
-		fields[fc.FieldName] = content
 	}
 
 	ext := gmap.Clone(etec.Ext)
-	if targetConf.IngressConf.CustomConf != nil {
+	if targetConf.IngressConf != nil && targetConf.IngressConf.CustomConf != nil {
 		for _, fc := range targetConf.IngressConf.CustomConf.FieldConfs {
 			if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
 				ext[consts.TargetExecuteExtRuntimeParamKey] = fc.Value
@@ -193,16 +212,35 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		}
 	}
 
-	targetRecord, err := e.evalTargetService.ExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, &entity.ExecuteTargetCtx{
+	var targetRecord *entity.EvalTargetRecord
+	etc := &entity.ExecuteTargetCtx{
 		ExperimentRunID: gptr.Of(etec.Event.ExptRunID),
 		ItemID:          etec.EvalSetItem.ItemID,
 		TurnID:          etec.Turn.ID,
-	}, &entity.EvalTargetInputData{
+	}
+	etid := &entity.EvalTargetInputData{
 		HistoryMessages: history,
-		InputFields:     fields,
+		InputFields:     inputFields,
 		Ext:             ext,
-	})
+	}
+
+	if !etec.Expt.AsyncCallTarget() {
+		return e.evalTargetService.ExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
+	}
+
+	ts := time.Now()
+	targetRecord, callee, err := e.evalTargetService.AsyncExecuteTarget(ctx, spaceID, etec.Expt.Target.ID, etec.Expt.Target.EvalTargetVersion.ID, etc, etid)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), &entity.EvalAsyncCtx{
+		Event:       etec.Event,
+		TurnID:      targetRecord.ID,
+		AsyncUnixMS: ts.UnixMilli(),
+		Session:     etec.Event.Session,
+		Callee:      callee,
+	}); err != nil {
 		return nil, err
 	}
 
@@ -250,8 +288,6 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, execEvaluatorVersionIDs []int64, etec *entity.ExptTurnEvalCtx,
 	targetResult *entity.EvalTargetRecord, history []*entity.Message,
 ) (map[int64]*entity.EvaluatorRecord, error) {
-	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators, etec: %v", etec)
-	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators, target_result: %v", json.Jsonify(targetResult))
 	var (
 		recordMap      sync.Map
 		item           = etec.EvalSetItem
