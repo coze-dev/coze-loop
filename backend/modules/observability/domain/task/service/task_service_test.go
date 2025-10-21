@@ -298,6 +298,39 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		assert.Equal(t, sampleRate, taskDO.Sampler.SampleRate)
 	})
 
+	t.Run("disable remove non final task error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		taskDO := &entity.ObservabilityTask{
+			TaskType:      task.TaskTypeAutoEval,
+			TaskStatus:    task.TaskStatusUnstarted,
+			EffectiveTime: &entity.EffectiveTime{StartAt: time.Now().UnixMilli(), EndAt: time.Now().Add(time.Hour).UnixMilli()},
+			Sampler:       &entity.Sampler{},
+			TaskRuns:      []*entity.TaskRun{{RunStatus: task.RunStatusRunning}},
+		}
+
+		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
+		repoMock.EXPECT().RemoveNonFinalTask(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("remove fail"))
+		repoMock.EXPECT().UpdateTask(gomock.Any(), taskDO).Return(nil)
+
+		proc := &fakeProcessor{}
+		svc := &TaskServiceImpl{TaskRepo: repoMock}
+		svc.taskProcessor.Register(task.TaskTypeAutoEval, proc)
+
+		sampleRate := 0.6
+		err := svc.UpdateTask(session.WithCtxUser(context.Background(), &session.User{ID: "user"}), &UpdateTaskReq{
+			TaskID:      1,
+			WorkspaceID: 2,
+			SampleRate:  &sampleRate,
+			TaskStatus:  gptr.Of(task.TaskStatusDisabled),
+		})
+		assert.NoError(t, err)
+		assert.True(t, proc.onFinishRunCalled)
+	})
+
 	t.Run("finish hook error", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
@@ -359,6 +392,13 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		userMock := rpcmock.NewMockIUserProvider(ctrl)
 
+		hiddenField := &filter.FilterField{FieldName: gptr.Of("hidden"), Values: []string{"1"}, Hidden: gptr.Of(true)}
+		visibleField := &filter.FilterField{FieldName: gptr.Of("visible"), Values: []string{"val"}}
+		childVisible := &filter.FilterField{FieldName: gptr.Of("child"), Values: []string{"child"}}
+		childHidden := &filter.FilterField{FieldName: gptr.Of("child_hidden"), Values: []string{"child_hidden"}, Hidden: gptr.Of(true)}
+		parentField := &filter.FilterField{SubFilter: &filter.FilterFields{FilterFields: []*filter.FilterField{childVisible, childHidden}}}
+		emptyField := &filter.FilterField{FieldName: gptr.Of("   ")}
+
 		taskDO := &entity.ObservabilityTask{
 			ID:            1,
 			Name:          "task",
@@ -369,6 +409,12 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 			UpdatedBy:     "user2",
 			EffectiveTime: &entity.EffectiveTime{},
 			Sampler:       &entity.Sampler{},
+			SpanFilter: &filter.SpanFilterFields{Filters: &filter.FilterFields{FilterFields: []*filter.FilterField{
+				hiddenField,
+				visibleField,
+				emptyField,
+				parentField,
+			}}},
 		}
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{taskDO}, int64(1), nil)
 		userMock.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, map[string]*entitycommon.UserInfo{}, nil)
@@ -379,6 +425,19 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 		if assert.NotNil(t, resp) {
 			assert.EqualValues(t, 1, *resp.Total)
 			assert.Len(t, resp.Tasks, 1)
+			filterFields := resp.Tasks[0].GetRule().GetSpanFilters().GetFilters()
+			if assert.NotNil(t, filterFields) {
+				fields := filterFields.GetFilterFields()
+				assert.Len(t, fields, 2)
+				assert.Equal(t, "visible", fields[0].GetFieldName())
+				assert.Equal(t, []string{"val"}, fields[0].GetValues())
+				sub := fields[1].GetSubFilter()
+				if assert.NotNil(t, sub) {
+					subFields := sub.GetFilterFields()
+					assert.Len(t, subFields, 1)
+					assert.Equal(t, "child", subFields[0].GetFieldName())
+				}
+			}
 		}
 	})
 }
@@ -422,6 +481,12 @@ func TestTaskServiceImpl_GetTask(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		userMock := rpcmock.NewMockIUserProvider(ctrl)
 
+		subHidden := &filter.FilterField{FieldName: gptr.Of("inner_hidden"), Values: []string{"v"}, Hidden: gptr.Of(true)}
+		subVisible := &filter.FilterField{FieldName: gptr.Of("inner_visible"), Values: []string{"v"}}
+		parent := &filter.FilterField{SubFilter: &filter.FilterFields{FilterFields: []*filter.FilterField{subHidden, subVisible}}}
+		visible := &filter.FilterField{FieldName: gptr.Of("outer_visible"), Values: []string{"v"}}
+		hidden := &filter.FilterField{FieldName: gptr.Of("outer_hidden"), Values: []string{"v"}, Hidden: gptr.Of(true)}
+
 		taskDO := &entity.ObservabilityTask{
 			TaskType:      task.TaskTypeAutoEval,
 			TaskStatus:    task.TaskStatusUnstarted,
@@ -429,6 +494,11 @@ func TestTaskServiceImpl_GetTask(t *testing.T) {
 			UpdatedBy:     "user2",
 			EffectiveTime: &entity.EffectiveTime{},
 			Sampler:       &entity.Sampler{},
+			SpanFilter: &filter.SpanFilterFields{Filters: &filter.FilterFields{FilterFields: []*filter.FilterField{
+				hidden,
+				visible,
+				parent,
+			}}},
 		}
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
@@ -437,7 +507,20 @@ func TestTaskServiceImpl_GetTask(t *testing.T) {
 		svc := &TaskServiceImpl{TaskRepo: repoMock, userProvider: userMock}
 		resp, err := svc.GetTask(context.Background(), &GetTaskReq{TaskID: 1, WorkspaceID: 2})
 		assert.NoError(t, err)
-		assert.NotNil(t, resp)
+		if assert.NotNil(t, resp) {
+			filters := resp.Task.GetRule().GetSpanFilters().GetFilters()
+			if assert.NotNil(t, filters) {
+				fields := filters.GetFilterFields()
+				assert.Len(t, fields, 2)
+				assert.Equal(t, "outer_visible", fields[0].GetFieldName())
+				sub := fields[1].GetSubFilter()
+				if assert.NotNil(t, sub) {
+					subFields := sub.GetFilterFields()
+					assert.Len(t, subFields, 1)
+					assert.Equal(t, "inner_visible", subFields[0].GetFieldName())
+				}
+			}
+		}
 	})
 }
 
