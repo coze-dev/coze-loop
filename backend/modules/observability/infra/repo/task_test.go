@@ -1,3 +1,6 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package repo
 
 import (
@@ -130,18 +133,23 @@ func (s *stubTaskRedisDao) RemoveNonFinalTask(ctx context.Context, spaceID strin
 }
 
 func (s *stubTaskRedisDao) GetTaskCount(context.Context, int64) (int64, error) { return 0, nil }
+
 func (s *stubTaskRedisDao) IncrTaskCount(context.Context, int64, time.Duration) (int64, error) {
 	return 0, nil
 }
+
 func (s *stubTaskRedisDao) DecrTaskCount(context.Context, int64, time.Duration) (int64, error) {
 	return 0, nil
 }
+
 func (s *stubTaskRedisDao) GetTaskRunCount(context.Context, int64, int64) (int64, error) {
 	return 0, nil
 }
+
 func (s *stubTaskRedisDao) IncrTaskRunCount(context.Context, int64, int64, time.Duration) (int64, error) {
 	return 0, nil
 }
+
 func (s *stubTaskRedisDao) DecrTaskRunCount(context.Context, int64, int64, time.Duration) (int64, error) {
 	return 0, nil
 }
@@ -151,18 +159,23 @@ type stubTaskRunDao struct{}
 func (stubTaskRunDao) GetBackfillTaskRun(context.Context, *int64, int64) (*mysqlmodel.ObservabilityTaskRun, error) {
 	return nil, nil
 }
+
 func (stubTaskRunDao) GetLatestNewDataTaskRun(context.Context, *int64, int64) (*mysqlmodel.ObservabilityTaskRun, error) {
 	return nil, nil
 }
+
 func (stubTaskRunDao) CreateTaskRun(context.Context, *mysqlmodel.ObservabilityTaskRun) (int64, error) {
 	return 0, nil
 }
+
 func (stubTaskRunDao) UpdateTaskRun(context.Context, *mysqlmodel.ObservabilityTaskRun) error {
 	return nil
 }
+
 func (stubTaskRunDao) ListTaskRuns(context.Context, mysql.ListTaskRunParam) ([]*mysqlmodel.ObservabilityTaskRun, int64, error) {
 	return nil, 0, nil
 }
+
 func (stubTaskRunDao) UpdateTaskRunWithOCC(context.Context, int64, int64, map[string]interface{}) error {
 	return nil
 }
@@ -172,13 +185,17 @@ type stubTaskRunRedisDao struct{}
 func (stubTaskRunRedisDao) IncrTaskRunSuccessCount(context.Context, int64, int64, time.Duration) error {
 	return nil
 }
+
 func (stubTaskRunRedisDao) DecrTaskRunSuccessCount(context.Context, int64, int64) error { return nil }
+
 func (stubTaskRunRedisDao) IncrTaskRunFailCount(context.Context, int64, int64, time.Duration) error {
 	return nil
 }
+
 func (stubTaskRunRedisDao) GetTaskRunSuccessCount(context.Context, int64, int64) (int64, error) {
 	return 0, nil
 }
+
 func (stubTaskRunRedisDao) GetTaskRunFailCount(context.Context, int64, int64) (int64, error) {
 	return 0, nil
 }
