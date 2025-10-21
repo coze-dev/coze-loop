@@ -125,6 +125,9 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
 	merr := &multierror.Error{}
 	for _, sub := range subs {
+		if sub.t.GetRule().GetEffectiveTime() == nil || sub.t.GetRule().GetEffectiveTime().GetStartAt() == 0 {
+			continue
+		}
 		if span.StartTime < sub.t.GetRule().GetEffectiveTime().GetStartAt() {
 			logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
 			continue

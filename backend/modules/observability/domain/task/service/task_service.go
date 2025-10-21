@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -281,31 +282,51 @@ func filterHiddenFilters(tasks []*entity.ObservabilityTask) []*entity.Observabil
 			continue
 		}
 
-		filters := t.SpanFilter.Filters.FilterFields
-		if len(filters) == 0 {
-			continue
+		filtered := filterVisibleFilterFields(&t.SpanFilter.Filters)
+		if filtered != nil {
+			t.SpanFilter.Filters = *filtered
 		}
-
-		writeIdx := 0
-		for _, filter := range filters {
-			if filter == nil || filter.Hidden {
-				continue
-			}
-			filters[writeIdx] = filter
-			writeIdx++
-		}
-
-		if writeIdx == len(filters) {
-			continue
-		}
-
-		for i := writeIdx; i < len(filters); i++ {
-			filters[i] = nil
-		}
-
-		t.SpanFilter.Filters.FilterFields = filters[:writeIdx]
 	}
 	return tasks
+}
+
+func filterVisibleFilterFields(fields *loop_span.FilterFields) *loop_span.FilterFields {
+	if fields == nil {
+		return nil
+	}
+
+	filters := fields.FilterFields
+	if len(filters) == 0 {
+		return fields
+	}
+
+	writeIdx := 0
+	for _, f := range filters {
+		if f == nil || f.Hidden {
+			continue
+		}
+		if f.SubFilter != nil {
+			filteredSub := filterVisibleFilterFields(f.SubFilter)
+			if filteredSub == nil || len(filteredSub.FilterFields) == 0 {
+				f.SubFilter = nil
+			} else {
+				f.SubFilter = filteredSub
+			}
+		}
+		filters[writeIdx] = f
+		writeIdx++
+	}
+
+	if writeIdx == len(filters) {
+		return fields
+	}
+
+	for i := writeIdx; i < len(filters); i++ {
+		filters[i] = nil
+	}
+
+	fields.FilterFields = filters[:writeIdx]
+	return fields
 }
 
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {

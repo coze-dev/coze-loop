@@ -12,7 +12,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	componentconfig "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -67,10 +66,13 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		WorkspaceID: workspaceID,
 		TaskType:    task.TaskTypeAutoEval,
 		TaskStatus:  task.TaskStatusRunning,
-		SpanFilter: &filter.SpanFilterFields{
-			Filters:      &filter.FilterFields{FilterFields: []*filter.FilterField{}},
-			PlatformType: ptr.Of(common.PlatformTypeLoopAll),
-			SpanListType: ptr.Of(common.SpanListTypeAllSpan),
+		SpanFilter: &entity.SpanFilterFields{
+			PlatformType: common.PlatformTypeLoopAll,
+			SpanListType: common.SpanListTypeAllSpan,
+			Filters: loop_span.FilterFields{
+				QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
+				FilterFields: []*loop_span.FilterField{},
+			},
 		},
 		Sampler: &entity.Sampler{
 			SampleRate: 1,

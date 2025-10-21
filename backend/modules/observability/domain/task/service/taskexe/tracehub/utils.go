@@ -49,10 +49,6 @@ func (h *TraceHubServiceImpl) fillCtx(ctx context.Context) context.Context {
 	if env := os.Getenv(TceEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck,SA1029
 	}
-	if env := os.Getenv("TCE_HOST_ENV"); env == "ppe" {
-		ctx = context.WithValue(ctx, CtxKeyEnv, "ppe_auto_task") //nolint:staticcheck,SA1029
-	}
-
 	return ctx
 }
 

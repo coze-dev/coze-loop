@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	entitycommon "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
+	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -392,13 +393,11 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		userMock := rpcmock.NewMockIUserProvider(ctrl)
 
-		hiddenField := &filter.FilterField{FieldName: gptr.Of("hidden"), Values: []string{"1"}, Hidden: gptr.Of(true)}
-		visibleField := &filter.FilterField{FieldName: gptr.Of("visible"), Values: []string{"val"}}
-		childVisible := &filter.FilterField{FieldName: gptr.Of("child"), Values: []string{"child"}}
-		childHidden := &filter.FilterField{FieldName: gptr.Of("child_hidden"), Values: []string{"child_hidden"}, Hidden: gptr.Of(true)}
-		parentField := &filter.FilterField{SubFilter: &filter.FilterFields{FilterFields: []*filter.FilterField{childVisible, childHidden}}}
-		emptyField := &filter.FilterField{FieldName: gptr.Of("   ")}
-
+		hiddenField := &loop_span.FilterField{FieldName: "hidden", Values: []string{"1"}, Hidden: true}
+		visibleField := &loop_span.FilterField{FieldName: "visible", Values: []string{"val"}}
+		childVisible := &loop_span.FilterField{FieldName: "child", Values: []string{"child"}}
+		childHidden := &loop_span.FilterField{FieldName: "child_hidden", Values: []string{"child_hidden"}, Hidden: true}
+		parentField := &loop_span.FilterField{SubFilter: &loop_span.FilterFields{QueryAndOr: gptr.Of(loop_span.QueryAndOrEnumAnd), FilterFields: []*loop_span.FilterField{childVisible, childHidden}}}
 		taskDO := &entity.ObservabilityTask{
 			ID:            1,
 			Name:          "task",
@@ -409,12 +408,10 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 			UpdatedBy:     "user2",
 			EffectiveTime: &entity.EffectiveTime{},
 			Sampler:       &entity.Sampler{},
-			SpanFilter: &filter.SpanFilterFields{Filters: &filter.FilterFields{FilterFields: []*filter.FilterField{
-				hiddenField,
-				visibleField,
-				emptyField,
-				parentField,
-			}}},
+			SpanFilter: &entity.SpanFilterFields{Filters: loop_span.FilterFields{
+				QueryAndOr:   gptr.Of(loop_span.QueryAndOrEnumAnd),
+				FilterFields: []*loop_span.FilterField{hiddenField, visibleField, parentField},
+			}},
 		}
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{taskDO}, int64(1), nil)
 		userMock.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, map[string]*entitycommon.UserInfo{}, nil)
@@ -481,11 +478,11 @@ func TestTaskServiceImpl_GetTask(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		userMock := rpcmock.NewMockIUserProvider(ctrl)
 
-		subHidden := &filter.FilterField{FieldName: gptr.Of("inner_hidden"), Values: []string{"v"}, Hidden: gptr.Of(true)}
-		subVisible := &filter.FilterField{FieldName: gptr.Of("inner_visible"), Values: []string{"v"}}
-		parent := &filter.FilterField{SubFilter: &filter.FilterFields{FilterFields: []*filter.FilterField{subHidden, subVisible}}}
-		visible := &filter.FilterField{FieldName: gptr.Of("outer_visible"), Values: []string{"v"}}
-		hidden := &filter.FilterField{FieldName: gptr.Of("outer_hidden"), Values: []string{"v"}, Hidden: gptr.Of(true)}
+		subHidden := &loop_span.FilterField{FieldName: "inner_hidden", Values: []string{"v"}, Hidden: true}
+		subVisible := &loop_span.FilterField{FieldName: "inner_visible", Values: []string{"v"}}
+		parent := &loop_span.FilterField{SubFilter: &loop_span.FilterFields{QueryAndOr: gptr.Of(loop_span.QueryAndOrEnumAnd), FilterFields: []*loop_span.FilterField{subHidden, subVisible}}}
+		visible := &loop_span.FilterField{FieldName: "outer_visible", Values: []string{"v"}}
+		hidden := &loop_span.FilterField{FieldName: "outer_hidden", Values: []string{"v"}, Hidden: true}
 
 		taskDO := &entity.ObservabilityTask{
 			TaskType:      task.TaskTypeAutoEval,
@@ -494,11 +491,10 @@ func TestTaskServiceImpl_GetTask(t *testing.T) {
 			UpdatedBy:     "user2",
 			EffectiveTime: &entity.EffectiveTime{},
 			Sampler:       &entity.Sampler{},
-			SpanFilter: &filter.SpanFilterFields{Filters: &filter.FilterFields{FilterFields: []*filter.FilterField{
-				hidden,
-				visible,
-				parent,
-			}}},
+			SpanFilter: &entity.SpanFilterFields{Filters: loop_span.FilterFields{
+				QueryAndOr:   gptr.Of(loop_span.QueryAndOrEnumAnd),
+				FilterFields: []*loop_span.FilterField{hidden, visible, parent},
+			}},
 		}
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)

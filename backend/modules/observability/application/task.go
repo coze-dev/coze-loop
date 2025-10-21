@@ -147,14 +147,6 @@ func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields
 		PlatformType: *spanFilterFields.PlatformType,
 		SpanListType: *spanFilterFields.SpanListType,
 	}
-	//filtersDO := make([]*loop_span.FilterField, 0, len(spanFilterFields.GetFilters().GetFilterFields()))
-	//if spanFilterFields.GetFilters() != nil {
-	//	filtersDO = convertor.FilterFieldsDTO2DO(spanFilterFields.GetFilters().GetFilterFields())
-	//}
-	//filters := loop_span.FilterFields{
-	//	QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
-	//	FilterFields: filtersDO,
-	//}
 	filters := convertor.FilterFieldsDTO2DO(spanFilterFields.GetFilters())
 	spanFilters.Filters = *filters
 	switch spanFilterFields.GetPlatformType() {
