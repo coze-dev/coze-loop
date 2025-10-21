@@ -338,7 +338,7 @@ func OpenAPIItemDTO2DO(dto *openapi_eval_set.EvaluationSetItem) *entity.Evaluati
 		return nil
 	}
 	return &entity.EvaluationSetItem{
-		ID:      gptr.Indirect(dto.ID),
+		ItemID:  gptr.Indirect(dto.ID),
 		ItemKey: gptr.Indirect(dto.ItemKey),
 		Turns:   OpenAPITurnDTO2DOs(dto.Turns),
 	}

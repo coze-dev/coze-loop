@@ -86,8 +86,8 @@ struct EvaluatorResult {
 
 // 评估器使用量
 struct EvaluatorUsage {
-    1: optional string input_tokens
-    2: optional string output_tokens
+    1: optional i64 input_tokens (api.js_conv = 'true', go.tag = 'json:"input_tokens"')
+    2: optional i64 output_tokens (api.js_conv = 'true', go.tag = 'json:"output_tokens"')
 }
 
 // 评估器运行错误

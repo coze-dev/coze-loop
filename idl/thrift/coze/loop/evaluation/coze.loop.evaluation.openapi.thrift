@@ -5,6 +5,7 @@ include "domain_openapi/common.thrift"
 include "domain_openapi/eval_set.thrift"
 include "domain_openapi/evaluator.thrift"
 include "domain_openapi/experiment.thrift"
+include "domain_openapi/eval_target.thrift"
 
 // ===============================
 // 评测集相关接口 (9个接口)
@@ -217,77 +218,15 @@ struct UpdateEvaluationSetSchemaOApiResponse {
 }
 
 // ===============================
-// 评估器相关接口 (5个接口)
+// 评估器相关接口 (1个接口)
 // ===============================
 
-// 2.1 创建评估器
-struct CreateEvaluatorOApiRequest {
-    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional evaluator.Evaluator evaluator (api.body="evaluator")
-
-    255: optional base.Base Base
-}
-
-struct CreateEvaluatorOApiResponse {
-    1: optional i32 code
-    2: optional string msg
-    3: optional CreateEvaluatorOpenAPIData data
-
-    255: base.BaseResp BaseResp
-}
-
-struct CreateEvaluatorOpenAPIData {
-    1: optional i64 evaluator_id (api.js_conv='true', go.tag='json:"evaluator_id"')
-}
-
-// 2.2 提交评估器版本
-struct SubmitEvaluatorVersionOApiRequest {
-    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string evaluator_id (api.path='evaluator_id')
-    3: optional string version (api.body="version")
-    4: optional string description (api.body="description")
-
-    255: optional base.Base Base
-}
-
-struct SubmitEvaluatorVersionOApiResponse {
-    1: optional i32 code
-    2: optional string msg
-    3: optional SubmitEvaluatorVersionOpenAPIData data
-
-    255: base.BaseResp BaseResp
-}
-
-struct SubmitEvaluatorVersionOpenAPIData {
-    1: optional evaluator.Evaluator evaluator
-}
-
-// 2.3 获取评估器版本详情
-struct GetEvaluatorVersionOApiRequest {
-    1: optional i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string evaluator_version_id (api.path='evaluator_version_id')
-
-    255: optional base.Base Base
-}
-
-struct GetEvaluatorVersionOApiResponse {
-    1: optional i32 code
-    2: optional string msg
-    3: optional GetEvaluatorVersionOpenAPIData data
-
-    255: base.BaseResp BaseResp
-}
-
-struct GetEvaluatorVersionOpenAPIData {
-    1: optional evaluator.Evaluator evaluator
-}
-
-// 2.4 执行评估器
+// 2.1 执行评估器
 struct RunEvaluatorOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional string evaluator_version_id (api.path='evaluator_version_id')
-    3: optional evaluator.EvaluatorInputData input_data
-    4: optional map<string, string> ext
+
+    10: optional evaluator.EvaluatorInputData input_data (api.body="input_data")
 
     255: optional base.Base Base
 }
@@ -301,28 +240,7 @@ struct RunEvaluatorOApiResponse {
 }
 
 struct RunEvaluatorOpenAPIData {
-    1: optional evaluator.EvaluatorRecord record
-}
-
-// 2.5 获取评估器执行结果
-struct GetEvaluatorRecordOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string evaluator_record_id (api.path='evaluator_record_id')
-    3: optional bool include_deleted
-
-    255: optional base.Base Base
-}
-
-struct GetEvaluatorRecordOApiResponse {
-    1: optional i32 code
-    2: optional string msg
-    3: optional GetEvaluatorRecordOpenAPIData data
-
-    255: base.BaseResp BaseResp
-}
-
-struct GetEvaluatorRecordOpenAPIData {
-    1: optional evaluator.EvaluatorRecord record
+    1: optional evaluator.EvaluatorOutputData evaluator_output_data  // 输出数据
 }
 
 // ===============================
@@ -337,10 +255,13 @@ struct CreateExperimentOApiRequest {
     4: optional list<string> evaluator_version_ids
     5: optional string name
     6: optional string description
-    7: optional experiment.TargetFieldMapping target_field_mapping
-    8: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping
-    9: optional i32 item_concur_num
-    10: optional i32 evaluators_concur_num
+
+    20: optional experiment.TargetFieldMapping target_field_mapping
+    21: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping
+    22: optional eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
+    23: optional i32 item_concur_num
+    24: optional i32 evaluators_concur_num
+    25: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
 
     255: optional base.Base Base
 }
@@ -355,6 +276,20 @@ struct CreateExperimentOApiResponse {
 
 struct CreateExperimentOpenAPIData {
     1: optional experiment.Experiment experiment
+}
+
+// 3.2 获取评测实验详情
+struct BatchGetExperimentsRequest {
+    1: required i64 workspace_id (api.query='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
+
+    255: optional base.Base Base
+}
+
+struct BatchGetExperimentsResponse {
+    1: optional experiment.Experiment experiment
+
+    255: base.BaseResp BaseResp
 }
 
 // 3.2 获取评测实验结果
@@ -409,21 +344,11 @@ service EvaluationOpenAPIService {
     // 1.9 更新评测集字段信息
     UpdateEvaluationSetSchemaOApiResponse UpdateEvaluationSetSchemaOApi(1: UpdateEvaluationSetSchemaOApiRequest req) (api.tag="openapi", api.put = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema"),
 
-    // 评估器接口 (5个)
-    // 2.1 创建评估器
-    CreateEvaluatorOApiResponse CreateEvaluatorOApi(1: CreateEvaluatorOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluators")
-    // 2.2 提交评估器版本
-    SubmitEvaluatorVersionOApiResponse SubmitEvaluatorVersionOApi(1: SubmitEvaluatorVersionOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluators/:evaluator_id/versions")
-    // 2.3 获取评估器版本详情
-    GetEvaluatorVersionOApiResponse GetEvaluatorVersionOApi(1: GetEvaluatorVersionOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluators/versions/:evaluator_version_id")
-    // 2.4 执行评估器
-    RunEvaluatorOApiResponse RunEvaluatorOApi(1: RunEvaluatorOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluators/versions/:evaluator_version_id/run")
-    // 2.5 获取评估器执行结果
-    GetEvaluatorRecordOApiResponse GetEvaluatorRecordOApi(1: GetEvaluatorRecordOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluator_records/:evaluator_record_id")
-
     // 评测实验接口 (2个)
     // 3.1 创建评测实验
     CreateExperimentOApiResponse CreateExperimentOApi(1: CreateExperimentOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/experiments")
+    GetExperimentsResponse BatchGetExperiments(1: GetExperimentsRequest req) (api.get = '/api/evaluation/v1/experiments/:expt_id')
+
     // 3.2 获取评测实验结果
     GetExperimentResultOApiResponse GetExperimentResultOApi(1: GetExperimentResultOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/experiments/:experiment_id/results")
 }
