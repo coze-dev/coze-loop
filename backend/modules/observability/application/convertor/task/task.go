@@ -188,9 +188,6 @@ func FiltersDO2DTO(filters *loop_span.FilterFields) *filter.FilterFields {
 	}
 	var filterFields []*filter.FilterField
 	for _, f := range filters.FilterFields {
-		if f.Hidden {
-			continue
-		}
 		filterFields = append(filterFields, &filter.FilterField{
 			FieldName:  ptr.Of(f.FieldName),
 			FieldType:  ptr.Of(filter.FieldType(f.FieldType)),
