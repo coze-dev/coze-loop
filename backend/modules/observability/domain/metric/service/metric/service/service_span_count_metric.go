@@ -16,7 +16,7 @@ func (m *ServiceSpanCountMetric) Name() string {
 }
 
 func (m *ServiceSpanCountMetric) Type() entity.MetricType {
-	return entity.MetricTypeTimeSeries
+	return entity.MetricTypeSummary
 }
 
 func (m *ServiceSpanCountMetric) Source() entity.MetricSource {
