@@ -172,8 +172,18 @@ func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields
 		} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
 			return nil, nil
 		}
+		for _, filter := range basicFilter {
+			filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
+				FieldName:  filter.FieldName,
+				FieldType:  filter.FieldType,
+				Values:     filter.Values,
+				QueryType:  filter.QueryType,
+				QueryAndOr: filter.QueryAndOr,
+				SubFilter:  filter.SubFilter,
+				Hidden:     true,
+			})
+		}
 
-		filters.FilterFields = append(filters.FilterFields, basicFilter...)
 		return &entity.SpanFilterFields{
 			Filters:      *filters,
 			PlatformType: *spanFilterFields.PlatformType,

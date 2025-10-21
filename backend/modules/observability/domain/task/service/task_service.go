@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -253,85 +254,54 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
 	return &ListTasksResp{
-		Tasks: tconv.TaskDOs2DTOs(ctx, taskDOs, userInfoMap),
+		Tasks: tconv.TaskDOs2DTOs(ctx, filterHiddenFilters(taskDOs), userInfoMap),
 		Total: ptr.Of(total),
 	}, nil
 }
 
 func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *GetTaskResp, err error) {
-	taskPO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
+	taskDO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
 	if err != nil {
 		logs.CtxError(ctx, "GetTasks err:%v", err)
 		return resp, err
 	}
-	if taskPO == nil {
+	if taskDO == nil {
 		logs.CtxError(ctx, "GetTasks tasks is nil")
 		return resp, nil
 	}
-	_, userInfoMap, err := t.userProvider.GetUserInfo(ctx, []string{taskPO.CreatedBy, taskPO.UpdatedBy})
+	_, userInfoMap, err := t.userProvider.GetUserInfo(ctx, []string{taskDO.CreatedBy, taskDO.UpdatedBy})
 	if err != nil {
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
-	return &GetTaskResp{Task: tconv.TaskDO2DTO(ctx, taskPO, userInfoMap)}, nil
+	return &GetTaskResp{Task: tconv.TaskDO2DTO(ctx, filterHiddenFilters([]*entity.ObservabilityTask{taskDO})[0], userInfoMap)}, nil
 }
 
-//func filterHiddenFilters(tasks []*task.Task) []*task.Task {
-//	for _, t := range tasks {
-//		if t == nil {
-//			continue
-//		}
-//		rule := t.GetRule()
-//		if rule == nil {
-//			continue
-//		}
-//		spanFilters := rule.GetSpanFilters()
-//		if spanFilters == nil {
-//			continue
-//		}
-//		filters := spanFilters.GetFilters()
-//		if filters == nil {
-//			continue
-//		}
-//		filterFields := filters.GetFilterFields()
-//		if len(filterFields) == 0 {
-//			continue
-//		}
-//
-//		filters.FilterFields = filterVisibleFilterFields(filterFields)
-//	}
-//	return tasks
-//}
-//
-//func filterVisibleFilterFields(fields []*filter.FilterField) []*filter.FilterField {
-//	res := make([]*filter.FilterField, 0, len(fields))
-//	for _, f := range fields {
-//		if f == nil || f.GetHidden() {
-//			continue
-//		}
-//		sub := f.GetSubFilter()
-//		var filteredSub []*filter.FilterField
-//		if sub != nil {
-//			filteredSub = filterVisibleFilterFields(sub.GetFilterFields())
-//			if len(filteredSub) == 0 {
-//				f.SetSubFilter(nil)
-//			} else {
-//				sub.FilterFields = filteredSub
-//			}
-//		}
-//		hasSub := len(filteredSub) > 0
-//		fieldName := strings.TrimSpace(f.GetFieldName())
-//		hasFieldName := fieldName != ""
-//		hasValues := len(f.GetValues()) > 0
-//		if !hasSub && (!hasFieldName || !hasValues) {
-//			continue
-//		}
-//		res = append(res, f)
-//	}
-//	if len(res) == 0 {
-//		return nil
-//	}
-//	return res
-//}
+func filterHiddenFilters(tasks []*entity.ObservabilityTask) []*entity.ObservabilityTask {
+	filteredTasks := make([]*entity.ObservabilityTask, 0, len(tasks))
+	for _, t := range tasks {
+		if t == nil {
+			continue
+		}
+
+		spanFilters := t.SpanFilter
+		if spanFilters == nil {
+			continue
+		}
+		filters := spanFilters.Filters
+		if len(filters.FilterFields) == 0 {
+			continue
+		}
+
+		resFilters := make([]*loop_span.FilterField, 0)
+		for _, filter := range filters.FilterFields {
+			if filter != nil && !filter.Hidden {
+				resFilters = append(resFilters, filter)
+			}
+		}
+		filters.FilterFields = resFilters
+	}
+	return filteredTasks
+}
 
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {
 	taskPOs, _, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
