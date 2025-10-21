@@ -11521,7 +11521,7 @@ type CreateDatasetItemOutput struct {
 	// item 在 BatchCreateDatasetItemsReq.items 中的索引
 	ItemIndex *int32  `thrift:"item_index,1,optional" frugal:"1,optional,i32" form:"item_index" json:"item_index,omitempty" query:"item_index"`
 	ItemKey   *string `thrift:"item_key,2,optional" frugal:"2,optional,string" form:"item_key" json:"item_key,omitempty" query:"item_key"`
-	ItemID    *int64  `thrift:"item_id,3,optional" frugal:"3,optional,i64" form:"item_id" json:"item_id,omitempty" query:"item_id"`
+	ItemID    *int64  `thrift:"item_id,3,optional" frugal:"3,optional,i64" json:"item_id" form:"item_id" query:"item_id"`
 	// 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
 	IsNewItem *bool `thrift:"is_new_item,4,optional" frugal:"4,optional,bool" form:"is_new_item" json:"is_new_item,omitempty" query:"is_new_item"`
 }

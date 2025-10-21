@@ -292,6 +292,6 @@ struct ItemErrorGroup {
 struct CreateDatasetItemOutput {
     1: optional i32 item_index                    // item 在 BatchCreateDatasetItemsReq.items 中的索引
     2: optional string item_key
-    3: optional i64 item_id (agw.js_conv = "str")
+    3: optional i64 item_id (api.js_conv="true", go.tag='json:"item_id"')
     4: optional bool is_new_item                   // 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
 }

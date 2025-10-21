@@ -123,9 +123,10 @@ struct BatchCreateEvaluationSetItemsOApiResponse {
 }
 
 struct BatchCreateEvaluationSetItemsOpenAPIData {
-    1: optional map<i64, i64> added_items (api.js_conv='true', go.tag='json:"added_items"') // key: item 在 items 中的索引，value: item_id
+    1: optional list<eval_set.DatasetItemOutput> itemOutputs
     2: optional list<eval_set.ItemErrorGroup> errors
 }
+
 
 // 1.6 批量更新评测集数据
 struct BatchUpdateEvaluationSetItemsOApiRequest {
@@ -146,7 +147,7 @@ struct BatchUpdateEvaluationSetItemsOApiResponse {
 }
 
 struct BatchUpdateEvaluationSetItemsOpenAPIData {
-    1: optional map<i64, i64> updated_items (api.js_conv="true", go.tag='json:"updated_items"')  // key: item 在 items 中的索引，value: item_id
+    1: optional list<eval_set.DatasetItemOutput> itemOutputs
     2: optional list<eval_set.ItemErrorGroup> errors
 }
 
