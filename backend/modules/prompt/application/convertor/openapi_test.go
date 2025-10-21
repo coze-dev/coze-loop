@@ -370,7 +370,9 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
 				PromptTemplate: &openapi.PromptTemplate{
-					Metadata: map[string]string{"commit": "meta"},
+					TemplateType: ptr.Of(prompt.TemplateType("")),
+					VariableDefs: []*openapi.VariableDef{},
+					Metadata:     map[string]string{"commit": "meta"},
 				},
 			},
 		},
@@ -440,7 +442,9 @@ func TestOpenAPIPromptTemplateDO2DTO(t *testing.T) {
 				Metadata: map[string]string{"k": "v"},
 			},
 			want: &openapi.PromptTemplate{
-				Metadata: map[string]string{"k": "v"},
+				TemplateType: ptr.Of(prompt.TemplateType("")),
+				VariableDefs: []*openapi.VariableDef{},
+				Metadata:     map[string]string{"k": "v"},
 			},
 		},
 	}
