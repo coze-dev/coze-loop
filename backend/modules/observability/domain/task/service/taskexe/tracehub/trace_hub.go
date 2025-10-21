@@ -68,7 +68,7 @@ func NewTraceHubImpl(
 	if err := loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
 		return nil, err
 	}
-	if cfg.IsEnabled {
+	if cfg.IsEnabled && cfg.IsAllSpace {
 		impl.startScheduledTask()
 	}
 
