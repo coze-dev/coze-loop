@@ -48,7 +48,6 @@ var taskConverter = redisconvert.NewTaskConverter()
 const (
 	taskDetailCacheKeyPattern = "observability:task:%d"
 	taskDetailCacheTTL        = 1 * time.Minute
-	nonFinalTaskCacheTTL      = 1 * time.Minute
 )
 
 // NewTaskDAO creates a new TaskDAO instance
@@ -175,7 +174,7 @@ func (p *TaskDAOImpl) AddNonFinalTask(ctx context.Context, spaceID string, taskI
 		return errorx.Wrapf(err, "TaskExpt json marshal failed")
 	}
 
-	if err := p.cmdable.Set(ctx, key, bytes, nonFinalTaskCacheTTL).Err(); err != nil {
+	if err := p.cmdable.Set(ctx, key, bytes, 0).Err(); err != nil {
 		logs.CtxError(ctx, "redis set task failed", "key", key, "err", err)
 		return errorx.Wrapf(err, "redis set task fail, key: %v", key)
 	}
@@ -215,7 +214,7 @@ func (p *TaskDAOImpl) RemoveNonFinalTask(ctx context.Context, spaceID string, ta
 	if err != nil {
 		return errorx.Wrapf(err, "TaskExpt json marshal failed")
 	}
-	if err := p.cmdable.Set(ctx, key, bytes, nonFinalTaskCacheTTL).Err(); err != nil {
+	if err := p.cmdable.Set(ctx, key, bytes, 0).Err(); err != nil {
 		logs.CtxError(ctx, "redis set task failed", "key", key, "err", err)
 		return errorx.Wrapf(err, "redis set task fail, key: %v", key)
 	}

@@ -22,7 +22,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -278,26 +277,33 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 
 func filterHiddenFilters(tasks []*entity.ObservabilityTask) []*entity.ObservabilityTask {
 	for _, t := range tasks {
-		if t == nil {
+		if t == nil || t.SpanFilter == nil {
 			continue
 		}
 
-		spanFilters := t.SpanFilter
-		if t.SpanFilter == nil {
-			continue
-		}
-		filters := spanFilters.Filters
-		if len(filters.FilterFields) == 0 {
+		filters := t.SpanFilter.Filters.FilterFields
+		if len(filters) == 0 {
 			continue
 		}
 
-		resFilters := make([]*loop_span.FilterField, 0)
-		for _, filter := range filters.FilterFields {
-			if filter != nil && !filter.Hidden {
-				resFilters = append(resFilters, filter)
+		writeIdx := 0
+		for _, filter := range filters {
+			if filter == nil || filter.Hidden {
+				continue
 			}
+			filters[writeIdx] = filter
+			writeIdx++
 		}
-		t.SpanFilter.Filters.FilterFields = resFilters
+
+		if writeIdx == len(filters) {
+			continue
+		}
+
+		for i := writeIdx; i < len(filters); i++ {
+			filters[i] = nil
+		}
+
+		t.SpanFilter.Filters.FilterFields = filters[:writeIdx]
 	}
 	return tasks
 }

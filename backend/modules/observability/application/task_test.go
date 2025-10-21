@@ -186,6 +186,13 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 			WorkspaceID: gptr.Of(int64(123)),
 			TaskType:    taskdto.TaskTypeAutoEval,
 			Rule: &taskdto.Rule{
+				SpanFilters: &filterdto.SpanFilterFields{
+					PlatformType: gptr.Of(commondomain.PlatformTypeCozeloop),
+					SpanListType: gptr.Of(commondomain.SpanListTypeRootSpan),
+					Filters: &filterdto.FilterFields{
+						FilterFields: []*filterdto.FilterField{},
+					},
+				},
 				EffectiveTime: &taskdto.EffectiveTime{
 					StartAt: gptr.Of(time.Now().Add(time.Hour).UnixMilli()),
 					EndAt:   gptr.Of(time.Now().Add(2 * time.Hour).UnixMilli()),
@@ -319,7 +326,7 @@ func TestTaskApplication_buildSpanFilters(t *testing.T) {
 		name          string
 		fieldsBuilder func(ctrl *gomock.Controller, t *testing.T, a args) fields
 		args          args
-		assertFunc    func(t *testing.T, original *filterdto.SpanFilterFields, got *filterdto.SpanFilterFields, err error)
+		assertFunc    func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error)
 	}{
 		{
 			name: "non supported platform returns original",
@@ -334,7 +341,6 @@ func TestTaskApplication_buildSpanFilters(t *testing.T) {
 								FieldName: gptr.Of("custom_field"),
 								FieldType: gptr.Of(filterdto.FieldTypeString),
 								Values:    []string{"value"},
-								Hidden:    gptr.Of(false),
 							},
 						},
 					},
@@ -343,9 +349,25 @@ func TestTaskApplication_buildSpanFilters(t *testing.T) {
 				},
 				workspaceID: 100,
 			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *filterdto.SpanFilterFields, err error) {
+			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
 				assert.NoError(t, err)
-				assert.Same(t, original, got)
+				if assert.NotNil(t, got) {
+					assert.Equal(t, commondomain.PlatformTypeCozeloop, got.PlatformType)
+					assert.Equal(t, commondomain.SpanListTypeRootSpan, got.SpanListType)
+					dtoFilters := original.GetFilters().GetFilterFields()
+					if assert.Len(t, got.Filters.FilterFields, len(dtoFilters)) && len(dtoFilters) > 0 {
+						firstDTO := dtoFilters[0]
+						firstDomain := got.Filters.FilterFields[0]
+						if assert.NotNil(t, firstDTO.FieldName) {
+							assert.Equal(t, *firstDTO.FieldName, firstDomain.FieldName)
+						}
+						if assert.NotNil(t, firstDTO.FieldType) {
+							assert.Equal(t, loop_span.FieldType(*firstDTO.FieldType), firstDomain.FieldType)
+						}
+						assert.Equal(t, firstDTO.Values, firstDomain.Values)
+						assert.False(t, firstDomain.Hidden)
+					}
+				}
 			},
 		},
 		{
@@ -361,10 +383,11 @@ func TestTaskApplication_buildSpanFilters(t *testing.T) {
 						FilterFields: []*filterdto.FilterField{},
 					},
 					PlatformType: gptr.Of(commondomain.PlatformTypeCozeBot),
+					SpanListType: gptr.Of(commondomain.SpanListTypeRootSpan),
 				},
 				workspaceID: 200,
 			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *filterdto.SpanFilterFields, err error) {
+			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
 				assert.Nil(t, got)
 				assert.EqualError(t, err, "build platform error")
 			},
@@ -389,10 +412,11 @@ func TestTaskApplication_buildSpanFilters(t *testing.T) {
 						FilterFields: []*filterdto.FilterField{},
 					},
 					PlatformType: gptr.Of(commondomain.PlatformTypeWorkflow),
+					SpanListType: gptr.Of(commondomain.SpanListTypeRootSpan),
 				},
 				workspaceID: 300,
 			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *filterdto.SpanFilterFields, err error) {
+			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
 				assert.Nil(t, got)
 				assert.EqualError(t, err, "build basic error")
 			},
@@ -417,10 +441,11 @@ func TestTaskApplication_buildSpanFilters(t *testing.T) {
 						FilterFields: []*filterdto.FilterField{},
 					},
 					PlatformType: gptr.Of(commondomain.PlatformTypeInnerCozeBot),
+					SpanListType: gptr.Of(commondomain.SpanListTypeRootSpan),
 				},
 				workspaceID: 400,
 			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *filterdto.SpanFilterFields, err error) {
+			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, got)
 			},
@@ -461,29 +486,24 @@ func TestTaskApplication_buildSpanFilters(t *testing.T) {
 				},
 				workspaceID: 500,
 			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *filterdto.SpanFilterFields, err error) {
+			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
 				assert.NoError(t, err)
 				if assert.NotNil(t, got) {
-					assert.NotNil(t, got.Filters)
-					if assert.NotNil(t, got.Filters.QueryAndOr) {
-						assert.Equal(t, filterdto.QueryRelationAnd, *got.Filters.QueryAndOr)
-					}
+					assert.Equal(t, commondomain.PlatformTypeProject, got.PlatformType)
+					assert.Equal(t, commondomain.SpanListTypeRootSpan, got.SpanListType)
 					originalFilters := original.GetFilters().GetFilterFields()
-					if assert.Len(t, got.Filters.FilterFields, len(originalFilters)+1) {
-						first := got.Filters.FilterFields[0]
-						assert.NotSame(t, originalFilters[0], first)
-						assert.Equal(t, originalFilters[0].Values, first.Values)
+					if assert.Len(t, got.Filters.FilterFields, len(originalFilters)+1) && len(originalFilters) > 0 {
+						firstDomain := got.Filters.FilterFields[0]
+						firstDTO := originalFilters[0]
+						if assert.NotNil(t, firstDTO.FieldName) {
+							assert.Equal(t, *firstDTO.FieldName, firstDomain.FieldName)
+						}
+						assert.False(t, firstDomain.Hidden)
 						appended := got.Filters.FilterFields[len(originalFilters)]
-						if assert.NotNil(t, appended.FieldName) {
-							assert.Equal(t, loop_span.SpanFieldSpaceId, *appended.FieldName)
-						}
+						assert.Equal(t, loop_span.SpanFieldSpaceId, appended.FieldName)
+						assert.True(t, appended.Hidden)
 						assert.Equal(t, []string{"tenant"}, appended.Values)
-						if assert.NotNil(t, appended.Hidden) {
-							assert.True(t, *appended.Hidden)
-						}
 					}
-					assert.Equal(t, original.PlatformType, got.PlatformType)
-					assert.Equal(t, original.SpanListType, got.SpanListType)
 				}
 			},
 		},
