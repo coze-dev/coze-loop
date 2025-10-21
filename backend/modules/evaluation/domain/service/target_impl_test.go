@@ -1091,13 +1091,13 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 					ID:             200,
 					SpaceID:        100,
 					SourceTargetID: "test-source",
-					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 					EvalTargetVersion: &entity.EvalTargetVersion{
 						ID:                  300,
 						SourceTargetVersion: "v1",
 						InputSchema: []*entity.ArgsSchema{
 							{
-								Key: gptr.Of("input_field"),
+								Key:                 gptr.Of("input_field"),
 								SupportContentTypes: []entity.ContentType{entity.ContentTypeText},
 								JsonSchema:          gptr.Of(`{"type":"string"}`),
 							},
@@ -1200,12 +1200,12 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 			name: "unsupported target type",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
-					ID:              targetID,
-					SpaceID:         spaceID,
-					SourceTargetID:  "test-source",
-					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					ID:             targetID,
+					SpaceID:        spaceID,
+					SourceTargetID: "test-source",
+					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                   targetVersionID,
+						ID:                  targetVersionID,
 						SourceTargetVersion: "v1",
 						InputSchema: []*entity.ArgsSchema{
 							{Key: gptr.Of("input_field")},
@@ -1222,12 +1222,12 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 			name: "validate input failed",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
-					ID:              targetID,
-					SpaceID:         spaceID,
-					SourceTargetID:  "test-source",
-					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					ID:             targetID,
+					SpaceID:        spaceID,
+					SourceTargetID: "test-source",
+					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                   targetVersionID,
+						ID:                  targetVersionID,
 						SourceTargetVersion: "v1",
 						InputSchema: []*entity.ArgsSchema{
 							{Key: gptr.Of("input_field")},
@@ -1245,12 +1245,12 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 			name: "async execute failed",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
-					ID:              targetID,
-					SpaceID:         spaceID,
-					SourceTargetID:  "test-source",
-					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					ID:             targetID,
+					SpaceID:        spaceID,
+					SourceTargetID: "test-source",
+					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                   targetVersionID,
+						ID:                  targetVersionID,
 						SourceTargetVersion: "v1",
 						InputSchema: []*entity.ArgsSchema{
 							{Key: gptr.Of("input_field")},
@@ -1270,12 +1270,12 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 			name: "create record failed",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
-					ID:              targetID,
-					SpaceID:         spaceID,
-					SourceTargetID:  "test-source",
-					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					ID:             targetID,
+					SpaceID:        spaceID,
+					SourceTargetID: "test-source",
+					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                   targetVersionID,
+						ID:                  targetVersionID,
 						SourceTargetVersion: "v1",
 						InputSchema: []*entity.ArgsSchema{
 							{Key: gptr.Of("input_field")},
@@ -1296,12 +1296,12 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 			name: "success",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
-					ID:              targetID,
-					SpaceID:         spaceID,
-					SourceTargetID:  "test-source",
-					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					ID:             targetID,
+					SpaceID:        spaceID,
+					SourceTargetID: "test-source",
+					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
 					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                   targetVersionID,
+						ID:                  targetVersionID,
 						SourceTargetVersion: "v1",
 						InputSchema: []*entity.ArgsSchema{
 							{Key: gptr.Of("input_field")},
@@ -1364,13 +1364,14 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 			// 根据测试用例设置不同的参数
 			var testParam *entity.ExecuteTargetCtx
 			var testInputData *entity.EvalTargetInputData
-			if tt.name == "nil input data" {
+			switch tt.name {
+			case "nil input data":
 				testParam = param
 				testInputData = nil
-			} else if tt.name == "nil param" {
+			case "nil param":
 				testParam = nil
 				testInputData = inputData
-			} else {
+			default:
 				testParam = param
 				testInputData = inputData
 			}
