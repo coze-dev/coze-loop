@@ -96,6 +96,26 @@ func (m *taskRepoMockAdapter) IncrTaskRunSuccessCount(ctx context.Context, taskI
 	return m.MockITaskRepo.IncrTaskRunSuccessCount(ctx, taskID, taskRunID, ttl)
 }
 
+func (m *taskRepoMockAdapter) ListNonFinalTask(context.Context, string) ([]int64, error) {
+	return nil, nil
+}
+
+func (m *taskRepoMockAdapter) AddNonFinalTask(context.Context, string, int64) error {
+	return nil
+}
+
+func (m *taskRepoMockAdapter) RemoveNonFinalTask(context.Context, string, int64) error {
+	return nil
+}
+
+func (m *taskRepoMockAdapter) GetTaskByRedis(context.Context, int64) (*taskentity.ObservabilityTask, error) {
+	return nil, nil
+}
+
+func (m *taskRepoMockAdapter) SetTask(context.Context, *taskentity.ObservabilityTask) error {
+	return nil
+}
+
 func buildTestTask(t *testing.T) *taskentity.ObservabilityTask {
 	t.Helper()
 	start := time.Now().Add(-30 * time.Minute).UnixMilli()

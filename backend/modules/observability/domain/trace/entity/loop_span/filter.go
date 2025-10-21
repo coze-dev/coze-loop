@@ -195,6 +195,7 @@ type FilterField struct {
 	SubFilter  *FilterFields   `mapstructure:"sub_filter" json:"sub_filter"`
 	IsSystem   bool            `mapstructure:"is_system" json:"is_system"`
 	IsCustom   bool            `mapstructure:"is_custom" json:"is_custom"`
+	Hidden     bool            `mapstructure:"hidden" json:"hidden"`
 }
 
 func (f *FilterField) Validate() error {

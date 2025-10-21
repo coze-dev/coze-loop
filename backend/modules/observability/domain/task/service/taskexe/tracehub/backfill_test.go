@@ -55,7 +55,11 @@ func TestTraceHubServiceImpl_SetBackfillTask(t *testing.T) {
 		ID:          1,
 		WorkspaceID: 1,
 		TaskType:    task.TaskTypeAutoEval,
-		SpanFilter:  &filter.SpanFilterFields{},
+		SpanFilter: &entity.SpanFilterFields{
+			Filters: loop_span.FilterFields{
+				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+			},
+		},
 		Sampler: &entity.Sampler{
 			SampleRate: 1,
 			SampleSize: 10,
