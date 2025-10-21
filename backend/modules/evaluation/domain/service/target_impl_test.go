@@ -963,3 +963,465 @@ func TestBuildPageByCursor(t *testing.T) {
 		})
 	}
 }
+
+func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
+	t.Parallel()
+
+	type prepareFunc func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam)
+
+	tests := []struct {
+		name        string
+		prepare     prepareFunc
+		wantErr     bool
+		wantErrCode int32
+		wantStatus  entity.EvalTargetRunStatus
+	}{
+		{
+			name: "unsupported target type",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
+				// 不设置任何 operator，模拟不支持的类型
+				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "validate input failed",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
+				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(errorx.NewByCode(errno.CommonInvalidParamCode))
+				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "execute failed with status error",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
+				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
+				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusFail, errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
+				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantStatus: entity.EvalTargetRunStatusFail,
+		},
+		{
+			name: "execute failed with common error",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
+				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
+				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusFail, errorx.New("common error"))
+				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
+				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantStatus: entity.EvalTargetRunStatusFail,
+		},
+		{
+			name: "execute success",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
+				outputData := &entity.EvalTargetOutputData{
+					OutputFields: map[string]*entity.Content{
+						"answer": {
+							ContentType: gptr.Of(entity.ContentTypeText),
+							Text:        gptr.Of("test answer"),
+						},
+					},
+					EvalTargetUsage: &entity.EvalTargetUsage{
+						InputTokens:  10,
+						OutputTokens: 20,
+					},
+				}
+				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
+				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, execParam *entity.ExecuteEvalTargetParam) (*entity.EvalTargetOutputData, entity.EvalTargetRunStatus, error) {
+					assert.Equal(t, param.InputData, execParam.Input)
+					assert.Equal(t, param.PatchyTarget.EvalTargetType, execParam.TargetType)
+					assert.Equal(t, param.PatchyTarget, execParam.EvalTarget)
+					return outputData, entity.EvalTargetRunStatusSuccess, nil
+				})
+				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
+				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantStatus: entity.EvalTargetRunStatusSuccess,
+		},
+		{
+			name: "idgen error",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
+				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
+				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(&entity.EvalTargetOutputData{}, entity.EvalTargetRunStatusSuccess, nil)
+				deps.idgen.EXPECT().GenID(ctx).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "create record error",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
+				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
+				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(&entity.EvalTargetOutputData{}, entity.EvalTargetRunStatusSuccess, nil)
+				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			deps := &evalTargetServiceTestDeps{
+				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
+				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
+				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
+				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+			}
+
+			param := &entity.DebugTargetParam{
+				SpaceID: 100,
+				PatchyTarget: &entity.EvalTarget{
+					ID:             200,
+					SpaceID:        100,
+					SourceTargetID: "test-source",
+					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                  300,
+						SourceTargetVersion: "v1",
+						InputSchema: []*entity.ArgsSchema{
+							{
+								Key: gptr.Of("input_field"),
+								SupportContentTypes: []entity.ContentType{entity.ContentTypeText},
+								JsonSchema:          gptr.Of(`{"type":"string"}`),
+							},
+						},
+					},
+				},
+				InputData: &entity.EvalTargetInputData{
+					InputFields: map[string]*entity.Content{
+						"input_field": {
+							ContentType: gptr.Of(entity.ContentTypeText),
+							Text:        gptr.Of("test input"),
+						},
+					},
+				},
+			}
+
+			typedOps := map[entity.EvalTargetType]ISourceEvalTargetOperateService{}
+			if tt.prepare != nil {
+				tt.prepare(ctx, deps, param)
+				// 只有在 prepare 函数中设置了 operator 时才添加到 typedOps
+				if tt.name != "unsupported target type" {
+					typedOps[entity.EvalTargetTypeLoopPrompt] = deps.operator
+				}
+			}
+
+			svc := &EvalTargetServiceImpl{
+				evalTargetRepo: deps.repo,
+				idgen:          deps.idgen,
+				metric:         deps.metric,
+				typedOperators: typedOps,
+			}
+
+			record, err := svc.DebugTarget(ctx, param)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					require.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, record)
+			assert.Equal(t, int64(999), record.ID)
+			assert.Equal(t, param.SpaceID, record.SpaceID)
+			assert.Equal(t, param.InputData, record.EvalTargetInputData)
+			assert.Equal(t, tt.wantStatus, gptr.Indirect(record.Status))
+
+			// 验证 BaseInfo 字段
+			require.NotNil(t, record.BaseInfo)
+			require.NotNil(t, record.BaseInfo.CreatedBy)
+			require.NotNil(t, record.BaseInfo.UpdatedBy)
+			require.NotNil(t, record.BaseInfo.CreatedAt)
+			require.NotNil(t, record.BaseInfo.UpdatedAt)
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
+	t.Parallel()
+
+	type prepareFunc func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData)
+
+	tests := []struct {
+		name         string
+		prepare      prepareFunc
+		wantErr      bool
+		wantErrCode  int32
+		expectCallee string
+		expectID     int64
+	}{
+		{
+			name: "nil input data",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+				// 不设置任何 mock，因为会在参数验证阶段失败
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "nil param",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+				// 不设置任何 mock，因为会在参数验证阶段失败
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "get eval target version failed",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "unsupported target type",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+				evalTarget := &entity.EvalTarget{
+					ID:              targetID,
+					SpaceID:         spaceID,
+					SourceTargetID:  "test-source",
+					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                   targetVersionID,
+						SourceTargetVersion: "v1",
+						InputSchema: []*entity.ArgsSchema{
+							{Key: gptr.Of("input_field")},
+						},
+					},
+				}
+				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
+				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "validate input failed",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+				evalTarget := &entity.EvalTarget{
+					ID:              targetID,
+					SpaceID:         spaceID,
+					SourceTargetID:  "test-source",
+					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                   targetVersionID,
+						SourceTargetVersion: "v1",
+						InputSchema: []*entity.ArgsSchema{
+							{Key: gptr.Of("input_field")},
+						},
+					},
+				}
+				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
+				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(errorx.NewByCode(errno.CommonInvalidParamCode))
+				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "async execute failed",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+				evalTarget := &entity.EvalTarget{
+					ID:              targetID,
+					SpaceID:         spaceID,
+					SourceTargetID:  "test-source",
+					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                   targetVersionID,
+						SourceTargetVersion: "v1",
+						InputSchema: []*entity.ArgsSchema{
+							{Key: gptr.Of("input_field")},
+						},
+					},
+				}
+				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
+				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
+				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).Return(int64(0), "callee", errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantErr:      true,
+			wantErrCode:  errno.CommonInternalErrorCode,
+			expectCallee: "callee",
+		},
+		{
+			name: "create record failed",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+				evalTarget := &entity.EvalTarget{
+					ID:              targetID,
+					SpaceID:         spaceID,
+					SourceTargetID:  "test-source",
+					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                   targetVersionID,
+						SourceTargetVersion: "v1",
+						InputSchema: []*entity.ArgsSchema{
+							{Key: gptr.Of("input_field")},
+						},
+					},
+				}
+				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
+				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
+				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).Return(int64(999), "callee", nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			wantErr:      true,
+			wantErrCode:  errno.CommonInternalErrorCode,
+			expectCallee: "callee",
+		},
+		{
+			name: "success",
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+				evalTarget := &entity.EvalTarget{
+					ID:              targetID,
+					SpaceID:         spaceID,
+					SourceTargetID:  "test-source",
+					EvalTargetType:  entity.EvalTargetTypeLoopPrompt,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                   targetVersionID,
+						SourceTargetVersion: "v1",
+						InputSchema: []*entity.ArgsSchema{
+							{Key: gptr.Of("input_field")},
+						},
+					},
+				}
+				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
+				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
+				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, execParam *entity.ExecuteEvalTargetParam) (int64, string, error) {
+					assert.Equal(t, targetID, execParam.TargetID)
+					assert.Equal(t, targetVersionID, execParam.VersionID)
+					assert.Equal(t, "test-source", execParam.SourceTargetID)
+					assert.Equal(t, "v1", execParam.SourceTargetVersion)
+					assert.Equal(t, inputData, execParam.Input)
+					assert.Equal(t, entity.EvalTargetTypeLoopPrompt, execParam.TargetType)
+					assert.Equal(t, evalTarget, execParam.EvalTarget)
+					return int64(999), "callee", nil
+				})
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
+				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
+			},
+			expectCallee: "callee",
+			expectID:     999,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			deps := &evalTargetServiceTestDeps{
+				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
+				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
+				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
+				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+			}
+
+			spaceID := int64(100)
+			targetID := int64(200)
+			targetVersionID := int64(300)
+			param := &entity.ExecuteTargetCtx{
+				ExperimentRunID: gptr.Of(int64(555)),
+				ItemID:          777,
+				TurnID:          888,
+			}
+			inputData := &entity.EvalTargetInputData{
+				InputFields: map[string]*entity.Content{
+					"input_field": {
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Text:        gptr.Of("test input"),
+					},
+				},
+			}
+
+			// 根据测试用例设置不同的参数
+			var testParam *entity.ExecuteTargetCtx
+			var testInputData *entity.EvalTargetInputData
+			if tt.name == "nil input data" {
+				testParam = param
+				testInputData = nil
+			} else if tt.name == "nil param" {
+				testParam = nil
+				testInputData = inputData
+			} else {
+				testParam = param
+				testInputData = inputData
+			}
+
+			typedOps := map[entity.EvalTargetType]ISourceEvalTargetOperateService{}
+			if tt.prepare != nil {
+				tt.prepare(ctx, deps, spaceID, targetID, targetVersionID, testParam, testInputData)
+				// 只有在 prepare 函数中设置了 operator 时才添加到 typedOps
+				if tt.name != "unsupported target type" {
+					typedOps[entity.EvalTargetTypeLoopPrompt] = deps.operator
+				}
+			}
+
+			svc := &EvalTargetServiceImpl{
+				evalTargetRepo: deps.repo,
+				idgen:          deps.idgen,
+				metric:         deps.metric,
+				typedOperators: typedOps,
+			}
+
+			record, callee, err := svc.AsyncExecuteTarget(ctx, spaceID, targetID, targetVersionID, testParam, testInputData)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					require.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+				assert.Equal(t, tt.expectCallee, callee)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, record)
+			assert.Equal(t, tt.expectCallee, callee)
+			assert.Equal(t, tt.expectID, record.ID)
+			assert.Equal(t, spaceID, record.SpaceID)
+			assert.Equal(t, targetID, record.TargetID)
+			assert.Equal(t, targetVersionID, record.TargetVersionID)
+			assert.Equal(t, param.ItemID, record.ItemID)
+			assert.Equal(t, param.TurnID, record.TurnID)
+			assert.Equal(t, inputData, record.EvalTargetInputData)
+			assert.Equal(t, entity.EvalTargetRunStatusAsyncInvoking, gptr.Indirect(record.Status))
+
+			// 验证 BaseInfo 字段
+			require.NotNil(t, record.BaseInfo)
+			require.NotNil(t, record.BaseInfo.CreatedBy)
+			require.NotNil(t, record.BaseInfo.UpdatedBy)
+			require.NotNil(t, record.BaseInfo.CreatedAt)
+			require.NotNil(t, record.BaseInfo.UpdatedAt)
+		})
+	}
+}
