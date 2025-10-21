@@ -9,39 +9,39 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-type ServiceTraceMetric struct{}
+type ServiceTraceCountMetric struct{}
 
-func (m *ServiceTraceMetric) Name() string {
+func (m *ServiceTraceCountMetric) Name() string {
 	return entity.MetricNameServiceTraceCount
 }
 
-func (m *ServiceTraceMetric) Type() entity.MetricType {
+func (m *ServiceTraceCountMetric) Type() entity.MetricType {
 	return entity.MetricTypeSummary
 }
 
-func (m *ServiceTraceMetric) Source() entity.MetricSource {
+func (m *ServiceTraceCountMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *ServiceTraceMetric) Expression(granularity entity.MetricGranularity) string {
+func (m *ServiceTraceCountMetric) Expression(granularity entity.MetricGranularity) string {
 	return "count()"
 }
 
-func (m *ServiceTraceMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+func (m *ServiceTraceCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	return filter.BuildRootSpanFilter(ctx, env)
 }
 
-func (m *ServiceTraceMetric) GroupBy() []*entity.Dimension {
+func (m *ServiceTraceCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
-func (m *ServiceTraceMetric) Wrappers() []entity.IMetricWrapper {
+func (m *ServiceTraceCountMetric) Wrappers() []entity.IMetricWrapper {
 	return []entity.IMetricWrapper{
 		wrapper.NewSelfWrapper(),
 		wrapper.NewTimeSeriesWrapper(),
 	}
 }
 
-func NewServiceTraceMetric() entity.IMetricDefinition {
-	return &ServiceTraceMetric{}
+func NewServiceTraceCountMetric() entity.IMetricDefinition {
+	return &ServiceTraceCountMetric{}
 }

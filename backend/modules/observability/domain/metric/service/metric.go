@@ -495,7 +495,7 @@ func divideTimeSeries(ctx context.Context, a, b entity.TimeSeries) entity.TimeSe
 		sort.Slice(anotherVal, func(i, j int) bool {
 			return anotherVal[i].Timestamp < anotherVal[j].Timestamp
 		})
-		// 正常情况下这里的key是一样的, 都是完全补齐的时间戳
+		// 正常情况下这里的key是一样的, 都是完全补齐的时间戳; 不支持下钻后相除...
 		ret[k] = make([]*entity.MetricPoint, 0)
 		for i := 0; i < len(val); i++ {
 			dividedVal := divideNumber(val[i].Value, anotherVal[i].Value)

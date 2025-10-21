@@ -176,6 +176,7 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 
 		metric_model.NewModelDurationMetric(),
 		metric_model.NewModelInputTokenCountMetric(),
+		metric_model.NewModelOutputTokenCountMetric(),
 		metric_model.NewModelNamePieMetric(),
 		metric_model.NewModelQPMAllMetric(),
 		metric_model.NewModelQPMFailMetric(),
@@ -204,7 +205,7 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		metric_service_def.NewServiceQPSFailMetric(),
 		metric_service_def.NewServiceSpanCountMetric(),
 		metric_service_def.NewServiceSuccessRatioMetric(),
-		metric_service_def.NewServiceTraceMetric(),
+		metric_service_def.NewServiceTraceCountMetric(),
 		metric_service_def.NewServiceUserCountMetric(),
 
 		metric_tool.NewToolDurationMetric(),

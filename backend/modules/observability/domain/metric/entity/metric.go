@@ -53,7 +53,7 @@ const (
 	MetricNameModelQPSAll               = "model_qps_all"
 	MetricNameModelQPSSuccess           = "model_qps_success"
 	MetricNameModelQPSFail              = "model_qps_fail"
-	MetricNameModelQPMAll               = "model_qpm"
+	MetricNameModelQPMAll               = "model_qpm_all"
 	MetricNameModelQPMSuccess           = "model_qpm_success"
 	MetricNameModelQPMFail              = "model_qpm_fail"
 	MetricNameModelSuccessRatio         = "model_success_ratio"

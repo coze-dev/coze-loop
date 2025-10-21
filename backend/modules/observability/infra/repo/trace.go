@@ -287,6 +287,7 @@ func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.Get
 	if err != nil {
 		return nil, err
 	}
+	st := time.Now()
 	metrics, err := t.spansDao.GetMetrics(ctx, &ck.GetMetricsParam{
 		Tables:       tableCfg.SpanTables,
 		Aggregations: param.Aggregations,
@@ -299,6 +300,7 @@ func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.Get
 	if err != nil {
 		return nil, err
 	}
+	logs.CtxInfo(ctx, "get metrics successfully, cost %v", time.Since(st))
 	return &metric_repo.GetMetricsResult{
 		Data: metrics,
 	}, nil
