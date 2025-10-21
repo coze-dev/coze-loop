@@ -30,7 +30,7 @@ func TestTraceHubServiceImpl_SpanTriggerSkipNoWorkspace(t *testing.T) {
 	t.Parallel()
 
 	impl := &TraceHubServiceImpl{}
-	impl.taskCache.Store("ObjListWithTask", &TaskCacheInfo{})
+	impl.taskCache.Store("ObjListWithTask", TaskCacheInfo{})
 
 	raw := &entity.RawSpan{
 		TraceID: "trace",
@@ -132,7 +132,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		taskProcessor: taskProcessor,
 		loader:        configLoader,
 	}
-	impl.taskCache.Store("ObjListWithTask", &TaskCacheInfo{WorkspaceIDs: []string{"space-1"}, Tasks: []*entity.ObservabilityTask{taskDO}})
+	impl.taskCache.Store("ObjListWithTask", TaskCacheInfo{WorkspaceIDs: []string{"space-1"}, Tasks: []*entity.ObservabilityTask{taskDO}})
 
 	raw := &entity.RawSpan{
 		TraceID:       "trace",

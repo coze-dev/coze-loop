@@ -22,23 +22,13 @@ import (
 func TestTraceHubServiceImpl_getObjListWithTaskFromCache_Fallback(t *testing.T) {
 	t.Parallel()
 
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-
-	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-
 	ctx := context.Background()
-	spaceIDs := []string{"space-1"}
-	botIDs := []string{"bot-1"}
-	tasks := []*entity.ObservabilityTask{{}}
-
-	mockRepo.EXPECT().GetObjListWithTask(gomock.Any()).Return(spaceIDs, botIDs, tasks)
+	impl := &TraceHubServiceImpl{}
 
 	gotSpaces, gotBots, gotTasks := impl.getObjListWithTaskFromCache(ctx)
-	require.Equal(t, spaceIDs, gotSpaces)
-	require.Equal(t, botIDs, gotBots)
-	require.Equal(t, tasks, gotTasks)
+	require.Nil(t, gotSpaces)
+	require.Nil(t, gotBots)
+	require.Nil(t, gotTasks)
 }
 
 func TestTraceHubServiceImpl_getObjListWithTaskFromCache_FromCache(t *testing.T) {
@@ -50,7 +40,7 @@ func TestTraceHubServiceImpl_getObjListWithTaskFromCache_FromCache(t *testing.T)
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
 
-	expected := &TaskCacheInfo{
+	expected := TaskCacheInfo{
 		WorkspaceIDs: []string{"space-2"},
 		BotIDs:       []string{"bot-2"},
 		Tasks:        []*entity.ObservabilityTask{{}},
@@ -66,24 +56,14 @@ func TestTraceHubServiceImpl_getObjListWithTaskFromCache_FromCache(t *testing.T)
 func TestTraceHubServiceImpl_getObjListWithTaskFromCache_TypeMismatch(t *testing.T) {
 	t.Parallel()
 
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-
-	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
+	impl := &TraceHubServiceImpl{}
 
 	impl.taskCache.Store("ObjListWithTask", "invalid")
 
-	spaceIDs := []string{"fallback-space"}
-	botIDs := []string{"fallback-bot"}
-	tasks := []*entity.ObservabilityTask{{}}
-
-	mockRepo.EXPECT().GetObjListWithTask(gomock.Any()).Return(spaceIDs, botIDs, tasks)
-
 	gotSpaces, gotBots, gotTasks := impl.getObjListWithTaskFromCache(context.Background())
-	require.Equal(t, spaceIDs, gotSpaces)
-	require.Equal(t, botIDs, gotBots)
-	require.Equal(t, tasks, gotTasks)
+	require.Nil(t, gotSpaces)
+	require.Nil(t, gotBots)
+	require.Nil(t, gotTasks)
 }
 
 func TestTraceHubServiceImpl_applySampling(t *testing.T) {
