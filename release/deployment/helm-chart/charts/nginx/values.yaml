@@ -4,12 +4,12 @@ service:
   targetPort: 80
 
 image:
-  registry: 'docker.io'
-  repository: 'library'
-  image: 'nginx'
-  tag: '1.28.0'
+  registry: "docker.io"
+  repository: "library"
+  image: "nginx"
+  tag: "1.28.0"
   pullPolicy: IfNotPresent
-  pullSecrets: 'coze-loop-image-secret'
+  pullSecrets: "coze-loop-image-secret"
 
 init_image:
   app:
@@ -21,7 +21,7 @@ init_image:
 
 deployment:
   replicaCount: 1
-  resourcesMountPath: '/usr/share/nginx/html'
+  resourcesMountPath: "/usr/share/nginx/html"
   terminationGracePeriodSeconds: 9
 
 liveness:
@@ -32,10 +32,10 @@ liveness:
 
 proxy:
   oss:
-    protocol: 'http'
-    domain: 'coze-loop-minio'
-    port: '9000'
-    bucket: 'coze-loop'
+    protocol: "http"
+    domain: "coze-loop-minio"
+    port: "9000"
+    bucket: "coze-loop"
 
 # customization
 custom:
