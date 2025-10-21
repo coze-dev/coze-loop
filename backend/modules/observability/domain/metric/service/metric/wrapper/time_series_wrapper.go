@@ -5,6 +5,7 @@ package wrapper
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -13,18 +14,16 @@ import (
 
 type TimeSeriesWrapper struct {
 	originalMetric entity.IMetricDefinition
-	nameFormatter  func(string) string
 }
 
 func (a *TimeSeriesWrapper) Wrap(definition entity.IMetricDefinition) entity.IMetricDefinition {
 	return &TimeSeriesWrapper{
 		originalMetric: definition,
-		nameFormatter:  a.nameFormatter,
 	}
 }
 
 func (a *TimeSeriesWrapper) Name() string {
-	return a.nameFormatter(a.originalMetric.Name())
+	return fmt.Sprintf("%s_by_time", a.originalMetric.Name())
 }
 
 func (a *TimeSeriesWrapper) Type() entity.MetricType {

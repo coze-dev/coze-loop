@@ -12,35 +12,34 @@ import (
 )
 
 type SelfWrapper struct {
-	originalMetric entity.IMetricDefinition
 }
 
-func (a *SelfWrapper) Wrap(entity.IMetricDefinition) entity.IMetricDefinition {
-	return a.originalMetric
+func (a *SelfWrapper) Wrap(in entity.IMetricDefinition) entity.IMetricDefinition {
+	return in
 }
 
 func (a *SelfWrapper) Name() string {
-	return a.originalMetric.Name()
+	return ""
 }
 
 func (a *SelfWrapper) Type() entity.MetricType {
-	return a.originalMetric.Type()
+	return entity.MetricTypeSummary
 }
 
 func (a *SelfWrapper) Source() entity.MetricSource {
-	return a.originalMetric.Source()
+	return entity.MetricSourceCK
 }
 
 func (a *SelfWrapper) Expression(granularity entity.MetricGranularity) string {
-	return a.originalMetric.Expression(granularity)
+	return ""
 }
 
 func (a *SelfWrapper) Where(ctx context.Context, f span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return a.originalMetric.Where(ctx, f, env)
+	return nil, nil
 }
 
 func (a *SelfWrapper) GroupBy() []*entity.Dimension {
-	return a.originalMetric.GroupBy()
+	return nil
 }
 
 func NewSelfWrapper() entity.IMetricWrapper {
