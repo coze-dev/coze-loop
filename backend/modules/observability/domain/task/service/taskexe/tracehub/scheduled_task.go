@@ -432,6 +432,7 @@ func (h *TraceHubServiceImpl) listNonFinalTaskByRedis(ctx context.Context, space
 	if len(nonFinalTaskIDs) == 0 {
 		return taskPOs, nil
 	}
+	logs.CtxInfo(ctx, "Start listing non-final tasks, taskCount:%d, nonFinalTaskIDs:%v", len(nonFinalTaskIDs), nonFinalTaskIDs)
 	for _, taskID := range nonFinalTaskIDs {
 		taskPO, err := h.taskRepo.GetTaskByRedis(ctx, taskID)
 		if err != nil {
