@@ -142,7 +142,13 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	return &task.CreateTaskResponse{TaskID: sResp.TaskID}, nil
 }
 
-func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*filter.SpanFilterFields, error) {
+func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*entity.SpanFilterFields, error) {
+	spanFilters := &entity.SpanFilterFields{
+		PlatformType: *spanFilterFields.PlatformType,
+		SpanListType: *spanFilterFields.SpanListType,
+	}
+	filters := convertor.FilterFieldsDTO2DO(spanFilterFields.GetFilters())
+	spanFilters.Filters = *filters
 	switch spanFilterFields.GetPlatformType() {
 	case common.PlatformTypeCozeBot, common.PlatformTypeProject, common.PlatformTypeWorkflow, common.PlatformTypeInnerCozeBot:
 		platformFilter, err := t.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(spanFilterFields.GetPlatformType()))
@@ -158,35 +164,26 @@ func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields
 		} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
 			return nil, nil
 		}
-		basicFilterFields := &loop_span.FilterFields{
-			QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
-			FilterFields: basicFilter,
+		for _, filter := range basicFilter {
+			filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
+				FieldName:  filter.FieldName,
+				FieldType:  filter.FieldType,
+				Values:     filter.Values,
+				QueryType:  filter.QueryType,
+				QueryAndOr: filter.QueryAndOr,
+				SubFilter:  filter.SubFilter,
+				Hidden:     true,
+			})
 		}
-		filters := combineFilters(convertor.FilterFieldsDO2DTO(basicFilterFields), spanFilterFields.Filters)
-		return &filter.SpanFilterFields{
-			Filters:      filters,
-			PlatformType: spanFilterFields.PlatformType,
-			SpanListType: spanFilterFields.SpanListType,
+
+		return &entity.SpanFilterFields{
+			Filters:      *filters,
+			PlatformType: *spanFilterFields.PlatformType,
+			SpanListType: *spanFilterFields.SpanListType,
 		}, nil
 	default:
-		return spanFilterFields, nil
+		return spanFilters, nil
 	}
-}
-
-func combineFilters(filters ...*filter.FilterFields) *filter.FilterFields {
-	filterAggr := &filter.FilterFields{
-		QueryAndOr: ptr.Of(filter.QueryRelationAnd),
-	}
-	for _, f := range filters {
-		if f == nil {
-			continue
-		}
-		filterAggr.FilterFields = append(filterAggr.FilterFields, &filter.FilterField{
-			QueryAndOr: ptr.Of(filter.QueryRelationAnd),
-			SubFilter:  f,
-		})
-	}
-	return filterAggr
 }
 
 func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.CreateTaskRequest) error {

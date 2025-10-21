@@ -59,6 +59,7 @@ func NewTraceHubImpl(
 		aid:                 aid,
 		backfillProducer:    backfillProducer,
 		locker:              locker,
+		loader:              loader,
 	}
 
 	// Start the scheduled tasks immediately
@@ -67,7 +68,7 @@ func NewTraceHubImpl(
 	if err := loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
 		return nil, err
 	}
-	if cfg.IsEnabled {
+	if cfg.IsEnabled && cfg.IsAllSpace {
 		impl.startScheduledTask()
 	}
 
@@ -87,6 +88,7 @@ type TraceHubServiceImpl struct {
 	benefitSvc          benefit.IBenefitService
 	backfillProducer    mq.IBackfillProducer
 	locker              lock.ILocker
+	loader              conf.IConfigLoader
 
 	flushErrLock sync.Mutex
 	flushErr     []error
