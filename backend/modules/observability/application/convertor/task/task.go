@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	entity_common "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -157,15 +158,50 @@ func DataReflowConfigDO2DTO(v *entity.DataReflowConfig) *task.DataReflowConfig {
 	}
 }
 
-func RuleDO2DTO(spanFilter *filter.SpanFilterFields, effectiveTime *entity.EffectiveTime, sampler *entity.Sampler, backfillEffectiveTime *entity.EffectiveTime) *task.Rule {
+func RuleDO2DTO(spanFilter *entity.SpanFilterFields, effectiveTime *entity.EffectiveTime, sampler *entity.Sampler, backfillEffectiveTime *entity.EffectiveTime) *task.Rule {
 	if spanFilter == nil {
 		return nil
 	}
 	return &task.Rule{
-		SpanFilters:           spanFilter,
+		SpanFilters:           SpanFilterDO2DTO(spanFilter),
 		Sampler:               SamplerDO2DTO(sampler),
 		EffectiveTime:         EffectiveTimeDO2DTO(effectiveTime),
 		BackfillEffectiveTime: EffectiveTimeDO2DTO(backfillEffectiveTime),
+	}
+}
+
+func SpanFilterDO2DTO(spanFilter *entity.SpanFilterFields) *filter.SpanFilterFields {
+	if spanFilter == nil {
+		return nil
+	}
+
+	return &filter.SpanFilterFields{
+		Filters:      FiltersDO2DTO(&spanFilter.Filters),
+		PlatformType: &spanFilter.PlatformType,
+		SpanListType: &spanFilter.SpanListType,
+	}
+}
+
+func FiltersDO2DTO(filters *loop_span.FilterFields) *filter.FilterFields {
+	if filters == nil {
+		return nil
+	}
+	var filterFields []*filter.FilterField
+	for _, f := range filters.FilterFields {
+		if f.Hidden {
+			continue
+		}
+		filterFields = append(filterFields, &filter.FilterField{
+			FieldName:  ptr.Of(f.FieldName),
+			FieldType:  ptr.Of(filter.FieldType(f.FieldType)),
+			Values:     f.Values,
+			QueryType:  ptr.Of(filter.QueryType(*f.QueryType)),
+			QueryAndOr: ptr.Of(filter.QueryRelation(*f.QueryAndOr)),
+		})
+	}
+	return &filter.FilterFields{
+		QueryAndOr:   ptr.Of(filter.QueryRelation(*filters.QueryAndOr)),
+		FilterFields: filterFields,
 	}
 }
 
@@ -292,7 +328,7 @@ func UserInfoPO2DO(userInfo *entity_common.UserInfo, userID string) *common.User
 	}
 }
 
-func TaskDTO2DO(taskDTO *task.Task, userID string, spanFilters *filter.SpanFilterFields) *entity.ObservabilityTask {
+func TaskDTO2DO(taskDTO *task.Task, userID string, spanFilters *entity.SpanFilterFields) *entity.ObservabilityTask {
 	if taskDTO == nil {
 		return nil
 	}
@@ -314,11 +350,11 @@ func TaskDTO2DO(taskDTO *task.Task, userID string, spanFilters *filter.SpanFilte
 			updatedBy = taskDTO.GetBaseInfo().GetUpdatedBy().GetUserID()
 		}
 	}
-	var spanFilterDO *filter.SpanFilterFields
+	var spanFilterDO *entity.SpanFilterFields
 	if spanFilters != nil {
 		spanFilterDO = spanFilters
 	} else {
-		spanFilterDO = taskDTO.GetRule().GetSpanFilters()
+		spanFilterDO = SpanFilterDTO2DO(taskDTO.GetRule().GetSpanFilters())
 	}
 
 	return &entity.ObservabilityTask{
@@ -339,6 +375,44 @@ func TaskDTO2DO(taskDTO *task.Task, userID string, spanFilters *filter.SpanFilte
 		UpdatedBy:             updatedBy,
 		BackfillEffectiveTime: EffectiveTimeDTO2DO(taskDTO.GetRule().GetBackfillEffectiveTime()),
 	}
+}
+
+func SpanFilterDTO2DO(spanFilterFields *filter.SpanFilterFields) *entity.SpanFilterFields {
+	if spanFilterFields == nil {
+		return nil
+	}
+	return &entity.SpanFilterFields{
+		PlatformType: *spanFilterFields.PlatformType,
+		SpanListType: *spanFilterFields.SpanListType,
+		Filters:      *SpanFilterFieldsDTO2DO(spanFilterFields.Filters),
+	}
+}
+
+func SpanFilterFieldsDTO2DO(spanFilterFields *filter.FilterFields) *loop_span.FilterFields {
+	if spanFilterFields == nil {
+		return nil
+	}
+	return &loop_span.FilterFields{
+		QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
+		FilterFields: FilterFieldsDTO2DO(spanFilterFields.FilterFields),
+	}
+}
+func FilterFieldsDTO2DO(filterFields []*filter.FilterField) []*loop_span.FilterField {
+	if filterFields == nil {
+		return nil
+	}
+	filtersDO := make([]*loop_span.FilterField, 0, len(filterFields))
+	for _, v := range filterFields {
+		filtersDO = append(filtersDO, &loop_span.FilterField{
+			FieldName:  *v.FieldName,
+			FieldType:  loop_span.FieldType(*v.FieldType),
+			Values:     v.Values,
+			QueryType:  ptr.Of(loop_span.QueryTypeEnum(*v.QueryType)),
+			QueryAndOr: ptr.Of(loop_span.QueryAndOrEnum(*v.QueryAndOr)),
+			SubFilter:  SpanFilterFieldsDTO2DO(v.SubFilter),
+		})
+	}
+	return filtersDO
 }
 
 func RunDetailDTO2DO(runDetail *task.RunDetail) *entity.RunDetail {

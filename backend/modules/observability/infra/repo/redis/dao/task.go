@@ -47,7 +47,7 @@ var taskConverter = redisconvert.NewTaskConverter()
 
 const (
 	taskDetailCacheKeyPattern = "observability:task:%d"
-	taskDetailCacheTTL        = 30 * time.Minute
+	taskDetailCacheTTL        = 1 * time.Minute
 	nonFinalTaskCacheTTL      = 1 * time.Minute
 )
 

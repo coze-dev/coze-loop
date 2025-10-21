@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -254,7 +253,7 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
 	return &ListTasksResp{
-		Tasks: filterHiddenFilters(tconv.TaskDOs2DTOs(ctx, taskDOs, userInfoMap)),
+		Tasks: tconv.TaskDOs2DTOs(ctx, taskDOs, userInfoMap),
 		Total: ptr.Of(total),
 	}, nil
 }
@@ -273,66 +272,66 @@ func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *G
 	if err != nil {
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
-	return &GetTaskResp{Task: filterHiddenFilters([]*task.Task{tconv.TaskDO2DTO(ctx, taskPO, userInfoMap)})[0]}, nil
+	return &GetTaskResp{Task: tconv.TaskDO2DTO(ctx, taskPO, userInfoMap)}, nil
 }
 
-func filterHiddenFilters(tasks []*task.Task) []*task.Task {
-	for _, t := range tasks {
-		if t == nil {
-			continue
-		}
-		rule := t.GetRule()
-		if rule == nil {
-			continue
-		}
-		spanFilters := rule.GetSpanFilters()
-		if spanFilters == nil {
-			continue
-		}
-		filters := spanFilters.GetFilters()
-		if filters == nil {
-			continue
-		}
-		filterFields := filters.GetFilterFields()
-		if len(filterFields) == 0 {
-			continue
-		}
-
-		filters.FilterFields = filterVisibleFilterFields(filterFields)
-	}
-	return tasks
-}
-
-func filterVisibleFilterFields(fields []*filter.FilterField) []*filter.FilterField {
-	res := make([]*filter.FilterField, 0, len(fields))
-	for _, f := range fields {
-		if f == nil || f.GetHidden() {
-			continue
-		}
-		sub := f.GetSubFilter()
-		var filteredSub []*filter.FilterField
-		if sub != nil {
-			filteredSub = filterVisibleFilterFields(sub.GetFilterFields())
-			if len(filteredSub) == 0 {
-				f.SetSubFilter(nil)
-			} else {
-				sub.FilterFields = filteredSub
-			}
-		}
-		hasSub := len(filteredSub) > 0
-		fieldName := strings.TrimSpace(f.GetFieldName())
-		hasFieldName := fieldName != ""
-		hasValues := len(f.GetValues()) > 0
-		if !hasSub && (!hasFieldName || !hasValues) {
-			continue
-		}
-		res = append(res, f)
-	}
-	if len(res) == 0 {
-		return nil
-	}
-	return res
-}
+//func filterHiddenFilters(tasks []*task.Task) []*task.Task {
+//	for _, t := range tasks {
+//		if t == nil {
+//			continue
+//		}
+//		rule := t.GetRule()
+//		if rule == nil {
+//			continue
+//		}
+//		spanFilters := rule.GetSpanFilters()
+//		if spanFilters == nil {
+//			continue
+//		}
+//		filters := spanFilters.GetFilters()
+//		if filters == nil {
+//			continue
+//		}
+//		filterFields := filters.GetFilterFields()
+//		if len(filterFields) == 0 {
+//			continue
+//		}
+//
+//		filters.FilterFields = filterVisibleFilterFields(filterFields)
+//	}
+//	return tasks
+//}
+//
+//func filterVisibleFilterFields(fields []*filter.FilterField) []*filter.FilterField {
+//	res := make([]*filter.FilterField, 0, len(fields))
+//	for _, f := range fields {
+//		if f == nil || f.GetHidden() {
+//			continue
+//		}
+//		sub := f.GetSubFilter()
+//		var filteredSub []*filter.FilterField
+//		if sub != nil {
+//			filteredSub = filterVisibleFilterFields(sub.GetFilterFields())
+//			if len(filteredSub) == 0 {
+//				f.SetSubFilter(nil)
+//			} else {
+//				sub.FilterFields = filteredSub
+//			}
+//		}
+//		hasSub := len(filteredSub) > 0
+//		fieldName := strings.TrimSpace(f.GetFieldName())
+//		hasFieldName := fieldName != ""
+//		hasValues := len(f.GetValues()) > 0
+//		if !hasSub && (!hasFieldName || !hasValues) {
+//			continue
+//		}
+//		res = append(res, f)
+//	}
+//	if len(res) == 0 {
+//		return nil
+//	}
+//	return res
+//}
 
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {
 	taskPOs, _, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
