@@ -283,7 +283,7 @@ func filterHiddenFilters(tasks []*entity.ObservabilityTask) []*entity.Observabil
 		}
 
 		spanFilters := t.SpanFilter
-		if spanFilters == nil {
+		if t.SpanFilter == nil {
 			continue
 		}
 		filters := spanFilters.Filters
@@ -297,7 +297,7 @@ func filterHiddenFilters(tasks []*entity.ObservabilityTask) []*entity.Observabil
 				resFilters = append(resFilters, filter)
 			}
 		}
-		filters.FilterFields = resFilters
+		t.SpanFilter.Filters.FilterFields = resFilters
 	}
 	return tasks
 }
