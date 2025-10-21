@@ -340,7 +340,7 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 	defer h.taskCacheLock.Unlock()
 
 	// 4. Write new cache into local cache
-	h.taskCache.Store("ObjListWithTask", &newCache)
+	h.taskCache.Store("ObjListWithTask", newCache)
 
 	logs.CtxInfo(ctx, "Task cache sync completed, taskCount:%d, updateTime:%s", len(tasks), newCache.UpdateTime.Format(time.RFC3339))
 }

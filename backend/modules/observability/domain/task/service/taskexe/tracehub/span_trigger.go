@@ -280,7 +280,7 @@ func (h *TraceHubServiceImpl) getObjListWithTaskFromCache(ctx context.Context) (
 		return nil, nil, nil
 	}
 
-	cacheInfo, ok := objListWithTask.(*TaskCacheInfo)
+	cacheInfo, ok := objListWithTask.(TaskCacheInfo)
 	if !ok {
 		logs.CtxError(ctx, "Cache data type mismatch")
 		return nil, nil, nil
