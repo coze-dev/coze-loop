@@ -18,7 +18,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	entity_common "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -177,45 +176,9 @@ func SpanFilterDO2DTO(spanFilter *entity.SpanFilterFields) *filter.SpanFilterFie
 	}
 
 	return &filter.SpanFilterFields{
-		Filters:      FiltersDO2DTO(&spanFilter.Filters),
+		Filters:      convertor.FilterFieldsDO2DTO(&spanFilter.Filters),
 		PlatformType: &spanFilter.PlatformType,
 		SpanListType: &spanFilter.SpanListType,
-	}
-}
-
-func FiltersDO2DTO(filters *loop_span.FilterFields) *filter.FilterFields {
-	if filters == nil {
-		return nil
-	}
-	var filterFields []*filter.FilterField
-	for _, f := range filters.FilterFields {
-		var queryType, queryAndOr string
-		if f.QueryType != nil {
-			queryType = filter.QueryType(*f.QueryType)
-		}
-		if f.QueryAndOr != nil {
-			queryAndOr = filter.QueryRelation(*f.QueryAndOr)
-		}
-		var subFilter *filter.FilterFields
-		if f.SubFilter != nil {
-			subFilter = FiltersDO2DTO(f.SubFilter)
-		}
-		filterFields = append(filterFields, &filter.FilterField{
-			FieldName:  ptr.Of(f.FieldName),
-			FieldType:  ptr.Of(filter.FieldType(f.FieldType)),
-			Values:     f.Values,
-			QueryType:  ptr.Of(queryType),
-			QueryAndOr: ptr.Of(queryAndOr),
-			SubFilter:  subFilter,
-		})
-	}
-	var queryAndOr *filter.QueryRelation
-	if filters.QueryAndOr != nil {
-		queryAndOr = ptr.Of(filter.QueryRelation(*filters.QueryAndOr))
-	}
-	return &filter.FilterFields{
-		QueryAndOr:   queryAndOr,
-		FilterFields: filterFields,
 	}
 }
 
