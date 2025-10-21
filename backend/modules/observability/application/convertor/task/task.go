@@ -188,12 +188,19 @@ func FiltersDO2DTO(filters *loop_span.FilterFields) *filter.FilterFields {
 	}
 	var filterFields []*filter.FilterField
 	for _, f := range filters.FilterFields {
+		var queryType, queryAndOr string
+		if f.QueryType != nil {
+			queryType = filter.QueryType(*f.QueryType)
+		}
+		if f.QueryAndOr != nil {
+			queryAndOr = filter.QueryRelation(*f.QueryAndOr)
+		}
 		filterFields = append(filterFields, &filter.FilterField{
 			FieldName:  ptr.Of(f.FieldName),
 			FieldType:  ptr.Of(filter.FieldType(f.FieldType)),
 			Values:     f.Values,
-			QueryType:  ptr.Of(filter.QueryType(*f.QueryType)),
-			QueryAndOr: ptr.Of(filter.QueryRelation(*f.QueryAndOr)),
+			QueryType:  ptr.Of(queryType),
+			QueryAndOr: ptr.Of(queryAndOr),
 		})
 	}
 	return &filter.FilterFields{
