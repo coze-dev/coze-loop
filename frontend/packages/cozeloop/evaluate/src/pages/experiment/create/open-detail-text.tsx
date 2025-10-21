@@ -8,10 +8,12 @@ export function OpenDetailText({
   className,
   text,
   url,
+  customOpen,
 }: {
   url: string;
   className?: string;
   text?: string;
+  customOpen?: () => void;
 }) {
   return (
     <Tooltip theme="dark" content={I18n.t('detail')}>
@@ -22,7 +24,11 @@ export function OpenDetailText({
         )}
         onClick={e => {
           e.stopPropagation();
-          window.open(url);
+          if (customOpen) {
+            customOpen();
+          } else {
+            window.open(url, '_blank');
+          }
         }}
       >
         {text || I18n.t('detail')}

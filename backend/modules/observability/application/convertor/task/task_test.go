@@ -18,6 +18,7 @@ import (
 	kitTask "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	entityCommon "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -79,7 +80,14 @@ func TestTaskDOs2DTOs(t *testing.T) {
 			Description: ptr.Of("desc"),
 			TaskType:    kitTask.TaskTypeAutoEval,
 			TaskStatus:  kitTask.TaskStatusRunning,
-			SpanFilter:  &filter.SpanFilterFields{},
+			SpanFilter: &entity.SpanFilterFields{
+				PlatformType: kitCommon.PlatformTypeCozeloop,
+				SpanListType: kitCommon.SpanListTypeRootSpan,
+				Filters: loop_span.FilterFields{
+					QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
+					FilterFields: []*loop_span.FilterField{},
+				},
+			},
 			EffectiveTime: &entity.EffectiveTime{
 				StartAt: now.Add(time.Hour).UnixMilli(),
 				EndAt:   now.Add(2 * time.Hour).UnixMilli(),
@@ -231,8 +239,13 @@ func TestTaskDTO2DO(t *testing.T) {
 		},
 	}
 
-	overrideSpan := &filter.SpanFilterFields{
-		PlatformType: gptr.Of(kitCommon.PlatformType("coze")),
+	overrideSpan := &entity.SpanFilterFields{
+		PlatformType: kitCommon.PlatformTypeCozeloop,
+		SpanListType: kitCommon.SpanListTypeRootSpan,
+		Filters: loop_span.FilterFields{
+			QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
+			FilterFields: []*loop_span.FilterField{},
+		},
 	}
 
 	entityTask := TaskDTO2DO(dto, "override", overrideSpan)

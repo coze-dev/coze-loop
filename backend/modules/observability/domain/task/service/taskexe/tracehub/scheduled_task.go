@@ -422,6 +422,31 @@ func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *Tas
 	return nil
 }
 
+func (h *TraceHubServiceImpl) listNonFinalTaskByRedis(ctx context.Context, spaceID string) ([]*entity.ObservabilityTask, error) {
+	var taskPOs []*entity.ObservabilityTask
+	nonFinalTaskIDs, err := h.taskRepo.ListNonFinalTask(ctx, spaceID)
+	if err != nil {
+		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "Start listing non-final tasks, taskCount:%d, nonFinalTaskIDs:%v", len(nonFinalTaskIDs), nonFinalTaskIDs)
+	if len(nonFinalTaskIDs) == 0 {
+		return taskPOs, nil
+	}
+	for _, taskID := range nonFinalTaskIDs {
+		taskPO, err := h.taskRepo.GetTaskByRedis(ctx, taskID)
+		if err != nil {
+			logs.CtxError(ctx, "Failed to get task", "err", err)
+			return nil, err
+		}
+		if taskPO == nil {
+			continue
+		}
+		taskPOs = append(taskPOs, taskPO)
+	}
+	return taskPOs, nil
+}
+
 func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
 	var taskPOs []*entity.ObservabilityTask
 	var offset int32 = 0
