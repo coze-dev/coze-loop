@@ -82,7 +82,6 @@ struct OrderBy {
 
 struct RuntimeParam {
     1: optional string json_value
-    2: optional string json_demo
 }
 
 // 消息角色
