@@ -1,31 +1,159 @@
 models:
+  # reasoning model
   - id: 1
-    name: "doubao"
+    workspace_id: 0 # In the future, there will be the concept of public/private workspaces. Public models are managed by the public workspace, private models by the private workspace. Currently, all models belong to the public workspace, and the public workspace id is temporarily set to 0.
+    name: "deepseek-r1-distill-qwen-32b-250120"
     frame: "eino"
     protocol: "ark"
     protocol_config:
-      api_key: "***"
-      model: "***"
+      api_key: "a715a14b-3b93-47da-8bc9-844c12fecff7"
+      model: "ep-20250304143659-5bcjt"
     param_config:
       param_schemas:
         - name: "temperature"
           label: "temperature"
-          desc: "Increasing temperature makes model output more diverse and creative, while decreasing it makes output more focused on instructions but less diverse. It's recommended not to adjust this simultaneously with 'Top p'."
+          desc: "Increasing temperature will make the model output more diverse and creative. Conversely, lowering the temperature will make the output more compliant with instructions but reduce diversity. It is recommended not to adjust together with 'Top p'."
           type: "float"
           min: "0"
           max: "1.0"
           default_val: "0.7"
         - name: "max_tokens"
           label: "max_tokens"
-          desc: "Controls the maximum number of tokens in model output. Typically, 100 tokens equals about 150 Chinese characters."
+          desc: "Controls the maximum length of model output tokens. Typically, 100 tokens are about 150 Chinese characters."
           type: "int"
           min: "1"
-          max: "4096"
+          max: "8192"
           default_val: "2048"
-        - name: "top_p"
-          label: "top_p"
-          desc: "Selects the minimum token set with cumulative probability reaching top_p during generation, excluding tokens outside the set, balancing diversity and reasonableness."
+  # multimodal model
+  - id: 2
+    workspace_id: 0 # In the future, there will be the concept of public/private workspaces. Public models are managed by the public workspace, private models by the private workspace. Currently, all models belong to the public workspace, and the public workspace id is temporarily set to 0.
+    name: "doubao-1.5-vision-pro-32k"
+    desc: ""
+    ability:
+      max_context_tokens: 65536
+      max_input_tokens: 65536
+      max_output_tokens: 8192
+      function_call: false
+      json_mode: false
+      multi_modal: true
+      ability_multi_modal:
+        image: true
+        ability_image:
+          url_enabled: true
+          binary_enabled: true
+          max_image_size: 20 # unit MB
+          max_image_count: 20
+    frame: "eino"
+    protocol: "ark"
+    protocol_config:
+      base_url: "https://ark.cn-beijing.volces.com/api/v3"
+      api_key: "a715a14b-3b93-47da-8bc9-844c12fecff7"
+      model: "ep-20250304145131-ndcct"
+      protocol_config_ark:
+        region: "cn-beijing"
+    scenario_configs:
+      default:
+        scenario: "default"
+        quota:
+          qpm: 0
+          tpm: 0
+        unavailable: false
+      evaluator:
+        scenario: "evaluator"
+        quota:
+          qpm: 0
+          tpm: 0
+        unavailable: false
+    param_config:
+      param_schemas:
+        - name: "temperature"
+          label: "temperature"
+          desc: "Increasing temperature will make the model output more diverse and creative. Conversely, lowering the temperature will make the output more compliant with instructions but reduce diversity. It is recommended not to adjust together with 'Top p'."
           type: "float"
-          min: "0.001"
+          min: "0"
           max: "1.0"
           default_val: "0.7"
+        - name: "max_tokens"
+          label: "max_tokens"
+          desc: "Controls the maximum length of model output tokens. Typically, 100 tokens are about 150 Chinese characters."
+          type: "int"
+          min: "1"
+          max: "8192"
+          default_val: "2048"
+  # fc model
+  - id: 3
+    workspace_id: 0 # In the future, there will be the concept of public/private workspaces. Public models are managed by the public workspace, private models by the private workspace. Currently, all models belong to the public workspace, and the public workspace id is temporarily set to 0.
+    name: "doubao-1.5-lite-32k"
+    desc: ""
+    ability:
+      max_context_tokens: 32000
+      max_input_tokens: 32000
+      max_output_tokens: 12000
+      function_call: true
+      json_mode: false
+      multi_modal: false
+    frame: "eino"
+    protocol: "ark"
+    protocol_config:
+      base_url: "https://ark.cn-beijing.volces.com/api/v3"
+      api_key: "a715a14b-3b93-47da-8bc9-844c12fecff7"
+      model: "ep-20250227201314-frn9m"
+      protocol_config_ark:
+        region: "cn-beijing"
+    scenario_configs:
+      default:
+        scenario: "default"
+        quota:
+          qpm: 0
+          tpm: 0
+        unavailable: false
+      evaluator:
+        scenario: "evaluator"
+        quota:
+          qpm: 0
+          tpm: 0
+        unavailable: false
+    param_config:
+      param_schemas:
+        - name: "temperature"
+          label: "temperature"
+          desc: "Increasing temperature will make the model output more diverse and creative. Conversely, lowering the temperature will make the output more compliant with instructions but reduce diversity. It is recommended not to adjust together with 'Top p'."
+          type: "float"
+          min: "0"
+          max: "1.0"
+          default_val: "0.1"
+        - name: "top_p"
+          label: "top_p"
+          desc: "The model will consider token results within top_p probability mass."
+          type: "float"
+          min: "0"
+          max: "1.0"
+          default_val: "0.1"
+        - name: "max_tokens"
+          label: "max_tokens"
+          desc: "Controls the maximum length of model output tokens. Typically, 100 tokens are about 150 Chinese characters."
+          type: "int"
+          min: "1"
+          max: "8192"
+          default_val: "2048"
+        - name: "top_k"
+          label: "top_k"  # Displayed as a name on the front end
+          desc: "Only sample from the top k tokens with the highest probability to limit the candidate range and improve generation stability." # Displayed as a description on the front end
+          type: "int" # Required. Must be float, int, bool, string
+          min: "1"
+          max: "100"
+          default_val: "50"
+        - name: "frequency_penalty"
+          label: "frequency_penalty"  # Displayed as a name on the front end
+          desc: "Penalizes generated tokens, with higher frequency resulting in higher penalties, suppressing repetitive content." # Displayed as a description on the front end
+          type: "float" # Required. Must be float, int, bool, string
+          min: "0"
+          max: "2.0"
+          default_val: "0"
+        - name: "presence_penalty"
+          label: "presence_penalty"  # Displayed as a name on the front end
+          desc: "Penalizes all tokens that have appeared, preventing the same content from appearing repeatedly, increasing content diversity." # Displayed as a description on the front end
+          type: "float" # Required. Must be float, int, bool, string
+          min: "0"
+          max: "2.0"
+          default_val: "0"

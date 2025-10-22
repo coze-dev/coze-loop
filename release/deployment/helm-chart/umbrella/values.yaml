@@ -15,7 +15,20 @@ custom: &custom
 
 # 固定，不要动，用于传递全局变量
 coze-loop-app:
-  custom: *custom
+  custom:
+    image:
+      registry: ""
+      pullSecrets: "***"
+    redis:
+      disabled: true
+    mysql:
+      disabled: true
+    clickhouse:
+      disabled: true
+    oss:
+      disabled: true
+    rmq:
+      disabled: true
 coze-loop-nginx:
   custom: *custom
 coze-loop-redis:
