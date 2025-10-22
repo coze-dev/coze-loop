@@ -36,23 +36,45 @@ func (p *TokenUsage) IsValid() error {
 func (p *EvaluatorAggregateResult_) IsValid() error {
 	return nil
 }
-func (p *ExperimentStatistics) IsValid() error {
-	if p.TokenUsage != nil {
-		if err := p.TokenUsage.IsValid(); err != nil {
-			return fmt.Errorf("field TokenUsage not valid, %w", err)
+func (p *AggregatorResult_) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
 		}
 	}
 	return nil
 }
+func (p *AggregateData) IsValid() error {
+	if p.ScoreDistribution != nil {
+		if err := p.ScoreDistribution.IsValid(); err != nil {
+			return fmt.Errorf("field ScoreDistribution not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ScoreDistribution) IsValid() error {
+	return nil
+}
+func (p *ScoreDistributionItem) IsValid() error {
+	return nil
+}
+func (p *ExperimentStatistics) IsValid() error {
+	return nil
+}
 func (p *Experiment) IsValid() error {
+	if p.TargetRuntimeParam != nil {
+		if err := p.TargetRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
 	if p.TargetFieldMapping != nil {
 		if err := p.TargetFieldMapping.IsValid(); err != nil {
 			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
 		}
 	}
-	if p.ExperimentStatistics != nil {
-		if err := p.ExperimentStatistics.IsValid(); err != nil {
-			return fmt.Errorf("field ExperimentStatistics not valid, %w", err)
+	if p.ExptStats != nil {
+		if err := p.ExptStats.IsValid(); err != nil {
+			return fmt.Errorf("field ExptStats not valid, %w", err)
 		}
 	}
 	if p.BaseInfo != nil {
@@ -76,31 +98,20 @@ func (p *TargetOutput) IsValid() error {
 	}
 	return nil
 }
-func (p *EvaluatorOutput) IsValid() error {
-	return nil
-}
-func (p *ExperimentResultPayload) IsValid() error {
+func (p *ResultPayload) IsValid() error {
 	if p.EvalSetTurn != nil {
 		if err := p.EvalSetTurn.IsValid(); err != nil {
 			return fmt.Errorf("field EvalSetTurn not valid, %w", err)
 		}
 	}
-	if p.TargetOutput != nil {
-		if err := p.TargetOutput.IsValid(); err != nil {
-			return fmt.Errorf("field TargetOutput not valid, %w", err)
-		}
-	}
-	if p.EvaluatorOutput != nil {
-		if err := p.EvaluatorOutput.IsValid(); err != nil {
-			return fmt.Errorf("field EvaluatorOutput not valid, %w", err)
+	if p.TargetRecord != nil {
+		if err := p.TargetRecord.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRecord not valid, %w", err)
 		}
 	}
 	return nil
 }
 func (p *TurnResult_) IsValid() error {
-	return nil
-}
-func (p *ExperimentResult_) IsValid() error {
 	if p.Payload != nil {
 		if err := p.Payload.IsValid(); err != nil {
 			return fmt.Errorf("field Payload not valid, %w", err)

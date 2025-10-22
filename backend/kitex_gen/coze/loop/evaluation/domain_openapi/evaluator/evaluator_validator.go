@@ -21,14 +21,6 @@ var (
 	_ = time.Nanosecond
 )
 
-func (p *Message) IsValid() error {
-	if p.Content != nil {
-		if err := p.Content.IsValid(); err != nil {
-			return fmt.Errorf("field Content not valid, %w", err)
-		}
-	}
-	return nil
-}
 func (p *PromptEvaluator) IsValid() error {
 	if p.ModelConfig != nil {
 		if err := p.ModelConfig.IsValid(); err != nil {
@@ -110,11 +102,6 @@ func (p *EvaluatorInputData) IsValid() error {
 	return nil
 }
 func (p *EvaluatorRecord) IsValid() error {
-	if p.EvaluatorInputData != nil {
-		if err := p.EvaluatorInputData.IsValid(); err != nil {
-			return fmt.Errorf("field EvaluatorInputData not valid, %w", err)
-		}
-	}
 	if p.EvaluatorOutputData != nil {
 		if err := p.EvaluatorOutputData.IsValid(); err != nil {
 			return fmt.Errorf("field EvaluatorOutputData not valid, %w", err)

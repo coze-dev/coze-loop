@@ -5,56 +5,11 @@ package evaluation_set
 
 import (
 	"github.com/bytedance/gg/gptr"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
+	dto_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapi_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
-
-// convertOpenAPIContentTypeToDO 将OpenAPI的ContentType转换为Domain Entity的ContentType
-func convertOpenAPIContentTypeToDO(contentType *common.ContentType) entity.ContentType {
-	if contentType == nil {
-		return entity.ContentTypeText // 默认值
-	}
-
-	switch *contentType {
-	case common.ContentTypeText:
-		return entity.ContentTypeText
-	case common.ContentTypeImage:
-		return entity.ContentTypeImage
-	case common.ContentTypeAudio:
-		return entity.ContentTypeAudio
-	case common.ContentTypeMultiPart:
-		return entity.ContentTypeMultipart
-	default:
-		return entity.ContentTypeText // 默认使用Text类型
-	}
-}
-
-// convertDOContentTypeToOpenAPI 将Domain Entity的ContentType转换为OpenAPI的ContentType
-func convertDOContentTypeToOpenAPI(contentType entity.ContentType) *common.ContentType {
-	if contentType == "" {
-		return nil
-	}
-
-	switch contentType {
-	case entity.ContentTypeText:
-		ct := common.ContentTypeText
-		return &ct
-	case entity.ContentTypeImage:
-		ct := common.ContentTypeImage
-		return &ct
-	case entity.ContentTypeAudio:
-		ct := common.ContentTypeAudio
-		return &ct
-	case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
-		ct := common.ContentTypeMultiPart
-		return &ct
-	default:
-		// 默认使用text类型
-		ct := common.ContentTypeText
-		return &ct
-	}
-}
 
 // convertOpenAPIDisplayFormatToDO 将OpenAPI的DefaultDisplayFormat转换为Domain Entity的DefaultDisplayFormat
 func convertOpenAPIDisplayFormatToDO(format *openapi_eval_set.FieldDisplayFormat) entity.FieldDisplayFormat {
@@ -165,7 +120,7 @@ func OpenAPIFieldSchemaDTO2DO(dto *openapi_eval_set.FieldSchema) *entity.FieldSc
 		textSchema = *dto.TextSchema
 	}
 
-	contentType := convertOpenAPIContentTypeToDO(dto.ContentType)
+	contentType := common.ConvertOpenAPIContentTypeToDO(dto.ContentType)
 
 	displayFormat := convertOpenAPIDisplayFormatToDO(dto.DefaultDisplayFormat)
 
@@ -180,7 +135,7 @@ func OpenAPIFieldSchemaDTO2DO(dto *openapi_eval_set.FieldSchema) *entity.FieldSc
 }
 
 // OpenAPI OrderBy 转换
-func OrderByDTO2DOs(dtos []*common.OrderBy) []*entity.OrderBy {
+func OrderByDTO2DOs(dtos []*dto_common.OrderBy) []*entity.OrderBy {
 	if dtos == nil {
 		return nil
 	}
@@ -191,7 +146,7 @@ func OrderByDTO2DOs(dtos []*common.OrderBy) []*entity.OrderBy {
 	return result
 }
 
-func OrderByDTO2DO(dto *common.OrderBy) *entity.OrderBy {
+func OrderByDTO2DO(dto *dto_common.OrderBy) *entity.OrderBy {
 	if dto == nil {
 		return nil
 	}
@@ -228,6 +183,17 @@ func OpenAPIEvaluationSetDO2DTOs(dos []*entity.EvaluationSet) []*openapi_eval_se
 	result := make([]*openapi_eval_set.EvaluationSet, 0)
 	for _, do := range dos {
 		result = append(result, OpenAPIEvaluationSetDO2DTO(do))
+	}
+	return result
+}
+
+func OpenAPIEvaluationSetVersionDO2DTOs(dos []*entity.EvaluationSetVersion) []*openapi_eval_set.EvaluationSetVersion {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.EvaluationSetVersion, 0)
+	for _, do := range dos {
+		result = append(result, OpenAPIEvaluationSetVersionDO2DTO(do))
 	}
 	return result
 }
@@ -273,7 +239,7 @@ func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 
 	displayFormat := convertDODisplayFormatToOpenAPI(do.DefaultDisplayFormat)
 
-	contentType := convertDOContentTypeToOpenAPI(do.ContentType)
+	contentType := common.ConvertDOContentTypeToOpenAPI(do.ContentType)
 
 	return &openapi_eval_set.FieldSchema{
 		Name:                 gptr.Of(do.Name),
@@ -285,11 +251,11 @@ func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 	}
 }
 
-func ConvertBaseInfoDO2DTO(info *entity.BaseInfo) *common.BaseInfo {
+func ConvertBaseInfoDO2DTO(info *entity.BaseInfo) *dto_common.BaseInfo {
 	if info == nil {
 		return nil
 	}
-	return &common.BaseInfo{
+	return &dto_common.BaseInfo{
 		CreatedBy: ConvertUserInfoDO2DTO(info.CreatedBy),
 		UpdatedBy: ConvertUserInfoDO2DTO(info.UpdatedBy),
 		CreatedAt: info.CreatedAt,
@@ -297,11 +263,11 @@ func ConvertBaseInfoDO2DTO(info *entity.BaseInfo) *common.BaseInfo {
 	}
 }
 
-func ConvertUserInfoDO2DTO(info *entity.UserInfo) *common.UserInfo {
+func ConvertUserInfoDO2DTO(info *entity.UserInfo) *dto_common.UserInfo {
 	if info == nil {
 		return nil
 	}
-	return &common.UserInfo{
+	return &dto_common.UserInfo{
 		Name:      info.Name,
 		AvatarURL: info.AvatarURL,
 		UserID:    info.UserID,
@@ -309,11 +275,11 @@ func ConvertUserInfoDO2DTO(info *entity.UserInfo) *common.UserInfo {
 	}
 }
 
-func OpenAPIUserInfoDO2DTO(do *entity.UserInfo) *common.UserInfo {
+func OpenAPIUserInfoDO2DTO(do *entity.UserInfo) *dto_common.UserInfo {
 	if do == nil {
 		return nil
 	}
-	return &common.UserInfo{
+	return &dto_common.UserInfo{
 		UserID:    do.UserID,
 		Name:      do.Name,
 		AvatarURL: do.AvatarURL,
@@ -386,7 +352,7 @@ func OpenAPIFieldDataDTO2DO(dto *openapi_eval_set.FieldData) *entity.FieldData {
 	}
 }
 
-func OpenAPIContentDTO2DO(content *common.Content) *entity.Content {
+func OpenAPIContentDTO2DO(content *dto_common.Content) *entity.Content {
 	if content == nil {
 		return nil
 	}
@@ -399,14 +365,14 @@ func OpenAPIContentDTO2DO(content *common.Content) *entity.Content {
 		}
 	}
 	return &entity.Content{
-		ContentType: gptr.Of(convertOpenAPIContentTypeToDO(content.ContentType)),
+		ContentType: gptr.Of(common.ConvertOpenAPIContentTypeToDO(content.ContentType)),
 		Text:        content.Text,
 		Image:       ConvertImageDTO2DO(content.Image),
 		MultiPart:   multiPart,
 	}
 }
 
-func ConvertImageDTO2DO(img *common.Image) *entity.Image {
+func ConvertImageDTO2DO(img *dto_common.Image) *entity.Image {
 	if img == nil {
 		return nil
 	}
@@ -482,41 +448,41 @@ func OpenAPIFieldDataDO2DTO(do *entity.FieldData) *openapi_eval_set.FieldData {
 	}
 }
 
-func OpenAPIContentDO2DTO(content *entity.Content) *common.Content {
+func OpenAPIContentDO2DTO(content *entity.Content) *dto_common.Content {
 	if content == nil {
 		return nil
 	}
-	var multiPart []*common.Content
+	var multiPart []*dto_common.Content
 	if content.MultiPart != nil {
-		multiPart = make([]*common.Content, 0, len(content.MultiPart))
+		multiPart = make([]*dto_common.Content, 0, len(content.MultiPart))
 		for _, part := range content.MultiPart {
 			multiPart = append(multiPart, OpenAPIContentDO2DTO(part))
 		}
 	}
-	return &common.Content{
-		ContentType: convertDOContentTypeToOpenAPI(gptr.Indirect(content.ContentType)),
+	return &dto_common.Content{
+		ContentType: common.ConvertDOContentTypeToOpenAPI(gptr.Indirect(content.ContentType)),
 		Text:        content.Text,
 		Image:       ConvertImageDO2DTO(content.Image),
 		MultiPart:   multiPart,
 	}
 }
 
-func ConvertImageDO2DTO(img *entity.Image) *common.Image {
+func ConvertImageDO2DTO(img *entity.Image) *dto_common.Image {
 	if img == nil {
 		return nil
 	}
-	return &common.Image{
+	return &dto_common.Image{
 		Name:     img.Name,
 		URL:      img.URL,
 		ThumbURL: img.ThumbURL,
 	}
 }
 
-func ConvertAudioDO2DTO(audio *entity.Audio) *common.Audio {
+func ConvertAudioDO2DTO(audio *entity.Audio) *dto_common.Audio {
 	if audio == nil {
 		return nil
 	}
-	return &common.Audio{
+	return &dto_common.Audio{
 		Format: audio.Format,
 		URL:    audio.URL,
 	}

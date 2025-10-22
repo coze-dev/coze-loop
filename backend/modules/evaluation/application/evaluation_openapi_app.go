@@ -572,23 +572,15 @@ func (e *EvaluationOpenApiApplicationImpl) UpdateEvaluationSetSchemaOApi(ctx con
 
 func (e *EvaluationOpenApiApplicationImpl) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	var (
-		evaluationSetID int64
-	)
 	defer func() {
-		var spaceID int64
-		if req != nil {
-			spaceID = req.GetWorkspaceID()
-		}
-		e.metric.EmitOpenAPIMetric(ctx, spaceID, evaluationSetID, kitexutil.GetTOMethod(ctx), startTime, err)
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 
-	workspaceID := req.GetWorkspaceID()
-	if workspaceID <= 0 {
+	if req.GetWorkspaceID() <= 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
 	}
 
@@ -596,90 +588,39 @@ func (e *EvaluationOpenApiApplicationImpl) SubmitExperimentOApi(ctx context.Cont
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_param.version is required"))
 	}
 
-	evalSetVersionID, convErr := strconv.ParseInt(req.EvalSetParam.GetVersion(), 10, 64)
-	if convErr != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid eval_set_param.version"))
-	}
-
-	version, set, getErr := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, workspaceID, evalSetVersionID, nil)
-	if getErr != nil {
-		return nil, getErr
-	}
-	if version == nil || set == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set version not found"))
-	}
-	if set.SpaceID != workspaceID {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set version not found"))
-	}
-	evaluationSetID = set.ID
-
-	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(workspaceID, 10),
-		SpaceID:       workspaceID,
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
+	// TODO dsf 查询评测集版本信息
+	var evalSetVersionID int64
+	// TODO dsf 查询评估器版本详情
+	var evaluatorVersionIDs []int64
 
-	if e.experimentApp == nil {
-		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment application not initialized"))
-	}
-
-	if req.EvaluatorParam == nil || len(req.EvaluatorParam.Versions) == 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator versions is required"))
-	}
-
-	evaluatorVersionIDs, parseErr := experiment_convertor.ParseOpenAPIEvaluatorVersions(req.EvaluatorParam.Versions)
-	if parseErr != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(parseErr.Error()))
-	}
-	if len(evaluatorVersionIDs) == 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator versions is required"))
-	}
-	if hasDuplicates(evaluatorVersionIDs) {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
-	}
-
-	targetMapping := experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping)
-	evaluatorFieldMapping, mappingErr := experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping)
-	if mappingErr != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(mappingErr.Error()))
-	}
-	runtimeParam := experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam)
-	evalTargetParam, targetErr := experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.GetEvalTargetParam())
-	if targetErr != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(targetErr.Error()))
-	}
-
-	createReq := &exptpb.CreateExperimentRequest{
-		WorkspaceID:           workspaceID,
+	createReq := &exptpb.SubmitExperimentRequest{
+		WorkspaceID:           req.GetWorkspaceID(),
 		EvalSetVersionID:      gptr.Of(evalSetVersionID),
-		EvalSetID:             gptr.Of(set.ID),
+		EvalSetID:             req.EvalSetParam.EvalSetID,
 		EvaluatorVersionIds:   evaluatorVersionIDs,
 		Name:                  req.Name,
 		Desc:                  req.Description,
-		TargetFieldMapping:    targetMapping,
-		EvaluatorFieldMapping: evaluatorFieldMapping,
+		TargetFieldMapping:    experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
+		EvaluatorFieldMapping: experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping),
 		ItemConcurNum:         req.ItemConcurNum,
-		TargetRuntimeParam:    runtimeParam,
-		CreateEvalTargetParam: evalTargetParam,
+		TargetRuntimeParam:    experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
+		CreateEvalTargetParam: experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
 	}
 
-	cresp, err := e.experimentApp.CreateExperiment(ctx, createReq)
+	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err
 	}
 	if cresp == nil || cresp.GetExperiment() == nil || cresp.GetExperiment().ID == nil {
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment create failed"))
-	}
-
-	_, err = e.experimentApp.RunExperiment(ctx, &exptpb.RunExperimentRequest{
-		WorkspaceID: gptr.Of(workspaceID),
-		ExptID:      cresp.GetExperiment().ID,
-		ExptType:    cresp.GetExperiment().ExptType,
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	return &openapi.SubmitExperimentOApiResponse{

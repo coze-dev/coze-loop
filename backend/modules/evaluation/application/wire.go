@@ -312,6 +312,7 @@ func InitEvaluationOpenAPIApplication(client datasetservice.Client,
 	meter metrics.Meter,
 	authClient authservice.Client,
 	userClient userservice.Client,
+	experimentApp IExperimentApplication,
 ) evaluation.EvaluationOpenAPIService {
 	wire.Build(
 		evaluationOpenAPISet,

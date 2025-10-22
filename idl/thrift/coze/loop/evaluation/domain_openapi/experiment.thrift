@@ -12,6 +12,8 @@ const ExperimentStatus ExperimentStatus_Processing = "processing"
 const ExperimentStatus ExperimentStatus_Success = "success"
 const ExperimentStatus ExperimentStatus_Failed = "failed"
 const ExperimentStatus ExperimentStatus_Terminated = "terminated"
+const ExperimentStatus ExperimentStatus_SystemTerminated = "system_terminated"
+const ExperimentStatus ExperimentStatus_Draining = "draining"
 
 // 实验类型
 typedef string ExperimentType(ts.enum="true")
@@ -45,7 +47,7 @@ struct TargetFieldMapping {
 
 // 评估器字段映射
 struct EvaluatorFieldMapping {
-    1: optional string evaluator_version_id
+    1: optional i64 evaluator_version_id (api.js_conv = 'true', go.tag = 'json:"evaluator_version_id"')
     2: optional list<FieldMapping> from_eval_set
     3: optional list<FieldMapping> from_target
 }

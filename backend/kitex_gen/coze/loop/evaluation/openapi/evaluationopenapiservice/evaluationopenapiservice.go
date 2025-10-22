@@ -41,6 +41,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListEvaluationSetVersionsOApi": kitex.NewMethodInfo(
+		listEvaluationSetVersionsOApiHandler,
+		newEvaluationOpenAPIServiceListEvaluationSetVersionsOApiArgs,
+		newEvaluationOpenAPIServiceListEvaluationSetVersionsOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"BatchCreateEvaluationSetItemsOApi": kitex.NewMethodInfo(
 		batchCreateEvaluationSetItemsOApiHandler,
 		newEvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs,
@@ -76,52 +83,31 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"CreateEvaluatorOApi": kitex.NewMethodInfo(
-		createEvaluatorOApiHandler,
-		newEvaluationOpenAPIServiceCreateEvaluatorOApiArgs,
-		newEvaluationOpenAPIServiceCreateEvaluatorOApiResult,
+	"SubmitExperimentOApi": kitex.NewMethodInfo(
+		submitExperimentOApiHandler,
+		newEvaluationOpenAPIServiceSubmitExperimentOApiArgs,
+		newEvaluationOpenAPIServiceSubmitExperimentOApiResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"SubmitEvaluatorVersionOApi": kitex.NewMethodInfo(
-		submitEvaluatorVersionOApiHandler,
-		newEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs,
-		newEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult,
+	"GetExperimentsOApi": kitex.NewMethodInfo(
+		getExperimentsOApiHandler,
+		newEvaluationOpenAPIServiceGetExperimentsOApiArgs,
+		newEvaluationOpenAPIServiceGetExperimentsOApiResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"GetEvaluatorVersionOApi": kitex.NewMethodInfo(
-		getEvaluatorVersionOApiHandler,
-		newEvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs,
-		newEvaluationOpenAPIServiceGetEvaluatorVersionOApiResult,
+	"ListExperimentResultOApi": kitex.NewMethodInfo(
+		listExperimentResultOApiHandler,
+		newEvaluationOpenAPIServiceListExperimentResultOApiArgs,
+		newEvaluationOpenAPIServiceListExperimentResultOApiResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"RunEvaluatorOApi": kitex.NewMethodInfo(
-		runEvaluatorOApiHandler,
-		newEvaluationOpenAPIServiceRunEvaluatorOApiArgs,
-		newEvaluationOpenAPIServiceRunEvaluatorOApiResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
-	"GetEvaluatorRecordOApi": kitex.NewMethodInfo(
-		getEvaluatorRecordOApiHandler,
-		newEvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs,
-		newEvaluationOpenAPIServiceGetEvaluatorRecordOApiResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
-	"CreateExperimentOApi": kitex.NewMethodInfo(
-		createExperimentOApiHandler,
-		newEvaluationOpenAPIServiceCreateExperimentOApiArgs,
-		newEvaluationOpenAPIServiceCreateExperimentOApiResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
-	"GetExperimentResultOApi": kitex.NewMethodInfo(
-		getExperimentResultOApiHandler,
-		newEvaluationOpenAPIServiceGetExperimentResultOApiArgs,
-		newEvaluationOpenAPIServiceGetExperimentResultOApiResult,
+	"GetExperimentAggrResultOApi": kitex.NewMethodInfo(
+		getExperimentAggrResultOApiHandler,
+		newEvaluationOpenAPIServiceGetExperimentAggrResultOApiArgs,
+		newEvaluationOpenAPIServiceGetExperimentAggrResultOApiResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -234,6 +220,25 @@ func newEvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult() interface
 	return openapi.NewEvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult()
 }
 
+func listEvaluationSetVersionsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceListEvaluationSetVersionsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceListEvaluationSetVersionsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ListEvaluationSetVersionsOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceListEvaluationSetVersionsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluationSetVersionsOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceListEvaluationSetVersionsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluationSetVersionsOApiResult()
+}
+
 func batchCreateEvaluationSetItemsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiArgs)
 	realResult := result.(*openapi.EvaluationOpenAPIServiceBatchCreateEvaluationSetItemsOApiResult)
@@ -329,10 +334,10 @@ func newEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult() interface{
 	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult()
 }
 
-func createEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).CreateEvaluatorOApi(ctx, realArg.Req)
+func submitExperimentOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceSubmitExperimentOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceSubmitExperimentOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).SubmitExperimentOApi(ctx, realArg.Req)
 	if err != nil {
 		return err
 	}
@@ -340,18 +345,18 @@ func createEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, r
 	return nil
 }
 
-func newEvaluationOpenAPIServiceCreateEvaluatorOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceCreateEvaluatorOApiArgs()
+func newEvaluationOpenAPIServiceSubmitExperimentOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceSubmitExperimentOApiArgs()
 }
 
-func newEvaluationOpenAPIServiceCreateEvaluatorOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceCreateEvaluatorOApiResult()
+func newEvaluationOpenAPIServiceSubmitExperimentOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceSubmitExperimentOApiResult()
 }
 
-func submitEvaluatorVersionOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).SubmitEvaluatorVersionOApi(ctx, realArg.Req)
+func getExperimentsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetExperimentsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetExperimentsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetExperimentsOApi(ctx, realArg.Req)
 	if err != nil {
 		return err
 	}
@@ -359,18 +364,18 @@ func submitEvaluatorVersionOApiHandler(ctx context.Context, handler interface{},
 	return nil
 }
 
-func newEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs()
+func newEvaluationOpenAPIServiceGetExperimentsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetExperimentsOApiArgs()
 }
 
-func newEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult()
+func newEvaluationOpenAPIServiceGetExperimentsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetExperimentsOApiResult()
 }
 
-func getEvaluatorVersionOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).GetEvaluatorVersionOApi(ctx, realArg.Req)
+func listExperimentResultOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceListExperimentResultOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceListExperimentResultOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ListExperimentResultOApi(ctx, realArg.Req)
 	if err != nil {
 		return err
 	}
@@ -378,18 +383,18 @@ func getEvaluatorVersionOApiHandler(ctx context.Context, handler interface{}, ar
 	return nil
 }
 
-func newEvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs()
+func newEvaluationOpenAPIServiceListExperimentResultOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListExperimentResultOApiArgs()
 }
 
-func newEvaluationOpenAPIServiceGetEvaluatorVersionOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceGetEvaluatorVersionOApiResult()
+func newEvaluationOpenAPIServiceListExperimentResultOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListExperimentResultOApiResult()
 }
 
-func runEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceRunEvaluatorOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceRunEvaluatorOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).RunEvaluatorOApi(ctx, realArg.Req)
+func getExperimentAggrResultOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetExperimentAggrResultOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetExperimentAggrResultOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetExperimentAggrResultOApi(ctx, realArg.Req)
 	if err != nil {
 		return err
 	}
@@ -397,69 +402,12 @@ func runEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, resu
 	return nil
 }
 
-func newEvaluationOpenAPIServiceRunEvaluatorOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceRunEvaluatorOApiArgs()
+func newEvaluationOpenAPIServiceGetExperimentAggrResultOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetExperimentAggrResultOApiArgs()
 }
 
-func newEvaluationOpenAPIServiceRunEvaluatorOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceRunEvaluatorOApiResult()
-}
-
-func getEvaluatorRecordOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).GetEvaluatorRecordOApi(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs()
-}
-
-func newEvaluationOpenAPIServiceGetEvaluatorRecordOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceGetEvaluatorRecordOApiResult()
-}
-
-func createExperimentOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceCreateExperimentOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceCreateExperimentOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).CreateExperimentOApi(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluationOpenAPIServiceCreateExperimentOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceCreateExperimentOApiArgs()
-}
-
-func newEvaluationOpenAPIServiceCreateExperimentOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceCreateExperimentOApiResult()
-}
-
-func getExperimentResultOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetExperimentResultOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceGetExperimentResultOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).GetExperimentResultOApi(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluationOpenAPIServiceGetExperimentResultOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceGetExperimentResultOApiArgs()
-}
-
-func newEvaluationOpenAPIServiceGetExperimentResultOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceGetExperimentResultOApiResult()
+func newEvaluationOpenAPIServiceGetExperimentAggrResultOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetExperimentAggrResultOApiResult()
 }
 
 type kClient struct {
@@ -509,6 +457,16 @@ func (p *kClient) CreateEvaluationSetVersionOApi(ctx context.Context, req *opena
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceCreateEvaluationSetVersionOApiResult
 	if err = p.c.Call(ctx, "CreateEvaluationSetVersionOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluationSetVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionsOApiRequest) (r *openapi.ListEvaluationSetVersionsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceListEvaluationSetVersionsOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceListEvaluationSetVersionsOApiResult
+	if err = p.c.Call(ctx, "ListEvaluationSetVersionsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -564,71 +522,41 @@ func (p *kClient) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openap
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) CreateEvaluatorOApi(ctx context.Context, req *openapi.CreateEvaluatorOApiRequest) (r *openapi.CreateEvaluatorOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiArgs
+func (p *kClient) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceSubmitExperimentOApiArgs
 	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiResult
-	if err = p.c.Call(ctx, "CreateEvaluatorOApi", &_args, &_result); err != nil {
+	var _result openapi.EvaluationOpenAPIServiceSubmitExperimentOApiResult
+	if err = p.c.Call(ctx, "SubmitExperimentOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) SubmitEvaluatorVersionOApi(ctx context.Context, req *openapi.SubmitEvaluatorVersionOApiRequest) (r *openapi.SubmitEvaluatorVersionOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs
+func (p *kClient) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest) (r *openapi.GetExperimentsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetExperimentsOApiArgs
 	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult
-	if err = p.c.Call(ctx, "SubmitEvaluatorVersionOApi", &_args, &_result); err != nil {
+	var _result openapi.EvaluationOpenAPIServiceGetExperimentsOApiResult
+	if err = p.c.Call(ctx, "GetExperimentsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) GetEvaluatorVersionOApi(ctx context.Context, req *openapi.GetEvaluatorVersionOApiRequest) (r *openapi.GetEvaluatorVersionOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceGetEvaluatorVersionOApiArgs
+func (p *kClient) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest) (r *openapi.ListExperimentResultOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceListExperimentResultOApiArgs
 	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceGetEvaluatorVersionOApiResult
-	if err = p.c.Call(ctx, "GetEvaluatorVersionOApi", &_args, &_result); err != nil {
+	var _result openapi.EvaluationOpenAPIServiceListExperimentResultOApiResult
+	if err = p.c.Call(ctx, "ListExperimentResultOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) RunEvaluatorOApi(ctx context.Context, req *openapi.RunEvaluatorOApiRequest) (r *openapi.RunEvaluatorOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceRunEvaluatorOApiArgs
+func (p *kClient) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetExperimentAggrResultOApiArgs
 	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceRunEvaluatorOApiResult
-	if err = p.c.Call(ctx, "RunEvaluatorOApi", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) GetEvaluatorRecordOApi(ctx context.Context, req *openapi.GetEvaluatorRecordOApiRequest) (r *openapi.GetEvaluatorRecordOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceGetEvaluatorRecordOApiArgs
-	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceGetEvaluatorRecordOApiResult
-	if err = p.c.Call(ctx, "GetEvaluatorRecordOApi", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) CreateExperimentOApi(ctx context.Context, req *openapi.CreateExperimentOApiRequest) (r *openapi.CreateExperimentOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceCreateExperimentOApiArgs
-	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceCreateExperimentOApiResult
-	if err = p.c.Call(ctx, "CreateExperimentOApi", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) GetExperimentResultOApi(ctx context.Context, req *openapi.GetExperimentResultOApiRequest) (r *openapi.GetExperimentResultOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceGetExperimentResultOApiArgs
-	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceGetExperimentResultOApiResult
-	if err = p.c.Call(ctx, "GetExperimentResultOApi", &_args, &_result); err != nil {
+	var _result openapi.EvaluationOpenAPIServiceGetExperimentAggrResultOApiResult
+	if err = p.c.Call(ctx, "GetExperimentAggrResultOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
