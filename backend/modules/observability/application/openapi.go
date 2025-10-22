@@ -145,7 +145,7 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 				WhichIsEnough:    benefitRes.WhichIsEnough,
 				CozeAccountId:    connectorUid,
 				VolcanoAccountID: benefitRes.VolcanoAccountID,
-				Spans:            spans,
+				Spans:            tenantSpanMap[ingestTenant],
 			}); err != nil {
 				return nil, err
 			}
