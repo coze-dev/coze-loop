@@ -135,7 +135,7 @@ func TestNewEvaluatorMetrics(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name:  "nil meter",
+			name:  "meter",
 			meter: metrics.GetMeter(),
 			want:  nil,
 		},
