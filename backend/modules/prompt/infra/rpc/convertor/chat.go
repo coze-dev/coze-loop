@@ -208,7 +208,7 @@ func base64DataToMedia(part *entity.ContentPart) (*runtimedto.ChatMessageImageUR
 	if dataURL == nil {
 		return nil, nil
 	}
-	mimeType := dataURL.Type
+	mimeType := dataURL.ContentType()
 	if strings.HasPrefix(mimeType, runtimedto.MimePrefixImage) {
 		return &runtimedto.ChatMessageImageURL{
 			URL:      part.Base64Data,

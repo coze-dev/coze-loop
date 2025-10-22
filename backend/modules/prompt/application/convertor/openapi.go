@@ -182,7 +182,9 @@ func OpenAPIContentPartDO2DTO(do *entity.ContentPart) *openapi.ContentPart {
 	var videoURL *string
 	var config *openapi.MediaConfig
 	if do.VideoURL != nil {
-		videoURL = ptr.Of(do.VideoURL.URL)
+		if do.VideoURL.URL != "" {
+			videoURL = ptr.Of(do.VideoURL.URL)
+		}
 		// Set Config with fps if available
 		if do.VideoURL.Fps != nil {
 			config = &openapi.MediaConfig{
