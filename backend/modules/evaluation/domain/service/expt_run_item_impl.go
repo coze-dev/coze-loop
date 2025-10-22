@@ -212,6 +212,9 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		}
 	)
 	etec.Ext = make(map[string]string)
+	for k, v := range eiec.Event.Ext {
+		etec.Ext[k] = v
+	}
 	for _, fieldData := range eiec.EvalSetItem.Turns[0].FieldDataList {
 		if fieldData.Name == "span_id" {
 			etec.Ext["span_id"] = fieldData.Content.GetText()
@@ -226,9 +229,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	etec.Ext["task_id"] = eiec.Expt.SourceID
 	etec.Ext["workspace_id"] = strconv.FormatInt(eiec.Expt.SpaceID, 10)
 	etec.Ext["start_time"] = strconv.FormatInt(gptr.Indirect(eiec.EvalSetItem.BaseInfo.CreatedAt)*1000, 10) // 存储是毫秒，需要存入微妙
-	for k, v := range eiec.Event.Ext {
-		etec.Ext[k] = v
-	}
+
 	if existTurnRunResult == nil {
 		return etec, nil
 	}
