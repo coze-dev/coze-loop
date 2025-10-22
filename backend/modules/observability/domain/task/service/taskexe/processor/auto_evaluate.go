@@ -98,6 +98,9 @@ func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) e
 
 func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) error {
 	taskRun := tconv.TaskRunDO2DTO(ctx, trigger.TaskRun, nil)
+	if taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig() == nil {
+		return nil
+	}
 	workspaceID := trigger.Task.WorkspaceID
 	sessionInfo := p.getSession(ctx, trigger.Task)
 	var mapping []*task_entity.EvaluateFieldMapping
@@ -408,7 +411,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 }
 
 func (p *AutoEvaluteProcessor) OnFinishTaskRunChange(ctx context.Context, param taskexe.OnFinishTaskRunChangeReq) error {
-	if param.TaskRun == nil {
+	if param.TaskRun == nil || param.TaskRun.TaskRunConfig.AutoEvaluateRunConfig == nil {
 		return nil
 	}
 	session := p.getSession(ctx, param.Task)
