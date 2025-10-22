@@ -6,6 +6,7 @@ include "../../llm/domain/runtime.thrift"
 enum EvaluatorType {
     Prompt = 1
     Code = 2
+    Builtin = 3
 }
 
 typedef string LanguageType(ts.enum="true")
@@ -32,6 +33,49 @@ enum EvaluatorRunStatus { // 运行状态, 异步下状态流转, 同步下只�
     Unknown = 0
     Success = 1
     Fail = 2
+}
+
+// 类型筛选枚举 - 针对外部用户的分类
+enum EvaluatorCategory {
+    LLM = 1
+    Code = 2
+}
+
+// 黑白盒枚举
+enum EvaluatorBoxType {
+    BlackBox = 1   // 黑盒：不关注内部实现，只看输入输出
+    WhiteBox = 2   // 白盒：可访问内部状态和实现细节
+}
+
+// 评估对象枚举
+enum EvaluationTargetType {
+    Text = 1
+    Image = 2
+    Video = 3
+    Audio = 4
+    Code = 5
+    Multimodal = 6
+    Agent = 7
+}
+
+// 评估目标枚举
+enum EvaluationObjectiveType {
+    TaskCompletion = 1
+    ContentQuality = 2
+    InteractionExperience = 3
+    ToolInvocation = 4
+    TrajectoryQuality = 5
+    KnowledgeManagementAndMemory = 6
+    FormatValidation = 7
+}
+
+// 业务场景枚举
+enum BusinessScenarioType {
+    SecurityRiskControl = 1
+    AICoding = 2
+    CustomerServiceAssistant = 3
+    AgentGeneralEvaluation = 4
+    AIGC = 5
 }
 
 struct Tool {
@@ -72,6 +116,7 @@ struct EvaluatorVersion {
 struct EvaluatorContent {
     1: optional bool receive_chat_history (go.tag = 'mapstructure:"receive_chat_history"')
     2: optional list<common.ArgsSchema> input_schemas (go.tag = 'mapstructure:"input_schemas"')
+    3: optional list<common.ArgsSchema> output_schemas (go.tag = 'mapstructure:"output_schemas"')
 
     // 101-200 Evaluator类型
     101: optional PromptEvaluator prompt_evaluator (go.tag ='mapstructure:"prompt_evaluator"')
@@ -88,6 +133,15 @@ struct Evaluator {
     7: optional common.BaseInfo base_info
     11: optional EvaluatorVersion current_version
     12: optional string latest_version
+    
+    // Tag筛选相关字段
+    21: optional EvaluatorCategory category (go.tag = 'json:"category"') // 类型筛选 - 针对外部用户
+    22: optional list<EvaluationTargetType> target_types (go.tag = 'json:"target_types"') // 评估对象
+    23: optional list<EvaluationObjectiveType> objective_types (go.tag = 'json:"objective_types"') // 评估目标
+    24: optional list<BusinessScenarioType> business_scenarios (go.tag = 'json:"business_scenarios"') // 业务场景
+    25: optional EvaluatorBoxType box_type (go.tag = 'json:"box_type"') // 黑白盒类型
+    26: optional string benchmark (go.tag = 'json:"benchmark"')
+    27: optional string vendor (go.tag = 'json:"vendor"')
 }
 
 struct Correction {
