@@ -255,9 +255,9 @@ struct SubmitExperimentOApiRequest {
     3: optional string description (api.body = 'description')
 
     // 三元组信息
-    4: optional string eval_set_version (api.body = 'eval_set_version')
-    6: optional list<string> evaluator_versions (api.body = 'evaluator_versions')
-    9: optional eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
+    4: optional SubmitExperimentEvalSetParam eval_set_param (api.body = 'eval_set_param')
+    5: optional SubmitExperimentEvaluatorParam evaluator_param (api.body = 'evaluator_param')
+    6: optional SubmitExperimentEvalTargetParam eval_target_param (api.body = 'eval_target_param')
 
     7: optional experiment.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     8: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
@@ -267,6 +267,22 @@ struct SubmitExperimentOApiRequest {
     22: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
 
     255: optional base.Base Base
+}
+
+struct SubmitExperimentEvalSetParam {
+    1: optional string version
+}
+
+struct SubmitExperimentEvaluatorParam {
+    1: optional list<string> versions
+}
+
+struct SubmitExperimentEvalTargetParam {
+    1: optional string source_target_id
+    2: optional string source_target_version
+    3: optional eval_target.EvalTargetType eval_target_type
+    4: optional eval_target.CozeBotInfoType bot_info_type
+    5: optional string bot_publish_version // 如果是发布版本则需要填充这个字段
 }
 
 struct SubmitExperimentOApiResponse {
@@ -283,8 +299,8 @@ struct SubmitExperimentOpenAPIData {
 
 // 3.2 获取评测实验详情
 struct GetExperimentsOApiRequest {
-    1: required i64 workspace_id (api.query='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
-    2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
+    1: optional i64 workspace_id (api.query='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
+    2: optional i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
 
     255: optional base.Base Base
 }
@@ -323,11 +339,31 @@ struct ListExperimentResultOApiResponse {
 }
 
 struct ListExperimentResultOpenAPIData {
-    1: optional list<experiment.ColumnEvalSetField> column_eval_set_fields
-    2: optional list<experiment.ColumnEvaluator> column_evaluators
-    3: optional list<experiment.ItemResult> item_results
+    1: optional list<experiment.ColumnEvalSetField> column_eval_set_fields  // 评测集列
+    2: optional list<experiment.ColumnEvaluator> column_evaluators  // 评估器列
+    3: optional list<experiment.ItemResult> item_results    // 评测行级结果
 
     100: optional i64 total
+}
+
+// 3.4 获取聚合结果
+struct GetExperimentAggrResultOApiRequest {
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
+
+    255: optional base.Base Base
+}
+
+struct GetExperimentAggrResultOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional GetExperimentAggrResultOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct GetExperimentAggrResultOpenAPIData {
+    1: optional list<experiment.EvaluatorAggregateResult> evaluator_results (go.tag = 'json:"evaluator_results"')
 }
 
 // ===============================

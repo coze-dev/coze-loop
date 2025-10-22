@@ -89,23 +89,24 @@ struct EvaluatorOutputData {
     1: optional EvaluatorResult evaluator_result
     2: optional EvaluatorUsage evaluator_usage
     3: optional EvaluatorRunError evaluator_run_error
-    4: optional string time_consuming_ms
+    4: optional i64 time_consuming_ms (api.js_conv = 'true', go.tag = 'json:"time_consuming_ms"')
 }
 
 // 评估器输入数据
 struct EvaluatorInputData {
-    1: optional list<Message> history_messages
+    1: optional list<common.Message> history_messages
     2: optional map<string, common.Content> input_fields
 }
 
 // 评估器执行记录
 struct EvaluatorRecord {
-    1: optional string record_id
-    2: optional string evaluator_version_id
-    3: optional string trace_id
-    4: optional EvaluatorRunStatus status
-    5: optional EvaluatorInputData evaluator_input_data
-    6: optional EvaluatorOutputData evaluator_output_data
-    7: optional common.BaseInfo base_info
-    8: optional map<string, string> ext
+    1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
+    2: optional i64 evaluator_version_id (api.js_conv = 'true', go.tag = 'json:"evaluator_version_id"')
+    3: optional i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id"')
+    4: optional i64 turn_id (api.js_conv = 'true', go.tag = 'json:"turn_id"')
+
+    20: optional EvaluatorRunStatus status
+    21: optional EvaluatorOutputData evaluator_output_data
+
+    100: optional common.BaseInfo base_info
 }

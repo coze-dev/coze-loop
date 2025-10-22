@@ -18,6 +18,20 @@ typedef string ExperimentType(ts.enum="true")
 const ExperimentType ExperimentType_Offline = "offline"
 const ExperimentType ExperimentType_Online = "online"
 
+// 聚合器类型
+typedef string AggregatorType(ts.enum="true")
+const AggregatorType AggregatorType_Average = "average"
+const AggregatorType AggregatorType_Sum = "sum"
+const AggregatorType AggregatorType_Max = "max"
+const AggregatorType AggregatorType_Min = "min"
+const AggregatorType AggregatorType_Distribution = "distribution"
+
+// 数据类型
+typedef string DataType(ts.enum="true")
+const DataType DataType_Double = "double"
+const DataType DataType_ScoreDistribution = "score_distribution"
+
+
 // 字段映射
 struct FieldMapping {
     1: optional string field_name
@@ -44,13 +58,34 @@ struct TokenUsage {
 
 // 评估器聚合结果
 struct EvaluatorAggregateResult {
-    1: optional string evaluator_version_id
-    2: optional string evaluator_name
-    3: optional double average_score
-    4: optional double max_score
-    5: optional double min_score
-    6: optional i32 success_count
-    7: optional i32 failed_count
+    1: optional i64 evaluator_id (api.js_conv = 'true', go.tag = 'json:"evaluator_id"')
+    2: optional i64 evaluator_version_id (api.js_conv = 'true', go.tag = 'json:"evaluator_version_id"')
+    3: optional string name
+    4: optional string version
+
+    20: optional list<AggregatorResult> aggregator_results
+}
+
+// 一种聚合器类型的聚合结果
+struct  AggregatorResult {
+    1: optional AggregatorType aggregator_type
+    2: optional AggregateData data
+}
+
+struct AggregateData {
+    1: optional DataType data_type
+    2: optional double value
+    3: optional ScoreDistribution score_distribution
+}
+
+struct ScoreDistribution {
+    1: optional list<ScoreDistributionItem> score_distribution_items
+}
+
+struct ScoreDistributionItem {
+    1: optional string score
+    2: optional i64 count (api.js_conv='true', go.tag='json:"count"')
+    3: optional double percentage
 }
 
 // 实验统计
@@ -68,22 +103,18 @@ struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
     2: optional string name
     3: optional string description
-    4: optional string creator_by
 
     // 运行信息
     10: optional ExperimentStatus status // 实验状态
-    12: optional i64 start_time  (api.js_conv='true', go.tag='json:"start_time"') // ISO 8601格式
-    13: optional i64 end_time    (api.js_conv='true', go.tag='json:"start_time"') // ISO 8601格式
-    14: optional i32 item_concur_num // 评测集并发数
-    15: optional i32 evaluators_concur_num // 评估器并发数
-    16: optional common.RuntimeParam target_runtime_param   // 运行时参数
+    11: optional i64 start_time  (api.js_conv='true', go.tag='json:"start_time"') // ISO 8601格式
+    12: optional i64 end_time    (api.js_conv='true', go.tag='json:"start_time"') // ISO 8601格式
+    13: optional i32 item_concur_num // 评测集并发数
+    14: optional i32 evaluators_concur_num // 评估器并发数
+    15: optional common.RuntimeParam target_runtime_param   // 运行时参数
 
     // 三元组信息
-    30: optional string eval_set_version_id
-    31: optional string target_version_id
-    32: optional list<string> evaluator_version_ids
-    33: optional TargetFieldMapping target_field_mapping
-    34: optional list<EvaluatorFieldMapping> evaluator_field_mapping
+    31: optional TargetFieldMapping target_field_mapping
+    32: optional list<EvaluatorFieldMapping> evaluator_field_mapping
 
     // 统计信息
     50: optional ExperimentStatistics expt_stats
@@ -119,17 +150,11 @@ struct TargetOutput {
     5: optional evaluator.EvaluatorRunError error
 }
 
-// 评估器输出结果
-struct EvaluatorOutput {
-    1: optional map<string, evaluator.EvaluatorRecord> evaluator_records  // key为evaluator_version_id
-}
-
 // 结果payload
 struct ResultPayload {
-    1: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"')
-    2: optional eval_set.Turn eval_set_turn
-    3: optional eval_target.EvalTargetRecord target_output
-    4: optional EvaluatorOutput evaluator_output
+    1: optional eval_set.Turn eval_set_turn // 评测集行数据信息
+    2: optional eval_target.EvalTargetRecord target_record  // 评测对象执行结果
+    3: optional list<evaluator.EvaluatorRecord> evaluator_records   // 评估器执行结果列表
 }
 
 // 轮次结果
@@ -140,6 +165,6 @@ struct TurnResult {
 
 // 数据项结果
 struct ItemResult {
-    1: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"')
-    2: optional list<TurnResult> turn_results
+    1: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"')   // 数据项(行)ID
+    2: optional list<TurnResult> turn_results   // 轮次结果，单轮仅有一个元素
 }
