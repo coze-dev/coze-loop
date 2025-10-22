@@ -45,10 +45,15 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range message.Parts {
-			if part == nil || part.ImageURL == nil {
+			if part == nil {
 				continue
 			}
-			fileKeys = append(fileKeys, part.ImageURL.URI)
+			if part.ImageURL != nil && part.ImageURL.URI != "" {
+				fileKeys = append(fileKeys, part.ImageURL.URI)
+			}
+			if part.VideoURL != nil && part.VideoURL.URI != "" {
+				fileKeys = append(fileKeys, part.VideoURL.URI)
+			}
 		}
 	}
 	for _, val := range variableVals {
@@ -56,10 +61,15 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range val.MultiPartValues {
-			if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
+			if part == nil {
 				continue
 			}
-			fileKeys = append(fileKeys, part.ImageURL.URI)
+			if part.ImageURL != nil && part.ImageURL.URI != "" {
+				fileKeys = append(fileKeys, part.ImageURL.URI)
+			}
+			if part.VideoURL != nil && part.VideoURL.URI != "" {
+				fileKeys = append(fileKeys, part.VideoURL.URI)
+			}
 		}
 	}
 	if len(fileKeys) == 0 {
@@ -75,10 +85,15 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range message.Parts {
-			if part == nil || part.ImageURL == nil {
+			if part == nil {
 				continue
 			}
-			part.ImageURL.URL = urlMap[part.ImageURL.URI]
+			if part.ImageURL != nil {
+				part.ImageURL.URL = urlMap[part.ImageURL.URI]
+			}
+			if part.VideoURL != nil {
+				part.VideoURL.URL = urlMap[part.VideoURL.URI]
+			}
 		}
 	}
 	for _, val := range variableVals {
@@ -86,10 +101,15 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range val.MultiPartValues {
-			if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
+			if part == nil {
 				continue
 			}
-			part.ImageURL.URL = urlMap[part.ImageURL.URI]
+			if part.ImageURL != nil && part.ImageURL.URI != "" {
+				part.ImageURL.URL = urlMap[part.ImageURL.URI]
+			}
+			if part.VideoURL != nil && part.VideoURL.URI != "" {
+				part.VideoURL.URL = urlMap[part.VideoURL.URI]
+			}
 		}
 	}
 	return nil

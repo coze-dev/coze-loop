@@ -128,11 +128,18 @@ struct ContentPart {
     2: optional string text
     3: optional string image_url
     4: optional string base64_data
+    5: optional string video_url
+    6: optional MediaConfig config
+}
+
+struct MediaConfig {
+    1: optional double fps (vt.ge="0.2", vt.le="5")
 }
 
 typedef string ContentType (ts.enum="true")
 const ContentType ContentType_Text = "text"
 const ContentType ContentType_ImageURL = "image_url"
+const ContentType ContentType_VideoURL = "video_url"
 const ContentType ContentType_Base64Data = "base64_data"
 const ContentType ContentType_MultiPartVariable = "multi_part_variable"
 

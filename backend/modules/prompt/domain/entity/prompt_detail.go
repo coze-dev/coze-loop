@@ -72,6 +72,7 @@ type ContentPart struct {
 	Type       ContentType `json:"type"`
 	Text       *string     `json:"text,omitempty"`
 	ImageURL   *ImageURL   `json:"image_url,omitempty"`
+	VideoURL   *VideoURL   `json:"video_url,omitempty"`
 	Base64Data *string     `json:"base64_data,omitempty"`
 }
 
@@ -80,6 +81,7 @@ type ContentType string
 const (
 	ContentTypeText              ContentType = "text"
 	ContentTypeImageURL          ContentType = "image_url"
+	ContentTypeVideoURL          ContentType = "video_url"
 	ContentTypeBase64Data        ContentType = "base64_data"
 	ContentTypeMultiPartVariable ContentType = "multi_part_variable"
 )
@@ -87,6 +89,12 @@ const (
 type ImageURL struct {
 	URI string `json:"uri"`
 	URL string `json:"url"`
+}
+
+type VideoURL struct {
+	URI string   `json:"uri"`
+	URL string   `json:"url"`
+	Fps *float64 `json:"fps,omitempty"`
 }
 
 type VariableDef struct {
@@ -263,7 +271,7 @@ func formatMultiPart(parts []*ContentPart, defMap map[string]*VariableDef, valMa
 		if pt == nil {
 			continue
 		}
-		if ptr.From(pt.Text) != "" || pt.ImageURL != nil {
+		if ptr.From(pt.Text) != "" || pt.ImageURL != nil || pt.VideoURL != nil {
 			filtered = append(filtered, pt)
 		}
 	}

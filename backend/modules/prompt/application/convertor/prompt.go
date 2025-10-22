@@ -194,6 +194,7 @@ func ContentPartDTO2DO(dto *prompt.ContentPart) *entity.ContentPart {
 		Type:     ContentTypeDTO2DO(dto.GetType()),
 		Text:     dto.Text,
 		ImageURL: ImageURLDTO2DO(dto.ImageURL),
+		VideoURL: VideoURLDTO2DO(dto.VideoURL),
 	}
 }
 
@@ -203,6 +204,8 @@ func ContentTypeDTO2DO(dto prompt.ContentType) entity.ContentType {
 		return entity.ContentTypeText
 	case prompt.ContentTypeImageURL:
 		return entity.ContentTypeImageURL
+	case prompt.ContentTypeVideoURL:
+		return entity.ContentTypeVideoURL
 	case prompt.ContentTypeMultiPartVariable:
 		return entity.ContentTypeMultiPartVariable
 	default:
@@ -218,6 +221,18 @@ func ImageURLDTO2DO(dto *prompt.ImageURL) *entity.ImageURL {
 	return &entity.ImageURL{
 		URI: dto.GetURI(),
 		URL: dto.GetURL(),
+	}
+}
+
+func VideoURLDTO2DO(dto *prompt.VideoURL) *entity.VideoURL {
+	if dto == nil {
+		return nil
+	}
+
+	return &entity.VideoURL{
+		URI: dto.GetURI(),
+		URL: dto.GetURL(),
+		Fps: dto.Fps,
 	}
 }
 
@@ -528,6 +543,7 @@ func ContentPartDO2DTO(do *entity.ContentPart) *prompt.ContentPart {
 		Type:     ptr.Of(ContentTypeDO2DTO(do.Type)),
 		Text:     do.Text,
 		ImageURL: ImageURLDO2DTO(do.ImageURL),
+		VideoURL: VideoURLDO2DTO(do.VideoURL),
 	}
 }
 
@@ -537,6 +553,8 @@ func ContentTypeDO2DTO(do entity.ContentType) prompt.ContentType {
 		return prompt.ContentTypeText
 	case entity.ContentTypeImageURL:
 		return prompt.ContentTypeImageURL
+	case entity.ContentTypeVideoURL:
+		return prompt.ContentType("video_url")
 	case entity.ContentTypeMultiPartVariable:
 		return prompt.ContentTypeMultiPartVariable
 	default:
@@ -551,6 +569,17 @@ func ImageURLDO2DTO(do *entity.ImageURL) *prompt.ImageURL {
 	return &prompt.ImageURL{
 		URI: ptr.Of(do.URI),
 		URL: ptr.Of(do.URL),
+	}
+}
+
+func VideoURLDO2DTO(do *entity.VideoURL) *prompt.VideoURL {
+	if do == nil {
+		return nil
+	}
+	return &prompt.VideoURL{
+		URI: ptr.Of(do.URI),
+		URL: ptr.Of(do.URL),
+		Fps: do.Fps,
 	}
 }
 
