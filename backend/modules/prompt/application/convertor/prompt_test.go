@@ -520,6 +520,35 @@ func mockMessageCases() []messageTestCase {
 			},
 		},
 		{
+			name: "user message with video content",
+			dto: &prompt.Message{
+				Role: ptr.Of(prompt.RoleUser),
+				Parts: []*prompt.ContentPart{
+					{
+						Type: ptr.Of(prompt.ContentTypeVideoURL),
+						VideoURL: &prompt.VideoURL{
+							URL: ptr.Of("https://example.com/video.mp4"),
+							URI: ptr.Of("video-uri"),
+							Fps: ptr.Of(2.5),
+						},
+					},
+				},
+			},
+			do: &entity.Message{
+				Role: entity.RoleUser,
+				Parts: []*entity.ContentPart{
+					{
+						Type: entity.ContentTypeVideoURL,
+						VideoURL: &entity.VideoURL{
+							URL: "https://example.com/video.mp4",
+							URI: "video-uri",
+							Fps: ptr.Of(2.5),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "assistant message with tool calls",
 			dto: &prompt.Message{
 				Role: ptr.Of(prompt.RoleAssistant),

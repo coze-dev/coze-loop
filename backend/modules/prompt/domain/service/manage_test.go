@@ -45,6 +45,7 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 		"test-image-1": "https://example.com/image1.jpg",
 		"test-image-2": "https://example.com/image2.jpg",
 		"test-image-3": "https://example.com/image3.jpg",
+		"test-video-1": "https://example.com/video1.mp4",
 	}
 	tests := []struct {
 		name         string
@@ -151,6 +152,46 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 								Type: entity.ContentTypeImageURL,
 								ImageURL: &entity.ImageURL{
 									URI: "test-image-3",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "video urls filled for messages and variable values",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockFile := mocks.NewMockIFileProvider(ctrl)
+				mockFile.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(uri2URLMap, nil)
+				return fields{
+					file: mockFile,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{
+						Role: entity.RoleUser,
+						Parts: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeVideoURL,
+								VideoURL: &entity.VideoURL{
+									URI: "test-video-1",
+								},
+							},
+						},
+					},
+				},
+				variableVals: []*entity.VariableVal{
+					{
+						Key: "video-multi",
+						MultiPartValues: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeVideoURL,
+								VideoURL: &entity.VideoURL{
+									URI: "test-video-1",
 								},
 							},
 						},
@@ -487,11 +528,17 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 						continue
 					}
 					for _, part := range message.Parts {
-						if part == nil || part.ImageURL == nil {
+						if part == nil {
 							continue
 						}
-						assert.Equal(t, uri2URLMap[part.ImageURL.URI], part.ImageURL.URL)
-						part.ImageURL.URL = ""
+						if part.ImageURL != nil && part.ImageURL.URI != "" {
+							assert.Equal(t, uri2URLMap[part.ImageURL.URI], part.ImageURL.URL)
+							part.ImageURL.URL = ""
+						}
+						if part.VideoURL != nil && part.VideoURL.URI != "" {
+							assert.Equal(t, uri2URLMap[part.VideoURL.URI], part.VideoURL.URL)
+							part.VideoURL.URL = ""
+						}
 					}
 				}
 				// 验证variableVals中的URL是否正确填充
@@ -500,11 +547,17 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 						continue
 					}
 					for _, part := range val.MultiPartValues {
-						if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
+						if part == nil {
 							continue
 						}
-						assert.Equal(t, uri2URLMap[part.ImageURL.URI], part.ImageURL.URL)
-						part.ImageURL.URL = ""
+						if part.ImageURL != nil && part.ImageURL.URI != "" {
+							assert.Equal(t, uri2URLMap[part.ImageURL.URI], part.ImageURL.URL)
+							part.ImageURL.URL = ""
+						}
+						if part.VideoURL != nil && part.VideoURL.URI != "" {
+							assert.Equal(t, uri2URLMap[part.VideoURL.URI], part.VideoURL.URL)
+							part.VideoURL.URL = ""
+						}
 					}
 				}
 				assert.Equal(t, originMessages, tt.args.messages)
