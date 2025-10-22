@@ -2,9 +2,9 @@ name: License Check
 
 on:
   push:
-    branches: ['main', "release/**"]
+    branches: ['main', "release/**", "feat/prompt_sync"]
   pull_request:
-    branches: ['main', "release/**"]
+    branches: ['main', "release/**", "feat/prompt_sync"]
   workflow_dispatch:
 
 permissions:
