@@ -73,6 +73,11 @@ func TestNewEvaluationSetMetrics(t *testing.T) {
 			meter: nil,
 			want:  nil,
 		},
+		{
+			name:  "nil meter",
+			meter: metrics.GetMeter(),
+			want:  nil,
+		},
 	}
 
 	for _, tt := range tests {
