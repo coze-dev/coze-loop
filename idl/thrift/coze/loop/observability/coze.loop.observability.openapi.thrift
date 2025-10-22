@@ -174,6 +174,6 @@ service OpenAPIService {
     SearchTraceTreeOApiResponse SearchTraceTreeOApi(1: SearchTraceTreeOApiRequest req) (api.post = '/v1/loop/traces/search_tree')
     ListSpansOApiResponse ListSpansOApi(1: ListSpansOApiRequest req) (api.post = '/v1/loop/spans/search', api.tag="openapi")
     ListTracesOApiResponse ListTracesOApi(1: ListTracesOApiRequest req) (api.post = '/v1/loop/traces/list')
-    CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req) (api.post = '/v1/loop/annotations/create')
-    DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req) (api.delete = '/v1/loop/annotations/delete')
+    CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req) (api.post = '/v1/loop/annotations')
+    DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req) (api.delete = '/v1/loop/annotations')
 }

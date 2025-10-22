@@ -375,11 +375,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 		_v16 := root.Group("/v1", _v16Mw(handler)...)
 		{
 			_loop := _v16.Group("/loop", _loopMw(handler)...)
-			{
-				_annotations0 := _loop.Group("/annotations", _annotations0Mw(handler)...)
-				_annotations0.POST("/create", append(_createannotationMw(handler), apis.CreateAnnotation)...)
-				_annotations0.DELETE("/delete", append(_deleteannotationMw(handler), apis.DeleteAnnotation)...)
-			}
+			_loop.DELETE("/annotations", append(_deleteannotationMw(handler), apis.DeleteAnnotation)...)
+			_loop.POST("/annotations", append(_createannotationMw(handler), apis.CreateAnnotation)...)
 			{
 				_eval_targets0 := _loop.Group("/eval_targets", _eval_targets0Mw(handler)...)
 				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
