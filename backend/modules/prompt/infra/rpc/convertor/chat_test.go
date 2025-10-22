@@ -213,6 +213,65 @@ func TestMessageDO2DTO(t *testing.T) {
 			},
 		},
 		{
+			name: "user video message with detail",
+			do: &entity.Message{
+				Role: "user",
+				Parts: []*entity.ContentPart{
+					{
+						Type: entity.ContentTypeVideoURL,
+						VideoURL: &entity.VideoURL{
+							URL: "https://example.com/video.mp4",
+							Fps: ptr.Of(1.25),
+						},
+					},
+				},
+			},
+			want: &runtimedto.Message{
+				Role: runtimedto.RoleUser,
+				MultimodalContents: []*runtimedto.ChatMessagePart{
+					{
+						Type: ptr.Of(runtimedto.ChatMessagePartTypeVideoURL),
+						VideoURL: &runtimedto.ChatMessageVideoURL{
+							URL: ptr.Of("https://example.com/video.mp4"),
+							Detail: &runtimedto.VideoURLDetail{
+								Fps: ptr.Of(1.25),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "user base64 video message",
+			do: &entity.Message{
+				Role: "user",
+				Parts: []*entity.ContentPart{
+					{
+						Type:       entity.ContentTypeBase64Data,
+						Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+						VideoURL: &entity.VideoURL{
+							Fps: ptr.Of(3.5),
+						},
+					},
+				},
+			},
+			want: &runtimedto.Message{
+				Role: runtimedto.RoleUser,
+				MultimodalContents: []*runtimedto.ChatMessagePart{
+					{
+						Type: ptr.Of(runtimedto.ChatMessagePartTypeVideoURL),
+						VideoURL: &runtimedto.ChatMessageVideoURL{
+							URL:      ptr.Of("data:video/mp4;base64,QUJDRA=="),
+							MimeType: ptr.Of("video/mp4"),
+							Detail: &runtimedto.VideoURLDetail{
+								Fps: ptr.Of(3.5),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "ai tool call message",
 			do: &entity.Message{
 				Role: "assistant",
@@ -436,6 +495,35 @@ func TestMessageDTO2DO(t *testing.T) {
 						Type: entity.ContentTypeImageURL,
 						ImageURL: &entity.ImageURL{
 							URL: "https://example.com/image.jpg",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "video content part with detail",
+			dto: &runtimedto.Message{
+				Role: runtimedto.RoleAssistant,
+				MultimodalContents: []*runtimedto.ChatMessagePart{
+					{
+						Type: ptr.Of(runtimedto.ChatMessagePartTypeVideoURL),
+						VideoURL: &runtimedto.ChatMessageVideoURL{
+							URL: ptr.Of("https://example.com/video.mp4"),
+							Detail: &runtimedto.VideoURLDetail{
+								Fps: ptr.Of(2.5),
+							},
+						},
+					},
+				},
+			},
+			want: &entity.Message{
+				Role: entity.RoleAssistant,
+				Parts: []*entity.ContentPart{
+					{
+						Type: entity.ContentTypeVideoURL,
+						VideoURL: &entity.VideoURL{
+							URL: "https://example.com/video.mp4",
+							Fps: ptr.Of(2.5),
 						},
 					},
 				},
