@@ -411,7 +411,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 }
 
 func (p *AutoEvaluteProcessor) OnFinishTaskRunChange(ctx context.Context, param taskexe.OnFinishTaskRunChangeReq) error {
-	if param.TaskRun == nil || param.TaskRun.TaskRunConfig.AutoEvaluateRunConfig == nil {
+	if param.TaskRun == nil || param.TaskRun.TaskRunConfig == nil || param.TaskRun.TaskRunConfig.AutoEvaluateRunConfig == nil {
 		return nil
 	}
 	session := p.getSession(ctx, param.Task)
