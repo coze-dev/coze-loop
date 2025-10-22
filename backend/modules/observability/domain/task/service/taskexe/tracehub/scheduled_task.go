@@ -448,7 +448,7 @@ func (h *TraceHubServiceImpl) listNonFinalTaskByRedis(ctx context.Context, space
 func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
 	var taskPOs []*entity.ObservabilityTask
 	var offset int32 = 0
-	const limit int32 = 1000
+	const limit int32 = 500
 	// Paginate through all tasks
 	for {
 		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
