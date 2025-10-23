@@ -12,10 +12,8 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
-	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
-	experiment_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
@@ -39,7 +37,6 @@ func NewEvaluationOpenApiApplicationImpl(auth rpc.IAuthProvider,
 	evaluationSetSchemaService service.EvaluationSetSchemaService,
 	metric metrics.OpenAPIEvaluationSetMetrics,
 	userInfoService userinfo.UserInfoService,
-	experimentApp IExperimentApplication,
 ) evaluation.EvaluationOpenAPIService {
 	evaluationOpenApiApplicationOnce.Do(func() {
 		evaluationOpenApiApplication = &EvaluationOpenApiApplicationImpl{
@@ -50,7 +47,6 @@ func NewEvaluationOpenApiApplicationImpl(auth rpc.IAuthProvider,
 			evaluationSetSchemaService:  evaluationSetSchemaService,
 			metric:                      metric,
 			userInfoService:             userInfoService,
-			experimentApp:               experimentApp,
 		}
 	})
 
@@ -65,7 +61,6 @@ type EvaluationOpenApiApplicationImpl struct {
 	evaluationSetSchemaService  service.EvaluationSetSchemaService
 	metric                      metrics.OpenAPIEvaluationSetMetrics
 	userInfoService             userinfo.UserInfoService
-	experimentApp               IExperimentApplication
 }
 
 func (e *EvaluationOpenApiApplicationImpl) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest) (r *openapi.CreateEvaluationSetOApiResponse, err error) {
@@ -568,135 +563,4 @@ func (e *EvaluationOpenApiApplicationImpl) UpdateEvaluationSetSchemaOApi(ctx con
 	}
 	// 返回结果构建、错误处理
 	return &openapi.UpdateEvaluationSetSchemaOApiResponse{}, nil
-}
-
-func (e *EvaluationOpenApiApplicationImpl) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
-	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	var (
-		evaluationSetID int64
-	)
-	defer func() {
-		var spaceID int64
-		if req != nil {
-			spaceID = req.GetWorkspaceID()
-		}
-		e.metric.EmitOpenAPIMetric(ctx, spaceID, evaluationSetID, kitexutil.GetTOMethod(ctx), startTime, err)
-	}()
-
-	if req == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
-	}
-
-	workspaceID := req.GetWorkspaceID()
-	if workspaceID <= 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
-	}
-
-	if req.EvalSetParam == nil || !req.EvalSetParam.IsSetVersion() || req.EvalSetParam.GetVersion() == "" {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_param.version is required"))
-	}
-
-	evalSetVersionID, convErr := strconv.ParseInt(req.EvalSetParam.GetVersion(), 10, 64)
-	if convErr != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid eval_set_param.version"))
-	}
-
-	version, set, getErr := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, workspaceID, evalSetVersionID, nil)
-	if getErr != nil {
-		return nil, getErr
-	}
-	if version == nil || set == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set version not found"))
-	}
-	if set.SpaceID != workspaceID {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set version not found"))
-	}
-	evaluationSetID = set.ID
-
-	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(workspaceID, 10),
-		SpaceID:       workspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	}); err != nil {
-		return nil, err
-	}
-
-	if e.experimentApp == nil {
-		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment application not initialized"))
-	}
-
-	if req.EvaluatorParam == nil || len(req.EvaluatorParam.Versions) == 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator versions is required"))
-	}
-
-	evaluatorVersionIDs, parseErr := experiment_convertor.ParseOpenAPIEvaluatorVersions(req.EvaluatorParam.Versions)
-	if parseErr != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(parseErr.Error()))
-	}
-	if len(evaluatorVersionIDs) == 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator versions is required"))
-	}
-	if hasDuplicates(evaluatorVersionIDs) {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
-	}
-
-	targetMapping := experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping)
-	evaluatorFieldMapping, mappingErr := experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping)
-	if mappingErr != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(mappingErr.Error()))
-	}
-	runtimeParam := experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam)
-	evalTargetParam, targetErr := experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.GetEvalTargetParam())
-	if targetErr != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(targetErr.Error()))
-	}
-
-	createReq := &exptpb.CreateExperimentRequest{
-		WorkspaceID:           workspaceID,
-		EvalSetVersionID:      gptr.Of(evalSetVersionID),
-		EvalSetID:             gptr.Of(set.ID),
-		EvaluatorVersionIds:   evaluatorVersionIDs,
-		Name:                  req.Name,
-		Desc:                  req.Description,
-		TargetFieldMapping:    targetMapping,
-		EvaluatorFieldMapping: evaluatorFieldMapping,
-		ItemConcurNum:         req.ItemConcurNum,
-		TargetRuntimeParam:    runtimeParam,
-		CreateEvalTargetParam: evalTargetParam,
-	}
-
-	cresp, err := e.experimentApp.CreateExperiment(ctx, createReq)
-	if err != nil {
-		return nil, err
-	}
-	if cresp == nil || cresp.GetExperiment() == nil || cresp.GetExperiment().ID == nil {
-		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment create failed"))
-	}
-
-	_, err = e.experimentApp.RunExperiment(ctx, &exptpb.RunExperimentRequest{
-		WorkspaceID: gptr.Of(workspaceID),
-		ExptID:      cresp.GetExperiment().ID,
-		ExptType:    cresp.GetExperiment().ExptType,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &openapi.SubmitExperimentOApiResponse{
-		Data: &openapi.SubmitExperimentOpenAPIData{
-			Experiment: experiment_convertor.DomainExperimentDTO2OpenAPI(cresp.GetExperiment()),
-		},
-	}, nil
-}
-
-func (e *EvaluationOpenApiApplicationImpl) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest) (r *openapi.GetExperimentsOApiResponse, err error) {
-	panic("implement me")
-}
-
-func (e *EvaluationOpenApiApplicationImpl) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest) (r *openapi.ListExperimentResultOApiResponse, err error) {
-	panic("implement me")
-}
-
-func (e *EvaluationOpenApiApplicationImpl) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {
-	panic("implement me")
 }

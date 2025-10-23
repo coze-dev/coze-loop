@@ -232,6 +232,17 @@ func OpenAPIEvaluationSetDO2DTOs(dos []*entity.EvaluationSet) []*openapi_eval_se
 	return result
 }
 
+func OpenAPIEvaluationSetVersionDO2DTOs(dos []*entity.EvaluationSetVersion) []*openapi_eval_set.EvaluationSetVersion {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*openapi_eval_set.EvaluationSetVersion, 0)
+	for _, do := range dos {
+		result = append(result, OpenAPIEvaluationSetVersionDO2DTO(do))
+	}
+	return result
+}
+
 func OpenAPIEvaluationSetVersionDO2DTO(do *entity.EvaluationSetVersion) *openapi_eval_set.EvaluationSetVersion {
 	if do == nil {
 		return nil

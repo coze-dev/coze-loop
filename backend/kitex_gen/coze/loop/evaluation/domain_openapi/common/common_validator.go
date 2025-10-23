@@ -66,3 +66,14 @@ func (p *OpenAPIResponse) IsValid() error {
 func (p *OrderBy) IsValid() error {
 	return nil
 }
+func (p *RuntimeParam) IsValid() error {
+	return nil
+}
+func (p *Message) IsValid() error {
+	if p.Content != nil {
+		if err := p.Content.IsValid(); err != nil {
+			return fmt.Errorf("field Content not valid, %w", err)
+		}
+	}
+	return nil
+}

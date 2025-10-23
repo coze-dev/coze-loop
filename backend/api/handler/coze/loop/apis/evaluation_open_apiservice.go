@@ -138,118 +138,6 @@ func ListEvaluationSetVersionItemsOApi(ctx context.Context, c *app.RequestContex
 	c.JSON(consts.StatusOK, resp)
 }
 
-// CreateEvaluatorOApi .
-// @router /open-apis/evaluation/v1/evaluators [POST]
-func CreateEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.CreateEvaluatorOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.CreateEvaluatorOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
-// SubmitEvaluatorVersionOApi .
-// @router /open-apis/evaluation/v1/evaluators/:evaluator_id/versions [POST]
-func SubmitEvaluatorVersionOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.SubmitEvaluatorVersionOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.SubmitEvaluatorVersionOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
-// GetEvaluatorVersionOApi .
-// @router /open-apis/evaluation/v1/evaluators/versions/:evaluator_version_id [GET]
-func GetEvaluatorVersionOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.GetEvaluatorVersionOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.GetEvaluatorVersionOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
-// RunEvaluatorOApi .
-// @router /open-apis/evaluation/v1/evaluators/versions/:evaluator_version_id/run [POST]
-func RunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.RunEvaluatorOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.RunEvaluatorOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
-// GetEvaluatorRecordOApi .
-// @router /open-apis/evaluation/v1/evaluator_records/:evaluator_record_id [GET]
-func GetEvaluatorRecordOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.GetEvaluatorRecordOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.GetEvaluatorRecordOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
-// CreateExperimentOApi .
-// @router /open-apis/evaluation/v1/experiments [POST]
-func CreateExperimentOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.CreateExperimentOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.CreateExperimentOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
-// GetExperimentResultOApi .
-// @router /open-apis/evaluation/v1/experiments/:experiment_id/results [GET]
-func GetExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.GetExperimentResultOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.GetExperimentResultOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
 // UpdateEvaluationSetSchemaOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema [PUT]
 func UpdateEvaluationSetSchemaOApi(ctx context.Context, c *app.RequestContext) {
@@ -262,6 +150,22 @@ func UpdateEvaluationSetSchemaOApi(ctx context.Context, c *app.RequestContext) {
 	}
 
 	resp := new(openapi0.UpdateEvaluationSetSchemaOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ListEvaluationSetVersionsOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions [GET]
+func ListEvaluationSetVersionsOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.ListEvaluationSetVersionsOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.ListEvaluationSetVersionsOApiResponse)
 
 	c.JSON(consts.StatusOK, resp)
 }
