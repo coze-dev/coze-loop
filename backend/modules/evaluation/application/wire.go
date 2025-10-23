@@ -215,20 +215,8 @@ var (
 
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
-		targetDomainService,
-		evaltargetmtr.NewEvalTargetMetrics,
-		flagSet,
-		rmqproducer.NewExptEventPublisher,
-		evalAsyncRepoSet,
-		domainservice.NewEvaluationSetServiceImpl,
-		domainservice.NewEvaluationSetVersionServiceImpl,
-		domainservice.NewEvaluationSetItemServiceImpl,
-		domainservice.NewEvaluationSetSchemaServiceImpl,
-		data.NewDatasetRPCAdapter,
+		experimentSet,
 		evalsetmtr.NewOpenAPIEvaluationSetMetrics,
-		foundation.NewAuthRPCProvider,
-		foundation.NewUserRPCProvider,
-		userinfo.NewUserInfoServiceImpl,
 	)
 )
 

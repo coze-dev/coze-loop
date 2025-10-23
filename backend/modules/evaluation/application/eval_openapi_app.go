@@ -727,6 +727,11 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
+	param := &entity.MGetExperimentResultParam{
+		SpaceID: req.GetWorkspaceID(),
+		ExptIDs: []int64{req.GetExperimentID()},
+		Page:    entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())),
+	}
 	columnEvaluators, _, columnEvalSetFields, _, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err

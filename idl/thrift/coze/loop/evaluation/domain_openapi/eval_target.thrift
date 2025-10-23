@@ -7,6 +7,7 @@ const EvalTargetType EvalTargetType_CozeLoopPrompt = "coze_loop_prompt"
 const EvalTargetType EvalTargetType_Trace = "trace"
 const EvalTargetType EvalTargetType_CozeWorkflow = "coze_workflow"
 const EvalTargetType EvalTargetType_VolcengineAgent = "volcengine_agent"
+const EvalTargetType EvalTargetType_CustomRPCServer = "custom_rpc_server"
 
 
 typedef string CozeBotInfoType(ts.enum="true")

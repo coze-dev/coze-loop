@@ -20,6 +20,8 @@ const (
 
 	EvalTargetTypeVolcengineAgent = "volcengine_agent"
 
+	EvalTargetTypeCustomRPCServer = "custom_rpc_server"
+
 	CozeBotInfoTypeDraftBot = "draft_bot"
 
 	CozeBotInfoTypeProductBot = "product_bot"
