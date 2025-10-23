@@ -230,7 +230,7 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService
 }
 
-func InitEvaluationOpenAPIApplication(client datasetservice.Client, meter metrics.Meter, authClient authservice.Client, userClient userservice.Client) evaluation.EvaluationOpenAPIService {
+func InitEvaluationOpenAPIApplication(client datasetservice.Client, meter metrics.Meter, authClient authservice.Client, userClient userservice.Client, experimentApp IExperimentApplication) evaluation.EvaluationOpenAPIService {
 	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
 	iDatasetRPCAdapter := data.NewDatasetRPCAdapter(client)
 	iEvaluationSetService := service.NewEvaluationSetServiceImpl(iDatasetRPCAdapter)
@@ -240,7 +240,7 @@ func InitEvaluationOpenAPIApplication(client datasetservice.Client, meter metric
 	openAPIEvaluationSetMetrics := metrics4.NewOpenAPIEvaluationSetMetrics(meter)
 	iUserProvider := foundation.NewUserRPCProvider(userClient)
 	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
-	evaluationOpenAPIService := NewEvaluationOpenApiApplicationImpl(iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationSetMetrics, userInfoService)
+	evaluationOpenAPIService := NewEvaluationOpenApiApplicationImpl(iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationSetMetrics, userInfoService, experimentApp)
 	return evaluationOpenAPIService
 }
 
