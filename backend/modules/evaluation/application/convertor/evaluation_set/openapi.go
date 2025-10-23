@@ -293,6 +293,7 @@ func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 		DefaultDisplayFormat: displayFormat,
 		IsRequired:           gptr.Of(do.IsRequired),
 		TextSchema:           gptr.Of(do.TextSchema),
+		Key:                  gptr.Of(do.Key),
 	}
 }
 
