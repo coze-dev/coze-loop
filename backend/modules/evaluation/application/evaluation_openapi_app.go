@@ -6,12 +6,20 @@ package application
 import (
 	"context"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
+	domainCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	domaindoEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
+	domainExpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
+	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
+	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
+	openapiExperiment "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
+	domainEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
@@ -572,8 +580,12 @@ func (e *EvaluationOpenApiApplicationImpl) UpdateEvaluationSetSchemaOApi(ctx con
 
 func (e *EvaluationOpenApiApplicationImpl) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	var spaceID, evaluationSetID int64
+	if req != nil {
+		spaceID = req.GetWorkspaceID()
+	}
 	defer func() {
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+		e.metric.EmitOpenAPIMetric(ctx, spaceID, evaluationSetID, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 
 	if req == nil {
@@ -588,46 +600,255 @@ func (e *EvaluationOpenApiApplicationImpl) SubmitExperimentOApi(ctx context.Cont
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_param.version is required"))
 	}
 
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+	versionID, convErr := strconv.ParseInt(req.EvalSetParam.GetVersion(), 10, 64)
+	if convErr != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid eval_set_param.version"))
+	}
+
+	version, set, getErr := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, req.GetWorkspaceID(), versionID, nil)
+	if getErr != nil {
+		return nil, getErr
+	}
+	if version == nil || set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set version not found"))
+	}
+	if set.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set version not found"))
+	}
+	evaluationSetID = set.ID
+
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
 		SpaceID:       req.GetWorkspaceID(),
 		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	if e.experimentApp == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment app not initialized"))
+	}
+
+	params := req.GetEvaluatorParams()
+	if len(params) == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator versions is required"))
+	}
+
+	evaluatorVersionIDs, parseErr := collectEvaluatorVersionIDs(params)
+	if parseErr != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(parseErr.Error()))
+	}
+	if len(evaluatorVersionIDs) == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator versions is required"))
+	}
+	if hasDuplicateInt64(evaluatorVersionIDs) {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
+	}
+
+	targetMapping := convertOpenAPITargetFieldMapping(req.TargetFieldMapping)
+	evaluatorFieldMapping := convertOpenAPIEvaluatorFieldMapping(req.EvaluatorFieldMapping)
+	runtimeParam := convertOpenAPIRuntimeParam(req.TargetRuntimeParam)
+	evalTargetParam, targetErr := convertOpenAPIEvalTargetParam(req.GetEvalTargetParam())
+	if targetErr != nil {
+		return nil, targetErr
+	}
+
+	createResp, err := e.experimentApp.CreateExperiment(ctx, &exptpb.CreateExperimentRequest{
+		WorkspaceID:           req.GetWorkspaceID(),
+		EvalSetVersionID:      gptr.Of(versionID),
+		EvalSetID:             gptr.Of(set.ID),
+		EvaluatorVersionIds:   evaluatorVersionIDs,
+		Name:                  req.Name,
+		Desc:                  req.Description,
+		TargetFieldMapping:    targetMapping,
+		EvaluatorFieldMapping: evaluatorFieldMapping,
+		ItemConcurNum:         req.ItemConcurNum,
+		TargetRuntimeParam:    runtimeParam,
+		CreateEvalTargetParam: evalTargetParam,
 	})
 	if err != nil {
 		return nil, err
 	}
-	// TODO dsf 查询评测集版本信息
-	var evalSetVersionID int64
-	// TODO dsf 查询评估器版本详情
-	var evaluatorVersionIDs []int64
-
-	createReq := &exptpb.SubmitExperimentRequest{
-		WorkspaceID:           req.GetWorkspaceID(),
-		EvalSetVersionID:      gptr.Of(evalSetVersionID),
-		EvalSetID:             req.EvalSetParam.EvalSetID,
-		EvaluatorVersionIds:   evaluatorVersionIDs,
-		Name:                  req.Name,
-		Desc:                  req.Description,
-		TargetFieldMapping:    experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
-		EvaluatorFieldMapping: experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping),
-		ItemConcurNum:         req.ItemConcurNum,
-		TargetRuntimeParam:    experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
-		CreateEvalTargetParam: experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
+	if createResp == nil || createResp.GetExperiment() == nil || createResp.GetExperiment().ID == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment create failed"))
 	}
 
-	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
+	_, err = e.experimentApp.RunExperiment(ctx, &exptpb.RunExperimentRequest{
+		WorkspaceID: gptr.Of(req.GetWorkspaceID()),
+		ExptID:      createResp.GetExperiment().ID,
+	})
 	if err != nil {
 		return nil, err
-	}
-	if cresp == nil || cresp.GetExperiment() == nil || cresp.GetExperiment().ID == nil {
-		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment create failed"))
 	}
 
 	return &openapi.SubmitExperimentOApiResponse{
 		Data: &openapi.SubmitExperimentOpenAPIData{
-			Experiment: experiment_convertor.DomainExperimentDTO2OpenAPI(cresp.GetExperiment()),
+			Experiment: experiment_convertor.DomainExperimentDTO2OpenAPI(createResp.GetExperiment()),
 		},
 	}, nil
+}
+
+func collectEvaluatorVersionIDs(params []*openapi.SubmitExperimentEvaluatorParam) ([]int64, error) {
+	ids := make([]int64, 0)
+	for _, param := range params {
+		if param == nil || !param.IsSetVersions() {
+			continue
+		}
+		splits := strings.Split(param.GetVersions(), ",")
+		parsed, err := parseEvaluatorVersionStrings(splits)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, parsed...)
+	}
+	return ids, nil
+}
+
+func parseEvaluatorVersionStrings(versions []string) ([]int64, error) {
+	ids := make([]int64, 0, len(versions))
+	for _, v := range versions {
+		value := strings.TrimSpace(v)
+		if value == "" {
+			continue
+		}
+		id, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+func hasDuplicateInt64(values []int64) bool {
+	seen := make(map[int64]struct{}, len(values))
+	for _, v := range values {
+		if _, ok := seen[v]; ok {
+			return true
+		}
+		seen[v] = struct{}{}
+	}
+	return false
+}
+
+func convertOpenAPITargetFieldMapping(mapping *openapiExperiment.TargetFieldMapping) *domainExpt.TargetFieldMapping {
+	if mapping == nil {
+		return nil
+	}
+	result := &domainExpt.TargetFieldMapping{}
+	for _, fm := range mapping.FromEvalSet {
+		if fm == nil {
+			continue
+		}
+		field := fm.GetFieldName()
+		fromField := fm.GetFromFieldName()
+		result.FromEvalSet = append(result.FromEvalSet, &domainExpt.FieldMapping{
+			FieldName:     gptr.Of(field),
+			FromFieldName: gptr.Of(fromField),
+		})
+	}
+	return result
+}
+
+func convertOpenAPIEvaluatorFieldMapping(mappings []*openapiExperiment.EvaluatorFieldMapping) []*domainExpt.EvaluatorFieldMapping {
+	if len(mappings) == 0 {
+		return nil
+	}
+	result := make([]*domainExpt.EvaluatorFieldMapping, 0, len(mappings))
+	for _, mapping := range mappings {
+		if mapping == nil {
+			continue
+		}
+		domainMapping := &domainExpt.EvaluatorFieldMapping{EvaluatorVersionID: mapping.GetEvaluatorVersionID()}
+		for _, fromEval := range mapping.FromEvalSet {
+			if fromEval == nil {
+				continue
+			}
+			field := fromEval.GetFieldName()
+			fromField := fromEval.GetFromFieldName()
+			domainMapping.FromEvalSet = append(domainMapping.FromEvalSet, &domainExpt.FieldMapping{
+				FieldName:     gptr.Of(field),
+				FromFieldName: gptr.Of(fromField),
+			})
+		}
+		for _, fromTarget := range mapping.FromTarget {
+			if fromTarget == nil {
+				continue
+			}
+			field := fromTarget.GetFieldName()
+			fromField := fromTarget.GetFromFieldName()
+			domainMapping.FromTarget = append(domainMapping.FromTarget, &domainExpt.FieldMapping{
+				FieldName:     gptr.Of(field),
+				FromFieldName: gptr.Of(fromField),
+			})
+		}
+		result = append(result, domainMapping)
+	}
+	return result
+}
+
+func convertOpenAPIRuntimeParam(param *openapiCommon.RuntimeParam) *domainCommon.RuntimeParam {
+	if param == nil {
+		return nil
+	}
+	if !param.IsSetJSONValue() {
+		return &domainCommon.RuntimeParam{}
+	}
+	return &domainCommon.RuntimeParam{JSONValue: gptr.Of(param.GetJSONValue())}
+}
+
+func convertOpenAPIEvalTargetParam(param *openapi.SubmitExperimentEvalTargetParam) (*domainEvalTarget.CreateEvalTargetParam, error) {
+	if param == nil {
+		return nil, nil
+	}
+	result := &domainEvalTarget.CreateEvalTargetParam{
+		SourceTargetID:      param.SourceTargetID,
+		SourceTargetVersion: param.SourceTargetVersion,
+		BotPublishVersion:   param.BotPublishVersion,
+	}
+	if param.EvalTargetType != nil {
+		typ, err := mapEvalTargetType(*param.EvalTargetType)
+		if err != nil {
+			return nil, err
+		}
+		result.EvalTargetType = gptr.Of(typ)
+	}
+	if param.BotInfoType != nil {
+		infoType, err := mapCozeBotInfoType(*param.BotInfoType)
+		if err != nil {
+			return nil, err
+		}
+		result.BotInfoType = gptr.Of(infoType)
+	}
+	return result, nil
+}
+
+func mapEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (domaindoEvalTarget.EvalTargetType, error) {
+	switch openapiType {
+	case openapiEvalTarget.EvalTargetTypeCozeBot:
+		return domaindoEvalTarget.EvalTargetType_CozeBot, nil
+	case openapiEvalTarget.EvalTargetTypeCozeLoopPrompt:
+		return domaindoEvalTarget.EvalTargetType_CozeLoopPrompt, nil
+	case openapiEvalTarget.EvalTargetTypeTrace:
+		return domaindoEvalTarget.EvalTargetType_Trace, nil
+	case openapiEvalTarget.EvalTargetTypeCozeWorkflow:
+		return domaindoEvalTarget.EvalTargetType_CozeWorkflow, nil
+	case openapiEvalTarget.EvalTargetTypeVolcengineAgent:
+		return domaindoEvalTarget.EvalTargetType_VolcengineAgent, nil
+	default:
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported eval target type"))
+	}
+}
+
+func mapCozeBotInfoType(openapiType openapiEvalTarget.CozeBotInfoType) (domaindoEvalTarget.CozeBotInfoType, error) {
+	switch openapiType {
+	case openapiEvalTarget.CozeBotInfoTypeDraftBot:
+		return domaindoEvalTarget.CozeBotInfoType_DraftBot, nil
+	case openapiEvalTarget.CozeBotInfoTypeProductBot:
+		return domaindoEvalTarget.CozeBotInfoType_ProductBot, nil
+	default:
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("unsupported coze bot info type"))
+	}
 }
 
 func (e *EvaluationOpenApiApplicationImpl) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest) (r *openapi.GetExperimentsOApiResponse, err error) {
