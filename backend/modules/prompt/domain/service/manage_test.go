@@ -1467,7 +1467,7 @@ func TestPromptServiceImpl_MConvertBase64ToFileURI(t *testing.T) {
 				file: mockFile,
 			}
 
-			err := p.MConvertBase64ToFileURI(tt.args.ctx, tt.args.messages, tt.args.workspaceID)
+			err := p.MConvertBase64DataURLToFileURI(tt.args.ctx, tt.args.messages, tt.args.workspaceID)
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 
 			if tt.validateFunc != nil {
@@ -1628,7 +1628,7 @@ func TestPromptServiceImpl_MConvertBase64ToFileURL(t *testing.T) {
 				file: mockFile,
 			}
 
-			err := p.MConvertBase64ToFileURL(tt.args.ctx, tt.args.messages, tt.args.workspaceID)
+			err := p.MConvertBase64DataURLToFileURL(tt.args.ctx, tt.args.messages, tt.args.workspaceID)
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 
 			if tt.validate != nil {

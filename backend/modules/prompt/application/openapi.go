@@ -407,7 +407,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 
 	// Convert base64 files to download URLs
 	if reply != nil && reply.Item != nil && reply.Item.Message != nil {
-		if err := p.promptService.MConvertBase64ToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
+		if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
 			return promptDO, nil, err
 		}
 	}
@@ -534,7 +534,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 		}
 		// Convert base64 files to download URLs
 		if reply.Item.Message != nil {
-			if err := p.promptService.MConvertBase64ToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
+			if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
 				logs.CtxError(ctx, "failed to convert base64 to file URLs: %v", err)
 				return promptDO, nil, err
 			}

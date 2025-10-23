@@ -287,7 +287,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		}
 		// Convert base64 files to download URLs
 		if reply.Item.Message != nil {
-			if err := p.promptService.MConvertBase64ToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.Prompt.GetWorkspaceID()); err != nil {
+			if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.Prompt.GetWorkspaceID()); err != nil {
 				logs.CtxError(ctx, "failed to convert base64 to file URLs: %v", err)
 				return nil, err
 			}

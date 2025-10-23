@@ -4,6 +4,7 @@
 package convertor
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -395,8 +396,13 @@ func ImageURLDTO2DO(dto *runtimedto.ChatMessageImageURL) *entity.ImageURL {
 	if dto == nil {
 		return nil
 	}
+	url := ptr.From(dto.URL)
+	// If mimetype is provided and URL is base64 string, convert to dataurl format
+	if dto.MimeType != nil && ptr.From(dto.MimeType) != "" && !strings.HasPrefix(url, "data:") {
+		url = fmt.Sprintf("data:%s;base64,%s", ptr.From(dto.MimeType), url)
+	}
 	return &entity.ImageURL{
-		URL: ptr.From(dto.URL),
+		URL: url,
 	}
 }
 
@@ -408,8 +414,13 @@ func VideoURLDTO2DO(dto *runtimedto.ChatMessageVideoURL) *entity.VideoURL {
 	if dto.Detail != nil {
 		fps = dto.Detail.Fps
 	}
+	url := ptr.From(dto.URL)
+	// If mimetype is provided and URL is base64 string, convert to dataurl format
+	if dto.MimeType != nil && ptr.From(dto.MimeType) != "" && !strings.HasPrefix(url, "data:") {
+		url = fmt.Sprintf("data:%s;base64,%s", ptr.From(dto.MimeType), url)
+	}
 	return &entity.VideoURL{
-		URL: ptr.From(dto.URL),
+		URL: url,
 		Fps: fps,
 	}
 }

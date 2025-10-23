@@ -115,8 +115,8 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 	return nil
 }
 
-// MConvertBase64ToFileURI converts base64 files to file URIs by uploading them
-func (p *PromptServiceImpl) MConvertBase64ToFileURI(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
+// MConvertBase64DataURLToFileURI converts base64 files to file URIs by uploading them
+func (p *PromptServiceImpl) MConvertBase64DataURLToFileURI(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
 	for _, message := range messages {
 		if message == nil || len(message.Parts) == 0 {
 			continue
@@ -195,15 +195,15 @@ func (p *PromptServiceImpl) messageContainsBase64File(messages []*entity.Message
 	return false
 }
 
-// MConvertBase64ToFileURL converts base64 files to download URLs
-func (p *PromptServiceImpl) MConvertBase64ToFileURL(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
+// MConvertBase64DataURLToFileURL converts base64 files to download URLs
+func (p *PromptServiceImpl) MConvertBase64DataURLToFileURL(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
 	// Fast path: skip processing if no base64 files present
 	if !p.messageContainsBase64File(messages) {
 		return nil
 	}
 
 	// Convert base64 files to file URIs
-	if err := p.MConvertBase64ToFileURI(ctx, messages, workspaceID); err != nil {
+	if err := p.MConvertBase64DataURLToFileURI(ctx, messages, workspaceID); err != nil {
 		return err
 	}
 
