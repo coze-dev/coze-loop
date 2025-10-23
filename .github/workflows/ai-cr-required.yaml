@@ -4,12 +4,15 @@ permissions:
 
 on:
   pull_request:
+    types: [opened]
     branches: [ "main"]
     paths:
       - 'backend/**'
       - 'idl/**'
       - 'release/**'
       - '.github/workflows/backend-ci.yaml'
+  issue_comment:
+    types: [ created ]
 
 jobs:
   require-ai-cr-comment:
