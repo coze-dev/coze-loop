@@ -28,6 +28,28 @@ jobs:
           curl -sSL https://github.com/cli/cli/releases/download/v2.40.0/gh_2.40.0_linux_amd64.deb -o gh.deb
           sudo dpkg -i gh.deb
 
+      - name: Check PR touched files
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking PR files for: backend/**, idl/**, release/**, .github/workflows/backend-ci.yaml"
+          FILES=$(gh api -H "Accept: application/vnd.github+json" /repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files --jq '.[].filename')
+          echo "Touched files:"
+          echo "$FILES"
+          MATCH=0
+          while read -r line; do
+            if [[ $line == backend/* ]] || [[ $line == idl/* ]] || [[ $line == release/* ]] || [[ $line == ".github/workflows/backend-ci.yaml" ]]; then
+              MATCH=1
+              break
+            fi
+          done <<< "$FILES"
+          if [ $MATCH -eq 0 ]; then
+            echo "No relevant file is changed. Skipping remaining steps."
+            exit 0
+          fi
+          echo "Relevant files found. Continue workflow."
+
       - name: Check for ai's CR comment
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
