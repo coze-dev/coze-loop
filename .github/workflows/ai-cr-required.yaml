@@ -1,0 +1,38 @@
+name: AI CR Required
+permissions:
+  pull-requests: read
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'backend/**'
+      - 'idl/**'
+      - 'release/**'
+      - '.github/workflows/backend-ci.yaml'
+
+jobs:
+  require-ai-cr-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install gh and jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          curl -sSL https://github.com/cli/cli/releases/download/v2.40.0/gh_2.40.0_linux_amd64.deb -o gh.deb
+          sudo dpkg -i gh.deb
+
+      - name: Check for ai's CR comment
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "PR number: $PR_NUMBER"
+          COMMENTS=$(gh api -H "Accept: application/vnd.github+json" /repos/${{ github.repository }}/pulls/${PR_NUMBER}/comments --jq '.[].user.login')
+          echo "Comment authors: $COMMENTS"
+          echo "$COMMENTS" | grep -q "^CozeLoop$"
+          if [ $? -ne 0 ]; then
+            echo "❌ No comment from target ai. Merge is blocked."
+            exit 1
+          fi
+          echo "✅ Target ai has commented. Merge is allowed."
