@@ -119,7 +119,7 @@ func TestSpansCkDaoImpl_convertFieldName(t *testing.T) {
 				FieldType: loop_span.FieldTypeBool,
 				IsSystem:  true,
 			},
-			want: "system_tags_tags_string['system_unknown']",
+			want: "system_tags_string['system_unknown']",
 		},
 		{
 			name: "super field",
