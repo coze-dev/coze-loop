@@ -28,7 +28,7 @@ type IBenefitService interface {
 	BatchCheckEnableTypeBenefit(ctx context.Context, param *BatchCheckEnableTypeBenefitParams) (result *BatchCheckEnableTypeBenefitResult, err error)
 	// CheckAndDeductOptimizationBenefit 校验扣减优化权益
 	CheckAndDeductOptimizationBenefit(ctx context.Context, param *CheckAndDeductOptimizationBenefitParams) (result *CheckAndDeductOptimizationBenefitResult, err error)
-	// DeductOptimizationBenefit 上报优化资源点, 废弃接口
+	// Deprecated: DeductOptimizationBenefit is deprecated. Use CheckAndDeductOptimizationBenefit(...) instead.
 	DeductOptimizationBenefit(ctx context.Context, param *DeductOptimizationBenefitParams) (err error)
 }
 
