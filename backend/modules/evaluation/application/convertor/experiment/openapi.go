@@ -156,6 +156,8 @@ func mapOpenAPIEvalTargetType(openapiType openapiEvalTarget.EvalTargetType) (dom
 		return domaindoEvalTarget.EvalTargetType_CozeWorkflow, nil
 	case openapiEvalTarget.EvalTargetTypeVolcengineAgent:
 		return domaindoEvalTarget.EvalTargetType_VolcengineAgent, nil
+	case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
+		return domaindoEvalTarget.EvalTargetType_CustomRPCServer, nil
 	default:
 		return 0, fmt.Errorf("unsupported eval target type: %s", openapiType)
 	}
@@ -812,4 +814,89 @@ func convertEntityEvaluatorStatusToOpenAPI(status entity.EvaluatorRunStatus) *op
 		openapiStatus = openapiEvaluator.EvaluatorRunStatusProcessing
 	}
 	return &openapiStatus
+}
+
+func OpenAPIAggregatorResultsDO2DTOs(results []*entity.AggregatorResult) []*openapiExperiment.AggregatorResult_ {
+	if len(results) == 0 {
+		return nil
+	}
+	converted := make([]*openapiExperiment.AggregatorResult_, 0, len(results))
+	for _, result := range results {
+		if result == nil {
+			continue
+		}
+		aggregatorType := openAPIAggregatorTypeDO2DTO(result.AggregatorType)
+		aggregateData := openAPIAggregateDataDO2DTO(result.Data)
+		if aggregatorType == nil && aggregateData == nil {
+			continue
+		}
+		converted = append(converted, &openapiExperiment.AggregatorResult_{
+			AggregatorType: aggregatorType,
+			Data:           aggregateData,
+		})
+	}
+	if len(converted) == 0 {
+		return nil
+	}
+	return converted
+}
+
+func openAPIAggregatorTypeDO2DTO(typ entity.AggregatorType) *openapiExperiment.AggregatorType {
+	var openapiType openapiExperiment.AggregatorType
+	switch typ {
+	case entity.Average:
+		openapiType = openapiExperiment.AggregatorTypeAverage
+	case entity.Sum:
+		openapiType = openapiExperiment.AggregatorTypeSum
+	case entity.Max:
+		openapiType = openapiExperiment.AggregatorTypeMax
+	case entity.Min:
+		openapiType = openapiExperiment.AggregatorTypeMin
+	case entity.Distribution:
+		openapiType = openapiExperiment.AggregatorTypeDistribution
+	default:
+		return nil
+	}
+	return &openapiType
+}
+
+func openAPIAggregateDataDO2DTO(data *entity.AggregateData) *openapiExperiment.AggregateData {
+	if data == nil {
+		return nil
+	}
+	aggregateData := &openapiExperiment.AggregateData{}
+	switch data.DataType {
+	case entity.Double:
+		dataType := openapiExperiment.DataTypeDouble
+		aggregateData.DataType = &dataType
+		aggregateData.Value = data.Value
+	case entity.ScoreDistribution:
+		dataType := openapiExperiment.DataTypeScoreDistribution
+		aggregateData.DataType = &dataType
+		aggregateData.ScoreDistribution = openAPIScoreDistributionDO2DTO(data.ScoreDistribution)
+	default:
+		return nil
+	}
+	return aggregateData
+}
+
+func openAPIScoreDistributionDO2DTO(data *entity.ScoreDistributionData) *openapiExperiment.ScoreDistribution {
+	if data == nil || len(data.ScoreDistributionItems) == 0 {
+		return nil
+	}
+	items := make([]*openapiExperiment.ScoreDistributionItem, 0, len(data.ScoreDistributionItems))
+	for _, item := range data.ScoreDistributionItems {
+		if item == nil {
+			continue
+		}
+		items = append(items, &openapiExperiment.ScoreDistributionItem{
+			Score:      gptr.Of(item.Score),
+			Count:      gptr.Of(item.Count),
+			Percentage: gptr.Of(item.Percentage),
+		})
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	return &openapiExperiment.ScoreDistribution{ScoreDistributionItems: items}
 }

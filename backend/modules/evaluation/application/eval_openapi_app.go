@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
+
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	experiment_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
@@ -49,6 +51,8 @@ type EvalOpenAPIApplication struct {
 	userInfoService             userinfo.UserInfoService
 	experimentApp               IExperimentApplication
 	manager                     service.IExptManager
+	resultSvc                   service.ExptResultService
+	service.ExptAggrResultService
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -61,7 +65,9 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	metric metrics.OpenAPIEvaluationSetMetrics,
 	userInfoService userinfo.UserInfoService,
 	experimentApp IExperimentApplication,
-	manager service.IExptManager) IEvalOpenAPIApplication {
+	manager service.IExptManager,
+	resultSvc service.ExptResultService,
+	aggResultSvc service.ExptAggrResultService) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
 		publisher:                   publisher,
@@ -75,6 +81,8 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		userInfoService:             userInfoService,
 		experimentApp:               experimentApp,
 		manager:                     manager,
+		resultSvc:                   resultSvc,
+		ExptAggrResultService:       aggResultSvc,
 	}
 }
 
@@ -719,10 +727,54 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+	columnEvaluators, _, columnEvalSetFields, _, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+	return &openapi.ListExperimentResultOApiResponse{
+		Data: &openapi.ListExperimentResultOpenAPIData{
+			ColumnEvalSetFields: experiment_convertor.OpenAPIColumnEvalSetFieldsDO2DTOs(columnEvalSetFields),
+			ColumnEvaluators:    experiment_convertor.OpenAPIColumnEvaluatorsDO2DTOs(columnEvaluators),
+			Total:               gptr.Of(total),
+			ItemResults:         experiment_convertor.OpenAPIItemResultsDO2DTOs(itemResults),
+		},
+	}, nil
 }
 
 func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	aggrResults, err := e.BatchGetExptAggrResultByExperimentIDs(ctx, req.GetWorkspaceID(), []int64{req.GetExperimentID()})
+	if err != nil {
+		return nil, err
+	}
+	if aggrResults == nil || len(aggrResults) == 0 {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("experiment aggr result not found"))
+	}
+	aggrResult := aggrResults[0]
+	res := make([]*experiment.EvaluatorAggregateResult_, 0)
+	for i, v := range aggrResult.EvaluatorResults {
+		res = append(res, &experiment.EvaluatorAggregateResult_{
+			EvaluatorID:        &i,
+			EvaluatorVersionID: &v.EvaluatorVersionID,
+			Name:               v.Name,
+			Version:            v.Version,
+			AggregatorResults:  experiment_convertor.OpenAPIAggregatorResultsDO2DTOs(v.AggregatorResults),
+		})
+	}
+	return &openapi.GetExperimentAggrResultOApiResponse{
+		Data: &openapi.GetExperimentAggrResultOpenAPIData{
+			EvaluatorResults: res,
+		},
+	}, nil
 }
