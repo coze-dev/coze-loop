@@ -13,6 +13,7 @@ const (
 	AuthActionTraceViewList      = "listLoopTraceView"
 	AuthActionTraceViewEdit      = "edit"
 	AuthActionAnnotationCreate   = "createLoopTraceAnnotation"
+	AuthActionAnnotationDelete   = "deleteLoopTraceAnnotation"
 	AuthActionTraceExport        = "exportLoopTrace"
 	AuthActionTracePreviewExport = "previewExportLoopTrace"
 	AuthActionTraceTaskCreate    = "createLoopTask"

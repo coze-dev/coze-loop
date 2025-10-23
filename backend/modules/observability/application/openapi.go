@@ -446,7 +446,7 @@ func (o *OpenAPIApplication) CreateAnnotation(ctx context.Context, req *openapi.
 
 func (o *OpenAPIApplication) DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest) (*openapi.DeleteAnnotationResponse, error) {
 	if err := o.auth.CheckWorkspacePermission(ctx,
-		rpc.AuthActionAnnotationCreate,
+		rpc.AuthActionAnnotationDelete,
 		strconv.FormatInt(req.WorkspaceID, 10), true); err != nil {
 		return nil, err
 	}
