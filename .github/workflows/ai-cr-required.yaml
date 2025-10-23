@@ -1,4 +1,6 @@
 name: AI CR Required
+permissions:
+  pull-requests: read
 
 on:
   pull_request:
