@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 
 	"github.com/bytedance/gg/gptr"
@@ -442,10 +443,187 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		return nil
 	}
 
-	domainExperiment := ToExptDTO(experiment)
-	if domainExperiment == nil {
+	result := &openapiExperiment.Experiment{
+		ID:        gptr.Of(experiment.ID),
+		Name:      gptr.Of(experiment.Name),
+		ExptStats: convertExperimentStatsFromEntity(experiment.Stats),
+	}
+	if experiment.Description != "" {
+		result.Description = gptr.Of(experiment.Description)
+	}
+
+	if status := convertExperimentStatusFromEntity(experiment.Status); status != nil {
+		result.Status = status
+	}
+
+	if experiment.StartAt != nil {
+		result.StartTime = gptr.Of(experiment.StartAt.Unix())
+	}
+	if experiment.EndAt != nil {
+		result.EndTime = gptr.Of(experiment.EndAt.Unix())
+	}
+
+	if experiment.EvalConf != nil {
+		if experiment.EvalConf.ItemConcurNum != nil {
+			itemConcur := int32(*experiment.EvalConf.ItemConcurNum)
+			result.ItemConcurNum = &itemConcur
+		}
+
+		mapping, runtimeParam := extractTargetIngressInfo(experiment.EvalConf.ConnectorConf.TargetConf)
+		if mapping != nil {
+			result.TargetFieldMapping = mapping
+		}
+		if runtimeParam != nil {
+			result.TargetRuntimeParam = runtimeParam
+		}
+
+		if evaluatorMappings := convertEvaluatorFieldMappingsFromEntity(experiment.EvalConf.ConnectorConf.EvaluatorsConf); len(evaluatorMappings) > 0 {
+			result.EvaluatorFieldMapping = evaluatorMappings
+		}
+
+		if experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
+			evaluatorConcur := int32(*experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum)
+			result.EvaluatorsConcurNum = &evaluatorConcur
+		}
+	}
+
+	return result
+}
+
+func convertExperimentStatusFromEntity(status entity.ExptStatus) *openapiExperiment.ExperimentStatus {
+	var openapiStatus openapiExperiment.ExperimentStatus
+	switch status {
+	case entity.ExptStatus_Pending:
+		openapiStatus = openapiExperiment.ExperimentStatusPending
+	case entity.ExptStatus_Processing:
+		openapiStatus = openapiExperiment.ExperimentStatusProcessing
+	case entity.ExptStatus_Success:
+		openapiStatus = openapiExperiment.ExperimentStatusSuccess
+	case entity.ExptStatus_Failed:
+		openapiStatus = openapiExperiment.ExperimentStatusFailed
+	case entity.ExptStatus_Terminated:
+		openapiStatus = openapiExperiment.ExperimentStatusTerminated
+	case entity.ExptStatus_SystemTerminated:
+		openapiStatus = openapiExperiment.ExperimentStatusSystemTerminated
+	case entity.ExptStatus_Draining:
+		openapiStatus = openapiExperiment.ExperimentStatusDraining
+	default:
+		return nil
+	}
+	return &openapiStatus
+}
+
+func extractTargetIngressInfo(targetConf *entity.TargetConf) (*openapiExperiment.TargetFieldMapping, *openapiCommon.RuntimeParam) {
+	if targetConf == nil || targetConf.IngressConf == nil {
+		return nil, nil
+	}
+
+	var mapping *openapiExperiment.TargetFieldMapping
+	if fields := convertFieldAdapterToMappings(targetConf.IngressConf.EvalSetAdapter); len(fields) > 0 {
+		mapping = &openapiExperiment.TargetFieldMapping{FromEvalSet: fields}
+	}
+
+	runtimeParam := extractRuntimeParamFromAdapter(targetConf.IngressConf.CustomConf)
+
+	return mapping, runtimeParam
+}
+
+func convertEvaluatorFieldMappingsFromEntity(conf *entity.EvaluatorsConf) []*openapiExperiment.EvaluatorFieldMapping {
+	if conf == nil || len(conf.EvaluatorConf) == 0 {
 		return nil
 	}
 
-	return DomainExperimentDTO2OpenAPI(domainExperiment)
+	mappings := make([]*openapiExperiment.EvaluatorFieldMapping, 0, len(conf.EvaluatorConf))
+	for _, evaluatorConf := range conf.EvaluatorConf {
+		if evaluatorConf == nil {
+			continue
+		}
+
+		mapping := &openapiExperiment.EvaluatorFieldMapping{}
+		if evaluatorConf.EvaluatorVersionID != 0 {
+			mapping.EvaluatorVersionID = gptr.Of(evaluatorConf.EvaluatorVersionID)
+		}
+
+		if ingress := evaluatorConf.IngressConf; ingress != nil {
+			if fields := convertFieldAdapterToMappings(ingress.EvalSetAdapter); len(fields) > 0 {
+				mapping.FromEvalSet = fields
+			}
+			if fields := convertFieldAdapterToMappings(ingress.TargetAdapter); len(fields) > 0 {
+				mapping.FromTarget = fields
+			}
+		}
+
+		if mapping.EvaluatorVersionID == nil && len(mapping.FromEvalSet) == 0 && len(mapping.FromTarget) == 0 {
+			continue
+		}
+		mappings = append(mappings, mapping)
+	}
+
+	if len(mappings) == 0 {
+		return nil
+	}
+	return mappings
+}
+
+func convertFieldAdapterToMappings(adapter *entity.FieldAdapter) []*openapiExperiment.FieldMapping {
+	if adapter == nil || len(adapter.FieldConfs) == 0 {
+		return nil
+	}
+
+	result := make([]*openapiExperiment.FieldMapping, 0, len(adapter.FieldConfs))
+	for _, conf := range adapter.FieldConfs {
+		if conf == nil {
+			continue
+		}
+
+		mapping := &openapiExperiment.FieldMapping{}
+		if conf.FieldName != "" {
+			mapping.FieldName = gptr.Of(conf.FieldName)
+		}
+		if conf.FromField != "" {
+			mapping.FromFieldName = gptr.Of(conf.FromField)
+		}
+
+		if mapping.FieldName == nil && mapping.FromFieldName == nil {
+			continue
+		}
+		result = append(result, mapping)
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func extractRuntimeParamFromAdapter(adapter *entity.FieldAdapter) *openapiCommon.RuntimeParam {
+	if adapter == nil || len(adapter.FieldConfs) == 0 {
+		return nil
+	}
+
+	for _, conf := range adapter.FieldConfs {
+		if conf == nil {
+			continue
+		}
+		if conf.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
+			runtimeParam := &openapiCommon.RuntimeParam{}
+			runtimeParam.JSONValue = gptr.Of(conf.Value)
+			return runtimeParam
+		}
+	}
+
+	return nil
+}
+
+func convertExperimentStatsFromEntity(stats *entity.ExptStats) *openapiExperiment.ExperimentStatistics {
+	if stats == nil {
+		return nil
+	}
+	return &openapiExperiment.ExperimentStatistics{
+		PendingTurnCount:    gptr.Of(stats.PendingItemCnt),
+		SuccessTurnCount:    gptr.Of(stats.SuccessItemCnt),
+		FailedTurnCount:     gptr.Of(stats.FailItemCnt),
+		TerminatedTurnCount: gptr.Of(stats.TerminatedItemCnt),
+		ProcessingTurnCount: gptr.Of(stats.ProcessingItemCnt),
+	}
 }
