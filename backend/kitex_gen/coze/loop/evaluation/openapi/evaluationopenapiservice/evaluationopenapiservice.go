@@ -83,6 +83,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ReportEvalTargetInvokeResult": kitex.NewMethodInfo(
+		reportEvalTargetInvokeResult_Handler,
+		newEvaluationOpenAPIServiceReportEvalTargetInvokeResultArgs,
+		newEvaluationOpenAPIServiceReportEvalTargetInvokeResultResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -306,6 +313,25 @@ func newEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult() interface{
 	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult()
 }
 
+func reportEvalTargetInvokeResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceReportEvalTargetInvokeResultArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceReportEvalTargetInvokeResultResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ReportEvalTargetInvokeResult_(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceReportEvalTargetInvokeResultArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceReportEvalTargetInvokeResultArgs()
+}
+
+func newEvaluationOpenAPIServiceReportEvalTargetInvokeResultResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceReportEvalTargetInvokeResultResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -413,6 +439,16 @@ func (p *kClient) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openap
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult
 	if err = p.c.Call(ctx, "UpdateEvaluationSetSchemaOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest) (r *openapi.ReportEvalTargetInvokeResultResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceReportEvalTargetInvokeResultArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceReportEvalTargetInvokeResultResult
+	if err = p.c.Call(ctx, "ReportEvalTargetInvokeResult", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

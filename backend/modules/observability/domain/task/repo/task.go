@@ -45,4 +45,12 @@ type ITaskRepo interface {
 	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 
 	GetObjListWithTask(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask)
+
+	// 非终态task列表by spaceID
+	ListNonFinalTask(ctx context.Context, spaceID string) ([]int64, error)
+	AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error
+	RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error
+
+	GetTaskByRedis(ctx context.Context, taskID int64) (*entity.ObservabilityTask, error)
+	SetTask(ctx context.Context, task *entity.ObservabilityTask) error
 }

@@ -5,6 +5,7 @@ package evaluator
 
 import (
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
@@ -28,6 +29,11 @@ const (
 	tagModelID = "model_id"
 )
 
+var (
+	evaluatorMetricsOnce = sync.Once{}
+	evaluatorMetricsImpl eval_metrics.EvaluatorExecMetrics
+)
+
 func evaluatorEvalMtrTags() []string {
 	return []string{
 		tagSpaceID,
@@ -38,14 +44,17 @@ func evaluatorEvalMtrTags() []string {
 }
 
 func NewEvaluatorMetrics(meter metrics.Meter) eval_metrics.EvaluatorExecMetrics {
-	if meter == nil {
-		return nil
-	}
-	metric, err := meter.NewMetric(evaluatorMtrName, []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, evaluatorEvalMtrTags())
-	if err != nil {
-		return nil
-	}
-	return &EvaluatorExecMetricsImpl{metric: metric}
+	evaluatorMetricsOnce.Do(func() {
+		if meter == nil {
+			return
+		}
+		metric, err := meter.NewMetric(evaluatorMtrName, []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, evaluatorEvalMtrTags())
+		if err != nil {
+			return
+		}
+		evaluatorMetricsImpl = &EvaluatorExecMetricsImpl{metric: metric}
+	})
+	return evaluatorMetricsImpl
 }
 
 type EvaluatorExecMetricsImpl struct {
@@ -67,7 +76,7 @@ func (e *EvaluatorExecMetricsImpl) EmitRun(spaceID int64, err error, start time.
 }
 
 func (e *EvaluatorExecMetricsImpl) EmitCreate(spaceID int64, err error) {
-	if e.metric == nil {
+	if e == nil || e.metric == nil {
 		return
 	}
 	code, isError := eval_metrics.GetCode(err)

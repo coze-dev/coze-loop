@@ -100,6 +100,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				impl := &TraceHubServiceImpl{
 					taskRepo:      mockRepo,
 					taskProcessor: tp,
+					loader:        newEnabledConsumerLoader(),
 				}
 				return impl, proc
 			},
@@ -133,6 +134,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				impl := &TraceHubServiceImpl{
 					taskRepo:      mockRepo,
 					taskProcessor: tp,
+					loader:        newEnabledConsumerLoader(),
 				}
 				return impl, proc
 			},
@@ -172,6 +174,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				impl := &TraceHubServiceImpl{
 					taskRepo:      mockRepo,
 					taskProcessor: tp,
+					loader:        newEnabledConsumerLoader(),
 				}
 				return impl, proc
 			},
@@ -217,7 +220,6 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				mockRepo.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{taskPO}, int64(1), nil)
 				locker.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), transformTaskStatusLockTTL, backfillLockMaxHold).
 					Return(false, context.Background(), func() {}, errors.New("lock failed"))
-				locker.EXPECT().Unlock(transformTaskStatusLockKey).Return(true, nil)
 
 				proc := newTrackingProcessor()
 				tp := processor.NewTaskProcessor()
@@ -229,6 +231,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 					taskProcessor:    tp,
 					locker:           locker,
 					backfillProducer: producer,
+					loader:           newEnabledConsumerLoader(),
 				}
 				return impl, proc
 			},
@@ -331,7 +334,7 @@ func TestTraceHubServiceImpl_syncTaskCache(t *testing.T) {
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	impl.taskCache.Store("ObjListWithTask", &TaskCacheInfo{})
+	impl.taskCache.Store("ObjListWithTask", TaskCacheInfo{})
 
 	workspaceIDs := []string{"space-1"}
 	botIDs := []string{"bot-1"}
@@ -343,7 +346,7 @@ func TestTraceHubServiceImpl_syncTaskCache(t *testing.T) {
 
 	val, ok := impl.taskCache.Load("ObjListWithTask")
 	require.True(t, ok)
-	cache, ok := val.(*TaskCacheInfo)
+	cache, ok := val.(TaskCacheInfo)
 	require.True(t, ok)
 	require.Equal(t, workspaceIDs, cache.WorkspaceIDs)
 	require.Equal(t, botIDs, cache.BotIDs)

@@ -109,7 +109,7 @@ function EvaluatorListPage() {
         if (record.evaluator_type === EvaluatorType.Code) {
           navigate(`create/code/${record.evaluator_id}`);
         } else {
-          navigate(`create/${record.evaluator_id}`);
+          navigate(`create/llm/${record.evaluator_id}`);
         }
       },
       showCancelButton: true,

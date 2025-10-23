@@ -253,6 +253,29 @@ func (l *LocalEvaluationOpenAPIService) UpdateEvaluationSetSchemaOApi(ctx contex
 	return result.GetSuccess(), nil
 }
 
+// ReportEvalTargetInvokeResult_
+// 评测目标调用结果上报接口
+func (l *LocalEvaluationOpenAPIService) ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (*openapi.ReportEvalTargetInvokeResultResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceReportEvalTargetInvokeResultArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceReportEvalTargetInvokeResultResult)
+		resp, err := l.impl.ReportEvalTargetInvokeResult_(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceReportEvalTargetInvokeResultArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceReportEvalTargetInvokeResultResult{}
+	ctx = l.injectRPCInfo(ctx, "ReportEvalTargetInvokeResult_")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationOpenAPIService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

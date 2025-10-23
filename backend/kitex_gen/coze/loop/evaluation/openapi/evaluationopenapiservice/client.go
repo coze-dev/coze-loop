@@ -21,6 +21,7 @@ type Client interface {
 	BatchDeleteEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchDeleteEvaluationSetItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchDeleteEvaluationSetItemsOApiResponse, err error)
 	ListEvaluationSetVersionItemsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetVersionItemsOApiResponse, err error)
 	UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error)
+	ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetInvokeResultResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -100,4 +101,9 @@ func (p *kEvaluationOpenAPIServiceClient) ListEvaluationSetVersionItemsOApi(ctx 
 func (p *kEvaluationOpenAPIServiceClient) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.UpdateEvaluationSetSchemaOApi(ctx, req)
+}
+
+func (p *kEvaluationOpenAPIServiceClient) ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetInvokeResultResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ReportEvalTargetInvokeResult_(ctx, req)
 }

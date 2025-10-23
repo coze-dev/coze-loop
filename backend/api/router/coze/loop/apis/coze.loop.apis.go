@@ -101,11 +101,14 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_v11 := _evaluation.Group("/v1", _v11Mw(handler)...)
 				_v11.POST("/eval_targets", append(_eval_targetsMw(handler), apis.CreateEvalTarget)...)
 				_eval_targets := _v11.Group("/eval_targets", _eval_targetsMw(handler)...)
+				_eval_targets.POST("/async_debug", append(_asyncdebugevaltargetMw(handler), apis.AsyncDebugEvalTarget)...)
 				_eval_targets.POST("/batch_get_by_source", append(_batchgetevaltargetsbysourceMw(handler), apis.BatchGetEvalTargetsBySource)...)
 				_eval_targets.POST("/batch_get_source", append(_batchgetsourceevaltargetsMw(handler), apis.BatchGetSourceEvalTargets)...)
+				_eval_targets.POST("/debug", append(_debugevaltargetMw(handler), apis.DebugEvalTarget)...)
 				_eval_targets.POST("/list_source", append(_listsourceevaltargetsMw(handler), apis.ListSourceEvalTargets)...)
 				_eval_targets.POST("/list_source_version", append(_listsourceevaltargetversionsMw(handler), apis.ListSourceEvalTargetVersions)...)
 				_eval_targets.POST("/mock_output", append(_mockevaltargetoutputMw(handler), apis.MockEvalTargetOutput)...)
+				_eval_targets.POST("/search_custom", append(_searchcustomevaltargetMw(handler), apis.SearchCustomEvalTarget)...)
 				{
 					_eval_target_id := _eval_targets.Group("/:eval_target_id", _eval_target_idMw(handler)...)
 					{
@@ -371,10 +374,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 		_v16 := root.Group("/v1", _v16Mw(handler)...)
 		{
 			_loop := _v16.Group("/loop", _loopMw(handler)...)
+			_loop.DELETE("/annotations", append(_deleteannotationMw(handler), apis.DeleteAnnotation)...)
+			_loop.POST("/annotations", append(_createannotationMw(handler), apis.CreateAnnotation)...)
 			{
-				_annotations0 := _loop.Group("/annotations", _annotations0Mw(handler)...)
-				_annotations0.POST("/create", append(_createannotationMw(handler), apis.CreateAnnotation)...)
-				_annotations0.DELETE("/delete", append(_deleteannotationMw(handler), apis.DeleteAnnotation)...)
+				_eval_targets0 := _loop.Group("/eval_targets", _eval_targets0Mw(handler)...)
+				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
 			}
 			{
 				_evaluation0 := _loop.Group("/evaluation", _evaluation0Mw(handler)...)

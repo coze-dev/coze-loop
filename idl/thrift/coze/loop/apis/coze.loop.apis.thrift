@@ -27,7 +27,7 @@ service EvaluationSetService extends coze.loop.evaluation.eval_set.EvaluationSet
 service EvaluatorService extends coze.loop.evaluation.evaluator.EvaluatorService{}
 service EvalTargetService extends coze.loop.evaluation.eval_target.EvalTargetService{}
 service ExperimentService extends coze.loop.evaluation.expt.ExperimentService{}
-service EvaluationOpenAPIService extends coze.loop.evaluation.openapi.EvaluationOpenAPIService{}
+service EvalOpenAPIService extends coze.loop.evaluation.openapi.EvaluationOpenAPIService{}
 
 service DatasetService extends coze.loop.data.dataset.DatasetService{}
 service TagService extends coze.loop.data.tag.TagService{}

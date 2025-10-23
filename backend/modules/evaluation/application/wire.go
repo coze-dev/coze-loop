@@ -131,6 +131,7 @@ var (
 		targetDomainService,
 		evaluatorDomainService,
 		flagSet,
+		evalAsyncRepoSet,
 	)
 
 	evaluatorDomainService = wire.NewSet(
@@ -188,19 +189,6 @@ var (
 		userinfo.NewUserInfoServiceImpl,
 	)
 
-	evaluationOpenAPISet = wire.NewSet(
-		NewEvaluationOpenApiApplicationImpl,
-		domainservice.NewEvaluationSetServiceImpl,
-		domainservice.NewEvaluationSetVersionServiceImpl,
-		domainservice.NewEvaluationSetItemServiceImpl,
-		domainservice.NewEvaluationSetSchemaServiceImpl,
-		data.NewDatasetRPCAdapter,
-		evalsetmtr.NewOpenAPIEvaluationSetMetrics,
-		foundation.NewAuthRPCProvider,
-		foundation.NewUserRPCProvider,
-		userinfo.NewUserInfoServiceImpl,
-	)
-
 	targetDomainService = wire.NewSet(
 		domainservice.NewEvalTargetServiceImpl,
 		NewSourceTargetOperators,
@@ -217,6 +205,30 @@ var (
 		foundation.NewAuthRPCProvider,
 		targetDomainService,
 		flagSet,
+		evalAsyncRepoSet,
+	)
+
+	evalAsyncRepoSet = wire.NewSet(
+		experiment.NewEvalAsyncRepo,
+		exptredis.NewEvalAsyncDAO,
+	)
+
+	evalOpenAPISet = wire.NewSet(
+		NewEvalOpenAPIApplication,
+		targetDomainService,
+		evaltargetmtr.NewEvalTargetMetrics,
+		flagSet,
+		rmqproducer.NewExptEventPublisher,
+		evalAsyncRepoSet,
+		domainservice.NewEvaluationSetServiceImpl,
+		domainservice.NewEvaluationSetVersionServiceImpl,
+		domainservice.NewEvaluationSetItemServiceImpl,
+		domainservice.NewEvaluationSetSchemaServiceImpl,
+		data.NewDatasetRPCAdapter,
+		evalsetmtr.NewOpenAPIEvaluationSetMetrics,
+		foundation.NewAuthRPCProvider,
+		foundation.NewUserRPCProvider,
+		userinfo.NewUserInfoServiceImpl,
 	)
 )
 
@@ -308,17 +320,6 @@ func InitEvalTargetApplication(ctx context.Context,
 	return nil
 }
 
-func InitEvaluationOpenAPIApplication(client datasetservice.Client,
-	meter metrics.Meter,
-	authClient authservice.Client,
-	userClient userservice.Client,
-) evaluation.EvaluationOpenAPIService {
-	wire.Build(
-		evaluationOpenAPISet,
-	)
-	return nil
-}
-
 // NewSandboxConfig 创建默认沙箱配置
 func NewSandboxConfig() *entity.SandboxConfig {
 	return entity.DefaultSandboxConfig()
@@ -361,4 +362,24 @@ func NewEvaluatorSourceServices(
 		serviceMap[svc.EvaluatorType()] = svc
 	}
 	return serviceMap
+}
+
+func InitEvalOpenAPIApplication(
+	ctx context.Context,
+	configFactory conf.IConfigLoaderFactory,
+	rmqFactory mq.IFactory,
+	cmdable redis.Cmdable,
+	idgen idgen.IIDGenerator,
+	db db.Provider,
+	client promptmanageservice.Client,
+	executeClient promptexecuteservice.Client,
+	authClient authservice.Client,
+	meter metrics.Meter,
+	dataClient datasetservice.Client,
+	userClient userservice.Client,
+) (IEvalOpenAPIApplication, error) {
+	wire.Build(
+		evalOpenAPISet,
+	)
+	return nil, nil
 }

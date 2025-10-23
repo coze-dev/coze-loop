@@ -132,28 +132,28 @@ func NewExperimentServiceClient(c thrift.TClient) *ExperimentServiceClient {
 	}
 }
 
-type EvaluationOpenAPIService interface {
+type EvalOpenAPIService interface {
 	openapi0.EvaluationOpenAPIService
 }
 
-type EvaluationOpenAPIServiceClient struct {
+type EvalOpenAPIServiceClient struct {
 	*openapi0.EvaluationOpenAPIServiceClient
 }
 
-func NewEvaluationOpenAPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *EvaluationOpenAPIServiceClient {
-	return &EvaluationOpenAPIServiceClient{
+func NewEvalOpenAPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
 		EvaluationOpenAPIServiceClient: openapi0.NewEvaluationOpenAPIServiceClientFactory(t, f),
 	}
 }
 
-func NewEvaluationOpenAPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *EvaluationOpenAPIServiceClient {
-	return &EvaluationOpenAPIServiceClient{
+func NewEvalOpenAPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
 		EvaluationOpenAPIServiceClient: openapi0.NewEvaluationOpenAPIServiceClientProtocol(t, iprot, oprot),
 	}
 }
 
-func NewEvaluationOpenAPIServiceClient(c thrift.TClient) *EvaluationOpenAPIServiceClient {
-	return &EvaluationOpenAPIServiceClient{
+func NewEvalOpenAPIServiceClient(c thrift.TClient) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
 		EvaluationOpenAPIServiceClient: openapi0.NewEvaluationOpenAPIServiceClient(c),
 	}
 }
@@ -636,12 +636,12 @@ func NewExperimentServiceProcessor(handler ExperimentService) *ExperimentService
 	return self
 }
 
-type EvaluationOpenAPIServiceProcessor struct {
+type EvalOpenAPIServiceProcessor struct {
 	*openapi0.EvaluationOpenAPIServiceProcessor
 }
 
-func NewEvaluationOpenAPIServiceProcessor(handler EvaluationOpenAPIService) *EvaluationOpenAPIServiceProcessor {
-	self := &EvaluationOpenAPIServiceProcessor{openapi0.NewEvaluationOpenAPIServiceProcessor(handler)}
+func NewEvalOpenAPIServiceProcessor(handler EvalOpenAPIService) *EvalOpenAPIServiceProcessor {
+	self := &EvalOpenAPIServiceProcessor{openapi0.NewEvaluationOpenAPIServiceProcessor(handler)}
 	return self
 }
 

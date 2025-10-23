@@ -304,6 +304,21 @@ func (mr *MockITaskRepoMockRecorder) IncrTaskRunSuccessCount(arg0, arg1, arg2, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrTaskRunSuccessCount", reflect.TypeOf((*MockITaskRepo)(nil).IncrTaskRunSuccessCount), arg0, arg1, arg2, arg3)
 }
 
+// ListNonFinalTask mocks base method.
+func (m *MockITaskRepo) ListNonFinalTask(arg0 context.Context, arg1 string) ([]int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNonFinalTask", arg0, arg1)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListNonFinalTask indicates an expected call of ListNonFinalTask.
+func (mr *MockITaskRepoMockRecorder) ListNonFinalTask(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNonFinalTask", reflect.TypeOf((*MockITaskRepo)(nil).ListNonFinalTask), arg0, arg1)
+}
+
 // ListTasks mocks base method.
 func (m *MockITaskRepo) ListTasks(arg0 context.Context, arg1 mysql.ListTaskParam) ([]*entity.ObservabilityTask, int64, error) {
 	m.ctrl.T.Helper()
@@ -318,6 +333,49 @@ func (m *MockITaskRepo) ListTasks(arg0 context.Context, arg1 mysql.ListTaskParam
 func (mr *MockITaskRepoMockRecorder) ListTasks(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTasks", reflect.TypeOf((*MockITaskRepo)(nil).ListTasks), arg0, arg1)
+}
+
+// AddNonFinalTask mocks base method.
+func (m *MockITaskRepo) AddNonFinalTask(arg0 context.Context, arg1 string, arg2 int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddNonFinalTask", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddNonFinalTask indicates an expected call of AddNonFinalTask.
+func (mr *MockITaskRepoMockRecorder) AddNonFinalTask(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddNonFinalTask", reflect.TypeOf((*MockITaskRepo)(nil).AddNonFinalTask), arg0, arg1, arg2)
+}
+
+// RemoveNonFinalTask mocks base method.
+func (m *MockITaskRepo) RemoveNonFinalTask(arg0 context.Context, arg1 string, arg2 int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveNonFinalTask", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveNonFinalTask indicates an expected call of RemoveNonFinalTask.
+func (mr *MockITaskRepoMockRecorder) RemoveNonFinalTask(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveNonFinalTask", reflect.TypeOf((*MockITaskRepo)(nil).RemoveNonFinalTask), arg0, arg1, arg2)
+}
+
+// GetTaskByRedis mocks base method.
+func (m *MockITaskRepo) GetTaskByRedis(arg0 context.Context, arg1 int64) (*entity.ObservabilityTask, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskByRedis", arg0, arg1)
+	ret0, _ := ret[0].(*entity.ObservabilityTask)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskByRedis indicates an expected call of GetTaskByRedis.
+func (mr *MockITaskRepoMockRecorder) GetTaskByRedis(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskByRedis", reflect.TypeOf((*MockITaskRepo)(nil).GetTaskByRedis), arg0, arg1)
 }
 
 // UpdateTask mocks base method.
@@ -374,4 +432,18 @@ func (m *MockITaskRepo) UpdateTaskWithOCC(arg0 context.Context, arg1, arg2 int64
 func (mr *MockITaskRepoMockRecorder) UpdateTaskWithOCC(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTaskWithOCC", reflect.TypeOf((*MockITaskRepo)(nil).UpdateTaskWithOCC), arg0, arg1, arg2, arg3)
+}
+
+// SetTask mocks base method.
+func (m *MockITaskRepo) SetTask(arg0 context.Context, arg1 *entity.ObservabilityTask) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetTask", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetTask indicates an expected call of SetTask.
+func (mr *MockITaskRepoMockRecorder) SetTask(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTask", reflect.TypeOf((*MockITaskRepo)(nil).SetTask), arg0, arg1)
 }
