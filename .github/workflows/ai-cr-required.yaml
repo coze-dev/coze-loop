@@ -11,7 +11,7 @@ on:
       - 'idl/**'
       - 'release/**'
       - '.github/workflows/backend-ci.yaml'
-  issue_comment:
+  pull_request_review_comment:
     types: [ created ]
 
 jobs:
