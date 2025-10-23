@@ -17,6 +17,8 @@ import (
 type StatusError interface {
 	error
 	Code() int32
+	IsAffectStability() bool
+	WithAffectStability(affectStability bool)
 	Extra() map[string]string
 	WithExtra(map[string]string)
 }
