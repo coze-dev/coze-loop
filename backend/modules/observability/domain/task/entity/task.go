@@ -8,28 +8,28 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
 // do
 type ObservabilityTask struct {
-	ID                    int64                    // Task ID
-	WorkspaceID           int64                    // 空间ID
-	Name                  string                   // 任务名称
-	Description           *string                  // 任务描述
-	TaskType              string                   // 任务类型
-	TaskStatus            string                   // 任务状态
-	TaskDetail            *RunDetail               // 任务运行详情
-	SpanFilter            *filter.SpanFilterFields // span 过滤条件
-	EffectiveTime         *EffectiveTime           // 生效时间
-	BackfillEffectiveTime *EffectiveTime           // 历史回溯生效时间
-	Sampler               *Sampler                 // 采样器
-	TaskConfig            *TaskConfig              // 相关任务的配置信息
-	CreatedAt             time.Time                // 创建时间
-	UpdatedAt             time.Time                // 更新时间
-	CreatedBy             string                   // 创建人
-	UpdatedBy             string                   // 更新人
+	ID                    int64             // Task ID
+	WorkspaceID           int64             // 空间ID
+	Name                  string            // 任务名称
+	Description           *string           // 任务描述
+	TaskType              string            // 任务类型
+	TaskStatus            string            // 任务状态
+	TaskDetail            *RunDetail        // 任务运行详情
+	SpanFilter            *SpanFilterFields // span 过滤条件
+	EffectiveTime         *EffectiveTime    // 生效时间
+	BackfillEffectiveTime *EffectiveTime    // 历史回溯生效时间
+	Sampler               *Sampler          // 采样器
+	TaskConfig            *TaskConfig       // 相关任务的配置信息
+	CreatedAt             time.Time         // 创建时间
+	UpdatedAt             time.Time         // 更新时间
+	CreatedBy             string            // 创建人
+	UpdatedBy             string            // 更新人
 
 	TaskRuns []*TaskRun
 }
@@ -40,9 +40,9 @@ type RunDetail struct {
 	TotalCount   int64 `json:"total_count"`
 }
 type SpanFilterFields struct {
-	Filters      filter.SpanFilterFields `json:"filters"`
-	PlatformType common.PlatformType     `json:"platform_type"`
-	SpanListType common.SpanListType     `json:"span_list_type"`
+	Filters      loop_span.FilterFields `json:"filters"`
+	PlatformType common.PlatformType    `json:"platform_type"`
+	SpanListType common.SpanListType    `json:"span_list_type"`
 }
 type EffectiveTime struct {
 	// ms timestamp

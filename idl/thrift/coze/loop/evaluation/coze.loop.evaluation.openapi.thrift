@@ -3,9 +3,7 @@ namespace go coze.loop.evaluation.openapi
 include "../../../base.thrift"
 include "domain_openapi/common.thrift"
 include "domain_openapi/eval_set.thrift"
-include "domain_openapi/evaluator.thrift"
-include "domain_openapi/experiment.thrift"
-include "domain_openapi/eval_target.thrift"
+include "coze.loop.evaluation.spi.thrift"
 
 // ===============================
 // 评测集相关接口 (9个接口)
@@ -102,6 +100,32 @@ struct CreateEvaluationSetVersionOApiResponse {
 
 struct CreateEvaluationSetVersionOpenAPIData {
     1: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"')
+}
+
+struct ListEvaluationSetVersionsOApiRequest {
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"'),
+    2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
+    3: optional string version_like (api.query="version_like") // 根据版本号模糊匹配
+
+    100: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20
+    101: optional string page_token (api.query="page_token")
+
+    255: optional base.Base Base
+}
+
+struct ListEvaluationSetVersionsOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional ListEvaluationSetVersionsOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListEvaluationSetVersionsOpenAPIData {
+    1: optional list<eval_set.EvaluationSetVersion> versions,
+
+    100: optional i64 total (api.js_conv="true", go.tag='json:"total"'),
+    101: optional string next_page_token
 }
 
 // 1.5 批量添加评测集数据
@@ -217,138 +241,52 @@ struct UpdateEvaluationSetSchemaOApiResponse {
     255: base.BaseResp BaseResp
 }
 
-// ===============================
-// 评估器相关接口 (1个接口)
-// ===============================
+struct ReportEvalTargetInvokeResultRequest {
+    1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    2: optional i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
+    3: optional coze.loop.evaluation.spi.InvokeEvalTargetStatus status
+    4: optional string callee
 
-// 2.1 执行评估器
-struct RunEvaluatorOApiRequest {
-    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string evaluator_version_id (api.path='evaluator_version_id')
-
-    10: optional evaluator.EvaluatorInputData input_data (api.body="input_data")
-
-    255: optional base.Base Base
-}
-
-struct RunEvaluatorOApiResponse {
-    1: optional i32 code
-    2: optional string msg
-    3: optional RunEvaluatorOpenAPIData data
-
-    255: base.BaseResp BaseResp
-}
-
-struct RunEvaluatorOpenAPIData {
-    1: optional evaluator.EvaluatorOutputData evaluator_output_data  // 输出数据
-}
-
-// ===============================
-// 评测实验相关接口 (2个接口)
-// ===============================
-
-// 3.1 创建评测实验
-struct CreateExperimentOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string eval_set_version_id
-    3: optional string target_version_id
-    4: optional list<string> evaluator_version_ids
-    5: optional string name
-    6: optional string description
-
-    20: optional experiment.TargetFieldMapping target_field_mapping
-    21: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping
-    22: optional eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
-    23: optional i32 item_concur_num
-    24: optional i32 evaluators_concur_num
-    25: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
+    // set output if status=SUCCESS
+    10: optional coze.loop.evaluation.spi.InvokeEvalTargetOutput output
+    // set output if status=SUCCESS
+    11: optional coze.loop.evaluation.spi.InvokeEvalTargetUsage usage
+    // set error_message if status=FAILED
+    20: optional string error_message
 
     255: optional base.Base Base
 }
 
-struct CreateExperimentOApiResponse {
-    1: optional i32 code
-    2: optional string msg
-    3: optional CreateExperimentOpenAPIData data
-
+struct ReportEvalTargetInvokeResultResponse {
     255: base.BaseResp BaseResp
-}
-
-struct CreateExperimentOpenAPIData {
-    1: optional experiment.Experiment experiment
-}
-
-// 3.2 获取评测实验详情
-struct BatchGetExperimentsRequest {
-    1: required i64 workspace_id (api.query='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
-    2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
-
-    255: optional base.Base Base
-}
-
-struct BatchGetExperimentsResponse {
-    1: optional experiment.Experiment experiment
-
-    255: base.BaseResp BaseResp
-}
-
-// 3.2 获取评测实验结果
-struct GetExperimentResultOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string experiment_id (api.path = "experiment_id")
-    3: optional string page_token
-    4: optional i32 page_size (vt.gt = "0", vt.le = "200")
-
-    255: optional base.Base Base
-}
-
-struct GetExperimentResultOApiResponse {
-    1: optional i32 code
-    2: optional string msg
-    3: optional GetExperimentResultOpenAPIData data
-
-    255: base.BaseResp BaseResp
-}
-
-struct GetExperimentResultOpenAPIData {
-    1: optional list<experiment.ColumnEvalSetField> column_eval_set_fields
-    2: optional list<experiment.ColumnEvaluator> column_evaluators
-    3: optional list<experiment.ItemResult> item_results
-    4: optional bool has_more
-    5: optional string next_page_token
-    6: optional i64 total
 }
 
 // ===============================
-// 服务定义 (16个接口总计)
+// 服务定义
 // ===============================
-
 service EvaluationOpenAPIService {
-    // 评测集接口 (9个)
-    // 1.1 创建评测集
+    // 评测集接口
+    // 创建评测集
     CreateEvaluationSetOApiResponse CreateEvaluationSetOApi(1: CreateEvaluationSetOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets")
-    // 1.2 获取评测集详情
+    // 获取评测集详情
     GetEvaluationSetOApiResponse GetEvaluationSetOApi(1: GetEvaluationSetOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
-    // 1.3 查询评测集列表
+    // 查询评测集列表
     ListEvaluationSetsOApiResponse ListEvaluationSetsOApi(1: ListEvaluationSetsOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets")
-    // 1.4 创建评测集版本
+    // 创建评测集版本
     CreateEvaluationSetVersionOApiResponse CreateEvaluationSetVersionOApi(1: CreateEvaluationSetVersionOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions")
-    // 1.5 批量添加评测集数据
+    // 获取评测集版本列表
+    ListEvaluationSetVersionsOApiResponse ListEvaluationSetVersionsOApi(1: ListEvaluationSetVersionsOApiRequest req) (api.category="evaluation_set", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions"),
+    // 批量添加评测集数据
     BatchCreateEvaluationSetItemsOApiResponse BatchCreateEvaluationSetItemsOApi(1: BatchCreateEvaluationSetItemsOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
-    // 1.6 批量更新评测集数据
+    // 批量更新评测集数据
     BatchUpdateEvaluationSetItemsOApiResponse BatchUpdateEvaluationSetItemsOApi(1: BatchUpdateEvaluationSetItemsOApiRequest req) (api.tag="openapi", api.put = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
-    // 1.7 批量删除评测集数据
+    // 批量删除评测集数据
     BatchDeleteEvaluationSetItemsOApiResponse BatchDeleteEvaluationSetItemsOApi(1: BatchDeleteEvaluationSetItemsOApiRequest req) (api.tag="openapi", api.delete = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
-    // 1.8 查询评测集特定版本数据
+    // 查询评测集特定版本数据
     ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
-    // 1.9 更新评测集字段信息
+    // 更新评测集字段信息
     UpdateEvaluationSetSchemaOApiResponse UpdateEvaluationSetSchemaOApi(1: UpdateEvaluationSetSchemaOApiRequest req) (api.tag="openapi", api.put = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema"),
 
-    // 评测实验接口 (2个)
-    // 3.1 创建评测实验
-    CreateExperimentOApiResponse CreateExperimentOApi(1: CreateExperimentOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/experiments")
-//    GetExperimentsResponse BatchGetExperiments(1: GetExperimentsRequest req) (api.get = '/api/evaluation/v1/experiments/:expt_id')
-
-    // 3.2 获取评测实验结果
-    GetExperimentResultOApiResponse GetExperimentResultOApi(1: GetExperimentResultOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/experiments/:experiment_id/results")
+    // 评测目标调用结果上报接口
+    ReportEvalTargetInvokeResultResponse ReportEvalTargetInvokeResult(1: ReportEvalTargetInvokeResultRequest req) (api.category="openapi", api.post = "/v1/loop/eval_targets/result")
 }

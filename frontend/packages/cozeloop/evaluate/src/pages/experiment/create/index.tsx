@@ -107,11 +107,11 @@ export default function ExperimentCreatePage() {
     // 保存当前步骤的值
     if (formRef?.current?.formApi) {
       const currentValues = formRef.current.formApi.getValues();
-      const nextStepValues = calcNextStepRenderValue(
+      const prevStepValues = calcNextStepRenderValue(
         createExperimentValues,
         currentValues,
       );
-      setCreateExperimentValues(nextStepValues);
+      setCreateExperimentValues(prevStepValues);
     }
 
     reportStep({
@@ -194,10 +194,12 @@ export default function ExperimentCreatePage() {
 
         if (values) {
           // 更新全局状态，确保包含最新的表单值
-          setCreateExperimentValues(prev => ({
-            ...prev,
-            ...values,
-          }));
+
+          setCreateExperimentValues(prev => {
+            const prevStepValues = calcNextStepRenderValue(prev, values);
+            return prevStepValues;
+          });
+
           // 设置下一步
           goNext();
         }

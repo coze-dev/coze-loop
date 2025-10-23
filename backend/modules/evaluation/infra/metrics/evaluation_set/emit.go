@@ -6,6 +6,7 @@ package metrics
 import (
 	"context"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
@@ -32,15 +33,23 @@ func evaluationSetEvalMtrTags() []string {
 	}
 }
 
+var (
+	evalSetMetricsOnce = sync.Once{}
+	evalSetMetricsImpl eval_metrics.EvaluationSetMetrics
+)
+
 func NewEvaluationSetMetrics(meter metrics.Meter) eval_metrics.EvaluationSetMetrics {
-	if meter == nil {
-		return nil
-	}
-	metric, err := meter.NewMetric(evaluationSetMtrName, []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, evaluationSetEvalMtrTags())
-	if err != nil {
-		return nil
-	}
-	return &EvaluationSetMetricsImpl{metric: metric}
+	evalSetMetricsOnce.Do(func() {
+		if meter == nil {
+			return
+		}
+		metric, err := meter.NewMetric(evaluationSetMtrName, []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, evaluationSetEvalMtrTags())
+		if err != nil {
+			return
+		}
+		evalSetMetricsImpl = &EvaluationSetMetricsImpl{metric: metric}
+	})
+	return evalSetMetricsImpl
 }
 
 func NewOpenAPIEvaluationSetMetrics(meter metrics.Meter) eval_metrics.OpenAPIEvaluationSetMetrics {
@@ -73,14 +82,14 @@ func (m *OpenAPIEvaluationSetMetricsImpl) EmitOpenAPIMetric(ctx context.Context,
 	if m == nil || m.meter == nil {
 		return
 	}
-	
+
 	metric, mErr := m.meter.NewMetric("openapi_evaluation_set", []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, []string{"space_id", "evaluation_set_id", "method", "is_error", "code"})
 	if mErr != nil {
 		return
 	}
-	
+
 	code, isError := eval_metrics.GetCode(err)
-	
+
 	tags := []metrics.T{
 		{Name: "space_id", Value: strconv.FormatInt(spaceID, 10)},
 		{Name: "evaluation_set_id", Value: strconv.FormatInt(evaluationSetID, 10)},
@@ -88,10 +97,10 @@ func (m *OpenAPIEvaluationSetMetricsImpl) EmitOpenAPIMetric(ctx context.Context,
 		{Name: "is_error", Value: strconv.FormatInt(isError, 10)},
 		{Name: "code", Value: strconv.FormatInt(code, 10)},
 	}
-	
+
 	// 记录调用次数
 	metric.Emit(tags, metrics.Counter(1))
-	
+
 	// 记录响应时间
 	if startTime > 0 {
 		responseTime := time.Now().UnixNano()/int64(time.Millisecond) - startTime

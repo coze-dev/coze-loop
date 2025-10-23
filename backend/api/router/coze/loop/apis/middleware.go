@@ -1271,8 +1271,16 @@ func _listtracesoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _asyncdebugevaltargetMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
 func _validateevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
+	return nil
+}
+
+func _debugevaltargetMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
@@ -1331,8 +1339,16 @@ func _mockevaltargetoutputMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _passbackevaltargetinvokeresultMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
 func _batchdebugevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
+	return nil
+}
+
+func _searchcustomevaltargetMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
@@ -1351,13 +1367,25 @@ func _insightanalysisexperimentMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _evaluation0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
 func _insight_analysis_recordsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
+func _eval_targets0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
 func _insight_analysis_record_idMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
+	return nil
+}
+
+func _reportevaltargetinvokeresultMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
@@ -1396,11 +1424,6 @@ func _annotations0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _open_apisMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _evaluation0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1541,5 +1564,10 @@ func _evaluation_sets1Mw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _updateevaluationsetschemaoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
+func _listevaluationsetversionsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
 	return nil
 }

@@ -75,6 +75,11 @@ const PluginEvalTargetForm = (props: PluginEvalTargetFormProps) => {
   };
 
   const handleEvalTargetVersionChange = () => {
+    const currentMapping = formValues?.evalTargetMapping || {};
+    const objKeys = Object.keys(currentMapping);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    objKeys.forEach(k => onChange(`evalTargetMapping.${k}`, undefined));
     onChange('evalTargetMapping', undefined);
     onChange('target_runtime_param', undefined);
   };
