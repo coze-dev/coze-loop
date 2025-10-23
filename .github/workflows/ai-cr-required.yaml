@@ -1,3 +1,5 @@
+name: AI CR Required
+
 on:
   pull_request:
     types: [opened]
@@ -33,7 +35,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "PR number: $PR_NUMBER"
-          COMMENTS=$(gh api -H "Accept: application/vnd.github+json" /repos/${{ github.repository }}/issues/${PR_NUMBER}/comments --jq '.[].user.login')
+          COMMENTS=$(gh api -H "Accept: application/vnd.github+json" /repos/${{ github.repository }}/pulls/${PR_NUMBER}/comments --jq '.[].user.login')
           echo "Comment authors: $COMMENTS"
           echo "$COMMENTS" | grep -q "^CozeLoop$"
           if [ $? -ne 0 ]; then
