@@ -1,22 +1,24 @@
-name: AI CR Required
-permissions:
-  contents: read
-
 on:
   pull_request:
     types: [opened]
-    branches: [ "main"]
+    branches: [ "main" ]
     paths:
       - 'backend/**'
       - 'idl/**'
       - 'release/**'
       - '.github/workflows/backend-ci.yaml'
-  pull_request_review_comment:
-    types: [ created ]
+  pull_request_review:
+    types: [ submitted ]
 
 jobs:
   require-ai-cr-comment:
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request'
+      || (
+        github.event_name == 'pull_request_review'
+        && github.event.pull_request.base.ref == 'main'
+      )
     steps:
       - name: Install gh and jq
         run: |
