@@ -8,9 +8,9 @@ include "../data/domain/dataset.thrift"
 struct CreateEvaluationSetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
 
-    2: optional string name (vt.min_size = "1", vt.max_size = "255"),
-    3: optional string description (vt.max_size = "2048"),
-    4: optional eval_set.EvaluationSetSchema evaluation_set_schema,
+    2: optional string name (vt.not_nil="true",vt.min_size = "1", vt.max_size = "255"),
+    3: optional string description (vt.max_size = "2048",vt.not_nil="true"),
+    4: optional eval_set.EvaluationSetSchema evaluation_set_schema (vt.not_nil="true"),
     5: optional eval_set.BizCategory biz_category (vt.max_size = "128") // 业务分类
 
     200: optional common.Session session (api.none = 'true')
