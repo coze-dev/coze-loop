@@ -216,15 +216,19 @@ func TestSpan_ExtractByJsonpath(t *testing.T) {
 		Input:  `{"name": "test", "data": {"value": 123, "nested": {"key": "hello"}}}`,
 		Output: `{"result": "success", "score": 0.95, "details": {"message": "completed"}}`,
 		TagsString: map[string]string{
-			"tag1": `{"custom": "value"}`,
+			"test":  `{"m": [{"a": {"b": 1}}, {"a": {"c": 2}}]}`,
+			"test1": `{"m": [{"a": {"b": 1}}]}`,
+			"tag1":  `{"custom": "value"}`,
 		},
 		TagsLong: map[string]int64{
 			"count": 42,
 		},
 	}
 
+	result, err := span.ExtractByJsonpath(ctx, "Tags.test", "m[:].a")
+	result, err = span.ExtractByJsonpath(ctx, "Tags.test1", "m[:].a")
 	// 测试从Input字段提取数据
-	result, err := span.ExtractByJsonpath(ctx, "Input", "name")
+	result, err = span.ExtractByJsonpath(ctx, "Input", "name")
 	assert.NoError(t, err)
 	assert.Equal(t, result, "test")
 

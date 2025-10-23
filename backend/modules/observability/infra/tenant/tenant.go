@@ -42,7 +42,11 @@ func (t *TenantProviderImpl) GetTenantsByPlatformType(ctx context.Context, platf
 	if tenants, ok := cfg.Config[string(platform)]; ok {
 		return tenants, nil
 	} else {
-		logs.CtxError(ctx, "tenant not found for platform %s", platform)
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("tenant not found for the platform"))
+		if tenants, ok = cfg.Config[string(loop_span.PlatformDefault)]; ok {
+			return tenants, nil
+		}
+		defaultTenant := t.traceConfig.GetDefaultTraceTenant(ctx)
+		logs.CtxInfo(ctx, "tenant not found for platform [%s], use default tenant [%s]", platform, defaultTenant)
+		return []string{defaultTenant}, nil
 	}
 }
