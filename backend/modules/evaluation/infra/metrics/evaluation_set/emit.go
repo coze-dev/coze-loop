@@ -4,10 +4,8 @@
 package metrics
 
 import (
-	"context"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	eval_metrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
@@ -52,12 +50,6 @@ func NewEvaluationSetMetrics(meter metrics.Meter) eval_metrics.EvaluationSetMetr
 	return evalSetMetricsImpl
 }
 
-func NewOpenAPIEvaluationSetMetrics(meter metrics.Meter) eval_metrics.OpenAPIEvaluationSetMetrics {
-	return &OpenAPIEvaluationSetMetricsImpl{
-		meter: meter,
-	}
-}
-
 type EvaluationSetMetricsImpl struct {
 	metric metrics.Metric
 }
@@ -72,38 +64,4 @@ func (e *EvaluationSetMetricsImpl) EmitCreate(spaceID int64, err error) {
 		{Name: tagIsErr, Value: strconv.FormatInt(isError, 10)},
 		{Name: tagCode, Value: strconv.FormatInt(code, 10)},
 	}, metrics.Counter(1, metrics.WithSuffix(createSuffix+throughputSuffix)))
-}
-
-type OpenAPIEvaluationSetMetricsImpl struct {
-	meter metrics.Meter
-}
-
-func (m *OpenAPIEvaluationSetMetricsImpl) EmitOpenAPIMetric(ctx context.Context, spaceID, evaluationSetID int64, method string, startTime int64, err error) {
-	if m == nil || m.meter == nil {
-		return
-	}
-
-	metric, mErr := m.meter.NewMetric("openapi_evaluation_set", []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, []string{"space_id", "evaluation_set_id", "method", "is_error", "code"})
-	if mErr != nil {
-		return
-	}
-
-	code, isError := eval_metrics.GetCode(err)
-
-	tags := []metrics.T{
-		{Name: "space_id", Value: strconv.FormatInt(spaceID, 10)},
-		{Name: "evaluation_set_id", Value: strconv.FormatInt(evaluationSetID, 10)},
-		{Name: "method", Value: method},
-		{Name: "is_error", Value: strconv.FormatInt(isError, 10)},
-		{Name: "code", Value: strconv.FormatInt(code, 10)},
-	}
-
-	// 记录调用次数
-	metric.Emit(tags, metrics.Counter(1))
-
-	// 记录响应时间
-	if startTime > 0 {
-		responseTime := time.Now().UnixNano()/int64(time.Millisecond) - startTime
-		metric.Emit(tags, metrics.Timer(responseTime))
-	}
 }
