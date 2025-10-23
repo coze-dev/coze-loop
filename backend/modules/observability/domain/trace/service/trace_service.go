@@ -305,8 +305,10 @@ type TraceServiceImpl struct {
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
-	if err := req.Filters.Traverse(processSpecificFilter); err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+	if req != nil && req.Filters != nil {
+		if err := req.Filters.Traverse(processSpecificFilter); err != nil {
+			return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+		}
 	}
 
 	tenants, err := r.getTenants(ctx, req.PlatformType)
@@ -421,8 +423,10 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 }
 
 func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error) {
-	if err := req.Filters.Traverse(processSpecificFilter); err != nil {
-		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+	if req != nil && req.Filters != nil {
+		if err := req.Filters.Traverse(processSpecificFilter); err != nil {
+			return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+		}
 	}
 
 	omitColumns := make([]string, 0)

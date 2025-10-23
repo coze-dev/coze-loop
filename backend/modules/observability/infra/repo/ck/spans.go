@@ -314,7 +314,7 @@ func (s *SpansCkDaoImpl) convertFieldName(ctx context.Context, filter *loop_span
 		case loop_span.FieldTypeDouble:
 			return fmt.Sprintf("system_tags_float['%s']", filter.FieldName), nil
 		default: // not expected to be here
-			return fmt.Sprintf("system_tags_tags_string['%s']", filter.FieldName), nil
+			return fmt.Sprintf("system_tags_string['%s']", filter.FieldName), nil
 		}
 	}
 	superFieldsMap := s.getSuperFieldsMap(ctx)
