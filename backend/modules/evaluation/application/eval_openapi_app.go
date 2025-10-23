@@ -600,3 +600,23 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 
 	return &openapi.ReportEvalTargetInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 }
+
+func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (e *EvalOpenAPIApplication) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest) (r *openapi.GetExperimentsOApiResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest) (r *openapi.ListExperimentResultOApiResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}

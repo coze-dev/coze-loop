@@ -1572,3 +1572,23 @@ func _listevaluationsetversionsoapiMw(handler *apis.APIHandler) []app.HandlerFun
 	// your code...
 	return nil
 }
+
+func _getexperimentsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _submitexperimentoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getexperimentaggrresultoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listexperimentresultoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

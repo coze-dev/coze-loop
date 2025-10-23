@@ -192,3 +192,67 @@ func UpdateEvaluationSetSchemaOApi(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// SubmitExperimentOApi .
+// @router /v1/loop/evaluation/experiments [POST]
+func SubmitExperimentOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.SubmitExperimentOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.SubmitExperimentOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetExperimentsOApi .
+// @router /api/evaluation/v1/experiments/:experiment_id [GET]
+func GetExperimentsOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.GetExperimentsOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.GetExperimentsOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ListExperimentResultOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/results [POST]
+func ListExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.ListExperimentResultOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.ListExperimentResultOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetExperimentAggrResultOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/aggr_results [POST]
+func GetExperimentAggrResultOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.GetExperimentAggrResultOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.GetExperimentAggrResultOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
