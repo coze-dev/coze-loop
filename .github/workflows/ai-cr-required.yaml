@@ -2,7 +2,6 @@ name: AI CR Required
 
 on:
   pull_request:
-    types: [opened]
     branches: [ "main" ]
     paths:
       - 'backend/**'
