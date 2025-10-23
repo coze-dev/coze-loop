@@ -102,6 +102,16 @@ func (m *MetricApplication) validateGetMetricsReq(ctx context.Context, req *metr
 	if req.StartTime > req.EndTime {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start_time cannot be greater than end_time"))
 	}
+	switch entity.MetricGranularity(req.GetGranularity()) {
+	case entity.MetricGranularity1Min:
+		if req.EndTime-req.StartTime > 3*time.Hour.Milliseconds() {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid granularity"))
+		}
+	case entity.MetricGranularity1Hour:
+		if req.EndTime-req.StartTime > 6*24*time.Hour.Milliseconds() {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid granularity"))
+		}
+	}
 	return nil
 }
 

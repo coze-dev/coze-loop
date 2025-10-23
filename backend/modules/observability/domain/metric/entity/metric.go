@@ -100,6 +100,15 @@ type Dimension struct {
 	Alias      string                 // 别名
 }
 
+type IMetricDefinition interface {
+	Name() string                                                                                      // 指标名，全局唯一
+	Type() MetricType                                                                                  // 指标类型
+	Source() MetricSource                                                                              // 数据来源
+	Expression(MetricGranularity) string                                                               // 计算表达式
+	Where(context.Context, span_filter.Filter, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) // 筛选条件
+	GroupBy() []*Dimension                                                                             // 聚合维度
+}
+
 type IMetricFill interface {
 	Interpolate() string
 }
@@ -113,15 +122,6 @@ type MetricFillNull struct{}
 
 func (f *MetricFillNull) Interpolate() string {
 	return "null"
-}
-
-type IMetricDefinition interface {
-	Name() string                                                                                      // 指标名，全局唯一
-	Type() MetricType                                                                                  // 指标类型
-	Source() MetricSource                                                                              // 数据来源
-	Expression(MetricGranularity) string                                                               // 计算表达式
-	Where(context.Context, span_filter.Filter, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) // 筛选条件
-	GroupBy() []*Dimension                                                                             // 聚合维度
 }
 
 type IMetricAdapter interface {
