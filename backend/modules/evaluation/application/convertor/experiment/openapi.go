@@ -446,13 +446,13 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	result := &openapiExperiment.Experiment{
 		ID:        gptr.Of(experiment.ID),
 		Name:      gptr.Of(experiment.Name),
-		ExptStats: convertExperimentStatsFromEntity(experiment.Stats),
+		ExptStats: openAPIExperimentStatsDO2DTO(experiment.Stats),
 	}
 	if experiment.Description != "" {
 		result.Description = gptr.Of(experiment.Description)
 	}
 
-	if status := convertExperimentStatusFromEntity(experiment.Status); status != nil {
+	if status := OpenAPIExperimentStatusDO2DTO(experiment.Status); status != nil {
 		result.Status = status
 	}
 
@@ -477,7 +477,7 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 			result.TargetRuntimeParam = runtimeParam
 		}
 
-		if evaluatorMappings := convertEvaluatorFieldMappingsFromEntity(experiment.EvalConf.ConnectorConf.EvaluatorsConf); len(evaluatorMappings) > 0 {
+		if evaluatorMappings := openAPIEvaluatorFieldMappingsDO2DTO(experiment.EvalConf.ConnectorConf.EvaluatorsConf); len(evaluatorMappings) > 0 {
 			result.EvaluatorFieldMapping = evaluatorMappings
 		}
 
@@ -490,7 +490,7 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	return result
 }
 
-func convertExperimentStatusFromEntity(status entity.ExptStatus) *openapiExperiment.ExperimentStatus {
+func OpenAPIExperimentStatusDO2DTO(status entity.ExptStatus) *openapiExperiment.ExperimentStatus {
 	var openapiStatus openapiExperiment.ExperimentStatus
 	switch status {
 	case entity.ExptStatus_Pending:
@@ -528,7 +528,7 @@ func extractTargetIngressInfo(targetConf *entity.TargetConf) (*openapiExperiment
 	return mapping, runtimeParam
 }
 
-func convertEvaluatorFieldMappingsFromEntity(conf *entity.EvaluatorsConf) []*openapiExperiment.EvaluatorFieldMapping {
+func openAPIEvaluatorFieldMappingsDO2DTO(conf *entity.EvaluatorsConf) []*openapiExperiment.EvaluatorFieldMapping {
 	if conf == nil || len(conf.EvaluatorConf) == 0 {
 		return nil
 	}
@@ -615,7 +615,7 @@ func extractRuntimeParamFromAdapter(adapter *entity.FieldAdapter) *openapiCommon
 	return nil
 }
 
-func convertExperimentStatsFromEntity(stats *entity.ExptStats) *openapiExperiment.ExperimentStatistics {
+func openAPIExperimentStatsDO2DTO(stats *entity.ExptStats) *openapiExperiment.ExperimentStatistics {
 	if stats == nil {
 		return nil
 	}

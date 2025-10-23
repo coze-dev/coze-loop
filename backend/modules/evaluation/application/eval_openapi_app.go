@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
+	experiment_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -45,6 +47,8 @@ type EvalOpenAPIApplication struct {
 	evaluationSetSchemaService  service.EvaluationSetSchemaService
 	metric                      metrics.OpenAPIEvaluationSetMetrics
 	userInfoService             userinfo.UserInfoService
+	experimentApp               IExperimentApplication
+	manager                     service.IExptManager
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -55,7 +59,9 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluationSetItemService service.EvaluationSetItemService,
 	evaluationSetSchemaService service.EvaluationSetSchemaService,
 	metric metrics.OpenAPIEvaluationSetMetrics,
-	userInfoService userinfo.UserInfoService) IEvalOpenAPIApplication {
+	userInfoService userinfo.UserInfoService,
+	experimentApp IExperimentApplication,
+	manager service.IExptManager) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
 		publisher:                   publisher,
@@ -67,6 +73,8 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		evaluationSetSchemaService:  evaluationSetSchemaService,
 		metric:                      metric,
 		userInfoService:             userInfoService,
+		experimentApp:               experimentApp,
+		manager:                     manager,
 	}
 }
 
@@ -602,18 +610,116 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 }
 
 func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	if req.EvalSetParam == nil || !req.EvalSetParam.IsSetVersion() || req.EvalSetParam.GetVersion() == "" {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_param.version is required"))
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	session := entity.NewSession(ctx)
+	// 检查是否重名
+	pass, err := e.manager.CheckName(ctx, req.GetName(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+	if !pass {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
+	}
+	// TODO dsf 查询评测集版本信息
+	var evalSetVersionID int64
+	// TODO dsf 查询评估器版本详情
+	var evaluatorVersionIDs []int64
+
+	createReq := &exptpb.SubmitExperimentRequest{
+		WorkspaceID:           req.GetWorkspaceID(),
+		EvalSetVersionID:      gptr.Of(evalSetVersionID),
+		EvalSetID:             req.EvalSetParam.EvalSetID,
+		EvaluatorVersionIds:   evaluatorVersionIDs,
+		Name:                  req.Name,
+		Desc:                  req.Description,
+		TargetFieldMapping:    experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
+		EvaluatorFieldMapping: experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping),
+		ItemConcurNum:         req.ItemConcurNum,
+		TargetRuntimeParam:    experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
+		CreateEvalTargetParam: experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
+	}
+
+	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
+	if err != nil {
+		return nil, err
+	}
+	if cresp == nil || cresp.GetExperiment() == nil || cresp.GetExperiment().ID == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment create failed"))
+	}
+
+	return &openapi.SubmitExperimentOApiResponse{
+		Data: &openapi.SubmitExperimentOpenAPIData{
+			Experiment: experiment_convertor.DomainExperimentDTO2OpenAPI(cresp.GetExperiment()),
+		},
+	}, nil
 }
 
 func (e *EvalOpenAPIApplication) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest) (r *openapi.GetExperimentsOApiResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	session := entity.NewSession(ctx)
+	do, err := e.manager.GetDetail(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+	// 鉴权
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(do.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &openapi.GetExperimentsOApiResponse{
+		Data: &openapi.GetExperimentsOpenAPIDataData{
+			Experiment: experiment_convertor.OpenAPIExptDO2DTO(do),
+		},
+	}, nil
 }
 
 func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest) (r *openapi.ListExperimentResultOApiResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {
