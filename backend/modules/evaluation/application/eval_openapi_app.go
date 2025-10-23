@@ -47,7 +47,7 @@ type EvalOpenAPIApplication struct {
 	evaluationSetVersionService service.EvaluationSetVersionService
 	evaluationSetItemService    service.EvaluationSetItemService
 	evaluationSetSchemaService  service.EvaluationSetSchemaService
-	metric                      metrics.OpenAPIEvaluationSetMetrics
+	metric                      metrics.OpenAPIEvaluationMetrics
 	userInfoService             userinfo.UserInfoService
 	experimentApp               IExperimentApplication
 	manager                     service.IExptManager
@@ -62,7 +62,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluationSetVersionService service.EvaluationSetVersionService,
 	evaluationSetItemService service.EvaluationSetItemService,
 	evaluationSetSchemaService service.EvaluationSetSchemaService,
-	metric metrics.OpenAPIEvaluationSetMetrics,
+	metric metrics.OpenAPIEvaluationMetrics,
 	userInfoService userinfo.UserInfoService,
 	experimentApp IExperimentApplication,
 	manager service.IExptManager,

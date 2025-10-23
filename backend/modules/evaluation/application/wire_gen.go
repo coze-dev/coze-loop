@@ -39,6 +39,7 @@ import (
 	metrics4 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluation_set"
 	evaluator2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
 	metrics2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	mysql2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
@@ -234,7 +235,7 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService
 }
 
-func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client) (IEvalOpenAPIApplication, error) {
+func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider) (IEvalOpenAPIApplication, error) {
 	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
 	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
@@ -256,10 +257,10 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	evaluationSetVersionService := service.NewEvaluationSetVersionServiceImpl(iDatasetRPCAdapter)
 	evaluationSetItemService := service.NewEvaluationSetItemServiceImpl(iDatasetRPCAdapter)
 	evaluationSetSchemaService := service.NewEvaluationSetSchemaServiceImpl(iDatasetRPCAdapter)
-	openAPIEvaluationSetMetrics := metrics4.NewOpenAPIEvaluationSetMetrics(meter)
+	openAPIEvaluationMetrics := openapi.NewEvaluationOApiMetrics(meter)
 	iUserProvider := foundation.NewUserRPCProvider(userClient)
 	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
-	v2 := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationSetMetrics, userInfoService)
+	v2 := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService)
 	return v2, nil
 }
 
@@ -307,7 +308,7 @@ var (
 
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
-		targetDomainService, metrics3.NewEvalTargetMetrics, flagSet, producer.NewExptEventPublisher, evalAsyncRepoSet, service.NewEvaluationSetServiceImpl, service.NewEvaluationSetVersionServiceImpl, service.NewEvaluationSetItemServiceImpl, service.NewEvaluationSetSchemaServiceImpl, data.NewDatasetRPCAdapter, metrics4.NewOpenAPIEvaluationSetMetrics, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl,
+		targetDomainService, metrics3.NewEvalTargetMetrics, flagSet, producer.NewExptEventPublisher, evalAsyncRepoSet, service.NewEvaluationSetServiceImpl, service.NewEvaluationSetVersionServiceImpl, service.NewEvaluationSetItemServiceImpl, service.NewEvaluationSetSchemaServiceImpl, data.NewDatasetRPCAdapter, openapi.NewEvaluationOApiMetrics, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl,
 	)
 )
 

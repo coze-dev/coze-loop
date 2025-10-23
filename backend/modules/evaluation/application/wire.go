@@ -47,6 +47,7 @@ import (
 	evalsetmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluation_set"
 	evaluatormtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
 	exptmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
+	evalmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
 	rmqproducer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
 	evaluatorrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	evaluatormysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
@@ -216,7 +217,9 @@ var (
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
 		experimentSet,
-		evalsetmtr.NewOpenAPIEvaluationSetMetrics,
+		evalmtr.NewEvaluationOApiMetrics,
+		domainservice.NewEvaluationSetSchemaServiceImpl,
+		data.NewDatasetRPCAdapter,
 	)
 )
 
@@ -365,6 +368,13 @@ func InitEvalOpenAPIApplication(
 	meter metrics.Meter,
 	dataClient datasetservice.Client,
 	userClient userservice.Client,
+	llmClient llmruntimeservice.Client,
+	tagClient tagservice.Client,
+	limiterFactory limiter.IRateLimiterFactory,
+	objectStorage fileserver.ObjectStorage,
+	auditClient audit.IAuditService,
+	benefitService benefit.IBenefitService,
+	ckProvider ck.Provider,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(
 		evalOpenAPISet,

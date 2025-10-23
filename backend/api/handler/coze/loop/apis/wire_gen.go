@@ -129,7 +129,7 @@ func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 d
 	if err != nil {
 		return nil, err
 	}
-	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient)
+	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, auditClient, benefitSvc, ckDb)
 	if err != nil {
 		return nil, err
 	}
