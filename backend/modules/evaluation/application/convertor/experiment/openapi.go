@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
+	evalsetopenapi "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 
@@ -626,4 +627,189 @@ func openAPIExperimentStatsDO2DTO(stats *entity.ExptStats) *openapiExperiment.Ex
 		TerminatedTurnCount: gptr.Of(stats.TerminatedItemCnt),
 		ProcessingTurnCount: gptr.Of(stats.ProcessingItemCnt),
 	}
+}
+
+func OpenAPIColumnEvalSetFieldsDO2DTOs(from []*entity.ColumnEvalSetField) []*openapiExperiment.ColumnEvalSetField {
+	if len(from) == 0 {
+		return nil
+	}
+	result := make([]*openapiExperiment.ColumnEvalSetField, 0, len(from))
+	for _, field := range from {
+		if field == nil {
+			continue
+		}
+		result = append(result, &openapiExperiment.ColumnEvalSetField{
+			Key:         field.Key,
+			Name:        field.Name,
+			Description: field.Description,
+			ContentType: convertEntityContentTypeToOpenAPI(field.ContentType),
+			TextSchema:  field.TextSchema,
+		})
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+func OpenAPIColumnEvaluatorsDO2DTOs(from []*entity.ColumnEvaluator) []*openapiExperiment.ColumnEvaluator {
+	if len(from) == 0 {
+		return nil
+	}
+	result := make([]*openapiExperiment.ColumnEvaluator, 0, len(from))
+	for _, evaluator := range from {
+		if evaluator == nil {
+			continue
+		}
+		result = append(result, &openapiExperiment.ColumnEvaluator{
+			EvaluatorVersionID: gptr.Of(evaluator.EvaluatorVersionID),
+			EvaluatorID:        gptr.Of(evaluator.EvaluatorID),
+			EvaluatorType:      convertEntityEvaluatorTypeToOpenAPI(evaluator.EvaluatorType),
+			Name:               evaluator.Name,
+			Version:            evaluator.Version,
+			Description:        evaluator.Description,
+		})
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.ItemResult_ {
+	if len(from) == 0 {
+		return nil
+	}
+	result := make([]*openapiExperiment.ItemResult_, 0, len(from))
+	for _, item := range from {
+		if item == nil {
+			continue
+		}
+		result = append(result, &openapiExperiment.ItemResult_{
+			ItemID:      gptr.Of(item.ItemID),
+			TurnResults: openAPITurnResultsDO2DTOs(item.TurnResults),
+		})
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func convertEntityContentTypeToOpenAPI(contentType entity.ContentType) *openapiCommon.ContentType {
+	var openapiType openapiCommon.ContentType
+	switch contentType {
+	case entity.ContentTypeText:
+		openapiType = openapiCommon.ContentTypeText
+	case entity.ContentTypeImage:
+		openapiType = openapiCommon.ContentTypeImage
+	case entity.ContentTypeAudio:
+		openapiType = openapiCommon.ContentTypeAudio
+	case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
+		openapiType = openapiCommon.ContentTypeMultiPart
+	default:
+		return nil
+	}
+	return &openapiType
+}
+
+func convertEntityEvaluatorTypeToOpenAPI(typ entity.EvaluatorType) *openapiEvaluator.EvaluatorType {
+	var openapiType openapiEvaluator.EvaluatorType
+	switch typ {
+	case entity.EvaluatorTypePrompt:
+		openapiType = openapiEvaluator.EvaluatorTypePrompt
+	case entity.EvaluatorTypeCode:
+		openapiType = openapiEvaluator.EvaluatorTypeCode
+	default:
+		return nil
+	}
+	return &openapiType
+}
+
+func openAPITurnResultsDO2DTOs(from []*entity.TurnResult) []*openapiExperiment.TurnResult_ {
+	if len(from) == 0 {
+		return nil
+	}
+	result := make([]*openapiExperiment.TurnResult_, 0, len(from))
+	for _, turn := range from {
+		if turn == nil {
+			continue
+		}
+		turnDTO := &openapiExperiment.TurnResult_{}
+		if turn.TurnID != 0 {
+			turnDTO.TurnID = gptr.Of(strconv.FormatInt(turn.TurnID, 10))
+		}
+		if len(turn.ExperimentResults) > 0 {
+			if payload := openAPIResultPayloadDO2DTO(turn.ExperimentResults[0]); payload != nil {
+				turnDTO.Payload = payload
+			}
+		}
+		result = append(result, turnDTO)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func openAPIResultPayloadDO2DTO(result *entity.ExperimentResult) *openapiExperiment.ResultPayload {
+	if result == nil || result.Payload == nil {
+		return nil
+	}
+	payload := result.Payload
+	res := &openapiExperiment.ResultPayload{}
+	if payload.EvalSet != nil {
+		res.EvalSetTurn = evalsetopenapi.OpenAPITurnDO2DTO(payload.EvalSet.Turn)
+	}
+	if payload.EvaluatorOutput != nil && len(payload.EvaluatorOutput.EvaluatorRecords) > 0 {
+		res.EvaluatorRecords = openAPIEvaluatorRecordsMapDO2DTO(payload.EvaluatorOutput.EvaluatorRecords)
+	}
+	if res.EvalSetTurn == nil && len(res.EvaluatorRecords) == 0 {
+		return nil
+	}
+	return res
+}
+
+func openAPIEvaluatorRecordsMapDO2DTO(records map[int64]*entity.EvaluatorRecord) []*openapiEvaluator.EvaluatorRecord {
+	if len(records) == 0 {
+		return nil
+	}
+	result := make([]*openapiEvaluator.EvaluatorRecord, 0, len(records))
+	for _, record := range records {
+		if record == nil {
+			continue
+		}
+		result = append(result, openAPIEvaluatorRecordDO2DTO(record))
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func openAPIEvaluatorRecordDO2DTO(record *entity.EvaluatorRecord) *openapiEvaluator.EvaluatorRecord {
+	if record == nil {
+		return nil
+	}
+	res := &openapiEvaluator.EvaluatorRecord{
+		ID:                 gptr.Of(record.ID),
+		EvaluatorVersionID: gptr.Of(record.EvaluatorVersionID),
+		ItemID:             gptr.Of(record.ItemID),
+		TurnID:             gptr.Of(record.TurnID),
+		Status:             convertEntityEvaluatorStatusToOpenAPI(record.Status),
+	}
+	return res
+}
+
+func convertEntityEvaluatorStatusToOpenAPI(status entity.EvaluatorRunStatus) *openapiEvaluator.EvaluatorRunStatus {
+	var openapiStatus openapiEvaluator.EvaluatorRunStatus
+	switch status {
+	case entity.EvaluatorRunStatusSuccess:
+		openapiStatus = openapiEvaluator.EvaluatorRunStatusSuccess
+	case entity.EvaluatorRunStatusFail:
+		openapiStatus = openapiEvaluator.EvaluatorRunStatusFailed
+	case entity.EvaluatorRunStatusUnknown:
+		return nil
+	default:
+		openapiStatus = openapiEvaluator.EvaluatorRunStatusProcessing
+	}
+	return &openapiStatus
 }
