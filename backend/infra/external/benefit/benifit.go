@@ -160,7 +160,6 @@ type CheckAndDeductOptimizationBenefitParams struct {
 	TaskID       int64   `json:"task_id"`       // task id
 	Amount       float64 `json:"amount"`        // 消耗的资源点数
 	When         When    `json:"when"`          // 适用场景：1-启动时校验，2-运行时校验，3-结束时校验
-
 }
 
 type CheckAndDeductOptimizationBenefitResult struct {
