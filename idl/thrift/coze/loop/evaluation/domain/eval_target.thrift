@@ -55,12 +55,11 @@ enum EvalTargetType {
     CustomRPCServer = 6 // 自定义RPC服务 for内场
 }
 
-enum VolcengineAgentProtocol {
-    MCP = 1
-    A2A = 2
-    A2AMCP = 3  // a2a和mcp都支持
-    Other = 4
-}
+// Agent协议类型
+typedef string VolcengineAgentProtocol (ts.enum="true")
+const VolcengineAgentProtocol VolcengineAgentProtocol_MCP = "mcp"    // mcp
+const VolcengineAgentProtocol VolcengineAgentProtocol_A2A = "a2a"  // a2a
+const VolcengineAgentProtocol VolcengineAgentProtocol_Other = "other" // other
 
 struct CustomRPCServer {
     1: optional i64 id    // 应用ID

@@ -3058,7 +3058,7 @@ func (p *VolcengineAgent) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 13:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField13(buf[offset:])
 				offset += l
 				if err != nil {
@@ -3174,13 +3174,11 @@ func (p *VolcengineAgent) FastReadField13(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *VolcengineAgentProtocol
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-
-		tmp := VolcengineAgentProtocol(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.Protocol = _field
 	return offset, nil
@@ -3276,8 +3274,8 @@ func (p *VolcengineAgent) fastWriteField12(buf []byte, w thrift.NocopyWriter) in
 func (p *VolcengineAgent) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetProtocol() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 13)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.Protocol))
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 13)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Protocol)
 	}
 	return offset
 }
@@ -3335,7 +3333,7 @@ func (p *VolcengineAgent) field13Length() int {
 	l := 0
 	if p.IsSetProtocol() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.StringLengthNocopy(*p.Protocol)
 	}
 	return l
 }

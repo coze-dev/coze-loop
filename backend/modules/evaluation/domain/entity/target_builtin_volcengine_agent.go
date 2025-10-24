@@ -18,11 +18,10 @@ type VolcengineAgentEndpoint struct {
 	APIKey     string
 }
 
-type VolcengineAgentProtocol int64
+type VolcengineAgentProtocol = string
 
 const (
-	VolcengineAgentProtocol_MCP    VolcengineAgentProtocol = 1
-	VolcengineAgentProtocol_A2A    VolcengineAgentProtocol = 2
-	VolcengineAgentProtocol_A2AMCP VolcengineAgentProtocol = 3
-	VolcengineAgentProtocol_Other  VolcengineAgentProtocol = 4
+	VolcengineAgentProtocolMCP   = "mcp"
+	VolcengineAgentProtocolA2A   = "a2a"
+	VolcengineAgentProtocolOther = "other"
 )

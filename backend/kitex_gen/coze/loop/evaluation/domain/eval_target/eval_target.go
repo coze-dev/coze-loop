@@ -12,6 +12,12 @@ import (
 )
 
 const (
+	VolcengineAgentProtocolMCP = "mcp"
+
+	VolcengineAgentProtocolA2A = "a2a"
+
+	VolcengineAgentProtocolOther = "other"
+
 	RegionBOE = "boe"
 
 	RegionCN = "cn"
@@ -92,59 +98,6 @@ func (p *EvalTargetType) Scan(value interface{}) (err error) {
 }
 
 func (p *EvalTargetType) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type VolcengineAgentProtocol int64
-
-const (
-	VolcengineAgentProtocol_MCP VolcengineAgentProtocol = 1
-	VolcengineAgentProtocol_A2A VolcengineAgentProtocol = 2
-	// a2a和mcp都支持
-	VolcengineAgentProtocol_A2AMCP VolcengineAgentProtocol = 3
-	VolcengineAgentProtocol_Other  VolcengineAgentProtocol = 4
-)
-
-func (p VolcengineAgentProtocol) String() string {
-	switch p {
-	case VolcengineAgentProtocol_MCP:
-		return "MCP"
-	case VolcengineAgentProtocol_A2A:
-		return "A2A"
-	case VolcengineAgentProtocol_A2AMCP:
-		return "A2AMCP"
-	case VolcengineAgentProtocol_Other:
-		return "Other"
-	}
-	return "<UNSET>"
-}
-
-func VolcengineAgentProtocolFromString(s string) (VolcengineAgentProtocol, error) {
-	switch s {
-	case "MCP":
-		return VolcengineAgentProtocol_MCP, nil
-	case "A2A":
-		return VolcengineAgentProtocol_A2A, nil
-	case "A2AMCP":
-		return VolcengineAgentProtocol_A2AMCP, nil
-	case "Other":
-		return VolcengineAgentProtocol_Other, nil
-	}
-	return VolcengineAgentProtocol(0), fmt.Errorf("not a valid VolcengineAgentProtocol string")
-}
-
-func VolcengineAgentProtocolPtr(v VolcengineAgentProtocol) *VolcengineAgentProtocol { return &v }
-func (p *VolcengineAgentProtocol) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = VolcengineAgentProtocol(result.Int64)
-	return
-}
-
-func (p *VolcengineAgentProtocol) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -342,6 +295,9 @@ func (p *EvalTargetRunStatus) Value() (driver.Value, error) {
 	}
 	return int64(*p), nil
 }
+
+// Agent协议类型
+type VolcengineAgentProtocol = string
 
 type Region = string
 
@@ -4430,7 +4386,7 @@ type VolcengineAgent struct {
 	// DTO使用，不存数据库
 	VolcengineAgentEndpoints []*VolcengineAgentEndpoint `thrift:"volcengine_agent_endpoints,12,optional" frugal:"12,optional,list<VolcengineAgentEndpoint>" form:"volcengine_agent_endpoints" json:"volcengine_agent_endpoints,omitempty" query:"volcengine_agent_endpoints"`
 	// 注册协议
-	Protocol *VolcengineAgentProtocol `thrift:"protocol,13,optional" frugal:"13,optional,VolcengineAgentProtocol" form:"protocol" json:"protocol,omitempty" query:"protocol"`
+	Protocol *VolcengineAgentProtocol `thrift:"protocol,13,optional" frugal:"13,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
 	BaseInfo *common.BaseInfo         `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
@@ -4615,7 +4571,7 @@ func (p *VolcengineAgent) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 13:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField13(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -4718,11 +4674,10 @@ func (p *VolcengineAgent) ReadField12(iprot thrift.TProtocol) error {
 func (p *VolcengineAgent) ReadField13(iprot thrift.TProtocol) error {
 
 	var _field *VolcengineAgentProtocol
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := VolcengineAgentProtocol(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.Protocol = _field
 	return nil
@@ -4866,10 +4821,10 @@ WriteFieldEndError:
 }
 func (p *VolcengineAgent) writeField13(oprot thrift.TProtocol) (err error) {
 	if p.IsSetProtocol() {
-		if err = oprot.WriteFieldBegin("protocol", thrift.I32, 13); err != nil {
+		if err = oprot.WriteFieldBegin("protocol", thrift.STRING, 13); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.Protocol)); err != nil {
+		if err := oprot.WriteString(*p.Protocol); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -4992,7 +4947,7 @@ func (p *VolcengineAgent) Field13DeepEqual(src *VolcengineAgentProtocol) bool {
 	} else if p.Protocol == nil || src == nil {
 		return false
 	}
-	if *p.Protocol != *src {
+	if strings.Compare(*p.Protocol, *src) != 0 {
 		return false
 	}
 	return true
