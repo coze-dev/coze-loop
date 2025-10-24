@@ -25,10 +25,15 @@ func (m *ServiceSuccessRatioMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceSuccessRatioMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression(
-		"countIf(1, status_code = 0) / count()",
-		entity.NewLongField(loop_span.SpanFieldStatusCode),
-	)
+	return &entity.Expression{
+		Expression: "countIf(1, status_code = 0) / count()",
+		Fields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldStatusCode,
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
+	}
 }
 
 func (m *ServiceSuccessRatioMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

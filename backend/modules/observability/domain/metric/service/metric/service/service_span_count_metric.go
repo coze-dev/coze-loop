@@ -24,7 +24,7 @@ func (m *ServiceSpanCountMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceSpanCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression("count()")
+	return &entity.Expression{Expression: "count()"}
 }
 
 func (m *ServiceSpanCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

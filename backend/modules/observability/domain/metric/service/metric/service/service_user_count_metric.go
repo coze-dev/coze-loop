@@ -23,10 +23,15 @@ func (m *ServiceUserCountMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceUserCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression(
-		"uniq(tags_string['user_id'])",
-		entity.NewStringField(loop_span.SpanFieldUserID),
-	)
+	return &entity.Expression{
+		Expression: "uniq(tags_string['user_id'])",
+		Fields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldUserID,
+				FieldType: loop_span.FieldTypeString,
+			},
+		},
+	}
 }
 
 func (m *ServiceUserCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

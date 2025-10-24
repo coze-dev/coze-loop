@@ -106,43 +106,6 @@ type Expression struct {
 	Fields     []*loop_span.FilterField
 }
 
-func NewExpression(expression string, fields ...*loop_span.FilterField) *Expression {
-	if len(fields) == 0 {
-		return &Expression{Expression: expression}
-	}
-	validFields := make([]*loop_span.FilterField, 0, len(fields))
-	for _, field := range fields {
-		if field == nil {
-			continue
-		}
-		validFields = append(validFields, field)
-	}
-	return &Expression{
-		Expression: expression,
-		Fields:     validFields,
-	}
-}
-
-func NewLongField(fieldName string) *loop_span.FilterField {
-	if fieldName == "" {
-		return nil
-	}
-	return &loop_span.FilterField{
-		FieldName: fieldName,
-		FieldType: loop_span.FieldTypeLong,
-	}
-}
-
-func NewStringField(fieldName string) *loop_span.FilterField {
-	if fieldName == "" {
-		return nil
-	}
-	return &loop_span.FilterField{
-		FieldName: fieldName,
-		FieldType: loop_span.FieldTypeString,
-	}
-}
-
 type IMetricDefinition interface {
 	Name() string                                                                                      // 指标名，全局唯一
 	Type() MetricType                                                                                  // 指标类型
