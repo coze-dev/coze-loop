@@ -37,6 +37,7 @@ func newPromptUserDraft(db *gorm.DB, opts ...gen.DOOption) promptUserDraft {
 	_promptUserDraft.VariableDefs = field.NewString(tableName, "variable_defs")
 	_promptUserDraft.Tools = field.NewString(tableName, "tools")
 	_promptUserDraft.ToolCallConfig = field.NewString(tableName, "tool_call_config")
+	_promptUserDraft.Metadata = field.NewString(tableName, "metadata")
 	_promptUserDraft.BaseVersion = field.NewString(tableName, "base_version")
 	_promptUserDraft.IsDraftEdited = field.NewInt32(tableName, "is_draft_edited")
 	_promptUserDraft.ExtInfo = field.NewString(tableName, "ext_info")
@@ -64,6 +65,7 @@ type promptUserDraft struct {
 	VariableDefs   field.String // 变量定义
 	Tools          field.String // tools
 	ToolCallConfig field.String // tool调用配置
+	Metadata       field.String // 模板元信息
 	BaseVersion    field.String // 草稿关联版本
 	IsDraftEdited  field.Int32  // 草稿内容是否基于BaseVersion有变更
 	ExtInfo        field.String // 扩展字段
@@ -96,6 +98,7 @@ func (p *promptUserDraft) updateTableName(table string) *promptUserDraft {
 	p.VariableDefs = field.NewString(table, "variable_defs")
 	p.Tools = field.NewString(table, "tools")
 	p.ToolCallConfig = field.NewString(table, "tool_call_config")
+	p.Metadata = field.NewString(table, "metadata")
 	p.BaseVersion = field.NewString(table, "base_version")
 	p.IsDraftEdited = field.NewInt32(table, "is_draft_edited")
 	p.ExtInfo = field.NewString(table, "ext_info")
@@ -130,7 +133,7 @@ func (p *promptUserDraft) GetFieldByName(fieldName string) (field.OrderExpr, boo
 }
 
 func (p *promptUserDraft) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 16)
+	p.fieldMap = make(map[string]field.Expr, 17)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["space_id"] = p.SpaceID
 	p.fieldMap["prompt_id"] = p.PromptID
@@ -141,6 +144,7 @@ func (p *promptUserDraft) fillFieldMap() {
 	p.fieldMap["variable_defs"] = p.VariableDefs
 	p.fieldMap["tools"] = p.Tools
 	p.fieldMap["tool_call_config"] = p.ToolCallConfig
+	p.fieldMap["metadata"] = p.Metadata
 	p.fieldMap["base_version"] = p.BaseVersion
 	p.fieldMap["is_draft_edited"] = p.IsDraftEdited
 	p.fieldMap["ext_info"] = p.ExtInfo

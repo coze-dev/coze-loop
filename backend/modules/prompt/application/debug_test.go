@@ -65,6 +65,7 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 				mockDebugLogRepo.EXPECT().SaveDebugLog(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptSvc := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any(), nil).Return(nil)
+				mockPromptSvc.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockPromptSvc.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
 					for _, v := range mockContent {
 						param.ResultStream <- &entity.Reply{
@@ -126,6 +127,7 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 				mockDebugLogRepo.EXPECT().SaveDebugLog(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptSvc := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any(), nil).Return(nil)
+				mockPromptSvc.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockPromptSvc.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
 					for _, v := range mockContent {
 						param.ResultStream <- &entity.Reply{
@@ -217,12 +219,80 @@ func TestPromptDebugApplicationImpl_DebugStreaming(t *testing.T) {
 			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode),
 		},
 		{
+			name: "base64 convert error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockDebugLogRepo := repomocks.NewMockIDebugLogRepo(ctrl)
+				mockDebugLogRepo.EXPECT().SaveDebugLog(gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptSvc := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any(), nil).Return(nil)
+				mockPromptSvc.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
+					param.ResultStream <- &entity.Reply{
+						Item: &entity.ReplyItem{
+							Message: &entity.Message{
+								Role: entity.RoleAssistant,
+								Parts: []*entity.ContentPart{
+									{
+										Type: entity.ContentTypeImageURL,
+										ImageURL: &entity.ImageURL{
+											URL: "data:image/png;base64,abc",
+										},
+									},
+								},
+							},
+						},
+					}
+					return &entity.Reply{
+						Item: &entity.ReplyItem{
+							Message: &entity.Message{
+								Role: entity.RoleAssistant,
+							},
+						},
+					}, nil
+				})
+				convertErr := errors.New("convert error")
+				mockPromptSvc.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(convertErr)
+				mockBenefitSvc := benefitmocks.NewMockIBenefitService(ctrl)
+				mockBenefitSvc.EXPECT().CheckPromptBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckPromptBenefitResult{}, nil)
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				return fields{
+					debugLogRepo:     mockDebugLogRepo,
+					debugContextRepo: nil,
+					promptService:    mockPromptSvc,
+					benefitService:   mockBenefitSvc,
+					auth:             mockAuth,
+					file:             nil,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), mockUser),
+				req: &debug.DebugStreamingRequest{
+					Prompt: &prompt.Prompt{
+						ID:          ptr.Of(int64(123456)),
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptDraft: &prompt.PromptDraft{
+							Detail: &prompt.PromptDetail{
+								PromptTemplate: &prompt.PromptTemplate{
+									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+								},
+								ModelConfig: &prompt.ModelConfig{},
+							},
+						},
+					},
+					SingleStepDebug: ptr.Of(true),
+				},
+				stream: localstream.NewInMemStream(context.Background(), make(chan *debug.DebugStreamingResponse), make(chan error)),
+			},
+			wantErr: errorx.WrapByCode(errors.New("convert error"), prompterr.CommonInternalErrorCode),
+		},
+		{
 			name: "goroutine panic",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockDebugLogRepo := repomocks.NewMockIDebugLogRepo(ctrl)
 				mockDebugLogRepo.EXPECT().SaveDebugLog(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptSvc := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptSvc.EXPECT().MCompleteMultiModalFileURL(gomock.Any(), gomock.Any(), nil).Return(nil)
+				mockPromptSvc.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				mockPromptSvc.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
 					panic("mock panic")
 				})

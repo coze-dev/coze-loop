@@ -342,6 +342,48 @@ func mockPromptCases() []promptTestCase {
 				},
 			},
 		},
+		{
+			name: "prompt template metadata",
+			dto: &prompt.Prompt{
+				ID:          ptr.Of(int64(0)),
+				WorkspaceID: ptr.Of(int64(0)),
+				PromptKey:   ptr.Of(""),
+				PromptCommit: &prompt.PromptCommit{
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							Metadata:     map[string]string{"commit-meta": "value"},
+						},
+					},
+				},
+				PromptDraft: &prompt.PromptDraft{
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							Metadata:     map[string]string{"draft-meta": "value"},
+						},
+					},
+				},
+			},
+			do: &entity.Prompt{
+				PromptCommit: &entity.PromptCommit{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Metadata:     map[string]string{"commit-meta": "value"},
+						},
+					},
+				},
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Metadata:     map[string]string{"draft-meta": "value"},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -478,6 +520,35 @@ func mockMessageCases() []messageTestCase {
 			},
 		},
 		{
+			name: "user message with video content",
+			dto: &prompt.Message{
+				Role: ptr.Of(prompt.RoleUser),
+				Parts: []*prompt.ContentPart{
+					{
+						Type: ptr.Of(prompt.ContentTypeVideoURL),
+						VideoURL: &prompt.VideoURL{
+							URL: ptr.Of("https://example.com/video.mp4"),
+							URI: ptr.Of("video-uri"),
+							Fps: ptr.Of(2.5),
+						},
+					},
+				},
+			},
+			do: &entity.Message{
+				Role: entity.RoleUser,
+				Parts: []*entity.ContentPart{
+					{
+						Type: entity.ContentTypeVideoURL,
+						VideoURL: &entity.VideoURL{
+							URL: "https://example.com/video.mp4",
+							URI: "video-uri",
+							Fps: ptr.Of(2.5),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "assistant message with tool calls",
 			dto: &prompt.Message{
 				Role: ptr.Of(prompt.RoleAssistant),
@@ -519,6 +590,17 @@ func mockMessageCases() []messageTestCase {
 				Role:             entity.RoleAssistant,
 				Content:          ptr.Of("Final answer"),
 				ReasoningContent: ptr.Of("This is my reasoning process..."),
+			},
+		},
+		{
+			name: "message with metadata",
+			dto: &prompt.Message{
+				Role:     ptr.Of(prompt.RoleAssistant),
+				Metadata: map[string]string{"key": "value"},
+			},
+			do: &entity.Message{
+				Role:     entity.RoleAssistant,
+				Metadata: map[string]string{"key": "value"},
 			},
 		},
 	}

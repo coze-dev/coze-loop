@@ -712,3 +712,52 @@ func TestPromptDO2DraftPO(t *testing.T) {
 		})
 	}
 }
+
+func TestPromptTemplateMetadataRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	commitMetadata := map[string]string{"commit": "meta"}
+	draftMetadata := map[string]string{"draft": "meta"}
+	prompt := &entity.Prompt{
+		ID:        1,
+		SpaceID:   2,
+		PromptKey: "test_key",
+		PromptCommit: &entity.PromptCommit{
+			PromptDetail: &entity.PromptDetail{
+				PromptTemplate: &entity.PromptTemplate{
+					Metadata: commitMetadata,
+				},
+			},
+		},
+		PromptDraft: &entity.PromptDraft{
+			DraftInfo: &entity.DraftInfo{UserID: "user"},
+			PromptDetail: &entity.PromptDetail{
+				PromptTemplate: &entity.PromptTemplate{
+					Metadata: draftMetadata,
+				},
+			},
+		},
+	}
+
+	commitPO := PromptDO2CommitPO(prompt)
+	if assert.NotNil(t, commitPO.Metadata) {
+		commitDO := CommitPO2DO(&model.PromptCommit{Metadata: commitPO.Metadata})
+		assert.NotNil(t, commitDO)
+		assert.NotNil(t, commitDO.PromptDetail)
+		assert.NotNil(t, commitDO.PromptDetail.PromptTemplate)
+		assert.Equal(t, commitMetadata, commitDO.PromptDetail.PromptTemplate.Metadata)
+	}
+
+	draftPO := PromptDO2DraftPO(prompt)
+	if assert.NotNil(t, draftPO.Metadata) {
+		draftModel := &model.PromptUserDraft{
+			UserID:   "user",
+			Metadata: draftPO.Metadata,
+		}
+		draftDO := DraftPO2DO(draftModel)
+		assert.NotNil(t, draftDO)
+		assert.NotNil(t, draftDO.PromptDetail)
+		assert.NotNil(t, draftDO.PromptDetail.PromptTemplate)
+		assert.Equal(t, draftMetadata, draftDO.PromptDetail.PromptTemplate.Metadata)
+	}
+}

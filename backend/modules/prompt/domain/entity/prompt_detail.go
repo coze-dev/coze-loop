@@ -34,9 +34,10 @@ type PromptDetail struct {
 }
 
 type PromptTemplate struct {
-	TemplateType TemplateType   `json:"template_type"`
-	Messages     []*Message     `json:"messages,omitempty"`
-	VariableDefs []*VariableDef `json:"variable_defs,omitempty"`
+	TemplateType TemplateType      `json:"template_type"`
+	Messages     []*Message        `json:"messages,omitempty"`
+	VariableDefs []*VariableDef    `json:"variable_defs,omitempty"`
+	Metadata     map[string]string `json:"metadata,omitempty"`
 }
 
 type TemplateType string
@@ -53,6 +54,8 @@ type Message struct {
 	Parts            []*ContentPart `json:"parts,omitempty"`
 	ToolCallID       *string        `json:"tool_call_id,omitempty"`
 	ToolCalls        []*ToolCall    `json:"tool_calls,omitempty"`
+
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 type Role string
@@ -69,6 +72,7 @@ type ContentPart struct {
 	Type       ContentType `json:"type"`
 	Text       *string     `json:"text,omitempty"`
 	ImageURL   *ImageURL   `json:"image_url,omitempty"`
+	VideoURL   *VideoURL   `json:"video_url,omitempty"`
 	Base64Data *string     `json:"base64_data,omitempty"`
 }
 
@@ -77,6 +81,7 @@ type ContentType string
 const (
 	ContentTypeText              ContentType = "text"
 	ContentTypeImageURL          ContentType = "image_url"
+	ContentTypeVideoURL          ContentType = "video_url"
 	ContentTypeBase64Data        ContentType = "base64_data"
 	ContentTypeMultiPartVariable ContentType = "multi_part_variable"
 )
@@ -84,6 +89,12 @@ const (
 type ImageURL struct {
 	URI string `json:"uri"`
 	URL string `json:"url"`
+}
+
+type VideoURL struct {
+	URI string   `json:"uri"`
+	URL string   `json:"url"`
+	Fps *float64 `json:"fps,omitempty"`
 }
 
 type VariableDef struct {
@@ -260,7 +271,7 @@ func formatMultiPart(parts []*ContentPart, defMap map[string]*VariableDef, valMa
 		if pt == nil {
 			continue
 		}
-		if ptr.From(pt.Text) != "" || pt.ImageURL != nil {
+		if ptr.From(pt.Text) != "" || pt.ImageURL != nil || pt.VideoURL != nil {
 			filtered = append(filtered, pt)
 		}
 	}
