@@ -1,3 +1,6 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package service
 
 import (
@@ -7,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	metricentity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metricrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	metricrepomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo/mocks"
@@ -15,7 +18,7 @@ import (
 	traceservicemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	spanfiltermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
-	gomock "go.uber.org/mock/gomock"
+	"go.uber.org/mock/gomock"
 )
 
 type stubMetricDef struct {

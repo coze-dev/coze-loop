@@ -475,7 +475,8 @@ func (m *MetricsService) formatPieData(data []map[string]any, mInfo *metricInfo)
 }
 
 func (m *MetricsService) divideMetrics(ctx context.Context, resp []*QueryMetricsResp,
-	compoundMetrics []entity.IMetricDefinition, newMetric entity.IMetricDefinition) (*QueryMetricsResp, error) {
+	compoundMetrics []entity.IMetricDefinition, newMetric entity.IMetricDefinition,
+) (*QueryMetricsResp, error) {
 	if len(resp) != 2 || len(compoundMetrics) != 2 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
