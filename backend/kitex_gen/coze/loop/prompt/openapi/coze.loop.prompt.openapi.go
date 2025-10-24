@@ -24,6 +24,8 @@ const (
 
 	ContentTypeImageURL = "image_url"
 
+	ContentTypeVideoURL = "video_url"
+
 	ContentTypeBase64Data = "base64_data"
 
 	ContentTypeMultiPartVariable = "multi_part_variable"
@@ -5832,6 +5834,8 @@ type ContentPart struct {
 	Text       *string      `thrift:"text,2,optional" frugal:"2,optional,string" form:"text" json:"text,omitempty" query:"text"`
 	ImageURL   *string      `thrift:"image_url,3,optional" frugal:"3,optional,string" form:"image_url" json:"image_url,omitempty" query:"image_url"`
 	Base64Data *string      `thrift:"base64_data,4,optional" frugal:"4,optional,string" form:"base64_data" json:"base64_data,omitempty" query:"base64_data"`
+	VideoURL   *string      `thrift:"video_url,5,optional" frugal:"5,optional,string" form:"video_url" json:"video_url,omitempty" query:"video_url"`
+	Config     *MediaConfig `thrift:"config,6,optional" frugal:"6,optional,MediaConfig" form:"config" json:"config,omitempty" query:"config"`
 }
 
 func NewContentPart() *ContentPart {
@@ -5888,6 +5892,30 @@ func (p *ContentPart) GetBase64Data() (v string) {
 	}
 	return *p.Base64Data
 }
+
+var ContentPart_VideoURL_DEFAULT string
+
+func (p *ContentPart) GetVideoURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVideoURL() {
+		return ContentPart_VideoURL_DEFAULT
+	}
+	return *p.VideoURL
+}
+
+var ContentPart_Config_DEFAULT *MediaConfig
+
+func (p *ContentPart) GetConfig() (v *MediaConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetConfig() {
+		return ContentPart_Config_DEFAULT
+	}
+	return p.Config
+}
 func (p *ContentPart) SetType(val *ContentType) {
 	p.Type = val
 }
@@ -5900,12 +5928,20 @@ func (p *ContentPart) SetImageURL(val *string) {
 func (p *ContentPart) SetBase64Data(val *string) {
 	p.Base64Data = val
 }
+func (p *ContentPart) SetVideoURL(val *string) {
+	p.VideoURL = val
+}
+func (p *ContentPart) SetConfig(val *MediaConfig) {
+	p.Config = val
+}
 
 var fieldIDToName_ContentPart = map[int16]string{
 	1: "type",
 	2: "text",
 	3: "image_url",
 	4: "base64_data",
+	5: "video_url",
+	6: "config",
 }
 
 func (p *ContentPart) IsSetType() bool {
@@ -5922,6 +5958,14 @@ func (p *ContentPart) IsSetImageURL() bool {
 
 func (p *ContentPart) IsSetBase64Data() bool {
 	return p.Base64Data != nil
+}
+
+func (p *ContentPart) IsSetVideoURL() bool {
+	return p.VideoURL != nil
+}
+
+func (p *ContentPart) IsSetConfig() bool {
+	return p.Config != nil
 }
 
 func (p *ContentPart) Read(iprot thrift.TProtocol) (err error) {
@@ -5969,6 +6013,22 @@ func (p *ContentPart) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6047,6 +6107,25 @@ func (p *ContentPart) ReadField4(iprot thrift.TProtocol) error {
 	p.Base64Data = _field
 	return nil
 }
+func (p *ContentPart) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.VideoURL = _field
+	return nil
+}
+func (p *ContentPart) ReadField6(iprot thrift.TProtocol) error {
+	_field := NewMediaConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Config = _field
+	return nil
+}
 
 func (p *ContentPart) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6068,6 +6147,14 @@ func (p *ContentPart) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -6160,6 +6247,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ContentPart) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVideoURL() {
+		if err = oprot.WriteFieldBegin("video_url", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.VideoURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ContentPart) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetConfig() {
+		if err = oprot.WriteFieldBegin("config", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Config.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *ContentPart) String() string {
 	if p == nil {
@@ -6185,6 +6308,12 @@ func (p *ContentPart) DeepEqual(ano *ContentPart) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.Base64Data) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.VideoURL) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Config) {
 		return false
 	}
 	return true
@@ -6234,6 +6363,206 @@ func (p *ContentPart) Field4DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Base64Data, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ContentPart) Field5DeepEqual(src *string) bool {
+
+	if p.VideoURL == src {
+		return true
+	} else if p.VideoURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.VideoURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ContentPart) Field6DeepEqual(src *MediaConfig) bool {
+
+	if !p.Config.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type MediaConfig struct {
+	Fps *float64 `thrift:"fps,1,optional" frugal:"1,optional,double" form:"fps" json:"fps,omitempty" query:"fps"`
+}
+
+func NewMediaConfig() *MediaConfig {
+	return &MediaConfig{}
+}
+
+func (p *MediaConfig) InitDefault() {
+}
+
+var MediaConfig_Fps_DEFAULT float64
+
+func (p *MediaConfig) GetFps() (v float64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFps() {
+		return MediaConfig_Fps_DEFAULT
+	}
+	return *p.Fps
+}
+func (p *MediaConfig) SetFps(val *float64) {
+	p.Fps = val
+}
+
+var fieldIDToName_MediaConfig = map[int16]string{
+	1: "fps",
+}
+
+func (p *MediaConfig) IsSetFps() bool {
+	return p.Fps != nil
+}
+
+func (p *MediaConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.DOUBLE {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MediaConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *MediaConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *float64
+	if v, err := iprot.ReadDouble(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Fps = _field
+	return nil
+}
+
+func (p *MediaConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MediaConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MediaConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFps() {
+		if err = oprot.WriteFieldBegin("fps", thrift.DOUBLE, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteDouble(*p.Fps); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *MediaConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MediaConfig(%+v)", *p)
+
+}
+
+func (p *MediaConfig) DeepEqual(ano *MediaConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Fps) {
+		return false
+	}
+	return true
+}
+
+func (p *MediaConfig) Field1DeepEqual(src *float64) bool {
+
+	if p.Fps == src {
+		return true
+	} else if p.Fps == nil || src == nil {
+		return false
+	}
+	if *p.Fps != *src {
 		return false
 	}
 	return true

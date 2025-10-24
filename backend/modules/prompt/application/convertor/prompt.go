@@ -109,7 +109,7 @@ func PromptTemplateDTO2DO(dto *prompt.PromptTemplate) *entity.PromptTemplate {
 		TemplateType: TemplateTypeDTO2DO(dto.GetTemplateType()),
 		Messages:     BatchMessageDTO2DO(dto.Messages),
 		VariableDefs: BatchVariableDefDTO2DO(dto.VariableDefs),
-        Metadata:     dto.Metadata,
+		Metadata:     dto.Metadata,
 	}
 }
 
@@ -150,7 +150,7 @@ func MessageDTO2DO(dto *prompt.Message) *entity.Message {
 		Parts:            BatchContentPartDTO2DO(dto.Parts),
 		ToolCallID:       dto.ToolCallID,
 		ToolCalls:        BatchToolCallDTO2DO(dto.ToolCalls),
-        Metadata:         dto.Metadata,
+		Metadata:         dto.Metadata,
 	}
 }
 
@@ -191,9 +191,11 @@ func ContentPartDTO2DO(dto *prompt.ContentPart) *entity.ContentPart {
 	}
 
 	return &entity.ContentPart{
-		Type:     ContentTypeDTO2DO(dto.GetType()),
-		Text:     dto.Text,
-		ImageURL: ImageURLDTO2DO(dto.ImageURL),
+		Type:        ContentTypeDTO2DO(dto.GetType()),
+		Text:        dto.Text,
+		ImageURL:    ImageURLDTO2DO(dto.ImageURL),
+		VideoURL:    VideoURLDTO2DO(dto.VideoURL),
+		MediaConfig: MediaConfigDTO2DO(dto.MediaConfig),
 	}
 }
 
@@ -203,6 +205,8 @@ func ContentTypeDTO2DO(dto prompt.ContentType) entity.ContentType {
 		return entity.ContentTypeText
 	case prompt.ContentTypeImageURL:
 		return entity.ContentTypeImageURL
+	case prompt.ContentTypeVideoURL:
+		return entity.ContentTypeVideoURL
 	case prompt.ContentTypeMultiPartVariable:
 		return entity.ContentTypeMultiPartVariable
 	default:
@@ -218,6 +222,27 @@ func ImageURLDTO2DO(dto *prompt.ImageURL) *entity.ImageURL {
 	return &entity.ImageURL{
 		URI: dto.GetURI(),
 		URL: dto.GetURL(),
+	}
+}
+
+func VideoURLDTO2DO(dto *prompt.VideoURL) *entity.VideoURL {
+	if dto == nil {
+		return nil
+	}
+
+	return &entity.VideoURL{
+		URI: dto.GetURI(),
+		URL: dto.GetURL(),
+	}
+}
+
+func MediaConfigDTO2DO(dto *prompt.MediaConfig) *entity.MediaConfig {
+	if dto == nil {
+		return nil
+	}
+
+	return &entity.MediaConfig{
+		Fps: dto.Fps,
 	}
 }
 
@@ -525,9 +550,11 @@ func ContentPartDO2DTO(do *entity.ContentPart) *prompt.ContentPart {
 		return nil
 	}
 	return &prompt.ContentPart{
-		Type:     ptr.Of(ContentTypeDO2DTO(do.Type)),
-		Text:     do.Text,
-		ImageURL: ImageURLDO2DTO(do.ImageURL),
+		Type:        ptr.Of(ContentTypeDO2DTO(do.Type)),
+		Text:        do.Text,
+		ImageURL:    ImageURLDO2DTO(do.ImageURL),
+		VideoURL:    VideoURLDO2DTO(do.VideoURL),
+		MediaConfig: MediaConfigDO2DTO(do.MediaConfig),
 	}
 }
 
@@ -537,6 +564,8 @@ func ContentTypeDO2DTO(do entity.ContentType) prompt.ContentType {
 		return prompt.ContentTypeText
 	case entity.ContentTypeImageURL:
 		return prompt.ContentTypeImageURL
+	case entity.ContentTypeVideoURL:
+		return prompt.ContentType("video_url")
 	case entity.ContentTypeMultiPartVariable:
 		return prompt.ContentTypeMultiPartVariable
 	default:
@@ -551,6 +580,25 @@ func ImageURLDO2DTO(do *entity.ImageURL) *prompt.ImageURL {
 	return &prompt.ImageURL{
 		URI: ptr.Of(do.URI),
 		URL: ptr.Of(do.URL),
+	}
+}
+
+func VideoURLDO2DTO(do *entity.VideoURL) *prompt.VideoURL {
+	if do == nil {
+		return nil
+	}
+	return &prompt.VideoURL{
+		URI: ptr.Of(do.URI),
+		URL: ptr.Of(do.URL),
+	}
+}
+
+func MediaConfigDO2DTO(do *entity.MediaConfig) *prompt.MediaConfig {
+	if do == nil {
+		return nil
+	}
+	return &prompt.MediaConfig{
+		Fps: do.Fps,
 	}
 }
 
@@ -630,7 +678,7 @@ func MessageDO2DTO(do *entity.Message) *prompt.Message {
 		Parts:            BatchContentPartDO2DTO(do.Parts),
 		ToolCallID:       do.ToolCallID,
 		ToolCalls:        BatchToolCallDO2DTO(do.ToolCalls),
-        Metadata:         do.Metadata,
+		Metadata:         do.Metadata,
 	}
 }
 
@@ -831,7 +879,7 @@ func PromptTemplateDO2DTO(do *entity.PromptTemplate) *prompt.PromptTemplate {
 		TemplateType: ptr.Of(prompt.TemplateType(do.TemplateType)),
 		Messages:     BatchMessageDO2DTO(do.Messages),
 		VariableDefs: BatchVariableDefDO2DTO(do.VariableDefs),
-        Metadata:     do.Metadata,
+		Metadata:     do.Metadata,
 	}
 }
 

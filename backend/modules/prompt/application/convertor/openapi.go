@@ -43,7 +43,7 @@ func OpenAPIPromptTemplateDO2DTO(do *entity.PromptTemplate) *openapi.PromptTempl
 		TemplateType: ptr.Of(prompt.TemplateType(do.TemplateType)),
 		Messages:     OpenAPIBatchMessageDO2DTO(do.Messages),
 		VariableDefs: OpenAPIBatchVariableDefDO2DTO(do.VariableDefs),
-        Metadata:     do.Metadata,
+		Metadata:     do.Metadata,
 	}
 }
 
@@ -72,7 +72,7 @@ func OpenAPIMessageDO2DTO(do *entity.Message) *openapi.Message {
 		Parts:            OpenAPIBatchContentPartDO2DTO(do.Parts),
 		ToolCallID:       do.ToolCallID,
 		ToolCalls:        OpenAPIBatchToolCallDO2DTO(do.ToolCalls),
-        Metadata:         do.Metadata,
+		Metadata:         do.Metadata,
 	}
 }
 
@@ -179,11 +179,26 @@ func OpenAPIContentPartDO2DTO(do *entity.ContentPart) *openapi.ContentPart {
 	if do.ImageURL != nil {
 		imageURL = ptr.Of(do.ImageURL.URL)
 	}
+	var videoURL *string
+	var config *openapi.MediaConfig
+	if do.VideoURL != nil {
+		if do.VideoURL.URL != "" {
+			videoURL = ptr.Of(do.VideoURL.URL)
+		}
+	}
+	// Set Config with fps if available
+	if do.MediaConfig != nil && do.MediaConfig.Fps != nil {
+		config = &openapi.MediaConfig{
+			Fps: do.MediaConfig.Fps,
+		}
+	}
 	return &openapi.ContentPart{
 		Type:       ptr.Of(OpenAPIContentTypeDO2DTO(do.Type)),
 		Text:       do.Text,
 		ImageURL:   imageURL,
+		VideoURL:   videoURL,
 		Base64Data: do.Base64Data,
+		Config:     config,
 	}
 }
 
@@ -193,6 +208,8 @@ func OpenAPIContentTypeDO2DTO(do entity.ContentType) openapi.ContentType {
 		return openapi.ContentTypeText
 	case entity.ContentTypeImageURL:
 		return openapi.ContentTypeImageURL
+	case entity.ContentTypeVideoURL:
+		return openapi.ContentTypeVideoURL
 	case entity.ContentTypeBase64Data:
 		return openapi.ContentTypeBase64Data
 	case entity.ContentTypeMultiPartVariable:
@@ -229,7 +246,7 @@ func OpenAPIMessageDTO2DO(dto *openapi.Message) *entity.Message {
 		Parts:            OpenAPIBatchContentPartDTO2DO(dto.Parts),
 		ToolCallID:       dto.ToolCallID,
 		ToolCalls:        OpenAPIBatchToolCallDTO2DO(dto.ToolCalls),
-        Metadata:         dto.Metadata,
+		Metadata:         dto.Metadata,
 	}
 }
 
@@ -259,11 +276,26 @@ func OpenAPIContentPartDTO2DO(dto *openapi.ContentPart) *entity.ContentPart {
 			URL: *dto.ImageURL,
 		}
 	}
+	var videoURL *entity.VideoURL
+	if dto.VideoURL != nil && *dto.VideoURL != "" {
+		videoURL = &entity.VideoURL{
+			URL: *dto.VideoURL,
+		}
+	}
+	var mediaConfig *entity.MediaConfig
+	// Set MediaConfig from Config if available
+	if dto.Config != nil && dto.Config.Fps != nil {
+		mediaConfig = &entity.MediaConfig{
+			Fps: dto.Config.Fps,
+		}
+	}
 	return &entity.ContentPart{
-		Type:       OpenAPIContentTypeDTO2DO(dto.GetType()),
-		Text:       dto.Text,
-		ImageURL:   imageURL,
-		Base64Data: dto.Base64Data,
+		Type:        OpenAPIContentTypeDTO2DO(dto.GetType()),
+		Text:        dto.Text,
+		ImageURL:    imageURL,
+		VideoURL:    videoURL,
+		Base64Data:  dto.Base64Data,
+		MediaConfig: mediaConfig,
 	}
 }
 
@@ -274,6 +306,8 @@ func OpenAPIContentTypeDTO2DO(dto openapi.ContentType) entity.ContentType {
 		return entity.ContentTypeText
 	case openapi.ContentTypeImageURL:
 		return entity.ContentTypeImageURL
+	case openapi.ContentTypeVideoURL:
+		return entity.ContentTypeVideoURL
 	case openapi.ContentTypeBase64Data:
 		return entity.ContentTypeBase64Data
 	case openapi.ContentTypeMultiPartVariable:

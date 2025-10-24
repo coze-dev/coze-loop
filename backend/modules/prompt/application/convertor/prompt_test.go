@@ -345,17 +345,22 @@ func mockPromptCases() []promptTestCase {
 		{
 			name: "prompt template metadata",
 			dto: &prompt.Prompt{
+				ID:          ptr.Of(int64(0)),
+				WorkspaceID: ptr.Of(int64(0)),
+				PromptKey:   ptr.Of(""),
 				PromptCommit: &prompt.PromptCommit{
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
-							Metadata: map[string]string{"commit-meta": "value"},
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							Metadata:     map[string]string{"commit-meta": "value"},
 						},
 					},
 				},
 				PromptDraft: &prompt.PromptDraft{
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
-							Metadata: map[string]string{"draft-meta": "value"},
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							Metadata:     map[string]string{"draft-meta": "value"},
 						},
 					},
 				},
@@ -364,14 +369,16 @@ func mockPromptCases() []promptTestCase {
 				PromptCommit: &entity.PromptCommit{
 					PromptDetail: &entity.PromptDetail{
 						PromptTemplate: &entity.PromptTemplate{
-							Metadata: map[string]string{"commit-meta": "value"},
+							TemplateType: entity.TemplateTypeNormal,
+							Metadata:     map[string]string{"commit-meta": "value"},
 						},
 					},
 				},
 				PromptDraft: &entity.PromptDraft{
 					PromptDetail: &entity.PromptDetail{
 						PromptTemplate: &entity.PromptTemplate{
-							Metadata: map[string]string{"draft-meta": "value"},
+							TemplateType: entity.TemplateTypeNormal,
+							Metadata:     map[string]string{"draft-meta": "value"},
 						},
 					},
 				},
@@ -508,6 +515,39 @@ func mockMessageCases() []messageTestCase {
 					{
 						Type: entity.ContentTypeText,
 						Text: ptr.Of("Describe this image"),
+					},
+				},
+			},
+		},
+		{
+			name: "user message with video content",
+			dto: &prompt.Message{
+				Role: ptr.Of(prompt.RoleUser),
+				Parts: []*prompt.ContentPart{
+					{
+						Type: ptr.Of(prompt.ContentTypeVideoURL),
+						VideoURL: &prompt.VideoURL{
+							URL: ptr.Of("https://example.com/video.mp4"),
+							URI: ptr.Of("video-uri"),
+						},
+						MediaConfig: &prompt.MediaConfig{
+							Fps: ptr.Of(2.5),
+						},
+					},
+				},
+			},
+			do: &entity.Message{
+				Role: entity.RoleUser,
+				Parts: []*entity.ContentPart{
+					{
+						Type: entity.ContentTypeVideoURL,
+						VideoURL: &entity.VideoURL{
+							URL: "https://example.com/video.mp4",
+							URI: "video-uri",
+						},
+						MediaConfig: &entity.MediaConfig{
+							Fps: ptr.Of(2.5),
+						},
 					},
 				},
 			},
