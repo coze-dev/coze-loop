@@ -12,11 +12,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-type MetricType string
-type MetricSource string
-type MetricGranularity string
-type MetricCompareType string
-type MetricOperator string
+type (
+	MetricType        string
+	MetricSource      string
+	MetricGranularity string
+	MetricCompareType string
+	MetricOperator    string
+)
 
 const (
 	MetricTypeTimeSeries MetricType = "time_series" // 时间序列
@@ -165,7 +167,7 @@ func GranularityToSecond(g MetricGranularity) int64 {
 
 func NewTimeIntervals(startTime, endTime int64, granularity MetricGranularity) []string {
 	var truncatedTime int64
-	var intervalMills = GranularityToSecond(granularity) * 1000
+	intervalMills := GranularityToSecond(granularity) * 1000
 	switch granularity {
 	case MetricGranularity1Min:
 		truncatedTime = startTime - (startTime % intervalMills)

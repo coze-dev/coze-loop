@@ -174,7 +174,7 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 		EndTime:      req.GetEndTime(),
 		FilterFields: tconv.FilterFieldsDTO2DO(req.Filters),
 	}
-	var sevenDayMills = 7 * 24 * time.Hour.Milliseconds()
+	sevenDayMills := 7 * 24 * time.Hour.Milliseconds()
 	if sReq.EndTime-sReq.StartTime > sevenDayMills {
 		sReq.StartTime = sReq.EndTime - sevenDayMills
 	}

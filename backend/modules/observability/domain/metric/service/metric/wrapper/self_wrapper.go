@@ -1,6 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package wrapper
 
 import (
@@ -11,8 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
 
-type SelfWrapper struct {
-}
+type SelfWrapper struct{}
 
 func (a *SelfWrapper) Wrap(in entity.IMetricDefinition) entity.IMetricDefinition {
 	return in
