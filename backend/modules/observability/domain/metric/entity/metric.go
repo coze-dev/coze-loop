@@ -95,9 +95,10 @@ type Compare struct {
 	Shift int64 // shift seconds
 }
 type Dimension struct {
-	Expression string                 // 表达式
-	Field      *loop_span.FilterField // 字段名, 设计上用于聚合
-	Alias      string                 // 别名
+	Expression       string // 表达式
+	ExpressionFields []*loop_span.FilterField
+	Field            *loop_span.FilterField // 字段名, 设计上用于聚合
+	Alias            string                 // 别名
 }
 
 type Expression struct {
@@ -106,13 +107,26 @@ type Expression struct {
 }
 
 func NewExpression(expression string, fields ...*loop_span.FilterField) *Expression {
+	if len(fields) == 0 {
+		return &Expression{Expression: expression}
+	}
+	validFields := make([]*loop_span.FilterField, 0, len(fields))
+	for _, field := range fields {
+		if field == nil {
+			continue
+		}
+		validFields = append(validFields, field)
+	}
 	return &Expression{
 		Expression: expression,
-		Fields:     fields,
+		Fields:     validFields,
 	}
 }
 
 func NewLongField(fieldName string) *loop_span.FilterField {
+	if fieldName == "" {
+		return nil
+	}
 	return &loop_span.FilterField{
 		FieldName: fieldName,
 		FieldType: loop_span.FieldTypeLong,
@@ -120,6 +134,9 @@ func NewLongField(fieldName string) *loop_span.FilterField {
 }
 
 func NewStringField(fieldName string) *loop_span.FilterField {
+	if fieldName == "" {
+		return nil
+	}
 	return &loop_span.FilterField{
 		FieldName: fieldName,
 		FieldType: loop_span.FieldTypeString,
