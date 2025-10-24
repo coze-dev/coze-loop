@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,13 +23,38 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+type safeMetricsRequests struct {
+	mu   sync.Mutex
+	list []*service.QueryMetricsReq
+}
+
+func (s *safeMetricsRequests) add(req *service.QueryMetricsReq) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.list = append(s.list, req)
+}
+
+func (s *safeMetricsRequests) snapshot() []*service.QueryMetricsReq {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]*service.QueryMetricsReq, len(s.list))
+	copy(out, s.list)
+	return out
+}
+
 func TestMetricApplication_GetMetrics(t *testing.T) {
 	t.Parallel()
 
 	type fields struct {
 		metricSvc service.IMetricsService
 		auth      rpc.IAuthProvider
-		captured  *[]*service.QueryMetricsReq
+		captured  *safeMetricsRequests
 	}
 
 	type args struct {
@@ -48,10 +74,10 @@ func TestMetricApplication_GetMetrics(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
 				authMock := rpcmock.NewMockIAuthProvider(ctrl)
-				captured := make([]*service.QueryMetricsReq, 0)
+				captured := &safeMetricsRequests{}
 				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceMetricRead, "1", false).Return(nil)
 				metricMock.EXPECT().QueryMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.QueryMetricsReq) (*service.QueryMetricsResp, error) {
-					captured = append(captured, req)
+					captured.add(req)
 					return &service.QueryMetricsResp{
 						Metrics: map[string]*entity.Metric{
 							"metric_a": {
@@ -67,7 +93,7 @@ func TestMetricApplication_GetMetrics(t *testing.T) {
 				return fields{
 					metricSvc: metricMock,
 					auth:      authMock,
-					captured:  &captured,
+					captured:  captured,
 				}
 			},
 			args: args{
@@ -86,7 +112,7 @@ func TestMetricApplication_GetMetrics(t *testing.T) {
 				assert.Equal(t, "1", got.Metrics["metric_a"].GetPie()["foo"])
 				assert.Len(t, got.Metrics["metric_a"].GetTimeSeries()["all"], 1)
 				if f.captured != nil {
-					captured := *f.captured
+					captured := f.captured.snapshot()
 					if assert.Len(t, captured, 1) {
 						assert.Equal(t, int64(1000), captured[0].StartTime)
 						assert.Equal(t, int64(2000), captured[0].EndTime)
@@ -100,10 +126,10 @@ func TestMetricApplication_GetMetrics(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
 				authMock := rpcmock.NewMockIAuthProvider(ctrl)
-				captured := make([]*service.QueryMetricsReq, 0)
+				captured := &safeMetricsRequests{}
 				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceMetricRead, "2", false).Return(nil)
 				metricMock.EXPECT().QueryMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.QueryMetricsReq) (*service.QueryMetricsResp, error) {
-					captured = append(captured, req)
+					captured.add(req)
 					summary := "2"
 					if req.StartTime == 2000 && req.EndTime == 4000 {
 						summary = "1"
@@ -117,7 +143,7 @@ func TestMetricApplication_GetMetrics(t *testing.T) {
 				return fields{
 					metricSvc: metricMock,
 					auth:      authMock,
-					captured:  &captured,
+					captured:  captured,
 				}
 			},
 			args: args{
@@ -141,7 +167,7 @@ func TestMetricApplication_GetMetrics(t *testing.T) {
 				assert.Equal(t, "1", got.Metrics["metric_a"].GetSummary())
 				assert.Equal(t, "2", got.ComparedMetrics["metric_a"].GetSummary())
 				if f.captured != nil {
-					captured := *f.captured
+					captured := f.captured.snapshot()
 					if assert.Len(t, captured, 2) {
 						startEnds := map[string]bool{}
 						for _, req := range captured {
@@ -428,7 +454,7 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 	type fields struct {
 		metricSvc service.IMetricsService
 		auth      rpc.IAuthProvider
-		captured  *[]*service.QueryMetricsReq
+		captured  *safeMetricsRequests
 	}
 
 	type args struct {
@@ -448,10 +474,10 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
 				authMock := rpcmock.NewMockIAuthProvider(ctrl)
-				captured := make([]*service.QueryMetricsReq, 0)
+				captured := &safeMetricsRequests{}
 				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceMetricRead, "5", false).Return(nil)
 				metricMock.EXPECT().QueryMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.QueryMetricsReq) (*service.QueryMetricsResp, error) {
-					captured = append(captured, req)
+					captured.add(req)
 					return &service.QueryMetricsResp{
 						Metrics: map[string]*entity.Metric{
 							entity.MetricNameModelNamePie: {
@@ -466,7 +492,7 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 				return fields{
 					metricSvc: metricMock,
 					auth:      authMock,
-					captured:  &captured,
+					captured:  captured,
 				}
 			},
 			args: args{
@@ -483,7 +509,7 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 				assert.NotNil(t, got)
 				assert.ElementsMatch(t, []string{"modelA", "modelB"}, got.Values)
 				if f.captured != nil {
-					captured := *f.captured
+					captured := f.captured.snapshot()
 					if assert.Len(t, captured, 1) {
 						expectedStart := (10 * 24 * time.Hour.Milliseconds()) - 7*24*time.Hour.Milliseconds()
 						assert.Equal(t, expectedStart, captured[0].StartTime)
