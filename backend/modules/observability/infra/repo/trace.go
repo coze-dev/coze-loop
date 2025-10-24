@@ -176,16 +176,20 @@ func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam)
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		})
 	}
+	filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
+		SubFilter: req.Filters,
+	})
 	st := time.Now()
 	spans, err := t.spansDao.Get(ctx, &ck.QueryParam{
-		QueryType:    ck.QueryTypeGetTrace,
-		Tables:       tableCfg.SpanTables,
-		AnnoTableMap: tableCfg.AnnoTableMap,
-		StartTime:    time_util.MillSec2MicroSec(req.StartAt),
-		EndTime:      time_util.MillSec2MicroSec(req.EndAt),
-		Filters:      filter,
-		Limit:        req.Limit,
-		OmitColumns:  req.OmitColumns,
+		QueryType:     ck.QueryTypeGetTrace,
+		Tables:        tableCfg.SpanTables,
+		AnnoTableMap:  tableCfg.AnnoTableMap,
+		StartTime:     time_util.MillSec2MicroSec(req.StartAt),
+		EndTime:       time_util.MillSec2MicroSec(req.EndAt),
+		Filters:       filter,
+		Limit:         req.Limit,
+		OmitColumns:   req.OmitColumns,
+		SelectColumns: req.SelectColumns,
 	})
 	if err != nil {
 		return nil, err
@@ -222,6 +226,8 @@ func (t *TraceCkRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListA
 	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
 	if err != nil {
 		return nil, err
+	} else if len(tableCfg.AnnoTables) == 0 {
+		return loop_span.AnnotationList{}, nil
 	}
 	st := time.Now()
 	annotations, err := t.annoDao.List(ctx, &ck.ListAnnotationsParam{
@@ -247,6 +253,8 @@ func (t *TraceCkRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnno
 	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
 	if err != nil {
 		return nil, err
+	} else if len(tableCfg.AnnoTables) == 0 {
+		return nil, nil
 	}
 	st := time.Now()
 	annotation, err := t.annoDao.Get(ctx, &ck.GetAnnotationParam{
@@ -280,6 +288,10 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 		Table:       table,
 		Annotations: pos,
 	})
+}
+
+func (t *TraceCkRepoImpl) UpsertAnnotation(ctx context.Context, param *repo.UpsertAnnotationParam) error {
+	return nil
 }
 
 func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
@@ -333,8 +345,10 @@ func (t *TraceCkRepoImpl) getQueryTenantTables(ctx context.Context, tenants []st
 		}
 		for _, tableCfg := range tables {
 			ret.SpanTables = append(ret.SpanTables, tableCfg.SpanTable)
-			ret.AnnoTables = append(ret.AnnoTables, tableCfg.AnnoTable)
-			ret.AnnoTableMap[tableCfg.SpanTable] = tableCfg.AnnoTable
+			if tableCfg.AnnoTable != "" {
+				ret.AnnoTables = append(ret.AnnoTables, tableCfg.AnnoTable)
+				ret.AnnoTableMap[tableCfg.SpanTable] = tableCfg.AnnoTable
+			}
 		}
 	}
 	for _, tenant := range tenants {

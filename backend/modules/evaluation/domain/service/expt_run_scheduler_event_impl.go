@@ -239,7 +239,7 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	incomplete, zombies, err := e.handleZombies(ctx, event, incomplete)
+	incomplete, zombies, err := e.handleZombies(ctx, event, incomplete, exptDetail)
 	if err != nil {
 		return err
 	}
@@ -283,6 +283,7 @@ func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *en
 			return err
 		}
 		time.Sleep(time.Millisecond * 50)
+		logs.CtxInfo(ctx, "[ExptEval] recordEvalItemRunLogs publish result, expt_id: %v, event: %v, item_id: %v, turn_evaluator_refs: %v", event.ExptID, event, item.ItemID, json.Jsonify(turnEvaluatorRefs))
 		err := mode.PublishResult(ctx, turnEvaluatorRefs, event)
 		if err != nil {
 			logs.CtxError(ctx, "publish online result fail, err: %v", err)
@@ -386,8 +387,8 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 	return nil
 }
 
-func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem) (alives, zombies []*entity.ExptEvalItem, err error) {
-	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetZombieSecond()
+func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, zombies []*entity.ExptEvalItem, err error) {
+	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetItemZombieSecond(expt.AsyncExec())
 	for _, item := range items {
 		if item.State == entity.ItemRunState_Processing && item.UpdatedAt != nil && !gptr.Indirect(item.UpdatedAt).IsZero() {
 			if time.Since(gptr.Indirect(item.UpdatedAt)).Seconds() > float64(zombieSecond) {

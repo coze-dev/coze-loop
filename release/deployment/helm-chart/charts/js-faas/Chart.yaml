@@ -1,0 +1,6 @@
+apiVersion: v2
+name:  coze-loop-js-faas
+description: JavaScript FaaS service for Coze Loop
+type: application
+version: 1.2.0
+appVersion: "1.2.0"

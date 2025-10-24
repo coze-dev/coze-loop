@@ -2,6 +2,10 @@ IMAGE_REGISTRY := docker.io
 IMAGE_REPOSITORY := cozedev
 IMAGE_NAME := coze-loop
 
+# Python FaaS image config
+PYFAAS_IMAGE_NAME := coze-loop-python-faas
+PYFAAS_DOCKERFILE := ./release/image/python-faas.Dockerfile
+
 DOCKER_COMPOSE_DIR := ./release/deployment/docker-compose
 
 HELM_CHART_DIR := ./release/deployment/helm-chart/umbrella
@@ -33,18 +37,37 @@ image%:
 		docker run --rm $(IMAGE_REPOSITORY)/$(IMAGE_NAME):latest du -sh /coze-loop/bin; \
 		docker run --rm $(IMAGE_REPOSITORY)/$(IMAGE_NAME):latest du -sh /coze-loop/resources; \
 		docker run --rm $(IMAGE_REPOSITORY)/$(IMAGE_NAME):latest du -sh /coze-loop ;; \
+	  -python-faas-bpush-*) \
+	    version="$*"; \
+	    version="$${version#-python-faas-bpush-}"; \
+	    docker buildx build \
+		  --platform linux/amd64,linux/arm64 \
+		  --progress=plain \
+		  --push \
+		  --build-context bootstrap=$(DOCKER_COMPOSE_DIR)/bootstrap/python-faas \
+		  -f $(PYFAAS_DOCKERFILE) \
+		  -t $(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(PYFAAS_IMAGE_NAME):latest \
+		  -t $(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(PYFAAS_IMAGE_NAME):"$$version" \
+		  .; \
+		docker pull $(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(PYFAAS_IMAGE_NAME):latest; \
+		docker run --rm $(IMAGE_REPOSITORY)/$(PYFAAS_IMAGE_NAME):latest du -sh /app; \
+		docker run --rm $(IMAGE_REPOSITORY)/$(PYFAAS_IMAGE_NAME):latest du -sh /app/vendor; \
+		;; \
 	  -help|*) \
       	echo "Usage:"; \
-      	echo "  make image--login             # Login to the image registry ($(IMAGE_REGISTRY))"; \
-      	echo "  make image-<version>          # Build & push multi-arch image with tags <version> and latest"; \
+		echo "  make image--login                         # Login to the image registry ($(IMAGE_REGISTRY))"; \
+		echo "  make image-<version>                      # Build & push coze-loop image (<version>, latest)"; \
+		echo "  make image-python-faas-bpush-<version>    # Build & push python-faas image (<version>, latest)"; \
       	echo; \
       	echo "Examples:"; \
-      	echo "  make image--login             # Login before pushing images"; \
-      	echo "  make image-1.0.0              # Build & push images tagged '1.0.0' and 'latest'"; \
+	    echo "  make image--login"; \
+	    echo "  make image-1.0.0"; \
+	    echo "  make image-python-faas-bpush-1.0.0"; \
       	echo; \
       	echo "Notes:"; \
-      	echo "  - 'image--login' logs in using IMAGE_REPOSITORY as the username."; \
-      	echo "  - 'image-<version>' will push to $(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(IMAGE_NAME)"; \
+	    echo "  - 'image--login' logs in using IMAGE_REPOSITORY as the username."; \
+	    echo "  - 'image-<version>' pushes to $(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(IMAGE_NAME)"; \
+	    echo "  - 'image-python-faas-bpush-<version>' pushes to $(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(PYFAAS_IMAGE_NAME)"; \
       	exit 1 ;; \
 	esac
 

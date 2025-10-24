@@ -10,6 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/authn"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file"
@@ -18,13 +19,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
 	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
+	openapi2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
-	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/debug"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
-	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 )
 
 type EvaluationSetService interface {
@@ -128,6 +130,32 @@ func NewExperimentServiceClientProtocol(t thrift.TTransport, iprot thrift.TProto
 func NewExperimentServiceClient(c thrift.TClient) *ExperimentServiceClient {
 	return &ExperimentServiceClient{
 		ExperimentServiceClient: expt.NewExperimentServiceClient(c),
+	}
+}
+
+type EvalOpenAPIService interface {
+	openapi0.EvaluationOpenAPIService
+}
+
+type EvalOpenAPIServiceClient struct {
+	*openapi0.EvaluationOpenAPIServiceClient
+}
+
+func NewEvalOpenAPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
+		EvaluationOpenAPIServiceClient: openapi0.NewEvaluationOpenAPIServiceClientFactory(t, f),
+	}
+}
+
+func NewEvalOpenAPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
+		EvaluationOpenAPIServiceClient: openapi0.NewEvaluationOpenAPIServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewEvalOpenAPIServiceClient(c thrift.TClient) *EvalOpenAPIServiceClient {
+	return &EvalOpenAPIServiceClient{
+		EvaluationOpenAPIServiceClient: openapi0.NewEvaluationOpenAPIServiceClient(c),
 	}
 }
 
@@ -262,28 +290,28 @@ func NewPromptExecuteServiceClient(c thrift.TClient) *PromptExecuteServiceClient
 }
 
 type PromptOpenAPIService interface {
-	openapi0.PromptOpenAPIService
+	openapi1.PromptOpenAPIService
 }
 
 type PromptOpenAPIServiceClient struct {
-	*openapi0.PromptOpenAPIServiceClient
+	*openapi1.PromptOpenAPIServiceClient
 }
 
 func NewPromptOpenAPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *PromptOpenAPIServiceClient {
 	return &PromptOpenAPIServiceClient{
-		PromptOpenAPIServiceClient: openapi0.NewPromptOpenAPIServiceClientFactory(t, f),
+		PromptOpenAPIServiceClient: openapi1.NewPromptOpenAPIServiceClientFactory(t, f),
 	}
 }
 
 func NewPromptOpenAPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *PromptOpenAPIServiceClient {
 	return &PromptOpenAPIServiceClient{
-		PromptOpenAPIServiceClient: openapi0.NewPromptOpenAPIServiceClientProtocol(t, iprot, oprot),
+		PromptOpenAPIServiceClient: openapi1.NewPromptOpenAPIServiceClientProtocol(t, iprot, oprot),
 	}
 }
 
 func NewPromptOpenAPIServiceClient(c thrift.TClient) *PromptOpenAPIServiceClient {
 	return &PromptOpenAPIServiceClient{
-		PromptOpenAPIServiceClient: openapi0.NewPromptOpenAPIServiceClient(c),
+		PromptOpenAPIServiceClient: openapi1.NewPromptOpenAPIServiceClient(c),
 	}
 }
 
@@ -366,28 +394,54 @@ func NewObservabilityTraceServiceClient(c thrift.TClient) *ObservabilityTraceSer
 }
 
 type ObservabilityOpenAPIService interface {
-	openapi1.OpenAPIService
+	openapi2.OpenAPIService
 }
 
 type ObservabilityOpenAPIServiceClient struct {
-	*openapi1.OpenAPIServiceClient
+	*openapi2.OpenAPIServiceClient
 }
 
 func NewObservabilityOpenAPIServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ObservabilityOpenAPIServiceClient {
 	return &ObservabilityOpenAPIServiceClient{
-		OpenAPIServiceClient: openapi1.NewOpenAPIServiceClientFactory(t, f),
+		OpenAPIServiceClient: openapi2.NewOpenAPIServiceClientFactory(t, f),
 	}
 }
 
 func NewObservabilityOpenAPIServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ObservabilityOpenAPIServiceClient {
 	return &ObservabilityOpenAPIServiceClient{
-		OpenAPIServiceClient: openapi1.NewOpenAPIServiceClientProtocol(t, iprot, oprot),
+		OpenAPIServiceClient: openapi2.NewOpenAPIServiceClientProtocol(t, iprot, oprot),
 	}
 }
 
 func NewObservabilityOpenAPIServiceClient(c thrift.TClient) *ObservabilityOpenAPIServiceClient {
 	return &ObservabilityOpenAPIServiceClient{
-		OpenAPIServiceClient: openapi1.NewOpenAPIServiceClient(c),
+		OpenAPIServiceClient: openapi2.NewOpenAPIServiceClient(c),
+	}
+}
+
+type ObservabilityTaskService interface {
+	task.TaskService
+}
+
+type ObservabilityTaskServiceClient struct {
+	*task.TaskServiceClient
+}
+
+func NewObservabilityTaskServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ObservabilityTaskServiceClient {
+	return &ObservabilityTaskServiceClient{
+		TaskServiceClient: task.NewTaskServiceClientFactory(t, f),
+	}
+}
+
+func NewObservabilityTaskServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ObservabilityTaskServiceClient {
+	return &ObservabilityTaskServiceClient{
+		TaskServiceClient: task.NewTaskServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewObservabilityTaskServiceClient(c thrift.TClient) *ObservabilityTaskServiceClient {
+	return &ObservabilityTaskServiceClient{
+		TaskServiceClient: task.NewTaskServiceClient(c),
 	}
 }
 
@@ -609,6 +663,15 @@ func NewExperimentServiceProcessor(handler ExperimentService) *ExperimentService
 	return self
 }
 
+type EvalOpenAPIServiceProcessor struct {
+	*openapi0.EvaluationOpenAPIServiceProcessor
+}
+
+func NewEvalOpenAPIServiceProcessor(handler EvalOpenAPIService) *EvalOpenAPIServiceProcessor {
+	self := &EvalOpenAPIServiceProcessor{openapi0.NewEvaluationOpenAPIServiceProcessor(handler)}
+	return self
+}
+
 type DatasetServiceProcessor struct {
 	*dataset.DatasetServiceProcessor
 }
@@ -655,11 +718,11 @@ func NewPromptExecuteServiceProcessor(handler PromptExecuteService) *PromptExecu
 }
 
 type PromptOpenAPIServiceProcessor struct {
-	*openapi0.PromptOpenAPIServiceProcessor
+	*openapi1.PromptOpenAPIServiceProcessor
 }
 
 func NewPromptOpenAPIServiceProcessor(handler PromptOpenAPIService) *PromptOpenAPIServiceProcessor {
-	self := &PromptOpenAPIServiceProcessor{openapi0.NewPromptOpenAPIServiceProcessor(handler)}
+	self := &PromptOpenAPIServiceProcessor{openapi1.NewPromptOpenAPIServiceProcessor(handler)}
 	return self
 }
 
@@ -691,11 +754,20 @@ func NewObservabilityTraceServiceProcessor(handler ObservabilityTraceService) *O
 }
 
 type ObservabilityOpenAPIServiceProcessor struct {
-	*openapi1.OpenAPIServiceProcessor
+	*openapi2.OpenAPIServiceProcessor
 }
 
 func NewObservabilityOpenAPIServiceProcessor(handler ObservabilityOpenAPIService) *ObservabilityOpenAPIServiceProcessor {
-	self := &ObservabilityOpenAPIServiceProcessor{openapi1.NewOpenAPIServiceProcessor(handler)}
+	self := &ObservabilityOpenAPIServiceProcessor{openapi2.NewOpenAPIServiceProcessor(handler)}
+	return self
+}
+
+type ObservabilityTaskServiceProcessor struct {
+	*task.TaskServiceProcessor
+}
+
+func NewObservabilityTaskServiceProcessor(handler ObservabilityTaskService) *ObservabilityTaskServiceProcessor {
+	self := &ObservabilityTaskServiceProcessor{task.NewTaskServiceProcessor(handler)}
 	return self
 }
 

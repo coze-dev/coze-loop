@@ -86,6 +86,21 @@ func (mr *MockITraceConfigMockRecorder) GetAnnotationSourceCfg(ctx any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotationSourceCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetAnnotationSourceCfg), ctx)
 }
 
+// GetBackfillMqProducerCfg mocks base method.
+func (m *MockITraceConfig) GetBackfillMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBackfillMqProducerCfg", ctx)
+	ret0, _ := ret[0].(*config.MqProducerCfg)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBackfillMqProducerCfg indicates an expected call of GetBackfillMqProducerCfg.
+func (mr *MockITraceConfigMockRecorder) GetBackfillMqProducerCfg(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackfillMqProducerCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetBackfillMqProducerCfg), ctx)
+}
+
 // GetDefaultTraceTenant mocks base method.
 func (m *MockITraceConfig) GetDefaultTraceTenant(ctx context.Context) string {
 	m.ctrl.T.Helper()
@@ -98,6 +113,20 @@ func (m *MockITraceConfig) GetDefaultTraceTenant(ctx context.Context) string {
 func (mr *MockITraceConfigMockRecorder) GetDefaultTraceTenant(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultTraceTenant", reflect.TypeOf((*MockITraceConfig)(nil).GetDefaultTraceTenant), ctx)
+}
+
+// GetKeySpanTypes mocks base method.
+func (m *MockITraceConfig) GetKeySpanTypes(ctx context.Context) map[string][]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKeySpanTypes", ctx)
+	ret0, _ := ret[0].(map[string][]string)
+	return ret0
+}
+
+// GetKeySpanTypes indicates an expected call of GetKeySpanTypes.
+func (mr *MockITraceConfigMockRecorder) GetKeySpanTypes(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeySpanTypes", reflect.TypeOf((*MockITraceConfig)(nil).GetKeySpanTypes), ctx)
 }
 
 // GetPlatformSpansTrans mocks base method.

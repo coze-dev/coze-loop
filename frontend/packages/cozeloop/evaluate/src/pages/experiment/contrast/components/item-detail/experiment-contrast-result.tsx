@@ -79,21 +79,23 @@ export default function ExperimentContrastResult({
               evaluatorRecord.evaluator_output_data?.evaluator_result;
 
             return (
-              <EvaluatorNameScore
-                key={item.columnInfo.key}
-                evaluator={item.columnInfo.data as ColumnEvaluator}
-                evaluatorResult={evaluatorResult}
-                experiment={experiment}
-                updateUser={evaluatorRecord?.base_info?.updated_by}
-                spaceID={spaceID}
-                traceID={evaluatorRecord?.trace_id}
-                evaluatorRecordID={evaluatorRecord?.id}
-                enablePopover={true}
-                showVersion={true}
-                onEditScoreSuccess={onRefresh}
-                onReportCalibration={onReportCalibration}
-                onReportEvaluatorTrace={onReportEvaluatorTrace}
-              />
+              <div key={item.columnInfo.key} className="max-w-[100%]">
+                <EvaluatorNameScore
+                  key={item.columnInfo.key}
+                  evaluator={item.columnInfo.data as ColumnEvaluator}
+                  evaluatorResult={evaluatorResult}
+                  experiment={experiment}
+                  updateUser={evaluatorRecord?.base_info?.updated_by}
+                  spaceID={spaceID}
+                  traceID={evaluatorRecord?.trace_id}
+                  evaluatorRecordID={evaluatorRecord?.id}
+                  enablePopover={true}
+                  showVersion={true}
+                  onEditScoreSuccess={onRefresh}
+                  onReportCalibration={onReportCalibration}
+                  onReportEvaluatorTrace={onReportEvaluatorTrace}
+                />
+              </div>
             );
           } else if (item.type === 'annotation') {
             return (

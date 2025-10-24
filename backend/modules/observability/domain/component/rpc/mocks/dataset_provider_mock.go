@@ -100,6 +100,21 @@ func (mr *MockIDatasetProviderMockRecorder) GetDataset(arg0, arg1, arg2, arg3 an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDataset", reflect.TypeOf((*MockIDatasetProvider)(nil).GetDataset), arg0, arg1, arg2, arg3)
 }
 
+// SearchDatasets mocks base method.
+func (m *MockIDatasetProvider) SearchDatasets(arg0 context.Context, arg1, arg2 int64, arg3 entity.DatasetCategory, arg4 string) ([]*entity.Dataset, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchDatasets", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].([]*entity.Dataset)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SearchDatasets indicates an expected call of SearchDatasets.
+func (mr *MockIDatasetProviderMockRecorder) SearchDatasets(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchDatasets", reflect.TypeOf((*MockIDatasetProvider)(nil).SearchDatasets), arg0, arg1, arg2, arg3, arg4)
+}
+
 // UpdateDatasetSchema mocks base method.
 func (m *MockIDatasetProvider) UpdateDatasetSchema(arg0 context.Context, arg1 *entity.Dataset) error {
 	m.ctrl.T.Helper()

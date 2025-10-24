@@ -82,6 +82,12 @@ error_code:
     description: number of export in running has reached the maximum limit
     no_affect_stability: true
 
+  - name: CustomEvalTargetInvokeFail
+    code: 4010
+    message: custom eval target invoke fail
+    description: custom eval target invoke fail
+    no_affect_stability: true
+
   - name: ContentTypeNotSupported
     code: 5000
     message: content type is not supported

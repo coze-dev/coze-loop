@@ -5,20 +5,31 @@ import { useCallback } from 'react';
 import { useDebounceFn, useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
-import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
-import { type Evaluator } from '@cozeloop/api-schema/evaluation';
-import { StoneEvaluationApi } from '@cozeloop/api-schema';
-import { IconCozPlus } from '@coze-arch/coze-design/icons';
+import { useOpenWindow, useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
+  type EvaluatorType,
+  type Evaluator,
+} from '@cozeloop/api-schema/evaluation';
+import { StoneEvaluationApi } from '@cozeloop/api-schema';
+import {
+  IconCozAi,
+  IconCozCode,
+  IconCozPlus,
+} from '@coze-arch/coze-design/icons';
+import {
+  Menu,
   type RenderSelectedItemFn,
   type SelectProps,
   Typography,
 } from '@coze-arch/coze-design';
 
+import { getEvaluatorIcon } from '@/utils/evaluator';
+
 const genEvaluatorOption = (item: Evaluator) => ({
   value: item.evaluator_id,
   label: (
-    <div className="w-full flex pr-2">
+    <div className="w-full flex pr-2 items-center gap-2">
+      {getEvaluatorIcon(item.evaluator_type as EvaluatorType)}
       <Typography.Text className="w-0 flex-1" ellipsis={{ showTooltip: true }}>
         {item.name}
       </Typography.Text>
@@ -27,15 +38,18 @@ const genEvaluatorOption = (item: Evaluator) => ({
   ...item,
 });
 
-export function EvaluatorSelect(props: SelectProps) {
+export function EvaluatorSelect(
+  props: SelectProps & { evaluatorTypes?: EvaluatorType[] | undefined },
+) {
   const { spaceID } = useSpace();
-  const { baseURL } = useBaseURL();
-  const { multiple } = props;
+  const { multiple, evaluatorTypes } = props;
+  const { openBlank } = useOpenWindow();
 
   const service = useRequest(async (text?: string) => {
     const res = await StoneEvaluationApi.ListEvaluators({
       workspace_id: spaceID,
       search_name: text || undefined,
+      evaluator_type: evaluatorTypes,
       page_size: 100,
     });
     return res.evaluators?.map(genEvaluatorOption);
@@ -63,16 +77,19 @@ export function EvaluatorSelect(props: SelectProps) {
         return {
           isRenderInTag: true,
           content: (
-            <Typography.Text
-              className="max-w-[100px]"
-              ellipsis={{ showTooltip: true }}
-            >
-              <>{optionNode?.name || optionNode?.value}</>
-            </Typography.Text>
+            <div className="w-full flex pr-2 items-center gap-2">
+              {getEvaluatorIcon(optionNode?.evaluator_type as EvaluatorType)}
+              <Typography.Text
+                className="max-w-[100px]"
+                ellipsis={{ showTooltip: true }}
+              >
+                <>{optionNode?.name || optionNode?.value || ''}</>
+              </Typography.Text>
+            </div>
           ),
         };
       }
-      return (optionNode?.label || optionNode?.value) as React.ReactNode;
+      return (optionNode?.label || optionNode?.value || '') as React.ReactNode;
     },
     [multiple],
   );
@@ -91,17 +108,44 @@ export function EvaluatorSelect(props: SelectProps) {
       showRefreshBtn={true}
       onClickRefresh={() => service.run()}
       outerBottomSlot={
-        <div
-          onClick={() => {
-            window.open(`${baseURL}/evaluation/evaluators/create`);
-          }}
-          className="h-8 px-2 flex flex-row items-center cursor-pointer"
-        >
-          <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
-          <div className="text-sm font-medium text-brand-9">
-            {I18n.t('create_evaluator')}
-          </div>
-        </div>
+        <>
+          <Menu
+            position="bottomRight"
+            render={
+              <Menu.SubMenu className="w-[174px]" mode="menu">
+                <Menu.Item
+                  onClick={() => {
+                    openBlank('/evaluation/evaluators/create/llm');
+                  }}
+                >
+                  <div className="flex flex-row items-center">
+                    <IconCozAi className="mr-1" />
+                    <span>{I18n.t('evaluate_llm_evaluator')}</span>
+                  </div>
+                </Menu.Item>
+                <Menu.Item
+                  onClick={() => {
+                    openBlank(
+                      '/evaluation/evaluators/create/code?templateKey=custom&templateLang=Python',
+                    );
+                  }}
+                >
+                  <div className="flex flex-row items-center">
+                    <IconCozCode className="mr-1" />
+                    <span>{I18n.t('evaluate_code_evaluator')}</span>
+                  </div>
+                </Menu.Item>
+              </Menu.SubMenu>
+            }
+          >
+            <div className="h-8 px-2 flex flex-row items-center cursor-pointer">
+              <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
+              <div className="text-sm font-medium text-brand-9">
+                {I18n.t('create_evaluator')}
+              </div>
+            </div>
+          </Menu>
+        </>
       }
       optionList={service.data}
     />

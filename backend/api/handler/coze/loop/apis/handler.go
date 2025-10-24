@@ -13,12 +13,14 @@ import (
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
+	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lotask"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lometric"
-
 	"github.com/coze-dev/coze-loop/backend/infra/i18n"
 	cachemw "github.com/coze-dev/coze-loop/backend/infra/middleware/ctxcache"
 	logmw "github.com/coze-dev/coze-loop/backend/infra/middleware/logs"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/validator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag"
@@ -27,6 +29,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	evalopen "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/authn"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file"
@@ -47,6 +50,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loeval_target"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loevaluator"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loexpt"
+	loevalopen "github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loopenapi"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauthn"
 	foundationlofile "github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/lofile"
 	foundationloopenapi "github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loopenapi"
@@ -84,6 +88,7 @@ type EvaluationHandler struct {
 	evaluation.EvaluatorService
 	evaluation.EvaluationSetService
 	evaluation.EvalTargetService
+	evaluation.EvalOpenAPIService
 }
 
 type FoundationHandler struct {
@@ -124,17 +129,20 @@ func NewEvaluationHandler(
 	evaluatorApp evaluation.EvaluatorService,
 	evaluationSetApp evaluation.EvaluationSetService,
 	evalTargetService evaluation.EvalTargetService,
+	evalOpenAPIApp evaluation.EvalOpenAPIService,
 ) *EvaluationHandler {
 	h := &EvaluationHandler{
 		EvaluatorService:       evaluatorApp,
 		IExperimentApplication: exptApp,
 		EvaluationSetService:   evaluationSetApp,
 		EvalTargetService:      evalTargetService,
+		EvalOpenAPIService:     evalOpenAPIApp,
 	}
 	bindLocalCallClient(expt.ExperimentService(h), &localExptSvc, loexpt.NewLocalExperimentService)
 	bindLocalCallClient(evaluator.EvaluatorService(h), &localEvaluatorSvc, loevaluator.NewLocalEvaluatorService)
 	bindLocalCallClient(eval_set.EvaluationSetService(h), &localEvalSetSvc, loeval_set.NewLocalEvaluationSetService)
 	bindLocalCallClient(eval_target.EvalTargetService(h), &localEvalTargetSvc, loeval_target.NewLocalEvalTargetService)
+	bindLocalCallClient(evalopen.EvaluationOpenAPIService(h), &localEvalOpenAPIClient, loevalopen.NewLocalEvaluationOpenAPIService)
 	return h
 }
 
@@ -196,6 +204,7 @@ type ObservabilityHandler struct {
 	obapp.ITraceApplication
 	obapp.ITraceIngestionApplication
 	obapp.IObservabilityOpenAPIApplication
+	obapp.ITaskApplication
 	obapp.IMetricApplication
 }
 
@@ -203,16 +212,19 @@ func NewObservabilityHandler(
 	traceApp obapp.ITraceApplication,
 	ingestApp obapp.ITraceIngestionApplication,
 	openAPIApp obapp.IObservabilityOpenAPIApplication,
+	taskApp obapp.ITaskApplication,
 	metricApp obapp.IMetricApplication,
 ) *ObservabilityHandler {
 	h := &ObservabilityHandler{
 		ITraceApplication:                traceApp,
 		ITraceIngestionApplication:       ingestApp,
 		IObservabilityOpenAPIApplication: openAPIApp,
+		ITaskApplication:                 taskApp,
 		IMetricApplication:               metricApp,
 	}
 	bindLocalCallClient(trace.TraceService(h), &observabilityClient, lotrace.NewLocalTraceService)
 	bindLocalCallClient(traceopenapi.OpenAPIService(h), &observabilityOpenAPIClient, looptraceopenapi.NewLocalOpenAPIService)
+	bindLocalCallClient(task.TaskService(h), &observabilityTaskClient, lotask.NewLocalTaskService)
 	bindLocalCallClient(metric.MetricService(h), &observabilityMetricClient, lometric.NewLocalMetricService)
 	return h
 }
@@ -230,6 +242,7 @@ func defaultKiteXMiddlewares() []endpoint.Middleware {
 	return []endpoint.Middleware{
 		logmw.LogTrafficMW,
 		validator.KiteXValidatorMW,
+		session.NewRequestSessionMW(),
 		cachemw.CtxCacheMW,
 	}
 }

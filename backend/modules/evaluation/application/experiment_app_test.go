@@ -74,6 +74,9 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 				Desc:        gptr.Of("test description"),
 				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
 					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+					CustomEvalTarget: &domain_eval_target.CustomEvalTarget{
+						Name: gptr.Of("test"),
+					},
 				},
 				Session: &common.Session{
 					UserID: gptr.Of(int64(789)),
@@ -2633,12 +2636,12 @@ func TestExperimentApplication_InvokeExperiment(t *testing.T) {
 						gomock.Any(),
 						gomock.Any(), // 使用 Any 匹配器，因为结构体内部包含指针
 					).
-					DoAndReturn(func(_ context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, error) {
+					DoAndReturn(func(_ context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, []*entity.CreateDatasetItemOutput, error) {
 						// 验证关键字段
 						if param.SpaceID != validSpaceID || param.EvaluationSetID != validEvalSetID {
 							t.Errorf("unexpected param values: got SpaceID=%v, EvaluationSetID=%v", param.SpaceID, param.EvaluationSetID)
 						}
-						return map[int64]int64{int64(0): 6001, int64(1): 6002}, nil, nil
+						return map[int64]int64{int64(0): 6001, int64(1): 6002}, nil, nil, nil
 					})
 
 				// Mock Invoke experiment with matcher

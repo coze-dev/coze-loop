@@ -207,6 +207,9 @@ func FilterFieldDTO2DO(field *filter.FilterField) *loop_span.FilterField {
 	if field.SubFilter != nil {
 		fField.SubFilter = FilterFieldsDTO2DO(field.SubFilter)
 	}
+	if field.IsCustom != nil {
+		fField.IsCustom = *field.IsCustom
+	}
 	return fField
 }
 

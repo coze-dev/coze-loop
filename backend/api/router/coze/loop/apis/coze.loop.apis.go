@@ -101,11 +101,14 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_v11 := _evaluation.Group("/v1", _v11Mw(handler)...)
 				_v11.POST("/eval_targets", append(_eval_targetsMw(handler), apis.CreateEvalTarget)...)
 				_eval_targets := _v11.Group("/eval_targets", _eval_targetsMw(handler)...)
+				_eval_targets.POST("/async_debug", append(_asyncdebugevaltargetMw(handler), apis.AsyncDebugEvalTarget)...)
 				_eval_targets.POST("/batch_get_by_source", append(_batchgetevaltargetsbysourceMw(handler), apis.BatchGetEvalTargetsBySource)...)
 				_eval_targets.POST("/batch_get_source", append(_batchgetsourceevaltargetsMw(handler), apis.BatchGetSourceEvalTargets)...)
+				_eval_targets.POST("/debug", append(_debugevaltargetMw(handler), apis.DebugEvalTarget)...)
 				_eval_targets.POST("/list_source", append(_listsourceevaltargetsMw(handler), apis.ListSourceEvalTargets)...)
 				_eval_targets.POST("/list_source_version", append(_listsourceevaltargetversionsMw(handler), apis.ListSourceEvalTargetVersions)...)
 				_eval_targets.POST("/mock_output", append(_mockevaltargetoutputMw(handler), apis.MockEvalTargetOutput)...)
+				_eval_targets.POST("/search_custom", append(_searchcustomevaltargetMw(handler), apis.SearchCustomEvalTarget)...)
 				{
 					_eval_target_id := _eval_targets.Group("/:eval_target_id", _eval_target_idMw(handler)...)
 					{
@@ -284,11 +287,20 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_annotations.DELETE("/:annotation_id", append(_deletemanualannotationMw(handler), apis.DeleteManualAnnotation)...)
 				_annotations.PUT("/:annotation_id", append(_updatemanualannotationMw(handler), apis.UpdateManualAnnotation)...)
 				_annotations.POST("/list", append(_listannotationsMw(handler), apis.ListAnnotations)...)
+				_v14.POST("/tasks", append(_tasksMw(handler), apis.CreateTask)...)
+				_tasks := _v14.Group("/tasks", _tasksMw(handler)...)
+				_tasks.POST("/list", append(_listtasksMw(handler), apis.ListTasks)...)
+				_tasks.GET("/:task_id", append(_gettaskMw(handler), apis.GetTask)...)
+				_tasks.PUT("/:task_id", append(_updatetaskMw(handler), apis.UpdateTask)...)
 				_v14.POST("/views", append(_viewsMw(handler), apis.CreateView)...)
 				_views := _v14.Group("/views", _viewsMw(handler)...)
 				_views.POST("/list", append(_listviewsMw(handler), apis.ListViews)...)
 				_views.DELETE("/:view_id", append(_deleteviewMw(handler), apis.DeleteView)...)
 				_views.PUT("/:view_id", append(_updateviewMw(handler), apis.UpdateView)...)
+				{
+					_annotation := _v14.Group("/annotation", _annotationMw(handler)...)
+					_annotation.GET("/list_evaluators", append(_listannotationevaluatorsMw(handler), apis.ListAnnotationEvaluators)...)
+				}
 				{
 					_metrics := _v14.Group("/metrics", _metricsMw(handler)...)
 					_metrics.POST("/drill_down_values", append(_getdrilldownvaluesMw(handler), apis.GetDrillDownValues)...)
@@ -299,11 +311,21 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_spans.POST("/list", append(_listspansMw(handler), apis.ListSpans)...)
 				}
 				{
+					_tasks0 := _v14.Group("/tasks", _tasks0Mw(handler)...)
+					_tasks0.POST("/check_name", append(_checktasknameMw(handler), apis.CheckTaskName)...)
+				}
+				{
+					_trace := _v14.Group("/trace", _traceMw(handler)...)
+					_trace.POST("/extract_span_info", append(_extractspaninfoMw(handler), apis.ExtractSpanInfo)...)
+				}
+				{
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
 					_traces.POST("/batch_get_advance_info", append(_batchgettracesadvanceinfoMw(handler), apis.BatchGetTracesAdvanceInfo)...)
+					_traces.POST("/change_eval_score", append(_changeevaluatorscoreMw(handler), apis.ChangeEvaluatorScore)...)
 					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
+					_traces.POST("/search_tree", append(_searchtracetreeMw(handler), apis.SearchTraceTree)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
 				}
 			}
@@ -358,6 +380,12 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 		_v16 := root.Group("/v1", _v16Mw(handler)...)
 		{
 			_loop := _v16.Group("/loop", _loopMw(handler)...)
+			_loop.DELETE("/annotations", append(_deleteannotationMw(handler), apis.DeleteAnnotation)...)
+			_loop.POST("/annotations", append(_createannotationMw(handler), apis.CreateAnnotation)...)
+			{
+				_eval_targets0 := _loop.Group("/eval_targets", _eval_targets0Mw(handler)...)
+				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
+			}
 			{
 				_files := _loop.Group("/files", _filesMw(handler)...)
 				_files.POST("/upload", append(_uploadloopfileMw(handler), apis.UploadLoopFile)...)
@@ -384,6 +412,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_traces0.POST("/ingest", append(_ingesttracesMw(handler), apis.IngestTraces)...)
 				_traces0.POST("/list", append(_listtracesoapiMw(handler), apis.ListTracesOApi)...)
 				_traces0.POST("/search", append(_searchtraceoapiMw(handler), apis.SearchTraceOApi)...)
+				_traces0.POST("/search_tree", append(_searchtracetreeoapiMw(handler), apis.SearchTraceTreeOApi)...)
 			}
 		}
 	}

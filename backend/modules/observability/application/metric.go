@@ -51,7 +51,7 @@ func (m *MetricApplication) GetMetrics(ctx context.Context, req *metric.GetMetri
 	}
 	if err := m.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceMetricRead,
-		strconv.FormatInt(req.GetWorkspaceID(), 10)); err != nil {
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	var (
@@ -150,6 +150,11 @@ func (m *MetricApplication) shouldCompareWith(start, end int64, c *entity.Compar
 // 取最近七天内数据
 func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.GetDrillDownValuesRequest) (r *metric.GetDrillDownValuesResponse, err error) {
 	if err := m.validateGetDrillDownValuesReq(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := m.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceMetricRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 	var metricName string
