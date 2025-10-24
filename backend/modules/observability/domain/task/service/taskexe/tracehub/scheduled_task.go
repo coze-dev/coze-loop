@@ -222,6 +222,10 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		}
 		// Handle taskRun
 		if taskPO.TaskStatus == task.TaskStatusRunning || taskPO.TaskStatus == task.TaskStatusPending {
+			if taskRun == nil {
+				logs.CtxError(ctx, "taskID:%d, taskRun is nil", taskPO.ID)
+				continue
+			}
 			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskPO.ID, taskRun.RunEndAt)
 			// Handling repeated tasks: single task time horizon reached
 			if time.Now().After(taskRun.RunEndAt) {
