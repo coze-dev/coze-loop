@@ -8,4 +8,5 @@ import "context"
 //go:generate mockgen -destination=mocks/file_provider.go -package=mocks . IFileProvider
 type IFileProvider interface {
 	MGetFileURL(ctx context.Context, keys []string) (urls map[string]string, err error)
+	UploadFileForServer(ctx context.Context, mimeType string, body []byte, workspaceID int64) (key string, err error)
 }

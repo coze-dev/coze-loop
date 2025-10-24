@@ -404,6 +404,14 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 	if err != nil {
 		return promptDO, nil, err
 	}
+
+	// Convert base64 files to download URLs
+	if reply != nil && reply.Item != nil && reply.Item.Message != nil {
+		if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
+			return promptDO, nil, err
+		}
+	}
+
 	return promptDO, reply, nil
 }
 
@@ -523,6 +531,13 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 	for reply := range resultStream {
 		if reply == nil || reply.Item == nil {
 			continue
+		}
+		// Convert base64 files to download URLs
+		if reply.Item.Message != nil {
+			if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
+				logs.CtxError(ctx, "failed to convert base64 to file URLs: %v", err)
+				return promptDO, nil, err
+			}
 		}
 		chunk := &openapi.ExecuteStreamingResponse{
 			Data: &openapi.ExecuteStreamingData{

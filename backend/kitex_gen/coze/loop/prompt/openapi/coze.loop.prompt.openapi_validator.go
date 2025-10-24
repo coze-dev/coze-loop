@@ -154,6 +154,22 @@ func (p *Message) IsValid() error {
 	return nil
 }
 func (p *ContentPart) IsValid() error {
+	if p.Config != nil {
+		if err := p.Config.IsValid(); err != nil {
+			return fmt.Errorf("field Config not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *MediaConfig) IsValid() error {
+	if p.Fps != nil {
+		if *p.Fps < float64(0.2) {
+			return fmt.Errorf("field Fps ge rule failed, current value: %v", *p.Fps)
+		}
+		if *p.Fps > float64(5) {
+			return fmt.Errorf("field Fps le rule failed, current value: %v", *p.Fps)
+		}
+	}
 	return nil
 }
 func (p *VariableDef) IsValid() error {

@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,6 +45,7 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 		"test-image-1": "https://example.com/image1.jpg",
 		"test-image-2": "https://example.com/image2.jpg",
 		"test-image-3": "https://example.com/image3.jpg",
+		"test-video-1": "https://example.com/video1.mp4",
 	}
 	tests := []struct {
 		name         string
@@ -150,6 +152,46 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 								Type: entity.ContentTypeImageURL,
 								ImageURL: &entity.ImageURL{
 									URI: "test-image-3",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "video urls filled for messages and variable values",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockFile := mocks.NewMockIFileProvider(ctrl)
+				mockFile.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(uri2URLMap, nil)
+				return fields{
+					file: mockFile,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{
+						Role: entity.RoleUser,
+						Parts: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeVideoURL,
+								VideoURL: &entity.VideoURL{
+									URI: "test-video-1",
+								},
+							},
+						},
+					},
+				},
+				variableVals: []*entity.VariableVal{
+					{
+						Key: "video-multi",
+						MultiPartValues: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeVideoURL,
+								VideoURL: &entity.VideoURL{
+									URI: "test-video-1",
 								},
 							},
 						},
@@ -486,11 +528,17 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 						continue
 					}
 					for _, part := range message.Parts {
-						if part == nil || part.ImageURL == nil {
+						if part == nil {
 							continue
 						}
-						assert.Equal(t, uri2URLMap[part.ImageURL.URI], part.ImageURL.URL)
-						part.ImageURL.URL = ""
+						if part.ImageURL != nil && part.ImageURL.URI != "" {
+							assert.Equal(t, uri2URLMap[part.ImageURL.URI], part.ImageURL.URL)
+							part.ImageURL.URL = ""
+						}
+						if part.VideoURL != nil && part.VideoURL.URI != "" {
+							assert.Equal(t, uri2URLMap[part.VideoURL.URI], part.VideoURL.URL)
+							part.VideoURL.URL = ""
+						}
 					}
 				}
 				// 验证variableVals中的URL是否正确填充
@@ -499,11 +547,17 @@ func TestPromptServiceImpl_MCompleteMultiModalFileURL(t *testing.T) {
 						continue
 					}
 					for _, part := range val.MultiPartValues {
-						if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
+						if part == nil {
 							continue
 						}
-						assert.Equal(t, uri2URLMap[part.ImageURL.URI], part.ImageURL.URL)
-						part.ImageURL.URL = ""
+						if part.ImageURL != nil && part.ImageURL.URI != "" {
+							assert.Equal(t, uri2URLMap[part.ImageURL.URI], part.ImageURL.URL)
+							part.ImageURL.URL = ""
+						}
+						if part.VideoURL != nil && part.VideoURL.URI != "" {
+							assert.Equal(t, uri2URLMap[part.VideoURL.URI], part.VideoURL.URL)
+							part.VideoURL.URL = ""
+						}
 					}
 				}
 				assert.Equal(t, originMessages, tt.args.messages)
@@ -1207,6 +1261,378 @@ func TestPromptServiceImpl_MParseCommitVersion(t *testing.T) {
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			if tt.wantErr == nil {
 				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_messageContainsBase64File(t *testing.T) {
+	encoded := base64.StdEncoding.EncodeToString([]byte("hello"))
+	dataURL := "data:image/png;base64," + encoded
+
+	tests := []struct {
+		name     string
+		messages []*entity.Message
+		want     bool
+	}{
+		{
+			name:     "nil messages returns false",
+			messages: nil,
+			want:     false,
+		},
+		{
+			name: "message without parts returns false",
+			messages: []*entity.Message{
+				{Role: entity.RoleUser},
+			},
+			want: false,
+		},
+		{
+			name: "message without data url returns false",
+			messages: []*entity.Message{
+				{
+					Role: entity.RoleUser,
+					Parts: []*entity.ContentPart{
+						{
+							Type: entity.ContentTypeImageURL,
+							ImageURL: &entity.ImageURL{
+								URL: "https://example.com/image.png",
+							},
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "contains base64 returns true",
+			messages: []*entity.Message{
+				{
+					Role: entity.RoleUser,
+					Parts: []*entity.ContentPart{
+						{
+							Type: entity.ContentTypeImageURL,
+							ImageURL: &entity.ImageURL{
+								URL: dataURL,
+							},
+						},
+					},
+				},
+			},
+			want: true,
+		},
+	}
+
+	p := &PromptServiceImpl{}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, p.messageContainsBase64File(tt.messages))
+		})
+	}
+}
+
+func TestPromptServiceImpl_MConvertBase64ToFileURI(t *testing.T) {
+	type args struct {
+		ctx         context.Context
+		messages    []*entity.Message
+		workspaceID int64
+	}
+
+	decoded := []byte("hello world")
+	dataURL := "data:image/png;base64," + base64.StdEncoding.EncodeToString(decoded)
+
+	tests := []struct {
+		name         string
+		args         args
+		setupMock    func(mock *mocks.MockIFileProvider)
+		wantErr      error
+		validateFunc func(t *testing.T, messages []*entity.Message)
+	}{
+		{
+			name: "successfully converts base64 image",
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{
+						Role: entity.RoleUser,
+						Parts: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeImageURL,
+								ImageURL: &entity.ImageURL{
+									URL: dataURL,
+								},
+							},
+						},
+					},
+				},
+				workspaceID: 101,
+			},
+			setupMock: func(mock *mocks.MockIFileProvider) {
+				mock.EXPECT().
+					UploadFileForServer(gomock.Any(), "image/png", gomock.Eq(decoded), int64(101)).
+					Return("workspace/101/file.png", nil)
+			},
+			wantErr: nil,
+			validateFunc: func(t *testing.T, messages []*entity.Message) {
+				part := messages[0].Parts[0]
+				assert.Equal(t, "workspace/101/file.png", part.ImageURL.URI)
+				assert.Equal(t, "", part.ImageURL.URL)
+			},
+		},
+		{
+			name: "invalid data url skipped without error",
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{
+						Role: entity.RoleUser,
+						Parts: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeImageURL,
+								ImageURL: &entity.ImageURL{
+									URL: "data:image/png;base64",
+								},
+							},
+						},
+					},
+				},
+				workspaceID: 1,
+			},
+			setupMock: func(mock *mocks.MockIFileProvider) {
+				mock.EXPECT().UploadFileForServer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: nil,
+			validateFunc: func(t *testing.T, messages []*entity.Message) {
+				part := messages[0].Parts[0]
+				assert.Equal(t, "", part.ImageURL.URI)
+				assert.Equal(t, "data:image/png;base64", part.ImageURL.URL)
+			},
+		},
+		{
+			name: "upload error returns error",
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{
+						Role: entity.RoleUser,
+						Parts: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeImageURL,
+								ImageURL: &entity.ImageURL{
+									URL: dataURL,
+								},
+							},
+						},
+					},
+				},
+				workspaceID: 7,
+			},
+			setupMock: func(mock *mocks.MockIFileProvider) {
+				mock.EXPECT().
+					UploadFileForServer(gomock.Any(), "image/png", gomock.Eq(decoded), int64(7)).
+					Return("", assert.AnError)
+			},
+			wantErr: assert.AnError,
+		},
+		{
+			name: "message without parts returns nil",
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{Role: entity.RoleUser},
+				},
+				workspaceID: 5,
+			},
+			setupMock: func(mock *mocks.MockIFileProvider) {
+				mock.EXPECT().UploadFileForServer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFile := mocks.NewMockIFileProvider(ctrl)
+			if tt.setupMock != nil {
+				tt.setupMock(mockFile)
+			}
+			p := &PromptServiceImpl{
+				file: mockFile,
+			}
+
+			err := p.MConvertBase64DataURLToFileURI(tt.args.ctx, tt.args.messages, tt.args.workspaceID)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+
+			if tt.validateFunc != nil {
+				tt.validateFunc(t, tt.args.messages)
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_MConvertBase64ToFileURL(t *testing.T) {
+	type args struct {
+		ctx         context.Context
+		messages    []*entity.Message
+		workspaceID int64
+	}
+
+	decoded := []byte("image-bytes")
+	dataURL := "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(decoded)
+
+	tests := []struct {
+		name      string
+		args      args
+		setupMock func(mock *mocks.MockIFileProvider)
+		wantErr   error
+		validate  func(t *testing.T, messages []*entity.Message)
+	}{
+		{
+			name: "returns quickly when no base64 data",
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{
+						Role: entity.RoleUser,
+						Parts: []*entity.ContentPart{
+							{
+								Type:     entity.ContentTypeImageURL,
+								ImageURL: &entity.ImageURL{URL: "https://example.com/image.png"},
+							},
+						},
+					},
+				},
+				workspaceID: 1,
+			},
+			setupMock: func(mock *mocks.MockIFileProvider) {
+				mock.EXPECT().UploadFileForServer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				mock.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: nil,
+		},
+		{
+			name: "successfully converts base64 to downloadable url",
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{
+						Role: entity.RoleUser,
+						Parts: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeImageURL,
+								ImageURL: &entity.ImageURL{
+									URL: dataURL,
+								},
+							},
+						},
+					},
+				},
+				workspaceID: 200,
+			},
+			setupMock: func(mock *mocks.MockIFileProvider) {
+				gomock.InOrder(
+					mock.EXPECT().
+						UploadFileForServer(gomock.Any(), "image/jpeg", gomock.Eq(decoded), int64(200)).
+						Return("workspace/200/file.jpg", nil),
+					mock.EXPECT().
+						MGetFileURL(gomock.Any(), gomock.Eq([]string{"workspace/200/file.jpg"})).
+						Return(map[string]string{"workspace/200/file.jpg": "https://example.com/file.jpg"}, nil),
+				)
+			},
+			wantErr: nil,
+			validate: func(t *testing.T, messages []*entity.Message) {
+				part := messages[0].Parts[0]
+				assert.Equal(t, "workspace/200/file.jpg", part.ImageURL.URI)
+				assert.Equal(t, "https://example.com/file.jpg", part.ImageURL.URL)
+			},
+		},
+		{
+			name: "upload error bubbles up",
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{
+						Role: entity.RoleUser,
+						Parts: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeImageURL,
+								ImageURL: &entity.ImageURL{
+									URL: dataURL,
+								},
+							},
+						},
+					},
+				},
+				workspaceID: 300,
+			},
+			setupMock: func(mock *mocks.MockIFileProvider) {
+				mock.EXPECT().
+					UploadFileForServer(gomock.Any(), "image/jpeg", gomock.Eq(decoded), int64(300)).
+					Return("", assert.AnError)
+			},
+			wantErr: assert.AnError,
+		},
+		{
+			name: "fetching url error bubbles up",
+			args: args{
+				ctx: context.Background(),
+				messages: []*entity.Message{
+					{
+						Role: entity.RoleUser,
+						Parts: []*entity.ContentPart{
+							{
+								Type: entity.ContentTypeImageURL,
+								ImageURL: &entity.ImageURL{
+									URL: dataURL,
+								},
+							},
+						},
+					},
+				},
+				workspaceID: 400,
+			},
+			setupMock: func(mock *mocks.MockIFileProvider) {
+				gomock.InOrder(
+					mock.EXPECT().
+						UploadFileForServer(gomock.Any(), "image/jpeg", gomock.Eq(decoded), int64(400)).
+						Return("workspace/400/file.jpg", nil),
+					mock.EXPECT().
+						MGetFileURL(gomock.Any(), gomock.Eq([]string{"workspace/400/file.jpg"})).
+						Return(nil, assert.AnError),
+				)
+			},
+			wantErr: assert.AnError,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFile := mocks.NewMockIFileProvider(ctrl)
+			if tt.setupMock != nil {
+				tt.setupMock(mockFile)
+			}
+
+			p := &PromptServiceImpl{
+				file: mockFile,
+			}
+
+			err := p.MConvertBase64DataURLToFileURL(tt.args.ctx, tt.args.messages, tt.args.workspaceID)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+
+			if tt.validate != nil {
+				tt.validate(t, tt.args.messages)
 			}
 		})
 	}
