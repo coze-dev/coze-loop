@@ -692,13 +692,13 @@ func (e *EvalOpenAPIApplication) GetExperimentsOApi(ctx context.Context, req *op
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 	session := entity.NewSession(ctx)
-	do, err := e.manager.GetDetail(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	do, err := e.manager.GetDetail(ctx, req.GetExperimentID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
 	}
 	// 鉴权
 	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
+		ObjectID:        strconv.FormatInt(req.GetExperimentID(), 10),
 		SpaceID:         req.GetWorkspaceID(),
 		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
 		OwnerID:         gptr.Of(do.CreatedBy),

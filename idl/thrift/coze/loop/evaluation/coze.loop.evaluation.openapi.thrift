@@ -323,7 +323,7 @@ struct SubmitExperimentOpenAPIData {
 // 3.2 获取评测实验详情
 struct GetExperimentsOApiRequest {
     1: optional i64 workspace_id (api.query='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
-    2: optional i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
+    2: optional i64 experiment_id (api.path='experiment_id',api.js_conv='true', go.tag='json:"experiment_id"')
 
     255: optional base.Base Base
 }

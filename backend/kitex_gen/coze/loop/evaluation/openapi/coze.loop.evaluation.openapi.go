@@ -14681,9 +14681,9 @@ func (p *SubmitExperimentOpenAPIData) Field1DeepEqual(src *experiment.Experiment
 
 // 3.2 获取评测实验详情
 type GetExperimentsOApiRequest struct {
-	WorkspaceID *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" query:"workspace_id" `
-	ExptID      *int64     `thrift:"expt_id,2,optional" frugal:"2,optional,i64" json:"expt_id" path:"expt_id" `
-	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID  *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" query:"workspace_id" `
+	ExperimentID *int64     `thrift:"experiment_id,2,optional" frugal:"2,optional,i64" json:"experiment_id" path:"experiment_id" `
+	Base         *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetExperimentsOApiRequest() *GetExperimentsOApiRequest {
@@ -14705,16 +14705,16 @@ func (p *GetExperimentsOApiRequest) GetWorkspaceID() (v int64) {
 	return *p.WorkspaceID
 }
 
-var GetExperimentsOApiRequest_ExptID_DEFAULT int64
+var GetExperimentsOApiRequest_ExperimentID_DEFAULT int64
 
-func (p *GetExperimentsOApiRequest) GetExptID() (v int64) {
+func (p *GetExperimentsOApiRequest) GetExperimentID() (v int64) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetExptID() {
-		return GetExperimentsOApiRequest_ExptID_DEFAULT
+	if !p.IsSetExperimentID() {
+		return GetExperimentsOApiRequest_ExperimentID_DEFAULT
 	}
-	return *p.ExptID
+	return *p.ExperimentID
 }
 
 var GetExperimentsOApiRequest_Base_DEFAULT *base.Base
@@ -14731,8 +14731,8 @@ func (p *GetExperimentsOApiRequest) GetBase() (v *base.Base) {
 func (p *GetExperimentsOApiRequest) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
-func (p *GetExperimentsOApiRequest) SetExptID(val *int64) {
-	p.ExptID = val
+func (p *GetExperimentsOApiRequest) SetExperimentID(val *int64) {
+	p.ExperimentID = val
 }
 func (p *GetExperimentsOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -14740,7 +14740,7 @@ func (p *GetExperimentsOApiRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_GetExperimentsOApiRequest = map[int16]string{
 	1:   "workspace_id",
-	2:   "expt_id",
+	2:   "experiment_id",
 	255: "Base",
 }
 
@@ -14748,8 +14748,8 @@ func (p *GetExperimentsOApiRequest) IsSetWorkspaceID() bool {
 	return p.WorkspaceID != nil
 }
 
-func (p *GetExperimentsOApiRequest) IsSetExptID() bool {
-	return p.ExptID != nil
+func (p *GetExperimentsOApiRequest) IsSetExperimentID() bool {
+	return p.ExperimentID != nil
 }
 
 func (p *GetExperimentsOApiRequest) IsSetBase() bool {
@@ -14846,7 +14846,7 @@ func (p *GetExperimentsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.ExptID = _field
+	p.ExperimentID = _field
 	return nil
 }
 func (p *GetExperimentsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -14913,11 +14913,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *GetExperimentsOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExptID() {
-		if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 2); err != nil {
+	if p.IsSetExperimentID() {
+		if err = oprot.WriteFieldBegin("experiment_id", thrift.I64, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.ExptID); err != nil {
+		if err := oprot.WriteI64(*p.ExperimentID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -14966,7 +14966,7 @@ func (p *GetExperimentsOApiRequest) DeepEqual(ano *GetExperimentsOApiRequest) bo
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.ExptID) {
+	if !p.Field2DeepEqual(ano.ExperimentID) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -14989,12 +14989,12 @@ func (p *GetExperimentsOApiRequest) Field1DeepEqual(src *int64) bool {
 }
 func (p *GetExperimentsOApiRequest) Field2DeepEqual(src *int64) bool {
 
-	if p.ExptID == src {
+	if p.ExperimentID == src {
 		return true
-	} else if p.ExptID == nil || src == nil {
+	} else if p.ExperimentID == nil || src == nil {
 		return false
 	}
-	if *p.ExptID != *src {
+	if *p.ExperimentID != *src {
 		return false
 	}
 	return true

@@ -10559,7 +10559,7 @@ func (p *GetExperimentsOApiRequest) FastReadField2(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.ExptID = _field
+	p.ExperimentID = _field
 	return offset, nil
 }
 
@@ -10612,9 +10612,9 @@ func (p *GetExperimentsOApiRequest) fastWriteField1(buf []byte, w thrift.NocopyW
 
 func (p *GetExperimentsOApiRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetExptID() {
+	if p.IsSetExperimentID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.ExptID)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ExperimentID)
 	}
 	return offset
 }
@@ -10639,7 +10639,7 @@ func (p *GetExperimentsOApiRequest) field1Length() int {
 
 func (p *GetExperimentsOApiRequest) field2Length() int {
 	l := 0
-	if p.IsSetExptID() {
+	if p.IsSetExperimentID() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -10666,9 +10666,9 @@ func (p *GetExperimentsOApiRequest) DeepCopy(s interface{}) error {
 		p.WorkspaceID = &tmp
 	}
 
-	if src.ExptID != nil {
-		tmp := *src.ExptID
-		p.ExptID = &tmp
+	if src.ExperimentID != nil {
+		tmp := *src.ExperimentID
+		p.ExperimentID = &tmp
 	}
 
 	var _base *base.Base
