@@ -487,7 +487,7 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 					if assert.Len(t, captured, 1) {
 						expectedStart := (10 * 24 * time.Hour.Milliseconds()) - 7*24*time.Hour.Milliseconds()
 						assert.Equal(t, expectedStart, captured[0].StartTime)
-						assert.Equal(t, int64(10*24*time.Hour.Milliseconds()), captured[0].EndTime)
+						assert.Equal(t, 10*24*time.Hour.Milliseconds(), captured[0].EndTime)
 						assert.Equal(t, []string{entity.MetricNameModelNamePie}, captured[0].MetricsNames)
 					}
 				}

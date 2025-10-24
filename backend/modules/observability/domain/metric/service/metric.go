@@ -364,7 +364,7 @@ func (m *MetricsService) formatTimeSeriesData(data []map[string]any, mBuilder *m
 	}
 	// 零值填充
 	t := entity.NewTimeIntervals(mBuilder.mRepoReq.StartAt, mBuilder.mRepoReq.EndAt, mBuilder.granularity)
-	for metricName, _ := range metricNameMap {
+	for metricName := range metricNameMap {
 		if len(ret[metricName].TimeSeries) == 0 {
 			ret[metricName].TimeSeries["all"] = []*entity.MetricPoint{}
 		}
