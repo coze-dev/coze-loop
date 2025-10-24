@@ -3287,10 +3287,8 @@ type Experiment struct {
 	EndTime *int64 `thrift:"end_time,12,optional" frugal:"12,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
 	// 评测集并发数
 	ItemConcurNum *int32 `thrift:"item_concur_num,13,optional" frugal:"13,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
-	// 评估器并发数
-	EvaluatorsConcurNum *int32 `thrift:"evaluators_concur_num,14,optional" frugal:"14,optional,i32" form:"evaluators_concur_num" json:"evaluators_concur_num,omitempty" query:"evaluators_concur_num"`
 	// 运行时参数
-	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,15,optional" frugal:"15,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty" query:"target_runtime_param"`
+	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,14,optional" frugal:"14,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty" query:"target_runtime_param"`
 	// 三元组信息
 	TargetFieldMapping    *TargetFieldMapping      `thrift:"target_field_mapping,31,optional" frugal:"31,optional,TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty" query:"target_field_mapping"`
 	EvaluatorFieldMapping []*EvaluatorFieldMapping `thrift:"evaluator_field_mapping,32,optional" frugal:"32,optional,list<EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty" query:"evaluator_field_mapping"`
@@ -3390,18 +3388,6 @@ func (p *Experiment) GetItemConcurNum() (v int32) {
 	return *p.ItemConcurNum
 }
 
-var Experiment_EvaluatorsConcurNum_DEFAULT int32
-
-func (p *Experiment) GetEvaluatorsConcurNum() (v int32) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEvaluatorsConcurNum() {
-		return Experiment_EvaluatorsConcurNum_DEFAULT
-	}
-	return *p.EvaluatorsConcurNum
-}
-
 var Experiment_TargetRuntimeParam_DEFAULT *common.RuntimeParam
 
 func (p *Experiment) GetTargetRuntimeParam() (v *common.RuntimeParam) {
@@ -3482,9 +3468,6 @@ func (p *Experiment) SetEndTime(val *int64) {
 func (p *Experiment) SetItemConcurNum(val *int32) {
 	p.ItemConcurNum = val
 }
-func (p *Experiment) SetEvaluatorsConcurNum(val *int32) {
-	p.EvaluatorsConcurNum = val
-}
 func (p *Experiment) SetTargetRuntimeParam(val *common.RuntimeParam) {
 	p.TargetRuntimeParam = val
 }
@@ -3509,8 +3492,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	11:  "start_time",
 	12:  "end_time",
 	13:  "item_concur_num",
-	14:  "evaluators_concur_num",
-	15:  "target_runtime_param",
+	14:  "target_runtime_param",
 	31:  "target_field_mapping",
 	32:  "evaluator_field_mapping",
 	50:  "expt_stats",
@@ -3543,10 +3525,6 @@ func (p *Experiment) IsSetEndTime() bool {
 
 func (p *Experiment) IsSetItemConcurNum() bool {
 	return p.ItemConcurNum != nil
-}
-
-func (p *Experiment) IsSetEvaluatorsConcurNum() bool {
-	return p.EvaluatorsConcurNum != nil
 }
 
 func (p *Experiment) IsSetTargetRuntimeParam() bool {
@@ -3644,16 +3622,8 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 14:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField14(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 15:
 			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField15(iprot); err != nil {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3798,17 +3768,6 @@ func (p *Experiment) ReadField13(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *Experiment) ReadField14(iprot thrift.TProtocol) error {
-
-	var _field *int32
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.EvaluatorsConcurNum = _field
-	return nil
-}
-func (p *Experiment) ReadField15(iprot thrift.TProtocol) error {
 	_field := common.NewRuntimeParam()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -3900,10 +3859,6 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField14(oprot); err != nil {
 			fieldId = 14
-			goto WriteFieldError
-		}
-		if err = p.writeField15(oprot); err != nil {
-			fieldId = 15
 			goto WriteFieldError
 		}
 		if err = p.writeField31(oprot); err != nil {
@@ -4067,26 +4022,8 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
 func (p *Experiment) writeField14(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvaluatorsConcurNum() {
-		if err = oprot.WriteFieldBegin("evaluators_concur_num", thrift.I32, 14); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI32(*p.EvaluatorsConcurNum); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
-}
-func (p *Experiment) writeField15(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetRuntimeParam() {
-		if err = oprot.WriteFieldBegin("target_runtime_param", thrift.STRUCT, 15); err != nil {
+		if err = oprot.WriteFieldBegin("target_runtime_param", thrift.STRUCT, 14); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := p.TargetRuntimeParam.Write(oprot); err != nil {
@@ -4098,9 +4035,9 @@ func (p *Experiment) writeField15(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
 func (p *Experiment) writeField31(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetFieldMapping() {
@@ -4218,10 +4155,7 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 	if !p.Field13DeepEqual(ano.ItemConcurNum) {
 		return false
 	}
-	if !p.Field14DeepEqual(ano.EvaluatorsConcurNum) {
-		return false
-	}
-	if !p.Field15DeepEqual(ano.TargetRuntimeParam) {
+	if !p.Field14DeepEqual(ano.TargetRuntimeParam) {
 		return false
 	}
 	if !p.Field31DeepEqual(ano.TargetFieldMapping) {
@@ -4323,19 +4257,7 @@ func (p *Experiment) Field13DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *Experiment) Field14DeepEqual(src *int32) bool {
-
-	if p.EvaluatorsConcurNum == src {
-		return true
-	} else if p.EvaluatorsConcurNum == nil || src == nil {
-		return false
-	}
-	if *p.EvaluatorsConcurNum != *src {
-		return false
-	}
-	return true
-}
-func (p *Experiment) Field15DeepEqual(src *common.RuntimeParam) bool {
+func (p *Experiment) Field14DeepEqual(src *common.RuntimeParam) bool {
 
 	if !p.TargetRuntimeParam.DeepEqual(src) {
 		return false

@@ -450,6 +450,11 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		ID:        gptr.Of(experiment.ID),
 		Name:      gptr.Of(experiment.Name),
 		ExptStats: openAPIExperimentStatsDO2DTO(experiment.Stats),
+		BaseInfo: &openapiCommon.BaseInfo{
+			CreatedBy: &openapiCommon.UserInfo{
+				UserID: gptr.Of(experiment.CreatedBy),
+			},
+		},
 	}
 	if experiment.Description != "" {
 		result.Description = gptr.Of(experiment.Description)
@@ -482,11 +487,6 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 
 		if evaluatorMappings := openAPIEvaluatorFieldMappingsDO2DTO(experiment.EvalConf.ConnectorConf.EvaluatorsConf); len(evaluatorMappings) > 0 {
 			result.EvaluatorFieldMapping = evaluatorMappings
-		}
-
-		if experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum != nil {
-			evaluatorConcur := int32(*experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConcurNum)
-			result.EvaluatorsConcurNum = &evaluatorConcur
 		}
 	}
 

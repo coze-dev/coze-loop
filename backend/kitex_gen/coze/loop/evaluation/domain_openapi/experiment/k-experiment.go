@@ -2405,22 +2405,8 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 14:
-			if fieldTypeId == thrift.I32 {
-				l, err = p.FastReadField14(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 15:
 			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField15(buf[offset:])
+				l, err = p.FastReadField14(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -2606,20 +2592,6 @@ func (p *Experiment) FastReadField13(buf []byte) (int, error) {
 
 func (p *Experiment) FastReadField14(buf []byte) (int, error) {
 	offset := 0
-
-	var _field *int32
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.EvaluatorsConcurNum = _field
-	return offset, nil
-}
-
-func (p *Experiment) FastReadField15(buf []byte) (int, error) {
-	offset := 0
 	_field := common.NewRuntimeParam()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
@@ -2702,11 +2674,10 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField13(buf[offset:], w)
-		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
-		offset += p.fastWriteField15(buf[offset:], w)
+		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField31(buf[offset:], w)
 		offset += p.fastWriteField32(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
@@ -2727,7 +2698,6 @@ func (p *Experiment) BLength() int {
 		l += p.field12Length()
 		l += p.field13Length()
 		l += p.field14Length()
-		l += p.field15Length()
 		l += p.field31Length()
 		l += p.field32Length()
 		l += p.field50Length()
@@ -2802,17 +2772,8 @@ func (p *Experiment) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *Experiment) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetEvaluatorsConcurNum() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 14)
-		offset += thrift.Binary.WriteI32(buf[offset:], *p.EvaluatorsConcurNum)
-	}
-	return offset
-}
-
-func (p *Experiment) fastWriteField15(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
 	if p.IsSetTargetRuntimeParam() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 15)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 14)
 		offset += p.TargetRuntimeParam.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
@@ -2926,15 +2887,6 @@ func (p *Experiment) field13Length() int {
 
 func (p *Experiment) field14Length() int {
 	l := 0
-	if p.IsSetEvaluatorsConcurNum() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
-	}
-	return l
-}
-
-func (p *Experiment) field15Length() int {
-	l := 0
 	if p.IsSetTargetRuntimeParam() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.TargetRuntimeParam.BLength()
@@ -3027,11 +2979,6 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 	if src.ItemConcurNum != nil {
 		tmp := *src.ItemConcurNum
 		p.ItemConcurNum = &tmp
-	}
-
-	if src.EvaluatorsConcurNum != nil {
-		tmp := *src.EvaluatorsConcurNum
-		p.EvaluatorsConcurNum = &tmp
 	}
 
 	var _targetRuntimeParam *common.RuntimeParam
