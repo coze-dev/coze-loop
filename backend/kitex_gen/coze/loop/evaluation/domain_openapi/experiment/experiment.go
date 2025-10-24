@@ -3284,7 +3284,7 @@ type Experiment struct {
 	// ISO 8601格式
 	StartTime *int64 `thrift:"start_time,11,optional" frugal:"11,optional,i64" json:"start_time" form:"start_time" query:"start_time"`
 	// ISO 8601格式
-	EndTime *int64 `thrift:"end_time,12,optional" frugal:"12,optional,i64" json:"start_time" form:"end_time" query:"end_time"`
+	EndTime *int64 `thrift:"end_time,12,optional" frugal:"12,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
 	// 评测集并发数
 	ItemConcurNum *int32 `thrift:"item_concur_num,13,optional" frugal:"13,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
 	// 评估器并发数
