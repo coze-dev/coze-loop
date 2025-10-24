@@ -110,15 +110,8 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	if err := t.validateCreateTaskReq(ctx, req); err != nil {
 		return resp, err
 	}
-	appID := session.AppIDInCtxOrEmpty(ctx)
-	var action string
-	if appID == 717152 {
-		action = rpc.AuthActionTraceTaskCreate
-	} else {
-		action = rpc.AuthActionTaskWritable
-	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		action,
+		rpc.AuthActionTraceTaskCreate,
 		strconv.FormatInt(req.GetTask().GetWorkspaceID(), 10),
 		false); err != nil {
 		return resp, err
@@ -216,15 +209,8 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 	} else if req.GetWorkspaceID() <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	appID := session.AppIDInCtxOrEmpty(ctx)
-	var action string
-	if appID == 717152 {
-		action = rpc.AuthActionTraceTaskEdit
-	} else {
-		action = rpc.AuthActionTaskWritable
-	}
 	if err := t.authSvc.CheckTaskPermission(ctx,
-		action,
+		rpc.AuthActionTraceTaskEdit,
 		strconv.FormatInt(req.GetWorkspaceID(), 10),
 		strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
 		return nil, err
@@ -251,15 +237,8 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	appID := session.AppIDInCtxOrEmpty(ctx)
-	var action string
-	if appID == 717152 {
-		action = rpc.AuthActionTraceTaskList
-	} else {
-		action = rpc.AuthActionTaskReadable
-	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		action,
+		rpc.AuthActionTraceTaskList,
 		strconv.FormatInt(req.GetWorkspaceID(), 10),
 		false); err != nil {
 		return resp, err
@@ -290,15 +269,8 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	appID := session.AppIDInCtxOrEmpty(ctx)
-	var action string
-	if appID == 717152 {
-		action = rpc.AuthActionTraceTaskList
-	} else {
-		action = rpc.AuthActionTaskReadable
-	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		action,
+		rpc.AuthActionTraceTaskList,
 		strconv.FormatInt(req.GetWorkspaceID(), 10),
 		false); err != nil {
 		return resp, err
