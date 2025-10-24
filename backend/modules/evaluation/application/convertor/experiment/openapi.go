@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	evalsetopenapi "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -685,15 +686,59 @@ func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.I
 		if item == nil {
 			continue
 		}
-		result = append(result, &openapiExperiment.ItemResult_{
+		res := &openapiExperiment.ItemResult_{
 			ItemID:      gptr.Of(item.ItemID),
 			TurnResults: openAPITurnResultsDO2DTOs(item.TurnResults),
-		})
+		}
+		if item.SystemInfo != nil {
+			res.SystemInfo = &openapiExperiment.ItemSystemInfo{
+				RunState: ItemRunStateDO2DTO(item.SystemInfo.RunState),
+			}
+		}
+		result = append(result, res)
 	}
 	if len(result) == 0 {
 		return nil
 	}
 	return result
+}
+
+func ItemRunStateDO2DTO(state entity.ItemRunState) *openapiExperiment.ItemRunState {
+	var openapiState openapiExperiment.ItemRunState
+	switch state {
+	case entity.ItemRunState_Queueing:
+		openapiState = openapiExperiment.ItemRunStateQueueing
+	case entity.ItemRunState_Processing:
+		openapiState = openapiExperiment.ItemRunStateProcessing
+	case entity.ItemRunState_Success:
+		openapiState = openapiExperiment.ItemRunStateSuccess
+	case entity.ItemRunState_Fail:
+		openapiState = openapiExperiment.ItemRunStateFail
+	case entity.ItemRunState_Terminal:
+		openapiState = openapiExperiment.ItemRunStateTerminal
+	default:
+		return nil
+	}
+	return &openapiState
+}
+
+func TurnRunStateDO2DTO(state entity.TurnRunState) *openapiExperiment.TurnRunState {
+	var openapiState openapiExperiment.TurnRunState
+	switch state {
+	case entity.TurnRunState_Queueing:
+		openapiState = openapiExperiment.TurnRunStateQueueing
+	case entity.TurnRunState_Processing:
+		openapiState = openapiExperiment.TurnRunStateProcessing
+	case entity.TurnRunState_Success:
+		openapiState = openapiExperiment.TurnRunStateSuccess
+	case entity.TurnRunState_Fail:
+		openapiState = openapiExperiment.TurnRunStateFail
+	case entity.TurnRunState_Terminal:
+		openapiState = openapiExperiment.TurnRunStateTerminal
+	default:
+		return nil
+	}
+	return &openapiState
 }
 
 func convertEntityContentTypeToOpenAPI(contentType entity.ContentType) *openapiCommon.ContentType {
@@ -764,6 +809,11 @@ func openAPIResultPayloadDO2DTO(result *entity.ExperimentResult) *openapiExperim
 	if payload.EvaluatorOutput != nil && len(payload.EvaluatorOutput.EvaluatorRecords) > 0 {
 		res.EvaluatorRecords = openAPIEvaluatorRecordsMapDO2DTO(payload.EvaluatorOutput.EvaluatorRecords)
 	}
+	if payload.SystemInfo != nil {
+		res.SystemInfo = &openapiExperiment.TurnSystemInfo{
+			TurnRunState: TurnRunStateDO2DTO(payload.SystemInfo.TurnRunState),
+		}
+	}
 	if res.EvalSetTurn == nil && len(res.EvaluatorRecords) == 0 {
 		return nil
 	}
@@ -797,6 +847,99 @@ func openAPIEvaluatorRecordDO2DTO(record *entity.EvaluatorRecord) *openapiEvalua
 		ItemID:             gptr.Of(record.ItemID),
 		TurnID:             gptr.Of(record.TurnID),
 		Status:             convertEntityEvaluatorStatusToOpenAPI(record.Status),
+		Logid:              gptr.Of(record.LogID),
+		TraceID:            gptr.Of(record.TraceID),
+		BaseInfo:           common.OpenAPIBaseInfoDO2DTO(record.BaseInfo),
+	}
+	if output := openAPIEvaluatorOutputDataDO2DTO(record.EvaluatorOutputData); output != nil {
+		res.EvaluatorOutputData = output
+	}
+	return res
+}
+
+func openAPIEvaluatorOutputDataDO2DTO(data *entity.EvaluatorOutputData) *openapiEvaluator.EvaluatorOutputData {
+	if data == nil {
+		return nil
+	}
+	res := &openapiEvaluator.EvaluatorOutputData{}
+	if result := openAPIEvaluatorResultDO2DTO(data.EvaluatorResult); result != nil {
+		res.EvaluatorResult_ = result
+	}
+	if usage := openAPIEvaluatorUsageDO2DTO(data.EvaluatorUsage); usage != nil {
+		res.EvaluatorUsage = usage
+	}
+	if runErr := openAPIEvaluatorRunErrorDO2DTO(data.EvaluatorRunError); runErr != nil {
+		res.EvaluatorRunError = runErr
+	}
+	if data.TimeConsumingMS > 0 {
+		res.TimeConsumingMs = gptr.Of(data.TimeConsumingMS)
+	}
+	if res.EvaluatorResult_ == nil && res.EvaluatorUsage == nil && res.EvaluatorRunError == nil && res.TimeConsumingMs == nil {
+		return nil
+	}
+	return res
+}
+
+func openAPIEvaluatorResultDO2DTO(result *entity.EvaluatorResult) *openapiEvaluator.EvaluatorResult_ {
+	if result == nil {
+		return nil
+	}
+	res := &openapiEvaluator.EvaluatorResult_{}
+	if result.Correction != nil {
+		if result.Correction.Score != nil {
+			res.Score = result.Correction.Score
+		} else if result.Score != nil {
+			res.Score = result.Score
+		}
+		if result.Correction.Explain != "" {
+			res.Reasoning = gptr.Of(result.Correction.Explain)
+		} else if result.Reasoning != "" {
+			res.Reasoning = gptr.Of(result.Reasoning)
+		}
+	} else {
+		if result.Score != nil {
+			res.Score = result.Score
+		}
+		if result.Reasoning != "" {
+			res.Reasoning = gptr.Of(result.Reasoning)
+		}
+	}
+	if res.Score == nil && res.Reasoning == nil {
+		return nil
+	}
+	return res
+}
+
+func openAPIEvaluatorUsageDO2DTO(usage *entity.EvaluatorUsage) *openapiEvaluator.EvaluatorUsage {
+	if usage == nil {
+		return nil
+	}
+	res := &openapiEvaluator.EvaluatorUsage{}
+	if usage.InputTokens != 0 {
+		res.InputTokens = gptr.Of(usage.InputTokens)
+	}
+	if usage.OutputTokens != 0 {
+		res.OutputTokens = gptr.Of(usage.OutputTokens)
+	}
+	if res.InputTokens == nil && res.OutputTokens == nil {
+		return nil
+	}
+	return res
+}
+
+func openAPIEvaluatorRunErrorDO2DTO(err *entity.EvaluatorRunError) *openapiEvaluator.EvaluatorRunError {
+	if err == nil {
+		return nil
+	}
+	res := &openapiEvaluator.EvaluatorRunError{}
+	if err.Code != 0 {
+		res.Code = gptr.Of(err.Code)
+	}
+	if err.Message != "" {
+		res.Message = gptr.Of(err.Message)
+	}
+	if res.Code == nil && res.Message == nil {
+		return nil
 	}
 	return res
 }
