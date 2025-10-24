@@ -2,7 +2,7 @@
   "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/common-versions.schema.json",
   "ensureConsistentVersions": true,
   "preferredVersions": {
-    "@coze-arch/coze-design": "0.0.6-alpha.101d0c"
+    "@coze-arch/coze-design": "0.0.7-alpha.985c0d"
   },
   "allowedAlternativeVersions": {
     "@coze-arch/coze-design": ["0.0.6-alpha.101d0c"],

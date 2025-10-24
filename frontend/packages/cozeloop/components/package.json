@@ -11,7 +11,7 @@
     "test:cov": "exit 0"
   },
   "dependencies": {
-    "@coze-arch/coze-design": "0.0.6-alpha.346d77",
+    "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
     "@cozeloop/api-schema": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/i18n-adapter": "workspace:*",

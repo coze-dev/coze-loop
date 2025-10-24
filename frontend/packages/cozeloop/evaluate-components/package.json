@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@coze-arch/bot-md-box-adapter": "workspace:*",
-    "@coze-arch/coze-design": "0.0.6-alpha.346d77",
+    "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
     "@cozeloop/api-schema": "workspace:*",
     "@cozeloop/base-hooks": "workspace:*",
     "@cozeloop/biz-components-adapter": "workspace:*",
@@ -90,4 +90,3 @@
     "react-router-dom": "^6.22.0"
   }
 }
-

@@ -13,7 +13,7 @@
     "test:cov": "npm run test -- --coverage"
   },
   "dependencies": {
-    "@coze-arch/coze-design": "0.0.6-alpha.346d77",
+    "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
     "@cozeloop/evaluate": "workspace:*",
     "@cozeloop/evaluate-components": "workspace:*",
     "@cozeloop/i18n-adapter": "workspace:*",
@@ -45,4 +45,3 @@
     "react-router-dom": "^6.22.0"
   }
 }
-
