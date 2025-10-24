@@ -226,6 +226,11 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 	prompt := convertor.PromptDTO2DO(req.Prompt)
 	// prompt hub span report
 	p.reportDebugPromptHubSpan(ctx, prompt)
+	// expand snippets
+	err = p.promptService.ExpandSnippets(ctx, prompt)
+	if err != nil {
+		return nil, err
+	}
 	// execute
 	resultStream := make(chan *entity.Reply)
 	errChan := make(chan error)

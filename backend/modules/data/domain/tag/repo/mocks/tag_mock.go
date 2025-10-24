@@ -23,6 +23,7 @@ import (
 type MockITagAPI struct {
 	ctrl     *gomock.Controller
 	recorder *MockITagAPIMockRecorder
+	isgomock struct{}
 }
 
 // MockITagAPIMockRecorder is the mock recorder for MockITagAPI.
@@ -43,10 +44,10 @@ func (m *MockITagAPI) EXPECT() *MockITagAPIMockRecorder {
 }
 
 // CountTagKeys mocks base method.
-func (m *MockITagAPI) CountTagKeys(arg0 context.Context, arg1 *entity.MGetTagKeyParam, arg2 ...db.Option) (int64, error) {
+func (m *MockITagAPI) CountTagKeys(ctx context.Context, param *entity.MGetTagKeyParam, opts ...db.Option) (int64, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, param}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CountTagKeys", varargs...)
@@ -56,17 +57,17 @@ func (m *MockITagAPI) CountTagKeys(arg0 context.Context, arg1 *entity.MGetTagKey
 }
 
 // CountTagKeys indicates an expected call of CountTagKeys.
-func (mr *MockITagAPIMockRecorder) CountTagKeys(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) CountTagKeys(ctx, param any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, param}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountTagKeys", reflect.TypeOf((*MockITagAPI)(nil).CountTagKeys), varargs...)
 }
 
 // DeleteTagKey mocks base method.
-func (m *MockITagAPI) DeleteTagKey(arg0 context.Context, arg1, arg2 int64, arg3 ...db.Option) error {
+func (m *MockITagAPI) DeleteTagKey(ctx context.Context, spaceID, id int64, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []any{ctx, spaceID, id}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeleteTagKey", varargs...)
@@ -75,17 +76,17 @@ func (m *MockITagAPI) DeleteTagKey(arg0 context.Context, arg1, arg2 int64, arg3 
 }
 
 // DeleteTagKey indicates an expected call of DeleteTagKey.
-func (mr *MockITagAPIMockRecorder) DeleteTagKey(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) DeleteTagKey(ctx, spaceID, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
+	varargs := append([]any{ctx, spaceID, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTagKey", reflect.TypeOf((*MockITagAPI)(nil).DeleteTagKey), varargs...)
 }
 
 // DeleteTagValue mocks base method.
-func (m *MockITagAPI) DeleteTagValue(arg0 context.Context, arg1, arg2 int64, arg3 ...db.Option) error {
+func (m *MockITagAPI) DeleteTagValue(ctx context.Context, spaceID, id int64, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []any{ctx, spaceID, id}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeleteTagValue", varargs...)
@@ -94,17 +95,17 @@ func (m *MockITagAPI) DeleteTagValue(arg0 context.Context, arg1, arg2 int64, arg
 }
 
 // DeleteTagValue indicates an expected call of DeleteTagValue.
-func (mr *MockITagAPIMockRecorder) DeleteTagValue(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) DeleteTagValue(ctx, spaceID, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
+	varargs := append([]any{ctx, spaceID, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTagValue", reflect.TypeOf((*MockITagAPI)(nil).DeleteTagValue), varargs...)
 }
 
 // GetTagKey mocks base method.
-func (m *MockITagAPI) GetTagKey(arg0 context.Context, arg1, arg2 int64, arg3 ...db.Option) (*entity.TagKey, error) {
+func (m *MockITagAPI) GetTagKey(ctx context.Context, spaceID, id int64, opts ...db.Option) (*entity.TagKey, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []any{ctx, spaceID, id}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetTagKey", varargs...)
@@ -114,17 +115,17 @@ func (m *MockITagAPI) GetTagKey(arg0 context.Context, arg1, arg2 int64, arg3 ...
 }
 
 // GetTagKey indicates an expected call of GetTagKey.
-func (mr *MockITagAPIMockRecorder) GetTagKey(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) GetTagKey(ctx, spaceID, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
+	varargs := append([]any{ctx, spaceID, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTagKey", reflect.TypeOf((*MockITagAPI)(nil).GetTagKey), varargs...)
 }
 
 // GetTagValue mocks base method.
-func (m *MockITagAPI) GetTagValue(arg0 context.Context, arg1, arg2 int64, arg3 ...db.Option) (*entity.TagValue, error) {
+func (m *MockITagAPI) GetTagValue(ctx context.Context, spaceID, id int64, opts ...db.Option) (*entity.TagValue, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []any{ctx, spaceID, id}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetTagValue", varargs...)
@@ -134,17 +135,17 @@ func (m *MockITagAPI) GetTagValue(arg0 context.Context, arg1, arg2 int64, arg3 .
 }
 
 // GetTagValue indicates an expected call of GetTagValue.
-func (mr *MockITagAPIMockRecorder) GetTagValue(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) GetTagValue(ctx, spaceID, id any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
+	varargs := append([]any{ctx, spaceID, id}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTagValue", reflect.TypeOf((*MockITagAPI)(nil).GetTagValue), varargs...)
 }
 
 // MCreateTagKeys mocks base method.
-func (m *MockITagAPI) MCreateTagKeys(arg0 context.Context, arg1 []*entity.TagKey, arg2 ...db.Option) error {
+func (m *MockITagAPI) MCreateTagKeys(ctx context.Context, val []*entity.TagKey, opt ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, val}
+	for _, a := range opt {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "MCreateTagKeys", varargs...)
@@ -153,17 +154,17 @@ func (m *MockITagAPI) MCreateTagKeys(arg0 context.Context, arg1 []*entity.TagKey
 }
 
 // MCreateTagKeys indicates an expected call of MCreateTagKeys.
-func (mr *MockITagAPIMockRecorder) MCreateTagKeys(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) MCreateTagKeys(ctx, val any, opt ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, val}, opt...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MCreateTagKeys", reflect.TypeOf((*MockITagAPI)(nil).MCreateTagKeys), varargs...)
 }
 
 // MCreateTagValues mocks base method.
-func (m *MockITagAPI) MCreateTagValues(arg0 context.Context, arg1 []*entity.TagValue, arg2 ...db.Option) error {
+func (m *MockITagAPI) MCreateTagValues(ctx context.Context, val []*entity.TagValue, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, val}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "MCreateTagValues", varargs...)
@@ -172,17 +173,17 @@ func (m *MockITagAPI) MCreateTagValues(arg0 context.Context, arg1 []*entity.TagV
 }
 
 // MCreateTagValues indicates an expected call of MCreateTagValues.
-func (mr *MockITagAPIMockRecorder) MCreateTagValues(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) MCreateTagValues(ctx, val any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, val}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MCreateTagValues", reflect.TypeOf((*MockITagAPI)(nil).MCreateTagValues), varargs...)
 }
 
 // MGetTagKeys mocks base method.
-func (m *MockITagAPI) MGetTagKeys(arg0 context.Context, arg1 *entity.MGetTagKeyParam, arg2 ...db.Option) ([]*entity.TagKey, *pagination.PageResult, error) {
+func (m *MockITagAPI) MGetTagKeys(ctx context.Context, param *entity.MGetTagKeyParam, opts ...db.Option) ([]*entity.TagKey, *pagination.PageResult, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, param}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "MGetTagKeys", varargs...)
@@ -193,17 +194,17 @@ func (m *MockITagAPI) MGetTagKeys(arg0 context.Context, arg1 *entity.MGetTagKeyP
 }
 
 // MGetTagKeys indicates an expected call of MGetTagKeys.
-func (mr *MockITagAPIMockRecorder) MGetTagKeys(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) MGetTagKeys(ctx, param any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, param}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetTagKeys", reflect.TypeOf((*MockITagAPI)(nil).MGetTagKeys), varargs...)
 }
 
 // MGetTagValue mocks base method.
-func (m *MockITagAPI) MGetTagValue(arg0 context.Context, arg1 *entity.MGetTagValueParam, arg2 ...db.Option) ([]*entity.TagValue, *pagination.PageResult, error) {
+func (m *MockITagAPI) MGetTagValue(ctx context.Context, param *entity.MGetTagValueParam, opts ...db.Option) ([]*entity.TagValue, *pagination.PageResult, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []any{ctx, param}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "MGetTagValue", varargs...)
@@ -214,17 +215,17 @@ func (m *MockITagAPI) MGetTagValue(arg0 context.Context, arg1 *entity.MGetTagVal
 }
 
 // MGetTagValue indicates an expected call of MGetTagValue.
-func (mr *MockITagAPIMockRecorder) MGetTagValue(arg0, arg1 any, arg2 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) MGetTagValue(ctx, param any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1}, arg2...)
+	varargs := append([]any{ctx, param}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetTagValue", reflect.TypeOf((*MockITagAPI)(nil).MGetTagValue), varargs...)
 }
 
 // PatchTagKey mocks base method.
-func (m *MockITagAPI) PatchTagKey(arg0 context.Context, arg1, arg2 int64, arg3 *entity.TagKey, arg4 ...db.Option) error {
+func (m *MockITagAPI) PatchTagKey(ctx context.Context, spaceID, id int64, patch *entity.TagKey, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3}
-	for _, a := range arg4 {
+	varargs := []any{ctx, spaceID, id, patch}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "PatchTagKey", varargs...)
@@ -233,17 +234,17 @@ func (m *MockITagAPI) PatchTagKey(arg0 context.Context, arg1, arg2 int64, arg3 *
 }
 
 // PatchTagKey indicates an expected call of PatchTagKey.
-func (mr *MockITagAPIMockRecorder) PatchTagKey(arg0, arg1, arg2, arg3 any, arg4 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) PatchTagKey(ctx, spaceID, id, patch any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3}, arg4...)
+	varargs := append([]any{ctx, spaceID, id, patch}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PatchTagKey", reflect.TypeOf((*MockITagAPI)(nil).PatchTagKey), varargs...)
 }
 
 // PatchTagValue mocks base method.
-func (m *MockITagAPI) PatchTagValue(arg0 context.Context, arg1, arg2 int64, arg3 *entity.TagValue, arg4 ...db.Option) error {
+func (m *MockITagAPI) PatchTagValue(ctx context.Context, spaceID, id int64, patch *entity.TagValue, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3}
-	for _, a := range arg4 {
+	varargs := []any{ctx, spaceID, id, patch}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "PatchTagValue", varargs...)
@@ -252,17 +253,17 @@ func (m *MockITagAPI) PatchTagValue(arg0 context.Context, arg1, arg2 int64, arg3
 }
 
 // PatchTagValue indicates an expected call of PatchTagValue.
-func (mr *MockITagAPIMockRecorder) PatchTagValue(arg0, arg1, arg2, arg3 any, arg4 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) PatchTagValue(ctx, spaceID, id, patch any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3}, arg4...)
+	varargs := append([]any{ctx, spaceID, id, patch}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PatchTagValue", reflect.TypeOf((*MockITagAPI)(nil).PatchTagValue), varargs...)
 }
 
 // UpdateTagKeysStatus mocks base method.
-func (m *MockITagAPI) UpdateTagKeysStatus(arg0 context.Context, arg1, arg2 int64, arg3 int32, arg4 entity.TagStatus, arg5 bool, arg6 ...db.Option) error {
+func (m *MockITagAPI) UpdateTagKeysStatus(ctx context.Context, spaceID, tagKeyID int64, versionNum int32, toStatus entity.TagStatus, updateInfo bool, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3, arg4, arg5}
-	for _, a := range arg6 {
+	varargs := []any{ctx, spaceID, tagKeyID, versionNum, toStatus, updateInfo}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "UpdateTagKeysStatus", varargs...)
@@ -271,17 +272,17 @@ func (m *MockITagAPI) UpdateTagKeysStatus(arg0 context.Context, arg1, arg2 int64
 }
 
 // UpdateTagKeysStatus indicates an expected call of UpdateTagKeysStatus.
-func (mr *MockITagAPIMockRecorder) UpdateTagKeysStatus(arg0, arg1, arg2, arg3, arg4, arg5 any, arg6 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) UpdateTagKeysStatus(ctx, spaceID, tagKeyID, versionNum, toStatus, updateInfo any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3, arg4, arg5}, arg6...)
+	varargs := append([]any{ctx, spaceID, tagKeyID, versionNum, toStatus, updateInfo}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTagKeysStatus", reflect.TypeOf((*MockITagAPI)(nil).UpdateTagKeysStatus), varargs...)
 }
 
 // UpdateTagValuesStatus mocks base method.
-func (m *MockITagAPI) UpdateTagValuesStatus(arg0 context.Context, arg1, arg2 int64, arg3 int32, arg4 entity.TagStatus, arg5 bool, arg6 ...db.Option) error {
+func (m *MockITagAPI) UpdateTagValuesStatus(ctx context.Context, spaceID, tagKeyID int64, versionNum int32, toStatus entity.TagStatus, updateInfo bool, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2, arg3, arg4, arg5}
-	for _, a := range arg6 {
+	varargs := []any{ctx, spaceID, tagKeyID, versionNum, toStatus, updateInfo}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "UpdateTagValuesStatus", varargs...)
@@ -290,8 +291,8 @@ func (m *MockITagAPI) UpdateTagValuesStatus(arg0 context.Context, arg1, arg2 int
 }
 
 // UpdateTagValuesStatus indicates an expected call of UpdateTagValuesStatus.
-func (mr *MockITagAPIMockRecorder) UpdateTagValuesStatus(arg0, arg1, arg2, arg3, arg4, arg5 any, arg6 ...any) *gomock.Call {
+func (mr *MockITagAPIMockRecorder) UpdateTagValuesStatus(ctx, spaceID, tagKeyID, versionNum, toStatus, updateInfo any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2, arg3, arg4, arg5}, arg6...)
+	varargs := append([]any{ctx, spaceID, tagKeyID, versionNum, toStatus, updateInfo}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTagValuesStatus", reflect.TypeOf((*MockITagAPI)(nil).UpdateTagValuesStatus), varargs...)
 }

@@ -66,6 +66,12 @@ func (p *PromptExecuteApplicationImpl) ExecuteInternal(ctx context.Context, req 
 	if err != nil {
 		return r, err
 	}
+	// expand snippets
+	err = p.promptService.ExpandSnippets(ctx, promptDO)
+	if err != nil {
+		return r, err
+	}
+	// override prompt params
 	overridePromptParams(promptDO, req.OverridePromptParams)
 	// execute
 	reply, err = p.promptService.Execute(ctx, service.ExecuteParam{

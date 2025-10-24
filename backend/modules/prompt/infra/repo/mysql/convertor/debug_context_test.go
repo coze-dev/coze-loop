@@ -100,6 +100,7 @@ func TestDebugContextDO2PO(t *testing.T) {
 							PromptDetail: &entity.PromptDetail{
 								PromptTemplate: &entity.PromptTemplate{
 									TemplateType: entity.TemplateTypeNormal,
+									HasSnippets:  false,
 									Messages: []*entity.Message{
 										{
 											Role:    entity.RoleSystem,
@@ -115,7 +116,7 @@ func TestDebugContextDO2PO(t *testing.T) {
 			expected: &model.PromptDebugContext{
 				PromptID:      1,
 				UserID:        "test_user",
-				CompareConfig: ptr.Of(`{"groups":[{"prompt_detail":{"prompt_template":{"template_type":"normal","messages":[{"role":"system","content":"test content"}]}}}]}`),
+				CompareConfig: ptr.Of(`{"groups":[{"prompt_detail":{"prompt_template":{"template_type":"normal","messages":[{"role":"system","content":"test content"}],"has_snippets":false}}}]}`),
 			},
 			wantErr: false,
 		},
@@ -245,7 +246,7 @@ func TestDebugContextPO2DO(t *testing.T) {
 			po: &model.PromptDebugContext{
 				PromptID:      1,
 				UserID:        "test_user",
-				CompareConfig: ptr.Of(`{"groups":[{"prompt_detail":{"prompt_template":{"template_type":"normal","messages":[{"role":"system","content":"test content"}]}}}]}`),
+				CompareConfig: ptr.Of(`{"groups":[{"prompt_detail":{"prompt_template":{"template_type":"normal","messages":[{"role":"system","content":"test content"}],"has_snippets":false}}}]}`),
 			},
 			expected: &entity.DebugContext{
 				PromptID:  1,
@@ -257,6 +258,7 @@ func TestDebugContextPO2DO(t *testing.T) {
 							PromptDetail: &entity.PromptDetail{
 								PromptTemplate: &entity.PromptTemplate{
 									TemplateType: entity.TemplateTypeNormal,
+									HasSnippets:  false,
 									Messages: []*entity.Message{
 										{
 											Role:    entity.RoleSystem,
