@@ -1452,3 +1452,18 @@ func _annotations0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _metricsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getmetricsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getdrilldownvaluesMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

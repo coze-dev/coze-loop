@@ -769,7 +769,6 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		session.UserIDInCtxOrEmpty(ctx),
 		false,
 	)
-	fmt.Println(annotation.ID, req.AnnotationID)
 	if err != nil || annotation.ID != req.AnnotationID {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}

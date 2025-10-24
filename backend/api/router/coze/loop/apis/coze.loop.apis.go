@@ -302,6 +302,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_annotation.GET("/list_evaluators", append(_listannotationevaluatorsMw(handler), apis.ListAnnotationEvaluators)...)
 				}
 				{
+					_metrics := _v14.Group("/metrics", _metricsMw(handler)...)
+					_metrics.POST("/drill_down_values", append(_getdrilldownvaluesMw(handler), apis.GetDrillDownValues)...)
+					_metrics.POST("/list", append(_getmetricsMw(handler), apis.GetMetrics)...)
+				}
+				{
 					_spans := _v14.Group("/spans", _spansMw(handler)...)
 					_spans.POST("/list", append(_listspansMw(handler), apis.ListSpans)...)
 				}

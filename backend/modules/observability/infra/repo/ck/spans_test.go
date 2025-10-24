@@ -8,13 +8,15 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/clickhouse"
-	"gorm.io/gorm"
-
+	ck_mock "github.com/coze-dev/coze-loop/backend/infra/ck/mocks"
+	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	"gorm.io/driver/clickhouse"
+	"gorm.io/gorm"
 )
 
 func TestSpansCkDaoImpl_convertFieldName(t *testing.T) {
@@ -727,5 +729,169 @@ func TestQueryTypeEnumNotMatchComplexScenarios(t *testing.T) {
 			t.Logf("Test case: %s, Generated SQL: %s", tc.name, sql)
 			assert.Equal(t, tc.expectedSql, sql, "SQL mismatch for test case: %s", tc.name)
 		})
+	}
+}
+
+func TestMetricSql(t *testing.T) {
+	sqlDB, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatal("Failed to create mock")
+	}
+	defer func() {
+		_ = sqlDB.Close()
+	}()
+	// 用mock DB替换GORM的DB
+	db, err := gorm.Open(clickhouse.New(clickhouse.Config{
+		Conn:                      sqlDB,
+		SkipInitializeWithVersion: true,
+	}), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	type testCase struct {
+		param       *GetMetricsParam
+		expectedSql string
+	}
+	testCases := []testCase{
+		{
+			param: &GetMetricsParam{
+				Tables: []string{"observability_spans"},
+				Aggregations: []*metrics_entity.Dimension{
+					{
+						Alias: "total_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "count()",
+						},
+					},
+					{
+						Alias: "total_error_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "countIf(%s != 0)",
+							Fields: []*loop_span.FilterField{
+								{
+									FieldName: loop_span.SpanFieldStatusCode,
+									FieldType: loop_span.FieldTypeLong,
+								},
+							},
+						},
+					},
+				},
+				Filters: &loop_span.FilterFields{
+					QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+					FilterFields: []*loop_span.FilterField{
+						{
+							FieldName: loop_span.SpanFieldSpaceId,
+							FieldType: loop_span.FieldTypeString,
+							Values:    []string{"123"},
+							QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+						},
+					},
+				},
+				StartAt: 1,
+				EndAt:   2,
+			},
+			expectedSql: "SELECT count() AS total_count, countIf(`status_code` != 0) AS total_error_count FROM (SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `space_id` = '123' AND start_time >= 1 AND start_time <= 2 )  ",
+		},
+		{
+			param: &GetMetricsParam{
+				Tables: []string{"observability_spans"},
+				Aggregations: []*metrics_entity.Dimension{
+					{
+						Alias: "total_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "count()",
+						},
+					},
+					{
+						Alias: "total_error_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "countIf(%s != 0)",
+							Fields: []*loop_span.FilterField{
+								{
+									FieldName: loop_span.SpanFieldStatusCode,
+									FieldType: loop_span.FieldTypeLong,
+								},
+							},
+						},
+					},
+				},
+				Filters: &loop_span.FilterFields{
+					QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+					FilterFields: []*loop_span.FilterField{
+						{
+							FieldName: loop_span.SpanFieldSpaceId,
+							FieldType: loop_span.FieldTypeString,
+							Values:    []string{"123"},
+							QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+						},
+					},
+				},
+				StartAt:     1,
+				EndAt:       2,
+				Granularity: metrics_entity.MetricGranularity1Min,
+			},
+			expectedSql: "SELECT toUnixTimestamp(toStartOfInterval(fromUnixTimestamp64Micro(start_time), INTERVAL 1 MINUTE)) * 1000 AS time_bucket, count() AS total_count, countIf(`status_code` != 0) AS total_error_count FROM (SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `space_id` = '123' AND start_time >= 1 AND start_time <= 2 ) GROUP BY time_bucket ORDER BY time_bucket",
+		},
+		{
+			param: &GetMetricsParam{
+				Tables: []string{"observability_spans"},
+				Aggregations: []*metrics_entity.Dimension{
+					{
+						Alias: "total_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "count()",
+						},
+					},
+					{
+						Alias: "total_error_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "countIf(%s != 0)",
+							Fields: []*loop_span.FilterField{
+								{
+									FieldName: loop_span.SpanFieldStatusCode,
+									FieldType: loop_span.FieldTypeLong,
+								},
+							},
+						},
+					},
+				},
+				Filters: &loop_span.FilterFields{
+					QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+					FilterFields: []*loop_span.FilterField{
+						{
+							FieldName: loop_span.SpanFieldSpaceId,
+							FieldType: loop_span.FieldTypeString,
+							Values:    []string{"123"},
+							QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+						},
+					},
+				},
+				GroupBys: []*metrics_entity.Dimension{
+					{
+						Alias: "val",
+						Field: &loop_span.FilterField{
+							FieldName: "prompt_key",
+							FieldType: loop_span.FieldTypeString,
+						},
+					},
+				},
+				StartAt:     1,
+				EndAt:       2,
+				Granularity: metrics_entity.MetricGranularity1Min,
+			},
+			expectedSql: "SELECT toUnixTimestamp(toStartOfInterval(fromUnixTimestamp64Micro(start_time), INTERVAL 1 MINUTE)) * 1000 AS time_bucket, count() AS total_count, countIf(`status_code` != 0) AS total_error_count, tags_string['prompt_key'] AS val FROM (SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `space_id` = '123' AND start_time >= 1 AND start_time <= 2 ) GROUP BY time_bucket, tags_string['prompt_key'] ORDER BY time_bucket",
+		},
+	}
+	ckProvider := ck_mock.NewMockProvider(gomock.NewController(t))
+	ckProvider.EXPECT().NewSession(gomock.Any()).Return(db).AnyTimes()
+	for _, tc := range testCases {
+		impl := &SpansCkDaoImpl{
+			db: ckProvider,
+		}
+		sql, err := impl.buildMetricsSql(context.Background(), tc.param)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, tc.expectedSql, sql)
 	}
 }

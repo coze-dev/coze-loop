@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
 	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
 	openapi2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
@@ -444,6 +445,32 @@ func NewObservabilityTaskServiceClient(c thrift.TClient) *ObservabilityTaskServi
 	}
 }
 
+type ObservabilityMetricService interface {
+	metric.MetricService
+}
+
+type ObservabilityMetricServiceClient struct {
+	*metric.MetricServiceClient
+}
+
+func NewObservabilityMetricServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ObservabilityMetricServiceClient {
+	return &ObservabilityMetricServiceClient{
+		MetricServiceClient: metric.NewMetricServiceClientFactory(t, f),
+	}
+}
+
+func NewObservabilityMetricServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ObservabilityMetricServiceClient {
+	return &ObservabilityMetricServiceClient{
+		MetricServiceClient: metric.NewMetricServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewObservabilityMetricServiceClient(c thrift.TClient) *ObservabilityMetricServiceClient {
+	return &ObservabilityMetricServiceClient{
+		MetricServiceClient: metric.NewMetricServiceClient(c),
+	}
+}
+
 type FoundationAuthService interface {
 	auth.AuthService
 }
@@ -741,6 +768,15 @@ type ObservabilityTaskServiceProcessor struct {
 
 func NewObservabilityTaskServiceProcessor(handler ObservabilityTaskService) *ObservabilityTaskServiceProcessor {
 	self := &ObservabilityTaskServiceProcessor{task.NewTaskServiceProcessor(handler)}
+	return self
+}
+
+type ObservabilityMetricServiceProcessor struct {
+	*metric.MetricServiceProcessor
+}
+
+func NewObservabilityMetricServiceProcessor(handler ObservabilityMetricService) *ObservabilityMetricServiceProcessor {
+	self := &ObservabilityMetricServiceProcessor{metric.NewMetricServiceProcessor(handler)}
 	return self
 }
 

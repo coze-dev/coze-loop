@@ -3,13 +3,17 @@
   "compilerOptions": {
     "jsx": "preserve",
     "useUnknownInCatchVariables": false,
-    "types": ["vitest/globals"],
+    "types": [
+      "vitest/globals"
+    ],
     "strictNullChecks": true,
     "rootDir": "./src",
     "outDir": "./dist",
     "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo"
   },
-  "include": ["./src"],
+  "include": [
+    "./src"
+  ],
   "references": [
     {
       "path": "../../../config/eslint-config/tsconfig.build.json"
