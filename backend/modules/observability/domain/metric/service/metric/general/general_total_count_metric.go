@@ -22,8 +22,8 @@ func (m *GeneralTotalCountMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *GeneralTotalCountMetric) Expression(granularity entity.MetricGranularity) string {
-	return "count()"
+func (m *GeneralTotalCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression("count()")
 }
 
 func (m *GeneralTotalCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -23,8 +23,8 @@ func (m *ServiceTraceCountMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *ServiceTraceCountMetric) Expression(granularity entity.MetricGranularity) string {
-	return "count()"
+func (m *ServiceTraceCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression("count()")
 }
 
 func (m *ServiceTraceCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

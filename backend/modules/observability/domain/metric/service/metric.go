@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
@@ -20,7 +21,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -254,8 +254,9 @@ func (m *MetricsService) buildMetricInfo(ctx context.Context, builder *metricQue
 		if err != nil {
 			return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
 		}
+		expr := metricDef.Expression(builder.granularity)
 		mInfo.mAggregation = []*entity.Dimension{{
-			Expression: metricDef.Expression(builder.granularity),
+			Expression: expr.Expression,
 			Alias:      metricDef.Name(), // 聚合指标的别名是指标名，以此后续来拆分数据
 		}}
 		mInfos = append(mInfos, mInfo)
@@ -315,6 +316,9 @@ const timeBucketKey = "time_bucket"
 
 func (m *MetricsService) formatMetrics(data []map[string]any, mBuilder *metricQueryBuilder) map[string]*entity.Metric {
 	mInfo := mBuilder.mInfo
+	if len(mInfo.mAggregation) == 0 {
+		return map[string]*entity.Metric{}
+	}
 	switch mInfo.mType {
 	case entity.MetricTypeTimeSeries:
 		return m.formatTimeSeriesData(data, mBuilder)
@@ -345,9 +349,19 @@ func (m *MetricsService) formatTimeSeriesData(data []map[string]any, mBuilder *m
 		}
 		val := "all"
 		if len(groupByVals) > 0 {
-			if data, err := json.Marshal(groupByVals); err == nil {
-				val = string(data)
+			keys := make([]string, 0, len(groupByVals))
+			for key := range groupByVals {
+				keys = append(keys, key)
 			}
+			sort.Strings(keys)
+			for i, j := 0, len(keys)-1; i < j; i, j = i+1, j-1 {
+				keys[i], keys[j] = keys[j], keys[i]
+			}
+			parts := make([]string, 0, len(keys))
+			for _, key := range keys {
+				parts = append(parts, groupByVals[key])
+			}
+			val = strings.Join(parts, "-")
 		}
 		for k, v := range dataItem {
 			if metricNameMap[k] {
@@ -359,12 +373,21 @@ func (m *MetricsService) formatTimeSeriesData(data []map[string]any, mBuilder *m
 		}
 	}
 	// 零值填充
-	t := entity.NewTimeIntervals(mBuilder.mRepoReq.StartAt, mBuilder.mRepoReq.EndAt, mBuilder.granularity)
-	for metricName, _ := range metricNameMap {
+	var intervals []string
+	if mBuilder.mRepoReq != nil {
+		intervals = entity.NewTimeIntervals(mBuilder.mRepoReq.StartAt, mBuilder.mRepoReq.EndAt, mBuilder.granularity)
+	}
+	for metricName := range metricNameMap {
 		if len(ret[metricName].TimeSeries) == 0 {
+			if len(intervals) == 0 {
+				delete(ret, metricName)
+				continue
+			}
 			ret[metricName].TimeSeries["all"] = []*entity.MetricPoint{}
 		}
-		m.fillTimeSeriesData(t, metricName, ret[metricName])
+		if len(intervals) > 0 {
+			m.fillTimeSeriesData(intervals, metricName, ret[metricName])
+		}
 	}
 	return ret
 }
@@ -423,14 +446,29 @@ func (m *MetricsService) formatPieData(data []map[string]any, mInfo *metricInfo)
 		}
 		val := "all"
 		if len(groupByVals) > 0 {
-			if data, err := json.Marshal(groupByVals); err == nil {
-				val = string(data)
+			keys := make([]string, 0, len(groupByVals))
+			for key := range groupByVals {
+				keys = append(keys, key)
 			}
+			sort.Strings(keys)
+			for i, j := 0, len(keys)-1; i < j; i, j = i+1, j-1 {
+				keys[i], keys[j] = keys[j], keys[i]
+			}
+			parts := make([]string, 0, len(keys))
+			for _, key := range keys {
+				parts = append(parts, groupByVals[key])
+			}
+			val = strings.Join(parts, "-")
 		}
 		for k, v := range dataItem {
 			if metricNameMap[k] {
 				ret[k].Pie[val] = getMetricValue(v)
 			}
+		}
+	}
+	for metricName, metric := range ret {
+		if len(metric.Pie) == 0 {
+			delete(ret, metricName)
 		}
 	}
 	return ret

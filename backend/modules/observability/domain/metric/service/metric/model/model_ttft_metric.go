@@ -26,8 +26,11 @@ func (m *ModelTTFTMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *ModelTTFTMetric) Expression(granularity entity.MetricGranularity) string {
-	return "tags_long['latency_first_resp']/1000"
+func (m *ModelTTFTMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression(
+		"tags_long['latency_first_resp']/1000",
+		entity.NewLongField(loop_span.SpanFieldLatencyFirstResp),
+	)
 }
 
 func (m *ModelTTFTMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -34,8 +34,9 @@ func (m *MaxWrapper) Source() entity.MetricSource {
 	return m.originalMetric.Source()
 }
 
-func (m *MaxWrapper) Expression(granularity entity.MetricGranularity) string {
-	return fmt.Sprintf("max(%s)", m.originalMetric.Expression(granularity))
+func (m *MaxWrapper) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	originExpr := m.originalMetric.Expression(granularity)
+	return entity.NewExpression(fmt.Sprintf("max(%s)", originExpr.Expression), originExpr.Fields...)
 }
 
 func (m *MaxWrapper) Where(ctx context.Context, f span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

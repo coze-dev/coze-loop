@@ -26,8 +26,8 @@ func (m *ModelNamePieMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *ModelNamePieMetric) Expression(granularity entity.MetricGranularity) string {
-	return "1"
+func (m *ModelNamePieMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression("1")
 }
 
 func (m *ModelNamePieMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

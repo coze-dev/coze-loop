@@ -34,8 +34,8 @@ func (a *MultiWrapper) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (a *MultiWrapper) Expression(granularity entity.MetricGranularity) string {
-	return ""
+func (a *MultiWrapper) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression("")
 }
 
 func (a *MultiWrapper) Where(ctx context.Context, f span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

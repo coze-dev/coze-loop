@@ -26,8 +26,11 @@ func (m *ModelDurationMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *ModelDurationMetric) Expression(granularity entity.MetricGranularity) string {
-	return "duration/1000"
+func (m *ModelDurationMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression(
+		"duration/1000",
+		entity.NewLongField(loop_span.SpanFieldDuration),
+	)
 }
 
 func (m *ModelDurationMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

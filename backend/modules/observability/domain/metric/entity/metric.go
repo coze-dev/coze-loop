@@ -100,11 +100,37 @@ type Dimension struct {
 	Alias      string                 // 别名
 }
 
+type Expression struct {
+	Expression string
+	Fields     []*loop_span.FilterField
+}
+
+func NewExpression(expression string, fields ...*loop_span.FilterField) *Expression {
+	return &Expression{
+		Expression: expression,
+		Fields:     fields,
+	}
+}
+
+func NewLongField(fieldName string) *loop_span.FilterField {
+	return &loop_span.FilterField{
+		FieldName: fieldName,
+		FieldType: loop_span.FieldTypeLong,
+	}
+}
+
+func NewStringField(fieldName string) *loop_span.FilterField {
+	return &loop_span.FilterField{
+		FieldName: fieldName,
+		FieldType: loop_span.FieldTypeString,
+	}
+}
+
 type IMetricDefinition interface {
 	Name() string                                                                                      // 指标名，全局唯一
 	Type() MetricType                                                                                  // 指标类型
 	Source() MetricSource                                                                              // 数据来源
-	Expression(MetricGranularity) string                                                               // 计算表达式
+	Expression(MetricGranularity) *Expression                                                          // 计算表达式
 	Where(context.Context, span_filter.Filter, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) // 筛选条件
 	GroupBy() []*Dimension                                                                             // 聚合维度
 }

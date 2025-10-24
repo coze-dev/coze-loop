@@ -26,8 +26,13 @@ func (m *ModelTPOTMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *ModelTPOTMetric) Expression(granularity entity.MetricGranularity) string {
-	return "(duration-tags_long['latency_first_resp'])/(1000*tags_long['output_tokens'])"
+func (m *ModelTPOTMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression(
+		"(duration-tags_long['latency_first_resp'])/(1000*tags_long['output_tokens'])",
+		entity.NewLongField(loop_span.SpanFieldDuration),
+		entity.NewLongField(loop_span.SpanFieldLatencyFirstResp),
+		entity.NewLongField(loop_span.SpanFieldOutputTokens),
+	)
 }
 
 func (m *ModelTPOTMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -25,8 +25,11 @@ func (m *ModelSystemTokenCountMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *ModelSystemTokenCountMetric) Expression(granularity entity.MetricGranularity) string {
-	return "sum(tags_long['_system_tokens'])"
+func (m *ModelSystemTokenCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression(
+		"sum(tags_long['_system_tokens'])",
+		entity.NewLongField("_system_tokens"),
+	)
 }
 
 func (m *ModelSystemTokenCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -24,8 +24,11 @@ func (m *GeneralModelFailRatioMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *GeneralModelFailRatioMetric) Expression(granularity entity.MetricGranularity) string {
-	return "countIf(1, status_code != 0) / count()"
+func (m *GeneralModelFailRatioMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression(
+		"countIf(1, status_code != 0) / count()",
+		entity.NewLongField(loop_span.SpanFieldStatusCode),
+	)
 }
 
 func (m *GeneralModelFailRatioMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

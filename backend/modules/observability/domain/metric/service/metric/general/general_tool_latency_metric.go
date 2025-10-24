@@ -25,8 +25,11 @@ func (m *GeneralToolLatencyMetric) Source() entity.MetricSource {
 	return entity.MetricSourceCK
 }
 
-func (m *GeneralToolLatencyMetric) Expression(granularity entity.MetricGranularity) string {
-	return "sum(duration) / (1000 * count())"
+func (m *GeneralToolLatencyMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return entity.NewExpression(
+		"sum(duration) / (1000 * count())",
+		entity.NewLongField(loop_span.SpanFieldDuration),
+	)
 }
 
 func (m *GeneralToolLatencyMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

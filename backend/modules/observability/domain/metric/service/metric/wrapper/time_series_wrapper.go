@@ -34,7 +34,7 @@ func (a *TimeSeriesWrapper) Source() entity.MetricSource {
 	return a.originalMetric.Source()
 }
 
-func (a *TimeSeriesWrapper) Expression(granularity entity.MetricGranularity) string {
+func (a *TimeSeriesWrapper) Expression(granularity entity.MetricGranularity) *entity.Expression {
 	return a.originalMetric.Expression(granularity)
 }
 
