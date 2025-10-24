@@ -256,3 +256,35 @@ func GetExperimentAggrResultOApi(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// UpdateEvaluationSetOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id [PATCH]
+func UpdateEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.UpdateEvaluationSetOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.UpdateEvaluationSetOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// DeleteEvaluationSetOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id [DELETE]
+func DeleteEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.DeleteEvaluationSetOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.DeleteEvaluationSetOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

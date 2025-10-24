@@ -13,6 +13,8 @@ import (
 type Client interface {
 	CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateEvaluationSetOApiResponse, err error)
 	GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvaluationSetOApiResponse, err error)
+	UpdateEvaluationSetOApi(ctx context.Context, req *openapi.UpdateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetOApiResponse, err error)
+	DeleteEvaluationSetOApi(ctx context.Context, req *openapi.DeleteEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.DeleteEvaluationSetOApiResponse, err error)
 	ListEvaluationSetsOApi(ctx context.Context, req *openapi.ListEvaluationSetsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetsOApiResponse, err error)
 	CreateEvaluationSetVersionOApi(ctx context.Context, req *openapi.CreateEvaluationSetVersionOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateEvaluationSetVersionOApiResponse, err error)
 	ListEvaluationSetVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetVersionsOApiResponse, err error)
@@ -65,6 +67,16 @@ func (p *kEvaluationOpenAPIServiceClient) CreateEvaluationSetOApi(ctx context.Co
 func (p *kEvaluationOpenAPIServiceClient) GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvaluationSetOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetEvaluationSetOApi(ctx, req)
+}
+
+func (p *kEvaluationOpenAPIServiceClient) UpdateEvaluationSetOApi(ctx context.Context, req *openapi.UpdateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateEvaluationSetOApi(ctx, req)
+}
+
+func (p *kEvaluationOpenAPIServiceClient) DeleteEvaluationSetOApi(ctx context.Context, req *openapi.DeleteEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.DeleteEvaluationSetOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteEvaluationSetOApi(ctx, req)
 }
 
 func (p *kEvaluationOpenAPIServiceClient) ListEvaluationSetsOApi(ctx context.Context, req *openapi.ListEvaluationSetsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetsOApiResponse, err error) {

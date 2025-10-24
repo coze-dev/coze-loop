@@ -53,6 +53,47 @@ struct GetEvaluationSetOpenAPIData {
     1: optional eval_set.EvaluationSet evaluation_set
 }
 
+// 更新评测集详情
+struct UpdateEvaluationSetOApiRequest {
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
+
+    3: optional string name (vt.min_size = "1", vt.max_size = "255"),
+    4: optional string description (vt.max_size = "2048"),
+
+    255: optional base.Base Base
+}
+
+struct UpdateEvaluationSetOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional UpdateEvaluationSetOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct UpdateEvaluationSetOpenAPIData {
+}
+
+// 删除评测集
+struct DeleteEvaluationSetOApiRequest {
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
+
+    255: optional base.Base Base
+}
+
+struct DeleteEvaluationSetOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional DeleteEvaluationSetOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct DeleteEvaluationSetOpenAPIData {
+}
+
 // 1.3 查询评测集列表
 struct ListEvaluationSetsOApiRequest {
     1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
@@ -398,6 +439,10 @@ service EvaluationOpenAPIService {
     CreateEvaluationSetOApiResponse CreateEvaluationSetOApi(1: CreateEvaluationSetOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets")
     // 获取评测集详情
     GetEvaluationSetOApiResponse GetEvaluationSetOApi(1: GetEvaluationSetOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
+    // 更新评测集详情
+    UpdateEvaluationSetOApiResponse UpdateEvaluationSetOApi(1: UpdateEvaluationSetOApiRequest req) (api.tag="openapi", api.patch = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
+    // 删除评测集
+    DeleteEvaluationSetOApiResponse DeleteEvaluationSetOApi(1: DeleteEvaluationSetOApiRequest req) (api.tag="openapi", api.delete = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
     // 查询评测集列表
     ListEvaluationSetsOApiResponse ListEvaluationSetsOApi(1: ListEvaluationSetsOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets")
     // 创建评测集版本

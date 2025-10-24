@@ -69,6 +69,52 @@ func (l *LocalEvaluationOpenAPIService) GetEvaluationSetOApi(ctx context.Context
 	return result.GetSuccess(), nil
 }
 
+// UpdateEvaluationSetOApi
+// 更新评测集详情
+func (l *LocalEvaluationOpenAPIService) UpdateEvaluationSetOApi(ctx context.Context, req *openapi.UpdateEvaluationSetOApiRequest, callOptions ...callopt.Option) (*openapi.UpdateEvaluationSetOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetOApiResult)
+		resp, err := l.impl.UpdateEvaluationSetOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceUpdateEvaluationSetOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceUpdateEvaluationSetOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateEvaluationSetOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// DeleteEvaluationSetOApi
+// 删除评测集
+func (l *LocalEvaluationOpenAPIService) DeleteEvaluationSetOApi(ctx context.Context, req *openapi.DeleteEvaluationSetOApiRequest, callOptions ...callopt.Option) (*openapi.DeleteEvaluationSetOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceDeleteEvaluationSetOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceDeleteEvaluationSetOApiResult)
+		resp, err := l.impl.DeleteEvaluationSetOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceDeleteEvaluationSetOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceDeleteEvaluationSetOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "DeleteEvaluationSetOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ListEvaluationSetsOApi
 // 查询评测集列表
 func (l *LocalEvaluationOpenAPIService) ListEvaluationSetsOApi(ctx context.Context, req *openapi.ListEvaluationSetsOApiRequest, callOptions ...callopt.Option) (*openapi.ListEvaluationSetsOApiResponse, error) {

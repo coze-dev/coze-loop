@@ -396,7 +396,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				_evaluation0.POST("/evaluation_sets", append(_evaluation_sets1Mw(handler), apis.CreateEvaluationSetOApi)...)
 				_evaluation_sets1 := _evaluation0.Group("/evaluation_sets", _evaluation_sets1Mw(handler)...)
+				_evaluation_sets1.DELETE("/:evaluation_set_id", append(_deleteevaluationsetoapiMw(handler), apis.DeleteEvaluationSetOApi)...)
 				_evaluation_sets1.GET("/:evaluation_set_id", append(_getevaluationsetoapiMw(handler), apis.GetEvaluationSetOApi)...)
+				_evaluation_sets1.PATCH("/:evaluation_set_id", append(_updateevaluationsetoapiMw(handler), apis.UpdateEvaluationSetOApi)...)
 				_evaluation0.POST("/experiments", append(_experiments0Mw(handler), apis.SubmitExperimentOApi)...)
 				_experiments0 := _evaluation0.Group("/experiments", _experiments0Mw(handler)...)
 				_experiments0.GET("/:experiment_id", append(_experiment_idMw(handler), apis.GetExperimentsOApi)...)

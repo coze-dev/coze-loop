@@ -28,6 +28,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UpdateEvaluationSetOApi": kitex.NewMethodInfo(
+		updateEvaluationSetOApiHandler,
+		newEvaluationOpenAPIServiceUpdateEvaluationSetOApiArgs,
+		newEvaluationOpenAPIServiceUpdateEvaluationSetOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteEvaluationSetOApi": kitex.NewMethodInfo(
+		deleteEvaluationSetOApiHandler,
+		newEvaluationOpenAPIServiceDeleteEvaluationSetOApiArgs,
+		newEvaluationOpenAPIServiceDeleteEvaluationSetOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListEvaluationSetsOApi": kitex.NewMethodInfo(
 		listEvaluationSetsOApiHandler,
 		newEvaluationOpenAPIServiceListEvaluationSetsOApiArgs,
@@ -188,6 +202,44 @@ func newEvaluationOpenAPIServiceGetEvaluationSetOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceGetEvaluationSetOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceGetEvaluationSetOApiResult()
+}
+
+func updateEvaluationSetOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).UpdateEvaluationSetOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceUpdateEvaluationSetOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluationSetOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceUpdateEvaluationSetOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluationSetOApiResult()
+}
+
+func deleteEvaluationSetOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceDeleteEvaluationSetOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceDeleteEvaluationSetOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).DeleteEvaluationSetOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceDeleteEvaluationSetOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceDeleteEvaluationSetOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceDeleteEvaluationSetOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceDeleteEvaluationSetOApiResult()
 }
 
 func listEvaluationSetsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -464,6 +516,26 @@ func (p *kClient) GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEval
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceGetEvaluationSetOApiResult
 	if err = p.c.Call(ctx, "GetEvaluationSetOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateEvaluationSetOApi(ctx context.Context, req *openapi.UpdateEvaluationSetOApiRequest) (r *openapi.UpdateEvaluationSetOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceUpdateEvaluationSetOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceUpdateEvaluationSetOApiResult
+	if err = p.c.Call(ctx, "UpdateEvaluationSetOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteEvaluationSetOApi(ctx context.Context, req *openapi.DeleteEvaluationSetOApiRequest) (r *openapi.DeleteEvaluationSetOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceDeleteEvaluationSetOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceDeleteEvaluationSetOApiResult
+	if err = p.c.Call(ctx, "DeleteEvaluationSetOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
