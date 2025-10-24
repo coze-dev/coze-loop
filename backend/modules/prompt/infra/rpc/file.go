@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
+//go:generate mockgen -source=../../../../kitex_gen/coze/loop/foundation/file/fileservice/client.go -destination=mocks/fileservice_mock.go -package=mocks -mock_names Client=FileServiceClient
 type FileRPCAdapter struct {
 	client fileservice.Client
 }
