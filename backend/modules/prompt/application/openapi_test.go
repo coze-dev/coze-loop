@@ -2361,6 +2361,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 					},
 				}
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
+				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
 					promptService:    mockPromptService,
@@ -2406,6 +2407,83 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				},
 			},
 			wantErr: nil,
+		},
+		{
+			name: "error: base64 convert failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
+					"test_prompt": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				expectedPrompt := &entity.Prompt{
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_prompt",
+				}
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 123, WithCommit: true, CommitVersion: "1.0.0"}: expectedPrompt,
+				}, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+
+				expectedReply := &entity.Reply{
+					DebugID: 456,
+					Item: &entity.ReplyItem{
+						Message: &entity.Message{
+							Role: entity.RoleAssistant,
+							Parts: []*entity.ContentPart{
+								{
+									Type: entity.ContentTypeImageURL,
+									ImageURL: &entity.ImageURL{
+										URL: "data:image/png;base64,abc",
+									},
+								},
+							},
+						},
+					},
+				}
+				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
+				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.ExecuteRequest{
+					WorkspaceID: ptr.Of(int64(123456)),
+					PromptIdentifier: &openapi.PromptQuery{
+						PromptKey: ptr.Of("test_prompt"),
+						Version:   ptr.Of("1.0.0"),
+					},
+				},
+			},
+			wantPromptDO: &entity.Prompt{
+				ID:        123,
+				SpaceID:   123456,
+				PromptKey: "test_prompt",
+			},
+			wantReply: nil,
+			wantErr:   errors.New("convert error"),
 		},
 		{
 			name: "error: rate limit exceeded",
@@ -2732,6 +2810,7 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 					},
 				}
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
+				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
 				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
@@ -2775,6 +2854,88 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				},
 			},
 			wantErr: nil,
+		},
+		{
+			name: "error: base64 convert failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
+					"test_prompt": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				expectedPrompt := &entity.Prompt{
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_prompt",
+				}
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 123, WithCommit: true, CommitVersion: "1.0.0"}: expectedPrompt,
+				}, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+
+				expectedReply := &entity.Reply{
+					DebugID: 456,
+					Item: &entity.ReplyItem{
+						Message: &entity.Message{
+							Role: entity.RoleAssistant,
+							Parts: []*entity.ContentPart{
+								{
+									Type: entity.ContentTypeImageURL,
+									ImageURL: &entity.ImageURL{
+										URL: "data:image/png;base64,abc",
+									},
+								},
+							},
+						},
+					},
+				}
+				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
+				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &openapi.ExecuteRequest{
+					WorkspaceID: ptr.Of(int64(123456)),
+					PromptIdentifier: &openapi.PromptQuery{
+						PromptKey: ptr.Of("test_prompt"),
+						Version:   ptr.Of("1.0.0"),
+					},
+					Messages: []*openapi.Message{
+						{
+							Role:    ptr.Of(prompt.RoleUser),
+							Content: ptr.Of("Hello"),
+						},
+					},
+				},
+			},
+			wantR:   openapi.NewExecuteResponse(),
+			wantErr: errors.New("convert error"),
 		},
 		{
 			name: "error: invalid request",
@@ -3034,11 +3195,12 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		fieldsGetter func(ctrl *gomock.Controller) fields
-		argsGetter   func(ctrl *gomock.Controller) args
-		wantErr      error
-		validateFunc func(t *testing.T, stream *mockExecuteStreamingServer)
+		name             string
+		fieldsGetter     func(ctrl *gomock.Controller) fields
+		argsGetter       func(ctrl *gomock.Controller) args
+		wantErr          error
+		validateFunc     func(t *testing.T, stream *mockExecuteStreamingServer)
+		setupConvertMock func(mockSvc *servicemocks.MockIPromptService)
 	}{
 		{
 			name: "success: normal streaming execution",
@@ -3195,6 +3357,100 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				assert.Equal(t, "Hello", calls[0].Data.Message.GetContent())
 				assert.Equal(t, ", how can I help you?", calls[1].Data.Message.GetContent())
 				assert.Equal(t, "stop", calls[1].Data.GetFinishReason())
+			},
+		},
+		{
+			name: "error: base64 convert failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockConfig := confmocks.NewMockIConfigProvider(ctrl)
+				mockConfig.EXPECT().GetPTaaSMaxQPSByPromptKey(gomock.Any(), int64(123456), "test_prompt").Return(100, nil)
+
+				mockRateLimiter := limitermocks.NewMockIRateLimiter(ctrl)
+				mockRateLimiter.EXPECT().AllowN(gomock.Any(), "ptaas:qps:space_id:123456:prompt_key:test_prompt", 1, gomock.Any()).Return(&limiter.Result{
+					Allowed: true,
+				}, nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().MGetPromptIDs(gomock.Any(), int64(123456), []string{"test_prompt"}).Return(map[string]int64{
+					"test_prompt": 123,
+				}, nil)
+				mockPromptService.EXPECT().MParseCommitVersion(gomock.Any(), int64(123456), gomock.Any()).Return(map[service.PromptQueryParam]string{
+					{PromptID: 123, PromptKey: "test_prompt", Version: "1.0.0"}: "1.0.0",
+				}, nil)
+
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				expectedPrompt := &entity.Prompt{
+					ID:        123,
+					SpaceID:   123456,
+					PromptKey: "test_prompt",
+				}
+				mockManageRepo.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 123, WithCommit: true, CommitVersion: "1.0.0"}: expectedPrompt,
+				}, nil)
+
+				mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().MCheckPromptPermissionForOpenAPI(gomock.Any(), int64(123456), []int64{123}, consts.ActionLoopPromptExecute).Return(nil)
+
+				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
+						param.ResultStream <- &entity.Reply{
+							Item: &entity.ReplyItem{
+								Message: &entity.Message{
+									Role: entity.RoleAssistant,
+									Parts: []*entity.ContentPart{
+										{
+											Type: entity.ContentTypeImageURL,
+											ImageURL: &entity.ImageURL{
+												URL: "data:image/png;base64,abc",
+											},
+										},
+									},
+								},
+							},
+						}
+						return &entity.Reply{
+							Item: &entity.ReplyItem{
+								Message: &entity.Message{
+									Role: entity.RoleAssistant,
+								},
+							},
+						}, nil
+					})
+
+				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
+				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
+
+				return fields{
+					promptService:    mockPromptService,
+					promptManageRepo: mockManageRepo,
+					config:           mockConfig,
+					auth:             mockAuth,
+					rateLimiter:      mockRateLimiter,
+					collector:        mockCollector,
+				}
+			},
+			argsGetter: func(ctrl *gomock.Controller) args {
+				ctx := context.Background()
+				stream := newMockExecuteStreamingServer(ctx)
+				return args{
+					ctx: ctx,
+					req: &openapi.ExecuteRequest{
+						WorkspaceID: ptr.Of(int64(123456)),
+						PromptIdentifier: &openapi.PromptQuery{
+							PromptKey: ptr.Of("test_prompt"),
+							Version:   ptr.Of("1.0.0"),
+						},
+					},
+					stream: stream,
+				}
+			},
+			wantErr: errors.New("convert error"),
+			validateFunc: func(t *testing.T, stream *mockExecuteStreamingServer) {
+				calls := stream.GetSendCalls()
+				assert.Len(t, calls, 0)
+			},
+			setupConvertMock: func(mockSvc *servicemocks.MockIPromptService) {
+				mockSvc.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
 			},
 		},
 		{
@@ -4057,6 +4313,13 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			ttFields := tt.fieldsGetter(ctrl)
+			if mockSvc, ok := ttFields.promptService.(*servicemocks.MockIPromptService); ok {
+				if tt.setupConvertMock != nil {
+					tt.setupConvertMock(mockSvc)
+				} else {
+					mockSvc.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				}
+			}
 			ttArgs := tt.argsGetter(ctrl)
 			p := &PromptOpenAPIApplicationImpl{
 				promptService:    ttFields.promptService,

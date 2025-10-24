@@ -43,6 +43,27 @@ func (l *LocalFileService) UploadLoopFileInner(ctx context.Context, req *file.Up
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalFileService) UploadFileForServer(ctx context.Context, req *file.UploadFileForServerRequest, callOptions ...callopt.Option) (*file.UploadFileForServerResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*file.FileServiceUploadFileForServerArgs)
+		result := out.(*file.FileServiceUploadFileForServerResult)
+		resp, err := l.impl.UploadFileForServer(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &file.FileServiceUploadFileForServerArgs{Req: req}
+	result := &file.FileServiceUploadFileForServerResult{}
+	ctx = l.injectRPCInfo(ctx, "UploadFileForServer")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalFileService) SignUploadFile(ctx context.Context, req *file.SignUploadFileRequest, callOptions ...callopt.Option) (*file.SignUploadFileResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*file.FileServiceSignUploadFileArgs)

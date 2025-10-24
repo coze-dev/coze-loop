@@ -5,12 +5,15 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func (p *PromptServiceImpl) MGetPromptIDs(ctx context.Context, spaceID int64, promptKeys []string) (PromptKeyIDMap map[string]int64, err error) {
@@ -42,10 +45,15 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range message.Parts {
-			if part == nil || part.ImageURL == nil {
+			if part == nil {
 				continue
 			}
-			fileKeys = append(fileKeys, part.ImageURL.URI)
+			if part.ImageURL != nil && part.ImageURL.URI != "" {
+				fileKeys = append(fileKeys, part.ImageURL.URI)
+			}
+			if part.VideoURL != nil && part.VideoURL.URI != "" {
+				fileKeys = append(fileKeys, part.VideoURL.URI)
+			}
 		}
 	}
 	for _, val := range variableVals {
@@ -53,10 +61,15 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range val.MultiPartValues {
-			if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
+			if part == nil {
 				continue
 			}
-			fileKeys = append(fileKeys, part.ImageURL.URI)
+			if part.ImageURL != nil && part.ImageURL.URI != "" {
+				fileKeys = append(fileKeys, part.ImageURL.URI)
+			}
+			if part.VideoURL != nil && part.VideoURL.URI != "" {
+				fileKeys = append(fileKeys, part.VideoURL.URI)
+			}
 		}
 	}
 	if len(fileKeys) == 0 {
@@ -72,10 +85,15 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range message.Parts {
-			if part == nil || part.ImageURL == nil {
+			if part == nil {
 				continue
 			}
-			part.ImageURL.URL = urlMap[part.ImageURL.URI]
+			if part.ImageURL != nil {
+				part.ImageURL.URL = urlMap[part.ImageURL.URI]
+			}
+			if part.VideoURL != nil {
+				part.VideoURL.URL = urlMap[part.VideoURL.URI]
+			}
 		}
 	}
 	for _, val := range variableVals {
@@ -83,12 +101,117 @@ func (p *PromptServiceImpl) MCompleteMultiModalFileURL(ctx context.Context, mess
 			continue
 		}
 		for _, part := range val.MultiPartValues {
-			if part == nil || part.ImageURL == nil || part.ImageURL.URI == "" {
+			if part == nil {
 				continue
 			}
-			part.ImageURL.URL = urlMap[part.ImageURL.URI]
+			if part.ImageURL != nil && part.ImageURL.URI != "" {
+				part.ImageURL.URL = urlMap[part.ImageURL.URI]
+			}
+			if part.VideoURL != nil && part.VideoURL.URI != "" {
+				part.VideoURL.URL = urlMap[part.VideoURL.URI]
+			}
 		}
 	}
+	return nil
+}
+
+// MConvertBase64DataURLToFileURI converts base64 files to file URIs by uploading them
+func (p *PromptServiceImpl) MConvertBase64DataURLToFileURI(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
+	for _, message := range messages {
+		if message == nil || len(message.Parts) == 0 {
+			continue
+		}
+
+		for _, part := range message.Parts {
+			if part == nil || part.ImageURL == nil {
+				continue
+			}
+			// Check if the URL is a base64 data URL
+			url := part.ImageURL.URL
+			if url == "" || !strings.HasPrefix(url, "data:") {
+				continue
+			}
+
+			// Parse the data URL to extract mime type and base64 data
+			// Format: data:<mime_type>;base64,<base64_data>
+			parts := strings.SplitN(url, ",", 2)
+			if len(parts) != 2 {
+				logs.CtxWarn(ctx, "invalid data URL format: %s", url)
+				continue
+			}
+
+			// Extract mime type from the first part
+			headerParts := strings.SplitN(parts[0], ";", 2)
+			if len(headerParts) != 2 {
+				logs.CtxWarn(ctx, "invalid data URL header: %s", parts[0])
+				continue
+			}
+			mimeType := strings.TrimPrefix(headerParts[0], "data:")
+			if mimeType == "" {
+				logs.CtxWarn(ctx, "missing mime type in data URL")
+				continue
+			}
+
+			// Decode base64 data
+			decodedData, err := base64.StdEncoding.DecodeString(parts[1])
+			if err != nil {
+				logs.CtxError(ctx, "failed to decode base64 file: %v", err)
+				continue
+			}
+
+			// Upload the file
+			fileKey, err := p.file.UploadFileForServer(ctx, mimeType, decodedData, workspaceID)
+			if err != nil {
+				logs.CtxError(ctx, "failed to upload file: %v", err)
+				return err
+			}
+
+			// Replace the base64 URL with the file URI
+			part.ImageURL.URI = fileKey
+			part.ImageURL.URL = "" // Clear the URL, it will be filled later by MGetFileURL if needed
+		}
+	}
+
+	return nil
+}
+
+// messageContainsBase64File checks if messages contain base64 files
+func (p *PromptServiceImpl) messageContainsBase64File(messages []*entity.Message) bool {
+	for _, message := range messages {
+		if message == nil || len(message.Parts) == 0 {
+			continue
+		}
+		for _, part := range message.Parts {
+			if part == nil || part.ImageURL == nil {
+				continue
+			}
+			// Check if the URL is a base64 data URL (format: data:<mime_type>;base64,<data>)
+			url := part.ImageURL.URL
+			if url != "" && strings.HasPrefix(url, "data:") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// MConvertBase64DataURLToFileURL converts base64 files to download URLs
+func (p *PromptServiceImpl) MConvertBase64DataURLToFileURL(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
+	// Fast path: skip processing if no base64 files present
+	if !p.messageContainsBase64File(messages) {
+		return nil
+	}
+
+	// Convert base64 files to file URIs
+	if err := p.MConvertBase64DataURLToFileURI(ctx, messages, workspaceID); err != nil {
+		return err
+	}
+
+	// Convert file URIs to download URLs
+	if err := p.MCompleteMultiModalFileURL(ctx, messages, nil); err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -4,7 +4,9 @@
 package convertor
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/vincent-petithory/dataurl"
@@ -130,44 +132,104 @@ func ContentPartDO2DTO(do *entity.ContentPart) *runtimedto.ChatMessagePart {
 	if do == nil {
 		return nil
 	}
-	return &runtimedto.ChatMessagePart{
-		Type:     ptr.Of(ContentTypeDO2DTO(do.Type)),
-		Text:     do.Text,
-		ImageURL: ImageURLDO2DTO(do.Type, do.ImageURL, do.Base64Data),
+	part := &runtimedto.ChatMessagePart{
+		Type: ptr.Of(ContentTypeDO2DTO(do.Type, do.Base64Data)),
+		Text: do.Text,
 	}
+	switch do.Type {
+	case entity.ContentTypeImageURL:
+		part.ImageURL = ImageURLDO2DTO(do.ImageURL)
+	case entity.ContentTypeVideoURL:
+		part.VideoURL = VideoURLDO2DTO(do.VideoURL)
+	case entity.ContentTypeBase64Data:
+		imageURL, videoURL := base64DataToMedia(do)
+		if videoURL != nil {
+			part.Type = ptr.Of(runtimedto.ChatMessagePartTypeVideoURL)
+			part.VideoURL = videoURL
+		} else if imageURL != nil {
+			part.Type = ptr.Of(runtimedto.ChatMessagePartTypeImageURL)
+			part.ImageURL = imageURL
+		}
+	}
+	return part
 }
 
-func ContentTypeDO2DTO(do entity.ContentType) runtimedto.ChatMessagePartType {
-	switch do {
+func ContentTypeDO2DTO(contentType entity.ContentType, base64Data *string) runtimedto.ChatMessagePartType {
+	switch contentType {
 	case entity.ContentTypeText:
 		return runtimedto.ChatMessagePartTypeText
 	case entity.ContentTypeImageURL:
 		return runtimedto.ChatMessagePartTypeImageURL
+	case entity.ContentTypeVideoURL:
+		return runtimedto.ChatMessagePartTypeVideoURL
 	case entity.ContentTypeBase64Data:
-		return runtimedto.ChatMessagePartTypeImageURL // 目前base64都通过image_url传递
+		imageURL, videoURL := base64DataToMedia(&entity.ContentPart{Base64Data: base64Data})
+		if videoURL != nil {
+			return runtimedto.ChatMessagePartTypeVideoURL
+		}
+		if imageURL != nil {
+			return runtimedto.ChatMessagePartTypeImageURL
+		}
+		return runtimedto.ChatMessagePartTypeImageURL
 	default:
 		return runtimedto.ChatMessagePartTypeText
 	}
 }
 
-func ImageURLDO2DTO(contentType entity.ContentType, url *entity.ImageURL, base64Data *string) *runtimedto.ChatMessageImageURL {
-	switch contentType {
-	case entity.ContentTypeImageURL:
-		return &runtimedto.ChatMessageImageURL{
-			URL: ptr.Of(url.URL),
-		}
-	case entity.ContentTypeBase64Data:
-		dataURL, _ := dataurl.DecodeString(ptr.From(base64Data))
-		if dataURL == nil {
-			return nil
-		}
-		return &runtimedto.ChatMessageImageURL{
-			URL:      base64Data,
-			MimeType: ptr.Of(dataURL.Type),
-		}
-	default:
+func ImageURLDO2DTO(url *entity.ImageURL) *runtimedto.ChatMessageImageURL {
+	if url == nil {
 		return nil
 	}
+	return &runtimedto.ChatMessageImageURL{
+		URL: ptr.Of(url.URL),
+	}
+}
+
+func VideoURLDO2DTO(url *entity.VideoURL) *runtimedto.ChatMessageVideoURL {
+	if url == nil {
+		return nil
+	}
+	var detail *runtimedto.VideoURLDetail
+	if url.Fps != nil {
+		detail = &runtimedto.VideoURLDetail{
+			Fps: url.Fps,
+		}
+	}
+	return &runtimedto.ChatMessageVideoURL{
+		URL:    ptr.Of(url.URL),
+		Detail: detail,
+	}
+}
+
+func base64DataToMedia(part *entity.ContentPart) (*runtimedto.ChatMessageImageURL, *runtimedto.ChatMessageVideoURL) {
+	if part == nil || part.Base64Data == nil || ptr.From(part.Base64Data) == "" {
+		return nil, nil
+	}
+	dataURL, _ := dataurl.DecodeString(ptr.From(part.Base64Data))
+	if dataURL == nil {
+		return nil, nil
+	}
+	mimeType := dataURL.ContentType()
+	if strings.HasPrefix(mimeType, runtimedto.MimePrefixImage) {
+		return &runtimedto.ChatMessageImageURL{
+			URL:      part.Base64Data,
+			MimeType: ptr.Of(mimeType),
+		}, nil
+	}
+	if strings.HasPrefix(mimeType, runtimedto.MimePrefixVideo) {
+		videoURL := &runtimedto.ChatMessageVideoURL{
+			URL:      part.Base64Data,
+			MimeType: ptr.Of(mimeType),
+		}
+		// Preserve fps from original VideoURL if available
+		if part.VideoURL != nil && part.VideoURL.Fps != nil {
+			videoURL.Detail = &runtimedto.VideoURLDetail{
+				Fps: part.VideoURL.Fps,
+			}
+		}
+		return nil, videoURL
+	}
+	return nil, nil
 }
 
 func BatchToolCallDO2DTO(dos []*entity.ToolCall) []*runtimedto.ToolCall {
@@ -313,6 +375,7 @@ func MultimodalContentDTO2DO(dto *runtimedto.ChatMessagePart) *entity.ContentPar
 		Type:     ContentTypeDTO2DO(dto.GetType()),
 		Text:     dto.Text,
 		ImageURL: ImageURLDTO2DO(dto.ImageURL),
+		VideoURL: VideoURLDTO2DO(dto.VideoURL),
 	}
 }
 
@@ -322,6 +385,8 @@ func ContentTypeDTO2DO(dto runtimedto.ChatMessagePartType) entity.ContentType {
 		return entity.ContentTypeText
 	case runtimedto.ChatMessagePartTypeImageURL:
 		return entity.ContentTypeImageURL
+	case runtimedto.ChatMessagePartTypeVideoURL:
+		return entity.ContentTypeVideoURL
 	default:
 		return entity.ContentTypeText
 	}
@@ -331,8 +396,32 @@ func ImageURLDTO2DO(dto *runtimedto.ChatMessageImageURL) *entity.ImageURL {
 	if dto == nil {
 		return nil
 	}
+	url := ptr.From(dto.URL)
+	// If mimetype is provided and URL is base64 string, convert to dataurl format
+	if dto.MimeType != nil && ptr.From(dto.MimeType) != "" && !strings.HasPrefix(url, "data:") {
+		url = fmt.Sprintf("data:%s;base64,%s", ptr.From(dto.MimeType), url)
+	}
 	return &entity.ImageURL{
-		URL: ptr.From(dto.URL),
+		URL: url,
+	}
+}
+
+func VideoURLDTO2DO(dto *runtimedto.ChatMessageVideoURL) *entity.VideoURL {
+	if dto == nil {
+		return nil
+	}
+	var fps *float64
+	if dto.Detail != nil {
+		fps = dto.Detail.Fps
+	}
+	url := ptr.From(dto.URL)
+	// If mimetype is provided and URL is base64 string, convert to dataurl format
+	if dto.MimeType != nil && ptr.From(dto.MimeType) != "" && !strings.HasPrefix(url, "data:") {
+		url = fmt.Sprintf("data:%s;base64,%s", ptr.From(dto.MimeType), url)
+	}
+	return &entity.VideoURL{
+		URL: url,
+		Fps: fps,
 	}
 }
 

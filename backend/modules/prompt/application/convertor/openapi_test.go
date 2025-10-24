@@ -365,12 +365,14 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					},
 				},
 			},
-			want: &openapi.Prompt{
+			dto: &openapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
 				PromptTemplate: &openapi.PromptTemplate{
-					Metadata: map[string]string{"commit": "meta"},
+					TemplateType: ptr.Of(prompt.TemplateType("")),
+					VariableDefs: []*openapi.VariableDef{},
+					Metadata:     map[string]string{"commit": "meta"},
 				},
 			},
 		},
@@ -440,7 +442,9 @@ func TestOpenAPIPromptTemplateDO2DTO(t *testing.T) {
 				Metadata: map[string]string{"k": "v"},
 			},
 			want: &openapi.PromptTemplate{
-				Metadata: map[string]string{"k": "v"},
+				TemplateType: ptr.Of(prompt.TemplateType("")),
+				VariableDefs: []*openapi.VariableDef{},
+				Metadata:     map[string]string{"k": "v"},
 			},
 		},
 	}
@@ -545,6 +549,11 @@ func TestOpenAPIContentTypeDO2DTO(t *testing.T) {
 			want: openapi.ContentTypeImageURL,
 		},
 		{
+			name: "video url content type",
+			do:   entity.ContentTypeVideoURL,
+			want: openapi.ContentTypeVideoURL,
+		},
+		{
 			name: "unknown content type - should default to text",
 			do:   entity.ContentType("unknown"),
 			want: openapi.ContentTypeText,
@@ -627,6 +636,36 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 			want: &openapi.ContentPart{
 				Type: ptr.Of(openapi.ContentTypeText),
 				Text: ptr.Of(""),
+			},
+		},
+		{
+			name: "video url content part with fps",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "https://example.com/video.mp4",
+					Fps: ptr.Of(2.0),
+				},
+			},
+			want: &openapi.ContentPart{
+				Type:     ptr.Of(openapi.ContentTypeVideoURL),
+				VideoURL: ptr.Of("https://example.com/video.mp4"),
+				Config: &openapi.MediaConfig{
+					Fps: ptr.Of(2.0),
+				},
+			},
+		},
+		{
+			name: "video url content part without fps",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "https://example.com/video.mp4",
+				},
+			},
+			want: &openapi.ContentPart{
+				Type:     ptr.Of(openapi.ContentTypeVideoURL),
+				VideoURL: ptr.Of("https://example.com/video.mp4"),
 			},
 		},
 	}
@@ -738,6 +777,48 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 				nil,
 			},
 			want: []*openapi.ContentPart{},
+		},
+		{
+			name: "array with video url part",
+			do: []*entity.ContentPart{
+				{
+					Type: entity.ContentTypeVideoURL,
+					VideoURL: &entity.VideoURL{
+						URL: "https://example.com/video.mp4",
+						Fps: ptr.Of(1.5),
+					},
+				},
+			},
+			want: []*openapi.ContentPart{
+				{
+					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of("https://example.com/video.mp4"),
+					Config: &openapi.MediaConfig{
+						Fps: ptr.Of(1.5),
+					},
+				},
+			},
+		},
+		{
+			name: "base64 content part carries fps",
+			do: []*entity.ContentPart{
+				{
+					Type:       entity.ContentTypeBase64Data,
+					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+					VideoURL: &entity.VideoURL{
+						Fps: ptr.Of(2.4),
+					},
+				},
+			},
+			want: []*openapi.ContentPart{
+				{
+					Type:       ptr.Of(openapi.ContentTypeBase64Data),
+					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+					Config: &openapi.MediaConfig{
+						Fps: ptr.Of(2.4),
+					},
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -974,6 +1055,11 @@ func TestOpenAPIContentTypeDO2DTO_NewTypes(t *testing.T) {
 			name: "image url content type",
 			do:   entity.ContentTypeImageURL,
 			want: openapi.ContentTypeImageURL,
+		},
+		{
+			name: "video url content type",
+			do:   entity.ContentTypeVideoURL,
+			want: openapi.ContentTypeVideoURL,
 		},
 		{
 			name: "base64 data content type",
@@ -1286,6 +1372,48 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 				{
 					Type:     entity.ContentTypeImageURL,
 					ImageURL: nil,
+				},
+			},
+		},
+		{
+			name: "video url handling with fps config",
+			dtos: []*openapi.ContentPart{
+				{
+					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of("https://example.com/video.mp4"),
+					Config: &openapi.MediaConfig{
+						Fps: ptr.Of(1.8),
+					},
+				},
+			},
+			want: []*entity.ContentPart{
+				{
+					Type: entity.ContentTypeVideoURL,
+					VideoURL: &entity.VideoURL{
+						URL: "https://example.com/video.mp4",
+						Fps: ptr.Of(1.8),
+					},
+				},
+			},
+		},
+		{
+			name: "base64 video carries fps without video url",
+			dtos: []*openapi.ContentPart{
+				{
+					Type:       ptr.Of(openapi.ContentTypeBase64Data),
+					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+					Config: &openapi.MediaConfig{
+						Fps: ptr.Of(2.2),
+					},
+				},
+			},
+			want: []*entity.ContentPart{
+				{
+					Type:       entity.ContentTypeBase64Data,
+					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+					VideoURL: &entity.VideoURL{
+						Fps: ptr.Of(2.2),
+					},
 				},
 			},
 		},

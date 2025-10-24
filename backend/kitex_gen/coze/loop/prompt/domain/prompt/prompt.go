@@ -33,6 +33,8 @@ const (
 
 	ContentTypeImageURL = "image_url"
 
+	ContentTypeVideoURL = "video_url"
+
 	ContentTypeMultiPartVariable = "multi_part_variable"
 
 	VariableTypeString = "string"
@@ -6007,6 +6009,7 @@ type ContentPart struct {
 	Type     *ContentType `thrift:"type,1,optional" frugal:"1,optional,string" form:"type" json:"type,omitempty" query:"type"`
 	Text     *string      `thrift:"text,2,optional" frugal:"2,optional,string" form:"text" json:"text,omitempty" query:"text"`
 	ImageURL *ImageURL    `thrift:"image_url,3,optional" frugal:"3,optional,ImageURL" form:"image_url" json:"image_url,omitempty" query:"image_url"`
+	VideoURL *VideoURL    `thrift:"video_url,4,optional" frugal:"4,optional,VideoURL" form:"video_url" json:"video_url,omitempty" query:"video_url"`
 }
 
 func NewContentPart() *ContentPart {
@@ -6051,6 +6054,18 @@ func (p *ContentPart) GetImageURL() (v *ImageURL) {
 	}
 	return p.ImageURL
 }
+
+var ContentPart_VideoURL_DEFAULT *VideoURL
+
+func (p *ContentPart) GetVideoURL() (v *VideoURL) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVideoURL() {
+		return ContentPart_VideoURL_DEFAULT
+	}
+	return p.VideoURL
+}
 func (p *ContentPart) SetType(val *ContentType) {
 	p.Type = val
 }
@@ -6060,11 +6075,15 @@ func (p *ContentPart) SetText(val *string) {
 func (p *ContentPart) SetImageURL(val *ImageURL) {
 	p.ImageURL = val
 }
+func (p *ContentPart) SetVideoURL(val *VideoURL) {
+	p.VideoURL = val
+}
 
 var fieldIDToName_ContentPart = map[int16]string{
 	1: "type",
 	2: "text",
 	3: "image_url",
+	4: "video_url",
 }
 
 func (p *ContentPart) IsSetType() bool {
@@ -6077,6 +6096,10 @@ func (p *ContentPart) IsSetText() bool {
 
 func (p *ContentPart) IsSetImageURL() bool {
 	return p.ImageURL != nil
+}
+
+func (p *ContentPart) IsSetVideoURL() bool {
+	return p.VideoURL != nil
 }
 
 func (p *ContentPart) Read(iprot thrift.TProtocol) (err error) {
@@ -6116,6 +6139,14 @@ func (p *ContentPart) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6180,6 +6211,14 @@ func (p *ContentPart) ReadField3(iprot thrift.TProtocol) error {
 	p.ImageURL = _field
 	return nil
 }
+func (p *ContentPart) ReadField4(iprot thrift.TProtocol) error {
+	_field := NewVideoURL()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.VideoURL = _field
+	return nil
+}
 
 func (p *ContentPart) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6197,6 +6236,10 @@ func (p *ContentPart) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -6271,6 +6314,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ContentPart) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVideoURL() {
+		if err = oprot.WriteFieldBegin("video_url", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.VideoURL.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *ContentPart) String() string {
 	if p == nil {
@@ -6293,6 +6354,9 @@ func (p *ContentPart) DeepEqual(ano *ContentPart) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.ImageURL) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.VideoURL) {
 		return false
 	}
 	return true
@@ -6325,6 +6389,13 @@ func (p *ContentPart) Field2DeepEqual(src *string) bool {
 func (p *ContentPart) Field3DeepEqual(src *ImageURL) bool {
 
 	if !p.ImageURL.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ContentPart) Field4DeepEqual(src *VideoURL) bool {
+
+	if !p.VideoURL.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -6583,6 +6654,341 @@ func (p *ImageURL) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.URL, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type VideoURL struct {
+	URL *string  `thrift:"url,1,optional" frugal:"1,optional,string" form:"url" json:"url,omitempty" query:"url"`
+	URI *string  `thrift:"uri,2,optional" frugal:"2,optional,string" form:"uri" json:"uri,omitempty" query:"uri"`
+	Fps *float64 `thrift:"fps,3,optional" frugal:"3,optional,double" form:"fps" json:"fps,omitempty" query:"fps"`
+}
+
+func NewVideoURL() *VideoURL {
+	return &VideoURL{}
+}
+
+func (p *VideoURL) InitDefault() {
+}
+
+var VideoURL_URL_DEFAULT string
+
+func (p *VideoURL) GetURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetURL() {
+		return VideoURL_URL_DEFAULT
+	}
+	return *p.URL
+}
+
+var VideoURL_URI_DEFAULT string
+
+func (p *VideoURL) GetURI() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetURI() {
+		return VideoURL_URI_DEFAULT
+	}
+	return *p.URI
+}
+
+var VideoURL_Fps_DEFAULT float64
+
+func (p *VideoURL) GetFps() (v float64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFps() {
+		return VideoURL_Fps_DEFAULT
+	}
+	return *p.Fps
+}
+func (p *VideoURL) SetURL(val *string) {
+	p.URL = val
+}
+func (p *VideoURL) SetURI(val *string) {
+	p.URI = val
+}
+func (p *VideoURL) SetFps(val *float64) {
+	p.Fps = val
+}
+
+var fieldIDToName_VideoURL = map[int16]string{
+	1: "url",
+	2: "uri",
+	3: "fps",
+}
+
+func (p *VideoURL) IsSetURL() bool {
+	return p.URL != nil
+}
+
+func (p *VideoURL) IsSetURI() bool {
+	return p.URI != nil
+}
+
+func (p *VideoURL) IsSetFps() bool {
+	return p.Fps != nil
+}
+
+func (p *VideoURL) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.DOUBLE {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_VideoURL[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *VideoURL) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.URL = _field
+	return nil
+}
+func (p *VideoURL) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.URI = _field
+	return nil
+}
+func (p *VideoURL) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *float64
+	if v, err := iprot.ReadDouble(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Fps = _field
+	return nil
+}
+
+func (p *VideoURL) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("VideoURL"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *VideoURL) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetURL() {
+		if err = oprot.WriteFieldBegin("url", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.URL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *VideoURL) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetURI() {
+		if err = oprot.WriteFieldBegin("uri", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.URI); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *VideoURL) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFps() {
+		if err = oprot.WriteFieldBegin("fps", thrift.DOUBLE, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteDouble(*p.Fps); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *VideoURL) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("VideoURL(%+v)", *p)
+
+}
+
+func (p *VideoURL) DeepEqual(ano *VideoURL) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.URL) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.URI) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Fps) {
+		return false
+	}
+	return true
+}
+
+func (p *VideoURL) Field1DeepEqual(src *string) bool {
+
+	if p.URL == src {
+		return true
+	} else if p.URL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.URL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *VideoURL) Field2DeepEqual(src *string) bool {
+
+	if p.URI == src {
+		return true
+	} else if p.URI == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.URI, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *VideoURL) Field3DeepEqual(src *float64) bool {
+
+	if p.Fps == src {
+		return true
+	} else if p.Fps == nil || src == nil {
+		return false
+	}
+	if *p.Fps != *src {
 		return false
 	}
 	return true
