@@ -809,6 +809,9 @@ func openAPIResultPayloadDO2DTO(result *entity.ExperimentResult) *openapiExperim
 	if payload.EvaluatorOutput != nil && len(payload.EvaluatorOutput.EvaluatorRecords) > 0 {
 		res.EvaluatorRecords = openAPIEvaluatorRecordsMapDO2DTO(payload.EvaluatorOutput.EvaluatorRecords)
 	}
+	if payload.TargetOutput != nil {
+		res.TargetRecord = openAPITargetRecordDO2DTO(payload.TargetOutput.EvalTargetRecord)
+	}
 	if payload.SystemInfo != nil {
 		res.SystemInfo = &openapiExperiment.TurnSystemInfo{
 			TurnRunState: TurnRunStateDO2DTO(payload.SystemInfo.TurnRunState),
@@ -855,6 +858,114 @@ func openAPIEvaluatorRecordDO2DTO(record *entity.EvaluatorRecord) *openapiEvalua
 		res.EvaluatorOutputData = output
 	}
 	return res
+}
+
+func openAPITargetRecordDO2DTO(record *entity.EvalTargetRecord) *openapiEvalTarget.EvalTargetRecord {
+	if record == nil {
+		return nil
+	}
+	res := &openapiEvalTarget.EvalTargetRecord{
+		ID:              gptr.Of(record.ID),
+		TargetID:        gptr.Of(record.TargetID),
+		TargetVersionID: gptr.Of(record.TargetVersionID),
+		ItemID:          gptr.Of(record.ItemID),
+		TurnID:          gptr.Of(record.TurnID),
+		Logid:           gptr.Of(record.LogID),
+		TraceID:         gptr.Of(record.TraceID),
+		BaseInfo:        common.OpenAPIBaseInfoDO2DTO(record.BaseInfo),
+	}
+	if output := openAPITargetOutputDataDO2DTO(record.EvalTargetOutputData); output != nil {
+		res.EvalTargetOutputData = output
+	}
+	if status := convertEntityTargetRunStatusToOpenAPI(record.Status); status != nil {
+		res.Status = status
+	}
+	return res
+}
+
+func openAPITargetOutputDataDO2DTO(data *entity.EvalTargetOutputData) *openapiEvalTarget.EvalTargetOutputData {
+	if data == nil {
+		return nil
+	}
+	res := &openapiEvalTarget.EvalTargetOutputData{}
+	if fields := openAPITargetOutputFieldsDO2DTO(data.OutputFields); len(fields) > 0 {
+		res.OutputFields = fields
+	}
+	if usage := openAPITargetUsageDO2DTO(data.EvalTargetUsage); usage != nil {
+		res.EvalTargetUsage = usage
+	}
+	if runErr := openAPITargetRunErrorDO2DTO(data.EvalTargetRunError); runErr != nil {
+		res.EvalTargetRunError = runErr
+	}
+	if data.TimeConsumingMS != nil {
+		res.TimeConsumingMs = data.TimeConsumingMS
+	}
+	if len(res.OutputFields) == 0 && res.EvalTargetUsage == nil && res.EvalTargetRunError == nil && res.TimeConsumingMs == nil {
+		return nil
+	}
+	return res
+}
+
+func openAPITargetOutputFieldsDO2DTO(fields map[string]*entity.Content) map[string]*openapiCommon.Content {
+	if len(fields) == 0 {
+		return nil
+	}
+	converted := make(map[string]*openapiCommon.Content, len(fields))
+	for key, value := range fields {
+		if value == nil {
+			continue
+		}
+		if content := evalsetopenapi.OpenAPIContentDO2DTO(value); content != nil {
+			converted[key] = content
+		}
+	}
+	if len(converted) == 0 {
+		return nil
+	}
+	return converted
+}
+
+func openAPITargetUsageDO2DTO(usage *entity.EvalTargetUsage) *openapiEvalTarget.EvalTargetUsage {
+	if usage == nil {
+		return nil
+	}
+	return &openapiEvalTarget.EvalTargetUsage{
+		InputTokens:  usage.InputTokens,
+		OutputTokens: usage.OutputTokens,
+	}
+}
+
+func openAPITargetRunErrorDO2DTO(err *entity.EvalTargetRunError) *openapiEvalTarget.EvalTargetRunError {
+	if err == nil {
+		return nil
+	}
+	res := &openapiEvalTarget.EvalTargetRunError{}
+	if err.Code != 0 {
+		res.Code = gptr.Of(err.Code)
+	}
+	if err.Message != "" {
+		res.Message = gptr.Of(err.Message)
+	}
+	if res.Code == nil && res.Message == nil {
+		return nil
+	}
+	return res
+}
+
+func convertEntityTargetRunStatusToOpenAPI(status *entity.EvalTargetRunStatus) *openapiEvalTarget.EvalTargetRunStatus {
+	if status == nil {
+		return nil
+	}
+	var openapiStatus openapiEvalTarget.EvalTargetRunStatus
+	switch *status {
+	case entity.EvalTargetRunStatusSuccess:
+		openapiStatus = openapiEvalTarget.EvalTargetRunStatusSuccess
+	case entity.EvalTargetRunStatusFail:
+		openapiStatus = openapiEvalTarget.EvalTargetRunStatusFail
+	default:
+		return nil
+	}
+	return &openapiStatus
 }
 
 func openAPIEvaluatorOutputDataDO2DTO(data *entity.EvaluatorOutputData) *openapiEvaluator.EvaluatorOutputData {
