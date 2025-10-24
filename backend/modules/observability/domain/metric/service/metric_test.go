@@ -82,6 +82,20 @@ func (s *stubFillMetric) Interpolate() string {
 	return s.fill
 }
 
+type stubCompoundMetric struct {
+	*stubMetricDef
+	metrics  []metricentity.IMetricDefinition
+	operator metricentity.MetricOperator
+}
+
+func (s *stubCompoundMetric) GetMetrics() []metricentity.IMetricDefinition {
+	return s.metrics
+}
+
+func (s *stubCompoundMetric) Operator() metricentity.MetricOperator {
+	return s.operator
+}
+
 func TestNewMetricsServiceDuplicateName(t *testing.T) {
 	def1 := &stubMetricDef{name: "dup"}
 	def2 := &stubMetricDef{name: "dup"}
@@ -105,6 +119,13 @@ func TestMetricsServiceQueryMetricsMetricNotFound(t *testing.T) {
 	svc := &MetricsService{metricDefMap: map[string]metricentity.IMetricDefinition{}}
 	_, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{MetricsNames: []string{"missing"}})
 	require.Error(t, err)
+}
+
+func TestMetricsServiceQueryMetricsEmpty(t *testing.T) {
+	svc := &MetricsService{}
+	resp, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{})
+	require.NoError(t, err)
+	require.Empty(t, resp.Metrics)
 }
 
 func TestBuildMetricQueryEmptyBasicFilter(t *testing.T) {
@@ -184,6 +205,83 @@ func TestBuildMetricQueryWithDrillDown(t *testing.T) {
 	require.NotNil(t, resp.Metrics)
 }
 
+func TestBuildMetricInfoTypeMismatch(t *testing.T) {
+	metric1 := &stubMetricDef{name: "m1", mType: metricentity.MetricTypeTimeSeries, groupBy: []*metricentity.Dimension{{Alias: "g"}}, where: []*loop_span.FilterField{{FieldName: "f"}}}
+	metric2 := &stubMetricDef{name: "m2", mType: metricentity.MetricTypeSummary, groupBy: metric1.groupBy, where: metric1.where}
+	svc := &MetricsService{metricDefMap: map[string]metricentity.IMetricDefinition{"m1": metric1, "m2": metric2}}
+	err := svc.buildMetricInfo(context.Background(), &metricQueryBuilder{metricNames: []string{"m1", "m2"}, granularity: metricentity.MetricGranularity1Min})
+	require.Error(t, err)
+}
+
+func TestQueryCompoundMetricDivide(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	builder := traceservicemocks.NewMockTraceFilterProcessorBuilder(ctrl)
+	filter := spanfiltermocks.NewMockFilter(ctrl)
+	repoMock := metricrepomocks.NewMockIMetricRepo(ctrl)
+	tenantProvider := mocks.NewMockITenantProvider(ctrl)
+	simpleWhere := []*loop_span.FilterField{{FieldName: "tenant"}}
+	simpleGroup := []*metricentity.Dimension{}
+	numerator := &stubMetricDef{name: "num", mType: metricentity.MetricTypeSummary, where: simpleWhere, groupBy: simpleGroup}
+	denominator := &stubMetricDef{name: "den", mType: metricentity.MetricTypeSummary, where: simpleWhere, groupBy: simpleGroup}
+	compound := &stubCompoundMetric{
+		stubMetricDef: &stubMetricDef{name: "ratio", mType: metricentity.MetricTypeSummary, where: simpleWhere, groupBy: simpleGroup},
+		metrics:       []metricentity.IMetricDefinition{numerator, denominator},
+		operator:      metricentity.MetricOperatorDivide,
+	}
+	svc := &MetricsService{
+		metricRepo:     repoMock,
+		metricDefMap:   map[string]metricentity.IMetricDefinition{"num": numerator, "den": denominator, "ratio": compound},
+		buildHelper:    builder,
+		tenantProvider: tenantProvider,
+	}
+	builder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(filter, nil).AnyTimes()
+	filter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{FieldName: "base"}}, false, nil).AnyTimes()
+	tenantProvider.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+	repoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *metricrepo.GetMetricsParam) (*metricrepo.GetMetricsResult, error) {
+		require.Len(t, param.Aggregations, 1)
+		switch param.Aggregations[0].Alias {
+		case "num":
+			return &metricrepo.GetMetricsResult{Data: []map[string]any{{"num": "4"}}}, nil
+		case "den":
+			return &metricrepo.GetMetricsResult{Data: []map[string]any{{"den": "2"}}}, nil
+		default:
+			t.Fatalf("unexpected alias %s", param.Aggregations[0].Alias)
+			return nil, nil
+		}
+	}).Times(2)
+	resp, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{
+		PlatformType: loop_span.PlatformType("test"),
+		WorkspaceID:  1,
+		MetricsNames: []string{"ratio"},
+		Granularity:  metricentity.MetricGranularity1Min,
+		StartTime:    0,
+		EndTime:      60000,
+	})
+	require.NoError(t, err)
+	require.Equal(t, "2", resp.Metrics["ratio"].Summary)
+}
+
+func TestBuildFilterMerge(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	filter := spanfiltermocks.NewMockFilter(ctrl)
+	mBuilder := &metricQueryBuilder{
+		spanEnv:       &span_filter.SpanEnv{WorkspaceID: 10},
+		requestFilter: &loop_span.FilterFields{FilterFields: []*loop_span.FilterField{{FieldName: "req"}}},
+		mInfo: &metricInfo{
+			mWhere: []*loop_span.FilterField{{FieldName: "where"}},
+		},
+		filter: filter,
+	}
+	filter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{FieldName: "base"}}, false, nil)
+	svc := &MetricsService{}
+	filters, err := svc.buildFilter(context.Background(), mBuilder)
+	require.NoError(t, err)
+	require.NotNil(t, filters)
+	require.Len(t, filters.FilterFields, 2)
+	require.NotNil(t, filters.FilterFields[0].SubFilter)
+	require.Len(t, filters.FilterFields[0].SubFilter.FilterFields, 2)
+}
+
 func TestFormatTimeSeriesDataFill(t *testing.T) {
 	fillMetric := &stubFillMetric{
 		stubMetricDef: &stubMetricDef{name: "metric"},
@@ -218,6 +316,27 @@ func TestFormatTimeSeriesDataFill(t *testing.T) {
 	require.Equal(t, "fill", series[2].Value)
 }
 
+func TestFormatSummaryData(t *testing.T) {
+	svc := &MetricsService{}
+	metrics := svc.formatSummaryData([]map[string]any{{"metric": 1}})
+	require.Contains(t, metrics, "metric")
+	require.Equal(t, "1", metrics["metric"].Summary)
+}
+
+func TestFormatPieData(t *testing.T) {
+	svc := &MetricsService{}
+	mInfo := &metricInfo{mAggregation: []*metricentity.Dimension{{Alias: "metric"}}}
+	data := []map[string]any{{"metric": 1, "group": "a"}}
+	metrics := svc.formatPieData(data, mInfo)
+	require.Contains(t, metrics, "metric")
+	require.Equal(t, "a", func() string {
+		for k := range metrics["metric"].Pie {
+			return k
+		}
+		return ""
+	}())
+}
+
 func TestDivideNumber(t *testing.T) {
 	require.Equal(t, "2", divideNumber("4", "2"))
 	require.Equal(t, "", divideNumber("4", "0"))
@@ -242,6 +361,31 @@ func TestDivideTimeSeries(t *testing.T) {
 	require.Len(t, result["all"], 2)
 	require.Equal(t, "2", result["all"][0].Value)
 	require.Equal(t, "2", result["all"][1].Value)
+}
+
+func TestDivideMetricsSummary(t *testing.T) {
+	svc := &MetricsService{}
+	resp, err := svc.divideMetrics(context.Background(), []*QueryMetricsResp{
+		{Metrics: map[string]*metricentity.Metric{"num": {Summary: "4"}}},
+		{Metrics: map[string]*metricentity.Metric{"den": {Summary: "2"}}},
+	}, []metricentity.IMetricDefinition{
+		&stubMetricDef{name: "num"},
+		&stubMetricDef{name: "den"},
+	}, &stubMetricDef{name: "res"})
+	require.NoError(t, err)
+	require.Equal(t, "2", resp.Metrics["res"].Summary)
+}
+
+func TestDivideMetricsError(t *testing.T) {
+	svc := &MetricsService{}
+	_, err := svc.divideMetrics(context.Background(), []*QueryMetricsResp{
+		{Metrics: map[string]*metricentity.Metric{"num": {Summary: "4"}}},
+		{Metrics: map[string]*metricentity.Metric{}},
+	}, []metricentity.IMetricDefinition{
+		&stubMetricDef{name: "num"},
+		&stubMetricDef{name: "den"},
+	}, &stubMetricDef{name: "res"})
+	require.Error(t, err)
 }
 
 func TestPieMetrics(t *testing.T) {
