@@ -79,15 +79,8 @@ func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTask
 	} else if req.GetWorkspaceID() <= 0 {
 		return resp, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	appID := session.AppIDInCtxOrEmpty(ctx)
-	var action string
-	if appID == 717152 {
-		action = rpc.AuthActionTraceTaskList
-	} else {
-		action = rpc.AuthActionTaskReadable
-	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
-		action,
+		rpc.AuthActionTraceTaskList,
 		strconv.FormatInt(req.GetWorkspaceID(), 10),
 		false); err != nil {
 		return nil, err
