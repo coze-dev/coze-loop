@@ -95,10 +95,9 @@ type Compare struct {
 	Shift int64 // shift seconds
 }
 type Dimension struct {
-	Expression       string // 表达式
-	ExpressionFields []*loop_span.FilterField
-	Field            *loop_span.FilterField // 字段名, 设计上用于聚合
-	Alias            string                 // 别名
+	Expression *Expression            // 表达式
+	Field      *loop_span.FilterField // 字段名, 设计上用于聚合
+	Alias      string                 // 别名
 }
 
 type Expression struct {
