@@ -26,6 +26,7 @@ overrides:
   '@types/react-dom': 18.2.15
   typescript: 5.8.2
   mdast-util-gfm>mdast-util-gfm-autolink-literal: 2.0.0
+  minimist: 1.2.8
 
 patchedDependencies:
   '@douyinfe/semi-rspack-plugin@2.61.0':
@@ -17758,7 +17759,7 @@ packages:
     hasBin: true
     dependencies:
       get-stdin: 6.0.0
-      minimist: 1.2.0
+      minimist: 1.2.8
     dev: false
 
   /geojson-linestring-dissolve@0.0.1:
@@ -21324,14 +21325,6 @@ packages:
       is-plain-obj: 1.1.0
       kind-of: 6.0.3
 
-  /minimist@1.2.0:
-    resolution: {integrity: sha512-7Wl+Jz+IGWuSdgsQEJ4JunV0si/iMhg42MnQQG6h1R6TNeVenp4U9x5CC5v/gYqz/fENLQITAWXidNtVL0NNbw==}
-    dev: false
-
-  /minimist@1.2.6:
-    resolution: {integrity: sha512-Jsjnk4bw3YJqYzbdyBiNsPWHPfO++UGG749Cxs6peCu5Xg4nrena6OVxOYxrQTqww0Jmwt+Ref8rggumkTLz9Q==}
-    dev: false
-
   /minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
@@ -24502,7 +24495,7 @@ packages:
     hasBin: true
     dependencies:
       concat-stream: 1.4.11
-      minimist: 1.2.6
+      minimist: 1.2.8
       simplify-geometry: 0.0.2
     dev: false
 

@@ -20,7 +20,8 @@
     "dev:cn-release": "REGION=cn CUSTOM_VERSION=release BUILD_TYPE=online npm run dev:base",
     "lint": "eslint ./ --cache --quiet",
     "preview": "rsbuild preview",
-    "test": "vitest --run --passWithNoTests"
+    "test": "vitest --run --passWithNoTests",
+    "why": "rush-pnpm --subspace default why"
   },
   "dependencies": {
     "@coze-arch/bot-flags": "workspace:*",

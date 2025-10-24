@@ -25,7 +25,8 @@
     "@types/react": "18.2.37",
     "@types/react-dom": "18.2.15",
     "typescript": "5.8.2",
-    "mdast-util-gfm>mdast-util-gfm-autolink-literal": "2.0.0"
+    "mdast-util-gfm>mdast-util-gfm-autolink-literal": "2.0.0",
+    "minimist": "1.2.8"
   },
   "globalPeerDependencyRules": {
     "allowedVersions": {
