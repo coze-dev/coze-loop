@@ -2021,26 +2021,26 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 					traceConfig: mockConfig,
 				}
 			}, args: args{
-			ctx: context.Background(),
-			req: &trace.PreviewExportTracesToDatasetRequest{
-				WorkspaceID: 123,
-				StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
-				EndTime:     time.Now().UnixMilli(),
-				SpanIds: []*trace.SpanID{
-					{TraceID: "trace1", SpanID: "span1"},
-				},
-				FieldMappings: []*dataset0.FieldMapping{
-					{
-						FieldSchema: &dataset0.FieldSchema{
-							Key:  ptr.Of("input"),
-							Name: ptr.Of("Input"),
+				ctx: context.Background(),
+				req: &trace.PreviewExportTracesToDatasetRequest{
+					WorkspaceID: 123,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					SpanIds: []*trace.SpanID{
+						{TraceID: "trace1", SpanID: "span1"},
+					},
+					FieldMappings: []*dataset0.FieldMapping{
+						{
+							FieldSchema: &dataset0.FieldSchema{
+								Key:  ptr.Of("input"),
+								Name: ptr.Of("Input"),
+							},
+							TraceFieldKey:      "input",
+							TraceFieldJsonpath: "$.input",
 						},
-						TraceFieldKey:      "input",
-						TraceFieldJsonpath: "$.input",
 					},
 				},
 			},
-		},
 			want:    nil,
 			wantErr: true,
 		},

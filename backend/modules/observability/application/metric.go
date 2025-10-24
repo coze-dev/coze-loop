@@ -185,7 +185,7 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 	resp := &metric.GetDrillDownValuesResponse{}
 	metricVal := sResp.Metrics[metricName]
 	if metricVal != nil {
-		for k, _ := range metricVal.Pie {
+		for k := range metricVal.Pie {
 			mp := make(map[string]string)
 			_ = json.Unmarshal([]byte(k), &mp)
 			if val := mp["name"]; val != "" {
