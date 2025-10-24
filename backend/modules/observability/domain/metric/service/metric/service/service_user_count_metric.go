@@ -27,7 +27,7 @@ func (m *ServiceUserCountMetric) Source() entity.MetricSource {
 
 func (m *ServiceUserCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
 	return &entity.Expression{
-		Expression: "uniq(tags_string['user_id'])",
+		Expression: "uniq(%s)",
 		Fields: []*loop_span.FilterField{
 			{
 				FieldName: loop_span.SpanFieldUserID,
