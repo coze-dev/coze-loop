@@ -32,7 +32,7 @@ func (m *ToolDurationMetric) Source() entity.MetricSource {
 
 func (m *ToolDurationMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
 	return &entity.Expression{
-		Expression: "%sw/1000",
+		Expression: "%s/1000",
 		Fields: []*loop_span.FilterField{
 			{
 				FieldName: loop_span.SpanFieldDuration,
