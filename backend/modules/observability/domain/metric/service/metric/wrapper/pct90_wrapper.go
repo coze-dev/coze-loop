@@ -36,7 +36,10 @@ func (p *Pct90Wrapper) Source() entity.MetricSource {
 
 func (p *Pct90Wrapper) Expression(granularity entity.MetricGranularity) *entity.Expression {
 	originExpr := p.originalMetric.Expression(granularity)
-	return entity.NewExpression(fmt.Sprintf("quantile(0.9)(%s)", originExpr.Expression), originExpr.Fields...)
+	return &entity.Expression{
+		Expression: fmt.Sprintf("quantile(0.9)(%s)", originExpr.Expression),
+		Fields:     originExpr.Fields,
+	}
 }
 
 func (p *Pct90Wrapper) Where(ctx context.Context, f span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

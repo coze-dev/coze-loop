@@ -27,12 +27,23 @@ func (m *ModelTPMMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelTPMMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression(
-		"(tags_long['input_tokens']+tags_long['output_tokens'])/(duration / 60000000)",
-		entity.NewLongField(loop_span.SpanFieldInputTokens),
-		entity.NewLongField(loop_span.SpanFieldOutputTokens),
-		entity.NewLongField(loop_span.SpanFieldDuration),
-	)
+	return &entity.Expression{
+		Expression: "(%s+%s)/(%s / 60000000)",
+		Fields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldInputTokens,
+				FieldType: loop_span.FieldTypeLong,
+			},
+			{
+				FieldName: loop_span.SpanFieldOutputTokens,
+				FieldType: loop_span.FieldTypeLong,
+			},
+			{
+				FieldName: loop_span.SpanFieldDuration,
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
+	}
 }
 
 func (m *ModelTPMMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -27,8 +27,17 @@ func (m *ModelQPSFailMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelQPSFailMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	expression := fmt.Sprintf("countIf(1, status_code != 0)/%d", entity.GranularityToSecond(granularity))
-	return entity.NewExpression(expression, entity.NewLongField(loop_span.SpanFieldStatusCode))
+	denominator := entity.GranularityToSecond(granularity)
+	expression := fmt.Sprintf("countIf(1, %%s != 0)/%d", denominator)
+	return &entity.Expression{
+		Expression: expression,
+		Fields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldStatusCode,
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
+	}
 }
 
 func (m *ModelQPSFailMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

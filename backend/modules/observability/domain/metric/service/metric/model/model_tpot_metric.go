@@ -27,12 +27,23 @@ func (m *ModelTPOTMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelTPOTMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression(
-		"(duration-tags_long['latency_first_resp'])/(1000*tags_long['output_tokens'])",
-		entity.NewLongField(loop_span.SpanFieldDuration),
-		entity.NewLongField(loop_span.SpanFieldLatencyFirstResp),
-		entity.NewLongField(loop_span.SpanFieldOutputTokens),
-	)
+	return &entity.Expression{
+		Expression: "(%s-%s)/(1000*%s)",
+		Fields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldDuration,
+				FieldType: loop_span.FieldTypeLong,
+			},
+			{
+				FieldName: loop_span.SpanFieldLatencyFirstResp,
+				FieldType: loop_span.FieldTypeLong,
+			},
+			{
+				FieldName: loop_span.SpanFieldOutputTokens,
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
+	}
 }
 
 func (m *ModelTPOTMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

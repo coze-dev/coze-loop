@@ -36,7 +36,10 @@ func (m *MinWrapper) Source() entity.MetricSource {
 
 func (m *MinWrapper) Expression(granularity entity.MetricGranularity) *entity.Expression {
 	originExpr := m.originalMetric.Expression(granularity)
-	return entity.NewExpression(fmt.Sprintf("min(%s)", originExpr.Expression), originExpr.Fields...)
+	return &entity.Expression{
+		Expression: fmt.Sprintf("min(%s)", originExpr.Expression),
+		Fields:     originExpr.Fields,
+	}
 }
 
 func (m *MinWrapper) Where(ctx context.Context, f span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -26,10 +26,15 @@ func (m *ModelToolChoiceTokenCountMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelToolChoiceTokenCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression(
-		"sum(tags_long['_tool_choice_tokens'])",
-		entity.NewLongField("_tool_choice_tokens"),
-	)
+	return &entity.Expression{
+		Expression: "sum(%s)",
+		Fields: []*loop_span.FilterField{
+			{
+				FieldName: "_tool_choice_tokens",
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
+	}
 }
 
 func (m *ModelToolChoiceTokenCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

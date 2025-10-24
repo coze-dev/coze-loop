@@ -23,10 +23,15 @@ func (m *ServiceMessageCountMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceMessageCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression(
-		"uniq(tags_string['message_id'])",
-		entity.NewStringField(loop_span.SpanFieldMessageID),
-	)
+	return &entity.Expression{
+		Expression: "uniq(%s)",
+		Fields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldMessageID,
+				FieldType: loop_span.FieldTypeString,
+			},
+		},
+	}
 }
 
 func (m *ServiceMessageCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

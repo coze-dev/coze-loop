@@ -27,10 +27,15 @@ func (m *ServiceDurationMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceDurationMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression(
-		"duration/1000",
-		entity.NewLongField(loop_span.SpanFieldDuration),
-	)
+	return &entity.Expression{
+		Expression: "%s/1000",
+		Fields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldDuration,
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
+	}
 }
 
 func (m *ServiceDurationMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

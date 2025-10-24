@@ -36,7 +36,10 @@ func (a *AvgWrapper) Source() entity.MetricSource {
 
 func (a *AvgWrapper) Expression(granularity entity.MetricGranularity) *entity.Expression {
 	originExpr := a.originalMetric.Expression(granularity)
-	return entity.NewExpression(fmt.Sprintf("avg(%s)", originExpr.Expression), originExpr.Fields...)
+	return &entity.Expression{
+		Expression: fmt.Sprintf("avg(%s)", originExpr.Expression),
+		Fields:     originExpr.Fields,
+	}
 }
 
 func (a *AvgWrapper) Where(ctx context.Context, f span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

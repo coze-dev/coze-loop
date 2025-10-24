@@ -159,8 +159,12 @@ func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *GetMetricsP
 		orderByClauses = append(orderByClauses, "time_bucket") // 代码填充, 不在SQL中实现
 	}
 	for _, dimension := range param.Aggregations {
+		expr, err := s.formatAggregationExpression(ctx, dimension)
+		if err != nil {
+			return "", err
+		}
 		selectClauses = append(selectClauses,
-			fmt.Sprintf("%s AS %s", dimension.Expression, dimension.Alias))
+			fmt.Sprintf("%s AS %s", expr, dimension.Alias))
 	}
 	for _, dimension := range param.GroupBys {
 		fieldName, err := s.convertFieldName(ctx, dimension.Field)
@@ -180,6 +184,24 @@ func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *GetMetricsP
 			"", "ORDER BY "+strings.Join(orderByClauses, ", ")),
 	)
 	return wholeSql, nil
+}
+
+func (s *SpansCkDaoImpl) formatAggregationExpression(ctx context.Context, dimension *metrics_entity.Dimension) (string, error) {
+	if dimension.Expression == nil {
+		return "", nil
+	}
+	replacements := make([]any, 0, len(dimension.Expression.Fields))
+	for _, field := range dimension.Expression.Fields {
+		if field == nil {
+			continue
+		}
+		expr, err := s.convertFieldName(ctx, field)
+		if err != nil {
+			return "", err
+		}
+		replacements = append(replacements, expr)
+	}
+	return fmt.Sprintf(dimension.Expression.Expression, replacements...), nil
 }
 
 func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm.DB, error) {

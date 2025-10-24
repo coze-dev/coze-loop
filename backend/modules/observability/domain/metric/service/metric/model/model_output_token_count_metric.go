@@ -27,10 +27,15 @@ func (m *ModelOutputTokenCountMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelOutputTokenCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression(
-		"sum(tags_long['output_tokens'])",
-		entity.NewLongField(loop_span.SpanFieldOutputTokens),
-	)
+	return &entity.Expression{
+		Expression: "sum(%s)",
+		Fields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldOutputTokens,
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
+	}
 }
 
 func (m *ModelOutputTokenCountMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -31,7 +31,7 @@ func (a *SelfWrapper) Source() entity.MetricSource {
 }
 
 func (a *SelfWrapper) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return entity.NewExpression("")
+	return &entity.Expression{}
 }
 
 func (a *SelfWrapper) Where(ctx context.Context, f span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

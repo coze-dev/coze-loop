@@ -256,7 +256,7 @@ func (m *MetricsService) buildMetricInfo(ctx context.Context, builder *metricQue
 		}
 		expr := metricDef.Expression(builder.granularity)
 		mInfo.mAggregation = []*entity.Dimension{{
-			Expression: expr.Expression,
+			Expression: expr,
 			Alias:      metricDef.Name(), // 聚合指标的别名是指标名，以此后续来拆分数据
 		}}
 		mInfos = append(mInfos, mInfo)
