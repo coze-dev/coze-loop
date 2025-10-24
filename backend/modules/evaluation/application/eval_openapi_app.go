@@ -770,9 +770,9 @@ func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context
 	}
 	aggrResult := aggrResults[0]
 	res := make([]*experiment.EvaluatorAggregateResult_, 0)
-	for i, v := range aggrResult.EvaluatorResults {
+	for _, v := range aggrResult.EvaluatorResults {
 		res = append(res, &experiment.EvaluatorAggregateResult_{
-			EvaluatorID:        &i,
+			EvaluatorID:        &v.EvaluatorID,
 			EvaluatorVersionID: &v.EvaluatorVersionID,
 			Name:               v.Name,
 			Version:            v.Version,
