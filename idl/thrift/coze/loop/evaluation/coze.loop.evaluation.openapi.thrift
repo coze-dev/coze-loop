@@ -55,11 +55,11 @@ struct GetEvaluationSetOpenAPIData {
 
 // 更新评测集详情
 struct UpdateEvaluationSetOApiRequest {
-    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
-    3: optional string name (vt.min_size = "1", vt.max_size = "255"),
-    4: optional string description (vt.max_size = "2048"),
+    3: optional string name (api.body="name", vt.min_size = "1", vt.max_size = "255"),
+    4: optional string description (api.body="description", vt.max_size = "2048"),
 
     255: optional base.Base Base
 }
