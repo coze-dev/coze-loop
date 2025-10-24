@@ -1,3 +1,6 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package metric_test
 
 import (
@@ -185,6 +188,9 @@ func renderExpressions(t *testing.T, defs []entity.IMetricDefinition, gran entit
 	t.Helper()
 	res := make(map[string]string)
 	for _, def := range defs {
+		_ = def.Type()
+		_ = def.GroupBy()
+		_ = def.Source()
 		res[def.Name()] = renderExpression(t, def, gran)
 	}
 	return res

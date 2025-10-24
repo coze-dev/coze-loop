@@ -33,8 +33,9 @@ func (m *ModelSystemTokenCountMetric) Expression(granularity entity.MetricGranul
 		Expression: "sum(%s)",
 		Fields: []*loop_span.FilterField{
 			{
-				FieldName: "_system_tokens",
+				FieldName: "model_system_tokens",
 				FieldType: loop_span.FieldTypeLong,
+				IsSystem:  true,
 			},
 		},
 	}

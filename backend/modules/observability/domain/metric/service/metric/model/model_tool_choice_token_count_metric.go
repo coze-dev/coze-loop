@@ -33,8 +33,9 @@ func (m *ModelToolChoiceTokenCountMetric) Expression(granularity entity.MetricGr
 		Expression: "sum(%s)",
 		Fields: []*loop_span.FilterField{
 			{
-				FieldName: "_tool_choice_tokens",
+				FieldName: "model_tool_choice_tokens",
 				FieldType: loop_span.FieldTypeLong,
+				IsSystem:  true,
 			},
 		},
 	}
