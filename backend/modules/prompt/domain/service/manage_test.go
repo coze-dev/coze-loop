@@ -925,15 +925,10 @@ func TestPromptServiceImpl_ExpandSnippets(t *testing.T) {
 				}
 				as.NotEmpty(detail.PromptTemplate.Snippets)
 				as.Equal("hello snippet body", ptr.From(detail.PromptTemplate.Messages[0].Content))
-				as.Len(detail.PromptTemplate.VariableDefs, 2)
-				keys := map[string]bool{}
-				for _, def := range detail.PromptTemplate.VariableDefs {
-					if def != nil {
-						keys[def.Key] = true
-					}
+				as.Len(detail.PromptTemplate.VariableDefs, 1)
+				if len(detail.PromptTemplate.VariableDefs) > 0 {
+					as.Equal("main_var", detail.PromptTemplate.VariableDefs[0].Key)
 				}
-				as.True(keys["main_var"])
-				as.True(keys["snippet_var"])
 			},
 		},
 	}
@@ -966,16 +961,14 @@ func TestPromptServiceImpl_expandWithSnippetMap(t *testing.T) {
 		snippetParser SnippetParser
 	}
 	type args struct {
-		content            string
-		snippetContentMap  map[string]string
-		snippetVariableMap map[string][]*entity.VariableDef
+		content           string
+		snippetContentMap map[string]string
 	}
 	tests := []struct {
 		name        string
 		fields      fields
 		args        args
 		wantContent string
-		wantVars    []*entity.VariableDef
 		wantErr     error
 	}{
 		{
@@ -988,9 +981,8 @@ func TestPromptServiceImpl_expandWithSnippetMap(t *testing.T) {
 				},
 			},
 			args: args{
-				content:            "test",
-				snippetContentMap:  map[string]string{},
-				snippetVariableMap: map[string][]*entity.VariableDef{},
+				content:           "test",
+				snippetContentMap: map[string]string{},
 			},
 			wantErr: errors.New("parse fail"),
 		},
@@ -1004,14 +996,13 @@ func TestPromptServiceImpl_expandWithSnippetMap(t *testing.T) {
 				},
 			},
 			args: args{
-				content:            "<cozeloop_snippet>id=2&version=v1</cozeloop_snippet>",
-				snippetContentMap:  map[string]string{},
-				snippetVariableMap: map[string][]*entity.VariableDef{},
+				content:           "<cozeloop_snippet>id=2&version=v1</cozeloop_snippet>",
+				snippetContentMap: map[string]string{},
 			},
 			wantErr: errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("snippet content for prompt 2 with version v1 not found in cache")),
 		},
 		{
-			name: "success merges duplicated variables",
+			name: "success expands duplicated snippets",
 			fields: fields{
 				snippetParser: NewCozeLoopSnippetParser(),
 			},
@@ -1020,14 +1011,8 @@ func TestPromptServiceImpl_expandWithSnippetMap(t *testing.T) {
 				snippetContentMap: map[string]string{
 					"2_v1": "snippet",
 				},
-				snippetVariableMap: map[string][]*entity.VariableDef{
-					"2_v1": {
-						{Key: "snippet_var"},
-					},
-				},
 			},
 			wantContent: "hello snippet and again snippet",
-			wantVars:    []*entity.VariableDef{{Key: "snippet_var"}},
 		},
 	}
 
@@ -1042,25 +1027,12 @@ func TestPromptServiceImpl_expandWithSnippetMap(t *testing.T) {
 				svc.snippetParser = NewCozeLoopSnippetParser()
 			}
 
-			gotContent, gotVars, err := svc.expandWithSnippetMap(context.Background(), ttt.args.content, ttt.args.snippetContentMap, ttt.args.snippetVariableMap)
+			gotContent, err := svc.expandWithSnippetMap(context.Background(), ttt.args.content, ttt.args.snippetContentMap)
 			unittest.AssertErrorEqual(t, ttt.wantErr, err)
 			if ttt.wantErr != nil {
 				return
 			}
 			assert.Equal(t, ttt.wantContent, gotContent)
-			if ttt.wantVars != nil {
-				assert.Len(t, gotVars, len(ttt.wantVars))
-				for _, expected := range ttt.wantVars {
-					found := false
-					for _, actual := range gotVars {
-						if actual != nil && actual.Key == expected.Key {
-							found = true
-							break
-						}
-					}
-					assert.True(t, found, "expected variable %s not found", expected.Key)
-				}
-			}
 		})
 	}
 }
