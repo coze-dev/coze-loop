@@ -483,9 +483,8 @@ func (p *PromptServiceImpl) doExpandSnippets(ctx context.Context, promptDO *enti
 		}
 	}
 
-	// Build maps for quick lookup of snippet content and variable definitions
+	// Build map for quick lookup of snippet content
 	snippetContentMap := make(map[string]string)
-	snippetVariableMap := make(map[string][]*entity.VariableDef)
 	for _, snippet := range promptDetail.PromptTemplate.Snippets {
 		if snippet == nil || snippet.PromptBasic == nil {
 			continue
@@ -503,25 +502,9 @@ func (p *PromptServiceImpl) doExpandSnippets(ctx context.Context, promptDO *enti
 			snippetContent := ptr.From(snippetDetail.PromptTemplate.Messages[0].Content)
 			snippetContentMap[key] = snippetContent
 		}
-
-		// Collect variable definitions from snippet
-		if len(snippetDetail.PromptTemplate.VariableDefs) > 0 {
-			snippetVariableMap[key] = snippetDetail.PromptTemplate.VariableDefs
-		}
 	}
 
-	// Now expand all snippet references in messages using the pre-built content map and merge variable definitions
-	var allMergedVariableDefs []*entity.VariableDef
-	existingVarKeys := make(map[string]bool) // Track existing variable keys to avoid duplicates
-
-	// First, collect existing variable definitions from the main prompt
-	for _, varDef := range promptDetail.PromptTemplate.VariableDefs {
-		if varDef != nil {
-			allMergedVariableDefs = append(allMergedVariableDefs, varDef)
-			existingVarKeys[varDef.Key] = true
-		}
-	}
-
+	// Expand all snippet references in messages using the pre-built content map
 	for _, message := range promptDetail.PromptTemplate.Messages {
 		if message == nil {
 			continue
@@ -529,18 +512,11 @@ func (p *PromptServiceImpl) doExpandSnippets(ctx context.Context, promptDO *enti
 
 		// Expand content if it exists
 		if message.Content != nil && *message.Content != "" {
-			expandedContent, mergedVars, err := p.expandWithSnippetMap(ctx, *message.Content, snippetContentMap, snippetVariableMap)
+			expandedContent, err := p.expandWithSnippetMap(ctx, *message.Content, snippetContentMap)
 			if err != nil {
 				return err
 			}
 			message.Content = &expandedContent
-			// Add merged variable definitions (avoid duplicates)
-			for _, varDef := range mergedVars {
-				if varDef != nil && !existingVarKeys[varDef.Key] {
-					allMergedVariableDefs = append(allMergedVariableDefs, varDef)
-					existingVarKeys[varDef.Key] = true
-				}
-			}
 		}
 
 		// Expand text in parts
@@ -548,60 +524,40 @@ func (p *PromptServiceImpl) doExpandSnippets(ctx context.Context, promptDO *enti
 			if part == nil || part.Text == nil || *part.Text == "" {
 				continue
 			}
-			expandedText, mergedVars, err := p.expandWithSnippetMap(ctx, *part.Text, snippetContentMap, snippetVariableMap)
+			expandedText, err := p.expandWithSnippetMap(ctx, *part.Text, snippetContentMap)
 			if err != nil {
 				return err
 			}
 			part.Text = &expandedText
-			// Add merged variable definitions (avoid duplicates)
-			for _, varDef := range mergedVars {
-				if varDef != nil && !existingVarKeys[varDef.Key] {
-					allMergedVariableDefs = append(allMergedVariableDefs, varDef)
-					existingVarKeys[varDef.Key] = true
-				}
-			}
 		}
 	}
-
-	// Update the prompt template with merged variable definitions
-	promptDetail.PromptTemplate.VariableDefs = allMergedVariableDefs
 
 	return nil
 }
 
-// expandWithSnippetMap expands snippet references using a pre-built content map and returns expanded content with merged variable definitions
-func (p *PromptServiceImpl) expandWithSnippetMap(ctx context.Context, content string, snippetContentMap map[string]string, snippetVariableMap map[string][]*entity.VariableDef) (string, []*entity.VariableDef, error) {
+// expandWithSnippetMap expands snippet references using a pre-built content map and returns expanded content
+func (p *PromptServiceImpl) expandWithSnippetMap(ctx context.Context, content string, snippetContentMap map[string]string) (string, error) {
 	// Parse snippet references from content
 	snippetRefs, err := p.snippetParser.ParseReferences(content)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	// If no references found, return original content and empty variable definitions
 	if len(snippetRefs) == 0 {
-		return content, nil, nil
+		return content, nil
 	}
 
-	// Replace each reference with expanded content from the map and collect variable definitions
+	// Replace each reference with expanded content from the map
 	expandedContent := content
-	var mergedVariableDefs []*entity.VariableDef
-	processedSnippets := make(map[string]bool) // Track processed snippets to avoid duplicates
 
 	for _, ref := range snippetRefs {
 		// Build lookup key: "promptID_version"
 		key := fmt.Sprintf("%d_%s", ref.PromptID, ref.CommitVersion)
 		expandedSnippetContent, exists := snippetContentMap[key]
 		if !exists {
-			return "", nil, errorx.NewByCode(prompterr.ResourceNotFoundCode,
+			return "", errorx.NewByCode(prompterr.ResourceNotFoundCode,
 				errorx.WithExtraMsg(fmt.Sprintf("snippet content for prompt %d with version %s not found in cache", ref.PromptID, ref.CommitVersion)))
-		}
-
-		// Collect variable definitions from this snippet if not already processed
-		if !processedSnippets[key] {
-			if variableDefs, varExists := snippetVariableMap[key]; varExists && len(variableDefs) > 0 {
-				mergedVariableDefs = append(mergedVariableDefs, variableDefs...)
-			}
-			processedSnippets[key] = true
 		}
 
 		// Replace the reference with expanded content
@@ -609,5 +565,5 @@ func (p *PromptServiceImpl) expandWithSnippetMap(ctx context.Context, content st
 		expandedContent = strings.ReplaceAll(expandedContent, refString, expandedSnippetContent)
 	}
 
-	return expandedContent, mergedVariableDefs, nil
+	return expandedContent, nil
 }
