@@ -18,7 +18,7 @@
     "@codemirror/state": "^6.4.1",
     "@codemirror/view": "^6.34.1",
     "@coze-arch/bot-md-box-adapter": "workspace:*",
-    "@coze-arch/coze-design": "0.0.6-alpha.346d77",
+    "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
     "@coze-arch/fetch-stream": "workspace:*",
     "@coze-editor/editor": "0.1.0-alpha.dac011",
     "@coze-editor/extension-regexp-decorator": "0.1.0-alpha.0fd19e",
