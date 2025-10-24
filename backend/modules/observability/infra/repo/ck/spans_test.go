@@ -758,12 +758,22 @@ func TestMetricSql(t *testing.T) {
 				Tables: []string{"observability_spans"},
 				Aggregations: []*metrics_entity.Dimension{
 					{
-						Alias:      "total_count",
-						Expression: "count()",
+						Alias: "total_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "count()",
+						},
 					},
 					{
-						Alias:      "total_error_count",
-						Expression: "countIf(status_code != 0)",
+						Alias: "total_error_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "countIf(%s != 0)",
+							Fields: []*loop_span.FilterField{
+								{
+									FieldName: loop_span.SpanFieldStatusCode,
+									FieldType: loop_span.FieldTypeLong,
+								},
+							},
+						},
 					},
 				},
 				Filters: &loop_span.FilterFields{
@@ -780,19 +790,29 @@ func TestMetricSql(t *testing.T) {
 				StartAt: 1,
 				EndAt:   2,
 			},
-			expectedSql: "SELECT count() AS total_count, countIf(status_code != 0) AS total_error_count FROM (SELECT * FROM `observability_spans` WHERE `space_id` = '123' AND start_time >= 1 AND start_time <= 2 )  ",
+			expectedSql: "SELECT count() AS total_count, countIf(`status_code` != 0) AS total_error_count FROM (SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `space_id` = '123' AND start_time >= 1 AND start_time <= 2 )  ",
 		},
 		{
 			param: &GetMetricsParam{
 				Tables: []string{"observability_spans"},
 				Aggregations: []*metrics_entity.Dimension{
 					{
-						Alias:      "total_count",
-						Expression: "count()",
+						Alias: "total_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "count()",
+						},
 					},
 					{
-						Alias:      "total_error_count",
-						Expression: "countIf(status_code != 0)",
+						Alias: "total_error_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "countIf(%s != 0)",
+							Fields: []*loop_span.FilterField{
+								{
+									FieldName: loop_span.SpanFieldStatusCode,
+									FieldType: loop_span.FieldTypeLong,
+								},
+							},
+						},
 					},
 				},
 				Filters: &loop_span.FilterFields{
@@ -810,19 +830,29 @@ func TestMetricSql(t *testing.T) {
 				EndAt:       2,
 				Granularity: metrics_entity.MetricGranularity1Min,
 			},
-			expectedSql: "SELECT toStartOfInterval(fromUnixTimestamp64Micro(start_time), INTERVAL 5 MINUTE) AS time_bucket, count() AS total_count, countIf(status_code != 0) AS total_error_count FROM (SELECT * FROM `observability_spans` WHERE `space_id` = '123' AND start_time >= 1 AND start_time <= 2 ) GROUP BY time_bucket ORDER BY time_bucket WITH FILL FROM toStartOfInterval(fromUnixTimestamp64Micro(1), INTERVAL 5 MINUTE) TO toStartOfInterval(fromUnixTimestamp64Micro(2), INTERVAL 5 MINUTE) STEP INTERVAL 5 MINUTE",
+			expectedSql: "SELECT toUnixTimestamp(toStartOfInterval(fromUnixTimestamp64Micro(start_time), INTERVAL 1 MINUTE)) * 1000 AS time_bucket, count() AS total_count, countIf(`status_code` != 0) AS total_error_count FROM (SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `space_id` = '123' AND start_time >= 1 AND start_time <= 2 ) GROUP BY time_bucket ORDER BY time_bucket",
 		},
 		{
 			param: &GetMetricsParam{
 				Tables: []string{"observability_spans"},
 				Aggregations: []*metrics_entity.Dimension{
 					{
-						Alias:      "total_count",
-						Expression: "count()",
+						Alias: "total_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "count()",
+						},
 					},
 					{
-						Alias:      "total_error_count",
-						Expression: "countIf(status_code != 0)",
+						Alias: "total_error_count",
+						Expression: &metrics_entity.Expression{
+							Expression: "countIf(%s != 0)",
+							Fields: []*loop_span.FilterField{
+								{
+									FieldName: loop_span.SpanFieldStatusCode,
+									FieldType: loop_span.FieldTypeLong,
+								},
+							},
+						},
 					},
 				},
 				Filters: &loop_span.FilterFields{
@@ -838,15 +868,18 @@ func TestMetricSql(t *testing.T) {
 				},
 				GroupBys: []*metrics_entity.Dimension{
 					{
-						Alias:      "val",
-						Expression: "tags_string['prompt_key']",
+						Alias: "val",
+						Field: &loop_span.FilterField{
+							FieldName: "prompt_key",
+							FieldType: loop_span.FieldTypeString,
+						},
 					},
 				},
 				StartAt:     1,
 				EndAt:       2,
 				Granularity: metrics_entity.MetricGranularity1Min,
 			},
-			expectedSql: "SELECT toStartOfInterval(fromUnixTimestamp64Micro(start_time), INTERVAL 5 MINUTE) AS time_bucket, count() AS total_count, countIf(status_code != 0) AS total_error_count, tags_string['prompt_key'] AS val FROM (SELECT * FROM `observability_spans` WHERE `space_id` = '123' AND start_time >= 1 AND start_time <= 2 ) GROUP BY time_bucket, tags_string['prompt_key'] ORDER BY time_bucket WITH FILL FROM toStartOfInterval(fromUnixTimestamp64Micro(1), INTERVAL 5 MINUTE) TO toStartOfInterval(fromUnixTimestamp64Micro(2), INTERVAL 5 MINUTE) STEP INTERVAL 5 MINUTE",
+			expectedSql: "SELECT toUnixTimestamp(toStartOfInterval(fromUnixTimestamp64Micro(start_time), INTERVAL 1 MINUTE)) * 1000 AS time_bucket, count() AS total_count, countIf(`status_code` != 0) AS total_error_count, tags_string['prompt_key'] AS val FROM (SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `space_id` = '123' AND start_time >= 1 AND start_time <= 2 ) GROUP BY time_bucket, tags_string['prompt_key'] ORDER BY time_bucket",
 		},
 	}
 	ckProvider := ck_mock.NewMockProvider(gomock.NewController(t))
