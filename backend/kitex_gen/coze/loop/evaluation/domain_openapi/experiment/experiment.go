@@ -44,6 +44,26 @@ const (
 	DataTypeDouble = "double"
 
 	DataTypeScoreDistribution = "score_distribution"
+
+	ItemRunStateQueueing = "queueing"
+
+	ItemRunStateProcessing = "processing"
+
+	ItemRunStateSuccess = "success"
+
+	ItemRunStateFail = "fail"
+
+	ItemRunStateTerminal = "terminal"
+
+	TurnRunStateQueueing = "queueing"
+
+	TurnRunStateProcessing = "processing"
+
+	TurnRunStateSuccess = "success"
+
+	TurnRunStateFail = "fail"
+
+	TurnRunStateTerminal = "terminal"
 )
 
 // 实验状态
@@ -57,6 +77,10 @@ type AggregatorType = string
 
 // 数据类型
 type DataType = string
+
+type ItemRunState = string
+
+type TurnRunState = string
 
 // 字段映射
 type FieldMapping struct {
@@ -5876,6 +5900,7 @@ type ResultPayload struct {
 	TargetRecord *eval_target.EvalTargetRecord `thrift:"target_record,2,optional" frugal:"2,optional,eval_target.EvalTargetRecord" form:"target_record" json:"target_record,omitempty" query:"target_record"`
 	// 评估器执行结果列表
 	EvaluatorRecords []*evaluator.EvaluatorRecord `thrift:"evaluator_records,3,optional" frugal:"3,optional,list<evaluator.EvaluatorRecord>" form:"evaluator_records" json:"evaluator_records,omitempty" query:"evaluator_records"`
+	SystemInfo       *TurnSystemInfo              `thrift:"system_info,20,optional" frugal:"20,optional,TurnSystemInfo" form:"system_info" json:"system_info,omitempty" query:"system_info"`
 }
 
 func NewResultPayload() *ResultPayload {
@@ -5920,6 +5945,18 @@ func (p *ResultPayload) GetEvaluatorRecords() (v []*evaluator.EvaluatorRecord) {
 	}
 	return p.EvaluatorRecords
 }
+
+var ResultPayload_SystemInfo_DEFAULT *TurnSystemInfo
+
+func (p *ResultPayload) GetSystemInfo() (v *TurnSystemInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSystemInfo() {
+		return ResultPayload_SystemInfo_DEFAULT
+	}
+	return p.SystemInfo
+}
 func (p *ResultPayload) SetEvalSetTurn(val *eval_set.Turn) {
 	p.EvalSetTurn = val
 }
@@ -5929,11 +5966,15 @@ func (p *ResultPayload) SetTargetRecord(val *eval_target.EvalTargetRecord) {
 func (p *ResultPayload) SetEvaluatorRecords(val []*evaluator.EvaluatorRecord) {
 	p.EvaluatorRecords = val
 }
+func (p *ResultPayload) SetSystemInfo(val *TurnSystemInfo) {
+	p.SystemInfo = val
+}
 
 var fieldIDToName_ResultPayload = map[int16]string{
-	1: "eval_set_turn",
-	2: "target_record",
-	3: "evaluator_records",
+	1:  "eval_set_turn",
+	2:  "target_record",
+	3:  "evaluator_records",
+	20: "system_info",
 }
 
 func (p *ResultPayload) IsSetEvalSetTurn() bool {
@@ -5946,6 +5987,10 @@ func (p *ResultPayload) IsSetTargetRecord() bool {
 
 func (p *ResultPayload) IsSetEvaluatorRecords() bool {
 	return p.EvaluatorRecords != nil
+}
+
+func (p *ResultPayload) IsSetSystemInfo() bool {
+	return p.SystemInfo != nil
 }
 
 func (p *ResultPayload) Read(iprot thrift.TProtocol) (err error) {
@@ -5985,6 +6030,14 @@ func (p *ResultPayload) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6058,6 +6111,14 @@ func (p *ResultPayload) ReadField3(iprot thrift.TProtocol) error {
 	p.EvaluatorRecords = _field
 	return nil
 }
+func (p *ResultPayload) ReadField20(iprot thrift.TProtocol) error {
+	_field := NewTurnSystemInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SystemInfo = _field
+	return nil
+}
 
 func (p *ResultPayload) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6075,6 +6136,10 @@ func (p *ResultPayload) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
 			goto WriteFieldError
 		}
 	}
@@ -6157,6 +6222,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ResultPayload) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSystemInfo() {
+		if err = oprot.WriteFieldBegin("system_info", thrift.STRUCT, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SystemInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
 
 func (p *ResultPayload) String() string {
 	if p == nil {
@@ -6179,6 +6262,9 @@ func (p *ResultPayload) DeepEqual(ano *ResultPayload) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.EvaluatorRecords) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.SystemInfo) {
 		return false
 	}
 	return true
@@ -6208,6 +6294,194 @@ func (p *ResultPayload) Field3DeepEqual(src []*evaluator.EvaluatorRecord) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ResultPayload) Field20DeepEqual(src *TurnSystemInfo) bool {
+
+	if !p.SystemInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TurnSystemInfo struct {
+	TurnRunState *TurnRunState `thrift:"turn_run_state,1,optional" frugal:"1,optional,string" form:"turn_run_state" json:"turn_run_state,omitempty" query:"turn_run_state"`
+}
+
+func NewTurnSystemInfo() *TurnSystemInfo {
+	return &TurnSystemInfo{}
+}
+
+func (p *TurnSystemInfo) InitDefault() {
+}
+
+var TurnSystemInfo_TurnRunState_DEFAULT TurnRunState
+
+func (p *TurnSystemInfo) GetTurnRunState() (v TurnRunState) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTurnRunState() {
+		return TurnSystemInfo_TurnRunState_DEFAULT
+	}
+	return *p.TurnRunState
+}
+func (p *TurnSystemInfo) SetTurnRunState(val *TurnRunState) {
+	p.TurnRunState = val
+}
+
+var fieldIDToName_TurnSystemInfo = map[int16]string{
+	1: "turn_run_state",
+}
+
+func (p *TurnSystemInfo) IsSetTurnRunState() bool {
+	return p.TurnRunState != nil
+}
+
+func (p *TurnSystemInfo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TurnSystemInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TurnSystemInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *TurnRunState
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TurnRunState = _field
+	return nil
+}
+
+func (p *TurnSystemInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TurnSystemInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TurnSystemInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTurnRunState() {
+		if err = oprot.WriteFieldBegin("turn_run_state", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TurnRunState); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TurnSystemInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TurnSystemInfo(%+v)", *p)
+
+}
+
+func (p *TurnSystemInfo) DeepEqual(ano *TurnSystemInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TurnRunState) {
+		return false
+	}
+	return true
+}
+
+func (p *TurnSystemInfo) Field1DeepEqual(src *TurnRunState) bool {
+
+	if p.TurnRunState == src {
+		return true
+	} else if p.TurnRunState == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TurnRunState, *src) != 0 {
+		return false
 	}
 	return true
 }
@@ -6468,7 +6742,8 @@ type ItemResult_ struct {
 	// 数据项(行)ID
 	ItemID *int64 `thrift:"item_id,1,optional" frugal:"1,optional,i64" json:"item_id" form:"item_id" query:"item_id"`
 	// 轮次结果，单轮仅有一个元素
-	TurnResults []*TurnResult_ `thrift:"turn_results,2,optional" frugal:"2,optional,list<TurnResult_>" form:"turn_results" json:"turn_results,omitempty" query:"turn_results"`
+	TurnResults []*TurnResult_  `thrift:"turn_results,2,optional" frugal:"2,optional,list<TurnResult_>" form:"turn_results" json:"turn_results,omitempty" query:"turn_results"`
+	SystemInfo  *ItemSystemInfo `thrift:"system_info,20,optional" frugal:"20,optional,ItemSystemInfo" form:"system_info" json:"system_info,omitempty" query:"system_info"`
 }
 
 func NewItemResult_() *ItemResult_ {
@@ -6501,16 +6776,32 @@ func (p *ItemResult_) GetTurnResults() (v []*TurnResult_) {
 	}
 	return p.TurnResults
 }
+
+var ItemResult__SystemInfo_DEFAULT *ItemSystemInfo
+
+func (p *ItemResult_) GetSystemInfo() (v *ItemSystemInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSystemInfo() {
+		return ItemResult__SystemInfo_DEFAULT
+	}
+	return p.SystemInfo
+}
 func (p *ItemResult_) SetItemID(val *int64) {
 	p.ItemID = val
 }
 func (p *ItemResult_) SetTurnResults(val []*TurnResult_) {
 	p.TurnResults = val
 }
+func (p *ItemResult_) SetSystemInfo(val *ItemSystemInfo) {
+	p.SystemInfo = val
+}
 
 var fieldIDToName_ItemResult_ = map[int16]string{
-	1: "item_id",
-	2: "turn_results",
+	1:  "item_id",
+	2:  "turn_results",
+	20: "system_info",
 }
 
 func (p *ItemResult_) IsSetItemID() bool {
@@ -6519,6 +6810,10 @@ func (p *ItemResult_) IsSetItemID() bool {
 
 func (p *ItemResult_) IsSetTurnResults() bool {
 	return p.TurnResults != nil
+}
+
+func (p *ItemResult_) IsSetSystemInfo() bool {
+	return p.SystemInfo != nil
 }
 
 func (p *ItemResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -6550,6 +6845,14 @@ func (p *ItemResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6618,6 +6921,14 @@ func (p *ItemResult_) ReadField2(iprot thrift.TProtocol) error {
 	p.TurnResults = _field
 	return nil
 }
+func (p *ItemResult_) ReadField20(iprot thrift.TProtocol) error {
+	_field := NewItemSystemInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SystemInfo = _field
+	return nil
+}
 
 func (p *ItemResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6631,6 +6942,10 @@ func (p *ItemResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
 			goto WriteFieldError
 		}
 	}
@@ -6695,6 +7010,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *ItemResult_) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSystemInfo() {
+		if err = oprot.WriteFieldBegin("system_info", thrift.STRUCT, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SystemInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
 
 func (p *ItemResult_) String() string {
 	if p == nil {
@@ -6714,6 +7047,9 @@ func (p *ItemResult_) DeepEqual(ano *ItemResult_) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.TurnResults) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.SystemInfo) {
 		return false
 	}
 	return true
@@ -6741,6 +7077,194 @@ func (p *ItemResult_) Field2DeepEqual(src []*TurnResult_) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ItemResult_) Field20DeepEqual(src *ItemSystemInfo) bool {
+
+	if !p.SystemInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ItemSystemInfo struct {
+	RunState *ItemRunState `thrift:"run_state,1,optional" frugal:"1,optional,string" form:"run_state" json:"run_state,omitempty" query:"run_state"`
+}
+
+func NewItemSystemInfo() *ItemSystemInfo {
+	return &ItemSystemInfo{}
+}
+
+func (p *ItemSystemInfo) InitDefault() {
+}
+
+var ItemSystemInfo_RunState_DEFAULT ItemRunState
+
+func (p *ItemSystemInfo) GetRunState() (v ItemRunState) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunState() {
+		return ItemSystemInfo_RunState_DEFAULT
+	}
+	return *p.RunState
+}
+func (p *ItemSystemInfo) SetRunState(val *ItemRunState) {
+	p.RunState = val
+}
+
+var fieldIDToName_ItemSystemInfo = map[int16]string{
+	1: "run_state",
+}
+
+func (p *ItemSystemInfo) IsSetRunState() bool {
+	return p.RunState != nil
+}
+
+func (p *ItemSystemInfo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ItemSystemInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ItemSystemInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *ItemRunState
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RunState = _field
+	return nil
+}
+
+func (p *ItemSystemInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ItemSystemInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ItemSystemInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunState() {
+		if err = oprot.WriteFieldBegin("run_state", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.RunState); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ItemSystemInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ItemSystemInfo(%+v)", *p)
+
+}
+
+func (p *ItemSystemInfo) DeepEqual(ano *ItemSystemInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.RunState) {
+		return false
+	}
+	return true
+}
+
+func (p *ItemSystemInfo) Field1DeepEqual(src *ItemRunState) bool {
+
+	if p.RunState == src {
+		return true
+	} else if p.RunState == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.RunState, *src) != 0 {
+		return false
 	}
 	return true
 }

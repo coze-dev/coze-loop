@@ -3642,13 +3642,18 @@ func (p *EvaluatorInputData) Field2DeepEqual(src map[string]*common.Content) boo
 
 // 评估器执行记录
 type EvaluatorRecord struct {
-	ID                  *int64               `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
-	EvaluatorVersionID  *int64               `thrift:"evaluator_version_id,2,optional" frugal:"2,optional,i64" json:"evaluator_version_id" form:"evaluator_version_id" query:"evaluator_version_id"`
-	ItemID              *int64               `thrift:"item_id,3,optional" frugal:"3,optional,i64" json:"item_id" form:"item_id" query:"item_id"`
-	TurnID              *int64               `thrift:"turn_id,4,optional" frugal:"4,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
+	// 基础信息
+	ID                 *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	EvaluatorVersionID *int64 `thrift:"evaluator_version_id,2,optional" frugal:"2,optional,i64" json:"evaluator_version_id" form:"evaluator_version_id" query:"evaluator_version_id"`
+	ItemID             *int64 `thrift:"item_id,3,optional" frugal:"3,optional,i64" json:"item_id" form:"item_id" query:"item_id"`
+	TurnID             *int64 `thrift:"turn_id,4,optional" frugal:"4,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
+	// 运行数据
 	Status              *EvaluatorRunStatus  `thrift:"status,20,optional" frugal:"20,optional,string" form:"status" json:"status,omitempty" query:"status"`
 	EvaluatorOutputData *EvaluatorOutputData `thrift:"evaluator_output_data,21,optional" frugal:"21,optional,EvaluatorOutputData" form:"evaluator_output_data" json:"evaluator_output_data,omitempty" query:"evaluator_output_data"`
-	BaseInfo            *common.BaseInfo     `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	// 系统信息
+	Logid    *string          `thrift:"logid,50,optional" frugal:"50,optional,string" form:"logid" json:"logid,omitempty" query:"logid"`
+	TraceID  *string          `thrift:"trace_id,51,optional" frugal:"51,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
+	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewEvaluatorRecord() *EvaluatorRecord {
@@ -3730,6 +3735,30 @@ func (p *EvaluatorRecord) GetEvaluatorOutputData() (v *EvaluatorOutputData) {
 	return p.EvaluatorOutputData
 }
 
+var EvaluatorRecord_Logid_DEFAULT string
+
+func (p *EvaluatorRecord) GetLogid() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLogid() {
+		return EvaluatorRecord_Logid_DEFAULT
+	}
+	return *p.Logid
+}
+
+var EvaluatorRecord_TraceID_DEFAULT string
+
+func (p *EvaluatorRecord) GetTraceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceID() {
+		return EvaluatorRecord_TraceID_DEFAULT
+	}
+	return *p.TraceID
+}
+
 var EvaluatorRecord_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *EvaluatorRecord) GetBaseInfo() (v *common.BaseInfo) {
@@ -3759,6 +3788,12 @@ func (p *EvaluatorRecord) SetStatus(val *EvaluatorRunStatus) {
 func (p *EvaluatorRecord) SetEvaluatorOutputData(val *EvaluatorOutputData) {
 	p.EvaluatorOutputData = val
 }
+func (p *EvaluatorRecord) SetLogid(val *string) {
+	p.Logid = val
+}
+func (p *EvaluatorRecord) SetTraceID(val *string) {
+	p.TraceID = val
+}
 func (p *EvaluatorRecord) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -3770,6 +3805,8 @@ var fieldIDToName_EvaluatorRecord = map[int16]string{
 	4:   "turn_id",
 	20:  "status",
 	21:  "evaluator_output_data",
+	50:  "logid",
+	51:  "trace_id",
 	100: "base_info",
 }
 
@@ -3795,6 +3832,14 @@ func (p *EvaluatorRecord) IsSetStatus() bool {
 
 func (p *EvaluatorRecord) IsSetEvaluatorOutputData() bool {
 	return p.EvaluatorOutputData != nil
+}
+
+func (p *EvaluatorRecord) IsSetLogid() bool {
+	return p.Logid != nil
+}
+
+func (p *EvaluatorRecord) IsSetTraceID() bool {
+	return p.TraceID != nil
 }
 
 func (p *EvaluatorRecord) IsSetBaseInfo() bool {
@@ -3862,6 +3907,22 @@ func (p *EvaluatorRecord) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 50:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField50(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 51:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField51(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3967,6 +4028,28 @@ func (p *EvaluatorRecord) ReadField21(iprot thrift.TProtocol) error {
 	p.EvaluatorOutputData = _field
 	return nil
 }
+func (p *EvaluatorRecord) ReadField50(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Logid = _field
+	return nil
+}
+func (p *EvaluatorRecord) ReadField51(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceID = _field
+	return nil
+}
 func (p *EvaluatorRecord) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -4004,6 +4087,14 @@ func (p *EvaluatorRecord) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField50(oprot); err != nil {
+			fieldId = 50
+			goto WriteFieldError
+		}
+		if err = p.writeField51(oprot); err != nil {
+			fieldId = 51
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -4136,6 +4227,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
+func (p *EvaluatorRecord) writeField50(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLogid() {
+		if err = oprot.WriteFieldBegin("logid", thrift.STRING, 50); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Logid); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
+}
+func (p *EvaluatorRecord) writeField51(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceID() {
+		if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 51); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
+}
 func (p *EvaluatorRecord) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -4185,6 +4312,12 @@ func (p *EvaluatorRecord) DeepEqual(ano *EvaluatorRecord) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.EvaluatorOutputData) {
+		return false
+	}
+	if !p.Field50DeepEqual(ano.Logid) {
+		return false
+	}
+	if !p.Field51DeepEqual(ano.TraceID) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -4256,6 +4389,30 @@ func (p *EvaluatorRecord) Field20DeepEqual(src *EvaluatorRunStatus) bool {
 func (p *EvaluatorRecord) Field21DeepEqual(src *EvaluatorOutputData) bool {
 
 	if !p.EvaluatorOutputData.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorRecord) Field50DeepEqual(src *string) bool {
+
+	if p.Logid == src {
+		return true
+	} else if p.Logid == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Logid, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorRecord) Field51DeepEqual(src *string) bool {
+
+	if p.TraceID == src {
+		return true
+	} else if p.TraceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceID, *src) != 0 {
 		return false
 	}
 	return true

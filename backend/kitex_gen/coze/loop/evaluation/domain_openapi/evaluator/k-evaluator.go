@@ -2705,6 +2705,34 @@ func (p *EvaluatorRecord) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 50:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField50(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 51:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField51(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
@@ -2819,6 +2847,34 @@ func (p *EvaluatorRecord) FastReadField21(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluatorRecord) FastReadField50(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Logid = _field
+	return offset, nil
+}
+
+func (p *EvaluatorRecord) FastReadField51(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TraceID = _field
+	return offset, nil
+}
+
 func (p *EvaluatorRecord) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -2844,6 +2900,8 @@ func (p *EvaluatorRecord) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
+		offset += p.fastWriteField50(buf[offset:], w)
+		offset += p.fastWriteField51(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -2859,6 +2917,8 @@ func (p *EvaluatorRecord) BLength() int {
 		l += p.field4Length()
 		l += p.field20Length()
 		l += p.field21Length()
+		l += p.field50Length()
+		l += p.field51Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -2915,6 +2975,24 @@ func (p *EvaluatorRecord) fastWriteField21(buf []byte, w thrift.NocopyWriter) in
 	if p.IsSetEvaluatorOutputData() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 21)
 		offset += p.EvaluatorOutputData.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *EvaluatorRecord) fastWriteField50(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLogid() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 50)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Logid)
+	}
+	return offset
+}
+
+func (p *EvaluatorRecord) fastWriteField51(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTraceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 51)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TraceID)
 	}
 	return offset
 }
@@ -2982,6 +3060,24 @@ func (p *EvaluatorRecord) field21Length() int {
 	return l
 }
 
+func (p *EvaluatorRecord) field50Length() int {
+	l := 0
+	if p.IsSetLogid() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Logid)
+	}
+	return l
+}
+
+func (p *EvaluatorRecord) field51Length() int {
+	l := 0
+	if p.IsSetTraceID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.TraceID)
+	}
+	return l
+}
+
 func (p *EvaluatorRecord) field100Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
@@ -3030,6 +3126,22 @@ func (p *EvaluatorRecord) DeepCopy(s interface{}) error {
 		}
 	}
 	p.EvaluatorOutputData = _evaluatorOutputData
+
+	if src.Logid != nil {
+		var tmp string
+		if *src.Logid != "" {
+			tmp = kutils.StringDeepCopy(*src.Logid)
+		}
+		p.Logid = &tmp
+	}
+
+	if src.TraceID != nil {
+		var tmp string
+		if *src.TraceID != "" {
+			tmp = kutils.StringDeepCopy(*src.TraceID)
+		}
+		p.TraceID = &tmp
+	}
 
 	var _baseInfo *common.BaseInfo
 	if src.BaseInfo != nil {

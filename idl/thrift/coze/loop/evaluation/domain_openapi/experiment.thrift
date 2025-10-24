@@ -33,6 +33,21 @@ typedef string DataType(ts.enum="true")
 const DataType DataType_Double = "double"
 const DataType DataType_ScoreDistribution = "score_distribution"
 
+typedef string ItemRunState(ts.enum="true")
+const ItemRunState ItemRunState_Queueing = "queueing"
+const ItemRunState ItemRunState_Processing = "processing"
+const ItemRunState ItemRunState_Success = "success"
+const ItemRunState ItemRunState_Fail = "fail"
+const ItemRunState ItemRunState_Terminal = "terminal"
+
+
+typedef string TurnRunState(ts.enum="true")
+const TurnRunState TurnRunState_Queueing = "queueing"
+const TurnRunState TurnRunState_Processing = "processing"
+const TurnRunState TurnRunState_Success = "success"
+const TurnRunState TurnRunState_Fail = "fail"
+const TurnRunState TurnRunState_Terminal = "terminal"
+
 
 // 字段映射
 struct FieldMapping {
@@ -156,6 +171,12 @@ struct ResultPayload {
     1: optional eval_set.Turn eval_set_turn // 评测集行数据信息
     2: optional eval_target.EvalTargetRecord target_record  // 评测对象执行结果
     3: optional list<evaluator.EvaluatorRecord> evaluator_records   // 评估器执行结果列表
+
+    20: optional TurnSystemInfo system_info
+}
+
+struct TurnSystemInfo {
+    1: optional TurnRunState turn_run_state
 }
 
 // 轮次结果
@@ -168,4 +189,10 @@ struct TurnResult {
 struct ItemResult {
     1: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"')   // 数据项(行)ID
     2: optional list<TurnResult> turn_results   // 轮次结果，单轮仅有一个元素
+
+    20: optional ItemSystemInfo system_info
+}
+
+struct ItemSystemInfo {
+    1: optional ItemRunState run_state
 }

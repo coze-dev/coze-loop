@@ -38,7 +38,7 @@ type CozeBotInfoType = string
 type EvalTargetRunStatus = string
 
 type EvalTargetRecord struct {
-	// 评估记录ID
+	// 基础信息
 	ID              *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
 	TargetID        *int64 `thrift:"target_id,2,optional" frugal:"2,optional,i64" json:"target_id" form:"target_id" query:"target_id"`
 	TargetVersionID *int64 `thrift:"target_version_id,3,optional" frugal:"3,optional,i64" json:"target_version_id" form:"target_version_id" query:"target_version_id"`
@@ -46,10 +46,13 @@ type EvalTargetRecord struct {
 	ItemID *int64 `thrift:"item_id,4,optional" frugal:"4,optional,i64" json:"item_id" form:"item_id" query:"item_id"`
 	// 评测集数据项轮次ID
 	TurnID *int64 `thrift:"turn_id,5,optional" frugal:"5,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
-	// 输出数据
+	// 运行数据
 	EvalTargetOutputData *EvalTargetOutputData `thrift:"eval_target_output_data,20,optional" frugal:"20,optional,EvalTargetOutputData" form:"eval_target_output_data" json:"eval_target_output_data,omitempty" query:"eval_target_output_data"`
 	Status               *EvalTargetRunStatus  `thrift:"status,21,optional" frugal:"21,optional,string" form:"status" json:"status,omitempty" query:"status"`
-	BaseInfo             *common.BaseInfo      `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	// 系统信息
+	Logid    *string          `thrift:"logid,50,optional" frugal:"50,optional,string" form:"logid" json:"logid,omitempty" query:"logid"`
+	TraceID  *string          `thrift:"trace_id,51,optional" frugal:"51,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
+	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewEvalTargetRecord() *EvalTargetRecord {
@@ -143,6 +146,30 @@ func (p *EvalTargetRecord) GetStatus() (v EvalTargetRunStatus) {
 	return *p.Status
 }
 
+var EvalTargetRecord_Logid_DEFAULT string
+
+func (p *EvalTargetRecord) GetLogid() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLogid() {
+		return EvalTargetRecord_Logid_DEFAULT
+	}
+	return *p.Logid
+}
+
+var EvalTargetRecord_TraceID_DEFAULT string
+
+func (p *EvalTargetRecord) GetTraceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceID() {
+		return EvalTargetRecord_TraceID_DEFAULT
+	}
+	return *p.TraceID
+}
+
 var EvalTargetRecord_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *EvalTargetRecord) GetBaseInfo() (v *common.BaseInfo) {
@@ -175,6 +202,12 @@ func (p *EvalTargetRecord) SetEvalTargetOutputData(val *EvalTargetOutputData) {
 func (p *EvalTargetRecord) SetStatus(val *EvalTargetRunStatus) {
 	p.Status = val
 }
+func (p *EvalTargetRecord) SetLogid(val *string) {
+	p.Logid = val
+}
+func (p *EvalTargetRecord) SetTraceID(val *string) {
+	p.TraceID = val
+}
 func (p *EvalTargetRecord) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -187,6 +220,8 @@ var fieldIDToName_EvalTargetRecord = map[int16]string{
 	5:   "turn_id",
 	20:  "eval_target_output_data",
 	21:  "status",
+	50:  "logid",
+	51:  "trace_id",
 	100: "base_info",
 }
 
@@ -216,6 +251,14 @@ func (p *EvalTargetRecord) IsSetEvalTargetOutputData() bool {
 
 func (p *EvalTargetRecord) IsSetStatus() bool {
 	return p.Status != nil
+}
+
+func (p *EvalTargetRecord) IsSetLogid() bool {
+	return p.Logid != nil
+}
+
+func (p *EvalTargetRecord) IsSetTraceID() bool {
+	return p.TraceID != nil
 }
 
 func (p *EvalTargetRecord) IsSetBaseInfo() bool {
@@ -291,6 +334,22 @@ func (p *EvalTargetRecord) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 50:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField50(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 51:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField51(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -407,6 +466,28 @@ func (p *EvalTargetRecord) ReadField21(iprot thrift.TProtocol) error {
 	p.Status = _field
 	return nil
 }
+func (p *EvalTargetRecord) ReadField50(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Logid = _field
+	return nil
+}
+func (p *EvalTargetRecord) ReadField51(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceID = _field
+	return nil
+}
 func (p *EvalTargetRecord) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -448,6 +529,14 @@ func (p *EvalTargetRecord) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField50(oprot); err != nil {
+			fieldId = 50
+			goto WriteFieldError
+		}
+		if err = p.writeField51(oprot); err != nil {
+			fieldId = 51
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -598,6 +687,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
+func (p *EvalTargetRecord) writeField50(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLogid() {
+		if err = oprot.WriteFieldBegin("logid", thrift.STRING, 50); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Logid); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
+}
+func (p *EvalTargetRecord) writeField51(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceID() {
+		if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 51); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
+}
 func (p *EvalTargetRecord) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -650,6 +775,12 @@ func (p *EvalTargetRecord) DeepEqual(ano *EvalTargetRecord) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.Status) {
+		return false
+	}
+	if !p.Field50DeepEqual(ano.Logid) {
+		return false
+	}
+	if !p.Field51DeepEqual(ano.TraceID) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -733,6 +864,30 @@ func (p *EvalTargetRecord) Field21DeepEqual(src *EvalTargetRunStatus) bool {
 		return false
 	}
 	if strings.Compare(*p.Status, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetRecord) Field50DeepEqual(src *string) bool {
+
+	if p.Logid == src {
+		return true
+	} else if p.Logid == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Logid, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetRecord) Field51DeepEqual(src *string) bool {
+
+	if p.TraceID == src {
+		return true
+	} else if p.TraceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceID, *src) != 0 {
 		return false
 	}
 	return true

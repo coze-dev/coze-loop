@@ -22,14 +22,20 @@ const EvalTargetRunStatus EvalTargetRunStatus_Fail = "fail"
 
 
 struct EvalTargetRecord  {
+    // 基础信息
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')// 评估记录ID
     2: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
     3: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
     4: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"') // 评测集数据项ID
     5: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 评测集数据项轮次ID
 
+    // 运行数据
     20: optional EvalTargetOutputData eval_target_output_data  // 输出数据
     21: optional EvalTargetRunStatus status
+
+    // 系统信息
+    50: optional string logid
+    51: optional string trace_id
 
     100: optional common.BaseInfo base_info
 }

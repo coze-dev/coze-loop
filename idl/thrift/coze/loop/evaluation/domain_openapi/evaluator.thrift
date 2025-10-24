@@ -100,13 +100,19 @@ struct EvaluatorInputData {
 
 // 评估器执行记录
 struct EvaluatorRecord {
+    // 基础信息
     1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
     2: optional i64 evaluator_version_id (api.js_conv = 'true', go.tag = 'json:"evaluator_version_id"')
     3: optional i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id"')
     4: optional i64 turn_id (api.js_conv = 'true', go.tag = 'json:"turn_id"')
 
+    // 运行数据
     20: optional EvaluatorRunStatus status
     21: optional EvaluatorOutputData evaluator_output_data
+
+    // 系统信息
+    50: optional string logid
+    51: optional string trace_id
 
     100: optional common.BaseInfo base_info
 }

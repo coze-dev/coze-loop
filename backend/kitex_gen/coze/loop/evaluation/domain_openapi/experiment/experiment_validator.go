@@ -109,6 +109,14 @@ func (p *ResultPayload) IsValid() error {
 			return fmt.Errorf("field TargetRecord not valid, %w", err)
 		}
 	}
+	if p.SystemInfo != nil {
+		if err := p.SystemInfo.IsValid(); err != nil {
+			return fmt.Errorf("field SystemInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *TurnSystemInfo) IsValid() error {
 	return nil
 }
 func (p *TurnResult_) IsValid() error {
@@ -120,5 +128,13 @@ func (p *TurnResult_) IsValid() error {
 	return nil
 }
 func (p *ItemResult_) IsValid() error {
+	if p.SystemInfo != nil {
+		if err := p.SystemInfo.IsValid(); err != nil {
+			return fmt.Errorf("field SystemInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ItemSystemInfo) IsValid() error {
 	return nil
 }
