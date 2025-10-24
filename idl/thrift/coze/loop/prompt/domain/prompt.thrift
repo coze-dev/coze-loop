@@ -124,16 +124,28 @@ struct ContentPart {
     1: optional ContentType type
     2: optional string text
     3: optional ImageURL image_url
+    4: optional VideoURL video_url
+    5: optional MediaConfig media_config
 }
 
 typedef string ContentType (ts.enum="true")
 const ContentType ContentType_Text = "text"
 const ContentType ContentType_ImageURL = "image_url"
+const ContentType ContentType_VideoURL = "video_url"
 const ContentType ContentType_MultiPartVariable = "multi_part_variable"
 
 struct ImageURL {
     1: optional string uri
     2: optional string url
+}
+
+struct VideoURL {
+    1: optional string url
+    2: optional string uri
+}
+
+struct MediaConfig {
+    1: optional double fps (vt.ge="0.2", vt.le="5")
 }
 
 struct ToolCall {

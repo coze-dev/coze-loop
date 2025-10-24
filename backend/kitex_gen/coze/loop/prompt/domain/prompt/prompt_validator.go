@@ -121,9 +121,33 @@ func (p *ContentPart) IsValid() error {
 			return fmt.Errorf("field ImageURL not valid, %w", err)
 		}
 	}
+	if p.VideoURL != nil {
+		if err := p.VideoURL.IsValid(); err != nil {
+			return fmt.Errorf("field VideoURL not valid, %w", err)
+		}
+	}
+	if p.MediaConfig != nil {
+		if err := p.MediaConfig.IsValid(); err != nil {
+			return fmt.Errorf("field MediaConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ImageURL) IsValid() error {
+	return nil
+}
+func (p *VideoURL) IsValid() error {
+	return nil
+}
+func (p *MediaConfig) IsValid() error {
+	if p.Fps != nil {
+		if *p.Fps < float64(0.2) {
+			return fmt.Errorf("field Fps ge rule failed, current value: %v", *p.Fps)
+		}
+		if *p.Fps > float64(5) {
+			return fmt.Errorf("field Fps le rule failed, current value: %v", *p.Fps)
+		}
+	}
 	return nil
 }
 func (p *ToolCall) IsValid() error {
