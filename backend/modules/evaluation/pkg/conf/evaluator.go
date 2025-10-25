@@ -28,6 +28,8 @@ type IConfiger interface {
 	GetCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent)
 	// 新增方法：专门为Custom类型模板提供配置
 	GetCustomCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent)
+	// 新增方法：获取评估器模板管理空间配置
+	GetEvaluatorTemplateSpaceConf(ctx context.Context) (spaceIDs []string)
 }
 
 func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
@@ -199,6 +201,25 @@ func (c *evaluatorConfiger) GetCustomCodeEvaluatorTemplateConf(ctx context.Conte
 
 func DefaultCustomCodeEvaluatorTemplateConf() map[string]map[string]*evaluatordto.EvaluatorContent {
 	return map[string]map[string]*evaluatordto.EvaluatorContent{}
+}
+
+func (c *evaluatorConfiger) GetEvaluatorTemplateSpaceConf(ctx context.Context) (spaceIDs []string) {
+	const key = "evaluator_template_space"
+
+	// 定义配置结构体
+	type EvaluatorTemplateSpaceConf struct {
+		EvaluatorTemplateSpace []string `json:"evaluator_template_space"`
+	}
+
+	var config EvaluatorTemplateSpaceConf
+	if c.loader.UnmarshalKey(ctx, key, &config, conf.WithTagName("json")) == nil && len(config.EvaluatorTemplateSpace) > 0 {
+		return config.EvaluatorTemplateSpace
+	}
+	return DefaultEvaluatorTemplateSpaceConf()
+}
+
+func DefaultEvaluatorTemplateSpaceConf() []string {
+	return make([]string, 0)
 }
 
 type evaluatorConfiger struct {

@@ -29,6 +29,8 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 		DraftSubmitted: ptr.Of(do.DraftSubmitted),
 		EvaluatorType:  int32(do.EvaluatorType),
 		LatestVersion:  do.LatestVersion,
+		Benchmark:      ptr.Of(do.Benchmark),
+		Vendor:         ptr.Of(do.Vendor),
 	}
 	if do.BaseInfo != nil {
 		if do.BaseInfo.CreatedBy != nil {
@@ -60,6 +62,8 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 		DraftSubmitted: gptr.Indirect(po.DraftSubmitted),
 		EvaluatorType:  evaluatordo.EvaluatorType(po.EvaluatorType),
 		LatestVersion:  po.LatestVersion,
+		Benchmark:      gptr.Indirect(po.Benchmark),
+		Vendor:         gptr.Indirect(po.Vendor),
 	}
 	do.BaseInfo = &evaluatordo.BaseInfo{
 		CreatedBy: &evaluatordo.UserInfo{

@@ -9,8 +9,10 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/evaluatorservice"
+	evaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 )
 
 var localEvaluatorSvc evaluatorservice.Client
@@ -151,4 +153,132 @@ func ValidateEvaluator(ctx context.Context, c *app.RequestContext) {
 // @router /api/evaluation/v1/evaluators/batch_debug [POST]
 func BatchDebugEvaluator(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvaluatorSvc.BatchDebugEvaluator)
+}
+
+// ListTemplatesV2 .
+// @router /api/evaluation/v1/evaluators/list_template_v2 [POST]
+func ListTemplatesV2(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.ListTemplatesV2Request
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.ListTemplatesV2Response)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetTemplateInfoV2 .
+// @router /api/evaluation/v1/evaluators/get_template_info_v2 [POST]
+func GetTemplateInfoV2(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.GetTemplateInfoV2Request
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.GetTemplateInfoV2Response)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetLatestEvaluatorVersion .
+// @router /api/evaluation/v1/evaluators/:evaluator_id/latest_version [POST]
+func GetLatestEvaluatorVersion(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.GetLatestEvaluatorVersionRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.GetLatestEvaluatorVersionResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// DebugBuiltinEvaluator .
+// @router /api/evaluation/v1/evaluators/debug_builtin [POST]
+func DebugBuiltinEvaluator(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.DebugBuiltinEvaluatorRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.DebugBuiltinEvaluatorResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// PublishBuiltinEvaluator .
+// @router /api/evaluation/v1/evaluators/publish_builtin [POST]
+func PublishBuiltinEvaluator(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.PublishBuiltinEvaluatorRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.PublishBuiltinEvaluatorResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// CreateEvaluatorTemplate .
+// @router /api/evaluation/v1/evaluators/create_template [POST]
+func CreateEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.CreateEvaluatorTemplateRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.CreateEvaluatorTemplateResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// UpdateEvaluatorTemplate .
+// @router /api/evaluation/v1/evaluators/update_template [POST]
+func UpdateEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.UpdateEvaluatorTemplateRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.UpdateEvaluatorTemplateResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// DeleteEvaluatorTemplate .
+// @router /api/evaluation/v1/evaluators/delete_template [POST]
+func DeleteEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.DeleteEvaluatorTemplateRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.DeleteEvaluatorTemplateResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }

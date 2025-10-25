@@ -384,6 +384,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					mockAuth,
 					mockEvaluatorService,
 					mockEvaluatorRecordService,
+					nil, // mockEvaluatorTemplateService - 暂时设为nil
 					mockMetrics,
 					mockUserInfoService,
 					mockAuditClient,
@@ -800,6 +801,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					mockAuth,
 					mockEvaluatorService,
 					mockEvaluatorRecordService,
+					nil, // mockEvaluatorTemplateService - 暂时设为nil
 					mockMetrics,
 					mockUserInfoService,
 					mockAuditClient,

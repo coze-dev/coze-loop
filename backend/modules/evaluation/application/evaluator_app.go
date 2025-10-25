@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	evaluatorcommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	evaluatorservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	evaluatorconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -31,6 +32,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
+	evaluatortemplateservice "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -47,6 +49,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	auth rpc.IAuthProvider,
 	evaluatorService service.EvaluatorService,
 	evaluatorRecordService service.EvaluatorRecordService,
+	evaluatorTemplateService evaluatortemplateservice.EvaluatorTemplateService,
 	metrics metrics.EvaluatorExecMetrics,
 	userInfoService userinfo.UserInfoService,
 	auditClient audit.IAuditService,
@@ -55,34 +58,36 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
-		idgen:                   idgen,
-		auth:                    auth,
-		auditClient:             auditClient,
-		configer:                configer,
-		evaluatorService:        evaluatorService,
-		evaluatorRecordService:  evaluatorRecordService,
-		metrics:                 metrics,
-		userInfoService:         userInfoService,
-		benefitService:          benefitService,
-		fileProvider:            fileProvider,
-		evaluatorSourceServices: evaluatorSourceServices,
+		idgen:                    idgen,
+		auth:                     auth,
+		auditClient:              auditClient,
+		configer:                 configer,
+		evaluatorService:         evaluatorService,
+		evaluatorRecordService:   evaluatorRecordService,
+		evaluatorTemplateService: evaluatorTemplateService,
+		metrics:                  metrics,
+		userInfoService:          userInfoService,
+		benefitService:           benefitService,
+		fileProvider:             fileProvider,
+		evaluatorSourceServices:  evaluatorSourceServices,
 	}
 	return handler
 }
 
 // EvaluatorHandlerImpl 实现 EvaluatorService 接口
 type EvaluatorHandlerImpl struct {
-	idgen                   idgen.IIDGenerator
-	auth                    rpc.IAuthProvider
-	auditClient             audit.IAuditService
-	configer                conf.IConfiger
-	evaluatorService        service.EvaluatorService
-	evaluatorRecordService  service.EvaluatorRecordService
-	metrics                 metrics.EvaluatorExecMetrics
-	userInfoService         userinfo.UserInfoService
-	benefitService          benefit.IBenefitService
-	fileProvider            rpc.IFileProvider
-	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService
+	idgen                    idgen.IIDGenerator
+	auth                     rpc.IAuthProvider
+	auditClient              audit.IAuditService
+	configer                 conf.IConfiger
+	evaluatorService         service.EvaluatorService
+	evaluatorRecordService   service.EvaluatorRecordService
+	evaluatorTemplateService evaluatortemplateservice.EvaluatorTemplateService
+	metrics                  metrics.EvaluatorExecMetrics
+	userInfoService          userinfo.UserInfoService
+	benefitService           benefit.IBenefitService
+	fileProvider             rpc.IFileProvider
+	evaluatorSourceServices  map[entity.EvaluatorType]service.EvaluatorSourceService
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -1249,4 +1254,306 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 	return &evaluatorservice.BatchDebugEvaluatorResponse{
 		EvaluatorOutputData: results,
 	}, nil
+}
+
+// ListTemplatesV2 查询评估器模板列表
+func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *evaluatorservice.ListTemplatesV2Request) (resp *evaluatorservice.ListTemplatesV2Response, err error) {
+	// List接口无需鉴权
+
+	// 构建service层请求
+	serviceReq := &evaluatortemplateservice.ListEvaluatorTemplateRequest{
+		SpaceID:        0,   // 模板查询不需要空间ID
+		FilterOption:   nil, // TODO: 需要实现FilterOption转换
+		PageSize:       20,  // 默认分页大小
+		PageNum:        1,   // 默认页码
+		IncludeDeleted: false,
+	}
+
+	// 调用service层
+	serviceResp, err := e.evaluatorTemplateService.ListEvaluatorTemplate(ctx, serviceReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换结果
+	templates := make([]*evaluatordto.EvaluatorTemplate, 0, len(serviceResp.Templates))
+	for _, template := range serviceResp.Templates {
+		templates = append(templates, evaluatorconvertor.ConvertEvaluatorTemplateDO2DTO(template))
+	}
+
+	return &evaluatorservice.ListTemplatesV2Response{
+		EvaluatorTemplates: templates,
+	}, nil
+}
+
+// GetTemplateInfoV2 获取评估器模板详情
+func (e *EvaluatorHandlerImpl) GetTemplateInfoV2(ctx context.Context, request *evaluatorservice.GetTemplateInfoV2Request) (resp *evaluatorservice.GetTemplateInfoV2Response, err error) {
+	// get接口无需鉴权
+	// 构建service层请求
+	serviceReq := &evaluatortemplateservice.GetEvaluatorTemplateRequest{
+		ID:             request.GetEvaluatorTemplateID(),
+		IncludeDeleted: false,
+	}
+
+	// 调用service层
+	serviceResp, err := e.evaluatorTemplateService.GetEvaluatorTemplate(ctx, serviceReq)
+	if err != nil {
+		return nil, err
+	}
+
+	if serviceResp.Template == nil {
+		return &evaluatorservice.GetTemplateInfoV2Response{}, nil
+	}
+
+	// 转换结果
+	template := evaluatorconvertor.ConvertEvaluatorTemplateDO2DTO(serviceResp.Template)
+
+	return &evaluatorservice.GetTemplateInfoV2Response{
+		EvaluatorTemplate: template,
+	}, nil
+}
+
+// CreateEvaluatorTemplate 创建评估器模板
+func (e *EvaluatorHandlerImpl) CreateEvaluatorTemplate(ctx context.Context, request *evaluator.CreateEvaluatorTemplateRequest) (resp *evaluator.CreateEvaluatorTemplateResponse, err error) {
+	// 参数验证
+	if request.GetEvaluatorTemplate() == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_template is nil"))
+	}
+
+	// 校验空间ID是否在允许的评估器模板管理空间范围内
+	err = e.validateWorkspaceID(ctx, request.GetEvaluatorTemplate().GetWorkspaceID())
+	if err != nil {
+		return nil, err
+	}
+
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.GetEvaluatorTemplate().GetWorkspaceID(), 10),
+		SpaceID:       request.GetEvaluatorTemplate().GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换DTO到DO
+	templateDO := evaluatorconvertor.ConvertEvaluatorTemplateDTO2DO(request.GetEvaluatorTemplate())
+
+	// 构建service层请求
+	serviceReq := &evaluatortemplateservice.CreateEvaluatorTemplateRequest{
+		SpaceID:                templateDO.SpaceID,
+		Name:                   templateDO.Name,
+		Description:            templateDO.Description,
+		EvaluatorType:          templateDO.EvaluatorType,
+		Benchmark:              templateDO.Benchmark,
+		Vendor:                 templateDO.Vendor,
+		InputSchemas:           templateDO.InputSchemas,
+		OutputSchemas:          templateDO.OutputSchemas,
+		ReceiveChatHistory:     templateDO.ReceiveChatHistory,
+		Tags:                   templateDO.Tags,
+		PromptEvaluatorContent: templateDO.PromptEvaluatorContent,
+		CodeEvaluatorContent:   templateDO.CodeEvaluatorContent,
+	}
+
+	// 调用service层
+	serviceResp, err := e.evaluatorTemplateService.CreateEvaluatorTemplate(ctx, serviceReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换结果
+	template := evaluatorconvertor.ConvertEvaluatorTemplateDO2DTO(serviceResp.Template)
+
+	return &evaluator.CreateEvaluatorTemplateResponse{
+		EvaluatorTemplate: template,
+	}, nil
+}
+
+// UpdateEvaluatorTemplate 更新评估器模板
+func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, request *evaluator.UpdateEvaluatorTemplateRequest) (resp *evaluator.UpdateEvaluatorTemplateResponse, err error) {
+	// 参数验证
+	if request.GetEvaluatorTemplate() == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_template is nil"))
+	}
+
+	// 校验空间ID是否在允许的评估器模板管理空间范围内
+	err = e.validateWorkspaceID(ctx, request.GetEvaluatorTemplate().GetWorkspaceID())
+	if err != nil {
+		return nil, err
+	}
+
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.GetEvaluatorTemplate().GetWorkspaceID(), 10),
+		SpaceID:       request.GetEvaluatorTemplate().GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("editLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换DTO到DO
+	templateDO := evaluatorconvertor.ConvertEvaluatorTemplateDTO2DO(request.GetEvaluatorTemplate())
+
+	// 构建service层请求
+	serviceReq := &evaluatortemplateservice.UpdateEvaluatorTemplateRequest{
+		ID:                     templateDO.ID,
+		Name:                   gptr.Of(templateDO.Name),
+		Description:            gptr.Of(templateDO.Description),
+		Benchmark:              gptr.Of(templateDO.Benchmark),
+		Vendor:                 gptr.Of(templateDO.Vendor),
+		InputSchemas:           templateDO.InputSchemas,
+		OutputSchemas:          templateDO.OutputSchemas,
+		ReceiveChatHistory:     templateDO.ReceiveChatHistory,
+		Tags:                   templateDO.Tags,
+		PromptEvaluatorContent: templateDO.PromptEvaluatorContent,
+		CodeEvaluatorContent:   templateDO.CodeEvaluatorContent,
+	}
+
+	// 调用service层
+	serviceResp, err := e.evaluatorTemplateService.UpdateEvaluatorTemplate(ctx, serviceReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换结果
+	template := evaluatorconvertor.ConvertEvaluatorTemplateDO2DTO(serviceResp.Template)
+
+	return &evaluator.UpdateEvaluatorTemplateResponse{
+		EvaluatorTemplate: template,
+	}, nil
+}
+
+// DeleteEvaluatorTemplate 删除评估器模板
+func (e *EvaluatorHandlerImpl) DeleteEvaluatorTemplate(ctx context.Context, request *evaluator.DeleteEvaluatorTemplateRequest) (resp *evaluator.DeleteEvaluatorTemplateResponse, err error) {
+	// 参数验证
+	if request.GetEvaluatorTemplateID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_template_id is 0"))
+	}
+
+	// 鉴权 - 需要先获取模板信息来确定空间ID
+	templateDO, err := e.evaluatorTemplateService.GetEvaluatorTemplate(ctx, &evaluatortemplateservice.GetEvaluatorTemplateRequest{
+		ID:             request.GetEvaluatorTemplateID(),
+		IncludeDeleted: false,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if templateDO.Template == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
+	}
+
+	// 校验空间ID是否在允许的评估器模板管理空间范围内
+	err = e.validateWorkspaceID(ctx, templateDO.Template.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(templateDO.Template.SpaceID, 10),
+		SpaceID:       templateDO.Template.SpaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("editLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 构建service层请求
+	serviceReq := &evaluatortemplateservice.DeleteEvaluatorTemplateRequest{
+		ID: request.GetEvaluatorTemplateID(),
+	}
+
+	// 调用service层
+	_, err = e.evaluatorTemplateService.DeleteEvaluatorTemplate(ctx, serviceReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &evaluator.DeleteEvaluatorTemplateResponse{}, nil
+}
+
+// DebugBuiltinEvaluator 调试预置评估器
+func (e *EvaluatorHandlerImpl) DebugBuiltinEvaluator(ctx context.Context, request *evaluator.DebugBuiltinEvaluatorRequest) (resp *evaluator.DebugBuiltinEvaluatorResponse, err error) {
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.GetEvaluatorID(), 10),
+		SpaceID:       0, // 预置评估器不需要空间权限
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: 实现预置评估器调试逻辑
+	// 这里需要根据具体的预置评估器调试需求来实现
+	return &evaluator.DebugBuiltinEvaluatorResponse{
+		OutputData: &evaluatordto.EvaluatorOutputData{
+			// 返回空的输出数据，具体实现需要根据业务需求
+		},
+	}, nil
+}
+
+// GetLatestEvaluatorVersion 获取评估器最新版本
+func (e *EvaluatorHandlerImpl) GetLatestEvaluatorVersion(ctx context.Context, request *evaluator.GetLatestEvaluatorVersionRequest) (resp *evaluator.GetLatestEvaluatorVersionResponse, err error) {
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.GetEvaluatorID(), 10),
+		SpaceID:       request.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: 实现获取最新版本逻辑
+	// 这里需要根据具体的业务需求来实现
+	return &evaluator.GetLatestEvaluatorVersionResponse{
+		Version: &evaluatordto.EvaluatorVersion{
+			// 返回空的版本信息，具体实现需要根据业务需求
+		},
+	}, nil
+}
+
+// PublishBuiltinEvaluator 发布预置评估器
+func (e *EvaluatorHandlerImpl) PublishBuiltinEvaluator(ctx context.Context, request *evaluator.PublishBuiltinEvaluatorRequest) (resp *evaluator.PublishBuiltinEvaluatorResponse, err error) {
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.GetEvaluatorID(), 10),
+		SpaceID:       0, // 预置评估器不需要空间权限
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("editLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: 实现预置评估器发布逻辑
+	// 这里需要根据具体的预置评估器发布需求来实现
+	return &evaluator.PublishBuiltinEvaluatorResponse{
+		Version: &evaluatordto.EvaluatorVersion{
+			// 返回空的版本信息，具体实现需要根据业务需求
+		},
+	}, nil
+}
+
+// validateWorkspaceID 校验空间ID是否在评估器模板管理空间范围内
+func (e *EvaluatorHandlerImpl) validateWorkspaceID(ctx context.Context, workspaceID int64) error {
+	// 获取允许的空间ID列表
+	allowedSpaceIDs := e.configer.GetEvaluatorTemplateSpaceConf(ctx)
+
+	// 如果配置为空，则不允许任何空间ID
+	if len(allowedSpaceIDs) == 0 {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator template space not configured"))
+	}
+
+	// 将空间ID转换为字符串进行比较
+	workspaceIDStr := strconv.FormatInt(workspaceID, 10)
+
+	// 检查空间ID是否在允许列表中
+	for _, allowedID := range allowedSpaceIDs {
+		if allowedID == workspaceIDStr {
+			return nil
+		}
+	}
+
+	return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id not in allowed evaluator template spaces"))
 }

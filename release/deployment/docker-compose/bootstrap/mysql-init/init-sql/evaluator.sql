@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS `evaluator`
     `updated_at`      timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`      timestamp       NULL     DEFAULT NULL COMMENT '删除时间',
     `latest_version`  varchar(128)    NOT NULL DEFAULT '' COMMENT '最新版本号',
+    `benchmark`       varchar(255)             DEFAULT NULL COMMENT 'benchmark',
+    `vendor`          varchar(255)             DEFAULT NULL COMMENT 'vendor',
     PRIMARY KEY (`id`),
     KEY `idx_space_id_evaluator_type` (`space_id`, `evaluator_type`),
     KEY `idx_space_id_created_by` (`space_id`, `created_by`),

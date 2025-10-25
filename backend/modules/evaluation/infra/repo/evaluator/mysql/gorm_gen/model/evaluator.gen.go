@@ -26,6 +26,8 @@ type Evaluator struct {
 	UpdatedAt      time.Time      `gorm:"column:updated_at;type:timestamp;not null;index:idx_space_id_updated_at,priority:2;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                                                                                                               // 更新时间
 	DeletedAt      gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                                                                                                                                                                                                           // 删除时间
 	LatestVersion  string         `gorm:"column:latest_version;type:varchar(128);not null;comment:最新版本号" json:"latest_version"`                                                                                                                                                                                                      // 最新版本号
+	Benchmark      *string        `gorm:"column:benchmark;type:varchar(255);comment:benchmark" json:"benchmark"`                                                                                                                                                                                                                     // benchmark
+	Vendor         *string        `gorm:"column:vendor;type:varchar(255);comment:vendor" json:"vendor"`                                                                                                                                                                                                                              // vendor
 }
 
 // TableName Evaluator's table name
