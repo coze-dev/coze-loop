@@ -101,8 +101,70 @@ struct AsyncInvokeEvalTargetResponse {
     255: base.BaseResp BaseResp (api.none="true")
 }
 
+// the run status enumerate for custom evaluator
+enum InvokeEvaluatorRunStatus {
+    UNKNOWN = 0
+    SUCCESS = 1
+    FAILED = 2
+}
+
+// the custom evaluator identity and parameter information
+struct InvokeCustomEvaluator {
+    1: optional string provider_evaluator_code // provider-side evaluator identity code
+}
+
+// the input data structure for custom evaluator
+struct InvokeEvaluatorInputData {
+    1: optional map<string, Content> input_fields    // key-value structure of input variables required by the evaluator
+}
+
+// the output data structure for custom evaluator
+struct InvokeEvaluatorOutputData {
+    1: optional InvokeEvaluatorResult evaluator_result
+    2: optional InvokeEvaluatorUsage evaluator_usage
+    3: optional InvokeEvaluatorRunError evaluator_run_error
+}
+
+// the result data structure for custom evaluator
+struct InvokeEvaluatorResult {
+    1: optional double score
+    2: optional string reasoning
+}
+
+// the usage data structure for custom evaluator
+struct InvokeEvaluatorUsage {
+    1: optional i64 input_tokens
+    2: optional i64 output_tokens
+}
+
+// the error data structure for custom evaluator
+struct InvokeEvaluatorRunError {
+    1: optional i32 code
+    2: optional string message
+}
+
+// invoke custom evaluator request
+struct InvokeEvaluatorRequest {
+    1: optional i64 workspace_id
+    2: optional InvokeCustomEvaluator evaluator
+    3: optional InvokeEvaluatorInputData input_data
+
+    255: optional base.Base Base
+}
+
+// invoke custom evaluator response
+struct InvokeEvaluatorResponse {
+    1: optional InvokeEvaluatorOutputData evaluator_output_data
+    2: optional InvokeEvaluatorRunStatus status
+
+    255: base.BaseResp BaseResp
+}
+
 service EvaluationSPIService {
     SearchEvalTargetResponse SearchEvalTarget(1: SearchEvalTargetRequest req)   // 搜索评测对象
     InvokeEvalTargetResponse InvokeEvalTarget(1: InvokeEvalTargetRequest req)   // 执行
     AsyncInvokeEvalTargetResponse AsyncInvokeEvalTarget(1: AsyncInvokeEvalTargetRequest req)    // 异步执行
+
+    // invoke custom evaluator
+    InvokeEvaluatorResponse InvokeEvaluator(1: InvokeEvaluatorRequest req)
 }
