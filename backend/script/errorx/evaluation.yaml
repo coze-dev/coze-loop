@@ -405,3 +405,27 @@ error_code:
     message: execution result is nil
     description: execution result object is nil
     no_affect_stability: true
+
+  - name: InvalidProviderEvaluatorCode
+    code: 5061
+    message: invalid provider evaluator code
+    description: the provider evaluator code is invalid, check if it is empty or invalid
+    no_affect_stability: true
+
+  - name: InvalidAccessProtocol
+    code: 5062
+    message: invalid access protocol
+    description: the access protocol is invalid, check if it is empty or invalid
+    no_affect_stability: true
+
+  - name: InvalidServiceName
+    code: 5063
+    message: invalid service name
+    description: the service name is invalid, check if it is empty or invalid
+    no_affect_stability: true
+
+  - name: InvalidCluster
+    code: 5064
+    message: invalid cluster
+    description: the cluster is invalid, check if it is empty or invalid
+    no_affect_stability: true
