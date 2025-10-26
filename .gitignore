@@ -53,3 +53,4 @@ release/deployment/helm-chart/umbrella/Chart.lock
 .coda/
 backend/script/errorx/.env
 .cursor/
+AGENTS.md

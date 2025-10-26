@@ -1424,7 +1424,16 @@ func _open_apisMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _v2Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _evaluation_sets0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+func _gettracev2Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1434,12 +1443,27 @@ func _createevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _traces1Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _evaluation_set_id0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
+func _trace_treeMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _getevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _searchtracetreeMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1560,6 +1584,10 @@ func _evaluation_sets1Mw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _updateevaluationsetschemaoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
+func _searchtracetreeoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 

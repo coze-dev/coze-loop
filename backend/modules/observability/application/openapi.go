@@ -17,6 +17,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
 
@@ -64,6 +65,7 @@ func NewOpenAPIApplication(
 	rateLimiter limiter.IRateLimiterFactory,
 	traceConfig config.ITraceConfig,
 	metrics metrics.ITraceMetrics,
+	collector collector.ICollectorProvider,
 ) (IObservabilityOpenAPIApplication, error) {
 	return &OpenAPIApplication{
 		traceService: traceService,
@@ -74,6 +76,7 @@ func NewOpenAPIApplication(
 		rateLimiter:  rateLimiter.NewRateLimiter(),
 		traceConfig:  traceConfig,
 		metrics:      metrics,
+		collector:    collector,
 	}, nil
 }
 
@@ -86,6 +89,7 @@ type OpenAPIApplication struct {
 	rateLimiter  limiter.IRateLimiter
 	traceConfig  config.ITraceConfig
 	metrics      metrics.ITraceMetrics
+	collector    collector.ICollectorProvider
 }
 
 func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest) (*openapi.IngestTracesResponse, error) {
@@ -141,7 +145,7 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 				WhichIsEnough:    benefitRes.WhichIsEnough,
 				CozeAccountId:    connectorUid,
 				VolcanoAccountID: benefitRes.VolcanoAccountID,
-				Spans:            spans,
+				Spans:            tenantSpanMap[ingestTenant],
 			}); err != nil {
 				return nil, err
 			}
@@ -475,10 +479,11 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	defer func() {
 		if req != nil {
 			o.metrics.EmitTraceOapi("SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 
-	if err = o.validateSearchOApiTraceReq(ctx, req); err != nil {
+	if err = o.validateSearchTraceOApiReq(ctx, req); err != nil {
 		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
 		return nil, err
 	}
@@ -492,7 +497,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 		errCode = obErrorx.CommonRequestRateLimitCode
 		return nil, err
 	}
-	sReq, err := o.buildSearchTraceReq(ctx, req)
+	sReq, err := o.buildSearchTraceOApiReq(ctx, req)
 	if err != nil {
 		errCode = obErrorx.CommonInternalErrorCode
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("search trace req is invalid"))
@@ -520,7 +525,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	}, nil
 }
 
-func (o *OpenAPIApplication) validateSearchOApiTraceReq(ctx context.Context, req *openapi.SearchTraceOApiRequest) error {
+func (o *OpenAPIApplication) validateSearchTraceOApiReq(ctx context.Context, req *openapi.SearchTraceOApiRequest) error {
 	if req == nil {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
 	} else if req.GetTraceID() == "" && req.GetLogid() == "" {
@@ -542,7 +547,7 @@ func (o *OpenAPIApplication) validateSearchOApiTraceReq(ctx context.Context, req
 	return nil
 }
 
-func (o *OpenAPIApplication) buildSearchTraceReq(ctx context.Context, req *openapi.SearchTraceOApiRequest) (*service.SearchTraceOApiReq, error) {
+func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *openapi.SearchTraceOApiRequest) (*service.SearchTraceOApiReq, error) {
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {
 		platformType = loop_span.PlatformCozeLoop
@@ -558,10 +563,122 @@ func (o *OpenAPIApplication) buildSearchTraceReq(ctx context.Context, req *opena
 		EndTime:               req.GetEndTime(),
 		Limit:                 req.GetLimit(),
 		PlatformType:          platformType,
+		WithDetail:            true,
+		SpanIDs:               req.SpanIds,
 	}
 	if len(ret.Tenants) == 0 {
 		logs.CtxError(ctx, "fail to get platform tenants")
 		return nil, errorx.WrapByCode(errors.New("fail to get platform tenants"), obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+
+	return ret, nil
+}
+
+func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest) (*openapi.SearchTraceTreeOApiResponse, error) {
+	var err error
+	st := time.Now()
+	spansSize := 0
+	errCode := 0
+	defer func() {
+		if req != nil {
+			o.metrics.EmitTraceOapi("SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
+		}
+	}()
+
+	if err = o.validateSearchTraceTreeOApiReq(ctx, req); err != nil {
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, err
+	}
+	if err = o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
+		errCode = obErrorx.CommonNoPermissionCode
+		return nil, err
+	}
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowByKey(ctx, limitKey) {
+		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		errCode = obErrorx.CommonRequestRateLimitCode
+		return nil, err
+	}
+	sReq, err := o.buildSearchTraceTreeOApiReq(ctx, req)
+	if err != nil {
+		errCode = obErrorx.CommonInternalErrorCode
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("search trace req is invalid"))
+	}
+	sResp, err := o.traceService.SearchTraceOApi(ctx, sReq)
+	if err != nil {
+		return nil, err
+	}
+	inTokens, outTokens, err := sResp.Spans.Stat(ctx)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	if sResp != nil {
+		spansSize = loop_span.SizeofSpans(sResp.Spans)
+		logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
+	}
+	return &openapi.SearchTraceTreeOApiResponse{
+		Data: &openapi.SearchTraceOApiData{
+			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
+			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+				Tokens: &trace.TokenCost{
+					Input:  inTokens,
+					Output: outTokens,
+				},
+			},
+		},
+	}, nil
+}
+
+func (o *OpenAPIApplication) validateSearchTraceTreeOApiReq(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetTraceID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("at least need trace_id or log_id"))
+	} else if req.Limit > MaxTraceTreeLength || req.Limit < 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid limit"))
+	}
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: 365,
+	}
+	newStartTime, newEndTime, err := v.CorrectDate()
+	if err != nil {
+		return err
+	}
+	req.SetStartTime(&newStartTime)
+	req.SetEndTime(&newEndTime)
+	return nil
+}
+
+func (o *OpenAPIApplication) buildSearchTraceTreeOApiReq(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest) (*service.SearchTraceOApiReq, error) {
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+
+	ret := &service.SearchTraceOApiReq{
+		WorkspaceID:           req.GetWorkspaceID(),
+		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.GetWorkspaceID()),
+		Tenants:               o.tenant.GetOAPIQueryTenants(ctx, platformType),
+		TraceID:               req.GetTraceID(),
+		StartTime:             req.GetStartTime(),
+		EndTime:               req.GetEndTime(),
+		Limit:                 req.GetLimit(),
+		PlatformType:          platformType,
+		WithDetail:            false,
+	}
+
+	if len(ret.Tenants) == 0 {
+		logs.CtxError(ctx, "fail to get platform tenants")
+		return nil, errorx.WrapByCode(errors.New("fail to get platform tenants"), obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	if req.Filters != nil {
+		ret.Filters = tconv.FilterFieldsDTO2DO(req.Filters)
+		if err := ret.Filters.Validate(); err != nil {
+			return nil, err
+		}
 	}
 	return ret, nil
 }
@@ -575,6 +692,7 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	defer func() {
 		if req != nil {
 			o.metrics.EmitTraceOapi("ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 	if err = o.validateListSpansOApi(ctx, req); err != nil {
@@ -685,6 +803,7 @@ func (o *OpenAPIApplication) ListTracesOApi(ctx context.Context, req *openapi.Li
 	errCode := 0
 	defer func() {
 		o.metrics.EmitTraceOapi("ListTracesOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
+		o.collector.CollectTraceOpenAPIEvent(ctx, "ListTracesOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
 	}()
 
 	if err = o.validateListTracesOApiReq(ctx, req); err != nil {
