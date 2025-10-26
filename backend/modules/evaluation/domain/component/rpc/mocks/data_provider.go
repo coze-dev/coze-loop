@@ -133,6 +133,22 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) BatchGetVersionedDatasets(ctx, spa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetVersionedDatasets", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).BatchGetVersionedDatasets), ctx, spaceID, versionIDs, deletedAt)
 }
 
+// BatchUpdateDatasetItems mocks base method.
+func (m *MockIDatasetRPCAdapter) BatchUpdateDatasetItems(ctx context.Context, param *rpc.BatchUpdateDatasetItemsParam) ([]*entity.ItemErrorGroup, []*entity.DatasetItemOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchUpdateDatasetItems", ctx, param)
+	ret0, _ := ret[0].([]*entity.ItemErrorGroup)
+	ret1, _ := ret[1].([]*entity.DatasetItemOutput)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// BatchUpdateDatasetItems indicates an expected call of BatchUpdateDatasetItems.
+func (mr *MockIDatasetRPCAdapterMockRecorder) BatchUpdateDatasetItems(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchUpdateDatasetItems", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).BatchUpdateDatasetItems), ctx, param)
+}
+
 // ClearEvaluationSetDraftItem mocks base method.
 func (m *MockIDatasetRPCAdapter) ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) error {
 	m.ctrl.T.Helper()
