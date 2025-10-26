@@ -55,7 +55,8 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluationSetItemService service.EvaluationSetItemService,
 	evaluationSetSchemaService service.EvaluationSetSchemaService,
 	metric metrics.OpenAPIEvaluationMetrics,
-	userInfoService userinfo.UserInfoService) IEvalOpenAPIApplication {
+	userInfoService userinfo.UserInfoService,
+) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
 		publisher:                   publisher,
@@ -318,7 +319,7 @@ func (e *EvalOpenAPIApplication) BatchCreateEvaluationSetItemsOApi(ctx context.C
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if req.Items == nil || len(req.Items) == 0 {
+	if len(req.Items) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is required"))
 	}
 	// 鉴权
@@ -374,7 +375,7 @@ func (e *EvalOpenAPIApplication) BatchUpdateEvaluationSetItemsOApi(ctx context.C
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if req.Items == nil || len(req.Items) == 0 {
+	if len(req.Items) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is required"))
 	}
 	// 鉴权
@@ -430,7 +431,7 @@ func (e *EvalOpenAPIApplication) BatchDeleteEvaluationSetItemsOApi(ctx context.C
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if req.GetIsDeleteAll() == false && (req.ItemIds == nil || len(req.ItemIds) == 0) {
+	if req.GetIsDeleteAll() == false && (len(req.ItemIds) == 0) {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is required"))
 	}
 	// 鉴权
@@ -455,7 +456,7 @@ func (e *EvalOpenAPIApplication) BatchDeleteEvaluationSetItemsOApi(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	if req.GetIsDeleteAll() == true {
+	if req.GetIsDeleteAll() {
 		// 清除所有
 		err = e.evaluationSetItemService.ClearEvaluationSetDraftItem(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID())
 		if err != nil {
