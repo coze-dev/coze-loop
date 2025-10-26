@@ -871,7 +871,7 @@ func TestEvalOpenAPIApplication_BatchUpdateEvaluationSetItemsOApi(t *testing.T) 
 			}
 
 			req := tc.buildReq()
-			if req.Items == nil || len(req.Items) == 0 {
+			if len(req.Items) == 0 {
 				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
 				itemSvc.EXPECT().BatchUpdateEvaluationSetItems(gomock.Any(), gomock.Any()).Times(0)

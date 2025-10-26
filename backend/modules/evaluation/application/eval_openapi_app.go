@@ -431,7 +431,7 @@ func (e *EvalOpenAPIApplication) BatchDeleteEvaluationSetItemsOApi(ctx context.C
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if req.GetIsDeleteAll() == false && (len(req.ItemIds) == 0) {
+	if !req.GetIsDeleteAll() && (len(req.ItemIds) == 0) {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is required"))
 	}
 	// 鉴权
