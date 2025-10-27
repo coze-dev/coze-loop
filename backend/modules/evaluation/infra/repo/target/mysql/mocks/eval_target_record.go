@@ -85,17 +85,3 @@ func (mr *MockEvalTargetRecordDAOMockRecorder) ListByIDsAndSpaceID(ctx, recordID
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByIDsAndSpaceID", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).ListByIDsAndSpaceID), ctx, recordIDs, spaceID)
 }
-
-// Save mocks base method.
-func (m *MockEvalTargetRecordDAO) Save(ctx context.Context, record *model.TargetRecord) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save", ctx, record)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Save indicates an expected call of Save.
-func (mr *MockEvalTargetRecordDAOMockRecorder) Save(ctx, record any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).Save), ctx, record)
-}

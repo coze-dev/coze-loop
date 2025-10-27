@@ -73,7 +73,7 @@ func (e *EvalTargetMetricsImpl) EmitRun(spaceID int64, err error, start time.Tim
 }
 
 func (e *EvalTargetMetricsImpl) EmitCreate(spaceID int64, err error) {
-	if e == nil || e.metric == nil {
+	if e.metric == nil {
 		return
 	}
 	code, isError := eval_metrics.GetCode(err)

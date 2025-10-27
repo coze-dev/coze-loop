@@ -21,7 +21,15 @@ import {
 } from '../evaluator-create/debug-button';
 import { type BaseInfo, BaseInfoModal } from './base-info-modal';
 
-interface HeaderProps {
+export function Header({
+  evaluator,
+  selectedVersion,
+  autoSaveService,
+  onChangeBaseInfo,
+  onOpenVersionList,
+  onSubmitVersion,
+  debugButtonProps,
+}: {
   evaluator?: Evaluator;
   selectedVersion?: EvaluatorVersion;
   autoSaveService: Result<
@@ -35,20 +43,9 @@ interface HeaderProps {
   onChangeBaseInfo: (values: BaseInfo) => void;
   onOpenVersionList: () => void;
   onSubmitVersion: () => void;
-  customDebugButton?: React.ReactNode;
-  debugButtonProps?: DebugButtonProps;
-}
 
-export function Header({
-  evaluator,
-  selectedVersion,
-  autoSaveService,
-  onChangeBaseInfo,
-  onOpenVersionList,
-  onSubmitVersion,
-  debugButtonProps,
-  customDebugButton,
-}: HeaderProps) {
+  debugButtonProps: DebugButtonProps;
+}) {
   const [editVisible, setEditVisible] = useState(false);
 
   const renderAutoSave = () => {
@@ -124,10 +121,6 @@ export function Header({
     );
   };
 
-  const DebugButtonComponent =
-    customDebugButton ||
-    (debugButtonProps ? <DebugButton {...debugButtonProps} /> : null);
-
   return (
     <>
       <div className="px-6 py-2 h-[64px] flex-shrink-0 flex flex-row items-center border-0 border-b border-solid coz-stroke-primary">
@@ -154,14 +147,14 @@ export function Header({
           <Button color="primary" onClick={onOpenVersionList}>
             {I18n.t('version_record')}
           </Button>
-          {!selectedVersion ? DebugButtonComponent : null}
-          {!selectedVersion ? (
+          {selectedVersion ? null : <DebugButton {...debugButtonProps} />}
+          {selectedVersion ? null : (
             <Guard point={GuardPoint['eval.evaluator.commit']}>
               <Button color="brand" onClick={onSubmitVersion}>
                 {I18n.t('submit_new_version')}
               </Button>
             </Guard>
-          ) : null}
+          )}
         </div>
       </div>
       <BaseInfoModal

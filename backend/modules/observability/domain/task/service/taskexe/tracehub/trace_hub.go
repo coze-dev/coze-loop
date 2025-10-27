@@ -10,6 +10,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -58,11 +59,17 @@ func NewTraceHubImpl(
 		aid:                 aid,
 		backfillProducer:    backfillProducer,
 		locker:              locker,
-		loader:              loader,
 	}
 
 	// Start the scheduled tasks immediately
-	impl.startScheduledTask()
+	const key = "consumer_listening"
+	cfg := &config.ConsumerListening{}
+	if err := loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
+		return nil, err
+	}
+	if cfg.IsEnabled {
+		impl.startScheduledTask()
+	}
 
 	// default+lane?+新集群？——定时任务和任务处理分开——内场
 	return impl, nil
@@ -80,7 +87,6 @@ type TraceHubServiceImpl struct {
 	benefitSvc          benefit.IBenefitService
 	backfillProducer    mq.IBackfillProducer
 	locker              lock.ILocker
-	loader              conf.IConfigLoader
 
 	flushErrLock sync.Mutex
 	flushErr     []error

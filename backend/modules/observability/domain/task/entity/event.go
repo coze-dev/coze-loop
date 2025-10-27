@@ -137,9 +137,25 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	if s.Tags == nil {
 		s.Tags = make(map[string]any)
 	}
-	spaceID := tagsString["fornax_space_id"]
-	callType := tagsString["call_type"]
-	spanType := tagsString["span_type"]
+	var callType string
+	if s.Tags["call_type"] == nil {
+		callType = ""
+	} else {
+		callType = s.Tags["call_type"].(string)
+	}
+	var spaceID string
+	if s.Tags["fornax_space_id"] == nil {
+		spaceID = ""
+	} else {
+		spaceID = s.Tags["fornax_space_id"].(string)
+	}
+	var spanType string
+
+	if s.Tags["span_type"] == nil {
+		spanType = ""
+	} else {
+		spanType = s.Tags["span_type"].(string)
+	}
 
 	result := &loop_span.Span{
 		StartTime:        s.StartTimeInUs / 1000,

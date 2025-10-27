@@ -18,12 +18,7 @@ import { Form, Spin } from '@coze-arch/coze-design';
 
 import { submitExperiment } from '@/request/experiment';
 
-import {
-  calcNextStepRenderValue,
-  getCurrentTime,
-  getSubmitValues,
-  getValidateFields,
-} from './tools';
+import { getCurrentTime, getSubmitValues, getValidateFields } from './tools';
 import { useStepNavigation } from './hooks/use-step-navigation';
 import { useLeaveGuard } from './hooks/use-leave-guard';
 import { useFormData } from './hooks/use-form-data';
@@ -107,11 +102,10 @@ export default function ExperimentCreatePage() {
     // 保存当前步骤的值
     if (formRef?.current?.formApi) {
       const currentValues = formRef.current.formApi.getValues();
-      const prevStepValues = calcNextStepRenderValue(
-        createExperimentValues,
-        currentValues,
-      );
-      setCreateExperimentValues(prevStepValues);
+      setCreateExperimentValues({
+        ...createExperimentValues,
+        ...currentValues,
+      });
     }
 
     reportStep({
@@ -194,12 +188,10 @@ export default function ExperimentCreatePage() {
 
         if (values) {
           // 更新全局状态，确保包含最新的表单值
-
-          setCreateExperimentValues(prev => {
-            const prevStepValues = calcNextStepRenderValue(prev, values);
-            return prevStepValues;
-          });
-
+          setCreateExperimentValues(prev => ({
+            ...prev,
+            ...values,
+          }));
           // 设置下一步
           goNext();
         }

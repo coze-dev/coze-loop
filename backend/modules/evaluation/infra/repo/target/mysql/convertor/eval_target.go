@@ -63,11 +63,6 @@ func EvalTargetVersionDO2PO(do *entity.EvalTargetVersion) (po *model.TargetVersi
 		if err != nil {
 			return nil, err
 		}
-	case entity.EvalTargetTypeCustomRPCServer:
-		meta, err = json.Marshal(do.CustomRPCServer)
-		if err != nil {
-			return nil, err
-		}
 	}
 	if do.InputSchema != nil {
 		inputSchema, err = json.Marshal(do.InputSchema)
@@ -204,11 +199,6 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 			meta := &entity.VolcengineAgent{}
 			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
 				targetVersionDO.VolcengineAgent = meta
-			}
-		case entity.EvalTargetTypeCustomRPCServer:
-			meta := &entity.CustomRPCServer{}
-			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
-				targetVersionDO.CustomRPCServer = meta
 			}
 		default:
 			// todo

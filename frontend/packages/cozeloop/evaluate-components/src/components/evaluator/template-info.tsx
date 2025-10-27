@@ -26,7 +26,7 @@ export function TemplateInfo({
   return (
     <>
       {notTemplate ? null : (
-        <div className="text-[16px] leading-8 font-medium coz-fg-plus mb-3">
+        <div className="text-[16px] leading-8 font-medium coz-fg-plus mb-5">
           {data?.prompt_evaluator?.prompt_template_name}
         </div>
       )}

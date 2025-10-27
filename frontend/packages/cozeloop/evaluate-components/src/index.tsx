@@ -41,11 +41,7 @@ export { getColumnType } from './components/dataset-item/util';
 export { DatasetItem } from './components/dataset-item';
 
 export { useFetchDatasetDetail } from './components/dataset-detail/use-dataset-detail';
-export {
-  type EvaluationSetItemTableData,
-  getFieldColumnConfig,
-  convertEvaluationSetItemListToTableData,
-} from './components/dataset-detail/table/use-dataset-item-list';
+export { getFieldColumnConfig } from './components/dataset-detail/table/use-dataset-item-list';
 export { DatasetItemList } from './components/dataset-detail/table';
 export { DatasetDetailHeader } from './components/dataset-detail/header';
 export { DatasetVersionTag } from './components/dataset-version-tag';
@@ -132,8 +128,6 @@ export {
   type EvaluatorFieldCardRef,
   type EvaluatorFieldMappingValue,
 } from './components/evaluator/evaluator-select-card/evaluator-field-card';
-export { default as EvaluatorIcon } from './components/evaluator/evaluator-icon';
-export { getEvaluatorJumpUrl } from './components/evaluator/utils';
 export { EvaluatorVersionDetail } from './components/evaluator/evaluator-version-detail';
 export { TemplateInfo } from './components/evaluator/template-info';
 export { PromptMessage } from './components/evaluator/prompt-message';

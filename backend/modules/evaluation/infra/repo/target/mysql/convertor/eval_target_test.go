@@ -158,26 +158,6 @@ func TestEvalTargetVersionDO2PO(t *testing.T) {
 				assert.NotNil(t, po.TargetMeta)
 			},
 		},
-		{
-			name: "自定义对象版本转换",
-			do: &entity.EvalTargetVersion{
-				ID:                  1,
-				SpaceID:             2,
-				TargetID:            3,
-				SourceTargetVersion: "v2.0",
-				EvalTargetType:      entity.EvalTargetTypeCustomRPCServer,
-				CustomRPCServer: &entity.CustomRPCServer{
-					Name:        "Test Prompt",
-					Description: "Test prompt description",
-				},
-			},
-			expectError: false,
-			checkResult: func(t *testing.T, po *model.TargetVersion) {
-				assert.Equal(t, int64(1), po.ID)
-				assert.Equal(t, "v2.0", po.SourceTargetVersion)
-				assert.NotNil(t, po.TargetMeta)
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -371,23 +351,6 @@ func TestEvalTargetVersionPO2DO(t *testing.T) {
 				UpdatedAt:           time.Now(),
 			},
 			targetType: entity.EvalTargetTypeVolcengineAgent,
-			checkResult: func(t *testing.T, do *entity.EvalTargetVersion) {
-				assert.NotNil(t, do)
-				assert.Equal(t, int64(1), do.ID)
-			},
-		},
-		{
-			name: "自定义对象的版本转换",
-			targetVersionPO: &model.TargetVersion{
-				ID:                  1,
-				SpaceID:             2,
-				TargetID:            3,
-				SourceTargetVersion: "v2.0",
-				TargetMeta:          gptr.Of([]byte(`{"id":1}`)),
-				CreatedAt:           time.Now(),
-				UpdatedAt:           time.Now(),
-			},
-			targetType: entity.EvalTargetTypeCustomRPCServer,
 			checkResult: func(t *testing.T, do *entity.EvalTargetVersion) {
 				assert.NotNil(t, do)
 				assert.Equal(t, int64(1), do.ID)

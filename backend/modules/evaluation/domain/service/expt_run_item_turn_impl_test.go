@@ -5,7 +5,6 @@ package service
 import (
 	"context"
 	"errors"
-	"strconv"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
@@ -17,7 +16,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 )
 
@@ -31,9 +29,8 @@ func TestNewExptTurnEvaluation(t *testing.T) {
 	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
 	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
 	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
-	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 
-	eval := NewExptTurnEvaluation(mockMetric, mockEvalTargetService, mockEvaluatorService, mockBenefitService, mockEvalAsyncRepo)
+	eval := NewExptTurnEvaluation(mockMetric, mockEvalTargetService, mockEvaluatorService, mockBenefitService)
 	assert.NotNil(t, eval)
 }
 
@@ -1121,112 +1118,6 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_RuntimeParam(t *testing.T) {
 	}
 }
 
-func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
-	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
-	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
-
-	service := &DefaultExptTurnEvaluationImpl{
-		metric:            mockMetric,
-		evalTargetService: mockEvalTargetService,
-		evalAsyncRepo:     mockEvalAsyncRepo,
-	}
-
-	spaceID := int64(42)
-	targetID := int64(101)
-	targetVersionID := int64(202)
-	isAsync := true
-	record := &entity.EvalTargetRecord{
-		ID:                   9999,
-		EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
-		Status:               gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
-		TargetID:             targetID,
-		TargetVersionID:      targetVersionID,
-		SpaceID:              spaceID,
-	}
-
-	turnContent := &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("payload")}
-	etec := &entity.ExptTurnEvalCtx{
-		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
-			Event: &entity.ExptItemEvalEvent{
-				ExptID:    555,
-				ExptRunID: 777,
-				SpaceID:   spaceID,
-				Session:   &entity.Session{UserID: "user"},
-			},
-			Expt: &entity.Experiment{
-				SpaceID:         spaceID,
-				TargetVersionID: targetVersionID,
-				Target: &entity.EvalTarget{
-					ID:             targetID,
-					EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
-					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID: targetVersionID,
-						CustomRPCServer: &entity.CustomRPCServer{
-							IsAsync: gptr.Of(isAsync),
-						},
-					},
-				},
-				EvalConf: &entity.EvaluationConfiguration{
-					ConnectorConf: entity.Connector{
-						TargetConf: &entity.TargetConf{
-							TargetVersionID: targetVersionID,
-							IngressConf: &entity.TargetIngressConf{
-								EvalSetAdapter: &entity.FieldAdapter{
-									FieldConfs: []*entity.FieldConf{
-										{FieldName: "fieldA", FromField: "fieldA"},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			EvalSetItem: &entity.EvaluationSetItem{ItemID: 888},
-		},
-		Turn: &entity.Turn{
-			ID: 999,
-			FieldDataList: []*entity.FieldData{
-				{Name: "fieldA", Content: turnContent},
-			},
-		},
-		Ext: map[string]string{"ext-key": "ext-val"},
-	}
-
-	mockMetric.EXPECT().EmitTurnExecTargetResult(spaceID, false)
-
-	mockEvalTargetService.EXPECT().AsyncExecuteTarget(gomock.Any(), spaceID, targetID, targetVersionID, gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ int64, _ int64, _ int64, param *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, string, error) {
-			assert.Equal(t, int64(777), gptr.Indirect(param.ExperimentRunID))
-			assert.Equal(t, int64(888), param.ItemID)
-			assert.Equal(t, int64(999), param.TurnID)
-			if assert.NotNil(t, input) {
-				assert.Equal(t, "payload", gptr.Indirect(input.InputFields["fieldA"].Text))
-				assert.Equal(t, "ext-val", input.Ext["ext-key"])
-			}
-			return record, "callee-service", nil
-		},
-	)
-
-	mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(record.ID, 10), gomock.Any()).DoAndReturn(
-		func(_ context.Context, invokeID string, actx *entity.EvalAsyncCtx) error {
-			assert.Equal(t, strconv.FormatInt(record.ID, 10), invokeID)
-			if assert.NotNil(t, actx) {
-				assert.Equal(t, "callee-service", actx.Callee)
-				assert.Equal(t, etec.Event, actx.Event)
-			}
-			return nil
-		},
-	)
-
-	got, err := service.callTarget(context.Background(), etec, []*entity.Message{}, spaceID)
-	assert.NoError(t, err)
-	assert.Equal(t, record, got)
-}
-
 func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 	t.Parallel()
 
@@ -1844,7 +1735,7 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_EdgeCases(t *testing.T) {
 						Target: &entity.EvalTarget{
 							ID:                1,
 							EvalTargetVersion: &entity.EvalTargetVersion{ID: 1},
-							EvalTargetType:    entity.EvalTargetTypeCozeBot,
+							EvalTargetType:    entity.EvalTargetTypeLoopPrompt,
 						},
 						EvalConf: &entity.EvaluationConfiguration{
 							ConnectorConf: entity.Connector{
@@ -1956,14 +1847,14 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_EdgeCases(t *testing.T) {
 			// Setup mocks based on test case
 			switch tt.name {
 			case "execute target service fails":
-				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), true)
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
 				mockEvalTargetService.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("execute target failed"))
 			case "target config validation fails":
 				// For target config validation fails, no ExecuteTarget call should be made
-				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), true)
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
 			default:
 				// For json path parsing error case
-				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), true)
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), false)
 			}
 
 			_, err := service.callTarget(context.Background(), tt.etec, tt.history, tt.spaceID)

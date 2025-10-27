@@ -24,11 +24,7 @@ export default function ExperimentContrastHeader({
   return (
     <header className="flex items-center h-[56px] px-5 gap-2  text-xs">
       <RouteBackAction defaultModuleRoute="evaluation/experiments" />
-      <div className="text-xl font-bold">
-        {I18n.t('compare_x_experiments', {
-          num: currentExperiments?.length,
-        })}
-      </div>
+      <div className="text-xl font-bold">{I18n.t('compare_x_experiments')}</div>
 
       <div className="flex items-center gap-3 ml-auto text-sm">
         <Select

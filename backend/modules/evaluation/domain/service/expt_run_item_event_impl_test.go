@@ -47,7 +47,6 @@ func TestNewExptRecordEvalService(t *testing.T) {
 		svcmocks.NewMockEvaluatorService(ctrl),
 		idgenmocks.NewMockIIDGenerator(ctrl),
 		benefitmocks.NewMockIBenefitService(ctrl),
-		repoMocks.NewMockIEvalAsyncRepo(ctrl),
 	)
 	assert.NotNil(t, service)
 }
@@ -685,6 +684,19 @@ func TestNewRecordEvalMode(t *testing.T) {
 }
 
 func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+
+	mode := &ExptRecordEvalModeSubmit{
+		exptItemResultRepo: mockExptItemResultRepo,
+		exptTurnResultRepo: mockExptTurnResultRepo,
+		idgen:              mockIdgen,
+	}
+
 	mockEvalSetItem := &entity.EvaluationSetItem{
 		ID: 1,
 		Turns: []*entity.Turn{
@@ -694,21 +706,21 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		prepare func(mockExptItemResultRepo *repoMocks.MockIExptItemResultRepo, mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo, mockIdgen *idgenmocks.MockIIDGenerator)
+		prepare func()
 		eiec    *entity.ExptItemEvalCtx
 		wantErr bool
 	}{
 		{
 			name: "正常流程",
-			prepare: func(_ *repoMocks.MockIExptItemResultRepo, mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo, _ *idgenmocks.MockIIDGenerator) {
-				// placeholder to satisfy type; real expectations set below per-correct types
+			prepare: func() {
+				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1}, nil)
+				mockExptTurnResultRepo.EXPECT().BatchCreateNXRunLog(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			eiec: &entity.ExptItemEvalCtx{
 				Event: &entity.ExptItemEvalEvent{
-					ExptID:        1,
-					ExptRunID:     2,
-					SpaceID:       3,
-					EvalSetItemID: 1,
+					ExptID:    1,
+					ExptRunID: 2,
+					SpaceID:   3,
 				},
 				EvalSetItem: mockEvalSetItem,
 				ExistItemEvalResult: &entity.ExptItemEvalResult{
@@ -719,8 +731,7 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 		},
 		{
 			name: "生成ID失败",
-			prepare: func(_ *repoMocks.MockIExptItemResultRepo, mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo, mockIdgen *idgenmocks.MockIIDGenerator) {
-				mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
+			prepare: func() {
 				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
 			},
 			eiec: &entity.ExptItemEvalCtx{
@@ -734,8 +745,7 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 		},
 		{
 			name: "创建运行日志失败",
-			prepare: func(_ *repoMocks.MockIExptItemResultRepo, mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo, mockIdgen *idgenmocks.MockIIDGenerator) {
-				mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
+			prepare: func() {
 				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1}, nil)
 				mockExptTurnResultRepo.EXPECT().BatchCreateNXRunLog(gomock.Any(), gomock.Any()).Return(errors.New("mock error"))
 			},
@@ -752,28 +762,7 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
-			mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-			mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
-
-			// 每个子用例独立设置期望
-			if tt.name == "正常流程" {
-				mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
-				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1}, nil)
-				mockExptTurnResultRepo.EXPECT().BatchCreateNXRunLog(gomock.Any(), gomock.Any()).Return(nil)
-			} else {
-				tt.prepare(mockExptItemResultRepo, mockExptTurnResultRepo, mockIdgen)
-			}
-
-			mode := &ExptRecordEvalModeSubmit{
-				exptItemResultRepo: mockExptItemResultRepo,
-				exptTurnResultRepo: mockExptTurnResultRepo,
-				idgen:              mockIdgen,
-			}
-
+			tt.prepare()
 			err := mode.PreEval(context.Background(), tt.eiec)
 			if tt.wantErr {
 				assert.Error(t, err)

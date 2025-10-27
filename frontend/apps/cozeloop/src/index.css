@@ -105,6 +105,11 @@ body,
     height: 32px;
   }
 
+  .semi-select-small {
+    min-height: 28px;
+    height: 28px;
+    border-radius: 5px;
+  }
   .semi-select-with-prefix .semi-select-prefix-text {
     margin-right: 0;
     flex-shrink: 0;

@@ -6,8 +6,6 @@ package consts
 const (
 	ActionCreateExpt = "createLoopEvaluationExperiment"
 	ActionReadExpt   = "listLoopEvaluationExperiment"
-
-	ActionDebugEvalTarget = "debugLoopEvalTarget"
 )
 
 const (

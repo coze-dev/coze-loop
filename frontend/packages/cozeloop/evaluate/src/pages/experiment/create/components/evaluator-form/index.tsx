@@ -121,6 +121,7 @@ export const EvaluatorForm = (props: EvaluatorFormProps) => {
                     ?.field_schemas
                 }
                 evaluateTargetSchemas={memoEvaluateTargetSchemas}
+                // evaluateTargetSchemas={evaluateTargetSchemas}
                 selectedVersionIds={selectedVersionIds}
                 getEvaluatorMappingFieldRules={
                   targetDefinition?.evaluator?.getEvaluatorMappingFieldRules

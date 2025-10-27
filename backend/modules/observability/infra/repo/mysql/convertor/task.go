@@ -5,6 +5,7 @@ package convertor
 
 import (
 	"github.com/bytedance/sonic"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -65,11 +66,11 @@ func TaskDetailJSON2DO(taskDetail *string) *entity.RunDetail {
 	return taskDetailDO
 }
 
-func SpanFilterJSON2DO(spanFilter *string) *entity.SpanFilterFields {
+func SpanFilterJSON2DO(spanFilter *string) *filter.SpanFilterFields {
 	if spanFilter == nil || *spanFilter == "" {
 		return nil
 	}
-	var spanFilterDO *entity.SpanFilterFields
+	var spanFilterDO *filter.SpanFilterFields
 	if err := sonic.UnmarshalString(*spanFilter, &spanFilterDO); err != nil {
 		logs.Error("SpanFilterJSON2DO UnmarshalString err: %v", err)
 		return nil

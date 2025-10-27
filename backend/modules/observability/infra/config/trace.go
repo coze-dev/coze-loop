@@ -24,7 +24,6 @@ const (
 	traceMaxDurationDay        = "trace_max_duration_day"
 	annotationSourceCfgKey     = "annotation_source_cfg"
 	queryTraceRateLimitCfgKey  = "query_trace_rate_limit_config"
-	keySpanTypeCfgKey          = "key_span_type"
 	backfillMqProducerCfgKey   = "backfill_mq_producer_config"
 )
 
@@ -159,14 +158,6 @@ func (t *TraceConfigCenter) GetQueryMaxQPS(ctx context.Context, key string) (int
 		return qps, nil
 	}
 	return qpsConfig.DefaultMaxQPS, nil
-}
-
-func (t *TraceConfigCenter) GetKeySpanTypes(ctx context.Context) map[string][]string {
-	keyColumns := make(map[string][]string)
-	if err := t.UnmarshalKey(ctx, keySpanTypeCfgKey, &keyColumns); err != nil {
-		return keyColumns
-	}
-	return keyColumns
 }
 
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {

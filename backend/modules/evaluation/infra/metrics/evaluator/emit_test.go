@@ -134,11 +134,6 @@ func TestNewEvaluatorMetrics(t *testing.T) {
 			meter: nil,
 			want:  nil,
 		},
-		{
-			name:  "meter",
-			meter: metrics.GetMeter(),
-			want:  nil,
-		},
 	}
 
 	for _, tt := range tests {

@@ -104,10 +104,9 @@ type EvalTargetRunError struct {
 type EvalTargetRunStatus int64
 
 const (
-	EvalTargetRunStatusUnknown       EvalTargetRunStatus = 0
-	EvalTargetRunStatusSuccess       EvalTargetRunStatus = 1
-	EvalTargetRunStatusFail          EvalTargetRunStatus = 2
-	EvalTargetRunStatusAsyncInvoking EvalTargetRunStatus = 3
+	EvalTargetRunStatusUnknown EvalTargetRunStatus = 0
+	EvalTargetRunStatusSuccess EvalTargetRunStatus = 1
+	EvalTargetRunStatusFail    EvalTargetRunStatus = 2
 )
 
 type ExecuteTargetCtx struct {

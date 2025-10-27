@@ -56,7 +56,6 @@ ignore:
   - "**/repo/mysql/**"
   - "**/repo/**/mysql/**"
   - "**/repo/redis/**"
-  - "**/repo/**/redis/**"
   - "backend/api/router/coze/loop/apis/*.go"
 
 parsers:

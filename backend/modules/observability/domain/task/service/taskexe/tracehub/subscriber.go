@@ -115,7 +115,6 @@ func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpa
 	env := &span_filter.SpanEnv{
 		WorkspaceID:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
-		Source:                span_filter.SourceTypeAutoTask,
 	}
 	basicFilter, forceQuery, err := f.BuildBasicSpanFilter(ctx, env)
 	if err != nil {

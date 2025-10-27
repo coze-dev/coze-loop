@@ -17,177 +17,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-func TestSpansCkDaoImpl_convertFieldName(t *testing.T) {
-	t.Parallel()
-
-	dao := &SpansCkDaoImpl{}
-	ctx := context.Background()
-
-	type testCase struct {
-		name    string
-		filter  *loop_span.FilterField
-		want    string
-		wantErr bool
-	}
-
-	testCases := []testCase{
-		{
-			name: "invalid field name",
-			filter: &loop_span.FilterField{
-				FieldName: "invalid-name",
-				FieldType: loop_span.FieldTypeString,
-				IsCustom:  true,
-			},
-			wantErr: true,
-		},
-		{
-			name: "custom string field",
-			filter: &loop_span.FilterField{
-				FieldName: "custom_str",
-				FieldType: loop_span.FieldTypeString,
-				IsCustom:  true,
-			},
-			want: "tags_string['custom_str']",
-		},
-		{
-			name: "custom long field",
-			filter: &loop_span.FilterField{
-				FieldName: "custom_long",
-				FieldType: loop_span.FieldTypeLong,
-				IsCustom:  true,
-			},
-			want: "tags_long['custom_long']",
-		},
-		{
-			name: "custom double field",
-			filter: &loop_span.FilterField{
-				FieldName: "custom_double",
-				FieldType: loop_span.FieldTypeDouble,
-				IsCustom:  true,
-			},
-			want: "tags_float['custom_double']",
-		},
-		{
-			name: "custom bool field",
-			filter: &loop_span.FilterField{
-				FieldName: "custom_bool",
-				FieldType: loop_span.FieldTypeBool,
-				IsCustom:  true,
-			},
-			want: "tags_bool['custom_bool']",
-		},
-		{
-			name: "custom fallback field type",
-			filter: &loop_span.FilterField{
-				FieldName: "custom_unknown",
-				FieldType: loop_span.FieldType("unknown"),
-				IsCustom:  true,
-			},
-			want: "tags_string['custom_unknown']",
-		},
-		{
-			name: "system string field",
-			filter: &loop_span.FilterField{
-				FieldName: "system_str",
-				FieldType: loop_span.FieldTypeString,
-				IsSystem:  true,
-			},
-			want: "system_tags_string['system_str']",
-		},
-		{
-			name: "system long field",
-			filter: &loop_span.FilterField{
-				FieldName: "system_long",
-				FieldType: loop_span.FieldTypeLong,
-				IsSystem:  true,
-			},
-			want: "system_tags_long['system_long']",
-		},
-		{
-			name: "system double field",
-			filter: &loop_span.FilterField{
-				FieldName: "system_double",
-				FieldType: loop_span.FieldTypeDouble,
-				IsSystem:  true,
-			},
-			want: "system_tags_float['system_double']",
-		},
-		{
-			name: "system fallback field type",
-			filter: &loop_span.FilterField{
-				FieldName: "system_unknown",
-				FieldType: loop_span.FieldTypeBool,
-				IsSystem:  true,
-			},
-			want: "system_tags_string['system_unknown']",
-		},
-		{
-			name: "super field",
-			filter: &loop_span.FilterField{
-				FieldName: loop_span.SpanFieldDuration,
-				FieldType: loop_span.FieldTypeLong,
-			},
-			want: "`duration`",
-		},
-		{
-			name: "default string field",
-			filter: &loop_span.FilterField{
-				FieldName: "default_str",
-				FieldType: loop_span.FieldTypeString,
-			},
-			want: "tags_string['default_str']",
-		},
-		{
-			name: "default long field",
-			filter: &loop_span.FilterField{
-				FieldName: "default_long",
-				FieldType: loop_span.FieldTypeLong,
-			},
-			want: "tags_long['default_long']",
-		},
-		{
-			name: "default double field",
-			filter: &loop_span.FilterField{
-				FieldName: "default_double",
-				FieldType: loop_span.FieldTypeDouble,
-			},
-			want: "tags_float['default_double']",
-		},
-		{
-			name: "default bool field",
-			filter: &loop_span.FilterField{
-				FieldName: "default_bool",
-				FieldType: loop_span.FieldTypeBool,
-			},
-			want: "tags_bool['default_bool']",
-		},
-		{
-			name: "default fallback field type",
-			filter: &loop_span.FilterField{
-				FieldName: "default_unknown",
-				FieldType: loop_span.FieldType("unknown"),
-			},
-			want: "tags_string['default_unknown']",
-		},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			got, err := dao.convertFieldName(ctx, tc.filter)
-			if tc.wantErr {
-				assert.Error(t, err)
-				return
-			}
-
-			assert.NoError(t, err)
-			assert.Equal(t, tc.want, got)
-		})
-	}
-}
-
 func TestBuildSql(t *testing.T) {
 	sqlDB, _, err := sqlmock.New()
 	if err != nil {
@@ -270,7 +99,7 @@ func TestBuildSql(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE ((tags_string['a'] IN ('1') AND (tags_string['aa'] IN ('aaa') OR tags_string['a'] = 'b')) AND (tags_string['b'] NOT IN ('b') OR (tags_string['c'] NOT IN ('c') AND tags_string['c'] NOT IN ('d') AND tags_string['c'] NOT IN ('e')))) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE ((tags_string['a'] IN ('1') AND (tags_string['aa'] IN ('aaa') OR tags_string['a'] = 'b')) AND (tags_string['b'] NOT IN ('b') OR (tags_string['c'] NOT IN ('c') AND tags_string['c'] NOT IN ('d') AND tags_string['c'] NOT IN ('e')))) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			filter: &loop_span.FilterFields{
@@ -301,7 +130,7 @@ func TestBuildSql(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE ((tags_string['custom_tag_string'] IS NULL OR tags_string['custom_tag_string'] = '') AND (tags_bool['custom_tag_bool'] IS NULL OR tags_bool['custom_tag_bool'] = 0) AND (tags_float['custom_tag_double'] IS NULL OR tags_float['custom_tag_double'] = 0) AND (tags_long['custom_tag_long'] IS NULL OR tags_long['custom_tag_long'] = 0)) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE ((tags_string['custom_tag_string'] IS NULL OR tags_string['custom_tag_string'] = '') AND (tags_bool['custom_tag_bool'] IS NULL OR tags_bool['custom_tag_bool'] = 0) AND (tags_float['custom_tag_double'] IS NULL OR tags_float['custom_tag_double'] = 0) AND (tags_long['custom_tag_long'] IS NULL OR tags_long['custom_tag_long'] = 0)) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			filter: &loop_span.FilterFields{
@@ -314,7 +143,7 @@ func TestBuildSql(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE tags_long['custom_tag_long'] IN (123,-123) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE tags_long['custom_tag_long'] IN (123,-123) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			filter: &loop_span.FilterFields{
@@ -327,7 +156,7 @@ func TestBuildSql(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE tags_float['custom_tag_float64'] = 123.999 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE tags_float['custom_tag_float64'] = 123.999 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			filter: &loop_span.FilterFields{
@@ -340,7 +169,7 @@ func TestBuildSql(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `duration` >= 121 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `duration` >= 121 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			filter: &loop_span.FilterFields{
@@ -353,7 +182,7 @@ func TestBuildSql(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE tags_bool['custom_tag_bool'] = 1 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE tags_bool['custom_tag_bool'] = 1 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			filter: &loop_span.FilterFields{
@@ -366,7 +195,7 @@ func TestBuildSql(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `input` like '%123%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `input` like '%123%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			filter: &loop_span.FilterFields{
@@ -379,7 +208,7 @@ func TestBuildSql(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `input` NOT like '%123%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `input` NOT like '%123%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 	}
 	for _, tc := range testCases {
@@ -467,7 +296,7 @@ func TestQueryTypeEnumNotMatchSqlExceptionCases(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `input` NOT like '%test_value%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `input` NOT like '%test_value%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 			shouldError: false,
 		},
 		{
@@ -482,7 +311,7 @@ func TestQueryTypeEnumNotMatchSqlExceptionCases(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `input` NOT like '%%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `input` NOT like '%%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 			shouldError: false,
 		},
 		// 特殊字符处理测试
@@ -498,7 +327,7 @@ func TestQueryTypeEnumNotMatchSqlExceptionCases(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `input` NOT like '%test''value%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `input` NOT like '%test''value%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 			shouldError: false,
 		},
 		{
@@ -513,7 +342,7 @@ func TestQueryTypeEnumNotMatchSqlExceptionCases(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `input` NOT like '%''; DROP TABLE spans; --%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `input` NOT like '%''; DROP TABLE spans; --%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 			shouldError: false,
 		},
 		// 不同字段类型测试
@@ -529,7 +358,7 @@ func TestQueryTypeEnumNotMatchSqlExceptionCases(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE tags_string['custom_tag'] NOT like '%tag_value%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE tags_string['custom_tag'] NOT like '%tag_value%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 			shouldError: false,
 		},
 		{
@@ -544,7 +373,7 @@ func TestQueryTypeEnumNotMatchSqlExceptionCases(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `span_type` NOT like '%test_type%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `span_type` NOT like '%test_type%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 			shouldError: false,
 		},
 		// Unicode字符测试
@@ -560,7 +389,7 @@ func TestQueryTypeEnumNotMatchSqlExceptionCases(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `input` NOT like '%测试数据%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE `input` NOT like '%测试数据%' AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 			shouldError: false,
 		},
 	}
@@ -633,7 +462,7 @@ func TestQueryTypeEnumNotMatchComplexScenarios(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE (`input` NOT like '%error%' AND `span_type` = 'http_request') AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE (`input` NOT like '%error%' AND `span_type` = 'http_request') AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			name: "NotMatch combined with other query types using OR",
@@ -654,7 +483,7 @@ func TestQueryTypeEnumNotMatchComplexScenarios(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE (`input` NOT like '%success%' OR `status_code` = 200) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE (`input` NOT like '%success%' OR `status_code` = 200) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			name: "Multiple NotMatch conditions with AND",
@@ -675,7 +504,7 @@ func TestQueryTypeEnumNotMatchComplexScenarios(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE (`input` NOT like '%error%' AND `output` NOT like '%failed%') AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE (`input` NOT like '%error%' AND `output` NOT like '%failed%') AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			name: "NotMatch with nested SubFilter",
@@ -708,7 +537,7 @@ func TestQueryTypeEnumNotMatchComplexScenarios(t *testing.T) {
 					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE (`input` NOT like '%test%' AND (tags_string['custom_tag'] NOT like '%debug%' OR `status_code` = 500)) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT * FROM `observability_spans` WHERE (`input` NOT like '%test%' AND (tags_string['custom_tag'] NOT like '%debug%' OR `status_code` = 500)) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 	}
 

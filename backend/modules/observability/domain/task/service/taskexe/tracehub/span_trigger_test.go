@@ -12,16 +12,14 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	componentconfig "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	trace_service_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	span_filter_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
-	pkgconf "github.com/coze-dev/coze-loop/backend/pkg/conf"
-	confmocks "github.com/coze-dev/coze-loop/backend/pkg/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +28,7 @@ func TestTraceHubServiceImpl_SpanTriggerSkipNoWorkspace(t *testing.T) {
 	t.Parallel()
 
 	impl := &TraceHubServiceImpl{}
-	impl.taskCache.Store("ObjListWithTask", TaskCacheInfo{})
+	impl.taskCache.Store("ObjListWithTask", &TaskCacheInfo{})
 
 	raw := &entity.RawSpan{
 		TraceID: "trace",
@@ -57,7 +55,6 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	mockBuilder := trace_service_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
 	mockFilter := span_filter_mocks.NewMockFilter(ctrl)
-	configLoader := confmocks.NewMockIConfigLoader(ctrl)
 
 	now := time.Now()
 	workspaceID := int64(1)
@@ -66,13 +63,10 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		WorkspaceID: workspaceID,
 		TaskType:    task.TaskTypeAutoEval,
 		TaskStatus:  task.TaskStatusRunning,
-		SpanFilter: &entity.SpanFilterFields{
-			PlatformType: common.PlatformTypeLoopAll,
-			SpanListType: common.SpanListTypeAllSpan,
-			Filters: loop_span.FilterFields{
-				QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
-				FilterFields: []*loop_span.FilterField{},
-			},
+		SpanFilter: &filter.SpanFilterFields{
+			Filters:      &filter.FilterFields{FilterFields: []*filter.FilterField{}},
+			PlatformType: ptr.Of(common.PlatformTypeLoopAll),
+			SpanListType: ptr.Of(common.SpanListTypeAllSpan),
 		},
 		Sampler: &entity.Sampler{
 			SampleRate: 1,
@@ -96,15 +90,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		},
 	}
 
-	configLoader.EXPECT().UnmarshalKey(gomock.Any(), "consumer_listening", gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ string, value any, _ ...pkgconf.DecodeOptionFn) error {
-			cfg := value.(*componentconfig.ConsumerListening)
-			*cfg = componentconfig.ConsumerListening{IsAllSpace: true}
-			return nil
-		},
-	).AnyTimes()
-	mockRepo.EXPECT().ListNonFinalTask(gomock.Any(), "space-1").Return([]int64{taskDO.ID}, nil).AnyTimes()
-	mockRepo.EXPECT().GetTaskByRedis(gomock.Any(), taskDO.ID).Return(taskDO, nil).AnyTimes()
+	mockRepo.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{taskDO}, int64(0), nil)
 	mockFilter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, false, nil).AnyTimes()
 	mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
@@ -118,9 +104,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		RunStartAt:  now.Add(-15 * time.Minute),
 		RunEndAt:    now.Add(15 * time.Minute),
 	}
-	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.Any(), int64(1)).Return(spanRun, nil).AnyTimes()
-	mockRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil).AnyTimes()
-	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), int64(1), spanRun.ID).Return(int64(0), nil).AnyTimes()
+	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), int64(1)).Return(nil, nil)
+	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(spanRun, nil)
 
 	proc := &stubProcessor{invokeErr: errors.New("invoke error"), createTaskRunErr: errors.New("create run error")}
 	taskProcessor := processor.NewTaskProcessor()
@@ -130,9 +115,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		taskRepo:      mockRepo,
 		buildHelper:   mockBuilder,
 		taskProcessor: taskProcessor,
-		loader:        configLoader,
 	}
-	impl.taskCache.Store("ObjListWithTask", TaskCacheInfo{WorkspaceIDs: []string{"space-1"}, Tasks: []*entity.ObservabilityTask{taskDO}})
+	impl.taskCache.Store("ObjListWithTask", &TaskCacheInfo{WorkspaceIDs: []string{"space-1"}})
 
 	raw := &entity.RawSpan{
 		TraceID:       "trace",
@@ -152,8 +136,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	}
 
 	err := impl.SpanTrigger(context.Background(), raw)
-	require.NoError(t, err)
-	require.True(t, proc.invokeCalled)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "invoke error")
 }
 
 func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) {

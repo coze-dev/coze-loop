@@ -64,7 +64,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -131,7 +130,6 @@ var (
 		targetDomainService,
 		evaluatorDomainService,
 		flagSet,
-		evalAsyncRepoSet,
 	)
 
 	evaluatorDomainService = wire.NewSet(
@@ -139,8 +137,8 @@ var (
 		domainservice.NewEvaluatorRecordServiceImpl,
 		NewEvaluatorSourceServices,
 		llm.NewLLMRPCProvider,
-		NewRuntimeFactory,
-		NewRuntimeManagerFromFactory,
+		NewStubRuntimeFactory,
+		NewStubRuntimeManagerFromFactory,
 		NewSandboxConfig,
 		NewLogger,
 
@@ -205,21 +203,6 @@ var (
 		foundation.NewAuthRPCProvider,
 		targetDomainService,
 		flagSet,
-		evalAsyncRepoSet,
-	)
-
-	evalAsyncRepoSet = wire.NewSet(
-		experiment.NewEvalAsyncRepo,
-		exptredis.NewEvalAsyncDAO,
-	)
-
-	evalOpenAPISet = wire.NewSet(
-		NewEvalOpenAPIApplication,
-		targetDomainService,
-		evaltargetmtr.NewEvalTargetMetrics,
-		flagSet,
-		rmqproducer.NewExptEventPublisher,
-		evalAsyncRepoSet,
 	)
 )
 
@@ -323,14 +306,14 @@ func NewLogger() *logrus.Logger {
 	return logger
 }
 
-// NewRuntimeFactory 创建运行时工厂
-func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
-	return runtime.NewRuntimeFactory(logger, sandboxConfig)
+// NewStubRuntimeFactory 创建存根运行时工厂
+func NewStubRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
+	return service.NewStubRuntimeFactory(logger, sandboxConfig)
 }
 
-// NewRuntimeManagerFromFactory 从工厂创建运行时管理器
-func NewRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
-	return runtime.NewRuntimeManager(factory, logger)
+// NewStubRuntimeManagerFromFactory 从工厂创建存根运行时管理器
+func NewStubRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
+	return service.NewStubRuntimeManager(factory, logger)
 }
 
 func NewEvaluatorSourceServices(
@@ -353,22 +336,4 @@ func NewEvaluatorSourceServices(
 		serviceMap[svc.EvaluatorType()] = svc
 	}
 	return serviceMap
-}
-
-func InitEvalOpenAPIApplication(
-	ctx context.Context,
-	configFactory conf.IConfigLoaderFactory,
-	rmqFactory mq.IFactory,
-	cmdable redis.Cmdable,
-	idgen idgen.IIDGenerator,
-	db db.Provider,
-	client promptmanageservice.Client,
-	executeClient promptexecuteservice.Client,
-	authClient authservice.Client,
-	meter metrics.Meter,
-) (IEvalOpenAPIApplication, error) {
-	wire.Build(
-		evalOpenAPISet,
-	)
-	return nil, nil
 }

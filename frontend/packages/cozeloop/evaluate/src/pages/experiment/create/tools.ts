@@ -1,4 +1,3 @@
-/* eslint-disable complexity */
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { cloneDeep } from 'lodash-es';
@@ -12,7 +11,6 @@ import {
   type EvaluatorFieldMapping,
   type SubmitExperimentRequest,
   type EvalTargetType,
-  EvaluatorType,
 } from '@cozeloop/api-schema/evaluation';
 import { DatasetStatus } from '@cozeloop/api-schema/data';
 
@@ -50,10 +48,7 @@ export const getCurrentTime = () => new Date().getTime();
  *
  * 注意：根据TODO注释，这个函数应该被移到表单监听中统一处理
  */
-const getEvaluatorSubmitValues = (
-  evaluatorProList: EvaluatorPro[],
-  evaluationSetVersionDetail?: EvaluationSetVersion,
-) => {
+const getEvaluatorSubmitValues = (evaluatorProList: EvaluatorPro[]) => {
   const evaluatorVersionIds: EvaluatorValues['evaluator_version_ids'] = [];
   const evaluatorFieldMapping: EvaluatorValues['evaluator_field_mapping'] = [];
 
@@ -74,43 +69,24 @@ const getEvaluatorSubmitValues = (
         from_target: [],
       };
 
-      // code 评估器, 字段映射固定
-      if (evaluatorPro?.evaluator?.evaluator_type === EvaluatorType.Code) {
-        evaluationSetVersionDetail?.evaluation_set_schema?.field_schemas?.forEach(
-          item => {
+      Object.entries(evaluatorPro?.evaluatorMapping || {}).forEach(([k, v]) => {
+        switch (v.schemaSourceType) {
+          case 'set':
             evaluatorFieldMappingItem.from_eval_set.push({
-              field_name: item.key,
-              from_field_name: item.name,
+              field_name: k,
+              from_field_name: v.name,
             });
-          },
-        );
-        evaluatorFieldMappingItem?.from_target.push({
-          field_name: 'actual_output',
-          from_field_name: 'actual_output',
-        });
-      } else {
-        // llm 评估器映射
-        Object.entries(evaluatorPro?.evaluatorMapping || {}).forEach(
-          ([k, v]) => {
-            switch (v.schemaSourceType) {
-              case 'set':
-                evaluatorFieldMappingItem.from_eval_set.push({
-                  field_name: k,
-                  from_field_name: v.name,
-                });
-                break;
-              case 'target':
-                evaluatorFieldMappingItem.from_target.push({
-                  field_name: k,
-                  from_field_name: v.name,
-                });
-                break;
-              default:
-                break;
-            }
-          },
-        );
-      }
+            break;
+          case 'target':
+            evaluatorFieldMappingItem.from_target.push({
+              field_name: k,
+              from_field_name: v.name,
+            });
+            break;
+          default:
+            break;
+        }
+      });
 
       evaluatorFieldMapping.push(evaluatorFieldMappingItem);
     }
@@ -312,7 +288,6 @@ export const getSubmitValues = (
   const clonedValues = cloneDeep(newValues);
   const createEvalTargetParam = getEvaluatorSubmitValues(
     clonedValues.evaluatorProList || [],
-    clonedValues.evaluationSetVersionDetail,
   );
 
   // 请求中会 pick 需要的数据, 没必要置为 undefined
@@ -365,21 +340,4 @@ export const getValidateFields = ({
     const extraArray = extraFields || [];
     return [...defaultArray, ...extraArray];
   }
-};
-
-export const calcNextStepRenderValue = (
-  renderData: CreateExperimentValues,
-  formData: CreateExperimentValues,
-): CreateExperimentValues => {
-  if (!formData?.evaluatorProList) {
-    return {
-      ...renderData,
-      ...formData,
-      evaluatorProList: [],
-    };
-  }
-  return {
-    ...renderData,
-    ...formData,
-  };
 };

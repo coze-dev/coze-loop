@@ -1,9 +1,7 @@
-/* eslint-disable max-lines-per-function */
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
-import { useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 
 import cls from 'classnames';
@@ -24,9 +22,7 @@ import {
   type Message,
   ContentType,
   type common,
-  TemplateType,
 } from '@cozeloop/api-schema/evaluation';
-import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import {
   IconCozPlus,
   IconCozTemplate,
@@ -39,8 +35,6 @@ import {
   Popconfirm,
   useFieldApi,
   useFieldState,
-  useFormApi,
-  useFormState,
   withField,
 } from '@coze-arch/coze-design';
 
@@ -68,14 +62,8 @@ export function PromptField({
   disabled?: boolean;
   multiModalVariableEnable?: boolean;
 }) {
-  const location = useLocation();
   const [templateVisible, setTemplateVisible] = useState(false);
   const [refreshEditorKey2, setRefreshEditorKey2] = useState(0);
-
-  const [confirmLoading, setConfirmLoading] = useState(false);
-
-  const formApi = useFormApi();
-  const { values: formValues } = useFormState();
 
   const promptEvaluatorFieldApi = useFieldApi(
     'current_version.evaluator_content.prompt_evaluator',
@@ -112,70 +100,9 @@ export function PromptField({
     [promptEvaluator?.message_list?.[1]?.content],
   );
 
-  const afterTemplateSelect = (payload: PromptEvaluator) => {
-    promptEvaluatorFieldApi.setValue({
-      ...promptEvaluator,
-      model_config:
-        formValues?.current_version?.evaluator_content?.prompt_evaluator
-          ?.model_config,
-      message_list: payload.message_list,
-      prompt_source_type: PromptSourceType.BuiltinTemplate,
-      prompt_template_key: payload.prompt_template_key,
-      prompt_template_name: payload.prompt_template_name,
-    });
-    if (!formValues?.name) {
-      formApi.setValue('name', payload.prompt_template_name);
-    }
-  };
-
   useEffect(() => {
     calcVariables.run();
   }, [promptEvaluator?.message_list]);
-
-  // 从URL查询参数中获取模板信息
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const templateKey = searchParams.get('templateKey');
-
-    // 如果URL中存在模板键，则加载模板
-    if (templateKey) {
-      // 获取模板信息
-      StoneEvaluationApi.GetTemplateInfo({
-        builtin_template_key: templateKey,
-        builtin_template_type: TemplateType.Prompt,
-      }).then(res => {
-        if (res.builtin_template?.prompt_evaluator) {
-          afterTemplateSelect(res.builtin_template.prompt_evaluator);
-          setRefreshEditorKey2(pre => pre + 1);
-        }
-      });
-    }
-  }, [location.search]);
-
-  const handleTemplateSelect = (template?: EvaluatorContent) => {
-    // 将模板信息添加到URL查询参数
-    if (template?.prompt_evaluator?.prompt_template_key) {
-      setConfirmLoading(true);
-      const templateKey = template?.prompt_evaluator.prompt_template_key;
-      const searchParams = new URLSearchParams(location.search);
-      searchParams.set('templateKey', templateKey);
-
-      if (template?.prompt_evaluator) {
-        afterTemplateSelect(template?.prompt_evaluator);
-      }
-
-      // 更新URL而不导航
-      window.history.replaceState(
-        null,
-        '',
-        `${location.pathname}?${searchParams.toString()}`,
-      );
-    }
-
-    setRefreshEditorKey2(pre => pre + 1);
-    setConfirmLoading(false);
-    setTemplateVisible(false);
-  };
 
   const systemMessage = (
     <FormPromptEditor
@@ -356,9 +283,19 @@ export function PromptField({
       <TemplateModal
         visible={templateVisible}
         disabled={disabled}
-        confirmLoading={confirmLoading}
         onCancel={() => setTemplateVisible(false)}
-        onSelect={handleTemplateSelect}
+        onSelect={(template: EvaluatorContent) => {
+          promptEvaluatorFieldApi.setValue({
+            ...promptEvaluator,
+            message_list: template.prompt_evaluator?.message_list,
+            prompt_source_type: PromptSourceType.BuiltinTemplate,
+            prompt_template_key: template.prompt_evaluator?.prompt_template_key,
+            prompt_template_name:
+              template.prompt_evaluator?.prompt_template_name,
+          });
+          setRefreshEditorKey2(pre => pre + 1);
+          setTemplateVisible(false);
+        }}
       />
     </>
   );

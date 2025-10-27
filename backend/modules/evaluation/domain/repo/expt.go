@@ -10,7 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IEvalAsyncRepo,IExptInsightAnalysisRecordRepo
+//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IExptInsightAnalysisRecordRepo
 type IExperimentRepo interface {
 	Create(ctx context.Context, expt *entity.Experiment, exptEvaluatorRefs []*entity.ExptEvaluatorRef) error
 	Update(ctx context.Context, expt *entity.Experiment) error
@@ -135,10 +135,6 @@ type IExptResultExportRecordRepo interface {
 	Get(ctx context.Context, spaceID, exportID int64) (*entity.ExptResultExportRecord, error)
 }
 
-type IEvalAsyncRepo interface {
-	GetEvalAsyncCtx(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error)
-	SetEvalAsyncCtx(ctx context.Context, invokeID string, actx *entity.EvalAsyncCtx) error
-}
 type IExptInsightAnalysisRecordRepo interface {
 	CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) (int64, error)
 	UpdateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error
