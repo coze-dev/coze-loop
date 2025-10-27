@@ -74,7 +74,7 @@ struct SearchTraceOApiRequest {
     5: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time") // ms
     6: required i32 limit (api.body="limit")
     8: optional common.PlatformType platform_type (api.body="platform_type")
-    9: optional list<string> span_ids (api.query="span_ids")
+    9: optional list<string> span_ids (api.body="span_ids")
 
     255: optional base.Base Base
 }
