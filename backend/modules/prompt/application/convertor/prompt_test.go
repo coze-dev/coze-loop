@@ -646,3 +646,18 @@ func TestMessageDO2DTO(t *testing.T) {
 		})
 	}
 }
+
+func TestModelConfigExtraConversion(t *testing.T) {
+	extra := ptr.Of(`{"foo":"bar"}`)
+	dto := &prompt.ModelConfig{
+		Extra: extra,
+	}
+
+	do := ModelConfigDTO2DO(dto)
+	assert.NotNil(t, do)
+	assert.Equal(t, extra, do.Extra)
+
+	dtoBack := ModelConfigDO2DTO(do)
+	assert.NotNil(t, dtoBack)
+	assert.Equal(t, extra, dtoBack.Extra)
+}
