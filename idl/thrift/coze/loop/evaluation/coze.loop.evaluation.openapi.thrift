@@ -338,7 +338,7 @@ struct SubmitExperimentEvalSetParam {
 
 struct SubmitExperimentEvaluatorParam {
     1: optional i64 evaluator_id (api.js_conv="true", go.tag='json:"evaluator_id"')
-    2: optional string versions
+    2: optional string version
 }
 
 struct SubmitExperimentEvalTargetParam {

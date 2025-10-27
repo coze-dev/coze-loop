@@ -53,6 +53,7 @@ type EvalOpenAPIApplication struct {
 	manager                     service.IExptManager
 	resultSvc                   service.ExptResultService
 	service.ExptAggrResultService
+	evaluatorService service.EvaluatorService
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -67,7 +68,8 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	experimentApp IExperimentApplication,
 	manager service.IExptManager,
 	resultSvc service.ExptResultService,
-	aggResultSvc service.ExptAggrResultService) IEvalOpenAPIApplication {
+	aggResultSvc service.ExptAggrResultService,
+	evaluatorService service.EvaluatorService) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
 		publisher:                   publisher,
@@ -83,6 +85,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		manager:                     manager,
 		resultSvc:                   resultSvc,
 		ExptAggrResultService:       aggResultSvc,
+		evaluatorService:            evaluatorService,
 	}
 }
 
@@ -744,15 +747,40 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	if !pass {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
 	}
-	// TODO dsf 查询评测集版本信息
-	var evalSetVersionID int64
-	// TODO dsf 查询评估器版本详情
-	var evaluatorVersionIDs []int64
+	versions, _, _, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+		SpaceID:         req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvalSetParam().GetEvalSetID(),
+		PageSize:        gptr.Of(int32(1)),
+		Versions:        []string{req.GetEvalSetParam().GetVersion()},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(versions) == 0 {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval set not found"))
+	}
+	evaluatorVersionIDs := make([]int64, 0)
+	for _, evaluator := range req.GetEvaluatorParams() {
+		version, _, err := e.evaluatorService.ListEvaluatorVersion(ctx, &entity.ListEvaluatorVersionRequest{
+			SpaceID:       req.GetWorkspaceID(),
+			EvaluatorID:   evaluator.GetEvaluatorID(),
+			QueryVersions: []string{evaluator.GetVersion()},
+			PageSize:      int32(1),
+			PageNum:       int32(1),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(versions) == 0 {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
+		}
+		evaluatorVersionIDs = append(evaluatorVersionIDs, version[0].ID)
+	}
 
 	createReq := &exptpb.SubmitExperimentRequest{
 		WorkspaceID:           req.GetWorkspaceID(),
-		EvalSetVersionID:      gptr.Of(evalSetVersionID),
-		EvalSetID:             req.EvalSetParam.EvalSetID,
+		EvalSetVersionID:      gptr.Of(versions[0].ID),
+		EvalSetID:             req.GetEvalSetParam().EvalSetID,
 		EvaluatorVersionIds:   evaluatorVersionIDs,
 		Name:                  req.Name,
 		Desc:                  req.Description,

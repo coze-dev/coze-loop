@@ -83,6 +83,7 @@ type ListEvaluationSetVersionsParam struct {
 	PageSize        *int32
 	PageNumber      *int32
 	VersionLike     *string
+	Versions        []string // 精确查询
 }
 
 type BatchGetEvaluationSetVersionsResult struct {

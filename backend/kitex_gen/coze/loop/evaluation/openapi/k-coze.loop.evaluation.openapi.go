@@ -10866,7 +10866,7 @@ func (p *SubmitExperimentEvaluatorParam) FastReadField2(buf []byte) (int, error)
 		offset += l
 		_field = &v
 	}
-	p.Versions = _field
+	p.Version = _field
 	return offset, nil
 }
 
@@ -10905,9 +10905,9 @@ func (p *SubmitExperimentEvaluatorParam) fastWriteField1(buf []byte, w thrift.No
 
 func (p *SubmitExperimentEvaluatorParam) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetVersions() {
+	if p.IsSetVersion() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Versions)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Version)
 	}
 	return offset
 }
@@ -10923,9 +10923,9 @@ func (p *SubmitExperimentEvaluatorParam) field1Length() int {
 
 func (p *SubmitExperimentEvaluatorParam) field2Length() int {
 	l := 0
-	if p.IsSetVersions() {
+	if p.IsSetVersion() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.Versions)
+		l += thrift.Binary.StringLengthNocopy(*p.Version)
 	}
 	return l
 }
@@ -10941,12 +10941,12 @@ func (p *SubmitExperimentEvaluatorParam) DeepCopy(s interface{}) error {
 		p.EvaluatorID = &tmp
 	}
 
-	if src.Versions != nil {
+	if src.Version != nil {
 		var tmp string
-		if *src.Versions != "" {
-			tmp = kutils.StringDeepCopy(*src.Versions)
+		if *src.Version != "" {
+			tmp = kutils.StringDeepCopy(*src.Version)
 		}
-		p.Versions = &tmp
+		p.Version = &tmp
 	}
 
 	return nil

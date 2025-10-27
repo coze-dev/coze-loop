@@ -1964,10 +1964,10 @@ func (p *GetEvaluationSetOpenAPIData) Field1DeepEqual(src *eval_set.EvaluationSe
 
 // 更新评测集详情
 type UpdateEvaluationSetOApiRequest struct {
-	WorkspaceID     *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" query:"workspace_id" `
+	WorkspaceID     *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
 	EvaluationSetID *int64     `thrift:"evaluation_set_id,2,optional" frugal:"2,optional,i64" json:"evaluation_set_id" path:"evaluation_set_id" `
-	Name            *string    `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description     *string    `thrift:"description,4,optional" frugal:"4,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	Name            *string    `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty"`
+	Description     *string    `thrift:"description,4,optional" frugal:"4,optional,string" form:"description" json:"description,omitempty"`
 	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -15146,7 +15146,7 @@ func (p *SubmitExperimentEvalSetParam) Field2DeepEqual(src *string) bool {
 
 type SubmitExperimentEvaluatorParam struct {
 	EvaluatorID *int64  `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
-	Versions    *string `thrift:"versions,2,optional" frugal:"2,optional,string" form:"versions" json:"versions,omitempty" query:"versions"`
+	Version     *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
 }
 
 func NewSubmitExperimentEvaluatorParam() *SubmitExperimentEvaluatorParam {
@@ -15168,35 +15168,35 @@ func (p *SubmitExperimentEvaluatorParam) GetEvaluatorID() (v int64) {
 	return *p.EvaluatorID
 }
 
-var SubmitExperimentEvaluatorParam_Versions_DEFAULT string
+var SubmitExperimentEvaluatorParam_Version_DEFAULT string
 
-func (p *SubmitExperimentEvaluatorParam) GetVersions() (v string) {
+func (p *SubmitExperimentEvaluatorParam) GetVersion() (v string) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetVersions() {
-		return SubmitExperimentEvaluatorParam_Versions_DEFAULT
+	if !p.IsSetVersion() {
+		return SubmitExperimentEvaluatorParam_Version_DEFAULT
 	}
-	return *p.Versions
+	return *p.Version
 }
 func (p *SubmitExperimentEvaluatorParam) SetEvaluatorID(val *int64) {
 	p.EvaluatorID = val
 }
-func (p *SubmitExperimentEvaluatorParam) SetVersions(val *string) {
-	p.Versions = val
+func (p *SubmitExperimentEvaluatorParam) SetVersion(val *string) {
+	p.Version = val
 }
 
 var fieldIDToName_SubmitExperimentEvaluatorParam = map[int16]string{
 	1: "evaluator_id",
-	2: "versions",
+	2: "version",
 }
 
 func (p *SubmitExperimentEvaluatorParam) IsSetEvaluatorID() bool {
 	return p.EvaluatorID != nil
 }
 
-func (p *SubmitExperimentEvaluatorParam) IsSetVersions() bool {
-	return p.Versions != nil
+func (p *SubmitExperimentEvaluatorParam) IsSetVersion() bool {
+	return p.Version != nil
 }
 
 func (p *SubmitExperimentEvaluatorParam) Read(iprot thrift.TProtocol) (err error) {
@@ -15281,7 +15281,7 @@ func (p *SubmitExperimentEvaluatorParam) ReadField2(iprot thrift.TProtocol) erro
 	} else {
 		_field = &v
 	}
-	p.Versions = _field
+	p.Version = _field
 	return nil
 }
 
@@ -15336,11 +15336,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *SubmitExperimentEvaluatorParam) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetVersions() {
-		if err = oprot.WriteFieldBegin("versions", thrift.STRING, 2); err != nil {
+	if p.IsSetVersion() {
+		if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.Versions); err != nil {
+		if err := oprot.WriteString(*p.Version); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15371,7 +15371,7 @@ func (p *SubmitExperimentEvaluatorParam) DeepEqual(ano *SubmitExperimentEvaluato
 	if !p.Field1DeepEqual(ano.EvaluatorID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.Versions) {
+	if !p.Field2DeepEqual(ano.Version) {
 		return false
 	}
 	return true
@@ -15391,12 +15391,12 @@ func (p *SubmitExperimentEvaluatorParam) Field1DeepEqual(src *int64) bool {
 }
 func (p *SubmitExperimentEvaluatorParam) Field2DeepEqual(src *string) bool {
 
-	if p.Versions == src {
+	if p.Version == src {
 		return true
-	} else if p.Versions == nil || src == nil {
+	} else if p.Version == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.Versions, *src) != 0 {
+	if strings.Compare(*p.Version, *src) != 0 {
 		return false
 	}
 	return true

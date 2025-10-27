@@ -233,7 +233,7 @@ func (a *DatasetRPCAdapter) BatchGetVersionedDatasets(ctx context.Context, space
 	return sets, nil
 }
 
-func (a *DatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceID, evaluationSetID int64, pageToken *string, pageNumber, pageSize *int32, versionLike *string) (version []*entity.EvaluationSetVersion, total *int64, nextPageToken *string, err error) {
+func (a *DatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceID, evaluationSetID int64, pageToken *string, pageNumber, pageSize *int32, versionLike *string, versions []string) (version []*entity.EvaluationSetVersion, total *int64, nextPageToken *string, err error) {
 	resp, err := a.client.ListDatasetVersions(ctx, &dataset.ListDatasetVersionsRequest{
 		WorkspaceID: &spaceID,
 		DatasetID:   evaluationSetID,
