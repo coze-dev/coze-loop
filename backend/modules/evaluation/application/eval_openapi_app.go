@@ -226,7 +226,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetVersionOApi(ctx context.Cont
 		return nil, err
 	}
 	if set == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
 	}
 	var ownerID *string
 	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
