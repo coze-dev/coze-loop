@@ -10,7 +10,6 @@ export enum QueryType {
   NotExist = "not_exist",
   In = "in",
   not_In = "not_in",
-  NotMatch = "not_match",
 }
 export enum QueryRelation {
   And = "and",

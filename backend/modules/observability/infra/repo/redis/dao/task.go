@@ -9,25 +9,12 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
-	redisconvert "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/convert"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
-	"github.com/samber/lo"
 )
 
 //go:generate mockgen -destination=mocks/Task_dao.go -package=mocks . ITaskDAO
 type ITaskDAO interface {
-	// Task相关
-	GetTask(ctx context.Context, taskID int64) (*entity.ObservabilityTask, error)
-	SetTask(ctx context.Context, task *entity.ObservabilityTask) error
-	// 非终态task列表by spaceID
-	// ListNonFinalTask lists all non-final tasks in the given space.
-	ListNonFinalTask(ctx context.Context, spaceID string) ([]int64, error)
-	AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error
-	RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error
-
 	// TaskCount相关
 	GetTaskCount(ctx context.Context, taskID int64) (int64, error)
 	IncrTaskCount(ctx context.Context, taskID int64, ttl time.Duration) (int64, error)
@@ -43,22 +30,11 @@ type TaskDAOImpl struct {
 	cmdable redis.Cmdable
 }
 
-var taskConverter = redisconvert.NewTaskConverter()
-
-const (
-	taskDetailCacheKeyPattern = "observability:task:%d"
-	taskDetailCacheTTL        = 1 * time.Minute
-)
-
 // NewTaskDAO creates a new TaskDAO instance
 func NewTaskDAO(cmdable redis.Cmdable) ITaskDAO {
 	return &TaskDAOImpl{
 		cmdable: cmdable,
 	}
-}
-
-func (q *TaskDAOImpl) makeTaskCacheKey(taskID int64) string {
-	return fmt.Sprintf(taskDetailCacheKeyPattern, taskID)
 }
 
 func (q *TaskDAOImpl) makeTaskCountCacheKey(taskID int64) string {
@@ -67,158 +43,6 @@ func (q *TaskDAOImpl) makeTaskCountCacheKey(taskID int64) string {
 
 func (q *TaskDAOImpl) makeTaskRunCountCacheKey(taskID, taskRunID int64) string {
 	return fmt.Sprintf("count_%d_%d", taskID, taskRunID)
-}
-
-func (q *TaskDAOImpl) makeNonFinalTaskCacheKey(spaceID string) string {
-	return fmt.Sprintf("tasks_of_%s", spaceID)
-}
-
-// GetTask 从缓存中获取任务详情
-func (p *TaskDAOImpl) GetTask(ctx context.Context, taskID int64) (*entity.ObservabilityTask, error) {
-	key := p.makeTaskCacheKey(taskID)
-	bytes, err := p.cmdable.Get(ctx, key).Bytes()
-	if err != nil {
-		if redis.IsNilError(err) {
-			return nil, nil
-		}
-		logs.CtxError(ctx, "redis get task failed", "key", key, "err", err)
-		return nil, errorx.Wrapf(err, "redis get task fail, key: %v", key)
-	}
-	if len(bytes) == 0 {
-		return nil, nil
-	}
-	task, err := taskConverter.ToDO(bytes)
-	if err != nil {
-		logs.CtxError(ctx, "convert task bytes to entity failed", "key", key, "err", err)
-		return nil, err
-	}
-	return task, nil
-}
-
-// SetTask 将任务详情写入缓存
-func (p *TaskDAOImpl) SetTask(ctx context.Context, task *entity.ObservabilityTask) error {
-	if task == nil {
-		return nil
-	}
-	if task.ID == 0 {
-		logs.CtxWarn(ctx, "skip caching task with empty id")
-		return nil
-	}
-	key := p.makeTaskCacheKey(task.ID)
-	bytes, err := taskConverter.FromDO(task)
-	if err != nil {
-		logs.CtxError(ctx, "convert task entity to bytes failed", "key", key, "err", err)
-		return err
-	}
-	if err := p.cmdable.Set(ctx, key, bytes, taskDetailCacheTTL).Err(); err != nil {
-		logs.CtxError(ctx, "redis set task failed", "key", key, "err", err)
-		return errorx.Wrapf(err, "redis set task fail, key: %v", key)
-	}
-	return nil
-}
-
-// ListNonFinalTask 获取非终态任务ID列表
-func (p *TaskDAOImpl) ListNonFinalTask(ctx context.Context, spaceID string) ([]int64, error) {
-	key := p.makeNonFinalTaskCacheKey(spaceID)
-	bytes, err := p.cmdable.Get(ctx, key).Bytes()
-	if err != nil {
-		if redis.IsNilError(err) {
-			return nil, nil
-		}
-		logs.CtxError(ctx, "redis get task failed", "key", key, "err", err)
-		return nil, errorx.Wrapf(err, "redis get task fail, key: %v", key)
-	}
-	if len(bytes) == 0 {
-		return nil, nil
-	}
-	var tasks []int64
-	if err := lo.TernaryF(
-		len(bytes) > 0,
-		func() error { return json.Unmarshal(bytes, &tasks) },
-		func() error { return nil },
-	); err != nil {
-		return nil, errorx.Wrapf(err, "TaskExpt json unmarshal failed")
-	}
-
-	return tasks, nil
-}
-
-// AddNonFinalTask 将任务加入非终态列表
-func (p *TaskDAOImpl) AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
-	if taskID == 0 {
-		logs.CtxWarn(ctx, "skip adding non final task with empty id")
-		return nil
-	}
-
-	key := p.makeNonFinalTaskCacheKey(spaceID)
-	bytes, err := p.cmdable.Get(ctx, key).Bytes()
-	var tasks []int64
-
-	if err != nil && !redis.IsNilError(err) {
-		logs.CtxError(ctx, "redis get task failed", "key", key, "err", err)
-		return errorx.Wrapf(err, "redis get task fail, key: %v", key)
-	}
-
-	if len(bytes) > 0 {
-		if err := json.Unmarshal(bytes, &tasks); err != nil {
-			return errorx.Wrapf(err, "TaskExpt json unmarshal failed")
-		}
-	}
-
-	if !lo.Contains(tasks, taskID) {
-		tasks = append(tasks, taskID)
-	}
-
-	bytes, err = json.Marshal(tasks)
-	if err != nil {
-		return errorx.Wrapf(err, "TaskExpt json marshal failed")
-	}
-
-	if err := p.cmdable.Set(ctx, key, bytes, 0).Err(); err != nil {
-		logs.CtxError(ctx, "redis set task failed", "key", key, "err", err)
-		return errorx.Wrapf(err, "redis set task fail, key: %v", key)
-	}
-
-	return nil
-}
-
-// RemoveNonFinalTask 将任务从非终态列表移除
-func (p *TaskDAOImpl) RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
-	if taskID == 0 {
-		logs.CtxWarn(ctx, "skip removing non final task with empty id")
-		return nil
-	}
-
-	key := p.makeNonFinalTaskCacheKey(spaceID)
-	bytes, err := p.cmdable.Get(ctx, key).Bytes()
-	if err != nil {
-		if redis.IsNilError(err) {
-			return nil
-		}
-		logs.CtxError(ctx, "redis get task failed", "key", key, "err", err)
-		return errorx.Wrapf(err, "redis get task fail, key: %v", key)
-	}
-	if len(bytes) == 0 {
-		return nil
-	}
-	var tasks []int64
-	if err := lo.TernaryF(
-		len(bytes) > 0,
-		func() error { return json.Unmarshal(bytes, &tasks) },
-		func() error { return nil },
-	); err != nil {
-		return errorx.Wrapf(err, "TaskExpt json unmarshal failed")
-	}
-	tasks = lo.Filter(tasks, func(item int64, _ int) bool { return item != taskID })
-	bytes, err = json.Marshal(tasks)
-	if err != nil {
-		return errorx.Wrapf(err, "TaskExpt json marshal failed")
-	}
-	if err := p.cmdable.Set(ctx, key, bytes, 0).Err(); err != nil {
-		logs.CtxError(ctx, "redis set task failed", "key", key, "err", err)
-		return errorx.Wrapf(err, "redis set task fail, key: %v", key)
-	}
-	return nil
 }
 
 // GetTaskCount 获取任务计数缓存

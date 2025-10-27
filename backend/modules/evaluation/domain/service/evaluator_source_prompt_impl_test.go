@@ -728,6 +728,43 @@ func TestParseOutput_ParseTypeContent(t *testing.T) {
 	})
 }
 
+func Test_stripMarkdownCodeFence(t *testing.T) {
+	t.Run("标准markdown代码块", func(t *testing.T) {
+		input := "```json\n{\"score\": 0, \"reason\": \"test\"}\n```"
+		expected := "{\"score\": 0, \"reason\": \"test\"}"
+		result := stripMarkdownCodeFence(input)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("不带语言标识的代码块", func(t *testing.T) {
+		input := "```\n{\"score\": 1}\n```"
+		expected := "{\"score\": 1}"
+		result := stripMarkdownCodeFence(input)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("带前后空白的代码块", func(t *testing.T) {
+		input := "  ```json\n{\"test\": true}\n```  "
+		expected := "{\"test\": true}"
+		result := stripMarkdownCodeFence(input)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("不是代码块的普通文本", func(t *testing.T) {
+		input := "{\"score\": 0, \"reason\": \"test\"}"
+		expected := "{\"score\": 0, \"reason\": \"test\"}"
+		result := stripMarkdownCodeFence(input)
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("多行JSON内容", func(t *testing.T) {
+		input := "```json\n{\n  \"reason\": \"测试\",\n  \"score\": 0\n}\n```"
+		expected := "{\n  \"reason\": \"测试\",\n  \"score\": 0\n}"
+		result := stripMarkdownCodeFence(input)
+		assert.Equal(t, expected, result)
+	})
+}
+
 func Test_parseContentOutput(t *testing.T) {
 	// 公共测试设置
 	ctx := context.Background()
@@ -870,6 +907,24 @@ func Test_parseContentOutput(t *testing.T) {
 		assert.NotNil(t, output.EvaluatorResult.Score)
 		assert.InDelta(t, 0.5, *output.EvaluatorResult.Score, 0.0001)
 		assert.Equal(t, `This is a reason with a "quote" and a \ backslash.`, output.EvaluatorResult.Reasoning)
+	})
+
+	t.Run("场景10: JSON被markdown代码块包裹且score为0", func(t *testing.T) {
+		// Arrange: 准备一个被markdown代码块包裹的JSON，score为0，包含中文
+		content := "```json\n{\n  \"reason\": \"模型输出"蠢猪"是一个带有强烈侮辱性和攻击性的词语。它不符合任何无争议或无可辩论性答案的标准，反而使用了煽动性语言，极易引发激烈的情绪反应和分歧。这完全违背了避免争议和辩论的原则。\",\n  \"score\": 0\n}\n```"
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 断言能够正确解析score为0的情况
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.0, *output.EvaluatorResult.Score, 0.0001)
+		assert.Contains(t, output.EvaluatorResult.Reasoning, "模型输出"蠢猪"是一个带有强烈侮辱性和攻击性的词语")
 	})
 }
 

@@ -270,8 +270,6 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 		SourceTargetID:      param.SourceTargetID,
 		SourceTargetVersion: param.SourceTargetVersion,
 		BotPublishVersion:   param.BotPublishVersion,
-		Region:              param.Region,
-		Env:                 param.Env,
 	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))
@@ -279,14 +277,7 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 	if param.BotInfoType != nil {
 		res.BotInfoType = gptr.Of(entity.CozeBotInfoType(*param.BotInfoType))
 	}
-	if param.CustomEvalTarget != nil {
-		res.CustomEvalTarget = &entity.CustomEvalTarget{
-			ID:        param.CustomEvalTarget.ID,
-			Name:      param.CustomEvalTarget.Name,
-			AvatarURL: param.CustomEvalTarget.AvatarURL,
-			Ext:       param.CustomEvalTarget.Ext,
-		}
-	}
+
 	return res
 }
 

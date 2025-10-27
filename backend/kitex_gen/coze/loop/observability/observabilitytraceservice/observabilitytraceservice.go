@@ -28,13 +28,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"SearchTraceTree": kitex.NewMethodInfo(
-		searchTraceTreeHandler,
-		newTraceServiceSearchTraceTreeArgs,
-		newTraceServiceSearchTraceTreeResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"BatchGetTracesAdvanceInfo": kitex.NewMethodInfo(
 		batchGetTracesAdvanceInfoHandler,
 		newTraceServiceBatchGetTracesAdvanceInfoArgs,
@@ -216,25 +209,6 @@ func newTraceServiceGetTraceArgs() interface{} {
 
 func newTraceServiceGetTraceResult() interface{} {
 	return trace.NewTraceServiceGetTraceResult()
-}
-
-func searchTraceTreeHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*trace.TraceServiceSearchTraceTreeArgs)
-	realResult := result.(*trace.TraceServiceSearchTraceTreeResult)
-	success, err := handler.(trace.TraceService).SearchTraceTree(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newTraceServiceSearchTraceTreeArgs() interface{} {
-	return trace.NewTraceServiceSearchTraceTreeArgs()
-}
-
-func newTraceServiceSearchTraceTreeResult() interface{} {
-	return trace.NewTraceServiceSearchTraceTreeResult()
 }
 
 func batchGetTracesAdvanceInfoHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -568,16 +542,6 @@ func (p *kClient) GetTrace(ctx context.Context, req *trace.GetTraceRequest) (r *
 	_args.Req = req
 	var _result trace.TraceServiceGetTraceResult
 	if err = p.c.Call(ctx, "GetTrace", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest) (r *trace.SearchTraceTreeResponse, err error) {
-	var _args trace.TraceServiceSearchTraceTreeArgs
-	_args.Req = req
-	var _result trace.TraceServiceSearchTraceTreeResult
-	if err = p.c.Call(ctx, "SearchTraceTree", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

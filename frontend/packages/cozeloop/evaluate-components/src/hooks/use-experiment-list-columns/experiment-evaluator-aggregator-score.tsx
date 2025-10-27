@@ -57,7 +57,6 @@ function ExperimentEvaluatorAggregatorScore({
           return (
             <EvaluatorNameScoreTag
               name={name}
-              type={evaluator.evaluator_type}
               evaluatorResult={evaluatorResult}
               version={version}
               evaluatorID={evaluator_id}
@@ -78,7 +77,6 @@ function ExperimentEvaluatorAggregatorScore({
               <div className="p-1" style={{ color: 'var(--coz-fg-secondary)' }}>
                 <EvaluatorNameScoreTag
                   name={name}
-                  type={evaluator.evaluator_type}
                   evaluatorResult={evaluatorResult}
                   version={version}
                   evaluatorID={evaluator_id}
@@ -95,7 +93,6 @@ function ExperimentEvaluatorAggregatorScore({
             <div onClick={e => e.stopPropagation()}>
               <EvaluatorNameScoreTag
                 name={name}
-                type={evaluator.evaluator_type}
                 evaluatorResult={evaluatorResult}
                 version={version}
                 border={true}

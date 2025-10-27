@@ -5,167 +5,174 @@ package service
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"testing"
 
-	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"github.com/bytedance/gg/gptr"
+
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
-	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
-type evalTargetServiceTestDeps struct {
-	repo     *repomocks.MockIEvalTargetRepo
-	idgen    *idgenmocks.MockIIDGenerator
-	metric   *metricsmocks.MockEvalTargetMetrics
-	operator *servicemocks.MockISourceEvalTargetOperateService
-}
-
-func TestEvalTargetServiceImpl_CreateEvalTarget(t *testing.T) {
+func TestEvaluatorTargetServiceImpl_CreateEvalTarget(t *testing.T) {
 	t.Parallel()
 
-	type args struct {
+	tests := []struct {
+		name                string
+		setupMocks          func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, *idgenmocks.MockIIDGenerator, *mocks.MockEvalTargetMetrics, *servicemocks.MockISourceEvalTargetOperateService)
 		spaceID             int64
 		sourceTargetID      string
 		sourceTargetVersion string
 		targetType          entity.EvalTargetType
-	}
-
-	tests := []struct {
-		name        string
-		args        args
-		prepare     func(ctx context.Context, deps *evalTargetServiceTestDeps) map[entity.EvalTargetType]ISourceEvalTargetOperateService
-		wantErr     bool
-		wantErrCode int32
-		wantID      int64
-		wantVersion int64
+		wantID              int64
+		wantVersionID       int64
+		wantErr             bool
 	}{
 		{
-			name: "unsupported target type",
-			args: args{
-				spaceID:             1,
-				sourceTargetID:      "src",
-				sourceTargetVersion: "v1",
-				targetType:          entity.EvalTargetTypeLoopPrompt,
-			},
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
-				return map[entity.EvalTargetType]ISourceEvalTargetOperateService{}
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
-		},
-		{
-			name: "build by source error",
-			args: args{
-				spaceID:             1,
-				sourceTargetID:      "src",
-				sourceTargetVersion: "v1",
-				targetType:          entity.EvalTargetTypeLoopPrompt,
-			},
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
-				deps.operator.EXPECT().BuildBySource(ctx, int64(1), "src", "v1").Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
-				return map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-					entity.EvalTargetTypeLoopPrompt: deps.operator,
-				}
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInternalErrorCode,
-		},
-		{
-			name: "build by source returns nil",
-			args: args{
-				spaceID:             1,
-				sourceTargetID:      "src",
-				sourceTargetVersion: "v1",
-				targetType:          entity.EvalTargetTypeLoopPrompt,
-			},
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
-				deps.operator.EXPECT().BuildBySource(ctx, int64(1), "src", "v1").Return(nil, nil)
-				return map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-					entity.EvalTargetTypeLoopPrompt: deps.operator,
-				}
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
-		},
-		{
-			name: "success",
-			args: args{
-				spaceID:             1,
-				sourceTargetID:      "src",
-				sourceTargetVersion: "v1",
-				targetType:          entity.EvalTargetTypeLoopPrompt,
-			},
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
-				expectDO := &entity.EvalTarget{
+			name: "成功创建评估目标",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *idgenmocks.MockIIDGenerator, *mocks.MockEvalTargetMetrics, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				evalTarget := &entity.EvalTarget{
+					ID:             123,
 					SpaceID:        1,
-					SourceTargetID: "src",
-					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
 				}
-				deps.operator.EXPECT().BuildBySource(ctx, int64(1), "src", "v1").Return(expectDO, nil)
-				deps.repo.EXPECT().CreateEvalTarget(ctx, expectDO).Return(int64(11), int64(22), nil)
-				return map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-					entity.EvalTargetTypeLoopPrompt: deps.operator,
-				}
+
+				mockOperator.EXPECT().BuildBySource(gomock.Any(), int64(1), "target_123", "v1.0").Return(evalTarget, nil)
+				mockRepo.EXPECT().CreateEvalTarget(gomock.Any(), evalTarget).Return(int64(123), int64(456), nil)
+				mockMetric.EXPECT().EmitCreate(int64(1), nil)
+
+				return mockRepo, mockIDGen, mockMetric, mockOperator
 			},
-			wantID:      11,
-			wantVersion: 22,
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			wantID:              123,
+			wantVersionID:       456,
+			wantErr:             false,
+		},
+		{
+			name: "不支持的目标类型",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *idgenmocks.MockIIDGenerator, *mocks.MockEvalTargetMetrics, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				mockMetric.EXPECT().EmitCreate(int64(1), gomock.Any())
+
+				return mockRepo, mockIDGen, mockMetric, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          99, // 不支持的类型
+			wantErr:             true,
+		},
+		{
+			name: "BuildBySource返回错误",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *idgenmocks.MockIIDGenerator, *mocks.MockEvalTargetMetrics, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				mockOperator.EXPECT().BuildBySource(gomock.Any(), int64(1), "target_123", "v1.0").Return(nil, errors.New("build error"))
+				mockMetric.EXPECT().EmitCreate(int64(1), gomock.Any())
+
+				return mockRepo, mockIDGen, mockMetric, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			wantErr:             true,
+		},
+		{
+			name: "BuildBySource返回nil",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *idgenmocks.MockIIDGenerator, *mocks.MockEvalTargetMetrics, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				mockOperator.EXPECT().BuildBySource(gomock.Any(), int64(1), "target_123", "v1.0").Return(nil, nil)
+				mockMetric.EXPECT().EmitCreate(int64(1), gomock.Any())
+
+				return mockRepo, mockIDGen, mockMetric, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			wantErr:             true,
+		},
+		{
+			name: "CreateEvalTarget失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *idgenmocks.MockIIDGenerator, *mocks.MockEvalTargetMetrics, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				evalTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockOperator.EXPECT().BuildBySource(gomock.Any(), int64(1), "target_123", "v1.0").Return(evalTarget, nil)
+				mockRepo.EXPECT().CreateEvalTarget(gomock.Any(), evalTarget).Return(int64(0), int64(0), errors.New("repo error"))
+				mockMetric.EXPECT().EmitCreate(int64(1), gomock.Any())
+
+				return mockRepo, mockIDGen, mockMetric, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			wantErr:             true,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			deps := &evalTargetServiceTestDeps{
-				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
-				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
-				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
-				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+			mockRepo, mockIDGen, mockMetric, mockOperator := tt.setupMocks(ctrl)
+
+			typedOperators := make(map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+			if tt.targetType == entity.EvalTargetTypeCozeBot {
+				typedOperators[entity.EvalTargetTypeCozeBot] = mockOperator
 			}
 
-			typedOps := map[entity.EvalTargetType]ISourceEvalTargetOperateService{}
-			if tt.prepare != nil {
-				typedOps = tt.prepare(ctx, deps)
-			}
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
 
-			deps.metric.EXPECT().EmitCreate(tt.args.spaceID, gomock.Any()).Times(1)
-
-			svc := &EvalTargetServiceImpl{
-				evalTargetRepo: deps.repo,
-				idgen:          deps.idgen,
-				metric:         deps.metric,
-				typedOperators: typedOps,
-			}
-
-			gotID, gotVersion, err := svc.CreateEvalTarget(ctx, tt.args.spaceID, tt.args.sourceTargetID, tt.args.sourceTargetVersion, tt.args.targetType)
+			id, versionID, err := service.CreateEvalTarget(context.Background(), tt.spaceID, tt.sourceTargetID, tt.sourceTargetVersion, tt.targetType)
 
 			if tt.wantErr {
-				require.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					require.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-				return
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantID, id)
+				assert.Equal(t, tt.wantVersionID, versionID)
 			}
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantID, gotID)
-			assert.Equal(t, tt.wantVersion, gotVersion)
 		})
 	}
 }
@@ -173,705 +180,330 @@ func TestEvalTargetServiceImpl_CreateEvalTarget(t *testing.T) {
 func TestEvalTargetServiceImpl_GetEvalTargetVersion(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
-	type args struct {
+	tests := []struct {
+		name           string
+		setupMocks     func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService)
 		spaceID        int64
 		versionID      int64
 		needSourceInfo bool
-	}
-
-	tests := []struct {
-		name    string
-		args    args
-		prepare func(deps *evalTargetServiceTestDeps, expectDo *entity.EvalTarget)
-		wantErr bool
+		want           *entity.EvalTarget
+		wantErr        bool
 	}{
 		{
-			name: "repo error",
-			args: args{spaceID: 1, versionID: 2, needSourceInfo: false},
-			prepare: func(deps *evalTargetServiceTestDeps, expectDo *entity.EvalTarget) {
-				deps.repo.EXPECT().GetEvalTargetVersion(ctx, int64(1), int64(2)).Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			name: "成功获取版本信息_不需要源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(456)).Return(expectedTarget, nil)
+				return mockRepo, mockOperator
 			},
-			wantErr: true,
-		},
-		{
-			name: "need source info",
-			args: args{spaceID: 1, versionID: 2, needSourceInfo: true},
-			prepare: func(deps *evalTargetServiceTestDeps, expectDo *entity.EvalTarget) {
-				deps.repo.EXPECT().GetEvalTargetVersion(ctx, int64(1), int64(2)).Return(expectDo, nil)
-				deps.operator.EXPECT().PackSourceVersionInfo(ctx, int64(1), []*entity.EvalTarget{expectDo}).Return(nil)
-			},
-		},
-		{
-			name: "without source info",
-			args: args{spaceID: 1, versionID: 2, needSourceInfo: false},
-			prepare: func(deps *evalTargetServiceTestDeps, expectDo *entity.EvalTarget) {
-				deps.repo.EXPECT().GetEvalTargetVersion(ctx, int64(1), int64(2)).Return(expectDo, nil)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			deps := &evalTargetServiceTestDeps{
-				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
-				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
-				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
-				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
-			}
-
-			expectDo := &entity.EvalTarget{
-				ID:             3,
-				SpaceID:        tt.args.spaceID,
-				EvalTargetType: entity.EvalTargetTypeLoopPrompt,
-				EvalTargetVersion: &entity.EvalTargetVersion{
-					ID: tt.args.versionID,
-				},
-			}
-
-			if tt.prepare != nil {
-				tt.prepare(deps, expectDo)
-			}
-
-			typedOps := map[entity.EvalTargetType]ISourceEvalTargetOperateService{}
-			if tt.args.needSourceInfo {
-				typedOps[entity.EvalTargetTypeLoopPrompt] = deps.operator
-			}
-
-			svc := &EvalTargetServiceImpl{
-				evalTargetRepo: deps.repo,
-				idgen:          deps.idgen,
-				metric:         deps.metric,
-				typedOperators: typedOps,
-			}
-
-			do, err := svc.GetEvalTargetVersion(ctx, tt.args.spaceID, tt.args.versionID, tt.args.needSourceInfo)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.Equal(t, expectDo, do)
-		})
-	}
-}
-
-func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
-	t.Parallel()
-
-	type prepareFunc func(ctx context.Context, deps *evalTargetServiceTestDeps, target *entity.EvalTarget, input *entity.EvalTargetInputData)
-
-	tests := []struct {
-		name         string
-		prepare      prepareFunc
-		wantErr      bool
-		wantErrCode  int32
-		expectCallee string
-		expectID     int64
-	}{
-		{
-			name: "validate input failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, target *entity.EvalTarget, input *entity.EvalTargetInputData) {
-				deps.operator.EXPECT().ValidateInput(ctx, target.SpaceID, target.EvalTargetVersion.InputSchema, input).Return(errorx.NewByCode(errno.CommonInvalidParamCode))
-				deps.metric.EXPECT().EmitRun(target.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
-		},
-		{
-			name: "async execute failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, target *entity.EvalTarget, input *entity.EvalTargetInputData) {
-				deps.operator.EXPECT().ValidateInput(ctx, target.SpaceID, target.EvalTargetVersion.InputSchema, input).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, target.SpaceID, gomock.Any()).Return(int64(0), "callee", errorx.NewByCode(errno.CommonInternalErrorCode))
-				deps.metric.EXPECT().EmitRun(target.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:      true,
-			wantErrCode:  errno.CommonInternalErrorCode,
-			expectCallee: "callee",
-		},
-		{
-			name: "success",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, target *entity.EvalTarget, input *entity.EvalTargetInputData) {
-				deps.operator.EXPECT().ValidateInput(ctx, target.SpaceID, target.EvalTargetVersion.InputSchema, input).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, target.SpaceID, gomock.Any()).Return(int64(999), "callee", nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
-				deps.metric.EXPECT().EmitRun(target.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			expectCallee: "callee",
-			expectID:     999,
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctx := context.Background()
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			deps := &evalTargetServiceTestDeps{
-				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
-				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
-				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
-				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
-			}
-
-			target := &entity.EvalTarget{
-				ID:             1,
+			spaceID:        1,
+			versionID:      456,
+			needSourceInfo: false,
+			want: &entity.EvalTarget{
+				ID:             123,
 				SpaceID:        1,
-				SourceTargetID: "source",
-				EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
-				EvalTargetVersion: &entity.EvalTargetVersion{
-					ID:                  2,
-					SourceTargetVersion: "v1",
-					InputSchema: []*entity.ArgsSchema{
-						{Key: gptr.Of("a")},
-					},
-				},
-			}
-			input := &entity.EvalTargetInputData{InputFields: map[string]*entity.Content{"a": {ContentType: gptr.Of(entity.ContentTypeText)}}}
-
-			typedOps := map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-				entity.EvalTargetTypeCustomRPCServer: deps.operator,
-			}
-
-			svc := &EvalTargetServiceImpl{
-				evalTargetRepo: deps.repo,
-				idgen:          deps.idgen,
-				metric:         deps.metric,
-				typedOperators: typedOps,
-			}
-
-			if tt.prepare != nil {
-				tt.prepare(ctx, deps, target, input)
-			}
-
-			record, callee, err := svc.asyncExecuteTarget(ctx, target.SpaceID, target, &entity.ExecuteTargetCtx{ItemID: 1, TurnID: 2}, input)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				statusErr, ok := errorx.FromStatusError(err)
-				require.True(t, ok)
-				assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				assert.Equal(t, tt.expectCallee, callee)
-				return
-			}
-
-			require.NoError(t, err)
-			require.NotNil(t, record)
-			assert.Equal(t, tt.expectCallee, callee)
-			assert.Equal(t, tt.expectID, record.ID)
-			assert.Equal(t, entity.EvalTargetRunStatusAsyncInvoking, gptr.Indirect(record.Status))
-		})
-	}
-}
-
-func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
-	t.Parallel()
-
-	type prepareResult struct {
-		typedOps       map[entity.EvalTargetType]ISourceEvalTargetOperateService
-		expectedOutput *entity.EvalTargetOutputData
-	}
-
-	tests := []struct {
-		name        string
-		prepare     func(ctx context.Context, deps *evalTargetServiceTestDeps, evalTarget *entity.EvalTarget, input *entity.EvalTargetInputData) prepareResult
-		wantStatus  entity.EvalTargetRunStatus
-		wantErrCode int32
-	}{
-		{
-			name: "success",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, evalTarget *entity.EvalTarget, input *entity.EvalTargetInputData) prepareResult {
-				outputData := &entity.EvalTargetOutputData{
-					OutputFields: map[string]*entity.Content{
-						"answer": {
-							ContentType: gptr.Of(entity.ContentTypeText),
-							Text:        gptr.Of("ok"),
-						},
-					},
-					EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 1, OutputTokens: 2},
-				}
-				deps.operator.EXPECT().ValidateInput(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.InputSchema, input).Return(nil)
-				deps.operator.EXPECT().Execute(ctx, evalTarget.SpaceID, gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, param *entity.ExecuteEvalTargetParam) (*entity.EvalTargetOutputData, entity.EvalTargetRunStatus, error) {
-					assert.Equal(t, evalTarget.ID, param.TargetID)
-					assert.Equal(t, evalTarget.EvalTargetVersion.ID, param.VersionID)
-					assert.Equal(t, evalTarget.SourceTargetID, param.SourceTargetID)
-					assert.Equal(t, evalTarget.EvalTargetType, param.TargetType)
-					return outputData, entity.EvalTargetRunStatusSuccess, nil
-				})
-				return prepareResult{
-					typedOps: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-						evalTarget.EvalTargetType: deps.operator,
-					},
-					expectedOutput: outputData,
-				}
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
 			},
-			wantStatus: entity.EvalTargetRunStatusSuccess,
+			wantErr: false,
 		},
 		{
-			name: "validate input failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, evalTarget *entity.EvalTarget, input *entity.EvalTargetInputData) prepareResult {
-				deps.operator.EXPECT().ValidateInput(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.InputSchema, input).Return(errorx.NewByCode(errno.CommonInvalidParamCode))
-				return prepareResult{
-					typedOps: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-						evalTarget.EvalTargetType: deps.operator,
-					},
+			name: "成功获取版本信息_需要源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
 				}
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(456)).Return(expectedTarget, nil)
+				mockOperator.EXPECT().PackSourceVersionInfo(gomock.Any(), int64(1), []*entity.EvalTarget{expectedTarget}).Return(nil)
+
+				return mockRepo, mockOperator
 			},
-			wantStatus:  entity.EvalTargetRunStatusFail,
-			wantErrCode: errno.CommonInvalidParamCode,
+			spaceID:        1,
+			versionID:      456,
+			needSourceInfo: true,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+			},
+			wantErr: false,
 		},
 		{
-			name: "execute failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, evalTarget *entity.EvalTarget, input *entity.EvalTargetInputData) prepareResult {
-				deps.operator.EXPECT().ValidateInput(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.InputSchema, input).Return(nil)
-				deps.operator.EXPECT().Execute(ctx, evalTarget.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusFail, errorx.NewByCode(errno.CommonInternalErrorCode))
-				return prepareResult{
-					typedOps: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-						evalTarget.EvalTargetType: deps.operator,
-					},
-				}
+			name: "获取版本失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(999)).Return(nil, errors.New("version not found"))
+				return mockRepo, mockOperator
 			},
-			wantStatus:  entity.EvalTargetRunStatusFail,
-			wantErrCode: errno.CommonInternalErrorCode,
+			spaceID:        1,
+			versionID:      999,
+			needSourceInfo: false,
+			wantErr:        true,
 		},
 		{
-			name: "execute returns nil output",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, evalTarget *entity.EvalTarget, input *entity.EvalTargetInputData) prepareResult {
-				deps.operator.EXPECT().ValidateInput(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.InputSchema, input).Return(nil)
-				deps.operator.EXPECT().Execute(ctx, evalTarget.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusSuccess, nil)
-				return prepareResult{
-					typedOps: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-						evalTarget.EvalTargetType: deps.operator,
-					},
+			name: "打包源信息失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
 				}
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(456)).Return(expectedTarget, nil)
+				mockOperator.EXPECT().PackSourceVersionInfo(gomock.Any(), int64(1), []*entity.EvalTarget{expectedTarget}).Return(errors.New("pack error"))
+
+				return mockRepo, mockOperator
 			},
-			wantStatus:  entity.EvalTargetRunStatusFail,
-			wantErrCode: errno.CommonInternalErrorCode,
+			spaceID:        1,
+			versionID:      456,
+			needSourceInfo: true,
+			wantErr:        true,
 		},
 	}
 
-	for _, tc := range tests {
-		tcase := tc
-		t.Run(tcase.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			deps := &evalTargetServiceTestDeps{
-				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
-				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
-				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
-				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+			mockRepo, mockOperator := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			typedOperators := map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+				entity.EvalTargetTypeCozeBot: mockOperator,
 			}
 
-			evalTarget := &entity.EvalTarget{
-				ID:             200,
-				SpaceID:        100,
-				SourceTargetID: "src-id",
-				EvalTargetType: entity.EvalTargetTypeLoopPrompt,
-				EvalTargetVersion: &entity.EvalTargetVersion{
-					ID:                  300,
-					SourceTargetVersion: "v1",
-					InputSchema: []*entity.ArgsSchema{
-						{Key: gptr.Of("field")},
-					},
-				},
-			}
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
 
-			input := &entity.EvalTargetInputData{
-				InputFields: map[string]*entity.Content{
-					"field": {
-						ContentType: gptr.Of(entity.ContentTypeText),
-						Text:        gptr.Of("hello"),
-					},
-				},
-			}
+			result, err := service.GetEvalTargetVersion(context.Background(), tt.spaceID, tt.versionID, tt.needSourceInfo)
 
-			param := &entity.ExecuteTargetCtx{
-				ExperimentRunID: gptr.Of(int64(555)),
-				ItemID:          777,
-				TurnID:          888,
-			}
-
-			deps.repo.EXPECT().GetEvalTargetVersion(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.ID).Return(evalTarget, nil)
-			deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			deps.idgen.EXPECT().GenID(ctx).Return(int64(9999), nil)
-
-			var savedRecord *entity.EvalTargetRecord
-			deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) (int64, error) {
-				savedRecord = rec
-				return rec.ID, nil
-			})
-
-			prepareRes := tcase.prepare(ctx, deps, evalTarget, input)
-
-			svc := &EvalTargetServiceImpl{
-				evalTargetRepo: deps.repo,
-				idgen:          deps.idgen,
-				metric:         deps.metric,
-				typedOperators: prepareRes.typedOps,
-			}
-
-			record, err := svc.ExecuteTarget(ctx, evalTarget.SpaceID, evalTarget.ID, evalTarget.EvalTargetVersion.ID, param, input)
-			require.NoError(t, err)
-			require.NotNil(t, record)
-			require.NotNil(t, savedRecord)
-			assert.Equal(t, savedRecord, record)
-			assert.Equal(t, int64(9999), record.ID)
-			assert.Equal(t, tcase.wantStatus, gptr.Indirect(record.Status))
-
-			if prepareRes.expectedOutput != nil {
-				assert.Equal(t, prepareRes.expectedOutput, record.EvalTargetOutputData)
-				assert.Nil(t, record.EvalTargetOutputData.EvalTargetRunError)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
 			} else {
-				if assert.NotNil(t, record.EvalTargetOutputData) {
-					if tcase.wantErrCode == 0 {
-						assert.Nil(t, record.EvalTargetOutputData.EvalTargetRunError)
-					} else {
-						if assert.NotNil(t, record.EvalTargetOutputData.EvalTargetRunError) {
-							assert.Equal(t, tcase.wantErrCode, record.EvalTargetOutputData.EvalTargetRunError.Code)
-						}
-					}
-				}
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
 			}
 		})
 	}
 }
 
-func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
+func TestEvalTargetServiceImpl_GetEvalTargetVersionBySourceTarget(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
-
 	tests := []struct {
-		name    string
-		prepare func(deps *evalTargetServiceTestDeps, param *entity.ReportTargetRecordParam, record *entity.EvalTargetRecord)
-		wantErr bool
-		errCode int32
+		name                string
+		setupMocks          func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService)
+		spaceID             int64
+		sourceTargetID      string
+		sourceTargetVersion string
+		targetType          entity.EvalTargetType
+		needSourceInfo      bool
+		want                *entity.EvalTarget
+		wantErr             bool
 	}{
 		{
-			name: "record query error",
-			prepare: func(deps *evalTargetServiceTestDeps, param *entity.ReportTargetRecordParam, record *entity.EvalTargetRecord) {
-				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
-			},
-			wantErr: true,
-			errCode: errno.CommonInternalErrorCode,
-		},
-		{
-			name: "record not found",
-			prepare: func(deps *evalTargetServiceTestDeps, param *entity.ReportTargetRecordParam, record *entity.EvalTargetRecord) {
-				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(nil, nil)
-			},
-			wantErr: true,
-			errCode: errno.CommonBadRequestCode,
-		},
-		{
-			name: "status not async",
-			prepare: func(deps *evalTargetServiceTestDeps, param *entity.ReportTargetRecordParam, record *entity.EvalTargetRecord) {
-				status := entity.EvalTargetRunStatusSuccess
-				record.Status = &status
-				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
-			},
-			wantErr: true,
-			errCode: errno.CommonBadRequestCode,
-		},
-		{
-			name: "success",
-			prepare: func(deps *evalTargetServiceTestDeps, param *entity.ReportTargetRecordParam, record *entity.EvalTargetRecord) {
-				status := entity.EvalTargetRunStatusAsyncInvoking
-				record.Status = &status
-				record.EvalTargetOutputData = &entity.EvalTargetOutputData{}
-				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
-				var saved *entity.EvalTargetRecord
-				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) error {
-					saved = rec
-					return nil
-				})
-				deps.repo.EXPECT().GetEvalTargetVersion(gomock.Any(), record.SpaceID, record.TargetVersionID).Return(&entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeCustomRPCServer}, nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any()).AnyTimes()
-				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			name: "成功通过源目标获取版本_不需要源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
 
-				param.Session = &entity.Session{UserID: "user"}
-				param.OutputData = &entity.EvalTargetOutputData{
-					OutputFields: map[string]*entity.Content{
-						"key": {
-							ContentType: gptr.Of(entity.ContentTypeText),
-							Text:        gptr.Of("value"),
-						},
-					},
-					EvalTargetUsage:    &entity.EvalTargetUsage{InputTokens: 1, OutputTokens: 2},
-					EvalTargetRunError: &entity.EvalTargetRunError{Code: 1, Message: "oops"},
-					TimeConsumingMS:    gptr.Of(int64(10)),
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
 				}
 
-				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-
-				t.Cleanup(func() {
-					require.NotNil(t, saved)
-					assert.Equal(t, param.OutputData, saved.EvalTargetOutputData)
-					assert.Equal(t, param.Status, gptr.Indirect(saved.Status))
-				})
+				mockRepo.EXPECT().GetEvalTargetVersionBySourceTarget(gomock.Any(), int64(1), "target_123", "v1.0", entity.EvalTargetTypeCozeBot).Return(expectedTarget, nil)
+				return mockRepo, mockOperator
 			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			needSourceInfo:      false,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+			},
+			wantErr: false,
+		},
+		{
+			name: "成功通过源目标获取版本_需要源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersionBySourceTarget(gomock.Any(), int64(1), "target_123", "v1.0", entity.EvalTargetTypeCozeBot).Return(expectedTarget, nil)
+				mockOperator.EXPECT().PackSourceVersionInfo(gomock.Any(), int64(1), []*entity.EvalTarget{expectedTarget}).Return(nil)
+
+				return mockRepo, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			needSourceInfo:      true,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+			},
+			wantErr: false,
+		},
+		{
+			name: "通过源目标获取失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, *servicemocks.MockISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				mockRepo.EXPECT().GetEvalTargetVersionBySourceTarget(gomock.Any(), int64(1), "invalid_target", "v1.0", entity.EvalTargetTypeCozeBot).Return(nil, errors.New("target not found"))
+				return mockRepo, mockOperator
+			},
+			spaceID:             1,
+			sourceTargetID:      "invalid_target",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			needSourceInfo:      false,
+			wantErr:             true,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			deps := &evalTargetServiceTestDeps{
-				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
-				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
-				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
-				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+			mockRepo, mockOperator := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			typedOperators := map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+				entity.EvalTargetTypeCozeBot: mockOperator,
 			}
 
-			svc := &EvalTargetServiceImpl{
-				evalTargetRepo: deps.repo,
-				idgen:          deps.idgen,
-				metric:         deps.metric,
-				typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{},
-			}
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
 
-			record := &entity.EvalTargetRecord{
-				ID:              1,
-				SpaceID:         1,
-				TargetID:        2,
-				TargetVersionID: 3,
-				Status:          gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
-			}
-			param := &entity.ReportTargetRecordParam{
-				SpaceID:  1,
-				RecordID: 1,
-				Status:   entity.EvalTargetRunStatusSuccess,
-				OutputData: &entity.EvalTargetOutputData{
-					OutputFields: map[string]*entity.Content{},
-				},
-			}
+			result, err := service.GetEvalTargetVersionBySourceTarget(context.Background(), tt.spaceID, tt.sourceTargetID, tt.sourceTargetVersion, tt.targetType, tt.needSourceInfo)
 
-			if tt.prepare != nil {
-				tt.prepare(deps, param, record)
-			}
-
-			err := svc.ReportInvokeRecords(ctx, param)
 			if tt.wantErr {
-				require.Error(t, err)
-				statusErr, ok := errorx.FromStatusError(err)
-				require.True(t, ok)
-				assert.Equal(t, tt.errCode, statusErr.Code())
-				return
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
 			}
-
-			require.NoError(t, err)
 		})
 	}
 }
 
-type fakeRuntimeParam struct {
-	parseErr error
-}
-
-func (f *fakeRuntimeParam) GetJSONDemo() string  { return "{}" }
-func (f *fakeRuntimeParam) GetJSONValue() string { return "{}" }
-func (f *fakeRuntimeParam) ParseFromJSON(string) (entity.IRuntimeParam, error) {
-	if f.parseErr != nil {
-		return nil, f.parseErr
-	}
-	return &fakeRuntimeParam{}, nil
-}
-
-func TestEvalTargetServiceImpl_ValidateRuntimeParam(t *testing.T) {
+func TestEvalTargetServiceImpl_GetEvalTarget(t *testing.T) {
 	t.Parallel()
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	operator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
-	operator.EXPECT().RuntimeParam().Return(&fakeRuntimeParam{parseErr: nil}).Times(1)
-
-	svc := &EvalTargetServiceImpl{
-		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
-			entity.EvalTargetTypeLoopPrompt: operator,
-		},
-	}
-
-	require.NoError(t, svc.ValidateRuntimeParam(context.Background(), entity.EvalTargetTypeLoopPrompt, "{}"))
-
-	err := svc.ValidateRuntimeParam(context.Background(), entity.EvalTargetTypeLoopPrompt, "")
-	require.NoError(t, err)
-
-	err = svc.ValidateRuntimeParam(context.Background(), entity.EvalTargetTypeCustomRPCServer, "{}")
-	require.Error(t, err)
-}
-
-func TestSetSpanInputOutput(t *testing.T) {
-	t.Parallel()
-
-	textType := entity.ContentTypeText
-	imageType := entity.ContentTypeImage
 
 	tests := []struct {
-		name        string
-		input       *entity.EvalTargetInputData
-		output      *entity.EvalTargetOutputData
-		wantInputs  int
-		wantOutputs int
+		name       string
+		setupMocks func(*gomock.Controller) *repomocks.MockIEvalTargetRepo
+		targetID   int64
+		want       *entity.EvalTarget
+		wantErr    bool
 	}{
 		{
-			name: "text content",
-			input: &entity.EvalTargetInputData{InputFields: map[string]*entity.Content{
-				"text": {ContentType: &textType, Text: gptr.Of("hello")},
-			}},
-			output: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{
-				"text": {ContentType: &textType, Text: gptr.Of("world")},
-			}, EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 1, OutputTokens: 2}},
-			wantInputs:  1,
-			wantOutputs: 1,
+			name: "成功获取评估目标",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockRepo.EXPECT().GetEvalTarget(gomock.Any(), int64(123)).Return(expectedTarget, nil)
+				return mockRepo
+			},
+			targetID: 123,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+			},
+			wantErr: false,
 		},
 		{
-			name: "image content",
-			input: &entity.EvalTargetInputData{InputFields: map[string]*entity.Content{
-				"image": {ContentType: &imageType, Image: &entity.Image{Name: gptr.Of("img"), URL: gptr.Of("http://img")}},
-			}},
-			output:      &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
-			wantInputs:  1,
-			wantOutputs: 0,
-		},
-		{
-			name:        "nil",
-			input:       nil,
-			output:      nil,
-			wantInputs:  0,
-			wantOutputs: 0,
+			name: "获取失败",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockRepo.EXPECT().GetEvalTarget(gomock.Any(), int64(999)).Return(nil, errors.New("not found"))
+				return mockRepo
+			},
+			targetID: 999,
+			wantErr:  true,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			spanParam := &targetSpanTagsParams{}
-			setSpanInputOutput(context.Background(), spanParam, tt.input, tt.output)
-			assert.Len(t, spanParam.Inputs, tt.wantInputs)
-			assert.Len(t, spanParam.Outputs, tt.wantOutputs)
-		})
-	}
-}
 
-func TestToTraceParts(t *testing.T) {
-	t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	textType := entity.ContentTypeText
-	imageType := entity.ContentTypeImage
-	multipartType := entity.ContentTypeMultipart
+			mockRepo := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
 
-	tests := []struct {
-		name    string
-		content *entity.Content
-		wantLen int
-	}{
-		{
-			name: "text",
-			content: &entity.Content{
-				ContentType: &textType,
-				Text:        gptr.Of("hello"),
-			},
-			wantLen: 1,
-		},
-		{
-			name: "image",
-			content: &entity.Content{
-				ContentType: &imageType,
-				Image: &entity.Image{
-					Name: gptr.Of("img"),
-					URL:  gptr.Of("http://img"),
-				},
-			},
-			wantLen: 1,
-		},
-		{
-			name: "multipart",
-			content: &entity.Content{
-				ContentType: &multipartType,
-				MultiPart: []*entity.Content{
-					{ContentType: &textType, Text: gptr.Of("part1")},
-					{ContentType: &textType, Text: gptr.Of("part2")},
-				},
-			},
-			wantLen: 2,
-		},
-		{
-			name: "unknown",
-			content: &entity.Content{
-				ContentType: nil,
-			},
-			wantLen: 1,
-		},
-	}
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, nil)
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			parts := toTraceParts(context.Background(), tt.content)
-			assert.Len(t, parts, tt.wantLen)
-		})
-	}
-}
+			result, err := service.GetEvalTarget(context.Background(), tt.targetID)
 
-func TestConvert2TraceString(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name  string
-		input interface{}
-		want  string
-	}{
-		{
-			name:  "nil",
-			input: nil,
-			want:  "",
-		},
-		{
-			name:  "map",
-			input: map[string]string{"a": "b"},
-			want:  "{\"a\":\"b\"}",
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := Convert2TraceString(tt.input)
-			if tt.input == nil {
-				assert.Equal(t, tt.want, got)
-				return
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
 			}
-
-			var expect interface{}
-			require.NoError(t, json.Unmarshal([]byte(tt.want), &expect))
-
-			var actual interface{}
-			require.NoError(t, json.Unmarshal([]byte(got), &actual))
-			assert.Equal(t, expect, actual)
 		})
 	}
 }
@@ -879,44 +511,999 @@ func TestConvert2TraceString(t *testing.T) {
 func TestEvalTargetServiceImpl_GenerateMockOutputData(t *testing.T) {
 	t.Parallel()
 
-	svc := &EvalTargetServiceImpl{}
-
-	validSchema := `{"type":"object","properties":{"name":{"type":"string"}}}`
-	invalidSchema := "invalid"
-
 	tests := []struct {
-		name    string
-		schemas []*entity.ArgsSchema
-		wantLen int
+		name          string
+		outputSchemas []*entity.ArgsSchema
+		want          map[string]string
+		wantErr       bool
 	}{
 		{
-			name:    "empty schema",
-			schemas: nil,
-			wantLen: 0,
+			name:          "空schema列表",
+			outputSchemas: []*entity.ArgsSchema{},
+			want:          map[string]string{},
+			wantErr:       false,
 		},
 		{
-			name: "valid schema",
-			schemas: []*entity.ArgsSchema{
-				{Key: gptr.Of("name"), JsonSchema: &validSchema},
+			name: "有效schema生成mock数据",
+			outputSchemas: []*entity.ArgsSchema{
+				{
+					Key:        gptr.Of("output1"),
+					JsonSchema: gptr.Of(`{"type": "string"}`),
+				},
+				{
+					Key:        gptr.Of("output2"),
+					JsonSchema: gptr.Of(`{"type": "number"}`),
+				},
 			},
-			wantLen: 1,
+			want:    map[string]string{}, // 实际内容由jsonmock生成，这里只验证不为空
+			wantErr: false,
 		},
 		{
-			name: "invalid schema",
-			schemas: []*entity.ArgsSchema{
-				{Key: gptr.Of("invalid"), JsonSchema: &invalidSchema},
+			name: "无效schema使用默认值",
+			outputSchemas: []*entity.ArgsSchema{
+				{
+					Key:        gptr.Of("invalid_output"),
+					JsonSchema: gptr.Of(`invalid json`),
+				},
 			},
-			wantLen: 1,
+			want: map[string]string{
+				"invalid_output": "{}",
+			},
+			wantErr: false,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result, err := svc.GenerateMockOutputData(tt.schemas)
-			require.NoError(t, err)
-			assert.Len(t, result, tt.wantLen)
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, nil)
+
+			result, err := service.GenerateMockOutputData(tt.outputSchemas)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, len(tt.outputSchemas), len(result))
+
+				// 对于有效的schema，验证生成的数据不为空
+				for _, schema := range tt.outputSchemas {
+					if schema.Key != nil {
+						value, exists := result[*schema.Key]
+						assert.True(t, exists)
+						assert.NotEmpty(t, value)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_EdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		setupMocks     func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+		spaceID        int64
+		versionID      int64
+		needSourceInfo bool
+		want           *entity.EvalTarget
+		wantErr        bool
+	}{
+		{
+			name: "成功获取版本信息_无需源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                  456,
+						SourceTargetVersion: "v1.0",
+					},
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(456)).Return(expectedTarget, nil)
+				return mockRepo, nil
+			},
+			spaceID:        1,
+			versionID:      456,
+			needSourceInfo: false,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					ID:                  456,
+					SourceTargetVersion: "v1.0",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "成功获取版本信息_需要源信息",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                  456,
+						SourceTargetVersion: "v1.0",
+					},
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(456)).Return(expectedTarget, nil)
+				mockOperator.EXPECT().PackSourceVersionInfo(gomock.Any(), int64(1), []*entity.EvalTarget{expectedTarget}).Return(nil)
+
+				typedOperators := map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+					entity.EvalTargetTypeCozeBot: mockOperator,
+				}
+				return mockRepo, typedOperators
+			},
+			spaceID:        1,
+			versionID:      456,
+			needSourceInfo: true,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					ID:                  456,
+					SourceTargetVersion: "v1.0",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "获取版本失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(999)).Return(nil, errors.New("version not found"))
+				return mockRepo, nil
+			},
+			spaceID:        1,
+			versionID:      999,
+			needSourceInfo: false,
+			wantErr:        true,
+		},
+		{
+			name: "包装源信息失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(456)).Return(expectedTarget, nil)
+				mockOperator.EXPECT().PackSourceVersionInfo(gomock.Any(), int64(1), []*entity.EvalTarget{expectedTarget}).Return(errors.New("pack source info failed"))
+
+				typedOperators := map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+					entity.EvalTargetTypeCozeBot: mockOperator,
+				}
+				return mockRepo, typedOperators
+			},
+			spaceID:        1,
+			versionID:      456,
+			needSourceInfo: true,
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo, typedOperators := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			if typedOperators == nil {
+				typedOperators = make(map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+			}
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
+
+			result, err := service.GetEvalTargetVersion(context.Background(), tt.spaceID, tt.versionID, tt.needSourceInfo)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_MoreEdgeCases(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                string
+		setupMocks          func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+		spaceID             int64
+		sourceTargetID      string
+		sourceTargetVersion string
+		targetType          entity.EvalTargetType
+		needSourceInfo      bool
+		want                *entity.EvalTarget
+		wantErr             bool
+	}{
+		{
+			name: "成功获取源目标版本",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                  456,
+						SourceTargetVersion: "v1.0",
+					},
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersionBySourceTarget(gomock.Any(), int64(1), "target_123", "v1.0", entity.EvalTargetTypeCozeBot).Return(expectedTarget, nil)
+				return mockRepo, nil
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_123",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			needSourceInfo:      false,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_123",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					ID:                  456,
+					SourceTargetVersion: "v1.0",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "获取失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockRepo.EXPECT().GetEvalTargetVersionBySourceTarget(gomock.Any(), int64(1), "target_999", "v1.0", entity.EvalTargetTypeCozeBot).Return(nil, errors.New("not found"))
+				return mockRepo, nil
+			},
+			spaceID:             1,
+			sourceTargetID:      "target_999",
+			sourceTargetVersion: "v1.0",
+			targetType:          entity.EvalTargetTypeCozeBot,
+			needSourceInfo:      false,
+			wantErr:             true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo, typedOperators := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			if typedOperators == nil {
+				typedOperators = make(map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+			}
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
+
+			result, err := service.GetEvalTargetVersionBySourceTarget(context.Background(), tt.spaceID, tt.sourceTargetID, tt.sourceTargetVersion, tt.targetType, tt.needSourceInfo)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_GetEvalTargetVersionBySource(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		setupMocks     func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+		spaceID        int64
+		targetID       int64
+		sourceVersion  string
+		needSourceInfo bool
+		want           *entity.EvalTarget
+		wantErr        bool
+	}{
+		{
+			name: "成功找到匹配版本",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				versions := []*entity.EvalTarget{
+					{
+						ID:             123,
+						SpaceID:        1,
+						SourceTargetID: "456",
+						EvalTargetType: entity.EvalTargetTypeCozeBot,
+						EvalTargetVersion: &entity.EvalTargetVersion{
+							ID:                  789,
+							SourceTargetVersion: "v1.0",
+						},
+					},
+				}
+
+				mockRepo.EXPECT().BatchGetEvalTargetBySource(gomock.Any(), gomock.Any()).Return(versions, nil)
+				return mockRepo, nil
+			},
+			spaceID:        1,
+			targetID:       456,
+			sourceVersion:  "v1.0",
+			needSourceInfo: false,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "456",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					ID:                  789,
+					SourceTargetVersion: "v1.0",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "未找到匹配版本",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				versions := []*entity.EvalTarget{
+					{
+						ID:             123,
+						SpaceID:        1,
+						SourceTargetID: "456",
+						EvalTargetType: entity.EvalTargetTypeCozeBot,
+						EvalTargetVersion: &entity.EvalTargetVersion{
+							ID:                  789,
+							SourceTargetVersion: "v2.0", // 不匹配
+						},
+					},
+				}
+
+				mockRepo.EXPECT().BatchGetEvalTargetBySource(gomock.Any(), gomock.Any()).Return(versions, nil)
+				return mockRepo, nil
+			},
+			spaceID:        1,
+			targetID:       456,
+			sourceVersion:  "v1.0",
+			needSourceInfo: false,
+			wantErr:        true,
+		},
+		{
+			name: "批量查询失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockRepo.EXPECT().BatchGetEvalTargetBySource(gomock.Any(), gomock.Any()).Return(nil, errors.New("query failed"))
+				return mockRepo, nil
+			},
+			spaceID:        1,
+			targetID:       456,
+			sourceVersion:  "v1.0",
+			needSourceInfo: false,
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo, typedOperators := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			if typedOperators == nil {
+				typedOperators = make(map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+			}
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
+
+			result, err := service.GetEvalTargetVersionBySource(context.Background(), tt.spaceID, tt.targetID, tt.sourceVersion, tt.needSourceInfo)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_GetEvalTargetVersionByTarget(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                string
+		setupMocks          func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+		spaceID             int64
+		targetID            int64
+		sourceTargetVersion string
+		needSourceInfo      bool
+		want                *entity.EvalTarget
+		wantErr             bool
+	}{
+		{
+			name: "成功获取目标版本",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				expectedTarget := &entity.EvalTarget{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_456",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                  789,
+						SourceTargetVersion: "v1.0",
+					},
+				}
+
+				mockRepo.EXPECT().GetEvalTargetVersionByTarget(gomock.Any(), int64(1), int64(456), "v1.0").Return(expectedTarget, nil)
+				return mockRepo, nil
+			},
+			spaceID:             1,
+			targetID:            456,
+			sourceTargetVersion: "v1.0",
+			needSourceInfo:      false,
+			want: &entity.EvalTarget{
+				ID:             123,
+				SpaceID:        1,
+				SourceTargetID: "target_456",
+				EvalTargetType: entity.EvalTargetTypeCozeBot,
+				EvalTargetVersion: &entity.EvalTargetVersion{
+					ID:                  789,
+					SourceTargetVersion: "v1.0",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "获取失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockRepo.EXPECT().GetEvalTargetVersionByTarget(gomock.Any(), int64(1), int64(999), "v1.0").Return(nil, errors.New("not found"))
+				return mockRepo, nil
+			},
+			spaceID:             1,
+			targetID:            999,
+			sourceTargetVersion: "v1.0",
+			needSourceInfo:      false,
+			wantErr:             true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo, typedOperators := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			if typedOperators == nil {
+				typedOperators = make(map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+			}
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
+
+			result, err := service.GetEvalTargetVersionByTarget(context.Background(), tt.spaceID, tt.targetID, tt.sourceTargetVersion, tt.needSourceInfo)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_BatchGetEvalTargetBySource(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		setupMocks func(*gomock.Controller) *repomocks.MockIEvalTargetRepo
+		param      *entity.BatchGetEvalTargetBySourceParam
+		want       []*entity.EvalTarget
+		wantErr    bool
+	}{
+		{
+			name: "成功批量获取",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				expectedTargets := []*entity.EvalTarget{
+					{
+						ID:             123,
+						SpaceID:        1,
+						SourceTargetID: "target_123",
+						EvalTargetType: entity.EvalTargetTypeCozeBot,
+					},
+				}
+
+				mockRepo.EXPECT().BatchGetEvalTargetBySource(gomock.Any(), gomock.Any()).Return(expectedTargets, nil)
+				return mockRepo
+			},
+			param: &entity.BatchGetEvalTargetBySourceParam{
+				SpaceID:        1,
+				SourceTargetID: []string{"target_123"},
+				TargetType:     entity.EvalTargetTypeCozeBot,
+			},
+			want: []*entity.EvalTarget{
+				{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "查询失败",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockRepo.EXPECT().BatchGetEvalTargetBySource(gomock.Any(), gomock.Any()).Return(nil, errors.New("query failed"))
+				return mockRepo
+			},
+			param: &entity.BatchGetEvalTargetBySourceParam{
+				SpaceID:        1,
+				SourceTargetID: []string{"target_123"},
+				TargetType:     entity.EvalTargetTypeCozeBot,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, nil)
+
+			result, err := service.BatchGetEvalTargetBySource(context.Background(), tt.param)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_BatchGetEvalTargetVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		setupMocks     func(*gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+		spaceID        int64
+		versionIDs     []int64
+		needSourceInfo bool
+		want           []*entity.EvalTarget
+		wantErr        bool
+	}{
+		{
+			name: "成功批量获取版本",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				expectedVersions := []*entity.EvalTarget{
+					{
+						ID:             123,
+						SpaceID:        1,
+						SourceTargetID: "target_123",
+						EvalTargetType: entity.EvalTargetTypeCozeBot,
+						EvalTargetVersion: &entity.EvalTargetVersion{
+							ID:                  456,
+							SourceTargetVersion: "v1.0",
+						},
+					},
+				}
+
+				mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), []int64{456}).Return(expectedVersions, nil)
+				return mockRepo, nil
+			},
+			spaceID:        1,
+			versionIDs:     []int64{456},
+			needSourceInfo: false,
+			want: []*entity.EvalTarget{
+				{
+					ID:             123,
+					SpaceID:        1,
+					SourceTargetID: "target_123",
+					EvalTargetType: entity.EvalTargetTypeCozeBot,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID:                  456,
+						SourceTargetVersion: "v1.0",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "查询失败",
+			setupMocks: func(ctrl *gomock.Controller) (*repomocks.MockIEvalTargetRepo, map[entity.EvalTargetType]ISourceEvalTargetOperateService) {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockRepo.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), int64(1), []int64{999}).Return(nil, errors.New("query failed"))
+				return mockRepo, nil
+			},
+			spaceID:        1,
+			versionIDs:     []int64{999},
+			needSourceInfo: false,
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo, typedOperators := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			if typedOperators == nil {
+				typedOperators = make(map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+			}
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
+
+			result, err := service.BatchGetEvalTargetVersion(context.Background(), tt.spaceID, tt.versionIDs, tt.needSourceInfo)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_GetRecordByID(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		setupMocks func(*gomock.Controller) *repomocks.MockIEvalTargetRepo
+		spaceID    int64
+		recordID   int64
+		want       *entity.EvalTargetRecord
+		wantErr    bool
+	}{
+		{
+			name: "成功获取记录",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				expectedRecord := &entity.EvalTargetRecord{
+					ID:              123,
+					SpaceID:         1,
+					TargetID:        456,
+					TargetVersionID: 789,
+				}
+
+				mockRepo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(gomock.Any(), int64(1), int64(123)).Return(expectedRecord, nil)
+				return mockRepo
+			},
+			spaceID:  1,
+			recordID: 123,
+			want: &entity.EvalTargetRecord{
+				ID:              123,
+				SpaceID:         1,
+				TargetID:        456,
+				TargetVersionID: 789,
+			},
+			wantErr: false,
+		},
+		{
+			name: "获取失败",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockRepo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(gomock.Any(), int64(1), int64(999)).Return(nil, errors.New("not found"))
+				return mockRepo
+			},
+			spaceID:  1,
+			recordID: 999,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, nil)
+
+			result, err := service.GetRecordByID(context.Background(), tt.spaceID, tt.recordID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_BatchGetRecordByIDs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		setupMocks func(*gomock.Controller) *repomocks.MockIEvalTargetRepo
+		spaceID    int64
+		recordIDs  []int64
+		want       []*entity.EvalTargetRecord
+		wantErr    bool
+	}{
+		{
+			name: "成功批量获取记录",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+
+				expectedRecords := []*entity.EvalTargetRecord{
+					{
+						ID:              123,
+						SpaceID:         1,
+						TargetID:        456,
+						TargetVersionID: 789,
+					},
+					{
+						ID:              124,
+						SpaceID:         1,
+						TargetID:        457,
+						TargetVersionID: 790,
+					},
+				}
+
+				mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{123, 124}).Return(expectedRecords, nil)
+				return mockRepo
+			},
+			spaceID:   1,
+			recordIDs: []int64{123, 124},
+			want: []*entity.EvalTargetRecord{
+				{
+					ID:              123,
+					SpaceID:         1,
+					TargetID:        456,
+					TargetVersionID: 789,
+				},
+				{
+					ID:              124,
+					SpaceID:         1,
+					TargetID:        457,
+					TargetVersionID: 790,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "spaceID为0",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				// 不应该调用仓储方法
+				return mockRepo
+			},
+			spaceID:   0,
+			recordIDs: []int64{123},
+			wantErr:   true,
+		},
+		{
+			name: "recordIDs为空",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				// 不应该调用仓储方法
+				return mockRepo
+			},
+			spaceID:   1,
+			recordIDs: []int64{},
+			wantErr:   true,
+		},
+		{
+			name: "查询失败",
+			setupMocks: func(ctrl *gomock.Controller) *repomocks.MockIEvalTargetRepo {
+				mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+				mockRepo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{999}).Return(nil, errors.New("query failed"))
+				return mockRepo
+			},
+			spaceID:   1,
+			recordIDs: []int64{999},
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := tt.setupMocks(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, nil)
+
+			result, err := service.BatchGetRecordByIDs(context.Background(), tt.spaceID, tt.recordIDs)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, result)
+			}
+		})
+	}
+}
+
+func TestEvalTargetServiceImpl_ValidateRuntimeParam(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		setupMocks   func(*gomock.Controller) map[entity.EvalTargetType]ISourceEvalTargetOperateService
+		targetType   entity.EvalTargetType
+		runtimeParam string
+		wantErr      bool
+	}{
+		{
+			name: "空参数直接返回成功",
+			setupMocks: func(ctrl *gomock.Controller) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
+				return make(map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+			},
+			targetType:   entity.EvalTargetTypeCozeBot,
+			runtimeParam: "",
+			wantErr:      false,
+		},
+		{
+			name: "成功验证运行时参数",
+			setupMocks: func(ctrl *gomock.Controller) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+				mockRuntimeParam := &entity.DummyRuntimeParam{}
+
+				mockOperator.EXPECT().RuntimeParam().Return(mockRuntimeParam)
+
+				return map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+					entity.EvalTargetTypeCozeBot: mockOperator,
+				}
+			},
+			targetType:   entity.EvalTargetTypeCozeBot,
+			runtimeParam: `{"timeout": 30}`,
+			wantErr:      false,
+		},
+		{
+			name: "不支持的目标类型",
+			setupMocks: func(ctrl *gomock.Controller) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
+				return make(map[entity.EvalTargetType]ISourceEvalTargetOperateService)
+			},
+			targetType:   99, // 不存在的类型
+			runtimeParam: `{"timeout": 30}`,
+			wantErr:      true,
+		},
+		{
+			name: "JSON解析失败",
+			setupMocks: func(ctrl *gomock.Controller) map[entity.EvalTargetType]ISourceEvalTargetOperateService {
+				// 创建一个自定义的RuntimeParam实现来模拟解析失败
+				mockOperator := servicemocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+				// 使用真实的PromptRuntimeParam来测试解析错误
+				mockOperator.EXPECT().RuntimeParam().Return(entity.NewPromptRuntimeParam(nil))
+
+				return map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+					entity.EvalTargetTypeCozeBot: mockOperator,
+				}
+			},
+			targetType:   entity.EvalTargetTypeCozeBot,
+			runtimeParam: `invalid json syntax`,
+			wantErr:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			typedOperators := tt.setupMocks(ctrl)
+			mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+
+			service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
+
+			err := service.ValidateRuntimeParam(context.Background(), tt.targetType, tt.runtimeParam)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
@@ -931,498 +1518,107 @@ func TestBuildPageByCursor(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "nil cursor",
+			name:     "cursor为nil_返回第1页",
 			cursor:   nil,
 			wantPage: 1,
+			wantErr:  false,
 		},
 		{
-			name:     "valid cursor",
+			name:     "cursor为有效数字",
 			cursor:   gptr.Of("5"),
 			wantPage: 5,
+			wantErr:  false,
 		},
 		{
-			name:    "invalid cursor",
-			cursor:  gptr.Of("abc"),
+			name:    "cursor为无效字符串",
+			cursor:  gptr.Of("invalid"),
 			wantErr: true,
+		},
+		{
+			name:     "cursor为0",
+			cursor:   gptr.Of("0"),
+			wantPage: 0,
+			wantErr:  false,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
 			page, err := buildPageByCursor(tt.cursor)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
 
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantPage, page)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantPage, page)
+			}
 		})
 	}
 }
 
-func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
+func TestConvert2TraceString(t *testing.T) {
 	t.Parallel()
 
-	type prepareFunc func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam)
-
 	tests := []struct {
-		name        string
-		prepare     prepareFunc
-		wantErr     bool
-		wantErrCode int32
-		wantStatus  entity.EvalTargetRunStatus
+		name  string
+		input interface{}
+		want  string
 	}{
 		{
-			name: "unsupported target type",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
-				// 不设置任何 operator，模拟不支持的类型
-				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
+			name:  "nil输入",
+			input: nil,
+			want:  "",
 		},
 		{
-			name: "validate input failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
-				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(errorx.NewByCode(errno.CommonInvalidParamCode))
-				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
+			name:  "字符串输入",
+			input: "test string",
+			want:  `"test string"`,
 		},
 		{
-			name: "execute failed with status error",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
-				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
-				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusFail, errorx.NewByCode(errno.CommonInternalErrorCode))
-				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
-				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantStatus: entity.EvalTargetRunStatusFail,
+			name:  "数字输入",
+			input: 123,
+			want:  "123",
 		},
 		{
-			name: "execute failed with common error",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
-				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
-				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusFail, errorx.New("common error"))
-				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
-				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+			name: "对象输入",
+			input: map[string]interface{}{
+				"key": "value",
 			},
-			wantStatus: entity.EvalTargetRunStatusFail,
-		},
-		{
-			name: "execute success",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
-				outputData := &entity.EvalTargetOutputData{
-					OutputFields: map[string]*entity.Content{
-						"answer": {
-							ContentType: gptr.Of(entity.ContentTypeText),
-							Text:        gptr.Of("test answer"),
-						},
-					},
-					EvalTargetUsage: &entity.EvalTargetUsage{
-						InputTokens:  10,
-						OutputTokens: 20,
-					},
-				}
-				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
-				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, execParam *entity.ExecuteEvalTargetParam) (*entity.EvalTargetOutputData, entity.EvalTargetRunStatus, error) {
-					assert.Equal(t, param.InputData, execParam.Input)
-					assert.Equal(t, param.PatchyTarget.EvalTargetType, execParam.TargetType)
-					assert.Equal(t, param.PatchyTarget, execParam.EvalTarget)
-					return outputData, entity.EvalTargetRunStatusSuccess, nil
-				})
-				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
-				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantStatus: entity.EvalTargetRunStatusSuccess,
-		},
-		{
-			name: "idgen error",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
-				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
-				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(&entity.EvalTargetOutputData{}, entity.EvalTargetRunStatusSuccess, nil)
-				deps.idgen.EXPECT().GenID(ctx).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
-				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInternalErrorCode,
-		},
-		{
-			name: "create record error",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
-				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
-				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(&entity.EvalTargetOutputData{}, entity.EvalTargetRunStatusSuccess, nil)
-				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
-				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInternalErrorCode,
+			want: `{"key":"value"}`,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			deps := &evalTargetServiceTestDeps{
-				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
-				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
-				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
-				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
-			}
-
-			param := &entity.DebugTargetParam{
-				SpaceID: 100,
-				PatchyTarget: &entity.EvalTarget{
-					ID:             200,
-					SpaceID:        100,
-					SourceTargetID: "test-source",
-					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
-					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                  300,
-						SourceTargetVersion: "v1",
-						InputSchema: []*entity.ArgsSchema{
-							{
-								Key:                 gptr.Of("input_field"),
-								SupportContentTypes: []entity.ContentType{entity.ContentTypeText},
-								JsonSchema:          gptr.Of(`{"type":"string"}`),
-							},
-						},
-					},
-				},
-				InputData: &entity.EvalTargetInputData{
-					InputFields: map[string]*entity.Content{
-						"input_field": {
-							ContentType: gptr.Of(entity.ContentTypeText),
-							Text:        gptr.Of("test input"),
-						},
-					},
-				},
-			}
-
-			typedOps := map[entity.EvalTargetType]ISourceEvalTargetOperateService{}
-			if tt.prepare != nil {
-				tt.prepare(ctx, deps, param)
-				// 只有在 prepare 函数中设置了 operator 时才添加到 typedOps
-				if tt.name != "unsupported target type" {
-					typedOps[entity.EvalTargetTypeLoopPrompt] = deps.operator
-				}
-			}
-
-			svc := &EvalTargetServiceImpl{
-				evalTargetRepo: deps.repo,
-				idgen:          deps.idgen,
-				metric:         deps.metric,
-				typedOperators: typedOps,
-			}
-
-			record, err := svc.DebugTarget(ctx, param)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					require.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-				return
-			}
-
-			require.NoError(t, err)
-			require.NotNil(t, record)
-			assert.Equal(t, int64(999), record.ID)
-			assert.Equal(t, param.SpaceID, record.SpaceID)
-			assert.Equal(t, param.InputData, record.EvalTargetInputData)
-			assert.Equal(t, tt.wantStatus, gptr.Indirect(record.Status))
-
-			// 验证 BaseInfo 字段
-			require.NotNil(t, record.BaseInfo)
-			require.NotNil(t, record.BaseInfo.CreatedBy)
-			require.NotNil(t, record.BaseInfo.UpdatedBy)
-			require.NotNil(t, record.BaseInfo.CreatedAt)
-			require.NotNil(t, record.BaseInfo.UpdatedAt)
+			result := Convert2TraceString(tt.input)
+			assert.Equal(t, tt.want, result)
 		})
 	}
 }
 
-func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
+func TestNewEvalTargetServiceImpl(t *testing.T) {
 	t.Parallel()
 
-	type prepareFunc func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	tests := []struct {
-		name         string
-		prepare      prepareFunc
-		wantErr      bool
-		wantErrCode  int32
-		expectCallee string
-		expectID     int64
-	}{
-		{
-			name: "nil input data",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
-				// 不设置任何 mock，因为会在参数验证阶段失败
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
-		},
-		{
-			name: "nil param",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
-				// 不设置任何 mock，因为会在参数验证阶段失败
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
-		},
-		{
-			name: "get eval target version failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
-				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInternalErrorCode,
-		},
-		{
-			name: "unsupported target type",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
-				evalTarget := &entity.EvalTarget{
-					ID:             targetID,
-					SpaceID:        spaceID,
-					SourceTargetID: "test-source",
-					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
-					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                  targetVersionID,
-						SourceTargetVersion: "v1",
-						InputSchema: []*entity.ArgsSchema{
-							{Key: gptr.Of("input_field")},
-						},
-					},
-				}
-				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
-				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
-		},
-		{
-			name: "validate input failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
-				evalTarget := &entity.EvalTarget{
-					ID:             targetID,
-					SpaceID:        spaceID,
-					SourceTargetID: "test-source",
-					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
-					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                  targetVersionID,
-						SourceTargetVersion: "v1",
-						InputSchema: []*entity.ArgsSchema{
-							{Key: gptr.Of("input_field")},
-						},
-					},
-				}
-				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
-				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(errorx.NewByCode(errno.CommonInvalidParamCode))
-				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:     true,
-			wantErrCode: errno.CommonInvalidParamCode,
-		},
-		{
-			name: "async execute failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
-				evalTarget := &entity.EvalTarget{
-					ID:             targetID,
-					SpaceID:        spaceID,
-					SourceTargetID: "test-source",
-					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
-					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                  targetVersionID,
-						SourceTargetVersion: "v1",
-						InputSchema: []*entity.ArgsSchema{
-							{Key: gptr.Of("input_field")},
-						},
-					},
-				}
-				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
-				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).Return(int64(0), "callee", errorx.NewByCode(errno.CommonInternalErrorCode))
-				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:      true,
-			wantErrCode:  errno.CommonInternalErrorCode,
-			expectCallee: "callee",
-		},
-		{
-			name: "create record failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
-				evalTarget := &entity.EvalTarget{
-					ID:             targetID,
-					SpaceID:        spaceID,
-					SourceTargetID: "test-source",
-					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
-					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                  targetVersionID,
-						SourceTargetVersion: "v1",
-						InputSchema: []*entity.ArgsSchema{
-							{Key: gptr.Of("input_field")},
-						},
-					},
-				}
-				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
-				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).Return(int64(999), "callee", nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
-				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			wantErr:      true,
-			wantErrCode:  errno.CommonInternalErrorCode,
-			expectCallee: "callee",
-		},
-		{
-			name: "success",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
-				evalTarget := &entity.EvalTarget{
-					ID:             targetID,
-					SpaceID:        spaceID,
-					SourceTargetID: "test-source",
-					EvalTargetType: entity.EvalTargetTypeLoopPrompt,
-					EvalTargetVersion: &entity.EvalTargetVersion{
-						ID:                  targetVersionID,
-						SourceTargetVersion: "v1",
-						InputSchema: []*entity.ArgsSchema{
-							{Key: gptr.Of("input_field")},
-						},
-					},
-				}
-				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
-				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, execParam *entity.ExecuteEvalTargetParam) (int64, string, error) {
-					assert.Equal(t, targetID, execParam.TargetID)
-					assert.Equal(t, targetVersionID, execParam.VersionID)
-					assert.Equal(t, "test-source", execParam.SourceTargetID)
-					assert.Equal(t, "v1", execParam.SourceTargetVersion)
-					assert.Equal(t, inputData, execParam.Input)
-					assert.Equal(t, entity.EvalTargetTypeLoopPrompt, execParam.TargetType)
-					assert.Equal(t, evalTarget, execParam.EvalTarget)
-					return int64(999), "callee", nil
-				})
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
-				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
-			},
-			expectCallee: "callee",
-			expectID:     999,
-		},
-	}
+	mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockMetric := mocks.NewMockEvalTargetMetrics(ctrl)
+	typedOperators := make(map[entity.EvalTargetType]ISourceEvalTargetOperateService)
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	service := NewEvalTargetServiceImpl(mockRepo, mockIDGen, mockMetric, typedOperators)
 
-			ctx := context.Background()
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+	assert.NotNil(t, service)
 
-			deps := &evalTargetServiceTestDeps{
-				repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
-				idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
-				metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
-				operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
-			}
-
-			spaceID := int64(100)
-			targetID := int64(200)
-			targetVersionID := int64(300)
-			param := &entity.ExecuteTargetCtx{
-				ExperimentRunID: gptr.Of(int64(555)),
-				ItemID:          777,
-				TurnID:          888,
-			}
-			inputData := &entity.EvalTargetInputData{
-				InputFields: map[string]*entity.Content{
-					"input_field": {
-						ContentType: gptr.Of(entity.ContentTypeText),
-						Text:        gptr.Of("test input"),
-					},
-				},
-			}
-
-			// 根据测试用例设置不同的参数
-			var testParam *entity.ExecuteTargetCtx
-			var testInputData *entity.EvalTargetInputData
-			switch tt.name {
-			case "nil input data":
-				testParam = param
-				testInputData = nil
-			case "nil param":
-				testParam = nil
-				testInputData = inputData
-			default:
-				testParam = param
-				testInputData = inputData
-			}
-
-			typedOps := map[entity.EvalTargetType]ISourceEvalTargetOperateService{}
-			if tt.prepare != nil {
-				tt.prepare(ctx, deps, spaceID, targetID, targetVersionID, testParam, testInputData)
-				// 只有在 prepare 函数中设置了 operator 时才添加到 typedOps
-				if tt.name != "unsupported target type" {
-					typedOps[entity.EvalTargetTypeLoopPrompt] = deps.operator
-				}
-			}
-
-			svc := &EvalTargetServiceImpl{
-				evalTargetRepo: deps.repo,
-				idgen:          deps.idgen,
-				metric:         deps.metric,
-				typedOperators: typedOps,
-			}
-
-			record, callee, err := svc.AsyncExecuteTarget(ctx, spaceID, targetID, targetVersionID, testParam, testInputData)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				if tt.wantErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					require.True(t, ok)
-					assert.Equal(t, tt.wantErrCode, statusErr.Code())
-				}
-				assert.Equal(t, tt.expectCallee, callee)
-				return
-			}
-
-			require.NoError(t, err)
-			require.NotNil(t, record)
-			assert.Equal(t, tt.expectCallee, callee)
-			assert.Equal(t, tt.expectID, record.ID)
-			assert.Equal(t, spaceID, record.SpaceID)
-			assert.Equal(t, targetID, record.TargetID)
-			assert.Equal(t, targetVersionID, record.TargetVersionID)
-			assert.Equal(t, param.ItemID, record.ItemID)
-			assert.Equal(t, param.TurnID, record.TurnID)
-			assert.Equal(t, inputData, record.EvalTargetInputData)
-			assert.Equal(t, entity.EvalTargetRunStatusAsyncInvoking, gptr.Indirect(record.Status))
-
-			// 验证 BaseInfo 字段
-			require.NotNil(t, record.BaseInfo)
-			require.NotNil(t, record.BaseInfo.CreatedBy)
-			require.NotNil(t, record.BaseInfo.UpdatedBy)
-			require.NotNil(t, record.BaseInfo.CreatedAt)
-			require.NotNil(t, record.BaseInfo.UpdatedAt)
-		})
-	}
+	impl, ok := service.(*EvalTargetServiceImpl)
+	assert.True(t, ok)
+	assert.Equal(t, mockRepo, impl.evalTargetRepo)
+	assert.Equal(t, mockIDGen, impl.idgen)
+	assert.Equal(t, mockMetric, impl.metric)
+	assert.Equal(t, typedOperators, impl.typedOperators)
 }

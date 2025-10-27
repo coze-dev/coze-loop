@@ -366,8 +366,22 @@ type outputMsgFormat struct {
 // 优化后的正则表达式，支持 score 为 number 或 string 类型
 var jsonRe = regexp.MustCompile(`\{(?s:.*?"score"\s*:\s*(?:"([\d.]+)"|([\d.]+)).*?"reason"\s*:\s*"((?:[^"\\]|\\.)*)".*?)}`)
 
+// stripMarkdownCodeFence removes markdown code fence markers (```json, ```, etc.) from content
+var codeFenceRe = regexp.MustCompile("(?s)^\\s*```(?:json)?\\s*\\n?(.+?)\\n?```\\s*$")
+
+func stripMarkdownCodeFence(content string) string {
+	if matches := codeFenceRe.FindStringSubmatch(content); len(matches) > 1 {
+		return matches[1]
+	}
+	return content
+}
+
 func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {
 	content := gptr.Indirect(replyItem.Content)
+	
+	// Strip markdown code fences if present
+	content = stripMarkdownCodeFence(content)
+	
 	var outputMsg outputMsgFormat
 	b := []byte(content)
 

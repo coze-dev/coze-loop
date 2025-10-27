@@ -60,25 +60,6 @@ struct GetTraceResponse {
     255: optional base.BaseResp BaseResp
 }
 
-struct SearchTraceTreeRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
-    2: required string trace_id (go.tag='json:"trace_id"', api.body="trace_id")
-    3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
-    4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time") // ms
-    8: optional common.PlatformType platform_type (api.body="platform_type")
-
-    10: optional filter.FilterFields filters (api.body="filters")
-
-    255: optional base.Base Base
-}
-
-struct SearchTraceTreeResponse {
-    1: required list<span.OutputSpan> spans
-    2: optional TraceAdvanceInfo traces_advance_info
-
-    255: optional base.BaseResp BaseResp
-}
-
 struct TraceQueryParams {
     1: required string trace_id
     2: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
@@ -129,7 +110,6 @@ struct GetTracesMetaInfoRequest {
 
 struct GetTracesMetaInfoResponse {
     1: required map<string, FieldMeta> field_metas
-    2: optional list<string> key_span_type
 
     255: optional base.BaseResp BaseResp
 }
@@ -368,7 +348,6 @@ struct ExtractSpanInfoResponse {
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
     GetTraceResponse GetTrace(1: GetTraceRequest req) (api.get = '/api/observability/v1/traces/:trace_id')
-    SearchTraceTreeResponse SearchTraceTree(1: SearchTraceTreeRequest req) (api.post = '/api/observability/v1/traces/search_tree')
     BatchGetTracesAdvanceInfoResponse BatchGetTracesAdvanceInfo(1: BatchGetTracesAdvanceInfoRequest req) (api.post = '/api/observability/v1/traces/batch_get_advance_info')
     IngestTracesResponse IngestTracesInner(1: IngestTracesRequest req)
     GetTracesMetaInfoResponse GetTracesMetaInfo(1: GetTracesMetaInfoRequest req) (api.get = '/api/observability/v1/traces/meta_info')

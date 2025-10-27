@@ -16,10 +16,7 @@ type Settings struct {
 	PlatformType          loop_span.PlatformType
 	QueryStartTime        int64 // ms
 	QueryEndTime          int64 // ms
-	QueryTenants          []string
-	SpanDoubleCheck       bool
-	QueryTraceID          string
-	QueryLogID            string
+	Tenant                string
 }
 
 type Factory interface {

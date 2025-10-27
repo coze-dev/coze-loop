@@ -47,7 +47,6 @@ const (
 	FieldTypeDouble FieldType = "double"
 	FieldTypeBool   FieldType = "bool"
 
-	PlatformDefault    PlatformType = "default"
 	PlatformCozeLoop   PlatformType = "cozeloop"
 	PlatformPrompt     PlatformType = "prompt"
 	PlatformEvaluator  PlatformType = "evaluator"
@@ -110,7 +109,7 @@ type FieldOptions struct {
 }
 
 type FilterObject interface {
-	GetFieldValue(fieldName string, isSystem, isCustom bool) any
+	GetFieldValue(fieldName string, isSystem bool) any
 }
 
 type FilterFields struct {
@@ -194,8 +193,6 @@ type FilterField struct {
 	QueryAndOr *QueryAndOrEnum `mapstructure:"query_and_or" json:"query_and_or"`
 	SubFilter  *FilterFields   `mapstructure:"sub_filter" json:"sub_filter"`
 	IsSystem   bool            `mapstructure:"is_system" json:"is_system"`
-	IsCustom   bool            `mapstructure:"is_custom" json:"is_custom"`
-	Hidden     bool            `mapstructure:"hidden" json:"hidden"`
 }
 
 func (f *FilterField) Validate() error {
@@ -261,7 +258,7 @@ func (f *FilterField) Satisfied(obj FilterObject) bool {
 	// 检测是否满足筛选条件
 	if f.FieldName != "" {
 		// 不满足field过滤条件
-		if !f.CheckValue(obj.GetFieldValue(f.FieldName, f.IsSystem, f.IsCustom)) {
+		if !f.CheckValue(obj.GetFieldValue(f.FieldName, f.IsSystem)) {
 			if op == QueryAndOrEnumAnd {
 				return false
 			}

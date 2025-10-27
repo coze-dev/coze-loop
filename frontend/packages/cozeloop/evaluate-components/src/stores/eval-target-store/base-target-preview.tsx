@@ -7,7 +7,16 @@ import { type Ellipsis, Tag, Tooltip } from '@coze-arch/coze-design';
 
 import { TypographyText } from '../../components/text-ellipsis';
 
-export function BaseTargetPreview(props: {
+export function BaseTargetPreview({
+  name,
+  version,
+  showVersion = true,
+  enableLinkJump,
+  className,
+  jumpBtnClassName,
+  onClick,
+  nameEllipsis = {},
+}: {
   name: React.ReactNode;
   version?: string;
   showVersion?: boolean;
@@ -17,16 +26,6 @@ export function BaseTargetPreview(props: {
   onClick?: (e: React.MouseEvent) => void;
   nameEllipsis?: Ellipsis;
 }) {
-  const {
-    name,
-    version,
-    showVersion = true,
-    enableLinkJump,
-    className,
-    jumpBtnClassName,
-    onClick,
-    nameEllipsis = {},
-  } = props;
   return (
     <div
       className={classNames(
@@ -41,9 +40,7 @@ export function BaseTargetPreview(props: {
         onClick?.(e);
       }}
     >
-      <TypographyText ellipsis={nameEllipsis} className="shrink">
-        {name ?? '-'}
-      </TypographyText>
+      <TypographyText ellipsis={nameEllipsis}>{name ?? '-'}</TypographyText>
       {showVersion ? (
         <Tag size="small" color="primary" className="shrink-0">
           {version ?? '-'}

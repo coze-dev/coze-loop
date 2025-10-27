@@ -5,7 +5,6 @@ package metrics
 
 import (
 	"strconv"
-	"sync"
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	eval_metrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
@@ -31,23 +30,15 @@ func evaluationSetEvalMtrTags() []string {
 	}
 }
 
-var (
-	evalSetMetricsOnce = sync.Once{}
-	evalSetMetricsImpl eval_metrics.EvaluationSetMetrics
-)
-
 func NewEvaluationSetMetrics(meter metrics.Meter) eval_metrics.EvaluationSetMetrics {
-	evalSetMetricsOnce.Do(func() {
-		if meter == nil {
-			return
-		}
-		metric, err := meter.NewMetric(evaluationSetMtrName, []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, evaluationSetEvalMtrTags())
-		if err != nil {
-			return
-		}
-		evalSetMetricsImpl = &EvaluationSetMetricsImpl{metric: metric}
-	})
-	return evalSetMetricsImpl
+	if meter == nil {
+		return nil
+	}
+	metric, err := meter.NewMetric(evaluationSetMtrName, []metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer}, evaluationSetEvalMtrTags())
+	if err != nil {
+		return nil
+	}
+	return &EvaluationSetMetricsImpl{metric: metric}
 }
 
 type EvaluationSetMetricsImpl struct {

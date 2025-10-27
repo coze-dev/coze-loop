@@ -28,10 +28,7 @@ type ISourceEvalTargetOperateService interface {
 	ValidateInput(ctx context.Context, spaceID int64, inputSchema []*entity.ArgsSchema, input *entity.EvalTargetInputData) error
 	// Execute
 	Execute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (outputData *entity.EvalTargetOutputData, status entity.EvalTargetRunStatus, err error)
-	AsyncExecute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (invokeID int64, callee string, err error)
 	RuntimeParam() entity.IRuntimeParam
-	// 搜索自定义评测对象
-	SearchCustomEvalTarget(ctx context.Context, param *entity.SearchCustomEvalTargetParam) (targets []*entity.CustomEvalTarget, nextCursor string, hasMore bool, err error)
 }
 
 //type Option func(option *Opt)

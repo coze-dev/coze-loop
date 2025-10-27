@@ -6,7 +6,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -22,7 +21,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -208,10 +206,6 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 					logs.CtxError(ctx, "proc Finish err:%v", err)
 					return err
 				}
-				err = t.TaskRepo.RemoveNonFinalTask(ctx, strconv.FormatInt(taskDO.WorkspaceID, 10), taskDO.ID)
-				if err != nil {
-					logs.CtxError(ctx, "remove non final task failed, task_id=%d, err=%v", taskDO.ID, err)
-				}
 			}
 			taskDO.TaskStatus = *req.TaskStatus
 		}
@@ -254,79 +248,26 @@ func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (res
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
 	return &ListTasksResp{
-		Tasks: tconv.TaskDOs2DTOs(ctx, filterHiddenFilters(taskDOs), userInfoMap),
+		Tasks: tconv.TaskDOs2DTOs(ctx, taskDOs, userInfoMap),
 		Total: ptr.Of(total),
 	}, nil
 }
 
 func (t *TaskServiceImpl) GetTask(ctx context.Context, req *GetTaskReq) (resp *GetTaskResp, err error) {
-	taskDO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
+	taskPO, err := t.TaskRepo.GetTask(ctx, req.TaskID, &req.WorkspaceID, nil)
 	if err != nil {
 		logs.CtxError(ctx, "GetTasks err:%v", err)
 		return resp, err
 	}
-	if taskDO == nil {
+	if taskPO == nil {
 		logs.CtxError(ctx, "GetTasks tasks is nil")
 		return resp, nil
 	}
-	_, userInfoMap, err := t.userProvider.GetUserInfo(ctx, []string{taskDO.CreatedBy, taskDO.UpdatedBy})
+	_, userInfoMap, err := t.userProvider.GetUserInfo(ctx, []string{taskPO.CreatedBy, taskPO.UpdatedBy})
 	if err != nil {
 		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
 	}
-	return &GetTaskResp{Task: tconv.TaskDO2DTO(ctx, filterHiddenFilters([]*entity.ObservabilityTask{taskDO})[0], userInfoMap)}, nil
-}
-
-func filterHiddenFilters(tasks []*entity.ObservabilityTask) []*entity.ObservabilityTask {
-	for _, t := range tasks {
-		if t == nil || t.SpanFilter == nil {
-			continue
-		}
-
-		filtered := filterVisibleFilterFields(&t.SpanFilter.Filters)
-		if filtered != nil {
-			t.SpanFilter.Filters = *filtered
-		}
-	}
-	return tasks
-}
-
-func filterVisibleFilterFields(fields *loop_span.FilterFields) *loop_span.FilterFields {
-	if fields == nil {
-		return nil
-	}
-
-	filters := fields.FilterFields
-	if len(filters) == 0 {
-		return fields
-	}
-
-	writeIdx := 0
-	for _, f := range filters {
-		if f == nil || f.Hidden {
-			continue
-		}
-		if f.SubFilter != nil {
-			filteredSub := filterVisibleFilterFields(f.SubFilter)
-			if filteredSub == nil || len(filteredSub.FilterFields) == 0 {
-				f.SubFilter = nil
-			} else {
-				f.SubFilter = filteredSub
-			}
-		}
-		filters[writeIdx] = f
-		writeIdx++
-	}
-
-	if writeIdx == len(filters) {
-		return fields
-	}
-
-	for i := writeIdx; i < len(filters); i++ {
-		filters[i] = nil
-	}
-
-	fields.FilterFields = filters[:writeIdx]
-	return fields
+	return &GetTaskResp{Task: tconv.TaskDO2DTO(ctx, taskPO, userInfoMap)}, nil
 }
 
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {

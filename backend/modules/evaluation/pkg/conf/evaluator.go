@@ -6,7 +6,6 @@ package conf
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/samber/lo"
 
@@ -117,38 +116,7 @@ func DefaultEvaluatorPromptMapping() map[string]string {
 
 func (c *evaluatorConfiger) GetCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
 	const key = "code_evaluator_template_conf"
-	// 使用 json 标签进行解码，兼容内层 CodeEvaluator 仅声明了 json 标签的情况
-	if c.loader.UnmarshalKey(ctx, key, &etf, conf.WithTagName("json")) == nil && len(etf) > 0 {
-		// 规范化第二层语言键，以及内部 LanguageType 字段
-		for templateKey, langMap := range etf {
-			// 重建语言映射，使用标准化后的键
-			newLangMap := make(map[string]*evaluatordto.EvaluatorContent, len(langMap))
-			for langKey, tpl := range langMap {
-				normalizedKey := langKey
-				switch strings.ToLower(langKey) {
-				case "python":
-					normalizedKey = string(evaluatordto.LanguageTypePython)
-				case "js", "javascript":
-					normalizedKey = string(evaluatordto.LanguageTypeJS)
-				}
-
-				if tpl != nil && tpl.CodeEvaluator != nil && tpl.CodeEvaluator.LanguageType != nil {
-					switch strings.ToLower(*tpl.CodeEvaluator.LanguageType) {
-					case "python":
-						v := evaluatordto.LanguageTypePython
-						tpl.CodeEvaluator.LanguageType = &v
-					case "js", "javascript":
-						v := evaluatordto.LanguageTypeJS
-						tpl.CodeEvaluator.LanguageType = &v
-					}
-				}
-				// 若标准键已存在，保留已存在的（避免覆盖）
-				if _, exists := newLangMap[normalizedKey]; !exists {
-					newLangMap[normalizedKey] = tpl
-				}
-			}
-			etf[templateKey] = newLangMap
-		}
+	if c.loader.UnmarshalKey(ctx, key, &etf) == nil && len(etf) > 0 {
 		return etf
 	}
 	return DefaultCodeEvaluatorTemplateConf()
@@ -160,38 +128,7 @@ func DefaultCodeEvaluatorTemplateConf() map[string]map[string]*evaluatordto.Eval
 
 func (c *evaluatorConfiger) GetCustomCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent) {
 	const key = "custom_code_evaluator_template_conf"
-	// 使用 json 标签进行解码，兼容内层 CodeEvaluator 仅声明了 json 标签的情况
-	if c.loader.UnmarshalKey(ctx, key, &etf, conf.WithTagName("json")) == nil && len(etf) > 0 {
-		// 规范化第二层语言键，以及内部 LanguageType 字段
-		for templateKey, langMap := range etf {
-			// 重建语言映射，使用标准化后的键
-			newLangMap := make(map[string]*evaluatordto.EvaluatorContent, len(langMap))
-			for langKey, tpl := range langMap {
-				normalizedKey := langKey
-				switch strings.ToLower(langKey) {
-				case "python":
-					normalizedKey = string(evaluatordto.LanguageTypePython)
-				case "js", "javascript":
-					normalizedKey = string(evaluatordto.LanguageTypeJS)
-				}
-
-				if tpl != nil && tpl.CodeEvaluator != nil && tpl.CodeEvaluator.LanguageType != nil {
-					switch strings.ToLower(*tpl.CodeEvaluator.LanguageType) {
-					case "python":
-						v := evaluatordto.LanguageTypePython
-						tpl.CodeEvaluator.LanguageType = &v
-					case "js", "javascript":
-						v := evaluatordto.LanguageTypeJS
-						tpl.CodeEvaluator.LanguageType = &v
-					}
-				}
-				// 若标准键已存在，保留已存在的（避免覆盖）
-				if _, exists := newLangMap[normalizedKey]; !exists {
-					newLangMap[normalizedKey] = tpl
-				}
-			}
-			etf[templateKey] = newLangMap
-		}
+	if c.loader.UnmarshalKey(ctx, key, &etf) == nil && len(etf) > 0 {
 		return etf
 	}
 	return DefaultCustomCodeEvaluatorTemplateConf()

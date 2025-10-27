@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useParams } from 'react-router-dom';
-import { type ReactNode, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
@@ -109,16 +109,6 @@ function EvaluatorDetailPage() {
     },
   );
 
-  const formFieldContent = (
-    <div className={`${!selectedVersion ? '' : 'hidden'}`}>
-      <PromptConfigField
-        disabled={guard.data.readonly}
-        refreshEditorModelKey={refreshEditorModelKey}
-      />
-      <div className="h-6" />
-    </div>
-  );
-
   if (service.loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -127,18 +117,16 @@ function EvaluatorDetailPage() {
     );
   }
 
-  let evaluatorInfo: null | ReactNode = null;
-
-  if (selectedVersion) {
-    if (versionService.loading) {
-      evaluatorInfo = (
-        <div className="h-full w-full flex items-center justify-center">
-          <Spin spinning={true} />
-        </div>
-      );
-    }
-    if (!versionService.loading) {
-      evaluatorInfo = (
+  const renderContent = () => {
+    if (selectedVersion) {
+      if (versionService.loading) {
+        return (
+          <div className="h-full w-full flex items-center justify-center">
+            <Spin spinning={true} />
+          </div>
+        );
+      }
+      return (
         <div className="flex-1 max-w-[800px] mx-auto">
           <div className="h-[28px] mb-3 text-[16px] leading-7 font-medium coz-fg-plus">
             {I18n.t('config_info')}
@@ -157,8 +145,27 @@ function EvaluatorDetailPage() {
         </div>
       );
     }
-  }
 
+    return (
+      <Form
+        initValues={evaluator}
+        className="flex-1 max-w-[800px] mx-auto"
+        ref={formRef}
+        onValueChange={values => {
+          // Demo 空间且没有管理权限，不保存
+          if (!isDemoSpace) {
+            autoSaveService.run(values);
+          }
+        }}
+      >
+        <PromptConfigField
+          disabled={guard.data.readonly}
+          refreshEditorModelKey={refreshEditorModelKey}
+        />
+        <div className="h-6" />
+      </Form>
+    );
+  };
   return (
     <div className="h-full overflow-hidden flex flex-col">
       <Header
@@ -190,20 +197,7 @@ function EvaluatorDetailPage() {
 
       <div className="flex-1 overflow-hidden flex flex-row">
         <div className="flex-1 overflow-y-auto p-6 flex styled-scrollbar pr-[18px]">
-          <Form
-            initValues={evaluator}
-            className="flex-1 max-w-[800px] mx-auto"
-            ref={formRef}
-            onValueChange={values => {
-              // Demo 空间且没有管理权限，不保存
-              if (!isDemoSpace) {
-                autoSaveService.run(values);
-              }
-            }}
-          >
-            {formFieldContent}
-            {evaluatorInfo}
-          </Form>
+          {renderContent()}
         </div>
         {versionListVisible && evaluator ? (
           <VersionListPane

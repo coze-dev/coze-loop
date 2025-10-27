@@ -20,8 +20,7 @@ import (
 //go:generate mockgen -destination=mocks/eval_target_record.go -package=mocks . EvalTargetRecordDAO
 type EvalTargetRecordDAO interface {
 	Create(ctx context.Context, record *model.TargetRecord) (id int64, err error)
-	Save(ctx context.Context, record *model.TargetRecord) error
-	GetByIDAndSpaceID(ctx context.Context, recordID int64, spaceID int64) (*model.TargetRecord, error)
+	GetByIDAndSpaceID(ctx context.Context, recordID, spaceID int64) (*model.TargetRecord, error)
 	ListByIDsAndSpaceID(ctx context.Context, recordIDs []int64, spaceID int64) ([]*model.TargetRecord, error)
 }
 
@@ -32,13 +31,6 @@ type EvalTargetRecordDAOImpl struct {
 
 func NewEvalTargetRecordDAO(db db.Provider) EvalTargetRecordDAO {
 	return &EvalTargetRecordDAOImpl{db: db, query: query.Use(db.NewSession(context.Background()))}
-}
-
-func (e *EvalTargetRecordDAOImpl) Save(ctx context.Context, record *model.TargetRecord) error {
-	if err := e.db.NewSession(ctx).Save(record).Error; err != nil {
-		return errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
-	}
-	return nil
 }
 
 func (e *EvalTargetRecordDAOImpl) Create(ctx context.Context, record *model.TargetRecord) (id int64, err error) {

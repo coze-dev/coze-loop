@@ -51,7 +51,6 @@ export function EvaluatorVersionSelect({
     () =>
       service.data?.map(item => {
         const { label } = item;
-        const isLLMType = Boolean(item?.evaluator_content?.prompt_evaluator);
         // 当前版本没有变量，禁用该选项
         const hasVariable = Boolean(
           item?.evaluator_content?.input_schemas?.length,
@@ -65,7 +64,7 @@ export function EvaluatorVersionSelect({
         return {
           ...item,
           label:
-            variableRequired && !hasVariable && isLLMType ? (
+            variableRequired && !hasVariable ? (
               <div className="flex items-center coz-fg-secondary">
                 {label}
                 <InfoIconTooltip
@@ -76,8 +75,7 @@ export function EvaluatorVersionSelect({
             ) : (
               <>{label}</>
             ),
-          disabled:
-            isSelected || (variableRequired && !hasVariable && isLLMType),
+          disabled: isSelected || (variableRequired && !hasVariable),
         };
       }),
     [service.data, disabledVersionIds, variableRequired],

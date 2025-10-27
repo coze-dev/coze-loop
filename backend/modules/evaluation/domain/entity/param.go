@@ -85,11 +85,8 @@ type BatchGetEvaluationSetVersionsResult struct {
 type Option func(option *Opt)
 
 type Opt struct {
-	PublishVersion   *string
-	BotInfoType      CozeBotInfoType
-	CustomEvalTarget *CustomEvalTarget
-	Region           *Region
-	Env              *string
+	PublishVersion *string
+	BotInfoType    CozeBotInfoType
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -101,24 +98,6 @@ func WithCozeBotPublishVersion(publishVersion *string) Option {
 func WithCozeBotInfoType(botInfoType CozeBotInfoType) Option {
 	return func(option *Opt) {
 		option.BotInfoType = botInfoType
-	}
-}
-
-func WithCustomEvalTarget(customTarget *CustomEvalTarget) Option {
-	return func(option *Opt) {
-		option.CustomEvalTarget = customTarget
-	}
-}
-
-func WithRegion(region *Region) Option {
-	return func(option *Opt) {
-		option.Region = region
-	}
-}
-
-func WithEnv(env *string) Option {
-	return func(option *Opt) {
-		option.Env = env
 	}
 }
 
@@ -278,30 +257,4 @@ type LLMCallParam struct {
 	Tools          []*Tool
 	ToolCallConfig *ToolCallConfig
 	ModelConfig    *ModelConfig
-}
-
-type SearchCustomEvalTargetParam struct {
-	WorkspaceID     *int64
-	Keyword         *string
-	ApplicationID   *int64
-	CustomRPCServer *CustomRPCServer
-	Region          *Region
-	Env             *string
-	PageSize        *int32
-	PageToken       *string
-}
-
-type ReportTargetRecordParam struct {
-	SpaceID    int64
-	RecordID   int64
-	Status     EvalTargetRunStatus
-	OutputData *EvalTargetOutputData
-
-	Session *Session
-}
-
-type DebugTargetParam struct {
-	SpaceID      int64
-	PatchyTarget *EvalTarget
-	InputData    *EvalTargetInputData
 }

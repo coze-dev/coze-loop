@@ -1271,16 +1271,8 @@ func _listtracesoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _asyncdebugevaltargetMw(handler *apis.APIHandler) []app.HandlerFunc {
-	return nil
-}
-
 func _validateevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
-	return nil
-}
-
-func _debugevaltargetMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
@@ -1339,16 +1331,8 @@ func _mockevaltargetoutputMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _passbackevaltargetinvokeresultMw(handler *apis.APIHandler) []app.HandlerFunc {
-	return nil
-}
-
 func _batchdebugevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
-	return nil
-}
-
-func _searchcustomevaltargetMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
@@ -1367,25 +1351,13 @@ func _insightanalysisexperimentMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _evaluation0Mw(handler *apis.APIHandler) []app.HandlerFunc {
-	return nil
-}
-
 func _insight_analysis_recordsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _eval_targets0Mw(handler *apis.APIHandler) []app.HandlerFunc {
-	return nil
-}
-
 func _insight_analysis_record_idMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
-	return nil
-}
-
-func _reportevaltargetinvokeresultMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
@@ -1416,35 +1388,6 @@ func _getexptinsightanalysisrecordMw(handler *apis.APIHandler) []app.HandlerFunc
 
 func _listexptinsightanalysisrecordMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
-	return nil
-}
-
-func _v2Mw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _gettracev2Mw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _traces1Mw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _trace_treeMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _searchtracetreeMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _searchtracetreeoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 

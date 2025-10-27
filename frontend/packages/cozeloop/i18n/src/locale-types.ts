@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable
   max-lines,
+  prettier/prettier,
   @typescript-eslint/naming-convention,
   @typescript-eslint/unified-signatures
 -- skip */
@@ -453,10 +454,7 @@ interface I18nTranslateFn {
   /** 删除 Prompt 模板 */
   (key: 'delete_prompt_template', fallbackText?: string): string;
   /** 确定删除当前 Prompt 模板？ */
-  (
-    key: 'confirm_delete_current_prompt_template',
-    fallbackText?: string,
-  ): string;
+  (key: 'confirm_delete_current_prompt_template', fallbackText?: string): string;
   /** 模拟值 */
   (key: 'mock_value', fallbackText?: string): string;
   /** 已深度思考 */
@@ -868,10 +866,7 @@ interface I18nTranslateFn {
   /** 未能找到相关结果 */
   (key: 'failed_to_find_related_results', fallbackText?: string): string;
   /** 请尝试其他关键词或修改筛选项 */
-  (
-    key: 'try_other_keywords_or_modify_filter_options',
-    fallbackText?: string,
-  ): string;
+  (key: 'try_other_keywords_or_modify_filter_options', fallbackText?: string): string;
   /** 暂无评估器 */
   (key: 'no_evaluator', fallbackText?: string): string;
   /** 点击右上角创建按钮进行创建 */
@@ -1310,10 +1305,7 @@ interface I18nTranslateFn {
   /** 正在加载 Prompt 详情 */
   (key: 'loading_prompt_detail', fallbackText?: string): string;
   /** 请选择评估器和版本号后再查看 */
-  (
-    key: 'select_evaluator_and_version_number_to_view',
-    fallbackText?: string,
-  ): string;
+  (key: 'select_evaluator_and_version_number_to_view', fallbackText?: string): string;
   /** 模型 */
   (key: 'model', fallbackText?: string): string;
   /** 通过 Function Call 从 LLM 中提取数据，固定评估器输出格式为“得分-原因”。 */
@@ -1441,10 +1433,7 @@ interface I18nTranslateFn {
   /** 预期理想输出，可作为评估时的参考标准 */
   (key: 'expected_ideal_output', fallbackText?: string): string;
   /** 评测集字段到评测对象字段的映射，用于评测对象准确获取输入。 */
-  (
-    key: 'evaluation_set_field_to_evaluation_object_field_mapping',
-    fallbackText?: string,
-  ): string;
+  (key: 'evaluation_set_field_to_evaluation_object_field_mapping', fallbackText?: string): string;
   /** 获取评测对象遇到错误 */
   (key: 'get_evaluation_object_error', fallbackText?: string): string;
   /** 仅评测集相同且已执行完成的实验可进行对比。目前选择的实验有关联评测集不同的情况，请重新选择。 */
@@ -1458,32 +1447,17 @@ interface I18nTranslateFn {
     fallbackText?: string,
   ): string;
   /** 仅已执行完成的实验可进行对比，请重新选择。 */
-  (
-    key: 'only_completed_experiments_can_be_compared',
-    fallbackText?: string,
-  ): string;
+  (key: 'only_completed_experiments_can_be_compared', fallbackText?: string): string;
   /** 实验对比发起失败 */
-  (
-    key: 'experiment_comparison_initiation_failure',
-    fallbackText?: string,
-  ): string;
+  (key: 'experiment_comparison_initiation_failure', fallbackText?: string): string;
   /** 实验组 */
   (key: 'experimental_group', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文开头 */
-  (
-    key: 'only_support_english_letters_numbers_and_chinese_at_the_beginning',
-    fallbackText?: string,
-  ): string;
+  (key: 'only_support_english_letters_numbers_and_chinese_at_the_beginning', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文，“-”，“_”，“.” */
-  (
-    key: 'only_support_english_letters_numbers_and_chinese_and_',
-    fallbackText?: string,
-  ): string;
+  (key: 'only_support_english_letters_numbers_and_chinese_and_', fallbackText?: string): string;
   /** 仅支持英文、数字、下划线，且需要以字母开头 */
-  (
-    key: 'only_support_english_numbers_and_underscores_and_start_with_a_letter',
-    fallbackText?: string,
-  ): string;
+  (key: 'only_support_english_numbers_and_underscores_and_start_with_a_letter', fallbackText?: string): string;
   /** 请选择版本 */
   (key: 'select_version', fallbackText?: string): string;
   /** 多模态 */
@@ -1521,10 +1495,7 @@ interface I18nTranslateFn {
   /** 请选择数据类型 */
   (key: 'select_data_type', fallbackText?: string): string;
   /** 草稿版本存在存量数据项，不支持修改数据类型。 */
-  (
-    key: 'draft_has_existing_data_can_not_modifying',
-    fallbackText?: string,
-  ): string;
+  (key: 'draft_has_existing_data_can_not_modifying', fallbackText?: string): string;
   /** undefined */
   (key: 'required', fallbackText?: string): string;
   /** 允许冗余字段 */
@@ -1554,15 +1525,9 @@ interface I18nTranslateFn {
   /** 信息未保存 */
   (key: 'information_not_saved', fallbackText?: string): string;
   /** 离开后信息将不会保存 */
-  (
-    key: 'leave_current_page_information_will_not_be_saved',
-    fallbackText?: string,
-  ): string;
+  (key: 'leave_current_page_information_will_not_be_saved', fallbackText?: string): string;
   /** 切换后当前修改会被覆盖 */
-  (
-    key: 'switching_modification_overwritten_tips',
-    fallbackText?: string,
-  ): string;
+  (key: 'switching_modification_overwritten_tips', fallbackText?: string): string;
   /** 作为输入投递给评测对象 */
   (key: 'evaluation_set_input_tips', fallbackText?: string): string;
   /** 预期理想输出，可作为评估时的参考标准 */
@@ -1570,10 +1535,7 @@ interface I18nTranslateFn {
   /** 工作流开始节点的输入参数及取值，你可以在指定工作流的编排页面查看参数列表。 */
   (key: 'evaluation_set_workflow_params_tips', fallbackText?: string): string;
   /** 工作流需要关联的 Coze 智能体 ID。 */
-  (
-    key: 'workflow_need_associated_coze_agent_id',
-    fallbackText?: string,
-  ): string;
+  (key: 'workflow_need_associated_coze_agent_id', fallbackText?: string): string;
   /** 用于指定工作流需要的一些额外的字段。 */
   (key: 'workflow_additional_fields', fallbackText?: string): string;
   /** 该工作流关联的应用的 ID。 */
@@ -1601,10 +1563,7 @@ interface I18nTranslateFn {
   /** 确认选择全量覆盖 */
   (key: 'confirm_full_overwrite', fallbackText?: string): string;
   /** 导入数据将覆盖现有数据 */
-  (
-    key: 'importing_data_will_overwrite_existing_data',
-    fallbackText?: string,
-  ): string;
+  (key: 'importing_data_will_overwrite_existing_data', fallbackText?: string): string;
   /** 格式化JSON */
   (key: 'format_json', fallbackText?: string): string;
   /** 字段补全 */
@@ -1640,22 +1599,13 @@ interface I18nTranslateFn {
   /** 请输入内容 */
   (key: 'please_enter_content', fallbackText?: string): string;
   /** 输入内容不是合法json格式 */
-  (
-    key: 'the_input_content_is_not_in_legal_json_format',
-    fallbackText?: string,
-  ): string;
+  (key: 'the_input_content_is_not_in_legal_json_format', fallbackText?: string): string;
   /** 请输入对象 */
   (key: 'please_enter_an_object', fallbackText?: string): string;
   /** 输入内容不符合列的字段定义 */
-  (
-    key: 'the_input_does_not_match_the_field_definition_of_the_column',
-    fallbackText?: string,
-  ): string;
+  (key: 'the_input_does_not_match_the_field_definition_of_the_column', fallbackText?: string): string;
   /** 数据类型不符合字段定义 */
-  (
-    key: 'data_type_does_not_match_the_field_definition',
-    fallbackText?: string,
-  ): string;
+  (key: 'data_type_does_not_match_the_field_definition', fallbackText?: string): string;
   /** 缺少必填字段 */
   (key: 'missing_required_field', fallbackText?: string): string;
   /** 存在冗余字段 */
@@ -1667,15 +1617,9 @@ interface I18nTranslateFn {
   /** 下一条 */
   (key: 'next_one', fallbackText?: string): string;
   /** 在最大高度内滚动查看字段内容 */
-  (
-    key: 'scroll_to_view_field_content_within_maximum_height',
-    fallbackText?: string,
-  ): string;
+  (key: 'scroll_to_view_field_content_within_maximum_height', fallbackText?: string): string;
   /** 字段内容不受最大高度限制 */
-  (
-    key: 'field_content_is_not_limited_by_maximum_height',
-    fallbackText?: string,
-  ): string;
+  (key: 'field_content_is_not_limited_by_maximum_height', fallbackText?: string): string;
   /** 删除评测集 */
   (key: 'delete_review_set', fallbackText?: string): string;
   /** 确定删除评测集 {name}  吗？此修改将不可逆。 */
@@ -1689,17 +1633,11 @@ interface I18nTranslateFn {
   /** 请尝试其他关键词或修改筛选项 */
   (key: 'try_other_keywords', fallbackText?: string): string;
   /** 点击右上角新建评测集按钮进行创建 */
-  (
-    key: 'evaluation_set_click_the_button_to_create',
-    fallbackText?: string,
-  ): string;
+  (key: 'evaluation_set_click_the_button_to_create', fallbackText?: string): string;
   /** 查看参数 */
   (key: 'view_parameters', fallbackText?: string): string;
   /** 得分仅预览效果，非实际结果。 */
-  (
-    key: 'scores_only_previews_not_actual_results',
-    fallbackText?: string,
-  ): string;
+  (key: 'scores_only_previews_not_actual_results', fallbackText?: string): string;
   /** Prompt 详情 */
   (key: 'prompt_details', fallbackText?: string): string;
   /** 查看标签详情 */
@@ -1730,10 +1668,7 @@ interface I18nTranslateFn {
   /** 实验对比 */
   (key: 'experimental_comparison', fallbackText?: string): string;
   /** 升级「企业团队版套餐」 */
-  (
-    key: 'upgrade_enterprise_team_edition_package',
-    fallbackText?: string,
-  ): string;
+  (key: 'upgrade_enterprise_team_edition_package', fallbackText?: string): string;
   /** 后可使用此功能 */
   (key: 'you_can_use_this_function_later', fallbackText?: string): string;
   /** 成功 {success_count} 条， 失败 {fail_count} 条 */
@@ -1764,24 +1699,15 @@ interface I18nTranslateFn {
   /** 数据结构 */
   (key: 'data_structure', fallbackText?: string): string;
   /** 数据结构不符合要求，无法导入 */
-  (
-    key: 'evaluation_set_import_error_data_structure_tips',
-    fallbackText?: string,
-  ): string;
+  (key: 'evaluation_set_import_error_data_structure_tips', fallbackText?: string): string;
   /** 导入数据类型与列的数据类型不一致，无法导入 */
-  (
-    key: 'evaluation_set_import_error_data_type_tips',
-    fallbackText?: string,
-  ): string;
+  (key: 'evaluation_set_import_error_data_type_tips', fallbackText?: string): string;
   /** 样例数据格式错误 */
   (key: 'sample_data_format_error', fallbackText?: string): string;
   /** 导入样例数据 */
   (key: 'import_sample_data', fallbackText?: string): string;
   /** 基于样例数据自动提取数据结构 */
-  (
-    key: 'automatic_extraction_of_data_structure_based_on_sample_data',
-    fallbackText?: string,
-  ): string;
+  (key: 'automatic_extraction_of_data_structure_based_on_sample_data', fallbackText?: string): string;
   /** 样例数据 */
   (key: 'evaluation_set_builtin_example_data', fallbackText?: string): string;
   /** 提取数据结构 */
@@ -1789,19 +1715,13 @@ interface I18nTranslateFn {
   /** 确认提取数据结构 */
   (key: 'confirm_the_extracted_data_structure', fallbackText?: string): string;
   /** 提取数据结构将覆盖原有的字段定义 */
-  (
-    key: 'extracting_the_data_structure_overwrite_tips',
-    fallbackText?: string,
-  ): string;
+  (key: 'extracting_the_data_structure_overwrite_tips', fallbackText?: string): string;
   /** 已下钻到最小层级，无法再下钻 */
   (key: 'drilled_to_minimum_level_tips', fallbackText?: string): string;
   /** 确认切换 */
   (key: 'confirm_the_switch', fallbackText?: string): string;
   /** 当前JSON Schema不合法，切换会导致配置丢失，是否继续切换 */
-  (
-    key: 'evaluation_set_json_schema_invalid_tips',
-    fallbackText?: string,
-  ): string;
+  (key: 'evaluation_set_json_schema_invalid_tips', fallbackText?: string): string;
   /** 冗余字段校验 */
   (key: 'redundant_field_check', fallbackText?: string): string;
   /** 高级校验规则 */
@@ -1939,10 +1859,7 @@ interface I18nTranslateFn {
   /** 通过 Function Call 从 LLM 中提取数据，固定评估器输出格式为“得分-原因”。 */
   (key: 'evaluator_output_tips', fallbackText?: string): string;
   /** 当前实验未完成,不支持导出和下载 */
-  (
-    key: 'export_not_supported_incomplete_experiment',
-    fallbackText?: string,
-  ): string;
+  (key: 'export_not_supported_incomplete_experiment', fallbackText?: string): string;
   /** 导出文件最多能保存100天,过期后需要重新导出再下载。 */
   (key: 'export_files_save_limit_100_days', fallbackText?: string): string;
   /** 导出进行中,请等导出结束后再尝试 */
@@ -2000,10 +1917,7 @@ interface I18nTranslateFn {
   /** 跳过评测对象执行配置,适用于评测集已包含agent实际输出的评测场景。 */
   (key: 'skip_eval_object_execution_config', fallbackText?: string): string;
   /** 选择跳过评估器配置,实验仅获agent实际输出,适用于人工标注的评测场景。 */
-  (
-    key: 'skip_evaluator_config_agent_output_only',
-    fallbackText?: string,
-  ): string;
+  (key: 'skip_evaluator_config_agent_output_only', fallbackText?: string): string;
   /** 总条数 {placeholder1}（成功 {success_turn_cnt} */
   (
     key: 'total_count_placeholder1_success_count',
@@ -2052,10 +1966,7 @@ interface I18nTranslateFn {
   /** 最大并发执行条数 */
   (key: 'max_concurrent_execution_count', fallbackText?: string): string;
   /** 实验支持并发执行评测集中的条目,但受限于评测对象的并发度和调用评估器的模型 TPM 限制。这里设置理想的最大执行条数。 */
-  (
-    key: 'experiment_supports_concurrent_eval_limitations',
-    fallbackText?: string,
-  ): string;
+  (key: 'experiment_supports_concurrent_eval_limitations', fallbackText?: string): string;
   /** 最大并发执行条数最多支持 {EVAL_EXPERIMENT_CONCUR_COUNT_MAX} 条。 */
   (
     key: 'max_concurrent_execution_count_limit',
@@ -2149,10 +2060,7 @@ interface I18nTranslateFn {
   /** 标注聚合得分 */
   (key: 'annotation_aggregate_score', fallbackText?: string): string;
   /** 完成该标签的所有数据标注后,再刷新重试 */
-  (
-    key: 'refresh_after_all_tag_annotations_completed',
-    fallbackText?: string,
-  ): string;
+  (key: 'refresh_after_all_tag_annotations_completed', fallbackText?: string): string;
   /** 其他 */
   (key: 'analytics_subtitle_others', fallbackText?: string): string;
   /** {placeholder0}明细 */
@@ -2212,10 +2120,7 @@ interface I18nTranslateFn {
   /** 完成时间 */
   (key: 'data_annotate_end_time', fallbackText?: string): string;
   /** 覆盖 Prompt 模型配置 */
-  (
-    key: 'dataset_ai_annotation_prompt_config_override',
-    fallbackText?: string,
-  ): string;
+  (key: 'dataset_ai_annotation_prompt_config_override', fallbackText?: string): string;
   /** 复制成功 */
   (key: 'prompt_example_copy_success', fallbackText?: string): string;
   /** 复制失败 */
@@ -2229,10 +2134,7 @@ interface I18nTranslateFn {
     fallbackText?: string,
   ): string;
   /** Coze 智能体 */
-  (
-    key: 'cozeloop_open_evaluate_coze_intelligent_agent',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_coze_intelligent_agent', fallbackText?: string): string;
   /** 数据嵌套层数超限 */
   (key: 'data_nesting_exceeds_limit', fallbackText?: string): string;
   /** 数据转换失败 */
@@ -2246,10 +2148,7 @@ interface I18nTranslateFn {
   /** 文件扩展名不合法 */
   (key: 'illegal_extension', fallbackText?: string): string;
   /** 上传图片失败 */
-  (
-    key: 'cozeloop_open_evaluate_image_upload_failed',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_image_upload_failed', fallbackText?: string): string;
   /** 世界上最大的动物是什么 */
   (key: 'evaluate_biggest_animal_world', fallbackText?: string): string;
   /** 蓝鲸 */
@@ -2271,41 +2170,23 @@ interface I18nTranslateFn {
     fallbackText?: string,
   ): string;
   /** JSON Schema格式错误 */
-  (
-    key: 'cozeloop_open_evaluate_json_schema_format_error',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_json_schema_format_error', fallbackText?: string): string;
   /** JSON Schema数据类型与列的类型不一致，请修改 */
-  (
-    key: 'cozeloop_open_evaluate_json_schema_type_mismatch',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_json_schema_type_mismatch', fallbackText?: string): string;
   /** JSON 格式错误 */
-  (
-    key: 'cozeloop_open_evaluate_json_format_error',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_json_format_error', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文开头 */
   (key: 'support_letter_number_chinese_start', fallbackText?: string): string;
   /** 仅支持英文字母、数字、中文，“-”，“_”，“.” */
-  (
-    key: 'support_letter_number_chinese_special_char',
-    fallbackText?: string,
-  ): string;
+  (key: 'support_letter_number_chinese_special_char', fallbackText?: string): string;
   /** 仅支持英文、数字、下划线，且需要以字母开头 */
-  (
-    key: 'support_letter_number_underscore_start_letter',
-    fallbackText?: string,
-  ): string;
+  (key: 'support_letter_number_underscore_start_letter', fallbackText?: string): string;
   /** 文件读取失败 */
   (key: 'knowledge_file_read_fail', fallbackText?: string): string;
   /** 文件格式错误 */
   (key: 'data_engine_file_format_error', fallbackText?: string): string;
   /** 单次最多添加10条数据项 */
-  (
-    key: 'cozeloop_open_evaluate_max_10_data_items_per_add',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_max_10_data_items_per_add', fallbackText?: string): string;
   /** 成功添加{successCount}条数据 */
   (
     key: 'cozeloop_open_evaluate_successfully_added_data_count',
@@ -2349,10 +2230,7 @@ interface I18nTranslateFn {
   /** 确认删除 */
   (key: 'task_delete_confirm_btn', fallbackText?: string): string;
   /** { }                 列，此操作不可逆 */
-  (
-    key: 'cozeloop_open_evaluate_column_braces_irreversible',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_column_braces_irreversible', fallbackText?: string): string;
   /** 确认 */
   (key: 'global_btn_confirm', fallbackText?: string): string;
   /** 取消 */
@@ -2370,37 +2248,19 @@ interface I18nTranslateFn {
     fallbackText?: string,
   ): string;
   /** 支持文件格式：csv、zip、xlsx、xls，文件最大200MB,                           仅支持导入一个文件 */
-  (
-    key: 'cozeloop_open_evaluate_supported_file_formats_limit',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_supported_file_formats_limit', fallbackText?: string): string;
   /** 下载模板 */
   (key: 'evaluate_dataset_download_template', fallbackText?: string): string;
   /** 适用于在同个单元格中管理图、文各类模态混排的数据。 */
-  (
-    key: 'cozeloop_open_evaluate_multi_modal_data_in_cell_usage',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_multi_modal_data_in_cell_usage', fallbackText?: string): string;
   /** 其Array<Object>数据样例如下，常见于多模态场景的Model span中。 */
-  (
-    key: 'cozeloop_open_evaluate_array_object_data_sample_multimodal',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_array_object_data_sample_multimodal', fallbackText?: string): string;
   /** 点击自动补全该数据结构内的所有字段 */
-  (
-    key: 'cozeloop_open_evaluate_click_autocomplete_all_fields',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_click_autocomplete_all_fields', fallbackText?: string): string;
   /** 自动补全字段将覆盖原有内容 */
-  (
-    key: 'cozeloop_open_evaluate_autocomplete_overwrites_original',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_autocomplete_overwrites_original', fallbackText?: string): string;
   /** 自动补全数据结构内所有字段将覆盖原有内容。确认覆盖吗？ */
-  (
-    key: 'cozeloop_open_evaluate_autocomplete_confirm_overwrite_all_fields',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_autocomplete_confirm_overwrite_all_fields', fallbackText?: string): string;
   /** 请输入大于等于{minimum}的数字 */
   (
     key: 'cozeloop_open_evaluate_enter_number_greater_equal_minimum',
@@ -2451,10 +2311,7 @@ interface I18nTranslateFn {
     fallbackText?: string,
   ): string;
   /** 确定删除评测集 */
-  (
-    key: 'cozeloop_open_evaluate_confirm_delete_evaluation_set',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_confirm_delete_evaluation_set', fallbackText?: string): string;
   /** 吗？此修改将不可逆。 */
   (key: 'this_change_irreversible', fallbackText?: string): string;
   /** 删除 */
@@ -2474,10 +2331,7 @@ interface I18nTranslateFn {
   /** 条数据 */
   (key: 'tiao_items', fallbackText?: string): string;
   /** 存在以下原因导致执行失败，请自行纠正后重试 */
-  (
-    key: 'cozeloop_open_evaluate_execution_failed_reasons',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_execution_failed_reasons', fallbackText?: string): string;
   /** （{placeholder1}条） */
   (
     key: 'cozeloop_open_evaluate_placeholder1_items_in_brackets',
@@ -2489,15 +2343,9 @@ interface I18nTranslateFn {
   /** 该字段必填 */
   (key: 'evaluate_dataset_input_required', fallbackText?: string): string;
   /** 请输入0～1区间内的数字 */
-  (
-    key: 'cozeloop_open_evaluate_enter_number_between_0_1',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_enter_number_between_0_1', fallbackText?: string): string;
   /** 最多保留小数点后四位 */
-  (
-    key: 'cozeloop_open_evaluate_max_four_decimal_places',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_max_four_decimal_places', fallbackText?: string): string;
   /** 更新 */
   (key: 'cozeloop_open_evaluate_update', fallbackText?: string): string;
   /** 得分 */
@@ -2523,10 +2371,7 @@ interface I18nTranslateFn {
   /** 导出记录 */
   (key: 'evaluate_export_records', fallbackText?: string): string;
   /** 导出中，查看 */
-  (
-    key: 'cozeloop_open_evaluate_export_in_progress_view',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_export_in_progress_view', fallbackText?: string): string;
   /** 导出失败 */
   (key: 'evaluate_export_failed', fallbackText?: string): string;
   /** 下载文件 */
@@ -2534,70 +2379,37 @@ interface I18nTranslateFn {
   /** 导出中 */
   (key: 'model_exporting', fallbackText?: string): string;
   /** 实验明细导出中 */
-  (
-    key: 'cozeloop_open_evaluate_experiment_details_exporting',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_experiment_details_exporting', fallbackText?: string): string;
   /** 实验明细导出失败 */
-  (
-    key: 'cozeloop_open_evaluate_experiment_details_export_failed',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_experiment_details_export_failed', fallbackText?: string): string;
   /** 实验明细导出成功 */
-  (
-    key: 'cozeloop_open_evaluate_experiment_details_export_success',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_experiment_details_export_success', fallbackText?: string): string;
   /** 操作 */
   (key: 'prompt_prompt_operate', fallbackText?: string): string;
   /** 导出 */
   (key: 'evaluate_export', fallbackText?: string): string;
   /** 仅支持导出终态(成功或失败)的实验 */
-  (
-    key: 'cozeloop_open_evaluate_export_only_final_state_experiments',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_export_only_final_state_experiments', fallbackText?: string): string;
   /** 动态参数 */
-  (
-    key: 'cozeloop_open_evaluate_dynamic_parameters',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_dynamic_parameters', fallbackText?: string): string;
   /** 确定要删除 */
-  (
-    key: 'cozeloop_open_evaluate_confirm_to_delete',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_confirm_to_delete', fallbackText?: string): string;
   /** 复制 */
   (key: 'evaluate_copy', fallbackText?: string): string;
   /** 配置，直接或修改配置后发起实验。 */
-  (
-    key: 'cozeloop_open_evaluate_config_and_launch_experiment',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_config_and_launch_experiment', fallbackText?: string): string;
   /** 导出实验明细 */
-  (
-    key: 'cozeloop_open_evaluate_export_experiment_details',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_export_experiment_details', fallbackText?: string): string;
   /** 导出格式 */
   (key: 'evaluate_export_format', fallbackText?: string): string;
   /** 请选择导出格式 */
-  (
-    key: 'cozeloop_open_evaluate_please_select_export_format',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_please_select_export_format', fallbackText?: string): string;
   /** 请选择 Prompt key 和版本号后再查看 */
-  (
-    key: 'cozeloop_open_evaluate_select_prompt_key_version_before_view',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_select_prompt_key_version_before_view', fallbackText?: string): string;
   /** 数据结构 */
   (key: 'cozeloop_open_evaluate_data_structure', fallbackText?: string): string;
   /** 预置Arrary<Object>数据类型，Object数据结构如下。适用于管理图、文等各类模态混排的数据。 */
-  (
-    key: 'cozeloop_open_evaluate_preset_array_object_data_type',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_preset_array_object_data_type', fallbackText?: string): string;
   /** (共有{currentColumnNum}/50列) */
   (
     key: 'data_engine_column_count_info',
@@ -2619,30 +2431,15 @@ interface I18nTranslateFn {
   /** 确认切换？ */
   (key: 'cozeloop_open_evaluate_confirm_switch', fallbackText?: string): string;
   /** 开启后，Object数据类型支持配置校验规则，用于控制数据导入时，如果存在Object数据结构定义之外的字段，该数据是否准入 */
-  (
-    key: 'cozeloop_open_evaluate_enable_object_type_validation_rules',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_enable_object_type_validation_rules', fallbackText?: string): string;
   /** 是否关闭 冗余字段校验 配置项 */
-  (
-    key: 'cozeloop_open_evaluate_confirm_disable_redundant_field_validation',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_confirm_disable_redundant_field_validation', fallbackText?: string): string;
   /** 关闭后 冗余字段校验 配置将采用默认配置“否”，确定关闭吗？ */
-  (
-    key: 'cozeloop_open_evaluate_disable_redundant_validation_default_no',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_disable_redundant_validation_default_no', fallbackText?: string): string;
   /** 导入数据时，在完成校验后对数据的加工操作。 */
-  (
-    key: 'cozeloop_open_evaluate_data_processing_after_validation_import',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_data_processing_after_validation_import', fallbackText?: string): string;
   /** 导入数据时，是否移除数据结构定义之外字段 */
-  (
-    key: 'cozeloop_open_evaluate_remove_fields_outside_structure_on_import',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_remove_fields_outside_structure_on_import', fallbackText?: string): string;
   /** 描述：{placeholder1} */
   (
     key: 'description_{placeholder1}',
@@ -2684,10 +2481,7 @@ interface I18nTranslateFn {
   /** 编辑 */
   (key: 'space_basic_edit_btn', fallbackText?: string): string;
   /** 点击右上角添加数据进行添加 */
-  (
-    key: 'cozeloop_open_evaluate_click_top_right_to_add_data',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_click_top_right_to_add_data', fallbackText?: string): string;
   /** 确认删除已选的{placeholder1}数据项？此操作不可逆 */
   (
     key: 'cozeloop_open_evaluate_confirm_delete_selected_data_irreversible',
@@ -2699,15 +2493,9 @@ interface I18nTranslateFn {
   /** 条数据 */
   (key: 'data_engine_items', fallbackText?: string): string;
   /** 图片大小不能超过20MB */
-  (
-    key: 'cozeloop_open_evaluate_image_size_limit_20mb',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_image_size_limit_20mb', fallbackText?: string): string;
   /** 点击右上角导出按钮进行导出 */
-  (
-    key: 'cozeloop_open_evaluate_click_export_button_top_right',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_click_export_button_top_right', fallbackText?: string): string;
   /** 总条数 {placeholder1} */
   (
     key: 'cozeloop_open_evaluate_total_count_placeholder1',
@@ -2757,27 +2545,15 @@ interface I18nTranslateFn {
     fallbackText?: string,
   ): string;
   /** 所选字段数据类型不一致，请重新选择 */
-  (
-    key: 'cozeloop_open_evaluate_selected_field_type_inconsistent',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_selected_field_type_inconsistent', fallbackText?: string): string;
   /** 该标签选项已禁用，若修改将不再允许被选中 */
-  (
-    key: 'cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable', fallbackText?: string): string;
   /** 选择上一步配置的评测集作为评测对象，适用于该评测集已包含agent输出的场景。 */
-  (
-    key: 'cozeloop_open_evaluate_select_previous_eval_set_as_target',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_select_previous_eval_set_as_target', fallbackText?: string): string;
   /** 请输入integer */
   (key: 'cozeloop_open_evaluate_enter_integer', fallbackText?: string): string;
   /** 请输入文本内容 */
-  (
-    key: 'cozeloop_open_evaluate_enter_text_content',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_enter_text_content', fallbackText?: string): string;
   /** 图片{placeholder1} */
   (
     key: 'cozeloop_open_evaluate_image_placeholder1',
@@ -2789,148 +2565,13 @@ interface I18nTranslateFn {
   /** 上传中... */
   (key: 'cozeloop_open_evaluate_uploading', fallbackText?: string): string;
   /** 正在上传图片... */
-  (
-    key: 'cozeloop_open_evaluate_uploading_image',
-    fallbackText?: string,
-  ): string;
+  (key: 'cozeloop_open_evaluate_uploading_image', fallbackText?: string): string;
   /** 请配置字段映射 */
-  (
-    key: 'evaluate_please_configure_field_mapping',
-    fallbackText?: string,
-  ): string;
+  (key: 'evaluate_please_configure_field_mapping', fallbackText?: string): string;
   /** 参数注入 */
   (key: 'evaluate_parameter_injection', fallbackText?: string): string;
   /** 请求评测对象时，可注入填写的参数，来拿到评测对象的输出结果。如请求环境的泳道、测试账号的 UID 等。 */
-  (
-    key: 'cozeloop_open_evaluate_inject_parameters_for_evaluation_request',
-    fallbackText?: string,
-  ): string;
-  /** LLM评估器 */
-  (key: 'evaluate_llm_evaluator', fallbackText?: string): string;
-  /** Code评估器 */
-  (key: 'evaluate_code_evaluator', fallbackText?: string): string;
-  /** Code 评估器详情 */
-  (key: 'evaluate_code_evaluator_detail', fallbackText?: string): string;
-  /** 正在加载 Code 评估器详情 */
-  (
-    key: 'evaluate_loading_code_evaluator_detail',
-    fallbackText?: string,
-  ): string;
-  /** JSON 序列化错误: */
-  (key: 'evaluate_json_serialize_error', fallbackText?: string): string;
-  /** JSON 解析错误: */
-  (key: 'evaluate_json_parse_error', fallbackText?: string): string;
-  /** 基于评测集 */
-  (key: 'evaluate_based_on_evaluation_set', fallbackText?: string): string;
-  /** 自定义 */
-  (key: 'evaluate_custom', fallbackText?: string): string;
-  /** 从评测集新增数据 */
-  (key: 'evaluate_add_data_from_evaluation_set', fallbackText?: string): string;
-  /** 暂无测试数据 */
-  (key: 'evaluate_no_test_data', fallbackText?: string): string;
-  /** 评估通过 */
-  (key: 'evaluate_validation_passed', fallbackText?: string): string;
-  /** 生成模拟输出 */
-  (key: 'evaluate_generate_mock_output', fallbackText?: string): string;
-  /** 版本 */
-  (key: 'evaluate_version', fallbackText?: string): string;
-  /** 获取评测集数据失败: */
-  (
-    key: 'evaluate_failed_to_get_evaluation_set_data',
-    fallbackText?: string,
-  ): string;
-  /** 如果你的评测集中已经包含评测对象输出，可直接导入你选中的数据 */
-  (
-    key: 'evaluate_import_data_from_eval_set_with_output_tip',
-    fallbackText?: string,
-  ): string;
-  /** 请选择评测对象和版本 */
-  (
-    key: 'evaluate_please_select_target_and_version',
-    fallbackText?: string,
-  ): string;
-  /** 原因: */
-  (key: 'evaluate_reason', fallbackText?: string): string;
-  /** 未知错误 */
-  (key: 'evaluate_unknown_error', fallbackText?: string): string;
-  /** 台湾省面积是多少？ */
-  (key: 'evaluate_test_taiwan_area_question', fallbackText?: string): string;
-  /** 台湾省由中国第一大岛台湾岛与兰屿、绿岛、钓鱼岛等附属岛屿和澎湖列岛等80多个岛屿组成，总面积约3.6万平方千米。其中台湾岛面积约3.58万平方千米。 */
-  (key: 'evaluate_test_taiwan_area_answer', fallbackText?: string): string;
-  /** 选择模板 */
-  (key: 'evaluate_select_template', fallbackText?: string): string;
-  /** 使用自定义创建 */
-  (key: 'evaluate_create_with_custom', fallbackText?: string): string;
-  /** 确定 */
-  (key: 'evaluate_confirm', fallbackText?: string): string;
-  /** 基础信息 */
-  (key: 'evaluate_basic_info', fallbackText?: string): string;
-  /** 名称 */
-  (key: 'evaluate_name', fallbackText?: string): string;
-  /** 配置 */
-  (key: 'evaluate_config', fallbackText?: string): string;
-  /** 请编写执行函数体 */
-  (key: 'evaluate_please_write_function_body', fallbackText?: string): string;
-  /** 请配置测试数据 */
-  (key: 'evaluate_please_configure_test_data', fallbackText?: string): string;
-  /** 调试失败: 未返回结果 */
-  (key: 'evaluate_debug_failed_no_result', fallbackText?: string): string;
-  /** 调试未返回评估结果 */
-  (key: 'evaluate_debug_no_evaluation_result', fallbackText?: string): string;
-  /** 调试失败: */
-  (key: 'evaluate_debug_failed', fallbackText?: string): string;
-  /** 运行中... */
-  (key: 'evaluate_running', fallbackText?: string): string;
-  /** 代码评估器创建成功 */
-  (
-    key: 'evaluate_code_evaluator_created_successfully',
-    fallbackText?: string,
-  ): string;
-  /** 保存失败: */
-  (key: 'evaluate_save_failed', fallbackText?: string): string;
-  /** 保存失败，请重试 */
-  (key: 'evaluate_save_failed_please_retry', fallbackText?: string): string;
-  /** 表单验证失败: */
-  (key: 'evaluate_form_validation_failed', fallbackText?: string): string;
-  /** 未命名模板 */
-  (key: 'evaluate_unnamed_template', fallbackText?: string): string;
-  /** 试运行 */
-  (key: 'evaluate_trial_run', fallbackText?: string): string;
-  /** 提交前代码检查 */
-  (key: 'evaluate_pre_submit_code_check', fallbackText?: string): string;
-  /** 检查 */
-  (key: 'evaluate_check', fallbackText?: string): string;
-  /** 重新检查 */
-  (key: 'evaluate_recheck', fallbackText?: string): string;
-  /** 编程语言 */
-  (key: 'evaluate_programming_language', fallbackText?: string): string;
-  /** 使用模板 */
-  (key: 'evaluate_used_template', fallbackText?: string): string;
-  /** 代码内容 */
-  (key: 'evaluate_code_content', fallbackText?: string): string;
-  /** 暂无配置信息 */
-  (key: 'evaluate_no_config_info', fallbackText?: string): string;
-  /** 调试失败: 未返回评估结果 */
-  (
-    key: 'evaluate_debug_failed_no_evaluation_result',
-    fallbackText?: string,
-  ): string;
-  /** 你可以直接使用home */
-  (key: 'evaluate_you_can_use_directly', fallbackText?: string): string;
-  /** 全屏 */
-  (key: 'evaluate_full_screen', fallbackText?: string): string;
-  /** 选择模板 */
-  (key: 'evaluate_template_select', fallbackText?: string): string;
-  /** 执行函数体 */
-  (key: 'evaluate_func_body', fallbackText?: string): string;
-  /** 测试数据：turn */
-  (key: 'evaluate_test_data_turn', fallbackText?: string): string;
-  /** 支持 Python / Javascript 内置库，部分三方库。更多使用说明参见 */
-  (key: 'evaluate_test_data_tutorial_tip', fallbackText?: string): string;
-  /** Code评估器手册 */
-  (key: 'evaluate_test_data_tutorial_link', fallbackText?: string): string;
-  /** 评估器配置 */
-  (key: 'evaluate_evaluator_config', fallbackText?: string): string;
+  (key: 'cozeloop_open_evaluate_inject_parameters_for_evaluation_request', fallbackText?: string): string;
   /** 图片不可访问 */
   (key: 'analytics_image_error', fallbackText?: string): string;
   /** Arguments */

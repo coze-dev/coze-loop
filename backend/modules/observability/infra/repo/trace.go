@@ -163,20 +163,16 @@ func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam)
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		})
 	}
-	filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
-		SubFilter: req.Filters,
-	})
 	st := time.Now()
 	spans, err := t.spansDao.Get(ctx, &ck.QueryParam{
-		QueryType:     ck.QueryTypeGetTrace,
-		Tables:        tableCfg.SpanTables,
-		AnnoTableMap:  tableCfg.AnnoTableMap,
-		StartTime:     time_util.MillSec2MicroSec(req.StartAt),
-		EndTime:       time_util.MillSec2MicroSec(req.EndAt),
-		Filters:       filter,
-		Limit:         req.Limit,
-		OmitColumns:   req.OmitColumns,
-		SelectColumns: req.SelectColumns,
+		QueryType:    ck.QueryTypeGetTrace,
+		Tables:       tableCfg.SpanTables,
+		AnnoTableMap: tableCfg.AnnoTableMap,
+		StartTime:    time_util.MillSec2MicroSec(req.StartAt),
+		EndTime:      time_util.MillSec2MicroSec(req.EndAt),
+		Filters:      filter,
+		Limit:        req.Limit,
+		OmitColumns:  req.OmitColumns,
 	})
 	if err != nil {
 		return nil, err

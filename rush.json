@@ -243,11 +243,6 @@
       "tags": ["team-devops", "level-3"]
     },
     {
-      "packageName": "@cozeloop/route-base",
-      "projectFolder": "frontend/packages/cozeloop/route",
-      "tags": ["level-3"]
-    },
-    {
       "packageName": "@coze-arch/subspace-resolve-plugin",
       "projectFolder": "frontend/packages/arch/subspace-resolve-plugin",
       "tags": ["level-3"]

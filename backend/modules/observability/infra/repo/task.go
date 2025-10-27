@@ -5,7 +5,6 @@ package repo
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -110,14 +109,7 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 	if err != nil {
 		return 0, err
 	}
-	err = v.TaskRedisDao.AddNonFinalTask(ctx, strconv.FormatInt(do.WorkspaceID, 10), id)
-	if err != nil {
-		return createdID, err
-	}
-	err = v.TaskRedisDao.SetTask(ctx, do)
-	if err != nil {
-		return createdID, err
-	}
+
 	return createdID, nil
 }
 
@@ -136,10 +128,6 @@ func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityT
 			return err
 		}
 	}
-	err = v.TaskRedisDao.SetTask(ctx, do)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -151,6 +139,7 @@ func (v *TaskRepoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspac
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -176,10 +165,6 @@ func (v *TaskRepoImpl) DeleteTask(ctx context.Context, do *entity.ObservabilityT
 		return err
 	}
 
-	err = v.TaskRedisDao.RemoveNonFinalTask(ctx, strconv.FormatInt(do.WorkspaceID, 10), do.ID)
-	if err != nil {
-		logs.CtxError(ctx, "remove non final task failed, task_id=%d, err=%v", do.ID, err)
-	}
 	return nil
 }
 
@@ -322,45 +307,4 @@ func (v *TaskRepoImpl) GetTaskRunFailCount(ctx context.Context, taskID, taskRunI
 
 func (v *TaskRepoImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
 	return v.TaskRunRedisDao.IncrTaskRunFailCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
-}
-
-func (v *TaskRepoImpl) ListNonFinalTask(ctx context.Context, spaceID string) ([]int64, error) {
-	return v.TaskRedisDao.ListNonFinalTask(ctx, spaceID)
-}
-
-func (v *TaskRepoImpl) AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
-	return v.TaskRedisDao.AddNonFinalTask(ctx, spaceID, taskID)
-}
-
-func (v *TaskRepoImpl) RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
-	return v.TaskRedisDao.RemoveNonFinalTask(ctx, spaceID, taskID)
-}
-
-func (v *TaskRepoImpl) GetTaskByRedis(ctx context.Context, taskID int64) (*entity.ObservabilityTask, error) {
-	taskDO, err := v.TaskRedisDao.GetTask(ctx, taskID)
-	if err != nil {
-		logs.CtxError(ctx, "Failed to get task", "err", err)
-		return nil, err
-	}
-	if taskDO == nil {
-		taskPO, err := v.TaskDao.GetTask(ctx, taskID, nil, nil)
-		if err != nil {
-			logs.CtxError(ctx, "Failed to get task", "err", err)
-			return nil, err
-		}
-		if taskPO == nil {
-			return nil, nil
-		}
-		taskDO = convertor.TaskPO2DO(taskPO)
-		err = v.TaskRedisDao.SetTask(ctx, taskDO)
-		if err != nil {
-			logs.CtxError(ctx, "Failed to set task", "err", err)
-			return nil, err
-		}
-	}
-	return taskDO, nil
-}
-
-func (v *TaskRepoImpl) SetTask(ctx context.Context, task *entity.ObservabilityTask) error {
-	return v.TaskRedisDao.SetTask(ctx, task)
 }

@@ -11,16 +11,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
-type SourceType string
-
-const (
-	SourceTypeAutoTask SourceType = "auto_task"
-)
-
 type SpanEnv struct {
 	WorkspaceID           int64
 	ThirdPartyWorkspaceID string
-	Source                SourceType
 }
 
 type Factory interface {

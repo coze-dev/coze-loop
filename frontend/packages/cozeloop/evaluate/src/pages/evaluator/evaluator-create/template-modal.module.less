@@ -7,6 +7,13 @@
       .semi-modal-content {
         gap: 0;
         padding: 0;
+
+        .semi-modal-body {
+          & > div,
+          & > div > div {
+            overflow: visible;
+          }
+        }
       }
     }
   }

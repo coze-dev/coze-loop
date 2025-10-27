@@ -7,9 +7,8 @@ export enum EvaluatorType {
   Code = 2,
 }
 export enum LanguageType {
-  Python = "Python",
-  /** 空间 */
-  JS = "JS",
+  Python = 1,
+  JS = 2,
 }
 export enum PromptSourceType {
   BuiltinTemplate = 1,
@@ -50,10 +49,7 @@ export interface PromptEvaluator {
 }
 export interface CodeEvaluator {
   language_type?: LanguageType,
-  code_content?: string,
-  /** code类型评估器模板中code_template_key + language_type是唯一键 */
-  code_template_key?: string,
-  code_template_name?: string,
+  code?: string,
 }
 export interface EvaluatorVersion {
   /** 版本id */
@@ -108,7 +104,6 @@ export interface EvaluatorOutputData {
   evaluator_usage?: EvaluatorUsage,
   evaluator_run_error?: EvaluatorRunError,
   time_consuming_ms?: string,
-  stdout?: string,
 }
 export interface EvaluatorResult {
   score?: number,
@@ -127,14 +122,5 @@ export interface EvaluatorInputData {
   history_messages?: common.Message[],
   input_fields?: {
     [key: string | number]: common.Content
-  },
-  evaluate_dataset_fields?: {
-    [key: string | number]: common.Content
-  },
-  evaluate_target_output_fields?: {
-    [key: string | number]: common.Content
-  },
-  ext?: {
-    [key: string | number]: string
   },
 }

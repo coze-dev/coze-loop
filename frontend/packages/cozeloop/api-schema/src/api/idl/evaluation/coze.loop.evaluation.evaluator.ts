@@ -123,8 +123,6 @@ export interface ListTemplatesResponse {
 export interface GetTemplateInfoRequest {
   builtin_template_type: evaluator.TemplateType,
   builtin_template_key: string,
-  /** code评估器默认python */
-  language_type?: evaluator.LanguageType,
 }
 export interface GetTemplateInfoResponse {
   builtin_template?: evaluator.EvaluatorContent
@@ -161,19 +159,6 @@ export interface DebugEvaluatorRequest {
 export interface DebugEvaluatorResponse {
   /** 输出数据 */
   evaluator_output_data?: evaluator.EvaluatorOutputData
-}
-export interface BatchDebugEvaluatorRequest {
-  /** 空间 id */
-  workspace_id: string,
-  /** 待调试评估器内容 */
-  evaluator_content: evaluator.EvaluatorContent,
-  /** 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace */
-  input_data: evaluator.EvaluatorInputData[],
-  evaluator_type: evaluator.EvaluatorType,
-}
-export interface BatchDebugEvaluatorResponse {
-  /** 输出数据 */
-  evaluator_output_data?: evaluator.EvaluatorOutputData[]
 }
 export interface DeleteEvaluatorRequest {
   evaluator_id?: string,
@@ -229,17 +214,6 @@ export interface UpdateEvaluatorRecordResponse {
 export interface GetDefaultPromptEvaluatorToolsRequest {}
 export interface GetDefaultPromptEvaluatorToolsResponse {
   tools: evaluator.Tool[]
-}
-export interface ValidateEvaluatorRequest {
-  workspace_id: string,
-  evaluator_content: evaluator.EvaluatorContent,
-  evaluator_type: evaluator.EvaluatorType,
-  input_data?: evaluator.EvaluatorInputData,
-}
-export interface ValidateEvaluatorResponse {
-  valid?: boolean,
-  error_message?: string,
-  evaluator_output_data?: evaluator.EvaluatorOutputData,
 }
 /**
  * 评估器
@@ -433,7 +407,7 @@ export const GetTemplateInfo = /*#__PURE__*/createAPI<GetTemplateInfoRequest, Ge
   "name": "GetTemplateInfo",
   "reqType": "GetTemplateInfoRequest",
   "reqMapping": {
-    "query": ["builtin_template_type", "builtin_template_key", "language_type"]
+    "query": ["builtin_template_type", "builtin_template_key"]
   },
   "resType": "GetTemplateInfoResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
@@ -480,19 +454,6 @@ export const DebugEvaluator = /*#__PURE__*/createAPI<DebugEvaluatorRequest, Debu
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** evaluator 调试 */
-export const BatchDebugEvaluator = /*#__PURE__*/createAPI<BatchDebugEvaluatorRequest, BatchDebugEvaluatorResponse>({
-  "url": "/api/evaluation/v1/evaluators/batch_debug",
-  "method": "POST",
-  "name": "BatchDebugEvaluator",
-  "reqType": "BatchDebugEvaluatorRequest",
-  "reqMapping": {
-    "body": ["workspace_id", "evaluator_content", "input_data", "evaluator_type"]
-  },
-  "resType": "BatchDebugEvaluatorResponse",
-  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
-  "service": "evaluationEvaluator"
-});
 /**
  * 评估器执行结果
  * 修正evaluator运行分数
@@ -507,19 +468,6 @@ export const UpdateEvaluatorRecord = /*#__PURE__*/createAPI<UpdateEvaluatorRecor
     "path": ["evaluator_record_id"]
   },
   "resType": "UpdateEvaluatorRecordResponse",
-  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
-  "service": "evaluationEvaluator"
-});
-/** 评估器验证 */
-export const ValidateEvaluator = /*#__PURE__*/createAPI<ValidateEvaluatorRequest, ValidateEvaluatorResponse>({
-  "url": "/api/evaluation/v1/evaluators/validate",
-  "method": "POST",
-  "name": "ValidateEvaluator",
-  "reqType": "ValidateEvaluatorRequest",
-  "reqMapping": {
-    "body": ["workspace_id", "evaluator_content", "evaluator_type", "input_data"]
-  },
-  "resType": "ValidateEvaluatorResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
