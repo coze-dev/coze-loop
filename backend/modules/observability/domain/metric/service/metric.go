@@ -116,7 +116,11 @@ func (m *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 				errorx.WithExtraMsg(fmt.Sprintf("metric definition %s not found", metricName)))
 		}
 		if _, ok := mVal.(entity.IMetricCompound); ok {
-			return m.queryCompoundMetric(ctx, req, mVal)
+			if len(req.MetricsNames) != 1 {
+				return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
+			} else {
+				return m.queryCompoundMetric(ctx, req, mVal)
+			}
 		}
 	}
 	return m.queryMetrics(ctx, req)
