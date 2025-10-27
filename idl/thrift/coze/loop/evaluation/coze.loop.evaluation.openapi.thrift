@@ -275,7 +275,7 @@ service EvaluationOpenAPIService {
     // 创建评测集版本
     CreateEvaluationSetVersionOApiResponse CreateEvaluationSetVersionOApi(1: CreateEvaluationSetVersionOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions")
     // 获取评测集版本列表
-    ListEvaluationSetVersionsOApiResponse ListEvaluationSetVersionsOApi(1: ListEvaluationSetVersionsOApiRequest req) (api.category="evaluation_set", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions"),
+    ListEvaluationSetVersionsOApiResponse ListEvaluationSetVersionsOApi(1: ListEvaluationSetVersionsOApiRequest req) (api.category="evaluation_set", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions")
     // 批量添加评测集数据
     BatchCreateEvaluationSetItemsOApiResponse BatchCreateEvaluationSetItemsOApi(1: BatchCreateEvaluationSetItemsOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
     // 批量更新评测集数据

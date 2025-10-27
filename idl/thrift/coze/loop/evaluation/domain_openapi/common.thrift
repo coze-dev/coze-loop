@@ -76,8 +76,8 @@ struct OpenAPIResponse {
 }
 
 struct OrderBy {
-    1: optional string field,
-    2: optional bool is_asc,
+    1: optional string field
+    2: optional bool is_asc
 }
 
 struct RuntimeParam {
