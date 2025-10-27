@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/samber/lo"
@@ -135,6 +136,7 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 	for i, metric := range metrics {
 		eGroup.Go(func(t int) func() error {
 			return func() error {
+				defer goroutine.Recovery(ctx)
 				sReq := &QueryMetricsReq{
 					PlatformType:    req.PlatformType,
 					WorkspaceID:     req.WorkspaceID,

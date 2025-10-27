@@ -20,6 +20,7 @@ import (
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -60,6 +61,7 @@ func (m *MetricApplication) GetMetrics(ctx context.Context, req *metric.GetMetri
 		eGroup          errgroup.Group
 	)
 	eGroup.Go(func() error {
+		defer goroutine.Recovery(ctx)
 		sReq := m.buildGetMetricsReq(req)
 		sResp, err := m.metricService.QueryMetrics(ctx, sReq)
 		if err != nil {
@@ -71,6 +73,7 @@ func (m *MetricApplication) GetMetrics(ctx context.Context, req *metric.GetMetri
 	compare := mconv.CompareDTO2DO(req.GetCompare())
 	if newStart, newEnd, do := m.shouldCompareWith(req.GetStartTime(), req.GetEndTime(), compare); do {
 		eGroup.Go(func() error {
+			defer goroutine.Recovery(ctx)
 			sReq := m.buildGetMetricsReq(req)
 			sReq.StartTime = newStart
 			sReq.EndTime = newEnd
