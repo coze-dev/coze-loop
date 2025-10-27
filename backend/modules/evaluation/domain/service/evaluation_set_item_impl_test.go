@@ -375,12 +375,12 @@ func TestEvaluationSetItemServiceImpl_BatchUpdateEvaluationSetItems(t *testing.T
 	service := NewEvaluationSetItemServiceImpl(mockDatasetRPCAdapter)
 
 	tests := []struct {
-		name           string
-		param          *entity.BatchUpdateEvaluationSetItemsParam
-		mockSetup      func()
-		wantErrors     []*entity.ItemErrorGroup
+		name            string
+		param           *entity.BatchUpdateEvaluationSetItemsParam
+		mockSetup       func()
+		wantErrors      []*entity.ItemErrorGroup
 		wantItemOutputs []*entity.DatasetItemOutput
-		wantErr        bool
+		wantErr         bool
 	}{
 		{
 			name: "成功批量更新评估集项",
@@ -455,8 +455,8 @@ func TestEvaluationSetItemServiceImpl_BatchUpdateEvaluationSetItems(t *testing.T
 							ErrorCount: gptr.Of[int32](1),
 							Details: []*entity.ItemErrorDetail{
 								{
-									Message:   gptr.Of("Field validation error"),
-									Index:     gptr.Of[int32](0),
+									Message: gptr.Of("Field validation error"),
+									Index:   gptr.Of[int32](0),
 								},
 							},
 						},
@@ -469,8 +469,8 @@ func TestEvaluationSetItemServiceImpl_BatchUpdateEvaluationSetItems(t *testing.T
 					ErrorCount: gptr.Of[int32](1),
 					Details: []*entity.ItemErrorDetail{
 						{
-							Message:   gptr.Of("Field validation error"),
-							Index:     gptr.Of[int32](0),
+							Message: gptr.Of("Field validation error"),
+							Index:   gptr.Of[int32](0),
 						},
 					},
 				},
@@ -496,17 +496,17 @@ func TestEvaluationSetItemServiceImpl_BatchUpdateEvaluationSetItems(t *testing.T
 					BatchUpdateDatasetItems(gomock.Any(), gomock.Any()).
 					Return(nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
-			wantErrors:     nil,
+			wantErrors:      nil,
 			wantItemOutputs: nil,
-			wantErr:        true,
+			wantErr:         true,
 		},
 		{
-			name:           "批量更新失败 - 参数为空",
-			param:          nil,
-			mockSetup:      func() {},
-			wantErrors:     nil,
+			name:            "批量更新失败 - 参数为空",
+			param:           nil,
+			mockSetup:       func() {},
+			wantErrors:      nil,
 			wantItemOutputs: nil,
-			wantErr:        true,
+			wantErr:         true,
 		},
 	}
 
