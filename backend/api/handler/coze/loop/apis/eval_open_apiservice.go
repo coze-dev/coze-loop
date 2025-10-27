@@ -8,11 +8,11 @@ package apis
 import (
 	"context"
 
-	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
 	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
 )
 
 var localEvalOpenAPIClient evalopenapiservice.Client
@@ -36,159 +36,59 @@ func ReportEvalTargetInvokeResult(ctx context.Context, c *app.RequestContext) {
 // CreateEvaluationSetOApi .
 // @router /v1/loop/evaluation/evaluation_sets [POST]
 func CreateEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.CreateEvaluationSetOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.CreateEvaluationSetOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.CreateEvaluationSetOApi)
 }
 
 // GetEvaluationSetOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id [GET]
 func GetEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.GetEvaluationSetOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.GetEvaluationSetOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvaluationSetOApi)
 }
 
 // ListEvaluationSetsOApi .
 // @router /v1/loop/evaluation/evaluation_sets [GET]
 func ListEvaluationSetsOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.ListEvaluationSetsOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.ListEvaluationSetsOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetsOApi)
 }
 
 // CreateEvaluationSetVersionOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions [POST]
 func CreateEvaluationSetVersionOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.CreateEvaluationSetVersionOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.CreateEvaluationSetVersionOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.CreateEvaluationSetVersionOApi)
 }
 
 // ListEvaluationSetVersionsOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions [GET]
 func ListEvaluationSetVersionsOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.ListEvaluationSetVersionsOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.ListEvaluationSetVersionsOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetVersionsOApi)
 }
 
 // BatchCreateEvaluationSetItemsOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items [POST]
 func BatchCreateEvaluationSetItemsOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.BatchCreateEvaluationSetItemsOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.BatchCreateEvaluationSetItemsOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.BatchCreateEvaluationSetItemsOApi)
 }
 
 // BatchUpdateEvaluationSetItemsOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items [PUT]
 func BatchUpdateEvaluationSetItemsOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.BatchUpdateEvaluationSetItemsOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.BatchUpdateEvaluationSetItemsOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.BatchUpdateEvaluationSetItemsOApi)
 }
 
 // BatchDeleteEvaluationSetItemsOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items [DELETE]
 func BatchDeleteEvaluationSetItemsOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.BatchDeleteEvaluationSetItemsOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.BatchDeleteEvaluationSetItemsOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.BatchDeleteEvaluationSetItemsOApi)
 }
 
 // ListEvaluationSetVersionItemsOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items [GET]
 func ListEvaluationSetVersionItemsOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.ListEvaluationSetVersionItemsOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.ListEvaluationSetVersionItemsOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluationSetVersionItemsOApi)
 }
 
 // UpdateEvaluationSetSchemaOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema [PUT]
 func UpdateEvaluationSetSchemaOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.UpdateEvaluationSetSchemaOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.UpdateEvaluationSetSchemaOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateEvaluationSetSchemaOApi)
 }
