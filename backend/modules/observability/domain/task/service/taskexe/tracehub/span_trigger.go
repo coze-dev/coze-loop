@@ -30,7 +30,7 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 	// 1.1 Filter out spans that do not belong to any space or bot
 	spaceIDs, botIDs, _ := h.getObjListWithTaskFromCache(ctx)
 	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
-		logs.CtxInfo(ctx, "no space or bot found for span,log_suffix=%s,space_id=%s,bot_id=%s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
+		logs.CtxInfo(ctx, "no space or bot found for span, space_id=%s,bot_id=%s, log_suffix=%s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
 		return nil
 	}
 	// 1.2 Filter out spans of type Evaluator
