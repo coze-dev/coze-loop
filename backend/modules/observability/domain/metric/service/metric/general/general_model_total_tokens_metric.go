@@ -22,7 +22,7 @@ func (m *GeneralModelTotalTokensMetric) Type() entity.MetricType {
 }
 
 func (m *GeneralModelTotalTokensMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *GeneralModelTotalTokensMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

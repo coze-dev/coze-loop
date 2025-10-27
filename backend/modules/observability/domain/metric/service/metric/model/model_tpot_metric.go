@@ -26,7 +26,7 @@ func (m *ModelTPOTMetric) Type() entity.MetricType {
 }
 
 func (m *ModelTPOTMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ModelTPOTMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

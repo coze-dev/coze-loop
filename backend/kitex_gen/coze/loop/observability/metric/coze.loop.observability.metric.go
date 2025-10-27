@@ -1854,9 +1854,259 @@ func (p *GetDrillDownValuesRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
+type DrillDownValue struct {
+	Value       string  `thrift:"value,1,required" frugal:"1,required,string" form:"value,required" json:"value,required" query:"value,required"`
+	DisplayName *string `thrift:"display_name,2,optional" frugal:"2,optional,string" form:"display_name" json:"display_name,omitempty" query:"display_name"`
+}
+
+func NewDrillDownValue() *DrillDownValue {
+	return &DrillDownValue{}
+}
+
+func (p *DrillDownValue) InitDefault() {
+}
+
+func (p *DrillDownValue) GetValue() (v string) {
+	if p != nil {
+		return p.Value
+	}
+	return
+}
+
+var DrillDownValue_DisplayName_DEFAULT string
+
+func (p *DrillDownValue) GetDisplayName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDisplayName() {
+		return DrillDownValue_DisplayName_DEFAULT
+	}
+	return *p.DisplayName
+}
+func (p *DrillDownValue) SetValue(val string) {
+	p.Value = val
+}
+func (p *DrillDownValue) SetDisplayName(val *string) {
+	p.DisplayName = val
+}
+
+var fieldIDToName_DrillDownValue = map[int16]string{
+	1: "value",
+	2: "display_name",
+}
+
+func (p *DrillDownValue) IsSetDisplayName() bool {
+	return p.DisplayName != nil
+}
+
+func (p *DrillDownValue) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetValue bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetValue = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetValue {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_DrillDownValue[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_DrillDownValue[fieldId]))
+}
+
+func (p *DrillDownValue) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Value = _field
+	return nil
+}
+func (p *DrillDownValue) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DisplayName = _field
+	return nil
+}
+
+func (p *DrillDownValue) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("DrillDownValue"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *DrillDownValue) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("value", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Value); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *DrillDownValue) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDisplayName() {
+		if err = oprot.WriteFieldBegin("display_name", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DisplayName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *DrillDownValue) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("DrillDownValue(%+v)", *p)
+
+}
+
+func (p *DrillDownValue) DeepEqual(ano *DrillDownValue) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Value) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.DisplayName) {
+		return false
+	}
+	return true
+}
+
+func (p *DrillDownValue) Field1DeepEqual(src string) bool {
+
+	if strings.Compare(p.Value, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *DrillDownValue) Field2DeepEqual(src *string) bool {
+
+	if p.DisplayName == src {
+		return true
+	} else if p.DisplayName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DisplayName, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type GetDrillDownValuesResponse struct {
-	Values   []string       `thrift:"values,1,optional" frugal:"1,optional,list<string>" form:"values" json:"values,omitempty" query:"values"`
-	BaseResp *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	DrillDownValues []*DrillDownValue `thrift:"drill_down_values,1,optional" frugal:"1,optional,list<DrillDownValue>" form:"drill_down_values" json:"drill_down_values,omitempty" query:"drill_down_values"`
+	BaseResp        *base.BaseResp    `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewGetDrillDownValuesResponse() *GetDrillDownValuesResponse {
@@ -1866,16 +2116,16 @@ func NewGetDrillDownValuesResponse() *GetDrillDownValuesResponse {
 func (p *GetDrillDownValuesResponse) InitDefault() {
 }
 
-var GetDrillDownValuesResponse_Values_DEFAULT []string
+var GetDrillDownValuesResponse_DrillDownValues_DEFAULT []*DrillDownValue
 
-func (p *GetDrillDownValuesResponse) GetValues() (v []string) {
+func (p *GetDrillDownValuesResponse) GetDrillDownValues() (v []*DrillDownValue) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetValues() {
-		return GetDrillDownValuesResponse_Values_DEFAULT
+	if !p.IsSetDrillDownValues() {
+		return GetDrillDownValuesResponse_DrillDownValues_DEFAULT
 	}
-	return p.Values
+	return p.DrillDownValues
 }
 
 var GetDrillDownValuesResponse_BaseResp_DEFAULT *base.BaseResp
@@ -1889,20 +2139,20 @@ func (p *GetDrillDownValuesResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *GetDrillDownValuesResponse) SetValues(val []string) {
-	p.Values = val
+func (p *GetDrillDownValuesResponse) SetDrillDownValues(val []*DrillDownValue) {
+	p.DrillDownValues = val
 }
 func (p *GetDrillDownValuesResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_GetDrillDownValuesResponse = map[int16]string{
-	1:   "values",
+	1:   "drill_down_values",
 	255: "BaseResp",
 }
 
-func (p *GetDrillDownValuesResponse) IsSetValues() bool {
-	return p.Values != nil
+func (p *GetDrillDownValuesResponse) IsSetDrillDownValues() bool {
+	return p.DrillDownValues != nil
 }
 
 func (p *GetDrillDownValuesResponse) IsSetBaseResp() bool {
@@ -1977,14 +2227,14 @@ func (p *GetDrillDownValuesResponse) ReadField1(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	_field := make([]string, 0, size)
+	_field := make([]*DrillDownValue, 0, size)
+	values := make([]DrillDownValue, size)
 	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
 
-		var _elem string
-		if v, err := iprot.ReadString(); err != nil {
+		if err := _elem.Read(iprot); err != nil {
 			return err
-		} else {
-			_elem = v
 		}
 
 		_field = append(_field, _elem)
@@ -1992,7 +2242,7 @@ func (p *GetDrillDownValuesResponse) ReadField1(iprot thrift.TProtocol) error {
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.Values = _field
+	p.DrillDownValues = _field
 	return nil
 }
 func (p *GetDrillDownValuesResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -2037,15 +2287,15 @@ WriteStructEndError:
 }
 
 func (p *GetDrillDownValuesResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetValues() {
-		if err = oprot.WriteFieldBegin("values", thrift.LIST, 1); err != nil {
+	if p.IsSetDrillDownValues() {
+		if err = oprot.WriteFieldBegin("drill_down_values", thrift.LIST, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(p.Values)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.DrillDownValues)); err != nil {
 			return err
 		}
-		for _, v := range p.Values {
-			if err := oprot.WriteString(v); err != nil {
+		for _, v := range p.DrillDownValues {
+			if err := v.Write(oprot); err != nil {
 				return err
 			}
 		}
@@ -2095,7 +2345,7 @@ func (p *GetDrillDownValuesResponse) DeepEqual(ano *GetDrillDownValuesResponse) 
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.Values) {
+	if !p.Field1DeepEqual(ano.DrillDownValues) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -2104,14 +2354,14 @@ func (p *GetDrillDownValuesResponse) DeepEqual(ano *GetDrillDownValuesResponse) 
 	return true
 }
 
-func (p *GetDrillDownValuesResponse) Field1DeepEqual(src []string) bool {
+func (p *GetDrillDownValuesResponse) Field1DeepEqual(src []*DrillDownValue) bool {
 
-	if len(p.Values) != len(src) {
+	if len(p.DrillDownValues) != len(src) {
 		return false
 	}
-	for i, v := range p.Values {
+	for i, v := range p.DrillDownValues {
 		_src := src[i]
-		if strings.Compare(v, _src) != 0 {
+		if !v.DeepEqual(_src) {
 			return false
 		}
 	}

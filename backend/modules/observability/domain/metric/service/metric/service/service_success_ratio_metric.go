@@ -24,7 +24,7 @@ func (m *ServiceSuccessRatioMetric) Type() entity.MetricType {
 }
 
 func (m *ServiceSuccessRatioMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ServiceSuccessRatioMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

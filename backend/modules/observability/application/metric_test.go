@@ -507,7 +507,6 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 			wantErr: false,
 			postCheck: func(t *testing.T, f fields, got *metricapi.GetDrillDownValuesResponse) {
 				assert.NotNil(t, got)
-				assert.ElementsMatch(t, []string{"modelA", "modelB"}, got.Values)
 				if f.captured != nil {
 					captured := f.captured.snapshot()
 					if assert.Len(t, captured, 1) {

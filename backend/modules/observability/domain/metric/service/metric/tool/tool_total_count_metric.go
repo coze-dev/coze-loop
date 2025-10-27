@@ -24,7 +24,7 @@ func (m *ToolTotalCountMetric) Type() entity.MetricType {
 }
 
 func (m *ToolTotalCountMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ToolTotalCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

@@ -25,7 +25,7 @@ func (m *GeneralToolFailRatioMetric) Type() entity.MetricType {
 }
 
 func (m *GeneralToolFailRatioMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *GeneralToolFailRatioMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

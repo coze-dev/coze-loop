@@ -23,7 +23,7 @@ func (m *ServiceTraceCountMetric) Type() entity.MetricType {
 }
 
 func (m *ServiceTraceCountMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ServiceTraceCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

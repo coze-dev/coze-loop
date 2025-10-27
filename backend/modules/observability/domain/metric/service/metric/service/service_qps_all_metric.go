@@ -23,7 +23,7 @@ func (m *ServiceQPSAllMetric) Type() entity.MetricType {
 }
 
 func (m *ServiceQPSAllMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ServiceQPSAllMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

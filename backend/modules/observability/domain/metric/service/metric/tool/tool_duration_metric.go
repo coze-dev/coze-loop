@@ -27,7 +27,7 @@ func (m *ToolDurationMetric) Type() entity.MetricType {
 }
 
 func (m *ToolDurationMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ToolDurationMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

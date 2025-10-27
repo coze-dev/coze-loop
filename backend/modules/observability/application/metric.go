@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aws/smithy-go/ptr"
 	metric2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/metric"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
 	mconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/metric"
@@ -192,7 +193,10 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 			mp := make(map[string]string)
 			_ = json.Unmarshal([]byte(k), &mp)
 			if val := mp["name"]; val != "" {
-				resp.Values = append(resp.Values, val)
+				resp.DrillDownValues = append(resp.DrillDownValues, &metric.DrillDownValue{
+					Value:       val,
+					DisplayName: ptr.String(val),
+				})
 			}
 		}
 	}

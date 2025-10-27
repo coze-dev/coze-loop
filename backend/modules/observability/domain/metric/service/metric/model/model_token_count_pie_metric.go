@@ -25,7 +25,7 @@ func (m *ModelTokenCountPieMetric) Type() entity.MetricType {
 }
 
 func (m *ModelTokenCountPieMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ModelTokenCountPieMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

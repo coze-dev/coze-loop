@@ -38,8 +38,13 @@ struct GetDrillDownValuesRequest {
     255: optional base.Base Base
 }
 
+struct DrillDownValue {
+    1: required string value
+    2: optional string display_name
+}
+
 struct GetDrillDownValuesResponse {
-    1: optional list<string> values
+    1: optional list<DrillDownValue> drill_down_values
 
     255: optional base.BaseResp BaseResp
 }

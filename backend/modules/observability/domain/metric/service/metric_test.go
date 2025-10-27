@@ -404,7 +404,7 @@ func (d *testMetricDefinition) Type() entity.MetricType {
 }
 
 func (d *testMetricDefinition) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (d *testMetricDefinition) Expression(entity.MetricGranularity) *entity.Expression {

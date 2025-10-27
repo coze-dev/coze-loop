@@ -81,6 +81,9 @@ func (p *GetDrillDownValuesRequest) IsValid() error {
 	}
 	return nil
 }
+func (p *DrillDownValue) IsValid() error {
+	return nil
+}
 func (p *GetDrillDownValuesResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {

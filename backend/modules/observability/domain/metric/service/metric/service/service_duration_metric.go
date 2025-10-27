@@ -26,7 +26,7 @@ func (m *ServiceDurationMetric) Type() entity.MetricType {
 }
 
 func (m *ServiceDurationMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ServiceDurationMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

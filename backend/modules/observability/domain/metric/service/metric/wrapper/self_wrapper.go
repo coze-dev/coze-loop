@@ -26,7 +26,7 @@ func (a *SelfWrapper) Type() entity.MetricType {
 }
 
 func (a *SelfWrapper) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (a *SelfWrapper) Expression(granularity entity.MetricGranularity) *entity.Expression {

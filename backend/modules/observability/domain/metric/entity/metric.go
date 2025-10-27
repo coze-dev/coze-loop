@@ -25,7 +25,7 @@ const (
 	MetricTypeSummary    MetricType = "summary"     // 汇总
 	MetricTypePie        MetricType = "pie"         // 饼图
 
-	MetricSourceCK MetricSource = "ck"
+	MetricSourceInnerStorage MetricSource = "storage"
 
 	MetricGranularity1Min  MetricGranularity = "1min"
 	MetricGranularity1Hour MetricGranularity = "1hour"

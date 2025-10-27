@@ -25,7 +25,7 @@ func (m *ModelSystemTokenCountMetric) Type() entity.MetricType {
 }
 
 func (m *ModelSystemTokenCountMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ModelSystemTokenCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

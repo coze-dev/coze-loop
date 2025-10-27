@@ -24,7 +24,7 @@ func (m *ServiceExecutionStepCountMetric) Type() entity.MetricType {
 }
 
 func (m *ServiceExecutionStepCountMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ServiceExecutionStepCountMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

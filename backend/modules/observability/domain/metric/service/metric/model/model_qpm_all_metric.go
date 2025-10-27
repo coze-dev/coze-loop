@@ -26,7 +26,7 @@ func (m *ModelQPMAllMetric) Type() entity.MetricType {
 }
 
 func (m *ModelQPMAllMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *ModelQPMAllMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {

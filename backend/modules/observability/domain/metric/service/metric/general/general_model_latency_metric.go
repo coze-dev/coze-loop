@@ -24,7 +24,7 @@ func (m *GeneralModelLatencyMetric) Type() entity.MetricType {
 }
 
 func (m *GeneralModelLatencyMetric) Source() entity.MetricSource {
-	return entity.MetricSourceCK
+	return entity.MetricSourceInnerStorage
 }
 
 func (m *GeneralModelLatencyMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
