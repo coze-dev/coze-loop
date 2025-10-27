@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -79,12 +77,6 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluationSetID, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
-
-	uid := session.UserIDInCtxOrEmpty(ctx)
-	println(uid)
-	appid := session.AppIDInCtxOrEmpty(ctx)
-	println(appid)
-
 	// 参数校验
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
