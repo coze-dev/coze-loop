@@ -4,12 +4,15 @@
 package metric_test
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
+	spanfiltermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	generalmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
@@ -185,12 +188,18 @@ func expandMetricDefinitions(defs []entity.IMetricDefinition) []entity.IMetricDe
 }
 
 func renderExpressions(t *testing.T, defs []entity.IMetricDefinition, gran entity.MetricGranularity) map[string]string {
+	f := spanfiltermocks.NewMockFilter(gomock.NewController(t))
+	f.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, false, nil).AnyTimes()
+	f.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	f.EXPECT().BuildLLMSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	f.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	t.Helper()
 	res := make(map[string]string)
 	for _, def := range defs {
 		_ = def.Type()
 		_ = def.GroupBy()
 		_ = def.Source()
+		_, _ = def.Where(context.Background(), f, nil)
 		res[def.Name()] = renderExpression(t, def, gran)
 	}
 	return res
