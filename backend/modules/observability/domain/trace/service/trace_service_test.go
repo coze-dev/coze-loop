@@ -3018,8 +3018,8 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				annotation := buildAnnotation(req, span)
 				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(annotation, nil)
 
-				var capturedUpsert *repo.UpsertAnnotationParam
-				traceRepoMock.EXPECT().UpsertAnnotation(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.UpsertAnnotationParam) error {
+				var capturedUpsert *repo.InsertAnnotationParam
+				traceRepoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.InsertAnnotationParam) error {
 					capturedUpsert = param
 					return nil
 				})
@@ -3041,7 +3041,6 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 							assert.Len(t, updated.Corrections, 2)
 							assert.InDelta(t, req.Correction.GetScore(), updated.Value.FloatValue, 1e-9)
 							assert.Equal(t, defaultUserID, updated.UpdatedBy)
-							assert.True(t, capturedUpsert.IsSync)
 							assert.Equal(t, "tenant", capturedUpsert.Tenant)
 						}
 						if assert.NotNil(t, capturedUpdate) {
@@ -3087,8 +3086,8 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(annotation, nil)
 				evalMock.EXPECT().UpdateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
 
-				var capturedUpsert *repo.UpsertAnnotationParam
-				traceRepoMock.EXPECT().UpsertAnnotation(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.UpsertAnnotationParam) error {
+				var capturedUpsert *repo.InsertAnnotationParam
+				traceRepoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.InsertAnnotationParam) error {
 					capturedUpsert = param
 					return fmt.Errorf("upsert error")
 				})
