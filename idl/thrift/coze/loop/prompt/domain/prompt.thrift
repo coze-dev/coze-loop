@@ -100,6 +100,7 @@ struct ModelConfig {
     6: optional double presence_penalty
     7: optional double frequency_penalty
     8: optional bool json_mode
+    9: optional string extra
 }
 
 struct Message {

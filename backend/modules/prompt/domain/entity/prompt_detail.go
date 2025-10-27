@@ -177,6 +177,7 @@ type ModelConfig struct {
 	PresencePenalty  *float64 `json:"presence_penalty,omitempty"`
 	FrequencyPenalty *float64 `json:"frequency_penalty,omitempty"`
 	JSONMode         *bool    `json:"json_mode,omitempty"`
+	Extra            *string  `json:"extra,omitempty"`
 }
 
 func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*VariableVal) ([]*Message, error) {

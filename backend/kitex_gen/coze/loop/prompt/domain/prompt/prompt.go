@@ -4579,6 +4579,7 @@ type ModelConfig struct {
 	PresencePenalty  *float64 `thrift:"presence_penalty,6,optional" frugal:"6,optional,double" form:"presence_penalty" json:"presence_penalty,omitempty" query:"presence_penalty"`
 	FrequencyPenalty *float64 `thrift:"frequency_penalty,7,optional" frugal:"7,optional,double" form:"frequency_penalty" json:"frequency_penalty,omitempty" query:"frequency_penalty"`
 	JSONMode         *bool    `thrift:"json_mode,8,optional" frugal:"8,optional,bool" form:"json_mode" json:"json_mode,omitempty" query:"json_mode"`
+	Extra            *string  `thrift:"extra,9,optional" frugal:"9,optional,string" form:"extra" json:"extra,omitempty" query:"extra"`
 }
 
 func NewModelConfig() *ModelConfig {
@@ -4683,6 +4684,18 @@ func (p *ModelConfig) GetJSONMode() (v bool) {
 	}
 	return *p.JSONMode
 }
+
+var ModelConfig_Extra_DEFAULT string
+
+func (p *ModelConfig) GetExtra() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return ModelConfig_Extra_DEFAULT
+	}
+	return *p.Extra
+}
 func (p *ModelConfig) SetModelID(val *int64) {
 	p.ModelID = val
 }
@@ -4707,6 +4720,9 @@ func (p *ModelConfig) SetFrequencyPenalty(val *float64) {
 func (p *ModelConfig) SetJSONMode(val *bool) {
 	p.JSONMode = val
 }
+func (p *ModelConfig) SetExtra(val *string) {
+	p.Extra = val
+}
 
 var fieldIDToName_ModelConfig = map[int16]string{
 	1: "model_id",
@@ -4717,6 +4733,7 @@ var fieldIDToName_ModelConfig = map[int16]string{
 	6: "presence_penalty",
 	7: "frequency_penalty",
 	8: "json_mode",
+	9: "extra",
 }
 
 func (p *ModelConfig) IsSetModelID() bool {
@@ -4749,6 +4766,10 @@ func (p *ModelConfig) IsSetFrequencyPenalty() bool {
 
 func (p *ModelConfig) IsSetJSONMode() bool {
 	return p.JSONMode != nil
+}
+
+func (p *ModelConfig) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -4828,6 +4849,14 @@ func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4950,6 +4979,17 @@ func (p *ModelConfig) ReadField8(iprot thrift.TProtocol) error {
 	p.JSONMode = _field
 	return nil
 }
+func (p *ModelConfig) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Extra = _field
+	return nil
+}
 
 func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4987,6 +5027,10 @@ func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -5151,6 +5195,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *ModelConfig) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Extra); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
 
 func (p *ModelConfig) String() string {
 	if p == nil {
@@ -5188,6 +5250,9 @@ func (p *ModelConfig) DeepEqual(ano *ModelConfig) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.JSONMode) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.Extra) {
 		return false
 	}
 	return true
@@ -5285,6 +5350,18 @@ func (p *ModelConfig) Field8DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.JSONMode != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelConfig) Field9DeepEqual(src *string) bool {
+
+	if p.Extra == src {
+		return true
+	} else if p.Extra == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Extra, *src) != 0 {
 		return false
 	}
 	return true

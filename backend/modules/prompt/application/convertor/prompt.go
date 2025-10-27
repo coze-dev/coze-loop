@@ -411,6 +411,7 @@ func ModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
 		PresencePenalty:  dto.PresencePenalty,
 		FrequencyPenalty: dto.FrequencyPenalty,
 		JSONMode:         dto.JSONMode,
+		Extra:            dto.Extra,
 	}
 }
 
@@ -805,6 +806,7 @@ func ModelConfigDO2DTO(do *entity.ModelConfig) *prompt.ModelConfig {
 		PresencePenalty:  do.PresencePenalty,
 		FrequencyPenalty: do.FrequencyPenalty,
 		JSONMode:         do.JSONMode,
+		Extra:            do.Extra,
 	}
 }
 

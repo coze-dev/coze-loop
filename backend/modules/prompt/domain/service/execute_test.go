@@ -854,3 +854,52 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 		})
 	}
 }
+
+func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
+	t.Parallel()
+	extra := ptr.Of(`{"foo":"bar"}`)
+	prompt := &entity.Prompt{
+		ID:        1,
+		SpaceID:   42,
+		PromptKey: "test_prompt",
+		PromptCommit: &entity.PromptCommit{
+			CommitInfo: &entity.CommitInfo{
+				Version: "v1",
+			},
+			PromptDetail: &entity.PromptDetail{
+				ModelConfig: &entity.ModelConfig{
+					ModelID:  99,
+					Extra:    extra,
+					JSONMode: ptr.Of(true),
+				},
+				PromptTemplate: &entity.PromptTemplate{
+					TemplateType: entity.TemplateTypeNormal,
+					Messages: []*entity.Message{
+						{
+							Role:    entity.RoleSystem,
+							Content: ptr.Of("System prompt"),
+						},
+					},
+				},
+			},
+		},
+	}
+	svc := &PromptServiceImpl{}
+	param := ExecuteParam{
+		Prompt: prompt,
+		Messages: []*entity.Message{
+			{
+				Role:    entity.RoleUser,
+				Content: ptr.Of("Hi"),
+			},
+		},
+		VariableVals: nil,
+		Scenario:     entity.ScenarioPromptDebug,
+	}
+	got, err := svc.prepareLLMCallParam(context.Background(), param)
+	assert.NoError(t, err)
+	if assert.NotNil(t, got.ModelConfig) {
+		assert.Equal(t, extra, got.ModelConfig.Extra)
+		assert.Equal(t, prompt.PromptCommit.PromptDetail.ModelConfig.Extra, got.ModelConfig.Extra)
+	}
+}
