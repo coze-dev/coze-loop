@@ -105,7 +105,7 @@ func TestTaskApplication_CheckTaskName(t *testing.T) {
 			expectErr:  errors.New("service error"),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTaskReadable, strconv.FormatInt(201, 10), false).Return(nil)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(201, 10), false).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().CheckTaskName(gomock.Any(), &svc.CheckTaskNameReq{WorkspaceID: 201, Name: "dup"}).Return(nil, errors.New("service error"))
 				return s, auth
@@ -121,7 +121,7 @@ func TestTaskApplication_CheckTaskName(t *testing.T) {
 			expectResp: &taskapi.CheckTaskNameResponse{Pass: gptr.Of(true)},
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTaskReadable, strconv.FormatInt(301, 10), false).Return(nil)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(301, 10), false).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().CheckTaskName(gomock.Any(), &svc.CheckTaskNameReq{WorkspaceID: 301, Name: "ok"}).Return(&svc.CheckTaskNameResp{Pass: gptr.Of(true)}, nil)
 				return s, auth
@@ -244,7 +244,7 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 			expectErr:  errors.New("auth error"),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTaskWritable, strconv.FormatInt(123, 10), false).Return(errors.New("auth error"))
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, strconv.FormatInt(123, 10), false).Return(errors.New("auth error"))
 				return nil, auth
 			},
 		},
@@ -256,7 +256,7 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 			expectErr:  errors.New("svc error"),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTaskWritable, strconv.FormatInt(123, 10), false).Return(nil)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, strconv.FormatInt(123, 10), false).Return(nil)
 				svcMock := svcmock.NewMockITaskService(ctrl)
 				svcMock.EXPECT().CreateTask(gomock.Any(), gomock.AssignableToTypeOf(&svc.CreateTaskReq{})).Return(nil, errors.New("svc error"))
 				return svcMock, auth
@@ -580,7 +580,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 			expectErr:  errors.New("svc error"),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckTaskPermission(gomock.Any(), rpc.AuthActionTaskWritable, strconv.FormatInt(44, 10), strconv.FormatInt(33, 10)).Return(nil)
+				auth.EXPECT().CheckTaskPermission(gomock.Any(), rpc.AuthActionTraceTaskEdit, strconv.FormatInt(44, 10), strconv.FormatInt(33, 10)).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().UpdateTask(gomock.Any(), &svc.UpdateTaskReq{
 					TaskID:      33,
@@ -598,7 +598,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 			expectResp: taskapi.NewUpdateTaskResponse(),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckTaskPermission(gomock.Any(), rpc.AuthActionTaskWritable, strconv.FormatInt(66, 10), strconv.FormatInt(55, 10)).Return(nil)
+				auth.EXPECT().CheckTaskPermission(gomock.Any(), rpc.AuthActionTraceTaskEdit, strconv.FormatInt(66, 10), strconv.FormatInt(55, 10)).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().UpdateTask(gomock.Any(), &svc.UpdateTaskReq{
 					TaskID:      55,
@@ -699,7 +699,7 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 			expectErr:  errors.New("svc error"),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTaskReadable, strconv.FormatInt(456, 10), false).Return(nil)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(456, 10), false).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().ListTasks(gomock.Any(), &svc.ListTasksReq{
 					WorkspaceID: 456,
@@ -714,7 +714,7 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 			expectResp: &taskapi.ListTasksResponse{Tasks: taskListResp.Tasks, Total: taskListResp.Total},
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTaskReadable, strconv.FormatInt(789, 10), false).Return(nil)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(789, 10), false).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().ListTasks(gomock.Any(), &svc.ListTasksReq{
 					WorkspaceID: 789,
@@ -810,7 +810,7 @@ func TestTaskApplication_GetTask(t *testing.T) {
 			expectErr:  errors.New("svc error"),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTaskReadable, strconv.FormatInt(101, 10), false).Return(nil)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(101, 10), false).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().GetTask(gomock.Any(), &svc.GetTaskReq{WorkspaceID: 101, TaskID: 2}).Return(nil, errors.New("svc error"))
 				return s, auth
@@ -823,7 +823,7 @@ func TestTaskApplication_GetTask(t *testing.T) {
 			expectResp: &taskapi.GetTaskResponse{Task: taskResp.Task},
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTaskReadable, strconv.FormatInt(202, 10), false).Return(nil)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(202, 10), false).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().GetTask(gomock.Any(), &svc.GetTaskReq{WorkspaceID: 202, TaskID: 3}).Return(taskResp, nil)
 				return s, auth
