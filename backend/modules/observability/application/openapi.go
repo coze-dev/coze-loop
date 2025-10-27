@@ -617,6 +617,7 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 		spansSize = loop_span.SizeofSpans(sResp.Spans)
 		logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	}
+
 	return &openapi.SearchTraceTreeOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
 			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
