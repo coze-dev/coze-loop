@@ -130,7 +130,7 @@ func (mr *MockITraceRepoMockRecorder) ListSpans(arg0, arg1 any) *gomock.Call {
 }
 
 // UpsertAnnotation mocks base method.
-func (m *MockITraceRepo) UpsertAnnotation(arg0 context.Context, arg1 *repo.UpsertAnnotationParam) error {
+func (m *MockITraceRepo) UpsertAnnotation(arg0 context.Context, arg1 *repo.InsertAnnotationParam) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpsertAnnotation", arg0, arg1)
 	ret0, _ := ret[0].(error)
