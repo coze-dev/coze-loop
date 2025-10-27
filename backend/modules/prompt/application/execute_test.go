@@ -519,6 +519,7 @@ func TestOverridePromptParams(t *testing.T) {
 				ModelConfig: &entity.ModelConfig{
 					ModelID:     456,
 					Temperature: ptr.Of(0.7),
+					Extra:       ptr.Of(`{"source":"base"}`),
 				},
 			},
 		},
@@ -586,6 +587,7 @@ func TestOverridePromptParams(t *testing.T) {
 						ModelID:     ptr.Of(int64(789)),
 						Temperature: ptr.Of(0.9),
 						MaxTokens:   ptr.Of(int32(2000)),
+						Extra:       ptr.Of(`{"source":"override"}`),
 					},
 				},
 			},
@@ -598,6 +600,7 @@ func TestOverridePromptParams(t *testing.T) {
 							ModelID:     789,
 							Temperature: ptr.Of(0.9),
 							MaxTokens:   ptr.Of(int32(2000)),
+							Extra:       ptr.Of(`{"source":"override"}`),
 						},
 					},
 				}
@@ -651,10 +654,17 @@ func TestOverridePromptParams(t *testing.T) {
 					if tt.args.promptDO.PromptCommit.PromptDetail != nil {
 						promptCopy.PromptCommit.PromptDetail = &entity.PromptDetail{}
 						if tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig != nil {
+							orig := tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig
 							promptCopy.PromptCommit.PromptDetail.ModelConfig = &entity.ModelConfig{
-								ModelID:     tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig.ModelID,
-								Temperature: tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig.Temperature,
-								MaxTokens:   tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig.MaxTokens,
+								ModelID:          orig.ModelID,
+								MaxTokens:        orig.MaxTokens,
+								Temperature:      orig.Temperature,
+								TopK:             orig.TopK,
+								TopP:             orig.TopP,
+								PresencePenalty:  orig.PresencePenalty,
+								FrequencyPenalty: orig.FrequencyPenalty,
+								JSONMode:         orig.JSONMode,
+								Extra:            orig.Extra,
 							}
 						}
 					}
