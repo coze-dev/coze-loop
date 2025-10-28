@@ -203,10 +203,10 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"PublishBuiltinEvaluator": kitex.NewMethodInfo(
-		publishBuiltinEvaluatorHandler,
-		newEvaluatorServicePublishBuiltinEvaluatorArgs,
-		newEvaluatorServicePublishBuiltinEvaluatorResult,
+	"UpdateBuiltinEvaluatorTags": kitex.NewMethodInfo(
+		updateBuiltinEvaluatorTagsHandler,
+		newEvaluatorServiceUpdateBuiltinEvaluatorTagsArgs,
+		newEvaluatorServiceUpdateBuiltinEvaluatorTagsResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -763,10 +763,10 @@ func newEvaluatorServiceDebugBuiltinEvaluatorResult() interface{} {
 	return evaluator.NewEvaluatorServiceDebugBuiltinEvaluatorResult()
 }
 
-func publishBuiltinEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*evaluator.EvaluatorServicePublishBuiltinEvaluatorArgs)
-	realResult := result.(*evaluator.EvaluatorServicePublishBuiltinEvaluatorResult)
-	success, err := handler.(evaluator.EvaluatorService).PublishBuiltinEvaluator(ctx, realArg.Req)
+func updateBuiltinEvaluatorTagsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs)
+	realResult := result.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult)
+	success, err := handler.(evaluator.EvaluatorService).UpdateBuiltinEvaluatorTags(ctx, realArg.Req)
 	if err != nil {
 		return err
 	}
@@ -774,12 +774,12 @@ func publishBuiltinEvaluatorHandler(ctx context.Context, handler interface{}, ar
 	return nil
 }
 
-func newEvaluatorServicePublishBuiltinEvaluatorArgs() interface{} {
-	return evaluator.NewEvaluatorServicePublishBuiltinEvaluatorArgs()
+func newEvaluatorServiceUpdateBuiltinEvaluatorTagsArgs() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateBuiltinEvaluatorTagsArgs()
 }
 
-func newEvaluatorServicePublishBuiltinEvaluatorResult() interface{} {
-	return evaluator.NewEvaluatorServicePublishBuiltinEvaluatorResult()
+func newEvaluatorServiceUpdateBuiltinEvaluatorTagsResult() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateBuiltinEvaluatorTagsResult()
 }
 
 func listEvaluatorTagsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1083,11 +1083,11 @@ func (p *kClient) DebugBuiltinEvaluator(ctx context.Context, req *evaluator.Debu
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) PublishBuiltinEvaluator(ctx context.Context, req *evaluator.PublishBuiltinEvaluatorRequest) (r *evaluator.PublishBuiltinEvaluatorResponse, err error) {
-	var _args evaluator.EvaluatorServicePublishBuiltinEvaluatorArgs
+func (p *kClient) UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest) (r *evaluator.UpdateBuiltinEvaluatorTagsResponse, err error) {
+	var _args evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs
 	_args.Req = req
-	var _result evaluator.EvaluatorServicePublishBuiltinEvaluatorResult
-	if err = p.c.Call(ctx, "PublishBuiltinEvaluator", &_args, &_result); err != nil {
+	var _result evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult
+	if err = p.c.Call(ctx, "UpdateBuiltinEvaluatorTags", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -6,7 +6,6 @@ package evaluator
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/bytedance/gg/gptr"
@@ -59,24 +58,24 @@ func (r *EvaluatorRepoImpl) SubmitEvaluatorVersion(ctx context.Context, evaluato
 		if err != nil {
 			return err
 		}
-        err = r.evaluatorVersionDao.CreateEvaluatorVersion(ctx, evaluatorVersionPO, opt)
+		err = r.evaluatorVersionDao.CreateEvaluatorVersion(ctx, evaluatorVersionPO, opt)
 		if err != nil {
 			return err
 		}
-        // 如果是预置评估器，且携带了标签，则为本次提交的版本ID创建tags
-        if evaluator.Builtin && len(evaluator.Tags) > 0 {
-            // 获取用户ID
-            userID := session.UserIDInCtxOrEmpty(ctx)
-            // 将 map[EvaluatorTagKey][]string 转为 map[string][]string
-            tags := make(map[string][]string)
-            for tagKey, tagValues := range evaluator.Tags {
-                tags[string(tagKey)] = tagValues
-            }
-            // 以提交版本的 evaluator_version_id 作为 source_id
-            if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorVersionPO.ID, int32(entity.EvaluatorTagKeyType_Evaluator), userID, tags, opt); err != nil {
-                return err
-            }
-        }
+		// 如果是预置评估器，且携带了标签，则为本次提交的版本ID创建tags
+		if evaluator.Builtin && len(evaluator.Tags) > 0 {
+			// 获取用户ID
+			userID := session.UserIDInCtxOrEmpty(ctx)
+			// 将 map[EvaluatorTagKey][]string 转为 map[string][]string
+			tags := make(map[string][]string)
+			for tagKey, tagValues := range evaluator.Tags {
+				tags[string(tagKey)] = tagValues
+			}
+			// 以提交版本的 evaluator_version_id 作为 source_id
+			if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorVersionPO.ID, int32(entity.EvaluatorTagKeyType_Evaluator), userID, tags, opt); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 	if err != nil {
@@ -101,127 +100,6 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorDraft(ctx context.Context, evaluator 
 		if err != nil {
 			return err
 		}
-		return nil
-	})
-}
-
-// UpdateBuiltinEvaluatorDraft 更新内置评估器草稿，包括tag的增量更新
-func (r *EvaluatorRepoImpl) UpdateBuiltinEvaluatorDraft(ctx context.Context, evaluator *entity.Evaluator) error {
-	po, err := convertor.ConvertEvaluatorVersionDO2PO(evaluator)
-	if err != nil {
-		return err
-	}
-
-	// 获取用户ID
-	userID := session.UserIDInCtxOrEmpty(ctx)
-
-	return r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
-		opt := db.WithTransaction(tx)
-
-		// 更新Evaluator最新版本
-		err := r.evaluatorDao.UpdateEvaluatorDraftSubmitted(ctx, po.EvaluatorID, false, gptr.Indirect(evaluator.BaseInfo.UpdatedBy.UserID), opt)
-		if err != nil {
-			return err
-		}
-
-		// 更新evaluator版本信息
-		err = r.evaluatorVersionDao.UpdateEvaluatorDraft(ctx, po, opt)
-		if err != nil {
-			return err
-		}
-
-		// 处理tag的增量更新
-		if evaluator.Tags != nil {
-			// 获取草稿版本的ID作为source_id
-			draftVersions, err := r.evaluatorVersionDao.BatchGetEvaluatorDraftByEvaluatorID(ctx, []int64{po.EvaluatorID}, false, opt)
-			if err != nil {
-				return err
-			}
-			if len(draftVersions) == 0 {
-				return fmt.Errorf("draft version not found for evaluator %d", po.EvaluatorID)
-			}
-			draftVersion := draftVersions[0]
-
-			// 获取现有的tags
-			existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{draftVersion.ID}, int32(entity.EvaluatorTagKeyType_Evaluator), opt)
-			if err != nil {
-				return err
-			}
-
-			// 构建现有tags的map
-			existingTagMap := make(map[string]map[string]bool) // tagKey -> {tagValue: true}
-			for _, tag := range existingTags {
-				if existingTagMap[tag.TagKey] == nil {
-					existingTagMap[tag.TagKey] = make(map[string]bool)
-				}
-				existingTagMap[tag.TagKey][tag.TagValue] = true
-			}
-
-			// 构建新tags的map
-			newTagMap := make(map[string]map[string]bool) // tagKey -> {tagValue: true}
-			for tagKey, tagValues := range evaluator.Tags {
-				tagKeyStr := string(tagKey)
-				if newTagMap[tagKeyStr] == nil {
-					newTagMap[tagKeyStr] = make(map[string]bool)
-				}
-				for _, tagValue := range tagValues {
-					newTagMap[tagKeyStr][tagValue] = true
-				}
-			}
-
-			// 找出需要删除的tags（在现有tags中但不在新tags中）
-			tagsToDelete := make(map[string][]string)
-			for tagKey, existingValues := range existingTagMap {
-				if newValues, exists := newTagMap[tagKey]; exists {
-					// 该tagKey存在，检查需要删除的值
-					for tagValue := range existingValues {
-						if !newValues[tagValue] {
-							tagsToDelete[tagKey] = append(tagsToDelete[tagKey], tagValue)
-						}
-					}
-				} else {
-					// 该tagKey不存在，删除所有值
-					for tagValue := range existingValues {
-						tagsToDelete[tagKey] = append(tagsToDelete[tagKey], tagValue)
-					}
-				}
-			}
-
-			// 找出需要新增的tags（在新tags中但不在现有tags中）
-			tagsToCreate := make(map[string][]string)
-			for tagKey, newValues := range newTagMap {
-				if existingValues, exists := existingTagMap[tagKey]; exists {
-					// 该tagKey存在，检查需要新增的值
-					for tagValue := range newValues {
-						if !existingValues[tagValue] {
-							tagsToCreate[tagKey] = append(tagsToCreate[tagKey], tagValue)
-						}
-					}
-				} else {
-					// 该tagKey不存在，新增所有值
-					for tagValue := range newValues {
-						tagsToCreate[tagKey] = append(tagsToCreate[tagKey], tagValue)
-					}
-				}
-			}
-
-			// 删除不需要的tags
-			if len(tagsToDelete) > 0 {
-				err = r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, draftVersion.ID, int32(entity.EvaluatorTagKeyType_Evaluator), tagsToDelete, opt)
-				if err != nil {
-					return err
-				}
-			}
-
-			// 新增需要的tags
-			if len(tagsToCreate) > 0 {
-				err = r.tagDAO.BatchCreateEvaluatorTags(ctx, draftVersion.ID, int32(entity.EvaluatorTagKeyType_Evaluator), userID, tagsToCreate, opt)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
 		return nil
 	})
 }
@@ -299,7 +177,7 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorDraftByEvaluatorID(ctx context.Cont
 	for _, evaluatorVersionPO := range evaluatorVersionPOS {
 		evaluatorID2VersionPO[evaluatorVersionPO.EvaluatorID] = evaluatorVersionPO
 	}
-    evaluatorPOS, err := r.evaluatorDao.BatchGetEvaluatorByID(ctx, ids, includeDeleted, opts...)
+	evaluatorPOS, err := r.evaluatorDao.BatchGetEvaluatorByID(ctx, ids, includeDeleted, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -307,30 +185,30 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorDraftByEvaluatorID(ctx context.Cont
 	for _, evaluatorPO := range evaluatorPOS {
 		evaluatorMap[evaluatorPO.ID] = evaluatorPO
 	}
-    // 如果是预置评估器，收集草稿版本ID用于批量查询tags（以版本ID为source_id）
-    builtinVersionIDs := make([]int64, 0)
-    for _, evaluatorPO := range evaluatorPOS {
-        if evaluatorPO.Builtin == 1 {
-            if evPO, ok := evaluatorID2VersionPO[evaluatorPO.ID]; ok && evPO != nil {
-                builtinVersionIDs = append(builtinVersionIDs, evPO.ID)
-            }
-        }
-    }
-    // 批量查询所有tags
-    var allTags []*model.EvaluatorTag
-    if len(builtinVersionIDs) > 0 {
-        allTags, err = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, builtinVersionIDs, int32(entity.EvaluatorTagKeyType_Evaluator), opts...)
-        if err != nil {
-            allTags = []*model.EvaluatorTag{}
-        }
-    }
-    // 将tags按sourceID分组
-    tagsBySourceID := make(map[int64][]*model.EvaluatorTag)
-    for _, tag := range allTags {
-        tagsBySourceID[tag.SourceID] = append(tagsBySourceID[tag.SourceID], tag)
-    }
+	// 如果是预置评估器，收集草稿版本ID用于批量查询tags（以版本ID为source_id）
+	builtinVersionIDs := make([]int64, 0)
+	for _, evaluatorPO := range evaluatorPOS {
+		if evaluatorPO.Builtin == 1 {
+			if evPO, ok := evaluatorID2VersionPO[evaluatorPO.ID]; ok && evPO != nil {
+				builtinVersionIDs = append(builtinVersionIDs, evPO.ID)
+			}
+		}
+	}
+	// 批量查询所有tags
+	var allTags []*model.EvaluatorTag
+	if len(builtinVersionIDs) > 0 {
+		allTags, err = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, builtinVersionIDs, int32(entity.EvaluatorTagKeyType_Evaluator), opts...)
+		if err != nil {
+			allTags = []*model.EvaluatorTag{}
+		}
+	}
+	// 将tags按sourceID分组
+	tagsBySourceID := make(map[int64][]*model.EvaluatorTag)
+	for _, tag := range allTags {
+		tagsBySourceID[tag.SourceID] = append(tagsBySourceID[tag.SourceID], tag)
+	}
 	evaluatorDOList := make([]*entity.Evaluator, 0, len(evaluatorPOS))
-    for _, evaluatorPO := range evaluatorPOS {
+	for _, evaluatorPO := range evaluatorPOS {
 		evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
 		if evaluatorVersionPO, exist := evaluatorID2VersionPO[evaluatorPO.ID]; exist {
 			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
@@ -338,10 +216,10 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorDraftByEvaluatorID(ctx context.Cont
 				return nil, err
 			}
 			evaluatorDO.SetEvaluatorVersion(evaluatorVersionDO)
-            // 如果是预置评估器，回填该草稿版本的tags（以版本ID为source_id）
-            if evaluatorPO.Builtin == 1 {
-                r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.ID, tagsBySourceID)
-            }
+			// 如果是预置评估器，回填该草稿版本的tags（以版本ID为source_id）
+			if evaluatorPO.Builtin == 1 {
+				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.ID, tagsBySourceID)
+			}
 		}
 		evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 	}
@@ -423,10 +301,7 @@ func (r *EvaluatorRepoImpl) CreateEvaluator(ctx context.Context, do *entity.Eval
 
 	evaluatorVersionPO.EvaluatorID = evaluatorPO.ID
 
-    // 获取用户ID（用于可能的内置评估器 tag 创建）
-    userID := session.UserIDInCtxOrEmpty(ctx)
-
-    err = r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
+	err = r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
 		opt := db.WithTransaction(tx)
 
 		err = r.evaluatorDao.CreateEvaluator(ctx, evaluatorPO, opt)
@@ -439,23 +314,13 @@ func (r *EvaluatorRepoImpl) CreateEvaluator(ctx context.Context, do *entity.Eval
 		if err != nil {
 			return err
 		}
-        evaluatorVersionPO.ID = genIDs[2]
+		evaluatorVersionPO.ID = genIDs[2]
 		evaluatorVersionPO.Version = consts.EvaluatorVersionDraftKey
 		evaluatorVersionPO.Description = gptr.Of("")
 		err = r.evaluatorVersionDao.CreateEvaluatorVersion(ctx, evaluatorVersionPO, opt)
 		if err != nil {
 			return err
 		}
-        // 如果是内置评估器，创建 tags（以草稿版本ID为 source_id）
-        if do.Builtin && len(do.Tags) > 0 {
-            tags := make(map[string][]string)
-            for tagKey, tagValues := range do.Tags {
-                tags[string(tagKey)] = tagValues
-            }
-            if err = r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorVersionPO.ID, int32(entity.EvaluatorTagKeyType_Evaluator), userID, tags, opt); err != nil {
-                return err
-            }
-        }
 		return nil
 	})
 	if err != nil {
@@ -518,18 +383,79 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorMeta(ctx context.Context, id int64, n
 // UpdateBuiltinEvaluatorMeta 更新内置评估器的 benchmark 和 vendor 字段
 func (r *EvaluatorRepoImpl) UpdateBuiltinEvaluatorMeta(ctx context.Context, id int64, name, description, benchmark, vendor, userID string) error {
 	po := &model.Evaluator{
-		ID:        id,
-		Name:      gptr.Of(name),
+		ID:          id,
+		Name:        gptr.Of(name),
 		Description: gptr.Of(description),
-		Benchmark: gptr.Of(benchmark),
-		Vendor:    gptr.Of(vendor),
-		UpdatedBy: userID,
+		Benchmark:   gptr.Of(benchmark),
+		Vendor:      gptr.Of(vendor),
+		UpdatedBy:   userID,
 	}
 	err := r.evaluatorDao.UpdateBuiltinEvaluatorMeta(ctx, po)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// UpdateEvaluatorVersionTags 根据版本ID全量更新标签：不存在的新增，不在传入列表中的删除
+func (r *EvaluatorRepoImpl) UpdateEvaluatorVersionTags(ctx context.Context, versionID int64, tags map[entity.EvaluatorTagKey][]string) error {
+	return r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
+		opt := db.WithTransaction(tx)
+		// 查询当前已有标签
+		existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{versionID}, int32(entity.EvaluatorTagKeyType_Evaluator), opt)
+		if err != nil {
+			return err
+		}
+		// 构建现有集合
+		existing := make(map[string]map[string]bool)
+		for _, t := range existingTags {
+			if _, ok := existing[t.TagKey]; !ok {
+				existing[t.TagKey] = make(map[string]bool)
+			}
+			existing[t.TagKey][t.TagValue] = true
+		}
+		// 目标集
+		target := make(map[string]map[string]bool)
+		for k, vs := range tags {
+			kstr := string(k)
+			if _, ok := target[kstr]; !ok {
+				target[kstr] = make(map[string]bool)
+			}
+			for _, v := range vs {
+				target[kstr][v] = true
+			}
+		}
+		// 计算需要删除
+		del := make(map[string][]string)
+		for k, vals := range existing {
+			for v := range vals {
+				if !target[k][v] {
+					del[k] = append(del[k], v)
+				}
+			}
+		}
+		if len(del) > 0 {
+			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, versionID, int32(entity.EvaluatorTagKeyType_Evaluator), del, opt); err != nil {
+				return err
+			}
+		}
+		// 计算需要新增
+		add := make(map[string][]string)
+		for k, vals := range target {
+			for v := range vals {
+				if !existing[k][v] {
+					add[k] = append(add[k], v)
+				}
+			}
+		}
+		if len(add) > 0 {
+			userID := session.UserIDInCtxOrEmpty(ctx)
+			if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, versionID, int32(entity.EvaluatorTagKeyType_Evaluator), userID, add, opt); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // BatchDeleteEvaluator 根据 ID 删除 Evaluator
@@ -633,9 +559,9 @@ func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.
 	// 构建DAO层查询请求
 	daoReq := &mysql.ListEvaluatorRequest{
 		SpaceID:       req.SpaceID,
-		SearchName:    "", // 内置评估器不需要名称搜索
-		CreatorIDs:    []int64{}, // 内置评估器不需要创建者过滤
-		EvaluatorType: []int32{}, // 可以根据需要添加类型过滤
+		SearchName:    "",           // 内置评估器不需要名称搜索
+		CreatorIDs:    []int64{},    // 内置评估器不需要创建者过滤
+		EvaluatorType: []int32{},    // 可以根据需要添加类型过滤
 		IDs:           evaluatorIDs, // 使用筛选后的IDs
 		PageSize:      req.PageSize,
 		PageNum:       req.PageNum,
@@ -711,16 +637,16 @@ func (r *EvaluatorRepoImpl) BatchGetBuiltinEvaluatorByVersionID(ctx context.Cont
 		evaluatorMap[evaluatorPO.ID] = evaluatorPO
 	}
 
-    // 收集所有 evaluator_version 的ID用于查询tags（以版本ID为source_id）
-    versionIDs := make([]int64, 0, len(evaluatorVersionPOS))
-    for _, ev := range evaluatorVersionPOS {
-        versionIDs = append(versionIDs, ev.ID)
-    }
+	// 收集所有 evaluator_version 的ID用于查询tags（以版本ID为source_id）
+	versionIDs := make([]int64, 0, len(evaluatorVersionPOS))
+	for _, ev := range evaluatorVersionPOS {
+		versionIDs = append(versionIDs, ev.ID)
+	}
 
-    // 批量查询所有tags（以版本ID为source_id）
-    var allTags []*model.EvaluatorTag
-    if len(versionIDs) > 0 {
-        allTags, err = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, versionIDs, int32(entity.EvaluatorTagKeyType_Evaluator))
+	// 批量查询所有tags（以版本ID为source_id）
+	var allTags []*model.EvaluatorTag
+	if len(versionIDs) > 0 {
+		allTags, err = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, versionIDs, int32(entity.EvaluatorTagKeyType_Evaluator))
 		if err != nil {
 			// 如果批量查询tags失败，记录错误但继续处理
 			allTags = []*model.EvaluatorTag{}
@@ -769,8 +695,8 @@ func (r *EvaluatorRepoImpl) BatchGetBuiltinEvaluatorByVersionID(ctx context.Cont
 			continue
 		}
 
-        // 设置tags信息（以版本ID为source_id）
-        r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.ID, tagsBySourceID)
+		// 设置tags信息（以版本ID为source_id）
+		r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.ID, tagsBySourceID)
 
 		evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 	}

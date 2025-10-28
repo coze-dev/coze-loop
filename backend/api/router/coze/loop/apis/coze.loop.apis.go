@@ -163,7 +163,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluators.POST("/list_tags", append(_listevaluatortagsMw(handler), apis.ListEvaluatorTags)...)
 				_evaluators.POST("/list_template", append(_listtemplatesMw(handler), apis.ListTemplates)...)
 				_evaluators.POST("/list_template_v2", append(_listtemplatesv2Mw(handler), apis.ListTemplatesV2)...)
-				_evaluators.POST("/publish_builtin", append(_publishbuiltinevaluatorMw(handler), apis.PublishBuiltinEvaluator)...)
+				_evaluators.POST("/update_builtin_tags", append(_updatebuiltinevaluatortagsMw(handler), apis.UpdateBuiltinEvaluatorTags)...)
 				_evaluators.POST("/update_template", append(_updateevaluatortemplateMw(handler), apis.UpdateEvaluatorTemplate)...)
 				_evaluators.POST("/validate", append(_validateevaluatorMw(handler), apis.ValidateEvaluator)...)
 				{

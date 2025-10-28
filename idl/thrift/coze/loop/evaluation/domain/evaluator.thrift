@@ -43,11 +43,7 @@ const EvaluatorTagKey EvaluatorTagKey_Objective = "Objective"      // 评估目�
 const EvaluatorTagKey EvaluatorTagKey_BusinessScenario = "BusinessScenario"   // 业务场景 (安全风控/AI Coding等)
 const EvaluatorTagKey EvaluatorTagKey_BoxType = "BoxType"            // 黑白盒类型
 const EvaluatorTagKey EvaluatorTagKey_Name = "Name"               // 评估器名称
-
-// 上下架操作类型枚举
-typedef string OperationType(ts.enum="true")
-const OperationType OperationType_Publish = "Publish"   // 上架
-const OperationType OperationType_Retreat = "Retreat"   // 下架
+const EvaluatorTagKey EvaluatorTagKey_Visible = "Visible"           // 可见性
 
 struct Tool {
     1: ToolType type (go.tag ='mapstructure:"type"')

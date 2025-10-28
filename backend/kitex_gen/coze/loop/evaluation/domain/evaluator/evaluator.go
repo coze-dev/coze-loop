@@ -28,9 +28,7 @@ const (
 
 	EvaluatorTagKeyName = "Name"
 
-	OperationTypePublish = "Publish"
-
-	OperationTypeRetreat = "Retreat"
+	EvaluatorTagKeyVisible = "Visible"
 
 	FilterLogicOpUnknown = "Unknown"
 
@@ -286,9 +284,6 @@ type LanguageType = string
 
 // Evaluator筛选字段
 type EvaluatorTagKey = string
-
-// 上下架操作类型枚举
-type OperationType = string
 
 // 筛选逻辑操作符
 type FilterLogicOp = string

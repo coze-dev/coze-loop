@@ -258,9 +258,9 @@ func (e *EvaluatorHandlerImpl) CreateEvaluator(ctx context.Context, request *eva
 	// 转换请求参数为领域对象
 	evaluatorDO := evaluatorconvertor.ConvertEvaluatorDTO2DO(request.GetEvaluator())
 
-    // 统一走 CreateEvaluator，是否创建tag由repo层依据 do.Builtin 决定
-    var evaluatorID int64
-    evaluatorID, err = e.evaluatorService.CreateEvaluator(ctx, evaluatorDO, request.GetCid())
+	// 统一走 CreateEvaluator，是否创建tag由repo层依据 do.Builtin 决定
+	var evaluatorID int64
+	evaluatorID, err = e.evaluatorService.CreateEvaluator(ctx, evaluatorDO, request.GetCid())
 	if err != nil {
 		return nil, err
 	}
@@ -421,29 +421,7 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 	evaluatorDTO := evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
 	evaluatorDTO.CurrentVersion.EvaluatorContent = request.EvaluatorContent
 	evaluatorDTO.DraftSubmitted = ptr.Of(false)
-
-	// 根据Builtin参数选择不同的更新方法
-	if request.GetBuiltin() {
-		// auth builtin evaluator
-		err = e.authBuiltinManagement(ctx, request.GetWorkspaceID(), spaceTypeBuiltin)
-		if err != nil {
-			return nil, err
-		}
-		// 处理 Tags 字段
-		if request.Tags != nil {
-			// 将 DTO 的 Tags 转换为 DO 的 Tags
-			tags := make(map[entity.EvaluatorTagKey][]string)
-			for tagKey, tagValues := range request.Tags {
-				convertedTagKey := evaluatorconvertor.ConvertEvaluatorTagKeyDTO2DO(tagKey)
-				tags[convertedTagKey] = tagValues
-			}
-			// 将转换后的 tags 设置到 evaluatorDTO 中
-			evaluatorDTO.Tags = request.Tags // 直接使用 request.Tags，因为 evaluatorDTO.Tags 的类型与 request.Tags 相同
-		}
-		err = e.evaluatorService.UpdateBuiltinEvaluatorDraft(ctx, evaluatorconvertor.ConvertEvaluatorDTO2DO(evaluatorDTO))
-	} else {
-		err = e.evaluatorService.UpdateEvaluatorDraft(ctx, evaluatorconvertor.ConvertEvaluatorDTO2DO(evaluatorDTO))
-	}
+	err = e.evaluatorService.UpdateEvaluatorDraft(ctx, evaluatorconvertor.ConvertEvaluatorDTO2DO(evaluatorDTO))
 	if err != nil {
 		return nil, err
 	}
@@ -1542,24 +1520,30 @@ func (e *EvaluatorHandlerImpl) DebugBuiltinEvaluator(ctx context.Context, reques
 	}, nil
 }
 
-// PublishBuiltinEvaluator 发布预置评估器
-func (e *EvaluatorHandlerImpl) PublishBuiltinEvaluator(ctx context.Context, request *evaluator.PublishBuiltinEvaluatorRequest) (resp *evaluator.PublishBuiltinEvaluatorResponse, err error) {
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(request.GetEvaluatorID(), 10),
-		SpaceID:       0, // 预置评估器不需要空间权限
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
+// UpdateBuiltinEvaluatorTags 发布预置评估器
+func (e *EvaluatorHandlerImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, request *evaluatorservice.UpdateBuiltinEvaluatorTagsRequest) (resp *evaluatorservice.UpdateBuiltinEvaluatorTagsResponse, err error) {
+	// 1) 查 Evaluator 实体，判断是否属于预置评估器管理空间
+	evaluatorDO, err := e.evaluatorService.GetEvaluator(ctx, request.GetWorkspaceID(), request.GetEvaluatorID(), false)
+	if err != nil {
+		return nil, err
+	}
+	if evaluatorDO == nil {
+		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
+	}
+	// 校验是否在builtin管理空间
+	if err := e.authBuiltinManagement(ctx, request.GetWorkspaceID(), spaceTypeBuiltin); err != nil {
+		return nil, err
+	}
+
+	// 2) 调用 service，按 evaluatorID + version 更新标签
+	ev, err := e.evaluatorService.UpdateBuiltinEvaluatorTags(ctx, request.GetEvaluatorID(), request.GetVersion(), evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags()))
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: 实现预置评估器发布逻辑
-	// 这里需要根据具体的预置评估器发布需求来实现
-	return &evaluator.PublishBuiltinEvaluatorResponse{
-		Version: &evaluatordto.EvaluatorVersion{
-			// 返回空的版本信息，具体实现需要根据业务需求
-		},
+	// 3) 返回版本信息
+	return &evaluatorservice.UpdateBuiltinEvaluatorTagsResponse{
+		Version: evaluatorconvertor.ConvertEvaluatorDO2DTO(ev).GetCurrentVersion(),
 	}, nil
 }
 

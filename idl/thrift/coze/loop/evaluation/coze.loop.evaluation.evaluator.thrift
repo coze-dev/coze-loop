@@ -73,8 +73,6 @@ struct UpdateEvaluatorDraftRequest {
     2: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')  // 空间 id
     3: required evaluator.EvaluatorContent evaluator_content (api.body='evaluator_content', go.tag='json:"evaluator_content"')
     4: required evaluator.EvaluatorType evaluator_type (api.body='evaluator_type', go.tag='json:"evaluator_type"')
-    5: optional map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags', go.tag = 'json:"tags"')
-    6: optional bool builtin (api.body='builtin', go.tag = 'json:"builtin"') // 是否预置评估器
 
     255: optional base.Base Base
 }
@@ -412,16 +410,16 @@ struct DebugBuiltinEvaluatorResponse {
     255: base.BaseResp BaseResp
 }
 
-struct PublishBuiltinEvaluatorRequest {
+struct UpdateBuiltinEvaluatorTagsRequest {
     1: required i64 evaluator_id (api.path='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_id"')
     2: required string version (api.body='version')
     3: optional i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
-    4: optional evaluator.OperationType operation_type (api.body='operation_type', go.tag='json:"operation_type"') // 上下架操作类型
+    4: optional map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags', go.tag = 'json:"tags"') // 评估器标签
 
     255: optional base.Base Base
 }
 
-struct PublishBuiltinEvaluatorResponse {
+struct UpdateBuiltinEvaluatorTagsResponse {
     1: required evaluator.EvaluatorVersion version (api.body='version')
 
     255: base.BaseResp BaseResp
@@ -518,8 +516,8 @@ service EvaluatorService {
     // 调试预置评估器
     DebugBuiltinEvaluatorResponse DebugBuiltinEvaluator(1: DebugBuiltinEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug_builtin")// 调试预置评估器
 
-    // 发布预置评估器
-    PublishBuiltinEvaluatorResponse PublishBuiltinEvaluator(1: PublishBuiltinEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/publish_builtin")// 发布预置评估器
+    // 更新预置评估器tag
+    UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/update_builtin_tags")// 更新预置评估器
     // 查询Tag
     ListEvaluatorTagsResponse ListEvaluatorTags(1: ListEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/list_tags")
 

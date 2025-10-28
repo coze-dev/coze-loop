@@ -611,13 +611,13 @@ func (l *LocalEvaluatorService) DebugBuiltinEvaluator(ctx context.Context, req *
 	return result.GetSuccess(), nil
 }
 
-// PublishBuiltinEvaluator
-// 发布预置评估器
-func (l *LocalEvaluatorService) PublishBuiltinEvaluator(ctx context.Context, req *evaluator.PublishBuiltinEvaluatorRequest, callOptions ...callopt.Option) (*evaluator.PublishBuiltinEvaluatorResponse, error) {
+// UpdateBuiltinEvaluatorTags
+// 更新预置评估器tag
+func (l *LocalEvaluatorService) UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest, callOptions ...callopt.Option) (*evaluator.UpdateBuiltinEvaluatorTagsResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*evaluator.EvaluatorServicePublishBuiltinEvaluatorArgs)
-		result := out.(*evaluator.EvaluatorServicePublishBuiltinEvaluatorResult)
-		resp, err := l.impl.PublishBuiltinEvaluator(ctx, arg.Req)
+		arg := in.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs)
+		result := out.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult)
+		resp, err := l.impl.UpdateBuiltinEvaluatorTags(ctx, arg.Req)
 		if err != nil {
 			return err
 		}
@@ -625,9 +625,9 @@ func (l *LocalEvaluatorService) PublishBuiltinEvaluator(ctx context.Context, req
 		return nil
 	})
 
-	arg := &evaluator.EvaluatorServicePublishBuiltinEvaluatorArgs{Req: req}
-	result := &evaluator.EvaluatorServicePublishBuiltinEvaluatorResult{}
-	ctx = l.injectRPCInfo(ctx, "PublishBuiltinEvaluator")
+	arg := &evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs{Req: req}
+	result := &evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateBuiltinEvaluatorTags")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

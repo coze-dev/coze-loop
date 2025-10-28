@@ -298,3 +298,19 @@ func ListEvaluatorTags(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// UpdateBuiltinEvaluatorTags .
+// @router /api/evaluation/v1/evaluators/update_builtin [POST]
+func UpdateBuiltinEvaluatorTags(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.UpdateBuiltinEvaluatorTagsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.UpdateBuiltinEvaluatorTagsResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

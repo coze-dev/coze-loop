@@ -19,9 +19,10 @@ type IEvaluatorRepo interface {
 	BatchDeleteEvaluator(ctx context.Context, ids []int64, userID string) error
 
 	UpdateEvaluatorDraft(ctx context.Context, version *entity.Evaluator) error
-	UpdateBuiltinEvaluatorDraft(ctx context.Context, version *entity.Evaluator) error
 	UpdateEvaluatorMeta(ctx context.Context, id int64, name, description, userID string) error
 	UpdateBuiltinEvaluatorMeta(ctx context.Context, id int64, name, description, benchmark, vendor, userID string) error
+	// UpdateEvaluatorVersionTags 根据版本ID全量更新标签：不存在的新增，不在传入列表中的删除
+	UpdateEvaluatorVersionTags(ctx context.Context, versionID int64, tags map[entity.EvaluatorTagKey][]string) error
 
 	BatchGetEvaluatorMetaByID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
@@ -44,7 +45,7 @@ type ListEvaluatorRequest struct {
 	SearchName    string
 	CreatorIDs    []int64
 	EvaluatorType []entity.EvaluatorType
-	FilterOption  *entity.EvaluatorFilterOption `json:"filter_option,omitempty"`   // 标签筛选条件
+	FilterOption  *entity.EvaluatorFilterOption `json:"filter_option,omitempty"` // 标签筛选条件
 	PageSize      int32
 	PageNum       int32
 	OrderBy       []*entity.OrderBy
@@ -79,6 +80,6 @@ type ListBuiltinEvaluatorRequest struct {
 
 // ListBuiltinEvaluatorResponse 查询内置评估器的响应
 type ListBuiltinEvaluatorResponse struct {
-	TotalCount int64                `json:"total_count"` // 总数量
-	Evaluators []*entity.Evaluator  `json:"evaluators"`   // 评估器列表
+	TotalCount int64               `json:"total_count"` // 总数量
+	Evaluators []*entity.Evaluator `json:"evaluators"`  // 评估器列表
 }

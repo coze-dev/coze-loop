@@ -258,6 +258,34 @@ func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorMeta(ctx context.Context, i
 	return nil
 }
 
+// UpdateBuiltinEvaluatorTags 根据 evaluatorID + version 更新该版本的标签
+func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, version string, tags map[entity.EvaluatorTagKey][]string) (*entity.Evaluator, error) {
+	// 查出该 evaluator 的指定版本，拿到版本ID
+	listReq := &repo.ListEvaluatorVersionRequest{
+		EvaluatorID:   evaluatorID,
+		QueryVersions: []string{version},
+		PageSize:      1,
+		PageNum:       1,
+		OrderBy:       []*entity.OrderBy{},
+	}
+	result, err := e.evaluatorRepo.ListEvaluatorVersion(ctx, listReq)
+	if err != nil {
+		return nil, err
+	}
+	if len(result.Versions) == 0 {
+		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode)
+	}
+	ev := result.Versions[0]
+	versionID := ev.GetEvaluatorVersionID()
+
+	// 调用 repo 更新该版本的标签
+	if err := e.evaluatorRepo.UpdateEvaluatorVersionTags(ctx, versionID, tags); err != nil {
+		return nil, err
+	}
+	// 回填最新标签到返回对象（可选：这里仅返回版本，不做额外查询）
+	return ev, nil
+}
+
 // 校验UpdateEvaluator参数合法性
 func (e *EvaluatorServiceImpl) validateUpdateEvaluatorMetaRequest(ctx context.Context, id, spaceID int64, name string) error {
 	// 校验评估器名称是否已存在
@@ -281,16 +309,6 @@ func (e *EvaluatorServiceImpl) UpdateEvaluatorDraft(ctx context.Context, version
 		UserID: gptr.Of(userIDInContext),
 	})
 	return e.evaluatorRepo.UpdateEvaluatorDraft(ctx, versionDO)
-}
-
-// UpdateBuiltinEvaluatorDraft 修改内置评估器草稿，包括tag的增量更新
-func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorDraft(ctx context.Context, versionDO *entity.Evaluator) error {
-	versionDO.BaseInfo.SetUpdatedAt(gptr.Of(time.Now().UnixMilli()))
-	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-	versionDO.BaseInfo.SetUpdatedBy(&entity.UserInfo{
-		UserID: gptr.Of(userIDInContext),
-	})
-	return e.evaluatorRepo.UpdateBuiltinEvaluatorDraft(ctx, versionDO)
 }
 
 // DeleteEvaluator 删除 evaluator_version

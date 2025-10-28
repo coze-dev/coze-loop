@@ -38,7 +38,7 @@ type Client interface {
 	UpdateEvaluatorTemplate(ctx context.Context, request *evaluator.UpdateEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorTemplateResponse, err error)
 	DeleteEvaluatorTemplate(ctx context.Context, request *evaluator.DeleteEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.DeleteEvaluatorTemplateResponse, err error)
 	DebugBuiltinEvaluator(ctx context.Context, req *evaluator.DebugBuiltinEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.DebugBuiltinEvaluatorResponse, err error)
-	PublishBuiltinEvaluator(ctx context.Context, req *evaluator.PublishBuiltinEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.PublishBuiltinEvaluatorResponse, err error)
+	UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.UpdateBuiltinEvaluatorTagsResponse, err error)
 	ListEvaluatorTags(ctx context.Context, req *evaluator.ListEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.ListEvaluatorTagsResponse, err error)
 }
 
@@ -206,9 +206,9 @@ func (p *kEvaluatorServiceClient) DebugBuiltinEvaluator(ctx context.Context, req
 	return p.kClient.DebugBuiltinEvaluator(ctx, req)
 }
 
-func (p *kEvaluatorServiceClient) PublishBuiltinEvaluator(ctx context.Context, req *evaluator.PublishBuiltinEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.PublishBuiltinEvaluatorResponse, err error) {
+func (p *kEvaluatorServiceClient) UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.UpdateBuiltinEvaluatorTagsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.PublishBuiltinEvaluator(ctx, req)
+	return p.kClient.UpdateBuiltinEvaluatorTags(ctx, req)
 }
 
 func (p *kEvaluatorServiceClient) ListEvaluatorTags(ctx context.Context, req *evaluator.ListEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.ListEvaluatorTagsResponse, err error) {
