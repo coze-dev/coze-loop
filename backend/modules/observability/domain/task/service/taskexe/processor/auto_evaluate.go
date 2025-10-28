@@ -112,7 +112,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, turns is empty")
 		return nil
 	}
-	taskTTL := trigger.Task.GetTaskttl()
+	taskTTL := trigger.Task.GetTaskTTL()
 	_ = p.taskRepo.IncrTaskCount(ctx, trigger.Task.ID, taskTTL)
 	_ = p.taskRepo.IncrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
 	taskCount, _ := p.taskRepo.GetTaskCount(ctx, trigger.Task.ID)
@@ -216,20 +216,20 @@ func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTa
 func (p *AutoEvaluteProcessor) OnUpdateTaskChange(ctx context.Context, currentTask *task_entity.ObservabilityTask, taskOp task.TaskStatus) error {
 	switch taskOp {
 	case task.TaskStatusSuccess:
-		if currentTask.TaskStatus != task.TaskStatusDisabled {
-			currentTask.TaskStatus = task.TaskStatusSuccess
+		if currentTask.TaskStatus != task_entity.TaskStatusDisabled {
+			currentTask.TaskStatus = task_entity.TaskStatusSuccess
 		}
 	case task.TaskStatusRunning:
-		if currentTask.TaskStatus != task.TaskStatusDisabled && currentTask.TaskStatus != task.TaskStatusSuccess {
-			currentTask.TaskStatus = task.TaskStatusRunning
+		if currentTask.TaskStatus != task_entity.TaskStatusDisabled && currentTask.TaskStatus != task_entity.TaskStatusSuccess {
+			currentTask.TaskStatus = task_entity.TaskStatusRunning
 		}
 	case task.TaskStatusDisabled:
-		if currentTask.TaskStatus != task.TaskStatusDisabled {
-			currentTask.TaskStatus = task.TaskStatusDisabled
+		if currentTask.TaskStatus != task_entity.TaskStatusDisabled {
+			currentTask.TaskStatus = task_entity.TaskStatusDisabled
 		}
 	case task.TaskStatusPending:
-		if currentTask.TaskStatus == task.TaskStatusPending || currentTask.TaskStatus == task.TaskStatusUnstarted {
-			currentTask.TaskStatus = task.TaskStatusPending
+		if currentTask.TaskStatus == task_entity.TaskStatusPending || currentTask.TaskStatus == task_entity.TaskStatusUnstarted {
+			currentTask.TaskStatus = task_entity.TaskStatusPending
 		}
 	default:
 		return fmt.Errorf("OnUpdateChangeProcessor, valid taskOp:%s", taskOp)
@@ -315,7 +315,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 			FromEvalSet:        fromEvalSet,
 		})
 	}
-	category := getCategory(currentTask.TaskType)
+	category := getCategory(task.TaskType(currentTask.TaskType))
 	schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
 	var datasetName, exptName string
@@ -394,8 +394,8 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 	taskRun := &task_entity.TaskRun{
 		TaskID:        currentTask.ID,
 		WorkspaceID:   currentTask.WorkspaceID,
-		TaskType:      param.RunType,
-		RunStatus:     task.RunStatusRunning,
+		TaskType:      task_entity.TaskRunType(param.RunType),
+		RunStatus:     task_entity.TaskRunStatusRunning,
 		RunStartAt:    time.UnixMilli(param.RunStartAt),
 		RunEndAt:      time.UnixMilli(param.RunEndAt),
 		CreatedAt:     time.Now(),

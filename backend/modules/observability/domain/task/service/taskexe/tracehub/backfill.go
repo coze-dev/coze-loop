@@ -117,7 +117,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 		return nil, err
 	}
 	taskRunDTO := tconv.TaskRunDO2DTO(ctx, taskRun, nil)
-	proc := h.taskProcessor.GetTaskProcessor(taskConfig.TaskType)
+	proc := h.taskProcessor.GetTaskProcessor(task.TaskType(taskConfig.TaskType))
 	sub := &spanSubscriber{
 		taskID:           taskConfigDO.GetID(),
 		t:                taskConfigDO,

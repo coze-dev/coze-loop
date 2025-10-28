@@ -117,7 +117,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		logs.CtxError(ctx, "task name exist")
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("task name exist"))
 	}
-	proc := t.taskProcessor.GetTaskProcessor(req.Task.TaskType)
+	proc := t.taskProcessor.GetTaskProcessor(task.TaskType(req.Task.TaskType))
 	// 校验配置项是否有效
 	if err = proc.ValidateConfig(ctx, req.Task); err != nil {
 		logs.CtxError(ctx, "ValidateConfig err:%v", err)
@@ -176,7 +176,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		taskDO.Description = req.Description
 	}
 	if req.EffectiveTime != nil {
-		validEffectiveTime, err := tconv.CheckEffectiveTime(ctx, req.EffectiveTime, taskDO.TaskStatus, taskDO.EffectiveTime)
+		validEffectiveTime, err := tconv.CheckEffectiveTime(ctx, req.EffectiveTime, task.TaskStatus(taskDO.TaskStatus), taskDO.EffectiveTime)
 		if err != nil {
 			return err
 		}
@@ -186,17 +186,17 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		taskDO.Sampler.SampleRate = *req.SampleRate
 	}
 	if req.TaskStatus != nil {
-		validTaskStatus, err := tconv.CheckTaskStatus(ctx, *req.TaskStatus, taskDO.TaskStatus)
+		validTaskStatus, err := tconv.CheckTaskStatus(ctx, *req.TaskStatus, task.TaskStatus(taskDO.TaskStatus))
 		if err != nil {
 			return err
 		}
 		if validTaskStatus != "" {
 			if validTaskStatus == task.TaskStatusDisabled {
 				// 禁用操作处理
-				proc := t.taskProcessor.GetTaskProcessor(taskDO.TaskType)
+				proc := t.taskProcessor.GetTaskProcessor(task.TaskType(taskDO.TaskType))
 				var taskRun *entity.TaskRun
 				for _, tr := range taskDO.TaskRuns {
-					if tr.RunStatus == task.RunStatusRunning {
+					if tr.RunStatus == entity.TaskRunStatusRunning {
 						taskRun = tr
 						break
 					}
@@ -213,7 +213,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 					logs.CtxError(ctx, "remove non final task failed, task_id=%d, err=%v", taskDO.ID, err)
 				}
 			}
-			taskDO.TaskStatus = *req.TaskStatus
+			taskDO.TaskStatus = entity.TaskStatus(validTaskStatus)
 		}
 	}
 	taskDO.UpdatedBy = userID
@@ -362,7 +362,7 @@ func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameR
 func (t *TaskServiceImpl) shouldTriggerBackfill(taskDO *entity.ObservabilityTask) bool {
 	// 检查任务类型
 	taskType := taskDO.TaskType
-	if taskType != task.TaskTypeAutoEval && taskType != task.TaskTypeAutoDataReflow {
+	if taskType != entity.TaskTypeAutoEval && taskType != entity.TaskTypeAutoDataReflow {
 		return false
 	}
 

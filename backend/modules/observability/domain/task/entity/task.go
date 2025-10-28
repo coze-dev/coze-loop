@@ -8,8 +8,39 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+)
+
+type TaskStatus string
+
+const (
+	TaskStatusUnstarted TaskStatus = "unstarted"
+	TaskStatusRunning   TaskStatus = "running"
+	TaskStatusFailed    TaskStatus = "failed"
+	TaskStatusSuccess   TaskStatus = "success"
+	TaskStatusPending   TaskStatus = "pending"
+	TaskStatusDisabled  TaskStatus = "disabled"
+)
+
+type TaskType string
+
+const (
+	TaskTypeAutoEval       TaskType = "auto_evaluate"
+	TaskTypeAutoDataReflow TaskType = "auto_data_reflow"
+)
+
+type TaskRunType string
+
+const (
+	TaskRunTypeBackFill TaskRunType = "back_fill"
+	TaskRunTypeNewData  TaskRunType = "new_data"
+)
+
+type TaskRunStatus string
+
+const (
+	TaskRunStatusRunning TaskRunStatus = "running"
+	TaskRunStatusDone    TaskRunStatus = "done"
 )
 
 // do
@@ -18,8 +49,8 @@ type ObservabilityTask struct {
 	WorkspaceID           int64             // 空间ID
 	Name                  string            // 任务名称
 	Description           *string           // 任务描述
-	TaskType              string            // 任务类型
-	TaskStatus            string            // 任务状态
+	TaskType              TaskType          // 任务类型
+	TaskStatus            TaskStatus        // 任务状态
 	TaskDetail            *RunDetail        // 任务运行详情
 	SpanFilter            *SpanFilterFields // span 过滤条件
 	EffectiveTime         *EffectiveTime    // 生效时间
@@ -85,8 +116,8 @@ type TaskRun struct {
 	ID             int64           // Task Run ID
 	TaskID         int64           // Task ID
 	WorkspaceID    int64           // 空间ID
-	TaskType       string          // 任务类型
-	RunStatus      string          // Task Run状态
+	TaskType       TaskRunType     // 任务类型
+	RunStatus      TaskRunStatus   // Task Run状态
 	RunDetail      *RunDetail      // Task Run运行详情
 	BackfillDetail *BackfillDetail // 历史回溯运行详情
 	RunStartAt     time.Time       // run 开始时间
@@ -128,7 +159,7 @@ type DataReflowRunConfig struct {
 
 func (t ObservabilityTask) IsFinished() bool {
 	switch t.TaskStatus {
-	case task.TaskStatusSuccess, task.TaskStatusDisabled, task.TaskStatusPending:
+	case TaskStatusSuccess, TaskStatusDisabled, TaskStatusPending:
 		return true
 	default:
 		return false
@@ -137,7 +168,7 @@ func (t ObservabilityTask) IsFinished() bool {
 
 func (t ObservabilityTask) GetBackfillTaskRun() *TaskRun {
 	for _, taskRunPO := range t.TaskRuns {
-		if taskRunPO.TaskType == task.TaskRunTypeBackFill {
+		if taskRunPO.TaskType == TaskRunTypeBackFill {
 			return taskRunPO
 		}
 	}
@@ -146,14 +177,14 @@ func (t ObservabilityTask) GetBackfillTaskRun() *TaskRun {
 
 func (t ObservabilityTask) GetCurrentTaskRun() *TaskRun {
 	for _, taskRunPO := range t.TaskRuns {
-		if taskRunPO.TaskType == task.TaskRunTypeNewData && taskRunPO.RunStatus == task.TaskStatusRunning {
+		if taskRunPO.TaskType == TaskRunTypeNewData && taskRunPO.RunStatus == TaskRunStatusRunning {
 			return taskRunPO
 		}
 	}
 	return nil
 }
 
-func (t ObservabilityTask) GetTaskttl() int64 {
+func (t ObservabilityTask) GetTaskTTL() int64 {
 	var ttl int64
 	if t.EffectiveTime != nil {
 		ttl = t.EffectiveTime.EndAt - t.EffectiveTime.StartAt

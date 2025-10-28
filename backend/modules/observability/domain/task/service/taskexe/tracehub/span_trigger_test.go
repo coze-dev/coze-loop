@@ -64,8 +64,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	taskDO := &entity.ObservabilityTask{
 		ID:          1,
 		WorkspaceID: workspaceID,
-		TaskType:    task.TaskTypeAutoEval,
-		TaskStatus:  task.TaskStatusRunning,
+		TaskType:    entity.TaskTypeAutoEval,
+		TaskStatus:  entity.TaskStatusRunning,
 		SpanFilter: &entity.SpanFilterFields{
 			PlatformType: common.PlatformTypeLoopAll,
 			SpanListType: common.SpanListTypeAllSpan,
@@ -88,8 +88,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 				ID:          101,
 				TaskID:      1,
 				WorkspaceID: workspaceID,
-				TaskType:    task.TaskRunTypeNewData,
-				RunStatus:   task.TaskStatusRunning,
+				TaskType:    entity.TaskRunTypeNewData,
+				RunStatus:   entity.TaskRunStatusRunning,
 				RunStartAt:  now.Add(-30 * time.Minute),
 				RunEndAt:    now.Add(30 * time.Minute),
 			},
@@ -113,8 +113,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		ID:          201,
 		TaskID:      1,
 		WorkspaceID: workspaceID,
-		TaskType:    task.TaskRunTypeNewData,
-		RunStatus:   task.TaskStatusRunning,
+		TaskType:    entity.TaskRunTypeNewData,
+		RunStatus:   entity.TaskRunStatusRunning,
 		RunStartAt:  now.Add(-15 * time.Minute),
 		RunEndAt:    now.Add(15 * time.Minute),
 	}

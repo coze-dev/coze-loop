@@ -113,8 +113,8 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		reqTask := &entity.ObservabilityTask{
 			WorkspaceID:           123,
 			Name:                  "task",
-			TaskType:              task.TaskTypeAutoEval,
-			TaskStatus:            task.TaskStatusUnstarted,
+			TaskType:              entity.TaskTypeAutoEval,
+			TaskStatus:            entity.TaskStatusUnstarted,
 			BackfillEffectiveTime: &entity.EffectiveTime{StartAt: time.Now().Add(time.Second).UnixMilli(), EndAt: time.Now().Add(2 * time.Second).UnixMilli()},
 			Sampler:               &entity.Sampler{},
 			EffectiveTime:         &entity.EffectiveTime{StartAt: time.Now().Add(time.Second).UnixMilli(), EndAt: time.Now().Add(2 * time.Second).UnixMilli()},
@@ -146,7 +146,7 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		proc := &fakeProcessor{validateErr: errors.New("invalid config")}
 		svc := newTaskServiceWithProcessor(t, repoMock, nil, nil, proc, task.TaskTypeAutoEval)
 
-		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: task.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}}
+		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}}
 		resp, err := svc.CreateTask(context.Background(), &CreateTaskReq{Task: reqTask})
 		assert.Nil(t, resp)
 		assert.Error(t, err)
@@ -166,7 +166,7 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 
 		proc := &fakeProcessor{}
 		svc := newTaskServiceWithProcessor(t, repoMock, nil, nil, proc, task.TaskTypeAutoEval)
-		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: task.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}}
+		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}}
 		resp, err := svc.CreateTask(context.Background(), &CreateTaskReq{Task: reqTask})
 		assert.Nil(t, resp)
 		assert.Error(t, err)
@@ -189,7 +189,7 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 
 		proc := &fakeProcessor{onCreateErr: errors.New("hook fail")}
 		svc := newTaskServiceWithProcessor(t, repoMock, nil, nil, proc, task.TaskTypeAutoEval)
-		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: task.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}}
+		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}}
 		resp, err := svc.CreateTask(context.Background(), &CreateTaskReq{Task: reqTask})
 		assert.Nil(t, resp)
 		assert.EqualError(t, err, "hook fail")
@@ -235,7 +235,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		defer ctrl.Finish()
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
-		taskDO := &entity.ObservabilityTask{TaskType: task.TaskTypeAutoEval, TaskStatus: task.TaskStatusUnstarted, EffectiveTime: &entity.EffectiveTime{}, Sampler: &entity.Sampler{}}
+		taskDO := &entity.ObservabilityTask{TaskType: entity.TaskTypeAutoEval, TaskStatus: entity.TaskStatusUnstarted, EffectiveTime: &entity.EffectiveTime{}, Sampler: &entity.Sampler{}}
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
 
 		proc := &fakeProcessor{}
@@ -258,11 +258,11 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		now := time.Now()
 		taskDO := &entity.ObservabilityTask{
-			TaskType:      task.TaskTypeAutoEval,
-			TaskStatus:    task.TaskStatusUnstarted,
+			TaskType:      entity.TaskTypeAutoEval,
+			TaskStatus:    entity.TaskStatusUnstarted,
 			EffectiveTime: &entity.EffectiveTime{StartAt: startAt, EndAt: startAt + 3600000},
 			Sampler:       &entity.Sampler{SampleRate: 0.1},
-			TaskRuns:      []*entity.TaskRun{{RunStatus: task.RunStatusRunning}},
+			TaskRuns:      []*entity.TaskRun{{RunStatus: entity.TaskRunStatusRunning}},
 			UpdatedAt:     now,
 			UpdatedBy:     "",
 		}
@@ -306,11 +306,11 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		taskDO := &entity.ObservabilityTask{
-			TaskType:      task.TaskTypeAutoEval,
-			TaskStatus:    task.TaskStatusUnstarted,
+			TaskType:      entity.TaskTypeAutoEval,
+			TaskStatus:    entity.TaskStatusUnstarted,
 			EffectiveTime: &entity.EffectiveTime{StartAt: time.Now().UnixMilli(), EndAt: time.Now().Add(time.Hour).UnixMilli()},
 			Sampler:       &entity.Sampler{},
-			TaskRuns:      []*entity.TaskRun{{RunStatus: task.RunStatusRunning}},
+			TaskRuns:      []*entity.TaskRun{{RunStatus: entity.TaskRunStatusRunning}},
 		}
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
@@ -340,11 +340,11 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		startAt := time.Now().Add(2 * time.Hour).UnixMilli()
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		taskDO := &entity.ObservabilityTask{
-			TaskType:      task.TaskTypeAutoEval,
-			TaskStatus:    task.TaskStatusUnstarted,
+			TaskType:      entity.TaskTypeAutoEval,
+			TaskStatus:    entity.TaskStatusUnstarted,
 			EffectiveTime: &entity.EffectiveTime{StartAt: startAt, EndAt: startAt + 3600000},
 			Sampler:       &entity.Sampler{},
-			TaskRuns:      []*entity.TaskRun{{RunStatus: task.RunStatusRunning}},
+			TaskRuns:      []*entity.TaskRun{{RunStatus: entity.TaskRunStatusRunning}},
 		}
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
@@ -402,8 +402,8 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 			ID:            1,
 			Name:          "task",
 			WorkspaceID:   2,
-			TaskType:      task.TaskTypeAutoEval,
-			TaskStatus:    task.TaskStatusUnstarted,
+			TaskType:      entity.TaskTypeAutoEval,
+			TaskStatus:    entity.TaskStatusUnstarted,
 			CreatedBy:     "user1",
 			UpdatedBy:     "user2",
 			EffectiveTime: &entity.EffectiveTime{},
@@ -485,8 +485,8 @@ func TestTaskServiceImpl_GetTask(t *testing.T) {
 		hidden := &loop_span.FilterField{FieldName: "outer_hidden", Values: []string{"v"}, Hidden: true}
 
 		taskDO := &entity.ObservabilityTask{
-			TaskType:      task.TaskTypeAutoEval,
-			TaskStatus:    task.TaskStatusUnstarted,
+			TaskType:      entity.TaskTypeAutoEval,
+			TaskStatus:    entity.TaskStatusUnstarted,
 			CreatedBy:     "user1",
 			UpdatedBy:     "user2",
 			EffectiveTime: &entity.EffectiveTime{},
@@ -574,18 +574,18 @@ func TestTaskServiceImpl_shouldTriggerBackfill(t *testing.T) {
 	service := &TaskServiceImpl{}
 
 	t.Run("task type mismatch", func(t *testing.T) {
-		taskDO := &entity.ObservabilityTask{TaskType: "other"}
+		taskDO := &entity.ObservabilityTask{TaskType: entity.TaskType("other")}
 		assert.False(t, service.shouldTriggerBackfill(taskDO))
 	})
 
 	t.Run("missing effective time", func(t *testing.T) {
-		taskDO := &entity.ObservabilityTask{TaskType: task.TaskTypeAutoEval}
+		taskDO := &entity.ObservabilityTask{TaskType: entity.TaskTypeAutoEval}
 		assert.False(t, service.shouldTriggerBackfill(taskDO))
 	})
 
 	t.Run("valid", func(t *testing.T) {
 		taskDO := &entity.ObservabilityTask{
-			TaskType:              task.TaskTypeAutoDataReflow,
+			TaskType:              entity.TaskTypeAutoDataReflow,
 			BackfillEffectiveTime: &entity.EffectiveTime{StartAt: 1, EndAt: 2},
 		}
 		assert.True(t, service.shouldTriggerBackfill(taskDO))

@@ -126,8 +126,8 @@ func buildTestTask(t *testing.T) *taskentity.ObservabilityTask {
 		WorkspaceID: 202,
 		Name:        "auto-eval",
 		CreatedBy:   "1001",
-		TaskType:    task.TaskTypeAutoEval,
-		TaskStatus:  task.TaskStatusUnstarted,
+		TaskType:    taskentity.TaskTypeAutoEval,
+		TaskStatus:  taskentity.TaskStatusUnstarted,
 		EffectiveTime: &taskentity.EffectiveTime{
 			StartAt: start,
 			EndAt:   end,
@@ -313,8 +313,8 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 			ID:            1001,
 			TaskID:        taskObj.ID,
 			WorkspaceID:   taskObj.WorkspaceID,
-			TaskType:      task.TaskRunTypeNewData,
-			RunStatus:     task.RunStatusRunning,
+			TaskType:      taskentity.TaskRunTypeNewData,
+			RunStatus:     taskentity.TaskRunStatusRunning,
 			TaskRunConfig: buildTaskRunConfig(schemaStr),
 		}
 		span := buildSpan("{\"parts\":[]}")
@@ -431,14 +431,14 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		initial string
+		initial taskentity.TaskStatus
 		op      task.TaskStatus
-		expect  string
+		expect  taskentity.TaskStatus
 	}{
-		{"success", task.TaskStatusRunning, task.TaskStatusSuccess, task.TaskStatusSuccess},
-		{"running", task.TaskStatusPending, task.TaskStatusRunning, task.TaskStatusRunning},
-		{"disable", task.TaskStatusRunning, task.TaskStatusDisabled, task.TaskStatusDisabled},
-		{"pending", task.TaskStatusUnstarted, task.TaskStatusPending, task.TaskStatusPending},
+		{"success", taskentity.TaskStatusRunning, task.TaskStatusSuccess, taskentity.TaskStatusSuccess},
+		{"running", taskentity.TaskStatusPending, task.TaskStatusRunning, taskentity.TaskStatusRunning},
+		{"disable", taskentity.TaskStatusRunning, task.TaskStatusDisabled, taskentity.TaskStatusDisabled},
+		{"pending", taskentity.TaskStatusUnstarted, task.TaskStatusPending, taskentity.TaskStatusPending},
 	}
 
 	for _, tt := range cases {
@@ -555,7 +555,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 	evalAdapter := &fakeEvaluationAdapter{}
 
-	taskObj := &taskentity.ObservabilityTask{TaskStatus: task.TaskStatusRunning, WorkspaceID: 123}
+	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning, WorkspaceID: 123}
 	taskRun := &taskentity.TaskRun{TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{ExptID: 1, ExptRunID: 2}}}
 
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(nil)
@@ -621,7 +621,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 	}
 
 	taskObj := buildTestTask(t)
-	taskObj.TaskStatus = task.TaskStatusPending
+	taskObj.TaskStatus = taskentity.TaskStatusPending
 
 	var runTypes []task.TaskRunType
 	var statuses []task.TaskStatus

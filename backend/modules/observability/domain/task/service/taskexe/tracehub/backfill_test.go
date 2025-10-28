@@ -54,7 +54,7 @@ func TestTraceHubServiceImpl_SetBackfillTask(t *testing.T) {
 	obsTask := &entity.ObservabilityTask{
 		ID:          1,
 		WorkspaceID: 1,
-		TaskType:    task.TaskTypeAutoEval,
+		TaskType:    entity.TaskTypeAutoEval,
 		SpanFilter: &entity.SpanFilterFields{
 			Filters: loop_span.FilterFields{
 				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
@@ -70,8 +70,8 @@ func TestTraceHubServiceImpl_SetBackfillTask(t *testing.T) {
 		ID:          2,
 		TaskID:      1,
 		WorkspaceID: 1,
-		TaskType:    task.TaskRunTypeBackFill,
-		RunStatus:   task.RunStatusRunning,
+		TaskType:    entity.TaskRunTypeBackFill,
+		RunStatus:   entity.TaskRunStatusRunning,
 		RunStartAt:  now.Add(-time.Minute),
 		RunEndAt:    now.Add(time.Minute),
 	}
@@ -207,8 +207,8 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_DispatchError(t *testing.T) {
 		ID:          20,
 		TaskID:      1,
 		WorkspaceID: 1,
-		TaskType:    task.TaskRunTypeNewData,
-		RunStatus:   task.RunStatusRunning,
+		TaskType:    entity.TaskRunTypeNewData,
+		RunStatus:   entity.TaskRunStatusRunning,
 		RunStartAt:  now.Add(-time.Minute),
 		RunEndAt:    now.Add(time.Minute),
 	}
@@ -677,8 +677,8 @@ func newDomainBackfillTaskRun(now time.Time) *entity.TaskRun {
 		ID:          10,
 		TaskID:      1,
 		WorkspaceID: 2,
-		TaskType:    task.TaskRunTypeBackFill,
-		RunStatus:   task.RunStatusRunning,
+		TaskType:    entity.TaskRunTypeBackFill,
+		RunStatus:   entity.TaskRunStatusRunning,
 		RunStartAt:  now.Add(-time.Minute),
 		RunEndAt:    now.Add(time.Minute),
 	}

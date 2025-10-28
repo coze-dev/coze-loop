@@ -123,12 +123,12 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			endTime = time.UnixMilli(taskPO.EffectiveTime.EndAt)
 			startTime = time.UnixMilli(taskPO.EffectiveTime.StartAt)
 		}
-		proc := h.taskProcessor.GetTaskProcessor(taskPO.TaskType)
+		proc := h.taskProcessor.GetTaskProcessor(task.TaskType(taskPO.TaskType))
 		// Task time horizon reached
 		// End when the task end time is reached
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskPO.ID, endTime, startTime)
 		if taskPO.BackfillEffectiveTime != nil && taskPO.EffectiveTime != nil && backfillTaskRun != nil {
-			if time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone {
+			if time.Now().After(endTime) && backfillTaskRun.RunStatus == entity.TaskRunStatusDone {
 				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskPO,
@@ -140,7 +140,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 					continue
 				}
 			}
-			if backfillTaskRun.RunStatus != task.RunStatusDone {
+			if backfillTaskRun.RunStatus != entity.TaskRunStatusDone {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
 				if lockErr != nil || !locked {
@@ -152,7 +152,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 				defer cancel()
 			}
 		} else if taskPO.BackfillEffectiveTime != nil && backfillTaskRun != nil {
-			if backfillTaskRun.RunStatus == task.RunStatusDone {
+			if backfillTaskRun.RunStatus == entity.TaskRunStatusDone {
 				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
 				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 					Task:     taskPO,
@@ -164,7 +164,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 					continue
 				}
 			}
-			if backfillTaskRun.RunStatus != task.RunStatusDone {
+			if backfillTaskRun.RunStatus != entity.TaskRunStatusDone {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
 				if lockErr != nil || !locked {
@@ -190,7 +190,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		}
 		// If the task status is unstarted, create it once the task start time is reached
-		if taskPO.TaskStatus == task.TaskStatusUnstarted && time.Now().After(startTime) {
+		if taskPO.TaskStatus == entity.TaskStatusUnstarted && time.Now().After(startTime) {
 			if !taskPO.Sampler.IsCycle {
 				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
 					CurrentTask: taskPO,
@@ -221,7 +221,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		}
 		// Handle taskRun
-		if taskPO.TaskStatus == task.TaskStatusRunning || taskPO.TaskStatus == task.TaskStatusPending {
+		if taskPO.TaskStatus == entity.TaskStatusRunning || taskPO.TaskStatus == entity.TaskStatusPending {
 			if taskRun == nil {
 				logs.CtxError(ctx, "taskID:%d, taskRun is nil", taskPO.ID)
 				continue
