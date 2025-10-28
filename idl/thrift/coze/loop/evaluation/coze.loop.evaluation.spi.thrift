@@ -154,7 +154,7 @@ struct InvokeEvaluatorRequest {
 
 // invoke custom evaluator response
 struct InvokeEvaluatorResponse {
-    1: optional InvokeEvaluatorOutputData evaluator_output_data
+    1: optional InvokeEvaluatorOutputData output_data
     2: optional InvokeEvaluatorRunStatus status
 
     255: base.BaseResp BaseResp
