@@ -96,6 +96,7 @@ var (
 		obapp.InitTraceIngestionApplication,
 		obapp.InitOpenAPIApplication,
 		obapp.InitTaskApplication,
+		obapp.InitMetricApplication,
 	)
 )
 

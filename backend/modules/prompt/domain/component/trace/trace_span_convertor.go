@@ -14,6 +14,7 @@ func VariableValsToSpanPromptVariables(variables []*entity.VariableVal) []*trace
 	if variables == nil {
 		return nil
 	}
+
 	spanVariables := make([]*tracespec.PromptArgument, 0, len(variables))
 	for _, variable := range variables {
 		if variable == nil {

@@ -153,13 +153,12 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	annotation.CorrectAutoEvaluateScore(event.EvaluatorResult.Correction.Score, event.EvaluatorResult.Correction.Explain, updateBy)
 
 	// Then synchronize the observability data
-	param := &repo.UpsertAnnotationParam{
+	param := &repo.InsertAnnotationParam{
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
-		IsSync:      true,
 	}
-	if err = h.traceRepo.UpsertAnnotation(ctx, param); err != nil {
+	if err = h.traceRepo.InsertAnnotations(ctx, param); err != nil {
 		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)
 		// If the synchronous update fails, compensate asynchronously
 		// TODO: asynchronous processing has issues and may duplicate

@@ -381,8 +381,11 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				confMock.EXPECT().GetTraceFieldMetaInfo(gomock.Any()).Return(&config.TraceFieldMetaInfoCfg{
 					FieldMetas: map[loop_span.PlatformType]map[loop_span.SpanListType][]string{
-						loop_span.PlatformCozeLoop: {
+						loop_span.PlatformDefault: {
 							loop_span.SpanListTypeAllSpan: {"field1", "field2"},
+						},
+						loop_span.PlatformCozeLoop: {
+							loop_span.SpanListTypeAllSpan: {},
 						},
 					},
 					AvailableFields: map[string]*config.FieldMeta{
@@ -390,6 +393,10 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 						"field2": {FieldType: "int"},
 					},
 				}, nil)
+				confMock.EXPECT().GetKeySpanTypes(gomock.Any()).Return(map[string][]string{
+					string(loop_span.PlatformDefault):  {},
+					string(loop_span.PlatformCozeLoop): {},
+				})
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
@@ -413,6 +420,7 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 					"field1": {FieldType: "string"},
 					"field2": {FieldType: "int"},
 				},
+				KeySpanTypeList: []string{},
 			},
 		},
 		{
@@ -458,8 +466,12 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 				fields.taskRepo,
 			)
 			got, err := r.GetTracesMetaInfo(tt.args.ctx, tt.args.req)
-			assert.Equal(t, tt.wantErr, err != nil)
-			assert.Equal(t, got, tt.want)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
 		})
 	}
 }
@@ -2725,10 +2737,13 @@ func TestTraceServiceImpl_SearchTraceOApi(t *testing.T) {
 					Tenants:            []string{"tenant1"},
 					TraceID:            "trace-123",
 					LogID:              "",
+					SpanIDs:            nil,
 					StartAt:            1640995200000,
 					EndAt:              1640995800000,
 					Limit:              100,
 					NotQueryAnnotation: false,
+					Filters:            nil,
+					OmitColumns:        []string{"input", "output"},
 				}).Return(loop_span.SpanList{
 					{
 						TraceID:   "trace-123",
@@ -2884,6 +2899,59 @@ func TestTraceServiceImpl_ListSpansOApi(t *testing.T) {
 	}
 }
 
+func TestTraceFilterProcessorBuilderImpl_BuildListSpansOApiProcessors(t *testing.T) {
+	tests := []struct {
+		name                            string
+		listSpansOApiProcessorFactories []span_processor.Factory
+		want                            int
+		wantErr                         bool
+	}{
+		{
+			name:                            "build processors successfully with empty factories",
+			listSpansOApiProcessorFactories: []span_processor.Factory{},
+			want:                            0,
+			wantErr:                         false,
+		},
+		{
+			name: "build processors successfully with multiple factories",
+			listSpansOApiProcessorFactories: []span_processor.Factory{
+				span_processor.NewCheckProcessorFactory(),
+				span_processor.NewCheckProcessorFactory(),
+			},
+			want:    2,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+			builder := NewTraceFilterProcessorBuilder(
+				filterFactoryMock,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				tt.listSpansOApiProcessorFactories,
+			)
+
+			got, err := builder.BuildListSpansOApiProcessors(context.Background(), span_processor.Settings{
+				WorkspaceId:    123,
+				QueryStartTime: 1640995200000,
+				QueryEndTime:   1640995800000,
+			})
+
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr {
+				assert.Equal(t, tt.want, len(got))
+			}
+		})
+	}
+}
+
 func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 	type fields struct {
 		traceRepo      repo.ITraceRepo
@@ -2950,8 +3018,8 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				annotation := buildAnnotation(req, span)
 				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(annotation, nil)
 
-				var capturedUpsert *repo.UpsertAnnotationParam
-				traceRepoMock.EXPECT().UpsertAnnotation(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.UpsertAnnotationParam) error {
+				var capturedUpsert *repo.InsertAnnotationParam
+				traceRepoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.InsertAnnotationParam) error {
 					capturedUpsert = param
 					return nil
 				})
@@ -2973,7 +3041,6 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 							assert.Len(t, updated.Corrections, 2)
 							assert.InDelta(t, req.Correction.GetScore(), updated.Value.FloatValue, 1e-9)
 							assert.Equal(t, defaultUserID, updated.UpdatedBy)
-							assert.True(t, capturedUpsert.IsSync)
 							assert.Equal(t, "tenant", capturedUpsert.Tenant)
 						}
 						if assert.NotNil(t, capturedUpdate) {
@@ -3019,8 +3086,8 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(annotation, nil)
 				evalMock.EXPECT().UpdateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
 
-				var capturedUpsert *repo.UpsertAnnotationParam
-				traceRepoMock.EXPECT().UpsertAnnotation(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.UpsertAnnotationParam) error {
+				var capturedUpsert *repo.InsertAnnotationParam
+				traceRepoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.InsertAnnotationParam) error {
 					capturedUpsert = param
 					return fmt.Errorf("upsert error")
 				})
@@ -3323,6 +3390,55 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 	}
 }
 
+func TestTraceFilterProcessorBuilderImpl_BuildIngestTraceProcessors_ErrorHandling(t *testing.T) {
+	tests := []struct {
+		name                          string
+		ingestTraceProcessorFactories []span_processor.Factory
+		want                          int
+		wantErr                       bool
+	}{
+		{
+			name:                          "build ingest processors successfully with empty factories",
+			ingestTraceProcessorFactories: []span_processor.Factory{},
+			want:                          0,
+			wantErr:                       false,
+		},
+		{
+			name: "build ingest processors successfully with multiple factories",
+			ingestTraceProcessorFactories: []span_processor.Factory{
+				span_processor.NewCheckProcessorFactory(),
+			},
+			want:    1,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+
+			builder := NewTraceFilterProcessorBuilder(
+				filterFactoryMock,
+				nil,
+				nil,
+				nil,
+				tt.ingestTraceProcessorFactories,
+				nil,
+				nil,
+			)
+
+			got, err := builder.BuildIngestTraceProcessors(context.Background(), span_processor.Settings{})
+
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr {
+				assert.Equal(t, tt.want, len(got))
+			}
+		})
+	}
+}
+
 func TestTraceServiceImpl_correctEvaluatorRecords(t *testing.T) {
 	type testCase struct {
 		name       string
@@ -3417,6 +3533,58 @@ func TestTraceServiceImpl_correctEvaluatorRecords(t *testing.T) {
 			assert.Equal(t, tt.wantErr, err != nil)
 			if tt.after != nil {
 				tt.after(t, captured)
+			}
+		})
+	}
+}
+
+func TestTraceFilterProcessorBuilderImpl_BuildSearchTraceOApiProcessors_ErrorHandling(t *testing.T) {
+	tests := []struct {
+		name                              string
+		searchTraceOApiProcessorFactories []span_processor.Factory
+		want                              int
+		wantErr                           bool
+	}{
+		{
+			name:                              "build search trace oapi processors successfully with empty factories",
+			searchTraceOApiProcessorFactories: []span_processor.Factory{},
+			want:                              0,
+			wantErr:                           false,
+		},
+		{
+			name: "build search trace oapi processors successfully with multiple factories",
+			searchTraceOApiProcessorFactories: []span_processor.Factory{
+				span_processor.NewCheckProcessorFactory(),
+			},
+			want:    1,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+			builder := NewTraceFilterProcessorBuilder(
+				filterFactoryMock,
+				nil,
+				nil,
+				nil,
+				nil,
+				tt.searchTraceOApiProcessorFactories,
+				nil,
+			)
+
+			got, err := builder.BuildSearchTraceOApiProcessors(context.Background(), span_processor.Settings{
+				WorkspaceId:    123,
+				QueryStartTime: 1640995200000,
+				QueryEndTime:   1640995800000,
+			})
+
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr {
+				assert.Equal(t, tt.want, len(got))
 			}
 		})
 	}
