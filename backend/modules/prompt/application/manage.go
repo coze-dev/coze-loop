@@ -633,7 +633,6 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 	}
 	r.Users = convertor.BatchUserInfoDO2DTO(userDOs)
 
-	// 填充commit版本标签映射
 	if len(r.PromptCommitInfos) > 0 {
 		var commitVersions []string
 		for _, commitInfo := range r.PromptCommitInfos {
@@ -642,6 +641,7 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 			}
 		}
 
+		// 填充commit版本标签映射
 		if len(commitVersions) > 0 {
 			// 查询这些版本的标签映射，使用labelService
 			commitLabelMapping, err := app.promptService.BatchGetCommitLabels(ctx, request.GetPromptID(), commitVersions)
@@ -662,6 +662,25 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 			}
 
 			r.CommitVersionLabelMapping = commitVersionLabelMapping
+		}
+		// 填充被引用次数映射
+		if len(commitVersions) > 0 {
+			// 查询这些版本的被引用次数，使用labelService
+			parentPromptCommitVersions, err := app.manageRepo.ListParentPrompt(ctx, repo.ListParentPromptParam{
+				SubPromptID:       request.GetPromptID(),
+				SubPromptVersions: commitVersions,
+			})
+			if err != nil {
+				return r, err
+			}
+
+			// 构建版本到被引用次数的映射
+			commitVersionReferencesMapping := make(map[string]int32)
+			for version, parents := range parentPromptCommitVersions {
+				commitVersionReferencesMapping[version] = int32(len(parents.CommitVersions))
+			}
+
+			r.ParentReferencesMapping = commitVersionReferencesMapping
 		}
 	}
 

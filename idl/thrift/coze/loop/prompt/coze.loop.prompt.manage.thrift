@@ -213,6 +213,7 @@ struct ListCommitRequest {
 struct ListCommitResponse {
     1: optional list<prompt.CommitInfo> prompt_commit_infos
     2: optional map<string, list<prompt.Label>> commit_version_label_mapping
+    3: optional map<string, i32> parent_references_mapping
 
     11: optional list<user.UserInfoDetail> users
 

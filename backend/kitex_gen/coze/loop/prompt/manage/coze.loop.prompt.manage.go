@@ -7924,6 +7924,7 @@ func (p *ListCommitRequest) Field255DeepEqual(src *base.Base) bool {
 type ListCommitResponse struct {
 	PromptCommitInfos         []*prompt.CommitInfo       `thrift:"prompt_commit_infos,1,optional" frugal:"1,optional,list<prompt.CommitInfo>" form:"prompt_commit_infos" json:"prompt_commit_infos,omitempty" query:"prompt_commit_infos"`
 	CommitVersionLabelMapping map[string][]*prompt.Label `thrift:"commit_version_label_mapping,2,optional" frugal:"2,optional,map<string:list<prompt.Label>>" form:"commit_version_label_mapping" json:"commit_version_label_mapping,omitempty" query:"commit_version_label_mapping"`
+	ParentReferencesMapping   map[string]int32           `thrift:"parent_references_mapping,3,optional" frugal:"3,optional,map<string:i32>" form:"parent_references_mapping" json:"parent_references_mapping,omitempty" query:"parent_references_mapping"`
 	Users                     []*user.UserInfoDetail     `thrift:"users,11,optional" frugal:"11,optional,list<user.UserInfoDetail>" form:"users" json:"users,omitempty" query:"users"`
 	HasMore                   *bool                      `thrift:"has_more,127,optional" frugal:"127,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
 	NextPageToken             *string                    `thrift:"next_page_token,128,optional" frugal:"128,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
@@ -7959,6 +7960,18 @@ func (p *ListCommitResponse) GetCommitVersionLabelMapping() (v map[string][]*pro
 		return ListCommitResponse_CommitVersionLabelMapping_DEFAULT
 	}
 	return p.CommitVersionLabelMapping
+}
+
+var ListCommitResponse_ParentReferencesMapping_DEFAULT map[string]int32
+
+func (p *ListCommitResponse) GetParentReferencesMapping() (v map[string]int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetParentReferencesMapping() {
+		return ListCommitResponse_ParentReferencesMapping_DEFAULT
+	}
+	return p.ParentReferencesMapping
 }
 
 var ListCommitResponse_Users_DEFAULT []*user.UserInfoDetail
@@ -8014,6 +8027,9 @@ func (p *ListCommitResponse) SetPromptCommitInfos(val []*prompt.CommitInfo) {
 func (p *ListCommitResponse) SetCommitVersionLabelMapping(val map[string][]*prompt.Label) {
 	p.CommitVersionLabelMapping = val
 }
+func (p *ListCommitResponse) SetParentReferencesMapping(val map[string]int32) {
+	p.ParentReferencesMapping = val
+}
 func (p *ListCommitResponse) SetUsers(val []*user.UserInfoDetail) {
 	p.Users = val
 }
@@ -8030,6 +8046,7 @@ func (p *ListCommitResponse) SetBaseResp(val *base.BaseResp) {
 var fieldIDToName_ListCommitResponse = map[int16]string{
 	1:   "prompt_commit_infos",
 	2:   "commit_version_label_mapping",
+	3:   "parent_references_mapping",
 	11:  "users",
 	127: "has_more",
 	128: "next_page_token",
@@ -8042,6 +8059,10 @@ func (p *ListCommitResponse) IsSetPromptCommitInfos() bool {
 
 func (p *ListCommitResponse) IsSetCommitVersionLabelMapping() bool {
 	return p.CommitVersionLabelMapping != nil
+}
+
+func (p *ListCommitResponse) IsSetParentReferencesMapping() bool {
+	return p.ParentReferencesMapping != nil
 }
 
 func (p *ListCommitResponse) IsSetUsers() bool {
@@ -8089,6 +8110,14 @@ func (p *ListCommitResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8219,6 +8248,35 @@ func (p *ListCommitResponse) ReadField2(iprot thrift.TProtocol) error {
 	p.CommitVersionLabelMapping = _field
 	return nil
 }
+func (p *ListCommitResponse) ReadField3(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]int32, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val int32
+		if v, err := iprot.ReadI32(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.ParentReferencesMapping = _field
+	return nil
+}
 func (p *ListCommitResponse) ReadField11(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -8285,6 +8343,10 @@ func (p *ListCommitResponse) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField11(oprot); err != nil {
@@ -8383,6 +8445,35 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListCommitResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetParentReferencesMapping() {
+		if err = oprot.WriteFieldBegin("parent_references_mapping", thrift.MAP, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.I32, len(p.ParentReferencesMapping)); err != nil {
+			return err
+		}
+		for k, v := range p.ParentReferencesMapping {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteI32(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *ListCommitResponse) writeField11(oprot thrift.TProtocol) (err error) {
 	if p.IsSetUsers() {
@@ -8485,6 +8576,9 @@ func (p *ListCommitResponse) DeepEqual(ano *ListCommitResponse) bool {
 	if !p.Field2DeepEqual(ano.CommitVersionLabelMapping) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.ParentReferencesMapping) {
+		return false
+	}
 	if !p.Field11DeepEqual(ano.Users) {
 		return false
 	}
@@ -8528,6 +8622,19 @@ func (p *ListCommitResponse) Field2DeepEqual(src map[string][]*prompt.Label) boo
 			if !v.DeepEqual(_src1) {
 				return false
 			}
+		}
+	}
+	return true
+}
+func (p *ListCommitResponse) Field3DeepEqual(src map[string]int32) bool {
+
+	if len(p.ParentReferencesMapping) != len(src) {
+		return false
+	}
+	for k, v := range p.ParentReferencesMapping {
+		_src := src[k]
+		if v != _src {
+			return false
 		}
 	}
 	return true
