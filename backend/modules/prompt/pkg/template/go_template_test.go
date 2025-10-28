@@ -177,6 +177,22 @@ func TestInterpolateGoTemplate(t *testing.T) {
 			want:        "Hello, World!",
 			wantErr:     false,
 		},
+		{
+			name:        "template execution error - index out of range",
+			templateStr: "{{index .items 10}}",
+			variables:   map[string]any{"items": []int{1, 2, 3}},
+			want:        "",
+			wantErr:     true,
+			errCode:     prompterr.TemplateRenderErrorCode,
+		},
+		{
+			name:        "template execution error - invalid index operation on non-indexable type",
+			templateStr: "{{index .value 0}}",
+			variables:   map[string]any{"value": 42},
+			want:        "",
+			wantErr:     true,
+			errCode:     prompterr.TemplateRenderErrorCode,
+		},
 	}
 
 	for _, tt := range tests {
