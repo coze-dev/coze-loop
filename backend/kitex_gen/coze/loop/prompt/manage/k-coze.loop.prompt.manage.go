@@ -5699,6 +5699,20 @@ func (p *ListCommitResponse) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 11:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField11(buf[offset:])
@@ -5841,6 +5855,38 @@ func (p *ListCommitResponse) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListCommitResponse) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]int32, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		var _val int32
+		if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	p.ParentReferencesMapping = _field
+	return offset, nil
+}
+
 func (p *ListCommitResponse) FastReadField11(buf []byte) (int, error) {
 	offset := 0
 
@@ -5916,6 +5962,7 @@ func (p *ListCommitResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 		offset += p.fastWriteField127(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField128(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -5929,6 +5976,7 @@ func (p *ListCommitResponse) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 		l += p.field11Length()
 		l += p.field127Length()
 		l += p.field128Length()
@@ -5974,6 +6022,23 @@ func (p *ListCommitResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) 
 			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 		}
 		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
+	}
+	return offset
+}
+
+func (p *ListCommitResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetParentReferencesMapping() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 3)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.ParentReferencesMapping {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += thrift.Binary.WriteI32(buf[offset:], v)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.I32, length)
 	}
 	return offset
 }
@@ -6048,6 +6113,21 @@ func (p *ListCommitResponse) field2Length() int {
 				_ = v
 				l += v.BLength()
 			}
+		}
+	}
+	return l
+}
+
+func (p *ListCommitResponse) field3Length() int {
+	l := 0
+	if p.IsSetParentReferencesMapping() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.ParentReferencesMapping {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.I32Length()
 		}
 	}
 	return l
@@ -6139,6 +6219,21 @@ func (p *ListCommitResponse) DeepCopy(s interface{}) error {
 			}
 
 			p.CommitVersionLabelMapping[_key] = _val
+		}
+	}
+
+	if src.ParentReferencesMapping != nil {
+		p.ParentReferencesMapping = make(map[string]int32, len(src.ParentReferencesMapping))
+		for key, val := range src.ParentReferencesMapping {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val int32
+			_val = val
+
+			p.ParentReferencesMapping[_key] = _val
 		}
 	}
 
