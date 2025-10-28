@@ -1517,3 +1517,8 @@ func _updatebuiltinevaluatortagsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _evaluator_templateMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -504,14 +504,14 @@ service EvaluatorService {
     ValidateEvaluatorResponse ValidateEvaluator(1: ValidateEvaluatorRequest request) (api.post="/api/evaluation/v1/evaluators/validate")
 
     // 查询评估器模板
-    ListTemplatesV2Response ListTemplatesV2(1: ListTemplatesV2Request request) (api.post="/api/evaluation/v1/evaluators/list_template_v2")
+    ListTemplatesV2Response ListTemplatesV2(1: ListTemplatesV2Request request) (api.post="/api/evaluation/v1/evaluator_template/list")
 
     // 创建评估器模板
-    CreateEvaluatorTemplateResponse CreateEvaluatorTemplate(1: CreateEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluators/create_template")
+    CreateEvaluatorTemplateResponse CreateEvaluatorTemplate(1: CreateEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluator_template")
     // 更新评估器模板
-    UpdateEvaluatorTemplateResponse UpdateEvaluatorTemplate(1: UpdateEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluators/update_template")
+    UpdateEvaluatorTemplateResponse UpdateEvaluatorTemplate(1: UpdateEvaluatorTemplateRequest request) (api.patch="/api/evaluation/v1/evaluator_template")
     // 删除
-    DeleteEvaluatorTemplateResponse DeleteEvaluatorTemplate(1: DeleteEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluators/delete_template")
+    DeleteEvaluatorTemplateResponse DeleteEvaluatorTemplate(1: DeleteEvaluatorTemplateRequest request) (api.delete="/api/evaluation/v1/evaluator_template")
 
     // 调试预置评估器
     DebugBuiltinEvaluatorResponse DebugBuiltinEvaluator(1: DebugBuiltinEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug_builtin")// 调试预置评估器
