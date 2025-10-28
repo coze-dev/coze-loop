@@ -68,6 +68,7 @@ struct PromptTemplate {
 typedef string TemplateType (ts.enum="true")
 const TemplateType TemplateType_Normal = "normal"
 const TemplateType TemplateType_Jinja2 = "jinja2"
+const TemplateType TemplateType_GoTemplate = "goTemplate"
 
 struct Tool {
     1: optional ToolType type

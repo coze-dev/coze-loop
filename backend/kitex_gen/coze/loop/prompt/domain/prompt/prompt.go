@@ -13,6 +13,8 @@ const (
 
 	TemplateTypeJinja2 = "jinja2"
 
+	TemplateTypeGoTemplate = "goTemplate"
+
 	ToolTypeFunction = "function"
 
 	ToolChoiceTypeNone = "none"
