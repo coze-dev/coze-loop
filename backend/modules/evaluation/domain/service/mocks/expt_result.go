@@ -99,6 +99,21 @@ func (mr *MockExptResultServiceMockRecorder) GetExptItemTurnResults(ctx, exptID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptItemTurnResults", reflect.TypeOf((*MockExptResultService)(nil).GetExptItemTurnResults), ctx, exptID, itemID, spaceID, session)
 }
 
+// GetIncompleteTurns mocks base method.
+func (m *MockExptResultService) GetIncompleteTurns(ctx context.Context, exptID, spaceID int64, session *entity.Session) ([]*entity.ItemTurnID, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIncompleteTurns", ctx, exptID, spaceID, session)
+	ret0, _ := ret[0].([]*entity.ItemTurnID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIncompleteTurns indicates an expected call of GetIncompleteTurns.
+func (mr *MockExptResultServiceMockRecorder) GetIncompleteTurns(ctx, exptID, spaceID, session any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncompleteTurns", reflect.TypeOf((*MockExptResultService)(nil).GetIncompleteTurns), ctx, exptID, spaceID, session)
+}
+
 // GetStats mocks base method.
 func (m *MockExptResultService) GetStats(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.ExptStats, error) {
 	m.ctrl.T.Helper()

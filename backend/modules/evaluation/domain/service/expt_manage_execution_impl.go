@@ -320,14 +320,17 @@ func (e *ExptMangerImpl) RetryUnSuccess(ctx context.Context, exptID, runID, spac
 	return nil
 }
 
-func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID int64, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
 	const idemKeyPrefix = "CompleteRun:"
 
 	opt := &entity.CompleteExptOption{}
 	for _, fn := range opts {
 		fn(opt)
 	}
-	time.Sleep(time.Second * 3)
+
+	if interval := opt.CompleteInterval; interval > 0 {
+		time.Sleep(interval)
+	}
 
 	if len(opt.CID) > 0 {
 		if exist, err := e.idem.Exist(ctx, idemKeyPrefix+opt.CID); err != nil {
@@ -423,7 +426,7 @@ func (e *ExptMangerImpl) calculateRunLogStats(ctx context.Context, exptID, exptR
 			break
 		}
 
-		time.Sleep(time.Millisecond * 30)
+		time.Sleep(time.Millisecond * 20)
 	}
 
 	runLog.PendingCnt = int32(pendingCnt)
@@ -450,8 +453,9 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 	for _, fn := range opts {
 		fn(opt)
 	}
-	time.Sleep(time.Second * 3)
-
+	if interval := opt.CompleteInterval; interval > 0 {
+		time.Sleep(interval)
+	}
 	if len(opt.CID) > 0 {
 		if exist, err := e.idem.Exist(ctx, idemKeyPrefix+opt.CID); err != nil {
 			logs.CtxInfo(ctx, "Exist fail, key: %v", opt.CID)
@@ -472,50 +476,46 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 		return err
 	}
 
-	err = e.publisher.PublishExptAggrCalculateEvent(ctx, []*entity.AggrCalculateEvent{
-		{
-			ExperimentID:  exptID,
-			SpaceID:       spaceID,
-			CalculateMode: entity.CreateAllFields,
-		},
-	}, gptr.Of(time.Second*3))
-	if err != nil {
-		return err
-	}
-
 	stats, err := e.exptResultService.CalculateStats(ctx, exptID, spaceID, session)
 	if err != nil {
 		return err
 	}
 
-	exptStats := &entity.ExptStats{
+	if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, &entity.ExptStats{
 		SuccessItemCnt:    int32(stats.SuccessItemCnt),
 		PendingItemCnt:    int32(stats.PendingItemCnt),
 		FailItemCnt:       int32(stats.FailItemCnt),
 		ProcessingItemCnt: int32(stats.ProcessingItemCnt),
 		TerminatedItemCnt: int32(stats.TerminatedItemCnt),
-	}
-
-	if err := e.statsRepo.UpdateByExptID(ctx, exptID, spaceID, exptStats); err != nil {
+	}); err != nil {
 		return err
 	}
 
 	status := opt.Status
 	if !entity.IsExptFinished(status) {
-		if stats.FailItemCnt > 0 || stats.TerminatedItemCnt > 0 || len(stats.IncompleteTurnIDs) > 0 {
+		if stats.FailItemCnt > 0 || stats.TerminatedItemCnt > 0 {
 			status = entity.ExptStatus_Failed
 		} else {
 			status = entity.ExptStatus_Success
 		}
 	}
 
-	if status == entity.ExptStatus_Terminated {
-		for _, chunk := range gslice.Chunk(stats.IncompleteTurnIDs, 30) {
-			if err := e.terminateItemTurns(ctx, exptID, chunk, spaceID, session); err != nil {
-				logs.CtxWarn(ctx, "terminateItemTurns fail, err: %v", err)
-				continue
+	if !opt.NoCompleteItemTurn {
+		incompleteTurnIDs, err := e.exptResultService.GetIncompleteTurns(ctx, exptID, spaceID, session)
+		if err != nil {
+			return err
+		}
+
+		switch status {
+		case entity.ExptStatus_Terminated:
+			for _, chunk := range gslice.Chunk(incompleteTurnIDs, 30) {
+				if err := e.terminateItemTurns(ctx, exptID, chunk, spaceID, session); err != nil {
+					logs.CtxWarn(ctx, "terminateItemTurns fail, err: %v", err)
+					continue
+				}
+				time.Sleep(time.Millisecond * 50)
 			}
-			time.Sleep(time.Millisecond * 50)
+		default:
 		}
 	}
 
@@ -525,11 +525,9 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 		Status:  status,
 		EndAt:   gptr.Of(time.Now()),
 	}
-
 	if len(opt.StatusMessage) > 0 {
 		exptDo.StatusMessage = opt.StatusMessage
 	}
-
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
 	}
@@ -540,7 +538,19 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 
 	if len(opt.CID) > 0 {
 		if err := e.idem.Set(ctx, idemKeyPrefix+opt.CID, time.Second*60*3); err != nil {
-			logs.CtxWarn(ctx, "CompleteExpt SetNX fail, err: %v", err)
+			logs.CtxError(ctx, "CompleteExpt SetNX fail, expt_id: %v, err: %v", exptID, err)
+		}
+	}
+
+	if !opt.NoAggrCalculate {
+		if err = e.publisher.PublishExptAggrCalculateEvent(ctx, []*entity.AggrCalculateEvent{
+			{
+				ExperimentID:  exptID,
+				SpaceID:       spaceID,
+				CalculateMode: entity.CreateAllFields,
+			},
+		}, gptr.Of(time.Second*3)); err != nil {
+			logs.CtxError(ctx, "PublishExptAggrCalculateEvent fail, expt_id: %v, err: %v", exptID, err)
 		}
 	}
 
@@ -819,7 +829,7 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 
 	defer e.mtr.EmitExptExecRun(spaceID, int64(mode))
 
-	return e.runLogRepo.Create(ctx, &entity.ExptRunLog{
+	if err := e.runLogRepo.Create(ctx, &entity.ExptRunLog{
 		ID:        exptRunID,
 		SpaceID:   spaceID,
 		CreatedBy: session.UserID,
@@ -827,9 +837,33 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 		ExptRunID: exptRunID,
 		Mode:      int32(mode),
 		Status:    int64(entity.ExptStatus_Pending),
-	})
+	}); err != nil {
+		return err
+	}
+
+	if err := e.exptRepo.Update(ctx, &entity.Experiment{
+		ID:          exptID,
+		LatestRunID: exptRunID,
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (e *ExptMangerImpl) GetRunLog(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) (*entity.ExptRunLog, error) {
 	return e.runLogRepo.Get(ctx, exptID, exptRunID)
+}
+
+func (e *ExptMangerImpl) SetExptTerminating(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+	if err := e.runLogRepo.Update(ctx, exptID, exptRunID, map[string]any{"status": int64(entity.ExptStatus_Terminating)}); err != nil {
+		return err
+	}
+	if err := e.exptRepo.Update(ctx, &entity.Experiment{
+		ID:     exptID,
+		Status: entity.ExptStatus_Terminating,
+	}); err != nil {
+		return err
+	}
+	return nil
 }
