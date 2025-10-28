@@ -47,7 +47,7 @@ func OpenAPITargetFieldMappingDTO2Domain(mapping *openapiExperiment.TargetFieldM
 	return result
 }
 
-func OpenAPIEvaluatorFieldMappingDTO2Domain(mappings []*openapiExperiment.EvaluatorFieldMapping) []*domainExpt.EvaluatorFieldMapping {
+func OpenAPIEvaluatorFieldMappingDTO2Domain(mappings []*openapiExperiment.EvaluatorFieldMapping, evaluatorMap map[string]int64) []*domainExpt.EvaluatorFieldMapping {
 	if len(mappings) == 0 {
 		return nil
 	}
@@ -57,8 +57,9 @@ func OpenAPIEvaluatorFieldMappingDTO2Domain(mappings []*openapiExperiment.Evalua
 		if mapping == nil {
 			continue
 		}
+		versionID := evaluatorMap[fmt.Sprintf("%d_%s", mapping.GetEvaluatorID(), mapping.GetVersion())]
 		domainMapping := &domainExpt.EvaluatorFieldMapping{
-			EvaluatorVersionID: mapping.GetEvaluatorVersionID(),
+			EvaluatorVersionID: versionID,
 		}
 		for _, fromEval := range mapping.FromEvalSet {
 			if fromEval == nil {
@@ -188,7 +189,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 		Description:           dto.Desc,
 		ItemConcurNum:         dto.ItemConcurNum,
 		TargetFieldMapping:    DomainTargetFieldMappingDTO2OpenAPI(dto.TargetFieldMapping),
-		EvaluatorFieldMapping: DomainEvaluatorFieldMappingDTO2OpenAPI(dto.EvaluatorFieldMapping),
+		EvaluatorFieldMapping: DomainEvaluatorFieldMappingDTO2OpenAPI(dto.EvaluatorFieldMapping, dto.Evaluators),
 		TargetRuntimeParam:    DomainRuntimeParamDTO2OpenAPI(dto.TargetRuntimeParam),
 	}
 
@@ -197,17 +198,6 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EndTime = dto.EndTime
 	result.ExptStats = DomainExperimentStatsDTO2OpenAPI(dto.ExptStats)
 	result.BaseInfo = DomainBaseInfoDTO2OpenAPI(dto.BaseInfo)
-	return result
-}
-
-func DomainExperimentDTOs2OpenAPI(dtos []*domainExpt.Experiment) []*openapiExperiment.Experiment {
-	if len(dtos) == 0 {
-		return nil
-	}
-	result := make([]*openapiExperiment.Experiment, 0, len(dtos))
-	for _, dto := range dtos {
-		result = append(result, DomainExperimentDTO2OpenAPI(dto))
-	}
 	return result
 }
 
@@ -228,18 +218,30 @@ func DomainTargetFieldMappingDTO2OpenAPI(mapping *domainExpt.TargetFieldMapping)
 	return result
 }
 
-func DomainEvaluatorFieldMappingDTO2OpenAPI(mappings []*domainExpt.EvaluatorFieldMapping) []*openapiExperiment.EvaluatorFieldMapping {
+func DomainEvaluatorFieldMappingDTO2OpenAPI(mappings []*domainExpt.EvaluatorFieldMapping, evaluators []*domainEvaluator.Evaluator) []*openapiExperiment.EvaluatorFieldMapping {
 	if len(mappings) == 0 {
 		return nil
+	}
+	evaluatorMap := make(map[int64][]string)
+	for _, e := range evaluators {
+		evaluatorMap[e.GetCurrentVersion().GetID()] = []string{strconv.FormatInt(e.GetEvaluatorID(), 10), e.GetCurrentVersion().GetVersion()}
 	}
 	result := make([]*openapiExperiment.EvaluatorFieldMapping, 0, len(mappings))
 	for _, mapping := range mappings {
 		if mapping == nil {
 			continue
 		}
+		infos := evaluatorMap[mapping.EvaluatorVersionID]
+		var id int64
+		var version string
+		if len(infos) == 2 {
+			id, _ = strconv.ParseInt(infos[0], 10, 64)
+			version = infos[1]
+		}
 		info := &openapiExperiment.EvaluatorFieldMapping{}
 		if mapping.EvaluatorVersionID != 0 {
-			info.EvaluatorVersionID = gptr.Of(mapping.EvaluatorVersionID)
+			info.EvaluatorID = gptr.Of(id)
+			info.Version = gptr.Of(version)
 		}
 		for _, fromEval := range mapping.FromEvalSet {
 			if fromEval == nil {
@@ -486,7 +488,7 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 			result.TargetRuntimeParam = runtimeParam
 		}
 
-		if evaluatorMappings := openAPIEvaluatorFieldMappingsDO2DTO(experiment.EvalConf.ConnectorConf.EvaluatorsConf); len(evaluatorMappings) > 0 {
+		if evaluatorMappings := openAPIEvaluatorFieldMappingsDO2DTO(experiment.EvalConf.ConnectorConf.EvaluatorsConf, experiment.Evaluators); len(evaluatorMappings) > 0 {
 			result.EvaluatorFieldMapping = evaluatorMappings
 		}
 	}
@@ -532,9 +534,13 @@ func extractTargetIngressInfo(targetConf *entity.TargetConf) (*openapiExperiment
 	return mapping, runtimeParam
 }
 
-func openAPIEvaluatorFieldMappingsDO2DTO(conf *entity.EvaluatorsConf) []*openapiExperiment.EvaluatorFieldMapping {
+func openAPIEvaluatorFieldMappingsDO2DTO(conf *entity.EvaluatorsConf, evaluators []*entity.Evaluator) []*openapiExperiment.EvaluatorFieldMapping {
 	if conf == nil || len(conf.EvaluatorConf) == 0 {
 		return nil
+	}
+	evaluatorMap := make(map[int64][]string)
+	for _, e := range evaluators {
+		evaluatorMap[e.GetEvaluatorVersionID()] = []string{strconv.FormatInt(e.ID, 10), e.GetVersion()}
 	}
 
 	mappings := make([]*openapiExperiment.EvaluatorFieldMapping, 0, len(conf.EvaluatorConf))
@@ -542,10 +548,17 @@ func openAPIEvaluatorFieldMappingsDO2DTO(conf *entity.EvaluatorsConf) []*openapi
 		if evaluatorConf == nil {
 			continue
 		}
-
+		infos := evaluatorMap[evaluatorConf.EvaluatorVersionID]
+		var id int64
+		var version string
+		if len(infos) == 2 {
+			id, _ = strconv.ParseInt(infos[0], 10, 64)
+			version = infos[1]
+		}
 		mapping := &openapiExperiment.EvaluatorFieldMapping{}
 		if evaluatorConf.EvaluatorVersionID != 0 {
-			mapping.EvaluatorVersionID = gptr.Of(evaluatorConf.EvaluatorVersionID)
+			mapping.EvaluatorID = gptr.Of(id)
+			mapping.Version = gptr.Of(version)
 		}
 
 		if ingress := evaluatorConf.IngressConf; ingress != nil {
@@ -555,10 +568,6 @@ func openAPIEvaluatorFieldMappingsDO2DTO(conf *entity.EvaluatorsConf) []*openapi
 			if fields := convertFieldAdapterToMappings(ingress.TargetAdapter); len(fields) > 0 {
 				mapping.FromTarget = fields
 			}
-		}
-
-		if mapping.EvaluatorVersionID == nil && len(mapping.FromEvalSet) == 0 && len(mapping.FromTarget) == 0 {
-			continue
 		}
 		mappings = append(mappings, mapping)
 	}

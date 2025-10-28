@@ -62,9 +62,10 @@ struct TargetFieldMapping {
 
 // 评估器字段映射
 struct EvaluatorFieldMapping {
-    1: optional i64 evaluator_version_id (api.js_conv = 'true', go.tag = 'json:"evaluator_version_id"')
-    2: optional list<FieldMapping> from_eval_set
-    3: optional list<FieldMapping> from_target
+    1: optional i64 evaluator_id (api.js_conv="true", go.tag='json:"evaluator_id"')
+    2: optional string version
+    3: optional list<FieldMapping> from_eval_set
+    4: optional list<FieldMapping> from_target
 }
 
 // Token使用量

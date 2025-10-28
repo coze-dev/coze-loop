@@ -5,6 +5,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -760,6 +761,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval set not found"))
 	}
 	evaluatorVersionIDs := make([]int64, 0)
+	evaluatorMap := make(map[string]int64)
 	for _, evaluator := range req.GetEvaluatorParams() {
 		version, _, err := e.evaluatorService.ListEvaluatorVersion(ctx, &entity.ListEvaluatorVersionRequest{
 			SpaceID:       req.GetWorkspaceID(),
@@ -775,6 +777,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
 		}
 		evaluatorVersionIDs = append(evaluatorVersionIDs, version[0].ID)
+		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = version[0].ID
 	}
 
 	createReq := &exptpb.SubmitExperimentRequest{
@@ -785,7 +788,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		Name:                  req.Name,
 		Desc:                  req.Description,
 		TargetFieldMapping:    experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
-		EvaluatorFieldMapping: experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping),
+		EvaluatorFieldMapping: experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
 		ItemConcurNum:         req.ItemConcurNum,
 		TargetRuntimeParam:    experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
 		CreateEvalTargetParam: experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),

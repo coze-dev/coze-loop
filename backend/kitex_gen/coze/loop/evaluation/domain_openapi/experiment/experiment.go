@@ -546,9 +546,10 @@ func (p *TargetFieldMapping) Field1DeepEqual(src []*FieldMapping) bool {
 
 // 评估器字段映射
 type EvaluatorFieldMapping struct {
-	EvaluatorVersionID *int64          `thrift:"evaluator_version_id,1,optional" frugal:"1,optional,i64" json:"evaluator_version_id" form:"evaluator_version_id" query:"evaluator_version_id"`
-	FromEvalSet        []*FieldMapping `thrift:"from_eval_set,2,optional" frugal:"2,optional,list<FieldMapping>" form:"from_eval_set" json:"from_eval_set,omitempty" query:"from_eval_set"`
-	FromTarget         []*FieldMapping `thrift:"from_target,3,optional" frugal:"3,optional,list<FieldMapping>" form:"from_target" json:"from_target,omitempty" query:"from_target"`
+	EvaluatorID *int64          `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
+	Version     *string         `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	FromEvalSet []*FieldMapping `thrift:"from_eval_set,3,optional" frugal:"3,optional,list<FieldMapping>" form:"from_eval_set" json:"from_eval_set,omitempty" query:"from_eval_set"`
+	FromTarget  []*FieldMapping `thrift:"from_target,4,optional" frugal:"4,optional,list<FieldMapping>" form:"from_target" json:"from_target,omitempty" query:"from_target"`
 }
 
 func NewEvaluatorFieldMapping() *EvaluatorFieldMapping {
@@ -558,16 +559,28 @@ func NewEvaluatorFieldMapping() *EvaluatorFieldMapping {
 func (p *EvaluatorFieldMapping) InitDefault() {
 }
 
-var EvaluatorFieldMapping_EvaluatorVersionID_DEFAULT int64
+var EvaluatorFieldMapping_EvaluatorID_DEFAULT int64
 
-func (p *EvaluatorFieldMapping) GetEvaluatorVersionID() (v int64) {
+func (p *EvaluatorFieldMapping) GetEvaluatorID() (v int64) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetEvaluatorVersionID() {
-		return EvaluatorFieldMapping_EvaluatorVersionID_DEFAULT
+	if !p.IsSetEvaluatorID() {
+		return EvaluatorFieldMapping_EvaluatorID_DEFAULT
 	}
-	return *p.EvaluatorVersionID
+	return *p.EvaluatorID
+}
+
+var EvaluatorFieldMapping_Version_DEFAULT string
+
+func (p *EvaluatorFieldMapping) GetVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVersion() {
+		return EvaluatorFieldMapping_Version_DEFAULT
+	}
+	return *p.Version
 }
 
 var EvaluatorFieldMapping_FromEvalSet_DEFAULT []*FieldMapping
@@ -593,8 +606,11 @@ func (p *EvaluatorFieldMapping) GetFromTarget() (v []*FieldMapping) {
 	}
 	return p.FromTarget
 }
-func (p *EvaluatorFieldMapping) SetEvaluatorVersionID(val *int64) {
-	p.EvaluatorVersionID = val
+func (p *EvaluatorFieldMapping) SetEvaluatorID(val *int64) {
+	p.EvaluatorID = val
+}
+func (p *EvaluatorFieldMapping) SetVersion(val *string) {
+	p.Version = val
 }
 func (p *EvaluatorFieldMapping) SetFromEvalSet(val []*FieldMapping) {
 	p.FromEvalSet = val
@@ -604,13 +620,18 @@ func (p *EvaluatorFieldMapping) SetFromTarget(val []*FieldMapping) {
 }
 
 var fieldIDToName_EvaluatorFieldMapping = map[int16]string{
-	1: "evaluator_version_id",
-	2: "from_eval_set",
-	3: "from_target",
+	1: "evaluator_id",
+	2: "version",
+	3: "from_eval_set",
+	4: "from_target",
 }
 
-func (p *EvaluatorFieldMapping) IsSetEvaluatorVersionID() bool {
-	return p.EvaluatorVersionID != nil
+func (p *EvaluatorFieldMapping) IsSetEvaluatorID() bool {
+	return p.EvaluatorID != nil
+}
+
+func (p *EvaluatorFieldMapping) IsSetVersion() bool {
+	return p.Version != nil
 }
 
 func (p *EvaluatorFieldMapping) IsSetFromEvalSet() bool {
@@ -648,7 +669,7 @@ func (p *EvaluatorFieldMapping) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -658,6 +679,14 @@ func (p *EvaluatorFieldMapping) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -700,10 +729,21 @@ func (p *EvaluatorFieldMapping) ReadField1(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.EvaluatorVersionID = _field
+	p.EvaluatorID = _field
 	return nil
 }
 func (p *EvaluatorFieldMapping) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Version = _field
+	return nil
+}
+func (p *EvaluatorFieldMapping) ReadField3(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -726,7 +766,7 @@ func (p *EvaluatorFieldMapping) ReadField2(iprot thrift.TProtocol) error {
 	p.FromEvalSet = _field
 	return nil
 }
-func (p *EvaluatorFieldMapping) ReadField3(iprot thrift.TProtocol) error {
+func (p *EvaluatorFieldMapping) ReadField4(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -768,6 +808,10 @@ func (p *EvaluatorFieldMapping) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 3
 			goto WriteFieldError
 		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
 	}
 	if err = oprot.WriteFieldStop(); err != nil {
 		goto WriteFieldStopError
@@ -787,11 +831,11 @@ WriteStructEndError:
 }
 
 func (p *EvaluatorFieldMapping) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvaluatorVersionID() {
-		if err = oprot.WriteFieldBegin("evaluator_version_id", thrift.I64, 1); err != nil {
+	if p.IsSetEvaluatorID() {
+		if err = oprot.WriteFieldBegin("evaluator_id", thrift.I64, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.EvaluatorVersionID); err != nil {
+		if err := oprot.WriteI64(*p.EvaluatorID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -805,8 +849,26 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *EvaluatorFieldMapping) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersion() {
+		if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Version); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvaluatorFieldMapping) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFromEvalSet() {
-		if err = oprot.WriteFieldBegin("from_eval_set", thrift.LIST, 2); err != nil {
+		if err = oprot.WriteFieldBegin("from_eval_set", thrift.LIST, 3); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FromEvalSet)); err != nil {
@@ -826,13 +888,13 @@ func (p *EvaluatorFieldMapping) writeField2(oprot thrift.TProtocol) (err error) 
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *EvaluatorFieldMapping) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *EvaluatorFieldMapping) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFromTarget() {
-		if err = oprot.WriteFieldBegin("from_target", thrift.LIST, 3); err != nil {
+		if err = oprot.WriteFieldBegin("from_target", thrift.LIST, 4); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FromTarget)); err != nil {
@@ -852,9 +914,9 @@ func (p *EvaluatorFieldMapping) writeField3(oprot thrift.TProtocol) (err error) 
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 
 func (p *EvaluatorFieldMapping) String() string {
@@ -871,13 +933,16 @@ func (p *EvaluatorFieldMapping) DeepEqual(ano *EvaluatorFieldMapping) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.EvaluatorVersionID) {
+	if !p.Field1DeepEqual(ano.EvaluatorID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.FromEvalSet) {
+	if !p.Field2DeepEqual(ano.Version) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.FromTarget) {
+	if !p.Field3DeepEqual(ano.FromEvalSet) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.FromTarget) {
 		return false
 	}
 	return true
@@ -885,17 +950,29 @@ func (p *EvaluatorFieldMapping) DeepEqual(ano *EvaluatorFieldMapping) bool {
 
 func (p *EvaluatorFieldMapping) Field1DeepEqual(src *int64) bool {
 
-	if p.EvaluatorVersionID == src {
+	if p.EvaluatorID == src {
 		return true
-	} else if p.EvaluatorVersionID == nil || src == nil {
+	} else if p.EvaluatorID == nil || src == nil {
 		return false
 	}
-	if *p.EvaluatorVersionID != *src {
+	if *p.EvaluatorID != *src {
 		return false
 	}
 	return true
 }
-func (p *EvaluatorFieldMapping) Field2DeepEqual(src []*FieldMapping) bool {
+func (p *EvaluatorFieldMapping) Field2DeepEqual(src *string) bool {
+
+	if p.Version == src {
+		return true
+	} else if p.Version == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorFieldMapping) Field3DeepEqual(src []*FieldMapping) bool {
 
 	if len(p.FromEvalSet) != len(src) {
 		return false
@@ -908,7 +985,7 @@ func (p *EvaluatorFieldMapping) Field2DeepEqual(src []*FieldMapping) bool {
 	}
 	return true
 }
-func (p *EvaluatorFieldMapping) Field3DeepEqual(src []*FieldMapping) bool {
+func (p *EvaluatorFieldMapping) Field4DeepEqual(src []*FieldMapping) bool {
 
 	if len(p.FromTarget) != len(src) {
 		return false
