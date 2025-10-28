@@ -155,7 +155,7 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 				lock.Lock()
 				defer lock.Unlock()
 				if err == nil {
-					metricsResp[i] = resp
+					metricsResp[t] = resp
 				}
 				return err
 			}
@@ -451,6 +451,8 @@ func (m *MetricsService) divideMetrics(ctx context.Context, resp []*QueryMetrics
 ) (*QueryMetricsResp, error) {
 	if len(resp) != 2 || len(compoundMetrics) != 2 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+	} else if resp[0] == nil || resp[1] == nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	numerator := resp[0].Metrics[compoundMetrics[0].Name()]
 	denominator := resp[1].Metrics[compoundMetrics[1].Name()]
@@ -531,6 +533,9 @@ func (m *MetricsService) pieMetrics(ctx context.Context, resp []*QueryMetricsRes
 		Pie: make(map[string]string),
 	}
 	for _, r := range resp {
+		if r == nil {
+			continue
+		}
 		for metricName, metricVal := range r.Metrics {
 			ret.Metrics[newMetricName].Pie[metricName] = metricVal.Summary
 		}

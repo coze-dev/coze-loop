@@ -3,17 +3,13 @@
   "compilerOptions": {
     "jsx": "preserve",
     "useUnknownInCatchVariables": false,
-    "types": [
-      "vitest/globals"
-    ],
+    "types": ["vitest/globals"],
     "strictNullChecks": true,
     "rootDir": "./src",
     "outDir": "./dist",
     "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo"
   },
-  "include": [
-    "./src"
-  ],
+  "include": ["./src"],
   "references": [
     {
       "path": "../account/tsconfig.build.json"
@@ -29,9 +25,6 @@
     },
     {
       "path": "../../../config/vitest-config/tsconfig.build.json"
-    },
-    {
-      "path": "../route/tsconfig.build.json"
     }
   ],
   "$schema": "https://json.schemastore.org/tsconfig"

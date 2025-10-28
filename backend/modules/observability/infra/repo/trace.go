@@ -290,10 +290,6 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 	})
 }
 
-func (t *TraceCkRepoImpl) UpsertAnnotation(ctx context.Context, param *repo.UpsertAnnotationParam) error {
-	return nil
-}
-
 func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
 	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
 	if err != nil {

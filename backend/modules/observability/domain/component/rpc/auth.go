@@ -18,8 +18,6 @@ const (
 	AuthActionTraceTaskCreate    = "createLoopTask"
 	AuthActionTraceTaskList      = "listLoopTask"
 	AuthActionTraceTaskEdit      = "edit"
-	AuthActionTaskWritable       = "task_writable"
-	AuthActionTaskReadable       = "task_readable"
 	AuthActionTraceMetricRead    = "readLoopIndictor"
 )
 
