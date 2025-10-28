@@ -119,6 +119,8 @@ func TemplateTypeDTO2DO(dto prompt.TemplateType) entity.TemplateType {
 		return entity.TemplateTypeNormal
 	case prompt.TemplateTypeJinja2:
 		return entity.TemplateTypeJinja2
+	case prompt.TemplateTypeGoTemplate:
+		return entity.TemplateTypeGoTemplate
 	default:
 		return entity.TemplateTypeNormal
 	}

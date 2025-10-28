@@ -1289,3 +1289,211 @@ func TestPromptTemplate_formatMessages_Jinja2(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderGoTemplate(t *testing.T) {
+	tests := []struct {
+		name          string
+		templateStr   string
+		defMap        map[string]*VariableDef
+		valMap        map[string]*VariableVal
+		expected      string
+		expectedError error
+	}{
+		{
+			name:        "simple string variable",
+			templateStr: "Hello {{.name}}!",
+			defMap: map[string]*VariableDef{
+				"name": {Key: "name", Type: VariableTypeString},
+			},
+			valMap: map[string]*VariableVal{
+				"name": {Key: "name", Value: ptr.Of("John")},
+			},
+			expected: "Hello John!",
+		},
+		{
+			name:        "multiple variables",
+			templateStr: "Hello {{.name}}, you are {{.age}} years old.",
+			defMap: map[string]*VariableDef{
+				"name": {Key: "name", Type: VariableTypeString},
+				"age":  {Key: "age", Type: VariableTypeInteger},
+			},
+			valMap: map[string]*VariableVal{
+				"name": {Key: "name", Value: ptr.Of("John")},
+				"age":  {Key: "age", Value: ptr.Of("30")},
+			},
+			expected: "Hello John, you are 30 years old.",
+		},
+		{
+			name:        "boolean variable in condition",
+			templateStr: "{{if .enabled}}Feature is enabled{{else}}Feature is disabled{{end}}",
+			defMap: map[string]*VariableDef{
+				"enabled": {Key: "enabled", Type: VariableTypeBoolean},
+			},
+			valMap: map[string]*VariableVal{
+				"enabled": {Key: "enabled", Value: ptr.Of("true")},
+			},
+			expected: "Feature is enabled",
+		},
+		{
+			name:        "boolean variable false in condition",
+			templateStr: "{{if .enabled}}Feature is enabled{{else}}Feature is disabled{{end}}",
+			defMap: map[string]*VariableDef{
+				"enabled": {Key: "enabled", Type: VariableTypeBoolean},
+			},
+			valMap: map[string]*VariableVal{
+				"enabled": {Key: "enabled", Value: ptr.Of("false")},
+			},
+			expected: "Feature is disabled",
+		},
+		{
+			name:        "array iteration",
+			templateStr: "Items: {{range $i, $item := .items}}{{if $i}}, {{end}}{{$item}}{{end}}",
+			defMap: map[string]*VariableDef{
+				"items": {Key: "items", Type: VariableTypeArrayString},
+			},
+			valMap: map[string]*VariableVal{
+				"items": {Key: "items", Value: ptr.Of(`["apple", "banana", "cherry"]`)},
+			},
+			expected: "Items: apple, banana, cherry",
+		},
+		{
+			name:        "integer variable",
+			templateStr: "Count: {{.count}}",
+			defMap: map[string]*VariableDef{
+				"count": {Key: "count", Type: VariableTypeInteger},
+			},
+			valMap: map[string]*VariableVal{
+				"count": {Key: "count", Value: ptr.Of("42")},
+			},
+			expected: "Count: 42",
+		},
+		{
+			name:        "float variable",
+			templateStr: "Price: ${{.price}}",
+			defMap: map[string]*VariableDef{
+				"price": {Key: "price", Type: VariableTypeFloat},
+			},
+			valMap: map[string]*VariableVal{
+				"price": {Key: "price", Value: ptr.Of("3.14")},
+			},
+			expected: "Price: $3.14",
+		},
+		{
+			name:        "invalid template syntax",
+			templateStr: "Hello {{.name",
+			defMap: map[string]*VariableDef{
+				"name": {Key: "name", Type: VariableTypeString},
+			},
+			valMap: map[string]*VariableVal{
+				"name": {Key: "name", Value: ptr.Of("John")},
+			},
+			expectedError: errorx.NewByCode(prompterr.TemplateParseErrorCode),
+		},
+		{
+			name:        "variable conversion error",
+			templateStr: "Count: {{.count}}",
+			defMap: map[string]*VariableDef{
+				"count": {Key: "count", Type: VariableTypeInteger},
+			},
+			valMap: map[string]*VariableVal{
+				"count": {Key: "count", Value: ptr.Of("not_a_number")},
+			},
+			expectedError: errorx.NewByCode(prompterr.CommonInvalidParamCode),
+		},
+		{
+			name:        "template with undefined variable",
+			templateStr: "Hello {{.undefined_var}}",
+			defMap:      map[string]*VariableDef{},
+			valMap:      map[string]*VariableVal{},
+			expected:    "Hello <no value>",
+		},
+		{
+			name:        "empty variable maps",
+			templateStr: "Hello World",
+			defMap:      map[string]*VariableDef{},
+			valMap:      map[string]*VariableVal{},
+			expected:    "Hello World",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := renderGoTemplate(tt.templateStr, tt.defMap, tt.valMap)
+			unittest.AssertErrorEqual(t, tt.expectedError, err)
+			if tt.expectedError == nil {
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestFormatText_GoTemplate(t *testing.T) {
+	tests := []struct {
+		name          string
+		templateType  TemplateType
+		templateStr   string
+		defMap        map[string]*VariableDef
+		valMap        map[string]*VariableVal
+		expected      string
+		expectedError error
+	}{
+		{
+			name:         "goTemplate template type",
+			templateType: TemplateTypeGoTemplate,
+			templateStr:  "Hello {{.name}}!",
+			defMap: map[string]*VariableDef{
+				"name": {Key: "name", Type: VariableTypeString},
+			},
+			valMap: map[string]*VariableVal{
+				"name": {Key: "name", Value: ptr.Of("John")},
+			},
+			expected: "Hello John!",
+		},
+		{
+			name:         "goTemplate with condition",
+			templateType: TemplateTypeGoTemplate,
+			templateStr:  "{{if .enabled}}Active{{else}}Inactive{{end}}",
+			defMap: map[string]*VariableDef{
+				"enabled": {Key: "enabled", Type: VariableTypeBoolean},
+			},
+			valMap: map[string]*VariableVal{
+				"enabled": {Key: "enabled", Value: ptr.Of("true")},
+			},
+			expected: "Active",
+		},
+		{
+			name:         "goTemplate parse error",
+			templateType: TemplateTypeGoTemplate,
+			templateStr:  "Hello {{.name",
+			defMap: map[string]*VariableDef{
+				"name": {Key: "name", Type: VariableTypeString},
+			},
+			valMap: map[string]*VariableVal{
+				"name": {Key: "name", Value: ptr.Of("John")},
+			},
+			expectedError: errorx.NewByCode(prompterr.TemplateParseErrorCode),
+		},
+		{
+			name:         "goTemplate with integer",
+			templateType: TemplateTypeGoTemplate,
+			templateStr:  "Count: {{.count}}",
+			defMap: map[string]*VariableDef{
+				"count": {Key: "count", Type: VariableTypeInteger},
+			},
+			valMap: map[string]*VariableVal{
+				"count": {Key: "count", Value: ptr.Of("100")},
+			},
+			expected: "Count: 100",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := formatText(tt.templateType, tt.templateStr, tt.defMap, tt.valMap)
+			unittest.AssertErrorEqual(t, tt.expectedError, err)
+			if tt.expectedError == nil {
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}

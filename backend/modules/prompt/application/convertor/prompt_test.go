@@ -661,3 +661,122 @@ func TestModelConfigExtraConversion(t *testing.T) {
 	assert.NotNil(t, dtoBack)
 	assert.Equal(t, extra, dtoBack.Extra)
 }
+
+func TestTemplateTypeDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  prompt.TemplateType
+		want entity.TemplateType
+	}{
+		{
+			name: "normal template type",
+			dto:  prompt.TemplateTypeNormal,
+			want: entity.TemplateTypeNormal,
+		},
+		{
+			name: "jinja2 template type",
+			dto:  prompt.TemplateTypeJinja2,
+			want: entity.TemplateTypeJinja2,
+		},
+		{
+			name: "go template type",
+			dto:  prompt.TemplateTypeGoTemplate,
+			want: entity.TemplateTypeGoTemplate,
+		},
+		{
+			name: "unknown template type defaults to normal",
+			dto:  prompt.TemplateType("unknown"),
+			want: entity.TemplateTypeNormal,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := TemplateTypeDTO2DO(tt.dto)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestPromptTemplateWithDifferentTypes(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		dto  *prompt.PromptTemplate
+		want *entity.PromptTemplate
+	}{
+		{
+			name: "normal template",
+			dto: &prompt.PromptTemplate{
+				TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+				Messages: []*prompt.Message{
+					{
+						Role:    ptr.Of(prompt.RoleUser),
+						Content: ptr.Of("Hello {{name}}"),
+					},
+				},
+			},
+			want: &entity.PromptTemplate{
+				TemplateType: entity.TemplateTypeNormal,
+				Messages: []*entity.Message{
+					{
+						Role:    entity.RoleUser,
+						Content: ptr.Of("Hello {{name}}"),
+					},
+				},
+			},
+		},
+		{
+			name: "jinja2 template",
+			dto: &prompt.PromptTemplate{
+				TemplateType: ptr.Of(prompt.TemplateTypeJinja2),
+				Messages: []*prompt.Message{
+					{
+						Role:    ptr.Of(prompt.RoleUser),
+						Content: ptr.Of("Hello {{ name }}"),
+					},
+				},
+			},
+			want: &entity.PromptTemplate{
+				TemplateType: entity.TemplateTypeJinja2,
+				Messages: []*entity.Message{
+					{
+						Role:    entity.RoleUser,
+						Content: ptr.Of("Hello {{ name }}"),
+					},
+				},
+			},
+		},
+		{
+			name: "go template",
+			dto: &prompt.PromptTemplate{
+				TemplateType: ptr.Of(prompt.TemplateTypeGoTemplate),
+				Messages: []*prompt.Message{
+					{
+						Role:    ptr.Of(prompt.RoleUser),
+						Content: ptr.Of("Hello {{.name}}"),
+					},
+				},
+			},
+			want: &entity.PromptTemplate{
+				TemplateType: entity.TemplateTypeGoTemplate,
+				Messages: []*entity.Message{
+					{
+						Role:    entity.RoleUser,
+						Content: ptr.Of("Hello {{.name}}"),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := PromptTemplateDTO2DO(tt.dto)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

@@ -43,8 +43,9 @@ type PromptTemplate struct {
 type TemplateType string
 
 const (
-	TemplateTypeNormal TemplateType = "normal"
-	TemplateTypeJinja2 TemplateType = "jinja2"
+	TemplateTypeNormal     TemplateType = "normal"
+	TemplateTypeJinja2     TemplateType = "jinja2"
+	TemplateTypeGoTemplate TemplateType = "go_template"
 )
 
 type Message struct {
@@ -296,6 +297,8 @@ func formatText(templateType TemplateType, templateStr string, defMap map[string
 			}), nil
 	case TemplateTypeJinja2:
 		return renderJinja2Template(templateStr, defMap, valMap)
+	case TemplateTypeGoTemplate:
+		return renderGoTemplate(templateStr, defMap, valMap)
 	default:
 		return "", errorx.NewByCode(prompterr.UnsupportedTemplateTypeCode, errorx.WithExtraMsg("unknown template type: "+string(templateType)))
 	}
@@ -310,6 +313,17 @@ func renderJinja2Template(templateStr string, defMap map[string]*VariableDef, va
 	}
 
 	return template.InterpolateJinja2(templateStr, variables)
+}
+
+// renderGoTemplate 渲染 Go Template 模板
+func renderGoTemplate(templateStr string, defMap map[string]*VariableDef, valMap map[string]*VariableVal) (string, error) {
+	// 转换变量为 map[string]any 格式
+	variables, err := convertVariablesToMap(defMap, valMap)
+	if err != nil {
+		return "", err
+	}
+
+	return template.InterpolateGoTemplate(templateStr, variables)
 }
 
 // convertVariablesToMap 将变量定义和变量值转换为模板引擎可用的 map
