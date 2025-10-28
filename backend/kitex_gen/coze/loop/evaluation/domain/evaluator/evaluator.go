@@ -30,11 +30,11 @@ const (
 
 	EvaluatorTagKeyVisible = "Visible"
 
-	FilterLogicOpUnknown = "Unknown"
+	EvaluatorFilterLogicOpUnknown = "Unknown"
 
-	FilterLogicOpAnd = "And"
+	EvaluatorFilterLogicOpAnd = "And"
 
-	FilterLogicOpOr = "Or"
+	EvaluatorFilterLogicOpOr = "Or"
 
 	EvaluatorFilterOperatorTypeUnknown = "Unknown"
 
@@ -286,7 +286,7 @@ type LanguageType = string
 type EvaluatorTagKey = string
 
 // 筛选逻辑操作符
-type FilterLogicOp = string
+type EvaluatorFilterLogicOp = string
 
 // Evaluator筛选操作符
 type EvaluatorFilterOperatorType = string
@@ -5213,7 +5213,7 @@ type EvaluatorFilters struct {
 	// 筛选条件列表
 	FilterConditions []*EvaluatorFilterCondition `thrift:"filter_conditions,1,optional" frugal:"1,optional,list<EvaluatorFilterCondition>" form:"filter_conditions" json:"filter_conditions,omitempty" query:"filter_conditions"`
 	// 逻辑操作符
-	LogicOp *FilterLogicOp `thrift:"logic_op,2,optional" frugal:"2,optional,string" form:"logic_op" json:"logic_op,omitempty" query:"logic_op"`
+	LogicOp *EvaluatorFilterLogicOp `thrift:"logic_op,2,optional" frugal:"2,optional,string" form:"logic_op" json:"logic_op,omitempty" query:"logic_op"`
 }
 
 func NewEvaluatorFilters() *EvaluatorFilters {
@@ -5235,9 +5235,9 @@ func (p *EvaluatorFilters) GetFilterConditions() (v []*EvaluatorFilterCondition)
 	return p.FilterConditions
 }
 
-var EvaluatorFilters_LogicOp_DEFAULT FilterLogicOp
+var EvaluatorFilters_LogicOp_DEFAULT EvaluatorFilterLogicOp
 
-func (p *EvaluatorFilters) GetLogicOp() (v FilterLogicOp) {
+func (p *EvaluatorFilters) GetLogicOp() (v EvaluatorFilterLogicOp) {
 	if p == nil {
 		return
 	}
@@ -5249,7 +5249,7 @@ func (p *EvaluatorFilters) GetLogicOp() (v FilterLogicOp) {
 func (p *EvaluatorFilters) SetFilterConditions(val []*EvaluatorFilterCondition) {
 	p.FilterConditions = val
 }
-func (p *EvaluatorFilters) SetLogicOp(val *FilterLogicOp) {
+func (p *EvaluatorFilters) SetLogicOp(val *EvaluatorFilterLogicOp) {
 	p.LogicOp = val
 }
 
@@ -5354,7 +5354,7 @@ func (p *EvaluatorFilters) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *EvaluatorFilters) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field *FilterLogicOp
+	var _field *EvaluatorFilterLogicOp
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
@@ -5477,7 +5477,7 @@ func (p *EvaluatorFilters) Field1DeepEqual(src []*EvaluatorFilterCondition) bool
 	}
 	return true
 }
-func (p *EvaluatorFilters) Field2DeepEqual(src *FilterLogicOp) bool {
+func (p *EvaluatorFilters) Field2DeepEqual(src *EvaluatorFilterLogicOp) bool {
 
 	if p.LogicOp == src {
 		return true

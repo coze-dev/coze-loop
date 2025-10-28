@@ -132,14 +132,14 @@ struct EvaluatorFilterOption {
 // Evaluator筛选条件
 struct EvaluatorFilters {
     1: optional list<EvaluatorFilterCondition> filter_conditions  // 筛选条件列表
-    2: optional FilterLogicOp logic_op  // 逻辑操作符
+    2: optional EvaluatorFilterLogicOp logic_op  // 逻辑操作符
 }
 
 // 筛选逻辑操作符
-typedef string FilterLogicOp(ts.enum="true")
-const FilterLogicOp FilterLogicOp_Unknown = "Unknown"
-const FilterLogicOp FilterLogicOp_And = "And"    // 与操作
-const FilterLogicOp FilterLogicOp_Or = "Or"      // 或操作
+typedef string EvaluatorFilterLogicOp(ts.enum="true")
+const EvaluatorFilterLogicOp EvaluatorFilterLogicOp_Unknown = "Unknown"
+const EvaluatorFilterLogicOp EvaluatorFilterLogicOp_And = "And"    // 与操作
+const EvaluatorFilterLogicOp EvaluatorFilterLogicOp_Or = "Or"      // 或操作
 
 // Evaluator筛选条件
 struct EvaluatorFilterCondition {
