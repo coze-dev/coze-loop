@@ -219,9 +219,6 @@ func FilterFieldListDTO2DO(fields []*filter.FilterField) []*loop_span.FilterFiel
 		if field == nil {
 			continue
 		}
-		if field.IsCustom != nil {
-			fField.IsCustom = *field.IsCustom
-		}
 		ret = append(ret, FilterFieldDTO2DO(field))
 	}
 	return ret

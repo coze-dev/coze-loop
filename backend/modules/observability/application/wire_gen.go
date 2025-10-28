@@ -27,10 +27,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
-	repo3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
-	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
@@ -264,7 +260,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
 	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo)
-	iTaskService, err := service2.NewTaskServiceImpl(iTaskRepo, iUserProvider, idgen2, iBackfillProducer, processorTaskProcessor)
+	iTaskService, err := service3.NewTaskServiceImpl(iTaskRepo, iUserProvider, idgen2, iBackfillProducer, processorTaskProcessor)
 	if err != nil {
 		return nil, err
 	}

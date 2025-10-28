@@ -27,16 +27,16 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
-	trepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
-	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
-	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	metric_general "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	metric_model "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
 	metric_service_def "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
 	metric_tool "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
+	trepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
+	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
+	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -135,15 +135,6 @@ var (
 		NewTaskLocker,
 		traceDomainSet,
 	)
-	taskSet = wire.NewSet(
-		tracehub.NewTraceHubImpl,
-		NewTaskApplication,
-		auth.NewAuthProvider,
-		user.NewUserRPCProvider,
-		evaluation.NewEvaluationRPCProvider,
-		NewTaskLocker,
-		traceDomainSet,
-	)
 	metricsSet = wire.NewSet(
 		NewMetricApplication,
 		metric_service.NewMetricsService,
@@ -159,10 +150,6 @@ var (
 		file.NewFileRPCProvider,
 	)
 )
-
-func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {
-	return lock.NewRedisLockerWithHolder(cmdable, "observability")
-}
 
 func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "observability")
