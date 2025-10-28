@@ -77,6 +77,7 @@ func NewEvaluatorVersionDAO(p db.Provider) EvaluatorVersionDAO {
 var SupportedOrderBys = map[string]string{
 	"updated_at": "updated_at",
 	"created_at": "created_at",
+	"heat":       "heat",
 }
 
 var (

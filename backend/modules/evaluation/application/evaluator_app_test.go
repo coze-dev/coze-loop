@@ -112,6 +112,36 @@ func TestEvaluatorHandlerImpl_ListEvaluators(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "success - builtin evaluators request",
+			req: &evaluatorservice.ListEvaluatorsRequest{
+				WorkspaceID: validSpaceID,
+				Builtin:     gptr.Of(true),
+			},
+			mockSetup: func() {
+				// Mock auth
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(validSpaceID, 10),
+					SpaceID:       validSpaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
+
+				// Mock builtin evaluator service call
+				mockEvaluatorService.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Any()).
+					Return(validEvaluators, int64(2), nil)
+
+				// Mock user info service
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
+			},
+			wantResp: &evaluatorservice.ListEvaluatorsResponse{
+				Total: gptr.Of(int64(2)),
+				Evaluators: []*evaluatordto.Evaluator{
+					evaluator.ConvertEvaluatorDO2DTO(validEvaluators[0]),
+					evaluator.ConvertEvaluatorDO2DTO(validEvaluators[1]),
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "error - auth failed",
 			req: &evaluatorservice.ListEvaluatorsRequest{
 				WorkspaceID: validSpaceID,
@@ -384,6 +414,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					mockAuth,
 					mockEvaluatorService,
 					mockEvaluatorRecordService,
+					nil, // mockEvaluatorTemplateService - 暂时设为nil
 					mockMetrics,
 					mockUserInfoService,
 					mockAuditClient,
@@ -800,6 +831,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					mockAuth,
 					mockEvaluatorService,
 					mockEvaluatorRecordService,
+					nil, // mockEvaluatorTemplateService - 暂时设为nil
 					mockMetrics,
 					mockUserInfoService,
 					mockAuditClient,

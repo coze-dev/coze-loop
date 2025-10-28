@@ -112,6 +112,20 @@ func (mr *MockIConfigerMockRecorder) GetEvaluatorTemplateConf(ctx any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorTemplateConf", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluatorTemplateConf), ctx)
 }
 
+// GetEvaluatorTemplateSpaceConf mocks base method.
+func (m *MockIConfiger) GetEvaluatorTemplateSpaceConf(ctx context.Context) []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvaluatorTemplateSpaceConf", ctx)
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GetEvaluatorTemplateSpaceConf indicates an expected call of GetEvaluatorTemplateSpaceConf.
+func (mr *MockIConfigerMockRecorder) GetEvaluatorTemplateSpaceConf(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorTemplateSpaceConf", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluatorTemplateSpaceConf), ctx)
+}
+
 // GetEvaluatorToolConf mocks base method.
 func (m *MockIConfiger) GetEvaluatorToolConf(ctx context.Context) map[string]*evaluator.Tool {
 	m.ctrl.T.Helper()

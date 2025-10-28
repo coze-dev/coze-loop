@@ -13,6 +13,11 @@ type Evaluator struct {
 	LatestVersion  string
 	BaseInfo       *BaseInfo
 
+	Builtin   bool
+	Benchmark string
+	Vendor    string
+	Tags      map[EvaluatorTagKey][]string `json:"tags"`
+
 	PromptEvaluatorVersion *PromptEvaluatorVersion
 	CodeEvaluatorVersion   *CodeEvaluatorVersion
 }

@@ -82,6 +82,33 @@ func (p *Evaluator) IsValid() error {
 	}
 	return nil
 }
+func (p *EvaluatorTemplate) IsValid() error {
+	if p.EvaluatorContent != nil {
+		if err := p.EvaluatorContent.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorContent not valid, %w", err)
+		}
+	}
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluatorFilterOption) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluatorFilters) IsValid() error {
+	return nil
+}
+func (p *EvaluatorFilterCondition) IsValid() error {
+	return nil
+}
 func (p *Correction) IsValid() error {
 	return nil
 }

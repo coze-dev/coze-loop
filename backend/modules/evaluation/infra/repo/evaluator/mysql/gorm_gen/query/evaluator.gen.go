@@ -39,6 +39,9 @@ func newEvaluator(db *gorm.DB, opts ...gen.DOOption) evaluator {
 	_evaluator.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_evaluator.DeletedAt = field.NewField(tableName, "deleted_at")
 	_evaluator.LatestVersion = field.NewString(tableName, "latest_version")
+	_evaluator.Benchmark = field.NewString(tableName, "benchmark")
+	_evaluator.Vendor = field.NewString(tableName, "vendor")
+	_evaluator.Builtin = field.NewInt32(tableName, "builtin")
 
 	_evaluator.fillFieldMap()
 
@@ -62,6 +65,9 @@ type evaluator struct {
 	UpdatedAt      field.Time   // 更新时间
 	DeletedAt      field.Field  // 删除时间
 	LatestVersion  field.String // 最新版本号
+	Benchmark      field.String // benchmark
+	Vendor         field.String // vendor
+	Builtin        field.Int32  // 是否预置，1:是；2:否
 
 	fieldMap map[string]field.Expr
 }
@@ -90,6 +96,9 @@ func (e *evaluator) updateTableName(table string) *evaluator {
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
 	e.LatestVersion = field.NewString(table, "latest_version")
+	e.Benchmark = field.NewString(table, "benchmark")
+	e.Vendor = field.NewString(table, "vendor")
+	e.Builtin = field.NewInt32(table, "builtin")
 
 	e.fillFieldMap()
 
@@ -116,7 +125,7 @@ func (e *evaluator) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *evaluator) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 12)
+	e.fieldMap = make(map[string]field.Expr, 15)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["evaluator_type"] = e.EvaluatorType
@@ -129,6 +138,9 @@ func (e *evaluator) fillFieldMap() {
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt
 	e.fieldMap["latest_version"] = e.LatestVersion
+	e.fieldMap["benchmark"] = e.Benchmark
+	e.fieldMap["vendor"] = e.Vendor
+	e.fieldMap["builtin"] = e.Builtin
 }
 
 func (e evaluator) clone(db *gorm.DB) evaluator {
