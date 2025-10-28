@@ -9,6 +9,7 @@
 <p>
   <img alt="License" src="https://img.shields.io/badge/license-apache2.0-blue.svg">
   <img alt="Go Version" src="https://img.shields.io/badge/go-%3E%3D%201.24.0-blue">
+  <a href="https://deepwiki.com/coze-dev/coze-loop"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
 English | [中文](README.cn.md)

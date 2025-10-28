@@ -769,7 +769,6 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		session.UserIDInCtxOrEmpty(ctx),
 		false,
 	)
-	fmt.Println(annotation.ID, req.AnnotationID)
 	if err != nil || annotation.ID != req.AnnotationID {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
@@ -1172,13 +1171,12 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 		return resp, err
 	}
 	// 再同步修改观测数据
-	param := &repo.UpsertAnnotationParam{
+	param := &repo.InsertAnnotationParam{
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
-		IsSync:      true,
 	}
-	if err = r.traceRepo.UpsertAnnotation(ctx, param); err != nil {
+	if err = r.traceRepo.InsertAnnotations(ctx, param); err != nil {
 		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)
 		// 如果同步修改失败，异步补偿
 		// todo 异步有问题，会重复

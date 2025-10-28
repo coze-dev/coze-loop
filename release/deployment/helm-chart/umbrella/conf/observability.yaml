@@ -342,12 +342,15 @@ key_columns:
 
 key_span_type:
   default:
-    - "model",
-    - "tool",
+    - "model"
+    - "tool"
     - "root"
     - "UserInput"
     - "UserInputV2"
     - "LLMCall"
+    - "WorkflowLLMCall"
+    - "WorkflowPluginTool"
+    - "PluginTool"
 
 correction_mq_consumer_config:
   addr:
