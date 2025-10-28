@@ -4548,7 +4548,7 @@ func (p *InvokeEvaluatorResponse) FastReadField1(buf []byte) (int, error) {
 	} else {
 		offset += l
 	}
-	p.EvaluatorOutputData = _field
+	p.OutputData = _field
 	return offset, nil
 }
 
@@ -4608,9 +4608,9 @@ func (p *InvokeEvaluatorResponse) BLength() int {
 
 func (p *InvokeEvaluatorResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetEvaluatorOutputData() {
+	if p.IsSetOutputData() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
-		offset += p.EvaluatorOutputData.FastWriteNocopy(buf[offset:], w)
+		offset += p.OutputData.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -4633,9 +4633,9 @@ func (p *InvokeEvaluatorResponse) fastWriteField255(buf []byte, w thrift.NocopyW
 
 func (p *InvokeEvaluatorResponse) field1Length() int {
 	l := 0
-	if p.IsSetEvaluatorOutputData() {
+	if p.IsSetOutputData() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.EvaluatorOutputData.BLength()
+		l += p.OutputData.BLength()
 	}
 	return l
 }
@@ -4662,14 +4662,14 @@ func (p *InvokeEvaluatorResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _evaluatorOutputData *InvokeEvaluatorOutputData
-	if src.EvaluatorOutputData != nil {
-		_evaluatorOutputData = &InvokeEvaluatorOutputData{}
-		if err := _evaluatorOutputData.DeepCopy(src.EvaluatorOutputData); err != nil {
+	var _outputData *InvokeEvaluatorOutputData
+	if src.OutputData != nil {
+		_outputData = &InvokeEvaluatorOutputData{}
+		if err := _outputData.DeepCopy(src.OutputData); err != nil {
 			return err
 		}
 	}
-	p.EvaluatorOutputData = _evaluatorOutputData
+	p.OutputData = _outputData
 
 	if src.Status != nil {
 		tmp := *src.Status

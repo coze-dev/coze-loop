@@ -179,9 +179,9 @@ func (p *InvokeEvaluatorRequest) IsValid() error {
 	return nil
 }
 func (p *InvokeEvaluatorResponse) IsValid() error {
-	if p.EvaluatorOutputData != nil {
-		if err := p.EvaluatorOutputData.IsValid(); err != nil {
-			return fmt.Errorf("field EvaluatorOutputData not valid, %w", err)
+	if p.OutputData != nil {
+		if err := p.OutputData.IsValid(); err != nil {
+			return fmt.Errorf("field OutputData not valid, %w", err)
 		}
 	}
 	if p.BaseResp != nil {

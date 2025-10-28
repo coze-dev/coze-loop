@@ -6314,9 +6314,9 @@ func (p *InvokeEvaluatorRequest) Field255DeepEqual(src *base.Base) bool {
 
 // invoke custom evaluator response
 type InvokeEvaluatorResponse struct {
-	EvaluatorOutputData *InvokeEvaluatorOutputData `thrift:"evaluator_output_data,1,optional" frugal:"1,optional,InvokeEvaluatorOutputData" form:"evaluator_output_data" json:"evaluator_output_data,omitempty" query:"evaluator_output_data"`
-	Status              *InvokeEvaluatorRunStatus  `thrift:"status,2,optional" frugal:"2,optional,InvokeEvaluatorRunStatus" form:"status" json:"status,omitempty" query:"status"`
-	BaseResp            *base.BaseResp             `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	OutputData *InvokeEvaluatorOutputData `thrift:"output_data,1,optional" frugal:"1,optional,InvokeEvaluatorOutputData" form:"output_data" json:"output_data,omitempty" query:"output_data"`
+	Status     *InvokeEvaluatorRunStatus  `thrift:"status,2,optional" frugal:"2,optional,InvokeEvaluatorRunStatus" form:"status" json:"status,omitempty" query:"status"`
+	BaseResp   *base.BaseResp             `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewInvokeEvaluatorResponse() *InvokeEvaluatorResponse {
@@ -6326,16 +6326,16 @@ func NewInvokeEvaluatorResponse() *InvokeEvaluatorResponse {
 func (p *InvokeEvaluatorResponse) InitDefault() {
 }
 
-var InvokeEvaluatorResponse_EvaluatorOutputData_DEFAULT *InvokeEvaluatorOutputData
+var InvokeEvaluatorResponse_OutputData_DEFAULT *InvokeEvaluatorOutputData
 
-func (p *InvokeEvaluatorResponse) GetEvaluatorOutputData() (v *InvokeEvaluatorOutputData) {
+func (p *InvokeEvaluatorResponse) GetOutputData() (v *InvokeEvaluatorOutputData) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetEvaluatorOutputData() {
-		return InvokeEvaluatorResponse_EvaluatorOutputData_DEFAULT
+	if !p.IsSetOutputData() {
+		return InvokeEvaluatorResponse_OutputData_DEFAULT
 	}
-	return p.EvaluatorOutputData
+	return p.OutputData
 }
 
 var InvokeEvaluatorResponse_Status_DEFAULT InvokeEvaluatorRunStatus
@@ -6361,8 +6361,8 @@ func (p *InvokeEvaluatorResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *InvokeEvaluatorResponse) SetEvaluatorOutputData(val *InvokeEvaluatorOutputData) {
-	p.EvaluatorOutputData = val
+func (p *InvokeEvaluatorResponse) SetOutputData(val *InvokeEvaluatorOutputData) {
+	p.OutputData = val
 }
 func (p *InvokeEvaluatorResponse) SetStatus(val *InvokeEvaluatorRunStatus) {
 	p.Status = val
@@ -6372,13 +6372,13 @@ func (p *InvokeEvaluatorResponse) SetBaseResp(val *base.BaseResp) {
 }
 
 var fieldIDToName_InvokeEvaluatorResponse = map[int16]string{
-	1:   "evaluator_output_data",
+	1:   "output_data",
 	2:   "status",
 	255: "BaseResp",
 }
 
-func (p *InvokeEvaluatorResponse) IsSetEvaluatorOutputData() bool {
-	return p.EvaluatorOutputData != nil
+func (p *InvokeEvaluatorResponse) IsSetOutputData() bool {
+	return p.OutputData != nil
 }
 
 func (p *InvokeEvaluatorResponse) IsSetStatus() bool {
@@ -6465,7 +6465,7 @@ func (p *InvokeEvaluatorResponse) ReadField1(iprot thrift.TProtocol) error {
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.EvaluatorOutputData = _field
+	p.OutputData = _field
 	return nil
 }
 func (p *InvokeEvaluatorResponse) ReadField2(iprot thrift.TProtocol) error {
@@ -6526,11 +6526,11 @@ WriteStructEndError:
 }
 
 func (p *InvokeEvaluatorResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvaluatorOutputData() {
-		if err = oprot.WriteFieldBegin("evaluator_output_data", thrift.STRUCT, 1); err != nil {
+	if p.IsSetOutputData() {
+		if err = oprot.WriteFieldBegin("output_data", thrift.STRUCT, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.EvaluatorOutputData.Write(oprot); err != nil {
+		if err := p.OutputData.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -6592,7 +6592,7 @@ func (p *InvokeEvaluatorResponse) DeepEqual(ano *InvokeEvaluatorResponse) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.EvaluatorOutputData) {
+	if !p.Field1DeepEqual(ano.OutputData) {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Status) {
@@ -6606,7 +6606,7 @@ func (p *InvokeEvaluatorResponse) DeepEqual(ano *InvokeEvaluatorResponse) bool {
 
 func (p *InvokeEvaluatorResponse) Field1DeepEqual(src *InvokeEvaluatorOutputData) bool {
 
-	if !p.EvaluatorOutputData.DeepEqual(src) {
+	if !p.OutputData.DeepEqual(src) {
 		return false
 	}
 	return true
