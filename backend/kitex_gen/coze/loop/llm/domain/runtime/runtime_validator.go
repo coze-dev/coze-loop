@@ -74,6 +74,15 @@ func (p *Tool) IsValid() error {
 	return nil
 }
 func (p *BizParam) IsValid() error {
+	if p.WorkspaceID == nil {
+		return fmt.Errorf("field WorkspaceID not_nil rule failed")
+	}
+	if p.Scenario == nil {
+		return fmt.Errorf("field Scenario not_nil rule failed")
+	}
+	if p.ScenarioEntityID == nil {
+		return fmt.Errorf("field ScenarioEntityID not_nil rule failed")
+	}
 	return nil
 }
 func (p *ResponseFormat) IsValid() error {
