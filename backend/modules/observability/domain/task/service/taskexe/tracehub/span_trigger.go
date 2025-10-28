@@ -29,7 +29,6 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.R
 	span := rawSpan.RawSpanConvertToLoopSpan()
 	// 1.1 Filter out spans that do not belong to any space or bot
 	spaceIDs, botIDs, _ := h.getObjListWithTaskFromCache(ctx)
-	logs.CtxInfo(ctx, "space list: %v, bot list: %v, log_suffix=%s", spaceIDs, botIDs, logSuffix)
 	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
 		logs.CtxInfo(ctx, "no space or bot found for span, space_id=%s,bot_id=%s, log_suffix=%s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
 		return nil

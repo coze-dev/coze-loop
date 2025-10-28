@@ -8,7 +8,6 @@ package apis
 
 import (
 	"context"
-
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -172,7 +171,11 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	observabilityHandler := NewObservabilityHandler(iTraceApplication, iTraceIngestionApplication, iObservabilityOpenAPIApplication, iTaskApplication)
+	iMetricApplication, err := application6.InitMetricApplication(ckDb, configFactory, fileClient, benefit2, authCli)
+	if err != nil {
+		return nil, err
+	}
+	observabilityHandler := NewObservabilityHandler(iTraceApplication, iTraceIngestionApplication, iObservabilityOpenAPIApplication, iTaskApplication, iMetricApplication)
 	return observabilityHandler, nil
 }
 
@@ -195,6 +198,6 @@ var (
 		NewDataHandler, application5.InitDatasetApplication, application5.InitTagApplication, foundation.NewAuthRPCProvider, conf2.NewConfigerFactory,
 	)
 	observabilitySet = wire.NewSet(
-		NewObservabilityHandler, application6.InitTraceApplication, application6.InitTraceIngestionApplication, application6.InitOpenAPIApplication, application6.InitTaskApplication,
+		NewObservabilityHandler, application6.InitTraceApplication, application6.InitTraceIngestionApplication, application6.InitOpenAPIApplication, application6.InitTaskApplication, application6.InitMetricApplication,
 	)
 )

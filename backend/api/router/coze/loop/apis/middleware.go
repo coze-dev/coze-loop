@@ -1600,3 +1600,18 @@ func _listevaluationsetversionsoapiMw(handler *apis.APIHandler) []app.HandlerFun
 	// your code...
 	return nil
 }
+
+func _metricsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getmetricsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getdrilldownvaluesMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

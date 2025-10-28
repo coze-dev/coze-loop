@@ -22,6 +22,7 @@ include "../observability/coze.loop.observability.trace.thrift"
 include "../data/coze.loop.data.tag.thrift"
 include "../observability/coze.loop.observability.openapi.thrift"
 include "../observability/coze.loop.observability.task.thrift"
+include "../observability/coze.loop.observability.metric.thrift"
 
 service EvaluationSetService extends coze.loop.evaluation.eval_set.EvaluationSetService{}
 service EvaluatorService extends coze.loop.evaluation.evaluator.EvaluatorService{}
@@ -42,6 +43,7 @@ service LLMRuntimeService extends coze.loop.llm.runtime.LLMRuntimeService {}
 service ObservabilityTraceService extends coze.loop.observability.trace.TraceService{}
 service ObservabilityOpenAPIService extends coze.loop.observability.openapi.OpenAPIService{}
 service ObservabilityTaskService extends coze.loop.observability.task.TaskService{}
+service ObservabilityMetricService extends coze.loop.observability.metric.MetricService{}
 
 service FoundationAuthService extends coze.loop.foundation.auth.AuthService{}
 service FoundationAuthNService extends coze.loop.foundation.authn.AuthNService{}
