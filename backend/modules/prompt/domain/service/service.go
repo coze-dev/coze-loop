@@ -26,6 +26,13 @@ type IPromptService interface {
 	// MParseCommitVersion 统一解析提交版本，支持version和label两种方式
 	MParseCommitVersion(ctx context.Context, spaceID int64, params []PromptQueryParam) (promptKeyCommitVersionMap map[PromptQueryParam]string, err error)
 
+	// Prompt管理相关方法
+	CreatePrompt(ctx context.Context, promptDO *entity.Prompt) (promptID int64, err error)
+	SaveDraft(ctx context.Context, promptDO *entity.Prompt) (*entity.DraftInfo, error)
+
+	// Snippet扩展相关方法
+	ExpandSnippets(ctx context.Context, promptDO *entity.Prompt) error
+
 	// Label管理相关方法
 	CreateLabel(ctx context.Context, labelDO *entity.PromptLabel) error
 	ListLabel(ctx context.Context, param ListLabelParam) ([]*entity.PromptLabel, *int64, error)
@@ -75,6 +82,7 @@ type PromptServiceImpl struct {
 	configProvider   conf.IConfigProvider
 	llm              rpc.ILLMProvider
 	file             rpc.IFileProvider
+	snippetParser    SnippetParser
 }
 
 func NewPromptService(
@@ -86,6 +94,7 @@ func NewPromptService(
 	configProvider conf.IConfigProvider,
 	llm rpc.ILLMProvider,
 	file rpc.IFileProvider,
+	snippetParser SnippetParser,
 ) IPromptService {
 	return &PromptServiceImpl{
 		idgen:            idgen,
@@ -96,5 +105,6 @@ func NewPromptService(
 		configProvider:   configProvider,
 		llm:              llm,
 		file:             file,
+		snippetParser:    snippetParser,
 	}
 }

@@ -34,10 +34,13 @@ type PromptDetail struct {
 }
 
 type PromptTemplate struct {
-	TemplateType TemplateType      `json:"template_type"`
-	Messages     []*Message        `json:"messages,omitempty"`
-	VariableDefs []*VariableDef    `json:"variable_defs,omitempty"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
+	TemplateType TemplateType   `json:"template_type"`
+	Messages     []*Message     `json:"messages,omitempty"`
+	VariableDefs []*VariableDef `json:"variable_defs,omitempty"`
+
+	HasSnippets bool              `json:"has_snippets"`
+	Snippets    []*Prompt         `json:"snippets,omitempty"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 
 type TemplateType string
