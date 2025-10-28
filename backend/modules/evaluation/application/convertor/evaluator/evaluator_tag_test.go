@@ -35,7 +35,7 @@ func TestConvertEvaluatorFilterOptionDTO2DO(t *testing.T) {
 		Operator: evaluatordto.EvaluatorFilterOperatorTypeEqual,
 		Value:    "LLM",
 	}
-	logicOp := evaluatordto.FilterLogicOpAnd
+	logicOp := evaluatordto.EvaluatorFilterLogicOpAnd
 	filters := &evaluatordto.EvaluatorFilters{
 		FilterConditions: []*evaluatordto.EvaluatorFilterCondition{filterCondition},
 		LogicOp:          &logicOp,
@@ -71,7 +71,7 @@ func TestConvertEvaluatorTagKeyDTO2DO(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		dtoKey evaluatordto.EvaluatorTagKey
+		dtoKey   evaluatordto.EvaluatorTagKey
 		expected evaluatordo.EvaluatorTagKey
 	}{
 		{evaluatordto.EvaluatorTagKeyCategory, evaluatordo.EvaluatorTagKey_Category},
@@ -92,12 +92,12 @@ func TestConvertFilterLogicOpDTO2DO(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		dtoOp    evaluatordto.FilterLogicOp
+		dtoOp    evaluatordto.EvaluatorFilterLogicOp
 		expected evaluatordo.FilterLogicOp
 	}{
-		{evaluatordto.FilterLogicOpAnd, evaluatordo.FilterLogicOp_And},
-		{evaluatordto.FilterLogicOpOr, evaluatordo.FilterLogicOp_Or},
-		{evaluatordto.FilterLogicOpUnknown, evaluatordo.FilterLogicOp_Unknown},
+		{evaluatordto.EvaluatorFilterLogicOpAnd, evaluatordo.FilterLogicOp_And},
+		{evaluatordto.EvaluatorFilterLogicOpOr, evaluatordo.FilterLogicOp_Or},
+		{evaluatordto.EvaluatorFilterLogicOpUnknown, evaluatordo.FilterLogicOp_Unknown},
 		{"", evaluatordo.FilterLogicOp_Unknown},
 	}
 
@@ -159,7 +159,7 @@ func TestConvertEvaluatorFiltersDTO2DO(t *testing.T) {
 	assert.Nil(t, result)
 
 	// 测试只有逻辑操作符的情况
-	logicOp := evaluatordto.FilterLogicOpOr
+	logicOp := evaluatordto.EvaluatorFilterLogicOpOr
 	dto := &evaluatordto.EvaluatorFilters{
 		LogicOp: &logicOp,
 	}

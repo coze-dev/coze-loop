@@ -28,12 +28,12 @@ func ConvertEvaluatorTagKeyDTO2DO(dtoKey evaluatordto.EvaluatorTagKey) evaluator
 	}
 }
 
-// ConvertFilterLogicOpDTO2DO 将DTO的FilterLogicOp转换为DO的FilterLogicOp
-func ConvertFilterLogicOpDTO2DO(dtoOp evaluatordto.FilterLogicOp) evaluatordo.FilterLogicOp {
+// ConvertFilterLogicOpDTO2DO 将DTO的EvaluatorFilterLogicOp转换为DO的FilterLogicOp
+func ConvertFilterLogicOpDTO2DO(dtoOp evaluatordto.EvaluatorFilterLogicOp) evaluatordo.FilterLogicOp {
 	switch dtoOp {
-	case evaluatordto.FilterLogicOpAnd:
+	case evaluatordto.EvaluatorFilterLogicOpAnd:
 		return evaluatordo.FilterLogicOp_And
-	case evaluatordto.FilterLogicOpOr:
+	case evaluatordto.EvaluatorFilterLogicOpOr:
 		return evaluatordo.FilterLogicOp_Or
 	default:
 		return evaluatordo.FilterLogicOp_Unknown
