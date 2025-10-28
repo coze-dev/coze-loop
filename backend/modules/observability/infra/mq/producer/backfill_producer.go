@@ -36,6 +36,7 @@ func (b *BackfillProducerImpl) SendBackfill(ctx context.Context, message *entity
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	msg := mq.NewDeferMessage(b.topic, 10*time.Second, bytes)
+	msg.WithTag("backfill")
 	sendMsg, err := b.mqProducer.Send(ctx, msg)
 	if err != nil {
 		logs.CtxWarn(ctx, "send annotation msg err: %v", err)
