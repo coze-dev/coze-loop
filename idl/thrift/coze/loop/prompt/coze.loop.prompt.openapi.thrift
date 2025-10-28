@@ -102,7 +102,7 @@ struct PromptTemplate {
 typedef string TemplateType
 const TemplateType TemplateType_Normal = "normal"
 const TemplateType TemplateType_Jinja2 = "jinja2"
-const TemplateType TemplateType_GoTemplate = "goTemplate"
+const TemplateType TemplateType_GoTemplate = "go_template"
 
 
 typedef string ToolChoiceType
