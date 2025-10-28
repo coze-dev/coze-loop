@@ -37,9 +37,9 @@ type Client interface {
 	CreateEvaluatorTemplate(ctx context.Context, request *evaluator.CreateEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.CreateEvaluatorTemplateResponse, err error)
 	UpdateEvaluatorTemplate(ctx context.Context, request *evaluator.UpdateEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorTemplateResponse, err error)
 	DeleteEvaluatorTemplate(ctx context.Context, request *evaluator.DeleteEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.DeleteEvaluatorTemplateResponse, err error)
-	GetLatestEvaluatorVersion(ctx context.Context, request *evaluator.GetLatestEvaluatorVersionRequest, callOptions ...callopt.Option) (r *evaluator.GetLatestEvaluatorVersionResponse, err error)
 	DebugBuiltinEvaluator(ctx context.Context, req *evaluator.DebugBuiltinEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.DebugBuiltinEvaluatorResponse, err error)
-	PublishBuiltinEvaluator(ctx context.Context, req *evaluator.PublishBuiltinEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.PublishBuiltinEvaluatorResponse, err error)
+	UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.UpdateBuiltinEvaluatorTagsResponse, err error)
+	ListEvaluatorTags(ctx context.Context, req *evaluator.ListEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.ListEvaluatorTagsResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -201,17 +201,17 @@ func (p *kEvaluatorServiceClient) DeleteEvaluatorTemplate(ctx context.Context, r
 	return p.kClient.DeleteEvaluatorTemplate(ctx, request)
 }
 
-func (p *kEvaluatorServiceClient) GetLatestEvaluatorVersion(ctx context.Context, request *evaluator.GetLatestEvaluatorVersionRequest, callOptions ...callopt.Option) (r *evaluator.GetLatestEvaluatorVersionResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.GetLatestEvaluatorVersion(ctx, request)
-}
-
 func (p *kEvaluatorServiceClient) DebugBuiltinEvaluator(ctx context.Context, req *evaluator.DebugBuiltinEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.DebugBuiltinEvaluatorResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.DebugBuiltinEvaluator(ctx, req)
 }
 
-func (p *kEvaluatorServiceClient) PublishBuiltinEvaluator(ctx context.Context, req *evaluator.PublishBuiltinEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.PublishBuiltinEvaluatorResponse, err error) {
+func (p *kEvaluatorServiceClient) UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.UpdateBuiltinEvaluatorTagsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.PublishBuiltinEvaluator(ctx, req)
+	return p.kClient.UpdateBuiltinEvaluatorTags(ctx, req)
+}
+
+func (p *kEvaluatorServiceClient) ListEvaluatorTags(ctx context.Context, req *evaluator.ListEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.ListEvaluatorTagsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListEvaluatorTags(ctx, req)
 }

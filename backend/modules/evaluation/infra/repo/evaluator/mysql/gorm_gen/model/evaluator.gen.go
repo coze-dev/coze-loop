@@ -28,6 +28,7 @@ type Evaluator struct {
 	LatestVersion  string         `gorm:"column:latest_version;type:varchar(128);not null;comment:最新版本号" json:"latest_version"`                                                                                                                                                                                                      // 最新版本号
 	Benchmark      *string        `gorm:"column:benchmark;type:varchar(255);comment:benchmark" json:"benchmark"`                                                                                                                                                                                                                     // benchmark
 	Vendor         *string        `gorm:"column:vendor;type:varchar(255);comment:vendor" json:"vendor"`                                                                                                                                                                                                                              // vendor
+	Builtin        int32          `gorm:"column:builtin;type:int(11) unsigned;not null;default:2;comment:是否预置，1:是；2:否" json:"builtin"`                                                                                                                                                                                               // 是否预置，1:是；2:否
 }
 
 // TableName Evaluator's table name

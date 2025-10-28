@@ -37,55 +37,13 @@ enum EvaluatorRunStatus { // 运行状态, 异步下状态流转, 同步下只�
 
 // Evaluator筛选字段
 typedef string EvaluatorTagKey(ts.enum="true")
-const EvaluatorTagKey EvaluatorTagKey_Category = "EvaluatorCategory"           // 类型筛选 (LLM/Code)
+const EvaluatorTagKey EvaluatorTagKey_Category = "Category"           // 类型筛选 (LLM/Code)
 const EvaluatorTagKey EvaluatorTagKey_TargetType = "TargetType"         // 评估对象 (文本/图片/视频等)
 const EvaluatorTagKey EvaluatorTagKey_Objective = "Objective"      // 评估目标 (任务完成/内容质量等)
 const EvaluatorTagKey EvaluatorTagKey_BusinessScenario = "BusinessScenario"   // 业务场景 (安全风控/AI Coding等)
 const EvaluatorTagKey EvaluatorTagKey_BoxType = "BoxType"            // 黑白盒类型
 const EvaluatorTagKey EvaluatorTagKey_Name = "Name"               // 评估器名称
-
-// 类型筛选枚举 - 针对外部用户的分类
-typedef string EvaluatorCategory(ts.enum="true")
-const EvaluatorCategory EvaluatorCategory_LLM = "LLM"
-const EvaluatorCategory EvaluatorCategory_Code = "Code"
-
-// 黑白盒枚举
-typedef string EvaluatorBoxType(ts.enum="true")
-const EvaluatorBoxType EvaluatorBoxType_BlackBox = "BlackBox"   // 黑盒：不关注内部实现，只看输入输出
-const EvaluatorBoxType EvaluatorBoxType_WhiteBox = "WhiteBox"   // 白盒：可访问内部状态和实现细节
-
-// 评估对象枚举
-typedef string EvaluationTargetType(ts.enum="true")
-const EvaluationTargetType EvaluationTargetType_Text = "Text"
-const EvaluationTargetType EvaluationTargetType_Image = "Image"
-const EvaluationTargetType EvaluationTargetType_Video = "Video"
-const EvaluationTargetType EvaluationTargetType_Audio = "Audio"
-const EvaluationTargetType EvaluationTargetType_Code = "Code"
-const EvaluationTargetType EvaluationTargetType_Multimodal = "Multimodal"
-const EvaluationTargetType EvaluationTargetType_Agent = "Agent"
-
-// 评估目标枚举
-typedef string EvaluationObjective(ts.enum="true")
-const EvaluationObjective EvaluationObjective_TaskCompletion = "TaskCompletion"
-const EvaluationObjective EvaluationObjective_ContentQuality = "ContentQuality"
-const EvaluationObjective EvaluationObjective_InteractionExperience = "InteractionExperience"
-const EvaluationObjective EvaluationObjective_ToolInvocation = "ToolInvocation"
-const EvaluationObjective EvaluationObjective_TrajectoryQuality = "TrajectoryQuality"
-const EvaluationObjective EvaluationObjective_KnowledgeManagementAndMemory = "KnowledgeManagementAndMemory"
-const EvaluationObjective EvaluationObjective_FormatValidation = "FormatValidation"
-
-// 业务场景枚举
-typedef string BusinessScenario(ts.enum="true")
-const BusinessScenario BusinessScenarioType_SecurityRiskControl = "SecurityRiskControl"
-const BusinessScenario BusinessScenarioType_AICoding = "AICoding"
-const BusinessScenario BusinessScenarioType_CustomerServiceAssistant = "CustomerServiceAssistant"
-const BusinessScenario BusinessScenarioType_AgentGeneralEvaluation = "AgentGeneralEvaluation"
-const BusinessScenario BusinessScenarioType_AIGC = "AIGC"
-
-// 上下架操作类型枚举
-typedef string OperationType(ts.enum="true")
-const OperationType OperationType_Publish = "Publish"   // 上架
-const OperationType OperationType_Retreat = "Retreat"   // 下架
+const EvaluatorTagKey EvaluatorTagKey_Visible = "Visible"           // 可见性
 
 struct Tool {
     1: ToolType type (go.tag ='mapstructure:"type"')
@@ -143,6 +101,7 @@ struct Evaluator {
     11: optional EvaluatorVersion current_version
     12: optional string latest_version
 
+    20: optional bool builtin (go.tag = 'json:"builtin"')
     21: optional string benchmark (go.tag = 'json:"benchmark"')
     22: optional string vendor (go.tag = 'json:"vendor"')
     23: map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
@@ -154,7 +113,7 @@ struct EvaluatorTemplate {
     3: optional EvaluatorType evaluator_type
     4: optional string name
     5: optional string description
-    6: optional i64 hot (go.tag = 'json:"hot"') // 热度
+    6: optional i64 popularity (go.tag = 'json:"popularity"') // 热度
     7: optional string benchmark (go.tag = 'json:"benchmark"')
     8: optional string vendor (go.tag = 'json:"vendor"')
     9: map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
@@ -173,15 +132,14 @@ struct EvaluatorFilterOption {
 // Evaluator筛选条件
 struct EvaluatorFilters {
     1: optional list<EvaluatorFilterCondition> filter_conditions  // 筛选条件列表
-    2: optional FilterLogicOp logic_op  // 逻辑操作符
+    2: optional EvaluatorFilterLogicOp logic_op  // 逻辑操作符
 }
 
 // 筛选逻辑操作符
-enum FilterLogicOp {
-    Unknown = 0
-    And = 1    // 与操作
-    Or = 2     // 或操作
-}
+typedef string EvaluatorFilterLogicOp(ts.enum="true")
+const EvaluatorFilterLogicOp EvaluatorFilterLogicOp_Unknown = "Unknown"
+const EvaluatorFilterLogicOp EvaluatorFilterLogicOp_And = "And"    // 与操作
+const EvaluatorFilterLogicOp EvaluatorFilterLogicOp_Or = "Or"      // 或操作
 
 // Evaluator筛选条件
 struct EvaluatorFilterCondition {
@@ -191,16 +149,15 @@ struct EvaluatorFilterCondition {
 }
 
 // Evaluator筛选操作符
-enum EvaluatorFilterOperatorType {
-    Unknown = 0
-    Equal = 1        // 等于
-    NotEqual = 2     // 不等于
-    In = 3           // 包含于
-    NotIn = 4        // 不包含于
-    Like = 5         // 模糊匹配
-    IsNull = 6       // 为空
-    IsNotNull = 7    // 非空
-}
+typedef string EvaluatorFilterOperatorType(ts.enum="true")
+const EvaluatorFilterOperatorType EvaluatorFilterOperatorType_Unknown = "Unknown"
+const EvaluatorFilterOperatorType EvaluatorFilterOperatorType_Equal = "Equal"        // 等于
+const EvaluatorFilterOperatorType EvaluatorFilterOperatorType_NotEqual = "NotEqual"     // 不等于
+const EvaluatorFilterOperatorType EvaluatorFilterOperatorType_In = "In"           // 包含于
+const EvaluatorFilterOperatorType EvaluatorFilterOperatorType_NotIn = "NotIn"        // 不包含于
+const EvaluatorFilterOperatorType EvaluatorFilterOperatorType_Like = "Like"         // 模糊匹配
+const EvaluatorFilterOperatorType EvaluatorFilterOperatorType_IsNull = "IsNull"       // 为空
+const EvaluatorFilterOperatorType EvaluatorFilterOperatorType_IsNotNull = "IsNotNull"    // 非空
 
 struct Correction {
     1: optional double score

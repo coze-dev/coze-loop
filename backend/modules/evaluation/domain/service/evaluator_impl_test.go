@@ -19,15 +19,44 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
+
+// MockEvaluatorSourceService 简单的mock实现
+type MockEvaluatorSourceService struct {
+	ctrl *gomock.Controller
+}
+
+func NewMockEvaluatorSourceService(ctrl *gomock.Controller) *MockEvaluatorSourceService {
+	return &MockEvaluatorSourceService{ctrl: ctrl}
+}
+
+func (m *MockEvaluatorSourceService) EvaluatorType() entity.EvaluatorType {
+	return entity.EvaluatorTypeLLM
+}
+
+func (m *MockEvaluatorSourceService) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
+	return &entity.EvaluatorOutputData{}, entity.EvaluatorRunStatusSuccess, "trace-id"
+}
+
+func (m *MockEvaluatorSourceService) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, err error) {
+	return &entity.EvaluatorOutputData{}, nil
+}
+
+func (m *MockEvaluatorSourceService) PreHandle(ctx context.Context, evaluator *entity.Evaluator) error {
+	return nil
+}
+
+func (m *MockEvaluatorSourceService) Validate(ctx context.Context, evaluator *entity.Evaluator) error {
+	return nil
+}
 
 func TestNewEvaluatorServiceImpl(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -40,7 +69,7 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
 	mockIdem := idemmocks.NewMockIdempotentService(ctrl)
 	mockConfiger := confmocks.NewMockIConfiger(ctrl)
-	mockSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockSourceService := NewMockEvaluatorSourceService(ctrl)
 
 	// 这里需要传递一个 EvaluatorSourceService 的 slice
 	service := NewEvaluatorServiceImpl(
@@ -817,6 +846,72 @@ func TestEvaluatorServiceImpl_UpdateEvaluatorDraft(t *testing.T) {
 	}
 }
 
+// TestEvaluatorServiceImpl_UpdateBuiltinEvaluatorDraft 测试 UpdateBuiltinEvaluatorDraft 方法
+func TestEvaluatorServiceImpl_UpdateBuiltinEvaluatorDraft(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+
+	s := &EvaluatorServiceImpl{
+		evaluatorRepo: mockEvaluatorRepo,
+	}
+
+	ctx := context.Background()
+	testEvaluator := &entity.Evaluator{
+		ID:      1,
+		SpaceID: 100,
+		Name:    "Test Builtin Evaluator",
+		Tags: map[entity.EvaluatorTagKey][]string{
+			entity.EvaluatorTagKey_Category: {"LLM", "Code"},
+			entity.EvaluatorTagKey_Objective: {"Quality"},
+		},
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:       10,
+			BaseInfo: &entity.BaseInfo{},
+		},
+		BaseInfo: &entity.BaseInfo{},
+	}
+
+	tests := []struct {
+		name          string
+		evaluatorDO   *entity.Evaluator
+		setupMock     func(mockRepo *repomocks.MockIEvaluatorRepo)
+		expectedError error
+	}{
+		{
+			name:        "成功更新内置评估器草稿",
+			evaluatorDO: testEvaluator,
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				mockRepo.EXPECT().UpdateBuiltinEvaluatorDraft(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name:        "更新内置评估器草稿失败 - repo返回错误",
+			evaluatorDO: testEvaluator,
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				mockRepo.EXPECT().UpdateBuiltinEvaluatorDraft(gomock.Any(), testEvaluator).Return(errors.New("repo error"))
+			},
+			expectedError: errors.New("repo error"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock(mockEvaluatorRepo)
+			err := s.UpdateBuiltinEvaluatorDraft(ctx, tt.evaluatorDO)
+
+			if tt.expectedError != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedError, err)
+			} else {
+				assert.NoError(t, err, "不期望得到错误")
+			}
+		})
+	}
+}
+
 // TestEvaluatorServiceImpl_DeleteEvaluator 测试 DeleteEvaluator 方法
 func TestEvaluatorServiceImpl_DeleteEvaluator(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -1412,7 +1507,7 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 	mockLimiter := repomocks.NewMockRateLimiter(ctrl)
 	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
-	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockEvaluatorSourceService := NewMockEvaluatorSourceService(ctrl)
 	s := &EvaluatorServiceImpl{
 		evaluatorRepo:       mockEvaluatorRepo,
 		limiter:             mockLimiter,
@@ -1659,7 +1754,7 @@ func Test_EvaluatorServiceImpl_DebugEvaluator(t *testing.T) {
 	mockLimiter := repomocks.NewMockRateLimiter(ctrl)
 	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
-	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockEvaluatorSourceService := NewMockEvaluatorSourceService(ctrl)
 	mockService := &EvaluatorServiceImpl{
 		evaluatorRepo:       mockEvaluatorRepo,
 		limiter:             mockLimiter,
@@ -1758,7 +1853,7 @@ func Test_EvaluatorServiceImpl_injectUserInfo(t *testing.T) {
 	mockLimiter := repomocks.NewMockRateLimiter(ctrl)
 	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
-	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockEvaluatorSourceService := NewMockEvaluatorSourceService(ctrl)
 	mockService := &EvaluatorServiceImpl{
 		evaluatorRepo:       mockEvaluatorRepo,
 		limiter:             mockLimiter,
@@ -1797,7 +1892,7 @@ func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
 	mockLimiter := repomocks.NewMockRateLimiter(ctrl)
 	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
-	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockEvaluatorSourceService := NewMockEvaluatorSourceService(ctrl)
 
 	s := &EvaluatorServiceImpl{
 		evaluatorRepo:       mockEvaluatorRepo,
@@ -1889,6 +1984,144 @@ func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
 			assert.NotNil(t, record)
 			assert.Equal(t, defaultRecordID, record.ID)
 			assert.Equal(t, defaultRunStatus, record.Status)
+		})
+	}
+}
+
+// TestEvaluatorServiceImpl_ListBuiltinEvaluator 测试 ListBuiltinEvaluator 方法
+func TestEvaluatorServiceImpl_ListBuiltinEvaluator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+	s := &EvaluatorServiceImpl{
+		evaluatorRepo: mockEvaluatorRepo,
+	}
+
+	ctx := context.Background()
+
+	// 定义测试用例
+	testCases := []struct {
+		name          string
+		request       *entity.ListBuiltinEvaluatorRequest
+		setupMock     func(mockRepo *repomocks.MockIEvaluatorRepo)
+		expectedList  []*entity.Evaluator
+		expectedTotal int64
+		expectedErr   error
+	}{
+		{
+			name: "成功 - 不带版本信息 (WithVersion = false)",
+			request: &entity.ListBuiltinEvaluatorRequest{
+				SpaceID:     1,
+				PageSize:    10,
+				PageNum:     1,
+				WithVersion: false,
+			},
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				expectedRepoReq := &repo.ListBuiltinEvaluatorRequest{
+					SpaceID:        1,
+					PageSize:       10,
+					PageNum:        1,
+					IncludeDeleted: false,
+					FilterOption:   nil, // 没有筛选条件
+				}
+				mockRepo.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
+					&repo.ListBuiltinEvaluatorResponse{
+						Evaluators: []*entity.Evaluator{
+							{ID: 1, Name: "BuiltinEval1", SpaceID: 1, Description: "Builtin Desc1"},
+							{ID: 2, Name: "BuiltinEval2", SpaceID: 1, Description: "Builtin Desc2"},
+						},
+						TotalCount: 2,
+					}, nil)
+			},
+			expectedList: []*entity.Evaluator{
+				{ID: 1, Name: "BuiltinEval1", SpaceID: 1, Description: "Builtin Desc1"},
+				{ID: 2, Name: "BuiltinEval2", SpaceID: 1, Description: "Builtin Desc2"},
+			},
+			expectedTotal: 2,
+			expectedErr:   nil,
+		},
+		{
+			name: "成功 - 带版本信息 (WithVersion = true)",
+			request: &entity.ListBuiltinEvaluatorRequest{
+				SpaceID:     1,
+				PageSize:    10,
+				PageNum:     1,
+				WithVersion: true,
+			},
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				expectedRepoReq := &repo.ListBuiltinEvaluatorRequest{
+					SpaceID:        1,
+					PageSize:       10,
+					PageNum:        1,
+					IncludeDeleted: false,
+					FilterOption:   nil,
+				}
+				mockRepo.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
+					&repo.ListBuiltinEvaluatorResponse{
+						Evaluators: []*entity.Evaluator{
+							{ID: 1, Name: "BuiltinEval1", SpaceID: 1, Description: "Builtin Desc1"},
+						},
+						TotalCount: 1,
+					}, nil)
+
+				// 模拟版本查询
+				mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDs(gomock.Any(), []int64{1}, false).Return(
+					[]*entity.Evaluator{
+						{ID: 1, Name: "BuiltinEval1", SpaceID: 1, Description: "Builtin Desc1"},
+					}, nil)
+			},
+			expectedList: []*entity.Evaluator{
+				{ID: 1, Name: "BuiltinEval1", SpaceID: 1, Description: "Builtin Desc1"},
+			},
+			expectedTotal: 1,
+			expectedErr:   nil,
+		},
+		{
+			name: "失败 - repo返回错误",
+			request: &entity.ListBuiltinEvaluatorRequest{
+				SpaceID:     1,
+				PageSize:    10,
+				PageNum:     1,
+				WithVersion: false,
+			},
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				expectedRepoReq := &repo.ListBuiltinEvaluatorRequest{
+					SpaceID:        1,
+					PageSize:       10,
+					PageNum:        1,
+					IncludeDeleted: false,
+					FilterOption:   nil,
+				}
+				mockRepo.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
+					nil, errors.New("repo error"))
+			},
+			expectedList:  nil,
+			expectedTotal: 0,
+			expectedErr:   errors.New("repo error"),
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock(mockEvaluatorRepo)
+
+			result, total, err := s.ListBuiltinEvaluator(ctx, tt.request)
+
+			if tt.expectedErr != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedErr.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedTotal, total)
+				assert.Equal(t, len(tt.expectedList), len(result))
+				for i, expected := range tt.expectedList {
+					assert.Equal(t, expected.ID, result[i].ID)
+					assert.Equal(t, expected.Name, result[i].Name)
+					assert.Equal(t, expected.SpaceID, result[i].SpaceID)
+					assert.Equal(t, expected.Description, result[i].Description)
+				}
+			}
 		})
 	}
 }

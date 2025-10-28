@@ -9,7 +9,7 @@ type EvaluatorTemplate struct {
 
 	Benchmark string
 	Vendor    string
-	Hot       int64
+	Popularity int64
 
 	InputSchemas       []*ArgsSchema                `json:"input_schemas"`
 	OutputSchemas      []*ArgsSchema                `json:"output_schemas"`

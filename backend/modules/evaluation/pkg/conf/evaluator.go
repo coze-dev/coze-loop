@@ -30,6 +30,10 @@ type IConfiger interface {
 	GetCustomCodeEvaluatorTemplateConf(ctx context.Context) (etf map[string]map[string]*evaluatordto.EvaluatorContent)
 	// 新增方法：获取评估器模板管理空间配置
 	GetEvaluatorTemplateSpaceConf(ctx context.Context) (spaceIDs []string)
+	// 新增方法：获取评估器模板管理空间配置
+	GetBuiltinEvaluatorSpaceConf(ctx context.Context) (spaceIDs []string)
+	// 新增方法：获取评估器Tag配置
+	GetEvaluatorTagConf(ctx context.Context) (etf map[evaluatordto.EvaluatorTagKey][]string)
 }
 
 func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
@@ -204,14 +208,14 @@ func DefaultCustomCodeEvaluatorTemplateConf() map[string]map[string]*evaluatordt
 }
 
 func (c *evaluatorConfiger) GetEvaluatorTemplateSpaceConf(ctx context.Context) (spaceIDs []string) {
-	const key = "evaluator_template_space"
+	const key = "evaluator_management_space_config"
 
 	// 定义配置结构体
-	type EvaluatorTemplateSpaceConf struct {
+	type EvaluatorManagementSpaceConf struct {
 		EvaluatorTemplateSpace []string `json:"evaluator_template_space"`
 	}
 
-	var config EvaluatorTemplateSpaceConf
+	var config EvaluatorManagementSpaceConf
 	if c.loader.UnmarshalKey(ctx, key, &config, conf.WithTagName("json")) == nil && len(config.EvaluatorTemplateSpace) > 0 {
 		return config.EvaluatorTemplateSpace
 	}
@@ -222,6 +226,38 @@ func DefaultEvaluatorTemplateSpaceConf() []string {
 	return make([]string, 0)
 }
 
+func (c *evaluatorConfiger) GetBuiltinEvaluatorSpaceConf(ctx context.Context) (spaceIDs []string) {
+	const key = "evaluator_management_space_config"
+
+	// 定义配置结构体
+	type EvaluatorManagementSpaceConf struct {
+		BuiltinEvaluatorSpace []string `json:"builtin_evaluator_space"`
+	}
+
+	var config EvaluatorManagementSpaceConf
+	if c.loader.UnmarshalKey(ctx, key, &config, conf.WithTagName("json")) == nil && len(config.BuiltinEvaluatorSpace) > 0 {
+		return config.BuiltinEvaluatorSpace
+	}
+	return DefaultBuiltinEvaluatorSpaceConf()
+}
+
+func DefaultBuiltinEvaluatorSpaceConf() []string {
+	return make([]string, 0)
+}
+
 type evaluatorConfiger struct {
 	loader conf.IConfigLoader
+}
+
+func (c *evaluatorConfiger) GetEvaluatorTagConf(ctx context.Context) (etf map[evaluatordto.EvaluatorTagKey][]string) {
+	const key = "evaluator_tag_config"
+	etf = make(map[evaluatordto.EvaluatorTagKey][]string)
+	if c.loader.UnmarshalKey(ctx, key, &etf, conf.WithTagName("json")) == nil && len(etf) > 0 {
+		return etf
+	}
+	return DefaultEvaluatorTagConf()
+}
+
+func DefaultEvaluatorTagConf() map[evaluatordto.EvaluatorTagKey][]string {
+	return make(map[evaluatordto.EvaluatorTagKey][]string)
 }

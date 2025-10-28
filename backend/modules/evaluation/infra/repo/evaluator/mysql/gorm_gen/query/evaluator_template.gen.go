@@ -41,7 +41,7 @@ func newEvaluatorTemplate(db *gorm.DB, opts ...gen.DOOption) evaluatorTemplate {
 	_evaluatorTemplate.CreatedAt = field.NewTime(tableName, "created_at")
 	_evaluatorTemplate.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_evaluatorTemplate.DeletedAt = field.NewField(tableName, "deleted_at")
-	_evaluatorTemplate.Heat = field.NewInt64(tableName, "heat")
+	_evaluatorTemplate.Popularity = field.NewInt64(tableName, "popularity")
 	_evaluatorTemplate.Benchmark = field.NewString(tableName, "benchmark")
 	_evaluatorTemplate.Vendor = field.NewString(tableName, "vendor")
 
@@ -69,7 +69,7 @@ type evaluatorTemplate struct {
 	CreatedAt          field.Time   // 创建时间
 	UpdatedAt          field.Time   // 更新时间
 	DeletedAt          field.Field  // 删除时间
-	Heat               field.Int64  // 热度
+	Popularity         field.Int64  // 热度
 	Benchmark          field.String // benchmark
 	Vendor             field.String // vendor
 
@@ -102,7 +102,7 @@ func (e *evaluatorTemplate) updateTableName(table string) *evaluatorTemplate {
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
-	e.Heat = field.NewInt64(table, "heat")
+	e.Popularity = field.NewInt64(table, "popularity")
 	e.Benchmark = field.NewString(table, "benchmark")
 	e.Vendor = field.NewString(table, "vendor")
 
@@ -148,7 +148,7 @@ func (e *evaluatorTemplate) fillFieldMap() {
 	e.fieldMap["created_at"] = e.CreatedAt
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt
-	e.fieldMap["heat"] = e.Heat
+	e.fieldMap["popularity"] = e.Popularity
 	e.fieldMap["benchmark"] = e.Benchmark
 	e.fieldMap["vendor"] = e.Vendor
 }

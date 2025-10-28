@@ -195,13 +195,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"GetLatestEvaluatorVersion": kitex.NewMethodInfo(
-		getLatestEvaluatorVersionHandler,
-		newEvaluatorServiceGetLatestEvaluatorVersionArgs,
-		newEvaluatorServiceGetLatestEvaluatorVersionResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"DebugBuiltinEvaluator": kitex.NewMethodInfo(
 		debugBuiltinEvaluatorHandler,
 		newEvaluatorServiceDebugBuiltinEvaluatorArgs,
@@ -209,10 +202,17 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"PublishBuiltinEvaluator": kitex.NewMethodInfo(
-		publishBuiltinEvaluatorHandler,
-		newEvaluatorServicePublishBuiltinEvaluatorArgs,
-		newEvaluatorServicePublishBuiltinEvaluatorResult,
+	"UpdateBuiltinEvaluatorTags": kitex.NewMethodInfo(
+		updateBuiltinEvaluatorTagsHandler,
+		newEvaluatorServiceUpdateBuiltinEvaluatorTagsArgs,
+		newEvaluatorServiceUpdateBuiltinEvaluatorTagsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListEvaluatorTags": kitex.NewMethodInfo(
+		listEvaluatorTagsHandler,
+		newEvaluatorServiceListEvaluatorTagsArgs,
+		newEvaluatorServiceListEvaluatorTagsResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -743,25 +743,6 @@ func newEvaluatorServiceDeleteEvaluatorTemplateResult() interface{} {
 	return evaluator.NewEvaluatorServiceDeleteEvaluatorTemplateResult()
 }
 
-func getLatestEvaluatorVersionHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*evaluator.EvaluatorServiceGetLatestEvaluatorVersionArgs)
-	realResult := result.(*evaluator.EvaluatorServiceGetLatestEvaluatorVersionResult)
-	success, err := handler.(evaluator.EvaluatorService).GetLatestEvaluatorVersion(ctx, realArg.Request)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluatorServiceGetLatestEvaluatorVersionArgs() interface{} {
-	return evaluator.NewEvaluatorServiceGetLatestEvaluatorVersionArgs()
-}
-
-func newEvaluatorServiceGetLatestEvaluatorVersionResult() interface{} {
-	return evaluator.NewEvaluatorServiceGetLatestEvaluatorVersionResult()
-}
-
 func debugBuiltinEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*evaluator.EvaluatorServiceDebugBuiltinEvaluatorArgs)
 	realResult := result.(*evaluator.EvaluatorServiceDebugBuiltinEvaluatorResult)
@@ -781,10 +762,10 @@ func newEvaluatorServiceDebugBuiltinEvaluatorResult() interface{} {
 	return evaluator.NewEvaluatorServiceDebugBuiltinEvaluatorResult()
 }
 
-func publishBuiltinEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*evaluator.EvaluatorServicePublishBuiltinEvaluatorArgs)
-	realResult := result.(*evaluator.EvaluatorServicePublishBuiltinEvaluatorResult)
-	success, err := handler.(evaluator.EvaluatorService).PublishBuiltinEvaluator(ctx, realArg.Req)
+func updateBuiltinEvaluatorTagsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs)
+	realResult := result.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult)
+	success, err := handler.(evaluator.EvaluatorService).UpdateBuiltinEvaluatorTags(ctx, realArg.Req)
 	if err != nil {
 		return err
 	}
@@ -792,12 +773,31 @@ func publishBuiltinEvaluatorHandler(ctx context.Context, handler interface{}, ar
 	return nil
 }
 
-func newEvaluatorServicePublishBuiltinEvaluatorArgs() interface{} {
-	return evaluator.NewEvaluatorServicePublishBuiltinEvaluatorArgs()
+func newEvaluatorServiceUpdateBuiltinEvaluatorTagsArgs() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateBuiltinEvaluatorTagsArgs()
 }
 
-func newEvaluatorServicePublishBuiltinEvaluatorResult() interface{} {
-	return evaluator.NewEvaluatorServicePublishBuiltinEvaluatorResult()
+func newEvaluatorServiceUpdateBuiltinEvaluatorTagsResult() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateBuiltinEvaluatorTagsResult()
+}
+
+func listEvaluatorTagsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceListEvaluatorTagsArgs)
+	realResult := result.(*evaluator.EvaluatorServiceListEvaluatorTagsResult)
+	success, err := handler.(evaluator.EvaluatorService).ListEvaluatorTags(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceListEvaluatorTagsArgs() interface{} {
+	return evaluator.NewEvaluatorServiceListEvaluatorTagsArgs()
+}
+
+func newEvaluatorServiceListEvaluatorTagsResult() interface{} {
+	return evaluator.NewEvaluatorServiceListEvaluatorTagsResult()
 }
 
 type kClient struct {
@@ -1072,16 +1072,6 @@ func (p *kClient) DeleteEvaluatorTemplate(ctx context.Context, request *evaluato
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) GetLatestEvaluatorVersion(ctx context.Context, request *evaluator.GetLatestEvaluatorVersionRequest) (r *evaluator.GetLatestEvaluatorVersionResponse, err error) {
-	var _args evaluator.EvaluatorServiceGetLatestEvaluatorVersionArgs
-	_args.Request = request
-	var _result evaluator.EvaluatorServiceGetLatestEvaluatorVersionResult
-	if err = p.c.Call(ctx, "GetLatestEvaluatorVersion", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
 func (p *kClient) DebugBuiltinEvaluator(ctx context.Context, req *evaluator.DebugBuiltinEvaluatorRequest) (r *evaluator.DebugBuiltinEvaluatorResponse, err error) {
 	var _args evaluator.EvaluatorServiceDebugBuiltinEvaluatorArgs
 	_args.Req = req
@@ -1092,11 +1082,21 @@ func (p *kClient) DebugBuiltinEvaluator(ctx context.Context, req *evaluator.Debu
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) PublishBuiltinEvaluator(ctx context.Context, req *evaluator.PublishBuiltinEvaluatorRequest) (r *evaluator.PublishBuiltinEvaluatorResponse, err error) {
-	var _args evaluator.EvaluatorServicePublishBuiltinEvaluatorArgs
+func (p *kClient) UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest) (r *evaluator.UpdateBuiltinEvaluatorTagsResponse, err error) {
+	var _args evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs
 	_args.Req = req
-	var _result evaluator.EvaluatorServicePublishBuiltinEvaluatorResult
-	if err = p.c.Call(ctx, "PublishBuiltinEvaluator", &_args, &_result); err != nil {
+	var _result evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult
+	if err = p.c.Call(ctx, "UpdateBuiltinEvaluatorTags", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluatorTags(ctx context.Context, req *evaluator.ListEvaluatorTagsRequest) (r *evaluator.ListEvaluatorTagsResponse, err error) {
+	var _args evaluator.EvaluatorServiceListEvaluatorTagsArgs
+	_args.Req = req
+	var _result evaluator.EvaluatorServiceListEvaluatorTagsResult
+	if err = p.c.Call(ctx, "ListEvaluatorTags", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

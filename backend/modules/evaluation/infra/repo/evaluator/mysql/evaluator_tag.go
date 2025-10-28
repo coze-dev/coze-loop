@@ -21,8 +21,8 @@ import (
 //
 //go:generate mockgen -destination mocks/evaluator_tag_mock.go -package=mocks . EvaluatorTagDAO
 type EvaluatorTagDAO interface {
-	// GetTagsBySourceIDAndType 根据source_id和tag_type筛选tag_key和tag_value
-	GetTagsBySourceIDAndType(ctx context.Context, sourceID int64, tagType int32, opts ...db.Option) ([]*model.EvaluatorTag, error)
+	// BatchGetTagsBySourceIDsAndType 批量根据source_ids和tag_type筛选tag_key和tag_value
+	BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, opts ...db.Option) ([]*model.EvaluatorTag, error)
 	// GetSourceIDsByFilterConditions 根据筛选条件查询source_id列表，支持复杂的AND/OR逻辑和分页
 	GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, opts ...db.Option) ([]int64, int64, error)
 	// BatchCreateEvaluatorTags 批量创建评估器标签
@@ -50,13 +50,17 @@ func NewEvaluatorTagDAO(p db.Provider) EvaluatorTagDAO {
 	return singletonEvaluatorTagDao
 }
 
-// GetTagsBySourceIDAndType 根据source_id和tag_type筛选tag_key和tag_value
-func (dao *EvaluatorTagDAOImpl) GetTagsBySourceIDAndType(ctx context.Context, sourceID int64, tagType int32, opts ...db.Option) ([]*model.EvaluatorTag, error) {
+// BatchGetTagsBySourceIDsAndType 批量根据source_ids和tag_type筛选tag_key和tag_value
+func (dao *EvaluatorTagDAOImpl) BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, opts ...db.Option) ([]*model.EvaluatorTag, error) {
+	if len(sourceIDs) == 0 {
+		return []*model.EvaluatorTag{}, nil
+	}
+
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	var tags []*model.EvaluatorTag
 	err := dbsession.WithContext(ctx).
-		Where("source_id = ? AND tag_type = ?", sourceID, tagType).
+		Where("source_id IN (?) AND tag_type = ?", sourceIDs, tagType).
 		Find(&tags).Error
 	if err != nil {
 		return nil, err
@@ -64,7 +68,6 @@ func (dao *EvaluatorTagDAOImpl) GetTagsBySourceIDAndType(ctx context.Context, so
 
 	return tags, nil
 }
-
 
 // BatchCreateEvaluatorTags 批量创建评估器标签
 func (dao *EvaluatorTagDAOImpl) BatchCreateEvaluatorTags(ctx context.Context, sourceID int64, tagType int32, userID string, tags map[string][]string, opts ...db.Option) error {

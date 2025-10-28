@@ -28,7 +28,7 @@ func ConvertEvaluatorTemplateDO2PO(do *evaluatordo.EvaluatorTemplate) (*model.Ev
 		Description:        ptr.Of(do.Description),
 		EvaluatorType:      ptr.Of(int32(do.EvaluatorType)),
 		ReceiveChatHistory: do.ReceiveChatHistory,
-		Heat:               do.Hot,
+		Popularity:         do.Popularity,
 		Benchmark:          ptr.Of(do.Benchmark),
 		Vendor:             ptr.Of(do.Vendor),
 	}
@@ -108,7 +108,7 @@ func ConvertEvaluatorTemplatePO2DO(po *model.EvaluatorTemplate) (*evaluatordo.Ev
 		Description:        gptr.Indirect(po.Description),
 		EvaluatorType:      evaluatordo.EvaluatorType(gptr.Indirect(po.EvaluatorType)),
 		ReceiveChatHistory: po.ReceiveChatHistory,
-		Hot:                po.Heat,
+		Popularity:         po.Popularity,
 		Benchmark:          gptr.Indirect(po.Benchmark),
 		Vendor:             gptr.Indirect(po.Vendor),
 		Tags:               make(map[evaluatordo.EvaluatorTagKey][]string),

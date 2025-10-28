@@ -27,7 +27,7 @@ func NewEvaluatorTemplateService(templateRepo repo.EvaluatorTemplateRepo) Evalua
 }
 
 // CreateEvaluatorTemplate 创建评估器模板
-func (s *EvaluatorTemplateServiceImpl) CreateEvaluatorTemplate(ctx context.Context, req *CreateEvaluatorTemplateRequest) (*CreateEvaluatorTemplateResponse, error) {
+func (s *EvaluatorTemplateServiceImpl) CreateEvaluatorTemplate(ctx context.Context, req *entity.CreateEvaluatorTemplateRequest) (*entity.CreateEvaluatorTemplateResponse, error) {
 	// 参数验证
 	if err := s.validateCreateRequest(req); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
@@ -72,13 +72,13 @@ func (s *EvaluatorTemplateServiceImpl) CreateEvaluatorTemplate(ctx context.Conte
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 
-	return &CreateEvaluatorTemplateResponse{
+	return &entity.CreateEvaluatorTemplateResponse{
 		Template: createdTemplate,
 	}, nil
 }
 
 // UpdateEvaluatorTemplate 更新评估器模板
-func (s *EvaluatorTemplateServiceImpl) UpdateEvaluatorTemplate(ctx context.Context, req *UpdateEvaluatorTemplateRequest) (*UpdateEvaluatorTemplateResponse, error) {
+func (s *EvaluatorTemplateServiceImpl) UpdateEvaluatorTemplate(ctx context.Context, req *entity.UpdateEvaluatorTemplateRequest) (*entity.UpdateEvaluatorTemplateResponse, error) {
 	// 参数验证
 	if err := s.validateUpdateRequest(req); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
@@ -144,13 +144,13 @@ func (s *EvaluatorTemplateServiceImpl) UpdateEvaluatorTemplate(ctx context.Conte
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 
-	return &UpdateEvaluatorTemplateResponse{
+	return &entity.UpdateEvaluatorTemplateResponse{
 		Template: updatedTemplate,
 	}, nil
 }
 
 // DeleteEvaluatorTemplate 删除评估器模板
-func (s *EvaluatorTemplateServiceImpl) DeleteEvaluatorTemplate(ctx context.Context, req *DeleteEvaluatorTemplateRequest) (*DeleteEvaluatorTemplateResponse, error) {
+func (s *EvaluatorTemplateServiceImpl) DeleteEvaluatorTemplate(ctx context.Context, req *entity.DeleteEvaluatorTemplateRequest) (*entity.DeleteEvaluatorTemplateResponse, error) {
 	// 参数验证
 	if err := s.validateDeleteRequest(req); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
@@ -177,13 +177,13 @@ func (s *EvaluatorTemplateServiceImpl) DeleteEvaluatorTemplate(ctx context.Conte
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 
-	return &DeleteEvaluatorTemplateResponse{
+	return &entity.DeleteEvaluatorTemplateResponse{
 		Success: true,
 	}, nil
 }
 
 // GetEvaluatorTemplate 获取评估器模板详情
-func (s *EvaluatorTemplateServiceImpl) GetEvaluatorTemplate(ctx context.Context, req *GetEvaluatorTemplateRequest) (*GetEvaluatorTemplateResponse, error) {
+func (s *EvaluatorTemplateServiceImpl) GetEvaluatorTemplate(ctx context.Context, req *entity.GetEvaluatorTemplateRequest) (*entity.GetEvaluatorTemplateResponse, error) {
 	// 参数验证
 	if err := s.validateGetRequest(req); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
@@ -198,13 +198,13 @@ func (s *EvaluatorTemplateServiceImpl) GetEvaluatorTemplate(ctx context.Context,
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
 	}
 
-	return &GetEvaluatorTemplateResponse{
+	return &entity.GetEvaluatorTemplateResponse{
 		Template: template,
 	}, nil
 }
 
 // ListEvaluatorTemplate 查询评估器模板列表
-func (s *EvaluatorTemplateServiceImpl) ListEvaluatorTemplate(ctx context.Context, req *ListEvaluatorTemplateRequest) (*ListEvaluatorTemplateResponse, error) {
+func (s *EvaluatorTemplateServiceImpl) ListEvaluatorTemplate(ctx context.Context, req *entity.ListEvaluatorTemplateRequest) (*entity.ListEvaluatorTemplateResponse, error) {
 	// 参数验证
 	if err := s.validateListRequest(req); err != nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
@@ -228,7 +228,7 @@ func (s *EvaluatorTemplateServiceImpl) ListEvaluatorTemplate(ctx context.Context
 	// 计算总页数
 	totalPages := int32((repoResp.TotalCount + int64(req.PageSize) - 1) / int64(req.PageSize))
 
-	return &ListEvaluatorTemplateResponse{
+	return &entity.ListEvaluatorTemplateResponse{
 		TotalCount: repoResp.TotalCount,
 		Templates:  repoResp.Templates,
 		PageSize:   req.PageSize,
@@ -238,7 +238,7 @@ func (s *EvaluatorTemplateServiceImpl) ListEvaluatorTemplate(ctx context.Context
 }
 
 // validateCreateRequest 验证创建请求
-func (s *EvaluatorTemplateServiceImpl) validateCreateRequest(req *CreateEvaluatorTemplateRequest) error {
+func (s *EvaluatorTemplateServiceImpl) validateCreateRequest(req *entity.CreateEvaluatorTemplateRequest) error {
 	if req.SpaceID <= 0 {
 		return errors.New("空间ID必须大于0")
 	}
@@ -270,7 +270,7 @@ func (s *EvaluatorTemplateServiceImpl) validateCreateRequest(req *CreateEvaluato
 }
 
 // validateUpdateRequest 验证更新请求
-func (s *EvaluatorTemplateServiceImpl) validateUpdateRequest(req *UpdateEvaluatorTemplateRequest) error {
+func (s *EvaluatorTemplateServiceImpl) validateUpdateRequest(req *entity.UpdateEvaluatorTemplateRequest) error {
 	if req.ID <= 0 {
 		return errors.New("模板ID必须大于0")
 	}
@@ -294,7 +294,7 @@ func (s *EvaluatorTemplateServiceImpl) validateUpdateRequest(req *UpdateEvaluato
 }
 
 // validateDeleteRequest 验证删除请求
-func (s *EvaluatorTemplateServiceImpl) validateDeleteRequest(req *DeleteEvaluatorTemplateRequest) error {
+func (s *EvaluatorTemplateServiceImpl) validateDeleteRequest(req *entity.DeleteEvaluatorTemplateRequest) error {
 	if req.ID <= 0 {
 		return errors.New("模板ID必须大于0")
 	}
@@ -302,7 +302,7 @@ func (s *EvaluatorTemplateServiceImpl) validateDeleteRequest(req *DeleteEvaluato
 }
 
 // validateGetRequest 验证获取请求
-func (s *EvaluatorTemplateServiceImpl) validateGetRequest(req *GetEvaluatorTemplateRequest) error {
+func (s *EvaluatorTemplateServiceImpl) validateGetRequest(req *entity.GetEvaluatorTemplateRequest) error {
 	if req.ID <= 0 {
 		return errors.New("模板ID必须大于0")
 	}
@@ -310,7 +310,7 @@ func (s *EvaluatorTemplateServiceImpl) validateGetRequest(req *GetEvaluatorTempl
 }
 
 // validateListRequest 验证列表请求
-func (s *EvaluatorTemplateServiceImpl) validateListRequest(req *ListEvaluatorTemplateRequest) error {
+func (s *EvaluatorTemplateServiceImpl) validateListRequest(req *entity.ListEvaluatorTemplateRequest) error {
 	if req.SpaceID <= 0 {
 		return errors.New("空间ID必须大于0")
 	}

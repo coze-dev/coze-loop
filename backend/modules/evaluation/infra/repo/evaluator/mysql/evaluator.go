@@ -26,6 +26,7 @@ type EvaluatorDAO interface {
 	GetEvaluatorByID(ctx context.Context, id int64, includeDeleted bool, opts ...db.Option) (*model.Evaluator, error)
 	BatchGetEvaluatorByID(ctx context.Context, ids []int64, includeDeleted bool, opts ...db.Option) ([]*model.Evaluator, error)
 	UpdateEvaluatorMeta(ctx context.Context, do *model.Evaluator, opts ...db.Option) error
+	UpdateBuiltinEvaluatorMeta(ctx context.Context, do *model.Evaluator, opts ...db.Option) error
 	UpdateEvaluatorDraftSubmitted(ctx context.Context, evaluatorID int64, draftSubmitted bool, userID string, opts ...db.Option) error
 	BatchDeleteEvaluator(ctx context.Context, ids []int64, userID string, opts ...db.Option) error
 	ListEvaluator(ctx context.Context, req *ListEvaluatorRequest, opts ...db.Option) (*ListEvaluatorResponse, error)
@@ -128,6 +129,29 @@ func (dao *EvaluatorDAOImpl) UpdateEvaluatorMeta(ctx context.Context, po *model.
 		Error
 }
 
+// UpdateBuiltinEvaluatorMeta 更新内置评估器的 benchmark 和 vendor 字段
+func (dao *EvaluatorDAOImpl) UpdateBuiltinEvaluatorMeta(ctx context.Context, po *model.Evaluator, opts ...db.Option) error {
+	// 通过opts获取当前的db session实例
+	dbsession := dao.provider.NewSession(ctx, opts...)
+	updateMap := make(map[string]interface{})
+	// 更新 benchmark 和 vendor 字段
+	updateMap["benchmark"] = po.Benchmark
+	updateMap["vendor"] = po.Vendor
+	// 允许同时更新名称与描述
+	if po.Name != nil {
+		updateMap["name"] = po.Name
+	}
+	if po.Description != nil {
+		updateMap["description"] = po.Description
+	}
+	updateMap["updated_by"] = po.UpdatedBy
+	return dbsession.WithContext(ctx).Model(&model.Evaluator{}).
+		Where("id = ?", po.ID).      // 添加ID筛选条件
+		Where("deleted_at IS NULL"). // 添加软删除筛选条件
+		Updates(updateMap).          // 使用Updates代替Save，避免全字段覆盖
+		Error
+}
+
 // DeleteEvaluator 根据 ID 删除 Evaluator
 func (dao *EvaluatorDAOImpl) DeleteEvaluator(ctx context.Context, id int64, userID string, opts ...db.Option) error {
 	// 通过opts获取当前的db session实例
@@ -185,6 +209,7 @@ type ListEvaluatorRequest struct {
 	SearchName    string
 	CreatorIDs    []int64
 	EvaluatorType []int32
+	IDs           []int64  // 新增：支持按ID查询
 	PageSize      int32
 	PageNum       int32
 	OrderBy       []*OrderBy
@@ -200,6 +225,11 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	query := dbsession.WithContext(ctx).Model(&model.Evaluator{}).Where("space_id = ?", req.SpaceID)
+
+	// 添加ID过滤（支持按ID查询）
+	if len(req.IDs) > 0 {
+		query = query.Where("id IN (?)", req.IDs)
+	}
 
 	// 添加名称模糊搜索
 	if len(req.SearchName) > 0 {

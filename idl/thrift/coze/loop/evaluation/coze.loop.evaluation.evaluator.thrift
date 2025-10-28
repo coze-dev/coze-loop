@@ -57,9 +57,6 @@ struct GetEvaluatorResponse {
 
 struct CreateEvaluatorRequest {
     1: required evaluator.Evaluator evaluator (api.body='evaluator')
-
-    11: optional bool builtin (api.body='builtin') // 是否预置评估器
-
     100: optional string cid (api.body='cid')
 
     255: optional base.Base Base
@@ -96,7 +93,6 @@ struct UpdateEvaluatorRequest {
     11: optional bool builtin (api.body='builtin', go.tag = 'json:"builtin"') // 是否预置评估器
     12: optional string benchmark (api.body='benchmark', go.tag = 'json:"benchmark"')
     13: optional string vendor (api.body='vendor', go.tag = 'json:"vendor"')
-    14: map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags', go.tag = 'json:"tags"')
 
     255: optional base.Base Base
 }
@@ -140,6 +136,7 @@ struct GetEvaluatorVersionRequest {
     1: required i64 workspace_id (api.query='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 evaluator_version_id (api.path='evaluator_version_id', api.js_conv='true', go.tag='json:"evaluator_version_id"')
     3: optional bool include_deleted (api.query='include_deleted') // 是否查询已删除的评估器，默认不查询
+    4: optional bool builtin (api.body='builtin', go.tag = 'json:"builtin"') // 是否预置评估器
 
     255: optional base.Base Base
 }
@@ -413,15 +410,16 @@ struct DebugBuiltinEvaluatorResponse {
     255: base.BaseResp BaseResp
 }
 
-struct PublishBuiltinEvaluatorRequest {
+struct UpdateBuiltinEvaluatorTagsRequest {
     1: required i64 evaluator_id (api.path='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_id"')
     2: required string version (api.body='version')
-    3: optional evaluator.OperationType operation_type (api.body='operation_type', go.tag='json:"operation_type"') // 上下架操作类型
+    3: optional i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    4: optional map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags', go.tag = 'json:"tags"') // 评估器标签
 
     255: optional base.Base Base
 }
 
-struct PublishBuiltinEvaluatorResponse {
+struct UpdateBuiltinEvaluatorTagsResponse {
     1: required evaluator.EvaluatorVersion version (api.body='version')
 
     255: base.BaseResp BaseResp
@@ -455,6 +453,17 @@ struct DeleteEvaluatorTemplateRequest {
 }
 
 struct DeleteEvaluatorTemplateResponse {
+    255: base.BaseResp BaseResp
+}
+
+struct ListEvaluatorTagsRequest {
+
+    255: optional base.Base Base
+}
+
+struct ListEvaluatorTagsResponse {
+    1: optional map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags') // 筛选器选项
+
     255: base.BaseResp BaseResp
 }
 
@@ -495,23 +504,21 @@ service EvaluatorService {
     ValidateEvaluatorResponse ValidateEvaluator(1: ValidateEvaluatorRequest request) (api.post="/api/evaluation/v1/evaluators/validate")
 
     // 查询评估器模板
-    ListTemplatesV2Response ListTemplatesV2(1: ListTemplatesV2Request request) (api.post="/api/evaluation/v1/evaluators/list_template_v2")
+    ListTemplatesV2Response ListTemplatesV2(1: ListTemplatesV2Request request) (api.post="/api/evaluation/v1/evaluator_template/list")
 
     // 创建评估器模板
-    CreateEvaluatorTemplateResponse CreateEvaluatorTemplate(1: CreateEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluators/create_template")
+    CreateEvaluatorTemplateResponse CreateEvaluatorTemplate(1: CreateEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluator_template")
     // 更新评估器模板
-    UpdateEvaluatorTemplateResponse UpdateEvaluatorTemplate(1: UpdateEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluators/update_template")
+    UpdateEvaluatorTemplateResponse UpdateEvaluatorTemplate(1: UpdateEvaluatorTemplateRequest request) (api.patch="/api/evaluation/v1/evaluator_template")
     // 删除
-    DeleteEvaluatorTemplateResponse DeleteEvaluatorTemplate(1: DeleteEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluators/delete_template")
-
-    // 获取评估器最新版本
-    GetLatestEvaluatorVersionResponse GetLatestEvaluatorVersion(1: GetLatestEvaluatorVersionRequest request) (api.post="/api/evaluation/v1/evaluators/:evaluator_id/latest_version")
+    DeleteEvaluatorTemplateResponse DeleteEvaluatorTemplate(1: DeleteEvaluatorTemplateRequest request) (api.delete="/api/evaluation/v1/evaluator_template")
 
     // 调试预置评估器
     DebugBuiltinEvaluatorResponse DebugBuiltinEvaluator(1: DebugBuiltinEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug_builtin")// 调试预置评估器
 
-    // 发布预置评估器
-    PublishBuiltinEvaluatorResponse PublishBuiltinEvaluator(1: PublishBuiltinEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/publish_builtin")// 发布预置评估器
-
+    // 更新预置评估器tag
+    UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/update_builtin_tags")// 更新预置评估器
+    // 查询Tag
+    ListEvaluatorTagsResponse ListEvaluatorTags(1: ListEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/list_tags")
 
 } (api.js_conv="true" )

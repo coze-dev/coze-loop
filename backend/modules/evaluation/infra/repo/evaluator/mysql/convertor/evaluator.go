@@ -21,7 +21,12 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 	if do == nil {
 		return nil
 	}
-	po := &model.Evaluator{
+    // builtin: do.Builtin=true -> 1, false -> 2
+    builtinVal := int32(2)
+    if do.Builtin {
+        builtinVal = 1
+    }
+    po := &model.Evaluator{
 		ID:             do.ID,
 		SpaceID:        do.SpaceID,
 		Name:           ptr.Of(do.Name),
@@ -29,6 +34,7 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 		DraftSubmitted: ptr.Of(do.DraftSubmitted),
 		EvaluatorType:  int32(do.EvaluatorType),
 		LatestVersion:  do.LatestVersion,
+        Builtin:        builtinVal,
 		Benchmark:      ptr.Of(do.Benchmark),
 		Vendor:         ptr.Of(do.Vendor),
 	}
@@ -54,7 +60,7 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 	if po == nil {
 		return nil
 	}
-	do := &evaluatordo.Evaluator{
+    do := &evaluatordo.Evaluator{
 		ID:             po.ID,
 		SpaceID:        po.SpaceID,
 		Name:           gptr.Indirect(po.Name),
@@ -62,6 +68,7 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 		DraftSubmitted: gptr.Indirect(po.DraftSubmitted),
 		EvaluatorType:  evaluatordo.EvaluatorType(po.EvaluatorType),
 		LatestVersion:  po.LatestVersion,
+        Builtin:        po.Builtin == 1,
 		Benchmark:      gptr.Indirect(po.Benchmark),
 		Vendor:         gptr.Indirect(po.Vendor),
 	}

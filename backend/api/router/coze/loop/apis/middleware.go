@@ -1419,7 +1419,51 @@ func _listexptinsightanalysisrecordMw(handler *apis.APIHandler) []app.HandlerFun
 	return nil
 }
 
+func _v2Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _gettracev2Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _traces1Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _trace_treeMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _searchtracetreeMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _searchtracetreeoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
 func _annotations0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _metricsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getmetricsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getdrilldownvaluesMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1460,6 +1504,21 @@ func _deleteevaluatortemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _updateevaluatortemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listevaluatortagsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updatebuiltinevaluatortagsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _evaluator_templateMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

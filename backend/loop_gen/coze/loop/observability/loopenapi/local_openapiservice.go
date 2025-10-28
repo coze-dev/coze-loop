@@ -85,6 +85,27 @@ func (l *LocalOpenAPIService) SearchTraceOApi(ctx context.Context, req *openapi.
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalOpenAPIService) SearchTraceTreeOApi(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest, callOptions ...callopt.Option) (*openapi.SearchTraceTreeOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceSearchTraceTreeOApiArgs)
+		result := out.(*openapi.OpenAPIServiceSearchTraceTreeOApiResult)
+		resp, err := l.impl.SearchTraceTreeOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceSearchTraceTreeOApiArgs{Req: req}
+	result := &openapi.OpenAPIServiceSearchTraceTreeOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "SearchTraceTreeOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalOpenAPIService) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (*openapi.ListSpansOApiResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*openapi.OpenAPIServiceListSpansOApiArgs)

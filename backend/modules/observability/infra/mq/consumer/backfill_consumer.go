@@ -43,6 +43,9 @@ func (e *BackFillConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig,
 		ConsumeGoroutineNums: cfg.WorkerNum,
 		EnablePPE:            cfg.EnablePPE,
 	}
+	if cfg.TagExpression != nil {
+		res.TagExpression = *cfg.TagExpression
+	}
 	return res, nil
 }
 

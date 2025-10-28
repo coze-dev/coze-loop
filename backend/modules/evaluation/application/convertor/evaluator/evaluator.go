@@ -18,7 +18,7 @@ import (
 
 func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.Evaluator {
 	// 从DTO转换为DO
-	evaluatorDO := &evaluatordo.Evaluator{
+    evaluatorDO := &evaluatordo.Evaluator{
 		ID:                     evaluatorDTO.GetEvaluatorID(),
 		SpaceID:                evaluatorDTO.GetWorkspaceID(),
 		Name:                   evaluatorDTO.GetName(),
@@ -26,8 +26,10 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 		DraftSubmitted:         evaluatorDTO.GetDraftSubmitted(),
 		EvaluatorType:          evaluatordo.EvaluatorType(evaluatorDTO.GetEvaluatorType()),
 		LatestVersion:          evaluatorDTO.GetLatestVersion(),
+        Builtin:                evaluatorDTO.GetBuiltin(),
 		PromptEvaluatorVersion: nil,
 		BaseInfo:               commonconvertor.ConvertBaseInfoDTO2DO(evaluatorDTO.GetBaseInfo()),
+		Tags:                   ConvertEvaluatorTagsDTO2DO(evaluatorDTO.GetTags()),
 	}
 	if evaluatorDTO.CurrentVersion != nil {
 		switch evaluatorDTO.GetEvaluatorType() {
@@ -61,7 +63,9 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 		DraftSubmitted: gptr.Of(do.DraftSubmitted),
 		EvaluatorType:  evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType(do.EvaluatorType)),
 		LatestVersion:  gptr.Of(do.LatestVersion),
+        Builtin:        gptr.Of(do.Builtin),
 		BaseInfo:       commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		Tags:           ConvertEvaluatorTagsDO2DTO(do.Tags),
 	}
 
 	switch do.EvaluatorType {
@@ -306,4 +310,52 @@ func ConvertPromptEvaluatorVersionDO2DTO(do *evaluatordo.PromptEvaluatorVersion)
 	}
 
 	return dto
+}
+
+// ConvertEvaluatorTagsDTO2DO 将DTO的Tags转换为DO的Tags
+func ConvertEvaluatorTagsDTO2DO(dtoTags map[evaluatordto.EvaluatorTagKey][]string) map[evaluatordo.EvaluatorTagKey][]string {
+	if dtoTags == nil {
+		return nil
+	}
+
+	doTags := make(map[evaluatordo.EvaluatorTagKey][]string)
+	for dtoKey, values := range dtoTags {
+		doKey := ConvertEvaluatorTagKeyDTO2DO(dtoKey)
+		doTags[doKey] = values
+	}
+	return doTags
+}
+
+// ConvertEvaluatorTagsDO2DTO 将DO的Tags转换为DTO的Tags
+func ConvertEvaluatorTagsDO2DTO(doTags map[evaluatordo.EvaluatorTagKey][]string) map[evaluatordto.EvaluatorTagKey][]string {
+	if doTags == nil {
+		return nil
+	}
+
+	dtoTags := make(map[evaluatordto.EvaluatorTagKey][]string)
+	for doKey, values := range doTags {
+		dtoKey := ConvertEvaluatorTagKeyDO2DTO(doKey)
+		dtoTags[dtoKey] = values
+	}
+	return dtoTags
+}
+
+// ConvertEvaluatorTagKeyDO2DTO 将DO的EvaluatorTagKey转换为DTO的EvaluatorTagKey
+func ConvertEvaluatorTagKeyDO2DTO(doKey evaluatordo.EvaluatorTagKey) evaluatordto.EvaluatorTagKey {
+	switch doKey {
+	case evaluatordo.EvaluatorTagKey_Category:
+		return evaluatordto.EvaluatorTagKeyCategory
+	case evaluatordo.EvaluatorTagKey_TargetType:
+		return evaluatordto.EvaluatorTagKeyTargetType
+	case evaluatordo.EvaluatorTagKey_Objective:
+		return evaluatordto.EvaluatorTagKeyObjective
+	case evaluatordo.EvaluatorTagKey_BusinessScenario:
+		return evaluatordto.EvaluatorTagKeyBusinessScenario
+	case evaluatordo.EvaluatorTagKey_BoxType:
+		return evaluatordto.EvaluatorTagKeyBoxType
+	case evaluatordo.EvaluatorTagKey_Name:
+		return evaluatordto.EvaluatorTagKeyName
+	default:
+		return evaluatordto.EvaluatorTagKey(doKey)
+	}
 }

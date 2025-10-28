@@ -34,6 +34,10 @@ func TestConvertEvaluatorDTO2DO(t *testing.T) {
 				DraftSubmitted: gptr.Of(true),
 				EvaluatorType:  evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
 				LatestVersion:  gptr.Of("1"),
+				Tags: map[evaluatordto.EvaluatorTagKey][]string{
+					evaluatordto.EvaluatorTagKeyCategory:  {"LLM", "Code"},
+					evaluatordto.EvaluatorTagKeyObjective: {"Quality"},
+				},
 			},
 			expected: &evaluatordo.Evaluator{
 				ID:             123,
@@ -43,6 +47,10 @@ func TestConvertEvaluatorDTO2DO(t *testing.T) {
 				DraftSubmitted: true,
 				EvaluatorType:  evaluatordo.EvaluatorTypePrompt,
 				LatestVersion:  "1",
+				Tags: map[evaluatordo.EvaluatorTagKey][]string{
+					evaluatordo.EvaluatorTagKey_Category:  {"LLM", "Code"},
+					evaluatordo.EvaluatorTagKey_Objective: {"Quality"},
+				},
 			},
 		},
 		{
@@ -103,6 +111,10 @@ func TestConvertEvaluatorDO2DTO(t *testing.T) {
 				DraftSubmitted: true,
 				EvaluatorType:  evaluatordo.EvaluatorTypePrompt,
 				LatestVersion:  "1",
+				Tags: map[evaluatordo.EvaluatorTagKey][]string{
+					evaluatordo.EvaluatorTagKey_Category:  {"LLM", "Code"},
+					evaluatordo.EvaluatorTagKey_Objective: {"Quality"},
+				},
 			},
 			expectedType: evaluatordto.EvaluatorType_Prompt,
 		},
@@ -904,6 +916,141 @@ func TestConvertPromptEvaluatorVersionDO2DTO(t *testing.T) {
 				assert.Equal(t, tt.expected.GetID(), result.GetID())
 				assert.Equal(t, tt.expected.GetVersion(), result.GetVersion())
 			}
+		})
+	}
+}
+
+func TestConvertEvaluatorTagsDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		dtoTags  map[evaluatordto.EvaluatorTagKey][]string
+		expected map[evaluatordo.EvaluatorTagKey][]string
+	}{
+		{
+			name: "正常转换",
+			dtoTags: map[evaluatordto.EvaluatorTagKey][]string{
+				evaluatordto.EvaluatorTagKeyCategory:         {"LLM", "Code"},
+				evaluatordto.EvaluatorTagKeyObjective:        {"Quality"},
+				evaluatordto.EvaluatorTagKeyBusinessScenario: {"AI Coding"},
+			},
+			expected: map[evaluatordo.EvaluatorTagKey][]string{
+				evaluatordo.EvaluatorTagKey_Category:         {"LLM", "Code"},
+				evaluatordo.EvaluatorTagKey_Objective:        {"Quality"},
+				evaluatordo.EvaluatorTagKey_BusinessScenario: {"AI Coding"},
+			},
+		},
+		{
+			name:     "空Tags",
+			dtoTags:  nil,
+			expected: nil,
+		},
+		{
+			name:     "空map",
+			dtoTags:  map[evaluatordto.EvaluatorTagKey][]string{},
+			expected: map[evaluatordo.EvaluatorTagKey][]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ConvertEvaluatorTagsDTO2DO(tt.dtoTags)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestConvertEvaluatorTagsDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		doTags   map[evaluatordo.EvaluatorTagKey][]string
+		expected map[evaluatordto.EvaluatorTagKey][]string
+	}{
+		{
+			name: "正常转换",
+			doTags: map[evaluatordo.EvaluatorTagKey][]string{
+				evaluatordo.EvaluatorTagKey_Category:         {"LLM", "Code"},
+				evaluatordo.EvaluatorTagKey_Objective:        {"Quality"},
+				evaluatordo.EvaluatorTagKey_BusinessScenario: {"AI Coding"},
+			},
+			expected: map[evaluatordto.EvaluatorTagKey][]string{
+				evaluatordto.EvaluatorTagKeyCategory:         {"LLM", "Code"},
+				evaluatordto.EvaluatorTagKeyObjective:        {"Quality"},
+				evaluatordto.EvaluatorTagKeyBusinessScenario: {"AI Coding"},
+			},
+		},
+		{
+			name:     "空Tags",
+			doTags:   nil,
+			expected: nil,
+		},
+		{
+			name:     "空map",
+			doTags:   map[evaluatordo.EvaluatorTagKey][]string{},
+			expected: map[evaluatordto.EvaluatorTagKey][]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ConvertEvaluatorTagsDO2DTO(tt.doTags)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestConvertEvaluatorTagKeyDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		doKey    evaluatordo.EvaluatorTagKey
+		expected evaluatordto.EvaluatorTagKey
+	}{
+		{
+			name:     "Category",
+			doKey:    evaluatordo.EvaluatorTagKey_Category,
+			expected: evaluatordto.EvaluatorTagKeyCategory,
+		},
+		{
+			name:     "TargetType",
+			doKey:    evaluatordo.EvaluatorTagKey_TargetType,
+			expected: evaluatordto.EvaluatorTagKeyTargetType,
+		},
+		{
+			name:     "Objective",
+			doKey:    evaluatordo.EvaluatorTagKey_Objective,
+			expected: evaluatordto.EvaluatorTagKeyObjective,
+		},
+		{
+			name:     "BusinessScenario",
+			doKey:    evaluatordo.EvaluatorTagKey_BusinessScenario,
+			expected: evaluatordto.EvaluatorTagKeyBusinessScenario,
+		},
+		{
+			name:     "BoxType",
+			doKey:    evaluatordo.EvaluatorTagKey_BoxType,
+			expected: evaluatordto.EvaluatorTagKeyBoxType,
+		},
+		{
+			name:     "Name",
+			doKey:    evaluatordo.EvaluatorTagKey_Name,
+			expected: evaluatordto.EvaluatorTagKeyName,
+		},
+		{
+			name:     "未知类型",
+			doKey:    evaluatordo.EvaluatorTagKey("Unknown"),
+			expected: evaluatordto.EvaluatorTagKey("Unknown"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ConvertEvaluatorTagKeyDO2DTO(tt.doKey)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

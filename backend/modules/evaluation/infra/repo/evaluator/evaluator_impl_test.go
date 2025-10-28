@@ -736,7 +736,8 @@ func TestEvaluatorRepoImpl_ListEvaluatorVersion(t *testing.T) {
 	mockDBProvider := dbmocks.NewMockProvider(ctrl)
 	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
 
-	evaluatorRepo := NewEvaluatorRepo(mockIDGen, mockDBProvider, mockEvaluatorDAO, mockEvaluatorVersionDAO, mockLWT)
+	mockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
+	evaluatorRepo := NewEvaluatorRepo(mockIDGen, mockDBProvider, mockEvaluatorDAO, mockEvaluatorVersionDAO, mockTagDAO, mockLWT)
 
 	tests := []struct {
 		name           string
@@ -1507,6 +1508,467 @@ func TestEvaluatorRepoImpl_ListEvaluator(t *testing.T) {
 					assert.Equal(t, tt.expectedResult.Evaluators[i].EvaluatorType, result.Evaluators[i].EvaluatorType)
 					assert.Equal(t, tt.expectedResult.Evaluators[i].Name, result.Evaluators[i].Name)
 				}
+			}
+		})
+	}
+}
+
+func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorDraft(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorDAO := evaluatormocks.NewMockEvaluatorDAO(ctrl)
+	mockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
+	mockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
+
+	repo := NewEvaluatorRepo(mockIDGen, mockDBProvider, mockEvaluatorDAO, mockEvaluatorVersionDAO, mockTagDAO, mockLWT)
+
+	tests := []struct {
+		name          string
+		evaluator     *entity.Evaluator
+		mockSetup     func()
+		expectedError error
+	}{
+		{
+			name: "成功更新内置评估器草稿，包含tag更新",
+			evaluator: &entity.Evaluator{
+				ID:            1,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				BaseInfo: &entity.BaseInfo{
+					UpdatedBy: &entity.UserInfo{
+						UserID: gptr.Of("test_user"),
+					},
+				},
+				Tags: map[entity.EvaluatorTagKey][]string{
+					entity.EvaluatorTagKey_Category: {"LLM", "Code"},
+					entity.EvaluatorTagKey_Objective: {"Quality"},
+				},
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					Version: "1.0.0",
+					BaseInfo: &entity.BaseInfo{
+						UpdatedBy: &entity.UserInfo{
+							UserID: gptr.Of("test_user"),
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				// 设置数据库事务的期望
+				mockDBProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				// 设置更新评估器草稿状态的期望
+				mockEvaluatorDAO.EXPECT().
+					UpdateEvaluatorDraftSubmitted(gomock.Any(), int64(1), false, "test_user", gomock.Any()).
+					Return(nil)
+
+				// 设置更新评估器草稿的期望
+				mockEvaluatorVersionDAO.EXPECT().
+					UpdateEvaluatorDraft(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// 设置获取草稿版本的期望
+				mockEvaluatorVersionDAO.EXPECT().
+					BatchGetEvaluatorDraftByEvaluatorID(gomock.Any(), []int64{1}, false, gomock.Any()).
+					Return([]*model.EvaluatorVersion{
+						{
+							ID:          100, // 草稿版本ID
+							EvaluatorID: 1,
+							Version:     "draft",
+						},
+					}, nil)
+
+				// 设置获取现有tags的期望
+				mockTagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{100}, int32(entity.EvaluatorTagKeyType_Evaluator), gomock.Any()).
+					Return([]*model.EvaluatorTag{
+						{
+							ID:       1,
+							SourceID: 100,
+							TagKey:   "Category",
+							TagValue: "LLM",
+						},
+						{
+							ID:       2,
+							SourceID: 100,
+							TagKey:   "Objective",
+							TagValue: "Performance",
+						},
+					}, nil)
+
+				// 设置删除不需要的tags的期望
+				mockTagDAO.EXPECT().
+					DeleteEvaluatorTagsByConditions(gomock.Any(), int64(100), int32(entity.EvaluatorTagKeyType_Evaluator), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// 设置新增tags的期望
+				mockTagDAO.EXPECT().
+					BatchCreateEvaluatorTags(gomock.Any(), int64(100), int32(entity.EvaluatorTagKeyType_Evaluator), "test_user", gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name: "成功更新内置评估器草稿，无tag更新",
+			evaluator: &entity.Evaluator{
+				ID:            1,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				BaseInfo: &entity.BaseInfo{
+					UpdatedBy: &entity.UserInfo{
+						UserID: gptr.Of("test_user"),
+					},
+				},
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					Version: "1.0.0",
+					BaseInfo: &entity.BaseInfo{
+						UpdatedBy: &entity.UserInfo{
+							UserID: gptr.Of("test_user"),
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				// 设置数据库事务的期望
+				mockDBProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				// 设置更新评估器草稿状态的期望
+				mockEvaluatorDAO.EXPECT().
+					UpdateEvaluatorDraftSubmitted(gomock.Any(), int64(1), false, "test_user", gomock.Any()).
+					Return(nil)
+
+				// 设置更新评估器草稿的期望
+				mockEvaluatorVersionDAO.EXPECT().
+					UpdateEvaluatorDraft(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name: "失败 - 草稿版本不存在",
+			evaluator: &entity.Evaluator{
+				ID:            1,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				BaseInfo: &entity.BaseInfo{
+					UpdatedBy: &entity.UserInfo{
+						UserID: gptr.Of("test_user"),
+					},
+				},
+				Tags: map[entity.EvaluatorTagKey][]string{
+					entity.EvaluatorTagKey_Category: {"LLM"},
+				},
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					Version: "1.0.0",
+					BaseInfo: &entity.BaseInfo{
+						UpdatedBy: &entity.UserInfo{
+							UserID: gptr.Of("test_user"),
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				// 设置数据库事务的期望
+				mockDBProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				// 设置更新评估器草稿状态的期望
+				mockEvaluatorDAO.EXPECT().
+					UpdateEvaluatorDraftSubmitted(gomock.Any(), int64(1), false, "test_user", gomock.Any()).
+					Return(nil)
+
+				// 设置更新评估器草稿的期望
+				mockEvaluatorVersionDAO.EXPECT().
+					UpdateEvaluatorDraft(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// 设置获取草稿版本的期望 - 返回空列表
+				mockEvaluatorVersionDAO.EXPECT().
+					BatchGetEvaluatorDraftByEvaluatorID(gomock.Any(), []int64{1}, false, gomock.Any()).
+					Return([]*model.EvaluatorVersion{}, nil)
+			},
+			expectedError: assert.AnError, // 期望返回错误
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			err := repo.UpdateBuiltinEvaluatorDraft(context.Background(), tt.evaluator)
+			if tt.expectedError != nil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEvaluatorRepoImpl_BatchGetBuiltinEvaluatorByVersionID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorDAO := evaluatormocks.NewMockEvaluatorDAO(ctrl)
+	mockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
+	mockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
+
+	tests := []struct {
+		name           string
+		spaceID        *int64
+		ids            []int64
+		includeDeleted bool
+		mockSetup      func()
+		expectedResult []*entity.Evaluator
+		expectedError  error
+	}{
+		{
+			name:           "成功批量获取内置评估器版本，包含tag信息",
+			spaceID:        gptr.Of(int64(1)),
+			ids:            []int64{1, 2},
+			includeDeleted: false,
+			mockSetup: func() {
+				// 设置获取评估器版本的期望
+				mockEvaluatorVersionDAO.EXPECT().
+					BatchGetEvaluatorVersionByID(gomock.Any(), gptr.Of(int64(1)), []int64{1, 2}, false).
+					Return([]*model.EvaluatorVersion{
+						{
+							ID:            1,
+							EvaluatorID:   1,
+							EvaluatorType: gptr.Of(int32(entity.EvaluatorTypePrompt)),
+							Version:       "1.0.0",
+						},
+						{
+							ID:            2,
+							EvaluatorID:   2,
+							EvaluatorType: gptr.Of(int32(entity.EvaluatorTypeCode)),
+							Version:       "1.0.0",
+						},
+					}, nil)
+
+				// 设置获取评估器基本信息的期望
+				mockEvaluatorDAO.EXPECT().
+					BatchGetEvaluatorByID(gomock.Any(), []int64{1, 2}, false).
+					Return([]*model.Evaluator{
+						{
+							ID:            1,
+							Name:          gptr.Of("Test Evaluator 1"),
+							EvaluatorType: int32(entity.EvaluatorTypePrompt),
+						},
+						{
+							ID:            2,
+							Name:          gptr.Of("Test Evaluator 2"),
+							EvaluatorType: int32(entity.EvaluatorTypeCode),
+						},
+					}, nil)
+
+				// 设置获取tag信息的期望
+				mockTagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{1, 2}, int32(entity.EvaluatorTagKeyType_Evaluator)).
+					Return([]*model.EvaluatorTag{
+						{
+							SourceID: 1,
+							TagKey:   "category",
+							TagValue: "test",
+						},
+						{
+							SourceID: 2,
+							TagKey:   "category",
+							TagValue: "production",
+						},
+					}, nil)
+			},
+			expectedResult: []*entity.Evaluator{
+				{
+					ID:            1,
+					Name:          "Test Evaluator 1",
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					Tags: map[entity.EvaluatorTagKey][]string{
+						"category": {"test"},
+					},
+				},
+				{
+					ID:            2,
+					Name:          "Test Evaluator 2",
+					EvaluatorType: entity.EvaluatorTypeCode,
+					Tags: map[entity.EvaluatorTagKey][]string{
+						"category": {"production"},
+					},
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name:           "获取评估器版本失败",
+			spaceID:        gptr.Of(int64(1)),
+			ids:            []int64{1, 2},
+			includeDeleted: false,
+			mockSetup: func() {
+				mockEvaluatorVersionDAO.EXPECT().
+					BatchGetEvaluatorVersionByID(gomock.Any(), gptr.Of(int64(1)), []int64{1, 2}, false).
+					Return(nil, assert.AnError)
+			},
+			expectedResult: nil,
+			expectedError:  assert.AnError,
+		},
+		{
+			name:           "获取tag信息失败，但继续处理",
+			spaceID:        gptr.Of(int64(1)),
+			ids:            []int64{1},
+			includeDeleted: false,
+			mockSetup: func() {
+				mockEvaluatorVersionDAO.EXPECT().
+					BatchGetEvaluatorVersionByID(gomock.Any(), gptr.Of(int64(1)), []int64{1}, false).
+					Return([]*model.EvaluatorVersion{
+						{
+							ID:            1,
+							EvaluatorID:   1,
+							EvaluatorType: gptr.Of(int32(entity.EvaluatorTypePrompt)),
+							Version:       "1.0.0",
+						},
+					}, nil)
+
+				mockEvaluatorDAO.EXPECT().
+					BatchGetEvaluatorByID(gomock.Any(), []int64{1}, false).
+					Return([]*model.Evaluator{
+						{
+							ID:            1,
+							Name:          gptr.Of("Test Evaluator 1"),
+							EvaluatorType: int32(entity.EvaluatorTypePrompt),
+						},
+					}, nil)
+
+				// tag查询失败，但方法应该继续处理
+				mockTagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{1}, int32(entity.EvaluatorTagKeyType_Evaluator)).
+					Return(nil, assert.AnError)
+			},
+			expectedResult: []*entity.Evaluator{
+				{
+					ID:            1,
+					Name:          "Test Evaluator 1",
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					Tags:          nil, // 没有tag信息
+				},
+			},
+			expectedError: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			repo := &EvaluatorRepoImpl{
+				evaluatorDao:        mockEvaluatorDAO,
+				evaluatorVersionDao: mockEvaluatorVersionDAO,
+				tagDAO:              mockTagDAO,
+				dbProvider:          mockDBProvider,
+				idgen:               mockIDGen,
+				lwt:                 mockLWT,
+			}
+
+			result, err := repo.BatchGetBuiltinEvaluatorByVersionID(context.Background(), tt.spaceID, tt.ids, tt.includeDeleted)
+			if tt.expectedError != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedError, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, len(tt.expectedResult), len(result))
+				for i, expected := range tt.expectedResult {
+					assert.Equal(t, expected.ID, result[i].ID)
+					assert.Equal(t, expected.Name, result[i].Name)
+					assert.Equal(t, expected.EvaluatorType, result[i].EvaluatorType)
+					assert.Equal(t, expected.Tags, result[i].Tags)
+				}
+			}
+		})
+	}
+}
+
+func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorMeta(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorDAO := evaluatormocks.NewMockEvaluatorDAO(ctrl)
+	mockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
+	mockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
+
+	tests := []struct {
+		name           string
+		id             int64
+		benchmark      string
+		vendor         string
+		userID         string
+		mockSetup      func()
+		expectedError  error
+	}{
+		{
+			name:      "成功更新内置评估器元数据",
+			id:        1,
+			benchmark: "test_benchmark",
+			vendor:    "test_vendor",
+			userID:    "test_user",
+			mockSetup: func() {
+				mockEvaluatorDAO.EXPECT().
+					UpdateBuiltinEvaluatorMeta(gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			expectedError: nil,
+		},
+		{
+			name:      "更新内置评估器元数据失败",
+			id:        2,
+			benchmark: "test_benchmark",
+			vendor:    "test_vendor",
+			userID:    "test_user",
+			mockSetup: func() {
+				mockEvaluatorDAO.EXPECT().
+					UpdateBuiltinEvaluatorMeta(gomock.Any(), gomock.Any()).
+					Return(assert.AnError)
+			},
+			expectedError: assert.AnError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			repo := &EvaluatorRepoImpl{
+				evaluatorDao:        mockEvaluatorDAO,
+				evaluatorVersionDao: mockEvaluatorVersionDAO,
+				tagDAO:              mockTagDAO,
+				dbProvider:          mockDBProvider,
+				idgen:               mockIDGen,
+				lwt:                 mockLWT,
+			}
+
+			err := repo.UpdateBuiltinEvaluatorMeta(context.Background(), tt.id, "", "", tt.benchmark, tt.vendor, tt.userID)
+			if tt.expectedError != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedError, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

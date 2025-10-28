@@ -617,7 +617,7 @@ func (p *DebugBuiltinEvaluatorResponse) IsValid() error {
 	}
 	return nil
 }
-func (p *PublishBuiltinEvaluatorRequest) IsValid() error {
+func (p *UpdateBuiltinEvaluatorTagsRequest) IsValid() error {
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -625,7 +625,7 @@ func (p *PublishBuiltinEvaluatorRequest) IsValid() error {
 	}
 	return nil
 }
-func (p *PublishBuiltinEvaluatorResponse) IsValid() error {
+func (p *UpdateBuiltinEvaluatorTagsResponse) IsValid() error {
 	if p.Version != nil {
 		if err := p.Version.IsValid(); err != nil {
 			return fmt.Errorf("field Version not valid, %w", err)
@@ -699,6 +699,22 @@ func (p *DeleteEvaluatorTemplateRequest) IsValid() error {
 	return nil
 }
 func (p *DeleteEvaluatorTemplateResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluatorTagsRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluatorTagsResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

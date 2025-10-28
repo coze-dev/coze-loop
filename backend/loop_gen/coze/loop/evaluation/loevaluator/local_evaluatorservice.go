@@ -588,29 +588,6 @@ func (l *LocalEvaluatorService) DeleteEvaluatorTemplate(ctx context.Context, req
 	return result.GetSuccess(), nil
 }
 
-// GetLatestEvaluatorVersion
-// 获取评估器最新版本
-func (l *LocalEvaluatorService) GetLatestEvaluatorVersion(ctx context.Context, request *evaluator.GetLatestEvaluatorVersionRequest, callOptions ...callopt.Option) (*evaluator.GetLatestEvaluatorVersionResponse, error) {
-	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*evaluator.EvaluatorServiceGetLatestEvaluatorVersionArgs)
-		result := out.(*evaluator.EvaluatorServiceGetLatestEvaluatorVersionResult)
-		resp, err := l.impl.GetLatestEvaluatorVersion(ctx, arg.Request)
-		if err != nil {
-			return err
-		}
-		result.SetSuccess(resp)
-		return nil
-	})
-
-	arg := &evaluator.EvaluatorServiceGetLatestEvaluatorVersionArgs{Request: request}
-	result := &evaluator.EvaluatorServiceGetLatestEvaluatorVersionResult{}
-	ctx = l.injectRPCInfo(ctx, "GetLatestEvaluatorVersion")
-	if err := chain(ctx, arg, result); err != nil {
-		return nil, err
-	}
-	return result.GetSuccess(), nil
-}
-
 // DebugBuiltinEvaluator
 // 调试预置评估器
 func (l *LocalEvaluatorService) DebugBuiltinEvaluator(ctx context.Context, req *evaluator.DebugBuiltinEvaluatorRequest, callOptions ...callopt.Option) (*evaluator.DebugBuiltinEvaluatorResponse, error) {
@@ -634,13 +611,13 @@ func (l *LocalEvaluatorService) DebugBuiltinEvaluator(ctx context.Context, req *
 	return result.GetSuccess(), nil
 }
 
-// PublishBuiltinEvaluator
-// 发布预置评估器
-func (l *LocalEvaluatorService) PublishBuiltinEvaluator(ctx context.Context, req *evaluator.PublishBuiltinEvaluatorRequest, callOptions ...callopt.Option) (*evaluator.PublishBuiltinEvaluatorResponse, error) {
+// UpdateBuiltinEvaluatorTags
+// 更新预置评估器tag
+func (l *LocalEvaluatorService) UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest, callOptions ...callopt.Option) (*evaluator.UpdateBuiltinEvaluatorTagsResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*evaluator.EvaluatorServicePublishBuiltinEvaluatorArgs)
-		result := out.(*evaluator.EvaluatorServicePublishBuiltinEvaluatorResult)
-		resp, err := l.impl.PublishBuiltinEvaluator(ctx, arg.Req)
+		arg := in.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs)
+		result := out.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult)
+		resp, err := l.impl.UpdateBuiltinEvaluatorTags(ctx, arg.Req)
 		if err != nil {
 			return err
 		}
@@ -648,9 +625,32 @@ func (l *LocalEvaluatorService) PublishBuiltinEvaluator(ctx context.Context, req
 		return nil
 	})
 
-	arg := &evaluator.EvaluatorServicePublishBuiltinEvaluatorArgs{Req: req}
-	result := &evaluator.EvaluatorServicePublishBuiltinEvaluatorResult{}
-	ctx = l.injectRPCInfo(ctx, "PublishBuiltinEvaluator")
+	arg := &evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs{Req: req}
+	result := &evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateBuiltinEvaluatorTags")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// ListEvaluatorTags
+// 查询Tag
+func (l *LocalEvaluatorService) ListEvaluatorTags(ctx context.Context, req *evaluator.ListEvaluatorTagsRequest, callOptions ...callopt.Option) (*evaluator.ListEvaluatorTagsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*evaluator.EvaluatorServiceListEvaluatorTagsArgs)
+		result := out.(*evaluator.EvaluatorServiceListEvaluatorTagsResult)
+		resp, err := l.impl.ListEvaluatorTags(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &evaluator.EvaluatorServiceListEvaluatorTagsArgs{Req: req}
+	result := &evaluator.EvaluatorServiceListEvaluatorTagsResult{}
+	ctx = l.injectRPCInfo(ctx, "ListEvaluatorTags")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

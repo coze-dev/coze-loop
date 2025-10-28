@@ -55,7 +55,7 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		req            *CreateEvaluatorTemplateRequest
+		req            *entity.CreateEvaluatorTemplateRequest
 		mockTemplate   *entity.EvaluatorTemplate
 		mockError      error
 		expectedError  bool
@@ -63,7 +63,7 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 	}{
 		{
 			name: "successful creation",
-			req: &CreateEvaluatorTemplateRequest{
+			req: &entity.CreateEvaluatorTemplateRequest{
 				SpaceID:       100,
 				Name:          "Test Template",
 				Description:   "Test Description",
@@ -90,7 +90,7 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "invalid space ID",
-			req: &CreateEvaluatorTemplateRequest{
+			req: &entity.CreateEvaluatorTemplateRequest{
 				SpaceID:       0,
 				Name:          "Test Template",
 				EvaluatorType: entity.EvaluatorTypePrompt,
@@ -100,7 +100,7 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "empty name",
-			req: &CreateEvaluatorTemplateRequest{
+			req: &entity.CreateEvaluatorTemplateRequest{
 				SpaceID:       100,
 				Name:          "",
 				EvaluatorType: entity.EvaluatorTypePrompt,
@@ -110,7 +110,7 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "missing prompt content for prompt type",
-			req: &CreateEvaluatorTemplateRequest{
+			req: &entity.CreateEvaluatorTemplateRequest{
 				SpaceID:       100,
 				Name:          "Test Template",
 				EvaluatorType: entity.EvaluatorTypePrompt,
@@ -164,7 +164,7 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		req            *UpdateEvaluatorTemplateRequest
+		req            *entity.UpdateEvaluatorTemplateRequest
 		existingTemplate *entity.EvaluatorTemplate
 		mockTemplate   *entity.EvaluatorTemplate
 		mockError      error
@@ -173,7 +173,7 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 	}{
 		{
 			name: "successful update",
-			req: &UpdateEvaluatorTemplateRequest{
+			req: &entity.UpdateEvaluatorTemplateRequest{
 				ID:   1,
 				Name: gptr.Of("Updated Template"),
 			},
@@ -192,7 +192,7 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "template not found",
-			req: &UpdateEvaluatorTemplateRequest{
+			req: &entity.UpdateEvaluatorTemplateRequest{
 				ID:   1,
 				Name: gptr.Of("Updated Template"),
 			},
@@ -202,7 +202,7 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "invalid ID",
-			req: &UpdateEvaluatorTemplateRequest{
+			req: &entity.UpdateEvaluatorTemplateRequest{
 				ID: 0,
 			},
 			expectedError: true,
@@ -258,7 +258,7 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		req            *DeleteEvaluatorTemplateRequest
+		req            *entity.DeleteEvaluatorTemplateRequest
 		existingTemplate *entity.EvaluatorTemplate
 		mockError      error
 		expectedError  bool
@@ -266,7 +266,7 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 	}{
 		{
 			name: "successful deletion",
-			req: &DeleteEvaluatorTemplateRequest{
+			req: &entity.DeleteEvaluatorTemplateRequest{
 				ID: 1,
 			},
 			existingTemplate: &entity.EvaluatorTemplate{
@@ -278,7 +278,7 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "template not found",
-			req: &DeleteEvaluatorTemplateRequest{
+			req: &entity.DeleteEvaluatorTemplateRequest{
 				ID: 1,
 			},
 			existingTemplate: nil,
@@ -287,7 +287,7 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "invalid ID",
-			req: &DeleteEvaluatorTemplateRequest{
+			req: &entity.DeleteEvaluatorTemplateRequest{
 				ID: 0,
 			},
 			expectedError: true,
@@ -342,7 +342,7 @@ func TestEvaluatorTemplateServiceImpl_GetEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		req            *GetEvaluatorTemplateRequest
+		req            *entity.GetEvaluatorTemplateRequest
 		mockTemplate   *entity.EvaluatorTemplate
 		mockError      error
 		expectedError  bool
@@ -350,7 +350,7 @@ func TestEvaluatorTemplateServiceImpl_GetEvaluatorTemplate(t *testing.T) {
 	}{
 		{
 			name: "successful get",
-			req: &GetEvaluatorTemplateRequest{
+			req: &entity.GetEvaluatorTemplateRequest{
 				ID: 1,
 			},
 			mockTemplate: &entity.EvaluatorTemplate{
@@ -363,7 +363,7 @@ func TestEvaluatorTemplateServiceImpl_GetEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "template not found",
-			req: &GetEvaluatorTemplateRequest{
+			req: &entity.GetEvaluatorTemplateRequest{
 				ID: 1,
 			},
 			mockTemplate:  nil,
@@ -372,7 +372,7 @@ func TestEvaluatorTemplateServiceImpl_GetEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "invalid ID",
-			req: &GetEvaluatorTemplateRequest{
+			req: &entity.GetEvaluatorTemplateRequest{
 				ID: 0,
 			},
 			expectedError: true,
@@ -415,7 +415,7 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		req            *ListEvaluatorTemplateRequest
+		req            *entity.ListEvaluatorTemplateRequest
 		mockResponse   *repo.ListEvaluatorTemplateResponse
 		mockError      error
 		expectedError  bool
@@ -423,7 +423,7 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 	}{
 		{
 			name: "successful list",
-			req: &ListEvaluatorTemplateRequest{
+			req: &entity.ListEvaluatorTemplateRequest{
 				SpaceID:  100,
 				PageSize: 10,
 				PageNum:  1,
@@ -440,7 +440,7 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "invalid space ID",
-			req: &ListEvaluatorTemplateRequest{
+			req: &entity.ListEvaluatorTemplateRequest{
 				SpaceID:  0,
 				PageSize: 10,
 				PageNum:  1,
@@ -450,7 +450,7 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "invalid page size",
-			req: &ListEvaluatorTemplateRequest{
+			req: &entity.ListEvaluatorTemplateRequest{
 				SpaceID:  100,
 				PageSize: 0,
 				PageNum:  1,
@@ -460,7 +460,7 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "invalid page num",
-			req: &ListEvaluatorTemplateRequest{
+			req: &entity.ListEvaluatorTemplateRequest{
 				SpaceID:  100,
 				PageSize: 10,
 				PageNum:  0,

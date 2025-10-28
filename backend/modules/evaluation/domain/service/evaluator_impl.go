@@ -122,11 +122,12 @@ func (e *EvaluatorServiceImpl) ListEvaluator(ctx context.Context, request *entit
 func buildListEvaluatorRequest(ctx context.Context, request *entity.ListEvaluatorRequest) (*repo.ListEvaluatorRequest, error) {
 	// 转换请求参数为repo层结构
 	req := &repo.ListEvaluatorRequest{
-		SpaceID:    request.SpaceID,
-		SearchName: request.SearchName,
-		CreatorIDs: request.CreatorIDs,
-		PageSize:   request.PageSize,
-		PageNum:    request.PageNum,
+		SpaceID:      request.SpaceID,
+		SearchName:   request.SearchName,
+		CreatorIDs:   request.CreatorIDs,
+		FilterOption: request.FilterOption, // 传递FilterOption
+		PageSize:     request.PageSize,
+		PageNum:      request.PageNum,
 	}
 	evaluatorType := make([]entity.EvaluatorType, 0, len(request.EvaluatorType))
 	evaluatorType = append(evaluatorType, request.EvaluatorType...)
@@ -200,6 +201,10 @@ func (e *EvaluatorServiceImpl) makeCreateIdemKey(cid string) string {
 	return consts.IdemKeyCreateEvaluator + cid
 }
 
+func (e *EvaluatorServiceImpl) makeCreateBuiltinIdemKey(cid string) string {
+	return consts.IdemKeyCreateEvaluator + "_builtin_" + cid
+}
+
 // 校验CreateEvaluator参数合法性
 func (e *EvaluatorServiceImpl) validateCreateEvaluatorRequest(ctx context.Context, evaluator *entity.Evaluator) error {
 	// 校验参数是否为空
@@ -233,6 +238,52 @@ func (e *EvaluatorServiceImpl) UpdateEvaluatorMeta(ctx context.Context, id, spac
 		return err
 	}
 	return nil
+}
+
+// UpdateBuiltinEvaluatorMeta 修改内置评估器元信息（包含benchmark/vendor）
+func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorMeta(ctx context.Context, id, spaceID int64, name, description, benchmark, vendor, userID string) error {
+	// 仅当修改了名称时校验重名；description/benchmark/vendor 不需要重名校验
+	if name != "" {
+		exist, err := e.evaluatorRepo.CheckNameExist(ctx, spaceID, id, name)
+		if err != nil {
+			return err
+		}
+		if exist {
+			return errorx.NewByCode(errno.EvaluatorNameExistCode)
+		}
+	}
+	if err := e.evaluatorRepo.UpdateBuiltinEvaluatorMeta(ctx, id, name, description, benchmark, vendor, userID); err != nil {
+		return err
+	}
+	return nil
+}
+
+// UpdateBuiltinEvaluatorTags 根据 evaluatorID + version 更新该版本的标签
+func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, version string, tags map[entity.EvaluatorTagKey][]string) (*entity.Evaluator, error) {
+	// 查出该 evaluator 的指定版本，拿到版本ID
+	listReq := &repo.ListEvaluatorVersionRequest{
+		EvaluatorID:   evaluatorID,
+		QueryVersions: []string{version},
+		PageSize:      1,
+		PageNum:       1,
+		OrderBy:       []*entity.OrderBy{},
+	}
+	result, err := e.evaluatorRepo.ListEvaluatorVersion(ctx, listReq)
+	if err != nil {
+		return nil, err
+	}
+	if len(result.Versions) == 0 {
+		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode)
+	}
+	ev := result.Versions[0]
+	versionID := ev.GetEvaluatorVersionID()
+
+	// 调用 repo 更新该版本的标签
+	if err := e.evaluatorRepo.UpdateEvaluatorVersionTags(ctx, versionID, tags); err != nil {
+		return nil, err
+	}
+	// 回填最新标签到返回对象（可选：这里仅返回版本，不做额外查询）
+	return ev, nil
 }
 
 // 校验UpdateEvaluator参数合法性
@@ -312,9 +363,15 @@ func buildListEvaluatorVersionRequest(ctx context.Context, request *entity.ListE
 }
 
 // GetEvaluatorVersion 按 id 和版本号单个查询 evaluator_version version
-func (e *EvaluatorServiceImpl) GetEvaluatorVersion(ctx context.Context, evaluatorVersionID int64, includeDeleted bool) (*entity.Evaluator, error) {
-	// 获取 evaluator_version 元信息和版本内容
-	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{evaluatorVersionID}, includeDeleted)
+func (e *EvaluatorServiceImpl) GetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted bool, builtin bool) (*entity.Evaluator, error) {
+	// 根据 builtin 分流
+	var evaluatorDOList []*entity.Evaluator
+	var err error
+	if builtin {
+		evaluatorDOList, err = e.evaluatorRepo.BatchGetBuiltinEvaluatorByVersionID(ctx, spaceID, []int64{evaluatorVersionID}, includeDeleted)
+	} else {
+		evaluatorDOList, err = e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, spaceID, []int64{evaluatorVersionID}, includeDeleted)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -499,4 +556,63 @@ func (e *EvaluatorServiceImpl) injectUserInfo(ctx context.Context, evaluatorDO *
 		CreatedAt: gptr.Of(time.Now().UnixMilli()),
 		UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 	})
+}
+
+// ListBuiltinEvaluator 查询内置评估器
+func (e *EvaluatorServiceImpl) ListBuiltinEvaluator(ctx context.Context, request *entity.ListBuiltinEvaluatorRequest) ([]*entity.Evaluator, int64, error) {
+	// 构建ListBuiltinEvaluator请求
+	repoReq := &repo.ListBuiltinEvaluatorRequest{
+		SpaceID:        request.SpaceID,
+		FilterOption:   request.FilterOption, // 直接使用传入的FilterOption
+		PageSize:       request.PageSize,
+		PageNum:        request.PageNum,
+		IncludeDeleted: false, // 内置评估器不包含已删除的
+	}
+
+	// 调用repo层的ListBuiltinEvaluator方法
+	result, err := e.evaluatorRepo.ListBuiltinEvaluator(ctx, repoReq)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 如果不需要版本信息，直接返回
+	if !request.WithVersion {
+		return result.Evaluators, result.TotalCount, nil
+	}
+
+	// 如果需要版本信息，获取版本数据
+	evaluatorID2DO := make(map[int64]*entity.Evaluator, len(result.Evaluators))
+	for _, evaluator := range result.Evaluators {
+		evaluatorID2DO[evaluator.ID] = evaluator
+	}
+
+	// 批量获取版本信息
+	evaluatorIDs := make([]int64, 0, len(result.Evaluators))
+	for _, evaluator := range result.Evaluators {
+		evaluatorIDs = append(evaluatorIDs, evaluator.ID)
+	}
+	evaluatorVersions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDs(ctx, evaluatorIDs, false)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 组装版本信息
+	for _, evaluatorVersion := range evaluatorVersions {
+		evaluatorDO, ok := evaluatorID2DO[evaluatorVersion.GetEvaluatorID()]
+		if !ok {
+			continue
+		}
+		// 设置 Evaluator.ID 为评估器ID（不是评估器版本ID）
+		evaluatorVersion.ID = evaluatorDO.ID
+		evaluatorVersion.SpaceID = evaluatorDO.SpaceID
+		evaluatorVersion.Description = evaluatorDO.Description
+		evaluatorVersion.BaseInfo = evaluatorDO.BaseInfo
+		evaluatorVersion.Name = evaluatorDO.Name
+		evaluatorVersion.EvaluatorType = evaluatorDO.EvaluatorType
+		evaluatorVersion.Description = evaluatorDO.Description
+		evaluatorVersion.DraftSubmitted = evaluatorDO.DraftSubmitted
+		evaluatorVersion.LatestVersion = evaluatorDO.LatestVersion
+	}
+
+	return evaluatorVersions, int64(len(evaluatorVersions)), nil
 }

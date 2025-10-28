@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `evaluator`
     `latest_version`  varchar(128)    NOT NULL DEFAULT '' COMMENT '最新版本号',
     `benchmark`       varchar(255)             DEFAULT NULL COMMENT 'benchmark',
     `vendor`          varchar(255)             DEFAULT NULL COMMENT 'vendor',
+    `builtin`         int unsigned    NOT NULL DEFAULT '2' COMMENT '是否预置，1:是；2:否',
     PRIMARY KEY (`id`),
     KEY `idx_space_id_evaluator_type` (`space_id`, `evaluator_type`),
     KEY `idx_space_id_created_by` (`space_id`, `created_by`),

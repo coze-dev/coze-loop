@@ -13,7 +13,7 @@ CREATE TABLE `evaluator_template` (
                                       `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                       `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                       `deleted_at` timestamp NULL DEFAULT NULL COMMENT '删除时间',
-                                      `heat` bigint unsigned NOT NULL DEFAULT '0' COMMENT '热度',
+                                      `popularity` bigint unsigned NOT NULL DEFAULT '0' COMMENT '热度',
                                       `benchmark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'benchmark',
                                       `vendor` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'vendor',
                                       PRIMARY KEY (`id`)
