@@ -45,6 +45,9 @@ const EvaluatorTagKey EvaluatorTagKey_BoxType = "BoxType"            // 黑白�
 const EvaluatorTagKey EvaluatorTagKey_Name = "Name"               // 评估器名称
 const EvaluatorTagKey EvaluatorTagKey_Visible = "Visible"           // 可见性
 
+typedef string AccessProtocol
+const AccessProtocol AccessProtocol_RPC = "rpc"
+
 struct Tool {
     1: ToolType type (go.tag ='mapstructure:"type"')
     2: optional Function function (go.tag ='mapstructure:"function"')
@@ -72,6 +75,15 @@ struct CodeEvaluator {
     4: optional string code_template_name
 }
 
+struct CustomRPCEvaluator {
+    1: optional string       custom_evaluator_code     // 自定义评估器编码，例如：EvalBot的给“代码生成-代码正确”赋予CN:480的评估器ID
+    2: required AccessProtocol access_protocol    // 本期是RPC，后续还可拓展HTTP
+    3: optional string service_name
+    4: optional string cluster
+
+    10: optional i64 timeout    // ms
+}
+
 struct EvaluatorVersion {
     1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')          // 版本id
     3: optional string version
@@ -88,6 +100,7 @@ struct EvaluatorContent {
     // 101-200 Evaluator类型
     101: optional PromptEvaluator prompt_evaluator (go.tag ='mapstructure:"prompt_evaluator"')
     102: optional CodeEvaluator code_evaluator
+    103: optional CustomRPCEvaluator custom_rpc_evaluator
 }
 
 struct Evaluator {
