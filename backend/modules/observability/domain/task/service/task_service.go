@@ -11,7 +11,6 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
-	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
@@ -43,6 +42,7 @@ type UpdateTaskReq struct {
 	Description   *string
 	EffectiveTime *task.EffectiveTime
 	SampleRate    *float64
+	UserID        string
 }
 type ListTasksReq struct {
 	WorkspaceID int64
@@ -167,10 +167,6 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		logs.CtxError(ctx, "task not found")
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("task not found"))
 	}
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return errorx.NewByCode(obErrorx.UserParseFailedCode)
-	}
 	// 校验更新参数是否合法
 	if req.Description != nil {
 		taskDO.Description = req.Description
@@ -216,7 +212,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 			taskDO.TaskStatus = *req.TaskStatus
 		}
 	}
-	taskDO.UpdatedBy = userID
+	taskDO.UpdatedBy = req.UserID
 	taskDO.UpdatedAt = time.Now()
 	if err = t.TaskRepo.UpdateTask(ctx, taskDO); err != nil {
 		return err

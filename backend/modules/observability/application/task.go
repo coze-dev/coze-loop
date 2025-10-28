@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -123,10 +124,9 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 		false); err != nil {
 		return resp, err
 	}
-
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	userID, err := GetUserID(ctx, req.GetSession())
+	if err != nil {
+		return nil, err
 	}
 	// 创建task
 	req.Task.TaskStatus = ptr.Of(domain_task.TaskStatusUnstarted)
@@ -140,6 +140,20 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	}
 
 	return &task.CreateTaskResponse{TaskID: sResp.TaskID}, nil
+}
+
+func GetUserID(ctx context.Context, sessionReq *common.Session) (string, error) {
+	if userID := session.UserIDInCtxOrEmpty(ctx); userID != "" {
+		return userID, nil
+	}
+	if sessionReq == nil {
+		return "", errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+	userID := strings.TrimSpace(sessionReq.GetUserID())
+	if userID == "" {
+		return "", errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+	return userID, nil
 }
 
 func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*entity.SpanFilterFields, error) {
@@ -229,13 +243,18 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 		strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
 		return nil, err
 	}
-	err := t.taskSvc.UpdateTask(ctx, &service.UpdateTaskReq{
+	userID, err := GetUserID(ctx, req.GetSession())
+	if err != nil {
+		return nil, err
+	}
+	err = t.taskSvc.UpdateTask(ctx, &service.UpdateTaskReq{
 		TaskID:        req.GetTaskID(),
 		WorkspaceID:   req.GetWorkspaceID(),
 		TaskStatus:    req.TaskStatus,
 		Description:   req.Description,
 		EffectiveTime: req.EffectiveTime,
 		SampleRate:    req.SampleRate,
+		UserID:        userID,
 	})
 	if err != nil {
 		return resp, err
