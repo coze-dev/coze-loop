@@ -24,7 +24,7 @@ import (
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 )
 
-func TestTraceCkRepoImpl_InsertSpans(t *testing.T) {
+func TestTraceRepoImpl_InsertSpans(t *testing.T) {
 	type fields struct {
 		spansDao    ck.ISpansDao
 		traceConfig config.ITraceConfig
@@ -122,7 +122,7 @@ func TestTraceCkRepoImpl_InsertSpans(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			r := &TraceCkRepoImpl{
+			r := &TraceRepoImpl{
 				spansDao:    fields.spansDao,
 				traceConfig: fields.traceConfig,
 			}
@@ -132,7 +132,7 @@ func TestTraceCkRepoImpl_InsertSpans(t *testing.T) {
 	}
 }
 
-func TestTraceCkRepoImpl_ListSpans(t *testing.T) {
+func TestTraceRepoImpl_ListSpans(t *testing.T) {
 	type fields struct {
 		spansDao    ck.ISpansDao
 		annoDao     ck.IAnnotationDao
@@ -320,7 +320,7 @@ func TestTraceCkRepoImpl_ListSpans(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			r := &TraceCkRepoImpl{
+			r := &TraceRepoImpl{
 				spansDao:    fields.spansDao,
 				annoDao:     fields.annoDao,
 				traceConfig: fields.traceConfig,
@@ -335,7 +335,7 @@ func TestTraceCkRepoImpl_ListSpans(t *testing.T) {
 	}
 }
 
-func TestTraceCkRepoImpl_GetTrace(t *testing.T) {
+func TestTraceRepoImpl_GetTrace(t *testing.T) {
 	type fields struct {
 		spansDao    ck.ISpansDao
 		annoDao     ck.IAnnotationDao
@@ -566,7 +566,7 @@ func TestTraceCkRepoImpl_GetTrace(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			r := &TraceCkRepoImpl{
+			r := &TraceRepoImpl{
 				spansDao:    fields.spansDao,
 				annoDao:     fields.annoDao,
 				traceConfig: fields.traceConfig,
@@ -578,7 +578,7 @@ func TestTraceCkRepoImpl_GetTrace(t *testing.T) {
 	}
 }
 
-func TestTraceCkRepoImpl_GetMetrics(t *testing.T) {
+func TestTraceRepoImpl_GetMetrics(t *testing.T) {
 	t.Run("get metrics successfully", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -638,7 +638,7 @@ func TestTraceCkRepoImpl_GetMetrics(t *testing.T) {
 			},
 		}, nil)
 
-		repoImpl := &TraceCkRepoImpl{
+		repoImpl := &TraceRepoImpl{
 			spansDao:    spansDaoMock,
 			traceConfig: traceConfigMock,
 		}
@@ -662,7 +662,7 @@ func TestTraceCkRepoImpl_GetMetrics(t *testing.T) {
 		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
 		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(nil, assert.AnError)
 
-		repoImpl := &TraceCkRepoImpl{
+		repoImpl := &TraceRepoImpl{
 			traceConfig: traceConfigMock,
 			spansDao:    ckmock.NewMockISpansDao(ctrl),
 		}
@@ -691,7 +691,7 @@ func TestTraceCkRepoImpl_GetMetrics(t *testing.T) {
 		}, nil)
 		spansDaoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 
-		repoImpl := &TraceCkRepoImpl{
+		repoImpl := &TraceRepoImpl{
 			spansDao:    spansDaoMock,
 			traceConfig: traceConfigMock,
 		}
@@ -703,7 +703,7 @@ func TestTraceCkRepoImpl_GetMetrics(t *testing.T) {
 	})
 }
 
-func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
+func TestTraceRepoImpl_InsertAnnotation(t *testing.T) {
 	type fields struct {
 		annoDao     ck.IAnnotationDao
 		traceConfig config.ITraceConfig
@@ -781,7 +781,7 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			r := &TraceCkRepoImpl{
+			r := &TraceRepoImpl{
 				annoDao:     fields.annoDao,
 				traceConfig: fields.traceConfig,
 			}
@@ -791,7 +791,7 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 	}
 }
 
-func TestTraceCkRepoImpl_GetAnnotation(t *testing.T) {
+func TestTraceRepoImpl_GetAnnotation(t *testing.T) {
 	type fields struct {
 		annoDao     ck.IAnnotationDao
 		traceConfig config.ITraceConfig
@@ -867,7 +867,7 @@ func TestTraceCkRepoImpl_GetAnnotation(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			r := &TraceCkRepoImpl{
+			r := &TraceRepoImpl{
 				annoDao:     fields.annoDao,
 				traceConfig: fields.traceConfig,
 			}
@@ -878,7 +878,7 @@ func TestTraceCkRepoImpl_GetAnnotation(t *testing.T) {
 	}
 }
 
-func TestTraceCkRepoImpl_ListAnnotations(t *testing.T) {
+func TestTraceRepoImpl_ListAnnotations(t *testing.T) {
 	type fields struct {
 		annoDao     ck.IAnnotationDao
 		traceConfig config.ITraceConfig
@@ -957,7 +957,7 @@ func TestTraceCkRepoImpl_ListAnnotations(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
-			r := &TraceCkRepoImpl{
+			r := &TraceRepoImpl{
 				annoDao:     fields.annoDao,
 				traceConfig: fields.traceConfig,
 			}

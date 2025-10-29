@@ -85,7 +85,8 @@ var (
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
 		service.NewTraceExportServiceImpl,
-		obrepo.NewTraceCKRepoImpl,
+		obrepo.NewTraceRepoImpl,
+		obrepo.NewRepoProvider,
 		ckdao.NewSpansCkDaoImpl,
 		ckdao.NewAnnotationCkDaoImpl,
 		obmetrics.NewTraceMetricsImpl,
@@ -114,7 +115,7 @@ var (
 	traceIngestionSet = wire.NewSet(
 		NewIngestionApplication,
 		service.NewIngestionServiceImpl,
-		obrepo.NewTraceCKRepoImpl,
+		obrepo.NewTraceRepoImpl,
 		ckdao.NewSpansCkDaoImpl,
 		ckdao.NewAnnotationCkDaoImpl,
 		obconfig.NewTraceConfigCenter,

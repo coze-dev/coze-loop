@@ -26,12 +26,12 @@ import (
 	"github.com/samber/lo"
 )
 
-func NewTraceCKRepoImpl(
+func NewTraceRepoImpl(
 	spanDao ck.ISpansDao,
 	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
 ) (repo.ITraceRepo, error) {
-	return &TraceCkRepoImpl{
+	return &TraceRepoImpl{
 		spansDao:    spanDao,
 		annoDao:     annoDao,
 		traceConfig: traceConfig,
@@ -43,14 +43,14 @@ func NewTraceMetricCKRepoImpl(
 	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
 ) (metric_repo.IMetricRepo, error) {
-	return &TraceCkRepoImpl{
+	return &TraceRepoImpl{
 		spansDao:    spanDao,
 		annoDao:     annoDao,
 		traceConfig: traceConfig,
 	}, nil
 }
 
-type TraceCkRepoImpl struct {
+type TraceRepoImpl struct {
 	spansDao    ck.ISpansDao
 	annoDao     ck.IAnnotationDao
 	traceConfig config.ITraceConfig
@@ -61,7 +61,7 @@ type PageToken struct {
 	SpanID    string `json:"SpanID"`
 }
 
-func (t *TraceCkRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTraceParam) error {
+func (t *TraceRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTraceParam) error {
 	table, err := t.getSpanInsertTable(ctx, param.Tenant, param.TTL)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (t *TraceCkRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTra
 	return nil
 }
 
-func (t *TraceCkRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam) (*repo.ListSpansResult, error) {
 	pageToken, err := parsePageToken(req.PageToken)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid list spans request"))
@@ -145,7 +145,7 @@ func (t *TraceCkRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansPara
 	return result, nil
 }
 
-func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (loop_span.SpanList, error) {
+func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (loop_span.SpanList, error) {
 	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
 	if err != nil {
 		return nil, err
@@ -219,7 +219,7 @@ func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam)
 	return spanDOList.Uniq(), nil
 }
 
-func (t *TraceCkRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnnotationsParam) (loop_span.AnnotationList, error) {
+func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnnotationsParam) (loop_span.AnnotationList, error) {
 	if param.SpanID == "" || param.TraceID == "" || param.WorkspaceId <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
@@ -249,7 +249,7 @@ func (t *TraceCkRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListA
 	return convertor.AnnotationListPO2DO(annotations).Uniq(), nil
 }
 
-func (t *TraceCkRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnotationParam) (*loop_span.Annotation, error) {
+func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnotationParam) (*loop_span.Annotation, error) {
 	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
 	if err != nil {
 		return nil, err
@@ -271,7 +271,7 @@ func (t *TraceCkRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnno
 	return convertor.AnnotationPO2DO(annotation), nil
 }
 
-func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.InsertAnnotationParam) error {
+func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.InsertAnnotationParam) error {
 	table, err := t.getAnnoInsertTable(ctx, param.Tenant, param.TTL)
 	if err != nil {
 		return err
@@ -290,7 +290,7 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 	})
 }
 
-func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
+func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
 	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
 	if err != nil {
 		return nil, err
@@ -321,7 +321,7 @@ type queryTableCfg struct {
 	NeedQueryAnno bool
 }
 
-func (t *TraceCkRepoImpl) getQueryTenantTables(ctx context.Context, tenants []string) (*queryTableCfg, error) {
+func (t *TraceRepoImpl) getQueryTenantTables(ctx context.Context, tenants []string) (*queryTableCfg, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant table config, %v", err)
@@ -358,7 +358,7 @@ func (t *TraceCkRepoImpl) getQueryTenantTables(ctx context.Context, tenants []st
 	return ret, nil
 }
 
-func (t *TraceCkRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL) (string, error) {
+func (t *TraceRepoImpl) getSpanInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL) (string, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant config, %v", err)
@@ -373,7 +373,7 @@ func (t *TraceCkRepoImpl) getSpanInsertTable(ctx context.Context, tenant string,
 	return tableCfg.SpanTable, nil
 }
 
-func (t *TraceCkRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL) (string, error) {
+func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, ttl loop_span.TTL) (string, error) {
 	tenantTableCfg, err := t.traceConfig.GetTenantConfig(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get tenant config, %v", err)
@@ -388,7 +388,7 @@ func (t *TraceCkRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string,
 	return tableCfg.AnnoTable, nil
 }
 
-func (t *TraceCkRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_span.FilterFields) *loop_span.FilterFields {
+func (t *TraceRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_span.FilterFields) *loop_span.FilterFields {
 	timeStr := strconv.FormatInt(pageToken.StartTime, 10)
 	filterFields := &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumOr),
