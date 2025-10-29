@@ -184,6 +184,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				Name:                     &targetVersionDO.VolcengineAgent.Name,
 				Description:              &targetVersionDO.VolcengineAgent.Description,
 				VolcengineAgentEndpoints: endpoints,
+				Protocol:                 gptr.Of(gptr.Indirect(targetVersionDO.VolcengineAgent.Protocol)),
 				BaseInfo:                 commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.VolcengineAgent.BaseInfo),
 			}
 		}

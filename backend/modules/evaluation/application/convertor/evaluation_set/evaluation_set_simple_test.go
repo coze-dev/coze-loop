@@ -19,7 +19,7 @@ func TestCreateDatasetItemOutputDO2DTOs(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    []*entity.CreateDatasetItemOutput
+		input    []*entity.DatasetItemOutput
 		expected []*dataset.CreateDatasetItemOutput
 	}{
 		{
@@ -29,7 +29,7 @@ func TestCreateDatasetItemOutputDO2DTOs(t *testing.T) {
 		},
 		{
 			name: "empty slice",
-			input: []*entity.CreateDatasetItemOutput{
+			input: []*entity.DatasetItemOutput{
 				{
 					ItemIndex: gptr.Of(int32(1)),
 					ItemKey:   gptr.Of("key1"),
