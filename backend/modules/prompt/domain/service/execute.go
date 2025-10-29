@@ -54,28 +54,8 @@ type ExecuteStreamingParam struct {
 }
 
 func (p *PromptServiceImpl) FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (formattedMessages []*entity.Message, err error) {
-	if parentSpan := looptracer.GetTracer().GetSpanFromContext(ctx); parentSpan != nil {
-		var span looptracer.Span
-		ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptTemplate, tracespec.VPromptTemplateSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(prompt.SpaceID, 10)))
-		if span != nil {
-			span.SetPrompt(ctx, loopentity.Prompt{PromptKey: prompt.PromptKey, Version: prompt.GetVersion()})
-			span.SetInput(ctx, json.Jsonify(tracespec.PromptInput{
-				Templates: trace.MessagesToSpanMessages(prompt.GetTemplateMessages(messages)),
-				Arguments: trace.VariableValsToSpanPromptVariables(variableVals),
-			}))
-			defer func() {
-				span.SetOutput(ctx, json.Jsonify(tracespec.PromptOutput{
-					Prompts: trace.MessagesToSpanMessages(formattedMessages),
-				}))
-				if err != nil {
-					span.SetStatusCode(ctx, int(traceutil.GetTraceStatusCode(err)))
-					span.SetError(ctx, errors.New(errorx.ErrorWithoutStack(err)))
-				}
-				span.Finish(ctx)
-			}()
-		}
-	}
-	return prompt.FormatMessages(messages, variableVals)
+	// Delegate to the formatter interface
+	return p.formatter.FormatPrompt(ctx, prompt, messages, variableVals)
 }
 
 func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteStreamingParam) (aggregatedReply *entity.Reply, err error) {
@@ -395,8 +375,8 @@ func (p *PromptServiceImpl) finishSequenceSpan(ctx context.Context, span cozeloo
 }
 
 func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param ExecuteParam) (rpc.LLMCallParam, error) {
-	// format messages
-	messages, err := p.FormatPrompt(ctx, param.Prompt, param.Messages, param.VariableVals)
+	// format messages using the formatter interface
+	messages, err := p.formatter.FormatPrompt(ctx, param.Prompt, param.Messages, param.VariableVals)
 	if err != nil {
 		return rpc.LLMCallParam{}, err
 	}

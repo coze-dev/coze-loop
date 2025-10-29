@@ -226,6 +226,7 @@ func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			p := &PromptServiceImpl{
+				formatter:        NewDefaultPromptFormatter(),
 				idgen:            ttFields.idgen,
 				debugLogRepo:     ttFields.debugLogRepo,
 				debugContextRepo: ttFields.debugContextRepo,
@@ -248,7 +249,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 	t.Run("nil prompt", func(t *testing.T) {
 		t.Parallel()
 
-		p := &PromptServiceImpl{}
+		p := &PromptServiceImpl{
+			formatter: NewDefaultPromptFormatter(),
+		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
 				Prompt: nil,
@@ -262,7 +265,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 	t.Run("nil result stream", func(t *testing.T) {
 		t.Parallel()
 
-		p := &PromptServiceImpl{}
+		p := &PromptServiceImpl{
+			formatter: NewDefaultPromptFormatter(),
+		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
 				Prompt: &entity.Prompt{},
@@ -327,8 +332,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 1,
 		}
 		p := &PromptServiceImpl{
-			idgen: mockIDGen,
-			llm:   mockLLM,
+			formatter: NewDefaultPromptFormatter(),
+			idgen:     mockIDGen,
+			llm:       mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -527,8 +533,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 2,
 		}
 		p := &PromptServiceImpl{
-			idgen: mockIDGen,
-			llm:   mockLLM,
+			formatter: NewDefaultPromptFormatter(),
+			idgen:     mockIDGen,
+			llm:       mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -834,6 +841,7 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 
 			ttFields := tt.fieldsGetter(ctrl)
 			p := &PromptServiceImpl{
+				formatter:        NewDefaultPromptFormatter(),
 				idgen:            ttFields.idgen,
 				debugLogRepo:     ttFields.debugLogRepo,
 				debugContextRepo: ttFields.debugContextRepo,
@@ -884,7 +892,9 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 			},
 		},
 	}
-	svc := &PromptServiceImpl{}
+	svc := &PromptServiceImpl{
+		formatter: NewDefaultPromptFormatter(),
+	}
 	param := ExecuteParam{
 		Prompt: prompt,
 		Messages: []*entity.Message{
