@@ -226,7 +226,7 @@ func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			p := &PromptServiceImpl{
-				formatter:        NewDefaultPromptFormatter(),
+				formatter:        NewPromptFormatter(),
 				idgen:            ttFields.idgen,
 				debugLogRepo:     ttFields.debugLogRepo,
 				debugContextRepo: ttFields.debugContextRepo,
@@ -250,7 +250,7 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		t.Parallel()
 
 		p := &PromptServiceImpl{
-			formatter: NewDefaultPromptFormatter(),
+			formatter: NewPromptFormatter(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -266,7 +266,7 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		t.Parallel()
 
 		p := &PromptServiceImpl{
-			formatter: NewDefaultPromptFormatter(),
+			formatter: NewPromptFormatter(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -332,7 +332,7 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 1,
 		}
 		p := &PromptServiceImpl{
-			formatter: NewDefaultPromptFormatter(),
+			formatter: NewPromptFormatter(),
 			idgen:     mockIDGen,
 			llm:       mockLLM,
 		}
@@ -533,7 +533,7 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 2,
 		}
 		p := &PromptServiceImpl{
-			formatter: NewDefaultPromptFormatter(),
+			formatter: NewPromptFormatter(),
 			idgen:     mockIDGen,
 			llm:       mockLLM,
 		}
@@ -841,7 +841,7 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 
 			ttFields := tt.fieldsGetter(ctrl)
 			p := &PromptServiceImpl{
-				formatter:        NewDefaultPromptFormatter(),
+				formatter:        NewPromptFormatter(),
 				idgen:            ttFields.idgen,
 				debugLogRepo:     ttFields.debugLogRepo,
 				debugContextRepo: ttFields.debugContextRepo,
@@ -893,7 +893,7 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 		},
 	}
 	svc := &PromptServiceImpl{
-		formatter: NewDefaultPromptFormatter(),
+		formatter: NewPromptFormatter(),
 	}
 	param := ExecuteParam{
 		Prompt: prompt,

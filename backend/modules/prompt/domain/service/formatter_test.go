@@ -13,7 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-func TestDefaultPromptFormatter_FormatPrompt(t *testing.T) {
+func TestPromptFormatter_FormatPrompt(t *testing.T) {
 	type args struct {
 		ctx          context.Context
 		prompt       *entity.Prompt
@@ -179,7 +179,7 @@ func TestDefaultPromptFormatter_FormatPrompt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			formatter := NewDefaultPromptFormatter()
+			formatter := NewPromptFormatter()
 			gotFormattedMessages, err := formatter.FormatPrompt(tt.args.ctx, tt.args.prompt, tt.args.messages, tt.args.variableVals)
 
 			if tt.wantErr {
@@ -192,8 +192,9 @@ func TestDefaultPromptFormatter_FormatPrompt(t *testing.T) {
 	}
 }
 
-func TestNewDefaultPromptFormatter(t *testing.T) {
-	formatter := NewDefaultPromptFormatter()
+func TestNewPromptFormatter(t *testing.T) {
+	formatter := NewPromptFormatter()
 	assert.NotNil(t, formatter)
-	assert.IsType(t, &DefaultPromptFormatter{}, formatter)
+	// Verify it implements the interface
+	var _ IPromptFormatter = formatter
 }

@@ -20,21 +20,21 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/traceutil"
 )
 
-// PromptFormatter defines the interface for formatting prompts
-type PromptFormatter interface {
+// IPromptFormatter defines the interface for formatting prompts
+type IPromptFormatter interface {
 	FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (formattedMessages []*entity.Message, err error)
 }
 
-// DefaultPromptFormatter provides the default implementation of PromptFormatter
-type DefaultPromptFormatter struct{}
+// PromptFormatter provides the default implementation of IPromptFormatter
+type PromptFormatter struct{}
 
-// NewDefaultPromptFormatter creates a new instance of DefaultPromptFormatter
-func NewDefaultPromptFormatter() PromptFormatter {
-	return &DefaultPromptFormatter{}
+// NewPromptFormatter creates a new instance of PromptFormatter
+func NewPromptFormatter() IPromptFormatter {
+	return &PromptFormatter{}
 }
 
-// FormatPrompt implements the PromptFormatter interface
-func (f *DefaultPromptFormatter) FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (formattedMessages []*entity.Message, err error) {
+// FormatPrompt implements the IPromptFormatter interface
+func (f *PromptFormatter) FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (formattedMessages []*entity.Message, err error) {
 	if parentSpan := looptracer.GetTracer().GetSpanFromContext(ctx); parentSpan != nil {
 		var span looptracer.Span
 		ctx, span = looptracer.GetTracer().StartSpan(ctx, consts.SpanNamePromptTemplate, tracespec.VPromptTemplateSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(prompt.SpaceID, 10)))

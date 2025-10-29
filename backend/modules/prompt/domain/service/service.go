@@ -67,7 +67,7 @@ type PromptLabelQuery struct {
 }
 
 type PromptServiceImpl struct {
-	formatter        PromptFormatter
+	formatter        IPromptFormatter
 	idgen            idgen.IIDGenerator
 	debugLogRepo     repo.IDebugLogRepo
 	debugContextRepo repo.IDebugContextRepo
@@ -79,6 +79,7 @@ type PromptServiceImpl struct {
 }
 
 func NewPromptService(
+	formatter IPromptFormatter,
 	idgen idgen.IIDGenerator,
 	debugLogRepo repo.IDebugLogRepo,
 	debugContextRepo repo.IDebugContextRepo,
@@ -88,35 +89,6 @@ func NewPromptService(
 	llm rpc.ILLMProvider,
 	file rpc.IFileProvider,
 ) IPromptService {
-	return NewPromptServiceWithFormatter(
-		nil, // Use default formatter
-		idgen,
-		debugLogRepo,
-		debugContextRepo,
-		promptManageRepo,
-		labelRepo,
-		configProvider,
-		llm,
-		file,
-	)
-}
-
-// NewPromptServiceWithFormatter creates a new PromptService with a custom formatter
-// If formatter is nil, it will use the DefaultPromptFormatter
-func NewPromptServiceWithFormatter(
-	formatter PromptFormatter,
-	idgen idgen.IIDGenerator,
-	debugLogRepo repo.IDebugLogRepo,
-	debugContextRepo repo.IDebugContextRepo,
-	promptManageRepo repo.IManageRepo,
-	labelRepo repo.ILabelRepo,
-	configProvider conf.IConfigProvider,
-	llm rpc.ILLMProvider,
-	file rpc.IFileProvider,
-) IPromptService {
-	if formatter == nil {
-		formatter = NewDefaultPromptFormatter()
-	}
 	return &PromptServiceImpl{
 		formatter:        formatter,
 		idgen:            idgen,
