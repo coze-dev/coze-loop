@@ -86,7 +86,7 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 		if !cfg.IsAllSpace && !gslice.Contains(cfg.SpaceList, taskDO.GetWorkspaceID()) {
 			continue
 		}
-		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
+		proc := h.taskProcessor.GetTaskProcessor(entity.TaskType(taskDO.TaskType))
 		subscribers = append(subscribers, &spanSubscriber{
 			taskID:           taskDO.GetID(),
 			RWMutex:          sync.RWMutex{},
@@ -153,7 +153,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				merr = multierror.Append(merr, errors.WithMessagef(err, "task is unstarted, need sub.Creative,creative processor, task_id=%d", sub.taskID))
 				continue
 			}
-			if err := sub.processor.OnUpdateTaskChange(ctx, tconv.TaskDTO2DO(sub.t, "", nil), task.TaskStatusRunning); err != nil {
+			if err := sub.processor.OnUpdateTaskChange(ctx, tconv.TaskDTO2DO(sub.t), task.TaskStatusRunning); err != nil {
 				logs.CtxWarn(ctx, "OnUpdateTaskChange, task_id=%d, err=%v", sub.taskID, err)
 				continue
 			}
@@ -194,7 +194,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		if time.Now().After(endTime) {
 			logs.CtxWarn(ctx, "[OnFinishTaskChange]time.Now().After(endTime) Finish processor, task_id=%d, endTime=%v, now=%v", sub.taskID, endTime, time.Now())
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-				Task:     tconv.TaskDTO2DO(sub.t, "", nil),
+				Task:     tconv.TaskDTO2DO(sub.t),
 				TaskRun:  taskRunConfig,
 				IsFinish: true,
 			}); err != nil {
@@ -207,7 +207,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		if taskCount+1 > sampler.GetSampleSize() {
 			logs.CtxWarn(ctx, "[OnFinishTaskChange]taskCount+1 > sampler.GetSampleSize() Finish processor, task_id=%d", sub.taskID)
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-				Task:     tconv.TaskDTO2DO(sub.t, "", nil),
+				Task:     tconv.TaskDTO2DO(sub.t),
 				TaskRun:  taskRunConfig,
 				IsFinish: true,
 			}); err != nil {
@@ -221,7 +221,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			if time.Now().After(cycleEndTime) {
 				logs.CtxInfo(ctx, "[OnFinishTaskChange]time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID)
 				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-					Task:     tconv.TaskDTO2DO(sub.t, "", nil),
+					Task:     tconv.TaskDTO2DO(sub.t),
 					TaskRun:  taskRunConfig,
 					IsFinish: false,
 				}); err != nil {
@@ -239,7 +239,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			if taskRunCount+1 > sampler.GetCycleCount() {
 				logs.CtxWarn(ctx, "[OnFinishTaskChange]taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
 				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-					Task:     tconv.TaskDTO2DO(sub.t, "", nil),
+					Task:     tconv.TaskDTO2DO(sub.t),
 					TaskRun:  taskRunConfig,
 					IsFinish: false,
 				}); err != nil {

@@ -63,23 +63,23 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				backfillRun := &entity.TaskRun{
 					ID:         2,
 					TaskID:     1,
-					TaskType:   string(task.TaskRunTypeBackFill),
-					RunStatus:  string(task.RunStatusDone),
+					TaskType:   entity.TaskRunTypeBackFill,
+					RunStatus:  entity.TaskRunStatusDone,
 					RunStartAt: now.Add(-3 * time.Hour),
 					RunEndAt:   now.Add(-2 * time.Hour),
 				}
 				currentRun := &entity.TaskRun{
 					ID:         3,
 					TaskID:     1,
-					TaskType:   string(task.TaskRunTypeNewData),
-					RunStatus:  string(task.TaskStatusRunning),
+					TaskType:   entity.TaskRunTypeNewData,
+					RunStatus:  entity.TaskRunStatusRunning,
 					RunStartAt: now.Add(-4 * time.Hour),
 					RunEndAt:   now.Add(2 * time.Hour),
 				}
 				taskPO := &entity.ObservabilityTask{
 					ID:         1,
-					TaskType:   string(task.TaskTypeAutoEval),
-					TaskStatus: string(task.TaskStatusRunning),
+					TaskType:   entity.TaskTypeAutoEval,
+					TaskStatus: entity.TaskStatusRunning,
 					EffectiveTime: &entity.EffectiveTime{
 						StartAt: now.Add(-5 * time.Hour).UnixMilli(),
 						EndAt:   now.Add(-1 * time.Hour).UnixMilli(),
@@ -95,7 +95,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 
 				proc := newTrackingProcessor()
 				tp := processor.NewTaskProcessor()
-				tp.Register(task.TaskTypeAutoEval, proc)
+				tp.Register(entity.TaskTypeAutoEval, proc)
 
 				impl := &TraceHubServiceImpl{
 					taskRepo:      mockRepo,
@@ -117,8 +117,8 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				now := time.Now()
 				taskPO := &entity.ObservabilityTask{
 					ID:         10,
-					TaskType:   string(task.TaskTypeAutoEval),
-					TaskStatus: string(task.TaskStatusUnstarted),
+					TaskType:   entity.TaskTypeAutoEval,
+					TaskStatus: entity.TaskStatusUnstarted,
 					EffectiveTime: &entity.EffectiveTime{
 						StartAt: now.Add(-2 * time.Hour).UnixMilli(),
 						EndAt:   now.Add(time.Hour).UnixMilli(),
@@ -129,7 +129,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 
 				proc := newTrackingProcessor()
 				tp := processor.NewTaskProcessor()
-				tp.Register(task.TaskTypeAutoEval, proc)
+				tp.Register(entity.TaskTypeAutoEval, proc)
 
 				impl := &TraceHubServiceImpl{
 					taskRepo:      mockRepo,
@@ -153,15 +153,15 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				currentRun := &entity.TaskRun{
 					ID:         30,
 					TaskID:     20,
-					TaskType:   string(task.TaskRunTypeNewData),
-					RunStatus:  string(task.TaskStatusRunning),
+					TaskType:   entity.TaskRunTypeNewData,
+					RunStatus:  entity.TaskRunStatusRunning,
 					RunStartAt: now.Add(-2 * time.Hour),
 					RunEndAt:   now.Add(-time.Minute),
 				}
 				taskPO := &entity.ObservabilityTask{
 					ID:         20,
-					TaskType:   string(task.TaskTypeAutoEval),
-					TaskStatus: string(task.TaskStatusRunning),
+					TaskType:   entity.TaskTypeAutoEval,
+					TaskStatus: entity.TaskStatusRunning,
 					Sampler:    &entity.Sampler{IsCycle: true},
 					TaskRuns:   []*entity.TaskRun{currentRun},
 				}
@@ -169,7 +169,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 
 				proc := newTrackingProcessor()
 				tp := processor.NewTaskProcessor()
-				tp.Register(task.TaskTypeAutoEval, proc)
+				tp.Register(entity.TaskTypeAutoEval, proc)
 
 				impl := &TraceHubServiceImpl{
 					taskRepo:      mockRepo,
@@ -194,24 +194,24 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				backfillRun := &entity.TaskRun{
 					ID:         40,
 					TaskID:     40,
-					TaskType:   string(task.TaskRunTypeBackFill),
-					RunStatus:  string(task.TaskStatusRunning),
+					TaskType:   entity.TaskRunTypeBackFill,
+					RunStatus:  entity.TaskRunStatusRunning,
 					RunStartAt: now.Add(-time.Hour),
 					RunEndAt:   now.Add(time.Hour),
 				}
 				currentRun := &entity.TaskRun{
 					ID:         41,
 					TaskID:     40,
-					TaskType:   string(task.TaskRunTypeNewData),
-					RunStatus:  string(task.TaskStatusRunning),
+					TaskType:   entity.TaskRunTypeNewData,
+					RunStatus:  entity.TaskRunStatusRunning,
 					RunStartAt: now.Add(-time.Hour),
 					RunEndAt:   now.Add(time.Hour),
 				}
 				taskPO := &entity.ObservabilityTask{
 					ID:                    40,
 					WorkspaceID:           99,
-					TaskType:              string(task.TaskTypeAutoEval),
-					TaskStatus:            string(task.TaskStatusRunning),
+					TaskType:              entity.TaskTypeAutoEval,
+					TaskStatus:            entity.TaskStatusRunning,
 					BackfillEffectiveTime: &entity.EffectiveTime{StartAt: now.Add(-2 * time.Hour).UnixMilli(), EndAt: now.Add(time.Hour).UnixMilli()},
 					Sampler:               &entity.Sampler{IsCycle: false},
 					TaskRuns:              []*entity.TaskRun{backfillRun, currentRun},
@@ -223,7 +223,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 
 				proc := newTrackingProcessor()
 				tp := processor.NewTaskProcessor()
-				tp.Register(task.TaskTypeAutoEval, proc)
+				tp.Register(entity.TaskTypeAutoEval, proc)
 
 				producer := &stubBackfillProducer{ch: make(chan *entity.BackFillEvent, 1)}
 				impl := &TraceHubServiceImpl{

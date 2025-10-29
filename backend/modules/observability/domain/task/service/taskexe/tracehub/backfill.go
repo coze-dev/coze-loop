@@ -117,7 +117,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 		return nil, err
 	}
 	taskRunDTO := tconv.TaskRunDO2DTO(ctx, taskRun, nil)
-	proc := h.taskProcessor.GetTaskProcessor(task.TaskType(taskConfig.TaskType))
+	proc := h.taskProcessor.GetTaskProcessor(taskConfig.TaskType)
 	sub := &spanSubscriber{
 		taskID:           taskConfigDO.GetID(),
 		t:                taskConfigDO,
@@ -368,7 +368,7 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 	if fr.noMore {
 		logs.CtxInfo(ctx, "no more spans to process, task_id=%d", sub.t.GetID())
 		if err = sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-			Task:     tconv.TaskDTO2DO(sub.t, "", nil),
+			Task:     tconv.TaskDTO2DO(sub.t),
 			TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
 			IsFinish: false,
 		}); err != nil {
@@ -449,7 +449,7 @@ func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*lo
 		if taskCount+1 > sampler.GetSampleSize() {
 			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d,SampleSize=%d", sub.taskID, sampler.GetSampleSize())
 			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-				Task:     tconv.TaskDTO2DO(sub.t, "", nil),
+				Task:     tconv.TaskDTO2DO(sub.t),
 				TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
 				IsFinish: true,
 			}); err != nil {

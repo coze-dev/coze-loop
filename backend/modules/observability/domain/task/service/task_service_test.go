@@ -17,15 +17,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	componentmq "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
-	rpc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
-	rpcmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-	entitycommon "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	span_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -68,6 +67,54 @@ func (f *fakeProcessor) OnFinishTaskRunChange(context.Context, taskexe.OnFinishT
 	return f.onFinishRunErr
 }
 
+type stubTraceFilterBuilder struct{}
+
+func (s *stubTraceFilterBuilder) BuildPlatformRelatedFilter(context.Context, loop_span.PlatformType) (span_filter.Filter, error) {
+	return &stubSpanFilter{}, nil
+}
+
+func (s *stubTraceFilterBuilder) BuildGetTraceProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, nil
+}
+
+func (s *stubTraceFilterBuilder) BuildListSpansProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, nil
+}
+
+func (s *stubTraceFilterBuilder) BuildAdvanceInfoProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, nil
+}
+
+func (s *stubTraceFilterBuilder) BuildIngestTraceProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, nil
+}
+
+func (s *stubTraceFilterBuilder) BuildSearchTraceOApiProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, nil
+}
+
+func (s *stubTraceFilterBuilder) BuildListSpansOApiProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, nil
+}
+
+type stubSpanFilter struct{}
+
+func (s *stubSpanFilter) BuildBasicSpanFilter(context.Context, *span_filter.SpanEnv) ([]*loop_span.FilterField, bool, error) {
+	return nil, true, nil
+}
+
+func (s *stubSpanFilter) BuildRootSpanFilter(context.Context, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+	return nil, nil
+}
+
+func (s *stubSpanFilter) BuildLLMSpanFilter(context.Context, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+	return nil, nil
+}
+
+func (s *stubSpanFilter) BuildALLSpanFilter(context.Context, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+	return nil, nil
+}
+
 type stubBackfillProducer struct {
 	ch  chan *entity.BackFillEvent
 	err error
@@ -80,11 +127,11 @@ func (s *stubBackfillProducer) SendBackfill(ctx context.Context, message *entity
 	return s.err
 }
 
-func newTaskServiceWithProcessor(t *testing.T, repo taskrepo.ITaskRepo, userProvider rpc.IUserProvider, backfill componentmq.IBackfillProducer, proc taskexe.Processor, taskType task.TaskType) *TaskServiceImpl {
+func newTaskServiceWithProcessor(t *testing.T, repo taskrepo.ITaskRepo, backfill componentmq.IBackfillProducer, proc taskexe.Processor, taskType entity.TaskType) *TaskServiceImpl {
 	t.Helper()
 	tp := processor.NewTaskProcessor()
 	tp.Register(taskType, proc)
-	service, err := NewTaskServiceImpl(repo, userProvider, nil, backfill, tp)
+	service, err := NewTaskServiceImpl(repo, nil, backfill, tp, &stubTraceFilterBuilder{})
 	assert.NoError(t, err)
 	return service.(*TaskServiceImpl)
 }
@@ -108,13 +155,14 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		backfillCh := make(chan *entity.BackFillEvent, 1)
 		backfill := &stubBackfillProducer{ch: backfillCh}
 
-		svc := newTaskServiceWithProcessor(t, repoMock, nil, backfill, proc, task.TaskTypeAutoEval)
+		svc := newTaskServiceWithProcessor(t, repoMock, backfill, proc, entity.TaskTypeAutoEval)
 
 		reqTask := &entity.ObservabilityTask{
 			WorkspaceID:           123,
 			Name:                  "task",
 			TaskType:              entity.TaskTypeAutoEval,
 			TaskStatus:            entity.TaskStatusUnstarted,
+			SpanFilter:            &entity.SpanFilterFields{},
 			BackfillEffectiveTime: &entity.EffectiveTime{StartAt: time.Now().Add(time.Second).UnixMilli(), EndAt: time.Now().Add(2 * time.Second).UnixMilli()},
 			Sampler:               &entity.Sampler{},
 			EffectiveTime:         &entity.EffectiveTime{StartAt: time.Now().Add(time.Second).UnixMilli(), EndAt: time.Now().Add(2 * time.Second).UnixMilli()},
@@ -144,9 +192,9 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 
 		proc := &fakeProcessor{validateErr: errors.New("invalid config")}
-		svc := newTaskServiceWithProcessor(t, repoMock, nil, nil, proc, task.TaskTypeAutoEval)
+		svc := newTaskServiceWithProcessor(t, repoMock, nil, proc, entity.TaskTypeAutoEval)
 
-		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}}
+		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}, SpanFilter: &entity.SpanFilterFields{}}
 		resp, err := svc.CreateTask(context.Background(), &CreateTaskReq{Task: reqTask})
 		assert.Nil(t, resp)
 		assert.Error(t, err)
@@ -165,8 +213,8 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{{}}, int64(1), nil)
 
 		proc := &fakeProcessor{}
-		svc := newTaskServiceWithProcessor(t, repoMock, nil, nil, proc, task.TaskTypeAutoEval)
-		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}}
+		svc := newTaskServiceWithProcessor(t, repoMock, nil, proc, entity.TaskTypeAutoEval)
+		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}, SpanFilter: &entity.SpanFilterFields{}}
 		resp, err := svc.CreateTask(context.Background(), &CreateTaskReq{Task: reqTask})
 		assert.Nil(t, resp)
 		assert.Error(t, err)
@@ -188,8 +236,8 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		repoMock.EXPECT().DeleteTask(gomock.Any(), gomock.AssignableToTypeOf(&entity.ObservabilityTask{})).Return(nil)
 
 		proc := &fakeProcessor{onCreateErr: errors.New("hook fail")}
-		svc := newTaskServiceWithProcessor(t, repoMock, nil, nil, proc, task.TaskTypeAutoEval)
-		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}}
+		svc := newTaskServiceWithProcessor(t, repoMock, nil, proc, entity.TaskTypeAutoEval)
+		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}, SpanFilter: &entity.SpanFilterFields{}}
 		resp, err := svc.CreateTask(context.Background(), &CreateTaskReq{Task: reqTask})
 		assert.Nil(t, resp)
 		assert.EqualError(t, err, "hook fail")
@@ -240,7 +288,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 
 		proc := &fakeProcessor{}
 		svc := &TaskServiceImpl{TaskRepo: repoMock}
-		svc.taskProcessor.Register(task.TaskTypeAutoEval, proc)
+		svc.taskProcessor.Register(entity.TaskTypeAutoEval, proc)
 
 		err := svc.UpdateTask(context.Background(), &UpdateTaskReq{TaskID: 1, WorkspaceID: 2})
 		statusErr, ok := errorx.FromStatusError(err)
@@ -273,7 +321,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 
 		proc := &fakeProcessor{}
 		svc := &TaskServiceImpl{TaskRepo: repoMock}
-		svc.taskProcessor.Register(task.TaskTypeAutoEval, proc)
+		svc.taskProcessor.Register(entity.TaskTypeAutoEval, proc)
 
 		desc := "updated"
 		newStart := startAt + 1000
@@ -283,13 +331,13 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			TaskID:        1,
 			WorkspaceID:   2,
 			Description:   &desc,
-			EffectiveTime: &task.EffectiveTime{StartAt: &newStart, EndAt: &newEnd},
+			EffectiveTime: &entity.EffectiveTime{StartAt: newStart, EndAt: newEnd},
 			SampleRate:    &sampleRate,
-			TaskStatus:    gptr.Of(task.TaskStatusDisabled),
+			TaskStatus:    gptr.Of(entity.TaskStatusDisabled),
 		})
 		assert.NoError(t, err)
 		assert.True(t, proc.onFinishRunCalled)
-		assert.Equal(t, task.TaskStatusDisabled, taskDO.TaskStatus)
+		assert.Equal(t, entity.TaskStatusDisabled, taskDO.TaskStatus)
 		assert.Equal(t, "user1", taskDO.UpdatedBy)
 		if assert.NotNil(t, taskDO.Description) {
 			assert.Equal(t, desc, *taskDO.Description)
@@ -319,14 +367,14 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 
 		proc := &fakeProcessor{}
 		svc := &TaskServiceImpl{TaskRepo: repoMock}
-		svc.taskProcessor.Register(task.TaskTypeAutoEval, proc)
+		svc.taskProcessor.Register(entity.TaskTypeAutoEval, proc)
 
 		sampleRate := 0.6
 		err := svc.UpdateTask(session.WithCtxUser(context.Background(), &session.User{ID: "user"}), &UpdateTaskReq{
 			TaskID:      1,
 			WorkspaceID: 2,
 			SampleRate:  &sampleRate,
-			TaskStatus:  gptr.Of(task.TaskStatusDisabled),
+			TaskStatus:  gptr.Of(entity.TaskStatusDisabled),
 		})
 		assert.NoError(t, err)
 		assert.True(t, proc.onFinishRunCalled)
@@ -352,7 +400,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 
 		proc := &fakeProcessor{onFinishRunErr: errors.New("finish fail")}
 		svc := &TaskServiceImpl{TaskRepo: repoMock}
-		svc.taskProcessor.Register(task.TaskTypeAutoEval, proc)
+		svc.taskProcessor.Register(entity.TaskTypeAutoEval, proc)
 
 		newStart := startAt + 1000
 		newEnd := startAt + 7200000
@@ -360,9 +408,9 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		err := svc.UpdateTask(session.WithCtxUser(context.Background(), &session.User{ID: "user"}), &UpdateTaskReq{
 			TaskID:        1,
 			WorkspaceID:   2,
-			EffectiveTime: &task.EffectiveTime{StartAt: &newStart, EndAt: &newEnd},
+			EffectiveTime: &entity.EffectiveTime{StartAt: newStart, EndAt: newEnd},
 			SampleRate:    &sampleRate,
-			TaskStatus:    gptr.Of(task.TaskStatusDisabled),
+			TaskStatus:    gptr.Of(entity.TaskStatusDisabled),
 		})
 		assert.EqualError(t, err, "finish fail")
 	})
@@ -391,7 +439,6 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 		defer ctrl.Finish()
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
-		userMock := rpcmock.NewMockIUserProvider(ctrl)
 
 		hiddenField := &loop_span.FilterField{FieldName: "hidden", Values: []string{"1"}, Hidden: true}
 		visibleField := &loop_span.FilterField{FieldName: "visible", Values: []string{"val"}}
@@ -414,25 +461,23 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 			}},
 		}
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{taskDO}, int64(1), nil)
-		userMock.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, map[string]*entitycommon.UserInfo{}, nil)
 
-		svc := &TaskServiceImpl{TaskRepo: repoMock, userProvider: userMock}
+		svc := &TaskServiceImpl{TaskRepo: repoMock}
 		resp, err := svc.ListTasks(context.Background(), &ListTasksReq{WorkspaceID: 2, TaskFilters: &filter.TaskFilterFields{}})
 		assert.NoError(t, err)
 		if assert.NotNil(t, resp) {
-			assert.EqualValues(t, 1, *resp.Total)
+			assert.EqualValues(t, 1, resp.Total)
 			assert.Len(t, resp.Tasks, 1)
-			filterFields := resp.Tasks[0].GetRule().GetSpanFilters().GetFilters()
-			if assert.NotNil(t, filterFields) {
-				fields := filterFields.GetFilterFields()
+			task := resp.Tasks[0]
+			if assert.NotNil(t, task.SpanFilter) {
+				fields := task.SpanFilter.Filters.FilterFields
 				assert.Len(t, fields, 2)
-				assert.Equal(t, "visible", fields[0].GetFieldName())
-				assert.Equal(t, []string{"val"}, fields[0].GetValues())
-				sub := fields[1].GetSubFilter()
-				if assert.NotNil(t, sub) {
-					subFields := sub.GetFilterFields()
+				assert.Equal(t, "visible", fields[0].FieldName)
+				assert.Equal(t, []string{"val"}, fields[0].Values)
+				if sub := fields[1].SubFilter; assert.NotNil(t, sub) {
+					subFields := sub.FilterFields
 					assert.Len(t, subFields, 1)
-					assert.Equal(t, "child", subFields[0].GetFieldName())
+					assert.Equal(t, "child", subFields[0].FieldName)
 				}
 			}
 		}
@@ -476,7 +521,6 @@ func TestTaskServiceImpl_GetTask(t *testing.T) {
 		defer ctrl.Finish()
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
-		userMock := rpcmock.NewMockIUserProvider(ctrl)
 
 		subHidden := &loop_span.FilterField{FieldName: "inner_hidden", Values: []string{"v"}, Hidden: true}
 		subVisible := &loop_span.FilterField{FieldName: "inner_visible", Values: []string{"v"}}
@@ -498,22 +542,20 @@ func TestTaskServiceImpl_GetTask(t *testing.T) {
 		}
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
-		userMock.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, map[string]*entitycommon.UserInfo{}, nil)
 
-		svc := &TaskServiceImpl{TaskRepo: repoMock, userProvider: userMock}
+		svc := &TaskServiceImpl{TaskRepo: repoMock}
 		resp, err := svc.GetTask(context.Background(), &GetTaskReq{TaskID: 1, WorkspaceID: 2})
 		assert.NoError(t, err)
 		if assert.NotNil(t, resp) {
-			filters := resp.Task.GetRule().GetSpanFilters().GetFilters()
-			if assert.NotNil(t, filters) {
-				fields := filters.GetFilterFields()
+			task := resp.Task
+			if assert.NotNil(t, task.SpanFilter) {
+				fields := task.SpanFilter.Filters.FilterFields
 				assert.Len(t, fields, 2)
-				assert.Equal(t, "outer_visible", fields[0].GetFieldName())
-				sub := fields[1].GetSubFilter()
-				if assert.NotNil(t, sub) {
-					subFields := sub.GetFilterFields()
+				assert.Equal(t, "outer_visible", fields[0].FieldName)
+				if sub := fields[1].SubFilter; assert.NotNil(t, sub) {
+					subFields := sub.FilterFields
 					assert.Len(t, subFields, 1)
-					assert.Equal(t, "inner_visible", subFields[0].GetFieldName())
+					assert.Equal(t, "inner_visible", subFields[0].FieldName)
 				}
 			}
 		}

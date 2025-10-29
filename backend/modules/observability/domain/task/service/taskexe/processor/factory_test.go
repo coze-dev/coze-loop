@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 )
 
@@ -18,13 +19,13 @@ func TestTaskProcessor_RegisterAndGet(t *testing.T) {
 
 	taskProcessor := NewTaskProcessor()
 
-	defaultProcessor := taskProcessor.GetTaskProcessor("unknown")
+	defaultProcessor := taskProcessor.GetTaskProcessor(entity.TaskType("unknown"))
 	_, ok := defaultProcessor.(*NoopTaskProcessor)
 	assert.True(t, ok)
 
 	registered := NewNoopTaskProcessor()
-	taskProcessor.Register(task.TaskTypeAutoEval, registered)
-	assert.Equal(t, registered, taskProcessor.GetTaskProcessor(task.TaskTypeAutoEval))
+	taskProcessor.Register(entity.TaskTypeAutoEval, registered)
+	assert.Equal(t, registered, taskProcessor.GetTaskProcessor(entity.TaskTypeAutoEval))
 }
 
 func TestNoopTaskProcessor_Methods(t *testing.T) {

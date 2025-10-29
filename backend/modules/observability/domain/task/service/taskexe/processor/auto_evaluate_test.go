@@ -543,7 +543,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, evalAdapter.finishReq)
-	assert.Equal(t, task.RunStatusDone, taskRun.RunStatus)
+	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
 }
 
 func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
@@ -572,7 +572,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 		IsFinish: true,
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, task.TaskStatusSuccess, taskObj.TaskStatus)
+	assert.Equal(t, taskentity.TaskStatusSuccess, taskObj.TaskStatus)
 }
 
 func TestAutoEvaluteProcessor_OnFinishTaskChange_Error(t *testing.T) {
@@ -623,8 +623,8 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 	taskObj := buildTestTask(t)
 	taskObj.TaskStatus = taskentity.TaskStatusPending
 
-	var runTypes []task.TaskRunType
-	var statuses []task.TaskStatus
+	var runTypes []taskentity.TaskRunType
+	var statuses []taskentity.TaskStatus
 
 	getBackfill := repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), taskObj.ID).Return(nil, nil)
 	createDatasetBackfill := datasetProvider.EXPECT().CreateDataset(gomock.Any(), gomock.AssignableToTypeOf(&traceentity.Dataset{})).Return(int64(9101), nil)
@@ -668,9 +668,9 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 
 	err := proc.OnCreateTaskChange(context.Background(), taskObj)
 	assert.NoError(t, err)
-	assert.Equal(t, []task.TaskRunType{task.TaskRunTypeBackFill, task.TaskRunTypeNewData}, runTypes)
-	assert.Equal(t, []task.TaskStatus{task.TaskStatusRunning, task.TaskStatusRunning}, statuses)
-	assert.Equal(t, task.TaskStatusRunning, taskObj.TaskStatus)
+	assert.Equal(t, []taskentity.TaskRunType{taskentity.TaskRunTypeBackFill, taskentity.TaskRunTypeNewData}, runTypes)
+	assert.Equal(t, []taskentity.TaskStatus{taskentity.TaskStatusRunning, taskentity.TaskStatusRunning}, statuses)
+	assert.Equal(t, taskentity.TaskStatusRunning, taskObj.TaskStatus)
 }
 
 func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) {

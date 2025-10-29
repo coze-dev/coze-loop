@@ -123,7 +123,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			endTime = time.UnixMilli(taskPO.EffectiveTime.EndAt)
 			startTime = time.UnixMilli(taskPO.EffectiveTime.StartAt)
 		}
-		proc := h.taskProcessor.GetTaskProcessor(task.TaskType(taskPO.TaskType))
+		proc := h.taskProcessor.GetTaskProcessor(taskPO.TaskType)
 		// Task time horizon reached
 		// End when the task end time is reached
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskPO.ID, endTime, startTime)
