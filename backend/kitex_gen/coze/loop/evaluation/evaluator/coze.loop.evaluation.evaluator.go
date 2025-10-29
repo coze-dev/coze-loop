@@ -3952,10 +3952,11 @@ type UpdateEvaluatorRequest struct {
 	// 描述
 	Description *string `thrift:"description,5,optional" frugal:"5,optional,string" json:"description" form:"description" `
 	// 是否预置评估器
-	Builtin   *bool      `thrift:"builtin,11,optional" frugal:"11,optional,bool" json:"builtin" form:"builtin" `
-	Benchmark *string    `thrift:"benchmark,12,optional" frugal:"12,optional,string" json:"benchmark" form:"benchmark" `
-	Vendor    *string    `thrift:"vendor,13,optional" frugal:"13,optional,string" json:"vendor" form:"vendor" `
-	Base      *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Builtin               *bool      `thrift:"builtin,11,optional" frugal:"11,optional,bool" json:"builtin" form:"builtin" `
+	Benchmark             *string    `thrift:"benchmark,12,optional" frugal:"12,optional,string" json:"benchmark" form:"benchmark" `
+	Vendor                *string    `thrift:"vendor,13,optional" frugal:"13,optional,string" json:"vendor" form:"vendor" `
+	BuiltinVisibleVersion *string    `thrift:"builtin_visible_version,14,optional" frugal:"14,optional,string" json:"builtin_visible_version" form:"builtin_visible_version" `
+	Base                  *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateEvaluatorRequest() *UpdateEvaluatorRequest {
@@ -4046,6 +4047,18 @@ func (p *UpdateEvaluatorRequest) GetVendor() (v string) {
 	return *p.Vendor
 }
 
+var UpdateEvaluatorRequest_BuiltinVisibleVersion_DEFAULT string
+
+func (p *UpdateEvaluatorRequest) GetBuiltinVisibleVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBuiltinVisibleVersion() {
+		return UpdateEvaluatorRequest_BuiltinVisibleVersion_DEFAULT
+	}
+	return *p.BuiltinVisibleVersion
+}
+
 var UpdateEvaluatorRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateEvaluatorRequest) GetBase() (v *base.Base) {
@@ -4081,6 +4094,9 @@ func (p *UpdateEvaluatorRequest) SetBenchmark(val *string) {
 func (p *UpdateEvaluatorRequest) SetVendor(val *string) {
 	p.Vendor = val
 }
+func (p *UpdateEvaluatorRequest) SetBuiltinVisibleVersion(val *string) {
+	p.BuiltinVisibleVersion = val
+}
 func (p *UpdateEvaluatorRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -4094,6 +4110,7 @@ var fieldIDToName_UpdateEvaluatorRequest = map[int16]string{
 	11:  "builtin",
 	12:  "benchmark",
 	13:  "vendor",
+	14:  "builtin_visible_version",
 	255: "Base",
 }
 
@@ -4115,6 +4132,10 @@ func (p *UpdateEvaluatorRequest) IsSetBenchmark() bool {
 
 func (p *UpdateEvaluatorRequest) IsSetVendor() bool {
 	return p.Vendor != nil
+}
+
+func (p *UpdateEvaluatorRequest) IsSetBuiltinVisibleVersion() bool {
+	return p.BuiltinVisibleVersion != nil
 }
 
 func (p *UpdateEvaluatorRequest) IsSetBase() bool {
@@ -4204,6 +4225,14 @@ func (p *UpdateEvaluatorRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4350,6 +4379,17 @@ func (p *UpdateEvaluatorRequest) ReadField13(iprot thrift.TProtocol) error {
 	p.Vendor = _field
 	return nil
 }
+func (p *UpdateEvaluatorRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BuiltinVisibleVersion = _field
+	return nil
+}
 func (p *UpdateEvaluatorRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -4395,6 +4435,10 @@ func (p *UpdateEvaluatorRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -4557,6 +4601,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
+func (p *UpdateEvaluatorRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBuiltinVisibleVersion() {
+		if err = oprot.WriteFieldBegin("builtin_visible_version", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.BuiltinVisibleVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
 func (p *UpdateEvaluatorRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -4612,6 +4674,9 @@ func (p *UpdateEvaluatorRequest) DeepEqual(ano *UpdateEvaluatorRequest) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.Vendor) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.BuiltinVisibleVersion) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -4697,6 +4762,18 @@ func (p *UpdateEvaluatorRequest) Field13DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Vendor, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpdateEvaluatorRequest) Field14DeepEqual(src *string) bool {
+
+	if p.BuiltinVisibleVersion == src {
+		return true
+	} else if p.BuiltinVisibleVersion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.BuiltinVisibleVersion, *src) != 0 {
 		return false
 	}
 	return true

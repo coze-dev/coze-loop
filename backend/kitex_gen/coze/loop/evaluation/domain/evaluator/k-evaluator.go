@@ -2078,8 +2078,22 @@ func (p *Evaluator) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 23:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField23(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField100(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -2278,6 +2292,20 @@ func (p *Evaluator) FastReadField22(buf []byte) (int, error) {
 func (p *Evaluator) FastReadField23(buf []byte) (int, error) {
 	offset := 0
 
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.BuiltinVisibleVersion = _field
+	return offset, nil
+}
+
+func (p *Evaluator) FastReadField100(buf []byte) (int, error) {
+	offset := 0
+
 	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
 	offset += l
 	if err != nil {
@@ -2337,6 +2365,7 @@ func (p *Evaluator) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField23(buf[offset:], w)
+		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2358,6 +2387,7 @@ func (p *Evaluator) BLength() int {
 		l += p.field21Length()
 		l += p.field22Length()
 		l += p.field23Length()
+		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2473,8 +2503,17 @@ func (p *Evaluator) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *Evaluator) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
+	if p.IsSetBuiltinVisibleVersion() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 23)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BuiltinVisibleVersion)
+	}
+	return offset
+}
+
+func (p *Evaluator) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
 	if p.IsSetTags() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 23)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 100)
 		mapBeginOffset := offset
 		offset += thrift.Binary.MapBeginLength()
 		var length int
@@ -2605,6 +2644,15 @@ func (p *Evaluator) field22Length() int {
 
 func (p *Evaluator) field23Length() int {
 	l := 0
+	if p.IsSetBuiltinVisibleVersion() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.BuiltinVisibleVersion)
+	}
+	return l
+}
+
+func (p *Evaluator) field100Length() int {
+	l := 0
 	if p.IsSetTags() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.MapBeginLength()
@@ -2709,6 +2757,14 @@ func (p *Evaluator) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Vendor)
 		}
 		p.Vendor = &tmp
+	}
+
+	if src.BuiltinVisibleVersion != nil {
+		var tmp string
+		if *src.BuiltinVisibleVersion != "" {
+			tmp = kutils.StringDeepCopy(*src.BuiltinVisibleVersion)
+		}
+		p.BuiltinVisibleVersion = &tmp
 	}
 
 	if src.Tags != nil {

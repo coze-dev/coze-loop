@@ -535,44 +535,6 @@ func (e *EvaluatorServiceImpl) ListBuiltinEvaluator(ctx context.Context, request
 		return nil, 0, err
 	}
 
-	// 如果不需要版本信息，直接返回
-	if !request.WithVersion {
-		return result.Evaluators, result.TotalCount, nil
-	}
-
-	// 如果需要版本信息，获取版本数据
-	evaluatorID2DO := make(map[int64]*entity.Evaluator, len(result.Evaluators))
-	for _, evaluator := range result.Evaluators {
-		evaluatorID2DO[evaluator.ID] = evaluator
-	}
-
-	// 批量获取版本信息
-	evaluatorIDs := make([]int64, 0, len(result.Evaluators))
-	for _, evaluator := range result.Evaluators {
-		evaluatorIDs = append(evaluatorIDs, evaluator.ID)
-	}
-	evaluatorVersions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDs(ctx, evaluatorIDs, false)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// 组装版本信息
-	for _, evaluatorVersion := range evaluatorVersions {
-		evaluatorDO, ok := evaluatorID2DO[evaluatorVersion.GetEvaluatorID()]
-		if !ok {
-			continue
-		}
-		// 设置 Evaluator.ID 为评估器ID（不是评估器版本ID）
-		evaluatorVersion.ID = evaluatorDO.ID
-		evaluatorVersion.SpaceID = evaluatorDO.SpaceID
-		evaluatorVersion.Description = evaluatorDO.Description
-		evaluatorVersion.BaseInfo = evaluatorDO.BaseInfo
-		evaluatorVersion.Name = evaluatorDO.Name
-		evaluatorVersion.EvaluatorType = evaluatorDO.EvaluatorType
-		evaluatorVersion.Description = evaluatorDO.Description
-		evaluatorVersion.DraftSubmitted = evaluatorDO.DraftSubmitted
-		evaluatorVersion.LatestVersion = evaluatorDO.LatestVersion
-	}
-
-	return evaluatorVersions, int64(len(evaluatorVersions)), nil
+	// 直接返回 repo 结果
+	return result.Evaluators, result.TotalCount, nil
 }
