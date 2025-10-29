@@ -18022,6 +18022,7 @@ func (p *ListTemplatesV2Request) Field255DeepEqual(src *base.Base) bool {
 
 type ListTemplatesV2Response struct {
 	EvaluatorTemplates []*evaluator.EvaluatorTemplate `thrift:"evaluator_templates,1,optional" frugal:"1,optional,list<evaluator.EvaluatorTemplate>" form:"evaluator_templates" json:"evaluator_templates,omitempty"`
+	Total              *int64                         `thrift:"total,10,optional" frugal:"10,optional,i64" json:"total" form:"total" `
 	BaseResp           *base.BaseResp                 `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -18044,6 +18045,18 @@ func (p *ListTemplatesV2Response) GetEvaluatorTemplates() (v []*evaluator.Evalua
 	return p.EvaluatorTemplates
 }
 
+var ListTemplatesV2Response_Total_DEFAULT int64
+
+func (p *ListTemplatesV2Response) GetTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotal() {
+		return ListTemplatesV2Response_Total_DEFAULT
+	}
+	return *p.Total
+}
+
 var ListTemplatesV2Response_BaseResp_DEFAULT *base.BaseResp
 
 func (p *ListTemplatesV2Response) GetBaseResp() (v *base.BaseResp) {
@@ -18058,17 +18071,25 @@ func (p *ListTemplatesV2Response) GetBaseResp() (v *base.BaseResp) {
 func (p *ListTemplatesV2Response) SetEvaluatorTemplates(val []*evaluator.EvaluatorTemplate) {
 	p.EvaluatorTemplates = val
 }
+func (p *ListTemplatesV2Response) SetTotal(val *int64) {
+	p.Total = val
+}
 func (p *ListTemplatesV2Response) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_ListTemplatesV2Response = map[int16]string{
 	1:   "evaluator_templates",
+	10:  "total",
 	255: "BaseResp",
 }
 
 func (p *ListTemplatesV2Response) IsSetEvaluatorTemplates() bool {
 	return p.EvaluatorTemplates != nil
+}
+
+func (p *ListTemplatesV2Response) IsSetTotal() bool {
+	return p.Total != nil
 }
 
 func (p *ListTemplatesV2Response) IsSetBaseResp() bool {
@@ -18096,6 +18117,14 @@ func (p *ListTemplatesV2Response) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18161,6 +18190,17 @@ func (p *ListTemplatesV2Response) ReadField1(iprot thrift.TProtocol) error {
 	p.EvaluatorTemplates = _field
 	return nil
 }
+func (p *ListTemplatesV2Response) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Total = _field
+	return nil
+}
 func (p *ListTemplatesV2Response) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -18178,6 +18218,10 @@ func (p *ListTemplatesV2Response) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -18228,6 +18272,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *ListTemplatesV2Response) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotal() {
+		if err = oprot.WriteFieldBegin("total", thrift.I64, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Total); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *ListTemplatesV2Response) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -18262,6 +18324,9 @@ func (p *ListTemplatesV2Response) DeepEqual(ano *ListTemplatesV2Response) bool {
 	if !p.Field1DeepEqual(ano.EvaluatorTemplates) {
 		return false
 	}
+	if !p.Field10DeepEqual(ano.Total) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -18278,6 +18343,18 @@ func (p *ListTemplatesV2Response) Field1DeepEqual(src []*evaluator.EvaluatorTemp
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ListTemplatesV2Response) Field10DeepEqual(src *int64) bool {
+
+	if p.Total == src {
+		return true
+	} else if p.Total == nil || src == nil {
+		return false
+	}
+	if *p.Total != *src {
+		return false
 	}
 	return true
 }

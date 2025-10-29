@@ -13159,6 +13159,20 @@ func (p *ListTemplatesV2Response) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -13216,6 +13230,20 @@ func (p *ListTemplatesV2Response) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListTemplatesV2Response) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Total = _field
+	return offset, nil
+}
+
 func (p *ListTemplatesV2Response) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -13235,6 +13263,7 @@ func (p *ListTemplatesV2Response) FastWrite(buf []byte) int {
 func (p *ListTemplatesV2Response) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -13246,6 +13275,7 @@ func (p *ListTemplatesV2Response) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field10Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -13268,6 +13298,15 @@ func (p *ListTemplatesV2Response) fastWriteField1(buf []byte, w thrift.NocopyWri
 	return offset
 }
 
+func (p *ListTemplatesV2Response) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTotal() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 10)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.Total)
+	}
+	return offset
+}
+
 func (p *ListTemplatesV2Response) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -13284,6 +13323,15 @@ func (p *ListTemplatesV2Response) field1Length() int {
 			_ = v
 			l += v.BLength()
 		}
+	}
+	return l
+}
+
+func (p *ListTemplatesV2Response) field10Length() int {
+	l := 0
+	if p.IsSetTotal() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
 	}
 	return l
 }
@@ -13314,6 +13362,11 @@ func (p *ListTemplatesV2Response) DeepCopy(s interface{}) error {
 
 			p.EvaluatorTemplates = append(p.EvaluatorTemplates, _elem)
 		}
+	}
+
+	if src.Total != nil {
+		tmp := *src.Total
+		p.Total = &tmp
 	}
 
 	var _baseResp *base.BaseResp
