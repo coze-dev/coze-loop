@@ -1338,6 +1338,14 @@ func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *eva
 		serviceReq.FilterOption = evaluatorconvertor.ConvertEvaluatorFilterOptionDTO2DO(request.GetFilterOption())
 	}
 
+	// 覆盖分页参数（若请求携带）
+	if ps := request.GetPageSize(); ps > 0 {
+		serviceReq.PageSize = ps
+	}
+	if pn := request.GetPageNumber(); pn > 0 {
+		serviceReq.PageNum = pn
+	}
+
 	// 调用service层
 	serviceResp, err := e.evaluatorTemplateService.ListEvaluatorTemplate(ctx, serviceReq)
 	if err != nil {
@@ -1352,6 +1360,7 @@ func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *eva
 
 	return &evaluatorservice.ListTemplatesV2Response{
 		EvaluatorTemplates: templates,
+		Total:              gptr.Of(serviceResp.TotalCount),
 	}, nil
 }
 

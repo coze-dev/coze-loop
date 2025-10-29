@@ -275,7 +275,8 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 
 // ListBuiltinEvaluator 查询内置评估器，支持 ids、分页与排序（按 name 排序）
 func (dao *EvaluatorDAOImpl) ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest, opts ...db.Option) (*ListEvaluatorResponse, error) {
-	dbsession := dao.provider.NewSession(ctx, opts...)
+	// 启用 GORM 调试日志，输出 SQL 以便排查
+	dbsession := dao.provider.NewSession(ctx, opts...).Debug()
 	query := dbsession.WithContext(ctx).Model(&model.Evaluator{}).
 		Where("builtin = ?", 1).
 		Where("builtin_visible_version != ?", "").

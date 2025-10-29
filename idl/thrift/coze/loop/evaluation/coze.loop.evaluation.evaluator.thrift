@@ -374,6 +374,8 @@ struct ListTemplatesV2Request {
 struct ListTemplatesV2Response {
     1: optional list<evaluator.EvaluatorTemplate> evaluator_templates (api.body='evaluator_templates')
 
+    10: optional i64 total (api.body='total', api.js_conv='true', go.tag='json:"total"')
+
     255: base.BaseResp BaseResp
 }
 
