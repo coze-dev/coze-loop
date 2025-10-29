@@ -331,6 +331,14 @@ const (
 	InvalidClusterCode              = 601205064 // the cluster is invalid, check if it is empty or invalid
 	invalidClusterMessage           = "invalid cluster"
 	invalidClusterNoAffectStability = true
+
+	CustomRPCEvaluatorRunFailedCode              = 601205065 // the custom rpc evaluator run failed, check if the configuration is correct
+	customRPCEvaluatorRunFailedMessage           = "custom rpc evaluator run failed"
+	customRPCEvaluatorRunFailedNoAffectStability = true
+
+	UnsupportedCustomRPCEvaluatorCode              = 601205066 // the custom rpc evaluator is not supported, check if the configuration is correct
+	unsupportedCustomRPCEvaluatorMessage           = "unsupported custom rpc evaluator"
+	unsupportedCustomRPCEvaluatorNoAffectStability = true
 )
 
 func init() {
@@ -819,6 +827,18 @@ func init() {
 		InvalidClusterCode,
 		invalidClusterMessage,
 		code.WithAffectStability(!invalidClusterNoAffectStability),
+	)
+
+	code.Register(
+		CustomRPCEvaluatorRunFailedCode,
+		customRPCEvaluatorRunFailedMessage,
+		code.WithAffectStability(!customRPCEvaluatorRunFailedNoAffectStability),
+	)
+
+	code.Register(
+		UnsupportedCustomRPCEvaluatorCode,
+		unsupportedCustomRPCEvaluatorMessage,
+		code.WithAffectStability(!unsupportedCustomRPCEvaluatorNoAffectStability),
 	)
 
 }
