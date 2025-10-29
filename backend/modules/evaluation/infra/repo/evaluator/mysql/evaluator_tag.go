@@ -26,7 +26,7 @@ type EvaluatorTagDAO interface {
 	// GetSourceIDsByFilterConditions 根据筛选条件查询source_id列表，支持复杂的AND/OR逻辑和分页
 	GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, opts ...db.Option) ([]int64, int64, error)
 	// BatchCreateEvaluatorTags 批量创建评估器标签
-	BatchCreateEvaluatorTags(ctx context.Context, sourceID int64, tagType int32, userID string, tags map[string][]string, opts ...db.Option) error
+	BatchCreateEvaluatorTags(ctx context.Context, evaluatorTags []*model.EvaluatorTag, opts ...db.Option) error
 	// DeleteEvaluatorTagsByConditions 根据sourceID、tagType、tags条件删除标签
 	DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, tags map[string][]string, opts ...db.Option) error
 }
@@ -70,27 +70,7 @@ func (dao *EvaluatorTagDAOImpl) BatchGetTagsBySourceIDsAndType(ctx context.Conte
 }
 
 // BatchCreateEvaluatorTags 批量创建评估器标签
-func (dao *EvaluatorTagDAOImpl) BatchCreateEvaluatorTags(ctx context.Context, sourceID int64, tagType int32, userID string, tags map[string][]string, opts ...db.Option) error {
-	if len(tags) == 0 {
-		return nil
-	}
-
-	// 构建model.EvaluatorTag列表
-	var evaluatorTags []*model.EvaluatorTag
-	for tagKey, tagValues := range tags {
-		for _, tagValue := range tagValues {
-			tag := &model.EvaluatorTag{
-				SourceID:  sourceID,
-				TagType:   tagType,
-				TagKey:    tagKey,
-				TagValue:  tagValue,
-				CreatedBy: userID,
-				UpdatedBy: userID,
-			}
-			evaluatorTags = append(evaluatorTags, tag)
-		}
-	}
-
+func (dao *EvaluatorTagDAOImpl) BatchCreateEvaluatorTags(ctx context.Context, evaluatorTags []*model.EvaluatorTag, opts ...db.Option) error {
 	if len(evaluatorTags) == 0 {
 		return nil
 	}

@@ -21,12 +21,10 @@ type EvaluatorService interface {
 	GetEvaluator(ctx context.Context, spaceID, evaluatorID int64, includeDeleted bool) (*entity.Evaluator, error)
 	// CreateEvaluator 创建 evaluator_version
 	CreateEvaluator(ctx context.Context, evaluator *entity.Evaluator, cid string) (int64, error)
-	// UpdateEvaluatorMeta 修改 evaluator_version
-	UpdateEvaluatorMeta(ctx context.Context, id, spaceID int64, name, description, userID string) error
-	// UpdateBuiltinEvaluatorMeta 修改内置评估器元信息（包含benchmark/vendor）
-	UpdateBuiltinEvaluatorMeta(ctx context.Context, id, spaceID int64, name, description, benchmark, vendor, userID string) error
-	// UpdateBuiltinEvaluatorTags 更新内置评估器版本的标签（按 evaluator_id + version 定位版本）
-	UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, version string, tags map[entity.EvaluatorTagKey][]string) (*entity.Evaluator, error)
+	// UpdateEvaluatorMeta 修改评估器元信息（支持 builtin/benchmark/vendor 可选更新）
+	UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error
+	// UpdateBuiltinEvaluatorTags 更新内置评估器的标签（按 evaluator_id 全量对齐）
+	UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagKey][]string) error
 	// UpdateEvaluatorDraft 修改 evaluator_version draft
 	UpdateEvaluatorDraft(ctx context.Context, versionDO *entity.Evaluator) error
 	// DeleteEvaluator 删除 evaluator_version

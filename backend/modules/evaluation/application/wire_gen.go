@@ -8,6 +8,7 @@ package application
 
 import (
 	"context"
+
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
@@ -82,7 +83,8 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	evaluatorVersionDAO := mysql2.NewEvaluatorVersionDAO(db2)
 	evaluatorTagDAO := mysql2.NewEvaluatorTagDAO(db2)
 	iLatestWriteTracker := platestwrite.NewLatestWriteTracker(cmdable)
-	iEvaluatorRepo := evaluator.NewEvaluatorRepo(idgen2, db2, evaluatorDAO, evaluatorVersionDAO, evaluatorTagDAO, iLatestWriteTracker)
+	evaluatorTemplateDAO := mysql2.NewEvaluatorTemplateDAO(db2)
+	iEvaluatorRepo := evaluator.NewEvaluatorRepo(idgen2, db2, evaluatorDAO, evaluatorVersionDAO, evaluatorTagDAO, iLatestWriteTracker, evaluatorTemplateDAO)
 	evaluatorRecordDAO := mysql2.NewEvaluatorRecordDAO(db2)
 	iEvaluatorRecordRepo := evaluator.NewEvaluatorRecordRepo(idgen2, db2, evaluatorRecordDAO)
 	iIdemDAO := redis2.NewIdemDAO(cmdable)
@@ -172,7 +174,8 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	evaluatorVersionDAO := mysql2.NewEvaluatorVersionDAO(db2)
 	evaluatorTagDAO := mysql2.NewEvaluatorTagDAO(db2)
 	iLatestWriteTracker := platestwrite.NewLatestWriteTracker(cmdable)
-	iEvaluatorRepo := evaluator.NewEvaluatorRepo(idgen2, db2, evaluatorDAO, evaluatorVersionDAO, evaluatorTagDAO, iLatestWriteTracker)
+	evaluatorTemplateDAO := mysql2.NewEvaluatorTemplateDAO(db2)
+	iEvaluatorRepo := evaluator.NewEvaluatorRepo(idgen2, db2, evaluatorDAO, evaluatorVersionDAO, evaluatorTagDAO, iLatestWriteTracker, evaluatorTemplateDAO)
 	evaluatorRecordDAO := mysql2.NewEvaluatorRecordDAO(db2)
 	iEvaluatorRecordRepo := evaluator.NewEvaluatorRecordRepo(idgen2, db2, evaluatorRecordDAO)
 	iIdemDAO := redis2.NewIdemDAO(cmdable)
@@ -200,8 +203,7 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	iExptEvaluatorRefDAO := mysql.NewExptEvaluatorRefDAO(db2)
 	iExperimentRepo := experiment.NewExptRepo(iExptDAO, iExptEvaluatorRefDAO, idgen2)
 	evaluatorRecordService := service.NewEvaluatorRecordServiceImpl(idgen2, iEvaluatorRecordRepo, exptEventPublisher, evaluatorEventPublisher, userInfoService, iExperimentRepo)
-	evaluatorTemplateDAO := mysql2.NewEvaluatorTemplateDAO(db2)
-	evaluatorTemplateRepo := evaluator.NewEvaluatorTemplateRepo(evaluatorTagDAO, evaluatorTemplateDAO)
+	evaluatorTemplateRepo := evaluator.NewEvaluatorTemplateRepo(evaluatorTagDAO, evaluatorTemplateDAO, idgen2)
 	evaluatorTemplateService := service.NewEvaluatorTemplateService(evaluatorTemplateRepo)
 	iFileProvider := foundation.NewFileRPCProvider(fileClient)
 	evaluationEvaluatorService := NewEvaluatorHandlerImpl(idgen2, iConfiger, iAuthProvider, evaluatorService, evaluatorRecordService, evaluatorTemplateService, evaluatorExecMetrics, userInfoService, auditClient, benefitSvc, iFileProvider, v)

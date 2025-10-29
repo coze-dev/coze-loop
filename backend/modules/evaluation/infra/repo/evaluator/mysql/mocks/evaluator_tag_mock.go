@@ -44,9 +44,9 @@ func (m *MockEvaluatorTagDAO) EXPECT() *MockEvaluatorTagDAOMockRecorder {
 }
 
 // BatchCreateEvaluatorTags mocks base method.
-func (m *MockEvaluatorTagDAO) BatchCreateEvaluatorTags(ctx context.Context, sourceID int64, tagType int32, userID string, tags map[string][]string, opts ...db.Option) error {
+func (m *MockEvaluatorTagDAO) BatchCreateEvaluatorTags(ctx context.Context, evaluatorTags []*model.EvaluatorTag, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, sourceID, tagType, userID, tags}
+	varargs := []any{ctx, evaluatorTags}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -56,9 +56,9 @@ func (m *MockEvaluatorTagDAO) BatchCreateEvaluatorTags(ctx context.Context, sour
 }
 
 // BatchCreateEvaluatorTags indicates an expected call of BatchCreateEvaluatorTags.
-func (mr *MockEvaluatorTagDAOMockRecorder) BatchCreateEvaluatorTags(ctx, sourceID, tagType, userID, tags any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorTagDAOMockRecorder) BatchCreateEvaluatorTags(ctx, evaluatorTags any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, sourceID, tagType, userID, tags}, opts...)
+	varargs := append([]any{ctx, evaluatorTags}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchCreateEvaluatorTags", reflect.TypeOf((*MockEvaluatorTagDAO)(nil).BatchCreateEvaluatorTags), varargs...)
 }
 

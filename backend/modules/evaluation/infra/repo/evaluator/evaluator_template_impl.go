@@ -7,23 +7,28 @@ import (
 	"context"
 	"errors"
 
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/convertor"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
 )
 
 // EvaluatorTemplateRepoImpl 实现 EvaluatorTemplateRepo 接口
 type EvaluatorTemplateRepoImpl struct {
 	tagDAO      mysql.EvaluatorTagDAO
 	templateDAO mysql.EvaluatorTemplateDAO
+	idgen       idgen.IIDGenerator
 }
 
 // NewEvaluatorTemplateRepo 创建 EvaluatorTemplateRepoImpl 实例
-func NewEvaluatorTemplateRepo(tagDAO mysql.EvaluatorTagDAO, templateDAO mysql.EvaluatorTemplateDAO) repo.EvaluatorTemplateRepo {
+func NewEvaluatorTemplateRepo(tagDAO mysql.EvaluatorTagDAO, templateDAO mysql.EvaluatorTemplateDAO, idgen idgen.IIDGenerator) repo.EvaluatorTemplateRepo {
 	return &EvaluatorTemplateRepoImpl{
 		tagDAO:      tagDAO,
 		templateDAO: templateDAO,
+		idgen:       idgen,
 	}
 }
 
@@ -115,6 +120,41 @@ func (r *EvaluatorTemplateRepoImpl) CreateEvaluatorTemplate(ctx context.Context,
 		return nil, err
 	}
 
+	// 若携带了标签，则为模板创建tags（以模板ID作为 source_id）
+	if template != nil && len(template.Tags) > 0 {
+		userID := session.UserIDInCtxOrEmpty(ctx)
+		// 统计总标签数
+		total := 0
+		for _, vals := range template.Tags {
+			total += len(vals)
+		}
+		if total > 0 {
+			ids, err := r.idgen.GenMultiIDs(ctx, total)
+			if err != nil {
+				return nil, err
+			}
+			idx := 0
+			evaluatorTags := make([]*model.EvaluatorTag, 0, total)
+			for tagKey, tagValues := range template.Tags {
+				for _, tagValue := range tagValues {
+					evaluatorTags = append(evaluatorTags, &model.EvaluatorTag{
+						ID:        ids[idx],
+						SourceID:  createdPO.ID,
+						TagType:   int32(entity.EvaluatorTagKeyType_EvaluatorTemplate),
+						TagKey:    string(tagKey),
+						TagValue:  tagValue,
+						CreatedBy: userID,
+						UpdatedBy: userID,
+					})
+					idx++
+				}
+			}
+			if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorTags); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	// 转换PO到DO
 	createdDO, err := convertor.ConvertEvaluatorTemplatePO2DOWithBaseInfo(createdPO)
 	if err != nil {
@@ -140,6 +180,89 @@ func (r *EvaluatorTemplateRepoImpl) UpdateEvaluatorTemplate(ctx context.Context,
 	updatedPO, err := r.templateDAO.UpdateEvaluatorTemplate(ctx, templatePO)
 	if err != nil {
 		return nil, err
+	}
+
+	// 标签全量对齐：新增补充、删除不在集合内的，保持未变化的不动
+	if template != nil {
+		// 查询当前已有标签
+		existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{template.ID}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate))
+		if err != nil {
+			return nil, err
+		}
+		// 构建现有集合
+		existing := make(map[string]map[string]bool)
+		for _, t := range existingTags {
+			if _, ok := existing[t.TagKey]; !ok {
+				existing[t.TagKey] = make(map[string]bool)
+			}
+			existing[t.TagKey][t.TagValue] = true
+		}
+		// 目标集
+		target := make(map[string]map[string]bool)
+		for k, vs := range template.Tags {
+			kstr := string(k)
+			if _, ok := target[kstr]; !ok {
+				target[kstr] = make(map[string]bool)
+			}
+			for _, v := range vs {
+				target[kstr][v] = true
+			}
+		}
+		// 计算需要删除
+		del := make(map[string][]string)
+		for k, vals := range existing {
+			for v := range vals {
+				if !target[k][v] {
+					del[k] = append(del[k], v)
+				}
+			}
+		}
+		if len(del) > 0 {
+			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, template.ID, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), del); err != nil {
+				return nil, err
+			}
+		}
+		// 计算需要新增
+		add := make(map[string][]string)
+		for k, vals := range target {
+			for v := range vals {
+				if !existing[k][v] {
+					add[k] = append(add[k], v)
+				}
+			}
+		}
+		if len(add) > 0 {
+			userID := session.UserIDInCtxOrEmpty(ctx)
+			total := 0
+			for _, vs := range add {
+				total += len(vs)
+			}
+			if total > 0 {
+				ids, err := r.idgen.GenMultiIDs(ctx, total)
+				if err != nil {
+					return nil, err
+				}
+				idx := 0
+				evaluatorTags := make([]*model.EvaluatorTag, 0, total)
+				for k, vs := range add {
+					for _, v := range vs {
+						evaluatorTags = append(evaluatorTags, &model.EvaluatorTag{
+							ID:        ids[idx],
+							SourceID:  template.ID,
+							TagType:   int32(entity.EvaluatorTagKeyType_EvaluatorTemplate),
+							TagKey:    k,
+							TagValue:  v,
+							CreatedBy: userID,
+							UpdatedBy: userID,
+						})
+						idx++
+					}
+				}
+				if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorTags); err != nil {
+					return nil, err
+				}
+			}
+		}
 	}
 
 	// 转换PO到DO
@@ -175,4 +298,9 @@ func (r *EvaluatorTemplateRepoImpl) GetEvaluatorTemplate(ctx context.Context, id
 	}
 
 	return templateDO, nil
+}
+
+// IncrPopularityByID 基于ID将 popularity + 1
+func (r *EvaluatorTemplateRepoImpl) IncrPopularityByID(ctx context.Context, id int64) error {
+	return r.templateDAO.IncrPopularityByID(ctx, id)
 }

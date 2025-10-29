@@ -20,22 +20,22 @@ import (
 
 func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 	tests := []struct {
-		name           string
-		request        *repo.ListBuiltinEvaluatorRequest
-		mockDaoResult  *mysql.ListEvaluatorResponse
-		mockDaoError   error
-		mockTagResult  []*model.EvaluatorTag
-		mockTagError   error
-		expectedError  bool
-		expectedCount  int64
+		name          string
+		request       *repo.ListBuiltinEvaluatorRequest
+		mockDaoResult *mysql.ListEvaluatorResponse
+		mockDaoError  error
+		mockTagResult []*model.EvaluatorTag
+		mockTagError  error
+		expectedError bool
+		expectedCount int64
 	}{
 		{
 			name: "successful query without filters",
 			request: &repo.ListBuiltinEvaluatorRequest{
 				SpaceID:        123,
-				FilterOption:    nil,
-				PageSize:        10,
-				PageNum:         1,
+				FilterOption:   nil,
+				PageSize:       10,
+				PageNum:        1,
 				IncludeDeleted: false,
 			},
 			mockDaoResult: &mysql.ListEvaluatorResponse{
@@ -58,9 +58,9 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 			name: "successful query with tags",
 			request: &repo.ListBuiltinEvaluatorRequest{
 				SpaceID:        123,
-				FilterOption:    nil,
-				PageSize:        10,
-				PageNum:         1,
+				FilterOption:   nil,
+				PageSize:       10,
+				PageNum:        1,
 				IncludeDeleted: false,
 			},
 			mockDaoResult: &mysql.ListEvaluatorResponse{
@@ -93,7 +93,7 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 
 			// 设置evaluatorDao的期望
 			if tt.mockDaoResult != nil {
-				mockEvaluatorDao.EXPECT().ListEvaluator(gomock.Any(), gomock.Any()).Return(tt.mockDaoResult, tt.mockDaoError)
+				mockEvaluatorDao.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Any()).Return(tt.mockDaoResult, tt.mockDaoError)
 			}
 
 			// 设置tagDAO的期望 - 使用批量查询

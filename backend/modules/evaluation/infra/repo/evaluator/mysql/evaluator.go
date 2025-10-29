@@ -26,10 +26,11 @@ type EvaluatorDAO interface {
 	GetEvaluatorByID(ctx context.Context, id int64, includeDeleted bool, opts ...db.Option) (*model.Evaluator, error)
 	BatchGetEvaluatorByID(ctx context.Context, ids []int64, includeDeleted bool, opts ...db.Option) ([]*model.Evaluator, error)
 	UpdateEvaluatorMeta(ctx context.Context, do *model.Evaluator, opts ...db.Option) error
-	UpdateBuiltinEvaluatorMeta(ctx context.Context, do *model.Evaluator, opts ...db.Option) error
 	UpdateEvaluatorDraftSubmitted(ctx context.Context, evaluatorID int64, draftSubmitted bool, userID string, opts ...db.Option) error
 	BatchDeleteEvaluator(ctx context.Context, ids []int64, userID string, opts ...db.Option) error
 	ListEvaluator(ctx context.Context, req *ListEvaluatorRequest, opts ...db.Option) (*ListEvaluatorResponse, error)
+	// ListBuiltinEvaluator 专用于内置评估器查询，支持 ids、分页与排序（按 name 排序）
+	ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest, opts ...db.Option) (*ListEvaluatorResponse, error)
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string, opts ...db.Option) (bool, error)
 	UpdateEvaluatorLatestVersion(ctx context.Context, evaluatorID int64, version, userID string, opts ...db.Option) error
 }
@@ -122,29 +123,16 @@ func (dao *EvaluatorDAOImpl) UpdateEvaluatorMeta(ctx context.Context, po *model.
 	updateMap["name"] = po.Name
 	updateMap["description"] = po.Description
 	updateMap["updated_by"] = po.UpdatedBy
-	return dbsession.WithContext(ctx).Model(&model.Evaluator{}).
-		Where("id = ?", po.ID).      // 添加ID筛选条件
-		Where("deleted_at IS NULL"). // 添加软删除筛选条件
-		Updates(updateMap).          // 使用Updates代替Save，避免全字段覆盖
-		Error
-}
-
-// UpdateBuiltinEvaluatorMeta 更新内置评估器的 benchmark 和 vendor 字段
-func (dao *EvaluatorDAOImpl) UpdateBuiltinEvaluatorMeta(ctx context.Context, po *model.Evaluator, opts ...db.Option) error {
-	// 通过opts获取当前的db session实例
-	dbsession := dao.provider.NewSession(ctx, opts...)
-	updateMap := make(map[string]interface{})
-	// 更新 benchmark 和 vendor 字段
-	updateMap["benchmark"] = po.Benchmark
-	updateMap["vendor"] = po.Vendor
-	// 允许同时更新名称与描述
-	if po.Name != nil {
-		updateMap["name"] = po.Name
+	// 可选字段：builtin/benchmark/vendor，如果传入则更新
+	if po.Benchmark != nil {
+		updateMap["benchmark"] = po.Benchmark
 	}
-	if po.Description != nil {
-		updateMap["description"] = po.Description
+	if po.Vendor != nil {
+		updateMap["vendor"] = po.Vendor
 	}
-	updateMap["updated_by"] = po.UpdatedBy
+	if po.Builtin != 0 {
+		updateMap["builtin"] = po.Builtin
+	}
 	return dbsession.WithContext(ctx).Model(&model.Evaluator{}).
 		Where("id = ?", po.ID).      // 添加ID筛选条件
 		Where("deleted_at IS NULL"). // 添加软删除筛选条件
@@ -209,10 +197,18 @@ type ListEvaluatorRequest struct {
 	SearchName    string
 	CreatorIDs    []int64
 	EvaluatorType []int32
-	IDs           []int64  // 新增：支持按ID查询
 	PageSize      int32
 	PageNum       int32
 	OrderBy       []*OrderBy
+}
+
+// ListBuiltinEvaluatorRequest 专用于内置评估器查询
+type ListBuiltinEvaluatorRequest struct {
+	SpaceID  int64
+	IDs      []int64
+	PageSize int32
+	PageNum  int32
+	OrderBy  []*OrderBy
 }
 
 type ListEvaluatorResponse struct {
@@ -225,11 +221,6 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	query := dbsession.WithContext(ctx).Model(&model.Evaluator{}).Where("space_id = ?", req.SpaceID)
-
-	// 添加ID过滤（支持按ID查询）
-	if len(req.IDs) > 0 {
-		query = query.Where("id IN (?)", req.IDs)
-	}
 
 	// 添加名称模糊搜索
 	if len(req.SearchName) > 0 {
@@ -280,6 +271,49 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 		Evaluators: poList,
 		TotalCount: total,
 	}, nil
+}
+
+// ListBuiltinEvaluator 查询内置评估器，支持 ids、分页与排序（按 name 排序）
+func (dao *EvaluatorDAOImpl) ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest, opts ...db.Option) (*ListEvaluatorResponse, error) {
+	dbsession := dao.provider.NewSession(ctx, opts...)
+	query := dbsession.WithContext(ctx).Model(&model.Evaluator{}).
+		Where("builtin = ?", 1).
+		Where("builtin_visible_version != ?", "").
+		Where("deleted_at IS NULL")
+
+	if len(req.IDs) > 0 {
+		query = query.Where("id IN (?)", req.IDs)
+	}
+
+	// 排序：如果未指定则默认按 name 升序；若指定则仅遵循支持字段
+	if len(req.OrderBy) > 0 {
+		for _, orderBy := range req.OrderBy {
+			if getOrderBy(orderBy) != "" {
+				query = query.Order(getOrderBy(orderBy))
+			}
+		}
+	} else {
+		query = query.Order("name asc")
+	}
+
+	// 先查总数
+	var total int64
+	countQuery := query.Session(&gorm.Session{})
+	if err := countQuery.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// 分页
+	if req.PageSize != 0 && req.PageNum != 0 {
+		offset := (req.PageNum - 1) * req.PageSize
+		query = query.Limit(int(req.PageSize)).Offset(int(offset))
+	}
+
+	poList := make([]*model.Evaluator, 0)
+	if err := query.Find(&poList).Error; err != nil {
+		return nil, err
+	}
+	return &ListEvaluatorResponse{Evaluators: poList, TotalCount: total}, nil
 }
 
 func (dao *EvaluatorDAOImpl) UpdateEvaluatorLatestVersion(ctx context.Context, evaluatorID int64, version, userID string, opts ...db.Option) error {

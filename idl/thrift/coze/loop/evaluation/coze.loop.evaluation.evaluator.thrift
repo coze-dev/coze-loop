@@ -136,7 +136,7 @@ struct GetEvaluatorVersionRequest {
     1: required i64 workspace_id (api.query='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 evaluator_version_id (api.path='evaluator_version_id', api.js_conv='true', go.tag='json:"evaluator_version_id"')
     3: optional bool include_deleted (api.query='include_deleted') // 是否查询已删除的评估器，默认不查询
-    4: optional bool builtin (api.body='builtin', go.tag = 'json:"builtin"') // 是否预置评估器
+    4: optional bool builtin (api.query='builtin', go.tag = 'json:"builtin"') // 是否预置评估器
 
     255: optional base.Base Base
 }
@@ -363,6 +363,12 @@ struct ValidateEvaluatorResponse {
 
 struct ListTemplatesV2Request {
     1: optional evaluator.EvaluatorFilterOption filter_option (api.body='filter_option', go.tag='json:"filter_option"') // 筛选器选项
+
+    101: optional i32 page_size (api.body='page_size', vt.gt='0')
+    102: optional i32 page_number (api.body='page_number', vt.gt='0')
+    103: optional list<common.OrderBy> order_bys (api.body='order_bys')
+
+    255: optional base.Base Base
 }
 
 struct ListTemplatesV2Response {
@@ -412,15 +418,14 @@ struct DebugBuiltinEvaluatorResponse {
 
 struct UpdateBuiltinEvaluatorTagsRequest {
     1: required i64 evaluator_id (api.path='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_id"')
-    2: required string version (api.body='version')
-    3: optional i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
-    4: optional map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags', go.tag = 'json:"tags"') // 评估器标签
+    2: optional i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags', go.tag = 'json:"tags"') // 评估器标签
 
     255: optional base.Base Base
 }
 
 struct UpdateBuiltinEvaluatorTagsResponse {
-    1: required evaluator.EvaluatorVersion version (api.body='version')
+    1: required evaluator.Evaluator evaluator (api.body='evaluator')
 
     255: base.BaseResp BaseResp
 }
@@ -437,7 +442,8 @@ struct CreateEvaluatorTemplateResponse {
 }
 
 struct UpdateEvaluatorTemplateRequest {
-    1: required evaluator.EvaluatorTemplate evaluator_template (api.body='evaluator_template')
+    1: required i64 evaluator_template_id (api.path='evaluator_template_id', api.js_conv='true', go.tag='json:"evaluator_template_id"')
+    2: required evaluator.EvaluatorTemplate evaluator_template (api.body='evaluator_template')
     255: optional base.Base Base
 }
 
@@ -448,7 +454,7 @@ struct UpdateEvaluatorTemplateResponse {
 }
 
 struct DeleteEvaluatorTemplateRequest {
-    1: required i64 evaluator_template_id (api.body='evaluator_template_id', api.js_conv='true', go.tag='json:"evaluator_template_id"')
+    1: required i64 evaluator_template_id (api.path='evaluator_template_id', api.js_conv='true', go.tag='json:"evaluator_template_id"')
     255: optional base.Base Base
 }
 
@@ -509,15 +515,15 @@ service EvaluatorService {
     // 创建评估器模板
     CreateEvaluatorTemplateResponse CreateEvaluatorTemplate(1: CreateEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluator_template")
     // 更新评估器模板
-    UpdateEvaluatorTemplateResponse UpdateEvaluatorTemplate(1: UpdateEvaluatorTemplateRequest request) (api.patch="/api/evaluation/v1/evaluator_template")
+    UpdateEvaluatorTemplateResponse UpdateEvaluatorTemplate(1: UpdateEvaluatorTemplateRequest request) (api.patch="/api/evaluation/v1/evaluator_template/:evaluator_template_id")
     // 删除
-    DeleteEvaluatorTemplateResponse DeleteEvaluatorTemplate(1: DeleteEvaluatorTemplateRequest request) (api.delete="/api/evaluation/v1/evaluator_template")
+    DeleteEvaluatorTemplateResponse DeleteEvaluatorTemplate(1: DeleteEvaluatorTemplateRequest request) (api.delete="/api/evaluation/v1/evaluator_template/:evaluator_template_id")
 
     // 调试预置评估器
     DebugBuiltinEvaluatorResponse DebugBuiltinEvaluator(1: DebugBuiltinEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug_builtin")// 调试预置评估器
 
     // 更新预置评估器tag
-    UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/update_builtin_tags")// 更新预置评估器
+    UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req) (api.patch="/api/evaluation/v1/evaluators/:evaluator_id/update_builtin_tags")// 更新预置评估器
     // 查询Tag
     ListEvaluatorTagsResponse ListEvaluatorTags(1: ListEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/list_tags")
 

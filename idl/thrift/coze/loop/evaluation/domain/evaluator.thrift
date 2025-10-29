@@ -43,7 +43,6 @@ const EvaluatorTagKey EvaluatorTagKey_Objective = "Objective"      // 评估目�
 const EvaluatorTagKey EvaluatorTagKey_BusinessScenario = "BusinessScenario"   // 业务场景 (安全风控/AI Coding等)
 const EvaluatorTagKey EvaluatorTagKey_BoxType = "BoxType"            // 黑白盒类型
 const EvaluatorTagKey EvaluatorTagKey_Name = "Name"               // 评估器名称
-const EvaluatorTagKey EvaluatorTagKey_Visible = "Visible"           // 可见性
 
 typedef string AccessProtocol
 const AccessProtocol AccessProtocol_RPC = "rpc"
@@ -117,7 +116,7 @@ struct Evaluator {
     20: optional bool builtin (go.tag = 'json:"builtin"')
     21: optional string benchmark (go.tag = 'json:"benchmark"')
     22: optional string vendor (go.tag = 'json:"vendor"')
-    23: map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
+    23: optional map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
 }
 
 struct EvaluatorTemplate {
@@ -129,7 +128,7 @@ struct EvaluatorTemplate {
     6: optional i64 popularity (go.tag = 'json:"popularity"') // 热度
     7: optional string benchmark (go.tag = 'json:"benchmark"')
     8: optional string vendor (go.tag = 'json:"vendor"')
-    9: map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
+    9: optional map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
 
     101: optional EvaluatorContent evaluator_content
     255: optional common.BaseInfo base_info

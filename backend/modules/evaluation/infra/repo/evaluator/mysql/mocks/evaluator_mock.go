@@ -161,23 +161,24 @@ func (mr *MockEvaluatorDAOMockRecorder) ListEvaluator(ctx, req any, opts ...any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluator", reflect.TypeOf((*MockEvaluatorDAO)(nil).ListEvaluator), varargs...)
 }
 
-// UpdateBuiltinEvaluatorMeta mocks base method.
-func (m *MockEvaluatorDAO) UpdateBuiltinEvaluatorMeta(ctx context.Context, do *model.Evaluator, opts ...db.Option) error {
+// ListBuiltinEvaluator mocks base method.
+func (m *MockEvaluatorDAO) ListBuiltinEvaluator(ctx context.Context, req *mysql.ListBuiltinEvaluatorRequest, opts ...db.Option) (*mysql.ListEvaluatorResponse, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, do}
+	varargs := []any{ctx, req}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "UpdateBuiltinEvaluatorMeta", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "ListBuiltinEvaluator", varargs...)
+	ret0, _ := ret[0].(*mysql.ListEvaluatorResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// UpdateBuiltinEvaluatorMeta indicates an expected call of UpdateBuiltinEvaluatorMeta.
-func (mr *MockEvaluatorDAOMockRecorder) UpdateBuiltinEvaluatorMeta(ctx, do any, opts ...any) *gomock.Call {
+// ListBuiltinEvaluator indicates an expected call of ListBuiltinEvaluator.
+func (mr *MockEvaluatorDAOMockRecorder) ListBuiltinEvaluator(ctx, req any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, do}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBuiltinEvaluatorMeta", reflect.TypeOf((*MockEvaluatorDAO)(nil).UpdateBuiltinEvaluatorMeta), varargs...)
+	varargs := append([]any{ctx, req}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBuiltinEvaluator", reflect.TypeOf((*MockEvaluatorDAO)(nil).ListBuiltinEvaluator), varargs...)
 }
 
 // UpdateEvaluatorDraftSubmitted mocks base method.

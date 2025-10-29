@@ -18,7 +18,7 @@ import (
 
 func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.Evaluator {
 	// 从DTO转换为DO
-    evaluatorDO := &evaluatordo.Evaluator{
+	evaluatorDO := &evaluatordo.Evaluator{
 		ID:                     evaluatorDTO.GetEvaluatorID(),
 		SpaceID:                evaluatorDTO.GetWorkspaceID(),
 		Name:                   evaluatorDTO.GetName(),
@@ -26,7 +26,7 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 		DraftSubmitted:         evaluatorDTO.GetDraftSubmitted(),
 		EvaluatorType:          evaluatordo.EvaluatorType(evaluatorDTO.GetEvaluatorType()),
 		LatestVersion:          evaluatorDTO.GetLatestVersion(),
-        Builtin:                evaluatorDTO.GetBuiltin(),
+		Builtin:                evaluatorDTO.GetBuiltin(),
 		PromptEvaluatorVersion: nil,
 		BaseInfo:               commonconvertor.ConvertBaseInfoDTO2DO(evaluatorDTO.GetBaseInfo()),
 		Tags:                   ConvertEvaluatorTagsDTO2DO(evaluatorDTO.GetTags()),
@@ -63,7 +63,7 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 		DraftSubmitted: gptr.Of(do.DraftSubmitted),
 		EvaluatorType:  evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType(do.EvaluatorType)),
 		LatestVersion:  gptr.Of(do.LatestVersion),
-        Builtin:        gptr.Of(do.Builtin),
+		Builtin:        gptr.Of(do.Builtin),
 		BaseInfo:       commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
 		Tags:           ConvertEvaluatorTagsDO2DTO(do.Tags),
 	}

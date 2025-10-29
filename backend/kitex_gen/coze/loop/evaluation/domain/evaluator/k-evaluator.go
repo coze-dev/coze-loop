@@ -2867,23 +2867,25 @@ func (p *Evaluator) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *Evaluator) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 23)
-	mapBeginOffset := offset
-	offset += thrift.Binary.MapBeginLength()
-	var length int
-	for k, v := range p.Tags {
-		length++
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-		listBeginOffset := offset
-		offset += thrift.Binary.ListBeginLength()
+	if p.IsSetTags() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 23)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
 		var length int
-		for _, v := range v {
+		for k, v := range p.Tags {
 			length++
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			listBeginOffset := offset
+			offset += thrift.Binary.ListBeginLength()
+			var length int
+			for _, v := range v {
+				length++
+				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			}
+			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
 		}
-		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
 	}
-	thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
 	return offset
 }
 
@@ -2997,16 +2999,18 @@ func (p *Evaluator) field22Length() int {
 
 func (p *Evaluator) field23Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.MapBeginLength()
-	for k, v := range p.Tags {
-		_, _ = k, v
+	if p.IsSetTags() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.Tags {
+			_, _ = k, v
 
-		l += thrift.Binary.StringLengthNocopy(k)
-		l += thrift.Binary.ListBeginLength()
-		for _, v := range v {
-			_ = v
-			l += thrift.Binary.StringLengthNocopy(v)
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.ListBeginLength()
+			for _, v := range v {
+				_ = v
+				l += thrift.Binary.StringLengthNocopy(v)
+			}
 		}
 	}
 	return l
@@ -3611,23 +3615,25 @@ func (p *EvaluatorTemplate) fastWriteField8(buf []byte, w thrift.NocopyWriter) i
 
 func (p *EvaluatorTemplate) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 9)
-	mapBeginOffset := offset
-	offset += thrift.Binary.MapBeginLength()
-	var length int
-	for k, v := range p.Tags {
-		length++
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-		listBeginOffset := offset
-		offset += thrift.Binary.ListBeginLength()
+	if p.IsSetTags() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 9)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
 		var length int
-		for _, v := range v {
+		for k, v := range p.Tags {
 			length++
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			listBeginOffset := offset
+			offset += thrift.Binary.ListBeginLength()
+			var length int
+			for _, v := range v {
+				length++
+				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			}
+			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
 		}
-		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
 	}
-	thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
 	return offset
 }
 
@@ -3723,16 +3729,18 @@ func (p *EvaluatorTemplate) field8Length() int {
 
 func (p *EvaluatorTemplate) field9Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.MapBeginLength()
-	for k, v := range p.Tags {
-		_, _ = k, v
+	if p.IsSetTags() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.Tags {
+			_, _ = k, v
 
-		l += thrift.Binary.StringLengthNocopy(k)
-		l += thrift.Binary.ListBeginLength()
-		for _, v := range v {
-			_ = v
-			l += thrift.Binary.StringLengthNocopy(v)
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.ListBeginLength()
+			for _, v := range v {
+				_ = v
+				l += thrift.Binary.StringLengthNocopy(v)
+			}
 		}
 	}
 	return l
