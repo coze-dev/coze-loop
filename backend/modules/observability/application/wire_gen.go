@@ -307,7 +307,7 @@ var (
 		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(
-		NewIngestionApplication, service.NewIngestionServiceImpl, repo.NewTraceRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, config.NewTraceConfigCenter, NewTraceConfigLoader,
+		NewIngestionApplication, service.NewIngestionServiceImpl, repo.NewTraceRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, config.NewTraceConfigCenter, storage.NewTraceStorageProvider, NewTraceConfigLoader,
 		NewIngestionCollectorFactory,
 	)
 	openApiSet = wire.NewSet(

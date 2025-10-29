@@ -120,6 +120,7 @@ var (
 		ckdao.NewSpansCkDaoImpl,
 		ckdao.NewAnnotationCkDaoImpl,
 		obconfig.NewTraceConfigCenter,
+		storage.NewTraceStorageProvider,
 		NewTraceConfigLoader,
 		NewIngestionCollectorFactory,
 	)

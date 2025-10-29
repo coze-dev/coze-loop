@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"strconv"
 	"time"
 
@@ -51,9 +52,10 @@ func NewTraceMetricCKRepoImpl(
 }
 
 type TraceRepoImpl struct {
-	spansDao    ck.ISpansDao
-	annoDao     ck.IAnnotationDao
-	traceConfig config.ITraceConfig
+	spansDao        ck.ISpansDao
+	annoDao         ck.IAnnotationDao
+	traceConfig     config.ITraceConfig
+	storageProvider storage.IStorageProvider
 }
 
 type PageToken struct {
