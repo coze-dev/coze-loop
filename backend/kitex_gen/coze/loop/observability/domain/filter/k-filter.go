@@ -334,6 +334,20 @@ func (p *FilterField) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -444,6 +458,20 @@ func (p *FilterField) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *FilterField) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.IsCustom = _field
+	return offset, nil
+}
+
 func (p *FilterField) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -451,6 +479,7 @@ func (p *FilterField) FastWrite(buf []byte) int {
 func (p *FilterField) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -471,6 +500,7 @@ func (p *FilterField) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -537,6 +567,15 @@ func (p *FilterField) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *FilterField) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetIsCustom() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 7)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsCustom)
+	}
+	return offset
+}
+
 func (p *FilterField) field1Length() int {
 	l := 0
 	if p.IsSetFieldName() {
@@ -595,6 +634,15 @@ func (p *FilterField) field6Length() int {
 	return l
 }
 
+func (p *FilterField) field7Length() int {
+	l := 0
+	if p.IsSetIsCustom() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *FilterField) DeepCopy(s interface{}) error {
 	src, ok := s.(*FilterField)
 	if !ok {
@@ -643,6 +691,11 @@ func (p *FilterField) DeepCopy(s interface{}) error {
 		}
 	}
 	p.SubFilter = _subFilter
+
+	if src.IsCustom != nil {
+		tmp := *src.IsCustom
+		p.IsCustom = &tmp
+	}
 
 	return nil
 }

@@ -12,22 +12,20 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	experiment_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
-
 	"github.com/bytedance/gg/gptr"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
@@ -337,7 +335,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetVersionOApi(ctx context.Cont
 		return nil, err
 	}
 	if set == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
 	}
 	var ownerID *string
 	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
@@ -430,7 +428,7 @@ func (e *EvalOpenAPIApplication) BatchCreateEvaluationSetItemsOApi(ctx context.C
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if req.Items == nil || len(req.Items) == 0 {
+	if len(req.Items) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is required"))
 	}
 	// 鉴权
@@ -486,7 +484,7 @@ func (e *EvalOpenAPIApplication) BatchUpdateEvaluationSetItemsOApi(ctx context.C
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if req.Items == nil || len(req.Items) == 0 {
+	if len(req.Items) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("items is required"))
 	}
 	// 鉴权
@@ -542,7 +540,7 @@ func (e *EvalOpenAPIApplication) BatchDeleteEvaluationSetItemsOApi(ctx context.C
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if req.GetIsDeleteAll() == false && (req.ItemIds == nil || len(req.ItemIds) == 0) {
+	if !req.GetIsDeleteAll() && (len(req.ItemIds) == 0) {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids is required"))
 	}
 	// 鉴权
@@ -567,7 +565,7 @@ func (e *EvalOpenAPIApplication) BatchDeleteEvaluationSetItemsOApi(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	if req.GetIsDeleteAll() == true {
+	if req.GetIsDeleteAll() {
 		// 清除所有
 		err = e.evaluationSetItemService.ClearEvaluationSetDraftItem(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID())
 		if err != nil {

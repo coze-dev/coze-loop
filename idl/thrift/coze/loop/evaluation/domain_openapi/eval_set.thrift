@@ -19,11 +19,11 @@ struct FieldSchema {
     1: optional string name
     2: optional string description
     3: optional common.ContentType content_type
-    4: optional FieldDisplayFormat default_display_format, // 默认渲染格式，如 code, json, etc.mai
+    4: optional FieldDisplayFormat default_display_format // 默认渲染格式，如 code, json, etc.mai
     5: optional bool is_required
     6: optional string text_schema  // JSON Schema字符串
 
-    10: optional string key,    // 唯一键，创建列时无需关注，更新列的时候携带即可
+    10: optional string key    // 唯一键，创建列时无需关注，更新列的时候携带即可
 }
 
 // 评测集Schema

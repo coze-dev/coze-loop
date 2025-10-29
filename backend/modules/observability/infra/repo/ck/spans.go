@@ -11,15 +11,16 @@ import (
 	"strconv"
 	"strings"
 
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
+	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/samber/lo"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -36,6 +37,7 @@ type QueryParam struct {
 	Filters          *loop_span.FilterFields
 	Limit            int32
 	OrderByStartTime bool
+	SelectColumns    []string
 	OmitColumns      []string // omit specific columns
 }
 
@@ -48,6 +50,18 @@ type InsertParam struct {
 type ISpansDao interface {
 	Insert(context.Context, *InsertParam) error
 	Get(context.Context, *QueryParam) ([]*model.ObservabilitySpan, error)
+	GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error)
+}
+
+// GetMetricsParam 指标查询参数
+type GetMetricsParam struct {
+	Tables       []string
+	Aggregations []*metrics_entity.Dimension
+	GroupBys     []*metrics_entity.Dimension
+	Filters      *loop_span.FilterFields
+	StartAt      int64
+	EndAt        int64
+	Granularity  metrics_entity.MetricGranularity
 }
 
 func NewSpansCkDaoImpl(db ck.Provider) (ISpansDao, error) {
@@ -97,6 +111,99 @@ func (s *SpansCkDaoImpl) Get(ctx context.Context, param *QueryParam) ([]*model.O
 	return spans, nil
 }
 
+// select/inner_query/group_by/order_by/with_fill
+var metricsSqlTemplate = `SELECT %s FROM (%s) %s %s`
+
+func (s *SpansCkDaoImpl) GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error) {
+	sql, err := s.buildMetricsSql(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "Get Metrics SQL: %+v", sql)
+	db := s.newSession(ctx)
+	result := make([]map[string]any, 0)
+	if err := db.Raw(sql).Find(&result).Error; err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
+	}
+	return result, nil
+}
+
+func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *GetMetricsParam) (string, error) {
+	// 直接复用现有的SQL获取所有数据, 然后再计算指标
+	sql, err := s.buildSql(ctx, &QueryParam{
+		Tables:           param.Tables,
+		StartTime:        param.StartAt,
+		EndTime:          param.EndAt,
+		Filters:          param.Filters,
+		Limit:            -1,
+		OrderByStartTime: false,
+		OmitColumns:      []string{"input", "output"}, // 当前不用, 先忽略
+	})
+	if err != nil {
+		return "", errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid get trace request"))
+	}
+	var (
+		innerQuery     string
+		selectClauses  []string
+		groupByClauses []string
+		orderByClauses []string
+	)
+	innerQuery = sql.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Find(nil)
+	})
+	if param.Granularity != "" {
+		ckTimeInterval := getTimeInterval(param.Granularity)
+		selectClauses = append(selectClauses,
+			fmt.Sprintf("toUnixTimestamp(toStartOfInterval(fromUnixTimestamp64Micro(start_time), %s)) * 1000 AS time_bucket", ckTimeInterval))
+		groupByClauses = append(groupByClauses, "time_bucket")
+		orderByClauses = append(orderByClauses, "time_bucket") // 代码填充, 不在SQL中实现
+	}
+	for _, dimension := range param.Aggregations {
+		expr, err := s.formatAggregationExpression(ctx, dimension)
+		if err != nil {
+			return "", err
+		}
+		selectClauses = append(selectClauses,
+			fmt.Sprintf("%s AS %s", expr, dimension.Alias))
+	}
+	for _, dimension := range param.GroupBys {
+		fieldName, err := s.convertFieldName(ctx, dimension.Field)
+		if err != nil {
+			return "", errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
+		}
+		selectClauses = append(selectClauses,
+			fmt.Sprintf("%s AS %s", fieldName, dimension.Alias))
+		groupByClauses = append(groupByClauses, fieldName)
+	}
+	wholeSql := fmt.Sprintf(metricsSqlTemplate,
+		strings.Join(selectClauses, ", "),
+		innerQuery,
+		lo.Ternary(len(groupByClauses) == 0,
+			"", "GROUP BY "+strings.Join(groupByClauses, ", ")),
+		lo.Ternary(len(orderByClauses) == 0,
+			"", "ORDER BY "+strings.Join(orderByClauses, ", ")),
+	)
+	return wholeSql, nil
+}
+
+func (s *SpansCkDaoImpl) formatAggregationExpression(ctx context.Context, dimension *metrics_entity.Dimension) (string, error) {
+	if dimension.Expression == nil {
+		return "", nil
+	}
+	replacements := make([]any, 0, len(dimension.Expression.Fields))
+	for _, field := range dimension.Expression.Fields {
+		if field == nil {
+			continue
+		}
+		expr, err := s.convertFieldName(ctx, field)
+		if err != nil {
+			return "", err
+		}
+		replacements = append(replacements, expr)
+	}
+	return fmt.Sprintf(dimension.Expression.Expression, replacements...), nil
+}
+
 func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm.DB, error) {
 	db := s.newSession(ctx)
 	var tableQueries []*gorm.DB
@@ -123,7 +230,9 @@ func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm
 		if param.OrderByStartTime {
 			sql += " ORDER BY start_time DESC, span_id DESC"
 		}
-		sql += fmt.Sprintf(" LIMIT %d", param.Limit)
+		if param.Limit >= 0 {
+			sql += fmt.Sprintf(" LIMIT %d", param.Limit)
+		}
 		return db.Raw(sql), nil
 	}
 }
@@ -133,8 +242,13 @@ func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, db *gorm.DB, tableN
 	if err != nil {
 		return nil, err
 	}
+	queryColumns := lo.Ternary(
+		len(param.SelectColumns) == 0,
+		getColumnStr(spanColumns, param.OmitColumns),
+		getColumnStr(param.SelectColumns, param.OmitColumns),
+	)
 	sqlQuery = db.
-		Table(tableName).
+		Table(tableName).Select(queryColumns).
 		Where(sqlQuery).
 		Where("start_time >= ?", param.StartTime).
 		Where("start_time <= ?", param.EndTime)
@@ -279,9 +393,36 @@ func (s *SpansCkDaoImpl) getSuperFieldsMap(ctx context.Context) map[string]bool 
 	return defSuperFieldsMap
 }
 
+// convertFieldName IsCustom > IsSystem > superField, default custom
 func (s *SpansCkDaoImpl) convertFieldName(ctx context.Context, filter *loop_span.FilterField) (string, error) {
 	if !isSafeColumnName(filter.FieldName) {
 		return "", fmt.Errorf("filter field name %s is not safe", filter.FieldName)
+	}
+	if filter.IsCustom {
+		switch filter.FieldType {
+		case loop_span.FieldTypeString:
+			return fmt.Sprintf("tags_string['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeLong:
+			return fmt.Sprintf("tags_long['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeDouble:
+			return fmt.Sprintf("tags_float['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeBool:
+			return fmt.Sprintf("tags_bool['%s']", filter.FieldName), nil
+		default: // not expected to be here
+			return fmt.Sprintf("tags_string['%s']", filter.FieldName), nil
+		}
+	}
+	if filter.IsSystem {
+		switch filter.FieldType {
+		case loop_span.FieldTypeString:
+			return fmt.Sprintf("system_tags_string['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeLong:
+			return fmt.Sprintf("system_tags_long['%s']", filter.FieldName), nil
+		case loop_span.FieldTypeDouble:
+			return fmt.Sprintf("system_tags_float['%s']", filter.FieldName), nil
+		default: // not expected to be here
+			return fmt.Sprintf("system_tags_string['%s']", filter.FieldName), nil
+		}
 	}
 	superFieldsMap := s.getSuperFieldsMap(ctx)
 	if superFieldsMap[filter.FieldName] {
@@ -380,6 +521,35 @@ func quoteSQLName(data string) string {
 	return buf.String()
 }
 
+var spanColumns = []string{
+	"start_time",
+	"logid",
+	"span_id",
+	"trace_id",
+	"parent_id",
+	"duration",
+	"psm",
+	"call_type",
+	"space_id",
+	"span_type",
+	"span_name",
+	"method",
+	"status_code",
+	"input",
+	"output",
+	"object_storage",
+	"system_tags_string",
+	"system_tags_long",
+	"system_tags_float",
+	"tags_string",
+	"tags_long",
+	"tags_bool",
+	"tags_float",
+	"tags_byte",
+	"reserve_create_time",
+	"logic_delete_date",
+}
+
 var defSuperFieldsMap = map[string]bool{
 	loop_span.SpanFieldStartTime:       true,
 	loop_span.SpanFieldSpanId:          true,
@@ -399,8 +569,22 @@ var defSuperFieldsMap = map[string]bool{
 	loop_span.SpanFieldObjectStorage:   true,
 	loop_span.SpanFieldLogicDeleteDate: true,
 }
-var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+
+var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
 
 func isSafeColumnName(name string) bool {
 	return validColumnRegex.MatchString(name)
+}
+
+func getTimeInterval(granularity metrics_entity.MetricGranularity) string {
+	switch granularity {
+	case metrics_entity.MetricGranularity1Min:
+		return "INTERVAL 1 MINUTE"
+	case metrics_entity.MetricGranularity1Hour:
+		return "INTERVAL 1 HOUR"
+	case metrics_entity.MetricGranularity1Day, metrics_entity.MetricGranularity1Week:
+		return "INTERVAL 1 DAY"
+	default:
+		return "INTERVAL 1 DAY"
+	}
 }
