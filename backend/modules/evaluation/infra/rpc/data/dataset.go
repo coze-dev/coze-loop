@@ -240,7 +240,7 @@ func (a *DatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceID, ev
 		PageToken:   pageToken,
 		PageSize:    pageSize,
 		PageNumber:  pageNumber,
-		VersionLike: versionLike,
+		VersionLike: versionLike, // 模糊搜索
 	})
 	if err != nil {
 		return nil, nil, nil, err
