@@ -380,8 +380,6 @@ func (r *EvaluatorRepoImpl) CreateEvaluator(ctx context.Context, do *entity.Eval
 	return evaluatorID, nil
 }
 
-// CreateBuiltinEvaluator 已移除：统一在 CreateEvaluator 中处理 builtin 逻辑
-
 // BatchGetEvaluatorDraft 批量根据ID 获取 Evaluator
 func (r *EvaluatorRepoImpl) BatchGetEvaluatorDraft(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
 	if len(ids) == 0 {
@@ -440,12 +438,12 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorMeta(ctx context.Context, req *entity
 	return r.evaluatorDao.UpdateEvaluatorMeta(ctx, po)
 }
 
-// UpdateEvaluatorVersionTags 根据版本ID全量更新标签：不存在的新增，不在传入列表中的删除
-func (r *EvaluatorRepoImpl) UpdateEvaluatorVersionTags(ctx context.Context, versionID int64, tags map[entity.EvaluatorTagKey][]string) error {
+// UpdateEvaluatorTags 根据评估器ID全量更新标签：不存在的新增，不在传入列表中的删除
+func (r *EvaluatorRepoImpl) UpdateEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagKey][]string) error {
 	return r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
 		opt := db.WithTransaction(tx)
 		// 查询当前已有标签
-		existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{versionID}, int32(entity.EvaluatorTagKeyType_Evaluator), opt)
+		existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{evaluatorID}, int32(entity.EvaluatorTagKeyType_Evaluator), opt)
 		if err != nil {
 			return err
 		}
@@ -478,7 +476,7 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorVersionTags(ctx context.Context, vers
 			}
 		}
 		if len(del) > 0 {
-			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, versionID, int32(entity.EvaluatorTagKeyType_Evaluator), del, opt); err != nil {
+			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, evaluatorID, int32(entity.EvaluatorTagKeyType_Evaluator), del, opt); err != nil {
 				return err
 			}
 		}
@@ -509,7 +507,7 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorVersionTags(ctx context.Context, vers
 					for _, v := range vals {
 						evaluatorTags = append(evaluatorTags, &model.EvaluatorTag{
 							ID:        ids[idx],
-							SourceID:  versionID,
+							SourceID:  evaluatorID,
 							TagType:   int32(entity.EvaluatorTagKeyType_Evaluator),
 							TagKey:    k,
 							TagValue:  v,
@@ -609,7 +607,7 @@ func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.
 		// 如果有有效的筛选条件，进行标签查询
 		if hasValidFilters {
 			// 使用EvaluatorTagDAO查询符合条件的evaluator IDs（不分页）
-			filteredIDs, _, err := r.tagDAO.GetSourceIDsByFilterConditions(ctx, int32(entity.EvaluatorTagKeyType_Evaluator), req.FilterOption, 0, 0)
+			filteredIDs, _, err := r.tagDAO.GetSourceIDsByFilterConditions(ctx, int32(entity.EvaluatorTagKeyType_Evaluator), req.FilterOption, req.PageSize, req.PageNum)
 			if err != nil {
 				return nil, err
 			}
@@ -626,63 +624,44 @@ func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.
 		}
 	}
 
-	// 构建DAO层查询请求
-	daoReq := &mysql.ListEvaluatorRequest{
-		SpaceID:       req.SpaceID,
-		SearchName:    "",           // 内置评估器不需要名称搜索
-		CreatorIDs:    []int64{},    // 内置评估器不需要创建者过滤
-		EvaluatorType: []int32{},    // 可以根据需要添加类型过滤
-		IDs:           evaluatorIDs, // 使用筛选后的IDs
-		PageSize:      req.PageSize,
-		PageNum:       req.PageNum,
-		OrderBy:       []*mysql.OrderBy{}, // 可以根据需要添加排序
+	// 构建DAO层查询请求（专用内置接口，默认按 name 排序）
+	daoReq := &mysql.ListBuiltinEvaluatorRequest{
+		IDs:      evaluatorIDs,
+		PageSize: req.PageSize,
+		PageNum:  req.PageNum,
+		OrderBy:  []*mysql.OrderBy{{Field: "name", ByDesc: false}},
 	}
 
 	// 调用DAO层查询
-	daoResp, err := r.evaluatorDao.ListEvaluator(ctx, daoReq)
+	daoResp, err := r.evaluatorDao.ListBuiltinEvaluator(ctx, daoReq)
 	if err != nil {
 		return nil, err
 	}
 
-	// 批量查询所有evaluator的tags
+	// 直接以 evaluatorID 为 source_id 批量查标签
 	var allTags []*model.EvaluatorTag
 	if len(daoResp.Evaluators) > 0 {
-		// 收集所有evaluator的ID
-		evaluatorIDs := make([]int64, 0, len(daoResp.Evaluators))
-		for _, evaluatorPO := range daoResp.Evaluators {
-			evaluatorIDs = append(evaluatorIDs, evaluatorPO.ID)
+		ids := make([]int64, 0, len(daoResp.Evaluators))
+		for _, po := range daoResp.Evaluators {
+			ids = append(ids, po.ID)
 		}
-
-		// 批量查询所有tags
-		allTags, err = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, evaluatorIDs, int32(entity.EvaluatorTagKeyType_Evaluator))
-		if err != nil {
-			// 如果批量查询tags失败，记录错误但继续处理
-			// 这里可以根据业务需求决定是否返回错误
+		var tagErr error
+		allTags, tagErr = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, ids, int32(entity.EvaluatorTagKeyType_Evaluator))
+		if tagErr != nil {
 			allTags = []*model.EvaluatorTag{}
 		}
 	}
-
-	// 将tags按sourceID分组
 	tagsBySourceID := make(map[int64][]*model.EvaluatorTag)
 	for _, tag := range allTags {
 		tagsBySourceID[tag.SourceID] = append(tagsBySourceID[tag.SourceID], tag)
 	}
-
-	// 转换响应格式
 	evaluators := make([]*entity.Evaluator, 0, len(daoResp.Evaluators))
 	for _, evaluatorPO := range daoResp.Evaluators {
 		evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
-
-		// 设置tags信息（使用提取出来的公共逻辑）
 		r.setEvaluatorTags(evaluatorDO, evaluatorPO.ID, tagsBySourceID)
-
 		evaluators = append(evaluators, evaluatorDO)
 	}
-
-	return &repo.ListBuiltinEvaluatorResponse{
-		TotalCount: daoResp.TotalCount,
-		Evaluators: evaluators,
-	}, nil
+	return &repo.ListBuiltinEvaluatorResponse{TotalCount: daoResp.TotalCount, Evaluators: evaluators}, nil
 }
 
 // BatchGetBuiltinEvaluatorByVersionID 批量根据版本ID获取内置评估器，包含tag信息

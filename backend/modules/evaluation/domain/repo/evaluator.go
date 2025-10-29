@@ -20,8 +20,8 @@ type IEvaluatorRepo interface {
 
 	UpdateEvaluatorDraft(ctx context.Context, version *entity.Evaluator) error
 	UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error
-	// UpdateEvaluatorVersionTags 根据版本ID全量更新标签：不存在的新增，不在传入列表中的删除
-	UpdateEvaluatorVersionTags(ctx context.Context, versionID int64, tags map[entity.EvaluatorTagKey][]string) error
+	// UpdateEvaluatorTags 根据评估器ID全量更新标签：不存在的新增，不在传入列表中的删除
+	UpdateEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagKey][]string) error
 
 	BatchGetEvaluatorMetaByID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
@@ -70,7 +70,6 @@ type ListEvaluatorVersionResponse struct {
 
 // ListBuiltinEvaluatorRequest 查询内置评估器的请求参数
 type ListBuiltinEvaluatorRequest struct {
-	SpaceID        int64                         `json:"space_id"`
 	FilterOption   *entity.EvaluatorFilterOption `json:"filter_option,omitempty"`   // 标签筛选条件
 	PageSize       int32                         `json:"page_size"`                 // 分页大小
 	PageNum        int32                         `json:"page_num"`                  // 页码

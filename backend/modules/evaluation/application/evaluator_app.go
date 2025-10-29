@@ -161,18 +161,10 @@ func buildSrvListEvaluatorRequest(request *evaluatorservice.ListEvaluatorsReques
 
 func buildSrvListBuiltinEvaluatorRequest(request *evaluatorservice.ListEvaluatorsRequest) *entity.ListBuiltinEvaluatorRequest {
 	srvReq := &entity.ListBuiltinEvaluatorRequest{
-		SpaceID:     request.WorkspaceID,
-		SearchName:  request.GetSearchName(),
-		CreatorIDs:  request.GetCreatorIds(),
 		PageSize:    request.GetPageSize(),
 		PageNum:     request.GetPageNumber(),
 		WithVersion: request.GetWithVersion(),
 	}
-	evaluatorType := make([]entity.EvaluatorType, 0, len(request.GetEvaluatorType()))
-	for _, et := range request.GetEvaluatorType() {
-		evaluatorType = append(evaluatorType, entity.EvaluatorType(et))
-	}
-	srvReq.EvaluatorType = evaluatorType
 
 	// 转换FilterOption
 	if request.GetFilterOption() != nil {
@@ -1556,24 +1548,31 @@ func (e *EvaluatorHandlerImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, r
 		return nil, err
 	}
 
-	// 2) 调用 service，按 evaluatorID + version 更新标签
-	ev, err := e.evaluatorService.UpdateBuiltinEvaluatorTags(ctx, request.GetEvaluatorID(), request.GetVersion(), evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags()))
+	// 2) 调用 service，按 evaluatorID 更新标签（不再使用 version 参数）
+	err = e.evaluatorService.UpdateBuiltinEvaluatorTags(ctx, request.GetEvaluatorID(), evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags()))
 	if err != nil {
 		return nil, err
 	}
 
 	// 3) 组装更新后的标签并返回 Evaluator（最终标签集合等于请求中的标签集合）
-	if ev != nil {
-		ev.Tags = evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags())
-	}
+	evaluatorDO.Tags = evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags())
 	return &evaluatorservice.UpdateBuiltinEvaluatorTagsResponse{
-		Evaluator: evaluatorconvertor.ConvertEvaluatorDO2DTO(ev),
+		Evaluator: evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO),
 	}, nil
 }
 
 func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *evaluatorservice.ListEvaluatorTagsRequest) (resp *evaluatorservice.ListEvaluatorTagsResponse, err error) {
 	// 直接从配置获取可用的标签配置
 	tags := e.configer.GetEvaluatorTagConf(ctx)
+	// 对每个 tagKey 下的列表按字母顺序排序
+	if len(tags) > 0 {
+		for k, vs := range tags {
+			if len(vs) > 1 {
+				sort.Strings(vs)
+				tags[k] = vs
+			}
+		}
+	}
 	return &evaluatorservice.ListEvaluatorTagsResponse{
 		Tags: tags,
 	}, nil

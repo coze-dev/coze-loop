@@ -28,8 +28,6 @@ const (
 
 	EvaluatorTagKeyName = "Name"
 
-	EvaluatorTagKeyVisible = "Visible"
-
 	EvaluatorFilterLogicOpUnknown = "Unknown"
 
 	EvaluatorFilterLogicOpAnd = "And"
@@ -2851,7 +2849,7 @@ type Evaluator struct {
 	Builtin        *bool                        `thrift:"builtin,20,optional" frugal:"20,optional,bool" json:"builtin" form:"builtin" query:"builtin"`
 	Benchmark      *string                      `thrift:"benchmark,21,optional" frugal:"21,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
 	Vendor         *string                      `thrift:"vendor,22,optional" frugal:"22,optional,string" json:"vendor" form:"vendor" query:"vendor"`
-	Tags           map[EvaluatorTagKey][]string `thrift:"tags,23" frugal:"23,default,map<string:list<string>>" json:"tags" form:"tags" query:"tags"`
+	Tags           map[EvaluatorTagKey][]string `thrift:"tags,23,optional" frugal:"23,optional,map<string:list<string>>" json:"tags" form:"tags" query:"tags"`
 }
 
 func NewEvaluator() *Evaluator {
@@ -3005,11 +3003,16 @@ func (p *Evaluator) GetVendor() (v string) {
 	return *p.Vendor
 }
 
+var Evaluator_Tags_DEFAULT map[EvaluatorTagKey][]string
+
 func (p *Evaluator) GetTags() (v map[EvaluatorTagKey][]string) {
-	if p != nil {
-		return p.Tags
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetTags() {
+		return Evaluator_Tags_DEFAULT
+	}
+	return p.Tags
 }
 func (p *Evaluator) SetEvaluatorID(val *int64) {
 	p.EvaluatorID = val
@@ -3113,6 +3116,10 @@ func (p *Evaluator) IsSetBenchmark() bool {
 
 func (p *Evaluator) IsSetVendor() bool {
 	return p.Vendor != nil
+}
+
+func (p *Evaluator) IsSetTags() bool {
+	return p.Tags != nil
 }
 
 func (p *Evaluator) Read(iprot thrift.TProtocol) (err error) {
@@ -3728,33 +3735,35 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
 func (p *Evaluator) writeField23(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("tags", thrift.MAP, 23); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.Tags)); err != nil {
-		return err
-	}
-	for k, v := range p.Tags {
-		if err := oprot.WriteString(k); err != nil {
+	if p.IsSetTags() {
+		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.Tags)); err != nil {
 			return err
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
-			return err
-		}
-		for _, v := range v {
-			if err := oprot.WriteString(v); err != nil {
+		for k, v := range p.Tags {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
+				return err
+			}
+			for _, v := range v {
+				if err := oprot.WriteString(v); err != nil {
+					return err
+				}
+			}
+			if err := oprot.WriteListEnd(); err != nil {
 				return err
 			}
 		}
-		if err := oprot.WriteListEnd(); err != nil {
+		if err := oprot.WriteMapEnd(); err != nil {
 			return err
 		}
-	}
-	if err := oprot.WriteMapEnd(); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -3983,7 +3992,7 @@ type EvaluatorTemplate struct {
 	Popularity       *int64                       `thrift:"popularity,6,optional" frugal:"6,optional,i64" json:"popularity" form:"popularity" query:"popularity"`
 	Benchmark        *string                      `thrift:"benchmark,7,optional" frugal:"7,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
 	Vendor           *string                      `thrift:"vendor,8,optional" frugal:"8,optional,string" json:"vendor" form:"vendor" query:"vendor"`
-	Tags             map[EvaluatorTagKey][]string `thrift:"tags,9" frugal:"9,default,map<string:list<string>>" json:"tags" form:"tags" query:"tags"`
+	Tags             map[EvaluatorTagKey][]string `thrift:"tags,9,optional" frugal:"9,optional,map<string:list<string>>" json:"tags" form:"tags" query:"tags"`
 	EvaluatorContent *EvaluatorContent            `thrift:"evaluator_content,101,optional" frugal:"101,optional,EvaluatorContent" form:"evaluator_content" json:"evaluator_content,omitempty" query:"evaluator_content"`
 	BaseInfo         *common.BaseInfo             `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
@@ -4091,11 +4100,16 @@ func (p *EvaluatorTemplate) GetVendor() (v string) {
 	return *p.Vendor
 }
 
+var EvaluatorTemplate_Tags_DEFAULT map[EvaluatorTagKey][]string
+
 func (p *EvaluatorTemplate) GetTags() (v map[EvaluatorTagKey][]string) {
-	if p != nil {
-		return p.Tags
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetTags() {
+		return EvaluatorTemplate_Tags_DEFAULT
+	}
+	return p.Tags
 }
 
 var EvaluatorTemplate_EvaluatorContent_DEFAULT *EvaluatorContent
@@ -4199,6 +4213,10 @@ func (p *EvaluatorTemplate) IsSetBenchmark() bool {
 
 func (p *EvaluatorTemplate) IsSetVendor() bool {
 	return p.Vendor != nil
+}
+
+func (p *EvaluatorTemplate) IsSetTags() bool {
+	return p.Tags != nil
 }
 
 func (p *EvaluatorTemplate) IsSetEvaluatorContent() bool {
@@ -4704,33 +4722,35 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 func (p *EvaluatorTemplate) writeField9(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("tags", thrift.MAP, 9); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.Tags)); err != nil {
-		return err
-	}
-	for k, v := range p.Tags {
-		if err := oprot.WriteString(k); err != nil {
+	if p.IsSetTags() {
+		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.Tags)); err != nil {
 			return err
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
-			return err
-		}
-		for _, v := range v {
-			if err := oprot.WriteString(v); err != nil {
+		for k, v := range p.Tags {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
+				return err
+			}
+			for _, v := range v {
+				if err := oprot.WriteString(v); err != nil {
+					return err
+				}
+			}
+			if err := oprot.WriteListEnd(); err != nil {
 				return err
 			}
 		}
-		if err := oprot.WriteListEnd(); err != nil {
+		if err := oprot.WriteMapEnd(); err != nil {
 			return err
 		}
-	}
-	if err := oprot.WriteMapEnd(); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:

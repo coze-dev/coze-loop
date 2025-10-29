@@ -363,6 +363,12 @@ struct ValidateEvaluatorResponse {
 
 struct ListTemplatesV2Request {
     1: optional evaluator.EvaluatorFilterOption filter_option (api.body='filter_option', go.tag='json:"filter_option"') // 筛选器选项
+
+    101: optional i32 page_size (api.body='page_size', vt.gt='0')
+    102: optional i32 page_number (api.body='page_number', vt.gt='0')
+    103: optional list<common.OrderBy> order_bys (api.body='order_bys')
+
+    255: optional base.Base Base
 }
 
 struct ListTemplatesV2Response {
@@ -412,9 +418,8 @@ struct DebugBuiltinEvaluatorResponse {
 
 struct UpdateBuiltinEvaluatorTagsRequest {
     1: required i64 evaluator_id (api.path='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_id"')
-    2: required string version (api.body='version')
-    3: optional i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
-    4: optional map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags', go.tag = 'json:"tags"') // 评估器标签
+    2: optional i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags', go.tag = 'json:"tags"') // 评估器标签
 
     255: optional base.Base Base
 }

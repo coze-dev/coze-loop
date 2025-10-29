@@ -242,32 +242,9 @@ func (e *EvaluatorServiceImpl) UpdateEvaluatorMeta(ctx context.Context, req *ent
 	return e.evaluatorRepo.UpdateEvaluatorMeta(ctx, req)
 }
 
-// UpdateBuiltinEvaluatorTags 根据 evaluatorID + version 更新该版本的标签
-func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, version string, tags map[entity.EvaluatorTagKey][]string) (*entity.Evaluator, error) {
-	// 查出该 evaluator 的指定版本，拿到版本ID
-	listReq := &repo.ListEvaluatorVersionRequest{
-		EvaluatorID:   evaluatorID,
-		QueryVersions: []string{version},
-		PageSize:      1,
-		PageNum:       1,
-		OrderBy:       []*entity.OrderBy{},
-	}
-	result, err := e.evaluatorRepo.ListEvaluatorVersion(ctx, listReq)
-	if err != nil {
-		return nil, err
-	}
-	if len(result.Versions) == 0 {
-		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode)
-	}
-	ev := result.Versions[0]
-	versionID := ev.GetEvaluatorVersionID()
-
-	// 调用 repo 更新该版本的标签
-	if err := e.evaluatorRepo.UpdateEvaluatorVersionTags(ctx, versionID, tags); err != nil {
-		return nil, err
-	}
-	// 回填最新标签到返回对象（可选：这里仅返回版本，不做额外查询）
-	return ev, nil
+// UpdateBuiltinEvaluatorTags 根据 evaluatorID 全量对齐标签
+func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagKey][]string) error {
+	return e.evaluatorRepo.UpdateEvaluatorTags(ctx, evaluatorID, tags)
 }
 
 // 校验UpdateEvaluator参数合法性
@@ -546,7 +523,6 @@ func (e *EvaluatorServiceImpl) injectUserInfo(ctx context.Context, evaluatorDO *
 func (e *EvaluatorServiceImpl) ListBuiltinEvaluator(ctx context.Context, request *entity.ListBuiltinEvaluatorRequest) ([]*entity.Evaluator, int64, error) {
 	// 构建ListBuiltinEvaluator请求
 	repoReq := &repo.ListBuiltinEvaluatorRequest{
-		SpaceID:        request.SpaceID,
 		FilterOption:   request.FilterOption, // 直接使用传入的FilterOption
 		PageSize:       request.PageSize,
 		PageNum:        request.PageNum,

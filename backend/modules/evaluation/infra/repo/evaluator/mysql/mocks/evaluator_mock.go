@@ -161,6 +161,26 @@ func (mr *MockEvaluatorDAOMockRecorder) ListEvaluator(ctx, req any, opts ...any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluator", reflect.TypeOf((*MockEvaluatorDAO)(nil).ListEvaluator), varargs...)
 }
 
+// ListBuiltinEvaluator mocks base method.
+func (m *MockEvaluatorDAO) ListBuiltinEvaluator(ctx context.Context, req *mysql.ListBuiltinEvaluatorRequest, opts ...db.Option) (*mysql.ListEvaluatorResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListBuiltinEvaluator", varargs...)
+	ret0, _ := ret[0].(*mysql.ListEvaluatorResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBuiltinEvaluator indicates an expected call of ListBuiltinEvaluator.
+func (mr *MockEvaluatorDAOMockRecorder) ListBuiltinEvaluator(ctx, req any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBuiltinEvaluator", reflect.TypeOf((*MockEvaluatorDAO)(nil).ListBuiltinEvaluator), varargs...)
+}
+
 // UpdateEvaluatorDraftSubmitted mocks base method.
 func (m *MockEvaluatorDAO) UpdateEvaluatorDraftSubmitted(ctx context.Context, evaluatorID int64, draftSubmitted bool, userID string, opts ...db.Option) error {
 	m.ctrl.T.Helper()
