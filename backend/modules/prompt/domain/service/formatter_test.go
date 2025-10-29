@@ -196,5 +196,5 @@ func TestNewPromptFormatter(t *testing.T) {
 	formatter := NewPromptFormatter()
 	assert.NotNil(t, formatter)
 	// Verify it implements the interface
-	var _ IPromptFormatter = formatter
+	_ = formatter
 }
