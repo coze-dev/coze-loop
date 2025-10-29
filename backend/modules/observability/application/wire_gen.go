@@ -64,6 +64,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -298,7 +299,7 @@ var (
 	taskDomainSet = wire.NewSet(
 		NewInitTaskProcessor, service3.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, dao.NewTaskDAO, dao.NewTaskRunDAO, mysql.NewTaskRunDaoImpl, producer.NewBackfillProducerImpl,
 	)
-	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, repo.NewTraceRepoImpl, repo.NewRepoProvider, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, collector.NewEventCollectorProvider, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
+	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, repo.NewTraceRepoImpl, storage.NewTraceStorageProvider, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, collector.NewEventCollectorProvider, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
 		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, evaluator.NewEvaluatorRPCProvider, NewDatasetServiceAdapter,
 		taskDomainSet,
 	)

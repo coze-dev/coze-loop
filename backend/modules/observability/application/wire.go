@@ -64,6 +64,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -86,7 +87,7 @@ var (
 		service.NewTraceServiceImpl,
 		service.NewTraceExportServiceImpl,
 		obrepo.NewTraceRepoImpl,
-		obrepo.NewRepoProvider,
+		storage.NewTraceStorageProvider,
 		ckdao.NewSpansCkDaoImpl,
 		ckdao.NewAnnotationCkDaoImpl,
 		obmetrics.NewTraceMetricsImpl,
