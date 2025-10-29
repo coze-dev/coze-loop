@@ -228,34 +228,18 @@ func (e *EvaluatorServiceImpl) validateCreateEvaluatorRequest(ctx context.Contex
 }
 
 // UpdateEvaluatorMeta 修改 evaluator_version
-func (e *EvaluatorServiceImpl) UpdateEvaluatorMeta(ctx context.Context, id, spaceID int64, name, description, userID string) error {
-	validateErr := e.validateUpdateEvaluatorMetaRequest(ctx, id, spaceID, name)
-	if validateErr != nil {
-		return validateErr
+func (e *EvaluatorServiceImpl) UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error {
+	if req == nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode)
 	}
-
-	if err := e.evaluatorRepo.UpdateEvaluatorMeta(ctx, id, name, description, userID); err != nil {
+	name := ""
+	if req.Name != nil {
+		name = *req.Name
+	}
+	if err := e.validateUpdateEvaluatorMetaRequest(ctx, req.ID, req.SpaceID, name); err != nil {
 		return err
 	}
-	return nil
-}
-
-// UpdateBuiltinEvaluatorMeta 修改内置评估器元信息（包含benchmark/vendor）
-func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorMeta(ctx context.Context, id, spaceID int64, name, description, benchmark, vendor, userID string) error {
-	// 仅当修改了名称时校验重名；description/benchmark/vendor 不需要重名校验
-	if name != "" {
-		exist, err := e.evaluatorRepo.CheckNameExist(ctx, spaceID, id, name)
-		if err != nil {
-			return err
-		}
-		if exist {
-			return errorx.NewByCode(errno.EvaluatorNameExistCode)
-		}
-	}
-	if err := e.evaluatorRepo.UpdateBuiltinEvaluatorMeta(ctx, id, name, description, benchmark, vendor, userID); err != nil {
-		return err
-	}
-	return nil
+	return e.evaluatorRepo.UpdateEvaluatorMeta(ctx, req)
 }
 
 // UpdateBuiltinEvaluatorTags 根据 evaluatorID + version 更新该版本的标签

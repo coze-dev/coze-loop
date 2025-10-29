@@ -30,8 +30,8 @@ func (m *MockEvaluatorTagDAO) GetSourceIDsByFilterConditions(ctx context.Context
 	return args.Get(0).([]int64), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *MockEvaluatorTagDAO) BatchCreateEvaluatorTags(ctx context.Context, sourceID int64, tagType int32, userID string, tags map[string][]string, opts ...db.Option) error {
-	args := m.Called(ctx, sourceID, tagType, userID, tags, opts)
+func (m *MockEvaluatorTagDAO) BatchCreateEvaluatorTags(ctx context.Context, evaluatorTags []*model.EvaluatorTag, opts ...db.Option) error {
+	args := m.Called(ctx, evaluatorTags, opts)
 	return args.Error(0)
 }
 
@@ -43,6 +43,23 @@ func (m *MockEvaluatorTagDAO) DeleteEvaluatorTagsByConditions(ctx context.Contex
 func (m *MockEvaluatorTagDAO) BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, opts ...db.Option) ([]*model.EvaluatorTag, error) {
 	args := m.Called(ctx, sourceIDs, tagType, opts)
 	return args.Get(0).([]*model.EvaluatorTag), args.Error(1)
+}
+
+// stubIDGen 为测试提供简单的自增ID生成器
+type stubIDGen struct{ cur int64 }
+
+func (s *stubIDGen) GenID(ctx context.Context) (int64, error) {
+	s.cur++
+	return s.cur, nil
+}
+
+func (s *stubIDGen) GenMultiIDs(ctx context.Context, counts int) ([]int64, error) {
+	ids := make([]int64, counts)
+	for i := 0; i < counts; i++ {
+		s.cur++
+		ids[i] = s.cur
+	}
+	return ids, nil
 }
 
 // MockEvaluatorTemplateDAO 模拟模板DAO
@@ -75,19 +92,24 @@ func (m *MockEvaluatorTemplateDAO) ListEvaluatorTemplate(ctx context.Context, re
 	return args.Get(0).(*mysql.ListEvaluatorTemplateResponse), args.Error(1)
 }
 
+func (m *MockEvaluatorTemplateDAO) IncrPopularityByID(ctx context.Context, id int64, opts ...db.Option) error {
+	args := m.Called(ctx, id, opts)
+	return args.Error(0)
+}
+
 func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		request        *repo.ListEvaluatorTemplateRequest
-		mockTagIDs     []int64
-		mockTagError   error
-		mockTemplates   *mysql.ListEvaluatorTemplateResponse
+		name              string
+		request           *repo.ListEvaluatorTemplateRequest
+		mockTagIDs        []int64
+		mockTagError      error
+		mockTemplates     *mysql.ListEvaluatorTemplateResponse
 		mockTemplateError error
-		expectedResult *repo.ListEvaluatorTemplateResponse
-		expectedError  bool
-		description    string
+		expectedResult    *repo.ListEvaluatorTemplateResponse
+		expectedError     bool
+		description       string
 	}{
 		{
 			name: "no filter conditions",
@@ -102,28 +124,28 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 				TotalCount: 2,
 				Templates: []*model.EvaluatorTemplate{
 					{
-						ID:           1,
-						SpaceID:      gptr.Of(int64(123)),
-						Name:         gptr.Of("Template A"),
-						Description:  gptr.Of("Description A"),
+						ID:            1,
+						SpaceID:       gptr.Of(int64(123)),
+						Name:          gptr.Of("Template A"),
+						Description:   gptr.Of("Description A"),
 						EvaluatorType: gptr.Of(int32(1)),
-						Benchmark:    gptr.Of("benchmark1"),
-						Vendor:       gptr.Of("vendor1"),
-						Popularity:   100,
-						CreatedBy:    "user1",
-						UpdatedBy:    "user1",
+						Benchmark:     gptr.Of("benchmark1"),
+						Vendor:        gptr.Of("vendor1"),
+						Popularity:    100,
+						CreatedBy:     "user1",
+						UpdatedBy:     "user1",
 					},
 					{
-						ID:           2,
-						SpaceID:      gptr.Of(int64(123)),
-						Name:         gptr.Of("Template B"),
-						Description:  gptr.Of("Description B"),
+						ID:            2,
+						SpaceID:       gptr.Of(int64(123)),
+						Name:          gptr.Of("Template B"),
+						Description:   gptr.Of("Description B"),
 						EvaluatorType: gptr.Of(int32(2)),
-						Benchmark:    gptr.Of("benchmark2"),
-						Vendor:       gptr.Of("vendor2"),
-						Popularity:   200,
-						CreatedBy:    "user2",
-						UpdatedBy:    "user2",
+						Benchmark:     gptr.Of("benchmark2"),
+						Vendor:        gptr.Of("vendor2"),
+						Popularity:    200,
+						CreatedBy:     "user2",
+						UpdatedBy:     "user2",
 					},
 				},
 			},
@@ -131,14 +153,14 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 				TotalCount: 2,
 				Templates: []*entity.EvaluatorTemplate{
 					{
-						ID:           1,
-						SpaceID:      123,
-						Name:         "Template A",
-						Description:  "Description A",
+						ID:            1,
+						SpaceID:       123,
+						Name:          "Template A",
+						Description:   "Description A",
 						EvaluatorType: entity.EvaluatorType(1),
-						Benchmark:    "benchmark1",
-						Vendor:       "vendor1",
-						Popularity:   100,
+						Benchmark:     "benchmark1",
+						Vendor:        "vendor1",
+						Popularity:    100,
 						BaseInfo: &entity.BaseInfo{
 							CreatedBy: &entity.UserInfo{
 								UserID: gptr.Of("user1"),
@@ -149,14 +171,14 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 						},
 					},
 					{
-						ID:           2,
-						SpaceID:      123,
-						Name:         "Template B",
-						Description:  "Description B",
+						ID:            2,
+						SpaceID:       123,
+						Name:          "Template B",
+						Description:   "Description B",
 						EvaluatorType: entity.EvaluatorType(2),
-						Benchmark:    "benchmark2",
-						Vendor:       "vendor2",
-						Popularity:   200,
+						Benchmark:     "benchmark2",
+						Vendor:        "vendor2",
+						Popularity:    200,
 						BaseInfo: &entity.BaseInfo{
 							CreatedBy: &entity.UserInfo{
 								UserID: gptr.Of("user2"),
@@ -194,16 +216,16 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 				TotalCount: 1,
 				Templates: []*model.EvaluatorTemplate{
 					{
-						ID:           1,
-						SpaceID:      gptr.Of(int64(123)),
-						Name:         gptr.Of("Template A"),
-						Description:  gptr.Of("Description A"),
+						ID:            1,
+						SpaceID:       gptr.Of(int64(123)),
+						Name:          gptr.Of("Template A"),
+						Description:   gptr.Of("Description A"),
 						EvaluatorType: gptr.Of(int32(1)),
-						Benchmark:    gptr.Of("benchmark1"),
-						Vendor:       gptr.Of("vendor1"),
-						Popularity:   100,
-						CreatedBy:    "user1",
-						UpdatedBy:    "user1",
+						Benchmark:     gptr.Of("benchmark1"),
+						Vendor:        gptr.Of("vendor1"),
+						Popularity:    100,
+						CreatedBy:     "user1",
+						UpdatedBy:     "user1",
 					},
 				},
 			},
@@ -211,14 +233,14 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 				TotalCount: 1,
 				Templates: []*entity.EvaluatorTemplate{
 					{
-						ID:           1,
-						SpaceID:      123,
-						Name:         "Template A",
-						Description:  "Description A",
+						ID:            1,
+						SpaceID:       123,
+						Name:          "Template A",
+						Description:   "Description A",
 						EvaluatorType: entity.EvaluatorType(1),
-						Benchmark:    "benchmark1",
-						Vendor:       "vendor1",
-						Popularity:   100,
+						Benchmark:     "benchmark1",
+						Vendor:        "vendor1",
+						Popularity:    100,
 						BaseInfo: &entity.BaseInfo{
 							CreatedBy: &entity.UserInfo{
 								UserID: gptr.Of("user1"),
@@ -251,7 +273,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 				PageNum:        1,
 				IncludeDeleted: false,
 			},
-			mockTagError: assert.AnError,
+			mockTagError:  assert.AnError,
 			expectedError: true,
 			description:   "标签查询出错时，应该返回错误",
 		},
@@ -282,16 +304,16 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 				TotalCount: 2,
 				Templates: []*model.EvaluatorTemplate{
 					{
-						ID:           1,
-						SpaceID:      gptr.Of(int64(123)),
-						Name:         gptr.Of("Template A"),
-						Description:  gptr.Of("Description A"),
+						ID:            1,
+						SpaceID:       gptr.Of(int64(123)),
+						Name:          gptr.Of("Template A"),
+						Description:   gptr.Of("Description A"),
 						EvaluatorType: gptr.Of(int32(1)),
-						Benchmark:    gptr.Of("benchmark1"),
-						Vendor:       gptr.Of("vendor1"),
-						Popularity:   100,
-						CreatedBy:    "user1",
-						UpdatedBy:    "user1",
+						Benchmark:     gptr.Of("benchmark1"),
+						Vendor:        gptr.Of("vendor1"),
+						Popularity:    100,
+						CreatedBy:     "user1",
+						UpdatedBy:     "user1",
 					},
 				},
 			},
@@ -299,14 +321,14 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 				TotalCount: 2,
 				Templates: []*entity.EvaluatorTemplate{
 					{
-						ID:           1,
-						SpaceID:      123,
-						Name:         "Template A",
-						Description:  "Description A",
+						ID:            1,
+						SpaceID:       123,
+						Name:          "Template A",
+						Description:   "Description A",
 						EvaluatorType: entity.EvaluatorType(1),
-						Benchmark:    "benchmark1",
-						Vendor:       "vendor1",
-						Popularity:   100,
+						Benchmark:     "benchmark1",
+						Vendor:        "vendor1",
+						Popularity:    100,
 						BaseInfo: &entity.BaseInfo{
 							CreatedBy: &entity.UserInfo{
 								UserID: gptr.Of("user1"),
@@ -398,7 +420,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 			}
 
 			// 创建repo实例
-			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO)
+			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO, &stubIDGen{})
 
 			// 执行测试
 			ctx := context.Background()
@@ -452,26 +474,26 @@ func TestConvertEvaluatorTemplatePO2DO(t *testing.T) {
 		{
 			name: "valid po",
 			po: &model.EvaluatorTemplate{
-				ID:           1,
-				SpaceID:      gptr.Of(int64(123)),
-				Name:         gptr.Of("Test Template"),
-				Description:  gptr.Of("Test Description"),
+				ID:            1,
+				SpaceID:       gptr.Of(int64(123)),
+				Name:          gptr.Of("Test Template"),
+				Description:   gptr.Of("Test Description"),
 				EvaluatorType: gptr.Of(int32(1)),
-				Benchmark:    gptr.Of("test_benchmark"),
-				Vendor:       gptr.Of("test_vendor"),
-				Popularity:   100,
-				CreatedBy:    "user1",
-				UpdatedBy:    "user1",
+				Benchmark:     gptr.Of("test_benchmark"),
+				Vendor:        gptr.Of("test_vendor"),
+				Popularity:    100,
+				CreatedBy:     "user1",
+				UpdatedBy:     "user1",
 			},
 			expected: &entity.EvaluatorTemplate{
-				ID:           1,
-				SpaceID:      123,
-				Name:         "Test Template",
-				Description:  "Test Description",
+				ID:            1,
+				SpaceID:       123,
+				Name:          "Test Template",
+				Description:   "Test Description",
 				EvaluatorType: entity.EvaluatorType(1),
-				Benchmark:    "test_benchmark",
-				Vendor:       "test_vendor",
-				Popularity:   100,
+				Benchmark:     "test_benchmark",
+				Vendor:        "test_vendor",
+				Popularity:    100,
 				BaseInfo: &entity.BaseInfo{
 					CreatedBy: &entity.UserInfo{
 						UserID: gptr.Of("user1"),
@@ -565,7 +587,7 @@ func TestEvaluatorTemplateRepoImpl_CreateEvaluatorTemplate(t *testing.T) {
 			mockTemplateDAO := &MockEvaluatorTemplateDAO{}
 			mockTagDAO := &MockEvaluatorTagDAO{}
 
-			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO)
+			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO, &stubIDGen{})
 
 			if tt.template != nil {
 				mockTemplateDAO.On("CreateEvaluatorTemplate", mock.Anything, mock.Anything, mock.Anything).Return(tt.mockTemplate, tt.mockError)
@@ -643,7 +665,7 @@ func TestEvaluatorTemplateRepoImpl_UpdateEvaluatorTemplate(t *testing.T) {
 			mockTemplateDAO := &MockEvaluatorTemplateDAO{}
 			mockTagDAO := &MockEvaluatorTagDAO{}
 
-			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO)
+			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO, &stubIDGen{})
 
 			if tt.template != nil {
 				mockTemplateDAO.On("UpdateEvaluatorTemplate", mock.Anything, mock.Anything, mock.Anything).Return(tt.mockTemplate, tt.mockError)
@@ -703,7 +725,7 @@ func TestEvaluatorTemplateRepoImpl_DeleteEvaluatorTemplate(t *testing.T) {
 			mockTemplateDAO := &MockEvaluatorTemplateDAO{}
 			mockTagDAO := &MockEvaluatorTagDAO{}
 
-			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO)
+			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO, &stubIDGen{})
 
 			mockTemplateDAO.On("DeleteEvaluatorTemplate", mock.Anything, tt.id, tt.userID, mock.Anything).Return(tt.mockError)
 
@@ -779,7 +801,7 @@ func TestEvaluatorTemplateRepoImpl_GetEvaluatorTemplate(t *testing.T) {
 			mockTemplateDAO := &MockEvaluatorTemplateDAO{}
 			mockTagDAO := &MockEvaluatorTagDAO{}
 
-			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO)
+			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO, &stubIDGen{})
 
 			mockTemplateDAO.On("GetEvaluatorTemplate", mock.Anything, tt.id, tt.includeDeleted, mock.Anything).Return(tt.mockTemplate, tt.mockError)
 

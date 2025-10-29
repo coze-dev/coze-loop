@@ -14694,7 +14694,7 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetVersion bool = false
+	var issetEvaluator bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -14712,7 +14712,7 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetVersion = true
+				issetEvaluator = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -14743,7 +14743,7 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetVersion {
+	if !issetEvaluator {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
@@ -14760,13 +14760,13 @@ RequiredFieldNotSetError:
 
 func (p *UpdateBuiltinEvaluatorTagsResponse) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := evaluator.NewEvaluatorVersion()
+	_field := evaluator.NewEvaluator()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 	}
-	p.Version = _field
+	p.Evaluator = _field
 	return offset, nil
 }
 
@@ -14809,7 +14809,7 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) BLength() int {
 func (p *UpdateBuiltinEvaluatorTagsResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
-	offset += p.Version.FastWriteNocopy(buf[offset:], w)
+	offset += p.Evaluator.FastWriteNocopy(buf[offset:], w)
 	return offset
 }
 
@@ -14823,7 +14823,7 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) fastWriteField255(buf []byte, w thr
 func (p *UpdateBuiltinEvaluatorTagsResponse) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
-	l += p.Version.BLength()
+	l += p.Evaluator.BLength()
 	return l
 }
 
@@ -14840,14 +14840,14 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _version *evaluator.EvaluatorVersion
-	if src.Version != nil {
-		_version = &evaluator.EvaluatorVersion{}
-		if err := _version.DeepCopy(src.Version); err != nil {
+	var _evaluator *evaluator.Evaluator
+	if src.Evaluator != nil {
+		_evaluator = &evaluator.Evaluator{}
+		if err := _evaluator.DeepCopy(src.Evaluator); err != nil {
 			return err
 		}
 	}
-	p.Version = _version
+	p.Evaluator = _evaluator
 
 	var _baseResp *base.BaseResp
 	if src.BaseResp != nil {
@@ -15220,6 +15220,7 @@ func (p *UpdateEvaluatorTemplateRequest) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
+	var issetEvaluatorTemplateID bool = false
 	var issetEvaluatorTemplate bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
@@ -15232,8 +15233,23 @@ func (p *UpdateEvaluatorTemplateRequest) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+				issetEvaluatorTemplateID = true
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -15269,8 +15285,13 @@ func (p *UpdateEvaluatorTemplateRequest) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetEvaluatorTemplate {
+	if !issetEvaluatorTemplateID {
 		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetEvaluatorTemplate {
+		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
 	return offset, nil
@@ -15285,6 +15306,20 @@ RequiredFieldNotSetError:
 }
 
 func (p *UpdateEvaluatorTemplateRequest) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = v
+	}
+	p.EvaluatorTemplateID = _field
+	return offset, nil
+}
+
+func (p *UpdateEvaluatorTemplateRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 	_field := evaluator.NewEvaluatorTemplate()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -15316,6 +15351,7 @@ func (p *UpdateEvaluatorTemplateRequest) FastWriteNocopy(buf []byte, w thrift.No
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -15326,6 +15362,7 @@ func (p *UpdateEvaluatorTemplateRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -15334,7 +15371,14 @@ func (p *UpdateEvaluatorTemplateRequest) BLength() int {
 
 func (p *UpdateEvaluatorTemplateRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+	offset += thrift.Binary.WriteI64(buf[offset:], p.EvaluatorTemplateID)
+	return offset
+}
+
+func (p *UpdateEvaluatorTemplateRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
 	offset += p.EvaluatorTemplate.FastWriteNocopy(buf[offset:], w)
 	return offset
 }
@@ -15349,6 +15393,13 @@ func (p *UpdateEvaluatorTemplateRequest) fastWriteField255(buf []byte, w thrift.
 }
 
 func (p *UpdateEvaluatorTemplateRequest) field1Length() int {
+	l := 0
+	l += thrift.Binary.FieldBeginLength()
+	l += thrift.Binary.I64Length()
+	return l
+}
+
+func (p *UpdateEvaluatorTemplateRequest) field2Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += p.EvaluatorTemplate.BLength()
@@ -15369,6 +15420,8 @@ func (p *UpdateEvaluatorTemplateRequest) DeepCopy(s interface{}) error {
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
+
+	p.EvaluatorTemplateID = src.EvaluatorTemplateID
 
 	var _evaluatorTemplate *evaluator.EvaluatorTemplate
 	if src.EvaluatorTemplate != nil {

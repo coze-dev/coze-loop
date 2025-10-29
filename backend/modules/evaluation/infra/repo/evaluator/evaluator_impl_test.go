@@ -1543,7 +1543,7 @@ func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorDraft(t *testing.T) {
 					},
 				},
 				Tags: map[entity.EvaluatorTagKey][]string{
-					entity.EvaluatorTagKey_Category: {"LLM", "Code"},
+					entity.EvaluatorTagKey_Category:  {"LLM", "Code"},
 					entity.EvaluatorTagKey_Objective: {"Quality"},
 				},
 				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
@@ -1608,9 +1608,9 @@ func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorDraft(t *testing.T) {
 					DeleteEvaluatorTagsByConditions(gomock.Any(), int64(100), int32(entity.EvaluatorTagKeyType_Evaluator), gomock.Any(), gomock.Any()).
 					Return(nil)
 
-				// 设置新增tags的期望
+					// 设置新增tags的期望
 				mockTagDAO.EXPECT().
-					BatchCreateEvaluatorTags(gomock.Any(), int64(100), int32(entity.EvaluatorTagKeyType_Evaluator), "test_user", gomock.Any(), gomock.Any()).
+					BatchCreateEvaluatorTags(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			expectedError: nil,
@@ -1914,13 +1914,13 @@ func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorMeta(t *testing.T) {
 	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
 
 	tests := []struct {
-		name           string
-		id             int64
-		benchmark      string
-		vendor         string
-		userID         string
-		mockSetup      func()
-		expectedError  error
+		name          string
+		id            int64
+		benchmark     string
+		vendor        string
+		userID        string
+		mockSetup     func()
+		expectedError error
 	}{
 		{
 			name:      "成功更新内置评估器元数据",

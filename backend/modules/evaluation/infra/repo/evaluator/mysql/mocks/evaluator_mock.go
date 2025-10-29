@@ -161,25 +161,6 @@ func (mr *MockEvaluatorDAOMockRecorder) ListEvaluator(ctx, req any, opts ...any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluator", reflect.TypeOf((*MockEvaluatorDAO)(nil).ListEvaluator), varargs...)
 }
 
-// UpdateBuiltinEvaluatorMeta mocks base method.
-func (m *MockEvaluatorDAO) UpdateBuiltinEvaluatorMeta(ctx context.Context, do *model.Evaluator, opts ...db.Option) error {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, do}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateBuiltinEvaluatorMeta", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateBuiltinEvaluatorMeta indicates an expected call of UpdateBuiltinEvaluatorMeta.
-func (mr *MockEvaluatorDAOMockRecorder) UpdateBuiltinEvaluatorMeta(ctx, do any, opts ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, do}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBuiltinEvaluatorMeta", reflect.TypeOf((*MockEvaluatorDAO)(nil).UpdateBuiltinEvaluatorMeta), varargs...)
-}
-
 // UpdateEvaluatorDraftSubmitted mocks base method.
 func (m *MockEvaluatorDAO) UpdateEvaluatorDraftSubmitted(ctx context.Context, evaluatorID int64, draftSubmitted bool, userID string, opts ...db.Option) error {
 	m.ctrl.T.Helper()

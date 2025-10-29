@@ -626,9 +626,9 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) IsValid() error {
 	return nil
 }
 func (p *UpdateBuiltinEvaluatorTagsResponse) IsValid() error {
-	if p.Version != nil {
-		if err := p.Version.IsValid(); err != nil {
-			return fmt.Errorf("field Version not valid, %w", err)
+	if p.Evaluator != nil {
+		if err := p.Evaluator.IsValid(); err != nil {
+			return fmt.Errorf("field Evaluator not valid, %w", err)
 		}
 	}
 	if p.BaseResp != nil {

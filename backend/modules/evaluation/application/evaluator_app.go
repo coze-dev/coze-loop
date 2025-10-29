@@ -348,6 +348,12 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluator(ctx context.Context, request *eva
 	if err != nil {
 		return nil, err
 	}
+	// 如果是builtin分支，补充管理空间校验
+	if request.GetBuiltin() {
+		if err := e.authBuiltinManagement(ctx, request.GetWorkspaceID(), spaceTypeBuiltin); err != nil {
+			return nil, err
+		}
+	}
 	// 机审
 	auditTexts := make([]string, 0)
 	auditTexts = append(auditTexts, request.GetName())
@@ -368,15 +374,30 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluator(ctx context.Context, request *eva
 		return nil, errorx.NewByCode(errno.RiskContentDetectedCode)
 	}
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-	if request.GetBuiltin() {
-		// 内置评估器更新元信息（允许更新 benchmark/vendor）
-		if err = e.evaluatorService.UpdateBuiltinEvaluatorMeta(ctx, request.GetEvaluatorID(), request.GetWorkspaceID(), request.GetName(), request.GetDescription(), request.GetBenchmark(), request.GetVendor(), userIDInContext); err != nil {
-			return nil, err
-		}
-	} else {
-		if err = e.evaluatorService.UpdateEvaluatorMeta(ctx, request.GetEvaluatorID(), request.GetWorkspaceID(), request.GetName(), request.GetDescription(), userIDInContext); err != nil {
-			return nil, err
-		}
+	// 组装请求
+	req := &entity.UpdateEvaluatorMetaRequest{
+		ID:        request.GetEvaluatorID(),
+		SpaceID:   request.GetWorkspaceID(),
+		UpdatedBy: userIDInContext,
+	}
+	if request.Name != nil {
+		req.Name = request.Name
+	}
+	if request.Description != nil {
+		req.Description = request.Description
+	}
+	if request.Builtin != nil {
+		req.Builtin = request.Builtin
+	}
+	if request.Benchmark != nil {
+		req.Benchmark = request.Benchmark
+	}
+	if request.Vendor != nil {
+		req.Vendor = request.Vendor
+	}
+
+	if err = e.evaluatorService.UpdateEvaluatorMeta(ctx, req); err != nil {
+		return nil, err
 	}
 	return &evaluatorservice.UpdateEvaluatorResponse{}, nil
 }
@@ -1541,9 +1562,12 @@ func (e *EvaluatorHandlerImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, r
 		return nil, err
 	}
 
-	// 3) 返回版本信息
+	// 3) 组装更新后的标签并返回 Evaluator（最终标签集合等于请求中的标签集合）
+	if ev != nil {
+		ev.Tags = evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags())
+	}
 	return &evaluatorservice.UpdateBuiltinEvaluatorTagsResponse{
-		Version: evaluatorconvertor.ConvertEvaluatorDO2DTO(ev).GetCurrentVersion(),
+		Evaluator: evaluatorconvertor.ConvertEvaluatorDO2DTO(ev),
 	}, nil
 }
 

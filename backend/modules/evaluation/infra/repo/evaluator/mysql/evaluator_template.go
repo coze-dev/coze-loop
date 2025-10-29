@@ -34,6 +34,9 @@ type EvaluatorTemplateDAO interface {
 
 	// ListEvaluatorTemplate 根据筛选条件查询evaluator_template列表，支持tag筛选和分页
 	ListEvaluatorTemplate(ctx context.Context, req *ListEvaluatorTemplateRequest, opts ...db.Option) (*ListEvaluatorTemplateResponse, error)
+
+	// IncrPopularityByID 基于ID将 popularity + 1
+	IncrPopularityByID(ctx context.Context, id int64, opts ...db.Option) error
 }
 
 var (
@@ -56,17 +59,16 @@ func NewEvaluatorTemplateDAO(p db.Provider) EvaluatorTemplateDAO {
 }
 
 type ListEvaluatorTemplateRequest struct {
-	IDs             []int64
-	PageSize        int32
-	PageNum         int32
-	IncludeDeleted  bool
+	IDs            []int64
+	PageSize       int32
+	PageNum        int32
+	IncludeDeleted bool
 }
 
 type ListEvaluatorTemplateResponse struct {
 	TotalCount int64
 	Templates  []*model.EvaluatorTemplate
 }
-
 
 func (dao *EvaluatorTemplateDAOImpl) ListEvaluatorTemplate(ctx context.Context, req *ListEvaluatorTemplateRequest, opts ...db.Option) (*ListEvaluatorTemplateResponse, error) {
 	// 通过opts获取当前的db session实例
@@ -208,4 +210,18 @@ func (dao *EvaluatorTemplateDAOImpl) GetEvaluatorTemplate(ctx context.Context, i
 	}
 
 	return &template, nil
+}
+
+// IncrPopularityByID 基于ID将 popularity + 1
+func (dao *EvaluatorTemplateDAOImpl) IncrPopularityByID(ctx context.Context, id int64, opts ...db.Option) error {
+	if contexts.CtxWriteDB(ctx) {
+		opts = append(opts, db.WithMaster())
+	}
+	dbsession := dao.provider.NewSession(ctx, opts...)
+	return dbsession.WithContext(ctx).
+		Model(&model.EvaluatorTemplate{}).
+		Where("id = ?", id).
+		Where("deleted_at IS NULL").
+		UpdateColumn("popularity", gorm.Expr("popularity + 1")).
+		Error
 }

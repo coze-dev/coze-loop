@@ -26,22 +26,24 @@ import (
 
 // EvaluatorRepoImpl 实现 EvaluatorRepo 接口
 type EvaluatorRepoImpl struct {
-	idgen               idgen.IIDGenerator
-	evaluatorDao        mysql.EvaluatorDAO
-	evaluatorVersionDao mysql.EvaluatorVersionDAO
-	tagDAO              mysql.EvaluatorTagDAO
-	dbProvider          db.Provider
-	lwt                 platestwrite.ILatestWriteTracker
+	idgen                idgen.IIDGenerator
+	evaluatorDao         mysql.EvaluatorDAO
+	evaluatorVersionDao  mysql.EvaluatorVersionDAO
+	tagDAO               mysql.EvaluatorTagDAO
+	evaluatorTemplateDAO mysql.EvaluatorTemplateDAO
+	dbProvider           db.Provider
+	lwt                  platestwrite.ILatestWriteTracker
 }
 
-func NewEvaluatorRepo(idgen idgen.IIDGenerator, provider db.Provider, evaluatorDao mysql.EvaluatorDAO, evaluatorVersionDao mysql.EvaluatorVersionDAO, tagDAO mysql.EvaluatorTagDAO, lwt platestwrite.ILatestWriteTracker) repo.IEvaluatorRepo {
+func NewEvaluatorRepo(idgen idgen.IIDGenerator, provider db.Provider, evaluatorDao mysql.EvaluatorDAO, evaluatorVersionDao mysql.EvaluatorVersionDAO, tagDAO mysql.EvaluatorTagDAO, lwt platestwrite.ILatestWriteTracker, evaluatorTemplateDAO mysql.EvaluatorTemplateDAO) repo.IEvaluatorRepo {
 	singletonEvaluatorRepo := &EvaluatorRepoImpl{
-		evaluatorDao:        evaluatorDao,
-		evaluatorVersionDao: evaluatorVersionDao,
-		tagDAO:              tagDAO,
-		dbProvider:          provider,
-		idgen:               idgen,
-		lwt:                 lwt,
+		evaluatorDao:         evaluatorDao,
+		evaluatorVersionDao:  evaluatorVersionDao,
+		tagDAO:               tagDAO,
+		evaluatorTemplateDAO: evaluatorTemplateDAO,
+		dbProvider:           provider,
+		idgen:                idgen,
+		lwt:                  lwt,
 	}
 	return singletonEvaluatorRepo
 }
@@ -62,18 +64,41 @@ func (r *EvaluatorRepoImpl) SubmitEvaluatorVersion(ctx context.Context, evaluato
 		if err != nil {
 			return err
 		}
+		// 提交版本成功后，根据模板ID为模板热度 +1（若可解析）
+		r.incrTemplatePopularityByEvaluator(ctx, evaluator, opt)
 		// 如果是预置评估器，且携带了标签，则为本次提交的版本ID创建tags
 		if evaluator.Builtin && len(evaluator.Tags) > 0 {
-			// 获取用户ID
 			userID := session.UserIDInCtxOrEmpty(ctx)
-			// 将 map[EvaluatorTagKey][]string 转为 map[string][]string
-			tags := make(map[string][]string)
-			for tagKey, tagValues := range evaluator.Tags {
-				tags[string(tagKey)] = tagValues
+			// 统计需要创建的总标签数
+			total := 0
+			for _, tagValues := range evaluator.Tags {
+				total += len(tagValues)
 			}
-			// 以提交版本的 evaluator_version_id 作为 source_id
-			if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorVersionPO.ID, int32(entity.EvaluatorTagKeyType_Evaluator), userID, tags, opt); err != nil {
-				return err
+			if total > 0 {
+				// 生成所需的ID
+				ids, err := r.idgen.GenMultiIDs(ctx, total)
+				if err != nil {
+					return err
+				}
+				idx := 0
+				evaluatorTags := make([]*model.EvaluatorTag, 0, total)
+				for tagKey, tagValues := range evaluator.Tags {
+					for _, tagValue := range tagValues {
+						evaluatorTags = append(evaluatorTags, &model.EvaluatorTag{
+							ID:        ids[idx],
+							SourceID:  evaluatorVersionPO.ID,
+							TagType:   int32(entity.EvaluatorTagKeyType_Evaluator),
+							TagKey:    string(tagKey),
+							TagValue:  tagValue,
+							CreatedBy: userID,
+							UpdatedBy: userID,
+						})
+						idx++
+					}
+				}
+				if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorTags, opt); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -82,6 +107,28 @@ func (r *EvaluatorRepoImpl) SubmitEvaluatorVersion(ctx context.Context, evaluato
 		return err
 	}
 	return nil
+}
+
+// incrTemplatePopularityByEvaluator 根据 Evaluator 的模板ID为模板热度 +1
+func (r *EvaluatorRepoImpl) incrTemplatePopularityByEvaluator(ctx context.Context, evaluator *entity.Evaluator, opts ...db.Option) {
+	var templateIDStr string
+	switch evaluator.EvaluatorType {
+	case entity.EvaluatorTypePrompt:
+		if evaluator.PromptEvaluatorVersion != nil {
+			templateIDStr = evaluator.PromptEvaluatorVersion.PromptTemplateKey
+		}
+	case entity.EvaluatorTypeCode:
+		if evaluator.CodeEvaluatorVersion != nil && evaluator.CodeEvaluatorVersion.CodeTemplateKey != nil {
+			templateIDStr = *evaluator.CodeEvaluatorVersion.CodeTemplateKey
+		}
+	}
+	if templateIDStr == "" {
+		return
+	}
+	// 模板key存的是模板ID（字符串），转换为int64
+	if id, err := strconv.ParseInt(templateIDStr, 10, 64); err == nil {
+		_ = r.evaluatorTemplateDAO.IncrPopularityByID(ctx, id, opts...)
+	}
 }
 
 func (r *EvaluatorRepoImpl) UpdateEvaluatorDraft(ctx context.Context, evaluator *entity.Evaluator) error {
@@ -321,6 +368,8 @@ func (r *EvaluatorRepoImpl) CreateEvaluator(ctx context.Context, do *entity.Eval
 		if err != nil {
 			return err
 		}
+		// 创建成功后，根据模板ID为模板热度 +1（若可解析）
+		r.incrTemplatePopularityByEvaluator(ctx, do, opt)
 		return nil
 	})
 	if err != nil {
@@ -366,35 +415,29 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorDraft(ctx context.Context, ids []in
 }
 
 // UpdateEvaluatorMeta 更新 Evaluator
-func (r *EvaluatorRepoImpl) UpdateEvaluatorMeta(ctx context.Context, id int64, name, description, userID string) error {
-	po := &model.Evaluator{
-		ID:          id,
-		Name:        gptr.Of(name),
-		Description: gptr.Of(description),
-		UpdatedBy:   userID,
+func (r *EvaluatorRepoImpl) UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error {
+	po := &model.Evaluator{ID: req.ID, UpdatedBy: req.UpdatedBy}
+	if req.Name != nil {
+		po.Name = req.Name
 	}
-	err := r.evaluatorDao.UpdateEvaluatorMeta(ctx, po)
-	if err != nil {
-		return err
+	if req.Description != nil {
+		po.Description = req.Description
 	}
-	return nil
-}
-
-// UpdateBuiltinEvaluatorMeta 更新内置评估器的 benchmark 和 vendor 字段
-func (r *EvaluatorRepoImpl) UpdateBuiltinEvaluatorMeta(ctx context.Context, id int64, name, description, benchmark, vendor, userID string) error {
-	po := &model.Evaluator{
-		ID:          id,
-		Name:        gptr.Of(name),
-		Description: gptr.Of(description),
-		Benchmark:   gptr.Of(benchmark),
-		Vendor:      gptr.Of(vendor),
-		UpdatedBy:   userID,
+	if req.Benchmark != nil {
+		po.Benchmark = req.Benchmark
 	}
-	err := r.evaluatorDao.UpdateBuiltinEvaluatorMeta(ctx, po)
-	if err != nil {
-		return err
+	if req.Vendor != nil {
+		po.Vendor = req.Vendor
 	}
-	return nil
+	if req.Builtin != nil {
+		// 将 bool 转为 1/2 存入
+		if *req.Builtin {
+			po.Builtin = 1
+		} else {
+			po.Builtin = 2
+		}
+	}
+	return r.evaluatorDao.UpdateEvaluatorMeta(ctx, po)
 }
 
 // UpdateEvaluatorVersionTags 根据版本ID全量更新标签：不存在的新增，不在传入列表中的删除
@@ -450,8 +493,35 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorVersionTags(ctx context.Context, vers
 		}
 		if len(add) > 0 {
 			userID := session.UserIDInCtxOrEmpty(ctx)
-			if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, versionID, int32(entity.EvaluatorTagKeyType_Evaluator), userID, add, opt); err != nil {
-				return err
+			// 统计需要新增的标签数量
+			total := 0
+			for _, vals := range add {
+				total += len(vals)
+			}
+			if total > 0 {
+				ids, err := r.idgen.GenMultiIDs(ctx, total)
+				if err != nil {
+					return err
+				}
+				idx := 0
+				evaluatorTags := make([]*model.EvaluatorTag, 0, total)
+				for k, vals := range add {
+					for _, v := range vals {
+						evaluatorTags = append(evaluatorTags, &model.EvaluatorTag{
+							ID:        ids[idx],
+							SourceID:  versionID,
+							TagType:   int32(entity.EvaluatorTagKeyType_Evaluator),
+							TagKey:    k,
+							TagValue:  v,
+							CreatedBy: userID,
+							UpdatedBy: userID,
+						})
+						idx++
+					}
+				}
+				if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorTags, opt); err != nil {
+					return err
+				}
 			}
 		}
 		return nil

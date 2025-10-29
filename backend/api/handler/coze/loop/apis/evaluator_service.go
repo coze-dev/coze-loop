@@ -12,7 +12,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/evaluatorservice"
-	evaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 )
 
 var localEvaluatorSvc evaluatorservice.Client
@@ -215,22 +215,6 @@ func DebugBuiltinEvaluator(ctx context.Context, c *app.RequestContext) {
 	}
 
 	resp := new(evaluator.DebugBuiltinEvaluatorResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
-// PublishBuiltinEvaluator .
-// @router /api/evaluation/v1/evaluators/publish_builtin [POST]
-func PublishBuiltinEvaluator(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.PublishBuiltinEvaluatorRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.PublishBuiltinEvaluatorResponse)
 
 	c.JSON(consts.StatusOK, resp)
 }

@@ -34,6 +34,18 @@ var EvaluatorTypeSet = map[EvaluatorType]struct{}{
 	EvaluatorTypeCode:   {},
 }
 
+// UpdateEvaluatorMetaRequest 用于更新评估器元信息的参数
+type UpdateEvaluatorMetaRequest struct {
+	ID          int64
+	SpaceID     int64
+	Name        *string
+	Description *string
+	Builtin     *bool
+	Benchmark   *string
+	Vendor      *string
+	UpdatedBy   string
+}
+
 // GetEvaluatorVersionID 获取评估器版本ID
 func (e *Evaluator) GetEvaluatorVersionID() int64 {
 	switch e.EvaluatorType {

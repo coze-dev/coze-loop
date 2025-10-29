@@ -27,6 +27,9 @@ type EvaluatorTemplateRepo interface {
 
 	// ListEvaluatorTemplate 根据筛选条件查询evaluator_template列表，支持tag筛选和分页
 	ListEvaluatorTemplate(ctx context.Context, req *ListEvaluatorTemplateRequest) (*ListEvaluatorTemplateResponse, error)
+
+	// IncrPopularityByID 基于ID将 popularity + 1
+	IncrPopularityByID(ctx context.Context, id int64) error
 }
 
 // ListEvaluatorTemplateRequest 查询evaluator_template的请求参数

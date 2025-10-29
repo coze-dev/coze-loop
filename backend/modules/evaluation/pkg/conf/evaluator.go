@@ -252,9 +252,8 @@ type evaluatorConfiger struct {
 func (c *evaluatorConfiger) GetEvaluatorTagConf(ctx context.Context) (etf map[evaluatordto.EvaluatorTagKey][]string) {
 	const key = "evaluator_tag_config"
 	etf = make(map[evaluatordto.EvaluatorTagKey][]string)
-	typ := make(map[evaluatordto.EvaluatorTagKey][]string)
-	if c.loader.UnmarshalKey(ctx, key, &typ, conf.WithTagName("json")) == nil && len(typ) > 0 {
-		return typ
+	if c.loader.UnmarshalKey(ctx, key, &etf, conf.WithTagName("json")) == nil && len(etf) > 0 {
+		return etf
 	}
 	return DefaultEvaluatorTagConf()
 }

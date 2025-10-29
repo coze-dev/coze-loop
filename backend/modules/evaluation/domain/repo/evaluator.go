@@ -19,8 +19,7 @@ type IEvaluatorRepo interface {
 	BatchDeleteEvaluator(ctx context.Context, ids []int64, userID string) error
 
 	UpdateEvaluatorDraft(ctx context.Context, version *entity.Evaluator) error
-	UpdateEvaluatorMeta(ctx context.Context, id int64, name, description, userID string) error
-	UpdateBuiltinEvaluatorMeta(ctx context.Context, id int64, name, description, benchmark, vendor, userID string) error
+	UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error
 	// UpdateEvaluatorVersionTags 根据版本ID全量更新标签：不存在的新增，不在传入列表中的删除
 	UpdateEvaluatorVersionTags(ctx context.Context, versionID int64, tags map[entity.EvaluatorTagKey][]string) error
 

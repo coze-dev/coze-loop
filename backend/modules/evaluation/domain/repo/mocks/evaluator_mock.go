@@ -161,7 +161,6 @@ func (mr *MockIEvaluatorRepoMockRecorder) CheckVersionExist(ctx, evaluatorID, ve
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckVersionExist", reflect.TypeOf((*MockIEvaluatorRepo)(nil).CheckVersionExist), ctx, evaluatorID, version)
 }
 
-
 // CreateEvaluator mocks base method.
 func (m *MockIEvaluatorRepo) CreateEvaluator(ctx context.Context, evaluator *entity.Evaluator) (int64, error) {
 	m.ctrl.T.Helper()
@@ -250,20 +249,6 @@ func (mr *MockIEvaluatorRepoMockRecorder) UpdateBuiltinEvaluatorDraft(ctx, versi
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBuiltinEvaluatorDraft", reflect.TypeOf((*MockIEvaluatorRepo)(nil).UpdateBuiltinEvaluatorDraft), ctx, version)
 }
 
-// UpdateBuiltinEvaluatorMeta mocks base method.
-func (m *MockIEvaluatorRepo) UpdateBuiltinEvaluatorMeta(ctx context.Context, id int64, name, description, benchmark, vendor, userID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateBuiltinEvaluatorMeta", ctx, id, name, description, benchmark, vendor, userID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateBuiltinEvaluatorMeta indicates an expected call of UpdateBuiltinEvaluatorMeta.
-func (mr *MockIEvaluatorRepoMockRecorder) UpdateBuiltinEvaluatorMeta(ctx, id, name, description, benchmark, vendor, userID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBuiltinEvaluatorMeta", reflect.TypeOf((*MockIEvaluatorRepo)(nil).UpdateBuiltinEvaluatorMeta), ctx, id, name, description, benchmark, vendor, userID)
-}
-
 // UpdateEvaluatorDraft mocks base method.
 func (m *MockIEvaluatorRepo) UpdateEvaluatorDraft(ctx context.Context, version *entity.Evaluator) error {
 	m.ctrl.T.Helper()
@@ -279,15 +264,15 @@ func (mr *MockIEvaluatorRepoMockRecorder) UpdateEvaluatorDraft(ctx, version any)
 }
 
 // UpdateEvaluatorMeta mocks base method.
-func (m *MockIEvaluatorRepo) UpdateEvaluatorMeta(ctx context.Context, id int64, name, description, userID string) error {
+func (m *MockIEvaluatorRepo) UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEvaluatorMeta", ctx, id, name, description, userID)
+	ret := m.ctrl.Call(m, "UpdateEvaluatorMeta", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateEvaluatorMeta indicates an expected call of UpdateEvaluatorMeta.
-func (mr *MockIEvaluatorRepoMockRecorder) UpdateEvaluatorMeta(ctx, id, name, description, userID any) *gomock.Call {
+func (mr *MockIEvaluatorRepoMockRecorder) UpdateEvaluatorMeta(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorMeta", reflect.TypeOf((*MockIEvaluatorRepo)(nil).UpdateEvaluatorMeta), ctx, id, name, description, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorMeta", reflect.TypeOf((*MockIEvaluatorRepo)(nil).UpdateEvaluatorMeta), ctx, req)
 }

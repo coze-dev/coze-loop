@@ -6459,7 +6459,7 @@ type GetEvaluatorVersionRequest struct {
 	// 是否查询已删除的评估器，默认不查询
 	IncludeDeleted *bool `thrift:"include_deleted,3,optional" frugal:"3,optional,bool" json:"include_deleted,omitempty" query:"include_deleted"`
 	// 是否预置评估器
-	Builtin *bool      `thrift:"builtin,4,optional" frugal:"4,optional,bool" json:"builtin" form:"builtin" `
+	Builtin *bool      `thrift:"builtin,4,optional" frugal:"4,optional,bool" json:"builtin" query:"builtin" `
 	Base    *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -20177,8 +20177,8 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Field255DeepEqual(src *base.Base) bo
 }
 
 type UpdateBuiltinEvaluatorTagsResponse struct {
-	Version  *evaluator.EvaluatorVersion `thrift:"version,1,required" frugal:"1,required,evaluator.EvaluatorVersion" form:"version,required" json:"version,required"`
-	BaseResp *base.BaseResp              `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	Evaluator *evaluator.Evaluator `thrift:"evaluator,1,required" frugal:"1,required,evaluator.Evaluator" form:"evaluator,required" json:"evaluator,required"`
+	BaseResp  *base.BaseResp       `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewUpdateBuiltinEvaluatorTagsResponse() *UpdateBuiltinEvaluatorTagsResponse {
@@ -20188,16 +20188,16 @@ func NewUpdateBuiltinEvaluatorTagsResponse() *UpdateBuiltinEvaluatorTagsResponse
 func (p *UpdateBuiltinEvaluatorTagsResponse) InitDefault() {
 }
 
-var UpdateBuiltinEvaluatorTagsResponse_Version_DEFAULT *evaluator.EvaluatorVersion
+var UpdateBuiltinEvaluatorTagsResponse_Evaluator_DEFAULT *evaluator.Evaluator
 
-func (p *UpdateBuiltinEvaluatorTagsResponse) GetVersion() (v *evaluator.EvaluatorVersion) {
+func (p *UpdateBuiltinEvaluatorTagsResponse) GetEvaluator() (v *evaluator.Evaluator) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetVersion() {
-		return UpdateBuiltinEvaluatorTagsResponse_Version_DEFAULT
+	if !p.IsSetEvaluator() {
+		return UpdateBuiltinEvaluatorTagsResponse_Evaluator_DEFAULT
 	}
-	return p.Version
+	return p.Evaluator
 }
 
 var UpdateBuiltinEvaluatorTagsResponse_BaseResp_DEFAULT *base.BaseResp
@@ -20211,20 +20211,20 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *UpdateBuiltinEvaluatorTagsResponse) SetVersion(val *evaluator.EvaluatorVersion) {
-	p.Version = val
+func (p *UpdateBuiltinEvaluatorTagsResponse) SetEvaluator(val *evaluator.Evaluator) {
+	p.Evaluator = val
 }
 func (p *UpdateBuiltinEvaluatorTagsResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_UpdateBuiltinEvaluatorTagsResponse = map[int16]string{
-	1:   "version",
+	1:   "evaluator",
 	255: "BaseResp",
 }
 
-func (p *UpdateBuiltinEvaluatorTagsResponse) IsSetVersion() bool {
-	return p.Version != nil
+func (p *UpdateBuiltinEvaluatorTagsResponse) IsSetEvaluator() bool {
+	return p.Evaluator != nil
 }
 
 func (p *UpdateBuiltinEvaluatorTagsResponse) IsSetBaseResp() bool {
@@ -20234,7 +20234,7 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) IsSetBaseResp() bool {
 func (p *UpdateBuiltinEvaluatorTagsResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetVersion bool = false
+	var issetEvaluator bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -20255,7 +20255,7 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) Read(iprot thrift.TProtocol) (err e
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetVersion = true
+				issetEvaluator = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -20280,7 +20280,7 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) Read(iprot thrift.TProtocol) (err e
 		goto ReadStructEndError
 	}
 
-	if !issetVersion {
+	if !issetEvaluator {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
@@ -20303,11 +20303,11 @@ RequiredFieldNotSetError:
 }
 
 func (p *UpdateBuiltinEvaluatorTagsResponse) ReadField1(iprot thrift.TProtocol) error {
-	_field := evaluator.NewEvaluatorVersion()
+	_field := evaluator.NewEvaluator()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.Version = _field
+	p.Evaluator = _field
 	return nil
 }
 func (p *UpdateBuiltinEvaluatorTagsResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -20352,10 +20352,10 @@ WriteStructEndError:
 }
 
 func (p *UpdateBuiltinEvaluatorTagsResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("version", thrift.STRUCT, 1); err != nil {
+	if err = oprot.WriteFieldBegin("evaluator", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := p.Version.Write(oprot); err != nil {
+	if err := p.Evaluator.Write(oprot); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -20398,7 +20398,7 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) DeepEqual(ano *UpdateBuiltinEvaluat
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.Version) {
+	if !p.Field1DeepEqual(ano.Evaluator) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -20407,9 +20407,9 @@ func (p *UpdateBuiltinEvaluatorTagsResponse) DeepEqual(ano *UpdateBuiltinEvaluat
 	return true
 }
 
-func (p *UpdateBuiltinEvaluatorTagsResponse) Field1DeepEqual(src *evaluator.EvaluatorVersion) bool {
+func (p *UpdateBuiltinEvaluatorTagsResponse) Field1DeepEqual(src *evaluator.Evaluator) bool {
 
-	if !p.Version.DeepEqual(src) {
+	if !p.Evaluator.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -20917,8 +20917,9 @@ func (p *CreateEvaluatorTemplateResponse) Field255DeepEqual(src *base.BaseResp) 
 }
 
 type UpdateEvaluatorTemplateRequest struct {
-	EvaluatorTemplate *evaluator.EvaluatorTemplate `thrift:"evaluator_template,1,required" frugal:"1,required,evaluator.EvaluatorTemplate" form:"evaluator_template,required" json:"evaluator_template,required"`
-	Base              *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	EvaluatorTemplateID int64                        `thrift:"evaluator_template_id,1,required" frugal:"1,required,i64" json:"evaluator_template_id" path:"evaluator_template_id,required" `
+	EvaluatorTemplate   *evaluator.EvaluatorTemplate `thrift:"evaluator_template,2,required" frugal:"2,required,evaluator.EvaluatorTemplate" form:"evaluator_template,required" json:"evaluator_template,required"`
+	Base                *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateEvaluatorTemplateRequest() *UpdateEvaluatorTemplateRequest {
@@ -20926,6 +20927,13 @@ func NewUpdateEvaluatorTemplateRequest() *UpdateEvaluatorTemplateRequest {
 }
 
 func (p *UpdateEvaluatorTemplateRequest) InitDefault() {
+}
+
+func (p *UpdateEvaluatorTemplateRequest) GetEvaluatorTemplateID() (v int64) {
+	if p != nil {
+		return p.EvaluatorTemplateID
+	}
+	return
 }
 
 var UpdateEvaluatorTemplateRequest_EvaluatorTemplate_DEFAULT *evaluator.EvaluatorTemplate
@@ -20951,6 +20959,9 @@ func (p *UpdateEvaluatorTemplateRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *UpdateEvaluatorTemplateRequest) SetEvaluatorTemplateID(val int64) {
+	p.EvaluatorTemplateID = val
+}
 func (p *UpdateEvaluatorTemplateRequest) SetEvaluatorTemplate(val *evaluator.EvaluatorTemplate) {
 	p.EvaluatorTemplate = val
 }
@@ -20959,7 +20970,8 @@ func (p *UpdateEvaluatorTemplateRequest) SetBase(val *base.Base) {
 }
 
 var fieldIDToName_UpdateEvaluatorTemplateRequest = map[int16]string{
-	1:   "evaluator_template",
+	1:   "evaluator_template_id",
+	2:   "evaluator_template",
 	255: "Base",
 }
 
@@ -20974,6 +20986,7 @@ func (p *UpdateEvaluatorTemplateRequest) IsSetBase() bool {
 func (p *UpdateEvaluatorTemplateRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
+	var issetEvaluatorTemplateID bool = false
 	var issetEvaluatorTemplate bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
@@ -20991,8 +21004,17 @@ func (p *UpdateEvaluatorTemplateRequest) Read(iprot thrift.TProtocol) (err error
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetEvaluatorTemplateID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 				issetEvaluatorTemplate = true
@@ -21020,8 +21042,13 @@ func (p *UpdateEvaluatorTemplateRequest) Read(iprot thrift.TProtocol) (err error
 		goto ReadStructEndError
 	}
 
-	if !issetEvaluatorTemplate {
+	if !issetEvaluatorTemplateID {
 		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetEvaluatorTemplate {
+		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -21043,6 +21070,17 @@ RequiredFieldNotSetError:
 }
 
 func (p *UpdateEvaluatorTemplateRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.EvaluatorTemplateID = _field
+	return nil
+}
+func (p *UpdateEvaluatorTemplateRequest) ReadField2(iprot thrift.TProtocol) error {
 	_field := evaluator.NewEvaluatorTemplate()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -21069,6 +21107,10 @@ func (p *UpdateEvaluatorTemplateRequest) Write(oprot thrift.TProtocol) (err erro
 			fieldId = 1
 			goto WriteFieldError
 		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
 		if err = p.writeField255(oprot); err != nil {
 			fieldId = 255
 			goto WriteFieldError
@@ -21092,10 +21134,10 @@ WriteStructEndError:
 }
 
 func (p *UpdateEvaluatorTemplateRequest) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("evaluator_template", thrift.STRUCT, 1); err != nil {
+	if err = oprot.WriteFieldBegin("evaluator_template_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := p.EvaluatorTemplate.Write(oprot); err != nil {
+	if err := oprot.WriteI64(p.EvaluatorTemplateID); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -21106,6 +21148,22 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *UpdateEvaluatorTemplateRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("evaluator_template", thrift.STRUCT, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.EvaluatorTemplate.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *UpdateEvaluatorTemplateRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -21140,7 +21198,10 @@ func (p *UpdateEvaluatorTemplateRequest) DeepEqual(ano *UpdateEvaluatorTemplateR
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.EvaluatorTemplate) {
+	if !p.Field1DeepEqual(ano.EvaluatorTemplateID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvaluatorTemplate) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -21149,7 +21210,14 @@ func (p *UpdateEvaluatorTemplateRequest) DeepEqual(ano *UpdateEvaluatorTemplateR
 	return true
 }
 
-func (p *UpdateEvaluatorTemplateRequest) Field1DeepEqual(src *evaluator.EvaluatorTemplate) bool {
+func (p *UpdateEvaluatorTemplateRequest) Field1DeepEqual(src int64) bool {
+
+	if p.EvaluatorTemplateID != src {
+		return false
+	}
+	return true
+}
+func (p *UpdateEvaluatorTemplateRequest) Field2DeepEqual(src *evaluator.EvaluatorTemplate) bool {
 
 	if !p.EvaluatorTemplate.DeepEqual(src) {
 		return false
@@ -21411,7 +21479,7 @@ func (p *UpdateEvaluatorTemplateResponse) Field255DeepEqual(src *base.BaseResp) 
 }
 
 type DeleteEvaluatorTemplateRequest struct {
-	EvaluatorTemplateID int64      `thrift:"evaluator_template_id,1,required" frugal:"1,required,i64" json:"evaluator_template_id" form:"evaluator_template_id,required" `
+	EvaluatorTemplateID int64      `thrift:"evaluator_template_id,1,required" frugal:"1,required,i64" json:"evaluator_template_id" path:"evaluator_template_id,required" `
 	Base                *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
