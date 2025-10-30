@@ -17,6 +17,7 @@ import (
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
+	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/unittest"
@@ -830,6 +831,86 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 				DebugID:   123456789,
 				DebugStep: 2,
 			},
+		},
+		{
+			name: "error_llm_call_failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(123456789), nil)
+				mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+				mockLLM.EXPECT().Call(gomock.Any(), gomock.Any()).Return(nil, errorx.New("llm call failed"))
+				return fields{
+					llm:   mockLLM,
+					idgen: mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: ExecuteParam{
+					Prompt: &entity.Prompt{
+						ID:        1,
+						SpaceID:   123,
+						PromptKey: "test_prompt",
+						PromptDraft: &entity.PromptDraft{
+							PromptDetail: &entity.PromptDetail{
+								PromptTemplate: &entity.PromptTemplate{
+									TemplateType: entity.TemplateTypeNormal,
+									Messages: []*entity.Message{
+										{
+											Role:    entity.RoleSystem,
+											Content: ptr.Of("You are a helpful assistant."),
+										},
+									},
+								},
+							},
+						},
+					},
+					Messages: []*entity.Message{
+						{
+							Role:    entity.RoleUser,
+							Content: ptr.Of("Hello"),
+						},
+					},
+					SingleStep: true,
+				},
+			},
+			wantErr: errorx.New("llm call failed"),
+		},
+		{
+			name: "error_format_prompt_failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(123456789), nil)
+				return fields{
+					idgen: mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: ExecuteParam{
+					Prompt: &entity.Prompt{
+						ID:        1,
+						SpaceID:   123,
+						PromptKey: "test_prompt",
+						PromptDraft: &entity.PromptDraft{
+							PromptDetail: &entity.PromptDetail{
+								PromptTemplate: &entity.PromptTemplate{
+									TemplateType: entity.TemplateTypeGoTemplate,
+									Messages: []*entity.Message{
+										{
+											Role:    entity.RoleSystem,
+											Content: ptr.Of("You are a {{.InvalidSyntax"), // Invalid template
+										},
+									},
+								},
+							},
+						},
+					},
+					SingleStep: true,
+				},
+			},
+			wantReply: nil,
+			wantErr:   errorx.NewByCode(prompterr.TemplateParseErrorCode),
 		},
 	}
 

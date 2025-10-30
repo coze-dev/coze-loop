@@ -174,6 +174,76 @@ func TestPromptFormatter_FormatPrompt(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "error_invalid_placeholder_role",
+			args: args{
+				ctx: context.Background(),
+				prompt: &entity.Prompt{
+					ID:        123,
+					SpaceID:   456,
+					PromptKey: "test_key",
+					PromptDraft: &entity.PromptDraft{
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RolePlaceholder,
+										Content: ptr.Of("history"),
+									},
+								},
+								VariableDefs: []*entity.VariableDef{
+									{
+										Key:  "history",
+										Desc: "Chat history",
+										Type: entity.VariableTypePlaceholder,
+									},
+								},
+							},
+						},
+					},
+				},
+				variableVals: []*entity.VariableVal{
+					{
+						Key: "history",
+						PlaceholderMessages: []*entity.Message{
+							{
+								Role:    entity.RolePlaceholder, // Invalid role for placeholder message
+								Content: ptr.Of("Invalid"),
+							},
+						},
+					},
+				},
+			},
+			wantFormattedMessages: nil,
+			wantErr:               true,
+		},
+		{
+			name: "error_go_template_syntax_error",
+			args: args{
+				ctx: context.Background(),
+				prompt: &entity.Prompt{
+					ID:        123,
+					SpaceID:   456,
+					PromptKey: "test_key",
+					PromptDraft: &entity.PromptDraft{
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeGoTemplate,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleUser,
+										Content: ptr.Of("Hello {{.InvalidSyntax"), // Invalid Go template syntax
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantFormattedMessages: nil,
+			wantErr:               true,
+		},
 	}
 
 	for _, tt := range tests {
