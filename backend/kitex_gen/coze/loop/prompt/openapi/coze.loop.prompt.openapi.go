@@ -18,6 +18,8 @@ const (
 
 	TemplateTypeGoTemplate = "go_template"
 
+	TemplateTypeCustomTemplateM = "custom_template_m"
+
 	ToolChoiceTypeAuto = "auto"
 
 	ToolChoiceTypeNone = "none"

@@ -17,6 +17,7 @@ import (
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
+	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/unittest"
@@ -226,6 +227,7 @@ func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			p := &PromptServiceImpl{
+				formatter:        NewPromptFormatter(),
 				idgen:            ttFields.idgen,
 				debugLogRepo:     ttFields.debugLogRepo,
 				debugContextRepo: ttFields.debugContextRepo,
@@ -248,7 +250,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 	t.Run("nil prompt", func(t *testing.T) {
 		t.Parallel()
 
-		p := &PromptServiceImpl{}
+		p := &PromptServiceImpl{
+			formatter: NewPromptFormatter(),
+		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
 				Prompt: nil,
@@ -262,7 +266,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 	t.Run("nil result stream", func(t *testing.T) {
 		t.Parallel()
 
-		p := &PromptServiceImpl{}
+		p := &PromptServiceImpl{
+			formatter: NewPromptFormatter(),
+		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
 				Prompt: &entity.Prompt{},
@@ -327,8 +333,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 1,
 		}
 		p := &PromptServiceImpl{
-			idgen: mockIDGen,
-			llm:   mockLLM,
+			formatter: NewPromptFormatter(),
+			idgen:     mockIDGen,
+			llm:       mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -527,8 +534,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 2,
 		}
 		p := &PromptServiceImpl{
-			idgen: mockIDGen,
-			llm:   mockLLM,
+			formatter: NewPromptFormatter(),
+			idgen:     mockIDGen,
+			llm:       mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -824,6 +832,86 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 				DebugStep: 2,
 			},
 		},
+		{
+			name: "error_llm_call_failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(123456789), nil)
+				mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+				mockLLM.EXPECT().Call(gomock.Any(), gomock.Any()).Return(nil, errorx.New("llm call failed"))
+				return fields{
+					llm:   mockLLM,
+					idgen: mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: ExecuteParam{
+					Prompt: &entity.Prompt{
+						ID:        1,
+						SpaceID:   123,
+						PromptKey: "test_prompt",
+						PromptDraft: &entity.PromptDraft{
+							PromptDetail: &entity.PromptDetail{
+								PromptTemplate: &entity.PromptTemplate{
+									TemplateType: entity.TemplateTypeNormal,
+									Messages: []*entity.Message{
+										{
+											Role:    entity.RoleSystem,
+											Content: ptr.Of("You are a helpful assistant."),
+										},
+									},
+								},
+							},
+						},
+					},
+					Messages: []*entity.Message{
+						{
+							Role:    entity.RoleUser,
+							Content: ptr.Of("Hello"),
+						},
+					},
+					SingleStep: true,
+				},
+			},
+			wantErr: errorx.New("llm call failed"),
+		},
+		{
+			name: "error_format_prompt_failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(123456789), nil)
+				return fields{
+					idgen: mockIDGen,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: ExecuteParam{
+					Prompt: &entity.Prompt{
+						ID:        1,
+						SpaceID:   123,
+						PromptKey: "test_prompt",
+						PromptDraft: &entity.PromptDraft{
+							PromptDetail: &entity.PromptDetail{
+								PromptTemplate: &entity.PromptTemplate{
+									TemplateType: entity.TemplateTypeGoTemplate,
+									Messages: []*entity.Message{
+										{
+											Role:    entity.RoleSystem,
+											Content: ptr.Of("You are a {{.InvalidSyntax"), // Invalid template
+										},
+									},
+								},
+							},
+						},
+					},
+					SingleStep: true,
+				},
+			},
+			wantReply: nil,
+			wantErr:   errorx.NewByCode(prompterr.TemplateParseErrorCode),
+		},
 	}
 
 	for _, tt := range tests {
@@ -834,6 +922,7 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 
 			ttFields := tt.fieldsGetter(ctrl)
 			p := &PromptServiceImpl{
+				formatter:        NewPromptFormatter(),
 				idgen:            ttFields.idgen,
 				debugLogRepo:     ttFields.debugLogRepo,
 				debugContextRepo: ttFields.debugContextRepo,
@@ -884,7 +973,9 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 			},
 		},
 	}
-	svc := &PromptServiceImpl{}
+	svc := &PromptServiceImpl{
+		formatter: NewPromptFormatter(),
+	}
 	param := ExecuteParam{
 		Prompt: prompt,
 		Messages: []*entity.Message{
