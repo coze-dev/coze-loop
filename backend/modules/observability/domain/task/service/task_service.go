@@ -12,17 +12,15 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	traceservice "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -44,7 +42,7 @@ type UpdateTaskReq struct {
 }
 type ListTasksReq struct {
 	WorkspaceID int64
-	TaskFilters *filter.TaskFilterFields
+	TaskFilters *entity.TaskFilterFields
 	Limit       int32
 	Offset      int32
 	OrderBy     *common.OrderBy
@@ -146,18 +144,16 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	}
 
 	// 历史回溯数据发MQ
-	if t.shouldTriggerBackfill(taskDO) {
+	if taskDO.ShouldTriggerBackfill() {
 		backfillEvent := &entity.BackFillEvent{
 			SpaceID: taskDO.WorkspaceID,
 			TaskID:  id,
 		}
 
-		// 异步发送MQ消息，不阻塞任务创建流程
-		go func() {
-			if err := t.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
-				logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", id, err)
-			}
-		}()
+		if err := t.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
+			// 失败了会有定时任务进行补偿
+			logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", id, err)
+		}
 	}
 
 	return &CreateTaskResp{TaskID: &id}, nil
@@ -169,7 +165,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		return err
 	}
 	if taskDO == nil {
-		logs.CtxError(ctx, "task not found")
+		logs.CtxError(ctx, "task [%d] not found", req.TaskID)
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("task not found"))
 	}
 	userID := session.UserIDInCtxOrEmpty(ctx)
@@ -228,7 +224,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 }
 
 func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (resp *ListTasksResp, err error) {
-	taskDOs, total, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
+	taskDOs, total, err := t.TaskRepo.ListTasks(ctx, repo.ListTaskParam{
 		WorkspaceIDs: []int64{req.WorkspaceID},
 		TaskFilters:  req.TaskFilters,
 		ReqLimit:     req.Limit,
@@ -322,15 +318,15 @@ func filterVisibleFilterFields(fields *loop_span.FilterFields) *loop_span.Filter
 }
 
 func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error) {
-	taskPOs, _, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
+	taskPOs, _, err := t.TaskRepo.ListTasks(ctx, repo.ListTaskParam{
 		WorkspaceIDs: []int64{req.WorkspaceID},
-		TaskFilters: &filter.TaskFilterFields{
-			FilterFields: []*filter.TaskFilterField{
+		TaskFilters: &entity.TaskFilterFields{
+			FilterFields: []*entity.TaskFilterField{
 				{
-					FieldName: gptr.Of(filter.TaskFieldNameTaskName),
-					FieldType: gptr.Of(filter.FieldTypeString),
+					FieldName: gptr.Of(entity.TaskFieldNameTaskName),
+					FieldType: gptr.Of(entity.FieldTypeString),
 					Values:    []string{req.Name},
-					QueryType: gptr.Of(filter.QueryTypeMatch),
+					QueryType: gptr.Of(entity.QueryTypeMatch),
 				},
 			},
 		},
@@ -348,25 +344,6 @@ func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameR
 		pass = true
 	}
 	return &CheckTaskNameResp{Pass: gptr.Of(pass)}, nil
-}
-
-// shouldTriggerBackfill 判断是否需要发送历史回溯MQ
-func (t *TaskServiceImpl) shouldTriggerBackfill(taskDO *entity.ObservabilityTask) bool {
-	// 检查任务类型
-	taskType := taskDO.TaskType
-	if taskType != entity.TaskTypeAutoEval && taskType != entity.TaskTypeAutoDataReflow {
-		return false
-	}
-
-	// 检查回填时间配置
-
-	if taskDO.BackfillEffectiveTime == nil {
-		return false
-	}
-
-	return taskDO.BackfillEffectiveTime.StartAt > 0 &&
-		taskDO.BackfillEffectiveTime.EndAt > 0 &&
-		taskDO.BackfillEffectiveTime.StartAt < taskDO.BackfillEffectiveTime.EndAt
 }
 
 // sendBackfillMessage 发送MQ消息

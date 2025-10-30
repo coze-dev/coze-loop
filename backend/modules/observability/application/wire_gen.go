@@ -24,7 +24,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
@@ -33,6 +32,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
 	service4 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
+	entity3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	service3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
@@ -55,7 +55,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo"
 	ck2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
+	redis3 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
@@ -104,9 +104,9 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis2 redis.Cmdabl
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
-	iTaskDAO := dao.NewTaskDAO(redis2)
+	iTaskDAO := redis3.NewTaskDAO(redis2)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
-	iTaskRunDAO := dao.NewTaskRunDAO(redis2)
+	iTaskRunDAO := redis3.NewTaskRunDAO(redis2)
 	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao, iTaskRunDAO)
 	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
@@ -161,9 +161,9 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
-	iTaskDAO := dao.NewTaskDAO(redis2)
+	iTaskDAO := redis3.NewTaskDAO(redis2)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
-	iTaskRunDAO := dao.NewTaskRunDAO(redis2)
+	iTaskRunDAO := redis3.NewTaskRunDAO(redis2)
 	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao, iTaskRunDAO)
 	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
@@ -242,11 +242,10 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 
 func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, benefit2 benefit.IBenefitService, ckDb ck.Provider, redis2 redis.Cmdable, mqFactory mq.IFactory, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client, fileClient fileservice.Client, taskProcessor processor.TaskProcessor, aid int32) (ITaskApplication, error) {
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
-	iTaskDAO := dao.NewTaskDAO(redis2)
+	iTaskDAO := redis3.NewTaskDAO(redis2)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
-	iTaskRunDAO := dao.NewTaskRunDAO(redis2)
+	iTaskRunDAO := redis3.NewTaskRunDAO(redis2)
 	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao, iTaskRunDAO)
-	iUserProvider := user.NewUserRPCProvider(userClient)
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
 	if err != nil {
 		return nil, err
@@ -260,11 +259,14 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
 	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo)
-	iTaskService, err := service3.NewTaskServiceImpl(iTaskRepo, iUserProvider, idgen2, iBackfillProducer, processorTaskProcessor)
+	iFileProvider := file.NewFileRPCProvider(fileClient)
+	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
+	iTaskService, err := service3.NewTaskServiceImpl(iTaskRepo, idgen2, iBackfillProducer, processorTaskProcessor, traceFilterProcessorBuilder)
 	if err != nil {
 		return nil, err
 	}
 	iAuthProvider := auth.NewAuthProvider(authClient)
+	iUserProvider := user.NewUserRPCProvider(userClient)
 	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
@@ -278,14 +280,12 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 		return nil, err
 	}
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
-	iFileProvider := file.NewFileRPCProvider(fileClient)
-	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
 	iLocker := NewTaskLocker(redis2)
 	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor, benefit2, aid, iBackfillProducer, iLocker, iConfigLoader)
 	if err != nil {
 		return nil, err
 	}
-	iTaskApplication, err := NewTaskApplication(iTaskService, iAuthProvider, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iUserProvider, iTraceHubService, taskProcessor, traceFilterProcessorBuilder)
+	iTaskApplication, err := NewTaskApplication(iTaskService, iAuthProvider, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iUserProvider, iTraceHubService, taskProcessor)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 
 var (
 	taskDomainSet = wire.NewSet(
-		NewInitTaskProcessor, service3.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, dao.NewTaskDAO, dao.NewTaskRunDAO, mysql.NewTaskRunDaoImpl, producer.NewBackfillProducerImpl,
+		NewInitTaskProcessor, service3.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, redis3.NewTaskDAO, redis3.NewTaskRunDAO, mysql.NewTaskRunDaoImpl, producer.NewBackfillProducerImpl,
 	)
 	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, collector.NewEventCollectorProvider, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
 		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, evaluator.NewEvaluatorRPCProvider, NewDatasetServiceAdapter,
@@ -371,6 +371,6 @@ func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
 	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo3.ITaskRepo,
 ) *processor.TaskProcessor {
 	taskProcessor := processor.NewTaskProcessor()
-	taskProcessor.Register(task.TaskTypeAutoEval, processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
+	taskProcessor.Register(entity3.TaskTypeAutoEval, processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
 	return taskProcessor
 }

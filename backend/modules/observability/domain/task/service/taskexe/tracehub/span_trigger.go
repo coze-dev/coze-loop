@@ -96,7 +96,7 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 			flushWait:        sync.WaitGroup{},
 			maxFlushInterval: time.Second * 5,
 			taskRepo:         h.taskRepo,
-			runType:          task.TaskRunTypeNewData,
+			runType:          entity.TaskRunTypeNewData,
 			buildHelper:      h.buildHelper,
 		})
 	}
@@ -153,7 +153,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				merr = multierror.Append(merr, errors.WithMessagef(err, "task is unstarted, need sub.Creative,creative processor, task_id=%d", sub.taskID))
 				continue
 			}
-			if err := sub.processor.OnUpdateTaskChange(ctx, tconv.TaskDTO2DO(sub.t), task.TaskStatusRunning); err != nil {
+			if err := sub.processor.OnUpdateTaskChange(ctx, tconv.TaskDTO2DO(sub.t), entity.TaskStatusRunning); err != nil {
 				logs.CtxWarn(ctx, "OnUpdateTaskChange, task_id=%d, err=%v", sub.taskID, err)
 				continue
 			}

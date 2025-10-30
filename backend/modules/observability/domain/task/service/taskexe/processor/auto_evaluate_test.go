@@ -108,7 +108,7 @@ func (m *taskRepoMockAdapter) RemoveNonFinalTask(context.Context, string, int64)
 	return nil
 }
 
-func (m *taskRepoMockAdapter) GetTaskByRedis(context.Context, int64) (*taskentity.ObservabilityTask, error) {
+func (m *taskRepoMockAdapter) GetTaskByCache(context.Context, int64) (*taskentity.ObservabilityTask, error) {
 	return nil, nil
 }
 
@@ -432,13 +432,13 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 	cases := []struct {
 		name    string
 		initial taskentity.TaskStatus
-		op      task.TaskStatus
+		op      taskentity.TaskStatus
 		expect  taskentity.TaskStatus
 	}{
-		{"success", taskentity.TaskStatusRunning, task.TaskStatusSuccess, taskentity.TaskStatusSuccess},
-		{"running", taskentity.TaskStatusPending, task.TaskStatusRunning, taskentity.TaskStatusRunning},
-		{"disable", taskentity.TaskStatusRunning, task.TaskStatusDisabled, taskentity.TaskStatusDisabled},
-		{"pending", taskentity.TaskStatusUnstarted, task.TaskStatusPending, taskentity.TaskStatusPending},
+		{"success", taskentity.TaskStatusRunning, taskentity.TaskStatusSuccess, taskentity.TaskStatusSuccess},
+		{"running", taskentity.TaskStatusPending, taskentity.TaskStatusRunning, taskentity.TaskStatusRunning},
+		{"disable", taskentity.TaskStatusRunning, taskentity.TaskStatusDisabled, taskentity.TaskStatusDisabled},
+		{"pending", taskentity.TaskStatusUnstarted, taskentity.TaskStatusPending, taskentity.TaskStatusPending},
 	}
 
 	for _, tt := range cases {
@@ -481,7 +481,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 	taskObj := buildTestTask(t)
 	param := taskexe.OnCreateTaskRunChangeReq{
 		CurrentTask: taskObj,
-		RunType:     task.TaskRunTypeNewData,
+		RunType:     taskentity.TaskRunTypeNewData,
 		RunStartAt:  time.Now().Add(-time.Minute).UnixMilli(),
 		RunEndAt:    time.Now().Add(time.Hour).UnixMilli(),
 	}

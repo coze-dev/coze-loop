@@ -126,7 +126,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 		bufCap:           0,
 		maxFlushInterval: time.Second * 5,
 		taskRepo:         h.taskRepo,
-		runType:          task.TaskRunTypeBackFill,
+		runType:          entity.TaskRunTypeBackFill,
 	}
 
 	return sub, nil

@@ -13,7 +13,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	lock_mocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -26,7 +25,7 @@ type trackingProcessor struct {
 	*stubProcessor
 	finishReqs     []taskexe.OnFinishTaskChangeReq
 	createRunReqs  []taskexe.OnCreateTaskRunChangeReq
-	updateStatuses []string
+	updateStatuses []entity.TaskStatus
 }
 
 func newTrackingProcessor() *trackingProcessor {
@@ -43,7 +42,7 @@ func (p *trackingProcessor) OnCreateTaskRunChange(ctx context.Context, req taske
 	return p.stubProcessor.OnCreateTaskRunChange(ctx, req)
 }
 
-func (p *trackingProcessor) OnUpdateTaskChange(ctx context.Context, obsTask *entity.ObservabilityTask, status string) error {
+func (p *trackingProcessor) OnUpdateTaskChange(ctx context.Context, obsTask *entity.ObservabilityTask, status entity.TaskStatus) error {
 	p.updateStatuses = append(p.updateStatuses, status)
 	return p.stubProcessor.OnUpdateTaskChange(ctx, obsTask, status)
 }
@@ -141,9 +140,9 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 			},
 			assert: func(t *testing.T, _ *TraceHubServiceImpl, proc *trackingProcessor) {
 				require.Len(t, proc.createRunReqs, 1)
-				require.Equal(t, task.TaskRunTypeNewData, proc.createRunReqs[0].RunType)
+				require.Equal(t, entity.TaskRunTypeNewData, proc.createRunReqs[0].RunType)
 				require.Len(t, proc.updateStatuses, 1)
-				require.Equal(t, string(task.TaskStatusRunning), proc.updateStatuses[0])
+				require.Equal(t, string(entity.TaskStatusRunning), proc.updateStatuses[0])
 			},
 		},
 		{
@@ -340,7 +339,6 @@ func TestTraceHubServiceImpl_syncTaskCache(t *testing.T) {
 	workspaceIDs := []string{"space-1"}
 	botIDs := []string{"bot-1"}
 	tasks := []*entity.ObservabilityTask{{ID: 100}}
-	mockRepo.EXPECT().GetObjListWithTask(gomock.Any()).Return(workspaceIDs, botIDs, tasks)
 
 	before := time.Now()
 	impl.syncTaskCache()

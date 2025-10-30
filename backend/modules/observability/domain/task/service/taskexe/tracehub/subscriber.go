@@ -35,7 +35,7 @@ type spanSubscriber struct {
 	flushWait        sync.WaitGroup
 	maxFlushInterval time.Duration
 	taskRepo         repo.ITaskRepo
-	runType          task.TaskRunType
+	runType          entity.TaskRunType
 	buildHelper      service.TraceFilterProcessorBuilder
 }
 
@@ -155,7 +155,7 @@ func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpa
 
 func (s *spanSubscriber) Creative(ctx context.Context, runStartAt, runEndAt int64) error {
 	err := s.processor.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
-		CurrentTask: tconv.TaskDTO2DO(s.t, "", nil),
+		CurrentTask: tconv.TaskDTO2DO(s.t),
 		RunType:     s.runType,
 		RunStartAt:  runStartAt,
 		RunEndAt:    runEndAt,
@@ -169,7 +169,7 @@ func (s *spanSubscriber) Creative(ctx context.Context, runStartAt, runEndAt int6
 func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) error {
 	var taskRunConfig *entity.TaskRun
 	var err error
-	if s.runType == task.TaskRunTypeNewData {
+	if s.runType == entity.TaskRunTypeNewData {
 		taskRunConfig, err = s.taskRepo.GetLatestNewDataTaskRun(ctx, nil, s.t.GetID())
 		if err != nil {
 			logs.CtxWarn(ctx, "get latest new data task run failed, task_id=%d, err: %v", s.t.GetID(), err)
@@ -195,7 +195,7 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 		logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
 		return nil
 	}
-	trigger := &taskexe.Trigger{Task: tconv.TaskDTO2DO(s.t, "", nil), Span: span, TaskRun: taskRunConfig}
+	trigger := &taskexe.Trigger{Task: tconv.TaskDTO2DO(s.t), Span: span, TaskRun: taskRunConfig}
 	logs.CtxInfo(ctx, "invoke processor, trigger: %v", trigger)
 	err = s.processor.Invoke(ctx, trigger)
 	if err != nil {

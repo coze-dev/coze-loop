@@ -14,7 +14,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	componentmq "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -22,9 +21,9 @@ import (
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
-	span_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -463,7 +462,7 @@ func TestTaskServiceImpl_ListTasks(t *testing.T) {
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{taskDO}, int64(1), nil)
 
 		svc := &TaskServiceImpl{TaskRepo: repoMock}
-		resp, err := svc.ListTasks(context.Background(), &ListTasksReq{WorkspaceID: 2, TaskFilters: &filter.TaskFilterFields{}})
+		resp, err := svc.ListTasks(context.Background(), &ListTasksReq{WorkspaceID: 2, TaskFilters: &entity.TaskFilterFields{}})
 		assert.NoError(t, err)
 		if assert.NotNil(t, resp) {
 			assert.EqualValues(t, 1, resp.Total)

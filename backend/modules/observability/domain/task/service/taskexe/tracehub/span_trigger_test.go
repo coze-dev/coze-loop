@@ -67,8 +67,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		TaskType:    entity.TaskTypeAutoEval,
 		TaskStatus:  entity.TaskStatusRunning,
 		SpanFilter: &entity.SpanFilterFields{
-			PlatformType: common.PlatformTypeLoopAll,
-			SpanListType: common.SpanListTypeAllSpan,
+			PlatformType: loop_span.PlatformDefault,
+			SpanListType: loop_span.SpanListTypeAllSpan,
 			Filters: loop_span.FilterFields{
 				QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
 				FilterFields: []*loop_span.FilterField{},
@@ -103,8 +103,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 			return nil
 		},
 	).AnyTimes()
-	mockRepo.EXPECT().ListNonFinalTask(gomock.Any(), "space-1").Return([]int64{taskDO.ID}, nil).AnyTimes()
-	mockRepo.EXPECT().GetTaskByRedis(gomock.Any(), taskDO.ID).Return(taskDO, nil).AnyTimes()
+	mockRepo.EXPECT().GetTaskByCache(gomock.Any(), taskDO.ID).Return(taskDO, nil).AnyTimes()
 	mockFilter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, false, nil).AnyTimes()
 	mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
@@ -198,14 +197,14 @@ func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) 
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          303,
 		TaskID:      taskID,
 		WorkspaceID: workspaceID,
-		TaskType:    task.TaskRunTypeNewData,
+		TaskType:    entity.TaskRunTypeNewData,
 		RunStatus:   task.TaskStatusRunning,
 		RunStartAt:  now.Add(-90 * time.Minute),
 		RunEndAt:    now.Add(-30 * time.Minute),
@@ -275,7 +274,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesMissingTaskRunConfig(t *testing.T
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, nil)
@@ -335,14 +334,14 @@ func TestTraceHubServiceImpl_preDispatchHandlesNonCycle(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          707,
 		TaskID:      taskID,
 		WorkspaceID: workspaceID,
-		TaskType:    task.TaskRunTypeNewData,
+		TaskType:    entity.TaskRunTypeNewData,
 		RunStatus:   task.TaskStatusRunning,
 		RunStartAt:  now.Add(-30 * time.Minute),
 		RunEndAt:    now.Add(30 * time.Minute),
@@ -404,7 +403,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesCycleDefaultUnit(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, nil)
@@ -466,14 +465,14 @@ func TestTraceHubServiceImpl_preDispatchTimeLimitFinishError(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          1101,
 		TaskID:      taskID,
 		WorkspaceID: workspaceID,
-		TaskType:    task.TaskRunTypeNewData,
+		TaskType:    entity.TaskRunTypeNewData,
 		RunStatus:   task.TaskStatusRunning,
 		RunStartAt:  now.Add(-3 * time.Hour),
 		RunEndAt:    now.Add(-2 * time.Hour),
@@ -533,14 +532,14 @@ func TestTraceHubServiceImpl_preDispatchSampleLimitFinishError(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          1404,
 		TaskID:      taskID,
 		WorkspaceID: workspaceID,
-		TaskType:    task.TaskRunTypeNewData,
+		TaskType:    entity.TaskRunTypeNewData,
 		RunStatus:   task.TaskStatusRunning,
 		RunStartAt:  now.Add(-30 * time.Minute),
 		RunEndAt:    now.Add(30 * time.Minute),
@@ -600,14 +599,14 @@ func TestTraceHubServiceImpl_preDispatchCycleTimeLimitFinishError(t *testing.T) 
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          1707,
 		TaskID:      taskID,
 		WorkspaceID: workspaceID,
-		TaskType:    task.TaskRunTypeNewData,
+		TaskType:    entity.TaskRunTypeNewData,
 		RunStatus:   task.TaskStatusRunning,
 		RunStartAt:  now.Add(-2 * time.Hour),
 		RunEndAt:    now.Add(-time.Minute),
@@ -667,14 +666,14 @@ func TestTraceHubServiceImpl_preDispatchCycleCountFinishError(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          2009,
 		TaskID:      taskID,
 		WorkspaceID: workspaceID,
-		TaskType:    task.TaskRunTypeNewData,
+		TaskType:    entity.TaskRunTypeNewData,
 		RunStatus:   task.TaskStatusRunning,
 		RunStartAt:  now.Add(-30 * time.Minute),
 		RunEndAt:    now.Add(30 * time.Minute),
@@ -730,7 +729,7 @@ func TestTraceHubServiceImpl_preDispatchCreativeError(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
@@ -772,7 +771,7 @@ func TestTraceHubServiceImpl_preDispatchAggregatesErrors(t *testing.T) {
 		},
 		processor: firstProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	secondStartAt := now.Add(-2 * time.Hour).UnixMilli()
@@ -790,7 +789,7 @@ func TestTraceHubServiceImpl_preDispatchAggregatesErrors(t *testing.T) {
 		ID:          101,
 		TaskID:      secondTaskID,
 		WorkspaceID: secondWorkspaceID,
-		TaskType:    task.TaskRunTypeNewData,
+		TaskType:    entity.TaskRunTypeNewData,
 		RunStatus:   task.TaskStatusRunning,
 		RunStartAt:  now.Add(-3 * time.Hour),
 		RunEndAt:    now.Add(-90 * time.Minute),
@@ -811,7 +810,7 @@ func TestTraceHubServiceImpl_preDispatchAggregatesErrors(t *testing.T) {
 		},
 		processor: secondProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), secondTaskID).Return(secondRun, nil)
@@ -867,7 +866,7 @@ func TestTraceHubServiceImpl_preDispatchUpdateError(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
@@ -913,7 +912,7 @@ func TestTraceHubServiceImpl_preDispatchListTaskRunError(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, errors.New("repo fail"))
@@ -963,7 +962,7 @@ func TestTraceHubServiceImpl_preDispatchTaskRunConfigDay(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, nil)
@@ -1020,14 +1019,14 @@ func TestTraceHubServiceImpl_preDispatchCycleCreativeError(t *testing.T) {
 		},
 		processor: stubProc,
 		taskRepo:  mockRepo,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 	}
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          3102,
 		TaskID:      taskID,
 		WorkspaceID: workspaceID,
-		TaskType:    task.TaskRunTypeNewData,
+		TaskType:    entity.TaskRunTypeNewData,
 		RunStatus:   task.TaskStatusRunning,
 		RunStartAt:  now.Add(-2 * time.Hour),
 		RunEndAt:    now.Add(-time.Minute),

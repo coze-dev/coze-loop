@@ -4,11 +4,15 @@
 package entity
 
 import (
+	"context"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
+	taskdto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type TaskStatus string
@@ -43,6 +47,11 @@ const (
 	TaskRunStatusDone    TaskRunStatus = "done"
 )
 
+type StatusChangeEvent struct {
+	Before TaskStatus
+	After  TaskStatus
+}
+
 // do
 type ObservabilityTask struct {
 	ID                    int64             // Task ID
@@ -72,8 +81,8 @@ type RunDetail struct {
 }
 type SpanFilterFields struct {
 	Filters      loop_span.FilterFields `json:"filters"`
-	PlatformType common.PlatformType    `json:"platform_type"`
-	SpanListType common.SpanListType    `json:"span_list_type"`
+	PlatformType loop_span.PlatformType `json:"platform_type"`
+	SpanListType loop_span.SpanListType `json:"span_list_type"`
 }
 type EffectiveTime struct {
 	// ms timestamp
@@ -157,7 +166,7 @@ type DataReflowRunConfig struct {
 	Status       string `json:"status"`
 }
 
-func (t ObservabilityTask) IsFinished() bool {
+func (t *ObservabilityTask) IsFinished() bool {
 	switch t.TaskStatus {
 	case TaskStatusSuccess, TaskStatusDisabled, TaskStatusPending:
 		return true
@@ -166,7 +175,7 @@ func (t ObservabilityTask) IsFinished() bool {
 	}
 }
 
-func (t ObservabilityTask) GetBackfillTaskRun() *TaskRun {
+func (t *ObservabilityTask) GetBackfillTaskRun() *TaskRun {
 	for _, taskRunPO := range t.TaskRuns {
 		if taskRunPO.TaskType == TaskRunTypeBackFill {
 			return taskRunPO
@@ -175,7 +184,7 @@ func (t ObservabilityTask) GetBackfillTaskRun() *TaskRun {
 	return nil
 }
 
-func (t ObservabilityTask) GetCurrentTaskRun() *TaskRun {
+func (t *ObservabilityTask) GetCurrentTaskRun() *TaskRun {
 	for _, taskRunPO := range t.TaskRuns {
 		if taskRunPO.TaskType == TaskRunTypeNewData && taskRunPO.RunStatus == TaskRunStatusRunning {
 			return taskRunPO
@@ -184,7 +193,7 @@ func (t ObservabilityTask) GetCurrentTaskRun() *TaskRun {
 	return nil
 }
 
-func (t ObservabilityTask) GetTaskTTL() int64 {
+func (t *ObservabilityTask) GetTaskTTL() int64 {
 	var ttl int64
 	if t.EffectiveTime != nil {
 		ttl = t.EffectiveTime.EndAt - t.EffectiveTime.StartAt
@@ -193,4 +202,94 @@ func (t ObservabilityTask) GetTaskTTL() int64 {
 		ttl += t.BackfillEffectiveTime.EndAt - t.BackfillEffectiveTime.StartAt
 	}
 	return ttl
+}
+
+func (t *ObservabilityTask) SetEffectiveTime(ctx context.Context, effectiveTime EffectiveTime) error {
+	if t.EffectiveTime == nil {
+		logs.CtxError(ctx, "EffectiveTime is null.")
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("effective time is nil"))
+	}
+	// 开始时间不能大于结束时间
+	if effectiveTime.StartAt >= effectiveTime.EndAt {
+		logs.CtxError(ctx, "Start time must be less than end time")
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start time must be less than end time"))
+	}
+	// 开始、结束时间不能小于当前时间
+	if t.EffectiveTime.StartAt != effectiveTime.StartAt && effectiveTime.StartAt < time.Now().UnixMilli() {
+		logs.CtxError(ctx, "update time must be greater than current time")
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start time must be greater than current time"))
+	}
+	if t.EffectiveTime.EndAt != effectiveTime.EndAt && effectiveTime.EndAt < time.Now().UnixMilli() {
+		logs.CtxError(ctx, "update time must be greater than current time")
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start time must be greater than current time"))
+	}
+	switch t.TaskStatus {
+	case TaskStatusUnstarted:
+		if effectiveTime.StartAt != 0 {
+			t.EffectiveTime.StartAt = effectiveTime.StartAt
+		}
+		if effectiveTime.EndAt != 0 {
+			t.EffectiveTime.EndAt = effectiveTime.EndAt
+		}
+	case TaskStatusRunning, TaskStatusPending:
+		if effectiveTime.EndAt != 0 {
+			t.EffectiveTime.EndAt = effectiveTime.EndAt
+		}
+	default:
+		logs.CtxError(ctx, "Invalid task status:%s", t.TaskStatus)
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid task status"))
+	}
+	return nil
+}
+
+func (t *ObservabilityTask) SetTaskStatus(ctx context.Context, taskStatus TaskStatus) (*StatusChangeEvent, error) {
+	currentTaskStatus := t.TaskStatus
+	if currentTaskStatus == taskStatus {
+		return nil, nil
+	}
+
+	switch taskStatus {
+	case taskdto.TaskStatusUnstarted:
+		break
+	case taskdto.TaskStatusRunning:
+		if currentTaskStatus == taskdto.TaskStatusUnstarted || currentTaskStatus == taskdto.TaskStatusPending {
+			t.TaskStatus = taskStatus
+			return &StatusChangeEvent{
+				Before: currentTaskStatus,
+				After:  taskStatus,
+			}, nil
+		}
+	case taskdto.TaskStatusPending:
+		if currentTaskStatus == taskdto.TaskStatusRunning {
+			t.TaskStatus = taskStatus
+			return &StatusChangeEvent{
+				Before: currentTaskStatus,
+				After:  taskStatus,
+			}, nil
+		}
+	case taskdto.TaskStatusDisabled:
+		if currentTaskStatus == taskdto.TaskStatusUnstarted || currentTaskStatus == taskdto.TaskStatusPending {
+			t.TaskStatus = taskStatus
+			return &StatusChangeEvent{
+				Before: currentTaskStatus,
+				After:  taskStatus,
+			}, nil
+		}
+	case taskdto.TaskStatusSuccess:
+		break
+	}
+
+	logs.CtxError(ctx, "Invalid task status. Before:[%s], after:[%s]", currentTaskStatus, taskStatus)
+	return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid task status"))
+}
+
+func (t *ObservabilityTask) ShouldTriggerBackfill() bool {
+	// 检查回填时间配置
+	if t.BackfillEffectiveTime == nil {
+		return false
+	}
+
+	return t.BackfillEffectiveTime.StartAt > 0 &&
+		t.BackfillEffectiveTime.EndAt > 0 &&
+		t.BackfillEffectiveTime.StartAt < t.BackfillEffectiveTime.EndAt
 }

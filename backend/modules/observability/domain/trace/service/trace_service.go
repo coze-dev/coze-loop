@@ -11,8 +11,7 @@ import (
 	"time"
 
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
-	taskRepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bytedance/gg/gptr"
@@ -37,7 +36,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
-	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
+	timeutil "github.com/coze-dev/coze-loop/backend/pkg/time"
 	"github.com/samber/lo"
 )
 
@@ -277,7 +276,7 @@ func NewTraceServiceImpl(
 	buildHelper TraceFilterProcessorBuilder,
 	tenantProvider tenant.ITenantProvider,
 	evalSvc rpc.IEvaluatorRPCAdapter,
-	taskRepo taskRepo.ITaskRepo,
+	taskRepo taskrepo.ITaskRepo,
 ) (ITraceService, error) {
 	return &TraceServiceImpl{
 		traceRepo:          tRepo,
@@ -301,7 +300,7 @@ type TraceServiceImpl struct {
 	buildHelper        TraceFilterProcessorBuilder
 	tenantProvider     tenant.ITenantProvider
 	evalSvc            rpc.IEvaluatorRPCAdapter
-	taskRepo           taskRepo.ITaskRepo
+	taskRepo           taskrepo.ITaskRepo
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
@@ -1230,7 +1229,7 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 		evaluators = append(evaluators, evaluatorList...)
 	} else {
 		// 没有name先查task
-		taskDOs, _, err := r.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+		taskDOs, _, err := r.taskRepo.ListTasks(ctx, taskrepo.ListTaskParam{
 			WorkspaceIDs: []int64{req.WorkspaceID},
 			ReqLimit:     int32(500),
 			ReqOffset:    int32(0),
@@ -1432,7 +1431,7 @@ func processLatencyFilter(f *loop_span.FilterField) error {
 		if err != nil {
 			return fmt.Errorf("fail to parse long value %s, %v", val, err)
 		}
-		integer = time_util.MillSec2MicroSec(integer)
+		integer = timeutil.MillSec2MicroSec(integer)
 		micros = append(micros, strconv.FormatInt(integer, 10))
 	}
 	f.Values = micros

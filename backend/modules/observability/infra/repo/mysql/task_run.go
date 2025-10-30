@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	tracecommon "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	genquery "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -33,7 +33,7 @@ type ListTaskRunParam struct {
 	TaskRunStatus *task.RunStatus
 	ReqLimit      int32
 	ReqOffset     int32
-	OrderBy       *common.OrderBy
+	OrderBy       *tracecommon.OrderBy
 }
 
 //go:generate mockgen -destination=mocks/task_run.go -package=mocks . ITaskRunDao
@@ -163,7 +163,13 @@ func (v *TaskRunDaoImpl) ListTaskRuns(ctx context.Context, param ListTaskRunPara
 	}
 
 	// 排序
-	qd = qd.Order(v.order(q, param.OrderBy.GetField(), param.OrderBy.GetIsAsc()))
+	orderField := ""
+	orderAsc := false
+	if param.OrderBy != nil {
+		orderField = param.OrderBy.Field
+		orderAsc = param.OrderBy.IsAsc
+	}
+	qd = qd.Order(v.order(q, orderField, orderAsc))
 
 	// 计算总数
 	total, err := qd.Count()

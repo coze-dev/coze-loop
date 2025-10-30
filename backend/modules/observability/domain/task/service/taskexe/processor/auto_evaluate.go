@@ -165,7 +165,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTa
 	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
 		err = p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
 			CurrentTask: currentTask,
-			RunType:     task.TaskRunTypeBackFill,
+			RunType:     task_entity.TaskRunTypeBackFill,
 			RunStartAt:  time.Now().UnixMilli(),
 			RunEndAt:    time.Now().UnixMilli() + (currentTask.BackfillEffectiveTime.EndAt - currentTask.BackfillEffectiveTime.StartAt),
 		})
@@ -196,7 +196,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTa
 		}
 		err = p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
 			CurrentTask: currentTask,
-			RunType:     task.TaskRunTypeNewData,
+			RunType:     task_entity.TaskRunTypeNewData,
 			RunStartAt:  runStartAt,
 			RunEndAt:    runEndAt,
 		})
@@ -213,21 +213,21 @@ func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTa
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnUpdateTaskChange(ctx context.Context, currentTask *task_entity.ObservabilityTask, taskOp task.TaskStatus) error {
+func (p *AutoEvaluteProcessor) OnUpdateTaskChange(ctx context.Context, currentTask *task_entity.ObservabilityTask, taskOp task_entity.TaskStatus) error {
 	switch taskOp {
-	case task.TaskStatusSuccess:
+	case task_entity.TaskStatusSuccess:
 		if currentTask.TaskStatus != task_entity.TaskStatusDisabled {
 			currentTask.TaskStatus = task_entity.TaskStatusSuccess
 		}
-	case task.TaskStatusRunning:
+	case task_entity.TaskStatusRunning:
 		if currentTask.TaskStatus != task_entity.TaskStatusDisabled && currentTask.TaskStatus != task_entity.TaskStatusSuccess {
 			currentTask.TaskStatus = task_entity.TaskStatusRunning
 		}
-	case task.TaskStatusDisabled:
+	case task_entity.TaskStatusDisabled:
 		if currentTask.TaskStatus != task_entity.TaskStatusDisabled {
 			currentTask.TaskStatus = task_entity.TaskStatusDisabled
 		}
-	case task.TaskStatusPending:
+	case task_entity.TaskStatusPending:
 		if currentTask.TaskStatus == task_entity.TaskStatusPending || currentTask.TaskStatus == task_entity.TaskStatusUnstarted {
 			currentTask.TaskStatus = task_entity.TaskStatusPending
 		}
@@ -319,7 +319,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 	schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
 	var datasetName, exptName string
-	if param.RunType == task.TaskRunTypeBackFill {
+	if param.RunType == task_entity.TaskRunTypeBackFill {
 		datasetName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, BackFillCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 		exptName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, BackFillCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 	} else {
@@ -394,7 +394,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 	taskRun := &task_entity.TaskRun{
 		TaskID:        currentTask.ID,
 		WorkspaceID:   currentTask.WorkspaceID,
-		TaskType:      task_entity.TaskRunType(param.RunType),
+		TaskType:      param.RunType,
 		RunStatus:     task_entity.TaskRunStatusRunning,
 		RunStartAt:    time.UnixMilli(param.RunStartAt),
 		RunEndAt:      time.UnixMilli(param.RunEndAt),

@@ -8,17 +8,18 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strconv"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 )
 
 // TaskRunCountInfo represents the TaskRunCount information structure
@@ -194,7 +195,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			if !taskPO.Sampler.IsCycle {
 				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
 					CurrentTask: taskPO,
-					RunType:     task.TaskRunTypeNewData,
+					RunType:     entity.TaskRunTypeNewData,
 					RunStartAt:  taskPO.EffectiveTime.StartAt,
 					RunEndAt:    taskPO.EffectiveTime.EndAt,
 				})
@@ -202,7 +203,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
 					continue
 				}
-				err = proc.OnUpdateTaskChange(ctx, taskPO, task.TaskStatusRunning)
+				err = proc.OnUpdateTaskChange(ctx, taskPO, entity.TaskStatusRunning)
 				if err != nil {
 					logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
 					continue
@@ -210,7 +211,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			} else {
 				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
 					CurrentTask: taskPO,
-					RunType:     task.TaskRunTypeNewData,
+					RunType:     entity.TaskRunTypeNewData,
 					RunStartAt:  taskRun.RunEndAt.UnixMilli(),
 					RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
 				})
@@ -242,7 +243,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 				if taskPO.Sampler.IsCycle {
 					err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
 						CurrentTask: taskPO,
-						RunType:     task.TaskRunTypeNewData,
+						RunType:     entity.TaskRunTypeNewData,
 						RunStartAt:  taskRun.RunEndAt.UnixMilli(),
 						RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
 					})
@@ -329,7 +330,11 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 	logs.CtxInfo(ctx, "Start syncing task cache...")
 
 	// 1. Retrieve spaceID, botID, and task information for all non-final tasks from the database
-	spaceIDs, botIDs, tasks := h.taskRepo.GetObjListWithTask(ctx)
+	spaceIDs, botIDs, tasks, err := h.getNonFinalTaskInfos(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+		return
+	}
 	logs.CtxInfo(ctx, "Retrieved task information, taskCount:%d, spaceCount:%d, botCount:%d", len(tasks), len(spaceIDs), len(botIDs))
 
 	// 2. Build a new cache map
@@ -426,7 +431,7 @@ func (h *TraceHubServiceImpl) updateTaskRunDetail(ctx context.Context, info *Tas
 
 func (h *TraceHubServiceImpl) listNonFinalTaskByRedis(ctx context.Context, spaceID string) ([]*entity.ObservabilityTask, error) {
 	var taskPOs []*entity.ObservabilityTask
-	nonFinalTaskIDs, err := h.taskRepo.ListNonFinalTask(ctx, spaceID)
+	nonFinalTaskIDs, err := h.taskRepo.ListNonFinalTaskBySpaceID(ctx, spaceID)
 	if err != nil {
 		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
 		return nil, err
@@ -436,7 +441,7 @@ func (h *TraceHubServiceImpl) listNonFinalTaskByRedis(ctx context.Context, space
 		return taskPOs, nil
 	}
 	for _, taskID := range nonFinalTaskIDs {
-		taskPO, err := h.taskRepo.GetTaskByRedis(ctx, taskID)
+		taskPO, err := h.taskRepo.GetTaskByCache(ctx, taskID)
 		if err != nil {
 			logs.CtxError(ctx, "Failed to get task", "err", err)
 			return nil, err
@@ -455,20 +460,20 @@ func (h *TraceHubServiceImpl) listNonFinalTask(ctx context.Context) ([]*entity.O
 	const limit int32 = 500
 	// Paginate through all tasks
 	for {
-		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+		tasklist, _, err := h.taskRepo.ListTasks(ctx, repo.ListTaskParam{
 			ReqLimit:  limit,
 			ReqOffset: offset,
-			TaskFilters: &filter.TaskFilterFields{
-				FilterFields: []*filter.TaskFilterField{
+			TaskFilters: &entity.TaskFilterFields{
+				FilterFields: []*entity.TaskFilterField{
 					{
-						FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
+						FieldName: ptr.Of(entity.TaskFieldNameTaskStatus),
 						Values: []string{
-							string(task.TaskStatusUnstarted),
-							string(task.TaskStatusRunning),
-							string(task.TaskStatusPending),
+							string(entity.TaskStatusUnstarted),
+							string(entity.TaskStatusRunning),
+							string(entity.TaskStatusPending),
 						},
-						QueryType: ptr.Of(filter.QueryTypeIn),
-						FieldType: ptr.Of(filter.FieldTypeString),
+						QueryType: ptr.Of(entity.QueryTypeIn),
+						FieldType: ptr.Of(entity.FieldTypeString),
 					},
 				},
 			},
@@ -503,27 +508,27 @@ func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entit
 	const limit int32 = 1000
 	// Paginate through all tasks
 	for {
-		tasklist, _, err := h.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+		tasklist, _, err := h.taskRepo.ListTasks(ctx, repo.ListTaskParam{
 			ReqLimit:  limit,
 			ReqOffset: offset,
-			TaskFilters: &filter.TaskFilterFields{
-				FilterFields: []*filter.TaskFilterField{
+			TaskFilters: &entity.TaskFilterFields{
+				FilterFields: []*entity.TaskFilterField{
 					{
-						FieldName: ptr.Of(filter.TaskFieldNameTaskStatus),
+						FieldName: ptr.Of(entity.TaskFieldNameTaskStatus),
 						Values: []string{
-							string(task.TaskStatusSuccess),
-							string(task.TaskStatusDisabled),
+							string(entity.TaskStatusSuccess),
+							string(entity.TaskStatusDisabled),
 						},
-						QueryType: ptr.Of(filter.QueryTypeIn),
-						FieldType: ptr.Of(filter.FieldTypeString),
+						QueryType: ptr.Of(entity.QueryTypeIn),
+						FieldType: ptr.Of(entity.FieldTypeString),
 					},
 					{
-						FieldName: ptr.Of("updated_at"),
+						FieldName: ptr.Of(entity.TaskFieldName("updated_at")),
 						Values: []string{
 							fmt.Sprintf("%d", time.Now().Add(-24*time.Hour).UnixMilli()),
 						},
-						QueryType: ptr.Of(filter.QueryTypeGt),
-						FieldType: ptr.Of(filter.FieldTypeLong),
+						QueryType: ptr.Of(entity.QueryTypeGt),
+						FieldType: ptr.Of(entity.FieldTypeLong),
 					},
 				},
 			},
@@ -545,4 +550,42 @@ func (h *TraceHubServiceImpl) listSyncTaskRunTask(ctx context.Context) ([]*entit
 		offset += limit
 	}
 	return taskDOs, nil
+}
+
+func (h *TraceHubServiceImpl) getNonFinalTaskInfos(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask, error) {
+	tasks, err := h.taskRepo.ListNonFinalTasks(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	spaceMap := make(map[string]interface{})
+	botMap := make(map[string]interface{})
+
+	for _, task := range tasks {
+		spaceMap[strconv.FormatInt(task.WorkspaceID, 10)] = struct{}{}
+		if task.SpanFilter != nil && task.SpanFilter.Filters.FilterFields != nil {
+			extractBotIDFromFilters(task.SpanFilter.Filters.FilterFields, botMap)
+		}
+	}
+
+	return lo.Keys(spaceMap), lo.Keys(botMap), tasks, nil
+}
+
+// extractBotIDFromFilters 递归提取过滤器中的 bot_id 值，包括 SubFilter
+func extractBotIDFromFilters(filterFields []*loop_span.FilterField, botMap map[string]interface{}) {
+	for _, filterField := range filterFields {
+		if filterField == nil {
+			continue
+		}
+		// 检查当前 FilterField 的 FieldName
+		if filterField.FieldName == "bot_id" {
+			for _, v := range filterField.Values {
+				botMap[v] = struct{}{}
+			}
+		}
+		// 递归处理 SubFilter
+		if filterField.SubFilter != nil && filterField.SubFilter.FilterFields != nil {
+			extractBotIDFromFilters(filterField.SubFilter.FilterFields, botMap)
+		}
+	}
 }

@@ -22,11 +22,11 @@ import (
 	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-	repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	trepo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
 	builder_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	spanfilter_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
-	span_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -83,7 +83,7 @@ func TestTraceHubServiceImpl_SetBackfillTask(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, sub)
 	require.Equal(t, int64(1), sub.taskID)
-	require.Equal(t, task.TaskRunTypeBackFill, sub.runType)
+	require.Equal(t, entity.TaskRunTypeBackFill, sub.runType)
 }
 
 func TestTraceHubServiceImpl_SetBackfillTaskNotFound(t *testing.T) {
@@ -199,7 +199,7 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_DispatchError(t *testing.T) {
 		t:         taskDTO,
 		tr:        taskRunDTO,
 		processor: proc,
-		runType:   task.TaskRunTypeNewData,
+		runType:   entity.TaskRunTypeNewData,
 		taskRepo:  mockRepo,
 	}
 
@@ -667,7 +667,7 @@ func newBackfillSubscriber(taskRepo taskrepo.ITaskRepo, now time.Time) (*spanSub
 		tr:        taskRun,
 		processor: proc,
 		taskRepo:  taskRepo,
-		runType:   task.TaskRunTypeBackFill,
+		runType:   entity.TaskRunTypeBackFill,
 	}
 	return sub, proc
 }

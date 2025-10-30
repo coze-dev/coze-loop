@@ -9,23 +9,18 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
-	domain_task "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
-	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	trace_Svc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/samber/lo"
 )
 
 type ITaskQueueConsumer interface {
@@ -34,6 +29,7 @@ type ITaskQueueConsumer interface {
 	Correction(ctx context.Context, event *entity.CorrectionEvent) error
 	BackFill(ctx context.Context, event *entity.BackFillEvent) error
 }
+
 type ITaskApplication interface {
 	task.TaskService
 	ITaskQueueConsumer
@@ -46,8 +42,7 @@ func NewTaskApplication(
 	evaluationService rpc.IEvaluationRPCAdapter,
 	userService rpc.IUserProvider,
 	tracehubSvc tracehub.ITraceHubService,
-	taskProcessor task_processor.TaskProcessor,
-	buildHelper trace_Svc.TraceFilterProcessorBuilder,
+	taskProcessor processor.TaskProcessor,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
 		taskSvc:       taskService,
@@ -57,7 +52,6 @@ func NewTaskApplication(
 		userSvc:       userService,
 		tracehubSvc:   tracehubSvc,
 		taskProcessor: taskProcessor,
-		buildHelper:   buildHelper,
 	}, nil
 }
 
@@ -68,8 +62,7 @@ type TaskApplication struct {
 	evaluationSvc rpc.IEvaluationRPCAdapter
 	userSvc       rpc.IUserProvider
 	tracehubSvc   tracehub.ITraceHubService
-	taskProcessor task_processor.TaskProcessor
-	buildHelper   trace_Svc.TraceFilterProcessorBuilder
+	taskProcessor processor.TaskProcessor
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
@@ -114,62 +107,18 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	if userID == "" {
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
+
 	// 创建task
-	req.Task.TaskStatus = ptr.Of(domain_task.TaskStatusUnstarted)
-	spanFilers, err := t.buildSpanFilters(ctx, req.Task.GetRule().GetSpanFilters(), req.GetTask().GetWorkspaceID())
-	if err != nil {
-		return nil, err
-	}
-	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: tconv.TaskDTO2DO(req.GetTask(), userID, spanFilers)})
+	taskDO := tconv.TaskDTO2DO(req.GetTask())
+	taskDO.TaskStatus = entity.TaskStatusUnstarted
+	taskDO.CreatedBy = userID
+	taskDO.UpdatedBy = userID
+	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: taskDO})
 	if err != nil {
 		return resp, err
 	}
 
 	return &task.CreateTaskResponse{TaskID: sResp.TaskID}, nil
-}
-
-func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*entity.SpanFilterFields, error) {
-	spanFilters := &entity.SpanFilterFields{
-		PlatformType: *spanFilterFields.PlatformType,
-		SpanListType: *spanFilterFields.SpanListType,
-	}
-	filters := convertor.FilterFieldsDTO2DO(spanFilterFields.GetFilters())
-	spanFilters.Filters = *filters
-	switch spanFilterFields.GetPlatformType() {
-	case common.PlatformTypeCozeBot, common.PlatformTypeProject, common.PlatformTypeWorkflow, common.PlatformTypeInnerCozeBot:
-		platformFilter, err := t.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(spanFilterFields.GetPlatformType()))
-		if err != nil {
-			return nil, err
-		}
-		env := &span_filter.SpanEnv{
-			WorkspaceID: workspaceID,
-		}
-		basicFilter, forceQuery, err := platformFilter.BuildBasicSpanFilter(ctx, env)
-		if err != nil {
-			return nil, err
-		} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
-			return nil, nil
-		}
-		for _, filter := range basicFilter {
-			filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
-				FieldName:  filter.FieldName,
-				FieldType:  filter.FieldType,
-				Values:     filter.Values,
-				QueryType:  filter.QueryType,
-				QueryAndOr: filter.QueryAndOr,
-				SubFilter:  filter.SubFilter,
-				Hidden:     true,
-			})
-		}
-
-		return &entity.SpanFilterFields{
-			Filters:      *filters,
-			PlatformType: *spanFilterFields.PlatformType,
-			SpanListType: *spanFilterFields.SpanListType,
-		}, nil
-	default:
-		return spanFilters, nil
-	}
 }
 
 func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.CreateTaskRequest) error {
@@ -208,12 +157,16 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 		strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
 		return nil, err
 	}
+	var taskStatus *entity.TaskStatus
+	if req.TaskStatus != nil {
+		taskStatus = lo.ToPtr(entity.TaskStatus(req.GetTaskStatus()))
+	}
 	err := t.taskSvc.UpdateTask(ctx, &service.UpdateTaskReq{
 		TaskID:        req.GetTaskID(),
 		WorkspaceID:   req.GetWorkspaceID(),
-		TaskStatus:    req.TaskStatus,
+		TaskStatus:    taskStatus,
 		Description:   req.Description,
-		EffectiveTime: req.EffectiveTime,
+		EffectiveTime: tconv.EffectiveTimeDTO2DO(req.EffectiveTime),
 		SampleRate:    req.SampleRate,
 	})
 	if err != nil {
@@ -236,12 +189,13 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 		false); err != nil {
 		return resp, err
 	}
+
 	sResp, err := t.taskSvc.ListTasks(ctx, &service.ListTasksReq{
 		WorkspaceID: req.GetWorkspaceID(),
-		TaskFilters: req.GetTaskFilters(),
+		TaskFilters: tconv.TaskFiltersDTO2DO(req.GetTaskFilters()),
 		Limit:       req.GetLimit(),
 		Offset:      req.GetOffset(),
-		OrderBy:     req.GetOrderBy(),
+		OrderBy:     convertor.OrderByDTO2DO(req.GetOrderBy()),
 	})
 	if err != nil {
 		return resp, err
@@ -249,9 +203,21 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 	if sResp == nil {
 		return resp, nil
 	}
+
+	userMap := make(map[string]bool)
+	for _, tp := range sResp.Tasks {
+		userMap[tp.CreatedBy] = true
+		userMap[tp.UpdatedBy] = true
+	}
+	_, userInfoMap, err := t.userSvc.GetUserInfo(ctx, lo.Keys(userMap))
+	if err != nil {
+		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
+	}
+	tasks := tconv.TaskDOs2DTOs(ctx, sResp.Tasks, userInfoMap)
+
 	return &task.ListTasksResponse{
-		Tasks: sResp.Tasks,
-		Total: sResp.Total,
+		Tasks: tasks,
+		Total: &sResp.Total,
 	}, nil
 }
 
@@ -268,6 +234,7 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 		false); err != nil {
 		return resp, err
 	}
+
 	sResp, err := t.taskSvc.GetTask(ctx, &service.GetTaskReq{
 		TaskID:      req.GetTaskID(),
 		WorkspaceID: req.GetWorkspaceID(),
@@ -279,8 +246,14 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 		return resp, nil
 	}
 
+	taskDO := sResp.Task
+	_, userInfoMap, err := t.userSvc.GetUserInfo(ctx, []string{taskDO.CreatedBy, taskDO.UpdatedBy})
+	if err != nil {
+		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
+	}
+
 	return &task.GetTaskResponse{
-		Task: sResp.Task,
+		Task: tconv.TaskDO2DTO(ctx, taskDO, userInfoMap),
 	}, nil
 }
 

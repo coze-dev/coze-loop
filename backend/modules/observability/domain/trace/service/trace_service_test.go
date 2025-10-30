@@ -52,7 +52,7 @@ func newTaskRepoMock(ctrl *gomock.Controller) *taskRepoMock {
 }
 
 func (m *taskRepoMock) ListNonFinalTask(context.Context, string) ([]int64, error) {
-	panic("unexpected call to ListNonFinalTask in taskRepoMock")
+	panic("unexpected call to ListNonFinalTaskBySpaceID in taskRepoMock")
 }
 
 func (m *taskRepoMock) AddNonFinalTask(context.Context, string, int64) error {
@@ -63,8 +63,8 @@ func (m *taskRepoMock) RemoveNonFinalTask(context.Context, string, int64) error 
 	panic("unexpected call to RemoveNonFinalTask in taskRepoMock")
 }
 
-func (m *taskRepoMock) GetTaskByRedis(context.Context, int64) (*taskentity.ObservabilityTask, error) {
-	panic("unexpected call to GetTaskByRedis in taskRepoMock")
+func (m *taskRepoMock) GetTaskByCache(context.Context, int64) (*taskentity.ObservabilityTask, error) {
+	panic("unexpected call to GetTaskByCache in taskRepoMock")
 }
 
 func (m *taskRepoMock) SetTask(context.Context, *taskentity.ObservabilityTask) error {

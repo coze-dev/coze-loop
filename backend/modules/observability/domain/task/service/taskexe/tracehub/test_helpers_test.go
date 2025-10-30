@@ -49,7 +49,7 @@ func (s *stubProcessor) OnCreateTaskChange(context.Context, *entity.Observabilit
 	return s.createTaskErr
 }
 
-func (s *stubProcessor) OnUpdateTaskChange(context.Context, *entity.ObservabilityTask, string) error {
+func (s *stubProcessor) OnUpdateTaskChange(context.Context, *entity.ObservabilityTask, entity.TaskStatus) error {
 	s.updateCallCount++
 	return s.updateErr
 }

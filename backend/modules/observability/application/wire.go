@@ -55,7 +55,7 @@ import (
 	obrepo "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo"
 	ckdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	mysqldao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
-	tredis "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
+	redis2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
@@ -77,8 +77,8 @@ var (
 		obrepo.NewTaskRepoImpl,
 		// obrepo.NewTaskRunRepoImpl,
 		mysqldao.NewTaskDaoImpl,
-		tredis.NewTaskDAO,
-		tredis.NewTaskRunDAO,
+		redis2.NewTaskDAO,
+		redis2.NewTaskRunDAO,
 		mysqldao.NewTaskRunDaoImpl,
 		mq2.NewBackfillProducerImpl,
 	)

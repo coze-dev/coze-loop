@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
-	mysql "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	mysqlconv "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/convertor"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 )
@@ -38,6 +38,7 @@ type stubTaskDao struct {
 	getTaskFunc            func(ctx context.Context, id int64, workspaceID *int64, userID *string) (*mysqlmodel.ObservabilityTask, error)
 	listTasksFunc          func(ctx context.Context, param mysql.ListTaskParam) ([]*mysqlmodel.ObservabilityTask, int64, error)
 	getObjListWithTaskFunc func(ctx context.Context) ([]string, []string, []*mysqlmodel.ObservabilityTask, error)
+	listNonFinalTasksFunc  func(ctx context.Context) ([]*mysqlmodel.ObservabilityTask, error)
 }
 
 func (s *stubTaskDao) CreateTask(ctx context.Context, po *mysqlmodel.ObservabilityTask) (int64, error) {
@@ -82,11 +83,11 @@ func (s *stubTaskDao) ListTasks(ctx context.Context, param mysql.ListTaskParam) 
 	return nil, 0, nil
 }
 
-func (s *stubTaskDao) GetObjListWithTask(ctx context.Context) ([]string, []string, []*mysqlmodel.ObservabilityTask, error) {
-	if s.getObjListWithTaskFunc != nil {
-		return s.getObjListWithTaskFunc(ctx)
+func (s *stubTaskDao) ListNonFinalTasks(ctx context.Context) ([]*mysqlmodel.ObservabilityTask, error) {
+	if s.listNonFinalTasksFunc != nil {
+		return s.listNonFinalTasksFunc(ctx)
 	}
-	return nil, nil, nil, nil
+	return nil, nil
 }
 
 type stubTaskRedisDao struct {
@@ -443,7 +444,7 @@ func TestTaskRepoImpl_NonFinalTaskWrappers(t *testing.T) {
 		TaskRunRedisDao: stubTaskRunRedisDao{},
 	}
 
-	list, err := repo.ListNonFinalTask(context.Background(), "space")
+	list, err := repo.ListNonFinalTaskBySpaceID(context.Background(), "space")
 	assert.NoError(t, err)
 	assert.Equal(t, expected, list)
 
@@ -558,7 +559,7 @@ func TestTaskRepoImpl_GetTaskByRedis(t *testing.T) {
 				}
 			}
 
-			got, err := repo.GetTaskByRedis(context.Background(), 100)
+			got, err := repo.GetTaskByCache(context.Background(), 100)
 			if tt.expectErr != nil {
 				assert.EqualError(t, err, tt.expectErr.Error())
 			} else {
@@ -569,24 +570,4 @@ func TestTaskRepoImpl_GetTaskByRedis(t *testing.T) {
 			assert.Equal(t, tt.expectResult, got)
 		})
 	}
-}
-
-func TestTaskRepoImpl_SetTask(t *testing.T) {
-	t.Parallel()
-
-	called := false
-	redisDao := &stubTaskRedisDao{setTaskFunc: func(ctx context.Context, task *entity.ObservabilityTask) error {
-		called = true
-		assert.Equal(t, int64(1), task.ID)
-		return nil
-	}}
-	repo := &TaskRepoImpl{
-		TaskDao:         &stubTaskDao{},
-		TaskRunDao:      stubTaskRunDao{},
-		TaskRedisDao:    redisDao,
-		TaskRunRedisDao: stubTaskRunRedisDao{},
-	}
-
-	assert.NoError(t, repo.SetTask(context.Background(), &entity.ObservabilityTask{ID: 1}))
-	assert.True(t, called)
 }

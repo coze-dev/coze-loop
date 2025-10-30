@@ -6,8 +6,7 @@ package processor
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 )
 
@@ -27,11 +26,11 @@ func (p *NoopTaskProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger
 	return nil
 }
 
-func (p *NoopTaskProcessor) OnCreateTaskChange(ctx context.Context, currentTask *task_entity.ObservabilityTask) error {
+func (p *NoopTaskProcessor) OnCreateTaskChange(ctx context.Context, currentTask *entity.ObservabilityTask) error {
 	return nil
 }
 
-func (p *NoopTaskProcessor) OnUpdateTaskChange(ctx context.Context, currentTask *task_entity.ObservabilityTask, taskOp task.TaskStatus) error {
+func (p *NoopTaskProcessor) OnUpdateTaskChange(ctx context.Context, currentTask *entity.ObservabilityTask, taskOp entity.TaskStatus) error {
 	return nil
 }
 
