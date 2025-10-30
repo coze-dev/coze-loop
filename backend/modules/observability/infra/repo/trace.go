@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
@@ -30,6 +31,18 @@ func NewTraceCKRepoImpl(
 	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
 ) (repo.ITraceRepo, error) {
+	return &TraceCkRepoImpl{
+		spansDao:    spanDao,
+		annoDao:     annoDao,
+		traceConfig: traceConfig,
+	}, nil
+}
+
+func NewTraceMetricCKRepoImpl(
+	spanDao ck.ISpansDao,
+	annoDao ck.IAnnotationDao,
+	traceConfig config.ITraceConfig,
+) (metric_repo.IMetricRepo, error) {
 	return &TraceCkRepoImpl{
 		spansDao:    spanDao,
 		annoDao:     annoDao,
@@ -275,6 +288,30 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 		Table:       table,
 		Annotations: pos,
 	})
+}
+
+func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
+	if err != nil {
+		return nil, err
+	}
+	st := time.Now()
+	metrics, err := t.spansDao.GetMetrics(ctx, &ck.GetMetricsParam{
+		Tables:       tableCfg.SpanTables,
+		Aggregations: param.Aggregations,
+		GroupBys:     param.GroupBys,
+		Filters:      param.Filters,
+		StartAt:      time_util.MillSec2MicroSec(param.StartAt),
+		EndAt:        time_util.MillSec2MicroSec(param.EndAt),
+		Granularity:  param.Granularity,
+	})
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "get metrics successfully, cost %v", time.Since(st))
+	return &metric_repo.GetMetricsResult{
+		Data: metrics,
+	}, nil
 }
 
 type queryTableCfg struct {
