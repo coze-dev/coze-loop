@@ -20,8 +20,8 @@ type IEvaluatorRepo interface {
 
 	UpdateEvaluatorDraft(ctx context.Context, version *entity.Evaluator) error
 	UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error
-	// UpdateEvaluatorTags 根据评估器ID全量更新标签：不存在的新增，不在传入列表中的删除
-	UpdateEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagKey][]string) error
+	// UpdateEvaluatorTags 根据评估器ID全量更新标签（多语言）：不存在的新增，不在传入列表中的删除
+	UpdateEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string) error
 
 	BatchGetEvaluatorMetaByID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)

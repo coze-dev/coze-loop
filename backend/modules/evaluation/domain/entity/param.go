@@ -316,16 +316,16 @@ type DebugTargetParam struct {
 
 // CreateEvaluatorTemplateRequest 创建评估器模板请求
 type CreateEvaluatorTemplateRequest struct {
-	SpaceID            int64                        `json:"space_id" validate:"required,gt=0"`      // 空间ID
-	Name               string                       `json:"name" validate:"required,min=1,max=100"` // 模板名称
-	Description        string                       `json:"description" validate:"max=500"`         // 模板描述
-	EvaluatorType      EvaluatorType                `json:"evaluator_type" validate:"required"`     // 评估器类型
-	Benchmark          string                       `json:"benchmark,omitempty" validate:"max=100"` // 基准
-	Vendor             string                       `json:"vendor,omitempty" validate:"max=100"`    // 供应商
-	InputSchemas       []*ArgsSchema                `json:"input_schemas,omitempty"`                // 输入模式
-	OutputSchemas      []*ArgsSchema                `json:"output_schemas,omitempty"`               // 输出模式
-	ReceiveChatHistory *bool                        `json:"receive_chat_history,omitempty"`         // 是否接收聊天历史
-	Tags               map[EvaluatorTagKey][]string `json:"tags,omitempty"`                         // 标签
+	SpaceID            int64                                                 `json:"space_id" validate:"required,gt=0"`      // 空间ID
+	Name               string                                                `json:"name" validate:"required,min=1,max=100"` // 模板名称
+	Description        string                                                `json:"description" validate:"max=500"`         // 模板描述
+	EvaluatorType      EvaluatorType                                         `json:"evaluator_type" validate:"required"`     // 评估器类型
+	Benchmark          string                                                `json:"benchmark,omitempty" validate:"max=100"` // 基准
+	Vendor             string                                                `json:"vendor,omitempty" validate:"max=100"`    // 供应商
+	InputSchemas       []*ArgsSchema                                         `json:"input_schemas,omitempty"`                // 输入模式
+	OutputSchemas      []*ArgsSchema                                         `json:"output_schemas,omitempty"`               // 输出模式
+	ReceiveChatHistory *bool                                                 `json:"receive_chat_history,omitempty"`         // 是否接收聊天历史
+	Tags               map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `json:"tags,omitempty"`                         // 标签
 
 	// 评估器内容
 	PromptEvaluatorContent *PromptEvaluatorContent `json:"prompt_evaluator_content,omitempty"` // Prompt评估器内容
@@ -339,15 +339,15 @@ type CreateEvaluatorTemplateResponse struct {
 
 // UpdateEvaluatorTemplateRequest 更新评估器模板请求
 type UpdateEvaluatorTemplateRequest struct {
-	ID                 int64                        `json:"id" validate:"required,gt=0"`                        // 模板ID
-	Name               *string                      `json:"name,omitempty" validate:"omitempty,min=1,max=100"`  // 模板名称
-	Description        *string                      `json:"description,omitempty" validate:"omitempty,max=500"` // 模板描述
-	Benchmark          *string                      `json:"benchmark,omitempty" validate:"omitempty,max=100"`   // 基准
-	Vendor             *string                      `json:"vendor,omitempty" validate:"omitempty,max=100"`      // 供应商
-	InputSchemas       []*ArgsSchema                `json:"input_schemas,omitempty"`                            // 输入模式
-	OutputSchemas      []*ArgsSchema                `json:"output_schemas,omitempty"`                           // 输出模式
-	ReceiveChatHistory *bool                        `json:"receive_chat_history,omitempty"`                     // 是否接收聊天历史
-	Tags               map[EvaluatorTagKey][]string `json:"tags,omitempty"`                                     // 标签
+	ID                 int64                                                 `json:"id" validate:"required,gt=0"`                        // 模板ID
+	Name               *string                                               `json:"name,omitempty" validate:"omitempty,min=1,max=100"`  // 模板名称
+	Description        *string                                               `json:"description,omitempty" validate:"omitempty,max=500"` // 模板描述
+	Benchmark          *string                                               `json:"benchmark,omitempty" validate:"omitempty,max=100"`   // 基准
+	Vendor             *string                                               `json:"vendor,omitempty" validate:"omitempty,max=100"`      // 供应商
+	InputSchemas       []*ArgsSchema                                         `json:"input_schemas,omitempty"`                            // 输入模式
+	OutputSchemas      []*ArgsSchema                                         `json:"output_schemas,omitempty"`                           // 输出模式
+	ReceiveChatHistory *bool                                                 `json:"receive_chat_history,omitempty"`                     // 是否接收聊天历史
+	Tags               map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `json:"tags,omitempty"`                                     // 标签
 
 	// 评估器内容
 	PromptEvaluatorContent *PromptEvaluatorContent `json:"prompt_evaluator_content,omitempty"` // Prompt评估器内容

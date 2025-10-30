@@ -108,6 +108,7 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 					gomock.Any(),
 					evaluatorIDs,
 					int32(entity.EvaluatorTagKeyType_Evaluator),
+					gomock.Any(),
 				).Return(tt.mockTagResult, tt.mockTagError).AnyTimes()
 			}
 

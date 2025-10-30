@@ -19,6 +19,7 @@ type EvaluatorTag struct {
 	TagType   int32          `gorm:"column:tag_type;type:int(11) unsigned;not null;index:idx_tag_type_tag_key_tag_value,priority:1;comment:tag类型，1:评估器；2:模板" json:"tag_type"`                   // tag类型，1:评估器；2:模板
 	TagKey    string         `gorm:"column:tag_key;type:varchar(128) character set utf8mb4;not null;index:idx_tag_type_tag_key_tag_value,priority:2;default:0;comment:tag键" json:"tag_key"`     // tag键
 	TagValue  string         `gorm:"column:tag_value;type:varchar(128) character set utf8mb4;not null;index:idx_tag_type_tag_key_tag_value,priority:3;default:0;comment:tag值" json:"tag_value"` // tag值
+	LangType  string         `gorm:"column:lang_type;type:varchar(128) character set utf8mb4;not null;default:zh;comment:语言类型" json:"lang_type"`                                                // 语言类型
 	CreatedBy string         `gorm:"column:created_by;type:varchar(128) character set utf8mb4;not null;default:0;comment:创建人" json:"created_by"`                                                // 创建人
 	UpdatedBy string         `gorm:"column:updated_by;type:varchar(128) character set utf8mb4;not null;default:0;comment:更新人" json:"updated_by"`                                                // 更新人
 	CreatedAt time.Time      `gorm:"column:created_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                        // 创建时间

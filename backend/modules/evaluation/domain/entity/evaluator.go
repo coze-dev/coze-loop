@@ -17,7 +17,7 @@ type Evaluator struct {
 	Benchmark             string
 	Vendor                string
 	BuiltinVisibleVersion string
-	Tags                  map[EvaluatorTagKey][]string `json:"tags"`
+	Tags                  map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `json:"tags"`
 
 	PromptEvaluatorVersion *PromptEvaluatorVersion
 	CodeEvaluatorVersion   *CodeEvaluatorVersion

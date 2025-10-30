@@ -111,7 +111,7 @@ func ConvertEvaluatorTemplatePO2DO(po *model.EvaluatorTemplate) (*evaluatordo.Ev
 		Popularity:         po.Popularity,
 		Benchmark:          gptr.Indirect(po.Benchmark),
 		Vendor:             gptr.Indirect(po.Vendor),
-		Tags:               make(map[evaluatordo.EvaluatorTagKey][]string),
+		Tags:               make(map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string),
 	}
 
 	// 反序列化InputSchema

@@ -25,8 +25,8 @@ type MockEvaluatorTagDAO struct {
 	mock.Mock
 }
 
-func (m *MockEvaluatorTagDAO) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, opts ...db.Option) ([]int64, int64, error) {
-	args := m.Called(ctx, tagType, filterOption, pageSize, pageNum, opts)
+func (m *MockEvaluatorTagDAO) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, langType string, opts ...db.Option) ([]int64, int64, error) {
+	args := m.Called(ctx, tagType, filterOption, pageSize, pageNum, langType, opts)
 	return args.Get(0).([]int64), args.Get(1).(int64), args.Error(2)
 }
 
@@ -35,13 +35,13 @@ func (m *MockEvaluatorTagDAO) BatchCreateEvaluatorTags(ctx context.Context, eval
 	return args.Error(0)
 }
 
-func (m *MockEvaluatorTagDAO) DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, tags map[string][]string, opts ...db.Option) error {
-	args := m.Called(ctx, sourceID, tagType, tags, opts)
+func (m *MockEvaluatorTagDAO) DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, langType string, tags map[string][]string, opts ...db.Option) error {
+	args := m.Called(ctx, sourceID, tagType, langType, tags, opts)
 	return args.Error(0)
 }
 
-func (m *MockEvaluatorTagDAO) BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, opts ...db.Option) ([]*model.EvaluatorTag, error) {
-	args := m.Called(ctx, sourceIDs, tagType, opts)
+func (m *MockEvaluatorTagDAO) BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, langType string, opts ...db.Option) ([]*model.EvaluatorTag, error) {
+	args := m.Called(ctx, sourceIDs, tagType, langType, opts)
 	return args.Get(0).([]*model.EvaluatorTag), args.Error(1)
 }
 
@@ -393,7 +393,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 			}
 
 			if hasValidFilters {
-				mockTagDAO.On("GetSourceIDsByFilterConditions", mock.Anything, int32(2), tt.request.FilterOption, int32(0), int32(0), mock.Anything).Return(tt.mockTagIDs, int64(len(tt.mockTagIDs)), tt.mockTagError)
+				mockTagDAO.On("GetSourceIDsByFilterConditions", mock.Anything, int32(2), tt.request.FilterOption, int32(0), int32(0), mock.Anything, mock.Anything).Return(tt.mockTagIDs, int64(len(tt.mockTagIDs)), tt.mockTagError)
 			}
 
 			// 设置templateDAO的期望

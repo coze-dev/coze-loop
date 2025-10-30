@@ -1587,7 +1587,7 @@ func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorDraft(t *testing.T) {
 
 				// 设置获取现有tags的期望
 				mockTagDAO.EXPECT().
-					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{100}, int32(entity.EvaluatorTagKeyType_Evaluator), gomock.Any()).
+					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{100}, int32(entity.EvaluatorTagKeyType_Evaluator), gomock.Any(), gomock.Any()).
 					Return([]*model.EvaluatorTag{
 						{
 							ID:       1,
@@ -1605,7 +1605,7 @@ func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorDraft(t *testing.T) {
 
 				// 设置删除不需要的tags的期望
 				mockTagDAO.EXPECT().
-					DeleteEvaluatorTagsByConditions(gomock.Any(), int64(100), int32(entity.EvaluatorTagKeyType_Evaluator), gomock.Any(), gomock.Any()).
+					DeleteEvaluatorTagsByConditions(gomock.Any(), int64(100), int32(entity.EvaluatorTagKeyType_Evaluator), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 
 					// 设置新增tags的期望
