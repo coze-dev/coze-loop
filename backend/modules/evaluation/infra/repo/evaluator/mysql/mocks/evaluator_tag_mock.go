@@ -63,9 +63,9 @@ func (mr *MockEvaluatorTagDAOMockRecorder) BatchCreateEvaluatorTags(ctx, evaluat
 }
 
 // BatchGetTagsBySourceIDsAndType mocks base method.
-func (m *MockEvaluatorTagDAO) BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, opts ...db.Option) ([]*model.EvaluatorTag, error) {
+func (m *MockEvaluatorTagDAO) BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, langType string, opts ...db.Option) ([]*model.EvaluatorTag, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, sourceIDs, tagType}
+	varargs := []any{ctx, sourceIDs, tagType, langType}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -76,16 +76,16 @@ func (m *MockEvaluatorTagDAO) BatchGetTagsBySourceIDsAndType(ctx context.Context
 }
 
 // BatchGetTagsBySourceIDsAndType indicates an expected call of BatchGetTagsBySourceIDsAndType.
-func (mr *MockEvaluatorTagDAOMockRecorder) BatchGetTagsBySourceIDsAndType(ctx, sourceIDs, tagType any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorTagDAOMockRecorder) BatchGetTagsBySourceIDsAndType(ctx, sourceIDs, tagType, langType any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, sourceIDs, tagType}, opts...)
+	varargs := append([]any{ctx, sourceIDs, tagType, langType}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetTagsBySourceIDsAndType", reflect.TypeOf((*MockEvaluatorTagDAO)(nil).BatchGetTagsBySourceIDsAndType), varargs...)
 }
 
 // DeleteEvaluatorTagsByConditions mocks base method.
-func (m *MockEvaluatorTagDAO) DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, tags map[string][]string, opts ...db.Option) error {
+func (m *MockEvaluatorTagDAO) DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, langType string, tags map[string][]string, opts ...db.Option) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, sourceID, tagType, tags}
+	varargs := []any{ctx, sourceID, tagType, langType, tags}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -95,16 +95,16 @@ func (m *MockEvaluatorTagDAO) DeleteEvaluatorTagsByConditions(ctx context.Contex
 }
 
 // DeleteEvaluatorTagsByConditions indicates an expected call of DeleteEvaluatorTagsByConditions.
-func (mr *MockEvaluatorTagDAOMockRecorder) DeleteEvaluatorTagsByConditions(ctx, sourceID, tagType, tags any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorTagDAOMockRecorder) DeleteEvaluatorTagsByConditions(ctx, sourceID, tagType, langType, tags any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, sourceID, tagType, tags}, opts...)
+	varargs := append([]any{ctx, sourceID, tagType, langType, tags}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvaluatorTagsByConditions", reflect.TypeOf((*MockEvaluatorTagDAO)(nil).DeleteEvaluatorTagsByConditions), varargs...)
 }
 
 // GetSourceIDsByFilterConditions mocks base method.
-func (m *MockEvaluatorTagDAO) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, opts ...db.Option) ([]int64, int64, error) {
+func (m *MockEvaluatorTagDAO) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, langType string, opts ...db.Option) ([]int64, int64, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, tagType, filterOption, pageSize, pageNum}
+	varargs := []any{ctx, tagType, filterOption, pageSize, pageNum, langType}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -116,8 +116,8 @@ func (m *MockEvaluatorTagDAO) GetSourceIDsByFilterConditions(ctx context.Context
 }
 
 // GetSourceIDsByFilterConditions indicates an expected call of GetSourceIDsByFilterConditions.
-func (mr *MockEvaluatorTagDAOMockRecorder) GetSourceIDsByFilterConditions(ctx, tagType, filterOption, pageSize, pageNum any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorTagDAOMockRecorder) GetSourceIDsByFilterConditions(ctx, tagType, filterOption, pageSize, pageNum, langType any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, tagType, filterOption, pageSize, pageNum}, opts...)
+	varargs := append([]any{ctx, tagType, filterOption, pageSize, pageNum, langType}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSourceIDsByFilterConditions", reflect.TypeOf((*MockEvaluatorTagDAO)(nil).GetSourceIDsByFilterConditions), varargs...)
 }

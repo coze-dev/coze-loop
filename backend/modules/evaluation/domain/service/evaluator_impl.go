@@ -233,14 +233,18 @@ func (e *EvaluatorServiceImpl) UpdateEvaluatorMeta(ctx context.Context, req *ent
 	if req == nil {
 		return errorx.NewByCode(errno.CommonInvalidParamCode)
 	}
-	if err := e.validateUpdateEvaluatorMetaRequest(ctx, req.ID, req.SpaceID, gptr.Indirect(req.Name)); err != nil {
+	name := ""
+	if req.Name != nil {
+		name = *req.Name
+	}
+	if err := e.validateUpdateEvaluatorMetaRequest(ctx, req.ID, req.SpaceID, name); err != nil {
 		return err
 	}
 	return e.evaluatorRepo.UpdateEvaluatorMeta(ctx, req)
 }
 
-// UpdateBuiltinEvaluatorTags 根据 evaluatorID 全量对齐标签
-func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagKey][]string) error {
+// UpdateBuiltinEvaluatorTags 根据 evaluatorID 全量对齐标签（多语言）
+func (e *EvaluatorServiceImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string) error {
 	return e.evaluatorRepo.UpdateEvaluatorTags(ctx, evaluatorID, tags)
 }
 
@@ -551,7 +555,7 @@ func (e *EvaluatorServiceImpl) ListBuiltinEvaluator(ctx context.Context, request
 			key := strconv.FormatInt(ver.GetEvaluatorID(), 10) + "#" + ver.GetVersion()
 			verMap[key] = ver
 		}
-		// 回填（参考 ListEvaluator 的回填方式）
+		// 回填
 		for _, ev := range result.Evaluators {
 			if ev == nil || ev.BuiltinVisibleVersion == "" {
 				continue

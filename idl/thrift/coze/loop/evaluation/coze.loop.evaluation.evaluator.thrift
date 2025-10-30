@@ -422,7 +422,7 @@ struct DebugBuiltinEvaluatorResponse {
 struct UpdateBuiltinEvaluatorTagsRequest {
     1: required i64 evaluator_id (api.path='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_id"')
     2: optional i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
-    3: optional map<evaluator.EvaluatorTagKey, list<string>> tags (api.body='tags', go.tag = 'json:"tags"') // 评估器标签
+    3: optional map<evaluator.EvaluatorTagLangType, map<evaluator.EvaluatorTagKey, list<string>>> tags (api.body='tags', go.tag = 'json:"tags"') // 评估器标签
 
     255: optional base.Base Base
 }

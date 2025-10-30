@@ -41,18 +41,18 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 		description  string
 	}{
 		{
-			name:        "nil filter option",
-			tagType:     1,
+			name:         "nil filter option",
+			tagType:      1,
 			filterOption: nil,
-			expectedErr: false,
-			description: "当筛选选项为nil时，应该返回空列表",
+			expectedErr:  false,
+			description:  "当筛选选项为nil时，应该返回空列表",
 		},
 		{
-			name:    "empty filter option",
-			tagType: 1,
+			name:         "empty filter option",
+			tagType:      1,
 			filterOption: &entity.EvaluatorFilterOption{},
-			expectedErr: false,
-			description: "当筛选选项为空时，应该返回空列表",
+			expectedErr:  false,
+			description:  "当筛选选项为空时，应该返回空列表",
 		},
 		{
 			name:    "search keyword only",
@@ -247,7 +247,8 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 
 			// 执行测试
 			ctx := context.Background()
-			result, err := dao.GetSourceIDsByFilterConditions(ctx, tt.tagType, tt.filterOption)
+			result, total, err := dao.GetSourceIDsByFilterConditions(ctx, tt.tagType, tt.filterOption, 0, 0, "")
+			_ = total
 
 			// 验证结果
 			if tt.expectedErr {
@@ -273,11 +274,11 @@ func TestBuildSingleCondition(t *testing.T) {
 	dao := &EvaluatorTagDAOImpl{}
 
 	tests := []struct {
-		name        string
-		condition   *entity.EvaluatorFilterCondition
-		expectedSQL string
+		name         string
+		condition    *entity.EvaluatorFilterCondition
+		expectedSQL  string
 		expectedArgs []interface{}
-		expectedErr bool
+		expectedErr  bool
 	}{
 		{
 			name: "equal condition",
@@ -286,9 +287,9 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_Equal,
 				"LLM",
 			),
-			expectedSQL: "tag_key = ? AND tag_value = ?",
+			expectedSQL:  "tag_key = ? AND tag_value = ?",
 			expectedArgs: []interface{}{"Category", "LLM"},
-			expectedErr: false,
+			expectedErr:  false,
 		},
 		{
 			name: "not equal condition",
@@ -297,9 +298,9 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_NotEqual,
 				"Code",
 			),
-			expectedSQL: "tag_key = ? AND tag_value != ?",
+			expectedSQL:  "tag_key = ? AND tag_value != ?",
 			expectedArgs: []interface{}{"Category", "Code"},
-			expectedErr: false,
+			expectedErr:  false,
 		},
 		{
 			name: "in condition",
@@ -308,9 +309,9 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_In,
 				"Text,Image,Video",
 			),
-			expectedSQL: "tag_key = ? AND tag_value IN (?,?,?)",
+			expectedSQL:  "tag_key = ? AND tag_value IN (?,?,?)",
 			expectedArgs: []interface{}{"TargetType", "Text", "Image", "Video"},
-			expectedErr: false,
+			expectedErr:  false,
 		},
 		{
 			name: "like condition",
@@ -319,9 +320,9 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_Like,
 				"Quality",
 			),
-			expectedSQL: "tag_key = ? AND tag_value LIKE ?",
+			expectedSQL:  "tag_key = ? AND tag_value LIKE ?",
 			expectedArgs: []interface{}{"Name", "%Quality%"},
-			expectedErr: false,
+			expectedErr:  false,
 		},
 		{
 			name: "is null condition",
@@ -330,9 +331,9 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_IsNull,
 				"",
 			),
-			expectedSQL: "tag_key = ? AND tag_value IS NULL",
+			expectedSQL:  "tag_key = ? AND tag_value IS NULL",
 			expectedArgs: []interface{}{"Objective"},
-			expectedErr: false,
+			expectedErr:  false,
 		},
 		{
 			name: "is not null condition",
@@ -341,9 +342,9 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_IsNotNull,
 				"",
 			),
-			expectedSQL: "tag_key = ? AND tag_value IS NOT NULL",
+			expectedSQL:  "tag_key = ? AND tag_value IS NOT NULL",
 			expectedArgs: []interface{}{"Objective"},
-			expectedErr: false,
+			expectedErr:  false,
 		},
 		{
 			name: "empty in condition",
@@ -352,9 +353,9 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_In,
 				"",
 			),
-			expectedSQL: "tag_key = ? AND tag_value IN (?)",
+			expectedSQL:  "tag_key = ? AND tag_value IN (?)",
 			expectedArgs: []interface{}{"TargetType", ""},
-			expectedErr: false,
+			expectedErr:  false,
 		},
 	}
 

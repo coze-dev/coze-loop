@@ -32,6 +32,7 @@ func newEvaluatorTag(db *gorm.DB, opts ...gen.DOOption) evaluatorTag {
 	_evaluatorTag.TagType = field.NewInt32(tableName, "tag_type")
 	_evaluatorTag.TagKey = field.NewString(tableName, "tag_key")
 	_evaluatorTag.TagValue = field.NewString(tableName, "tag_value")
+	_evaluatorTag.LangType = field.NewString(tableName, "lang_type")
 	_evaluatorTag.CreatedBy = field.NewString(tableName, "created_by")
 	_evaluatorTag.UpdatedBy = field.NewString(tableName, "updated_by")
 	_evaluatorTag.CreatedAt = field.NewTime(tableName, "created_at")
@@ -53,6 +54,7 @@ type evaluatorTag struct {
 	TagType   field.Int32  // tag类型，1:评估器；2:模板
 	TagKey    field.String // tag键
 	TagValue  field.String // tag值
+	LangType  field.String // 语言类型
 	CreatedBy field.String // 创建人
 	UpdatedBy field.String // 更新人
 	CreatedAt field.Time   // 创建时间
@@ -79,6 +81,7 @@ func (e *evaluatorTag) updateTableName(table string) *evaluatorTag {
 	e.TagType = field.NewInt32(table, "tag_type")
 	e.TagKey = field.NewString(table, "tag_key")
 	e.TagValue = field.NewString(table, "tag_value")
+	e.LangType = field.NewString(table, "lang_type")
 	e.CreatedBy = field.NewString(table, "created_by")
 	e.UpdatedBy = field.NewString(table, "updated_by")
 	e.CreatedAt = field.NewTime(table, "created_at")
@@ -112,12 +115,13 @@ func (e *evaluatorTag) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (e *evaluatorTag) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 10)
+	e.fieldMap = make(map[string]field.Expr, 11)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["source_id"] = e.SourceID
 	e.fieldMap["tag_type"] = e.TagType
 	e.fieldMap["tag_key"] = e.TagKey
 	e.fieldMap["tag_value"] = e.TagValue
+	e.fieldMap["lang_type"] = e.LangType
 	e.fieldMap["created_by"] = e.CreatedBy
 	e.fieldMap["updated_by"] = e.UpdatedBy
 	e.fieldMap["created_at"] = e.CreatedAt

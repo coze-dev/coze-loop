@@ -33,7 +33,7 @@ type IConfiger interface {
 	// 新增方法：获取评估器模板管理空间配置
 	GetBuiltinEvaluatorSpaceConf(ctx context.Context) (spaceIDs []string)
 	// 新增方法：获取评估器Tag配置
-	GetEvaluatorTagConf(ctx context.Context) (etf map[evaluatordto.EvaluatorTagKey][]string)
+	GetEvaluatorTagConf(ctx context.Context) (etf map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string)
 }
 
 func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
@@ -249,15 +249,15 @@ type evaluatorConfiger struct {
 	loader conf.IConfigLoader
 }
 
-func (c *evaluatorConfiger) GetEvaluatorTagConf(ctx context.Context) (etf map[evaluatordto.EvaluatorTagKey][]string) {
+func (c *evaluatorConfiger) GetEvaluatorTagConf(ctx context.Context) (etf map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string) {
 	const key = "evaluator_tag_config"
-	etf = make(map[evaluatordto.EvaluatorTagKey][]string)
+	etf = make(map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string)
 	if c.loader.UnmarshalKey(ctx, key, &etf, conf.WithTagName("json")) == nil && len(etf) > 0 {
 		return etf
 	}
 	return DefaultEvaluatorTagConf()
 }
 
-func DefaultEvaluatorTagConf() map[evaluatordto.EvaluatorTagKey][]string {
-	return make(map[evaluatordto.EvaluatorTagKey][]string)
+func DefaultEvaluatorTagConf() map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string {
+	return make(map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string)
 }

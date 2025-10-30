@@ -29,13 +29,17 @@ func ConvertEvaluatorTemplateDTO2DO(dto *evaluatordto.EvaluatorTemplate) *evalua
 		Vendor:        dto.GetVendor(),
 		InputSchemas:  make([]*evaluatordo.ArgsSchema, 0),
 		OutputSchemas: make([]*evaluatordo.ArgsSchema, 0),
-		Tags:          make(map[evaluatordo.EvaluatorTagKey][]string),
+		Tags:          make(map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string),
 	}
 
 	// 处理标签
 	if len(dto.GetTags()) > 0 {
-		for key, values := range dto.GetTags() {
-			do.Tags[evaluatordo.EvaluatorTagKey(key)] = values
+		for lang, kv := range dto.GetTags() {
+			inner := make(map[evaluatordo.EvaluatorTagKey][]string, len(kv))
+			for key, values := range kv {
+				inner[evaluatordo.EvaluatorTagKey(key)] = values
+			}
+			do.Tags[evaluatordo.EvaluatorTagLangType(lang)] = inner
 		}
 	}
 
@@ -94,13 +98,17 @@ func ConvertEvaluatorTemplateDO2DTO(do *evaluatordo.EvaluatorTemplate) *evaluato
 		Popularity:    gptr.Of(do.Popularity),
 		Benchmark:     gptr.Of(do.Benchmark),
 		Vendor:        gptr.Of(do.Vendor),
-		Tags:          make(map[evaluatordto.EvaluatorTagKey][]string),
+		Tags:          make(map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string),
 	}
 
 	// 处理标签
 	if len(do.Tags) > 0 {
-		for key, values := range do.Tags {
-			dto.Tags[evaluatordto.EvaluatorTagKey(key)] = values
+		for lang, kv := range do.Tags {
+			inner := make(map[evaluatordto.EvaluatorTagKey][]string, len(kv))
+			for key, values := range kv {
+				inner[evaluatordto.EvaluatorTagKey(key)] = values
+			}
+			dto.Tags[evaluatordto.EvaluatorTagLangType(lang)] = inner
 		}
 	}
 

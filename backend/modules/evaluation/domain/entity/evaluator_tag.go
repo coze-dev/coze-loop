@@ -1,5 +1,12 @@
 package entity
 
+type EvaluatorTagLangType string
+
+const (
+	EvaluatorTagLangType_Zh EvaluatorTagLangType = "zh-CN" // 中文
+	EvaluatorTagLangType_En EvaluatorTagLangType = "en-US" // 英文
+)
+
 // EvaluatorTagKey Evaluator筛选字段
 type EvaluatorTagKey string
 

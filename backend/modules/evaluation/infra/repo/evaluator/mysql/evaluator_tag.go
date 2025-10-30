@@ -22,13 +22,13 @@ import (
 //go:generate mockgen -destination mocks/evaluator_tag_mock.go -package=mocks . EvaluatorTagDAO
 type EvaluatorTagDAO interface {
 	// BatchGetTagsBySourceIDsAndType 批量根据source_ids和tag_type筛选tag_key和tag_value
-	BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, opts ...db.Option) ([]*model.EvaluatorTag, error)
+	BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, langType string, opts ...db.Option) ([]*model.EvaluatorTag, error)
 	// GetSourceIDsByFilterConditions 根据筛选条件查询source_id列表，支持复杂的AND/OR逻辑和分页
-	GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, opts ...db.Option) ([]int64, int64, error)
+	GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, langType string, opts ...db.Option) ([]int64, int64, error)
 	// BatchCreateEvaluatorTags 批量创建评估器标签
 	BatchCreateEvaluatorTags(ctx context.Context, evaluatorTags []*model.EvaluatorTag, opts ...db.Option) error
 	// DeleteEvaluatorTagsByConditions 根据sourceID、tagType、tags条件删除标签
-	DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, tags map[string][]string, opts ...db.Option) error
+	DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, langType string, tags map[string][]string, opts ...db.Option) error
 }
 
 var (
@@ -51,7 +51,7 @@ func NewEvaluatorTagDAO(p db.Provider) EvaluatorTagDAO {
 }
 
 // BatchGetTagsBySourceIDsAndType 批量根据source_ids和tag_type筛选tag_key和tag_value
-func (dao *EvaluatorTagDAOImpl) BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, opts ...db.Option) ([]*model.EvaluatorTag, error) {
+func (dao *EvaluatorTagDAOImpl) BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, langType string, opts ...db.Option) ([]*model.EvaluatorTag, error) {
 	if len(sourceIDs) == 0 {
 		return []*model.EvaluatorTag{}, nil
 	}
@@ -59,8 +59,12 @@ func (dao *EvaluatorTagDAOImpl) BatchGetTagsBySourceIDsAndType(ctx context.Conte
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	var tags []*model.EvaluatorTag
-	err := dbsession.WithContext(ctx).
-		Where("source_id IN (?) AND tag_type = ?", sourceIDs, tagType).
+	query := dbsession.WithContext(ctx).
+		Where("source_id IN (?) AND tag_type = ?", sourceIDs, tagType)
+	if langType != "" {
+		query = query.Where("lang_type = ?", langType)
+	}
+	err := query.
 		Find(&tags).Error
 	if err != nil {
 		return nil, err
@@ -80,12 +84,15 @@ func (dao *EvaluatorTagDAOImpl) BatchCreateEvaluatorTags(ctx context.Context, ev
 }
 
 // DeleteEvaluatorTagsByConditions 根据sourceID、tagType、tags条件删除标签
-func (dao *EvaluatorTagDAOImpl) DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, tags map[string][]string, opts ...db.Option) error {
+func (dao *EvaluatorTagDAOImpl) DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, langType string, tags map[string][]string, opts ...db.Option) error {
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	// 基础查询条件
 	query := dbsession.WithContext(ctx).
 		Where("source_id = ? AND tag_type = ?", sourceID, tagType)
+	if langType != "" {
+		query = query.Where("lang_type = ?", langType)
+	}
 
 	// 如果有指定tags条件，则添加额外的删除条件
 	if len(tags) > 0 {
@@ -113,7 +120,7 @@ func (dao *EvaluatorTagDAOImpl) DeleteEvaluatorTagsByConditions(ctx context.Cont
 }
 
 // GetSourceIDsByFilterConditions 根据筛选条件查询source_id列表，支持复杂的AND/OR逻辑和分页
-func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, opts ...db.Option) ([]int64, int64, error) {
+func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, langType string, opts ...db.Option) ([]int64, int64, error) {
 	if filterOption == nil {
 		return []int64{}, 0, nil
 	}
@@ -124,6 +131,9 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	query := dbsession.WithContext(ctx).Table("evaluator_tag").
 		Select("source_id").
 		Where("tag_type = ?", tagType)
+	if langType != "" {
+		query = query.Where("lang_type = ?", langType)
+	}
 
 	// 处理搜索关键词
 	if filterOption.SearchKeyword != nil && *filterOption.SearchKeyword != "" {

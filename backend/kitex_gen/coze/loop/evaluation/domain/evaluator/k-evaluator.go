@@ -2311,9 +2311,9 @@ func (p *Evaluator) FastReadField100(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	_field := make(map[EvaluatorTagKey][]string, size)
+	_field := make(map[EvaluatorTagLangType]map[EvaluatorTagKey][]string, size)
 	for i := 0; i < size; i++ {
-		var _key EvaluatorTagKey
+		var _key EvaluatorTagLangType
 		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 			return offset, err
 		} else {
@@ -2321,22 +2321,40 @@ func (p *Evaluator) FastReadField100(buf []byte) (int, error) {
 			_key = v
 		}
 
-		_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+		_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
 		offset += l
 		if err != nil {
 			return offset, err
 		}
-		_val := make([]string, 0, size)
+		_val := make(map[EvaluatorTagKey][]string, size)
 		for i := 0; i < size; i++ {
-			var _elem string
+			var _key1 EvaluatorTagKey
 			if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 				return offset, err
 			} else {
 				offset += l
-				_elem = v
+				_key1 = v
 			}
 
-			_val = append(_val, _elem)
+			_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+			offset += l
+			if err != nil {
+				return offset, err
+			}
+			_val1 := make([]string, 0, size)
+			for i := 0; i < size; i++ {
+				var _elem string
+				if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+					return offset, err
+				} else {
+					offset += l
+					_elem = v
+				}
+
+				_val1 = append(_val1, _elem)
+			}
+
+			_val[_key1] = _val1
 		}
 
 		_field[_key] = _val
@@ -2520,16 +2538,24 @@ func (p *Evaluator) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
 		for k, v := range p.Tags {
 			length++
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-			listBeginOffset := offset
-			offset += thrift.Binary.ListBeginLength()
+			mapBeginOffset := offset
+			offset += thrift.Binary.MapBeginLength()
 			var length int
-			for _, v := range v {
+			for k, v := range v {
 				length++
-				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+				listBeginOffset := offset
+				offset += thrift.Binary.ListBeginLength()
+				var length int
+				for _, v := range v {
+					length++
+					offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+				}
+				thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
 			}
-			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+			thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
 		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.MAP, length)
 	}
 	return offset
 }
@@ -2660,10 +2686,16 @@ func (p *Evaluator) field100Length() int {
 			_, _ = k, v
 
 			l += thrift.Binary.StringLengthNocopy(k)
-			l += thrift.Binary.ListBeginLength()
-			for _, v := range v {
-				_ = v
-				l += thrift.Binary.StringLengthNocopy(v)
+			l += thrift.Binary.MapBeginLength()
+			for k, v := range v {
+				_, _ = k, v
+
+				l += thrift.Binary.StringLengthNocopy(k)
+				l += thrift.Binary.ListBeginLength()
+				for _, v := range v {
+					_ = v
+					l += thrift.Binary.StringLengthNocopy(v)
+				}
 			}
 		}
 	}
@@ -2768,20 +2800,30 @@ func (p *Evaluator) DeepCopy(s interface{}) error {
 	}
 
 	if src.Tags != nil {
-		p.Tags = make(map[EvaluatorTagKey][]string, len(src.Tags))
+		p.Tags = make(map[EvaluatorTagLangType]map[EvaluatorTagKey][]string, len(src.Tags))
 		for key, val := range src.Tags {
-			var _key EvaluatorTagKey
+			var _key EvaluatorTagLangType
 			_key = key
-
-			var _val []string
+			var _val map[EvaluatorTagKey][]string
 			if val != nil {
-				_val = make([]string, 0, len(val))
-				for _, elem := range val {
-					var _elem string
-					if elem != "" {
-						_elem = kutils.StringDeepCopy(elem)
+				_val = make(map[EvaluatorTagKey][]string, len(val))
+				for key1, val1 := range val {
+					var _key1 EvaluatorTagKey
+					_key1 = key1
+
+					var _val1 []string
+					if val1 != nil {
+						_val1 = make([]string, 0, len(val1))
+						for _, elem := range val1 {
+							var _elem string
+							if elem != "" {
+								_elem = kutils.StringDeepCopy(elem)
+							}
+							_val1 = append(_val1, _elem)
+						}
 					}
-					_val = append(_val, _elem)
+
+					_val[_key1] = _val1
 				}
 			}
 
@@ -3103,9 +3145,9 @@ func (p *EvaluatorTemplate) FastReadField9(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	_field := make(map[EvaluatorTagKey][]string, size)
+	_field := make(map[EvaluatorTagLangType]map[EvaluatorTagKey][]string, size)
 	for i := 0; i < size; i++ {
-		var _key EvaluatorTagKey
+		var _key EvaluatorTagLangType
 		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 			return offset, err
 		} else {
@@ -3113,22 +3155,40 @@ func (p *EvaluatorTemplate) FastReadField9(buf []byte) (int, error) {
 			_key = v
 		}
 
-		_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+		_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
 		offset += l
 		if err != nil {
 			return offset, err
 		}
-		_val := make([]string, 0, size)
+		_val := make(map[EvaluatorTagKey][]string, size)
 		for i := 0; i < size; i++ {
-			var _elem string
+			var _key1 EvaluatorTagKey
 			if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 				return offset, err
 			} else {
 				offset += l
-				_elem = v
+				_key1 = v
 			}
 
-			_val = append(_val, _elem)
+			_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+			offset += l
+			if err != nil {
+				return offset, err
+			}
+			_val1 := make([]string, 0, size)
+			for i := 0; i < size; i++ {
+				var _elem string
+				if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+					return offset, err
+				} else {
+					offset += l
+					_elem = v
+				}
+
+				_val1 = append(_val1, _elem)
+			}
+
+			_val[_key1] = _val1
 		}
 
 		_field[_key] = _val
@@ -3285,16 +3345,24 @@ func (p *EvaluatorTemplate) fastWriteField9(buf []byte, w thrift.NocopyWriter) i
 		for k, v := range p.Tags {
 			length++
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-			listBeginOffset := offset
-			offset += thrift.Binary.ListBeginLength()
+			mapBeginOffset := offset
+			offset += thrift.Binary.MapBeginLength()
 			var length int
-			for _, v := range v {
+			for k, v := range v {
 				length++
-				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+				listBeginOffset := offset
+				offset += thrift.Binary.ListBeginLength()
+				var length int
+				for _, v := range v {
+					length++
+					offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+				}
+				thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
 			}
-			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+			thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
 		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.MAP, length)
 	}
 	return offset
 }
@@ -3398,10 +3466,16 @@ func (p *EvaluatorTemplate) field9Length() int {
 			_, _ = k, v
 
 			l += thrift.Binary.StringLengthNocopy(k)
-			l += thrift.Binary.ListBeginLength()
-			for _, v := range v {
-				_ = v
-				l += thrift.Binary.StringLengthNocopy(v)
+			l += thrift.Binary.MapBeginLength()
+			for k, v := range v {
+				_, _ = k, v
+
+				l += thrift.Binary.StringLengthNocopy(k)
+				l += thrift.Binary.ListBeginLength()
+				for _, v := range v {
+					_ = v
+					l += thrift.Binary.StringLengthNocopy(v)
+				}
 			}
 		}
 	}
@@ -3485,20 +3559,30 @@ func (p *EvaluatorTemplate) DeepCopy(s interface{}) error {
 	}
 
 	if src.Tags != nil {
-		p.Tags = make(map[EvaluatorTagKey][]string, len(src.Tags))
+		p.Tags = make(map[EvaluatorTagLangType]map[EvaluatorTagKey][]string, len(src.Tags))
 		for key, val := range src.Tags {
-			var _key EvaluatorTagKey
+			var _key EvaluatorTagLangType
 			_key = key
-
-			var _val []string
+			var _val map[EvaluatorTagKey][]string
 			if val != nil {
-				_val = make([]string, 0, len(val))
-				for _, elem := range val {
-					var _elem string
-					if elem != "" {
-						_elem = kutils.StringDeepCopy(elem)
+				_val = make(map[EvaluatorTagKey][]string, len(val))
+				for key1, val1 := range val {
+					var _key1 EvaluatorTagKey
+					_key1 = key1
+
+					var _val1 []string
+					if val1 != nil {
+						_val1 = make([]string, 0, len(val1))
+						for _, elem := range val1 {
+							var _elem string
+							if elem != "" {
+								_elem = kutils.StringDeepCopy(elem)
+							}
+							_val1 = append(_val1, _elem)
+						}
 					}
-					_val = append(_val, _elem)
+
+					_val[_key1] = _val1
 				}
 			}
 

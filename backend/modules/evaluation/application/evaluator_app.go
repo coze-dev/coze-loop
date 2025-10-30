@@ -35,6 +35,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -1555,32 +1556,52 @@ func (e *EvaluatorHandlerImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, r
 	}
 
 	// 2) 调用 service，按 evaluatorID 更新标签（不再使用 version 参数）
-	err = e.evaluatorService.UpdateBuiltinEvaluatorTags(ctx, request.GetEvaluatorID(), evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags()))
+	err = e.evaluatorService.UpdateBuiltinEvaluatorTags(ctx, request.GetEvaluatorID(), evaluatorconvertor.ConvertEvaluatorLangTagsDTO2DO(request.GetTags()))
 	if err != nil {
 		return nil, err
 	}
 
 	// 3) 组装更新后的标签并返回 Evaluator（最终标签集合等于请求中的标签集合）
-	evaluatorDO.Tags = evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags())
+	evaluatorDO.Tags = evaluatorconvertor.ConvertEvaluatorLangTagsDTO2DO(request.GetTags())
 	return &evaluatorservice.UpdateBuiltinEvaluatorTagsResponse{
 		Evaluator: evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO),
 	}, nil
 }
 
 func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *evaluatorservice.ListEvaluatorTagsRequest) (resp *evaluatorservice.ListEvaluatorTagsResponse, err error) {
-	// 直接从配置获取可用的标签配置
-	tags := e.configer.GetEvaluatorTagConf(ctx)
-	// 对每个 tagKey 下的列表按字母顺序排序
-	if len(tags) > 0 {
-		for k, vs := range tags {
-			if len(vs) > 1 {
-				sort.Strings(vs)
-				tags[k] = vs
+	// 读取全部语言的标签配置
+	all := e.configer.GetEvaluatorTagConf(ctx)
+
+	// 选择语言：先取上下文 locale；再尝试 zh-CN；再 en-US；最后任意可用语言
+	var selected map[evaluatordto.EvaluatorTagKey][]string
+	if len(all) > 0 {
+		locale := contexts.CtxLocale(ctx)
+		if m, ok := all[locale]; ok {
+			selected = m
+		} else if m, ok := all["zh-CN"]; ok {
+			selected = m
+		} else if m, ok := all["en-US"]; ok {
+			selected = m
+		} else {
+			for _, m := range all { // 兜底取任意一种
+				selected = m
+				break
 			}
 		}
 	}
+
+	// 排序 value 列表
+	if len(selected) > 0 {
+		for k, vs := range selected {
+			if len(vs) > 1 {
+				sort.Strings(vs)
+				selected[k] = vs
+			}
+		}
+	}
+
 	return &evaluatorservice.ListEvaluatorTagsResponse{
-		Tags: tags,
+		Tags: selected,
 	}, nil
 }
 

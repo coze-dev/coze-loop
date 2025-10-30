@@ -35,6 +35,10 @@ enum EvaluatorRunStatus { // 运行状态, 异步下状态流转, 同步下只�
     Fail = 2
 }
 
+typedef string EvaluatorTagLangType(ts.enum="true")
+const EvaluatorTagLangType EvaluatorTagLangType_Zh = "zh-CN"
+const EvaluatorTagLangType EvaluatorTagLangType_En = "en-US"
+
 // Evaluator筛选字段
 typedef string EvaluatorTagKey(ts.enum="true")
 const EvaluatorTagKey EvaluatorTagKey_Category = "Category"           // 类型筛选 (LLM/Code)
@@ -105,7 +109,7 @@ struct Evaluator {
     22: optional string vendor (go.tag = 'json:"vendor"')
     23: optional string builtin_visible_version (go.tag = 'json:"builtin_visible_version"')
 
-    100: optional map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
+    100: optional map<EvaluatorTagLangType, map<EvaluatorTagKey, list<string>>> tags (go.tag = 'json:"tags"')
 }
 
 struct EvaluatorTemplate {
@@ -117,7 +121,7 @@ struct EvaluatorTemplate {
     6: optional i64 popularity (go.tag = 'json:"popularity"') // 热度
     7: optional string benchmark (go.tag = 'json:"benchmark"')
     8: optional string vendor (go.tag = 'json:"vendor"')
-    9: optional map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
+    9: optional map<EvaluatorTagLangType, map<EvaluatorTagKey, list<string>>> tags (go.tag = 'json:"tags"')
 
     101: optional EvaluatorContent evaluator_content
     255: optional common.BaseInfo base_info

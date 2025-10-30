@@ -20134,8 +20134,8 @@ type UpdateBuiltinEvaluatorTagsRequest struct {
 	EvaluatorID int64  `thrift:"evaluator_id,1,required" frugal:"1,required,i64" json:"evaluator_id" path:"evaluator_id,required" `
 	WorkspaceID *int64 `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
 	// 评估器标签
-	Tags map[evaluator.EvaluatorTagKey][]string `thrift:"tags,3,optional" frugal:"3,optional,map<string:list<string>>" json:"tags" form:"tags" `
-	Base *base.Base                             `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Tags map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string `thrift:"tags,3,optional" frugal:"3,optional,map<string:map<string:list<string>>>" json:"tags" form:"tags" `
+	Base *base.Base                                                                `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateBuiltinEvaluatorTagsRequest() *UpdateBuiltinEvaluatorTagsRequest {
@@ -20164,9 +20164,9 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) GetWorkspaceID() (v int64) {
 	return *p.WorkspaceID
 }
 
-var UpdateBuiltinEvaluatorTagsRequest_Tags_DEFAULT map[evaluator.EvaluatorTagKey][]string
+var UpdateBuiltinEvaluatorTagsRequest_Tags_DEFAULT map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string
 
-func (p *UpdateBuiltinEvaluatorTagsRequest) GetTags() (v map[evaluator.EvaluatorTagKey][]string) {
+func (p *UpdateBuiltinEvaluatorTagsRequest) GetTags() (v map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string) {
 	if p == nil {
 		return
 	}
@@ -20193,7 +20193,7 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) SetEvaluatorID(val int64) {
 func (p *UpdateBuiltinEvaluatorTagsRequest) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
-func (p *UpdateBuiltinEvaluatorTagsRequest) SetTags(val map[evaluator.EvaluatorTagKey][]string) {
+func (p *UpdateBuiltinEvaluatorTagsRequest) SetTags(val map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string) {
 	p.Tags = val
 }
 func (p *UpdateBuiltinEvaluatorTagsRequest) SetBase(val *base.Base) {
@@ -20333,31 +20333,49 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) ReadField3(iprot thrift.TProtocol) e
 	if err != nil {
 		return err
 	}
-	_field := make(map[evaluator.EvaluatorTagKey][]string, size)
+	_field := make(map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string, size)
 	for i := 0; i < size; i++ {
-		var _key evaluator.EvaluatorTagKey
+		var _key evaluator.EvaluatorTagLangType
 		if v, err := iprot.ReadString(); err != nil {
 			return err
 		} else {
 			_key = v
 		}
-		_, size, err := iprot.ReadListBegin()
+		_, _, size, err := iprot.ReadMapBegin()
 		if err != nil {
 			return err
 		}
-		_val := make([]string, 0, size)
+		_val := make(map[evaluator.EvaluatorTagKey][]string, size)
 		for i := 0; i < size; i++ {
-
-			var _elem string
+			var _key1 evaluator.EvaluatorTagKey
 			if v, err := iprot.ReadString(); err != nil {
 				return err
 			} else {
-				_elem = v
+				_key1 = v
+			}
+			_, size, err := iprot.ReadListBegin()
+			if err != nil {
+				return err
+			}
+			_val1 := make([]string, 0, size)
+			for i := 0; i < size; i++ {
+
+				var _elem string
+				if v, err := iprot.ReadString(); err != nil {
+					return err
+				} else {
+					_elem = v
+				}
+
+				_val1 = append(_val1, _elem)
+			}
+			if err := iprot.ReadListEnd(); err != nil {
+				return err
 			}
 
-			_val = append(_val, _elem)
+			_val[_key1] = _val1
 		}
-		if err := iprot.ReadListEnd(); err != nil {
+		if err := iprot.ReadMapEnd(); err != nil {
 			return err
 		}
 
@@ -20457,22 +20475,33 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) writeField3(oprot thrift.TProtocol) 
 		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.Tags)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.MAP, len(p.Tags)); err != nil {
 			return err
 		}
 		for k, v := range p.Tags {
 			if err := oprot.WriteString(k); err != nil {
 				return err
 			}
-			if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
+			if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(v)); err != nil {
 				return err
 			}
-			for _, v := range v {
-				if err := oprot.WriteString(v); err != nil {
+			for k, v := range v {
+				if err := oprot.WriteString(k); err != nil {
+					return err
+				}
+				if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
+					return err
+				}
+				for _, v := range v {
+					if err := oprot.WriteString(v); err != nil {
+						return err
+					}
+				}
+				if err := oprot.WriteListEnd(); err != nil {
 					return err
 				}
 			}
-			if err := oprot.WriteListEnd(); err != nil {
+			if err := oprot.WriteMapEnd(); err != nil {
 				return err
 			}
 		}
@@ -20556,7 +20585,7 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Field2DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *UpdateBuiltinEvaluatorTagsRequest) Field3DeepEqual(src map[evaluator.EvaluatorTagKey][]string) bool {
+func (p *UpdateBuiltinEvaluatorTagsRequest) Field3DeepEqual(src map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string) bool {
 
 	if len(p.Tags) != len(src) {
 		return false
@@ -20566,10 +20595,16 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Field3DeepEqual(src map[evaluator.Ev
 		if len(v) != len(_src) {
 			return false
 		}
-		for i, v := range v {
-			_src1 := _src[i]
-			if strings.Compare(v, _src1) != 0 {
+		for k, v := range v {
+			_src1 := _src[k]
+			if len(v) != len(_src1) {
 				return false
+			}
+			for i, v := range v {
+				_src2 := _src1[i]
+				if strings.Compare(v, _src2) != 0 {
+					return false
+				}
 			}
 		}
 	}
