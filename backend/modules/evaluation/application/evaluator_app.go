@@ -347,51 +347,48 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluator(ctx context.Context, request *eva
 		}
 	}
 	// 机审
-	auditTexts := make([]string, 0)
-	auditTexts = append(auditTexts, request.GetName())
-	auditTexts = append(auditTexts, request.GetDescription())
-	data := map[string]string{
-		"texts": strings.Join(auditTexts, ","),
-	}
-	record, err := e.auditClient.Audit(ctx, audit.AuditParam{
-		ObjectID:  evaluatorDO.ID,
-		AuditData: data,
-		ReqID:     encoding.Encode(ctx, data),
-		AuditType: audit.AuditType_CozeLoopEvaluatorModify,
-	})
-	if err != nil {
-		logs.CtxError(ctx, "audit: failed to audit, err=%v", err) // 审核服务不可用，默认通过
-	}
-	if record.AuditStatus == audit.AuditStatus_Rejected {
-		return nil, errorx.NewByCode(errno.RiskContentDetectedCode)
+	if err := e.auditEvaluatorModify(ctx, evaluatorDO.ID, []string{request.GetName(), request.GetDescription()}); err != nil {
+		return nil, err
 	}
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	// 组装请求
 	req := &entity.UpdateEvaluatorMetaRequest{
-		ID:        request.GetEvaluatorID(),
-		SpaceID:   request.GetWorkspaceID(),
-		UpdatedBy: userIDInContext,
-	}
-	if request.Name != nil {
-		req.Name = request.Name
-	}
-	if request.Description != nil {
-		req.Description = request.Description
-	}
-	if request.Builtin != nil {
-		req.Builtin = request.Builtin
-	}
-	if request.Benchmark != nil {
-		req.Benchmark = request.Benchmark
-	}
-	if request.Vendor != nil {
-		req.Vendor = request.Vendor
+		ID:                    request.GetEvaluatorID(),
+		SpaceID:               request.GetWorkspaceID(),
+		Name:                  request.Name,
+		Description:           request.Description,
+		Builtin:               request.Builtin,
+		Benchmark:             request.Benchmark,
+		Vendor:                request.Vendor,
+		BuiltinVisibleVersion: request.BuiltinVisibleVersion, // 后续 Service/Repo/DAO 层补充更新逻辑
+		UpdatedBy:             userIDInContext,
 	}
 
 	if err = e.evaluatorService.UpdateEvaluatorMeta(ctx, req); err != nil {
 		return nil, err
 	}
 	return &evaluatorservice.UpdateEvaluatorResponse{}, nil
+}
+
+// auditEvaluatorModify 抽取的机审逻辑：传入要审计的文本列表
+func (e *EvaluatorHandlerImpl) auditEvaluatorModify(ctx context.Context, objectID int64, texts []string) error {
+	data := map[string]string{
+		"texts": strings.Join(texts, ","),
+	}
+	record, err := e.auditClient.Audit(ctx, audit.AuditParam{
+		ObjectID:  objectID,
+		AuditData: data,
+		ReqID:     encoding.Encode(ctx, data),
+		AuditType: audit.AuditType_CozeLoopEvaluatorModify,
+	})
+	if err != nil {
+		logs.CtxError(ctx, "audit: failed to audit, err=%v", err) // 审核服务不可用，默认通过
+		return nil
+	}
+	if record.AuditStatus == audit.AuditStatus_Rejected {
+		return errorx.NewByCode(errno.RiskContentDetectedCode)
+	}
+	return nil
 }
 
 func validateUpdateEvaluatorRequest(ctx context.Context, request *evaluatorservice.UpdateEvaluatorRequest) error {

@@ -233,11 +233,7 @@ func (e *EvaluatorServiceImpl) UpdateEvaluatorMeta(ctx context.Context, req *ent
 	if req == nil {
 		return errorx.NewByCode(errno.CommonInvalidParamCode)
 	}
-	name := ""
-	if req.Name != nil {
-		name = *req.Name
-	}
-	if err := e.validateUpdateEvaluatorMetaRequest(ctx, req.ID, req.SpaceID, name); err != nil {
+	if err := e.validateUpdateEvaluatorMetaRequest(ctx, req.ID, req.SpaceID, gptr.Indirect(req.Name)); err != nil {
 		return err
 	}
 	return e.evaluatorRepo.UpdateEvaluatorMeta(ctx, req)

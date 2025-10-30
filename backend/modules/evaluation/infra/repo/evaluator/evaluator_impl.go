@@ -444,6 +444,9 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorMeta(ctx context.Context, req *entity
 	if req.Vendor != nil {
 		po.Vendor = req.Vendor
 	}
+	if req.BuiltinVisibleVersion != nil {
+		po.BuiltinVisibleVersion = gptr.Indirect(req.BuiltinVisibleVersion)
+	}
 	if req.Builtin != nil {
 		// 将 bool 转为 1/2 存入
 		if *req.Builtin {
