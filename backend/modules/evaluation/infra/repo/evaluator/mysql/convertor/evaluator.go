@@ -21,12 +21,12 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 	if do == nil {
 		return nil
 	}
-    // builtin: do.Builtin=true -> 1, false -> 2
-    builtinVal := int32(2)
-    if do.Builtin {
-        builtinVal = 1
-    }
-    po := &model.Evaluator{
+	// builtin: do.Builtin=true -> 1, false -> 2
+	builtinVal := int32(2)
+	if do.Builtin {
+		builtinVal = 1
+	}
+	po := &model.Evaluator{
 		ID:             do.ID,
 		SpaceID:        do.SpaceID,
 		Name:           ptr.Of(do.Name),
@@ -34,7 +34,7 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 		DraftSubmitted: ptr.Of(do.DraftSubmitted),
 		EvaluatorType:  int32(do.EvaluatorType),
 		LatestVersion:  do.LatestVersion,
-        Builtin:        builtinVal,
+		Builtin:        builtinVal,
 		Benchmark:      ptr.Of(do.Benchmark),
 		Vendor:         ptr.Of(do.Vendor),
 	}
@@ -60,7 +60,7 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 	if po == nil {
 		return nil
 	}
-    do := &evaluatordo.Evaluator{
+	do := &evaluatordo.Evaluator{
 		ID:             po.ID,
 		SpaceID:        po.SpaceID,
 		Name:           gptr.Indirect(po.Name),
@@ -68,7 +68,7 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 		DraftSubmitted: gptr.Indirect(po.DraftSubmitted),
 		EvaluatorType:  evaluatordo.EvaluatorType(po.EvaluatorType),
 		LatestVersion:  po.LatestVersion,
-        Builtin:        po.Builtin == 1,
+		Builtin:        po.Builtin == 1,
 		Benchmark:      gptr.Indirect(po.Benchmark),
 		Vendor:         gptr.Indirect(po.Vendor),
 	}
@@ -92,7 +92,8 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVersion, error) {
 	if do == nil ||
 		(do.EvaluatorType == evaluatordo.EvaluatorTypePrompt && do.PromptEvaluatorVersion == nil) ||
-		(do.EvaluatorType == evaluatordo.EvaluatorTypeCode && do.CodeEvaluatorVersion == nil) {
+		(do.EvaluatorType == evaluatordo.EvaluatorTypeCode && do.CodeEvaluatorVersion == nil) ||
+		(do.EvaluatorType == evaluatordo.EvaluatorTypeCustomRPC && do.CustomRPCEvaluatorVersion == nil) {
 		return nil, nil
 	}
 
@@ -154,6 +155,29 @@ func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVe
 		// Code evaluator不需要chat history，设置为nil
 		po.ReceiveChatHistory = nil
 		po.ID = do.CodeEvaluatorVersion.ID
+	case evaluatordo.EvaluatorTypeCustomRPC:
+		// 序列化Metainfo（整个CustomRPCEvaluatorVersion）
+		metaInfoByte, err := json.Marshal(do.CustomRPCEvaluatorVersion)
+		if err != nil {
+			return nil, err
+		}
+		// 序列化InputSchema
+		inputSchemaByte, err := json.Marshal(do.CustomRPCEvaluatorVersion.InputSchemas)
+		if err != nil {
+			return nil, err
+		}
+		// 序列化OutputSchema
+		outputSchemaByte, err := json.Marshal(do.CustomRPCEvaluatorVersion.OutputSchemas)
+		if err != nil {
+			return nil, err
+		}
+
+		po.InputSchema = ptr.Of(inputSchemaByte)
+		po.OutputSchema = ptr.Of(outputSchemaByte)
+		po.Metainfo = ptr.Of(metaInfoByte)
+		// Custom RPC evaluator不需要chat history，设置为nil
+		po.ReceiveChatHistory = nil
+		po.ID = do.CustomRPCEvaluatorVersion.ID
 	}
 	return po, nil
 }
@@ -199,6 +223,13 @@ func ConvertEvaluatorVersionPO2DO(po *model.EvaluatorVersion) (*evaluatordo.Eval
 		// 反序列化Metainfo获取完整的CodeEvaluatorVersion对象
 		if po.Metainfo != nil {
 			if err := json.Unmarshal(*po.Metainfo, do.CodeEvaluatorVersion); err != nil {
+				return nil, err
+			}
+		}
+	case evaluatordo.EvaluatorTypeCustomRPC:
+		do.CustomRPCEvaluatorVersion = &evaluatordo.CustomRPCEvaluatorVersion{}
+		if po.Metainfo != nil {
+			if err := json.Unmarshal(*po.Metainfo, do.CustomRPCEvaluatorVersion); err != nil {
 				return nil, err
 			}
 		}

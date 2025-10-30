@@ -255,6 +255,17 @@ func ConvertArgsSchemaDO2DTO(schema *commonentity.ArgsSchema) *commondto.ArgsSch
 	}
 }
 
+func ConvertArgsSchemaListDO2DTO(schemas []*commonentity.ArgsSchema) []*commondto.ArgsSchema {
+	if len(schemas) == 0 {
+		return nil
+	}
+	res := make([]*commondto.ArgsSchema, 0, len(schemas))
+	for _, schema := range schemas {
+		res = append(res, ConvertArgsSchemaDO2DTO(schema))
+	}
+	return res
+}
+
 // ConvertUserInfoDTO2DO 将 DTO 转换为 UserInfo 结构体
 func ConvertUserInfoDTO2DO(info *commondto.UserInfo) *commonentity.UserInfo {
 	if info == nil {
