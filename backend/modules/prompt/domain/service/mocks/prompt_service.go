@@ -161,7 +161,7 @@ func (mr *MockIPromptServiceMockRecorder) MCompleteMultiModalFileURL(ctx, messag
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MCompleteMultiModalFileURL", reflect.TypeOf((*MockIPromptService)(nil).MCompleteMultiModalFileURL), ctx, messages, variableVals)
 }
 
-// MConvertBase64ToFileURI mocks base method.
+// MConvertBase64DataURLToFileURI mocks base method.
 func (m *MockIPromptService) MConvertBase64DataURLToFileURI(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MConvertBase64DataURLToFileURI", ctx, messages, workspaceID)
@@ -169,13 +169,13 @@ func (m *MockIPromptService) MConvertBase64DataURLToFileURI(ctx context.Context,
 	return ret0
 }
 
-// MConvertBase64ToFileURI indicates an expected call of MConvertBase64ToFileURI.
-func (mr *MockIPromptServiceMockRecorder) MConvertBase64ToFileURI(ctx, messages, workspaceID any) *gomock.Call {
+// MConvertBase64DataURLToFileURI indicates an expected call of MConvertBase64DataURLToFileURI.
+func (mr *MockIPromptServiceMockRecorder) MConvertBase64DataURLToFileURI(ctx, messages, workspaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MConvertBase64DataURLToFileURI", reflect.TypeOf((*MockIPromptService)(nil).MConvertBase64DataURLToFileURI), ctx, messages, workspaceID)
 }
 
-// MConvertBase64ToFileURL mocks base method.
+// MConvertBase64DataURLToFileURL mocks base method.
 func (m *MockIPromptService) MConvertBase64DataURLToFileURL(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MConvertBase64DataURLToFileURL", ctx, messages, workspaceID)
@@ -183,8 +183,8 @@ func (m *MockIPromptService) MConvertBase64DataURLToFileURL(ctx context.Context,
 	return ret0
 }
 
-// MConvertBase64ToFileURL indicates an expected call of MConvertBase64ToFileURL.
-func (mr *MockIPromptServiceMockRecorder) MConvertBase64ToFileURL(ctx, messages, workspaceID any) *gomock.Call {
+// MConvertBase64DataURLToFileURL indicates an expected call of MConvertBase64DataURLToFileURL.
+func (mr *MockIPromptServiceMockRecorder) MConvertBase64DataURLToFileURL(ctx, messages, workspaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MConvertBase64DataURLToFileURL", reflect.TypeOf((*MockIPromptService)(nil).MConvertBase64DataURLToFileURL), ctx, messages, workspaceID)
 }

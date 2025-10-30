@@ -2361,7 +2361,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 					},
 				}
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
-				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
 					promptService:    mockPromptService,
@@ -2457,7 +2457,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 					},
 				}
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
-				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
 
 				return fields{
 					promptService:    mockPromptService,
@@ -2810,7 +2810,7 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 					},
 				}
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
-				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
 				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
@@ -2904,7 +2904,7 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 					},
 				}
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
-				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
 
 				mockCollector := collectormocks.NewMockICollectorProvider(ctrl)
 				mockCollector.EXPECT().CollectPTaaSEvent(gomock.Any(), gomock.Any()).Return()
@@ -3450,7 +3450,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				assert.Len(t, calls, 0)
 			},
 			setupConvertMock: func(mockSvc *servicemocks.MockIPromptService) {
-				mockSvc.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
+				mockSvc.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
 			},
 		},
 		{
@@ -4317,7 +4317,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				if tt.setupConvertMock != nil {
 					tt.setupConvertMock(mockSvc)
 				} else {
-					mockSvc.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+					mockSvc.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}
 			}
 			ttArgs := tt.argsGetter(ctrl)

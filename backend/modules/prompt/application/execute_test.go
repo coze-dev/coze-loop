@@ -110,7 +110,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
-				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
 					promptService: mockPromptService,
@@ -148,7 +148,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
-				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
 
 				return fields{
 					promptService: mockPromptService,
@@ -225,7 +225,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
-				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
 					promptService: mockPromptService,
@@ -269,7 +269,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
-				mockPromptService.EXPECT().MConvertBase64ToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
 					promptService: mockPromptService,

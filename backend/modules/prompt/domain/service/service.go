@@ -67,6 +67,7 @@ type PromptLabelQuery struct {
 }
 
 type PromptServiceImpl struct {
+	formatter        IPromptFormatter
 	idgen            idgen.IIDGenerator
 	debugLogRepo     repo.IDebugLogRepo
 	debugContextRepo repo.IDebugContextRepo
@@ -78,6 +79,7 @@ type PromptServiceImpl struct {
 }
 
 func NewPromptService(
+	formatter IPromptFormatter,
 	idgen idgen.IIDGenerator,
 	debugLogRepo repo.IDebugLogRepo,
 	debugContextRepo repo.IDebugContextRepo,
@@ -88,6 +90,7 @@ func NewPromptService(
 	file rpc.IFileProvider,
 ) IPromptService {
 	return &PromptServiceImpl{
+		formatter:        formatter,
 		idgen:            idgen,
 		debugLogRepo:     debugLogRepo,
 		debugContextRepo: debugContextRepo,
