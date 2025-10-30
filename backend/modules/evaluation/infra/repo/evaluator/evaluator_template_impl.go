@@ -114,6 +114,13 @@ func (r *EvaluatorTemplateRepoImpl) CreateEvaluatorTemplate(ctx context.Context,
 		return nil, err
 	}
 
+	// 生成并填充主键ID（使用 idgen），避免依赖数据库自增
+	ids, err := r.idgen.GenMultiIDs(ctx, 1)
+	if err != nil {
+		return nil, err
+	}
+	templatePO.ID = ids[0]
+
 	// 调用DAO层创建
 	createdPO, err := r.templateDAO.CreateEvaluatorTemplate(ctx, templatePO)
 	if err != nil {
@@ -121,7 +128,7 @@ func (r *EvaluatorTemplateRepoImpl) CreateEvaluatorTemplate(ctx context.Context,
 	}
 
 	// 若携带了标签，则为模板创建tags（以模板ID作为 source_id）
-	if template != nil && len(template.Tags) > 0 {
+	if len(template.Tags) > 0 {
 		userID := session.UserIDInCtxOrEmpty(ctx)
 		// 统计总标签数
 		total := 0
