@@ -6,7 +6,7 @@ include "../../llm/domain/runtime.thrift"
 enum EvaluatorType {
     Prompt = 1
     Code = 2
-    Builtin = 3
+    CustomRPC = 3
 }
 
 typedef string LanguageType(ts.enum="true")
@@ -75,7 +75,7 @@ struct CodeEvaluator {
 }
 
 struct CustomRPCEvaluator {
-    1: optional string       custom_evaluator_code     // 自定义评估器编码，例如：EvalBot的给“代码生成-代码正确”赋予CN:480的评估器ID
+    1: optional string provider_evaluator_code     // 自定义评估器编码，例如：EvalBot的给“代码生成-代码正确”赋予CN:480的评估器ID
     2: required AccessProtocol access_protocol    // 本期是RPC，后续还可拓展HTTP
     3: optional string service_name
     4: optional string cluster

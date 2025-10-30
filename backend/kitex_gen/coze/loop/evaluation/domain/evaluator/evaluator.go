@@ -56,9 +56,9 @@ const (
 type EvaluatorType int64
 
 const (
-	EvaluatorType_Prompt  EvaluatorType = 1
-	EvaluatorType_Code    EvaluatorType = 2
-	EvaluatorType_Builtin EvaluatorType = 3
+	EvaluatorType_Prompt    EvaluatorType = 1
+	EvaluatorType_Code      EvaluatorType = 2
+	EvaluatorType_CustomRPC EvaluatorType = 3
 )
 
 func (p EvaluatorType) String() string {
@@ -67,8 +67,8 @@ func (p EvaluatorType) String() string {
 		return "Prompt"
 	case EvaluatorType_Code:
 		return "Code"
-	case EvaluatorType_Builtin:
-		return "Builtin"
+	case EvaluatorType_CustomRPC:
+		return "CustomRPC"
 	}
 	return "<UNSET>"
 }
@@ -79,8 +79,8 @@ func EvaluatorTypeFromString(s string) (EvaluatorType, error) {
 		return EvaluatorType_Prompt, nil
 	case "Code":
 		return EvaluatorType_Code, nil
-	case "Builtin":
-		return EvaluatorType_Builtin, nil
+	case "CustomRPC":
+		return EvaluatorType_CustomRPC, nil
 	}
 	return EvaluatorType(0), fmt.Errorf("not a valid EvaluatorType string")
 }
@@ -1852,7 +1852,7 @@ func (p *CodeEvaluator) Field4DeepEqual(src *string) bool {
 
 type CustomRPCEvaluator struct {
 	// 自定义评估器编码，例如：EvalBot的给“代码生成-代码正确”赋予CN:480的评估器ID
-	CustomEvaluatorCode *string `thrift:"custom_evaluator_code,1,optional" frugal:"1,optional,string" form:"custom_evaluator_code" json:"custom_evaluator_code,omitempty" query:"custom_evaluator_code"`
+	ProviderEvaluatorCode *string `thrift:"provider_evaluator_code,1,optional" frugal:"1,optional,string" form:"provider_evaluator_code" json:"provider_evaluator_code,omitempty" query:"provider_evaluator_code"`
 	// 本期是RPC，后续还可拓展HTTP
 	AccessProtocol AccessProtocol `thrift:"access_protocol,2,required" frugal:"2,required,string" form:"access_protocol,required" json:"access_protocol,required" query:"access_protocol,required"`
 	ServiceName    *string        `thrift:"service_name,3,optional" frugal:"3,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
@@ -1868,16 +1868,16 @@ func NewCustomRPCEvaluator() *CustomRPCEvaluator {
 func (p *CustomRPCEvaluator) InitDefault() {
 }
 
-var CustomRPCEvaluator_CustomEvaluatorCode_DEFAULT string
+var CustomRPCEvaluator_ProviderEvaluatorCode_DEFAULT string
 
-func (p *CustomRPCEvaluator) GetCustomEvaluatorCode() (v string) {
+func (p *CustomRPCEvaluator) GetProviderEvaluatorCode() (v string) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetCustomEvaluatorCode() {
-		return CustomRPCEvaluator_CustomEvaluatorCode_DEFAULT
+	if !p.IsSetProviderEvaluatorCode() {
+		return CustomRPCEvaluator_ProviderEvaluatorCode_DEFAULT
 	}
-	return *p.CustomEvaluatorCode
+	return *p.ProviderEvaluatorCode
 }
 
 func (p *CustomRPCEvaluator) GetAccessProtocol() (v AccessProtocol) {
@@ -1922,8 +1922,8 @@ func (p *CustomRPCEvaluator) GetTimeout() (v int64) {
 	}
 	return *p.Timeout
 }
-func (p *CustomRPCEvaluator) SetCustomEvaluatorCode(val *string) {
-	p.CustomEvaluatorCode = val
+func (p *CustomRPCEvaluator) SetProviderEvaluatorCode(val *string) {
+	p.ProviderEvaluatorCode = val
 }
 func (p *CustomRPCEvaluator) SetAccessProtocol(val AccessProtocol) {
 	p.AccessProtocol = val
@@ -1939,15 +1939,15 @@ func (p *CustomRPCEvaluator) SetTimeout(val *int64) {
 }
 
 var fieldIDToName_CustomRPCEvaluator = map[int16]string{
-	1:  "custom_evaluator_code",
+	1:  "provider_evaluator_code",
 	2:  "access_protocol",
 	3:  "service_name",
 	4:  "cluster",
 	10: "timeout",
 }
 
-func (p *CustomRPCEvaluator) IsSetCustomEvaluatorCode() bool {
-	return p.CustomEvaluatorCode != nil
+func (p *CustomRPCEvaluator) IsSetProviderEvaluatorCode() bool {
+	return p.ProviderEvaluatorCode != nil
 }
 
 func (p *CustomRPCEvaluator) IsSetServiceName() bool {
@@ -2065,7 +2065,7 @@ func (p *CustomRPCEvaluator) ReadField1(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.CustomEvaluatorCode = _field
+	p.ProviderEvaluatorCode = _field
 	return nil
 }
 func (p *CustomRPCEvaluator) ReadField2(iprot thrift.TProtocol) error {
@@ -2158,11 +2158,11 @@ WriteStructEndError:
 }
 
 func (p *CustomRPCEvaluator) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCustomEvaluatorCode() {
-		if err = oprot.WriteFieldBegin("custom_evaluator_code", thrift.STRING, 1); err != nil {
+	if p.IsSetProviderEvaluatorCode() {
+		if err = oprot.WriteFieldBegin("provider_evaluator_code", thrift.STRING, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.CustomEvaluatorCode); err != nil {
+		if err := oprot.WriteString(*p.ProviderEvaluatorCode); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2260,7 +2260,7 @@ func (p *CustomRPCEvaluator) DeepEqual(ano *CustomRPCEvaluator) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.CustomEvaluatorCode) {
+	if !p.Field1DeepEqual(ano.ProviderEvaluatorCode) {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.AccessProtocol) {
@@ -2280,12 +2280,12 @@ func (p *CustomRPCEvaluator) DeepEqual(ano *CustomRPCEvaluator) bool {
 
 func (p *CustomRPCEvaluator) Field1DeepEqual(src *string) bool {
 
-	if p.CustomEvaluatorCode == src {
+	if p.ProviderEvaluatorCode == src {
 		return true
-	} else if p.CustomEvaluatorCode == nil || src == nil {
+	} else if p.ProviderEvaluatorCode == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.CustomEvaluatorCode, *src) != 0 {
+	if strings.Compare(*p.ProviderEvaluatorCode, *src) != 0 {
 		return false
 	}
 	return true

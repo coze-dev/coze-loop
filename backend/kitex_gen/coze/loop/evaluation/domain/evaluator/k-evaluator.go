@@ -1279,7 +1279,7 @@ func (p *CustomRPCEvaluator) FastReadField1(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.CustomEvaluatorCode = _field
+	p.ProviderEvaluatorCode = _field
 	return offset, nil
 }
 
@@ -1371,9 +1371,9 @@ func (p *CustomRPCEvaluator) BLength() int {
 
 func (p *CustomRPCEvaluator) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetCustomEvaluatorCode() {
+	if p.IsSetProviderEvaluatorCode() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.CustomEvaluatorCode)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ProviderEvaluatorCode)
 	}
 	return offset
 }
@@ -1414,9 +1414,9 @@ func (p *CustomRPCEvaluator) fastWriteField10(buf []byte, w thrift.NocopyWriter)
 
 func (p *CustomRPCEvaluator) field1Length() int {
 	l := 0
-	if p.IsSetCustomEvaluatorCode() {
+	if p.IsSetProviderEvaluatorCode() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.CustomEvaluatorCode)
+		l += thrift.Binary.StringLengthNocopy(*p.ProviderEvaluatorCode)
 	}
 	return l
 }
@@ -1461,12 +1461,12 @@ func (p *CustomRPCEvaluator) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.CustomEvaluatorCode != nil {
+	if src.ProviderEvaluatorCode != nil {
 		var tmp string
-		if *src.CustomEvaluatorCode != "" {
-			tmp = kutils.StringDeepCopy(*src.CustomEvaluatorCode)
+		if *src.ProviderEvaluatorCode != "" {
+			tmp = kutils.StringDeepCopy(*src.ProviderEvaluatorCode)
 		}
-		p.CustomEvaluatorCode = &tmp
+		p.ProviderEvaluatorCode = &tmp
 	}
 
 	p.AccessProtocol = src.AccessProtocol

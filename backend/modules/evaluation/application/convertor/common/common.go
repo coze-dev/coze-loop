@@ -228,6 +228,17 @@ func ConvertArgsSchemaDTO2DO(schema *commondto.ArgsSchema) *commonentity.ArgsSch
 	}
 }
 
+func ConvertArgsSchemaListDTO2DO(schemas []*commondto.ArgsSchema) []*commonentity.ArgsSchema {
+	if len(schemas) == 0 {
+		return nil
+	}
+	res := make([]*commonentity.ArgsSchema, 0, len(schemas))
+	for _, schema := range schemas {
+		res = append(res, ConvertArgsSchemaDTO2DO(schema))
+	}
+	return res
+}
+
 // ConvertArgsSchemaDO2DTO 将 ArgsSchema 结构体转换为 DTO
 func ConvertArgsSchemaDO2DTO(schema *commonentity.ArgsSchema) *commondto.ArgsSchema {
 	if schema == nil {

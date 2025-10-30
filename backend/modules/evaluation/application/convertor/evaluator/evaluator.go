@@ -37,6 +37,8 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 			evaluatorDO.PromptEvaluatorVersion = ConvertPromptEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
 		case evaluatordto.EvaluatorType_Code:
 			evaluatorDO.CodeEvaluatorVersion = ConvertCodeEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
+		case evaluatordto.EvaluatorType_CustomRPC:
+			evaluatorDO.CustomRPCEvaluatorVersion = ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
 		}
 	}
 	return evaluatorDO
@@ -358,4 +360,31 @@ func ConvertEvaluatorTagKeyDO2DTO(doKey evaluatordo.EvaluatorTagKey) evaluatordt
 	default:
 		return evaluatordto.EvaluatorTagKey(doKey)
 	}
+}
+
+func ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *evaluatordto.EvaluatorVersion) *evaluatordo.CustomRPCEvaluatorVersion {
+	if dto == nil {
+		return nil
+	}
+	customRPCEvaluatorVersion := &evaluatordo.CustomRPCEvaluatorVersion{
+		ID:            dto.GetID(),
+		SpaceID:       spaceID,
+		EvaluatorType: evaluatordo.EvaluatorTypeCustomRPC,
+		EvaluatorID:   evaluatorID,
+		Description:   dto.GetDescription(),
+		Version:       dto.GetVersion(),
+		BaseInfo:      commonconvertor.ConvertBaseInfoDTO2DO(dto.GetBaseInfo()),
+	}
+	if dto.EvaluatorContent != nil {
+		customRPCEvaluatorVersion.InputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.InputSchemas)
+		customRPCEvaluatorVersion.OutputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.OutputSchemas)
+		if dto.EvaluatorContent.CustomRPCEvaluator != nil {
+			customRPCEvaluatorVersion.ProviderEvaluatorCode = dto.EvaluatorContent.CustomRPCEvaluator.ProviderEvaluatorCode
+			customRPCEvaluatorVersion.AccessProtocol = dto.EvaluatorContent.CustomRPCEvaluator.AccessProtocol
+			customRPCEvaluatorVersion.ServiceName = dto.EvaluatorContent.CustomRPCEvaluator.ServiceName
+			customRPCEvaluatorVersion.Cluster = dto.EvaluatorContent.CustomRPCEvaluator.Cluster
+			customRPCEvaluatorVersion.Timeout = dto.EvaluatorContent.CustomRPCEvaluator.Timeout
+		}
+	}
+	return customRPCEvaluatorVersion
 }
