@@ -35,7 +35,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -554,14 +553,22 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorVersion(ctx context.Context, request 
 		return &evaluatorservice.GetEvaluatorVersionResponse{}, nil
 	}
 	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
-		SpaceID:       evaluatorDO.SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-	})
-	if err != nil {
-		return nil, err
+	if request.GetBuiltin() {
+		err = e.authBuiltinManagement(ctx, evaluatorDO.SpaceID, spaceTypeBuiltin)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
+			SpaceID:       evaluatorDO.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	dto := evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
 	e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier([]*evaluatordto.Evaluator{dto}))
 	evaluatorVersionDTO := dto.CurrentVersion
@@ -1453,7 +1460,7 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, requ
 
 	// 构建service层请求
 	serviceReq := &entity.UpdateEvaluatorTemplateRequest{
-		ID:                     templateDO.ID,
+		ID:                     request.EvaluatorTemplateID,
 		Name:                   gptr.Of(templateDO.Name),
 		Description:            gptr.Of(templateDO.Description),
 		Benchmark:              gptr.Of(templateDO.Benchmark),
@@ -1569,39 +1576,19 @@ func (e *EvaluatorHandlerImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, r
 }
 
 func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *evaluatorservice.ListEvaluatorTagsRequest) (resp *evaluatorservice.ListEvaluatorTagsResponse, err error) {
-	// 读取全部语言的标签配置
-	all := e.configer.GetEvaluatorTagConf(ctx)
-
-	// 选择语言：先取上下文 locale；再尝试 zh-CN；再 en-US；最后任意可用语言
-	var selected map[evaluatordto.EvaluatorTagKey][]string
-	if len(all) > 0 {
-		locale := contexts.CtxLocale(ctx)
-		if m, ok := all[locale]; ok {
-			selected = m
-		} else if m, ok := all["zh-CN"]; ok {
-			selected = m
-		} else if m, ok := all["en-US"]; ok {
-			selected = m
-		} else {
-			for _, m := range all { // 兜底取任意一种
-				selected = m
-				break
-			}
-		}
-	}
-
-	// 排序 value 列表
-	if len(selected) > 0 {
-		for k, vs := range selected {
+	// 直接从配置获取可用的标签配置
+	tags := e.configer.GetEvaluatorTagConf(ctx)
+	// 对每个 tagKey 下的列表按字母顺序排序
+	if len(tags) > 0 {
+		for k, vs := range tags {
 			if len(vs) > 1 {
 				sort.Strings(vs)
-				selected[k] = vs
+				tags[k] = vs
 			}
 		}
 	}
-
 	return &evaluatorservice.ListEvaluatorTagsResponse{
-		Tags: selected,
+		Tags: tags,
 	}, nil
 }
 

@@ -89,12 +89,28 @@ func (r *EvaluatorTemplateRepoImpl) ListEvaluatorTemplate(ctx context.Context, r
 
 	// 转换响应格式
 	templates := make([]*entity.EvaluatorTemplate, 0, len(daoResp.Templates))
+	ids := make([]int64, 0, len(daoResp.Templates))
 	for _, templatePO := range daoResp.Templates {
 		templateDO, err := convertor.ConvertEvaluatorTemplatePO2DOWithBaseInfo(templatePO)
 		if err != nil {
 			return nil, err
 		}
 		templates = append(templates, templateDO)
+		ids = append(ids, templatePO.ID)
+	}
+
+	// 批量查询并填充标签（以模板ID为source_id）
+	if len(ids) > 0 {
+		allTags, tagErr := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, ids, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), contexts.CtxLocale(ctx))
+		if tagErr == nil && len(allTags) > 0 {
+			tagsBySourceID := make(map[int64][]*model.EvaluatorTag)
+			for _, tag := range allTags {
+				tagsBySourceID[tag.SourceID] = append(tagsBySourceID[tag.SourceID], tag)
+			}
+			for _, tpl := range templates {
+				r.setTemplateTags(tpl, tpl.ID, tagsBySourceID)
+			}
+		}
 	}
 
 	return &repo.ListEvaluatorTemplateResponse{
@@ -315,4 +331,23 @@ func (r *EvaluatorTemplateRepoImpl) GetEvaluatorTemplate(ctx context.Context, id
 // IncrPopularityByID 基于ID将 popularity + 1
 func (r *EvaluatorTemplateRepoImpl) IncrPopularityByID(ctx context.Context, id int64) error {
 	return r.templateDAO.IncrPopularityByID(ctx, id)
+}
+
+// setTemplateTags 将查询到的标签填充到模板DO（当前按单语言过滤后回填到对应语言key下）
+func (r *EvaluatorTemplateRepoImpl) setTemplateTags(tpl *entity.EvaluatorTemplate, templateID int64, tagsBySourceID map[int64][]*model.EvaluatorTag) {
+	if tags, exists := tagsBySourceID[templateID]; exists && len(tags) > 0 {
+		tagMap := make(map[entity.EvaluatorTagKey][]string)
+		for _, t := range tags {
+			key := entity.EvaluatorTagKey(t.TagKey)
+			if tagMap[key] == nil {
+				tagMap[key] = make([]string, 0)
+			}
+			tagMap[key] = append(tagMap[key], t.TagValue)
+		}
+		if tpl.Tags == nil {
+			tpl.Tags = make(map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string)
+		}
+		lang := entity.EvaluatorTagLangType(tags[0].LangType)
+		tpl.Tags[lang] = tagMap
+	}
 }

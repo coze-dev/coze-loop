@@ -39,7 +39,7 @@ type IEvaluatorRepo interface {
 	// ListBuiltinEvaluator 根据筛选条件查询内置评估器列表，支持tag筛选和分页
 	ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest) (*ListBuiltinEvaluatorResponse, error)
 	// BatchGetBuiltinEvaluatorByVersionID 批量根据版本ID获取内置评估器，包含tag信息
-	BatchGetBuiltinEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
+	BatchGetBuiltinEvaluatorByVersionID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 }
 
 type ListEvaluatorRequest struct {

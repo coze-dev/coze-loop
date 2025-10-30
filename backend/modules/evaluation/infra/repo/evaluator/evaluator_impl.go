@@ -702,9 +702,9 @@ func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.
 }
 
 // BatchGetBuiltinEvaluatorByVersionID 批量根据版本ID获取内置评估器，包含tag信息
-func (r *EvaluatorRepoImpl) BatchGetBuiltinEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
+func (r *EvaluatorRepoImpl) BatchGetBuiltinEvaluatorByVersionID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
 	// 先获取evaluator版本信息
-	evaluatorVersionPOS, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, spaceID, ids, includeDeleted)
+	evaluatorVersionPOS, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, nil, ids, includeDeleted)
 	if err != nil {
 		return nil, err
 	}
@@ -723,16 +723,16 @@ func (r *EvaluatorRepoImpl) BatchGetBuiltinEvaluatorByVersionID(ctx context.Cont
 		evaluatorMap[evaluatorPO.ID] = evaluatorPO
 	}
 
-	// 收集所有 evaluator_version 的ID用于查询tags（以版本ID为source_id）
-	versionIDs := make([]int64, 0, len(evaluatorVersionPOS))
+	// 收集所有 evaluator 的ID用于查询tags（以evaluator ID为source_id）
+	evaluatorIDs := make([]int64, 0, len(evaluatorVersionPOS))
 	for _, ev := range evaluatorVersionPOS {
-		versionIDs = append(versionIDs, ev.ID)
+		evaluatorIDs = append(evaluatorIDs, ev.EvaluatorID)
 	}
 
 	// 批量查询所有tags（以版本ID为source_id）
 	var allTags []*model.EvaluatorTag
-	if len(versionIDs) > 0 {
-		allTags, err = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, versionIDs, int32(entity.EvaluatorTagKeyType_Evaluator), contexts.CtxLocale(ctx))
+	if len(evaluatorIDs) > 0 {
+		allTags, err = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, evaluatorIDs, int32(entity.EvaluatorTagKeyType_Evaluator), contexts.CtxLocale(ctx))
 		if err != nil {
 			// 如果批量查询tags失败，记录错误但继续处理
 			allTags = []*model.EvaluatorTag{}
@@ -791,7 +791,7 @@ func (r *EvaluatorRepoImpl) BatchGetBuiltinEvaluatorByVersionID(ctx context.Cont
 		}
 
 		// 设置tags信息（以版本ID为source_id）
-		r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.ID, tagsBySourceID)
+		r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
 
 		evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 	}

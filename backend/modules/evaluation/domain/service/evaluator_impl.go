@@ -330,7 +330,7 @@ func (e *EvaluatorServiceImpl) GetEvaluatorVersion(ctx context.Context, spaceID 
 	var evaluatorDOList []*entity.Evaluator
 	var err error
 	if builtin {
-		evaluatorDOList, err = e.evaluatorRepo.BatchGetBuiltinEvaluatorByVersionID(ctx, spaceID, []int64{evaluatorVersionID}, includeDeleted)
+		evaluatorDOList, err = e.evaluatorRepo.BatchGetBuiltinEvaluatorByVersionID(ctx, []int64{evaluatorVersionID}, includeDeleted)
 	} else {
 		evaluatorDOList, err = e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, spaceID, []int64{evaluatorVersionID}, includeDeleted)
 	}
