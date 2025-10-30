@@ -48,7 +48,7 @@ func TestNewPromptService(t *testing.T) {
 		assert.NotNil(t, service)
 
 		// Verify it returns the interface type
-		var _ IPromptService = service
+		_ = service
 
 		// Verify implementation has all fields set (by converting to concrete type for inspection)
 		impl, ok := service.(*PromptServiceImpl)
