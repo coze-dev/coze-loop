@@ -35,6 +35,26 @@ type EvaluatorRepoImpl struct {
 	lwt                  platestwrite.ILatestWriteTracker
 }
 
+// (单个查询方法已移除，统一使用批量接口
+// (单个查询方法已移除，统一使用批量接口)
+
+// BatchGetEvaluatorVersionsByEvaluatorIDAndVersions 批量根据 (evaluator_id, version) 获取版本
+	pos, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*entity.Evaluator, 0, len(pos))
+	for _, po := range pos {
+		do, err := convertor.ConvertEvaluatorVersionPO2DO(po)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, do)
+	}
+	return result, nil
+    return result, nil
+}
+
 func NewEvaluatorRepo(idgen idgen.IIDGenerator, provider db.Provider, evaluatorDao mysql.EvaluatorDAO, evaluatorVersionDao mysql.EvaluatorVersionDAO, tagDAO mysql.EvaluatorTagDAO, lwt platestwrite.ILatestWriteTracker, evaluatorTemplateDAO mysql.EvaluatorTemplateDAO) repo.IEvaluatorRepo {
 	singletonEvaluatorRepo := &EvaluatorRepoImpl{
 		evaluatorDao:         evaluatorDao,

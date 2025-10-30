@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -535,6 +536,35 @@ func (e *EvaluatorServiceImpl) ListBuiltinEvaluator(ctx context.Context, request
 		return nil, 0, err
 	}
 
-	// 直接返回 repo 结果
+	// 通过 evaluator_id + BuiltinVisibleVersion 批量查询版本并回填
+	pairs := make([][2]interface{}, 0, len(result.Evaluators))
+	for _, ev := range result.Evaluators {
+		if ev == nil || ev.BuiltinVisibleVersion == "" {
+			continue
+		}
+		pairs = append(pairs, [2]interface{}{ev.ID, ev.BuiltinVisibleVersion})
+	}
+	if len(pairs) > 0 {
+		versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+		if err != nil {
+			return nil, 0, err
+		}
+		// 建立 (evaluatorID, version) -> DO 映射
+		verMap := make(map[string]*entity.Evaluator, len(versions))
+		for _, ver := range versions {
+			key := strconv.FormatInt(ver.GetEvaluatorID(), 10) + "#" + ver.GetVersion()
+			verMap[key] = ver
+		}
+		// 回填（参考 ListEvaluator 的回填方式）
+		for _, ev := range result.Evaluators {
+			if ev == nil || ev.BuiltinVisibleVersion == "" {
+				continue
+			}
+			key := strconv.FormatInt(ev.ID, 10) + "#" + ev.BuiltinVisibleVersion
+			if v, ok := verMap[key]; ok {
+				ev.SetEvaluatorVersion(v)
+			}
+		}
+	}
 	return result.Evaluators, result.TotalCount, nil
 }
