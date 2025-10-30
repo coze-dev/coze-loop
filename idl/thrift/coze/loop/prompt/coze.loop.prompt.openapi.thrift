@@ -103,6 +103,7 @@ typedef string TemplateType
 const TemplateType TemplateType_Normal = "normal"
 const TemplateType TemplateType_Jinja2 = "jinja2"
 const TemplateType TemplateType_GoTemplate = "go_template"
+const TemplateType TemplateType_CustomTemplate_M = "custom_template_m"
 
 
 typedef string ToolChoiceType
