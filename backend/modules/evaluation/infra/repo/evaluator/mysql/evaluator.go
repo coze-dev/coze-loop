@@ -133,6 +133,9 @@ func (dao *EvaluatorDAOImpl) UpdateEvaluatorMeta(ctx context.Context, po *model.
 	if po.Builtin != 0 {
 		updateMap["builtin"] = po.Builtin
 	}
+	if po.BuiltinVisibleVersion != "" {
+		updateMap["builtin_visible_version"] = po.BuiltinVisibleVersion
+	}
 	return dbsession.WithContext(ctx).Model(&model.Evaluator{}).
 		Where("id = ?", po.ID).      // 添加ID筛选条件
 		Where("deleted_at IS NULL"). // 添加软删除筛选条件

@@ -116,7 +116,9 @@ struct Evaluator {
     20: optional bool builtin (go.tag = 'json:"builtin"')
     21: optional string benchmark (go.tag = 'json:"benchmark"')
     22: optional string vendor (go.tag = 'json:"vendor"')
-    23: optional map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
+    23: optional string builtin_visible_version (go.tag = 'json:"builtin_visible_version"')
+
+    100: optional map<EvaluatorTagKey, list<string>> tags (go.tag = 'json:"tags"')
 }
 
 struct EvaluatorTemplate {

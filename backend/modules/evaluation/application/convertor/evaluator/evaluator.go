@@ -27,6 +27,7 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 		EvaluatorType:          evaluatordo.EvaluatorType(evaluatorDTO.GetEvaluatorType()),
 		LatestVersion:          evaluatorDTO.GetLatestVersion(),
 		Builtin:                evaluatorDTO.GetBuiltin(),
+		BuiltinVisibleVersion:  evaluatorDTO.GetBuiltinVisibleVersion(),
 		PromptEvaluatorVersion: nil,
 		BaseInfo:               commonconvertor.ConvertBaseInfoDTO2DO(evaluatorDTO.GetBaseInfo()),
 		Tags:                   ConvertEvaluatorTagsDTO2DO(evaluatorDTO.GetTags()),
@@ -58,16 +59,17 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 		return nil
 	}
 	dto := &evaluatordto.Evaluator{
-		EvaluatorID:    gptr.Of(do.ID),
-		WorkspaceID:    gptr.Of(do.SpaceID),
-		Name:           gptr.Of(do.Name),
-		Description:    gptr.Of(do.Description),
-		DraftSubmitted: gptr.Of(do.DraftSubmitted),
-		EvaluatorType:  evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType(do.EvaluatorType)),
-		LatestVersion:  gptr.Of(do.LatestVersion),
-		Builtin:        gptr.Of(do.Builtin),
-		BaseInfo:       commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
-		Tags:           ConvertEvaluatorTagsDO2DTO(do.Tags),
+		EvaluatorID:           gptr.Of(do.ID),
+		WorkspaceID:           gptr.Of(do.SpaceID),
+		Name:                  gptr.Of(do.Name),
+		Description:           gptr.Of(do.Description),
+		DraftSubmitted:        gptr.Of(do.DraftSubmitted),
+		EvaluatorType:         evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType(do.EvaluatorType)),
+		LatestVersion:         gptr.Of(do.LatestVersion),
+		BuiltinVisibleVersion: gptr.Of(do.BuiltinVisibleVersion),
+		Builtin:               gptr.Of(do.Builtin),
+		BaseInfo:              commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		Tags:                  ConvertEvaluatorTagsDO2DTO(do.Tags),
 	}
 
 	switch do.EvaluatorType {

@@ -93,6 +93,7 @@ struct UpdateEvaluatorRequest {
     11: optional bool builtin (api.body='builtin', go.tag = 'json:"builtin"') // 是否预置评估器
     12: optional string benchmark (api.body='benchmark', go.tag = 'json:"benchmark"')
     13: optional string vendor (api.body='vendor', go.tag = 'json:"vendor"')
+    14: optional string builtin_visible_version (api.body='builtin_visible_version', go.tag = 'json:"builtin_visible_version"')
 
     255: optional base.Base Base
 }

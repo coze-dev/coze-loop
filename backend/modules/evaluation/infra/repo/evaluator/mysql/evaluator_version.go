@@ -6,6 +6,7 @@ package mysql
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +32,8 @@ type EvaluatorVersionDAO interface {
 	BatchGetEvaluatorDraftByEvaluatorID(ctx context.Context, evaluatorIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorVersion, error)
 	BatchGetEvaluatorVersionsByEvaluatorIDs(ctx context.Context, evaluatorIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorVersion, error)
 	CheckVersionExist(ctx context.Context, evaluatorID int64, version string, opts ...db.Option) (bool, error)
+	// BatchGetEvaluatorVersionsByEvaluatorIDAndVersions 批量根据 (evaluator_id, version) 查询版本
+	BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx context.Context, pairs [][2]interface{}, opts ...db.Option) ([]*model.EvaluatorVersion, error)
 }
 
 // ListEvaluatorVersionRequest 定义查询 EvaluatorVersion 的请求结构体
@@ -97,6 +100,34 @@ func getOrderBy(orderBy *OrderBy) string {
 		return field + " asc"
 	}
 	return ""
+}
+
+// GetEvaluatorVersionByEvaluatorIDAndVersion 根据评估器ID与版本号查询版本
+// (单个查询方法已移除，统一使用批量接口)
+
+// BatchGetEvaluatorVersionsByEvaluatorIDAndVersions 批量根据 (evaluator_id, version) 查询版本
+func (dao *EvaluatorVersionDAOImpl) BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx context.Context, pairs [][2]interface{}, opts ...db.Option) ([]*model.EvaluatorVersion, error) {
+	if len(pairs) == 0 {
+		return []*model.EvaluatorVersion{}, nil
+	}
+	dbsession := dao.provider.NewSession(ctx, opts...)
+	query := dbsession.WithContext(ctx).Model(&model.EvaluatorVersion{})
+	// 构建 OR 条件 (evaluator_id=? AND version=?) OR ...
+	var conds []string
+	var args []interface{}
+	for _, p := range pairs {
+		conds = append(conds, "(evaluator_id = ? AND version = ?)")
+		args = append(args, p[0], p[1])
+	}
+	where := "(" + strings.Join(conds, " OR ") + ") AND deleted_at IS NULL"
+	var list []*model.EvaluatorVersion
+	if err := query.Where(where, args...).Find(&list).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []*model.EvaluatorVersion{}, nil
+		}
+		return nil, err
+	}
+	return list, nil
 }
 
 // CreateEvaluatorVersion 创建 EvaluatorVersion 记录

@@ -35,6 +35,23 @@ type EvaluatorRepoImpl struct {
 	lwt                  platestwrite.ILatestWriteTracker
 }
 
+// BatchGetEvaluatorVersionsByEvaluatorIDAndVersions 批量根据 (evaluator_id, version) 获取版本
+func (r *EvaluatorRepoImpl) BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx context.Context, pairs [][2]interface{}) ([]*entity.Evaluator, error) {
+	pos, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*entity.Evaluator, 0, len(pos))
+	for _, po := range pos {
+		do, err := convertor.ConvertEvaluatorVersionPO2DO(po)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, do)
+	}
+	return result, nil
+}
+
 func NewEvaluatorRepo(idgen idgen.IIDGenerator, provider db.Provider, evaluatorDao mysql.EvaluatorDAO, evaluatorVersionDao mysql.EvaluatorVersionDAO, tagDAO mysql.EvaluatorTagDAO, lwt platestwrite.ILatestWriteTracker, evaluatorTemplateDAO mysql.EvaluatorTemplateDAO) repo.IEvaluatorRepo {
 	singletonEvaluatorRepo := &EvaluatorRepoImpl{
 		evaluatorDao:         evaluatorDao,
@@ -435,6 +452,9 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorMeta(ctx context.Context, req *entity
 	}
 	if req.Vendor != nil {
 		po.Vendor = req.Vendor
+	}
+	if req.BuiltinVisibleVersion != nil {
+		po.BuiltinVisibleVersion = gptr.Indirect(req.BuiltinVisibleVersion)
 	}
 	if req.Builtin != nil {
 		// 将 bool 转为 1/2 存入

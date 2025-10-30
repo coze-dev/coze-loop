@@ -3394,19 +3394,20 @@ func (p *EvaluatorContent) Field103DeepEqual(src *CustomRPCEvaluator) bool {
 }
 
 type Evaluator struct {
-	EvaluatorID    *int64                       `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
-	WorkspaceID    *int64                       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
-	EvaluatorType  *EvaluatorType               `thrift:"evaluator_type,3,optional" frugal:"3,optional,EvaluatorType" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
-	Name           *string                      `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description    *string                      `thrift:"description,5,optional" frugal:"5,optional,string" form:"description" json:"description,omitempty" query:"description"`
-	DraftSubmitted *bool                        `thrift:"draft_submitted,6,optional" frugal:"6,optional,bool" form:"draft_submitted" json:"draft_submitted,omitempty" query:"draft_submitted"`
-	BaseInfo       *common.BaseInfo             `thrift:"base_info,7,optional" frugal:"7,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
-	CurrentVersion *EvaluatorVersion            `thrift:"current_version,11,optional" frugal:"11,optional,EvaluatorVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
-	LatestVersion  *string                      `thrift:"latest_version,12,optional" frugal:"12,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
-	Builtin        *bool                        `thrift:"builtin,20,optional" frugal:"20,optional,bool" json:"builtin" form:"builtin" query:"builtin"`
-	Benchmark      *string                      `thrift:"benchmark,21,optional" frugal:"21,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
-	Vendor         *string                      `thrift:"vendor,22,optional" frugal:"22,optional,string" json:"vendor" form:"vendor" query:"vendor"`
-	Tags           map[EvaluatorTagKey][]string `thrift:"tags,23,optional" frugal:"23,optional,map<string:list<string>>" json:"tags" form:"tags" query:"tags"`
+	EvaluatorID           *int64                       `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
+	WorkspaceID           *int64                       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	EvaluatorType         *EvaluatorType               `thrift:"evaluator_type,3,optional" frugal:"3,optional,EvaluatorType" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
+	Name                  *string                      `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Description           *string                      `thrift:"description,5,optional" frugal:"5,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	DraftSubmitted        *bool                        `thrift:"draft_submitted,6,optional" frugal:"6,optional,bool" form:"draft_submitted" json:"draft_submitted,omitempty" query:"draft_submitted"`
+	BaseInfo              *common.BaseInfo             `thrift:"base_info,7,optional" frugal:"7,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	CurrentVersion        *EvaluatorVersion            `thrift:"current_version,11,optional" frugal:"11,optional,EvaluatorVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
+	LatestVersion         *string                      `thrift:"latest_version,12,optional" frugal:"12,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
+	Builtin               *bool                        `thrift:"builtin,20,optional" frugal:"20,optional,bool" json:"builtin" form:"builtin" query:"builtin"`
+	Benchmark             *string                      `thrift:"benchmark,21,optional" frugal:"21,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
+	Vendor                *string                      `thrift:"vendor,22,optional" frugal:"22,optional,string" json:"vendor" form:"vendor" query:"vendor"`
+	BuiltinVisibleVersion *string                      `thrift:"builtin_visible_version,23,optional" frugal:"23,optional,string" json:"builtin_visible_version" form:"builtin_visible_version" query:"builtin_visible_version"`
+	Tags                  map[EvaluatorTagKey][]string `thrift:"tags,100,optional" frugal:"100,optional,map<string:list<string>>" json:"tags" form:"tags" query:"tags"`
 }
 
 func NewEvaluator() *Evaluator {
@@ -3560,6 +3561,18 @@ func (p *Evaluator) GetVendor() (v string) {
 	return *p.Vendor
 }
 
+var Evaluator_BuiltinVisibleVersion_DEFAULT string
+
+func (p *Evaluator) GetBuiltinVisibleVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBuiltinVisibleVersion() {
+		return Evaluator_BuiltinVisibleVersion_DEFAULT
+	}
+	return *p.BuiltinVisibleVersion
+}
+
 var Evaluator_Tags_DEFAULT map[EvaluatorTagKey][]string
 
 func (p *Evaluator) GetTags() (v map[EvaluatorTagKey][]string) {
@@ -3607,24 +3620,28 @@ func (p *Evaluator) SetBenchmark(val *string) {
 func (p *Evaluator) SetVendor(val *string) {
 	p.Vendor = val
 }
+func (p *Evaluator) SetBuiltinVisibleVersion(val *string) {
+	p.BuiltinVisibleVersion = val
+}
 func (p *Evaluator) SetTags(val map[EvaluatorTagKey][]string) {
 	p.Tags = val
 }
 
 var fieldIDToName_Evaluator = map[int16]string{
-	1:  "evaluator_id",
-	2:  "workspace_id",
-	3:  "evaluator_type",
-	4:  "name",
-	5:  "description",
-	6:  "draft_submitted",
-	7:  "base_info",
-	11: "current_version",
-	12: "latest_version",
-	20: "builtin",
-	21: "benchmark",
-	22: "vendor",
-	23: "tags",
+	1:   "evaluator_id",
+	2:   "workspace_id",
+	3:   "evaluator_type",
+	4:   "name",
+	5:   "description",
+	6:   "draft_submitted",
+	7:   "base_info",
+	11:  "current_version",
+	12:  "latest_version",
+	20:  "builtin",
+	21:  "benchmark",
+	22:  "vendor",
+	23:  "builtin_visible_version",
+	100: "tags",
 }
 
 func (p *Evaluator) IsSetEvaluatorID() bool {
@@ -3673,6 +3690,10 @@ func (p *Evaluator) IsSetBenchmark() bool {
 
 func (p *Evaluator) IsSetVendor() bool {
 	return p.Vendor != nil
+}
+
+func (p *Evaluator) IsSetBuiltinVisibleVersion() bool {
+	return p.BuiltinVisibleVersion != nil
 }
 
 func (p *Evaluator) IsSetTags() bool {
@@ -3794,8 +3815,16 @@ func (p *Evaluator) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 23:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3958,6 +3987,17 @@ func (p *Evaluator) ReadField22(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *Evaluator) ReadField23(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BuiltinVisibleVersion = _field
+	return nil
+}
+func (p *Evaluator) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
 		return err
@@ -4055,6 +4095,10 @@ func (p *Evaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
 			goto WriteFieldError
 		}
 	}
@@ -4292,8 +4336,26 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
 func (p *Evaluator) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBuiltinVisibleVersion() {
+		if err = oprot.WriteFieldBegin("builtin_visible_version", thrift.STRING, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.BuiltinVisibleVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
+func (p *Evaluator) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTags() {
-		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 23); err != nil {
+		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 100); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.Tags)); err != nil {
@@ -4324,9 +4386,9 @@ func (p *Evaluator) writeField23(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
 
 func (p *Evaluator) String() string {
@@ -4379,7 +4441,10 @@ func (p *Evaluator) DeepEqual(ano *Evaluator) bool {
 	if !p.Field22DeepEqual(ano.Vendor) {
 		return false
 	}
-	if !p.Field23DeepEqual(ano.Tags) {
+	if !p.Field23DeepEqual(ano.BuiltinVisibleVersion) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.Tags) {
 		return false
 	}
 	return true
@@ -4519,7 +4584,19 @@ func (p *Evaluator) Field22DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *Evaluator) Field23DeepEqual(src map[EvaluatorTagKey][]string) bool {
+func (p *Evaluator) Field23DeepEqual(src *string) bool {
+
+	if p.BuiltinVisibleVersion == src {
+		return true
+	} else if p.BuiltinVisibleVersion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.BuiltinVisibleVersion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Evaluator) Field100DeepEqual(src map[EvaluatorTagKey][]string) bool {
 
 	if len(p.Tags) != len(src) {
 		return false

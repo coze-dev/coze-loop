@@ -33,6 +33,9 @@ type IEvaluatorRepo interface {
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error)
 	CheckVersionExist(ctx context.Context, evaluatorID int64, version string) (bool, error)
 
+	// BatchGetEvaluatorVersionsByEvaluatorIDAndVersions 批量根据 (evaluator_id, version) 获取版本
+	BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx context.Context, pairs [][2]interface{}) ([]*entity.Evaluator, error)
+
 	// ListBuiltinEvaluator 根据筛选条件查询内置评估器列表，支持tag筛选和分页
 	ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest) (*ListBuiltinEvaluatorResponse, error)
 	// BatchGetBuiltinEvaluatorByVersionID 批量根据版本ID获取内置评估器，包含tag信息

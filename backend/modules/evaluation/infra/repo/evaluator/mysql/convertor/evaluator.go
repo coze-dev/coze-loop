@@ -27,16 +27,17 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 		builtinVal = 1
 	}
 	po := &model.Evaluator{
-		ID:             do.ID,
-		SpaceID:        do.SpaceID,
-		Name:           ptr.Of(do.Name),
-		Description:    ptr.Of(do.Description),
-		DraftSubmitted: ptr.Of(do.DraftSubmitted),
-		EvaluatorType:  int32(do.EvaluatorType),
-		LatestVersion:  do.LatestVersion,
-		Builtin:        builtinVal,
-		Benchmark:      ptr.Of(do.Benchmark),
-		Vendor:         ptr.Of(do.Vendor),
+		ID:                    do.ID,
+		SpaceID:               do.SpaceID,
+		Name:                  ptr.Of(do.Name),
+		Description:           ptr.Of(do.Description),
+		DraftSubmitted:        ptr.Of(do.DraftSubmitted),
+		EvaluatorType:         int32(do.EvaluatorType),
+		LatestVersion:         do.LatestVersion,
+		BuiltinVisibleVersion: do.BuiltinVisibleVersion,
+		Builtin:               builtinVal,
+		Benchmark:             ptr.Of(do.Benchmark),
+		Vendor:                ptr.Of(do.Vendor),
 	}
 	if do.BaseInfo != nil {
 		if do.BaseInfo.CreatedBy != nil {
@@ -61,16 +62,17 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 		return nil
 	}
 	do := &evaluatordo.Evaluator{
-		ID:             po.ID,
-		SpaceID:        po.SpaceID,
-		Name:           gptr.Indirect(po.Name),
-		Description:    gptr.Indirect(po.Description),
-		DraftSubmitted: gptr.Indirect(po.DraftSubmitted),
-		EvaluatorType:  evaluatordo.EvaluatorType(po.EvaluatorType),
-		LatestVersion:  po.LatestVersion,
-		Builtin:        po.Builtin == 1,
-		Benchmark:      gptr.Indirect(po.Benchmark),
-		Vendor:         gptr.Indirect(po.Vendor),
+		ID:                    po.ID,
+		SpaceID:               po.SpaceID,
+		Name:                  gptr.Indirect(po.Name),
+		Description:           gptr.Indirect(po.Description),
+		DraftSubmitted:        gptr.Indirect(po.DraftSubmitted),
+		EvaluatorType:         evaluatordo.EvaluatorType(po.EvaluatorType),
+		LatestVersion:         po.LatestVersion,
+		BuiltinVisibleVersion: po.BuiltinVisibleVersion,
+		Builtin:               po.Builtin == 1,
+		Benchmark:             gptr.Indirect(po.Benchmark),
+		Vendor:                gptr.Indirect(po.Vendor),
 	}
 	do.BaseInfo = &evaluatordo.BaseInfo{
 		CreatedBy: &evaluatordo.UserInfo{

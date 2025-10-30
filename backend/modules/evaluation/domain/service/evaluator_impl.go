@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -232,11 +233,7 @@ func (e *EvaluatorServiceImpl) UpdateEvaluatorMeta(ctx context.Context, req *ent
 	if req == nil {
 		return errorx.NewByCode(errno.CommonInvalidParamCode)
 	}
-	name := ""
-	if req.Name != nil {
-		name = *req.Name
-	}
-	if err := e.validateUpdateEvaluatorMetaRequest(ctx, req.ID, req.SpaceID, name); err != nil {
+	if err := e.validateUpdateEvaluatorMetaRequest(ctx, req.ID, req.SpaceID, gptr.Indirect(req.Name)); err != nil {
 		return err
 	}
 	return e.evaluatorRepo.UpdateEvaluatorMeta(ctx, req)
@@ -535,44 +532,35 @@ func (e *EvaluatorServiceImpl) ListBuiltinEvaluator(ctx context.Context, request
 		return nil, 0, err
 	}
 
-	// 如果不需要版本信息，直接返回
-	if !request.WithVersion {
-		return result.Evaluators, result.TotalCount, nil
-	}
-
-	// 如果需要版本信息，获取版本数据
-	evaluatorID2DO := make(map[int64]*entity.Evaluator, len(result.Evaluators))
-	for _, evaluator := range result.Evaluators {
-		evaluatorID2DO[evaluator.ID] = evaluator
-	}
-
-	// 批量获取版本信息
-	evaluatorIDs := make([]int64, 0, len(result.Evaluators))
-	for _, evaluator := range result.Evaluators {
-		evaluatorIDs = append(evaluatorIDs, evaluator.ID)
-	}
-	evaluatorVersions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDs(ctx, evaluatorIDs, false)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// 组装版本信息
-	for _, evaluatorVersion := range evaluatorVersions {
-		evaluatorDO, ok := evaluatorID2DO[evaluatorVersion.GetEvaluatorID()]
-		if !ok {
+	// 通过 evaluator_id + BuiltinVisibleVersion 批量查询版本并回填
+	pairs := make([][2]interface{}, 0, len(result.Evaluators))
+	for _, ev := range result.Evaluators {
+		if ev == nil || ev.BuiltinVisibleVersion == "" {
 			continue
 		}
-		// 设置 Evaluator.ID 为评估器ID（不是评估器版本ID）
-		evaluatorVersion.ID = evaluatorDO.ID
-		evaluatorVersion.SpaceID = evaluatorDO.SpaceID
-		evaluatorVersion.Description = evaluatorDO.Description
-		evaluatorVersion.BaseInfo = evaluatorDO.BaseInfo
-		evaluatorVersion.Name = evaluatorDO.Name
-		evaluatorVersion.EvaluatorType = evaluatorDO.EvaluatorType
-		evaluatorVersion.Description = evaluatorDO.Description
-		evaluatorVersion.DraftSubmitted = evaluatorDO.DraftSubmitted
-		evaluatorVersion.LatestVersion = evaluatorDO.LatestVersion
+		pairs = append(pairs, [2]interface{}{ev.ID, ev.BuiltinVisibleVersion})
 	}
-
-	return evaluatorVersions, int64(len(evaluatorVersions)), nil
+	if len(pairs) > 0 {
+		versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+		if err != nil {
+			return nil, 0, err
+		}
+		// 建立 (evaluatorID, version) -> DO 映射
+		verMap := make(map[string]*entity.Evaluator, len(versions))
+		for _, ver := range versions {
+			key := strconv.FormatInt(ver.GetEvaluatorID(), 10) + "#" + ver.GetVersion()
+			verMap[key] = ver
+		}
+		// 回填（参考 ListEvaluator 的回填方式）
+		for _, ev := range result.Evaluators {
+			if ev == nil || ev.BuiltinVisibleVersion == "" {
+				continue
+			}
+			key := strconv.FormatInt(ev.ID, 10) + "#" + ev.BuiltinVisibleVersion
+			if v, ok := verMap[key]; ok {
+				ev.SetEvaluatorVersion(v)
+			}
+		}
+	}
+	return result.Evaluators, result.TotalCount, nil
 }
