@@ -18,6 +18,7 @@ import (
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/stretchr/testify/require"
 )
 
@@ -448,6 +449,91 @@ func TestTraceHubServiceImpl_listNonFinalTask(t *testing.T) {
 
 		tasks, err := impl.listNonFinalTask(context.Background())
 		require.Error(t, err)
+		require.Nil(t, tasks)
+	})
+}
+
+func TestTraceHubServiceImpl_getNonFinalTaskInfos(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		impl := &TraceHubServiceImpl{taskRepo: mockRepo}
+
+		tasks := []*entity.ObservabilityTask{
+			{
+				WorkspaceID: 101,
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						FilterFields: []*loop_span.FilterField{
+							{
+								FieldName: "bot_id",
+								Values:    []string{"bot-a", "bot-b"},
+							},
+							{
+								FieldName: "ignored",
+								SubFilter: &loop_span.FilterFields{
+									FilterFields: []*loop_span.FilterField{
+										{
+											FieldName: "bot_id",
+											Values:    []string{"bot-c"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				WorkspaceID: 202,
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						FilterFields: []*loop_span.FilterField{
+							{
+								FieldName: "other",
+								Values:    []string{"value"},
+							},
+						},
+					},
+				},
+			},
+			{
+				WorkspaceID: 101,
+			},
+		}
+
+		mockRepo.EXPECT().ListNonFinalTasks(gomock.Any()).Return(tasks, nil)
+
+		workspaceIDs, botIDs, resultTasks, err := impl.getNonFinalTaskInfos(context.Background())
+		require.NoError(t, err)
+		require.ElementsMatch(t, []string{"101", "202"}, workspaceIDs)
+		require.ElementsMatch(t, []string{"bot-a", "bot-b", "bot-c"}, botIDs)
+		require.Equal(t, tasks, resultTasks)
+	})
+
+	t.Run("repo error", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		impl := &TraceHubServiceImpl{taskRepo: mockRepo}
+
+		expectErr := errors.New("repo err")
+		mockRepo.EXPECT().ListNonFinalTasks(gomock.Any()).Return(nil, expectErr)
+
+		workspaceIDs, botIDs, tasks, err := impl.getNonFinalTaskInfos(context.Background())
+		require.Error(t, err)
+		require.ErrorIs(t, err, expectErr)
+		require.Nil(t, workspaceIDs)
+		require.Nil(t, botIDs)
 		require.Nil(t, tasks)
 	})
 }
