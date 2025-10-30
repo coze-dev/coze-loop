@@ -7,14 +7,14 @@ type EvaluatorTemplate struct {
 	Description   string
 	EvaluatorType EvaluatorType
 
-	Benchmark string
-	Vendor    string
+	Benchmark  string
+	Vendor     string
 	Popularity int64
 
-	InputSchemas       []*ArgsSchema                `json:"input_schemas"`
-	OutputSchemas      []*ArgsSchema                `json:"output_schemas"`
-	ReceiveChatHistory *bool                        `json:"receive_chat_history"`
-	Tags               map[EvaluatorTagKey][]string `json:"tags"`
+	InputSchemas       []*ArgsSchema                                         `json:"input_schemas"`
+	OutputSchemas      []*ArgsSchema                                         `json:"output_schemas"`
+	ReceiveChatHistory *bool                                                 `json:"receive_chat_history"`
+	Tags               map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `json:"tags"`
 
 	PromptEvaluatorContent *PromptEvaluatorContent
 	CodeEvaluatorContent   *CodeEvaluatorContent

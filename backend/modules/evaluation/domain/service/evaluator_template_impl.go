@@ -41,16 +41,16 @@ func (s *EvaluatorTemplateServiceImpl) CreateEvaluatorTemplate(ctx context.Conte
 
 	// 构建模板实体
 	template := &entity.EvaluatorTemplate{
-		SpaceID:            req.SpaceID,
-		Name:               req.Name,
-		Description:        req.Description,
-		EvaluatorType:      req.EvaluatorType,
-		Benchmark:          req.Benchmark,
-		Vendor:             req.Vendor,
-		InputSchemas:       req.InputSchemas,
-		OutputSchemas:      req.OutputSchemas,
-		ReceiveChatHistory: req.ReceiveChatHistory,
-		Tags:               req.Tags,
+		SpaceID:                req.SpaceID,
+		Name:                   req.Name,
+		Description:            req.Description,
+		EvaluatorType:          req.EvaluatorType,
+		Benchmark:              req.Benchmark,
+		Vendor:                 req.Vendor,
+		InputSchemas:           req.InputSchemas,
+		OutputSchemas:          req.OutputSchemas,
+		ReceiveChatHistory:     req.ReceiveChatHistory,
+		Tags:                   req.Tags,
 		PromptEvaluatorContent: req.PromptEvaluatorContent,
 		CodeEvaluatorContent:   req.CodeEvaluatorContent,
 	}
@@ -311,9 +311,6 @@ func (s *EvaluatorTemplateServiceImpl) validateGetRequest(req *entity.GetEvaluat
 
 // validateListRequest 验证列表请求
 func (s *EvaluatorTemplateServiceImpl) validateListRequest(req *entity.ListEvaluatorTemplateRequest) error {
-	if req.SpaceID <= 0 {
-		return errors.New("空间ID必须大于0")
-	}
 	if req.PageSize <= 0 || req.PageSize > 100 {
 		return errors.New("分页大小必须在1-100之间")
 	}

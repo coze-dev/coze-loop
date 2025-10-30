@@ -238,17 +238,7 @@ func CreateEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
 // UpdateEvaluatorTemplate .
 // @router /api/evaluation/v1/evaluators/update_template [POST]
 func UpdateEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.UpdateEvaluatorTemplateRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.UpdateEvaluatorTemplateResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvaluatorSvc.UpdateEvaluatorTemplate)
 }
 
 // DeleteEvaluatorTemplate .

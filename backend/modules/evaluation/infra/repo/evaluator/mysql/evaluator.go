@@ -29,6 +29,8 @@ type EvaluatorDAO interface {
 	UpdateEvaluatorDraftSubmitted(ctx context.Context, evaluatorID int64, draftSubmitted bool, userID string, opts ...db.Option) error
 	BatchDeleteEvaluator(ctx context.Context, ids []int64, userID string, opts ...db.Option) error
 	ListEvaluator(ctx context.Context, req *ListEvaluatorRequest, opts ...db.Option) (*ListEvaluatorResponse, error)
+	// ListBuiltinEvaluator 专用于内置评估器查询，支持 ids、分页与排序（按 name 排序）
+	ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest, opts ...db.Option) (*ListEvaluatorResponse, error)
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string, opts ...db.Option) (bool, error)
 	UpdateEvaluatorLatestVersion(ctx context.Context, evaluatorID int64, version, userID string, opts ...db.Option) error
 }
@@ -131,6 +133,9 @@ func (dao *EvaluatorDAOImpl) UpdateEvaluatorMeta(ctx context.Context, po *model.
 	if po.Builtin != 0 {
 		updateMap["builtin"] = po.Builtin
 	}
+	if po.BuiltinVisibleVersion != "" {
+		updateMap["builtin_visible_version"] = po.BuiltinVisibleVersion
+	}
 	return dbsession.WithContext(ctx).Model(&model.Evaluator{}).
 		Where("id = ?", po.ID).      // 添加ID筛选条件
 		Where("deleted_at IS NULL"). // 添加软删除筛选条件
@@ -195,10 +200,18 @@ type ListEvaluatorRequest struct {
 	SearchName    string
 	CreatorIDs    []int64
 	EvaluatorType []int32
-	IDs           []int64 // 新增：支持按ID查询
 	PageSize      int32
 	PageNum       int32
 	OrderBy       []*OrderBy
+}
+
+// ListBuiltinEvaluatorRequest 专用于内置评估器查询
+type ListBuiltinEvaluatorRequest struct {
+	SpaceID  int64
+	IDs      []int64
+	PageSize int32
+	PageNum  int32
+	OrderBy  []*OrderBy
 }
 
 type ListEvaluatorResponse struct {
@@ -211,11 +224,6 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	query := dbsession.WithContext(ctx).Model(&model.Evaluator{}).Where("space_id = ?", req.SpaceID)
-
-	// 添加ID过滤（支持按ID查询）
-	if len(req.IDs) > 0 {
-		query = query.Where("id IN (?)", req.IDs)
-	}
 
 	// 添加名称模糊搜索
 	if len(req.SearchName) > 0 {
@@ -266,6 +274,50 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 		Evaluators: poList,
 		TotalCount: total,
 	}, nil
+}
+
+// ListBuiltinEvaluator 查询内置评估器，支持 ids、分页与排序（按 name 排序）
+func (dao *EvaluatorDAOImpl) ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest, opts ...db.Option) (*ListEvaluatorResponse, error) {
+	// 启用 GORM 调试日志，输出 SQL 以便排查
+	dbsession := dao.provider.NewSession(ctx, opts...).Debug()
+	query := dbsession.WithContext(ctx).Model(&model.Evaluator{}).
+		Where("builtin = ?", 1).
+		Where("builtin_visible_version != ?", "").
+		Where("deleted_at IS NULL")
+
+	if len(req.IDs) > 0 {
+		query = query.Where("id IN (?)", req.IDs)
+	}
+
+	// 排序：如果未指定则默认按 name 升序；若指定则仅遵循支持字段
+	if len(req.OrderBy) > 0 {
+		for _, orderBy := range req.OrderBy {
+			if getOrderBy(orderBy) != "" {
+				query = query.Order(getOrderBy(orderBy))
+			}
+		}
+	} else {
+		query = query.Order("name asc")
+	}
+
+	// 先查总数
+	var total int64
+	countQuery := query.Session(&gorm.Session{})
+	if err := countQuery.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// 分页
+	if req.PageSize != 0 && req.PageNum != 0 {
+		offset := (req.PageNum - 1) * req.PageSize
+		query = query.Limit(int(req.PageSize)).Offset(int(offset))
+	}
+
+	poList := make([]*model.Evaluator, 0)
+	if err := query.Find(&poList).Error; err != nil {
+		return nil, err
+	}
+	return &ListEvaluatorResponse{Evaluators: poList, TotalCount: total}, nil
 }
 
 func (dao *EvaluatorDAOImpl) UpdateEvaluatorLatestVersion(ctx context.Context, evaluatorID int64, version, userID string, opts ...db.Option) error {

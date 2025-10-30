@@ -13,10 +13,11 @@ type Evaluator struct {
 	LatestVersion  string
 	BaseInfo       *BaseInfo
 
-	Builtin   bool
-	Benchmark string
-	Vendor    string
-	Tags      map[EvaluatorTagKey][]string `json:"tags"`
+	Builtin               bool
+	Benchmark             string
+	Vendor                string
+	BuiltinVisibleVersion string
+	Tags                  map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `json:"tags"`
 
 	PromptEvaluatorVersion *PromptEvaluatorVersion
 	CodeEvaluatorVersion   *CodeEvaluatorVersion
@@ -43,7 +44,9 @@ type UpdateEvaluatorMetaRequest struct {
 	Builtin     *bool
 	Benchmark   *string
 	Vendor      *string
-	UpdatedBy   string
+	// BuiltinVisibleVersion 预置评估器的对外可见版本（后续在 Service/Repo/DAO 层补充更新逻辑）
+	BuiltinVisibleVersion *string
+	UpdatedBy             string
 }
 
 // GetEvaluatorVersionID 获取评估器版本ID

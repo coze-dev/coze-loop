@@ -161,18 +161,10 @@ func buildSrvListEvaluatorRequest(request *evaluatorservice.ListEvaluatorsReques
 
 func buildSrvListBuiltinEvaluatorRequest(request *evaluatorservice.ListEvaluatorsRequest) *entity.ListBuiltinEvaluatorRequest {
 	srvReq := &entity.ListBuiltinEvaluatorRequest{
-		SpaceID:     request.WorkspaceID,
-		SearchName:  request.GetSearchName(),
-		CreatorIDs:  request.GetCreatorIds(),
 		PageSize:    request.GetPageSize(),
 		PageNum:     request.GetPageNumber(),
 		WithVersion: request.GetWithVersion(),
 	}
-	evaluatorType := make([]entity.EvaluatorType, 0, len(request.GetEvaluatorType()))
-	for _, et := range request.GetEvaluatorType() {
-		evaluatorType = append(evaluatorType, entity.EvaluatorType(et))
-	}
-	srvReq.EvaluatorType = evaluatorType
 
 	// 转换FilterOption
 	if request.GetFilterOption() != nil {
@@ -355,51 +347,48 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluator(ctx context.Context, request *eva
 		}
 	}
 	// 机审
-	auditTexts := make([]string, 0)
-	auditTexts = append(auditTexts, request.GetName())
-	auditTexts = append(auditTexts, request.GetDescription())
-	data := map[string]string{
-		"texts": strings.Join(auditTexts, ","),
-	}
-	record, err := e.auditClient.Audit(ctx, audit.AuditParam{
-		ObjectID:  evaluatorDO.ID,
-		AuditData: data,
-		ReqID:     encoding.Encode(ctx, data),
-		AuditType: audit.AuditType_CozeLoopEvaluatorModify,
-	})
-	if err != nil {
-		logs.CtxError(ctx, "audit: failed to audit, err=%v", err) // 审核服务不可用，默认通过
-	}
-	if record.AuditStatus == audit.AuditStatus_Rejected {
-		return nil, errorx.NewByCode(errno.RiskContentDetectedCode)
+	if err := e.auditEvaluatorModify(ctx, evaluatorDO.ID, []string{request.GetName(), request.GetDescription()}); err != nil {
+		return nil, err
 	}
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	// 组装请求
 	req := &entity.UpdateEvaluatorMetaRequest{
-		ID:        request.GetEvaluatorID(),
-		SpaceID:   request.GetWorkspaceID(),
-		UpdatedBy: userIDInContext,
-	}
-	if request.Name != nil {
-		req.Name = request.Name
-	}
-	if request.Description != nil {
-		req.Description = request.Description
-	}
-	if request.Builtin != nil {
-		req.Builtin = request.Builtin
-	}
-	if request.Benchmark != nil {
-		req.Benchmark = request.Benchmark
-	}
-	if request.Vendor != nil {
-		req.Vendor = request.Vendor
+		ID:                    request.GetEvaluatorID(),
+		SpaceID:               request.GetWorkspaceID(),
+		Name:                  request.Name,
+		Description:           request.Description,
+		Builtin:               request.Builtin,
+		Benchmark:             request.Benchmark,
+		Vendor:                request.Vendor,
+		BuiltinVisibleVersion: request.BuiltinVisibleVersion, // 后续 Service/Repo/DAO 层补充更新逻辑
+		UpdatedBy:             userIDInContext,
 	}
 
 	if err = e.evaluatorService.UpdateEvaluatorMeta(ctx, req); err != nil {
 		return nil, err
 	}
 	return &evaluatorservice.UpdateEvaluatorResponse{}, nil
+}
+
+// auditEvaluatorModify 抽取的机审逻辑：传入要审计的文本列表
+func (e *EvaluatorHandlerImpl) auditEvaluatorModify(ctx context.Context, objectID int64, texts []string) error {
+	data := map[string]string{
+		"texts": strings.Join(texts, ","),
+	}
+	record, err := e.auditClient.Audit(ctx, audit.AuditParam{
+		ObjectID:  objectID,
+		AuditData: data,
+		ReqID:     encoding.Encode(ctx, data),
+		AuditType: audit.AuditType_CozeLoopEvaluatorModify,
+	})
+	if err != nil {
+		logs.CtxError(ctx, "audit: failed to audit, err=%v", err) // 审核服务不可用，默认通过
+		return nil
+	}
+	if record.AuditStatus == audit.AuditStatus_Rejected {
+		return errorx.NewByCode(errno.RiskContentDetectedCode)
+	}
+	return nil
 }
 
 func validateUpdateEvaluatorRequest(ctx context.Context, request *evaluatorservice.UpdateEvaluatorRequest) error {
@@ -564,14 +553,22 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorVersion(ctx context.Context, request 
 		return &evaluatorservice.GetEvaluatorVersionResponse{}, nil
 	}
 	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
-		SpaceID:       evaluatorDO.SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-	})
-	if err != nil {
-		return nil, err
+	if request.GetBuiltin() {
+		err = e.authBuiltinManagement(ctx, evaluatorDO.SpaceID, spaceTypeBuiltin)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
+			SpaceID:       evaluatorDO.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	dto := evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
 	e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier([]*evaluatordto.Evaluator{dto}))
 	evaluatorVersionDTO := dto.CurrentVersion
@@ -1346,6 +1343,14 @@ func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *eva
 		serviceReq.FilterOption = evaluatorconvertor.ConvertEvaluatorFilterOptionDTO2DO(request.GetFilterOption())
 	}
 
+	// 覆盖分页参数（若请求携带）
+	if ps := request.GetPageSize(); ps > 0 {
+		serviceReq.PageSize = ps
+	}
+	if pn := request.GetPageNumber(); pn > 0 {
+		serviceReq.PageNum = pn
+	}
+
 	// 调用service层
 	serviceResp, err := e.evaluatorTemplateService.ListEvaluatorTemplate(ctx, serviceReq)
 	if err != nil {
@@ -1360,6 +1365,7 @@ func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *eva
 
 	return &evaluatorservice.ListTemplatesV2Response{
 		EvaluatorTemplates: templates,
+		Total:              gptr.Of(serviceResp.TotalCount),
 	}, nil
 }
 
@@ -1454,7 +1460,7 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, requ
 
 	// 构建service层请求
 	serviceReq := &entity.UpdateEvaluatorTemplateRequest{
-		ID:                     templateDO.ID,
+		ID:                     request.EvaluatorTemplateID,
 		Name:                   gptr.Of(templateDO.Name),
 		Description:            gptr.Of(templateDO.Description),
 		Benchmark:              gptr.Of(templateDO.Benchmark),
@@ -1556,24 +1562,31 @@ func (e *EvaluatorHandlerImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, r
 		return nil, err
 	}
 
-	// 2) 调用 service，按 evaluatorID + version 更新标签
-	ev, err := e.evaluatorService.UpdateBuiltinEvaluatorTags(ctx, request.GetEvaluatorID(), request.GetVersion(), evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags()))
+	// 2) 调用 service，按 evaluatorID 更新标签（不再使用 version 参数）
+	err = e.evaluatorService.UpdateBuiltinEvaluatorTags(ctx, request.GetEvaluatorID(), evaluatorconvertor.ConvertEvaluatorLangTagsDTO2DO(request.GetTags()))
 	if err != nil {
 		return nil, err
 	}
 
 	// 3) 组装更新后的标签并返回 Evaluator（最终标签集合等于请求中的标签集合）
-	if ev != nil {
-		ev.Tags = evaluatorconvertor.ConvertEvaluatorTagsDTO2DO(request.GetTags())
-	}
+	evaluatorDO.Tags = evaluatorconvertor.ConvertEvaluatorLangTagsDTO2DO(request.GetTags())
 	return &evaluatorservice.UpdateBuiltinEvaluatorTagsResponse{
-		Evaluator: evaluatorconvertor.ConvertEvaluatorDO2DTO(ev),
+		Evaluator: evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO),
 	}, nil
 }
 
 func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *evaluatorservice.ListEvaluatorTagsRequest) (resp *evaluatorservice.ListEvaluatorTagsResponse, err error) {
 	// 直接从配置获取可用的标签配置
 	tags := e.configer.GetEvaluatorTagConf(ctx)
+	// 对每个 tagKey 下的列表按字母顺序排序
+	if len(tags) > 0 {
+		for k, vs := range tags {
+			if len(vs) > 1 {
+				sort.Strings(vs)
+				tags[k] = vs
+			}
+		}
+	}
 	return &evaluatorservice.ListEvaluatorTagsResponse{
 		Tags: tags,
 	}, nil

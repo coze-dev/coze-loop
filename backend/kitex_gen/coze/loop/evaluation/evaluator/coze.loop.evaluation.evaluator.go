@@ -3952,10 +3952,11 @@ type UpdateEvaluatorRequest struct {
 	// 描述
 	Description *string `thrift:"description,5,optional" frugal:"5,optional,string" json:"description" form:"description" `
 	// 是否预置评估器
-	Builtin   *bool      `thrift:"builtin,11,optional" frugal:"11,optional,bool" json:"builtin" form:"builtin" `
-	Benchmark *string    `thrift:"benchmark,12,optional" frugal:"12,optional,string" json:"benchmark" form:"benchmark" `
-	Vendor    *string    `thrift:"vendor,13,optional" frugal:"13,optional,string" json:"vendor" form:"vendor" `
-	Base      *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Builtin               *bool      `thrift:"builtin,11,optional" frugal:"11,optional,bool" json:"builtin" form:"builtin" `
+	Benchmark             *string    `thrift:"benchmark,12,optional" frugal:"12,optional,string" json:"benchmark" form:"benchmark" `
+	Vendor                *string    `thrift:"vendor,13,optional" frugal:"13,optional,string" json:"vendor" form:"vendor" `
+	BuiltinVisibleVersion *string    `thrift:"builtin_visible_version,14,optional" frugal:"14,optional,string" json:"builtin_visible_version" form:"builtin_visible_version" `
+	Base                  *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateEvaluatorRequest() *UpdateEvaluatorRequest {
@@ -4046,6 +4047,18 @@ func (p *UpdateEvaluatorRequest) GetVendor() (v string) {
 	return *p.Vendor
 }
 
+var UpdateEvaluatorRequest_BuiltinVisibleVersion_DEFAULT string
+
+func (p *UpdateEvaluatorRequest) GetBuiltinVisibleVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBuiltinVisibleVersion() {
+		return UpdateEvaluatorRequest_BuiltinVisibleVersion_DEFAULT
+	}
+	return *p.BuiltinVisibleVersion
+}
+
 var UpdateEvaluatorRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateEvaluatorRequest) GetBase() (v *base.Base) {
@@ -4081,6 +4094,9 @@ func (p *UpdateEvaluatorRequest) SetBenchmark(val *string) {
 func (p *UpdateEvaluatorRequest) SetVendor(val *string) {
 	p.Vendor = val
 }
+func (p *UpdateEvaluatorRequest) SetBuiltinVisibleVersion(val *string) {
+	p.BuiltinVisibleVersion = val
+}
 func (p *UpdateEvaluatorRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -4094,6 +4110,7 @@ var fieldIDToName_UpdateEvaluatorRequest = map[int16]string{
 	11:  "builtin",
 	12:  "benchmark",
 	13:  "vendor",
+	14:  "builtin_visible_version",
 	255: "Base",
 }
 
@@ -4115,6 +4132,10 @@ func (p *UpdateEvaluatorRequest) IsSetBenchmark() bool {
 
 func (p *UpdateEvaluatorRequest) IsSetVendor() bool {
 	return p.Vendor != nil
+}
+
+func (p *UpdateEvaluatorRequest) IsSetBuiltinVisibleVersion() bool {
+	return p.BuiltinVisibleVersion != nil
 }
 
 func (p *UpdateEvaluatorRequest) IsSetBase() bool {
@@ -4204,6 +4225,14 @@ func (p *UpdateEvaluatorRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4350,6 +4379,17 @@ func (p *UpdateEvaluatorRequest) ReadField13(iprot thrift.TProtocol) error {
 	p.Vendor = _field
 	return nil
 }
+func (p *UpdateEvaluatorRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BuiltinVisibleVersion = _field
+	return nil
+}
 func (p *UpdateEvaluatorRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -4395,6 +4435,10 @@ func (p *UpdateEvaluatorRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -4557,6 +4601,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
+func (p *UpdateEvaluatorRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBuiltinVisibleVersion() {
+		if err = oprot.WriteFieldBegin("builtin_visible_version", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.BuiltinVisibleVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
 func (p *UpdateEvaluatorRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -4612,6 +4674,9 @@ func (p *UpdateEvaluatorRequest) DeepEqual(ano *UpdateEvaluatorRequest) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.Vendor) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.BuiltinVisibleVersion) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -4697,6 +4762,18 @@ func (p *UpdateEvaluatorRequest) Field13DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Vendor, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpdateEvaluatorRequest) Field14DeepEqual(src *string) bool {
+
+	if p.BuiltinVisibleVersion == src {
+		return true
+	} else if p.BuiltinVisibleVersion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.BuiltinVisibleVersion, *src) != 0 {
 		return false
 	}
 	return true
@@ -17528,6 +17605,10 @@ func (p *ValidateEvaluatorResponse) Field255DeepEqual(src *base.BaseResp) bool {
 type ListTemplatesV2Request struct {
 	// 筛选器选项
 	FilterOption *evaluator.EvaluatorFilterOption `thrift:"filter_option,1,optional" frugal:"1,optional,evaluator.EvaluatorFilterOption" json:"filter_option" form:"filter_option" `
+	PageSize     *int32                           `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	PageNumber   *int32                           `thrift:"page_number,102,optional" frugal:"102,optional,i32" form:"page_number" json:"page_number,omitempty"`
+	OrderBys     []*common.OrderBy                `thrift:"order_bys,103,optional" frugal:"103,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty"`
+	Base         *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListTemplatesV2Request() *ListTemplatesV2Request {
@@ -17548,16 +17629,96 @@ func (p *ListTemplatesV2Request) GetFilterOption() (v *evaluator.EvaluatorFilter
 	}
 	return p.FilterOption
 }
+
+var ListTemplatesV2Request_PageSize_DEFAULT int32
+
+func (p *ListTemplatesV2Request) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return ListTemplatesV2Request_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
+var ListTemplatesV2Request_PageNumber_DEFAULT int32
+
+func (p *ListTemplatesV2Request) GetPageNumber() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageNumber() {
+		return ListTemplatesV2Request_PageNumber_DEFAULT
+	}
+	return *p.PageNumber
+}
+
+var ListTemplatesV2Request_OrderBys_DEFAULT []*common.OrderBy
+
+func (p *ListTemplatesV2Request) GetOrderBys() (v []*common.OrderBy) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOrderBys() {
+		return ListTemplatesV2Request_OrderBys_DEFAULT
+	}
+	return p.OrderBys
+}
+
+var ListTemplatesV2Request_Base_DEFAULT *base.Base
+
+func (p *ListTemplatesV2Request) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ListTemplatesV2Request_Base_DEFAULT
+	}
+	return p.Base
+}
 func (p *ListTemplatesV2Request) SetFilterOption(val *evaluator.EvaluatorFilterOption) {
 	p.FilterOption = val
 }
+func (p *ListTemplatesV2Request) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+func (p *ListTemplatesV2Request) SetPageNumber(val *int32) {
+	p.PageNumber = val
+}
+func (p *ListTemplatesV2Request) SetOrderBys(val []*common.OrderBy) {
+	p.OrderBys = val
+}
+func (p *ListTemplatesV2Request) SetBase(val *base.Base) {
+	p.Base = val
+}
 
 var fieldIDToName_ListTemplatesV2Request = map[int16]string{
-	1: "filter_option",
+	1:   "filter_option",
+	101: "page_size",
+	102: "page_number",
+	103: "order_bys",
+	255: "Base",
 }
 
 func (p *ListTemplatesV2Request) IsSetFilterOption() bool {
 	return p.FilterOption != nil
+}
+
+func (p *ListTemplatesV2Request) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListTemplatesV2Request) IsSetPageNumber() bool {
+	return p.PageNumber != nil
+}
+
+func (p *ListTemplatesV2Request) IsSetOrderBys() bool {
+	return p.OrderBys != nil
+}
+
+func (p *ListTemplatesV2Request) IsSetBase() bool {
+	return p.Base != nil
 }
 
 func (p *ListTemplatesV2Request) Read(iprot thrift.TProtocol) (err error) {
@@ -17581,6 +17742,38 @@ func (p *ListTemplatesV2Request) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 102:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField102(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 103:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField103(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17623,6 +17816,59 @@ func (p *ListTemplatesV2Request) ReadField1(iprot thrift.TProtocol) error {
 	p.FilterOption = _field
 	return nil
 }
+func (p *ListTemplatesV2Request) ReadField101(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
+func (p *ListTemplatesV2Request) ReadField102(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageNumber = _field
+	return nil
+}
+func (p *ListTemplatesV2Request) ReadField103(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*common.OrderBy, 0, size)
+	values := make([]common.OrderBy, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.OrderBys = _field
+	return nil
+}
+func (p *ListTemplatesV2Request) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
 
 func (p *ListTemplatesV2Request) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -17632,6 +17878,22 @@ func (p *ListTemplatesV2Request) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField102(oprot); err != nil {
+			fieldId = 102
+			goto WriteFieldError
+		}
+		if err = p.writeField103(oprot); err != nil {
+			fieldId = 103
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
 			goto WriteFieldError
 		}
 	}
@@ -17670,6 +17932,86 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *ListTemplatesV2Request) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
+func (p *ListTemplatesV2Request) writeField102(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageNumber() {
+		if err = oprot.WriteFieldBegin("page_number", thrift.I32, 102); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageNumber); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
+}
+func (p *ListTemplatesV2Request) writeField103(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOrderBys() {
+		if err = oprot.WriteFieldBegin("order_bys", thrift.LIST, 103); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.OrderBys)); err != nil {
+			return err
+		}
+		for _, v := range p.OrderBys {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
+}
+func (p *ListTemplatesV2Request) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
 
 func (p *ListTemplatesV2Request) String() string {
 	if p == nil {
@@ -17688,6 +18030,18 @@ func (p *ListTemplatesV2Request) DeepEqual(ano *ListTemplatesV2Request) bool {
 	if !p.Field1DeepEqual(ano.FilterOption) {
 		return false
 	}
+	if !p.Field101DeepEqual(ano.PageSize) {
+		return false
+	}
+	if !p.Field102DeepEqual(ano.PageNumber) {
+		return false
+	}
+	if !p.Field103DeepEqual(ano.OrderBys) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
 	return true
 }
 
@@ -17698,9 +18052,54 @@ func (p *ListTemplatesV2Request) Field1DeepEqual(src *evaluator.EvaluatorFilterO
 	}
 	return true
 }
+func (p *ListTemplatesV2Request) Field101DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *ListTemplatesV2Request) Field102DeepEqual(src *int32) bool {
+
+	if p.PageNumber == src {
+		return true
+	} else if p.PageNumber == nil || src == nil {
+		return false
+	}
+	if *p.PageNumber != *src {
+		return false
+	}
+	return true
+}
+func (p *ListTemplatesV2Request) Field103DeepEqual(src []*common.OrderBy) bool {
+
+	if len(p.OrderBys) != len(src) {
+		return false
+	}
+	for i, v := range p.OrderBys {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListTemplatesV2Request) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 
 type ListTemplatesV2Response struct {
 	EvaluatorTemplates []*evaluator.EvaluatorTemplate `thrift:"evaluator_templates,1,optional" frugal:"1,optional,list<evaluator.EvaluatorTemplate>" form:"evaluator_templates" json:"evaluator_templates,omitempty"`
+	Total              *int64                         `thrift:"total,10,optional" frugal:"10,optional,i64" json:"total" form:"total" `
 	BaseResp           *base.BaseResp                 `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -17723,6 +18122,18 @@ func (p *ListTemplatesV2Response) GetEvaluatorTemplates() (v []*evaluator.Evalua
 	return p.EvaluatorTemplates
 }
 
+var ListTemplatesV2Response_Total_DEFAULT int64
+
+func (p *ListTemplatesV2Response) GetTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotal() {
+		return ListTemplatesV2Response_Total_DEFAULT
+	}
+	return *p.Total
+}
+
 var ListTemplatesV2Response_BaseResp_DEFAULT *base.BaseResp
 
 func (p *ListTemplatesV2Response) GetBaseResp() (v *base.BaseResp) {
@@ -17737,17 +18148,25 @@ func (p *ListTemplatesV2Response) GetBaseResp() (v *base.BaseResp) {
 func (p *ListTemplatesV2Response) SetEvaluatorTemplates(val []*evaluator.EvaluatorTemplate) {
 	p.EvaluatorTemplates = val
 }
+func (p *ListTemplatesV2Response) SetTotal(val *int64) {
+	p.Total = val
+}
 func (p *ListTemplatesV2Response) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_ListTemplatesV2Response = map[int16]string{
 	1:   "evaluator_templates",
+	10:  "total",
 	255: "BaseResp",
 }
 
 func (p *ListTemplatesV2Response) IsSetEvaluatorTemplates() bool {
 	return p.EvaluatorTemplates != nil
+}
+
+func (p *ListTemplatesV2Response) IsSetTotal() bool {
+	return p.Total != nil
 }
 
 func (p *ListTemplatesV2Response) IsSetBaseResp() bool {
@@ -17775,6 +18194,14 @@ func (p *ListTemplatesV2Response) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17840,6 +18267,17 @@ func (p *ListTemplatesV2Response) ReadField1(iprot thrift.TProtocol) error {
 	p.EvaluatorTemplates = _field
 	return nil
 }
+func (p *ListTemplatesV2Response) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Total = _field
+	return nil
+}
 func (p *ListTemplatesV2Response) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -17857,6 +18295,10 @@ func (p *ListTemplatesV2Response) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -17907,6 +18349,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *ListTemplatesV2Response) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotal() {
+		if err = oprot.WriteFieldBegin("total", thrift.I64, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Total); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *ListTemplatesV2Response) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -17941,6 +18401,9 @@ func (p *ListTemplatesV2Response) DeepEqual(ano *ListTemplatesV2Response) bool {
 	if !p.Field1DeepEqual(ano.EvaluatorTemplates) {
 		return false
 	}
+	if !p.Field10DeepEqual(ano.Total) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
 		return false
 	}
@@ -17957,6 +18420,18 @@ func (p *ListTemplatesV2Response) Field1DeepEqual(src []*evaluator.EvaluatorTemp
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ListTemplatesV2Response) Field10DeepEqual(src *int64) bool {
+
+	if p.Total == src {
+		return true
+	} else if p.Total == nil || src == nil {
+		return false
+	}
+	if *p.Total != *src {
+		return false
 	}
 	return true
 }
@@ -19657,11 +20132,10 @@ func (p *DebugBuiltinEvaluatorResponse) Field255DeepEqual(src *base.BaseResp) bo
 
 type UpdateBuiltinEvaluatorTagsRequest struct {
 	EvaluatorID int64  `thrift:"evaluator_id,1,required" frugal:"1,required,i64" json:"evaluator_id" path:"evaluator_id,required" `
-	Version     string `thrift:"version,2,required" frugal:"2,required,string" form:"version,required" json:"version,required"`
-	WorkspaceID *int64 `thrift:"workspace_id,3,optional" frugal:"3,optional,i64" json:"workspace_id" form:"workspace_id" `
+	WorkspaceID *int64 `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
 	// 评估器标签
-	Tags map[evaluator.EvaluatorTagKey][]string `thrift:"tags,4,optional" frugal:"4,optional,map<string:list<string>>" json:"tags" form:"tags" `
-	Base *base.Base                             `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Tags map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string `thrift:"tags,3,optional" frugal:"3,optional,map<string:map<string:list<string>>>" json:"tags" form:"tags" `
+	Base *base.Base                                                                `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateBuiltinEvaluatorTagsRequest() *UpdateBuiltinEvaluatorTagsRequest {
@@ -19678,13 +20152,6 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) GetEvaluatorID() (v int64) {
 	return
 }
 
-func (p *UpdateBuiltinEvaluatorTagsRequest) GetVersion() (v string) {
-	if p != nil {
-		return p.Version
-	}
-	return
-}
-
 var UpdateBuiltinEvaluatorTagsRequest_WorkspaceID_DEFAULT int64
 
 func (p *UpdateBuiltinEvaluatorTagsRequest) GetWorkspaceID() (v int64) {
@@ -19697,9 +20164,9 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) GetWorkspaceID() (v int64) {
 	return *p.WorkspaceID
 }
 
-var UpdateBuiltinEvaluatorTagsRequest_Tags_DEFAULT map[evaluator.EvaluatorTagKey][]string
+var UpdateBuiltinEvaluatorTagsRequest_Tags_DEFAULT map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string
 
-func (p *UpdateBuiltinEvaluatorTagsRequest) GetTags() (v map[evaluator.EvaluatorTagKey][]string) {
+func (p *UpdateBuiltinEvaluatorTagsRequest) GetTags() (v map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string) {
 	if p == nil {
 		return
 	}
@@ -19723,13 +20190,10 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) GetBase() (v *base.Base) {
 func (p *UpdateBuiltinEvaluatorTagsRequest) SetEvaluatorID(val int64) {
 	p.EvaluatorID = val
 }
-func (p *UpdateBuiltinEvaluatorTagsRequest) SetVersion(val string) {
-	p.Version = val
-}
 func (p *UpdateBuiltinEvaluatorTagsRequest) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
-func (p *UpdateBuiltinEvaluatorTagsRequest) SetTags(val map[evaluator.EvaluatorTagKey][]string) {
+func (p *UpdateBuiltinEvaluatorTagsRequest) SetTags(val map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string) {
 	p.Tags = val
 }
 func (p *UpdateBuiltinEvaluatorTagsRequest) SetBase(val *base.Base) {
@@ -19738,9 +20202,8 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_UpdateBuiltinEvaluatorTagsRequest = map[int16]string{
 	1:   "evaluator_id",
-	2:   "version",
-	3:   "workspace_id",
-	4:   "tags",
+	2:   "workspace_id",
+	3:   "tags",
 	255: "Base",
 }
 
@@ -19760,7 +20223,6 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Read(iprot thrift.TProtocol) (err er
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetEvaluatorID bool = false
-	var issetVersion bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -19786,25 +20248,16 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Read(iprot thrift.TProtocol) (err er
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetVersion = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
 			if fieldTypeId == thrift.MAP {
-				if err = p.ReadField4(iprot); err != nil {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -19833,11 +20286,6 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Read(iprot thrift.TProtocol) (err er
 
 	if !issetEvaluatorID {
 		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetVersion {
-		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -19871,17 +20319,6 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) ReadField1(iprot thrift.TProtocol) e
 }
 func (p *UpdateBuiltinEvaluatorTagsRequest) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.Version = _field
-	return nil
-}
-func (p *UpdateBuiltinEvaluatorTagsRequest) ReadField3(iprot thrift.TProtocol) error {
-
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
@@ -19891,36 +20328,54 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) ReadField3(iprot thrift.TProtocol) e
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *UpdateBuiltinEvaluatorTagsRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *UpdateBuiltinEvaluatorTagsRequest) ReadField3(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
 		return err
 	}
-	_field := make(map[evaluator.EvaluatorTagKey][]string, size)
+	_field := make(map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string, size)
 	for i := 0; i < size; i++ {
-		var _key evaluator.EvaluatorTagKey
+		var _key evaluator.EvaluatorTagLangType
 		if v, err := iprot.ReadString(); err != nil {
 			return err
 		} else {
 			_key = v
 		}
-		_, size, err := iprot.ReadListBegin()
+		_, _, size, err := iprot.ReadMapBegin()
 		if err != nil {
 			return err
 		}
-		_val := make([]string, 0, size)
+		_val := make(map[evaluator.EvaluatorTagKey][]string, size)
 		for i := 0; i < size; i++ {
-
-			var _elem string
+			var _key1 evaluator.EvaluatorTagKey
 			if v, err := iprot.ReadString(); err != nil {
 				return err
 			} else {
-				_elem = v
+				_key1 = v
+			}
+			_, size, err := iprot.ReadListBegin()
+			if err != nil {
+				return err
+			}
+			_val1 := make([]string, 0, size)
+			for i := 0; i < size; i++ {
+
+				var _elem string
+				if v, err := iprot.ReadString(); err != nil {
+					return err
+				} else {
+					_elem = v
+				}
+
+				_val1 = append(_val1, _elem)
+			}
+			if err := iprot.ReadListEnd(); err != nil {
+				return err
 			}
 
-			_val = append(_val, _elem)
+			_val[_key1] = _val1
 		}
-		if err := iprot.ReadListEnd(); err != nil {
+		if err := iprot.ReadMapEnd(); err != nil {
 			return err
 		}
 
@@ -19957,10 +20412,6 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Write(oprot thrift.TProtocol) (err e
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -20002,24 +20453,8 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *UpdateBuiltinEvaluatorTagsRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.Version); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-func (p *UpdateBuiltinEvaluatorTagsRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetWorkspaceID() {
-		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 3); err != nil {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
@@ -20031,31 +20466,42 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) writeField3(oprot thrift.TProtocol) 
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *UpdateBuiltinEvaluatorTagsRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *UpdateBuiltinEvaluatorTagsRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTags() {
-		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 4); err != nil {
+		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.Tags)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.MAP, len(p.Tags)); err != nil {
 			return err
 		}
 		for k, v := range p.Tags {
 			if err := oprot.WriteString(k); err != nil {
 				return err
 			}
-			if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
+			if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(v)); err != nil {
 				return err
 			}
-			for _, v := range v {
-				if err := oprot.WriteString(v); err != nil {
+			for k, v := range v {
+				if err := oprot.WriteString(k); err != nil {
+					return err
+				}
+				if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
+					return err
+				}
+				for _, v := range v {
+					if err := oprot.WriteString(v); err != nil {
+						return err
+					}
+				}
+				if err := oprot.WriteListEnd(); err != nil {
 					return err
 				}
 			}
-			if err := oprot.WriteListEnd(); err != nil {
+			if err := oprot.WriteMapEnd(); err != nil {
 				return err
 			}
 		}
@@ -20068,9 +20514,9 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) writeField4(oprot thrift.TProtocol) 
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *UpdateBuiltinEvaluatorTagsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -20108,13 +20554,10 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) DeepEqual(ano *UpdateBuiltinEvaluato
 	if !p.Field1DeepEqual(ano.EvaluatorID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.Version) {
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.WorkspaceID) {
-		return false
-	}
-	if !p.Field4DeepEqual(ano.Tags) {
+	if !p.Field3DeepEqual(ano.Tags) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -20130,14 +20573,7 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Field1DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *UpdateBuiltinEvaluatorTagsRequest) Field2DeepEqual(src string) bool {
-
-	if strings.Compare(p.Version, src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *UpdateBuiltinEvaluatorTagsRequest) Field3DeepEqual(src *int64) bool {
+func (p *UpdateBuiltinEvaluatorTagsRequest) Field2DeepEqual(src *int64) bool {
 
 	if p.WorkspaceID == src {
 		return true
@@ -20149,7 +20585,7 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Field3DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *UpdateBuiltinEvaluatorTagsRequest) Field4DeepEqual(src map[evaluator.EvaluatorTagKey][]string) bool {
+func (p *UpdateBuiltinEvaluatorTagsRequest) Field3DeepEqual(src map[evaluator.EvaluatorTagLangType]map[evaluator.EvaluatorTagKey][]string) bool {
 
 	if len(p.Tags) != len(src) {
 		return false
@@ -20159,10 +20595,16 @@ func (p *UpdateBuiltinEvaluatorTagsRequest) Field4DeepEqual(src map[evaluator.Ev
 		if len(v) != len(_src) {
 			return false
 		}
-		for i, v := range v {
-			_src1 := _src[i]
-			if strings.Compare(v, _src1) != 0 {
+		for k, v := range v {
+			_src1 := _src[k]
+			if len(v) != len(_src1) {
 				return false
+			}
+			for i, v := range v {
+				_src2 := _src1[i]
+				if strings.Compare(v, _src2) != 0 {
+					return false
+				}
 			}
 		}
 	}

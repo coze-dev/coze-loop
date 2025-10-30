@@ -20,8 +20,8 @@ type IEvaluatorRepo interface {
 
 	UpdateEvaluatorDraft(ctx context.Context, version *entity.Evaluator) error
 	UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error
-	// UpdateEvaluatorVersionTags 根据版本ID全量更新标签：不存在的新增，不在传入列表中的删除
-	UpdateEvaluatorVersionTags(ctx context.Context, versionID int64, tags map[entity.EvaluatorTagKey][]string) error
+	// UpdateEvaluatorTags 根据评估器ID全量更新标签（多语言）：不存在的新增，不在传入列表中的删除
+	UpdateEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string) error
 
 	BatchGetEvaluatorMetaByID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
@@ -33,10 +33,13 @@ type IEvaluatorRepo interface {
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error)
 	CheckVersionExist(ctx context.Context, evaluatorID int64, version string) (bool, error)
 
+	// BatchGetEvaluatorVersionsByEvaluatorIDAndVersions 批量根据 (evaluator_id, version) 获取版本
+	BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx context.Context, pairs [][2]interface{}) ([]*entity.Evaluator, error)
+
 	// ListBuiltinEvaluator 根据筛选条件查询内置评估器列表，支持tag筛选和分页
 	ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest) (*ListBuiltinEvaluatorResponse, error)
 	// BatchGetBuiltinEvaluatorByVersionID 批量根据版本ID获取内置评估器，包含tag信息
-	BatchGetBuiltinEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
+	BatchGetBuiltinEvaluatorByVersionID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 }
 
 type ListEvaluatorRequest struct {
@@ -70,7 +73,6 @@ type ListEvaluatorVersionResponse struct {
 
 // ListBuiltinEvaluatorRequest 查询内置评估器的请求参数
 type ListBuiltinEvaluatorRequest struct {
-	SpaceID        int64                         `json:"space_id"`
 	FilterOption   *entity.EvaluatorFilterOption `json:"filter_option,omitempty"`   // 标签筛选条件
 	PageSize       int32                         `json:"page_size"`                 // 分页大小
 	PageNum        int32                         `json:"page_num"`                  // 页码

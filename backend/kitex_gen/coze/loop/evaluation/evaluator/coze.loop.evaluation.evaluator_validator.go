@@ -539,6 +539,21 @@ func (p *ListTemplatesV2Request) IsValid() error {
 			return fmt.Errorf("field FilterOption not valid, %w", err)
 		}
 	}
+	if p.PageSize != nil {
+		if *p.PageSize <= int32(0) {
+			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.PageNumber != nil {
+		if *p.PageNumber <= int32(0) {
+			return fmt.Errorf("field PageNumber gt rule failed, current value: %v", *p.PageNumber)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ListTemplatesV2Response) IsValid() error {

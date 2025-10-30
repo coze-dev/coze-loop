@@ -16,6 +16,10 @@ const (
 
 	LanguageTypeJS = "JS"
 
+	EvaluatorTagLangTypeZh = "zh-CN"
+
+	EvaluatorTagLangTypeEn = "en-US"
+
 	EvaluatorTagKeyCategory = "Category"
 
 	EvaluatorTagKeyTargetType = "TargetType"
@@ -27,8 +31,6 @@ const (
 	EvaluatorTagKeyBoxType = "BoxType"
 
 	EvaluatorTagKeyName = "Name"
-
-	EvaluatorTagKeyVisible = "Visible"
 
 	EvaluatorFilterLogicOpUnknown = "Unknown"
 
@@ -281,6 +283,8 @@ func (p *EvaluatorRunStatus) Value() (driver.Value, error) {
 }
 
 type LanguageType = string
+
+type EvaluatorTagLangType = string
 
 // Evaluator筛选字段
 type EvaluatorTagKey = string
@@ -2839,19 +2843,20 @@ func (p *EvaluatorContent) Field102DeepEqual(src *CodeEvaluator) bool {
 }
 
 type Evaluator struct {
-	EvaluatorID    *int64                       `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
-	WorkspaceID    *int64                       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
-	EvaluatorType  *EvaluatorType               `thrift:"evaluator_type,3,optional" frugal:"3,optional,EvaluatorType" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
-	Name           *string                      `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description    *string                      `thrift:"description,5,optional" frugal:"5,optional,string" form:"description" json:"description,omitempty" query:"description"`
-	DraftSubmitted *bool                        `thrift:"draft_submitted,6,optional" frugal:"6,optional,bool" form:"draft_submitted" json:"draft_submitted,omitempty" query:"draft_submitted"`
-	BaseInfo       *common.BaseInfo             `thrift:"base_info,7,optional" frugal:"7,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
-	CurrentVersion *EvaluatorVersion            `thrift:"current_version,11,optional" frugal:"11,optional,EvaluatorVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
-	LatestVersion  *string                      `thrift:"latest_version,12,optional" frugal:"12,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
-	Builtin        *bool                        `thrift:"builtin,20,optional" frugal:"20,optional,bool" json:"builtin" form:"builtin" query:"builtin"`
-	Benchmark      *string                      `thrift:"benchmark,21,optional" frugal:"21,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
-	Vendor         *string                      `thrift:"vendor,22,optional" frugal:"22,optional,string" json:"vendor" form:"vendor" query:"vendor"`
-	Tags           map[EvaluatorTagKey][]string `thrift:"tags,23" frugal:"23,default,map<string:list<string>>" json:"tags" form:"tags" query:"tags"`
+	EvaluatorID           *int64                                                `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
+	WorkspaceID           *int64                                                `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	EvaluatorType         *EvaluatorType                                        `thrift:"evaluator_type,3,optional" frugal:"3,optional,EvaluatorType" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
+	Name                  *string                                               `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Description           *string                                               `thrift:"description,5,optional" frugal:"5,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	DraftSubmitted        *bool                                                 `thrift:"draft_submitted,6,optional" frugal:"6,optional,bool" form:"draft_submitted" json:"draft_submitted,omitempty" query:"draft_submitted"`
+	BaseInfo              *common.BaseInfo                                      `thrift:"base_info,7,optional" frugal:"7,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	CurrentVersion        *EvaluatorVersion                                     `thrift:"current_version,11,optional" frugal:"11,optional,EvaluatorVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
+	LatestVersion         *string                                               `thrift:"latest_version,12,optional" frugal:"12,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
+	Builtin               *bool                                                 `thrift:"builtin,20,optional" frugal:"20,optional,bool" json:"builtin" form:"builtin" query:"builtin"`
+	Benchmark             *string                                               `thrift:"benchmark,21,optional" frugal:"21,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
+	Vendor                *string                                               `thrift:"vendor,22,optional" frugal:"22,optional,string" json:"vendor" form:"vendor" query:"vendor"`
+	BuiltinVisibleVersion *string                                               `thrift:"builtin_visible_version,23,optional" frugal:"23,optional,string" json:"builtin_visible_version" form:"builtin_visible_version" query:"builtin_visible_version"`
+	Tags                  map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `thrift:"tags,100,optional" frugal:"100,optional,map<string:map<string:list<string>>>" json:"tags" form:"tags" query:"tags"`
 }
 
 func NewEvaluator() *Evaluator {
@@ -3005,11 +3010,28 @@ func (p *Evaluator) GetVendor() (v string) {
 	return *p.Vendor
 }
 
-func (p *Evaluator) GetTags() (v map[EvaluatorTagKey][]string) {
-	if p != nil {
-		return p.Tags
+var Evaluator_BuiltinVisibleVersion_DEFAULT string
+
+func (p *Evaluator) GetBuiltinVisibleVersion() (v string) {
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetBuiltinVisibleVersion() {
+		return Evaluator_BuiltinVisibleVersion_DEFAULT
+	}
+	return *p.BuiltinVisibleVersion
+}
+
+var Evaluator_Tags_DEFAULT map[EvaluatorTagLangType]map[EvaluatorTagKey][]string
+
+func (p *Evaluator) GetTags() (v map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTags() {
+		return Evaluator_Tags_DEFAULT
+	}
+	return p.Tags
 }
 func (p *Evaluator) SetEvaluatorID(val *int64) {
 	p.EvaluatorID = val
@@ -3047,24 +3069,28 @@ func (p *Evaluator) SetBenchmark(val *string) {
 func (p *Evaluator) SetVendor(val *string) {
 	p.Vendor = val
 }
-func (p *Evaluator) SetTags(val map[EvaluatorTagKey][]string) {
+func (p *Evaluator) SetBuiltinVisibleVersion(val *string) {
+	p.BuiltinVisibleVersion = val
+}
+func (p *Evaluator) SetTags(val map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) {
 	p.Tags = val
 }
 
 var fieldIDToName_Evaluator = map[int16]string{
-	1:  "evaluator_id",
-	2:  "workspace_id",
-	3:  "evaluator_type",
-	4:  "name",
-	5:  "description",
-	6:  "draft_submitted",
-	7:  "base_info",
-	11: "current_version",
-	12: "latest_version",
-	20: "builtin",
-	21: "benchmark",
-	22: "vendor",
-	23: "tags",
+	1:   "evaluator_id",
+	2:   "workspace_id",
+	3:   "evaluator_type",
+	4:   "name",
+	5:   "description",
+	6:   "draft_submitted",
+	7:   "base_info",
+	11:  "current_version",
+	12:  "latest_version",
+	20:  "builtin",
+	21:  "benchmark",
+	22:  "vendor",
+	23:  "builtin_visible_version",
+	100: "tags",
 }
 
 func (p *Evaluator) IsSetEvaluatorID() bool {
@@ -3113,6 +3139,14 @@ func (p *Evaluator) IsSetBenchmark() bool {
 
 func (p *Evaluator) IsSetVendor() bool {
 	return p.Vendor != nil
+}
+
+func (p *Evaluator) IsSetBuiltinVisibleVersion() bool {
+	return p.BuiltinVisibleVersion != nil
+}
+
+func (p *Evaluator) IsSetTags() bool {
+	return p.Tags != nil
 }
 
 func (p *Evaluator) Read(iprot thrift.TProtocol) (err error) {
@@ -3230,8 +3264,16 @@ func (p *Evaluator) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 23:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3394,35 +3436,64 @@ func (p *Evaluator) ReadField22(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *Evaluator) ReadField23(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BuiltinVisibleVersion = _field
+	return nil
+}
+func (p *Evaluator) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
 		return err
 	}
-	_field := make(map[EvaluatorTagKey][]string, size)
+	_field := make(map[EvaluatorTagLangType]map[EvaluatorTagKey][]string, size)
 	for i := 0; i < size; i++ {
-		var _key EvaluatorTagKey
+		var _key EvaluatorTagLangType
 		if v, err := iprot.ReadString(); err != nil {
 			return err
 		} else {
 			_key = v
 		}
-		_, size, err := iprot.ReadListBegin()
+		_, _, size, err := iprot.ReadMapBegin()
 		if err != nil {
 			return err
 		}
-		_val := make([]string, 0, size)
+		_val := make(map[EvaluatorTagKey][]string, size)
 		for i := 0; i < size; i++ {
-
-			var _elem string
+			var _key1 EvaluatorTagKey
 			if v, err := iprot.ReadString(); err != nil {
 				return err
 			} else {
-				_elem = v
+				_key1 = v
+			}
+			_, size, err := iprot.ReadListBegin()
+			if err != nil {
+				return err
+			}
+			_val1 := make([]string, 0, size)
+			for i := 0; i < size; i++ {
+
+				var _elem string
+				if v, err := iprot.ReadString(); err != nil {
+					return err
+				} else {
+					_elem = v
+				}
+
+				_val1 = append(_val1, _elem)
+			}
+			if err := iprot.ReadListEnd(); err != nil {
+				return err
 			}
 
-			_val = append(_val, _elem)
+			_val[_key1] = _val1
 		}
-		if err := iprot.ReadListEnd(); err != nil {
+		if err := iprot.ReadMapEnd(); err != nil {
 			return err
 		}
 
@@ -3491,6 +3562,10 @@ func (p *Evaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
 			goto WriteFieldError
 		}
 	}
@@ -3728,39 +3803,70 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
 func (p *Evaluator) writeField23(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("tags", thrift.MAP, 23); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.Tags)); err != nil {
-		return err
-	}
-	for k, v := range p.Tags {
-		if err := oprot.WriteString(k); err != nil {
+	if p.IsSetBuiltinVisibleVersion() {
+		if err = oprot.WriteFieldBegin("builtin_visible_version", thrift.STRING, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.BuiltinVisibleVersion); err != nil {
 			return err
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
-			return err
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
 		}
-		for _, v := range v {
-			if err := oprot.WriteString(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return err
-		}
-	}
-	if err := oprot.WriteMapEnd(); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
 	}
 	return nil
 WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
+func (p *Evaluator) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTags() {
+		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.MAP, len(p.Tags)); err != nil {
+			return err
+		}
+		for k, v := range p.Tags {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(v)); err != nil {
+				return err
+			}
+			for k, v := range v {
+				if err := oprot.WriteString(k); err != nil {
+					return err
+				}
+				if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
+					return err
+				}
+				for _, v := range v {
+					if err := oprot.WriteString(v); err != nil {
+						return err
+					}
+				}
+				if err := oprot.WriteListEnd(); err != nil {
+					return err
+				}
+			}
+			if err := oprot.WriteMapEnd(); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
 
 func (p *Evaluator) String() string {
@@ -3813,7 +3919,10 @@ func (p *Evaluator) DeepEqual(ano *Evaluator) bool {
 	if !p.Field22DeepEqual(ano.Vendor) {
 		return false
 	}
-	if !p.Field23DeepEqual(ano.Tags) {
+	if !p.Field23DeepEqual(ano.BuiltinVisibleVersion) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.Tags) {
 		return false
 	}
 	return true
@@ -3953,7 +4062,19 @@ func (p *Evaluator) Field22DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *Evaluator) Field23DeepEqual(src map[EvaluatorTagKey][]string) bool {
+func (p *Evaluator) Field23DeepEqual(src *string) bool {
+
+	if p.BuiltinVisibleVersion == src {
+		return true
+	} else if p.BuiltinVisibleVersion == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.BuiltinVisibleVersion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Evaluator) Field100DeepEqual(src map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) bool {
 
 	if len(p.Tags) != len(src) {
 		return false
@@ -3963,10 +4084,16 @@ func (p *Evaluator) Field23DeepEqual(src map[EvaluatorTagKey][]string) bool {
 		if len(v) != len(_src) {
 			return false
 		}
-		for i, v := range v {
-			_src1 := _src[i]
-			if strings.Compare(v, _src1) != 0 {
+		for k, v := range v {
+			_src1 := _src[k]
+			if len(v) != len(_src1) {
 				return false
+			}
+			for i, v := range v {
+				_src2 := _src1[i]
+				if strings.Compare(v, _src2) != 0 {
+					return false
+				}
 			}
 		}
 	}
@@ -3980,12 +4107,12 @@ type EvaluatorTemplate struct {
 	Name          *string        `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Description   *string        `thrift:"description,5,optional" frugal:"5,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	// 热度
-	Popularity       *int64                       `thrift:"popularity,6,optional" frugal:"6,optional,i64" json:"popularity" form:"popularity" query:"popularity"`
-	Benchmark        *string                      `thrift:"benchmark,7,optional" frugal:"7,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
-	Vendor           *string                      `thrift:"vendor,8,optional" frugal:"8,optional,string" json:"vendor" form:"vendor" query:"vendor"`
-	Tags             map[EvaluatorTagKey][]string `thrift:"tags,9" frugal:"9,default,map<string:list<string>>" json:"tags" form:"tags" query:"tags"`
-	EvaluatorContent *EvaluatorContent            `thrift:"evaluator_content,101,optional" frugal:"101,optional,EvaluatorContent" form:"evaluator_content" json:"evaluator_content,omitempty" query:"evaluator_content"`
-	BaseInfo         *common.BaseInfo             `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	Popularity       *int64                                                `thrift:"popularity,6,optional" frugal:"6,optional,i64" json:"popularity" form:"popularity" query:"popularity"`
+	Benchmark        *string                                               `thrift:"benchmark,7,optional" frugal:"7,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
+	Vendor           *string                                               `thrift:"vendor,8,optional" frugal:"8,optional,string" json:"vendor" form:"vendor" query:"vendor"`
+	Tags             map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `thrift:"tags,9,optional" frugal:"9,optional,map<string:map<string:list<string>>>" json:"tags" form:"tags" query:"tags"`
+	EvaluatorContent *EvaluatorContent                                     `thrift:"evaluator_content,101,optional" frugal:"101,optional,EvaluatorContent" form:"evaluator_content" json:"evaluator_content,omitempty" query:"evaluator_content"`
+	BaseInfo         *common.BaseInfo                                      `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewEvaluatorTemplate() *EvaluatorTemplate {
@@ -4091,11 +4218,16 @@ func (p *EvaluatorTemplate) GetVendor() (v string) {
 	return *p.Vendor
 }
 
-func (p *EvaluatorTemplate) GetTags() (v map[EvaluatorTagKey][]string) {
-	if p != nil {
-		return p.Tags
+var EvaluatorTemplate_Tags_DEFAULT map[EvaluatorTagLangType]map[EvaluatorTagKey][]string
+
+func (p *EvaluatorTemplate) GetTags() (v map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) {
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetTags() {
+		return EvaluatorTemplate_Tags_DEFAULT
+	}
+	return p.Tags
 }
 
 var EvaluatorTemplate_EvaluatorContent_DEFAULT *EvaluatorContent
@@ -4145,7 +4277,7 @@ func (p *EvaluatorTemplate) SetBenchmark(val *string) {
 func (p *EvaluatorTemplate) SetVendor(val *string) {
 	p.Vendor = val
 }
-func (p *EvaluatorTemplate) SetTags(val map[EvaluatorTagKey][]string) {
+func (p *EvaluatorTemplate) SetTags(val map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) {
 	p.Tags = val
 }
 func (p *EvaluatorTemplate) SetEvaluatorContent(val *EvaluatorContent) {
@@ -4199,6 +4331,10 @@ func (p *EvaluatorTemplate) IsSetBenchmark() bool {
 
 func (p *EvaluatorTemplate) IsSetVendor() bool {
 	return p.Vendor != nil
+}
+
+func (p *EvaluatorTemplate) IsSetTags() bool {
+	return p.Tags != nil
 }
 
 func (p *EvaluatorTemplate) IsSetEvaluatorContent() bool {
@@ -4438,31 +4574,49 @@ func (p *EvaluatorTemplate) ReadField9(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	_field := make(map[EvaluatorTagKey][]string, size)
+	_field := make(map[EvaluatorTagLangType]map[EvaluatorTagKey][]string, size)
 	for i := 0; i < size; i++ {
-		var _key EvaluatorTagKey
+		var _key EvaluatorTagLangType
 		if v, err := iprot.ReadString(); err != nil {
 			return err
 		} else {
 			_key = v
 		}
-		_, size, err := iprot.ReadListBegin()
+		_, _, size, err := iprot.ReadMapBegin()
 		if err != nil {
 			return err
 		}
-		_val := make([]string, 0, size)
+		_val := make(map[EvaluatorTagKey][]string, size)
 		for i := 0; i < size; i++ {
-
-			var _elem string
+			var _key1 EvaluatorTagKey
 			if v, err := iprot.ReadString(); err != nil {
 				return err
 			} else {
-				_elem = v
+				_key1 = v
+			}
+			_, size, err := iprot.ReadListBegin()
+			if err != nil {
+				return err
+			}
+			_val1 := make([]string, 0, size)
+			for i := 0; i < size; i++ {
+
+				var _elem string
+				if v, err := iprot.ReadString(); err != nil {
+					return err
+				} else {
+					_elem = v
+				}
+
+				_val1 = append(_val1, _elem)
+			}
+			if err := iprot.ReadListEnd(); err != nil {
+				return err
 			}
 
-			_val = append(_val, _elem)
+			_val[_key1] = _val1
 		}
-		if err := iprot.ReadListEnd(); err != nil {
+		if err := iprot.ReadMapEnd(); err != nil {
 			return err
 		}
 
@@ -4704,33 +4858,46 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 func (p *EvaluatorTemplate) writeField9(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("tags", thrift.MAP, 9); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.Tags)); err != nil {
-		return err
-	}
-	for k, v := range p.Tags {
-		if err := oprot.WriteString(k); err != nil {
+	if p.IsSetTags() {
+		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.MAP, len(p.Tags)); err != nil {
 			return err
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
-			return err
-		}
-		for _, v := range v {
-			if err := oprot.WriteString(v); err != nil {
+		for k, v := range p.Tags {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(v)); err != nil {
+				return err
+			}
+			for k, v := range v {
+				if err := oprot.WriteString(k); err != nil {
+					return err
+				}
+				if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
+					return err
+				}
+				for _, v := range v {
+					if err := oprot.WriteString(v); err != nil {
+						return err
+					}
+				}
+				if err := oprot.WriteListEnd(); err != nil {
+					return err
+				}
+			}
+			if err := oprot.WriteMapEnd(); err != nil {
 				return err
 			}
 		}
-		if err := oprot.WriteListEnd(); err != nil {
+		if err := oprot.WriteMapEnd(); err != nil {
 			return err
 		}
-	}
-	if err := oprot.WriteMapEnd(); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -4921,7 +5088,7 @@ func (p *EvaluatorTemplate) Field8DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *EvaluatorTemplate) Field9DeepEqual(src map[EvaluatorTagKey][]string) bool {
+func (p *EvaluatorTemplate) Field9DeepEqual(src map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) bool {
 
 	if len(p.Tags) != len(src) {
 		return false
@@ -4931,10 +5098,16 @@ func (p *EvaluatorTemplate) Field9DeepEqual(src map[EvaluatorTagKey][]string) bo
 		if len(v) != len(_src) {
 			return false
 		}
-		for i, v := range v {
-			_src1 := _src[i]
-			if strings.Compare(v, _src1) != 0 {
+		for k, v := range v {
+			_src1 := _src[k]
+			if len(v) != len(_src1) {
 				return false
+			}
+			for i, v := range v {
+				_src2 := _src1[i]
+				if strings.Compare(v, _src2) != 0 {
+					return false
+				}
 			}
 		}
 	}
