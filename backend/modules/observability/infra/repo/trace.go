@@ -6,8 +6,8 @@ package repo
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"strconv"
 	"time"
 
@@ -27,35 +27,78 @@ import (
 	"github.com/samber/lo"
 )
 
+type TraceRepoOption func(*TraceRepoImpl)
+
+func WithTraceStorageDaos(storageType string, spanDao ck.ISpansDao, annoDao ck.IAnnotationDao) TraceRepoOption {
+	return func(t *TraceRepoImpl) {
+		WithTraceStorageSpanDao(storageType, spanDao)(t)
+		WithTraceStorageAnnotationDao(storageType, annoDao)(t)
+	}
+}
+
+func WithTraceStorageSpanDao(storageType string, spanDao ck.ISpansDao) TraceRepoOption {
+	return func(t *TraceRepoImpl) {
+		if storageType == "" || spanDao == nil {
+			return
+		}
+		if t.spanDaos == nil {
+			t.spanDaos = make(map[string]ck.ISpansDao)
+		}
+		t.spanDaos[storageType] = spanDao
+	}
+}
+
+func WithTraceStorageAnnotationDao(storageType string, annoDao ck.IAnnotationDao) TraceRepoOption {
+	return func(t *TraceRepoImpl) {
+		if storageType == "" || annoDao == nil {
+			return
+		}
+		if t.annoDaos == nil {
+			t.annoDaos = make(map[string]ck.IAnnotationDao)
+		}
+		t.annoDaos[storageType] = annoDao
+	}
+}
+
 func NewTraceRepoImpl(
-	spanDao ck.ISpansDao,
-	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
+	opts ...TraceRepoOption,
 ) (repo.ITraceRepo, error) {
-	return &TraceRepoImpl{
-		spansDao:    spanDao,
-		annoDao:     annoDao,
-		traceConfig: traceConfig,
-	}, nil
+	impl, err := newTraceRepoImpl(traceConfig, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return impl, nil
 }
 
 func NewTraceMetricCKRepoImpl(
-	spanDao ck.ISpansDao,
-	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
+	opts ...TraceRepoOption,
 ) (metric_repo.IMetricRepo, error) {
-	return &TraceRepoImpl{
-		spansDao:    spanDao,
-		annoDao:     annoDao,
+	return newTraceRepoImpl(traceConfig, opts...)
+}
+
+func newTraceRepoImpl(
+	traceConfig config.ITraceConfig,
+	opts ...TraceRepoOption,
+) (*TraceRepoImpl, error) {
+	impl := &TraceRepoImpl{
 		traceConfig: traceConfig,
-	}, nil
+		spanDaos:    make(map[string]ck.ISpansDao),
+		annoDaos:    make(map[string]ck.IAnnotationDao),
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(impl)
+		}
+	}
+	return impl, nil
 }
 
 type TraceRepoImpl struct {
-	spansDao        ck.ISpansDao
-	annoDao         ck.IAnnotationDao
-	traceConfig     config.ITraceConfig
-	storageProvider storage.IStorageProvider
+	traceConfig config.ITraceConfig
+	spanDaos    map[string]ck.ISpansDao
+	annoDaos    map[string]ck.IAnnotationDao
 }
 
 type PageToken struct {
@@ -64,11 +107,18 @@ type PageToken struct {
 }
 
 func (t *TraceRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTraceParam) error {
+	if param.Storage == "" {
+		param.Storage = ck.TraceStorageTypeCK
+	}
+	spanDao := t.spanDaos[param.Storage]
+	if spanDao == nil {
+		return errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
 	table, err := t.getSpanInsertTable(ctx, param.Tenant, param.TTL)
 	if err != nil {
 		return err
 	}
-	if err := t.spansDao.Insert(ctx, &ck.InsertParam{
+	if err := spanDao.Insert(ctx, &ck.InsertParam{
 		Table: table,
 		Spans: convertor.SpanListDO2PO(param.Spans, param.TTL),
 	}); err != nil {
@@ -80,6 +130,18 @@ func (t *TraceRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTrace
 }
 
 func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+	if req.Storage == "" {
+		req.Storage = ck.TraceStorageTypeCK
+	}
+	spanDao := t.spanDaos[req.Storage]
+	if spanDao == nil {
+		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	annoDao := t.annoDaos[req.Storage]
+	if annoDao == nil {
+		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+
 	pageToken, err := parsePageToken(req.PageToken)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid list spans request"))
@@ -92,7 +154,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		return nil, err
 	}
 	st := time.Now()
-	spans, err := t.spansDao.Get(ctx, &ck.QueryParam{
+	spans, err := spanDao.Get(ctx, &ck.QueryParam{
 		QueryType:        ck.QueryTypeListSpans,
 		Tables:           tableCfg.SpanTables,
 		AnnoTableMap:     tableCfg.AnnoTableMap,
@@ -113,7 +175,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 			return item.SpanID
 		})
 		st = time.Now()
-		annotations, err := t.annoDao.List(ctx, &ck.ListAnnotationsParam{
+		annotations, err := annoDao.List(ctx, &ck.ListAnnotationsParam{
 			Tables:    tableCfg.AnnoTables,
 			SpanIDs:   spanIDs,
 			StartTime: time_util.MillSec2MicroSec(req.StartAt),
@@ -148,6 +210,18 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 }
 
 func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (loop_span.SpanList, error) {
+	if req.Storage == "" {
+		req.Storage = ck.TraceStorageTypeCK
+	}
+	spanDao := t.spanDaos[req.Storage]
+	if spanDao == nil {
+		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	annoDao := t.annoDaos[req.Storage]
+	if annoDao == nil {
+		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+
 	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
 	if err != nil {
 		return nil, err
@@ -182,7 +256,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		SubFilter: req.Filters,
 	})
 	st := time.Now()
-	spans, err := t.spansDao.Get(ctx, &ck.QueryParam{
+	spans, err := spanDao.Get(ctx, &ck.QueryParam{
 		QueryType:     ck.QueryTypeGetTrace,
 		Tables:        tableCfg.SpanTables,
 		AnnoTableMap:  tableCfg.AnnoTableMap,
@@ -204,7 +278,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 			return item.SpanID
 		})
 		st = time.Now()
-		annotations, err := t.annoDao.List(ctx, &ck.ListAnnotationsParam{
+		annotations, err := annoDao.List(ctx, &ck.ListAnnotationsParam{
 			Tables:    tableCfg.AnnoTables,
 			SpanIDs:   spanIDs,
 			StartTime: time_util.MillSec2MicroSec(req.StartAt),
@@ -222,6 +296,14 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 }
 
 func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnnotationsParam) (loop_span.AnnotationList, error) {
+	if param.Storage == "" {
+		param.Storage = ck.TraceStorageTypeCK
+	}
+	annoDao := t.annoDaos[param.Storage]
+	if annoDao == nil {
+		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+
 	if param.SpanID == "" || param.TraceID == "" || param.WorkspaceId <= 0 {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
@@ -232,7 +314,7 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 		return loop_span.AnnotationList{}, nil
 	}
 	st := time.Now()
-	annotations, err := t.annoDao.List(ctx, &ck.ListAnnotationsParam{
+	annotations, err := annoDao.List(ctx, &ck.ListAnnotationsParam{
 		Tables:          tableCfg.AnnoTables,
 		SpanIDs:         []string{param.SpanID},
 		StartTime:       time_util.MillSec2MicroSec(param.StartAt),
@@ -252,6 +334,14 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 }
 
 func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnotationParam) (*loop_span.Annotation, error) {
+	if param.Storage == "" {
+		param.Storage = ck.TraceStorageTypeCK
+	}
+	annoDao := t.annoDaos[param.Storage]
+	if annoDao == nil {
+		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+
 	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
 	if err != nil {
 		return nil, err
@@ -259,7 +349,7 @@ func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnota
 		return nil, nil
 	}
 	st := time.Now()
-	annotation, err := t.annoDao.Get(ctx, &ck.GetAnnotationParam{
+	annotation, err := annoDao.Get(ctx, &ck.GetAnnotationParam{
 		Tables:    tableCfg.AnnoTables,
 		ID:        param.ID,
 		StartTime: time_util.MillSec2MicroSec(param.StartAt),
@@ -274,6 +364,14 @@ func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnota
 }
 
 func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.InsertAnnotationParam) error {
+	if param.Storage == "" {
+		param.Storage = ck.TraceStorageTypeCK
+	}
+	annoDao := t.annoDaos[param.Storage]
+	if annoDao == nil {
+		return errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+
 	table, err := t.getAnnoInsertTable(ctx, param.Tenant, param.TTL)
 	if err != nil {
 		return err
@@ -286,19 +384,27 @@ func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Inser
 		}
 		pos = append(pos, annotationPO)
 	}
-	return t.annoDao.Insert(ctx, &ck.InsertAnnotationParam{
+	return annoDao.Insert(ctx, &ck.InsertAnnotationParam{
 		Table:       table,
 		Annotations: pos,
 	})
 }
 
 func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
+	if param.Storage == "" {
+		param.Storage = ck.TraceStorageTypeCK
+	}
+	spanDao := t.spanDaos[param.Storage]
+	if spanDao == nil {
+		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+
 	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
 	if err != nil {
 		return nil, err
 	}
 	st := time.Now()
-	metrics, err := t.spansDao.GetMetrics(ctx, &ck.GetMetricsParam{
+	metrics, err := spanDao.GetMetrics(ctx, &ck.GetMetricsParam{
 		Tables:       tableCfg.SpanTables,
 		Aggregations: param.Aggregations,
 		GroupBys:     param.GroupBys,

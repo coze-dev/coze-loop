@@ -88,6 +88,7 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 		}
 
 		err = h.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+			Storage:     h.storageProvider.GetTraceStorage(ctx, workspaceIDStr),
 			Tenant:      span.GetTenant(),
 			TTL:         span.GetTTL(ctx),
 			Annotations: []*loop_span.Annotation{annotation},
@@ -127,6 +128,7 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 	}
 	span := spans[0]
 	annotations, err := h.traceRepo.ListAnnotations(ctx, &repo.ListAnnotationsParam{
+		Storage:     h.storageProvider.GetTraceStorage(ctx, workspaceIDStr),
 		Tenants:     tenants,
 		SpanID:      event.GetSpanIDFromExt(),
 		TraceID:     event.GetTraceIDFromExt(),
@@ -154,6 +156,7 @@ func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.Corr
 
 	// Then synchronize the observability data
 	param := &repo.InsertAnnotationParam{
+		Storage:     h.storageProvider.GetTraceStorage(ctx, workspaceIDStr),
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},

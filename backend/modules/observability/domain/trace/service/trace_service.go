@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"strconv"
 	"sync"
 	"time"
@@ -270,6 +271,7 @@ type ITraceService interface {
 
 func NewTraceServiceImpl(
 	tRepo repo.ITraceRepo,
+	storageProvider storage.IStorageProvider,
 	traceConfig config.ITraceConfig,
 	traceProducer mq.ITraceProducer,
 	annotationProducer mq.IAnnotationProducer,
@@ -281,6 +283,7 @@ func NewTraceServiceImpl(
 ) (ITraceService, error) {
 	return &TraceServiceImpl{
 		traceRepo:          tRepo,
+		storageProvider:    storageProvider,
 		traceConfig:        traceConfig,
 		traceProducer:      traceProducer,
 		annotationProducer: annotationProducer,
@@ -294,6 +297,7 @@ func NewTraceServiceImpl(
 
 type TraceServiceImpl struct {
 	traceRepo          repo.ITraceRepo
+	storageProvider    storage.IStorageProvider
 	traceConfig        config.ITraceConfig
 	traceProducer      mq.ITraceProducer
 	annotationProducer mq.IAnnotationProducer
@@ -325,6 +329,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		limit = 10000
 	}
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
+		Storage:     r.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(req.WorkspaceID, 10)),
 		Tenants:     tenants,
 		LogID:       req.LogID,
 		TraceID:     req.TraceID,
@@ -386,6 +391,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	}
 	st := time.Now()
 	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		Storage:         r.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(req.WorkspaceID, 10)),
 		Tenants:         tenants,
 		Filters:         filters,
 		StartAt:         req.StartTime,
@@ -435,6 +441,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 	}
 
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
+		Storage:            r.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(req.WorkspaceID, 10)),
 		Tenants:            req.Tenants,
 		TraceID:            req.TraceID,
 		LogID:              req.LogID,
@@ -495,6 +502,7 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 	}
 	filters := r.combineFilters(builtinFilter, req.Filters)
 	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		Storage:         r.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(req.WorkspaceID, 10)),
 		Tenants:         req.Tenants,
 		Filters:         filters,
 		StartAt:         req.StartTime,
@@ -586,6 +594,7 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 		g.Go(func() error {
 			defer goroutine.Recovery(ctx)
 			qReq := &repo.GetTraceParam{
+				Storage:            r.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(req.WorkspaceID, 10)),
 				Tenants:            tenants,
 				TraceID:            v.TraceID,
 				StartAt:            v.StartTime,
@@ -682,6 +691,7 @@ func (r *TraceServiceImpl) ListAnnotations(ctx context.Context, req *ListAnnotat
 		return nil, err
 	}
 	annotations, err := r.traceRepo.ListAnnotations(ctx, &repo.ListAnnotationsParam{
+		Storage:         r.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(req.WorkspaceID, 10)),
 		Tenants:         tenants,
 		SpanID:          req.SpanID,
 		TraceID:         req.TraceID,
@@ -730,6 +740,7 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	if err := r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Storage:     r.storageProvider.GetTraceStorage(ctx, span.WorkspaceID),
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
@@ -773,6 +784,7 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 	existedAnno, err := r.traceRepo.GetAnnotation(ctx, &repo.GetAnnotationParam{
+		Storage: r.storageProvider.GetTraceStorage(ctx, req.Annotation.WorkspaceID),
 		Tenants: tenants,
 		ID:      req.AnnotationID,
 		StartAt: time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
@@ -786,6 +798,7 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Storage:     r.storageProvider.GetTraceStorage(ctx, span.WorkspaceID),
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
@@ -824,6 +837,7 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Storage:     r.storageProvider.GetTraceStorage(ctx, span.WorkspaceID),
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
@@ -876,6 +890,7 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	existedAnno, err := r.traceRepo.GetAnnotation(ctx, &repo.GetAnnotationParam{
+		Storage: r.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(req.WorkspaceID, 10)),
 		Tenants: cfg.Tenants,
 		ID:      annotation.ID,
 		StartAt: time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
@@ -888,6 +903,7 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Storage:     r.storageProvider.GetTraceStorage(ctx, span.WorkspaceID),
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
@@ -939,6 +955,7 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Storage:     r.storageProvider.GetTraceStorage(ctx, span.WorkspaceID),
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
@@ -980,6 +997,7 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	}
 	// retry if failed
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		Storage:     r.storageProvider.GetTraceStorage(ctx, span.WorkspaceID),
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{event.Annotation},
@@ -1031,6 +1049,7 @@ func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanId
 		})
 	}
 	res, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		Storage: r.storageProvider.GetTraceStorage(ctx, workspaceId),
 		Tenants: tenants,
 		Filters: &loop_span.FilterFields{
 			FilterFields: filterFields,
@@ -1149,6 +1168,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	}
 	span := spans[0]
 	annotation, err := r.traceRepo.GetAnnotation(ctx, &repo.GetAnnotationParam{
+		Storage: r.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(req.WorkspaceID, 10)),
 		Tenants: tenants,
 		ID:      req.AnnotationID,
 		StartAt: time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
@@ -1172,6 +1192,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	}
 	// 再同步修改观测数据
 	param := &repo.InsertAnnotationParam{
+		Storage:     r.storageProvider.GetTraceStorage(ctx, span.WorkspaceID),
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},

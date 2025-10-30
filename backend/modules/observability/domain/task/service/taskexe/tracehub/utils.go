@@ -85,6 +85,7 @@ func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spa
 	var spans []*loop_span.Span
 	for _, tenant := range tenants {
 		res, err := h.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+			Storage: h.storageProvider.GetTraceStorage(ctx, workspaceId),
 			Tenants: []string{tenant},
 			Filters: &loop_span.FilterFields{
 				FilterFields: filterFields,

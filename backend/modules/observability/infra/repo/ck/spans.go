@@ -26,6 +26,7 @@ import (
 const (
 	QueryTypeGetTrace  = "get_trace"
 	QueryTypeListSpans = "list_spans"
+	TraceStorageTypeCK = "ck"
 )
 
 type QueryParam struct {

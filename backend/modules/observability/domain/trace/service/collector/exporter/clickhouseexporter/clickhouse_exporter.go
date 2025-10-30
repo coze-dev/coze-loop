@@ -38,9 +38,10 @@ func (c *ckExporter) ConsumeTraces(ctx context.Context, td consumer.Traces) erro
 	}
 	for ttl, spans := range tracesMap {
 		if err := c.traceRepo.InsertSpans(ctx, &repo.InsertTraceParam{
-			Spans:  spans,
-			Tenant: td.Tenant,
-			TTL:    ttl,
+			Storage: "ck",
+			Spans:   spans,
+			Tenant:  td.Tenant,
+			TTL:     ttl,
 		}); err != nil {
 			logs.CtxError(ctx, "inert %d spans failed, %v", len(spans), err)
 			return err

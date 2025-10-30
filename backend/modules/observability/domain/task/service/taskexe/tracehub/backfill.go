@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -152,6 +153,7 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 
 	// Build query parameters
 	listParam := &repo.ListSpansParam{
+		Storage:            h.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(sub.t.GetWorkspaceID(), 10)),
 		Tenants:            tenants,
 		Filters:            h.buildSpanFilters(ctx, sub.t),
 		StartAt:            backfillTime.GetStartAt(),

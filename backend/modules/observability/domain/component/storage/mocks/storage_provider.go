@@ -13,7 +13,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	storage "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,15 +41,15 @@ func (m *MockIStorageProvider) EXPECT() *MockIStorageProviderMockRecorder {
 }
 
 // GetTraceStorage mocks base method.
-func (m *MockIStorageProvider) GetTraceStorage(ctx context.Context, param storage.GetTraceStorageParam) string {
+func (m *MockIStorageProvider) GetTraceStorage(ctx context.Context, WorkSpaceID string) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTraceStorage", ctx, param)
+	ret := m.ctrl.Call(m, "GetTraceStorage", ctx, WorkSpaceID)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // GetTraceStorage indicates an expected call of GetTraceStorage.
-func (mr *MockIStorageProviderMockRecorder) GetTraceStorage(ctx, param any) *gomock.Call {
+func (mr *MockIStorageProviderMockRecorder) GetTraceStorage(ctx, WorkSpaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceStorage", reflect.TypeOf((*MockIStorageProvider)(nil).GetTraceStorage), ctx, param)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceStorage", reflect.TypeOf((*MockIStorageProvider)(nil).GetTraceStorage), ctx, WorkSpaceID)
 }

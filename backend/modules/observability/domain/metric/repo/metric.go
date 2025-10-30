@@ -11,6 +11,7 @@ import (
 )
 
 type GetMetricsParam struct {
+	Storage      string
 	Tenants      []string
 	Aggregations []*entity.Dimension
 	GroupBys     []*entity.Dimension

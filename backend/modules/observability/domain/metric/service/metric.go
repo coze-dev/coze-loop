@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"math"
 	"reflect"
 	"sort"
@@ -50,14 +51,16 @@ type IMetricsService interface {
 }
 
 type MetricsService struct {
-	metricRepo     repo.IMetricRepo
-	metricDefMap   map[string]entity.IMetricDefinition
-	buildHelper    trace_service.TraceFilterProcessorBuilder
-	tenantProvider tenant.ITenantProvider
+	metricRepo      repo.IMetricRepo
+	storageProvider storage.IStorageProvider
+	metricDefMap    map[string]entity.IMetricDefinition
+	buildHelper     trace_service.TraceFilterProcessorBuilder
+	tenantProvider  tenant.ITenantProvider
 }
 
 func NewMetricsService(
 	metricRepo repo.IMetricRepo,
+	storageProvider storage.IStorageProvider,
 	metricDefs []entity.IMetricDefinition,
 	tenantProvider tenant.ITenantProvider,
 	buildHelper trace_service.TraceFilterProcessorBuilder,
@@ -81,10 +84,11 @@ func NewMetricsService(
 	}
 	logs.Info("%d metrics registered", len(metricDefMap))
 	return &MetricsService{
-		metricRepo:     metricRepo,
-		metricDefMap:   metricDefMap,
-		tenantProvider: tenantProvider,
-		buildHelper:    buildHelper,
+		metricRepo:      metricRepo,
+		storageProvider: storageProvider,
+		metricDefMap:    metricDefMap,
+		tenantProvider:  tenantProvider,
+		buildHelper:     buildHelper,
 	}, nil
 }
 
@@ -203,6 +207,7 @@ func (m *MetricsService) buildMetricQuery(ctx context.Context, req *QueryMetrics
 		return nil, err
 	}
 	param := &repo.GetMetricsParam{
+		Storage: m.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(req.WorkspaceID, 10)),
 		Tenants: tenants,
 		StartAt: req.StartTime,
 		EndAt:   req.EndTime,

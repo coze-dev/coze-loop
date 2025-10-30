@@ -28,6 +28,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	metric_general "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	metric_model "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
@@ -56,6 +57,7 @@ import (
 	ckdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	mysqldao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	tredis "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
+	tlsdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/tls"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
@@ -64,7 +66,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
+	obstorage "github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -86,10 +88,8 @@ var (
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
 		service.NewTraceExportServiceImpl,
-		obrepo.NewTraceRepoImpl,
-		storage.NewTraceStorageProvider,
-		ckdao.NewSpansCkDaoImpl,
-		ckdao.NewAnnotationCkDaoImpl,
+		provideTraceRepo,
+		obstorage.NewTraceStorageProvider,
 		obmetrics.NewTraceMetricsImpl,
 		obcollector.NewEventCollectorProvider,
 		mq2.NewTraceProducerImpl,
@@ -116,11 +116,9 @@ var (
 	traceIngestionSet = wire.NewSet(
 		NewIngestionApplication,
 		service.NewIngestionServiceImpl,
-		obrepo.NewTraceRepoImpl,
-		ckdao.NewSpansCkDaoImpl,
-		ckdao.NewAnnotationCkDaoImpl,
+		provideTraceRepo,
 		obconfig.NewTraceConfigCenter,
-		storage.NewTraceStorageProvider,
+		obstorage.NewTraceStorageProvider,
 		NewTraceConfigLoader,
 		NewIngestionCollectorFactory,
 	)
@@ -141,18 +139,62 @@ var (
 	metricsSet = wire.NewSet(
 		NewMetricApplication,
 		metric_service.NewMetricsService,
-		obrepo.NewTraceMetricCKRepoImpl,
+		provideTraceMetricRepo,
 		tenant.NewTenantProvider,
 		auth.NewAuthProvider,
 		NewTraceConfigLoader,
 		NewTraceProcessorBuilder,
 		obconfig.NewTraceConfigCenter,
+		obstorage.NewTraceStorageProvider,
 		NewMetricDefinitions,
-		ckdao.NewSpansCkDaoImpl,
-		ckdao.NewAnnotationCkDaoImpl,
 		file.NewFileRPCProvider,
 	)
 )
+
+func provideTraceRepo(
+	traceConfig config.ITraceConfig,
+	ckProvider ck.Provider,
+) (repo.ITraceRepo, error) {
+	options, err := buildTraceRepoOptions(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	return obrepo.NewTraceRepoImpl(traceConfig, options...)
+}
+
+func provideTraceMetricRepo(
+	traceConfig config.ITraceConfig,
+	ckProvider ck.Provider,
+) (metric_repo.IMetricRepo, error) {
+	options, err := buildTraceRepoOptions(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	return obrepo.NewTraceMetricCKRepoImpl(traceConfig, options...)
+}
+
+func buildTraceRepoOptions(ckProvider ck.Provider) ([]obrepo.TraceRepoOption, error) {
+	ckSpanDao, err := ckdao.NewSpansCkDaoImpl(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	ckAnnoDao, err := ckdao.NewAnnotationCkDaoImpl(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	tlsSpanDao, err := tlsdao.NewSpansTLSDaoImpl()
+	if err != nil {
+		return nil, err
+	}
+	tlsAnnoDao, err := tlsdao.NewAnnotationTLSDaoImpl()
+	if err != nil {
+		return nil, err
+	}
+	return []obrepo.TraceRepoOption{
+		obrepo.WithTraceStorageDaos(ckdao.TraceStorageTypeCK, ckSpanDao, ckAnnoDao),
+		obrepo.WithTraceStorageDaos(tlsdao.TraceStorageTypeTLS, tlsSpanDao, tlsAnnoDao),
+	}, nil
+}
 
 func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "observability")

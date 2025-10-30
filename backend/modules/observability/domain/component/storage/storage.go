@@ -4,11 +4,7 @@ package storage
 
 import "context"
 
-type GetTraceStorageParam struct {
-	WorkSpaceID string
-}
-
 //go:generate mockgen -destination=mocks/storage_provider.go -package=mocks . IStorageProvider
 type IStorageProvider interface {
-	GetTraceStorage(ctx context.Context, param GetTraceStorageParam) string
+	GetTraceStorage(ctx context.Context, WorkSpaceID string) string
 }
