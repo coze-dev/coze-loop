@@ -97,12 +97,12 @@ func (do *CustomRPCEvaluatorVersion) ValidateInput(input *EvaluatorInputData) er
 		// no need to validate schema for fields not defined in input schemas
 		if argsSchema, ok := inputSchemaMap[fieldKey]; ok {
 			if !gslice.Contains(argsSchema.SupportContentTypes, gptr.Indirect(content.ContentType)) {
-				return errorx.NewByCode(errno.ContentTypeNotSupportedCode, errorx.WithExtraMsg(fmt.Sprintf("content type %v not supported", content.ContentType)))
+				return errorx.NewByCode(errno.ContentTypeNotSupportedCode, errorx.WithExtraMsg(fmt.Sprintf("content type %v not supported", gptr.Indirect(content.ContentType))))
 			}
 			if gptr.Indirect(content.ContentType) == ContentTypeText {
 				valid, err := json.ValidateJSONSchema(gptr.Indirect(argsSchema.JsonSchema), gptr.Indirect(content.Text))
 				if err != nil || !valid {
-					return errorx.NewByCode(errno.ContentSchemaInvalidCode, errorx.WithExtraMsg(fmt.Sprintf("content %v does not validate with expected schema: %v", content.Text, argsSchema.JsonSchema)))
+					return errorx.NewByCode(errno.ContentSchemaInvalidCode, errorx.WithExtraMsg(fmt.Sprintf("content %v does not validate with expected schema: %v", gptr.Indirect(content.Text), gptr.Indirect(argsSchema.JsonSchema))))
 				}
 			}
 		}
