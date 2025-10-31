@@ -153,8 +153,8 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				merr = multierror.Append(merr, errors.WithMessagef(err, "task is unstarted, need sub.Creative,creative processor, task_id=%d", sub.taskID))
 				continue
 			}
-			if err := sub.processor.OnUpdateTaskChange(ctx, tconv.TaskDTO2DO(sub.t), entity.TaskStatusRunning); err != nil {
-				logs.CtxWarn(ctx, "OnUpdateTaskChange, task_id=%d, err=%v", sub.taskID, err)
+			if err := sub.processor.OnTaskUpdated(ctx, tconv.TaskDTO2DO(sub.t), entity.TaskStatusRunning); err != nil {
+				logs.CtxWarn(ctx, "OnTaskUpdated, task_id=%d, err=%v", sub.taskID, err)
 				continue
 			}
 		}
@@ -192,8 +192,8 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		endTime := time.UnixMilli(sub.t.GetRule().GetEffectiveTime().GetEndAt())
 		// Reached task time limit
 		if time.Now().After(endTime) {
-			logs.CtxWarn(ctx, "[OnFinishTaskChange]time.Now().After(endTime) Finish processor, task_id=%d, endTime=%v, now=%v", sub.taskID, endTime, time.Now())
-			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+			logs.CtxWarn(ctx, "[OnTaskFinished]time.Now().After(endTime) Finish processor, task_id=%d, endTime=%v, now=%v", sub.taskID, endTime, time.Now())
+			if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 				Task:     tconv.TaskDTO2DO(sub.t),
 				TaskRun:  taskRunConfig,
 				IsFinish: true,
@@ -205,8 +205,8 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 		}
 		// Reached task limit
 		if taskCount+1 > sampler.GetSampleSize() {
-			logs.CtxWarn(ctx, "[OnFinishTaskChange]taskCount+1 > sampler.GetSampleSize() Finish processor, task_id=%d", sub.taskID)
-			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+			logs.CtxWarn(ctx, "[OnTaskFinished]taskCount+1 > sampler.GetSampleSize() Finish processor, task_id=%d", sub.taskID)
+			if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 				Task:     tconv.TaskDTO2DO(sub.t),
 				TaskRun:  taskRunConfig,
 				IsFinish: true,
@@ -219,8 +219,8 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			cycleEndTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
 			// Reached single cycle task time limit
 			if time.Now().After(cycleEndTime) {
-				logs.CtxInfo(ctx, "[OnFinishTaskChange]time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID)
-				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				logs.CtxInfo(ctx, "[OnTaskFinished]time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID)
+				if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 					Task:     tconv.TaskDTO2DO(sub.t),
 					TaskRun:  taskRunConfig,
 					IsFinish: false,
@@ -237,8 +237,8 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 			// Reached single cycle task limit
 			if taskRunCount+1 > sampler.GetCycleCount() {
-				logs.CtxWarn(ctx, "[OnFinishTaskChange]taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
-				if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				logs.CtxWarn(ctx, "[OnTaskFinished]taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
+				if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 					Task:     tconv.TaskDTO2DO(sub.t),
 					TaskRun:  taskRunConfig,
 					IsFinish: false,

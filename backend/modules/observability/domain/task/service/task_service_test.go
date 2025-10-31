@@ -53,15 +53,15 @@ func (f *fakeProcessor) OnUpdateTaskChange(context.Context, *entity.Observabilit
 	return nil
 }
 
-func (f *fakeProcessor) OnFinishTaskChange(context.Context, taskexe.OnFinishTaskChangeReq) error {
+func (f *fakeProcessor) OnFinishTaskChange(context.Context, taskexe.OnTaskFinishedReq) error {
 	return nil
 }
 
-func (f *fakeProcessor) OnCreateTaskRunChange(context.Context, taskexe.OnCreateTaskRunChangeReq) error {
+func (f *fakeProcessor) OnCreateTaskRunChange(context.Context, taskexe.OnTaskRunCreatedReq) error {
 	return nil
 }
 
-func (f *fakeProcessor) OnFinishTaskRunChange(context.Context, taskexe.OnFinishTaskRunChangeReq) error {
+func (f *fakeProcessor) OnFinishTaskRunChange(context.Context, taskexe.OnTaskRunFinishedReq) error {
 	f.onFinishRunCalled = true
 	return f.onFinishRunErr
 }

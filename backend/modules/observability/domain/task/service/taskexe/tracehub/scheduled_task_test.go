@@ -23,8 +23,8 @@ import (
 
 type trackingProcessor struct {
 	*stubProcessor
-	finishReqs     []taskexe.OnFinishTaskChangeReq
-	createRunReqs  []taskexe.OnCreateTaskRunChangeReq
+	finishReqs     []taskexe.OnTaskFinishedReq
+	createRunReqs  []taskexe.OnTaskRunCreatedReq
 	updateStatuses []entity.TaskStatus
 }
 
@@ -32,19 +32,19 @@ func newTrackingProcessor() *trackingProcessor {
 	return &trackingProcessor{stubProcessor: &stubProcessor{}}
 }
 
-func (p *trackingProcessor) OnFinishTaskChange(ctx context.Context, req taskexe.OnFinishTaskChangeReq) error {
+func (p *trackingProcessor) OnFinishTaskChange(ctx context.Context, req taskexe.OnTaskFinishedReq) error {
 	p.finishReqs = append(p.finishReqs, req)
 	return p.stubProcessor.OnFinishTaskChange(ctx, req)
 }
 
-func (p *trackingProcessor) OnCreateTaskRunChange(ctx context.Context, req taskexe.OnCreateTaskRunChangeReq) error {
+func (p *trackingProcessor) OnCreateTaskRunChange(ctx context.Context, req taskexe.OnTaskRunCreatedReq) error {
 	p.createRunReqs = append(p.createRunReqs, req)
 	return p.stubProcessor.OnCreateTaskRunChange(ctx, req)
 }
 
-func (p *trackingProcessor) OnUpdateTaskChange(ctx context.Context, obsTask *entity.ObservabilityTask, status entity.TaskStatus) error {
+func (p *trackingProcessor) OnTaskUpdated(ctx context.Context, obsTask *entity.ObservabilityTask, status entity.TaskStatus) error {
 	p.updateStatuses = append(p.updateStatuses, status)
-	return p.stubProcessor.OnUpdateTaskChange(ctx, obsTask, status)
+	return p.stubProcessor.OnTaskUpdated(ctx, obsTask, status)
 }
 
 func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {

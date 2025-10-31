@@ -134,7 +134,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	// 数据回流任务——创建/更新输出数据集
 	// 自动评测历史回溯——创建空壳子
 	taskDO.ID = id
-	if err = proc.OnCreateTaskChange(ctx, taskDO); err != nil {
+	if err = proc.OnTaskCreated(ctx, taskDO); err != nil {
 		logs.CtxError(ctx, "create initial task run failed, task_id=%d, err=%v", id, err)
 
 		if err1 := t.TaskRepo.DeleteTask(ctx, taskDO); err1 != nil {
@@ -201,7 +201,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 						break
 					}
 				}
-				if err = proc.OnFinishTaskRunChange(ctx, taskexe.OnFinishTaskRunChangeReq{
+				if err = proc.OnTaskRunFinished(ctx, taskexe.OnTaskRunFinishedReq{
 					Task:    taskDO,
 					TaskRun: taskRun,
 				}); err != nil {

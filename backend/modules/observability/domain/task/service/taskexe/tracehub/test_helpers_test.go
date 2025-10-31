@@ -29,8 +29,8 @@ type stubProcessor struct {
 	createTaskRunErr    error
 	finishChangeInvoked int
 	invokeCalled        bool
-	createTaskRunReqs   []taskexe.OnCreateTaskRunChangeReq
-	finishChangeReqs    []taskexe.OnFinishTaskChangeReq
+	createTaskRunReqs   []taskexe.OnTaskRunCreatedReq
+	finishChangeReqs    []taskexe.OnTaskFinishedReq
 	updateCallCount     int
 	createTaskRunErrSeq []error
 	finishErrSeq        []error
@@ -45,16 +45,16 @@ func (s *stubProcessor) Invoke(context.Context, *taskexe.Trigger) error {
 	return s.invokeErr
 }
 
-func (s *stubProcessor) OnCreateTaskChange(context.Context, *entity.ObservabilityTask) error {
+func (s *stubProcessor) OnTaskCreated(context.Context, *entity.ObservabilityTask) error {
 	return s.createTaskErr
 }
 
-func (s *stubProcessor) OnUpdateTaskChange(context.Context, *entity.ObservabilityTask, entity.TaskStatus) error {
+func (s *stubProcessor) OnTaskUpdated(context.Context, *entity.ObservabilityTask, entity.TaskStatus) error {
 	s.updateCallCount++
 	return s.updateErr
 }
 
-func (s *stubProcessor) OnFinishTaskChange(_ context.Context, req taskexe.OnFinishTaskChangeReq) error {
+func (s *stubProcessor) OnFinishTaskChange(_ context.Context, req taskexe.OnTaskFinishedReq) error {
 	idx := len(s.finishChangeReqs)
 	s.finishChangeReqs = append(s.finishChangeReqs, req)
 	s.finishChangeInvoked++
@@ -64,7 +64,7 @@ func (s *stubProcessor) OnFinishTaskChange(_ context.Context, req taskexe.OnFini
 	return s.finishErr
 }
 
-func (s *stubProcessor) OnCreateTaskRunChange(_ context.Context, req taskexe.OnCreateTaskRunChangeReq) error {
+func (s *stubProcessor) OnCreateTaskRunChange(_ context.Context, req taskexe.OnTaskRunCreatedReq) error {
 	s.createTaskRunReqs = append(s.createTaskRunReqs, req)
 	idx := len(s.createTaskRunReqs) - 1
 	if idx >= 0 && idx < len(s.createTaskRunErrSeq) {
@@ -75,7 +75,7 @@ func (s *stubProcessor) OnCreateTaskRunChange(_ context.Context, req taskexe.OnC
 	return s.createTaskRunErr
 }
 
-func (s *stubProcessor) OnFinishTaskRunChange(context.Context, taskexe.OnFinishTaskRunChangeReq) error {
+func (s *stubProcessor) OnFinishTaskRunChange(context.Context, taskexe.OnTaskRunFinishedReq) error {
 	return s.finishTaskRunErr
 }
 

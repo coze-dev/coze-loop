@@ -35,9 +35,9 @@ func TestNoopTaskProcessor_Methods(t *testing.T) {
 
 	assert.NoError(t, p.ValidateConfig(ctx, nil))
 	assert.NoError(t, p.Invoke(ctx, nil))
-	assert.NoError(t, p.OnCreateTaskChange(ctx, nil))
-	assert.NoError(t, p.OnUpdateTaskChange(ctx, nil, task.TaskStatusRunning))
-	assert.NoError(t, p.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{}))
-	assert.NoError(t, p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{}))
-	assert.NoError(t, p.OnFinishTaskRunChange(ctx, taskexe.OnFinishTaskRunChangeReq{}))
+	assert.NoError(t, p.OnTaskCreated(ctx, nil))
+	assert.NoError(t, p.OnTaskUpdated(ctx, nil, task.TaskStatusRunning))
+	assert.NoError(t, p.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{}))
+	assert.NoError(t, p.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{}))
+	assert.NoError(t, p.OnTaskRunFinished(ctx, taskexe.OnTaskRunFinishedReq{}))
 }

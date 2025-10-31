@@ -224,7 +224,8 @@ func TestAutoEvaluteProcessor_ValidateConfig(t *testing.T) {
 			name:   "invalid type",
 			config: "bad",
 			expectErr: func(err error) bool {
-				return errors.Is(err, taskexe.ErrInvalidConfig)
+				status, ok := errorx.FromStatusError(err)
+				return ok && status.Code() == obErrorx.CommonInvalidParamCode
 			},
 		},
 		{
@@ -457,14 +458,14 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 
 			proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
 			taskObj := &taskentity.ObservabilityTask{TaskStatus: caseItem.initial}
-			err := proc.OnUpdateTaskChange(ctx, taskObj, caseItem.op)
+			err := proc.OnTaskUpdated(ctx, taskObj, caseItem.op)
 			assert.NoError(t, err)
 		})
 	}
 
 	t.Run("invalid op", func(t *testing.T) {
 		proc := &AutoEvaluteProcessor{}
-		err := proc.OnUpdateTaskChange(ctx, &taskentity.ObservabilityTask{}, "unknown")
+		err := proc.OnTaskUpdated(ctx, &taskentity.ObservabilityTask{}, "unknown")
 		assert.Error(t, err)
 	})
 }
@@ -479,7 +480,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 
 	taskObj := buildTestTask(t)
-	param := taskexe.OnCreateTaskRunChangeReq{
+	param := taskexe.OnTaskRunCreatedReq{
 		CurrentTask: taskObj,
 		RunType:     taskentity.TaskRunTypeNewData,
 		RunStartAt:  time.Now().Add(-time.Minute).UnixMilli(),
@@ -506,7 +507,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 	}
 
 	ctx := session.WithCtxUser(context.Background(), &session.User{ID: taskObj.CreatedBy})
-	err := proc.OnCreateTaskRunChange(ctx, param)
+	err := proc.OnTaskRunCreated(ctx, param)
 	assert.NoError(t, err)
 	assert.NotNil(t, evalAdapter.submitReq)
 	assert.Equal(t, int64(9001), *evalAdapter.submitReq.EvalSetID)
@@ -537,7 +538,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
 		evaluationSvc: evalAdapter,
 	}
 
-	err := proc.OnFinishTaskRunChange(context.Background(), taskexe.OnFinishTaskRunChangeReq{
+	err := proc.OnTaskRunFinished(context.Background(), taskexe.OnTaskRunFinishedReq{
 		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234},
 		TaskRun: taskRun,
 	})
@@ -566,7 +567,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 		taskRepo:      repoAdapter,
 	}
 
-	err := proc.OnFinishTaskChange(context.Background(), taskexe.OnFinishTaskChangeReq{
+	err := proc.OnTaskFinished(context.Background(), taskexe.OnTaskFinishedReq{
 		Task:     taskObj,
 		TaskRun:  taskRun,
 		IsFinish: true,
@@ -590,7 +591,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange_Error(t *testing.T) {
 		taskRepo:      repoAdapter,
 	}
 
-	err := proc.OnFinishTaskChange(context.Background(), taskexe.OnFinishTaskChangeReq{
+	err := proc.OnTaskFinished(context.Background(), taskexe.OnTaskFinishedReq{
 		Task:    &taskentity.ObservabilityTask{WorkspaceID: 123},
 		TaskRun: &taskentity.TaskRun{TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{ExptID: 1, ExptRunID: 2}}},
 	})
@@ -666,7 +667,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 		updateTaskNewData,
 	)
 
-	err := proc.OnCreateTaskChange(context.Background(), taskObj)
+	err := proc.OnTaskCreated(context.Background(), taskObj)
 	assert.NoError(t, err)
 	assert.Equal(t, []taskentity.TaskRunType{taskentity.TaskRunTypeBackFill, taskentity.TaskRunTypeNewData}, runTypes)
 	assert.Equal(t, []taskentity.TaskStatus{taskentity.TaskStatusRunning, taskentity.TaskStatusRunning}, statuses)
@@ -685,7 +686,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) 
 
 	proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
 
-	err := proc.OnCreateTaskChange(context.Background(), buildTestTask(t))
+	err := proc.OnTaskCreated(context.Background(), buildTestTask(t))
 	assert.EqualError(t, err, "db error")
 }
 
@@ -710,7 +711,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T
 	repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), gomock.Any()).Return(nil, nil)
 	datasetProvider.EXPECT().CreateDataset(gomock.Any(), gomock.AssignableToTypeOf(&traceentity.Dataset{})).Return(int64(0), errors.New("create fail"))
 
-	err := proc.OnCreateTaskChange(context.Background(), buildTestTask(t))
+	err := proc.OnTaskCreated(context.Background(), buildTestTask(t))
 	assert.EqualError(t, err, "create fail")
 }
 

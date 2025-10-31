@@ -367,7 +367,7 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 	}
 	if fr.noMore {
 		logs.CtxInfo(ctx, "no more spans to process, task_id=%d", sub.t.GetID())
-		if err = sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+		if err = sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 			Task:     tconv.TaskDTO2DO(sub.t),
 			TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
 			IsFinish: false,
@@ -448,7 +448,7 @@ func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*lo
 		sampler := sub.t.GetRule().GetSampler()
 		if taskCount+1 > sampler.GetSampleSize() {
 			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d,SampleSize=%d", sub.taskID, sampler.GetSampleSize())
-			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+			if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 				Task:     tconv.TaskDTO2DO(sub.t),
 				TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
 				IsFinish: true,

@@ -27,6 +27,9 @@ const (
 	DefaultLimit  = 20
 	MaxLimit      = 501
 	DefaultOffset = 0
+
+	MaxRetries = 3
+	RetryDelay = 100 * time.Millisecond
 )
 
 type ListTaskParam struct {
@@ -372,7 +375,6 @@ func (d *TaskDaoImpl) order(q *genquery.Query, orderBy string, asc bool) field.E
 }
 
 func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
-	// todo[xun]: 乐观锁
 	logs.CtxInfo(ctx, "UpdateTaskWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTask
 	qd := q.WithContext(ctx)

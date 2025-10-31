@@ -154,7 +154,7 @@ func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpa
 }
 
 func (s *spanSubscriber) Creative(ctx context.Context, runStartAt, runEndAt int64) error {
-	err := s.processor.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+	err := s.processor.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
 		CurrentTask: tconv.TaskDTO2DO(s.t),
 		RunType:     s.runType,
 		RunStartAt:  runStartAt,

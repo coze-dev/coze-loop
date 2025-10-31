@@ -26,22 +26,22 @@ func (p *NoopTaskProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger
 	return nil
 }
 
-func (p *NoopTaskProcessor) OnCreateTaskChange(ctx context.Context, currentTask *entity.ObservabilityTask) error {
+func (p *NoopTaskProcessor) OnTaskCreated(ctx context.Context, currentTask *entity.ObservabilityTask) error {
 	return nil
 }
 
-func (p *NoopTaskProcessor) OnUpdateTaskChange(ctx context.Context, currentTask *entity.ObservabilityTask, taskOp entity.TaskStatus) error {
+func (p *NoopTaskProcessor) OnTaskUpdated(ctx context.Context, currentTask *entity.ObservabilityTask, taskOp entity.TaskStatus) error {
 	return nil
 }
 
-func (p *NoopTaskProcessor) OnFinishTaskChange(ctx context.Context, param taskexe.OnFinishTaskChangeReq) error {
+func (p *NoopTaskProcessor) OnTaskFinished(ctx context.Context, param taskexe.OnTaskFinishedReq) error {
 	return nil
 }
 
-func (p *NoopTaskProcessor) OnCreateTaskRunChange(ctx context.Context, param taskexe.OnCreateTaskRunChangeReq) error {
+func (p *NoopTaskProcessor) OnTaskRunCreated(ctx context.Context, param taskexe.OnTaskRunCreatedReq) error {
 	return nil
 }
 
-func (p *NoopTaskProcessor) OnFinishTaskRunChange(ctx context.Context, param taskexe.OnFinishTaskRunChangeReq) error {
+func (p *NoopTaskProcessor) OnTaskRunFinished(ctx context.Context, param taskexe.OnTaskRunFinishedReq) error {
 	return nil
 }

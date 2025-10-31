@@ -130,14 +130,14 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskPO.ID, endTime, startTime)
 		if taskPO.BackfillEffectiveTime != nil && taskPO.EffectiveTime != nil && backfillTaskRun != nil {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == entity.TaskRunStatusDone {
-				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
-				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
+				err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 					Task:     taskPO,
 					TaskRun:  backfillTaskRun,
 					IsFinish: true,
 				})
 				if err != nil {
-					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+					logs.CtxError(ctx, "OnTaskFinished err:%v", err)
 					continue
 				}
 			}
@@ -154,14 +154,14 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		} else if taskPO.BackfillEffectiveTime != nil && backfillTaskRun != nil {
 			if backfillTaskRun.RunStatus == entity.TaskRunStatusDone {
-				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
-				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
+				err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 					Task:     taskPO,
 					TaskRun:  backfillTaskRun,
 					IsFinish: true,
 				})
 				if err != nil {
-					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+					logs.CtxError(ctx, "OnTaskFinished err:%v", err)
 					continue
 				}
 			}
@@ -178,14 +178,14 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			}
 		} else if taskPO.EffectiveTime != nil {
 			if time.Now().After(endTime) {
-				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(endTime)", taskPO.ID)
-				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, time.Now().After(endTime)", taskPO.ID)
+				err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 					Task:     taskPO,
 					TaskRun:  taskRun,
 					IsFinish: true,
 				})
 				if err != nil {
-					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+					logs.CtxError(ctx, "OnTaskFinished err:%v", err)
 					continue
 				}
 			}
@@ -193,30 +193,30 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		// If the task status is unstarted, create it once the task start time is reached
 		if taskPO.TaskStatus == entity.TaskStatusUnstarted && time.Now().After(startTime) {
 			if !taskPO.Sampler.IsCycle {
-				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+				err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
 					CurrentTask: taskPO,
 					RunType:     entity.TaskRunTypeNewData,
 					RunStartAt:  taskPO.EffectiveTime.StartAt,
 					RunEndAt:    taskPO.EffectiveTime.EndAt,
 				})
 				if err != nil {
-					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+					logs.CtxError(ctx, "OnTaskRunCreated err:%v", err)
 					continue
 				}
-				err = proc.OnUpdateTaskChange(ctx, taskPO, entity.TaskStatusRunning)
+				err = proc.OnTaskUpdated(ctx, taskPO, entity.TaskStatusRunning)
 				if err != nil {
-					logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
+					logs.CtxError(ctx, "OnTaskUpdated err:%v", err)
 					continue
 				}
 			} else {
-				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+				err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
 					CurrentTask: taskPO,
 					RunType:     entity.TaskRunTypeNewData,
 					RunStartAt:  taskRun.RunEndAt.UnixMilli(),
 					RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
 				})
 				if err != nil {
-					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+					logs.CtxError(ctx, "OnTaskRunCreated err:%v", err)
 					continue
 				}
 			}
@@ -230,25 +230,25 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskPO.ID, taskRun.RunEndAt)
 			// Handling repeated tasks: single task time horizon reached
 			if time.Now().After(taskRun.RunEndAt) {
-				logs.CtxInfo(ctx, "[OnFinishTaskChange]taskID:%d, time.Now().After(cycleEndTime)", taskPO.ID)
-				err = proc.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, time.Now().After(cycleEndTime)", taskPO.ID)
+				err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 					Task:     taskPO,
 					TaskRun:  taskRun,
 					IsFinish: false,
 				})
 				if err != nil {
-					logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+					logs.CtxError(ctx, "OnTaskFinished err:%v", err)
 					continue
 				}
 				if taskPO.Sampler.IsCycle {
-					err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+					err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
 						CurrentTask: taskPO,
 						RunType:     entity.TaskRunTypeNewData,
 						RunStartAt:  taskRun.RunEndAt.UnixMilli(),
 						RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
 					})
 					if err != nil {
-						logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+						logs.CtxError(ctx, "OnTaskRunCreated err:%v", err)
 						continue
 					}
 				}
