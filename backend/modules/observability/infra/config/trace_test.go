@@ -159,33 +159,22 @@ func TestTraceConfigCenter_GetPlatformSpansTrans(t *testing.T) {
 			name: "get platform spans trans successfully",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
-				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), platformSpanHandlerCfgKey, gomock.Any()).
-					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
-						cfg := v.(*config.SpanTransHandlerConfig)
-						cfg.PlatformCfg = map[string]loop_span.SpanTransCfgList{
-							"test_platform": {
-								{},
-							},
-						}
-						return nil
-					})
+				mockLoader.EXPECT().Get(gomock.Any(), platformSpanHandlerCfgKey).Return(`{"platform_cfg":{"test_platform":[]}}`)
 				return fields{configLoader: mockLoader}
 			},
 			args: args{
 				ctx:          context.Background(),
 				platformType: "test_platform",
 			},
-			want: loop_span.SpanTransCfgList{
-				{},
-			},
+			want:    loop_span.SpanTransCfgList{},
 			wantErr: false,
 		},
 		{
 			name: "unmarshal key failed",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
-				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), platformSpanHandlerCfgKey, gomock.Any()).
-					Return(fmt.Errorf("unmarshal error"))
+				mockLoader.EXPECT().Get(gomock.Any(), platformSpanHandlerCfgKey).
+					Return(nil)
 				return fields{configLoader: mockLoader}
 			},
 			args: args{
