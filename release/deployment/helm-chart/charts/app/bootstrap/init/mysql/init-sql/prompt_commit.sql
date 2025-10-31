@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS `prompt_commit`
     `variable_defs`    text COLLATE utf8mb4_general_ci COMMENT '变量定义',
     `tools`            longtext COLLATE utf8mb4_general_ci COMMENT 'tools',
     `tool_call_config` text COLLATE utf8mb4_general_ci COMMENT 'tool调用配置',
+    `metadata`         text COLLATE utf8mb4_general_ci COMMENT '模板元信息',
     `version`          varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '版本',
     `base_version`     varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '来源版本',
     `committed_by`     varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '提交人',

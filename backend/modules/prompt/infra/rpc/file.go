@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
+//go:generate mockgen -source=../../../../kitex_gen/coze/loop/foundation/file/fileservice/client.go -destination=mocks/fileservice_mock.go -package=mocks -mock_names Client=FileServiceClient
 type FileRPCAdapter struct {
 	client fileservice.Client
 }
@@ -44,4 +45,20 @@ func (f *FileRPCAdapter) MGetFileURL(ctx context.Context, keys []string) (urls m
 		urls[key] = resp.Uris[idx]
 	}
 	return urls, nil
+}
+
+func (f *FileRPCAdapter) UploadFileForServer(ctx context.Context, mimeType string, body []byte, workspaceID int64) (key string, err error) {
+	req := &file.UploadFileForServerRequest{
+		MimeType:    mimeType,
+		Body:        body,
+		WorkspaceID: workspaceID,
+	}
+	resp, err := f.client.UploadFileForServer(ctx, req)
+	if err != nil {
+		return "", err
+	}
+	if resp.Data == nil || resp.Data.FileName == nil {
+		return "", errorx.New("upload file response invalid: missing file name")
+	}
+	return *resp.Data.FileName, nil
 }

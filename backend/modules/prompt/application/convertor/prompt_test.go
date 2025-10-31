@@ -342,6 +342,48 @@ func mockPromptCases() []promptTestCase {
 				},
 			},
 		},
+		{
+			name: "prompt template metadata",
+			dto: &prompt.Prompt{
+				ID:          ptr.Of(int64(0)),
+				WorkspaceID: ptr.Of(int64(0)),
+				PromptKey:   ptr.Of(""),
+				PromptCommit: &prompt.PromptCommit{
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							Metadata:     map[string]string{"commit-meta": "value"},
+						},
+					},
+				},
+				PromptDraft: &prompt.PromptDraft{
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							Metadata:     map[string]string{"draft-meta": "value"},
+						},
+					},
+				},
+			},
+			do: &entity.Prompt{
+				PromptCommit: &entity.PromptCommit{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Metadata:     map[string]string{"commit-meta": "value"},
+						},
+					},
+				},
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Metadata:     map[string]string{"draft-meta": "value"},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -478,6 +520,35 @@ func mockMessageCases() []messageTestCase {
 			},
 		},
 		{
+			name: "user message with video content",
+			dto: &prompt.Message{
+				Role: ptr.Of(prompt.RoleUser),
+				Parts: []*prompt.ContentPart{
+					{
+						Type: ptr.Of(prompt.ContentTypeVideoURL),
+						VideoURL: &prompt.VideoURL{
+							URL: ptr.Of("https://example.com/video.mp4"),
+							URI: ptr.Of("video-uri"),
+							Fps: ptr.Of(2.5),
+						},
+					},
+				},
+			},
+			do: &entity.Message{
+				Role: entity.RoleUser,
+				Parts: []*entity.ContentPart{
+					{
+						Type: entity.ContentTypeVideoURL,
+						VideoURL: &entity.VideoURL{
+							URL: "https://example.com/video.mp4",
+							URI: "video-uri",
+							Fps: ptr.Of(2.5),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "assistant message with tool calls",
 			dto: &prompt.Message{
 				Role: ptr.Of(prompt.RoleAssistant),
@@ -521,6 +592,17 @@ func mockMessageCases() []messageTestCase {
 				ReasoningContent: ptr.Of("This is my reasoning process..."),
 			},
 		},
+		{
+			name: "message with metadata",
+			dto: &prompt.Message{
+				Role:     ptr.Of(prompt.RoleAssistant),
+				Metadata: map[string]string{"key": "value"},
+			},
+			do: &entity.Message{
+				Role:     entity.RoleAssistant,
+				Metadata: map[string]string{"key": "value"},
+			},
+		},
 	}
 }
 
@@ -561,6 +643,166 @@ func TestMessageDO2DTO(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.dto, MessageDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestModelConfigExtraConversion(t *testing.T) {
+	extra := ptr.Of(`{"foo":"bar"}`)
+	dto := &prompt.ModelConfig{
+		Extra: extra,
+	}
+
+	do := ModelConfigDTO2DO(dto)
+	assert.NotNil(t, do)
+	assert.Equal(t, extra, do.Extra)
+
+	dtoBack := ModelConfigDO2DTO(do)
+	assert.NotNil(t, dtoBack)
+	assert.Equal(t, extra, dtoBack.Extra)
+}
+
+func TestTemplateTypeDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  prompt.TemplateType
+		want entity.TemplateType
+	}{
+		{
+			name: "normal template type",
+			dto:  prompt.TemplateTypeNormal,
+			want: entity.TemplateTypeNormal,
+		},
+		{
+			name: "jinja2 template type",
+			dto:  prompt.TemplateTypeJinja2,
+			want: entity.TemplateTypeJinja2,
+		},
+		{
+			name: "go template type",
+			dto:  prompt.TemplateTypeGoTemplate,
+			want: entity.TemplateTypeGoTemplate,
+		},
+		{
+			name: "custom template m type",
+			dto:  prompt.TemplateTypeCustomTemplateM,
+			want: entity.TemplateTYpeCustomTemplateM,
+		},
+		{
+			name: "unknown template type defaults to normal",
+			dto:  prompt.TemplateType("unknown"),
+			want: entity.TemplateTypeNormal,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := TemplateTypeDTO2DO(tt.dto)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestPromptTemplateWithDifferentTypes(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		dto  *prompt.PromptTemplate
+		want *entity.PromptTemplate
+	}{
+		{
+			name: "normal template",
+			dto: &prompt.PromptTemplate{
+				TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+				Messages: []*prompt.Message{
+					{
+						Role:    ptr.Of(prompt.RoleUser),
+						Content: ptr.Of("Hello {{name}}"),
+					},
+				},
+			},
+			want: &entity.PromptTemplate{
+				TemplateType: entity.TemplateTypeNormal,
+				Messages: []*entity.Message{
+					{
+						Role:    entity.RoleUser,
+						Content: ptr.Of("Hello {{name}}"),
+					},
+				},
+			},
+		},
+		{
+			name: "jinja2 template",
+			dto: &prompt.PromptTemplate{
+				TemplateType: ptr.Of(prompt.TemplateTypeJinja2),
+				Messages: []*prompt.Message{
+					{
+						Role:    ptr.Of(prompt.RoleUser),
+						Content: ptr.Of("Hello {{ name }}"),
+					},
+				},
+			},
+			want: &entity.PromptTemplate{
+				TemplateType: entity.TemplateTypeJinja2,
+				Messages: []*entity.Message{
+					{
+						Role:    entity.RoleUser,
+						Content: ptr.Of("Hello {{ name }}"),
+					},
+				},
+			},
+		},
+		{
+			name: "go template",
+			dto: &prompt.PromptTemplate{
+				TemplateType: ptr.Of(prompt.TemplateTypeGoTemplate),
+				Messages: []*prompt.Message{
+					{
+						Role:    ptr.Of(prompt.RoleUser),
+						Content: ptr.Of("Hello {{.name}}"),
+					},
+				},
+			},
+			want: &entity.PromptTemplate{
+				TemplateType: entity.TemplateTypeGoTemplate,
+				Messages: []*entity.Message{
+					{
+						Role:    entity.RoleUser,
+						Content: ptr.Of("Hello {{.name}}"),
+					},
+				},
+			},
+		},
+		{
+			name: "custom template m",
+			dto: &prompt.PromptTemplate{
+				TemplateType: ptr.Of(prompt.TemplateTypeCustomTemplateM),
+				Messages: []*prompt.Message{
+					{
+						Role:    ptr.Of(prompt.RoleUser),
+						Content: ptr.Of("Hello world"),
+					},
+				},
+			},
+			want: &entity.PromptTemplate{
+				TemplateType: entity.TemplateTYpeCustomTemplateM,
+				Messages: []*entity.Message{
+					{
+						Role:    entity.RoleUser,
+						Content: ptr.Of("Hello world"),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := PromptTemplateDTO2DO(tt.dto)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

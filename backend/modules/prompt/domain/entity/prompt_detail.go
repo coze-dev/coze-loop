@@ -34,16 +34,19 @@ type PromptDetail struct {
 }
 
 type PromptTemplate struct {
-	TemplateType TemplateType   `json:"template_type"`
-	Messages     []*Message     `json:"messages,omitempty"`
-	VariableDefs []*VariableDef `json:"variable_defs,omitempty"`
+	TemplateType TemplateType      `json:"template_type"`
+	Messages     []*Message        `json:"messages,omitempty"`
+	VariableDefs []*VariableDef    `json:"variable_defs,omitempty"`
+	Metadata     map[string]string `json:"metadata,omitempty"`
 }
 
 type TemplateType string
 
 const (
-	TemplateTypeNormal TemplateType = "normal"
-	TemplateTypeJinja2 TemplateType = "jinja2"
+	TemplateTypeNormal          TemplateType = "normal"
+	TemplateTypeJinja2          TemplateType = "jinja2"
+	TemplateTypeGoTemplate      TemplateType = "go_template"
+	TemplateTYpeCustomTemplateM TemplateType = "custom_template_m"
 )
 
 type Message struct {
@@ -53,6 +56,8 @@ type Message struct {
 	Parts            []*ContentPart `json:"parts,omitempty"`
 	ToolCallID       *string        `json:"tool_call_id,omitempty"`
 	ToolCalls        []*ToolCall    `json:"tool_calls,omitempty"`
+
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 type Role string
@@ -69,6 +74,7 @@ type ContentPart struct {
 	Type       ContentType `json:"type"`
 	Text       *string     `json:"text,omitempty"`
 	ImageURL   *ImageURL   `json:"image_url,omitempty"`
+	VideoURL   *VideoURL   `json:"video_url,omitempty"`
 	Base64Data *string     `json:"base64_data,omitempty"`
 }
 
@@ -77,6 +83,7 @@ type ContentType string
 const (
 	ContentTypeText              ContentType = "text"
 	ContentTypeImageURL          ContentType = "image_url"
+	ContentTypeVideoURL          ContentType = "video_url"
 	ContentTypeBase64Data        ContentType = "base64_data"
 	ContentTypeMultiPartVariable ContentType = "multi_part_variable"
 )
@@ -84,6 +91,12 @@ const (
 type ImageURL struct {
 	URI string `json:"uri"`
 	URL string `json:"url"`
+}
+
+type VideoURL struct {
+	URI string   `json:"uri"`
+	URL string   `json:"url"`
+	Fps *float64 `json:"fps,omitempty"`
 }
 
 type VariableDef struct {
@@ -166,6 +179,7 @@ type ModelConfig struct {
 	PresencePenalty  *float64 `json:"presence_penalty,omitempty"`
 	FrequencyPenalty *float64 `json:"frequency_penalty,omitempty"`
 	JSONMode         *bool    `json:"json_mode,omitempty"`
+	Extra            *string  `json:"extra,omitempty"`
 }
 
 func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*VariableVal) ([]*Message, error) {
@@ -260,7 +274,7 @@ func formatMultiPart(parts []*ContentPart, defMap map[string]*VariableDef, valMa
 		if pt == nil {
 			continue
 		}
-		if ptr.From(pt.Text) != "" || pt.ImageURL != nil {
+		if ptr.From(pt.Text) != "" || pt.ImageURL != nil || pt.VideoURL != nil {
 			filtered = append(filtered, pt)
 		}
 	}
@@ -284,6 +298,8 @@ func formatText(templateType TemplateType, templateStr string, defMap map[string
 			}), nil
 	case TemplateTypeJinja2:
 		return renderJinja2Template(templateStr, defMap, valMap)
+	case TemplateTypeGoTemplate:
+		return renderGoTemplate(templateStr, defMap, valMap)
 	default:
 		return "", errorx.NewByCode(prompterr.UnsupportedTemplateTypeCode, errorx.WithExtraMsg("unknown template type: "+string(templateType)))
 	}
@@ -298,6 +314,17 @@ func renderJinja2Template(templateStr string, defMap map[string]*VariableDef, va
 	}
 
 	return template.InterpolateJinja2(templateStr, variables)
+}
+
+// renderGoTemplate 渲染 Go Template 模板
+func renderGoTemplate(templateStr string, defMap map[string]*VariableDef, valMap map[string]*VariableVal) (string, error) {
+	// 转换变量为 map[string]any 格式
+	variables, err := convertVariablesToMap(defMap, valMap)
+	if err != nil {
+		return "", err
+	}
+
+	return template.InterpolateGoTemplate(templateStr, variables)
 }
 
 // convertVariablesToMap 将变量定义和变量值转换为模板引擎可用的 map
