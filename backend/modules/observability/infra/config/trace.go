@@ -108,10 +108,12 @@ func (t *TraceConfigCenter) GetTraceFieldMetaInfo(ctx context.Context) (*config.
 
 func (t *TraceConfigCenter) GetTraceDataMaxDurationDay(ctx context.Context, platformPtr *string) int64 {
 	defaultDuration := int64(7)
+	var platformType string
 	if platformPtr == nil {
-		return defaultDuration
+		platformType = "default"
+	} else {
+		platformType = *platformPtr
 	}
-	platformType := *platformPtr
 	mp := make(map[string]int64)
 	err := t.UnmarshalKey(ctx, traceMaxDurationDay, &mp)
 	if err != nil {
