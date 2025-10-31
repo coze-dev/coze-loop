@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -50,12 +51,20 @@ func (t *TraceConfigCenter) GetPlatformTenants(ctx context.Context) (*config.Pla
 	return cfg, nil
 }
 
-func (t *TraceConfigCenter) GetPlatformSpansTrans(ctx context.Context) (*config.SpanTransHandlerConfig, error) {
+func (t *TraceConfigCenter) GetPlatformSpansTrans(ctx context.Context, platformType loop_span.PlatformType) (loop_span.SpanTransCfgList, error) {
 	cfg := new(config.SpanTransHandlerConfig)
 	if err := t.UnmarshalKey(ctx, platformSpanHandlerCfgKey, cfg); err != nil {
 		return nil, err
 	}
-	return cfg, nil
+	ret := cfg.PlatformCfg[string(platformType)]
+	for _, inheritance := range cfg.PlatformInheritance[string(platformType)] {
+		basic := cfg.BasicConfig[inheritance]
+		if len(basic) == 0 {
+			continue
+		}
+		ret = append(ret, basic...)
+	}
+	return ret, nil
 }
 
 func (t *TraceConfigCenter) GetTraceIngestTenantProducerCfg(ctx context.Context) (map[string]*config.IngestConfig, error) {

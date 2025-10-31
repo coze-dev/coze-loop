@@ -5,7 +5,6 @@ package span_filter
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
@@ -86,13 +85,9 @@ func (c *PromptFilterFactory) PlatformType() loop_span.PlatformType {
 }
 
 func (c *PromptFilterFactory) CreateFilter(ctx context.Context) (Filter, error) {
-	transCfg, err := c.traceConfig.GetPlatformSpansTrans(ctx)
+	cfg, err := c.traceConfig.GetPlatformSpansTrans(ctx, c.PlatformType())
 	if err != nil {
 		return nil, err
-	}
-	cfg, ok := transCfg.PlatformCfg[string(c.PlatformType())]
-	if !ok {
-		return nil, fmt.Errorf("trans config not configured for platform type %s", c.PlatformType())
 	}
 	return &PromptFilter{
 		transCfg: cfg,

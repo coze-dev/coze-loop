@@ -23,11 +23,10 @@ type PlatformProcessorFactory struct {
 }
 
 func (p *PlatformProcessorFactory) CreateProcessor(ctx context.Context, set Settings) (Processor, error) {
-	transCfg, err := p.traceConfig.GetPlatformSpansTrans(ctx)
+	cfg, err := p.traceConfig.GetPlatformSpansTrans(ctx, set.PlatformType)
 	if err != nil {
 		return nil, err
 	}
-	cfg := transCfg.PlatformCfg[string(set.PlatformType)]
 	return &PlatformProcessor{
 		cfg: cfg,
 	}, nil
