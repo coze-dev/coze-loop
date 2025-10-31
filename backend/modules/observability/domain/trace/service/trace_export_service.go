@@ -217,7 +217,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 			*config.DatasetName,
 			category,
 			config.DatasetSchema,
-			nil,
+			nil, nil,
 		))
 		if err != nil {
 			return nil, err
@@ -241,7 +241,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 				"",
 				category,
 				config.DatasetSchema,
-				nil,
+				nil, nil,
 			)); err != nil {
 				return nil, err
 			}
@@ -479,7 +479,7 @@ func (r *TraceExportServiceImpl) buildPreviewDataset(ctx context.Context, worksp
 		"",
 		category,
 		schema,
-		nil,
+		nil, nil,
 	)
 	if config.DatasetID != nil {
 		dataset.ID = *config.DatasetID
