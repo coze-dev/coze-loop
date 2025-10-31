@@ -847,14 +847,17 @@ func (e *EvaluatorHandlerImpl) RunEvaluator(ctx context.Context, request *evalua
 	if evaluatorDO == nil {
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
-		SpaceID:       evaluatorDO.SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-	})
-	if err != nil {
-		return nil, err
+	// 若为预置评估器则跳过鉴权
+	if !evaluatorDO.Builtin {
+		// 鉴权
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
+			SpaceID:       evaluatorDO.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	recordDO, err := e.evaluatorService.RunEvaluator(ctx, buildRunEvaluatorRequest(evaluatorDO.Name, request))
 	if err != nil {
@@ -1537,13 +1540,25 @@ func (e *EvaluatorHandlerImpl) DebugBuiltinEvaluator(ctx context.Context, reques
 	if err != nil {
 		return nil, err
 	}
+	// 1) 通过 evaluator_id 查询预置评估器（按 builtin_visible_version 组装）
+	builtinEvaluatorDO, err := e.evaluatorService.GetBuiltinEvaluator(ctx, request.GetEvaluatorID())
+	if err != nil {
+		return nil, err
+	}
+	if builtinEvaluatorDO == nil {
+		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
+	}
 
-	// TODO: 实现预置评估器调试逻辑
-	// 这里需要根据具体的预置评估器调试需求来实现
+	// 2) 调用调试逻辑
+	inputDataDO := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
+	outputDataDO, err := e.evaluatorService.DebugEvaluator(ctx, builtinEvaluatorDO, inputDataDO)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3) 返回结果
 	return &evaluator.DebugBuiltinEvaluatorResponse{
-		OutputData: &evaluatordto.EvaluatorOutputData{
-			// 返回空的输出数据，具体实现需要根据业务需求
-		},
+		OutputData: evaluatorconvertor.ConvertEvaluatorOutputDataDO2DTO(outputDataDO),
 	}, nil
 }
 
