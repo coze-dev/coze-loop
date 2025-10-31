@@ -46,6 +46,10 @@ const (
 
 type EvaluationBizCategory string
 
+const (
+	BizCategoryFromOnlineTrace EvaluationBizCategory = "from_online_trace"
+)
+
 type Dataset struct {
 	// 主键&外键
 	ID          int64
@@ -99,7 +103,7 @@ type FieldSchema struct {
 	DisplayFormat FieldDisplayFormat
 }
 
-func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema DatasetSchema, session *common.Session) *Dataset {
+func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema DatasetSchema, session *common.Session, evaluationBizCategory *EvaluationBizCategory) *Dataset {
 	var userID *string
 	if session != nil {
 		userID = ptr.Of(strconv.FormatInt(*session.UserID, 10))
@@ -111,9 +115,10 @@ func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema
 		DatasetVersion: DatasetVersion{
 			DatasetSchema: schema,
 		},
-		DatasetCategory: category,
-		Seesion:         session,
-		UserID:          userID,
+		EvaluationBizCategory: evaluationBizCategory,
+		DatasetCategory:       category,
+		Seesion:               session,
+		UserID:                userID,
 	}
 	return dataset
 }
