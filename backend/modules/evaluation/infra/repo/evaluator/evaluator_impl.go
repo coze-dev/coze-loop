@@ -42,12 +42,32 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ct
 	if err != nil {
 		return nil, err
 	}
+	// 收集 evaluatorIDs 以批量获取标签
+	evaluatorIDs := make([]int64, 0, len(pos))
+	for _, po := range pos {
+		evaluatorIDs = append(evaluatorIDs, po.EvaluatorID)
+	}
+
+	// 批量查询标签（以 evaluatorID 为 source_id），按当前语言
+	tagsBySourceID := make(map[int64][]*model.EvaluatorTag)
+	if len(evaluatorIDs) > 0 {
+		allTags, tagErr := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, evaluatorIDs, int32(entity.EvaluatorTagKeyType_Evaluator), contexts.CtxLocale(ctx))
+		if tagErr == nil {
+			for _, tag := range allTags {
+				tagsBySourceID[tag.SourceID] = append(tagsBySourceID[tag.SourceID], tag)
+			}
+		}
+	}
+
+	// 转换并回填标签
 	result := make([]*entity.Evaluator, 0, len(pos))
 	for _, po := range pos {
 		do, err := convertor.ConvertEvaluatorVersionPO2DO(po)
 		if err != nil {
 			return nil, err
 		}
+		// 根据 evaluatorID 设置标签
+		r.setEvaluatorTags(do, po.EvaluatorID, tagsBySourceID)
 		result = append(result, do)
 	}
 	return result, nil

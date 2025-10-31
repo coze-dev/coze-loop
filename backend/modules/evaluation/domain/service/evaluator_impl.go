@@ -178,6 +178,39 @@ func (e *EvaluatorServiceImpl) GetEvaluator(ctx context.Context, spaceID, evalua
 	return drafts[0], nil
 }
 
+// GetBuiltinEvaluator 根据 evaluatorID 查询元信息，若为预置评估器则按 builtin_visible_version 组装返回
+// 非预置评估器或条件不满足时返回 nil
+func (e *EvaluatorServiceImpl) GetBuiltinEvaluator(ctx context.Context, evaluatorID int64) (*entity.Evaluator, error) {
+	if evaluatorID == 0 {
+		return nil, nil
+	}
+
+	// 0) 查询元信息以判断是否为预置评估器及其可见版本
+	metas, err := e.evaluatorRepo.BatchGetEvaluatorMetaByID(ctx, []int64{evaluatorID}, false)
+	if err != nil {
+		return nil, err
+	}
+	if len(metas) == 0 || metas[0] == nil {
+		return nil, nil
+	}
+	meta := metas[0]
+	if !meta.Builtin || meta.BuiltinVisibleVersion == "" {
+		return nil, nil
+	}
+
+	// 1) 通过 (evaluator_id, builtin_visible_version) 获取对应版本
+	pairs := [][2]interface{}{{evaluatorID, meta.BuiltinVisibleVersion}}
+	versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+	if err != nil {
+		return nil, err
+	}
+	if len(versions) == 0 {
+		return nil, nil
+	}
+
+	return versions[0], nil
+}
+
 // CreateEvaluator 创建 evaluator_version
 func (e *EvaluatorServiceImpl) CreateEvaluator(ctx context.Context, evaluator *entity.Evaluator, cid string) (int64, error) {
 	err := e.idem.Set(ctx, e.makeCreateIdemKey(cid), time.Second*10)
