@@ -57,33 +57,21 @@ func (mr *MockIEvaluatorRepoMockRecorder) BatchDeleteEvaluator(ctx, ids, userID 
 }
 
 // BatchGetBuiltinEvaluatorByVersionID mocks base method.
-func (m *MockIEvaluatorRepo) BatchGetBuiltinEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetBuiltinEvaluatorByVersionID", ctx, spaceID, ids, includeDeleted)
-	ret0, _ := ret[0].([]*entity.Evaluator)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BatchGetBuiltinEvaluatorByVersionID indicates an expected call of BatchGetBuiltinEvaluatorByVersionID.
-func (mr *MockIEvaluatorRepoMockRecorder) BatchGetBuiltinEvaluatorByVersionID(ctx, spaceID, ids, includeDeleted any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetBuiltinEvaluatorByVersionID", reflect.TypeOf((*MockIEvaluatorRepo)(nil).BatchGetBuiltinEvaluatorByVersionID), ctx, spaceID, ids, includeDeleted)
-}
+// removed: BatchGetBuiltinEvaluatorByVersionID merged into BatchGetEvaluatorByVersionID
 
 // BatchGetEvaluatorByVersionID mocks base method.
-func (m *MockIEvaluatorRepo) BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
+func (m *MockIEvaluatorRepo) BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool, withTags bool) ([]*entity.Evaluator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetEvaluatorByVersionID", ctx, spaceID, ids, includeDeleted)
+	ret := m.ctrl.Call(m, "BatchGetEvaluatorByVersionID", ctx, spaceID, ids, includeDeleted, withTags)
 	ret0, _ := ret[0].([]*entity.Evaluator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetEvaluatorByVersionID indicates an expected call of BatchGetEvaluatorByVersionID.
-func (mr *MockIEvaluatorRepoMockRecorder) BatchGetEvaluatorByVersionID(ctx, spaceID, ids, includeDeleted any) *gomock.Call {
+func (mr *MockIEvaluatorRepoMockRecorder) BatchGetEvaluatorByVersionID(ctx, spaceID, ids, includeDeleted, withTags any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorByVersionID", reflect.TypeOf((*MockIEvaluatorRepo)(nil).BatchGetEvaluatorByVersionID), ctx, spaceID, ids, includeDeleted)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorByVersionID", reflect.TypeOf((*MockIEvaluatorRepo)(nil).BatchGetEvaluatorByVersionID), ctx, spaceID, ids, includeDeleted, withTags)
 }
 
 // BatchGetEvaluatorDraftByEvaluatorID mocks base method.

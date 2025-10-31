@@ -207,7 +207,7 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorMetaByID(ctx context.Context, ids [
 	return evaluatorDOs, nil
 }
 
-func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
+func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool, withTags bool) ([]*entity.Evaluator, error) {
 	evaluatorVersionPOS, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, spaceID, ids, includeDeleted)
 	if err != nil {
 		return nil, err
@@ -223,9 +223,33 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, sp
 	for _, evaluatorPO := range evaluatorPOS {
 		evaluatorMap[evaluatorPO.ID] = evaluatorPO
 	}
+	// 当 withTags=true 时，准备 tags 映射（按 evaluatorID 聚合）
+	var tagsBySourceID map[int64][]*model.EvaluatorTag
+	if withTags {
+		evaluatorIDs := make([]int64, 0, len(evaluatorVersionPOS))
+		for _, ev := range evaluatorVersionPOS {
+			evaluatorIDs = append(evaluatorIDs, ev.EvaluatorID)
+		}
+		var allTags []*model.EvaluatorTag
+		if len(evaluatorIDs) > 0 {
+			allTags, err = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, evaluatorIDs, int32(entity.EvaluatorTagKeyType_Evaluator), contexts.CtxLocale(ctx))
+			if err != nil {
+				allTags = []*model.EvaluatorTag{}
+			}
+		}
+		tagsBySourceID = make(map[int64][]*model.EvaluatorTag)
+		for _, tag := range allTags {
+			tagsBySourceID[tag.SourceID] = append(tagsBySourceID[tag.SourceID], tag)
+		}
+	}
+
 	evaluatorDOList := make([]*entity.Evaluator, 0, len(evaluatorVersionPOS))
 	for _, evaluatorVersionPO := range evaluatorVersionPOS {
 		if evaluatorVersionPO.EvaluatorType == nil {
+			continue
+		}
+		evaluatorPO, exists := evaluatorMap[evaluatorVersionPO.EvaluatorID]
+		if !exists {
 			continue
 		}
 		switch *evaluatorVersionPO.EvaluatorType {
@@ -234,27 +258,36 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, sp
 			if err != nil {
 				return nil, err
 			}
-			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorMap[evaluatorVersionPO.EvaluatorID])
+			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
 			evaluatorDO.PromptEvaluatorVersion = evaluatorVersionDO.PromptEvaluatorVersion
 			evaluatorDO.EvaluatorType = entity.EvaluatorTypePrompt
+			if withTags {
+				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
+			}
 			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 		case int32(entity.EvaluatorTypeCode):
 			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
 			if err != nil {
 				return nil, err
 			}
-			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorMap[evaluatorVersionPO.EvaluatorID])
+			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
 			evaluatorDO.CodeEvaluatorVersion = evaluatorVersionDO.CodeEvaluatorVersion
 			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCode
+			if withTags {
+				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
+			}
 			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 		case int32(entity.EvaluatorTypeCustomRPC):
 			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
 			if err != nil {
 				return nil, err
 			}
-			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorMap[evaluatorVersionPO.EvaluatorID])
+			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
 			evaluatorDO.CustomRPCEvaluatorVersion = evaluatorVersionDO.CustomRPCEvaluatorVersion
 			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCustomRPC
+			if withTags {
+				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
+			}
 			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 		default:
 			continue
@@ -721,103 +754,7 @@ func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.
 	return &repo.ListBuiltinEvaluatorResponse{TotalCount: daoResp.TotalCount, Evaluators: evaluators}, nil
 }
 
-// BatchGetBuiltinEvaluatorByVersionID 批量根据版本ID获取内置评估器，包含tag信息
-func (r *EvaluatorRepoImpl) BatchGetBuiltinEvaluatorByVersionID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
-	// 先获取evaluator版本信息
-	evaluatorVersionPOS, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, nil, ids, includeDeleted)
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取evaluator基本信息
-	evaluatorPOS, err := r.evaluatorDao.BatchGetEvaluatorByID(ctx, gslice.Map(evaluatorVersionPOS, func(t *model.EvaluatorVersion) int64 {
-		return t.EvaluatorID
-	}), includeDeleted)
-	if err != nil {
-		return nil, err
-	}
-
-	// 构建evaluator映射
-	evaluatorMap := make(map[int64]*model.Evaluator)
-	for _, evaluatorPO := range evaluatorPOS {
-		evaluatorMap[evaluatorPO.ID] = evaluatorPO
-	}
-
-	// 收集所有 evaluator 的ID用于查询tags（以evaluator ID为source_id）
-	evaluatorIDs := make([]int64, 0, len(evaluatorVersionPOS))
-	for _, ev := range evaluatorVersionPOS {
-		evaluatorIDs = append(evaluatorIDs, ev.EvaluatorID)
-	}
-
-	// 批量查询所有tags（以版本ID为source_id）
-	var allTags []*model.EvaluatorTag
-	if len(evaluatorIDs) > 0 {
-		allTags, err = r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, evaluatorIDs, int32(entity.EvaluatorTagKeyType_Evaluator), contexts.CtxLocale(ctx))
-		if err != nil {
-			// 如果批量查询tags失败，记录错误但继续处理
-			allTags = []*model.EvaluatorTag{}
-		}
-	}
-
-	// 将tags按sourceID分组
-	tagsBySourceID := make(map[int64][]*model.EvaluatorTag)
-	for _, tag := range allTags {
-		tagsBySourceID[tag.SourceID] = append(tagsBySourceID[tag.SourceID], tag)
-	}
-
-	// 构建结果
-	evaluatorDOList := make([]*entity.Evaluator, 0, len(evaluatorVersionPOS))
-	for _, evaluatorVersionPO := range evaluatorVersionPOS {
-		if evaluatorVersionPO.EvaluatorType == nil {
-			continue
-		}
-
-		evaluatorPO, exists := evaluatorMap[evaluatorVersionPO.EvaluatorID]
-		if !exists {
-			continue
-		}
-
-		var evaluatorDO *entity.Evaluator
-		switch *evaluatorVersionPO.EvaluatorType {
-		case int32(entity.EvaluatorTypePrompt):
-			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
-			if err != nil {
-				return nil, err
-			}
-			evaluatorDO = convertor.ConvertEvaluatorPO2DO(evaluatorPO)
-			evaluatorDO.PromptEvaluatorVersion = evaluatorVersionDO.PromptEvaluatorVersion
-			evaluatorDO.EvaluatorType = entity.EvaluatorTypePrompt
-
-		case int32(entity.EvaluatorTypeCode):
-			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
-			if err != nil {
-				return nil, err
-			}
-			evaluatorDO = convertor.ConvertEvaluatorPO2DO(evaluatorPO)
-			evaluatorDO.CodeEvaluatorVersion = evaluatorVersionDO.CodeEvaluatorVersion
-			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCode
-
-		case int32(entity.EvaluatorTypeCustomRPC):
-			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
-			if err != nil {
-				return nil, err
-			}
-			evaluatorDO = convertor.ConvertEvaluatorPO2DO(evaluatorPO)
-			evaluatorDO.CustomRPCEvaluatorVersion = evaluatorVersionDO.CustomRPCEvaluatorVersion
-			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCustomRPC
-
-		default:
-			continue
-		}
-
-		// 设置tags信息（以版本ID为source_id）
-		r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
-
-		evaluatorDOList = append(evaluatorDOList, evaluatorDO)
-	}
-
-	return evaluatorDOList, nil
-}
+// 已合并内置与普通查询至 BatchGetEvaluatorByVersionID(builtin)
 
 // setEvaluatorTags 设置评估器的tag信息
 func (r *EvaluatorRepoImpl) setEvaluatorTags(evaluatorDO *entity.Evaluator, evaluatorID int64, tagsBySourceID map[int64][]*model.EvaluatorTag) {

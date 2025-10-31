@@ -847,14 +847,17 @@ func (e *EvaluatorHandlerImpl) RunEvaluator(ctx context.Context, request *evalua
 	if evaluatorDO == nil {
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
-		SpaceID:       evaluatorDO.SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-	})
-	if err != nil {
-		return nil, err
+	// 若为预置评估器则跳过鉴权
+	if !evaluatorDO.Builtin {
+		// 鉴权
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
+			SpaceID:       evaluatorDO.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	recordDO, err := e.evaluatorService.RunEvaluator(ctx, buildRunEvaluatorRequest(evaluatorDO.Name, request))
 	if err != nil {
