@@ -525,15 +525,6 @@ func TestTraceConfigCenter_GetTraceDataMaxDurationDay(t *testing.T) {
 		want         int64
 	}{
 		{
-			name: "platform ptr is nil, return default duration",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
-				return fields{configLoader: mockLoader}
-			},
-			args: args{ctx: context.Background(), platformPtr: nil},
-			want: 7,
-		},
-		{
 			name: "get duration successfully with platform type",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
@@ -588,6 +579,21 @@ func TestTraceConfigCenter_GetTraceDataMaxDurationDay(t *testing.T) {
 			},
 			args: args{ctx: context.Background(), platformPtr: stringPtr("coze")},
 			want: 7,
+		},
+		{
+			name: "platform ptr is nil, use default platform duration",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
+				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), traceMaxDurationDay, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
+						mp := v.(*map[string]int64)
+						(*mp)["default"] = 14
+						return nil
+					})
+				return fields{configLoader: mockLoader}
+			},
+			args: args{ctx: context.Background(), platformPtr: nil},
+			want: 14,
 		},
 	}
 	for _, tt := range tests {
