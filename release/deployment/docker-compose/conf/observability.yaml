@@ -46,6 +46,7 @@ trace_platform_tenants:
       - "cozeloop"
 
 trace_max_duration_day:
+  default: 180
   cozeloop: 180
   prompt: 180
   evaluator: 180

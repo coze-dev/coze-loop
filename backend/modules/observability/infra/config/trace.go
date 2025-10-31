@@ -121,6 +121,9 @@ func (t *TraceConfigCenter) GetTraceDataMaxDurationDay(ctx context.Context, plat
 	if mp[platformType] > 0 {
 		return mp[platformType]
 	} else {
+		if duration, ok := mp["default"]; ok && duration > 0 {
+			return duration
+		}
 		return defaultDuration
 	}
 }
