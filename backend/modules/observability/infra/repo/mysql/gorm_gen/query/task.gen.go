@@ -43,6 +43,7 @@ func newObservabilityTask(db *gorm.DB, opts ...gen.DOOption) observabilityTask {
 	_observabilityTask.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_observabilityTask.CreatedBy = field.NewString(tableName, "created_by")
 	_observabilityTask.UpdatedBy = field.NewString(tableName, "updated_by")
+	_observabilityTask.TaskSource = field.NewString(tableName, "task_source")
 
 	_observabilityTask.fillFieldMap()
 
@@ -70,6 +71,7 @@ type observabilityTask struct {
 	UpdatedAt             field.Time   // 更新时间
 	CreatedBy             field.String // 创建人
 	UpdatedBy             field.String // 更新人
+	TaskSource            field.String // 任务来源
 
 	fieldMap map[string]field.Expr
 }
@@ -102,6 +104,7 @@ func (o *observabilityTask) updateTableName(table string) *observabilityTask {
 	o.UpdatedAt = field.NewTime(table, "updated_at")
 	o.CreatedBy = field.NewString(table, "created_by")
 	o.UpdatedBy = field.NewString(table, "updated_by")
+	o.TaskSource = field.NewString(table, "task_source")
 
 	o.fillFieldMap()
 
@@ -130,7 +133,7 @@ func (o *observabilityTask) GetFieldByName(fieldName string) (field.OrderExpr, b
 }
 
 func (o *observabilityTask) fillFieldMap() {
-	o.fieldMap = make(map[string]field.Expr, 16)
+	o.fieldMap = make(map[string]field.Expr, 17)
 	o.fieldMap["id"] = o.ID
 	o.fieldMap["workspace_id"] = o.WorkspaceID
 	o.fieldMap["name"] = o.Name
@@ -147,6 +150,7 @@ func (o *observabilityTask) fillFieldMap() {
 	o.fieldMap["updated_at"] = o.UpdatedAt
 	o.fieldMap["created_by"] = o.CreatedBy
 	o.fieldMap["updated_by"] = o.UpdatedBy
+	o.fieldMap["task_source"] = o.TaskSource
 }
 
 func (o observabilityTask) clone(db *gorm.DB) observabilityTask {

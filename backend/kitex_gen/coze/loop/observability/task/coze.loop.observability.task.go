@@ -14,8 +14,9 @@ import (
 )
 
 type CreateTaskRequest struct {
-	Task *task.Task `thrift:"task,1,required" frugal:"1,required,task.Task" form:"task,required" json:"task,required"`
-	Base *base.Base `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
+	Task    *task.Task      `thrift:"task,1,required" frugal:"1,required,task.Task" form:"task,required" json:"task,required"`
+	Session *common.Session `thrift:"session,2,optional" frugal:"2,optional,common.Session" form:"session" json:"session,omitempty"`
+	Base    *base.Base      `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
 }
 
 func NewCreateTaskRequest() *CreateTaskRequest {
@@ -37,6 +38,18 @@ func (p *CreateTaskRequest) GetTask() (v *task.Task) {
 	return p.Task
 }
 
+var CreateTaskRequest_Session_DEFAULT *common.Session
+
+func (p *CreateTaskRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return CreateTaskRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
 var CreateTaskRequest_Base_DEFAULT *base.Base
 
 func (p *CreateTaskRequest) GetBase() (v *base.Base) {
@@ -51,17 +64,25 @@ func (p *CreateTaskRequest) GetBase() (v *base.Base) {
 func (p *CreateTaskRequest) SetTask(val *task.Task) {
 	p.Task = val
 }
+func (p *CreateTaskRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
 func (p *CreateTaskRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
 var fieldIDToName_CreateTaskRequest = map[int16]string{
 	1:   "task",
+	2:   "session",
 	255: "base",
 }
 
 func (p *CreateTaskRequest) IsSetTask() bool {
 	return p.Task != nil
+}
+
+func (p *CreateTaskRequest) IsSetSession() bool {
+	return p.Session != nil
 }
 
 func (p *CreateTaskRequest) IsSetBase() bool {
@@ -93,6 +114,14 @@ func (p *CreateTaskRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetTask = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -147,6 +176,14 @@ func (p *CreateTaskRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.Task = _field
 	return nil
 }
+func (p *CreateTaskRequest) ReadField2(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
 func (p *CreateTaskRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -164,6 +201,10 @@ func (p *CreateTaskRequest) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -204,6 +245,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *CreateTaskRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *CreateTaskRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("base", thrift.STRUCT, 255); err != nil {
@@ -240,6 +299,9 @@ func (p *CreateTaskRequest) DeepEqual(ano *CreateTaskRequest) bool {
 	if !p.Field1DeepEqual(ano.Task) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.Session) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -249,6 +311,13 @@ func (p *CreateTaskRequest) DeepEqual(ano *CreateTaskRequest) bool {
 func (p *CreateTaskRequest) Field1DeepEqual(src *task.Task) bool {
 
 	if !p.Task.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateTaskRequest) Field2DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -518,6 +587,7 @@ type UpdateTaskRequest struct {
 	Description   *string             `thrift:"description,4,optional" frugal:"4,optional,string" form:"description" json:"description,omitempty"`
 	EffectiveTime *task.EffectiveTime `thrift:"effective_time,5,optional" frugal:"5,optional,task.EffectiveTime" form:"effective_time" json:"effective_time,omitempty"`
 	SampleRate    *float64            `thrift:"sample_rate,6,optional" frugal:"6,optional,double" form:"sample_rate" json:"sample_rate,omitempty"`
+	Session       *common.Session     `thrift:"session,7,optional" frugal:"7,optional,common.Session" form:"session" json:"session,omitempty"`
 	Base          *base.Base          `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
 }
 
@@ -590,6 +660,18 @@ func (p *UpdateTaskRequest) GetSampleRate() (v float64) {
 	return *p.SampleRate
 }
 
+var UpdateTaskRequest_Session_DEFAULT *common.Session
+
+func (p *UpdateTaskRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return UpdateTaskRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
 var UpdateTaskRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateTaskRequest) GetBase() (v *base.Base) {
@@ -619,6 +701,9 @@ func (p *UpdateTaskRequest) SetEffectiveTime(val *task.EffectiveTime) {
 func (p *UpdateTaskRequest) SetSampleRate(val *float64) {
 	p.SampleRate = val
 }
+func (p *UpdateTaskRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
 func (p *UpdateTaskRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -630,6 +715,7 @@ var fieldIDToName_UpdateTaskRequest = map[int16]string{
 	4:   "description",
 	5:   "effective_time",
 	6:   "sample_rate",
+	7:   "session",
 	255: "base",
 }
 
@@ -647,6 +733,10 @@ func (p *UpdateTaskRequest) IsSetEffectiveTime() bool {
 
 func (p *UpdateTaskRequest) IsSetSampleRate() bool {
 	return p.SampleRate != nil
+}
+
+func (p *UpdateTaskRequest) IsSetSession() bool {
+	return p.Session != nil
 }
 
 func (p *UpdateTaskRequest) IsSetBase() bool {
@@ -718,6 +808,14 @@ func (p *UpdateTaskRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.DOUBLE {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -834,6 +932,14 @@ func (p *UpdateTaskRequest) ReadField6(iprot thrift.TProtocol) error {
 	p.SampleRate = _field
 	return nil
 }
+func (p *UpdateTaskRequest) ReadField7(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
 func (p *UpdateTaskRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -871,6 +977,10 @@ func (p *UpdateTaskRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -999,6 +1109,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *UpdateTaskRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *UpdateTaskRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("base", thrift.STRUCT, 255); err != nil {
@@ -1048,6 +1176,9 @@ func (p *UpdateTaskRequest) DeepEqual(ano *UpdateTaskRequest) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.SampleRate) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.Session) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -1109,6 +1240,13 @@ func (p *UpdateTaskRequest) Field6DeepEqual(src *float64) bool {
 		return false
 	}
 	if *p.SampleRate != *src {
+		return false
+	}
+	return true
+}
+func (p *UpdateTaskRequest) Field7DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
 		return false
 	}
 	return true
