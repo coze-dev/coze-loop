@@ -221,9 +221,19 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 }
 
 func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (resp *ListTasksResp, err error) {
+	var taskFilters *filter.TaskFilterFields
+	if req.TaskFilters != nil {
+		taskFilters = req.TaskFilters
+	}
+	taskFilters.FilterFields = append(taskFilters.FilterFields, &filter.TaskFilterField{
+		FieldName: ptr.Of("task_source"),
+		FieldType: ptr.Of(filter.FieldTypeString),
+		Values:    []string{task.TaskSourceUser},
+		QueryType: ptr.Of(filter.QueryTypeIn),
+	})
 	taskDOs, total, err := t.TaskRepo.ListTasks(ctx, mysql.ListTaskParam{
 		WorkspaceIDs: []int64{req.WorkspaceID},
-		TaskFilters:  req.TaskFilters,
+		TaskFilters:  taskFilters,
 		ReqLimit:     req.Limit,
 		ReqOffset:    req.Offset,
 		OrderBy:      req.OrderBy,
