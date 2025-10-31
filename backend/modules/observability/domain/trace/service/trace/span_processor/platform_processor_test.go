@@ -187,12 +187,8 @@ func TestPlatformProcessorFactory_CreateProcessor(t *testing.T) {
 			name: "create processor successfully",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
-				confMock.EXPECT().GetPlatformSpansTrans(gomock.Any()).Return(&config.SpanTransHandlerConfig{
-					PlatformCfg: map[string]loop_span.SpanTransCfgList{
-						"cozeloop": {
-							{},
-						},
-					},
+				confMock.EXPECT().GetPlatformSpansTrans(gomock.Any(), gomock.Any()).Return(loop_span.SpanTransCfgList{
+					{},
 				}, nil)
 				return fields{
 					traceConfig: confMock,
@@ -215,7 +211,7 @@ func TestPlatformProcessorFactory_CreateProcessor(t *testing.T) {
 			name: "create processor failed when config returns error",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
-				confMock.EXPECT().GetPlatformSpansTrans(gomock.Any()).Return(nil, fmt.Errorf("config error"))
+				confMock.EXPECT().GetPlatformSpansTrans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("config error"))
 				return fields{
 					traceConfig: confMock,
 				}

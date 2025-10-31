@@ -188,20 +188,16 @@ func TestPromptFilterFactory_CreateFilter(t *testing.T) {
 			name: "success",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				confmock := confmocks.NewMockITraceConfig(ctrl)
-				confmock.EXPECT().GetPlatformSpansTrans(gomock.Any()).Return(&config.SpanTransHandlerConfig{
-					PlatformCfg: map[string]loop_span.SpanTransCfgList{
-						string(loop_span.PlatformPrompt): {
-							{
-								SpanFilter: &loop_span.FilterFields{
-									QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-									FilterFields: []*loop_span.FilterField{
-										{
-											FieldName: "test_field",
-											FieldType: loop_span.FieldTypeString,
-											Values:    []string{"test_value"},
-											QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-										},
-									},
+				confmock.EXPECT().GetPlatformSpansTrans(gomock.Any(), gomock.Any()).Return(loop_span.SpanTransCfgList{
+					{
+						SpanFilter: &loop_span.FilterFields{
+							QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+							FilterFields: []*loop_span.FilterField{
+								{
+									FieldName: "test_field",
+									FieldType: loop_span.FieldTypeString,
+									Values:    []string{"test_value"},
+									QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 								},
 							},
 						},
@@ -216,23 +212,21 @@ func TestPromptFilterFactory_CreateFilter(t *testing.T) {
 			name: "error getting config",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				confmock := confmocks.NewMockITraceConfig(ctrl)
-				confmock.EXPECT().GetPlatformSpansTrans(gomock.Any()).Return(nil, assert.AnError)
+				confmock.EXPECT().GetPlatformSpansTrans(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				return fields{confmock}
 			},
 			want:    nil,
 			wantErr: true,
 		},
 		{
-			name: "config not found",
+			name: "empty config is valid",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				confmock := confmocks.NewMockITraceConfig(ctrl)
-				confmock.EXPECT().GetPlatformSpansTrans(gomock.Any()).Return(&config.SpanTransHandlerConfig{
-					PlatformCfg: map[string]loop_span.SpanTransCfgList{},
-				}, nil)
+				confmock.EXPECT().GetPlatformSpansTrans(gomock.Any(), gomock.Any()).Return(loop_span.SpanTransCfgList{}, nil)
 				return fields{confmock}
 			},
-			want:    nil,
-			wantErr: true,
+			want:    &PromptFilter{},
+			wantErr: false,
 		},
 	}
 
