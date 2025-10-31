@@ -227,6 +227,15 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, sp
 			evaluatorDO.CodeEvaluatorVersion = evaluatorVersionDO.CodeEvaluatorVersion
 			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCode
 			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
+		case int32(entity.EvaluatorTypeCustomRPC):
+			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
+			if err != nil {
+				return nil, err
+			}
+			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorMap[evaluatorVersionPO.EvaluatorID])
+			evaluatorDO.CustomRPCEvaluatorVersion = evaluatorVersionDO.CustomRPCEvaluatorVersion
+			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCustomRPC
+			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 		default:
 			continue
 		}
@@ -767,6 +776,15 @@ func (r *EvaluatorRepoImpl) BatchGetBuiltinEvaluatorByVersionID(ctx context.Cont
 			evaluatorDO = convertor.ConvertEvaluatorPO2DO(evaluatorPO)
 			evaluatorDO.CodeEvaluatorVersion = evaluatorVersionDO.CodeEvaluatorVersion
 			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCode
+
+		case int32(entity.EvaluatorTypeCustomRPC):
+			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
+			if err != nil {
+				return nil, err
+			}
+			evaluatorDO = convertor.ConvertEvaluatorPO2DO(evaluatorPO)
+			evaluatorDO.CustomRPCEvaluatorVersion = evaluatorVersionDO.CustomRPCEvaluatorVersion
+			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCustomRPC
 
 		default:
 			continue

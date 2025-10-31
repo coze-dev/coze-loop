@@ -32,6 +32,8 @@ const (
 
 	EvaluatorTagKeyName = "Name"
 
+	AccessProtocolRPC = "rpc"
+
 	EvaluatorFilterLogicOpUnknown = "Unknown"
 
 	EvaluatorFilterLogicOpAnd = "And"
@@ -58,9 +60,9 @@ const (
 type EvaluatorType int64
 
 const (
-	EvaluatorType_Prompt  EvaluatorType = 1
-	EvaluatorType_Code    EvaluatorType = 2
-	EvaluatorType_Builtin EvaluatorType = 3
+	EvaluatorType_Prompt    EvaluatorType = 1
+	EvaluatorType_Code      EvaluatorType = 2
+	EvaluatorType_CustomRPC EvaluatorType = 3
 )
 
 func (p EvaluatorType) String() string {
@@ -69,8 +71,8 @@ func (p EvaluatorType) String() string {
 		return "Prompt"
 	case EvaluatorType_Code:
 		return "Code"
-	case EvaluatorType_Builtin:
-		return "Builtin"
+	case EvaluatorType_CustomRPC:
+		return "CustomRPC"
 	}
 	return "<UNSET>"
 }
@@ -81,8 +83,8 @@ func EvaluatorTypeFromString(s string) (EvaluatorType, error) {
 		return EvaluatorType_Prompt, nil
 	case "Code":
 		return EvaluatorType_Code, nil
-	case "Builtin":
-		return EvaluatorType_Builtin, nil
+	case "CustomRPC":
+		return EvaluatorType_CustomRPC, nil
 	}
 	return EvaluatorType(0), fmt.Errorf("not a valid EvaluatorType string")
 }
@@ -288,6 +290,8 @@ type EvaluatorTagLangType = string
 
 // Evaluator筛选字段
 type EvaluatorTagKey = string
+
+type AccessProtocol = string
 
 // 筛选逻辑操作符
 type EvaluatorFilterLogicOp = string
@@ -1852,6 +1856,490 @@ func (p *CodeEvaluator) Field4DeepEqual(src *string) bool {
 	return true
 }
 
+type CustomRPCEvaluator struct {
+	// 自定义评估器编码，例如：EvalBot的给“代码生成-代码正确”赋予CN:480的评估器ID
+	ProviderEvaluatorCode *string `thrift:"provider_evaluator_code,1,optional" frugal:"1,optional,string" form:"provider_evaluator_code" json:"provider_evaluator_code,omitempty" query:"provider_evaluator_code"`
+	// 本期是RPC，后续还可拓展HTTP
+	AccessProtocol AccessProtocol `thrift:"access_protocol,2,required" frugal:"2,required,string" form:"access_protocol,required" json:"access_protocol,required" query:"access_protocol,required"`
+	ServiceName    *string        `thrift:"service_name,3,optional" frugal:"3,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
+	Cluster        *string        `thrift:"cluster,4,optional" frugal:"4,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
+	// ms
+	Timeout *int64 `thrift:"timeout,10,optional" frugal:"10,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
+}
+
+func NewCustomRPCEvaluator() *CustomRPCEvaluator {
+	return &CustomRPCEvaluator{}
+}
+
+func (p *CustomRPCEvaluator) InitDefault() {
+}
+
+var CustomRPCEvaluator_ProviderEvaluatorCode_DEFAULT string
+
+func (p *CustomRPCEvaluator) GetProviderEvaluatorCode() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetProviderEvaluatorCode() {
+		return CustomRPCEvaluator_ProviderEvaluatorCode_DEFAULT
+	}
+	return *p.ProviderEvaluatorCode
+}
+
+func (p *CustomRPCEvaluator) GetAccessProtocol() (v AccessProtocol) {
+	if p != nil {
+		return p.AccessProtocol
+	}
+	return
+}
+
+var CustomRPCEvaluator_ServiceName_DEFAULT string
+
+func (p *CustomRPCEvaluator) GetServiceName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetServiceName() {
+		return CustomRPCEvaluator_ServiceName_DEFAULT
+	}
+	return *p.ServiceName
+}
+
+var CustomRPCEvaluator_Cluster_DEFAULT string
+
+func (p *CustomRPCEvaluator) GetCluster() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCluster() {
+		return CustomRPCEvaluator_Cluster_DEFAULT
+	}
+	return *p.Cluster
+}
+
+var CustomRPCEvaluator_Timeout_DEFAULT int64
+
+func (p *CustomRPCEvaluator) GetTimeout() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTimeout() {
+		return CustomRPCEvaluator_Timeout_DEFAULT
+	}
+	return *p.Timeout
+}
+func (p *CustomRPCEvaluator) SetProviderEvaluatorCode(val *string) {
+	p.ProviderEvaluatorCode = val
+}
+func (p *CustomRPCEvaluator) SetAccessProtocol(val AccessProtocol) {
+	p.AccessProtocol = val
+}
+func (p *CustomRPCEvaluator) SetServiceName(val *string) {
+	p.ServiceName = val
+}
+func (p *CustomRPCEvaluator) SetCluster(val *string) {
+	p.Cluster = val
+}
+func (p *CustomRPCEvaluator) SetTimeout(val *int64) {
+	p.Timeout = val
+}
+
+var fieldIDToName_CustomRPCEvaluator = map[int16]string{
+	1:  "provider_evaluator_code",
+	2:  "access_protocol",
+	3:  "service_name",
+	4:  "cluster",
+	10: "timeout",
+}
+
+func (p *CustomRPCEvaluator) IsSetProviderEvaluatorCode() bool {
+	return p.ProviderEvaluatorCode != nil
+}
+
+func (p *CustomRPCEvaluator) IsSetServiceName() bool {
+	return p.ServiceName != nil
+}
+
+func (p *CustomRPCEvaluator) IsSetCluster() bool {
+	return p.Cluster != nil
+}
+
+func (p *CustomRPCEvaluator) IsSetTimeout() bool {
+	return p.Timeout != nil
+}
+
+func (p *CustomRPCEvaluator) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetAccessProtocol bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetAccessProtocol = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetAccessProtocol {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomRPCEvaluator[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_CustomRPCEvaluator[fieldId]))
+}
+
+func (p *CustomRPCEvaluator) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ProviderEvaluatorCode = _field
+	return nil
+}
+func (p *CustomRPCEvaluator) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field AccessProtocol
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.AccessProtocol = _field
+	return nil
+}
+func (p *CustomRPCEvaluator) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ServiceName = _field
+	return nil
+}
+func (p *CustomRPCEvaluator) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Cluster = _field
+	return nil
+}
+func (p *CustomRPCEvaluator) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Timeout = _field
+	return nil
+}
+
+func (p *CustomRPCEvaluator) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CustomRPCEvaluator"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CustomRPCEvaluator) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetProviderEvaluatorCode() {
+		if err = oprot.WriteFieldBegin("provider_evaluator_code", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ProviderEvaluatorCode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CustomRPCEvaluator) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("access_protocol", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.AccessProtocol); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CustomRPCEvaluator) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetServiceName() {
+		if err = oprot.WriteFieldBegin("service_name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ServiceName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *CustomRPCEvaluator) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCluster() {
+		if err = oprot.WriteFieldBegin("cluster", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Cluster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *CustomRPCEvaluator) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeout() {
+		if err = oprot.WriteFieldBegin("timeout", thrift.I64, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Timeout); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+
+func (p *CustomRPCEvaluator) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CustomRPCEvaluator(%+v)", *p)
+
+}
+
+func (p *CustomRPCEvaluator) DeepEqual(ano *CustomRPCEvaluator) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ProviderEvaluatorCode) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.AccessProtocol) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.ServiceName) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Cluster) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Timeout) {
+		return false
+	}
+	return true
+}
+
+func (p *CustomRPCEvaluator) Field1DeepEqual(src *string) bool {
+
+	if p.ProviderEvaluatorCode == src {
+		return true
+	} else if p.ProviderEvaluatorCode == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ProviderEvaluatorCode, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomRPCEvaluator) Field2DeepEqual(src AccessProtocol) bool {
+
+	if strings.Compare(p.AccessProtocol, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomRPCEvaluator) Field3DeepEqual(src *string) bool {
+
+	if p.ServiceName == src {
+		return true
+	} else if p.ServiceName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ServiceName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomRPCEvaluator) Field4DeepEqual(src *string) bool {
+
+	if p.Cluster == src {
+		return true
+	} else if p.Cluster == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Cluster, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomRPCEvaluator) Field10DeepEqual(src *int64) bool {
+
+	if p.Timeout == src {
+		return true
+	} else if p.Timeout == nil || src == nil {
+		return false
+	}
+	if *p.Timeout != *src {
+		return false
+	}
+	return true
+}
+
 type EvaluatorVersion struct {
 	// 版本id
 	ID               *int64            `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
@@ -2331,8 +2819,9 @@ type EvaluatorContent struct {
 	InputSchemas       []*common.ArgsSchema `thrift:"input_schemas,2,optional" frugal:"2,optional,list<common.ArgsSchema>" mapstructure:"input_schemas" form:"input_schemas" json:"input_schemas,omitempty" query:"input_schemas"`
 	OutputSchemas      []*common.ArgsSchema `thrift:"output_schemas,3,optional" frugal:"3,optional,list<common.ArgsSchema>" mapstructure:"output_schemas" form:"output_schemas" json:"output_schemas,omitempty" query:"output_schemas"`
 	// 101-200 Evaluator类型
-	PromptEvaluator *PromptEvaluator `thrift:"prompt_evaluator,101,optional" frugal:"101,optional,PromptEvaluator" mapstructure:"prompt_evaluator" form:"prompt_evaluator" json:"prompt_evaluator,omitempty" query:"prompt_evaluator"`
-	CodeEvaluator   *CodeEvaluator   `thrift:"code_evaluator,102,optional" frugal:"102,optional,CodeEvaluator" form:"code_evaluator" json:"code_evaluator,omitempty" query:"code_evaluator"`
+	PromptEvaluator    *PromptEvaluator    `thrift:"prompt_evaluator,101,optional" frugal:"101,optional,PromptEvaluator" mapstructure:"prompt_evaluator" form:"prompt_evaluator" json:"prompt_evaluator,omitempty" query:"prompt_evaluator"`
+	CodeEvaluator      *CodeEvaluator      `thrift:"code_evaluator,102,optional" frugal:"102,optional,CodeEvaluator" form:"code_evaluator" json:"code_evaluator,omitempty" query:"code_evaluator"`
+	CustomRPCEvaluator *CustomRPCEvaluator `thrift:"custom_rpc_evaluator,103,optional" frugal:"103,optional,CustomRPCEvaluator" form:"custom_rpc_evaluator" json:"custom_rpc_evaluator,omitempty" query:"custom_rpc_evaluator"`
 }
 
 func NewEvaluatorContent() *EvaluatorContent {
@@ -2401,6 +2890,18 @@ func (p *EvaluatorContent) GetCodeEvaluator() (v *CodeEvaluator) {
 	}
 	return p.CodeEvaluator
 }
+
+var EvaluatorContent_CustomRPCEvaluator_DEFAULT *CustomRPCEvaluator
+
+func (p *EvaluatorContent) GetCustomRPCEvaluator() (v *CustomRPCEvaluator) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomRPCEvaluator() {
+		return EvaluatorContent_CustomRPCEvaluator_DEFAULT
+	}
+	return p.CustomRPCEvaluator
+}
 func (p *EvaluatorContent) SetReceiveChatHistory(val *bool) {
 	p.ReceiveChatHistory = val
 }
@@ -2416,6 +2917,9 @@ func (p *EvaluatorContent) SetPromptEvaluator(val *PromptEvaluator) {
 func (p *EvaluatorContent) SetCodeEvaluator(val *CodeEvaluator) {
 	p.CodeEvaluator = val
 }
+func (p *EvaluatorContent) SetCustomRPCEvaluator(val *CustomRPCEvaluator) {
+	p.CustomRPCEvaluator = val
+}
 
 var fieldIDToName_EvaluatorContent = map[int16]string{
 	1:   "receive_chat_history",
@@ -2423,6 +2927,7 @@ var fieldIDToName_EvaluatorContent = map[int16]string{
 	3:   "output_schemas",
 	101: "prompt_evaluator",
 	102: "code_evaluator",
+	103: "custom_rpc_evaluator",
 }
 
 func (p *EvaluatorContent) IsSetReceiveChatHistory() bool {
@@ -2443,6 +2948,10 @@ func (p *EvaluatorContent) IsSetPromptEvaluator() bool {
 
 func (p *EvaluatorContent) IsSetCodeEvaluator() bool {
 	return p.CodeEvaluator != nil
+}
+
+func (p *EvaluatorContent) IsSetCustomRPCEvaluator() bool {
+	return p.CustomRPCEvaluator != nil
 }
 
 func (p *EvaluatorContent) Read(iprot thrift.TProtocol) (err error) {
@@ -2498,6 +3007,14 @@ func (p *EvaluatorContent) Read(iprot thrift.TProtocol) (err error) {
 		case 102:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField102(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 103:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField103(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2605,6 +3122,14 @@ func (p *EvaluatorContent) ReadField102(iprot thrift.TProtocol) error {
 	p.CodeEvaluator = _field
 	return nil
 }
+func (p *EvaluatorContent) ReadField103(iprot thrift.TProtocol) error {
+	_field := NewCustomRPCEvaluator()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CustomRPCEvaluator = _field
+	return nil
+}
 
 func (p *EvaluatorContent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2630,6 +3155,10 @@ func (p *EvaluatorContent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField102(oprot); err != nil {
 			fieldId = 102
+			goto WriteFieldError
+		}
+		if err = p.writeField103(oprot); err != nil {
+			fieldId = 103
 			goto WriteFieldError
 		}
 	}
@@ -2756,6 +3285,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
 }
+func (p *EvaluatorContent) writeField103(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomRPCEvaluator() {
+		if err = oprot.WriteFieldBegin("custom_rpc_evaluator", thrift.STRUCT, 103); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CustomRPCEvaluator.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
+}
 
 func (p *EvaluatorContent) String() string {
 	if p == nil {
@@ -2784,6 +3331,9 @@ func (p *EvaluatorContent) DeepEqual(ano *EvaluatorContent) bool {
 		return false
 	}
 	if !p.Field102DeepEqual(ano.CodeEvaluator) {
+		return false
+	}
+	if !p.Field103DeepEqual(ano.CustomRPCEvaluator) {
 		return false
 	}
 	return true
@@ -2837,6 +3387,13 @@ func (p *EvaluatorContent) Field101DeepEqual(src *PromptEvaluator) bool {
 func (p *EvaluatorContent) Field102DeepEqual(src *CodeEvaluator) bool {
 
 	if !p.CodeEvaluator.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorContent) Field103DeepEqual(src *CustomRPCEvaluator) bool {
+
+	if !p.CustomRPCEvaluator.DeepEqual(src) {
 		return false
 	}
 	return true

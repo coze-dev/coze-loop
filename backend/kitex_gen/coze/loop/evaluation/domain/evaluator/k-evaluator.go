@@ -1156,6 +1156,345 @@ func (p *CodeEvaluator) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *CustomRPCEvaluator) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetAccessProtocol bool = false
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+				issetAccessProtocol = true
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	if !issetAccessProtocol {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomRPCEvaluator[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+RequiredFieldNotSetError:
+	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_CustomRPCEvaluator[fieldId]))
+}
+
+func (p *CustomRPCEvaluator) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ProviderEvaluatorCode = _field
+	return offset, nil
+}
+
+func (p *CustomRPCEvaluator) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field AccessProtocol
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = v
+	}
+	p.AccessProtocol = _field
+	return offset, nil
+}
+
+func (p *CustomRPCEvaluator) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ServiceName = _field
+	return offset, nil
+}
+
+func (p *CustomRPCEvaluator) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Cluster = _field
+	return offset, nil
+}
+
+func (p *CustomRPCEvaluator) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Timeout = _field
+	return offset, nil
+}
+
+func (p *CustomRPCEvaluator) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *CustomRPCEvaluator) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *CustomRPCEvaluator) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field10Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *CustomRPCEvaluator) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetProviderEvaluatorCode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ProviderEvaluatorCode)
+	}
+	return offset
+}
+
+func (p *CustomRPCEvaluator) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.AccessProtocol)
+	return offset
+}
+
+func (p *CustomRPCEvaluator) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetServiceName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ServiceName)
+	}
+	return offset
+}
+
+func (p *CustomRPCEvaluator) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCluster() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Cluster)
+	}
+	return offset
+}
+
+func (p *CustomRPCEvaluator) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTimeout() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 10)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.Timeout)
+	}
+	return offset
+}
+
+func (p *CustomRPCEvaluator) field1Length() int {
+	l := 0
+	if p.IsSetProviderEvaluatorCode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ProviderEvaluatorCode)
+	}
+	return l
+}
+
+func (p *CustomRPCEvaluator) field2Length() int {
+	l := 0
+	l += thrift.Binary.FieldBeginLength()
+	l += thrift.Binary.StringLengthNocopy(p.AccessProtocol)
+	return l
+}
+
+func (p *CustomRPCEvaluator) field3Length() int {
+	l := 0
+	if p.IsSetServiceName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ServiceName)
+	}
+	return l
+}
+
+func (p *CustomRPCEvaluator) field4Length() int {
+	l := 0
+	if p.IsSetCluster() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Cluster)
+	}
+	return l
+}
+
+func (p *CustomRPCEvaluator) field10Length() int {
+	l := 0
+	if p.IsSetTimeout() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *CustomRPCEvaluator) DeepCopy(s interface{}) error {
+	src, ok := s.(*CustomRPCEvaluator)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.ProviderEvaluatorCode != nil {
+		var tmp string
+		if *src.ProviderEvaluatorCode != "" {
+			tmp = kutils.StringDeepCopy(*src.ProviderEvaluatorCode)
+		}
+		p.ProviderEvaluatorCode = &tmp
+	}
+
+	p.AccessProtocol = src.AccessProtocol
+
+	if src.ServiceName != nil {
+		var tmp string
+		if *src.ServiceName != "" {
+			tmp = kutils.StringDeepCopy(*src.ServiceName)
+		}
+		p.ServiceName = &tmp
+	}
+
+	if src.Cluster != nil {
+		var tmp string
+		if *src.Cluster != "" {
+			tmp = kutils.StringDeepCopy(*src.Cluster)
+		}
+		p.Cluster = &tmp
+	}
+
+	if src.Timeout != nil {
+		tmp := *src.Timeout
+		p.Timeout = &tmp
+	}
+
+	return nil
+}
+
 func (p *EvaluatorVersion) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -1582,6 +1921,20 @@ func (p *EvaluatorContent) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 103:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField103(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1688,6 +2041,18 @@ func (p *EvaluatorContent) FastReadField102(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluatorContent) FastReadField103(buf []byte) (int, error) {
+	offset := 0
+	_field := NewCustomRPCEvaluator()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.CustomRPCEvaluator = _field
+	return offset, nil
+}
+
 func (p *EvaluatorContent) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1700,6 +2065,7 @@ func (p *EvaluatorContent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
+		offset += p.fastWriteField103(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1713,6 +2079,7 @@ func (p *EvaluatorContent) BLength() int {
 		l += p.field3Length()
 		l += p.field101Length()
 		l += p.field102Length()
+		l += p.field103Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1777,6 +2144,15 @@ func (p *EvaluatorContent) fastWriteField102(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
+func (p *EvaluatorContent) fastWriteField103(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCustomRPCEvaluator() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 103)
+		offset += p.CustomRPCEvaluator.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *EvaluatorContent) field1Length() int {
 	l := 0
 	if p.IsSetReceiveChatHistory() {
@@ -1826,6 +2202,15 @@ func (p *EvaluatorContent) field102Length() int {
 	if p.IsSetCodeEvaluator() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.CodeEvaluator.BLength()
+	}
+	return l
+}
+
+func (p *EvaluatorContent) field103Length() int {
+	l := 0
+	if p.IsSetCustomRPCEvaluator() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.CustomRPCEvaluator.BLength()
 	}
 	return l
 }
@@ -1888,6 +2273,15 @@ func (p *EvaluatorContent) DeepCopy(s interface{}) error {
 		}
 	}
 	p.CodeEvaluator = _codeEvaluator
+
+	var _customRPCEvaluator *CustomRPCEvaluator
+	if src.CustomRPCEvaluator != nil {
+		_customRPCEvaluator = &CustomRPCEvaluator{}
+		if err := _customRPCEvaluator.DeepCopy(src.CustomRPCEvaluator); err != nil {
+			return err
+		}
+	}
+	p.CustomRPCEvaluator = _customRPCEvaluator
 
 	return nil
 }

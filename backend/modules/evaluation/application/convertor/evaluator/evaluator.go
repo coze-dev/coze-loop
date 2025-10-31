@@ -38,6 +38,8 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 			evaluatorDO.PromptEvaluatorVersion = ConvertPromptEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
 		case evaluatordto.EvaluatorType_Code:
 			evaluatorDO.CodeEvaluatorVersion = ConvertCodeEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
+		case evaluatordto.EvaluatorType_CustomRPC:
+			evaluatorDO.CustomRPCEvaluatorVersion = ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
 		}
 	}
 	return evaluatorDO
@@ -79,6 +81,11 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 	case evaluatordo.EvaluatorTypeCode:
 		if do.CodeEvaluatorVersion != nil {
 			versionDTO := ConvertCodeEvaluatorVersionDO2DTO(do.CodeEvaluatorVersion)
+			dto.CurrentVersion = versionDTO
+		}
+	case evaluatordo.EvaluatorTypeCustomRPC:
+		if do.CustomRPCEvaluatorVersion != nil {
+			versionDTO := ConvertCustomRPCEvaluatorVersionDO2DTO(do.CustomRPCEvaluatorVersion)
 			dto.CurrentVersion = versionDTO
 		}
 	}
@@ -227,6 +234,21 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 
 		evaluator.CodeEvaluatorVersion = codeVersion
 
+	case evaluatordto.EvaluatorType_CustomRPC:
+		if content.CustomRPCEvaluator == nil {
+			return nil, errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("custom rpc evaluator content is nil"))
+		}
+
+		customRPCVersion := &evaluatordo.CustomRPCEvaluatorVersion{
+			ProviderEvaluatorCode: content.CustomRPCEvaluator.ProviderEvaluatorCode,
+			AccessProtocol:        content.CustomRPCEvaluator.AccessProtocol,
+			ServiceName:           content.CustomRPCEvaluator.ServiceName,
+			Cluster:               content.CustomRPCEvaluator.Cluster,
+			Timeout:               content.CustomRPCEvaluator.Timeout,
+		}
+
+		evaluator.CustomRPCEvaluatorVersion = customRPCVersion
+
 	default:
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("unsupported evaluator type"))
 	}
@@ -372,4 +394,56 @@ func ConvertEvaluatorTagKeyDO2DTO(doKey evaluatordo.EvaluatorTagKey) evaluatordt
 	default:
 		return evaluatordto.EvaluatorTagKey(doKey)
 	}
+}
+
+func ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *evaluatordto.EvaluatorVersion) *evaluatordo.CustomRPCEvaluatorVersion {
+	if dto == nil {
+		return nil
+	}
+	customRPCEvaluatorVersion := &evaluatordo.CustomRPCEvaluatorVersion{
+		ID:            dto.GetID(),
+		SpaceID:       spaceID,
+		EvaluatorType: evaluatordo.EvaluatorTypeCustomRPC,
+		EvaluatorID:   evaluatorID,
+		Description:   dto.GetDescription(),
+		Version:       dto.GetVersion(),
+		BaseInfo:      commonconvertor.ConvertBaseInfoDTO2DO(dto.GetBaseInfo()),
+	}
+	if dto.EvaluatorContent != nil {
+		customRPCEvaluatorVersion.InputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.InputSchemas)
+		customRPCEvaluatorVersion.OutputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.OutputSchemas)
+		if dto.EvaluatorContent.CustomRPCEvaluator != nil {
+			customRPCEvaluatorVersion.ProviderEvaluatorCode = dto.EvaluatorContent.CustomRPCEvaluator.ProviderEvaluatorCode
+			customRPCEvaluatorVersion.AccessProtocol = dto.EvaluatorContent.CustomRPCEvaluator.AccessProtocol
+			customRPCEvaluatorVersion.ServiceName = dto.EvaluatorContent.CustomRPCEvaluator.ServiceName
+			customRPCEvaluatorVersion.Cluster = dto.EvaluatorContent.CustomRPCEvaluator.Cluster
+			customRPCEvaluatorVersion.Timeout = dto.EvaluatorContent.CustomRPCEvaluator.Timeout
+		}
+	}
+	return customRPCEvaluatorVersion
+}
+
+func ConvertCustomRPCEvaluatorVersionDO2DTO(do *evaluatordo.CustomRPCEvaluatorVersion) *evaluatordto.EvaluatorVersion {
+	if do == nil {
+		return nil
+	}
+	dto := &evaluatordto.EvaluatorVersion{
+		ID:          gptr.Of(do.ID),
+		Version:     gptr.Of(do.Version),
+		Description: gptr.Of(do.Description),
+		BaseInfo:    commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		EvaluatorContent: &evaluatordto.EvaluatorContent{
+			ReceiveChatHistory: nil,
+			InputSchemas:       commonconvertor.ConvertArgsSchemaListDO2DTO(do.InputSchemas),
+			OutputSchemas:      commonconvertor.ConvertArgsSchemaListDO2DTO(do.OutputSchemas),
+			CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+				ProviderEvaluatorCode: do.ProviderEvaluatorCode,
+				AccessProtocol:        do.AccessProtocol,
+				ServiceName:           do.ServiceName,
+				Cluster:               do.Cluster,
+				Timeout:               do.Timeout,
+			},
+		},
+	}
+	return dto
 }

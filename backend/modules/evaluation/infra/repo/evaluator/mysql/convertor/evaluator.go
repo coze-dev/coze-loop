@@ -94,7 +94,8 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVersion, error) {
 	if do == nil ||
 		(do.EvaluatorType == evaluatordo.EvaluatorTypePrompt && do.PromptEvaluatorVersion == nil) ||
-		(do.EvaluatorType == evaluatordo.EvaluatorTypeCode && do.CodeEvaluatorVersion == nil) {
+		(do.EvaluatorType == evaluatordo.EvaluatorTypeCode && do.CodeEvaluatorVersion == nil) ||
+		(do.EvaluatorType == evaluatordo.EvaluatorTypeCustomRPC && do.CustomRPCEvaluatorVersion == nil) {
 		return nil, nil
 	}
 
@@ -156,6 +157,29 @@ func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVe
 		// Code evaluator不需要chat history，设置为nil
 		po.ReceiveChatHistory = nil
 		po.ID = do.CodeEvaluatorVersion.ID
+	case evaluatordo.EvaluatorTypeCustomRPC:
+		// 序列化Metainfo（整个CustomRPCEvaluatorVersion）
+		metaInfoByte, err := json.Marshal(do.CustomRPCEvaluatorVersion)
+		if err != nil {
+			return nil, err
+		}
+		// 序列化InputSchema
+		inputSchemaByte, err := json.Marshal(do.CustomRPCEvaluatorVersion.InputSchemas)
+		if err != nil {
+			return nil, err
+		}
+		// 序列化OutputSchema
+		outputSchemaByte, err := json.Marshal(do.CustomRPCEvaluatorVersion.OutputSchemas)
+		if err != nil {
+			return nil, err
+		}
+
+		po.InputSchema = ptr.Of(inputSchemaByte)
+		po.OutputSchema = ptr.Of(outputSchemaByte)
+		po.Metainfo = ptr.Of(metaInfoByte)
+		// Custom RPC evaluator不需要chat history，设置为nil
+		po.ReceiveChatHistory = nil
+		po.ID = do.CustomRPCEvaluatorVersion.ID
 	}
 	return po, nil
 }
@@ -201,6 +225,13 @@ func ConvertEvaluatorVersionPO2DO(po *model.EvaluatorVersion) (*evaluatordo.Eval
 		// 反序列化Metainfo获取完整的CodeEvaluatorVersion对象
 		if po.Metainfo != nil {
 			if err := json.Unmarshal(*po.Metainfo, do.CodeEvaluatorVersion); err != nil {
+				return nil, err
+			}
+		}
+	case evaluatordo.EvaluatorTypeCustomRPC:
+		do.CustomRPCEvaluatorVersion = &evaluatordo.CustomRPCEvaluatorVersion{}
+		if po.Metainfo != nil {
+			if err := json.Unmarshal(*po.Metainfo, do.CustomRPCEvaluatorVersion); err != nil {
 				return nil, err
 			}
 		}

@@ -43,6 +43,9 @@ func (p *PromptEvaluator) IsValid() error {
 func (p *CodeEvaluator) IsValid() error {
 	return nil
 }
+func (p *CustomRPCEvaluator) IsValid() error {
+	return nil
+}
 func (p *EvaluatorVersion) IsValid() error {
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
@@ -65,6 +68,11 @@ func (p *EvaluatorContent) IsValid() error {
 	if p.CodeEvaluator != nil {
 		if err := p.CodeEvaluator.IsValid(); err != nil {
 			return fmt.Errorf("field CodeEvaluator not valid, %w", err)
+		}
+	}
+	if p.CustomRPCEvaluator != nil {
+		if err := p.CustomRPCEvaluator.IsValid(); err != nil {
+			return fmt.Errorf("field CustomRPCEvaluator not valid, %w", err)
 		}
 	}
 	return nil

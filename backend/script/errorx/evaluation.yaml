@@ -405,3 +405,39 @@ error_code:
     message: execution result is nil
     description: execution result object is nil
     no_affect_stability: true
+
+  - name: InvalidProviderEvaluatorCode
+    code: 5061
+    message: invalid provider evaluator code
+    description: the provider evaluator code is invalid, check if it is empty or invalid
+    no_affect_stability: true
+
+  - name: InvalidAccessProtocol
+    code: 5062
+    message: invalid access protocol
+    description: the access protocol is invalid, check if it is empty or invalid
+    no_affect_stability: true
+
+  - name: InvalidServiceName
+    code: 5063
+    message: invalid service name
+    description: the service name is invalid, check if it is empty or invalid
+    no_affect_stability: true
+
+  - name: InvalidCluster
+    code: 5064
+    message: invalid cluster
+    description: the cluster is invalid, check if it is empty or invalid
+    no_affect_stability: true
+
+  - name: CustomRPCEvaluatorRunFailed
+    code: 5065
+    message: custom rpc evaluator run failed
+    description: the custom rpc evaluator run failed, check if the configuration is correct
+    no_affect_stability: true
+
+  - name: UnsupportedCustomRPCEvaluator
+    code: 5066
+    message: unsupported custom rpc evaluator
+    description: the custom rpc evaluator is not supported, check if the configuration is correct
+    no_affect_stability: true
