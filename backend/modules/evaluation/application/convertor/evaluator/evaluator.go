@@ -31,6 +31,8 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 		PromptEvaluatorVersion: nil,
 		BaseInfo:               commonconvertor.ConvertBaseInfoDTO2DO(evaluatorDTO.GetBaseInfo()),
 		Tags:                   ConvertEvaluatorLangTagsDTO2DO(evaluatorDTO.GetTags()),
+		Benchmark:              evaluatorDTO.GetBenchmark(),
+		Vendor:                 evaluatorDTO.GetVendor(),
 	}
 	if evaluatorDTO.CurrentVersion != nil {
 		switch evaluatorDTO.GetEvaluatorType() {
@@ -70,6 +72,8 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 		Builtin:               gptr.Of(do.Builtin),
 		BaseInfo:              commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
 		Tags:                  ConvertEvaluatorLangTagsDO2DTO(do.Tags),
+		Benchmark:             gptr.Of(do.Benchmark),
+		Vendor:                gptr.Of(do.Vendor),
 	}
 
 	switch do.EvaluatorType {
