@@ -42,6 +42,7 @@ func newEvaluator(db *gorm.DB, opts ...gen.DOOption) evaluator {
 	_evaluator.Benchmark = field.NewString(tableName, "benchmark")
 	_evaluator.Vendor = field.NewString(tableName, "vendor")
 	_evaluator.Builtin = field.NewInt32(tableName, "builtin")
+	_evaluator.BoxType = field.NewInt32(tableName, "box_type")
 	_evaluator.BuiltinVisibleVersion = field.NewString(tableName, "builtin_visible_version")
 
 	_evaluator.fillFieldMap()
@@ -69,6 +70,7 @@ type evaluator struct {
 	Benchmark             field.String // benchmark
 	Vendor                field.String // vendor
 	Builtin               field.Int32  // 是否预置，1:是；2:否
+	BoxType               field.Int32  // 黑白盒类型，1:白盒；2:黑盒
 	BuiltinVisibleVersion field.String // 预置评估器最新可见版本号
 
 	fieldMap map[string]field.Expr
@@ -101,6 +103,7 @@ func (e *evaluator) updateTableName(table string) *evaluator {
 	e.Benchmark = field.NewString(table, "benchmark")
 	e.Vendor = field.NewString(table, "vendor")
 	e.Builtin = field.NewInt32(table, "builtin")
+	e.BoxType = field.NewInt32(table, "box_type")
 	e.BuiltinVisibleVersion = field.NewString(table, "builtin_visible_version")
 
 	e.fillFieldMap()
@@ -128,7 +131,7 @@ func (e *evaluator) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *evaluator) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 16)
+	e.fieldMap = make(map[string]field.Expr, 17)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["evaluator_type"] = e.EvaluatorType
@@ -144,6 +147,7 @@ func (e *evaluator) fillFieldMap() {
 	e.fieldMap["benchmark"] = e.Benchmark
 	e.fieldMap["vendor"] = e.Vendor
 	e.fieldMap["builtin"] = e.Builtin
+	e.fieldMap["box_type"] = e.BoxType
 	e.fieldMap["builtin_visible_version"] = e.BuiltinVisibleVersion
 }
 

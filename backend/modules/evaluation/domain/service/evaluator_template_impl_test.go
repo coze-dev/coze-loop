@@ -36,6 +36,11 @@ func (m *MockEvaluatorTemplateRepo) DeleteEvaluatorTemplate(ctx context.Context,
 	return args.Error(0)
 }
 
+func (m *MockEvaluatorTemplateRepo) IncrPopularityByID(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 func (m *MockEvaluatorTemplateRepo) GetEvaluatorTemplate(ctx context.Context, id int64, includeDeleted bool) (*entity.EvaluatorTemplate, error) {
 	args := m.Called(ctx, id, includeDeleted)
 	if args.Get(0) == nil {
@@ -439,16 +444,6 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 			description:   "成功查询评估器模板列表",
 		},
 		{
-			name: "invalid space ID",
-			req: &entity.ListEvaluatorTemplateRequest{
-				SpaceID:  0,
-				PageSize: 10,
-				PageNum:  1,
-			},
-			expectedError: true,
-			description:   "无效的空间ID应该返回错误",
-		},
-		{
 			name: "invalid page size",
 			req: &entity.ListEvaluatorTemplateRequest{
 				SpaceID:  100,
@@ -477,6 +472,14 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 
 			if !tt.expectedError {
 				mockRepo.On("ListEvaluatorTemplate", mock.Anything, mock.Anything).Return(tt.mockResponse, tt.mockError)
+			} else {
+				// For error cases, we still need to mock the call or handle the validation error
+				if tt.name == "invalid page size" || tt.name == "invalid page num" {
+					// These are validation errors that should happen before the repo call
+					// So we don't need to mock the repo call
+				} else {
+					mockRepo.On("ListEvaluatorTemplate", mock.Anything, mock.Anything).Return(tt.mockResponse, tt.mockError)
+				}
 			}
 
 			result, err := service.ListEvaluatorTemplate(context.Background(), tt.req)

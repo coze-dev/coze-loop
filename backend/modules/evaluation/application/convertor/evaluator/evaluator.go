@@ -28,6 +28,7 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 		LatestVersion:          evaluatorDTO.GetLatestVersion(),
 		Builtin:                evaluatorDTO.GetBuiltin(),
 		BuiltinVisibleVersion:  evaluatorDTO.GetBuiltinVisibleVersion(),
+		BoxType:                convertBoxTypeDTO2DO(evaluatorDTO.GetBoxType()),
 		PromptEvaluatorVersion: nil,
 		BaseInfo:               commonconvertor.ConvertBaseInfoDTO2DO(evaluatorDTO.GetBaseInfo()),
 		Tags:                   ConvertEvaluatorLangTagsDTO2DO(evaluatorDTO.GetTags()),
@@ -71,6 +72,11 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 		BaseInfo:              commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
 		Tags:                  ConvertEvaluatorLangTagsDO2DTO(do.Tags),
 	}
+	// 设置 BoxType
+	{
+		val := convertBoxTypeDO2DTO(do.BoxType)
+		dto.SetBoxType(&val)
+	}
 
 	switch do.EvaluatorType {
 	case evaluatordo.EvaluatorTypePrompt:
@@ -90,6 +96,31 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 		}
 	}
 	return dto
+}
+
+// convertBoxTypeDTO2DO 将 DTO 的 BoxType(字符串) 转换为 DO 的 BoxType(数值枚举)
+func convertBoxTypeDTO2DO(dtoType string) evaluatordo.EvaluatorBoxType {
+	switch dtoType {
+	case "White":
+		return evaluatordo.EvaluatorBoxTypeWhite
+	case "Black":
+		return evaluatordo.EvaluatorBoxTypeBlack
+	default:
+		// 默认回退白盒
+		return evaluatordo.EvaluatorBoxTypeWhite
+	}
+}
+
+// convertBoxTypeDO2DTO 将 DO 的 BoxType(数值枚举) 转换为 DTO 的 BoxType(字符串)
+func convertBoxTypeDO2DTO(doType evaluatordo.EvaluatorBoxType) string {
+	switch doType {
+	case evaluatordo.EvaluatorBoxTypeWhite:
+		return "White"
+	case evaluatordo.EvaluatorBoxTypeBlack:
+		return "Black"
+	default:
+		return "White"
+	}
 }
 
 // normalizeLanguageType 标准化语言类型（转换为标准格式）
@@ -247,6 +278,22 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 			Timeout:               content.CustomRPCEvaluator.Timeout,
 		}
 
+		// 转换输入模式
+		if len(content.InputSchemas) > 0 {
+			customRPCVersion.InputSchemas = make([]*evaluatordo.ArgsSchema, 0, len(content.InputSchemas))
+			for _, schema := range content.InputSchemas {
+				customRPCVersion.InputSchemas = append(customRPCVersion.InputSchemas, commonconvertor.ConvertArgsSchemaDTO2DO(schema))
+			}
+		}
+
+		// 转换输出模式
+		if len(content.OutputSchemas) > 0 {
+			customRPCVersion.OutputSchemas = make([]*evaluatordo.ArgsSchema, 0, len(content.OutputSchemas))
+			for _, schema := range content.OutputSchemas {
+				customRPCVersion.OutputSchemas = append(customRPCVersion.OutputSchemas, commonconvertor.ConvertArgsSchemaDTO2DO(schema))
+			}
+		}
+
 		evaluator.CustomRPCEvaluatorVersion = customRPCVersion
 
 	default:
@@ -387,8 +434,6 @@ func ConvertEvaluatorTagKeyDO2DTO(doKey evaluatordo.EvaluatorTagKey) evaluatordt
 		return evaluatordto.EvaluatorTagKeyObjective
 	case evaluatordo.EvaluatorTagKey_BusinessScenario:
 		return evaluatordto.EvaluatorTagKeyBusinessScenario
-	case evaluatordo.EvaluatorTagKey_BoxType:
-		return evaluatordto.EvaluatorTagKeyBoxType
 	case evaluatordo.EvaluatorTagKey_Name:
 		return evaluatordto.EvaluatorTagKeyName
 	default:

@@ -36,6 +36,7 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 		LatestVersion:         do.LatestVersion,
 		BuiltinVisibleVersion: do.BuiltinVisibleVersion,
 		Builtin:               builtinVal,
+		BoxType:               int32(do.BoxType),
 		Benchmark:             ptr.Of(do.Benchmark),
 		Vendor:                ptr.Of(do.Vendor),
 	}
@@ -71,6 +72,7 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 		LatestVersion:         po.LatestVersion,
 		BuiltinVisibleVersion: po.BuiltinVisibleVersion,
 		Builtin:               po.Builtin == 1,
+		BoxType:               evaluatordo.EvaluatorBoxType(po.BoxType),
 		Benchmark:             gptr.Indirect(po.Benchmark),
 		Vendor:                gptr.Indirect(po.Vendor),
 	}
@@ -233,6 +235,20 @@ func ConvertEvaluatorVersionPO2DO(po *model.EvaluatorVersion) (*evaluatordo.Eval
 		if po.Metainfo != nil {
 			if err := json.Unmarshal(*po.Metainfo, do.CustomRPCEvaluatorVersion); err != nil {
 				return nil, err
+			}
+		}
+		// 反序列化InputSchema
+		if po.InputSchema != nil {
+			var inputSchemas []*evaluatordo.ArgsSchema
+			if err := json.Unmarshal(*po.InputSchema, &inputSchemas); err == nil {
+				do.CustomRPCEvaluatorVersion.InputSchemas = inputSchemas
+			}
+		}
+		// 反序列化OutputSchema
+		if po.OutputSchema != nil {
+			var outputSchemas []*evaluatordo.ArgsSchema
+			if err := json.Unmarshal(*po.OutputSchema, &outputSchemas); err == nil {
+				do.CustomRPCEvaluatorVersion.OutputSchemas = outputSchemas
 			}
 		}
 	}

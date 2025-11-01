@@ -32,7 +32,6 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 		{
 			name: "successful query without filters",
 			request: &repo.ListBuiltinEvaluatorRequest{
-				SpaceID:        123,
 				FilterOption:   nil,
 				PageSize:       10,
 				PageNum:        1,
@@ -57,7 +56,6 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 		{
 			name: "successful query with tags",
 			request: &repo.ListBuiltinEvaluatorRequest{
-				SpaceID:        123,
 				FilterOption:   nil,
 				PageSize:       10,
 				PageNum:        1,

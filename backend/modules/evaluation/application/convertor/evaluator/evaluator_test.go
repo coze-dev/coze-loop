@@ -34,9 +34,11 @@ func TestConvertEvaluatorDTO2DO(t *testing.T) {
 				DraftSubmitted: gptr.Of(true),
 				EvaluatorType:  evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
 				LatestVersion:  gptr.Of("1"),
-				Tags: map[evaluatordto.EvaluatorTagKey][]string{
-					evaluatordto.EvaluatorTagKeyCategory:  {"LLM", "Code"},
-					evaluatordto.EvaluatorTagKeyObjective: {"Quality"},
+				Tags: map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string{
+					evaluatordto.EvaluatorTagLangTypeEn: {
+						evaluatordto.EvaluatorTagKeyCategory:  {"LLM", "Code"},
+						evaluatordto.EvaluatorTagKeyObjective: {"Quality"},
+					},
 				},
 			},
 			expected: &evaluatordo.Evaluator{
@@ -47,9 +49,11 @@ func TestConvertEvaluatorDTO2DO(t *testing.T) {
 				DraftSubmitted: true,
 				EvaluatorType:  evaluatordo.EvaluatorTypePrompt,
 				LatestVersion:  "1",
-				Tags: map[evaluatordo.EvaluatorTagKey][]string{
-					evaluatordo.EvaluatorTagKey_Category:  {"LLM", "Code"},
-					evaluatordo.EvaluatorTagKey_Objective: {"Quality"},
+				Tags: map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string{
+					evaluatordo.EvaluatorTagLangType_En: {
+						evaluatordo.EvaluatorTagKey_Category:  {"LLM", "Code"},
+						evaluatordo.EvaluatorTagKey_Objective: {"Quality"},
+					},
 				},
 			},
 		},
@@ -111,9 +115,11 @@ func TestConvertEvaluatorDO2DTO(t *testing.T) {
 				DraftSubmitted: true,
 				EvaluatorType:  evaluatordo.EvaluatorTypePrompt,
 				LatestVersion:  "1",
-				Tags: map[evaluatordo.EvaluatorTagKey][]string{
-					evaluatordo.EvaluatorTagKey_Category:  {"LLM", "Code"},
-					evaluatordo.EvaluatorTagKey_Objective: {"Quality"},
+				Tags: map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string{
+					evaluatordo.EvaluatorTagLangType_En: {
+						evaluatordo.EvaluatorTagKey_Category:  {"LLM", "Code"},
+						evaluatordo.EvaluatorTagKey_Objective: {"Quality"},
+					},
 				},
 			},
 			expectedType: evaluatordto.EvaluatorType_Prompt,
@@ -925,20 +931,24 @@ func TestConvertEvaluatorTagsDTO2DO(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		dtoTags  map[evaluatordto.EvaluatorTagKey][]string
-		expected map[evaluatordo.EvaluatorTagKey][]string
+		dtoTags  map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string
+		expected map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string
 	}{
 		{
 			name: "正常转换",
-			dtoTags: map[evaluatordto.EvaluatorTagKey][]string{
-				evaluatordto.EvaluatorTagKeyCategory:         {"LLM", "Code"},
-				evaluatordto.EvaluatorTagKeyObjective:        {"Quality"},
-				evaluatordto.EvaluatorTagKeyBusinessScenario: {"AI Coding"},
+			dtoTags: map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string{
+				evaluatordto.EvaluatorTagLangTypeEn: {
+					evaluatordto.EvaluatorTagKeyCategory:         {"LLM", "Code"},
+					evaluatordto.EvaluatorTagKeyObjective:        {"Quality"},
+					evaluatordto.EvaluatorTagKeyBusinessScenario: {"AI Coding"},
+				},
 			},
-			expected: map[evaluatordo.EvaluatorTagKey][]string{
-				evaluatordo.EvaluatorTagKey_Category:         {"LLM", "Code"},
-				evaluatordo.EvaluatorTagKey_Objective:        {"Quality"},
-				evaluatordo.EvaluatorTagKey_BusinessScenario: {"AI Coding"},
+			expected: map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string{
+				evaluatordo.EvaluatorTagLangType_En: {
+					evaluatordo.EvaluatorTagKey_Category:         {"LLM", "Code"},
+					evaluatordo.EvaluatorTagKey_Objective:        {"Quality"},
+					evaluatordo.EvaluatorTagKey_BusinessScenario: {"AI Coding"},
+				},
 			},
 		},
 		{
@@ -948,14 +958,14 @@ func TestConvertEvaluatorTagsDTO2DO(t *testing.T) {
 		},
 		{
 			name:     "空map",
-			dtoTags:  map[evaluatordto.EvaluatorTagKey][]string{},
-			expected: map[evaluatordo.EvaluatorTagKey][]string{},
+			dtoTags:  map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string{},
+			expected: map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ConvertEvaluatorTagsDTO2DO(tt.dtoTags)
+			result := ConvertEvaluatorLangTagsDTO2DO(tt.dtoTags)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -966,20 +976,24 @@ func TestConvertEvaluatorTagsDO2DTO(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		doTags   map[evaluatordo.EvaluatorTagKey][]string
-		expected map[evaluatordto.EvaluatorTagKey][]string
+		doTags   map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string
+		expected map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string
 	}{
 		{
 			name: "正常转换",
-			doTags: map[evaluatordo.EvaluatorTagKey][]string{
-				evaluatordo.EvaluatorTagKey_Category:         {"LLM", "Code"},
-				evaluatordo.EvaluatorTagKey_Objective:        {"Quality"},
-				evaluatordo.EvaluatorTagKey_BusinessScenario: {"AI Coding"},
+			doTags: map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string{
+				evaluatordo.EvaluatorTagLangType_En: {
+					evaluatordo.EvaluatorTagKey_Category:         {"LLM", "Code"},
+					evaluatordo.EvaluatorTagKey_Objective:        {"Quality"},
+					evaluatordo.EvaluatorTagKey_BusinessScenario: {"AI Coding"},
+				},
 			},
-			expected: map[evaluatordto.EvaluatorTagKey][]string{
-				evaluatordto.EvaluatorTagKeyCategory:         {"LLM", "Code"},
-				evaluatordto.EvaluatorTagKeyObjective:        {"Quality"},
-				evaluatordto.EvaluatorTagKeyBusinessScenario: {"AI Coding"},
+			expected: map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string{
+				evaluatordto.EvaluatorTagLangTypeEn: {
+					evaluatordto.EvaluatorTagKeyCategory:         {"LLM", "Code"},
+					evaluatordto.EvaluatorTagKeyObjective:        {"Quality"},
+					evaluatordto.EvaluatorTagKeyBusinessScenario: {"AI Coding"},
+				},
 			},
 		},
 		{
@@ -989,14 +1003,14 @@ func TestConvertEvaluatorTagsDO2DTO(t *testing.T) {
 		},
 		{
 			name:     "空map",
-			doTags:   map[evaluatordo.EvaluatorTagKey][]string{},
-			expected: map[evaluatordto.EvaluatorTagKey][]string{},
+			doTags:   map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string{},
+			expected: map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ConvertEvaluatorTagsDO2DTO(tt.doTags)
+			result := ConvertEvaluatorLangTagsDO2DTO(tt.doTags)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -1033,7 +1047,7 @@ func TestConvertEvaluatorTagKeyDO2DTO(t *testing.T) {
 		{
 			name:     "BoxType",
 			doKey:    evaluatordo.EvaluatorTagKey_BoxType,
-			expected: evaluatordto.EvaluatorTagKeyBoxType,
+			expected: "BoxType",
 		},
 		{
 			name:     "Name",

@@ -696,8 +696,8 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 				// 第一次调用失败，第二次成功（模拟重试机制）
 				callCount := 0
 				mockEvaluatorService.EXPECT().
-					GetEvaluatorVersion(gomock.Any(), int64(123), false).
-					DoAndReturn(func(ctx context.Context, id int64, includeDeleted bool) (*entity.Evaluator, error) {
+					GetEvaluatorVersion(gomock.Any(), gomock.Any(), int64(123), false, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted bool, withTags bool) (*entity.Evaluator, error) {
 						callCount++
 						if callCount == 1 {
 							return nil, errors.New("temporary database error")
@@ -923,7 +923,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					Times(1)
 
 				mockEvaluatorService.EXPECT().
-					UpdateEvaluatorMeta(gomock.Any(), evaluatorID, spaceID, "更新后的评估器", "更新后的描述", gomock.Any()).
+					UpdateEvaluatorMeta(gomock.Any(), gomock.Any()).
 					Return(nil).
 					Times(1)
 

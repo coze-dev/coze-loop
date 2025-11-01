@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS `evaluator`
     `benchmark`       varchar(255)             DEFAULT NULL COMMENT 'benchmark',
     `vendor`          varchar(255)             DEFAULT NULL COMMENT 'vendor',
     `builtin`         int unsigned    NOT NULL DEFAULT '2' COMMENT '是否预置，1:是；2:否',
+    `box_type` int unsigned NOT NULL DEFAULT '1' COMMENT '黑白盒类型，1:白盒；2:黑盒',
     `builtin_visible_version` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '预置评估器最新可见版本号',
     PRIMARY KEY (`id`),
     KEY `idx_space_id_evaluator_type` (`space_id`, `evaluator_type`),

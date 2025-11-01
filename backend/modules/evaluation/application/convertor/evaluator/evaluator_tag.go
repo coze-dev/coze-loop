@@ -19,8 +19,6 @@ func ConvertEvaluatorTagKeyDTO2DO(dtoKey evaluatordto.EvaluatorTagKey) evaluator
 		return evaluatordo.EvaluatorTagKey_Objective
 	case evaluatordto.EvaluatorTagKeyBusinessScenario:
 		return evaluatordo.EvaluatorTagKey_BusinessScenario
-	case evaluatordto.EvaluatorTagKeyBoxType:
-		return evaluatordo.EvaluatorTagKey_BoxType
 	case evaluatordto.EvaluatorTagKeyName:
 		return evaluatordo.EvaluatorTagKey_Name
 	default:

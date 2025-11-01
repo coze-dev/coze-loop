@@ -102,6 +102,25 @@ func (mr *MockEvaluatorTemplateDAOMockRecorder) GetEvaluatorTemplate(ctx, id, in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateDAO)(nil).GetEvaluatorTemplate), varargs...)
 }
 
+// IncrPopularityByID mocks base method.
+func (m *MockEvaluatorTemplateDAO) IncrPopularityByID(ctx context.Context, id int64, opts ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "IncrPopularityByID", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IncrPopularityByID indicates an expected call of IncrPopularityByID.
+func (mr *MockEvaluatorTemplateDAOMockRecorder) IncrPopularityByID(ctx, id any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrPopularityByID", reflect.TypeOf((*MockEvaluatorTemplateDAO)(nil).IncrPopularityByID), varargs...)
+}
+
 // ListEvaluatorTemplate mocks base method.
 func (m *MockEvaluatorTemplateDAO) ListEvaluatorTemplate(ctx context.Context, req *mysql.ListEvaluatorTemplateRequest, opts ...db.Option) (*mysql.ListEvaluatorTemplateResponse, error) {
 	m.ctrl.T.Helper()

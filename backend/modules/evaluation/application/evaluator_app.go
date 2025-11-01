@@ -360,8 +360,19 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluator(ctx context.Context, request *eva
 		Builtin:               request.Builtin,
 		Benchmark:             request.Benchmark,
 		Vendor:                request.Vendor,
-		BuiltinVisibleVersion: request.BuiltinVisibleVersion, // 后续 Service/Repo/DAO 层补充更新逻辑
+		BuiltinVisibleVersion: request.BuiltinVisibleVersion,
 		UpdatedBy:             userIDInContext,
+	}
+	// box_type 映射（White/Black -> 1/2）
+	if request.IsSetBoxType() {
+		bt := entity.EvaluatorBoxTypeWhite
+		switch request.GetBoxType() {
+		case "Black":
+			bt = entity.EvaluatorBoxTypeBlack
+		case "White":
+			bt = entity.EvaluatorBoxTypeWhite
+		}
+		req.BoxType = &bt
 	}
 
 	if err = e.evaluatorService.UpdateEvaluatorMeta(ctx, req); err != nil {
@@ -545,7 +556,11 @@ func buildListEvaluatorVersionRequest(request *evaluatorservice.ListEvaluatorVer
 
 // GetEvaluatorVersion 按 id 和版本号单个查询 evaluator_version version
 func (e *EvaluatorHandlerImpl) GetEvaluatorVersion(ctx context.Context, request *evaluatorservice.GetEvaluatorVersionRequest) (resp *evaluatorservice.GetEvaluatorVersionResponse, err error) {
-	evaluatorDO, err := e.evaluatorService.GetEvaluatorVersion(ctx, gptr.Of(request.WorkspaceID), request.GetEvaluatorVersionID(), request.GetIncludeDeleted(), request.GetBuiltin())
+	var spaceID *int64
+	if !request.GetBuiltin() {
+		spaceID = gptr.Of(request.WorkspaceID)
+	}
+	evaluatorDO, err := e.evaluatorService.GetEvaluatorVersion(ctx, spaceID, request.GetEvaluatorVersionID(), request.GetIncludeDeleted(), request.GetBuiltin())
 	if err != nil {
 		return nil, err
 	}
@@ -555,6 +570,15 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorVersion(ctx context.Context, request 
 	// 鉴权
 	if request.GetBuiltin() {
 		err = e.authBuiltinManagement(ctx, evaluatorDO.SpaceID, spaceTypeBuiltin)
+		if err != nil {
+			return nil, err
+		}
+		// 预置评估器复用空间下列表查询鉴权
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+			SpaceID:       request.WorkspaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -847,14 +871,17 @@ func (e *EvaluatorHandlerImpl) RunEvaluator(ctx context.Context, request *evalua
 	if evaluatorDO == nil {
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
-		SpaceID:       evaluatorDO.SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-	})
-	if err != nil {
-		return nil, err
+	// 若为预置评估器则跳过鉴权
+	if !evaluatorDO.Builtin {
+		// 鉴权
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
+			SpaceID:       evaluatorDO.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	recordDO, err := e.evaluatorService.RunEvaluator(ctx, buildRunEvaluatorRequest(evaluatorDO.Name, request))
 	if err != nil {
@@ -1327,7 +1354,6 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 
 // ListTemplatesV2 查询评估器模板列表
 func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *evaluatorservice.ListTemplatesV2Request) (resp *evaluatorservice.ListTemplatesV2Response, err error) {
-	// List接口无需鉴权
 
 	// 构建service层请求
 	serviceReq := &entity.ListEvaluatorTemplateRequest{
@@ -1371,7 +1397,6 @@ func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *eva
 
 // GetTemplateInfoV2 获取评估器模板详情
 func (e *EvaluatorHandlerImpl) GetTemplateInfoV2(ctx context.Context, request *evaluatorservice.GetTemplateInfoV2Request) (resp *evaluatorservice.GetTemplateInfoV2Response, err error) {
-	// get接口无需鉴权
 	// 构建service层请求
 	serviceReq := &entity.GetEvaluatorTemplateRequest{
 		ID:             request.GetEvaluatorTemplateID(),
@@ -1528,11 +1553,11 @@ func (e *EvaluatorHandlerImpl) DeleteEvaluatorTemplate(ctx context.Context, requ
 
 // DebugBuiltinEvaluator 调试预置评估器
 func (e *EvaluatorHandlerImpl) DebugBuiltinEvaluator(ctx context.Context, request *evaluator.DebugBuiltinEvaluatorRequest) (resp *evaluator.DebugBuiltinEvaluatorResponse, err error) {
-	// 鉴权
+	// 预置评估器复用空间下列表查询鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(request.GetEvaluatorID(), 10),
-		SpaceID:       0, // 预置评估器不需要空间权限
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err

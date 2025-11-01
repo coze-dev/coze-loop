@@ -396,6 +396,15 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 				mockTagDAO.On("GetSourceIDsByFilterConditions", mock.Anything, int32(2), tt.request.FilterOption, int32(0), int32(0), mock.Anything, mock.Anything).Return(tt.mockTagIDs, int64(len(tt.mockTagIDs)), tt.mockTagError)
 			}
 
+			// Set up mock for BatchGetTagsBySourceIDsAndType - this is always called when there are template IDs
+			if tt.mockTemplates != nil && len(tt.mockTemplates.Templates) > 0 {
+				templateIDs := make([]int64, len(tt.mockTemplates.Templates))
+				for i, template := range tt.mockTemplates.Templates {
+					templateIDs[i] = template.ID
+				}
+				mockTagDAO.On("BatchGetTagsBySourceIDsAndType", mock.Anything, templateIDs, int32(2), "en-US", mock.Anything).Return([]*model.EvaluatorTag{}, nil)
+			}
+
 			// 设置templateDAO的期望
 			// 只有在tag查询有错误或筛选条件命中数为0时才不设置templateDAO的期望
 			if tt.mockTagError == nil && !(hasValidFilters && len(tt.mockTagIDs) == 0) {

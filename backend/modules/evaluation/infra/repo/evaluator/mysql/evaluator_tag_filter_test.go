@@ -7,28 +7,15 @@ import (
 	"context"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"go.uber.org/mock/gomock"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
-	"github.com/coze-dev/coze-loop/backend/infra/db"
+	dbmock "github.com/coze-dev/coze-loop/backend/infra/db/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
-
-// MockProvider 模拟数据库提供者
-type MockProvider struct {
-	mock.Mock
-}
-
-func (m *MockProvider) NewSession(ctx context.Context, opts ...db.Option) *gorm.DB {
-	args := m.Called(ctx, opts)
-	return args.Get(0).(*gorm.DB)
-}
-
-func (m *MockProvider) Transaction(ctx context.Context, fc func(tx *gorm.DB) error, opts ...db.Option) error {
-	args := m.Called(ctx, fc, opts)
-	return args.Error(0)
-}
 
 func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 	t.Parallel()
@@ -233,17 +220,50 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// 创建sqlmock连接
+			sqlDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to create sqlmock: %v", err)
+			}
+			defer sqlDB.Close()
+
+			// 创建真实的GORM数据库连接
+			gormDB, err := gorm.Open(mysql.New(mysql.Config{
+				Conn:                      sqlDB,
+				SkipInitializeWithVersion: true,
+			}), &gorm.Config{})
+			if err != nil {
+				t.Fatalf("failed to open gorm db: %v", err)
+			}
+
 			// 创建mock provider
-			mockProvider := &MockProvider{}
+			mockProvider := dbmock.NewMockProvider(ctrl)
+
+			// 对于nil的filterOption，方法会直接返回，不需要数据库调用
+			if tt.filterOption == nil {
+				// 这种情况下方法直接返回，不需要设置mock期望
+			} else {
+				// 对于非nil的filterOption，方法会调用NewSession并执行查询
+				mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
+
+				// Mock COUNT查询 - 总是会执行
+				// 实际SQL格式: SELECT COUNT(DISTINCT(`source_id`)) FROM `evaluator_tag` WHERE ...
+				countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
+				mock.ExpectQuery("^SELECT COUNT\\(DISTINCT\\(`source_id`\\)\\) FROM `evaluator_tag`").WillReturnRows(countRows)
+
+				// Mock SELECT查询 - 总是会执行Pluck查询
+				// 实际SQL格式: SELECT DISTINCT source_id FROM `evaluator_tag` WHERE ...
+				selectRows := sqlmock.NewRows([]string{"source_id"})
+				mock.ExpectQuery("^SELECT DISTINCT source_id FROM `evaluator_tag`").WillReturnRows(selectRows)
+			}
 
 			// 创建DAO实例
 			dao := &EvaluatorTagDAOImpl{
 				provider: mockProvider,
 			}
-
-			// 模拟数据库会话
-			mockSession := &gorm.DB{}
-			mockProvider.On("NewSession", mock.Anything, mock.Anything).Return(mockSession)
 
 			// 执行测试
 			ctx := context.Background()
@@ -262,8 +282,10 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 				}
 			}
 
-			// 验证mock调用
-			mockProvider.AssertExpectations(t)
+			// 验证所有期望的SQL查询都被执行
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
 		})
 	}
 }
