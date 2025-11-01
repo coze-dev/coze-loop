@@ -2019,11 +2019,10 @@ func TestEvaluatorServiceImpl_ListBuiltinEvaluator(t *testing.T) {
 			expectedErr:   nil,
 		},
 		{
-			name: "成功 - 带版本信息 (WithVersion = true)",
+			name: "成功 - 带BuiltinVisibleVersion并回填版本信息",
 			request: &entity.ListBuiltinEvaluatorRequest{
-				PageSize:    10,
-				PageNum:     1,
-				WithVersion: true,
+				PageSize: 10,
+				PageNum:  1,
 			},
 			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
 				expectedRepoReq := &repo.ListBuiltinEvaluatorRequest{
@@ -2031,6 +2030,180 @@ func TestEvaluatorServiceImpl_ListBuiltinEvaluator(t *testing.T) {
 					PageNum:        1,
 					IncludeDeleted: false,
 					FilterOption:   nil,
+				}
+				// 模拟返回有BuiltinVisibleVersion的评估器元数据
+				mockRepo.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
+					&repo.ListBuiltinEvaluatorResponse{
+						Evaluators: []*entity.Evaluator{
+							{
+								ID:                   1,
+								Name:                 "BuiltinEval1",
+								SpaceID:              1,
+								Description:          "Builtin Desc1",
+								BuiltinVisibleVersion: "1.0.0",
+								EvaluatorType:        entity.EvaluatorTypePrompt,
+							},
+							{
+								ID:                   2,
+								Name:                 "BuiltinEval2",
+								SpaceID:              1,
+								Description:          "Builtin Desc2",
+								BuiltinVisibleVersion: "2.0.0",
+								EvaluatorType:        entity.EvaluatorTypeCode,
+							},
+						},
+						TotalCount: 2,
+					}, nil)
+
+				// 模拟批量查询版本信息
+				mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{
+					{int64(1), "1.0.0"},
+					{int64(2), "2.0.0"},
+				}).Return([]*entity.Evaluator{
+					{
+						ID:            1,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							EvaluatorID: 1,
+							Version:     "1.0.0",
+							MessageList: []*entity.Message{},
+						},
+					},
+					{
+						ID:            2,
+						EvaluatorType: entity.EvaluatorTypeCode,
+						CodeEvaluatorVersion: &entity.CodeEvaluatorVersion{
+							EvaluatorID: 2,
+							Version:     "2.0.0",
+							CodeContent: "def evaluate(): pass",
+						},
+					},
+				}, nil)
+			},
+			expectedList: []*entity.Evaluator{
+				{
+					ID:                   1,
+					Name:                 "BuiltinEval1",
+					SpaceID:              1,
+					Description:          "Builtin Desc1",
+					BuiltinVisibleVersion: "1.0.0",
+					EvaluatorType:        entity.EvaluatorTypePrompt,
+				},
+				{
+					ID:                   2,
+					Name:                 "BuiltinEval2",
+					SpaceID:              1,
+					Description:          "Builtin Desc2",
+					BuiltinVisibleVersion: "2.0.0",
+					EvaluatorType:        entity.EvaluatorTypeCode,
+				},
+			},
+			expectedTotal: 2,
+			expectedErr:   nil,
+		},
+		{
+			name: "成功 - 部分评估器有BuiltinVisibleVersion",
+			request: &entity.ListBuiltinEvaluatorRequest{
+				PageSize: 10,
+				PageNum:  1,
+			},
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				expectedRepoReq := &repo.ListBuiltinEvaluatorRequest{
+					PageSize:       10,
+					PageNum:        1,
+					IncludeDeleted: false,
+					FilterOption:   nil,
+				}
+				mockRepo.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
+					&repo.ListBuiltinEvaluatorResponse{
+						Evaluators: []*entity.Evaluator{
+							{
+								ID:                   1,
+								Name:                 "BuiltinEval1",
+								SpaceID:              1,
+								BuiltinVisibleVersion: "1.0.0",
+								EvaluatorType:        entity.EvaluatorTypePrompt,
+							},
+							{
+								ID:                   2,
+								Name:                 "BuiltinEval2",
+								SpaceID:              1,
+								BuiltinVisibleVersion: "", // 没有版本
+								EvaluatorType:        entity.EvaluatorTypePrompt,
+							},
+						},
+						TotalCount: 2,
+					}, nil)
+
+				// 只查询有BuiltinVisibleVersion的评估器版本
+				mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{
+					{int64(1), "1.0.0"},
+				}).Return([]*entity.Evaluator{
+					{
+						ID:            1,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							EvaluatorID: 1,
+							Version:     "1.0.0",
+						},
+					},
+				}, nil)
+			},
+			expectedList: []*entity.Evaluator{
+				{
+					ID:                   1,
+					Name:                 "BuiltinEval1",
+					SpaceID:              1,
+					BuiltinVisibleVersion: "1.0.0",
+					EvaluatorType:        entity.EvaluatorTypePrompt,
+				},
+				{
+					ID:            2,
+					Name:          "BuiltinEval2",
+					SpaceID:       1,
+					EvaluatorType: entity.EvaluatorTypePrompt,
+				},
+			},
+			expectedTotal: 2,
+			expectedErr:   nil,
+		},
+		{
+			name: "成功 - 空列表",
+			request: &entity.ListBuiltinEvaluatorRequest{
+				PageSize: 10,
+				PageNum:  1,
+			},
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				expectedRepoReq := &repo.ListBuiltinEvaluatorRequest{
+					PageSize:       10,
+					PageNum:        1,
+					IncludeDeleted: false,
+					FilterOption:   nil,
+				}
+				mockRepo.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
+					&repo.ListBuiltinEvaluatorResponse{
+						Evaluators: []*entity.Evaluator{},
+						TotalCount: 0,
+					}, nil)
+				// 空列表时不会调用BatchGetEvaluatorVersionsByEvaluatorIDAndVersions
+			},
+			expectedList:  []*entity.Evaluator{},
+			expectedTotal: 0,
+			expectedErr:   nil,
+		},
+		{
+			name: "成功 - 带筛选条件",
+			request: &entity.ListBuiltinEvaluatorRequest{
+				PageSize:     10,
+				PageNum:      1,
+				FilterOption: &entity.EvaluatorFilterOption{},
+			},
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				expectedRepoReq := &repo.ListBuiltinEvaluatorRequest{
+					PageSize:       10,
+					PageNum:        1,
+					IncludeDeleted: false,
+					FilterOption:   &entity.EvaluatorFilterOption{},
 				}
 				mockRepo.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
 					&repo.ListBuiltinEvaluatorResponse{
@@ -2045,6 +2218,41 @@ func TestEvaluatorServiceImpl_ListBuiltinEvaluator(t *testing.T) {
 			},
 			expectedTotal: 1,
 			expectedErr:   nil,
+		},
+		{
+			name: "失败 - BatchGetEvaluatorVersionsByEvaluatorIDAndVersions返回错误",
+			request: &entity.ListBuiltinEvaluatorRequest{
+				PageSize: 10,
+				PageNum:  1,
+			},
+			setupMock: func(mockRepo *repomocks.MockIEvaluatorRepo) {
+				expectedRepoReq := &repo.ListBuiltinEvaluatorRequest{
+					PageSize:       10,
+					PageNum:        1,
+					IncludeDeleted: false,
+					FilterOption:   nil,
+				}
+				mockRepo.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Eq(expectedRepoReq)).Return(
+					&repo.ListBuiltinEvaluatorResponse{
+						Evaluators: []*entity.Evaluator{
+							{
+								ID:                   1,
+								Name:                 "BuiltinEval1",
+								SpaceID:              1,
+								BuiltinVisibleVersion: "1.0.0",
+								EvaluatorType:        entity.EvaluatorTypePrompt,
+							},
+						},
+						TotalCount: 1,
+					}, nil)
+
+				mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{
+					{int64(1), "1.0.0"},
+				}).Return(nil, errors.New("version query error"))
+			},
+			expectedList:  nil,
+			expectedTotal: 0,
+			expectedErr:   errors.New("version query error"),
 		},
 		{
 			name: "失败 - repo返回错误",
