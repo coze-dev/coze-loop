@@ -42,6 +42,20 @@ func (m *MockIConfiger) EXPECT() *MockIConfigerMockRecorder {
 	return m.recorder
 }
 
+// GetBuiltinEvaluatorSpaceConf mocks base method.
+func (m *MockIConfiger) GetBuiltinEvaluatorSpaceConf(ctx context.Context) []string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBuiltinEvaluatorSpaceConf", ctx)
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// GetBuiltinEvaluatorSpaceConf indicates an expected call of GetBuiltinEvaluatorSpaceConf.
+func (mr *MockIConfigerMockRecorder) GetBuiltinEvaluatorSpaceConf(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBuiltinEvaluatorSpaceConf", reflect.TypeOf((*MockIConfiger)(nil).GetBuiltinEvaluatorSpaceConf), ctx)
+}
+
 // GetCodeEvaluatorTemplateConf mocks base method.
 func (m *MockIConfiger) GetCodeEvaluatorTemplateConf(ctx context.Context) map[string]map[string]*evaluator.EvaluatorContent {
 	m.ctrl.T.Helper()
@@ -96,6 +110,20 @@ func (m *MockIConfiger) GetEvaluatorPromptSuffixMapping(ctx context.Context) map
 func (mr *MockIConfigerMockRecorder) GetEvaluatorPromptSuffixMapping(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorPromptSuffixMapping", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluatorPromptSuffixMapping), ctx)
+}
+
+// GetEvaluatorTagConf mocks base method.
+func (m *MockIConfiger) GetEvaluatorTagConf(ctx context.Context) map[evaluator.EvaluatorTagKey][]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvaluatorTagConf", ctx)
+	ret0, _ := ret[0].(map[evaluator.EvaluatorTagKey][]string)
+	return ret0
+}
+
+// GetEvaluatorTagConf indicates an expected call of GetEvaluatorTagConf.
+func (mr *MockIConfigerMockRecorder) GetEvaluatorTagConf(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorTagConf", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluatorTagConf), ctx)
 }
 
 // GetEvaluatorTemplateConf mocks base method.

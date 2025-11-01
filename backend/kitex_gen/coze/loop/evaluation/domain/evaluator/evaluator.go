@@ -28,9 +28,11 @@ const (
 
 	EvaluatorTagKeyBusinessScenario = "BusinessScenario"
 
-	EvaluatorTagKeyBoxType = "BoxType"
-
 	EvaluatorTagKeyName = "Name"
+
+	EvaluatorBoxTypeWhite = "White"
+
+	EvaluatorBoxTypeBlack = "Black"
 
 	AccessProtocolRPC = "rpc"
 
@@ -290,6 +292,8 @@ type EvaluatorTagLangType = string
 
 // Evaluator筛选字段
 type EvaluatorTagKey = string
+
+type EvaluatorBoxType = string
 
 type AccessProtocol = string
 
@@ -3400,20 +3404,22 @@ func (p *EvaluatorContent) Field103DeepEqual(src *CustomRPCEvaluator) bool {
 }
 
 type Evaluator struct {
-	EvaluatorID           *int64                                                `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
-	WorkspaceID           *int64                                                `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
-	EvaluatorType         *EvaluatorType                                        `thrift:"evaluator_type,3,optional" frugal:"3,optional,EvaluatorType" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
-	Name                  *string                                               `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description           *string                                               `thrift:"description,5,optional" frugal:"5,optional,string" form:"description" json:"description,omitempty" query:"description"`
-	DraftSubmitted        *bool                                                 `thrift:"draft_submitted,6,optional" frugal:"6,optional,bool" form:"draft_submitted" json:"draft_submitted,omitempty" query:"draft_submitted"`
-	BaseInfo              *common.BaseInfo                                      `thrift:"base_info,7,optional" frugal:"7,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
-	CurrentVersion        *EvaluatorVersion                                     `thrift:"current_version,11,optional" frugal:"11,optional,EvaluatorVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
-	LatestVersion         *string                                               `thrift:"latest_version,12,optional" frugal:"12,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
-	Builtin               *bool                                                 `thrift:"builtin,20,optional" frugal:"20,optional,bool" json:"builtin" form:"builtin" query:"builtin"`
-	Benchmark             *string                                               `thrift:"benchmark,21,optional" frugal:"21,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
-	Vendor                *string                                               `thrift:"vendor,22,optional" frugal:"22,optional,string" json:"vendor" form:"vendor" query:"vendor"`
-	BuiltinVisibleVersion *string                                               `thrift:"builtin_visible_version,23,optional" frugal:"23,optional,string" json:"builtin_visible_version" form:"builtin_visible_version" query:"builtin_visible_version"`
-	Tags                  map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `thrift:"tags,100,optional" frugal:"100,optional,map<string:map<string:list<string>>>" json:"tags" form:"tags" query:"tags"`
+	EvaluatorID           *int64            `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
+	WorkspaceID           *int64            `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	EvaluatorType         *EvaluatorType    `thrift:"evaluator_type,3,optional" frugal:"3,optional,EvaluatorType" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
+	Name                  *string           `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Description           *string           `thrift:"description,5,optional" frugal:"5,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	DraftSubmitted        *bool             `thrift:"draft_submitted,6,optional" frugal:"6,optional,bool" form:"draft_submitted" json:"draft_submitted,omitempty" query:"draft_submitted"`
+	BaseInfo              *common.BaseInfo  `thrift:"base_info,7,optional" frugal:"7,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	CurrentVersion        *EvaluatorVersion `thrift:"current_version,11,optional" frugal:"11,optional,EvaluatorVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
+	LatestVersion         *string           `thrift:"latest_version,12,optional" frugal:"12,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
+	Builtin               *bool             `thrift:"builtin,20,optional" frugal:"20,optional,bool" json:"builtin" form:"builtin" query:"builtin"`
+	Benchmark             *string           `thrift:"benchmark,21,optional" frugal:"21,optional,string" json:"benchmark" form:"benchmark" query:"benchmark"`
+	Vendor                *string           `thrift:"vendor,22,optional" frugal:"22,optional,string" json:"vendor" form:"vendor" query:"vendor"`
+	BuiltinVisibleVersion *string           `thrift:"builtin_visible_version,23,optional" frugal:"23,optional,string" json:"builtin_visible_version" form:"builtin_visible_version" query:"builtin_visible_version"`
+	// 默认白盒
+	BoxType *EvaluatorBoxType                                     `thrift:"box_type,24,optional" frugal:"24,optional,string" json:"box_type" form:"box_type" query:"box_type"`
+	Tags    map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `thrift:"tags,100,optional" frugal:"100,optional,map<string:map<string:list<string>>>" json:"tags" form:"tags" query:"tags"`
 }
 
 func NewEvaluator() *Evaluator {
@@ -3579,6 +3585,18 @@ func (p *Evaluator) GetBuiltinVisibleVersion() (v string) {
 	return *p.BuiltinVisibleVersion
 }
 
+var Evaluator_BoxType_DEFAULT EvaluatorBoxType
+
+func (p *Evaluator) GetBoxType() (v EvaluatorBoxType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBoxType() {
+		return Evaluator_BoxType_DEFAULT
+	}
+	return *p.BoxType
+}
+
 var Evaluator_Tags_DEFAULT map[EvaluatorTagLangType]map[EvaluatorTagKey][]string
 
 func (p *Evaluator) GetTags() (v map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) {
@@ -3629,6 +3647,9 @@ func (p *Evaluator) SetVendor(val *string) {
 func (p *Evaluator) SetBuiltinVisibleVersion(val *string) {
 	p.BuiltinVisibleVersion = val
 }
+func (p *Evaluator) SetBoxType(val *EvaluatorBoxType) {
+	p.BoxType = val
+}
 func (p *Evaluator) SetTags(val map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) {
 	p.Tags = val
 }
@@ -3647,6 +3668,7 @@ var fieldIDToName_Evaluator = map[int16]string{
 	21:  "benchmark",
 	22:  "vendor",
 	23:  "builtin_visible_version",
+	24:  "box_type",
 	100: "tags",
 }
 
@@ -3700,6 +3722,10 @@ func (p *Evaluator) IsSetVendor() bool {
 
 func (p *Evaluator) IsSetBuiltinVisibleVersion() bool {
 	return p.BuiltinVisibleVersion != nil
+}
+
+func (p *Evaluator) IsSetBoxType() bool {
+	return p.BoxType != nil
 }
 
 func (p *Evaluator) IsSetTags() bool {
@@ -3823,6 +3849,14 @@ func (p *Evaluator) Read(iprot thrift.TProtocol) (err error) {
 		case 23:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 24:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField24(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4003,6 +4037,17 @@ func (p *Evaluator) ReadField23(iprot thrift.TProtocol) error {
 	p.BuiltinVisibleVersion = _field
 	return nil
 }
+func (p *Evaluator) ReadField24(iprot thrift.TProtocol) error {
+
+	var _field *EvaluatorBoxType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.BoxType = _field
+	return nil
+}
 func (p *Evaluator) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -4119,6 +4164,10 @@ func (p *Evaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField24(oprot); err != nil {
+			fieldId = 24
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -4377,6 +4426,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
 }
+func (p *Evaluator) writeField24(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBoxType() {
+		if err = oprot.WriteFieldBegin("box_type", thrift.STRING, 24); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.BoxType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
+}
 func (p *Evaluator) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTags() {
 		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 100); err != nil {
@@ -4477,6 +4544,9 @@ func (p *Evaluator) DeepEqual(ano *Evaluator) bool {
 		return false
 	}
 	if !p.Field23DeepEqual(ano.BuiltinVisibleVersion) {
+		return false
+	}
+	if !p.Field24DeepEqual(ano.BoxType) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Tags) {
@@ -4627,6 +4697,18 @@ func (p *Evaluator) Field23DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.BuiltinVisibleVersion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Evaluator) Field24DeepEqual(src *EvaluatorBoxType) bool {
+
+	if p.BoxType == src {
+		return true
+	} else if p.BoxType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.BoxType, *src) != 0 {
 		return false
 	}
 	return true

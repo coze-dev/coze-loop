@@ -506,6 +506,9 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorMeta(ctx context.Context, req *entity
 	if req.Description != nil {
 		po.Description = req.Description
 	}
+	if req.BoxType != nil {
+		po.BoxType = int32(*req.BoxType)
+	}
 	if req.Benchmark != nil {
 		po.Benchmark = req.Benchmark
 	}

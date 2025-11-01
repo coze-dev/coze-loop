@@ -17,12 +17,20 @@ type Evaluator struct {
 	Benchmark             string
 	Vendor                string
 	BuiltinVisibleVersion string
+	BoxType               EvaluatorBoxType                                      `json:"box_type"`
 	Tags                  map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `json:"tags"`
 
-	PromptEvaluatorVersion *PromptEvaluatorVersion
-	CodeEvaluatorVersion   *CodeEvaluatorVersion
+	PromptEvaluatorVersion    *PromptEvaluatorVersion
+	CodeEvaluatorVersion      *CodeEvaluatorVersion
 	CustomRPCEvaluatorVersion *CustomRPCEvaluatorVersion
 }
+
+type EvaluatorBoxType int64
+
+const (
+	EvaluatorBoxTypeWhite EvaluatorBoxType = 1
+	EvaluatorBoxTypeBlack EvaluatorBoxType = 2
+)
 
 type EvaluatorType int64
 
@@ -40,15 +48,15 @@ var EvaluatorTypeSet = map[EvaluatorType]struct{}{
 
 // UpdateEvaluatorMetaRequest 用于更新评估器元信息的参数
 type UpdateEvaluatorMetaRequest struct {
-	ID          int64
-	SpaceID     int64
-	Name        *string
-	Description *string
-	Builtin     *bool
-	Benchmark   *string
-	Vendor      *string
-	// BuiltinVisibleVersion 预置评估器的对外可见版本（后续在 Service/Repo/DAO 层补充更新逻辑）
+	ID                    int64
+	SpaceID               int64
+	Name                  *string
+	Description           *string
+	Builtin               *bool
+	Benchmark             *string
+	Vendor                *string
 	BuiltinVisibleVersion *string
+	BoxType               *EvaluatorBoxType
 	UpdatedBy             string
 }
 

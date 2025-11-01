@@ -102,6 +102,26 @@ func (mr *MockEvaluatorVersionDAOMockRecorder) BatchGetEvaluatorVersionByID(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorVersionByID", reflect.TypeOf((*MockEvaluatorVersionDAO)(nil).BatchGetEvaluatorVersionByID), varargs...)
 }
 
+// BatchGetEvaluatorVersionsByEvaluatorIDAndVersions mocks base method.
+func (m *MockEvaluatorVersionDAO) BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx context.Context, pairs [][2]any, opts ...db.Option) ([]*model.EvaluatorVersion, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, pairs}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "BatchGetEvaluatorVersionsByEvaluatorIDAndVersions", varargs...)
+	ret0, _ := ret[0].([]*model.EvaluatorVersion)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetEvaluatorVersionsByEvaluatorIDAndVersions indicates an expected call of BatchGetEvaluatorVersionsByEvaluatorIDAndVersions.
+func (mr *MockEvaluatorVersionDAOMockRecorder) BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, pairs}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorVersionsByEvaluatorIDAndVersions", reflect.TypeOf((*MockEvaluatorVersionDAO)(nil).BatchGetEvaluatorVersionsByEvaluatorIDAndVersions), varargs...)
+}
+
 // BatchGetEvaluatorVersionsByEvaluatorIDs mocks base method.
 func (m *MockEvaluatorVersionDAO) BatchGetEvaluatorVersionsByEvaluatorIDs(ctx context.Context, evaluatorIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorVersion, error) {
 	m.ctrl.T.Helper()

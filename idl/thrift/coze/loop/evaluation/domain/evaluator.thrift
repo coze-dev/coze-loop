@@ -45,8 +45,11 @@ const EvaluatorTagKey EvaluatorTagKey_Category = "Category"           // 类型�
 const EvaluatorTagKey EvaluatorTagKey_TargetType = "TargetType"         // 评估对象 (文本/图片/视频等)
 const EvaluatorTagKey EvaluatorTagKey_Objective = "Objective"      // 评估目标 (任务完成/内容质量等)
 const EvaluatorTagKey EvaluatorTagKey_BusinessScenario = "BusinessScenario"   // 业务场景 (安全风控/AI Coding等)
-const EvaluatorTagKey EvaluatorTagKey_BoxType = "BoxType"            // 黑白盒类型
 const EvaluatorTagKey EvaluatorTagKey_Name = "Name"               // 评估器名称
+
+typedef string EvaluatorBoxType(ts.enum="true")
+const EvaluatorBoxType EvaluatorBoxType_White = "White" // 白盒
+const EvaluatorBoxType EvaluatorBoxType_Black = "Black" // 黑盒
 
 typedef string AccessProtocol
 const AccessProtocol AccessProtocol_RPC = "rpc"
@@ -121,6 +124,7 @@ struct Evaluator {
     21: optional string benchmark (go.tag = 'json:"benchmark"')
     22: optional string vendor (go.tag = 'json:"vendor"')
     23: optional string builtin_visible_version (go.tag = 'json:"builtin_visible_version"')
+    24: optional EvaluatorBoxType box_type (go.tag = 'json:"box_type"') // 默认白盒
 
     100: optional map<EvaluatorTagLangType, map<EvaluatorTagKey, list<string>>> tags (go.tag = 'json:"tags"')
 }

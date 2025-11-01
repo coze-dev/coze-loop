@@ -585,27 +585,6 @@ func (p *GetTemplateInfoV2Response) IsValid() error {
 	}
 	return nil
 }
-func (p *GetLatestEvaluatorVersionRequest) IsValid() error {
-	if p.Base != nil {
-		if err := p.Base.IsValid(); err != nil {
-			return fmt.Errorf("field Base not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *GetLatestEvaluatorVersionResponse) IsValid() error {
-	if p.Version != nil {
-		if err := p.Version.IsValid(); err != nil {
-			return fmt.Errorf("field Version not valid, %w", err)
-		}
-	}
-	if p.BaseResp != nil {
-		if err := p.BaseResp.IsValid(); err != nil {
-			return fmt.Errorf("field BaseResp not valid, %w", err)
-		}
-	}
-	return nil
-}
 func (p *DebugBuiltinEvaluatorRequest) IsValid() error {
 	if p.InputData != nil {
 		if err := p.InputData.IsValid(); err != nil {

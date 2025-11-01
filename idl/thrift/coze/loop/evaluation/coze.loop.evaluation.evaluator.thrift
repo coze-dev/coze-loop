@@ -94,6 +94,7 @@ struct UpdateEvaluatorRequest {
     12: optional string benchmark (api.body='benchmark', go.tag = 'json:"benchmark"')
     13: optional string vendor (api.body='vendor', go.tag = 'json:"vendor"')
     14: optional string builtin_visible_version (api.body='builtin_visible_version', go.tag = 'json:"builtin_visible_version"')
+    15: optional evaluator.EvaluatorBoxType box_type (api.body='box_type', go.tag = 'json:"box_type"')
 
     255: optional base.Base Base
 }
@@ -392,23 +393,10 @@ struct GetTemplateInfoV2Response {
     255: base.BaseResp BaseResp
 }
 
-struct GetLatestEvaluatorVersionRequest {
-    1: required i64 evaluator_id (api.path='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_id"')
-    2: optional i64 workspace_id (api.query='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
-    3: optional bool builtin (api.query='builtin') // 是否预置评估器
-
-    255: optional base.Base Base
-}
-
-struct GetLatestEvaluatorVersionResponse {
-    1: required evaluator.EvaluatorVersion version (api.body='version')
-
-    255: base.BaseResp BaseResp
-}
-
 struct DebugBuiltinEvaluatorRequest {
     1: required i64 evaluator_id (api.body='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_id"')
     2: required evaluator.EvaluatorInputData input_data (api.body='input_data')
+    3: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"') // 空间 id
 
     255: optional base.Base Base
 }
@@ -466,7 +454,6 @@ struct DeleteEvaluatorTemplateResponse {
 }
 
 struct ListEvaluatorTagsRequest {
-
     255: optional base.Base Base
 }
 

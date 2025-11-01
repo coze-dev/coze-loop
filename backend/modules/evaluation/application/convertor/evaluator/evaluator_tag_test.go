@@ -6,9 +6,10 @@ package evaluator
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	evaluatordo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestConvertEvaluatorFilterOptionDTO2DO(t *testing.T) {
@@ -78,7 +79,6 @@ func TestConvertEvaluatorTagKeyDTO2DO(t *testing.T) {
 		{evaluatordto.EvaluatorTagKeyTargetType, evaluatordo.EvaluatorTagKey_TargetType},
 		{evaluatordto.EvaluatorTagKeyObjective, evaluatordo.EvaluatorTagKey_Objective},
 		{evaluatordto.EvaluatorTagKeyBusinessScenario, evaluatordo.EvaluatorTagKey_BusinessScenario},
-		{evaluatordto.EvaluatorTagKeyBoxType, evaluatordo.EvaluatorTagKey_BoxType},
 		{evaluatordto.EvaluatorTagKeyName, evaluatordo.EvaluatorTagKey_Name},
 	}
 

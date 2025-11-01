@@ -187,22 +187,6 @@ func GetTemplateInfoV2(ctx context.Context, c *app.RequestContext) {
 	c.JSON(consts.StatusOK, resp)
 }
 
-// GetLatestEvaluatorVersion .
-// @router /api/evaluation/v1/evaluators/:evaluator_id/latest_version [POST]
-func GetLatestEvaluatorVersion(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.GetLatestEvaluatorVersionRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.GetLatestEvaluatorVersionResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
 // DebugBuiltinEvaluator .
 // @router /api/evaluation/v1/evaluators/debug_builtin [POST]
 func DebugBuiltinEvaluator(ctx context.Context, c *app.RequestContext) {

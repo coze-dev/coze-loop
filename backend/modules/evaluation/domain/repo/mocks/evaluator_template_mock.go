@@ -86,6 +86,20 @@ func (mr *MockEvaluatorTemplateRepoMockRecorder) GetEvaluatorTemplate(ctx, id, i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorTemplate", reflect.TypeOf((*MockEvaluatorTemplateRepo)(nil).GetEvaluatorTemplate), ctx, id, includeDeleted)
 }
 
+// IncrPopularityByID mocks base method.
+func (m *MockEvaluatorTemplateRepo) IncrPopularityByID(ctx context.Context, id int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IncrPopularityByID", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// IncrPopularityByID indicates an expected call of IncrPopularityByID.
+func (mr *MockEvaluatorTemplateRepoMockRecorder) IncrPopularityByID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrPopularityByID", reflect.TypeOf((*MockEvaluatorTemplateRepo)(nil).IncrPopularityByID), ctx, id)
+}
+
 // ListEvaluatorTemplate mocks base method.
 func (m *MockEvaluatorTemplateRepo) ListEvaluatorTemplate(ctx context.Context, req *repo.ListEvaluatorTemplateRequest) (*repo.ListEvaluatorTemplateResponse, error) {
 	m.ctrl.T.Helper()
