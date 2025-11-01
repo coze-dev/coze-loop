@@ -947,7 +947,6 @@ func Test_parseContentOutput(t *testing.T) {
 		assert.NotNil(t, output.EvaluatorResult.Score)
 		assert.InDelta(t, 0.0, *output.EvaluatorResult.Score, 0.0001)
 		assert.Contains(t, output.EvaluatorResult.Reasoning, "MINNESOTA")
-
 	})
 
 	t.Run("场景11: 未转义双引号后出现数字", func(t *testing.T) {
