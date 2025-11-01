@@ -221,11 +221,23 @@ func ConvertArgsSchemaDTO2DO(schema *commondto.ArgsSchema) *commonentity.ArgsSch
 	for _, ct := range schema.SupportContentTypes {
 		contentTypes = append(contentTypes, commonentity.ContentType(ct))
 	}
-	return &commonentity.ArgsSchema{
-		Key:                 schema.Key,
-		SupportContentTypes: contentTypes,
-		JsonSchema:          schema.JSONSchema,
+    return &commonentity.ArgsSchema{
+        Key:                 schema.Key,
+        SupportContentTypes: contentTypes,
+        JsonSchema:          schema.JSONSchema,
+        DefaultValue:        ConvertContentDTO2DO(schema.DefaultValue),
+    }
+}
+
+func ConvertArgsSchemaListDTO2DO(schemas []*commondto.ArgsSchema) []*commonentity.ArgsSchema {
+	if len(schemas) == 0 {
+		return nil
 	}
+	res := make([]*commonentity.ArgsSchema, 0, len(schemas))
+	for _, schema := range schemas {
+		res = append(res, ConvertArgsSchemaDTO2DO(schema))
+	}
+	return res
 }
 
 // ConvertArgsSchemaDO2DTO 将 ArgsSchema 结构体转换为 DTO
@@ -237,11 +249,23 @@ func ConvertArgsSchemaDO2DTO(schema *commonentity.ArgsSchema) *commondto.ArgsSch
 	for _, ct := range schema.SupportContentTypes {
 		contentTypes = append(contentTypes, string(ct))
 	}
-	return &commondto.ArgsSchema{
-		Key:                 schema.Key,
-		SupportContentTypes: contentTypes,
-		JSONSchema:          schema.JsonSchema,
+    return &commondto.ArgsSchema{
+        Key:                 schema.Key,
+        SupportContentTypes: contentTypes,
+        JSONSchema:          schema.JsonSchema,
+        DefaultValue:        ConvertContentDO2DTO(schema.DefaultValue),
+    }
+}
+
+func ConvertArgsSchemaListDO2DTO(schemas []*commonentity.ArgsSchema) []*commondto.ArgsSchema {
+	if len(schemas) == 0 {
+		return nil
 	}
+	res := make([]*commondto.ArgsSchema, 0, len(schemas))
+	for _, schema := range schemas {
+		res = append(res, ConvertArgsSchemaDO2DTO(schema))
+	}
+	return res
 }
 
 // ConvertUserInfoDTO2DO 将 DTO 转换为 UserInfo 结构体

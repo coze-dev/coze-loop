@@ -63,3 +63,9 @@ const (
 	MaxEvaluatorVersionLength     = 50
 	MaxEvaluatorVersionDescLength = 200
 )
+
+const (
+	// EvaluatorTagType 评估器标签类型
+	EvaluatorTagTypeEvaluator         int32 = 1 // 评估器标签
+	EvaluatorTagTypeEvaluatorTemplate int32 = 2 // 评估器模板标签
+)

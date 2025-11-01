@@ -60,6 +60,7 @@ struct ArgsSchema {
     2: optional list<ContentType> support_content_types (go.tag='mapstructure:"support_content_types"'),
     // 	序列化后的jsonSchema字符串，例如："{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}, \"age\": {\"type\": \"integer\"}, \"isStudent\": {\"type\": \"boolean\"}}, \"required\": [\"name\", \"age\", \"isStudent\"]}"
     3: optional string json_schema (go.tag='mapstructure:"json_schema"'),
+    4: optional Content default_value (go.tag='mapstructure:"default_value"'),
 }
 
 struct UserInfo {

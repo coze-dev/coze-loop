@@ -130,6 +130,21 @@ func (mr *MockEvaluatorServiceMockRecorder) DeleteEvaluator(ctx, evaluatorIDs, u
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).DeleteEvaluator), ctx, evaluatorIDs, userID)
 }
 
+// GetBuiltinEvaluator mocks base method.
+func (m *MockEvaluatorService) GetBuiltinEvaluator(ctx context.Context, evaluatorID int64) (*entity.Evaluator, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBuiltinEvaluator", ctx, evaluatorID)
+	ret0, _ := ret[0].(*entity.Evaluator)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBuiltinEvaluator indicates an expected call of GetBuiltinEvaluator.
+func (mr *MockEvaluatorServiceMockRecorder) GetBuiltinEvaluator(ctx, evaluatorID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBuiltinEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).GetBuiltinEvaluator), ctx, evaluatorID)
+}
+
 // GetEvaluator mocks base method.
 func (m *MockEvaluatorService) GetEvaluator(ctx context.Context, spaceID, evaluatorID int64, includeDeleted bool) (*entity.Evaluator, error) {
 	m.ctrl.T.Helper()
@@ -146,18 +161,34 @@ func (mr *MockEvaluatorServiceMockRecorder) GetEvaluator(ctx, spaceID, evaluator
 }
 
 // GetEvaluatorVersion mocks base method.
-func (m *MockEvaluatorService) GetEvaluatorVersion(ctx context.Context, evaluatorVersionID int64, includeDeleted bool) (*entity.Evaluator, error) {
+func (m *MockEvaluatorService) GetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted, withTags bool) (*entity.Evaluator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvaluatorVersion", ctx, evaluatorVersionID, includeDeleted)
+	ret := m.ctrl.Call(m, "GetEvaluatorVersion", ctx, spaceID, evaluatorVersionID, includeDeleted, withTags)
 	ret0, _ := ret[0].(*entity.Evaluator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetEvaluatorVersion indicates an expected call of GetEvaluatorVersion.
-func (mr *MockEvaluatorServiceMockRecorder) GetEvaluatorVersion(ctx, evaluatorVersionID, includeDeleted any) *gomock.Call {
+func (mr *MockEvaluatorServiceMockRecorder) GetEvaluatorVersion(ctx, spaceID, evaluatorVersionID, includeDeleted, withTags any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorVersion", reflect.TypeOf((*MockEvaluatorService)(nil).GetEvaluatorVersion), ctx, evaluatorVersionID, includeDeleted)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorVersion", reflect.TypeOf((*MockEvaluatorService)(nil).GetEvaluatorVersion), ctx, spaceID, evaluatorVersionID, includeDeleted, withTags)
+}
+
+// ListBuiltinEvaluator mocks base method.
+func (m *MockEvaluatorService) ListBuiltinEvaluator(ctx context.Context, request *entity.ListBuiltinEvaluatorRequest) ([]*entity.Evaluator, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBuiltinEvaluator", ctx, request)
+	ret0, _ := ret[0].([]*entity.Evaluator)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListBuiltinEvaluator indicates an expected call of ListBuiltinEvaluator.
+func (mr *MockEvaluatorServiceMockRecorder) ListBuiltinEvaluator(ctx, request any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBuiltinEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).ListBuiltinEvaluator), ctx, request)
 }
 
 // ListEvaluator mocks base method.
@@ -222,6 +253,20 @@ func (mr *MockEvaluatorServiceMockRecorder) SubmitEvaluatorVersion(ctx, evaluato
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitEvaluatorVersion", reflect.TypeOf((*MockEvaluatorService)(nil).SubmitEvaluatorVersion), ctx, evaluatorVersionDO, version, description, cid)
 }
 
+// UpdateBuiltinEvaluatorTags mocks base method.
+func (m *MockEvaluatorService) UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateBuiltinEvaluatorTags", ctx, evaluatorID, tags)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateBuiltinEvaluatorTags indicates an expected call of UpdateBuiltinEvaluatorTags.
+func (mr *MockEvaluatorServiceMockRecorder) UpdateBuiltinEvaluatorTags(ctx, evaluatorID, tags any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBuiltinEvaluatorTags", reflect.TypeOf((*MockEvaluatorService)(nil).UpdateBuiltinEvaluatorTags), ctx, evaluatorID, tags)
+}
+
 // UpdateEvaluatorDraft mocks base method.
 func (m *MockEvaluatorService) UpdateEvaluatorDraft(ctx context.Context, versionDO *entity.Evaluator) error {
 	m.ctrl.T.Helper()
@@ -237,15 +282,15 @@ func (mr *MockEvaluatorServiceMockRecorder) UpdateEvaluatorDraft(ctx, versionDO 
 }
 
 // UpdateEvaluatorMeta mocks base method.
-func (m *MockEvaluatorService) UpdateEvaluatorMeta(ctx context.Context, id, spaceID int64, name, description, userID string) error {
+func (m *MockEvaluatorService) UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEvaluatorMeta", ctx, id, spaceID, name, description, userID)
+	ret := m.ctrl.Call(m, "UpdateEvaluatorMeta", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateEvaluatorMeta indicates an expected call of UpdateEvaluatorMeta.
-func (mr *MockEvaluatorServiceMockRecorder) UpdateEvaluatorMeta(ctx, id, spaceID, name, description, userID any) *gomock.Call {
+func (mr *MockEvaluatorServiceMockRecorder) UpdateEvaluatorMeta(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorMeta", reflect.TypeOf((*MockEvaluatorService)(nil).UpdateEvaluatorMeta), ctx, id, spaceID, name, description, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorMeta", reflect.TypeOf((*MockEvaluatorService)(nil).UpdateEvaluatorMeta), ctx, req)
 }

@@ -117,6 +117,7 @@ type ArgsSchema struct {
 	Key                 *string       `json:"key,omitempty"`
 	SupportContentTypes []ContentType `json:"support_content_types,omitempty"`
 	JsonSchema          *string       `json:"json_schema,omitempty"`
+	DefaultValue        *Content      `json:"default_value,omitempty"`
 }
 
 // UserInfo 用户信息结构体
