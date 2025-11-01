@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	evaluatorservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
+	evaluatorapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmock "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
@@ -2293,6 +2294,1187 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 					assert.Equal(t, int32(500), *resp.EvaluatorOutputData[0].EvaluatorRunError.Code)
 					assert.Equal(t, "code execution failed", *resp.EvaluatorOutputData[0].EvaluatorRunError.Message)
 				}
+			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_ListTemplatesV2 测试 ListTemplatesV2 方法
+func TestEvaluatorHandlerImpl_ListTemplatesV2(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTemplateService := mocks.NewMockEvaluatorTemplateService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		evaluatorTemplateService: mockTemplateService,
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorservice.ListTemplatesV2Request
+		mockSetup   func()
+		wantResp    *evaluatorservice.ListTemplatesV2Response
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &evaluatorservice.ListTemplatesV2Request{
+				PageSize:   gptr.Of(int32(20)),
+				PageNumber: gptr.Of(int32(1)),
+			},
+			mockSetup: func() {
+				mockTemplateService.EXPECT().
+					ListEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(&entity.ListEvaluatorTemplateResponse{
+						Templates: []*entity.EvaluatorTemplate{
+							{
+								ID:          1,
+								Name:        "template1",
+								Description: "test template 1",
+							},
+							{
+								ID:          2,
+								Name:        "template2",
+								Description: "test template 2",
+							},
+						},
+						TotalCount: 2,
+					}, nil)
+			},
+			wantResp: &evaluatorservice.ListTemplatesV2Response{
+				Total: gptr.Of(int64(2)),
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - with pagination",
+			req: &evaluatorservice.ListTemplatesV2Request{
+				PageSize:   gptr.Of(int32(10)),
+				PageNumber: gptr.Of(int32(2)),
+			},
+			mockSetup: func() {
+				mockTemplateService.EXPECT().
+					ListEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(&entity.ListEvaluatorTemplateResponse{
+						Templates:  []*entity.EvaluatorTemplate{},
+						TotalCount: 25,
+					}, nil)
+			},
+			wantResp: &evaluatorservice.ListTemplatesV2Response{
+				Total: gptr.Of(int64(25)),
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - with filter option",
+			req: &evaluatorservice.ListTemplatesV2Request{
+				PageSize:   gptr.Of(int32(20)),
+				PageNumber: gptr.Of(int32(1)),
+				FilterOption: &evaluatordto.EvaluatorFilterOption{},
+			},
+			mockSetup: func() {
+				mockTemplateService.EXPECT().
+					ListEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(&entity.ListEvaluatorTemplateResponse{
+						Templates:  []*entity.EvaluatorTemplate{},
+						TotalCount: 0,
+					}, nil)
+			},
+			wantResp: &evaluatorservice.ListTemplatesV2Response{
+				Total: gptr.Of(int64(0)),
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - service failure",
+			req: &evaluatorservice.ListTemplatesV2Request{
+				PageSize:   gptr.Of(int32(20)),
+				PageNumber: gptr.Of(int32(1)),
+			},
+			mockSetup: func() {
+				mockTemplateService.EXPECT().
+					ListEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.ListTemplatesV2(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				if tt.wantResp.Total != nil {
+					assert.Equal(t, *tt.wantResp.Total, *resp.Total)
+				}
+			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_GetTemplateInfoV2 测试 GetTemplateInfoV2 方法
+func TestEvaluatorHandlerImpl_GetTemplateInfoV2(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTemplateService := mocks.NewMockEvaluatorTemplateService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		evaluatorTemplateService: mockTemplateService,
+	}
+
+	templateID := int64(123)
+	template := &entity.EvaluatorTemplate{
+		ID:          templateID,
+		Name:        "test template",
+		Description: "test description",
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorservice.GetTemplateInfoV2Request
+		mockSetup   func()
+		wantResp    *evaluatorservice.GetTemplateInfoV2Response
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &evaluatorservice.GetTemplateInfoV2Request{
+				EvaluatorTemplateID: templateID,
+			},
+			mockSetup: func() {
+				mockTemplateService.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), &entity.GetEvaluatorTemplateRequest{
+						ID:             templateID,
+						IncludeDeleted: false,
+					}).
+					Return(&entity.GetEvaluatorTemplateResponse{
+						Template: template,
+					}, nil)
+			},
+			wantResp: &evaluatorservice.GetTemplateInfoV2Response{
+				EvaluatorTemplate: evaluator.ConvertEvaluatorTemplateDO2DTO(template),
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - template not found",
+			req: &evaluatorservice.GetTemplateInfoV2Request{
+				EvaluatorTemplateID: templateID,
+			},
+			mockSetup: func() {
+				mockTemplateService.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(&entity.GetEvaluatorTemplateResponse{
+						Template: nil,
+					}, nil)
+			},
+			wantResp: &evaluatorservice.GetTemplateInfoV2Response{},
+			wantErr:  false,
+		},
+		{
+			name: "error - service failure",
+			req: &evaluatorservice.GetTemplateInfoV2Request{
+				EvaluatorTemplateID: templateID,
+			},
+			mockSetup: func() {
+				mockTemplateService.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.GetTemplateInfoV2(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				if tt.wantResp.EvaluatorTemplate != nil {
+					assert.Equal(t, templateID, resp.GetEvaluatorTemplate().GetID())
+				}
+			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_CreateEvaluatorTemplate 测试 CreateEvaluatorTemplate 方法
+func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTemplateService := mocks.NewMockEvaluatorTemplateService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		evaluatorTemplateService: mockTemplateService,
+		configer:                 mockConfiger,
+		auth:                     mockAuth,
+	}
+
+	workspaceID := int64(123)
+	templateDTO := &evaluatordto.EvaluatorTemplate{
+		ID:          gptr.Of(int64(1)),
+		WorkspaceID: gptr.Of(workspaceID),
+		Name:        gptr.Of("test template"),
+		Description: gptr.Of("test description"),
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorapi.CreateEvaluatorTemplateRequest
+		mockSetup   func()
+		wantResp    *evaluatorapi.CreateEvaluatorTemplateResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &evaluatorapi.CreateEvaluatorTemplateRequest{
+				EvaluatorTemplate: templateDTO,
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{"123"})
+
+				mockTemplateService.EXPECT().
+					CreateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(&entity.CreateEvaluatorTemplateResponse{
+						Template: evaluator.ConvertEvaluatorTemplateDTO2DO(templateDTO),
+					}, nil)
+			},
+			wantResp: &evaluatorapi.CreateEvaluatorTemplateResponse{
+				EvaluatorTemplate: templateDTO,
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - nil template",
+			req: &evaluatorapi.CreateEvaluatorTemplateRequest{
+				EvaluatorTemplate: nil,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - auth failed",
+			req: &evaluatorapi.CreateEvaluatorTemplateRequest{
+				EvaluatorTemplate: &evaluatordto.EvaluatorTemplate{
+					ID:          gptr.Of(int64(1)),
+					WorkspaceID: gptr.Of(int64(789)), // 不在允许列表中
+					Name:        gptr.Of("test template"),
+					Description: gptr.Of("test description"),
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{"123"})
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - service failure",
+			req: &evaluatorapi.CreateEvaluatorTemplateRequest{
+				EvaluatorTemplate: templateDTO,
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{"123"})
+
+				mockTemplateService.EXPECT().
+					CreateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.CreateEvaluatorTemplate(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.NotNil(t, resp.EvaluatorTemplate)
+			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate 测试 UpdateEvaluatorTemplate 方法
+func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTemplateService := mocks.NewMockEvaluatorTemplateService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		evaluatorTemplateService: mockTemplateService,
+		configer:                 mockConfiger,
+		auth:                     mockAuth,
+	}
+
+	templateID := int64(123)
+	workspaceID := int64(456)
+	templateDTO := &evaluatordto.EvaluatorTemplate{
+		ID:          gptr.Of(templateID),
+		WorkspaceID: gptr.Of(workspaceID),
+		Name:        gptr.Of("updated template"),
+		Description: gptr.Of("updated description"),
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorapi.UpdateEvaluatorTemplateRequest
+		mockSetup   func()
+		wantResp    *evaluatorapi.UpdateEvaluatorTemplateResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &evaluatorapi.UpdateEvaluatorTemplateRequest{
+				EvaluatorTemplateID: templateID,
+				EvaluatorTemplate:   templateDTO,
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{"456"})
+
+				mockTemplateService.EXPECT().
+					UpdateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(&entity.UpdateEvaluatorTemplateResponse{
+						Template: evaluator.ConvertEvaluatorTemplateDTO2DO(templateDTO),
+					}, nil)
+			},
+			wantResp: &evaluatorapi.UpdateEvaluatorTemplateResponse{
+				EvaluatorTemplate: templateDTO,
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - nil template",
+			req: &evaluatorapi.UpdateEvaluatorTemplateRequest{
+				EvaluatorTemplateID: templateID,
+				EvaluatorTemplate:   nil,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - auth failed",
+			req: &evaluatorapi.UpdateEvaluatorTemplateRequest{
+				EvaluatorTemplateID: templateID,
+				EvaluatorTemplate: &evaluatordto.EvaluatorTemplate{
+					ID:          gptr.Of(templateID),
+					WorkspaceID: gptr.Of(int64(789)), // 不在允许列表中
+					Name:        gptr.Of("updated template"),
+					Description: gptr.Of("updated description"),
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{"456"})
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - service failure",
+			req: &evaluatorapi.UpdateEvaluatorTemplateRequest{
+				EvaluatorTemplateID: templateID,
+				EvaluatorTemplate:   templateDTO,
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{"456"})
+
+				mockTemplateService.EXPECT().
+					UpdateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.UpdateEvaluatorTemplate(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.NotNil(t, resp.EvaluatorTemplate)
+			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate 测试 DeleteEvaluatorTemplate 方法
+func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTemplateService := mocks.NewMockEvaluatorTemplateService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		evaluatorTemplateService: mockTemplateService,
+		configer:                 mockConfiger,
+		auth:                     mockAuth,
+	}
+
+	templateID := int64(123)
+	workspaceID := int64(456)
+	template := &entity.EvaluatorTemplate{
+		ID:      templateID,
+		SpaceID: workspaceID,
+		Name:    "test template",
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorapi.DeleteEvaluatorTemplateRequest
+		mockSetup   func()
+		wantResp    *evaluatorapi.DeleteEvaluatorTemplateResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &evaluatorapi.DeleteEvaluatorTemplateRequest{
+				EvaluatorTemplateID: templateID,
+			},
+			mockSetup: func() {
+				mockTemplateService.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), &entity.GetEvaluatorTemplateRequest{
+						ID:             templateID,
+						IncludeDeleted: false,
+					}).
+					Return(&entity.GetEvaluatorTemplateResponse{
+						Template: template,
+					}, nil)
+
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{"456"})
+
+				mockTemplateService.EXPECT().
+					DeleteEvaluatorTemplate(gomock.Any(), &entity.DeleteEvaluatorTemplateRequest{
+						ID: templateID,
+					}).
+					Return(&entity.DeleteEvaluatorTemplateResponse{}, nil)
+			},
+			wantResp: &evaluatorapi.DeleteEvaluatorTemplateResponse{},
+			wantErr:  false,
+		},
+		{
+			name: "error - template id is 0",
+			req: &evaluatorapi.DeleteEvaluatorTemplateRequest{
+				EvaluatorTemplateID: 0,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - template not found",
+			req: &evaluatorapi.DeleteEvaluatorTemplateRequest{
+				EvaluatorTemplateID: templateID,
+			},
+			mockSetup: func() {
+				mockTemplateService.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(&entity.GetEvaluatorTemplateResponse{
+						Template: nil,
+					}, nil)
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "error - auth failed",
+			req: &evaluatorapi.DeleteEvaluatorTemplateRequest{
+				EvaluatorTemplateID: templateID,
+			},
+			mockSetup: func() {
+				// 使用不在允许列表中的workspaceID的template
+				testTemplate := &entity.EvaluatorTemplate{
+					ID:      templateID,
+					SpaceID: 789, // 不在允许列表中
+					Name:    "test template",
+				}
+				mockTemplateService.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					Return(&entity.GetEvaluatorTemplateResponse{
+						Template: testTemplate,
+					}, nil)
+
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{"456"})
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.DeleteEvaluatorTemplate(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_DebugBuiltinEvaluator 测试 DebugBuiltinEvaluator 方法
+func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		evaluatorService: mockEvaluatorService,
+		auth:             mockAuth,
+	}
+
+	evaluatorID := int64(123)
+	workspaceID := int64(456)
+	builtinEvaluator := &entity.Evaluator{
+		ID:      evaluatorID,
+		SpaceID: workspaceID,
+		Name:    "builtin evaluator",
+		Builtin: true,
+	}
+
+	inputData := &evaluatordto.EvaluatorInputData{
+		InputFields: map[string]*common.Content{
+			"input": {
+				ContentType: gptr.Of(common.ContentTypeText),
+				Text:        gptr.Of("test input"),
+			},
+		},
+	}
+
+	outputData := &entity.EvaluatorOutputData{
+		EvaluatorResult: &entity.EvaluatorResult{
+			Score:     gptr.Of(0.85),
+			Reasoning: "test result",
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorapi.DebugBuiltinEvaluatorRequest
+		mockSetup   func()
+		wantResp    *evaluatorapi.DebugBuiltinEvaluatorResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &evaluatorapi.DebugBuiltinEvaluatorRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: workspaceID,
+				InputData:   inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(workspaceID, 10),
+						SpaceID:       workspaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+					}).
+					Return(nil)
+
+				mockEvaluatorService.EXPECT().
+					GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(builtinEvaluator, nil)
+
+				mockEvaluatorService.EXPECT().
+					DebugEvaluator(gomock.Any(), builtinEvaluator, gomock.Any()).
+					Return(outputData, nil)
+			},
+			wantResp: &evaluatorapi.DebugBuiltinEvaluatorResponse{
+				OutputData: evaluator.ConvertEvaluatorOutputDataDO2DTO(outputData),
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - auth failed",
+			req: &evaluatorapi.DebugBuiltinEvaluatorRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: workspaceID,
+				InputData:   inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - evaluator not found",
+			req: &evaluatorapi.DebugBuiltinEvaluatorRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: workspaceID,
+				InputData:   inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				mockEvaluatorService.EXPECT().
+					GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(nil, nil)
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.EvaluatorNotExistCode,
+		},
+		{
+			name: "error - debug failure",
+			req: &evaluatorapi.DebugBuiltinEvaluatorRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: workspaceID,
+				InputData:   inputData,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				mockEvaluatorService.EXPECT().
+					GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(builtinEvaluator, nil)
+
+				mockEvaluatorService.EXPECT().
+					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.DebugBuiltinEvaluator(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.NotNil(t, resp.OutputData)
+			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_UpdateBuiltinEvaluatorTags 测试 UpdateBuiltinEvaluatorTags 方法
+func TestEvaluatorHandlerImpl_UpdateBuiltinEvaluatorTags(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		evaluatorService: mockEvaluatorService,
+		configer:         mockConfiger,
+		auth:             mockAuth,
+	}
+
+	evaluatorID := int64(123)
+	workspaceID := int64(456)
+	evaluatorDO := &entity.Evaluator{
+		ID:      evaluatorID,
+		SpaceID: workspaceID,
+		Name:    "builtin evaluator",
+		Builtin: true,
+	}
+
+	tags := map[string]map[string][]string{
+		evaluatordto.EvaluatorTagLangTypeZh: {
+			evaluatordto.EvaluatorTagKeyCategory: {"category1", "category2"},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorservice.UpdateBuiltinEvaluatorTagsRequest
+		mockSetup   func()
+		wantResp    *evaluatorservice.UpdateBuiltinEvaluatorTagsResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &evaluatorservice.UpdateBuiltinEvaluatorTagsRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: gptr.Of(workspaceID),
+				Tags:        tags,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(evaluatorDO, nil)
+
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{"456"})
+
+				mockEvaluatorService.EXPECT().
+					UpdateBuiltinEvaluatorTags(gomock.Any(), evaluatorID, gomock.Any()).
+					Return(nil)
+			},
+			wantResp: &evaluatorservice.UpdateBuiltinEvaluatorTagsResponse{
+				Evaluator: evaluator.ConvertEvaluatorDO2DTO(evaluatorDO),
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - evaluator not found",
+			req: &evaluatorservice.UpdateBuiltinEvaluatorTagsRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: gptr.Of(workspaceID),
+				Tags:        tags,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.EvaluatorNotExistCode,
+		},
+		{
+			name: "error - auth failed",
+			req: &evaluatorservice.UpdateBuiltinEvaluatorTagsRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: gptr.Of(int64(789)), // 不在允许列表中
+				Tags:        tags,
+			},
+			mockSetup: func() {
+				testEvaluatorDO := &entity.Evaluator{
+					ID:      evaluatorID,
+					SpaceID: 789, // 不在允许列表中
+					Name:    "builtin evaluator",
+					Builtin: true,
+				}
+				mockEvaluatorService.EXPECT().
+					GetEvaluator(gomock.Any(), int64(789), evaluatorID, false).
+					Return(testEvaluatorDO, nil)
+
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{"456"})
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - service failure",
+			req: &evaluatorservice.UpdateBuiltinEvaluatorTagsRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: gptr.Of(workspaceID),
+				Tags:        tags,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(evaluatorDO, nil)
+
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{"456"})
+
+				mockEvaluatorService.EXPECT().
+					UpdateBuiltinEvaluatorTags(gomock.Any(), evaluatorID, gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.UpdateBuiltinEvaluatorTags(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.NotNil(t, resp.Evaluator)
+			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_ListEvaluatorTags 测试 ListEvaluatorTags 方法
+func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		configer: mockConfiger,
+	}
+
+	tags := map[string][]string{
+		evaluatordto.EvaluatorTagKeyCategory: {"category1", "category2"},
+		evaluatordto.EvaluatorTagKeyTargetType: {"domain1"},
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorservice.ListEvaluatorTagsRequest
+		mockSetup   func()
+		wantResp    *evaluatorservice.ListEvaluatorTagsResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req:   &evaluatorservice.ListEvaluatorTagsRequest{},
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTagConf(gomock.Any()).
+					Return(tags)
+			},
+			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
+				Tags: tags,
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - empty tags",
+			req:   &evaluatorservice.ListEvaluatorTagsRequest{},
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTagConf(gomock.Any()).
+					Return(map[string][]string{})
+			},
+			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
+				Tags: map[string][]string{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - tags sorted",
+			req:   &evaluatorservice.ListEvaluatorTagsRequest{},
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTagConf(gomock.Any()).
+					Return(map[string][]string{
+						evaluatordto.EvaluatorTagKeyCategory: {"z", "a", "m"},
+						evaluatordto.EvaluatorTagKeyTargetType: {"x", "b"},
+					})
+			},
+			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
+				Tags: map[string][]string{
+					evaluatordto.EvaluatorTagKeyCategory: {"a", "m", "z"},
+					evaluatordto.EvaluatorTagKeyTargetType: {"b", "x"},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.ListEvaluatorTags(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				if tt.wantResp.Tags != nil {
+					// 验证标签是否已排序
+					for key, expectedValues := range tt.wantResp.Tags {
+						actualValues := resp.Tags[key]
+						assert.Equal(t, expectedValues, actualValues, "Tags for key %v should be sorted", key)
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestEvaluatorHandlerImpl_authBuiltinManagement 测试 authBuiltinManagement 方法
+func TestEvaluatorHandlerImpl_authBuiltinManagement(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		configer: mockConfiger,
+		auth:     mockAuth,
+	}
+
+	tests := []struct {
+		name        string
+		workspaceID int64
+		spaceType   SpaceType
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name:        "success - workspace in allowed list for builtin",
+			workspaceID: 123,
+			spaceType:   spaceTypeBuiltin,
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{"123", "456"})
+			},
+			wantErr: false,
+		},
+		{
+			name:        "success - workspace in allowed list for template",
+			workspaceID: 456,
+			spaceType:   spaceTypeTemplate,
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{"123", "456"})
+			},
+			wantErr: false,
+		},
+		{
+			name:        "error - empty config for builtin",
+			workspaceID: 123,
+			spaceType:   spaceTypeBuiltin,
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{})
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name:        "error - empty config for template",
+			workspaceID: 123,
+			spaceType:   spaceTypeTemplate,
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetEvaluatorTemplateSpaceConf(gomock.Any()).
+					Return([]string{})
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name:        "error - workspace not in allowed list",
+			workspaceID: 789,
+			spaceType:   spaceTypeBuiltin,
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{"123", "456"})
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name:        "error - auth failed",
+			workspaceID: 789,
+			spaceType:   spaceTypeBuiltin,
+			mockSetup: func() {
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{"123", "456"})
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			err := app.authBuiltinManagement(context.Background(), tt.workspaceID, tt.spaceType)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
