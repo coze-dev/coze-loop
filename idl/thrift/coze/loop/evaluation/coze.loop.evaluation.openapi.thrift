@@ -318,7 +318,7 @@ struct SubmitExperimentOApiRequest {
 
     // 三元组信息
     4: optional SubmitExperimentEvalSetParam eval_set_param (api.body = 'eval_set_param')
-    5: optional list<SubmitExperimentEvaluatorParam> evaluator_params (api.body = 'evaluator_param')
+    5: optional list<SubmitExperimentEvaluatorParam> evaluator_params (api.body = 'evaluator_params')
     6: optional SubmitExperimentEvalTargetParam eval_target_param (api.body = 'eval_target_param')
 
     7: optional experiment.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
