@@ -13,6 +13,11 @@ struct ModelConfig {
     8: optional i32 top_k
     9: optional double presence_penalty
     10: optional double frequency_penalty
+    11: optional Thinking thinking
+}
+
+struct Thinking {
+    1: optional ThinkingOption thinking_option
 }
 
 struct Message {
@@ -118,3 +123,8 @@ typedef string ImageURLDetail (ts.enum="true")
 const ImageURLDetail image_url_detail_auto = "auto"
 const ImageURLDetail image_url_detail_low = "low"
 const ImageURLDetail image_url_detail_high = "high"
+
+typedef string ThinkingOption (ts.enum="true")
+const ThinkingOption thinking_option_disabled = "disabled"
+const ThinkingOption thinking_option_enabled = "enabled"
+const ThinkingOption thinking_option_auto = "auto"
