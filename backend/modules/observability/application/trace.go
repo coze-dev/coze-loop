@@ -6,7 +6,6 @@ package application
 import (
 	"context"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -1024,41 +1023,37 @@ type GetDisplayInfoResponse struct {
 }
 
 func (t *TraceApplication) GetDisplayInfo(ctx context.Context, req *GetDisplayInfoRequest) GetDisplayInfoResponse {
-	resp := GetDisplayInfoResponse{}
 	if len(req.UserIDs) == 0 && len(req.EvaluatorIDs) == 0 && len(req.TagKeyIDs) == 0 {
-		return resp
+		return GetDisplayInfoResponse{}
 	}
 	var (
-		g    errgroup.Group
-		lock sync.Mutex
+		g       errgroup.Group
+		userMap map[string]*commdo.UserInfo
+		evalMap map[int64]*rpc.Evaluator
+		tagMap  map[int64]*rpc.TagInfo
 	)
 	g.Go(func() error {
 		defer goroutine.Recovery(ctx)
-		_, userMap, _ := t.userSvc.GetUserInfo(ctx, req.UserIDs)
-		lock.Lock()
-		defer lock.Unlock()
-		resp.UserMap = userMap
+		_, userMap, _ = t.userSvc.GetUserInfo(ctx, req.UserIDs)
 		return nil
 	})
 	g.Go(func() error {
 		defer goroutine.Recovery(ctx)
-		_, evalMap, _ := t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+		_, evalMap, _ = t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
 			WorkspaceID:         req.WorkspaceID,
 			EvaluatorVersionIds: req.EvaluatorIDs,
 		})
-		lock.Lock()
-		defer lock.Unlock()
-		resp.EvalMap = evalMap
 		return nil
 	})
 	g.Go(func() error {
 		defer goroutine.Recovery(ctx)
-		tagMap, _ := t.tagSvc.BatchGetTagInfo(ctx, req.WorkspaceID, req.TagKeyIDs)
-		lock.Lock()
-		defer lock.Unlock()
-		resp.TagMap = tagMap
+		tagMap, _ = t.tagSvc.BatchGetTagInfo(ctx, req.WorkspaceID, req.TagKeyIDs)
 		return nil
 	})
 	_ = g.Wait()
-	return resp
+	return GetDisplayInfoResponse{
+		UserMap: userMap,
+		EvalMap: evalMap,
+		TagMap:  tagMap,
+	}
 }
