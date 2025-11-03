@@ -38,21 +38,21 @@ type IAnnotationDao interface {
 type Annotation struct {
 	ID              string   `json:"id"`
 	SpanID          string   `json:"span_id"`
-	TraceID         string   `gorm:"column:trace_id;type:String;not null" json:"trace_id"`
-	StartTime       int64    `gorm:"column:start_time;type:Int64;not null" json:"start_time"`
-	SpaceID         string   `gorm:"column:space_id;type:String;not null" json:"space_id"`
-	AnnotationType  string   `gorm:"column:annotation_type;type:String;not null" json:"annotation_type"`
-	AnnotationIndex []string `gorm:"column:annotation_index;type:Array(String);not null" json:"annotation_index"`
-	Key             string   `gorm:"column:key;type:String;not null" json:"key"`
-	ValueType       string   `gorm:"column:value_type;type:String;not null" json:"value_type"`
-	ValueString     string   `gorm:"column:value_string;type:String;not null" json:"value_string"`
-	ValueLong       int64    `gorm:"column:value_long;type:Int64;not null" json:"value_long"`
-	ValueFloat      float64  `gorm:"column:value_float;type:Float64;not null" json:"value_float"`
-	ValueBool       bool     `gorm:"column:value_bool;type:Bool;not null" json:"value_bool"`
-	Reasoning       string   `gorm:"column:reasoning;type:String;not null" json:"reasoning"`
-	Correction      string   `gorm:"column:correction;type:String;not null" json:"correction"`
-	Metadata        string   `gorm:"column:metadata;type:String;not null" json:"metadata"`
-	Status          string   `gorm:"column:status;type:String;not null" json:"status"`
+	TraceID         string   `json:"trace_id"`
+	StartTime       int64    `json:"start_time"`
+	SpaceID         string   `json:"space_id"`
+	AnnotationType  string   `json:"annotation_type"`
+	AnnotationIndex []string `json:"annotation_index"`
+	Key             string   `json:"key"`
+	ValueType       string   `json:"value_type"`
+	ValueString     string   `json:"value_string"`
+	ValueLong       int64    `json:"value_long"`
+	ValueFloat      float64  `json:"value_float"`
+	ValueBool       bool     `json:"value_bool"`
+	Reasoning       string   `json:"reasoning"`
+	Correction      string   `json:"correction"`
+	Metadata        string   `json:"metadata"`
+	Status          string   `json:"status"`
 	CreatedBy       string   `json:"created_by"`
 	CreatedAt       uint64   `json:"created_at"`
 	UpdatedBy       string   `json:"updated_by"`
