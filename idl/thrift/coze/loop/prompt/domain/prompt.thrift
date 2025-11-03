@@ -98,7 +98,17 @@ struct ModelConfig {
     6: optional double presence_penalty
     7: optional double frequency_penalty
     8: optional bool json_mode
+    9: optional Thinking thinking
 }
+
+struct Thinking {
+    1: optional ThinkingOption thinking_option
+}
+
+typedef string ThinkingOption (ts.enum="true")
+const ThinkingOption thinking_option_disabled = "disabled"
+const ThinkingOption thinking_option_enabled = "enabled"
+const ThinkingOption thinking_option_auto = "auto"
 
 struct Message {
     1: optional Role role
