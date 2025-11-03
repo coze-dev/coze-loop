@@ -771,7 +771,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		if err != nil {
 			return nil, err
 		}
-		if len(versions) == 0 {
+		if len(version) == 0 {
 			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
 		}
 		evaluatorVersionIDs = append(evaluatorVersionIDs, version[0].ID)
