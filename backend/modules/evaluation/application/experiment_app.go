@@ -1268,10 +1268,10 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 
 	var startTime, endTime *int64
 	if got.StartAt != nil {
-		startTime = gptr.Of(got.StartAt.Unix())
+		startTime = gptr.Of(got.StartAt.UnixMilli())
 	}
 	if got.EndAt != nil {
-		endTime = gptr.Of(got.EndAt.Unix())
+		endTime = gptr.Of(got.EndAt.UnixMilli())
 	}
 
 	recordID, err := e.CreateAnalysisRecord(ctx, &entity.ExptInsightAnalysisRecord{
