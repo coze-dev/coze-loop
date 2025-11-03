@@ -57,7 +57,6 @@ import (
 	ck2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/tls"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
@@ -319,15 +318,7 @@ func buildTraceRepoOptions(ckProvider ck.Provider) ([]repo.TraceRepoOption, erro
 	if err != nil {
 		return nil, err
 	}
-	tlsSpanDao, err := tls.NewSpansTLSDaoImpl()
-	if err != nil {
-		return nil, err
-	}
-	tlsAnnoDao, err := tls.NewAnnotationTLSDaoImpl()
-	if err != nil {
-		return nil, err
-	}
-	return []repo.TraceRepoOption{repo.WithTraceStorageDaos(ck2.TraceStorageTypeCK, ckSpanDao, ckAnnoDao), repo.WithTraceStorageDaos(tls.TraceStorageTypeTLS, tlsSpanDao, tlsAnnoDao)}, nil
+	return []repo.TraceRepoOption{repo.WithTraceStorageDaos(ck2.TraceStorageTypeCK, ckSpanDao, ckAnnoDao)}, nil
 }
 
 func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {

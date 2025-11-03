@@ -57,7 +57,6 @@ import (
 	ckdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	mysqldao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	tredis "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
-	tlsdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/tls"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
@@ -182,17 +181,8 @@ func buildTraceRepoOptions(ckProvider ck.Provider) ([]obrepo.TraceRepoOption, er
 	if err != nil {
 		return nil, err
 	}
-	tlsSpanDao, err := tlsdao.NewSpansTLSDaoImpl()
-	if err != nil {
-		return nil, err
-	}
-	tlsAnnoDao, err := tlsdao.NewAnnotationTLSDaoImpl()
-	if err != nil {
-		return nil, err
-	}
 	return []obrepo.TraceRepoOption{
 		obrepo.WithTraceStorageDaos(ckdao.TraceStorageTypeCK, ckSpanDao, ckAnnoDao),
-		obrepo.WithTraceStorageDaos(tlsdao.TraceStorageTypeTLS, tlsSpanDao, tlsAnnoDao),
 	}, nil
 }
 
