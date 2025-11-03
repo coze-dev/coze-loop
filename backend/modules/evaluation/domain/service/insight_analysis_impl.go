@@ -55,18 +55,20 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 	}
 }
 
-func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, session *entity.Session) (int64, error) {
+func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, session *entity.Session, startTime, endTime int64) (int64, error) {
 	recordID, err := e.repo.CreateAnalysisRecord(ctx, record)
 	if err != nil {
 		return 0, err
 	}
 
 	exportEvent := &entity.ExportCSVEvent{
-		ExportID:     recordID,
-		ExperimentID: record.ExptID,
-		SpaceID:      record.SpaceID,
-		ExportScene:  entity.ExportSceneInsightAnalysis,
-		CreatedAt:    time.Now().Unix(),
+		ExportID:      recordID,
+		ExperimentID:  record.ExptID,
+		SpaceID:       record.SpaceID,
+		ExportScene:   entity.ExportSceneInsightAnalysis,
+		CreatedAt:     time.Now().Unix(),
+		ExptStartTime: startTime,
+		ExptEndTime:   endTime,
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Second*3))
 	if err != nil {
@@ -76,7 +78,7 @@ func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context
 	return recordID, nil
 }
 
-func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID, CreateAt int64) (err error) {
+func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID, CreateAt, startTime, endTime int64) (err error) {
 	analysisRecord, err := e.repo.GetAnalysisRecordByID(ctx, spaceID, exptID, recordID)
 	if err != nil {
 		return err
@@ -125,7 +127,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		return err
 	}
 
-	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url)
+	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url, startTime, endTime)
 	if err != nil {
 		return err
 	}
@@ -135,11 +137,13 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 
 	// 发送时间检查分析报告生成状态
 	exportEvent := &entity.ExportCSVEvent{
-		ExportID:     recordID,
-		ExperimentID: exptID,
-		SpaceID:      spaceID,
-		ExportScene:  entity.ExportSceneInsightAnalysis,
-		CreatedAt:    CreateAt,
+		ExportID:      recordID,
+		ExperimentID:  exptID,
+		SpaceID:       spaceID,
+		ExportScene:   entity.ExportSceneInsightAnalysis,
+		CreatedAt:     CreateAt,
+		ExptStartTime: startTime, // 传递开始时间
+		ExptEndTime:   endTime,   // 传递结束时间
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Minute*3))
 	if err != nil {
