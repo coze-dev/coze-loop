@@ -142,8 +142,8 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		SpaceID:       spaceID,
 		ExportScene:   entity.ExportSceneInsightAnalysis,
 		CreatedAt:     CreateAt,
-		ExptStartTime: startTime, // 传递开始时间
-		ExptEndTime:   endTime,   // 传递结束时间
+		ExptStartTime: startTime,
+		ExptEndTime:   endTime,
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Minute*3))
 	if err != nil {
