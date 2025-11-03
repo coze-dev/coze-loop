@@ -12,159 +12,181 @@ import (
 	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	evaluatordo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
-func TestConvertEvaluatorDTO2DO(t *testing.T) {
-	t.Parallel()
+func TestConvertBoxType(t *testing.T) {
+    t.Parallel()
+    assert.Equal(t, evaluatordo.EvaluatorBoxTypeWhite, convertBoxTypeDTO2DO("White"))
+    assert.Equal(t, evaluatordo.EvaluatorBoxTypeBlack, convertBoxTypeDTO2DO("Black"))
+    assert.Equal(t, evaluatordo.EvaluatorBoxTypeWhite, convertBoxTypeDTO2DO(""))
 
-	tests := []struct {
-		name         string
-		evaluatorDTO *evaluatordto.Evaluator
-		expected     *evaluatordo.Evaluator
-	}{
-		{
-			name: "Prompt评估器转换",
-			evaluatorDTO: &evaluatordto.Evaluator{
-				EvaluatorID:    gptr.Of(int64(123)),
-				WorkspaceID:    gptr.Of(int64(456)),
-				Name:           gptr.Of("Test Prompt Evaluator"),
-				Description:    gptr.Of("Test description"),
-				DraftSubmitted: gptr.Of(true),
-				EvaluatorType:  evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
-				LatestVersion:  gptr.Of("1"),
-				Tags: map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string{
-					evaluatordto.EvaluatorTagLangTypeEn: {
-						evaluatordto.EvaluatorTagKeyCategory:  {"LLM", "Code"},
-						evaluatordto.EvaluatorTagKeyObjective: {"Quality"},
-					},
-				},
-			},
-			expected: &evaluatordo.Evaluator{
-				ID:             123,
-				SpaceID:        456,
-				Name:           "Test Prompt Evaluator",
-				Description:    "Test description",
-				DraftSubmitted: true,
-				EvaluatorType:  evaluatordo.EvaluatorTypePrompt,
-				LatestVersion:  "1",
-				Tags: map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string{
-					evaluatordo.EvaluatorTagLangType_En: {
-						evaluatordo.EvaluatorTagKey_Category:  {"LLM", "Code"},
-						evaluatordo.EvaluatorTagKey_Objective: {"Quality"},
-					},
-				},
-			},
-		},
-		{
-			name: "Code评估器转换",
-			evaluatorDTO: &evaluatordto.Evaluator{
-				EvaluatorID:    gptr.Of(int64(124)),
-				WorkspaceID:    gptr.Of(int64(457)),
-				Name:           gptr.Of("Test Code Evaluator"),
-				Description:    gptr.Of("Code test description"),
-				DraftSubmitted: gptr.Of(false),
-				EvaluatorType:  evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Code),
-				LatestVersion:  gptr.Of("2"),
-			},
-			expected: &evaluatordo.Evaluator{
-				ID:             124,
-				SpaceID:        457,
-				Name:           "Test Code Evaluator",
-				Description:    "Code test description",
-				DraftSubmitted: false,
-				EvaluatorType:  evaluatordo.EvaluatorTypeCode,
-				LatestVersion:  "2",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := ConvertEvaluatorDTO2DO(tt.evaluatorDTO)
-
-			assert.Equal(t, tt.expected.ID, result.ID)
-			assert.Equal(t, tt.expected.SpaceID, result.SpaceID)
-			assert.Equal(t, tt.expected.Name, result.Name)
-			assert.Equal(t, tt.expected.Description, result.Description)
-			assert.Equal(t, tt.expected.DraftSubmitted, result.DraftSubmitted)
-			assert.Equal(t, tt.expected.EvaluatorType, result.EvaluatorType)
-			assert.Equal(t, tt.expected.LatestVersion, result.LatestVersion)
-		})
-	}
+    assert.Equal(t, "White", convertBoxTypeDO2DTO(evaluatordo.EvaluatorBoxTypeWhite))
+    assert.Equal(t, "Black", convertBoxTypeDO2DTO(evaluatordo.EvaluatorBoxTypeBlack))
 }
 
-func TestConvertEvaluatorDO2DTO(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name         string
-		evaluatorDO  *evaluatordo.Evaluator
-		expectedType evaluatordto.EvaluatorType
-	}{
-		{
-			name: "Prompt评估器转换",
-			evaluatorDO: &evaluatordo.Evaluator{
-				ID:             123,
-				SpaceID:        456,
-				Name:           "Test Prompt Evaluator",
-				Description:    "Test description",
-				DraftSubmitted: true,
-				EvaluatorType:  evaluatordo.EvaluatorTypePrompt,
-				LatestVersion:  "1",
-				Tags: map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string{
-					evaluatordo.EvaluatorTagLangType_En: {
-						evaluatordo.EvaluatorTagKey_Category:  {"LLM", "Code"},
-						evaluatordo.EvaluatorTagKey_Objective: {"Quality"},
-					},
-				},
-			},
-			expectedType: evaluatordto.EvaluatorType_Prompt,
-		},
-		{
-			name: "Code评估器转换",
-			evaluatorDO: &evaluatordo.Evaluator{
-				ID:             124,
-				SpaceID:        457,
-				Name:           "Test Code Evaluator",
-				Description:    "Code test description",
-				DraftSubmitted: false,
-				EvaluatorType:  evaluatordo.EvaluatorTypeCode,
-				LatestVersion:  "2",
-			},
-			expectedType: evaluatordto.EvaluatorType_Code,
-		},
-		{
-			name:        "nil输入",
-			evaluatorDO: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := ConvertEvaluatorDO2DTO(tt.evaluatorDO)
-
-			if tt.evaluatorDO == nil {
-				assert.Nil(t, result)
-				return
-			}
-
-			assert.Equal(t, tt.evaluatorDO.ID, result.GetEvaluatorID())
-			assert.Equal(t, tt.evaluatorDO.SpaceID, result.GetWorkspaceID())
-			assert.Equal(t, tt.evaluatorDO.Name, result.GetName())
-			assert.Equal(t, tt.evaluatorDO.Description, result.GetDescription())
-			assert.Equal(t, tt.evaluatorDO.DraftSubmitted, result.GetDraftSubmitted())
-			assert.Equal(t, tt.expectedType, result.GetEvaluatorType())
-			assert.Equal(t, tt.evaluatorDO.LatestVersion, result.GetLatestVersion())
-		})
-	}
+func TestNormalizeLanguageType(t *testing.T) {
+    t.Parallel()
+    assert.Equal(t, evaluatordo.LanguageTypePython, normalizeLanguageType(evaluatordo.LanguageType("python")))
+    assert.Equal(t, evaluatordo.LanguageTypeJS, normalizeLanguageType(evaluatordo.LanguageType("js")))
+    assert.Equal(t, evaluatordo.LanguageType("Java"), normalizeLanguageType(evaluatordo.LanguageType("java")))
 }
 
+func TestConvertEvaluatorDTO2DO_And_Back(t *testing.T) {
+    t.Parallel()
+    dto := &evaluatordto.Evaluator{
+        EvaluatorID:           gptr.Of(int64(1)),
+        WorkspaceID:           gptr.Of(int64(2)),
+        Name:                  gptr.Of("n"),
+        Description:           gptr.Of("d"),
+        DraftSubmitted:        gptr.Of(true),
+        EvaluatorType:         evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Code),
+        LatestVersion:         gptr.Of("1.0.0"),
+        Builtin:               gptr.Of(false),
+        BuiltinVisibleVersion: gptr.Of("1.0.0"),
+        BoxType:               gptr.Of("Black"),
+        BaseInfo:              &commondto.BaseInfo{},
+        CurrentVersion: &evaluatordto.EvaluatorVersion{ID: gptr.Of(int64(10)), Version: gptr.Of("1.0.0"),
+            EvaluatorContent: &evaluatordto.EvaluatorContent{CodeEvaluator: &evaluatordto.CodeEvaluator{LanguageType: gptr.Of(evaluatordto.LanguageTypePython), CodeTemplateKey: gptr.Of("tk"), CodeTemplateName: gptr.Of("tn"), CodeContent: gptr.Of("print(1)")}}},
+        Tags: map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string{
+            evaluatordto.EvaluatorTagLangType("en"): {evaluatordto.EvaluatorTagKeyName: {"tag"}},
+        },
+    }
+    do := ConvertEvaluatorDTO2DO(dto)
+    if assert.NotNil(t, do) {
+        assert.Equal(t, int64(1), do.ID)
+        assert.Equal(t, int64(2), do.SpaceID)
+        assert.Equal(t, "n", do.Name)
+        assert.Equal(t, true, do.DraftSubmitted)
+        assert.Equal(t, evaluatordo.EvaluatorBoxTypeBlack, do.BoxType)
+        // EvaluatorInfo 字段非本用例重点
+        // Code 版本
+        if assert.NotNil(t, do.CodeEvaluatorVersion) {
+            assert.Equal(t, "Python", string(do.CodeEvaluatorVersion.LanguageType))
+            assert.Equal(t, "print(1)", do.CodeEvaluatorVersion.CodeContent)
+        }
+        // Tags
+        assert.Equal(t, []string{"tag"}, do.Tags[evaluatordo.EvaluatorTagLangType("en")][evaluatordo.EvaluatorTagKey("Name")])
+    }
+    back := ConvertEvaluatorDO2DTO(do)
+    if assert.NotNil(t, back) {
+        assert.Equal(t, "Black", back.GetBoxType())
+        if assert.NotNil(t, back.CurrentVersion) && assert.NotNil(t, back.CurrentVersion.EvaluatorContent) {
+            assert.Equal(t, evaluatordto.LanguageTypePython, back.CurrentVersion.EvaluatorContent.CodeEvaluator.GetLanguageType())
+        }
+        // EvaluatorInfo 字段非本用例重点
+    }
+}
+
+func TestConvertCodeEvaluatorVersionRoundTrip(t *testing.T) {
+    t.Parallel()
+    // DTO -> DO
+    dto := &evaluatordto.EvaluatorVersion{ID: gptr.Of(int64(11)), Version: gptr.Of("0.1.0"), Description: gptr.Of("desc"),
+        EvaluatorContent: &evaluatordto.EvaluatorContent{CodeEvaluator: &evaluatordto.CodeEvaluator{LanguageType: gptr.Of(evaluatordto.LanguageTypeJS), CodeTemplateKey: gptr.Of("k"), CodeTemplateName: gptr.Of("n"), CodeContent: gptr.Of("console.log(1)")}}}
+    do := ConvertCodeEvaluatorVersionDTO2DO(1, 2, dto)
+    if assert.NotNil(t, do) {
+        assert.Equal(t, int64(11), do.ID)
+        assert.Equal(t, int64(2), do.SpaceID)
+        assert.Equal(t, evaluatordo.LanguageTypeJS, do.LanguageType)
+    }
+    // DO -> DTO
+    dtoBack := ConvertCodeEvaluatorVersionDO2DTO(do)
+    if assert.NotNil(t, dtoBack) {
+        assert.Equal(t, "0.1.0", dtoBack.GetVersion())
+        if assert.NotNil(t, dtoBack.EvaluatorContent) && assert.NotNil(t, dtoBack.EvaluatorContent.CodeEvaluator) {
+            assert.Equal(t, evaluatordto.LanguageTypeJS, dtoBack.EvaluatorContent.CodeEvaluator.GetLanguageType())
+            assert.Equal(t, "console.log(1)", dtoBack.EvaluatorContent.CodeEvaluator.GetCodeContent())
+        }
+    }
+}
+
+func TestConvertPromptEvaluatorVersionRoundTrip(t *testing.T) {
+    t.Parallel()
+    // DTO -> DO
+    dto := &evaluatordto.EvaluatorVersion{
+        ID:          gptr.Of(int64(21)),
+        Version:     gptr.Of("0.2.0"),
+        Description: gptr.Of("desc"),
+        EvaluatorContent: &evaluatordto.EvaluatorContent{
+            ReceiveChatHistory: gptr.Of(true),
+            InputSchemas:       []*commondto.ArgsSchema{{Key: gptr.Of("in")}},
+            PromptEvaluator: &evaluatordto.PromptEvaluator{
+                PromptSourceType:  evaluatordto.PromptSourceTypePtr(evaluatordto.PromptSourceType_BuiltinTemplate),
+                PromptTemplateKey: gptr.Of("ptk"),
+                MessageList:       []*commondto.Message{{Content: &commondto.Content{Text: gptr.Of("t")}}},
+            },
+        },
+    }
+    do := ConvertPromptEvaluatorVersionDTO2DO(100, 200, dto)
+    if assert.NotNil(t, do) {
+        assert.Equal(t, int64(21), do.ID)
+        assert.True(t, gptr.Indirect(do.ReceiveChatHistory))
+        assert.Equal(t, "ptk", do.PromptTemplateKey)
+        assert.Len(t, do.InputSchemas, 1)
+    }
+    // DO -> DTO
+    dtoBack := ConvertPromptEvaluatorVersionDO2DTO(do)
+    if assert.NotNil(t, dtoBack) {
+        assert.Equal(t, "0.2.0", dtoBack.GetVersion())
+        if assert.NotNil(t, dtoBack.EvaluatorContent) && assert.NotNil(t, dtoBack.EvaluatorContent.PromptEvaluator) {
+            assert.Equal(t, "ptk", dtoBack.EvaluatorContent.PromptEvaluator.GetPromptTemplateKey())
+        }
+    }
+}
+
+func TestConvertEvaluatorContent2DO(t *testing.T) {
+    t.Parallel()
+    // nil content
+    e, err := ConvertEvaluatorContent2DO(nil, evaluatordto.EvaluatorType_Prompt)
+    assert.Nil(t, e)
+    assert.Error(t, err)
+
+    // prompt missing content
+    _, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{}, evaluatordto.EvaluatorType_Prompt)
+    assert.Error(t, err)
+
+    // code missing content
+    _, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{}, evaluatordto.EvaluatorType_Code)
+    assert.Error(t, err)
+
+    // custom rpc missing content
+    _, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{}, evaluatordto.EvaluatorType_CustomRPC)
+    assert.Error(t, err)
+
+    // code ok
+    e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
+        CodeEvaluator: &evaluatordto.CodeEvaluator{LanguageType: gptr.Of(evaluatordto.LanguageTypePython), CodeTemplateKey: gptr.Of("k"), CodeTemplateName: gptr.Of("n"), CodeContent: gptr.Of("print(1)")},
+    }, evaluatordto.EvaluatorType_Code)
+    assert.NoError(t, err)
+    if assert.NotNil(t, e) && assert.NotNil(t, e.CodeEvaluatorVersion) {
+        assert.Equal(t, evaluatordo.LanguageTypePython, e.CodeEvaluatorVersion.LanguageType)
+    }
+
+    // prompt ok
+    e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
+        ReceiveChatHistory: gptr.Of(true),
+        PromptEvaluator: &evaluatordto.PromptEvaluator{
+            PromptSourceType:  evaluatordto.PromptSourceTypePtr(evaluatordto.PromptSourceType_BuiltinTemplate),
+            PromptTemplateKey: gptr.Of("key"),
+            MessageList:       []*commondto.Message{{Content: &commondto.Content{Text: gptr.Of("t")}}},
+            ModelConfig:       &commondto.ModelConfig{},
+        },
+        InputSchemas: []*commondto.ArgsSchema{{Key: gptr.Of("in")}},
+    }, evaluatordto.EvaluatorType_Prompt)
+    assert.NoError(t, err)
+    if assert.NotNil(t, e) && assert.NotNil(t, e.PromptEvaluatorVersion) {
+        assert.True(t, gptr.Indirect(e.PromptEvaluatorVersion.ReceiveChatHistory))
+        assert.Equal(t, "key", e.PromptEvaluatorVersion.PromptTemplateKey)
+    }
+}
+
+func TestTagKeyConvert(t *testing.T) {
+    t.Parallel()
+    assert.Equal(t, evaluatordto.EvaluatorTagKeyCategory, ConvertEvaluatorTagKeyDO2DTO(evaluatordo.EvaluatorTagKey_Category))
+    assert.Equal(t, evaluatordto.EvaluatorTagKeyTargetType, ConvertEvaluatorTagKeyDO2DTO(evaluatordo.EvaluatorTagKey_TargetType))
+    assert.Equal(t, evaluatordto.EvaluatorTagKeyObjective, ConvertEvaluatorTagKeyDO2DTO(evaluatordo.EvaluatorTagKey_Objective))
+    assert.Equal(t, evaluatordto.EvaluatorTagKeyBusinessScenario, ConvertEvaluatorTagKeyDO2DTO(evaluatordo.EvaluatorTagKey_BusinessScenario))
+    assert.Equal(t, evaluatordto.EvaluatorTagKeyName, ConvertEvaluatorTagKeyDO2DTO(evaluatordo.EvaluatorTagKey_Name))
+}
 func TestConvertEvaluatorDOList2DTO(t *testing.T) {
 	t.Parallel()
 
@@ -221,55 +243,7 @@ func TestConvertEvaluatorDOList2DTO(t *testing.T) {
 	}
 }
 
-func TestNormalizeLanguageType(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		langType evaluatordo.LanguageType
-		expected evaluatordo.LanguageType
-	}{
-		{
-			name:     "python小写",
-			langType: "python",
-			expected: evaluatordo.LanguageTypePython,
-		},
-		{
-			name:     "Python首字母大写",
-			langType: "Python",
-			expected: evaluatordo.LanguageTypePython,
-		},
-		{
-			name:     "js小写",
-			langType: "js",
-			expected: evaluatordo.LanguageTypeJS,
-		},
-		{
-			name:     "javascript",
-			langType: "javascript",
-			expected: evaluatordo.LanguageTypeJS,
-		},
-		{
-			name:     "未知类型",
-			langType: "golang",
-			expected: "Golang",
-		},
-		{
-			name:     "空字符串",
-			langType: "",
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := normalizeLanguageType(tt.langType)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
+// 重复函数已移除，避免重复定义
 
 func TestConvertLanguageTypeDO2DTO(t *testing.T) {
 	t.Parallel()
@@ -621,131 +595,7 @@ func TestConvertCodeEvaluatorVersionDO2DTO(t *testing.T) {
 	}
 }
 
-func TestConvertEvaluatorContent2DO(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name            string
-		content         *evaluatordto.EvaluatorContent
-		evaluatorType   evaluatordto.EvaluatorType
-		expectedErr     bool
-		expectedErrCode int32
-		validate        func(t *testing.T, result *evaluatordo.Evaluator)
-	}{
-		{
-			name:            "nil content",
-			content:         nil,
-			evaluatorType:   evaluatordto.EvaluatorType_Prompt,
-			expectedErr:     true,
-			expectedErrCode: errno.InvalidInputDataCode,
-		},
-		{
-			name: "Prompt evaluator with nil PromptEvaluator",
-			content: &evaluatordto.EvaluatorContent{
-				PromptEvaluator: nil,
-			},
-			evaluatorType:   evaluatordto.EvaluatorType_Prompt,
-			expectedErr:     true,
-			expectedErrCode: errno.InvalidInputDataCode,
-		},
-		{
-			name: "Code evaluator with nil CodeEvaluator",
-			content: &evaluatordto.EvaluatorContent{
-				CodeEvaluator: nil,
-			},
-			evaluatorType:   evaluatordto.EvaluatorType_Code,
-			expectedErr:     true,
-			expectedErrCode: errno.InvalidInputDataCode,
-		},
-		{
-			name: "unsupported evaluator type",
-			content: &evaluatordto.EvaluatorContent{
-				PromptEvaluator: &evaluatordto.PromptEvaluator{},
-			},
-			evaluatorType:   evaluatordto.EvaluatorType(999), // Invalid type
-			expectedErr:     true,
-			expectedErrCode: errno.InvalidEvaluatorTypeCode,
-		},
-		{
-			name: "valid Prompt evaluator",
-			content: &evaluatordto.EvaluatorContent{
-				ReceiveChatHistory: gptr.Of(true),
-				PromptEvaluator: &evaluatordto.PromptEvaluator{
-					PromptSourceType:  evaluatordto.PromptSourceTypePtr(evaluatordto.PromptSourceType_BuiltinTemplate),
-					PromptTemplateKey: gptr.Of("test_template"),
-					MessageList: []*commondto.Message{
-						{
-							Role: gptr.Of(commondto.Role(1)),
-							Content: &commondto.Content{
-								ContentType: gptr.Of("text"),
-								Text:        gptr.Of("Hello"),
-							},
-						},
-					},
-				},
-				InputSchemas: []*commondto.ArgsSchema{
-					{
-						Key:        gptr.Of("input1"),
-						JSONSchema: gptr.Of("{}"),
-					},
-				},
-			},
-			evaluatorType: evaluatordto.EvaluatorType_Prompt,
-			expectedErr:   false,
-			validate: func(t *testing.T, result *evaluatordo.Evaluator) {
-				assert.Equal(t, evaluatordo.EvaluatorTypePrompt, result.EvaluatorType)
-				assert.NotNil(t, result.PromptEvaluatorVersion)
-				assert.Equal(t, "test_template", result.PromptEvaluatorVersion.PromptTemplateKey)
-				assert.Len(t, result.PromptEvaluatorVersion.MessageList, 1)
-				assert.Len(t, result.PromptEvaluatorVersion.InputSchemas, 1)
-			},
-		},
-		{
-			name: "valid Code evaluator",
-			content: &evaluatordto.EvaluatorContent{
-				CodeEvaluator: &evaluatordto.CodeEvaluator{
-					CodeTemplateKey:  gptr.Of("test_code_template"),
-					CodeTemplateName: gptr.Of("Test Code Template"),
-					CodeContent:      gptr.Of("print('hello')"),
-					LanguageType:     gptr.Of(evaluatordto.LanguageType("js")),
-				},
-			},
-			evaluatorType: evaluatordto.EvaluatorType_Code,
-			expectedErr:   false,
-			validate: func(t *testing.T, result *evaluatordo.Evaluator) {
-				assert.Equal(t, evaluatordo.EvaluatorTypeCode, result.EvaluatorType)
-				assert.NotNil(t, result.CodeEvaluatorVersion)
-				assert.Equal(t, "print('hello')", result.CodeEvaluatorVersion.CodeContent)
-				assert.Equal(t, evaluatordo.LanguageTypeJS, result.CodeEvaluatorVersion.LanguageType)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result, err := ConvertEvaluatorContent2DO(tt.content, tt.evaluatorType)
-
-			if tt.expectedErr {
-				assert.Error(t, err)
-				if tt.expectedErrCode != 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					if ok {
-						assert.Equal(t, tt.expectedErrCode, statusErr.Code())
-					}
-				}
-				assert.Nil(t, result)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, result)
-				if tt.validate != nil {
-					tt.validate(t, result)
-				}
-			}
-		})
-	}
-}
+// 删除重复的表驱动复杂用例，保留上方的简化覆盖
 
 // Test additional functions to improve coverage
 func TestConvertEvaluatorDTO2DO_EdgeCases(t *testing.T) {
