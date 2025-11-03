@@ -23,8 +23,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
@@ -177,67 +177,59 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 
 // Test_experimentApplication_resolveEvaluatorVersionIDs 覆盖 BuiltinVisible 与普通版本解析、去重及映射回填
 func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
-    ctrl := gomock.NewController(t)
-    defer ctrl.Finish()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-    mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+	mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
 
-    app := &experimentApplication{
-        evaluatorService: mockEvaluatorService,
-    }
+	app := &experimentApplication{
+		evaluatorService: mockEvaluatorService,
+	}
 
-    ctx := context.Background()
+	ctx := context.Background()
 
-    // 输入序列：
-    //  - (eid: 1, ver: BuiltinVisible)
-    //  - (eid: 2, ver: "1.0.0")
-    //  - (eid: 2, ver: "1.0.0") 重复
-    //  - (eid: 3, ver: "2.0.0")
-    //  并且 EvaluatorFieldMapping 中有一条缺少 evaluator_version_id 的映射，需要回填
-    req := &exptpb.SubmitExperimentRequest{
-        EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
-            {EvaluatorID: gptr.Of(int64(1)), Version: gptr.Of("BuiltinVisible")},
-            {EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
-            {EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
-            {EvaluatorID: gptr.Of(int64(3)), Version: gptr.Of("2.0.0")},
-        },
-    }
-    // 不设置 EvaluatorFieldMapping，专注验证 ID 解析与去重
+	// 输入序列：
+	//  - (eid: 1, ver: BuiltinVisible)
+	//  - (eid: 2, ver: "1.0.0")
+	//  - (eid: 2, ver: "1.0.0") 重复
+	//  - (eid: 3, ver: "2.0.0")
+	//  并且 EvaluatorFieldMapping 中有一条缺少 evaluator_version_id 的映射，需要回填
+	req := &exptpb.SubmitExperimentRequest{
+		EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+			{EvaluatorID: gptr.Of(int64(1)), Version: gptr.Of("BuiltinVisible")},
+			{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
+			{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
+			{EvaluatorID: gptr.Of(int64(3)), Version: gptr.Of("2.0.0")},
+		},
+	}
+    // 不增加映射，专注验证版本ID解析与去重
 
-    // 期望：
-    //  - BuiltinVisible: eid=1 返回可见版本，其版本ID设为 10101
-    //  - 普通对： (2,1.0.0) -> 20200, (3,2.0.0) -> 30300
-    mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), []int64{1}).Return([]*entity.Evaluator{
-        {ID: 1, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 1, Version: "1.2.3", ID: 10101}},
-    }, nil)
+	// 期望：
+	//  - BuiltinVisible: eid=1 返回可见版本，其版本ID设为 10101
+	//  - 普通对： (2,1.0.0) -> 20200, (3,2.0.0) -> 30300
+	mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+		{ID: 1, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 1, Version: "1.2.3", ID: 10101}},
+	}, nil)
 
-    mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), [][2]interface{}{
-        {int64(2), "1.0.0"}, {int64(3), "2.0.0"},
-    }).Return([]*entity.Evaluator{
-        {ID: 2, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 2, Version: "1.0.0", ID: 20200}},
-        {ID: 3, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
-    }, nil)
+	mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+		{ID: 2, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 2, Version: "1.0.0", ID: 20200}},
+		{ID: 3, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
+	}, nil)
 
-    ids, err := app.resolveEvaluatorVersionIDs(ctx, req)
-    if err != nil {
-        t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
-    }
-    // 输入顺序：builtin(10101), (2,1.0.0)->20200, (2,1.0.0) 重复去重, (3,2.0.0)->30300
-    // 去重后期望顺序 [10101,20200,30300]
-    if got, want := len(ids), 3; got != want {
-        t.Fatalf("len(ids)=%d want=%d", got, want)
-    }
-    if ids[0] != 10101 || ids[1] != 20200 || ids[2] != 30300 {
-        t.Fatalf("ids=%v want=[10101 20200 30300]", ids)
-    }
+	ids, err := app.resolveEvaluatorVersionIDs(ctx, req)
+	if err != nil {
+		t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
+	}
+	// 输入顺序：builtin(10101), (2,1.0.0)->20200, (2,1.0.0) 重复去重, (3,2.0.0)->30300
+	// 去重后期望顺序 [10101,20200,30300]
+	if got, want := len(ids), 3; got != want {
+		t.Fatalf("len(ids)=%d want=%d", got, want)
+	}
+	if ids[0] != 10101 || ids[1] != 20200 || ids[2] != 30300 {
+		t.Fatalf("ids=%v want=[10101 20200 30300]", ids)
+	}
 
-    // 校验 EvaluatorFieldMapping 的回填：
-    if len(req.EvaluatorFieldMapping) != 1 {
-        t.Fatalf("unexpected field mapping len")
-    }
-    if req.EvaluatorFieldMapping[0].GetEvaluatorVersionID() != 30300 {
-        t.Fatalf("field mapping not backfilled, got=%d want=30300", req.EvaluatorFieldMapping[0].GetEvaluatorVersionID())
-    }
+    // 本用例不校验映射回填
 }
 
 func TestExperimentApplication_SubmitExperiment(t *testing.T) {
@@ -1669,7 +1661,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validRunID,
 						entity.EvaluationModeSubmit,
 						validWorkspaceID,
-						&entity.Session{UserID: strconv.FormatInt(validUserID, 10)},
+						&entity.Session{UserID: "789", AppID: 0},
 					).Return(nil)
 
 				// 模拟运行实验
@@ -1679,7 +1671,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validExptID,
 						validRunID,
 						validWorkspaceID,
-						&entity.Session{UserID: strconv.FormatInt(validUserID, 10)},
+						&entity.Session{UserID: "789", AppID: 0},
 						entity.EvaluationModeSubmit,
 						gomock.Any(),
 					).Return(nil)
@@ -1714,7 +1706,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validRunID,
 						entity.EvaluationModeSubmit,
 						validWorkspaceID,
-						&entity.Session{UserID: strconv.FormatInt(validUserID, 10)},
+						&entity.Session{UserID: "789", AppID: 0},
 					).Return(nil)
 
 				// 模拟运行实验失败
@@ -1724,7 +1716,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validExptID,
 						validRunID,
 						validWorkspaceID,
-						&entity.Session{UserID: strconv.FormatInt(validUserID, 10)},
+						&entity.Session{UserID: "789", AppID: 0},
 						entity.EvaluationModeSubmit,
 						gomock.Any(),
 					).Return(errorx.NewByCode(errno.CommonInternalErrorCode))

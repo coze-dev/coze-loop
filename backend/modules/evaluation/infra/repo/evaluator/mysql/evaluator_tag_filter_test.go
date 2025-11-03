@@ -293,15 +293,13 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 				// 对于非nil的filterOption，方法会调用NewSession并执行查询
 				mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
 
-				// Mock COUNT查询 - 总是会执行
-				// 实际SQL格式: SELECT COUNT(DISTINCT(`source_id`)) FROM `evaluator_tag` WHERE ...
-				countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
-				mock.ExpectQuery("^SELECT COUNT\\(DISTINCT\\(`source_id`\\)\\) FROM `evaluator_tag`").WillReturnRows(countRows)
+                // Mock COUNT 查询（放宽匹配，兼容 JOIN、别名与列限定）
+                countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
+                mock.ExpectQuery("SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*").WillReturnRows(countRows)
 
-				// Mock SELECT查询 - 总是会执行Pluck查询
-				// 实际SQL格式: SELECT DISTINCT source_id FROM `evaluator_tag` WHERE ...
-				selectRows := sqlmock.NewRows([]string{"source_id"})
-				mock.ExpectQuery("^SELECT DISTINCT source_id FROM `evaluator_tag`").WillReturnRows(selectRows)
+                // Mock SELECT 查询（放宽匹配，兼容 DISTINCT、JOIN、ORDER BY 等）
+                selectRows := sqlmock.NewRows([]string{"source_id"})
+                mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*").WillReturnRows(selectRows)
 			}
 
 			// 创建DAO实例

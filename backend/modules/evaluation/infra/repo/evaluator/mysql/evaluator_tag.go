@@ -148,11 +148,11 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	}
 	query = query.Joins(nameJoinSQL, nameJoinArgs...)
 
-	// 处理搜索关键词
-	if filterOption.SearchKeyword != nil && *filterOption.SearchKeyword != "" {
-		keyword := "%" + *filterOption.SearchKeyword + "%"
-		query = query.Where("tag_value LIKE ?", keyword)
-	}
+    // 处理搜索关键词
+    if filterOption.SearchKeyword != nil && *filterOption.SearchKeyword != "" {
+        keyword := "%" + *filterOption.SearchKeyword + "%"
+        query = query.Where("evaluator_tag.tag_value LIKE ?", keyword)
+    }
 
 	// 处理筛选条件
 	if filterOption.Filters != nil {
@@ -256,12 +256,12 @@ func (dao *EvaluatorTagDAOImpl) buildSingleCondition(condition *entity.Evaluator
 	operator := condition.Operator
 	value := condition.Value
 
-	switch operator {
+    switch operator {
 	case entity.EvaluatorFilterOperatorType_Equal:
-		return "tag_key = ? AND tag_value = ?", []interface{}{tagKey, value}, nil
+        return "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value = ?", []interface{}{tagKey, value}, nil
 
 	case entity.EvaluatorFilterOperatorType_NotEqual:
-		return "tag_key = ? AND tag_value != ?", []interface{}{tagKey, value}, nil
+        return "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value != ?", []interface{}{tagKey, value}, nil
 
 	case entity.EvaluatorFilterOperatorType_In:
 		// 将value按逗号分割
@@ -271,7 +271,7 @@ func (dao *EvaluatorTagDAOImpl) buildSingleCondition(condition *entity.Evaluator
 		}
 		placeholders := strings.Repeat("?,", len(values))
 		placeholders = placeholders[:len(placeholders)-1] // 移除最后的逗号
-		return fmt.Sprintf("tag_key = ? AND tag_value IN (%s)", placeholders),
+        return fmt.Sprintf("evaluator_tag.tag_key = ? AND evaluator_tag.tag_value IN (%s)", placeholders),
 			append([]interface{}{tagKey}, convertToInterfaceSlice(values)...), nil
 
 	case entity.EvaluatorFilterOperatorType_NotIn:
@@ -282,18 +282,18 @@ func (dao *EvaluatorTagDAOImpl) buildSingleCondition(condition *entity.Evaluator
 		}
 		placeholders := strings.Repeat("?,", len(values))
 		placeholders = placeholders[:len(placeholders)-1] // 移除最后的逗号
-		return fmt.Sprintf("tag_key = ? AND tag_value NOT IN (%s)", placeholders),
+        return fmt.Sprintf("evaluator_tag.tag_key = ? AND evaluator_tag.tag_value NOT IN (%s)", placeholders),
 			append([]interface{}{tagKey}, convertToInterfaceSlice(values)...), nil
 
 	case entity.EvaluatorFilterOperatorType_Like:
 		likeValue := "%" + value + "%"
-		return "tag_key = ? AND tag_value LIKE ?", []interface{}{tagKey, likeValue}, nil
+        return "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value LIKE ?", []interface{}{tagKey, likeValue}, nil
 
 	case entity.EvaluatorFilterOperatorType_IsNull:
-		return "tag_key = ? AND tag_value IS NULL", []interface{}{tagKey}, nil
+        return "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value IS NULL", []interface{}{tagKey}, nil
 
 	case entity.EvaluatorFilterOperatorType_IsNotNull:
-		return "tag_key = ? AND tag_value IS NOT NULL", []interface{}{tagKey}, nil
+        return "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value IS NOT NULL", []interface{}{tagKey}, nil
 
 	default:
 		return "", nil, fmt.Errorf("unsupported operator type: %v", operator)
