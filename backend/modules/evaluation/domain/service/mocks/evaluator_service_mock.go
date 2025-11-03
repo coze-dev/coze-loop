@@ -41,6 +41,21 @@ func (m *MockEvaluatorService) EXPECT() *MockEvaluatorServiceMockRecorder {
 	return m.recorder
 }
 
+// BatchGetBuiltinEvaluator mocks base method.
+func (m *MockEvaluatorService) BatchGetBuiltinEvaluator(ctx context.Context, evaluatorIDs []int64) ([]*entity.Evaluator, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetBuiltinEvaluator", ctx, evaluatorIDs)
+	ret0, _ := ret[0].([]*entity.Evaluator)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetBuiltinEvaluator indicates an expected call of BatchGetBuiltinEvaluator.
+func (mr *MockEvaluatorServiceMockRecorder) BatchGetBuiltinEvaluator(ctx, evaluatorIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetBuiltinEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).BatchGetBuiltinEvaluator), ctx, evaluatorIDs)
+}
+
 // BatchGetEvaluator mocks base method.
 func (m *MockEvaluatorService) BatchGetEvaluator(ctx context.Context, spaceID int64, evaluatorIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error) {
 	m.ctrl.T.Helper()
@@ -54,6 +69,21 @@ func (m *MockEvaluatorService) BatchGetEvaluator(ctx context.Context, spaceID in
 func (mr *MockEvaluatorServiceMockRecorder) BatchGetEvaluator(ctx, spaceID, evaluatorIDs, includeDeleted any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).BatchGetEvaluator), ctx, spaceID, evaluatorIDs, includeDeleted)
+}
+
+// BatchGetEvaluatorByIDAndVersion mocks base method.
+func (m *MockEvaluatorService) BatchGetEvaluatorByIDAndVersion(ctx context.Context, pairs [][2]any) ([]*entity.Evaluator, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetEvaluatorByIDAndVersion", ctx, pairs)
+	ret0, _ := ret[0].([]*entity.Evaluator)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetEvaluatorByIDAndVersion indicates an expected call of BatchGetEvaluatorByIDAndVersion.
+func (mr *MockEvaluatorServiceMockRecorder) BatchGetEvaluatorByIDAndVersion(ctx, pairs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorByIDAndVersion", reflect.TypeOf((*MockEvaluatorService)(nil).BatchGetEvaluatorByIDAndVersion), ctx, pairs)
 }
 
 // BatchGetEvaluatorVersion mocks base method.

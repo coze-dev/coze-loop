@@ -42,8 +42,7 @@ func newEvaluatorTemplate(db *gorm.DB, opts ...gen.DOOption) evaluatorTemplate {
 	_evaluatorTemplate.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_evaluatorTemplate.DeletedAt = field.NewField(tableName, "deleted_at")
 	_evaluatorTemplate.Popularity = field.NewInt64(tableName, "popularity")
-	_evaluatorTemplate.Benchmark = field.NewString(tableName, "benchmark")
-	_evaluatorTemplate.Vendor = field.NewString(tableName, "vendor")
+	_evaluatorTemplate.EvaluatorInfo = field.NewBytes(tableName, "evaluator_info")
 
 	_evaluatorTemplate.fillFieldMap()
 
@@ -70,8 +69,7 @@ type evaluatorTemplate struct {
 	UpdatedAt          field.Time   // 更新时间
 	DeletedAt          field.Field  // 删除时间
 	Popularity         field.Int64  // 热度
-	Benchmark          field.String // benchmark
-	Vendor             field.String // vendor
+	EvaluatorInfo      field.Bytes  // 评估器补充信息, json
 
 	fieldMap map[string]field.Expr
 }
@@ -103,8 +101,7 @@ func (e *evaluatorTemplate) updateTableName(table string) *evaluatorTemplate {
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
 	e.Popularity = field.NewInt64(table, "popularity")
-	e.Benchmark = field.NewString(table, "benchmark")
-	e.Vendor = field.NewString(table, "vendor")
+	e.EvaluatorInfo = field.NewBytes(table, "evaluator_info")
 
 	e.fillFieldMap()
 
@@ -133,7 +130,7 @@ func (e *evaluatorTemplate) GetFieldByName(fieldName string) (field.OrderExpr, b
 }
 
 func (e *evaluatorTemplate) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 17)
+	e.fieldMap = make(map[string]field.Expr, 16)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["evaluator_type"] = e.EvaluatorType
@@ -149,8 +146,7 @@ func (e *evaluatorTemplate) fillFieldMap() {
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt
 	e.fieldMap["popularity"] = e.Popularity
-	e.fieldMap["benchmark"] = e.Benchmark
-	e.fieldMap["vendor"] = e.Vendor
+	e.fieldMap["evaluator_info"] = e.EvaluatorInfo
 }
 
 func (e evaluatorTemplate) clone(db *gorm.DB) evaluatorTemplate {

@@ -39,8 +39,7 @@ func newEvaluator(db *gorm.DB, opts ...gen.DOOption) evaluator {
 	_evaluator.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_evaluator.DeletedAt = field.NewField(tableName, "deleted_at")
 	_evaluator.LatestVersion = field.NewString(tableName, "latest_version")
-	_evaluator.Benchmark = field.NewString(tableName, "benchmark")
-	_evaluator.Vendor = field.NewString(tableName, "vendor")
+	_evaluator.EvaluatorInfo = field.NewBytes(tableName, "evaluator_info")
 	_evaluator.Builtin = field.NewInt32(tableName, "builtin")
 	_evaluator.BoxType = field.NewInt32(tableName, "box_type")
 	_evaluator.BuiltinVisibleVersion = field.NewString(tableName, "builtin_visible_version")
@@ -67,8 +66,7 @@ type evaluator struct {
 	UpdatedAt             field.Time   // 更新时间
 	DeletedAt             field.Field  // 删除时间
 	LatestVersion         field.String // 最新版本号
-	Benchmark             field.String // benchmark
-	Vendor                field.String // vendor
+	EvaluatorInfo         field.Bytes  // 评估器补充信息, json
 	Builtin               field.Int32  // 是否预置，1:是；2:否
 	BoxType               field.Int32  // 黑白盒类型，1:白盒；2:黑盒
 	BuiltinVisibleVersion field.String // 预置评估器最新可见版本号
@@ -100,8 +98,7 @@ func (e *evaluator) updateTableName(table string) *evaluator {
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
 	e.LatestVersion = field.NewString(table, "latest_version")
-	e.Benchmark = field.NewString(table, "benchmark")
-	e.Vendor = field.NewString(table, "vendor")
+	e.EvaluatorInfo = field.NewBytes(table, "evaluator_info")
 	e.Builtin = field.NewInt32(table, "builtin")
 	e.BoxType = field.NewInt32(table, "box_type")
 	e.BuiltinVisibleVersion = field.NewString(table, "builtin_visible_version")
@@ -131,7 +128,7 @@ func (e *evaluator) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *evaluator) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 17)
+	e.fieldMap = make(map[string]field.Expr, 16)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["evaluator_type"] = e.EvaluatorType
@@ -144,8 +141,7 @@ func (e *evaluator) fillFieldMap() {
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt
 	e.fieldMap["latest_version"] = e.LatestVersion
-	e.fieldMap["benchmark"] = e.Benchmark
-	e.fieldMap["vendor"] = e.Vendor
+	e.fieldMap["evaluator_info"] = e.EvaluatorInfo
 	e.fieldMap["builtin"] = e.Builtin
 	e.fieldMap["box_type"] = e.BoxType
 	e.fieldMap["builtin_visible_version"] = e.BuiltinVisibleVersion

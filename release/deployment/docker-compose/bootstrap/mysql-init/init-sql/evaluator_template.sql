@@ -14,7 +14,6 @@ CREATE TABLE `evaluator_template` (
                                       `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                       `deleted_at` timestamp NULL DEFAULT NULL COMMENT '删除时间',
                                       `popularity` bigint unsigned NOT NULL DEFAULT '0' COMMENT '热度',
-                                      `benchmark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'benchmark',
-                                      `vendor` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'vendor',
+                                      `evaluator_info` blob COMMENT '评估器补充信息, json',
                                       PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='NDB_SHARE_TABLE;评估器模板'

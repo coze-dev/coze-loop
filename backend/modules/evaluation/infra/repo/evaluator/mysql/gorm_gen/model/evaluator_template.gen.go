@@ -29,8 +29,7 @@ type EvaluatorTemplate struct {
 	UpdatedAt          time.Time      `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`         // 更新时间
 	DeletedAt          gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                            // 删除时间
 	Popularity         int64          `gorm:"column:popularity;type:bigint(20) unsigned;not null;comment:热度" json:"popularity"`                           // 热度
-	Benchmark          *string        `gorm:"column:benchmark;type:varchar(255) character set utf8mb4;comment:benchmark" json:"benchmark"`                // benchmark
-	Vendor             *string        `gorm:"column:vendor;type:varchar(255) character set utf8mb4;comment:vendor" json:"vendor"`                         // vendor
+	EvaluatorInfo      *[]byte        `gorm:"column:evaluator_info;type:blob binary;comment:评估器补充信息, json" json:"evaluator_info"`                         // 评估器补充信息, json
 }
 
 // TableName EvaluatorTemplate's table name

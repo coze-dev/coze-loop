@@ -59,8 +59,9 @@ func (dao *EvaluatorTagDAOImpl) BatchGetTagsBySourceIDsAndType(ctx context.Conte
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	var tags []*model.EvaluatorTag
-	query := dbsession.WithContext(ctx).
-		Where("source_id IN (?) AND tag_type = ?", sourceIDs, tagType)
+    query := dbsession.WithContext(ctx).
+        Where("source_id IN (?) AND tag_type = ?", sourceIDs, tagType).
+        Where("deleted_at IS NULL")
 	if langType != "" {
 		query = query.Where("lang_type = ?", langType)
 	}
@@ -88,8 +89,9 @@ func (dao *EvaluatorTagDAOImpl) DeleteEvaluatorTagsByConditions(ctx context.Cont
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	// 基础查询条件
-	query := dbsession.WithContext(ctx).
-		Where("source_id = ? AND tag_type = ?", sourceID, tagType)
+    query := dbsession.WithContext(ctx).
+        Where("source_id = ? AND tag_type = ?", sourceID, tagType).
+        Where("deleted_at IS NULL")
 	if langType != "" {
 		query = query.Where("lang_type = ?", langType)
 	}
@@ -128,9 +130,10 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	// 基础查询条件
-	query := dbsession.WithContext(ctx).Table("evaluator_tag").
-		Select("source_id").
-		Where("tag_type = ?", tagType)
+    query := dbsession.WithContext(ctx).Table("evaluator_tag").
+        Select("source_id").
+        Where("tag_type = ?", tagType).
+        Where("deleted_at IS NULL")
 	if langType != "" {
 		query = query.Where("lang_type = ?", langType)
 	}

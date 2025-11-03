@@ -80,6 +80,9 @@ func (p *EvaluatorContent) IsValid() error {
 func (p *EvaluatorIDVersionItem) IsValid() error {
 	return nil
 }
+func (p *EvaluatorInfo) IsValid() error {
+	return nil
+}
 func (p *Evaluator) IsValid() error {
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
@@ -91,9 +94,19 @@ func (p *Evaluator) IsValid() error {
 			return fmt.Errorf("field CurrentVersion not valid, %w", err)
 		}
 	}
+	if p.EvaluatorInfo != nil {
+		if err := p.EvaluatorInfo.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorInfo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *EvaluatorTemplate) IsValid() error {
+	if p.EvaluatorInfo != nil {
+		if err := p.EvaluatorInfo.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorInfo not valid, %w", err)
+		}
+	}
 	if p.EvaluatorContent != nil {
 		if err := p.EvaluatorContent.IsValid(); err != nil {
 			return fmt.Errorf("field EvaluatorContent not valid, %w", err)

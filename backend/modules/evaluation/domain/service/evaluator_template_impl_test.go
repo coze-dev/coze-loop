@@ -62,14 +62,16 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "成功 - 创建Code类型模板",
-			req: &entity.CreateEvaluatorTemplateRequest{
+            req: &entity.CreateEvaluatorTemplateRequest{
 				SpaceID:       100,
 				Name:          "Test Template",
 				Description:   "Test Description",
 				EvaluatorType: entity.EvaluatorTypeCode,
-				CodeEvaluatorContent: &entity.CodeEvaluatorContent{
-					CodeContent: "def evaluate(): pass",
-				},
+                CodeEvaluatorContent: &entity.CodeEvaluatorContent{
+                    Lang2CodeContent: map[entity.LanguageType]string{
+                        entity.LanguageTypePython: "def evaluate(): pass",
+                    },
+                },
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
 				mockRepo.EXPECT().
@@ -259,12 +261,11 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "成功 - 更新多个字段",
-			req: &entity.UpdateEvaluatorTemplateRequest{
+            req: &entity.UpdateEvaluatorTemplateRequest{
 				ID:          1,
 				Name:        gptr.Of("Updated Template"),
 				Description: gptr.Of("Updated Description"),
-				Benchmark:   gptr.Of("benchmark1"),
-				Vendor:      gptr.Of("vendor1"),
+                EvaluatorInfo: &entity.EvaluatorInfo{Benchmark: "benchmark1", Vendor: "vendor1"},
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
 				existingTemplate := &entity.EvaluatorTemplate{

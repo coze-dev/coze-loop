@@ -118,27 +118,31 @@ func (dao *EvaluatorDAOImpl) UpdateEvaluatorDraftSubmitted(ctx context.Context, 
 func (dao *EvaluatorDAOImpl) UpdateEvaluatorMeta(ctx context.Context, po *model.Evaluator, opts ...db.Option) error {
 	// 通过opts获取当前的db session实例
 	dbsession := dao.provider.NewSession(ctx, opts...)
-	updateMap := make(map[string]interface{})
-	// 基础字段转换
-	updateMap["name"] = po.Name
-	updateMap["description"] = po.Description
-	updateMap["updated_by"] = po.UpdatedBy
-	// 可选字段：builtin/benchmark/vendor，如果传入则更新
-	if po.Benchmark != nil {
-		updateMap["benchmark"] = po.Benchmark
-	}
-	if po.Vendor != nil {
-		updateMap["vendor"] = po.Vendor
-	}
-	if po.Builtin != 0 {
-		updateMap["builtin"] = po.Builtin
-	}
-	if po.BuiltinVisibleVersion != "" {
-		updateMap["builtin_visible_version"] = po.BuiltinVisibleVersion
-	}
-	if po.BoxType != 0 {
-		updateMap["box_type"] = po.BoxType
-	}
+    updateMap := make(map[string]interface{})
+    // 基础字段（按传入是否为空决定是否更新）
+    if po.Name != nil {
+        updateMap["name"] = po.Name
+    }
+    if po.Description != nil {
+        updateMap["description"] = po.Description
+    }
+    if po.UpdatedBy != "" {
+        updateMap["updated_by"] = po.UpdatedBy
+    }
+    // 可选字段：builtin、builtin_visible_version、box_type
+    if po.Builtin != 0 {
+        updateMap["builtin"] = po.Builtin
+    }
+    if po.BuiltinVisibleVersion != "" {
+        updateMap["builtin_visible_version"] = po.BuiltinVisibleVersion
+    }
+    if po.BoxType != 0 {
+        updateMap["box_type"] = po.BoxType
+    }
+    // 新增：EvaluatorInfo JSON 序列化字段
+    if po.EvaluatorInfo != nil {
+        updateMap["evaluator_info"] = po.EvaluatorInfo
+    }
 	return dbsession.WithContext(ctx).Model(&model.Evaluator{}).
 		Where("id = ?", po.ID).      // 添加ID筛选条件
 		Where("deleted_at IS NULL"). // 添加软删除筛选条件

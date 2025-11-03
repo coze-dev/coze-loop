@@ -26,7 +26,7 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 	if do.Builtin {
 		builtinVal = 1
 	}
-	po := &model.Evaluator{
+    po := &model.Evaluator{
 		ID:                    do.ID,
 		SpaceID:               do.SpaceID,
 		Name:                  ptr.Of(do.Name),
@@ -37,9 +37,13 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 		BuiltinVisibleVersion: do.BuiltinVisibleVersion,
 		Builtin:               builtinVal,
 		BoxType:               int32(do.BoxType),
-		Benchmark:             ptr.Of(do.Benchmark),
-		Vendor:                ptr.Of(do.Vendor),
 	}
+    if do.EvaluatorInfo != nil {
+        b, err := json.Marshal(do.EvaluatorInfo)
+        if err == nil {
+            po.EvaluatorInfo = ptr.Of(b)
+        }
+    }
 	if do.BaseInfo != nil {
 		if do.BaseInfo.CreatedBy != nil {
 			po.CreatedBy = gptr.Indirect(do.BaseInfo.CreatedBy.UserID) // ignore_security_alert SQL_INJECTION
@@ -62,7 +66,7 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 	if po == nil {
 		return nil
 	}
-	do := &evaluatordo.Evaluator{
+    do := &evaluatordo.Evaluator{
 		ID:                    po.ID,
 		SpaceID:               po.SpaceID,
 		Name:                  gptr.Indirect(po.Name),
@@ -73,9 +77,13 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 		BuiltinVisibleVersion: po.BuiltinVisibleVersion,
 		Builtin:               po.Builtin == 1,
 		BoxType:               evaluatordo.EvaluatorBoxType(po.BoxType),
-		Benchmark:             gptr.Indirect(po.Benchmark),
-		Vendor:                gptr.Indirect(po.Vendor),
 	}
+    if po.EvaluatorInfo != nil {
+        var info evaluatordo.EvaluatorInfo
+        if err := json.Unmarshal(*po.EvaluatorInfo, &info); err == nil {
+            do.EvaluatorInfo = &info
+        }
+    }
 	do.BaseInfo = &evaluatordo.BaseInfo{
 		CreatedBy: &evaluatordo.UserInfo{
 			UserID: ptr.Of(po.CreatedBy),

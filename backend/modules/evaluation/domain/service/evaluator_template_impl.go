@@ -40,13 +40,11 @@ func (s *EvaluatorTemplateServiceImpl) CreateEvaluatorTemplate(ctx context.Conte
 	}
 
 	// 构建模板实体
-	template := &entity.EvaluatorTemplate{
+    template := &entity.EvaluatorTemplate{
 		SpaceID:                req.SpaceID,
 		Name:                   req.Name,
 		Description:            req.Description,
 		EvaluatorType:          req.EvaluatorType,
-		Benchmark:              req.Benchmark,
-		Vendor:                 req.Vendor,
 		InputSchemas:           req.InputSchemas,
 		OutputSchemas:          req.OutputSchemas,
 		ReceiveChatHistory:     req.ReceiveChatHistory,
@@ -54,6 +52,10 @@ func (s *EvaluatorTemplateServiceImpl) CreateEvaluatorTemplate(ctx context.Conte
 		PromptEvaluatorContent: req.PromptEvaluatorContent,
 		CodeEvaluatorContent:   req.CodeEvaluatorContent,
 	}
+    // EvaluatorInfo（优先使用新字段）
+    if req.EvaluatorInfo != nil {
+        template.EvaluatorInfo = req.EvaluatorInfo
+    }
 
 	// 设置基础信息
 	baseInfo := &entity.BaseInfo{
@@ -106,12 +108,25 @@ func (s *EvaluatorTemplateServiceImpl) UpdateEvaluatorTemplate(ctx context.Conte
 	if req.Description != nil {
 		existingTemplate.Description = *req.Description
 	}
-	if req.Benchmark != nil {
-		existingTemplate.Benchmark = *req.Benchmark
-	}
-	if req.Vendor != nil {
-		existingTemplate.Vendor = *req.Vendor
-	}
+    // 更新 EvaluatorInfo
+    if req.EvaluatorInfo != nil {
+        if existingTemplate.EvaluatorInfo == nil {
+            existingTemplate.EvaluatorInfo = &entity.EvaluatorInfo{}
+        }
+        // 按字段级别覆盖，避免丢失未提供字段
+        if req.EvaluatorInfo.Benchmark != "" {
+            existingTemplate.EvaluatorInfo.Benchmark = req.EvaluatorInfo.Benchmark
+        }
+        if req.EvaluatorInfo.Vendor != "" {
+            existingTemplate.EvaluatorInfo.Vendor = req.EvaluatorInfo.Vendor
+        }
+        if req.EvaluatorInfo.VendorURL != "" {
+            existingTemplate.EvaluatorInfo.VendorURL = req.EvaluatorInfo.VendorURL
+        }
+        if req.EvaluatorInfo.UserManualURL != "" {
+            existingTemplate.EvaluatorInfo.UserManualURL = req.EvaluatorInfo.UserManualURL
+        }
+    }
 	if req.InputSchemas != nil {
 		existingTemplate.InputSchemas = req.InputSchemas
 	}
@@ -251,12 +266,20 @@ func (s *EvaluatorTemplateServiceImpl) validateCreateRequest(req *entity.CreateE
 	if len(req.Description) > 500 {
 		return errors.New("模板描述长度不能超过500个字符")
 	}
-	if req.Benchmark != "" && len(req.Benchmark) > 100 {
-		return errors.New("基准长度不能超过100个字符")
-	}
-	if req.Vendor != "" && len(req.Vendor) > 100 {
-		return errors.New("供应商长度不能超过100个字符")
-	}
+    if req.EvaluatorInfo != nil {
+        if req.EvaluatorInfo.Benchmark != "" && len(req.EvaluatorInfo.Benchmark) > 100 {
+            return errors.New("基准长度不能超过100个字符")
+        }
+        if req.EvaluatorInfo.Vendor != "" && len(req.EvaluatorInfo.Vendor) > 100 {
+            return errors.New("供应商长度不能超过100个字符")
+        }
+        if req.EvaluatorInfo.VendorURL != "" && len(req.EvaluatorInfo.VendorURL) > 500 {
+            return errors.New("供应商链接长度不能超过500个字符")
+        }
+        if req.EvaluatorInfo.UserManualURL != "" && len(req.EvaluatorInfo.UserManualURL) > 500 {
+            return errors.New("用户手册链接长度不能超过500个字符")
+        }
+    }
 
 	// 验证评估器类型和内容匹配
 	if req.EvaluatorType == entity.EvaluatorTypePrompt && req.PromptEvaluatorContent == nil {
@@ -283,12 +306,20 @@ func (s *EvaluatorTemplateServiceImpl) validateUpdateRequest(req *entity.UpdateE
 	if req.Description != nil && len(*req.Description) > 500 {
 		return errors.New("模板描述长度不能超过500个字符")
 	}
-	if req.Benchmark != nil && len(*req.Benchmark) > 100 {
-		return errors.New("基准长度不能超过100个字符")
-	}
-	if req.Vendor != nil && len(*req.Vendor) > 100 {
-		return errors.New("供应商长度不能超过100个字符")
-	}
+    if req.EvaluatorInfo != nil {
+        if req.EvaluatorInfo.Benchmark != "" && len(req.EvaluatorInfo.Benchmark) > 100 {
+            return errors.New("基准长度不能超过100个字符")
+        }
+        if req.EvaluatorInfo.Vendor != "" && len(req.EvaluatorInfo.Vendor) > 100 {
+            return errors.New("供应商长度不能超过100个字符")
+        }
+        if req.EvaluatorInfo.VendorURL != "" && len(req.EvaluatorInfo.VendorURL) > 500 {
+            return errors.New("供应商链接长度不能超过500个字符")
+        }
+        if req.EvaluatorInfo.UserManualURL != "" && len(req.EvaluatorInfo.UserManualURL) > 500 {
+            return errors.New("用户手册链接长度不能超过500个字符")
+        }
+    }
 
 	return nil
 }

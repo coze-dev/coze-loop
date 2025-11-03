@@ -7,9 +7,8 @@ type EvaluatorTemplate struct {
 	Description   string
 	EvaluatorType EvaluatorType
 
-	Benchmark  string
-	Vendor     string
-	Popularity int64
+	EvaluatorInfo *EvaluatorInfo
+	Popularity    int64
 
 	InputSchemas       []*ArgsSchema                                         `json:"input_schemas"`
 	OutputSchemas      []*ArgsSchema                                         `json:"output_schemas"`

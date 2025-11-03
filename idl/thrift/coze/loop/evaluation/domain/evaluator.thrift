@@ -120,6 +120,13 @@ struct EvaluatorIDVersionItem {
     2: optional string version (api.js_conv = 'true', go.tag = 'json:"version"')
 }
 
+struct EvaluatorInfo {
+    1: optional string benchmark (go.tag = 'json:"benchmark"')
+    2: optional string vendor (go.tag = 'json:"vendor"')
+    3: optional string vendor_url (go.tag = 'json:"vendor_url"')
+    4: optional string user_manual_url (go.tag = 'json:"user_manual_url"')
+}
+
 struct Evaluator {
     1: optional i64 evaluator_id (api.js_conv = 'true', go.tag = 'json:"evaluator_id"')
     2: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
@@ -132,10 +139,9 @@ struct Evaluator {
     12: optional string latest_version
 
     20: optional bool builtin (go.tag = 'json:"builtin"')
-    21: optional string benchmark (go.tag = 'json:"benchmark"')
-    22: optional string vendor (go.tag = 'json:"vendor"')
-    23: optional string builtin_visible_version (go.tag = 'json:"builtin_visible_version"')
-    24: optional EvaluatorBoxType box_type (go.tag = 'json:"box_type"') // 默认白盒
+    21: optional EvaluatorInfo evaluator_info (go.tag = 'json:"evaluator_info"')
+    22: optional string builtin_visible_version (go.tag = 'json:"builtin_visible_version"')
+    23: optional EvaluatorBoxType box_type (go.tag = 'json:"box_type"') // 默认白盒
 
     100: optional map<EvaluatorTagLangType, map<EvaluatorTagKey, list<string>>> tags (go.tag = 'json:"tags"')
 }
@@ -147,8 +153,7 @@ struct EvaluatorTemplate {
     4: optional string name
     5: optional string description
     6: optional i64 popularity (go.tag = 'json:"popularity"') // 热度
-    7: optional string benchmark (go.tag = 'json:"benchmark"')
-    8: optional string vendor (go.tag = 'json:"vendor"')
+    7: optional EvaluatorInfo evaluator_info (go.tag = 'json:"evaluator_info"')
     9: optional map<EvaluatorTagLangType, map<EvaluatorTagKey, list<string>>> tags (go.tag = 'json:"tags"')
 
     101: optional EvaluatorContent evaluator_content

@@ -1438,13 +1438,12 @@ func (e *EvaluatorHandlerImpl) CreateEvaluatorTemplate(ctx context.Context, requ
 	templateDO := evaluatorconvertor.ConvertEvaluatorTemplateDTO2DO(request.GetEvaluatorTemplate())
 
 	// 构建service层请求
-	serviceReq := &entity.CreateEvaluatorTemplateRequest{
+    serviceReq := &entity.CreateEvaluatorTemplateRequest{
 		SpaceID:                templateDO.SpaceID,
 		Name:                   templateDO.Name,
 		Description:            templateDO.Description,
 		EvaluatorType:          templateDO.EvaluatorType,
-		Benchmark:              templateDO.Benchmark,
-		Vendor:                 templateDO.Vendor,
+        EvaluatorInfo:          templateDO.EvaluatorInfo,
 		InputSchemas:           templateDO.InputSchemas,
 		OutputSchemas:          templateDO.OutputSchemas,
 		ReceiveChatHistory:     templateDO.ReceiveChatHistory,
@@ -1484,12 +1483,11 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, requ
 	templateDO := evaluatorconvertor.ConvertEvaluatorTemplateDTO2DO(request.GetEvaluatorTemplate())
 
 	// 构建service层请求
-	serviceReq := &entity.UpdateEvaluatorTemplateRequest{
+    serviceReq := &entity.UpdateEvaluatorTemplateRequest{
 		ID:                     request.EvaluatorTemplateID,
 		Name:                   gptr.Of(templateDO.Name),
 		Description:            gptr.Of(templateDO.Description),
-		Benchmark:              gptr.Of(templateDO.Benchmark),
-		Vendor:                 gptr.Of(templateDO.Vendor),
+        EvaluatorInfo:          templateDO.EvaluatorInfo,
 		InputSchemas:           templateDO.InputSchemas,
 		OutputSchemas:          templateDO.OutputSchemas,
 		ReceiveChatHistory:     templateDO.ReceiveChatHistory,

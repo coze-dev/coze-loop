@@ -54,14 +54,13 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 					Return(&mysql.ListEvaluatorTemplateResponse{
 						TotalCount: 2,
 						Templates: []*model.EvaluatorTemplate{
-							{
+                            {
 								ID:            1,
 								SpaceID:       gptr.Of(int64(123)),
 								Name:          gptr.Of("Template A"),
 								Description:   gptr.Of("Description A"),
 								EvaluatorType: gptr.Of(int32(1)),
-								Benchmark:     gptr.Of("benchmark1"),
-								Vendor:        gptr.Of("vendor1"),
+                                EvaluatorInfo: gptr.Of([]byte(`{"benchmark":"benchmark1","vendor":"vendor1"}`)),
 								Popularity:    100,
 								CreatedBy:     "user1",
 								UpdatedBy:     "user1",
@@ -72,8 +71,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 								Name:          gptr.Of("Template B"),
 								Description:   gptr.Of("Description B"),
 								EvaluatorType: gptr.Of(int32(2)),
-								Benchmark:     gptr.Of("benchmark2"),
-								Vendor:        gptr.Of("vendor2"),
+                                EvaluatorInfo: gptr.Of([]byte(`{"benchmark":"benchmark2","vendor":"vendor2"}`)),
 								Popularity:    200,
 								CreatedBy:     "user2",
 								UpdatedBy:     "user2",
@@ -139,14 +137,13 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 					Return(&mysql.ListEvaluatorTemplateResponse{
 						TotalCount: 1,
 						Templates: []*model.EvaluatorTemplate{
-							{
+                            {
 								ID:            1,
 								SpaceID:       gptr.Of(int64(123)),
 								Name:          gptr.Of("Template A"),
 								Description:   gptr.Of("Description A"),
 								EvaluatorType: gptr.Of(int32(1)),
-								Benchmark:     gptr.Of("benchmark1"),
-								Vendor:        gptr.Of("vendor1"),
+                                EvaluatorInfo: gptr.Of([]byte(`{"benchmark":"benchmark1","vendor":"vendor1"}`)),
 								Popularity:    100,
 								CreatedBy:     "user1",
 								UpdatedBy:     "user1",

@@ -23,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
 // EvaluatorRepoImpl 实现 EvaluatorRepo 接口
@@ -509,12 +510,19 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorMeta(ctx context.Context, req *entity
 	if req.BoxType != nil {
 		po.BoxType = int32(*req.BoxType)
 	}
-	if req.Benchmark != nil {
-		po.Benchmark = req.Benchmark
-	}
-	if req.Vendor != nil {
-		po.Vendor = req.Vendor
-	}
+    // 写入 EvaluatorInfo JSON（由旧字段组装）
+    if req.Benchmark != nil || req.Vendor != nil {
+        info := &entity.EvaluatorInfo{}
+        if req.Benchmark != nil {
+            info.Benchmark = *req.Benchmark
+        }
+        if req.Vendor != nil {
+            info.Vendor = *req.Vendor
+        }
+        if b, err := json.Marshal(info); err == nil {
+            po.EvaluatorInfo = &b
+        }
+    }
 	if req.BuiltinVisibleVersion != nil {
 		po.BuiltinVisibleVersion = gptr.Indirect(req.BuiltinVisibleVersion)
 	}

@@ -18,19 +18,25 @@ func ConvertEvaluatorTemplateDTO2DO(dto *evaluatordto.EvaluatorTemplate) *evalua
 		return nil
 	}
 
-	do := &evaluatordo.EvaluatorTemplate{
+    do := &evaluatordo.EvaluatorTemplate{
 		ID:            dto.GetID(),
 		SpaceID:       dto.GetWorkspaceID(),
 		Name:          dto.GetName(),
 		Description:   dto.GetDescription(),
 		EvaluatorType: evaluatordo.EvaluatorType(dto.GetEvaluatorType()),
 		Popularity:    dto.GetPopularity(),
-		Benchmark:     dto.GetBenchmark(),
-		Vendor:        dto.GetVendor(),
 		InputSchemas:  make([]*evaluatordo.ArgsSchema, 0),
 		OutputSchemas: make([]*evaluatordo.ArgsSchema, 0),
 		Tags:          make(map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string),
 	}
+    if dto.GetEvaluatorInfo() != nil {
+        do.EvaluatorInfo = &evaluatordo.EvaluatorInfo{
+            Benchmark:     dto.GetEvaluatorInfo().GetBenchmark(),
+            Vendor:        dto.GetEvaluatorInfo().GetVendor(),
+            VendorURL:     dto.GetEvaluatorInfo().GetVendorURL(),
+            UserManualURL: dto.GetEvaluatorInfo().GetUserManualURL(),
+        }
+    }
 
 	// 处理标签
 	if len(dto.GetTags()) > 0 {
@@ -89,17 +95,23 @@ func ConvertEvaluatorTemplateDO2DTO(do *evaluatordo.EvaluatorTemplate) *evaluato
 		return nil
 	}
 
-	dto := &evaluatordto.EvaluatorTemplate{
+    dto := &evaluatordto.EvaluatorTemplate{
 		ID:            gptr.Of(do.ID),
 		WorkspaceID:   gptr.Of(do.SpaceID),
 		Name:          gptr.Of(do.Name),
 		Description:   gptr.Of(do.Description),
 		EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType(do.EvaluatorType)),
 		Popularity:    gptr.Of(do.Popularity),
-		Benchmark:     gptr.Of(do.Benchmark),
-		Vendor:        gptr.Of(do.Vendor),
 		Tags:          make(map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string),
 	}
+    if do.EvaluatorInfo != nil {
+        dto.EvaluatorInfo = &evaluatordto.EvaluatorInfo{
+            Benchmark:     gptr.Of(do.EvaluatorInfo.Benchmark),
+            Vendor:        gptr.Of(do.EvaluatorInfo.Vendor),
+            VendorURL:     gptr.Of(do.EvaluatorInfo.VendorURL),
+            UserManualURL: gptr.Of(do.EvaluatorInfo.UserManualURL),
+        }
+    }
 
 	// 处理标签
 	if len(do.Tags) > 0 {

@@ -21,7 +21,7 @@ func ConvertEvaluatorTemplateDO2PO(do *evaluatordo.EvaluatorTemplate) (*model.Ev
 		return nil, nil
 	}
 
-	po := &model.EvaluatorTemplate{
+    po := &model.EvaluatorTemplate{
 		ID:                 do.ID,
 		SpaceID:            ptr.Of(do.SpaceID),
 		Name:               ptr.Of(do.Name),
@@ -29,9 +29,13 @@ func ConvertEvaluatorTemplateDO2PO(do *evaluatordo.EvaluatorTemplate) (*model.Ev
 		EvaluatorType:      ptr.Of(int32(do.EvaluatorType)),
 		ReceiveChatHistory: do.ReceiveChatHistory,
 		Popularity:         do.Popularity,
-		Benchmark:          ptr.Of(do.Benchmark),
-		Vendor:             ptr.Of(do.Vendor),
 	}
+    if do.EvaluatorInfo != nil {
+        b, err := json.Marshal(do.EvaluatorInfo)
+        if err == nil {
+            po.EvaluatorInfo = ptr.Of(b)
+        }
+    }
 
 	// 序列化InputSchema
 	if len(do.InputSchemas) > 0 {
@@ -101,7 +105,7 @@ func ConvertEvaluatorTemplatePO2DO(po *model.EvaluatorTemplate) (*evaluatordo.Ev
 		return nil, nil
 	}
 
-	do := &evaluatordo.EvaluatorTemplate{
+    do := &evaluatordo.EvaluatorTemplate{
 		ID:                 po.ID,
 		SpaceID:            gptr.Indirect(po.SpaceID),
 		Name:               gptr.Indirect(po.Name),
@@ -109,10 +113,14 @@ func ConvertEvaluatorTemplatePO2DO(po *model.EvaluatorTemplate) (*evaluatordo.Ev
 		EvaluatorType:      evaluatordo.EvaluatorType(gptr.Indirect(po.EvaluatorType)),
 		ReceiveChatHistory: po.ReceiveChatHistory,
 		Popularity:         po.Popularity,
-		Benchmark:          gptr.Indirect(po.Benchmark),
-		Vendor:             gptr.Indirect(po.Vendor),
 		Tags:               make(map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string),
 	}
+    if po.EvaluatorInfo != nil {
+        var info evaluatordo.EvaluatorInfo
+        if err := json.Unmarshal(*po.EvaluatorInfo, &info); err == nil {
+            do.EvaluatorInfo = &info
+        }
+    }
 
 	// 反序列化InputSchema
 	if po.InputSchema != nil {

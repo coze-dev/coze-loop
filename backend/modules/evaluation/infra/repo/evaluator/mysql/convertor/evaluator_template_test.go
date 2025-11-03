@@ -13,6 +13,7 @@ import (
 
 	evaluatordo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -23,16 +24,16 @@ func TestConvertEvaluatorTemplateDO2PO(t *testing.T) {
 	baseTime := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name      string
-		do        *evaluatordo.EvaluatorTemplate
-		wantErr   bool
-		validate  func(t *testing.T, po *model.EvaluatorTemplate, err error)
+		name        string
+		do          *evaluatordo.EvaluatorTemplate
+		wantErr     bool
+		validate    func(t *testing.T, po *model.EvaluatorTemplate, err error)
 		description string
 	}{
 		{
-			name:      "nil输入",
-			do:        nil,
-			wantErr:   false,
+			name:    "nil输入",
+			do:      nil,
+			wantErr: false,
 			validate: func(t *testing.T, po *model.EvaluatorTemplate, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, po)
@@ -49,8 +50,7 @@ func TestConvertEvaluatorTemplateDO2PO(t *testing.T) {
 				EvaluatorType:      evaluatordo.EvaluatorTypePrompt,
 				ReceiveChatHistory: gptr.Of(true),
 				Popularity:         100,
-				Benchmark:          "benchmark1",
-				Vendor:             "vendor1",
+				EvaluatorInfo:      &evaluatordo.EvaluatorInfo{Benchmark: "benchmark1", Vendor: "vendor1", VendorURL: "u1", UserManualURL: "m1"},
 				BaseInfo: &evaluatordo.BaseInfo{
 					CreatedBy: &evaluatordo.UserInfo{
 						UserID: ptr.Of("user1"),
@@ -73,13 +73,19 @@ func TestConvertEvaluatorTemplateDO2PO(t *testing.T) {
 				assert.Equal(t, int32(evaluatordo.EvaluatorTypePrompt), gptr.Indirect(po.EvaluatorType))
 				assert.NotNil(t, po.ReceiveChatHistory)
 				assert.True(t, gptr.Indirect(po.ReceiveChatHistory))
-				assert.Equal(t, int32(100), po.Popularity)
-				assert.Equal(t, "benchmark1", gptr.Indirect(po.Benchmark))
-				assert.Equal(t, "vendor1", gptr.Indirect(po.Vendor))
+				assert.Equal(t, int64(100), po.Popularity)
+				if assert.NotNil(t, po.EvaluatorInfo) {
+					var info evaluatordo.EvaluatorInfo
+					_ = json.Unmarshal(*po.EvaluatorInfo, &info)
+					assert.Equal(t, "benchmark1", info.Benchmark)
+					assert.Equal(t, "vendor1", info.Vendor)
+					assert.Equal(t, "u1", info.VendorURL)
+					assert.Equal(t, "m1", info.UserManualURL)
+				}
 				assert.Equal(t, "user1", po.CreatedBy)
 				assert.Equal(t, "user1", po.UpdatedBy)
-				assert.Equal(t, baseTime, po.CreatedAt)
-				assert.Equal(t, baseTime, po.UpdatedAt)
+				assert.Equal(t, baseTime.UnixMilli(), po.CreatedAt.UnixMilli())
+				assert.Equal(t, baseTime.UnixMilli(), po.UpdatedAt.UnixMilli())
 			},
 			description: "成功转换Prompt类型模板（基础字段）",
 		},
@@ -91,7 +97,9 @@ func TestConvertEvaluatorTemplateDO2PO(t *testing.T) {
 				Name:          "Code Template",
 				EvaluatorType: evaluatordo.EvaluatorTypeCode,
 				CodeEvaluatorContent: &evaluatordo.CodeEvaluatorContent{
-					CodeContent: "def evaluate(): pass",
+					Lang2CodeContent: map[evaluatordo.LanguageType]string{
+						evaluatordo.LanguageTypePython: "def evaluate(): pass",
+					},
 				},
 			},
 			wantErr: false,
@@ -114,14 +122,14 @@ func TestConvertEvaluatorTemplateDO2PO(t *testing.T) {
 					{
 						Key:                 ptr.Of("input1"),
 						SupportContentTypes: []evaluatordo.ContentType{evaluatordo.ContentTypeText},
-						JsonSchema:           ptr.Of(`{"type": "string"}`),
+						JsonSchema:          ptr.Of(`{"type": "string"}`),
 					},
 				},
 				OutputSchemas: []*evaluatordo.ArgsSchema{
 					{
 						Key:                 ptr.Of("output1"),
 						SupportContentTypes: []evaluatordo.ContentType{evaluatordo.ContentTypeText},
-						JsonSchema:           ptr.Of(`{"type": "string"}`),
+						JsonSchema:          ptr.Of(`{"type": "string"}`),
 					},
 				},
 			},
@@ -150,7 +158,7 @@ func TestConvertEvaluatorTemplateDO2PO(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, po)
 				assert.True(t, po.DeletedAt.Valid)
-				assert.Equal(t, baseTime, po.DeletedAt.Time)
+				assert.Equal(t, baseTime.UnixMilli(), po.DeletedAt.Time.UnixMilli())
 			},
 			description: "成功转换带删除时间的模板",
 		},
@@ -201,16 +209,16 @@ func TestConvertEvaluatorTemplatePO2DO(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		po        *model.EvaluatorTemplate
-		wantErr   bool
-		validate  func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error)
+		name        string
+		po          *model.EvaluatorTemplate
+		wantErr     bool
+		validate    func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error)
 		description string
 	}{
 		{
-			name:      "nil输入",
-			po:        nil,
-			wantErr:   false,
+			name:    "nil输入",
+			po:      nil,
+			wantErr: false,
 			validate: func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, do)
@@ -227,8 +235,7 @@ func TestConvertEvaluatorTemplatePO2DO(t *testing.T) {
 				EvaluatorType:      gptr.Of(int32(evaluatordo.EvaluatorTypePrompt)),
 				ReceiveChatHistory: gptr.Of(true),
 				Popularity:         100,
-				Benchmark:          gptr.Of("benchmark1"),
-				Vendor:             gptr.Of("vendor1"),
+				EvaluatorInfo:      gptr.Of([]byte(`{"benchmark":"benchmark1","vendor":"vendor1","vendor_url":"u1","user_manual_url":"m1"}`)),
 			},
 			wantErr: false,
 			validate: func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error) {
@@ -241,9 +248,13 @@ func TestConvertEvaluatorTemplatePO2DO(t *testing.T) {
 				assert.Equal(t, evaluatordo.EvaluatorTypePrompt, do.EvaluatorType)
 				assert.NotNil(t, do.ReceiveChatHistory)
 				assert.True(t, gptr.Indirect(do.ReceiveChatHistory))
-				assert.Equal(t, int32(100), do.Popularity)
-				assert.Equal(t, "benchmark1", do.Benchmark)
-				assert.Equal(t, "vendor1", do.Vendor)
+				assert.Equal(t, int64(100), do.Popularity)
+				if assert.NotNil(t, do.EvaluatorInfo) {
+					assert.Equal(t, "benchmark1", do.EvaluatorInfo.Benchmark)
+					assert.Equal(t, "vendor1", do.EvaluatorInfo.Vendor)
+					assert.Equal(t, "u1", do.EvaluatorInfo.VendorURL)
+					assert.Equal(t, "m1", do.EvaluatorInfo.UserManualURL)
+				}
 				assert.NotNil(t, do.Tags)
 			},
 			description: "成功转换Prompt类型模板",
@@ -255,7 +266,7 @@ func TestConvertEvaluatorTemplatePO2DO(t *testing.T) {
 				SpaceID:       gptr.Of(int64(123)),
 				Name:          gptr.Of("Code Template"),
 				EvaluatorType: gptr.Of(int32(evaluatordo.EvaluatorTypeCode)),
-				Metainfo: gptr.Of([]byte(`{"code_content":"def evaluate(): pass"}`)),
+				Metainfo:      gptr.Of([]byte(`{"code_content":"def evaluate(): pass"}`)),
 			},
 			wantErr: false,
 			validate: func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error) {
@@ -273,8 +284,8 @@ func TestConvertEvaluatorTemplatePO2DO(t *testing.T) {
 				SpaceID:       gptr.Of(int64(123)),
 				Name:          gptr.Of("Template with Schemas"),
 				EvaluatorType: gptr.Of(int32(evaluatordo.EvaluatorTypePrompt)),
-				InputSchema: gptr.Of([]byte(`[{"key":"input1","support_content_types":["Text"],"json_schema":"{\"type\": \"string\"}"}]`)),
-				OutputSchema: gptr.Of([]byte(`[{"key":"output1","support_content_types":["Text"],"json_schema":"{\"type\": \"string\"}"}]`)),
+				InputSchema:   gptr.Of([]byte(`[{"key":"input1","support_content_types":["Text"],"json_schema":"{\"type\": \"string\"}"}]`)),
+				OutputSchema:  gptr.Of([]byte(`[{"key":"output1","support_content_types":["Text"],"json_schema":"{\"type\": \"string\"}"}]`)),
 			},
 			wantErr: false,
 			validate: func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error) {
@@ -294,7 +305,7 @@ func TestConvertEvaluatorTemplatePO2DO(t *testing.T) {
 				SpaceID:       gptr.Of(int64(123)),
 				Name:          gptr.Of("Invalid Template"),
 				EvaluatorType: gptr.Of(int32(evaluatordo.EvaluatorTypePrompt)),
-				Metainfo: gptr.Of([]byte(`invalid json`)),
+				Metainfo:      gptr.Of([]byte(`invalid json`)),
 			},
 			wantErr: true,
 			validate: func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error) {
@@ -326,16 +337,16 @@ func TestConvertEvaluatorTemplatePO2DOWithBaseInfo(t *testing.T) {
 	baseTime := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name      string
-		po        *model.EvaluatorTemplate
-		wantErr   bool
-		validate  func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error)
+		name        string
+		po          *model.EvaluatorTemplate
+		wantErr     bool
+		validate    func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error)
 		description string
 	}{
 		{
-			name:      "nil输入",
-			po:        nil,
-			wantErr:   false,
+			name:    "nil输入",
+			po:      nil,
+			wantErr: false,
 			validate: func(t *testing.T, do *evaluatordo.EvaluatorTemplate, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, do)
@@ -434,4 +445,3 @@ func TestConvertEvaluatorTemplatePO2DOWithBaseInfo(t *testing.T) {
 		})
 	}
 }
-

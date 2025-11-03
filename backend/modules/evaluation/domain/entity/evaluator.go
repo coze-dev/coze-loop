@@ -14,8 +14,7 @@ type Evaluator struct {
 	BaseInfo       *BaseInfo
 
 	Builtin               bool
-	Benchmark             string
-	Vendor                string
+	EvaluatorInfo         *EvaluatorInfo
 	BuiltinVisibleVersion string
 	BoxType               EvaluatorBoxType                                      `json:"box_type"`
 	Tags                  map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `json:"tags"`
@@ -23,6 +22,13 @@ type Evaluator struct {
 	PromptEvaluatorVersion    *PromptEvaluatorVersion
 	CodeEvaluatorVersion      *CodeEvaluatorVersion
 	CustomRPCEvaluatorVersion *CustomRPCEvaluatorVersion
+}
+
+type EvaluatorInfo struct {
+	Benchmark     string `json:"benchmark"`
+	Vendor        string `json:"vendor"`
+	VendorURL     string `json:"vendor_url"`
+	UserManualURL string `json:"user_manual_url"`
 }
 
 type EvaluatorBoxType int64
