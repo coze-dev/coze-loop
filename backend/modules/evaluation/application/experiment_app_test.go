@@ -2076,7 +2076,7 @@ func TestExperimentApplication_BatchGetExperimentResult_(t *testing.T) {
 						},
 					},
 
-					//{
+					// {
 					//	TagKeyID:    ptr.Of(int64(1)),
 					//	TagKeyName:  ptr.Of("name"),
 					//	Description: ptr.Of("desc"),
@@ -2095,7 +2095,7 @@ func TestExperimentApplication_BatchGetExperimentResult_(t *testing.T) {
 					//		MaxValueDescription: ptr.Of("2"),
 					//	}},
 					//	Status: ptr.Of(tag.TagStatusActive),
-					//},
+					// },
 				},
 				ItemResults: []*expt.ItemResult_{
 					{
@@ -2636,7 +2636,7 @@ func TestExperimentApplication_InvokeExperiment(t *testing.T) {
 						gomock.Any(),
 						gomock.Any(), // 使用 Any 匹配器，因为结构体内部包含指针
 					).
-					DoAndReturn(func(_ context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, []*entity.CreateDatasetItemOutput, error) {
+					DoAndReturn(func(_ context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, []*entity.DatasetItemOutput, error) {
 						// 验证关键字段
 						if param.SpaceID != validSpaceID || param.EvaluationSetID != validEvalSetID {
 							t.Errorf("unexpected param values: got SpaceID=%v, EvaluationSetID=%v", param.SpaceID, param.EvaluationSetID)

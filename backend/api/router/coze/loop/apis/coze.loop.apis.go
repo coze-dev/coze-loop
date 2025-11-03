@@ -398,6 +398,24 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
 			}
 			{
+				_evaluation0 := _loop.Group("/evaluation", _evaluation0Mw(handler)...)
+				_evaluation0.GET("/evaluation_sets", append(_evaluation_sets0Mw(handler), apis.ListEvaluationSetsOApi)...)
+				_evaluation_sets0 := _evaluation0.Group("/evaluation_sets", _evaluation_sets0Mw(handler)...)
+				{
+					_evaluation_set_id0 := _evaluation_sets0.Group("/:evaluation_set_id", _evaluation_set_id0Mw(handler)...)
+					_evaluation_set_id0.DELETE("/items", append(_batchdeleteevaluationsetitemsoapiMw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
+					_evaluation_set_id0.GET("/items", append(_listevaluationsetversionitemsoapiMw(handler), apis.ListEvaluationSetVersionItemsOApi)...)
+					_evaluation_set_id0.POST("/items", append(_batchcreateevaluationsetitemsoapiMw(handler), apis.BatchCreateEvaluationSetItemsOApi)...)
+					_evaluation_set_id0.PUT("/items", append(_batchupdateevaluationsetitemsoapiMw(handler), apis.BatchUpdateEvaluationSetItemsOApi)...)
+					_evaluation_set_id0.PUT("/schema", append(_updateevaluationsetschemaoapiMw(handler), apis.UpdateEvaluationSetSchemaOApi)...)
+					_evaluation_set_id0.GET("/versions", append(_listevaluationsetversionsoapiMw(handler), apis.ListEvaluationSetVersionsOApi)...)
+					_evaluation_set_id0.POST("/versions", append(_createevaluationsetversionoapiMw(handler), apis.CreateEvaluationSetVersionOApi)...)
+				}
+				_evaluation0.POST("/evaluation_sets", append(_evaluation_sets1Mw(handler), apis.CreateEvaluationSetOApi)...)
+				_evaluation_sets1 := _evaluation0.Group("/evaluation_sets", _evaluation_sets1Mw(handler)...)
+				_evaluation_sets1.GET("/:evaluation_set_id", append(_getevaluationsetoapiMw(handler), apis.GetEvaluationSetOApi)...)
+			}
+			{
 				_files := _loop.Group("/files", _filesMw(handler)...)
 				_files.POST("/upload", append(_uploadloopfileMw(handler), apis.UploadLoopFile)...)
 			}
