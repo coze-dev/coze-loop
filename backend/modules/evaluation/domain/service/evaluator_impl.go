@@ -197,17 +197,34 @@ func (e *EvaluatorServiceImpl) GetBuiltinEvaluator(ctx context.Context, evaluato
 		return nil, nil
 	}
 
-	// 1) 通过 (evaluator_id, builtin_visible_version) 获取对应版本
-	pairs := [][2]interface{}{{evaluatorID, meta.BuiltinVisibleVersion}}
-	versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
-	if err != nil {
-		return nil, err
-	}
-	if len(versions) == 0 {
-		return nil, nil
-	}
+    // 1) 通过 (evaluator_id, builtin_visible_version) 获取对应版本
+    pairs := [][2]interface{}{{evaluatorID, meta.BuiltinVisibleVersion}}
+    versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+    if err != nil {
+        return nil, err
+    }
+    if len(versions) == 0 {
+        return nil, nil
+    }
 
-	return versions[0], nil
+    // 2) 回填 metas（元信息）到返回的版本实体根字段
+    v := versions[0]
+    if v != nil && meta != nil {
+        v.ID = meta.ID
+        v.SpaceID = meta.SpaceID
+        v.Name = meta.Name
+        v.Description = meta.Description
+        v.DraftSubmitted = meta.DraftSubmitted
+        v.EvaluatorType = meta.EvaluatorType
+        v.LatestVersion = meta.LatestVersion
+        v.Builtin = meta.Builtin
+        v.EvaluatorInfo = meta.EvaluatorInfo
+        v.BuiltinVisibleVersion = meta.BuiltinVisibleVersion
+        v.BoxType = meta.BoxType
+        v.Tags = meta.Tags
+    }
+
+    return v, nil
 }
 
 // BatchGetBuiltinEvaluator 批量获取预置评估器（visible版本）
@@ -235,6 +252,34 @@ func (e *EvaluatorServiceImpl) BatchGetBuiltinEvaluator(ctx context.Context, eva
     versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
     if err != nil {
         return nil, err
+    }
+
+    // 回填 metas（元信息）到各版本实体根字段
+    id2Meta := make(map[int64]*entity.Evaluator, len(metas))
+    for _, m := range metas {
+        if m != nil {
+            id2Meta[m.ID] = m
+        }
+    }
+    for _, v := range versions {
+        if v == nil {
+            continue
+        }
+        mid := v.GetEvaluatorID()
+        if m, ok := id2Meta[mid]; ok && m != nil {
+            v.ID = m.ID
+            v.SpaceID = m.SpaceID
+            v.Name = m.Name
+            v.Description = m.Description
+            v.DraftSubmitted = m.DraftSubmitted
+            v.EvaluatorType = m.EvaluatorType
+            v.LatestVersion = m.LatestVersion
+            v.Builtin = m.Builtin
+            v.EvaluatorInfo = m.EvaluatorInfo
+            v.BuiltinVisibleVersion = m.BuiltinVisibleVersion
+            v.BoxType = m.BoxType
+            v.Tags = m.Tags
+        }
     }
     return versions, nil
 }
