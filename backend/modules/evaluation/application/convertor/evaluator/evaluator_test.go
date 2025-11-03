@@ -1068,3 +1068,317 @@ func TestConvertEvaluatorTagKeyDO2DTO(t *testing.T) {
 		})
 	}
 }
+
+// 新增：覆盖 CodeEvaluatorContent 的 lang_2_code_content 转换路径（DTO -> DO）
+func TestConvertCodeEvaluatorContentDTO2DO_OldFieldsToMap(t *testing.T) {
+    t.Parallel()
+
+    dto := &evaluatordto.CodeEvaluator{
+        LanguageType: gptr.Of(evaluatordto.LanguageType("Python")),
+        CodeContent:  gptr.Of("print('old')"),
+    }
+    // 使用旧字段，期望转换为单元素 Lang2CodeContent
+
+    do := ConvertCodeEvaluatorContentDTO2DO(dto)
+    // 期望将 map 完整落入 DO
+    assert.NotNil(t, do)
+    assert.NotNil(t, do.Lang2CodeContent)
+    assert.Equal(t, "print('old')", do.Lang2CodeContent[evaluatordo.LanguageType("Python")])
+}
+
+// 新增：覆盖 CodeEvaluatorContent 的 lang_2_code_content 转换路径（DO -> DTO）
+func TestConvertCodeEvaluatorContentDO2DTO_Lang2(t *testing.T) {
+    t.Parallel()
+
+    do := &evaluatordo.CodeEvaluatorContent{
+        Lang2CodeContent: map[evaluatordo.LanguageType]string{
+            evaluatordo.LanguageType("Python"): "print('py')",
+        },
+    }
+
+    dto := ConvertCodeEvaluatorContentDO2DTO(do)
+    assert.NotNil(t, dto)
+    // 兼容旧字段：从 map 回填一个 language_type/code_content
+    assert.Equal(t, "Python", dto.GetLanguageType())
+    assert.Equal(t, "print('py')", dto.GetCodeContent())
+    // 不校验新字段（兼容老字段即可）
+}
+
+// 新增：覆盖 CodeEvaluatorVersion 的 DTO -> DO（优先根据 language_type 命中 lang_2_code_content）
+func TestConvertCodeEvaluatorVersionDTO2DO_Lang2_PickByLanguageType(t *testing.T) {
+    t.Parallel()
+
+    ev := &evaluatordto.EvaluatorVersion{
+        ID:          gptr.Of(int64(100)),
+        Version:     gptr.Of("1.0.0"),
+        Description: gptr.Of("desc"),
+        EvaluatorContent: &evaluatordto.EvaluatorContent{
+            CodeEvaluator: &evaluatordto.CodeEvaluator{
+                LanguageType: gptr.Of(evaluatordto.LanguageType("JS")),
+                CodeTemplateKey:  gptr.Of("tpl-1"),
+                CodeTemplateName: gptr.Of("TPL1"),
+            },
+        },
+    }
+    // 不使用新字段，使用旧字段验证兼容路径
+    ev.EvaluatorContent.CodeEvaluator.CodeContent = gptr.Of("console.log('js')")
+
+    do := ConvertCodeEvaluatorVersionDTO2DO(1, 2, ev)
+    assert.NotNil(t, do)
+    assert.Equal(t, int64(1), do.EvaluatorID)
+    assert.Equal(t, int64(2), do.SpaceID)
+    // 根据 language_type=JS 命中 map
+    assert.Equal(t, "console.log('js')", do.CodeContent)
+    assert.Equal(t, evaluatordo.LanguageType("JS"), do.LanguageType)
+}
+
+// 新增：覆盖 CodeEvaluatorVersion 的 DTO -> DO（未给 language_type 时取第一个）
+func TestConvertCodeEvaluatorVersionDTO2DO_Lang2_PickFirst(t *testing.T) {
+    t.Parallel()
+
+    ev := &evaluatordto.EvaluatorVersion{
+        EvaluatorContent: &evaluatordto.EvaluatorContent{
+            CodeEvaluator: &evaluatordto.CodeEvaluator{},
+        },
+    }
+    // 不使用新字段，使用旧字段验证兼容路径
+    ev.EvaluatorContent.CodeEvaluator.LanguageType = gptr.Of(evaluatordto.LanguageType("Python"))
+    ev.EvaluatorContent.CodeEvaluator.CodeContent = gptr.Of("print('py')")
+
+    do := ConvertCodeEvaluatorVersionDTO2DO(1, 2, ev)
+    assert.NotNil(t, do)
+    assert.Equal(t, "print('py')", do.CodeContent)
+    assert.Equal(t, evaluatordo.LanguageType("Python"), do.LanguageType)
+}
+
+// 新增：覆盖 ConvertEvaluatorContent2DO 的 Code 分支（优先 lang_2_code_content）
+func TestConvertEvaluatorContent2DO_Code_Lang2(t *testing.T) {
+    t.Parallel()
+    content := &evaluatordto.EvaluatorContent{
+        CodeEvaluator: &evaluatordto.CodeEvaluator{
+            LanguageType: gptr.Of(evaluatordto.LanguageType("Python")),
+        },
+    }
+    // 不使用新字段，使用旧字段验证兼容路径
+    content.CodeEvaluator.CodeContent = gptr.Of("print('py')")
+
+    do, err := ConvertEvaluatorContent2DO(content, evaluatordto.EvaluatorType_Code)
+    assert.NoError(t, err)
+    assert.NotNil(t, do)
+    if do.CodeEvaluatorVersion == nil {
+        t.Fatalf("expected CodeEvaluatorVersion not nil")
+    }
+    assert.Equal(t, "print('py')", do.CodeEvaluatorVersion.CodeContent)
+    assert.Equal(t, evaluatordo.LanguageType("Python"), do.CodeEvaluatorVersion.LanguageType)
+}
+
+// TestConvertCustomRPCEvaluatorVersionDTO2DO 测试将 CustomRPC EvaluatorVersion DTO 转换为 DO
+func TestConvertCustomRPCEvaluatorVersionDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		evaluatorID int64
+		spaceID     int64
+		dto         *evaluatordto.EvaluatorVersion
+		validate    func(t *testing.T, result *evaluatordo.CustomRPCEvaluatorVersion)
+		description string
+	}{
+		{
+			name:        "nil输入",
+			evaluatorID: 123,
+			spaceID:     456,
+			dto:         nil,
+			validate: func(t *testing.T, result *evaluatordo.CustomRPCEvaluatorVersion) {
+				assert.Nil(t, result)
+			},
+			description: "nil输入应该返回nil",
+		},
+		{
+			name:        "成功 - 基本转换",
+			evaluatorID: 123,
+			spaceID:     456,
+			dto: &evaluatordto.EvaluatorVersion{
+				ID:          gptr.Of(int64(789)),
+				Version:     gptr.Of("1.0.0"),
+				Description: gptr.Of("Test CustomRPC version"),
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+						ProviderEvaluatorCode: gptr.Of("PROVIDER_001"),
+						AccessProtocol:        evaluatordto.AccessProtocol("HTTP"),
+						ServiceName:           gptr.Of("test_service"),
+						Cluster:               gptr.Of("test_cluster"),
+						Timeout:               gptr.Of(int64(5000)),
+					},
+					InputSchemas: []*commondto.ArgsSchema{
+						{
+							Key:                 gptr.Of("input1"),
+							SupportContentTypes: []commondto.ContentType{"Text"},
+							JSONSchema:          gptr.Of(`{"type": "string"}`),
+						},
+					},
+					OutputSchemas: []*commondto.ArgsSchema{
+						{
+							Key:                 gptr.Of("output1"),
+							SupportContentTypes: []commondto.ContentType{"Text"},
+							JSONSchema:          gptr.Of(`{"type": "string"}`),
+						},
+					},
+				},
+			},
+			validate: func(t *testing.T, result *evaluatordo.CustomRPCEvaluatorVersion) {
+				assert.NotNil(t, result)
+				assert.Equal(t, int64(789), result.ID)
+				assert.Equal(t, int64(123), result.EvaluatorID)
+				assert.Equal(t, int64(456), result.SpaceID)
+				assert.Equal(t, "1.0.0", result.Version)
+				assert.Equal(t, "Test CustomRPC version", result.Description)
+				assert.Equal(t, evaluatordo.EvaluatorTypeCustomRPC, result.EvaluatorType)
+				assert.NotNil(t, result.ProviderEvaluatorCode)
+				assert.Equal(t, "PROVIDER_001", *result.ProviderEvaluatorCode)
+				assert.Equal(t, evaluatordo.AccessProtocol("HTTP"), evaluatordo.AccessProtocol(result.AccessProtocol))
+				assert.NotNil(t, result.ServiceName)
+				assert.Equal(t, "test_service", *result.ServiceName)
+				assert.NotNil(t, result.Cluster)
+				assert.Equal(t, "test_cluster", *result.Cluster)
+				assert.NotNil(t, result.Timeout)
+				assert.Equal(t, int64(5000), *result.Timeout)
+				assert.NotNil(t, result.InputSchemas)
+				assert.Len(t, result.InputSchemas, 1)
+				assert.NotNil(t, result.OutputSchemas)
+				assert.Len(t, result.OutputSchemas, 1)
+			},
+			description: "成功转换CustomRPC评估器版本",
+		},
+		{
+			name:        "成功 - 空EvaluatorContent",
+			evaluatorID: 123,
+			spaceID:     456,
+			dto: &evaluatordto.EvaluatorVersion{
+				ID:          gptr.Of(int64(789)),
+				Version:     gptr.Of("1.0.0"),
+				Description: gptr.Of("Test version"),
+				EvaluatorContent: &evaluatordto.EvaluatorContent{},
+			},
+			validate: func(t *testing.T, result *evaluatordo.CustomRPCEvaluatorVersion) {
+				assert.NotNil(t, result)
+				assert.Equal(t, int64(789), result.ID)
+				assert.Nil(t, result.InputSchemas)
+				assert.Nil(t, result.OutputSchemas)
+			},
+			description: "成功转换空EvaluatorContent",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := ConvertCustomRPCEvaluatorVersionDTO2DO(tt.evaluatorID, tt.spaceID, tt.dto)
+
+			if tt.validate != nil {
+				tt.validate(t, result)
+			}
+		})
+	}
+}
+
+// TestConvertCustomRPCEvaluatorVersionDO2DTO 测试将 CustomRPC EvaluatorVersion DO 转换为 DTO
+func TestConvertCustomRPCEvaluatorVersionDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		do        *evaluatordo.CustomRPCEvaluatorVersion
+		validate  func(t *testing.T, result *evaluatordto.EvaluatorVersion)
+		description string
+	}{
+		{
+			name:      "nil输入",
+			do:        nil,
+			validate: func(t *testing.T, result *evaluatordto.EvaluatorVersion) {
+				assert.Nil(t, result)
+			},
+			description: "nil输入应该返回nil",
+		},
+		{
+			name: "成功 - 完整转换",
+			do: &evaluatordo.CustomRPCEvaluatorVersion{
+				ID:            789,
+				EvaluatorID:   123,
+				SpaceID:       456,
+				Version:       "1.0.0",
+				Description:   "Test CustomRPC version",
+				EvaluatorType: evaluatordo.EvaluatorTypeCustomRPC,
+				ProviderEvaluatorCode: gptr.Of("PROVIDER_001"),
+				AccessProtocol:        evaluatordo.AccessProtocol("HTTP"),
+				ServiceName:           gptr.Of("test_service"),
+				Cluster:               gptr.Of("test_cluster"),
+				Timeout:               gptr.Of(int64(5000)),
+				InputSchemas: []*evaluatordo.ArgsSchema{
+					{
+						Key:                 gptr.Of("input1"),
+						SupportContentTypes: []evaluatordo.ContentType{evaluatordo.ContentTypeText},
+						JsonSchema:          gptr.Of(`{"type": "string"}`),
+					},
+				},
+				OutputSchemas: []*evaluatordo.ArgsSchema{
+					{
+						Key:                 gptr.Of("output1"),
+						SupportContentTypes: []evaluatordo.ContentType{evaluatordo.ContentTypeText},
+						JsonSchema:          gptr.Of(`{"type": "string"}`),
+					},
+				},
+			},
+			validate: func(t *testing.T, result *evaluatordto.EvaluatorVersion) {
+				assert.NotNil(t, result)
+				assert.Equal(t, int64(789), result.GetID())
+				assert.Equal(t, "1.0.0", result.GetVersion())
+				assert.Equal(t, "Test CustomRPC version", result.GetDescription())
+				assert.NotNil(t, result.EvaluatorContent)
+				assert.NotNil(t, result.EvaluatorContent.CustomRPCEvaluator)
+				assert.Equal(t, "PROVIDER_001", *result.EvaluatorContent.CustomRPCEvaluator.ProviderEvaluatorCode)
+				assert.Equal(t, evaluatordto.AccessProtocol("HTTP"), evaluatordto.AccessProtocol(result.EvaluatorContent.CustomRPCEvaluator.AccessProtocol))
+				assert.Equal(t, "test_service", *result.EvaluatorContent.CustomRPCEvaluator.ServiceName)
+				assert.Equal(t, "test_cluster", *result.EvaluatorContent.CustomRPCEvaluator.Cluster)
+				assert.Equal(t, int64(5000), *result.EvaluatorContent.CustomRPCEvaluator.Timeout)
+				assert.NotNil(t, result.EvaluatorContent.InputSchemas)
+				assert.Len(t, result.EvaluatorContent.InputSchemas, 1)
+				assert.NotNil(t, result.EvaluatorContent.OutputSchemas)
+				assert.Len(t, result.EvaluatorContent.OutputSchemas, 1)
+			},
+			description: "成功转换CustomRPC评估器版本DO为DTO",
+		},
+		{
+			name: "成功 - 空字段",
+			do: &evaluatordo.CustomRPCEvaluatorVersion{
+				ID:            789,
+				EvaluatorID:   123,
+				SpaceID:       456,
+				Version:       "1.0.0",
+				Description:   "",
+				EvaluatorType: evaluatordo.EvaluatorTypeCustomRPC,
+			},
+			validate: func(t *testing.T, result *evaluatordto.EvaluatorVersion) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "", result.GetDescription())
+				assert.Nil(t, result.EvaluatorContent.InputSchemas)
+				assert.Nil(t, result.EvaluatorContent.OutputSchemas)
+			},
+			description: "成功转换空字段的CustomRPC版本",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := ConvertCustomRPCEvaluatorVersionDO2DTO(tt.do)
+
+			if tt.validate != nil {
+				tt.validate(t, result)
+			}
+		})
+	}
+}
+

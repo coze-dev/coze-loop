@@ -237,11 +237,21 @@ func ConvertCodeEvaluatorContentDTO2DO(dto *evaluatordto.CodeEvaluator) *evaluat
 	if dto == nil {
 		return nil
 	}
-
-	return &evaluatordo.CodeEvaluatorContent{
-		CodeContent:  dto.GetCodeContent(),
-		LanguageType: evaluatordo.LanguageType(dto.GetLanguageType()),
-	}
+    // 新字段优先：lang_2_code_content
+    if len(dto.GetLang2CodeContent()) > 0 {
+        // 直接映射为 DO 的 Lang2CodeContent
+        lang2 := make(map[evaluatordo.LanguageType]string, len(dto.GetLang2CodeContent()))
+        for k, v := range dto.GetLang2CodeContent() {
+            lang2[evaluatordo.LanguageType(k)] = v
+        }
+        return &evaluatordo.CodeEvaluatorContent{Lang2CodeContent: lang2}
+    }
+    // 兼容旧字段：language_type + code_content
+    return &evaluatordo.CodeEvaluatorContent{
+        Lang2CodeContent: map[evaluatordo.LanguageType]string{
+            evaluatordo.LanguageType(dto.GetLanguageType()): dto.GetCodeContent(),
+        },
+    }
 }
 
 // ConvertCodeEvaluatorContentDO2DTO 将 CodeEvaluatorContent DO 转换为 DTO
@@ -249,9 +259,21 @@ func ConvertCodeEvaluatorContentDO2DTO(do *evaluatordo.CodeEvaluatorContent) *ev
 	if do == nil {
 		return nil
 	}
-
-	return &evaluatordto.CodeEvaluator{
-		CodeContent:  gptr.Of(do.CodeContent),
-		LanguageType: gptr.Of(evaluatordto.LanguageType(do.LanguageType)),
-	}
+    dto := &evaluatordto.CodeEvaluator{}
+    if len(do.Lang2CodeContent) > 0 {
+        lang2 := make(map[evaluatordto.LanguageType]string, len(do.Lang2CodeContent))
+        for k, v := range do.Lang2CodeContent {
+            lang2[evaluatordto.LanguageType(k)] = v
+        }
+        dto.SetLang2CodeContent(lang2)
+        // 兼容旧字段：选择一个主语言回填（稳定选择）
+        for k, v := range do.Lang2CodeContent {
+            // 回填后跳出
+            dto.LanguageType = gptr.Of(evaluatordto.LanguageType(k))
+            dto.CodeContent = gptr.Of(v)
+            break
+        }
+        return dto
+    }
+    return dto
 }

@@ -31,8 +31,7 @@ type PromptEvaluatorContent struct {
 }
 
 type CodeEvaluatorContent struct {
-	CodeContent  string       `json:"code_content"`
-	LanguageType LanguageType `json:"language_type"`
+	Lang2CodeContent map[LanguageType]string `json:"lang_2_code_content"`
 }
 
 func (do *EvaluatorTemplate) SetBaseInfo(baseInfo *BaseInfo) {

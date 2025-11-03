@@ -251,7 +251,7 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 			return nil, errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("code evaluator content is nil"))
 		}
 
-		// 标准化语言类型
+		// 保持原逻辑：基于旧字段
 		languageType := evaluatordo.LanguageType(content.CodeEvaluator.GetLanguageType())
 		normalizedLangType := normalizeLanguageType(languageType)
 

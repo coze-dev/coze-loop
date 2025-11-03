@@ -54,6 +54,10 @@ const EvaluatorBoxType EvaluatorBoxType_Black = "Black" // 黑盒
 typedef string AccessProtocol
 const AccessProtocol AccessProtocol_RPC = "rpc"
 
+typedef string EvaluatorVersionType(ts.enum="true")
+const EvaluatorVersionType EvaluatorVersionType_Latest = "Latest" // 最新版本
+const EvaluatorVersionType EvaluatorVersionType_BuiltinVisible = "BuiltinVisible" // 内置可见版本
+
 struct Tool {
     1: ToolType type (go.tag ='mapstructure:"type"')
     2: optional Function function (go.tag ='mapstructure:"function"')
@@ -79,6 +83,7 @@ struct CodeEvaluator {
     2: optional string code_content
     3: optional string code_template_key // code类型评估器模板中code_template_key + language_type是唯一键；最新版本中存evaluator_template_id
     4: optional string code_template_name
+    5: optional map<LanguageType, string> lang_2_code_content
 }
 
 struct CustomRPCEvaluator {
@@ -107,6 +112,12 @@ struct EvaluatorContent {
     101: optional PromptEvaluator prompt_evaluator (go.tag ='mapstructure:"prompt_evaluator"')
     102: optional CodeEvaluator code_evaluator
     103: optional CustomRPCEvaluator custom_rpc_evaluator
+}
+
+// 明确有顺序的 evaluator 与版本映射元素
+struct EvaluatorIDVersionItem {
+    1: optional i64 evaluator_id (api.js_conv = 'true', go.tag = 'json:"evaluator_id"')
+    2: optional string version (api.js_conv = 'true', go.tag = 'json:"version"')
 }
 
 struct Evaluator {

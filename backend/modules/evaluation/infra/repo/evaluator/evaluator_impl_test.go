@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	dbmocks "github.com/coze-dev/coze-loop/backend/infra/db/mocks"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	platestwritemocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -1226,11 +1227,11 @@ func TestEvaluatorRepoImpl_UpdateEvaluatorMeta(t *testing.T) {
 			}
 
 			err := repo.UpdateEvaluatorMeta(context.Background(), &entity.UpdateEvaluatorMetaRequest{
-				ID:        tt.id,
-				SpaceID:   100, // 使用测试用的spaceID
-				Name:      &tt.evaluatorName,
+				ID:          tt.id,
+				SpaceID:     100, // 使用测试用的spaceID
+				Name:        &tt.evaluatorName,
 				Description: &tt.description,
-				UpdatedBy: tt.userID,
+				UpdatedBy:   tt.userID,
 			})
 			assert.Equal(t, tt.expectedError, err)
 		})
@@ -1938,13 +1939,13 @@ func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorMeta(t *testing.T) {
 			}
 
 			err := repo.UpdateEvaluatorMeta(context.Background(), &entity.UpdateEvaluatorMetaRequest{
-				ID:        tt.id,
-				SpaceID:   100, // 使用测试用的spaceID
-				Name:      gptr.Of(""),
+				ID:          tt.id,
+				SpaceID:     100, // 使用测试用的spaceID
+				Name:        gptr.Of(""),
 				Description: gptr.Of(""),
-				Benchmark: &tt.benchmark,
-				Vendor:    &tt.vendor,
-				UpdatedBy: tt.userID,
+				Benchmark:   &tt.benchmark,
+				Vendor:      &tt.vendor,
+				UpdatedBy:   tt.userID,
 			})
 			if tt.expectedError != nil {
 				assert.Error(t, err)
@@ -1960,15 +1961,15 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		request        *repo.ListBuiltinEvaluatorRequest
-		mockDaoResult  *mysql.ListEvaluatorResponse
-		mockDaoError   error
-		mockTagResult  []*model.EvaluatorTag
-		mockTagError   error
-		expectedError  bool
-		expectedCount  int64
-		description    string
+		name          string
+		request       *repo.ListBuiltinEvaluatorRequest
+		mockDaoResult *mysql.ListEvaluatorResponse
+		mockDaoError  error
+		mockTagResult []*model.EvaluatorTag
+		mockTagError  error
+		expectedError bool
+		expectedCount int64
+		description   string
 	}{
 		{
 			name: "成功 - 无筛选条件查询",
@@ -2054,13 +2055,13 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 				PageNum:        1,
 				IncludeDeleted: false,
 			},
-			mockDaoResult:  nil,
-			mockDaoError:   nil,
-			mockTagResult:  nil,
-			mockTagError:   nil,
-			expectedError:  false,
-			expectedCount:  0,
-			description:    "筛选条件匹配无结果",
+			mockDaoResult: nil,
+			mockDaoError:  nil,
+			mockTagResult: nil,
+			mockTagError:  nil,
+			expectedError: false,
+			expectedCount: 0,
+			description:   "筛选条件匹配无结果",
 		},
 		{
 			name: "失败 - DAO查询错误",
@@ -2070,13 +2071,13 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 				PageNum:        1,
 				IncludeDeleted: false,
 			},
-			mockDaoResult:  nil,
-			mockDaoError:   assert.AnError,
-			mockTagResult:  nil,
-			mockTagError:   nil,
-			expectedError:  true,
-			expectedCount:  0,
-			description:    "DAO查询错误应该返回错误",
+			mockDaoResult: nil,
+			mockDaoError:  assert.AnError,
+			mockTagResult: nil,
+			mockTagError:  nil,
+			expectedError: true,
+			expectedCount: 0,
+			description:   "DAO查询错误应该返回错误",
 		},
 		{
 			name: "成功 - 标签查询失败但继续处理",
@@ -2092,7 +2093,7 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 					{ID: 1, Name: gptr.Of("test1"), EvaluatorType: int32(entity.EvaluatorTypePrompt)},
 				},
 			},
-			mockDaoError: nil,
+			mockDaoError:  nil,
 			mockTagResult: nil,
 			mockTagError:  assert.AnError,
 			expectedError: false,
@@ -2228,6 +2229,537 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 					assert.Len(t, result.Evaluators, 0)
 				}
 			}
+		})
+	}
+}
+
+// TestEvaluatorRepoImpl_BatchGetEvaluatorVersionsByEvaluatorIDAndVersions 测试批量根据 (evaluator_id, version) 获取版本
+func TestEvaluatorRepoImpl_BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorDAO := evaluatormocks.NewMockEvaluatorDAO(ctrl)
+	mockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
+	mockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
+	mockTemplateDAO := evaluatormocks.NewMockEvaluatorTemplateDAO(ctrl)
+
+	tests := []struct {
+		name           string
+		pairs          [][2]interface{}
+		mockSetup      func()
+		expectedResult []*entity.Evaluator
+		expectedError  error
+		description    string
+	}{
+		{
+			name: "成功 - 批量获取版本",
+			pairs: [][2]interface{}{
+				{int64(1), "1.0.0"},
+				{int64(2), "2.0.0"},
+			},
+			mockSetup: func() {
+				mockEvaluatorVersionDAO.EXPECT().
+					BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{
+						{int64(1), "1.0.0"},
+						{int64(2), "2.0.0"},
+					}).
+					Return([]*model.EvaluatorVersion{
+						{
+							ID:            1,
+							EvaluatorID:   1,
+							Version:       "1.0.0",
+							EvaluatorType: gptr.Of(int32(entity.EvaluatorTypePrompt)),
+						},
+						{
+							ID:            2,
+							EvaluatorID:   2,
+							Version:       "2.0.0",
+							EvaluatorType: gptr.Of(int32(entity.EvaluatorTypeCode)),
+						},
+					}, nil)
+
+				mockTagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1, 2},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						gomock.Any(),
+					).Return([]*model.EvaluatorTag{
+					{SourceID: 1, TagKey: "category", TagValue: "test", LangType: "en-US"},
+					{SourceID: 2, TagKey: "category", TagValue: "production", LangType: "en-US"},
+				}, nil)
+			},
+			expectedError: nil,
+			description:   "成功批量获取评估器版本",
+		},
+		{
+			name:  "成功 - 空pairs",
+			pairs: [][2]interface{}{},
+			mockSetup: func() {
+				mockEvaluatorVersionDAO.EXPECT().
+					BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{}).
+					Return([]*model.EvaluatorVersion{}, nil)
+			},
+			expectedResult: []*entity.Evaluator{},
+			expectedError:  nil,
+			description:    "空pairs应该返回空结果",
+		},
+		{
+			name: "失败 - DAO查询错误",
+			pairs: [][2]interface{}{
+				{int64(1), "1.0.0"},
+			},
+			mockSetup: func() {
+				mockEvaluatorVersionDAO.EXPECT().
+					BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), gomock.Any()).
+					Return(nil, assert.AnError)
+			},
+			expectedResult: nil,
+			expectedError:  assert.AnError,
+			description:    "DAO查询错误应该返回错误",
+		},
+		{
+			name: "成功 - 标签查询失败但继续处理",
+			pairs: [][2]interface{}{
+				{int64(1), "1.0.0"},
+			},
+			mockSetup: func() {
+				mockEvaluatorVersionDAO.EXPECT().
+					BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), gomock.Any()).
+					Return([]*model.EvaluatorVersion{
+						{
+							ID:            1,
+							EvaluatorID:   1,
+							Version:       "1.0.0",
+							EvaluatorType: gptr.Of(int32(entity.EvaluatorTypePrompt)),
+						},
+					}, nil)
+
+				mockTagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						gomock.Any(),
+					).Return(nil, assert.AnError)
+			},
+			expectedError: nil,
+			description:   "标签查询失败应该继续处理，返回无标签结果",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			repo := &EvaluatorRepoImpl{
+				evaluatorDao:         mockEvaluatorDAO,
+				evaluatorVersionDao:  mockEvaluatorVersionDAO,
+				tagDAO:               mockTagDAO,
+				dbProvider:           mockDBProvider,
+				idgen:                mockIDGen,
+				lwt:                  mockLWT,
+				evaluatorTemplateDAO: mockTemplateDAO,
+			}
+
+			result, err := repo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(context.Background(), tt.pairs)
+
+			assert.Equal(t, tt.expectedError, err)
+			if err == nil {
+				if tt.expectedResult != nil {
+					assert.Equal(t, len(tt.expectedResult), len(result))
+				}
+				if len(tt.pairs) > 0 && len(result) > 0 {
+					assert.NotNil(t, result[0])
+				}
+			} else {
+				assert.Nil(t, result)
+			}
+		})
+	}
+}
+
+// TestEvaluatorRepoImpl_UpdateEvaluatorTags 测试更新评估器标签
+func TestEvaluatorRepoImpl_UpdateEvaluatorTags(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		evaluatorID   int64
+		tags          map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string
+		mockSetup     func()
+		mockSetupWithMocks func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO)
+		expectedError error
+		description   string
+	}{
+		{
+			name:        "成功 - 新增标签",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_En: {
+					entity.EvaluatorTagKey_Category:  {"LLM"},
+					entity.EvaluatorTagKey_Objective: {"Quality"},
+				},
+			},
+			mockSetup: func() {},
+			mockSetupWithMocks: func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO) {
+				dbProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				tagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+					).Return([]*model.EvaluatorTag{}, nil)
+
+				idgen.EXPECT().
+					GenMultiIDs(gomock.Any(), 2).
+					Return([]int64{1, 2}, nil)
+
+				tagDAO.EXPECT().
+					BatchCreateEvaluatorTags(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			expectedError: nil,
+			description:   "成功新增标签",
+		},
+		{
+			name:        "成功 - 删除标签",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_En: {
+					entity.EvaluatorTagKey_Category: {"LLM"},
+				},
+			},
+			mockSetup: func() {},
+			mockSetupWithMocks: func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO) {
+				dbProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				tagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+					).Return([]*model.EvaluatorTag{
+					{SourceID: 1, TagKey: "Category", TagValue: "LLM", LangType: "en-US"},
+					{SourceID: 1, TagKey: "Objective", TagValue: "Quality", LangType: "en-US"},
+				}, nil)
+
+				tagDAO.EXPECT().
+					DeleteEvaluatorTagsByConditions(
+						gomock.Any(),
+						int64(1),
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+						gomock.Any(),
+					).Return(nil)
+			},
+			expectedError: nil,
+			description:   "成功删除不需要的标签",
+		},
+		{
+			name:        "成功 - 新增和删除同时进行",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_En: {
+					entity.EvaluatorTagKey_Category:  {"LLM", "Code"},
+					entity.EvaluatorTagKey_Objective: {"Quality"},
+				},
+			},
+			mockSetup: func() {},
+			mockSetupWithMocks: func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO) {
+				dbProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				tagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+					).Return([]*model.EvaluatorTag{
+					{SourceID: 1, TagKey: "Category", TagValue: "LLM", LangType: "en-US"},
+					{SourceID: 1, TagKey: "Objective", TagValue: "Speed", LangType: "en-US"},
+				}, nil)
+
+				tagDAO.EXPECT().
+					DeleteEvaluatorTagsByConditions(
+						gomock.Any(),
+						int64(1),
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+						gomock.Any(),
+					).Return(nil)
+
+				idgen.EXPECT().
+					GenMultiIDs(gomock.Any(), 2).
+					Return([]int64{1, 2}, nil)
+
+				tagDAO.EXPECT().
+					BatchCreateEvaluatorTags(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			expectedError: nil,
+			description:   "成功同时新增和删除标签",
+		},
+		{
+			name:        "成功 - 空标签",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_En: {},
+			},
+			mockSetup: func() {},
+			mockSetupWithMocks: func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO) {
+				dbProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				tagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+					).Return([]*model.EvaluatorTag{
+					{SourceID: 1, TagKey: "Category", TagValue: "LLM", LangType: "en-US"},
+				}, nil)
+
+				tagDAO.EXPECT().
+					DeleteEvaluatorTagsByConditions(
+						gomock.Any(),
+						int64(1),
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+						gomock.Any(),
+					).Return(nil)
+			},
+			expectedError: nil,
+			description:   "成功清空标签",
+		},
+		{
+			name:        "失败 - 查询已有标签错误",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_En: {
+					entity.EvaluatorTagKey_Category: {"LLM"},
+				},
+			},
+			mockSetup: func() {},
+			mockSetupWithMocks: func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO) {
+				dbProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				tagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+					).Return(nil, assert.AnError)
+			},
+			expectedError: assert.AnError,
+			description:   "查询已有标签错误应该返回错误",
+		},
+		{
+			name:        "失败 - 生成ID错误",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_En: {
+					entity.EvaluatorTagKey_Category: {"LLM"},
+				},
+			},
+			mockSetup: func() {},
+			mockSetupWithMocks: func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO) {
+				dbProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				tagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+					).Return([]*model.EvaluatorTag{}, nil)
+
+				idgen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return(nil, assert.AnError)
+			},
+			expectedError: assert.AnError,
+			description:   "生成ID错误应该返回错误",
+		},
+		{
+			name:        "失败 - 创建标签错误",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_En: {
+					entity.EvaluatorTagKey_Category: {"LLM"},
+				},
+			},
+			mockSetup: func() {},
+			mockSetupWithMocks: func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO) {
+				dbProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				tagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+					).Return([]*model.EvaluatorTag{}, nil)
+
+				idgen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return([]int64{1}, nil)
+
+				tagDAO.EXPECT().
+					BatchCreateEvaluatorTags(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(assert.AnError)
+			},
+			expectedError: assert.AnError,
+			description:   "创建标签错误应该返回错误",
+		},
+		{
+			name:        "成功 - 多语言标签",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_En: {
+					entity.EvaluatorTagKey_Category: {"LLM"},
+				},
+				entity.EvaluatorTagLangType_Zh: {
+					entity.EvaluatorTagKey_Category: {"大语言模型"},
+				},
+			},
+			mockSetup: func() {},
+			mockSetupWithMocks: func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO) {
+				dbProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				// en-US 语言 - 先处理
+				tagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"en-US",
+						gomock.Any(),
+					).Return([]*model.EvaluatorTag{}, nil)
+
+				idgen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return([]int64{1}, nil)
+
+				tagDAO.EXPECT().
+					BatchCreateEvaluatorTags(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// zh-CN 语言 - 后处理
+				tagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{1},
+						int32(entity.EvaluatorTagKeyType_Evaluator),
+						"zh-CN",
+						gomock.Any(),
+					).Return([]*model.EvaluatorTag{}, nil)
+
+				idgen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return([]int64{2}, nil)
+
+				tagDAO.EXPECT().
+					BatchCreateEvaluatorTags(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			expectedError: nil,
+			description:   "成功处理多语言标签",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// 每个测试用例创建独立的mock控制器，避免并行执行时mock期望冲突
+			subCtrl := gomock.NewController(t)
+			defer subCtrl.Finish()
+
+			subMockIDGen := idgenmocks.NewMockIIDGenerator(subCtrl)
+			subMockEvaluatorDAO := evaluatormocks.NewMockEvaluatorDAO(subCtrl)
+			subMockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(subCtrl)
+			subMockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(subCtrl)
+			subMockDBProvider := dbmocks.NewMockProvider(subCtrl)
+			subMockLWT := platestwritemocks.NewMockILatestWriteTracker(subCtrl)
+			subMockTemplateDAO := evaluatormocks.NewMockEvaluatorTemplateDAO(subCtrl)
+
+			// 设置mock期望
+			tt.mockSetupWithMocks(subMockIDGen, subMockEvaluatorDAO, subMockEvaluatorVersionDAO, subMockTagDAO, subMockDBProvider, subMockLWT, subMockTemplateDAO)
+
+			repo := &EvaluatorRepoImpl{
+				evaluatorDao:         subMockEvaluatorDAO,
+				evaluatorVersionDao:  subMockEvaluatorVersionDAO,
+				tagDAO:               subMockTagDAO,
+				dbProvider:           subMockDBProvider,
+				idgen:                subMockIDGen,
+				lwt:                  subMockLWT,
+				evaluatorTemplateDAO: subMockTemplateDAO,
+			}
+
+			ctx := context.Background()
+			ctx = session.WithCtxUser(ctx, &session.User{ID: "test_user"})
+
+			err := repo.UpdateEvaluatorTags(ctx, tt.evaluatorID, tt.tags)
+
+			assert.Equal(t, tt.expectedError, err)
 		})
 	}
 }

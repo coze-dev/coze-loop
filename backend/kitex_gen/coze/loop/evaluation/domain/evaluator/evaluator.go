@@ -36,6 +36,10 @@ const (
 
 	AccessProtocolRPC = "rpc"
 
+	EvaluatorVersionTypeLatest = "Latest"
+
+	EvaluatorVersionTypeBuiltinVisible = "BuiltinVisible"
+
 	EvaluatorFilterLogicOpUnknown = "Unknown"
 
 	EvaluatorFilterLogicOpAnd = "And"
@@ -296,6 +300,8 @@ type EvaluatorTagKey = string
 type EvaluatorBoxType = string
 
 type AccessProtocol = string
+
+type EvaluatorVersionType = string
 
 // 筛选逻辑操作符
 type EvaluatorFilterLogicOp = string
@@ -1451,8 +1457,9 @@ type CodeEvaluator struct {
 	LanguageType *LanguageType `thrift:"language_type,1,optional" frugal:"1,optional,string" form:"language_type" json:"language_type,omitempty" query:"language_type"`
 	CodeContent  *string       `thrift:"code_content,2,optional" frugal:"2,optional,string" form:"code_content" json:"code_content,omitempty" query:"code_content"`
 	// code类型评估器模板中code_template_key + language_type是唯一键；最新版本中存evaluator_template_id
-	CodeTemplateKey  *string `thrift:"code_template_key,3,optional" frugal:"3,optional,string" form:"code_template_key" json:"code_template_key,omitempty" query:"code_template_key"`
-	CodeTemplateName *string `thrift:"code_template_name,4,optional" frugal:"4,optional,string" form:"code_template_name" json:"code_template_name,omitempty" query:"code_template_name"`
+	CodeTemplateKey  *string                 `thrift:"code_template_key,3,optional" frugal:"3,optional,string" form:"code_template_key" json:"code_template_key,omitempty" query:"code_template_key"`
+	CodeTemplateName *string                 `thrift:"code_template_name,4,optional" frugal:"4,optional,string" form:"code_template_name" json:"code_template_name,omitempty" query:"code_template_name"`
+	Lang2CodeContent map[LanguageType]string `thrift:"lang_2_code_content,5,optional" frugal:"5,optional,map<string:string>" form:"lang_2_code_content" json:"lang_2_code_content,omitempty" query:"lang_2_code_content"`
 }
 
 func NewCodeEvaluator() *CodeEvaluator {
@@ -1509,6 +1516,18 @@ func (p *CodeEvaluator) GetCodeTemplateName() (v string) {
 	}
 	return *p.CodeTemplateName
 }
+
+var CodeEvaluator_Lang2CodeContent_DEFAULT map[LanguageType]string
+
+func (p *CodeEvaluator) GetLang2CodeContent() (v map[LanguageType]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLang2CodeContent() {
+		return CodeEvaluator_Lang2CodeContent_DEFAULT
+	}
+	return p.Lang2CodeContent
+}
 func (p *CodeEvaluator) SetLanguageType(val *LanguageType) {
 	p.LanguageType = val
 }
@@ -1521,12 +1540,16 @@ func (p *CodeEvaluator) SetCodeTemplateKey(val *string) {
 func (p *CodeEvaluator) SetCodeTemplateName(val *string) {
 	p.CodeTemplateName = val
 }
+func (p *CodeEvaluator) SetLang2CodeContent(val map[LanguageType]string) {
+	p.Lang2CodeContent = val
+}
 
 var fieldIDToName_CodeEvaluator = map[int16]string{
 	1: "language_type",
 	2: "code_content",
 	3: "code_template_key",
 	4: "code_template_name",
+	5: "lang_2_code_content",
 }
 
 func (p *CodeEvaluator) IsSetLanguageType() bool {
@@ -1543,6 +1566,10 @@ func (p *CodeEvaluator) IsSetCodeTemplateKey() bool {
 
 func (p *CodeEvaluator) IsSetCodeTemplateName() bool {
 	return p.CodeTemplateName != nil
+}
+
+func (p *CodeEvaluator) IsSetLang2CodeContent() bool {
+	return p.Lang2CodeContent != nil
 }
 
 func (p *CodeEvaluator) Read(iprot thrift.TProtocol) (err error) {
@@ -1590,6 +1617,14 @@ func (p *CodeEvaluator) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1668,6 +1703,35 @@ func (p *CodeEvaluator) ReadField4(iprot thrift.TProtocol) error {
 	p.CodeTemplateName = _field
 	return nil
 }
+func (p *CodeEvaluator) ReadField5(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[LanguageType]string, size)
+	for i := 0; i < size; i++ {
+		var _key LanguageType
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Lang2CodeContent = _field
+	return nil
+}
 
 func (p *CodeEvaluator) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1689,6 +1753,10 @@ func (p *CodeEvaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -1781,6 +1849,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *CodeEvaluator) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLang2CodeContent() {
+		if err = oprot.WriteFieldBegin("lang_2_code_content", thrift.MAP, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Lang2CodeContent)); err != nil {
+			return err
+		}
+		for k, v := range p.Lang2CodeContent {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *CodeEvaluator) String() string {
 	if p == nil {
@@ -1806,6 +1903,9 @@ func (p *CodeEvaluator) DeepEqual(ano *CodeEvaluator) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.CodeTemplateName) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Lang2CodeContent) {
 		return false
 	}
 	return true
@@ -1856,6 +1956,19 @@ func (p *CodeEvaluator) Field4DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.CodeTemplateName, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *CodeEvaluator) Field5DeepEqual(src map[LanguageType]string) bool {
+
+	if len(p.Lang2CodeContent) != len(src) {
+		return false
+	}
+	for k, v := range p.Lang2CodeContent {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }
@@ -3398,6 +3511,265 @@ func (p *EvaluatorContent) Field102DeepEqual(src *CodeEvaluator) bool {
 func (p *EvaluatorContent) Field103DeepEqual(src *CustomRPCEvaluator) bool {
 
 	if !p.CustomRPCEvaluator.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+// 明确有顺序的 evaluator 与版本映射元素
+type EvaluatorIDVersionItem struct {
+	EvaluatorID *int64  `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
+	Version     *string `thrift:"version,2,optional" frugal:"2,optional,string" json:"version" form:"version" query:"version"`
+}
+
+func NewEvaluatorIDVersionItem() *EvaluatorIDVersionItem {
+	return &EvaluatorIDVersionItem{}
+}
+
+func (p *EvaluatorIDVersionItem) InitDefault() {
+}
+
+var EvaluatorIDVersionItem_EvaluatorID_DEFAULT int64
+
+func (p *EvaluatorIDVersionItem) GetEvaluatorID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorID() {
+		return EvaluatorIDVersionItem_EvaluatorID_DEFAULT
+	}
+	return *p.EvaluatorID
+}
+
+var EvaluatorIDVersionItem_Version_DEFAULT string
+
+func (p *EvaluatorIDVersionItem) GetVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVersion() {
+		return EvaluatorIDVersionItem_Version_DEFAULT
+	}
+	return *p.Version
+}
+func (p *EvaluatorIDVersionItem) SetEvaluatorID(val *int64) {
+	p.EvaluatorID = val
+}
+func (p *EvaluatorIDVersionItem) SetVersion(val *string) {
+	p.Version = val
+}
+
+var fieldIDToName_EvaluatorIDVersionItem = map[int16]string{
+	1: "evaluator_id",
+	2: "version",
+}
+
+func (p *EvaluatorIDVersionItem) IsSetEvaluatorID() bool {
+	return p.EvaluatorID != nil
+}
+
+func (p *EvaluatorIDVersionItem) IsSetVersion() bool {
+	return p.Version != nil
+}
+
+func (p *EvaluatorIDVersionItem) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorIDVersionItem[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorIDVersionItem) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EvaluatorID = _field
+	return nil
+}
+func (p *EvaluatorIDVersionItem) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Version = _field
+	return nil
+}
+
+func (p *EvaluatorIDVersionItem) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvaluatorIDVersionItem"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorIDVersionItem) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorID() {
+		if err = oprot.WriteFieldBegin("evaluator_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EvaluatorID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvaluatorIDVersionItem) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersion() {
+		if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Version); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *EvaluatorIDVersionItem) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorIDVersionItem(%+v)", *p)
+
+}
+
+func (p *EvaluatorIDVersionItem) DeepEqual(ano *EvaluatorIDVersionItem) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.EvaluatorID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorIDVersionItem) Field1DeepEqual(src *int64) bool {
+
+	if p.EvaluatorID == src {
+		return true
+	} else if p.EvaluatorID == nil || src == nil {
+		return false
+	}
+	if *p.EvaluatorID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorIDVersionItem) Field2DeepEqual(src *string) bool {
+
+	if p.Version == src {
+		return true
+	} else if p.Version == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Version, *src) != 0 {
 		return false
 	}
 	return true

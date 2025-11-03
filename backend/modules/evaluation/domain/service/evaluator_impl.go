@@ -210,6 +210,47 @@ func (e *EvaluatorServiceImpl) GetBuiltinEvaluator(ctx context.Context, evaluato
 	return versions[0], nil
 }
 
+// BatchGetBuiltinEvaluator 批量获取预置评估器（visible版本）
+func (e *EvaluatorServiceImpl) BatchGetBuiltinEvaluator(ctx context.Context, evaluatorIDs []int64) ([]*entity.Evaluator, error) {
+    if len(evaluatorIDs) == 0 {
+        return []*entity.Evaluator{}, nil
+    }
+    // 批量获取元信息
+    metas, err := e.evaluatorRepo.BatchGetEvaluatorMetaByID(ctx, evaluatorIDs, false)
+    if err != nil {
+        return nil, err
+    }
+    // 组装 (evaluator_id, builtin_visible_version) 对
+    pairs := make([][2]interface{}, 0, len(metas))
+    for _, meta := range metas {
+        if meta == nil || !meta.Builtin || meta.BuiltinVisibleVersion == "" {
+            continue
+        }
+        pairs = append(pairs, [2]interface{}{meta.ID, meta.BuiltinVisibleVersion})
+    }
+    if len(pairs) == 0 {
+        return []*entity.Evaluator{}, nil
+    }
+    // 一次性批量获取版本
+    versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+    if err != nil {
+        return nil, err
+    }
+    return versions, nil
+}
+
+// BatchGetEvaluatorByIDAndVersion 批量根据 (evaluator_id, version) 查询具体版本
+func (e *EvaluatorServiceImpl) BatchGetEvaluatorByIDAndVersion(ctx context.Context, pairs [][2]interface{}) ([]*entity.Evaluator, error) {
+    if len(pairs) == 0 {
+        return []*entity.Evaluator{}, nil
+    }
+    versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+    if err != nil {
+        return nil, err
+    }
+    return versions, nil
+}
+
 // CreateEvaluator 创建 evaluator_version
 func (e *EvaluatorServiceImpl) CreateEvaluator(ctx context.Context, evaluator *entity.Evaluator, cid string) (int64, error) {
 	err := e.idem.Set(ctx, e.makeCreateIdemKey(cid), time.Second*10)

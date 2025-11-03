@@ -36,6 +36,10 @@ type EvaluatorService interface {
 	// GetBuiltinEvaluator 根据 evaluatorID 查询元信息，若为预置评估器则按 builtin_visible_version 组装返回
 	// 非预置评估器则返回nil
 	GetBuiltinEvaluator(ctx context.Context, evaluatorID int64) (*entity.Evaluator, error)
+    // BatchGetBuiltinEvaluator 批量获取预置评估器（按 visible 版本）
+    BatchGetBuiltinEvaluator(ctx context.Context, evaluatorIDs []int64) ([]*entity.Evaluator, error)
+    // BatchGetEvaluatorByIDAndVersion 批量根据 (evaluator_id, version) 查询具体版本
+    BatchGetEvaluatorByIDAndVersion(ctx context.Context, pairs [][2]interface{}) ([]*entity.Evaluator, error)
 	// GetEvaluatorVersion 按 version id 单个查询 evaluator_version version
 	// withTags=true 时查询并回填标签（用于内置评估器），需传入 spaceID；否则查询普通评估器
 	GetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted bool, withTags bool) (*entity.Evaluator, error)

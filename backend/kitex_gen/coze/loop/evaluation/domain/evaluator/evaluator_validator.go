@@ -77,6 +77,9 @@ func (p *EvaluatorContent) IsValid() error {
 	}
 	return nil
 }
+func (p *EvaluatorIDVersionItem) IsValid() error {
+	return nil
+}
 func (p *Evaluator) IsValid() error {
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
