@@ -156,7 +156,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 	}
 	st := time.Now()
 	spans, err := spanDao.Get(ctx, &dao.QueryParam{
-		QueryType:        ck.QueryTypeListSpans,
+		QueryType:        dao.QueryTypeListSpans,
 		Tables:           tableCfg.SpanTables,
 		AnnoTableMap:     tableCfg.AnnoTableMap,
 		StartTime:        time_util.MillSec2MicroSec(req.StartAt),
@@ -256,7 +256,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 	})
 	st := time.Now()
 	spans, err := spanDao.Get(ctx, &dao.QueryParam{
-		QueryType:     ck.QueryTypeGetTrace,
+		QueryType:     dao.QueryTypeGetTrace,
 		Tables:        tableCfg.SpanTables,
 		AnnoTableMap:  tableCfg.AnnoTableMap,
 		StartTime:     time_util.MillSec2MicroSec(req.StartAt),

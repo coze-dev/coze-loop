@@ -8,6 +8,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
+const (
+	QueryTypeGetTrace  = "get_trace"
+	QueryTypeListSpans = "list_spans"
+)
+
 type QueryParam struct {
 	QueryType        string // for sql optimization
 	Tables           []string
