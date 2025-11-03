@@ -36,18 +36,18 @@ func (m *MockIExptInsightAnalysisService) EXPECT() *MockIExptInsightAnalysisServ
 }
 
 // CreateAnalysisRecord mocks base method.
-func (m *MockIExptInsightAnalysisService) CreateAnalysisRecord(arg0 context.Context, arg1 *entity.ExptInsightAnalysisRecord, arg2 *entity.Session) (int64, error) {
+func (m *MockIExptInsightAnalysisService) CreateAnalysisRecord(arg0 context.Context, arg1 *entity.ExptInsightAnalysisRecord, arg2 *entity.Session, arg3, arg4 int64) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAnalysisRecord", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "CreateAnalysisRecord", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateAnalysisRecord indicates an expected call of CreateAnalysisRecord.
-func (mr *MockIExptInsightAnalysisServiceMockRecorder) CreateAnalysisRecord(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockIExptInsightAnalysisServiceMockRecorder) CreateAnalysisRecord(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnalysisRecord", reflect.TypeOf((*MockIExptInsightAnalysisService)(nil).CreateAnalysisRecord), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAnalysisRecord", reflect.TypeOf((*MockIExptInsightAnalysisService)(nil).CreateAnalysisRecord), arg0, arg1, arg2, arg3, arg4)
 }
 
 // DeleteAnalysisRecord mocks base method.
@@ -79,17 +79,17 @@ func (mr *MockIExptInsightAnalysisServiceMockRecorder) FeedbackExptInsightAnalys
 }
 
 // GenAnalysisReport mocks base method.
-func (m *MockIExptInsightAnalysisService) GenAnalysisReport(arg0 context.Context, arg1, arg2, arg3, arg4 int64) error {
+func (m *MockIExptInsightAnalysisService) GenAnalysisReport(arg0 context.Context, arg1, arg2, arg3, arg4, arg5, arg6 int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenAnalysisReport", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "GenAnalysisReport", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // GenAnalysisReport indicates an expected call of GenAnalysisReport.
-func (mr *MockIExptInsightAnalysisServiceMockRecorder) GenAnalysisReport(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockIExptInsightAnalysisServiceMockRecorder) GenAnalysisReport(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenAnalysisReport", reflect.TypeOf((*MockIExptInsightAnalysisService)(nil).GenAnalysisReport), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenAnalysisReport", reflect.TypeOf((*MockIExptInsightAnalysisService)(nil).GenAnalysisReport), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
 // GetAnalysisRecordByID mocks base method.

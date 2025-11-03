@@ -42,18 +42,18 @@ func (m *MockIAgentAdapter) EXPECT() *MockIAgentAdapterMockRecorder {
 }
 
 // CallTraceAgent mocks base method.
-func (m *MockIAgentAdapter) CallTraceAgent(ctx context.Context, spaceID int64, url string) (int64, error) {
+func (m *MockIAgentAdapter) CallTraceAgent(ctx context.Context, spaceID int64, url string, startTime, endTime int64) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CallTraceAgent", ctx, spaceID, url)
+	ret := m.ctrl.Call(m, "CallTraceAgent", ctx, spaceID, url, startTime, endTime)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CallTraceAgent indicates an expected call of CallTraceAgent.
-func (mr *MockIAgentAdapterMockRecorder) CallTraceAgent(ctx, spaceID, url any) *gomock.Call {
+func (mr *MockIAgentAdapterMockRecorder) CallTraceAgent(ctx, spaceID, url, startTime, endTime any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallTraceAgent", reflect.TypeOf((*MockIAgentAdapter)(nil).CallTraceAgent), ctx, spaceID, url)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallTraceAgent", reflect.TypeOf((*MockIAgentAdapter)(nil).CallTraceAgent), ctx, spaceID, url, startTime, endTime)
 }
 
 // GetReport mocks base method.
