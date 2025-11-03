@@ -56,7 +56,7 @@ func (dao *EvaluatorTagDAOImpl) BatchGetTagsBySourceIDsAndType(ctx context.Conte
 		return []*model.EvaluatorTag{}, nil
 	}
 
-	dbsession := dao.provider.NewSession(ctx, opts...)
+    dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
 
 	var tags []*model.EvaluatorTag
     query := dbsession.WithContext(ctx).
@@ -80,13 +80,13 @@ func (dao *EvaluatorTagDAOImpl) BatchCreateEvaluatorTags(ctx context.Context, ev
 		return nil
 	}
 
-	dbsession := dao.provider.NewSession(ctx, opts...)
+    dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
 	return dbsession.WithContext(ctx).CreateInBatches(evaluatorTags, 100).Error
 }
 
 // DeleteEvaluatorTagsByConditions 根据sourceID、tagType、tags条件删除标签
 func (dao *EvaluatorTagDAOImpl) DeleteEvaluatorTagsByConditions(ctx context.Context, sourceID int64, tagType int32, langType string, tags map[string][]string, opts ...db.Option) error {
-	dbsession := dao.provider.NewSession(ctx, opts...)
+    dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
 
 	// 基础查询条件
     query := dbsession.WithContext(ctx).
@@ -127,7 +127,7 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 		return []int64{}, 0, nil
 	}
 
-	dbsession := dao.provider.NewSession(ctx, opts...)
+    dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
 
 	// 基础查询条件
     query := dbsession.WithContext(ctx).Table("evaluator_tag").

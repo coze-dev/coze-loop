@@ -60,6 +60,129 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 	assert.IsType(t, &EvaluatorServiceImpl{}, service)
 }
 
+// Test_GetBuiltinEvaluator 覆盖预置评估器按 builtin_visible_version 组装逻辑
+func Test_GetBuiltinEvaluator(t *testing.T) {
+    ctrl := gomock.NewController(t)
+    defer ctrl.Finish()
+
+    mockRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+    s := &EvaluatorServiceImpl{evaluatorRepo: mockRepo}
+
+    ctx := context.Background()
+
+    t.Run("evaluatorID为0返回nil", func(t *testing.T) {
+        got, err := s.GetBuiltinEvaluator(ctx, 0)
+        assert.NoError(t, err)
+        assert.Nil(t, got)
+    })
+
+    t.Run("非builtin或无visibleVersion返回nil", func(t *testing.T) {
+        mockRepo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{101}, false).Return([]*entity.Evaluator{
+            {ID: 101, Builtin: false},
+        }, nil)
+        got, err := s.GetBuiltinEvaluator(ctx, 101)
+        assert.NoError(t, err)
+        assert.Nil(t, got)
+    })
+
+    t.Run("正常返回visible版本并回填元信息", func(t *testing.T) {
+        meta := &entity.Evaluator{ID: 201, SpaceID: 9, Name: "builtin", Description: "desc", Builtin: true, BuiltinVisibleVersion: "1.2.3", EvaluatorType: entity.EvaluatorTypePrompt, LatestVersion: "2.0.0"}
+        mockRepo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{201}, false).Return([]*entity.Evaluator{meta}, nil)
+        mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(201), "1.2.3"}}).Return([]*entity.Evaluator{
+            {PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 201, Version: "1.2.3"}},
+        }, nil)
+        got, err := s.GetBuiltinEvaluator(ctx, 201)
+        assert.NoError(t, err)
+        assert.NotNil(t, got)
+        assert.Equal(t, int64(201), got.ID)
+        assert.Equal(t, int64(9), got.SpaceID)
+        assert.Equal(t, "builtin", got.Name)
+        assert.Equal(t, "1.2.3", got.GetVersion())
+        assert.Equal(t, entity.EvaluatorTypePrompt, got.EvaluatorType)
+        assert.True(t, got.Builtin)
+        assert.Equal(t, "1.2.3", got.BuiltinVisibleVersion)
+    })
+
+    t.Run("visible版本不存在返回nil", func(t *testing.T) {
+        meta := &entity.Evaluator{ID: 301, Builtin: true, BuiltinVisibleVersion: "0.1.0"}
+        mockRepo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{301}, false).Return([]*entity.Evaluator{meta}, nil)
+        mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(301), "0.1.0"}}).Return([]*entity.Evaluator{}, nil)
+        got, err := s.GetBuiltinEvaluator(ctx, 301)
+        assert.NoError(t, err)
+        assert.Nil(t, got)
+    })
+}
+
+// Test_BatchGetBuiltinEvaluator 覆盖批量可见版本查询与元信息回填
+func Test_BatchGetBuiltinEvaluator(t *testing.T) {
+    ctrl := gomock.NewController(t)
+    defer ctrl.Finish()
+
+    mockRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+    s := &EvaluatorServiceImpl{evaluatorRepo: mockRepo}
+    ctx := context.Background()
+
+    t.Run("空入参返回空切片", func(t *testing.T) {
+        list, err := s.BatchGetBuiltinEvaluator(ctx, []int64{})
+        assert.NoError(t, err)
+        assert.Equal(t, 0, len(list))
+    })
+
+    t.Run("过滤非builtin与无visibleVersion并回填元信息", func(t *testing.T) {
+        metas := []*entity.Evaluator{
+            {ID: 1, Builtin: true, BuiltinVisibleVersion: "1.0.0", Name: "A", SpaceID: 7, EvaluatorType: entity.EvaluatorTypePrompt},
+            {ID: 2, Builtin: false},
+            {ID: 3, Builtin: true, BuiltinVisibleVersion: ""},
+            {ID: 4, Builtin: true, BuiltinVisibleVersion: "2.0.0", Name: "B", SpaceID: 8, EvaluatorType: entity.EvaluatorTypeCode},
+        }
+        mockRepo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{1, 2, 3, 4}, false).Return(metas, nil)
+        mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(1), "1.0.0"}, {int64(4), "2.0.0"}}).Return([]*entity.Evaluator{
+            {PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 1, Version: "1.0.0"}},
+            {CodeEvaluatorVersion: &entity.CodeEvaluatorVersion{EvaluatorID: 4, Version: "2.0.0"}},
+        }, nil)
+        list, err := s.BatchGetBuiltinEvaluator(ctx, []int64{1, 2, 3, 4})
+        assert.NoError(t, err)
+        assert.Equal(t, 2, len(list))
+        // 回填校验
+        for _, ev := range list {
+            if ev.GetEvaluatorID() == 1 {
+                assert.Equal(t, int64(1), ev.ID)
+                assert.Equal(t, int64(7), ev.SpaceID)
+                assert.Equal(t, "A", ev.Name)
+                assert.Equal(t, entity.EvaluatorTypePrompt, ev.EvaluatorType)
+            }
+            if ev.GetEvaluatorID() == 4 {
+                assert.Equal(t, int64(4), ev.ID)
+                assert.Equal(t, int64(8), ev.SpaceID)
+                assert.Equal(t, "B", ev.Name)
+                assert.Equal(t, entity.EvaluatorTypeCode, ev.EvaluatorType)
+            }
+        }
+    })
+}
+
+// Test_BatchGetEvaluatorByIDAndVersion 覆盖简单透传
+func Test_BatchGetEvaluatorByIDAndVersion(t *testing.T) {
+    ctrl := gomock.NewController(t)
+    defer ctrl.Finish()
+
+    mockRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+    s := &EvaluatorServiceImpl{evaluatorRepo: mockRepo}
+    ctx := context.Background()
+
+    pairs := [][2]interface{}{{int64(11), "0.1.0"}, {int64(22), "1.0.0"}}
+    expect := []*entity.Evaluator{{ID: 11}, {ID: 22}}
+    mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), pairs).Return(expect, nil)
+    got, err := s.BatchGetEvaluatorByIDAndVersion(ctx, pairs)
+    assert.NoError(t, err)
+    assert.Equal(t, expect, got)
+
+    // 空入参
+    got2, err2 := s.BatchGetEvaluatorByIDAndVersion(ctx, [][2]interface{}{})
+    assert.NoError(t, err2)
+    assert.Equal(t, 0, len(got2))
+}
+
 // TestEvaluatorServiceImpl_ListEvaluator 使用 gomock 对 ListEvaluator 方法进行单元测试
 func TestEvaluatorServiceImpl_ListEvaluator(t *testing.T) {
 	ctrl := gomock.NewController(t)
