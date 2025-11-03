@@ -91,6 +91,7 @@ struct EvaluatorFieldMapping {
     1: required i64 evaluator_version_id (api.js_conv='true', go.tag='json:"evaluator_version_id"')
     2: optional list<FieldMapping> from_eval_set
     3: optional list<FieldMapping> from_target
+    4: optional evaluator.EvaluatorIDVersionItem evaluator_id_version_item
 }
 
 struct FieldMapping {
