@@ -149,23 +149,25 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	}
 	query = query.Joins(nameJoinSQL, nameJoinArgs...)
 
-    // 处理搜索关键词
+    // 处理搜索关键词（在所有非 Category 标签范围内 LIKE 匹配）
     if filterOption.SearchKeyword != nil && *filterOption.SearchKeyword != "" {
         keyword := "%" + *filterOption.SearchKeyword + "%"
-        query = query.Where("evaluator_tag.tag_value LIKE ?", keyword)
+        query = query.Where("evaluator_tag.tag_key <> ? AND evaluator_tag.tag_value LIKE ?", string(entity.EvaluatorTagKey_Category), keyword)
     }
 
-	// 处理筛选条件
-	if filterOption.Filters != nil {
-		conditions, args, err := dao.buildFilterConditions(filterOption.Filters)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		if len(conditions) > 0 {
-			query = query.Where(conditions, args...)
-		}
-	}
+    // 处理筛选条件（自连接实现 AND，WHERE 实现 OR）
+    if filterOption.Filters != nil {
+        joinSQLs, joinArgs, whereSQL, whereArgs, err := dao.buildSelfJoinAndWhere(filterOption.Filters, tagType, langType)
+        if err != nil {
+            return nil, 0, err
+        }
+        for i, js := range joinSQLs {
+            query = query.Joins(js, joinArgs[i]...)
+        }
+        if whereSQL != "" {
+            query = query.Where(whereSQL, whereArgs...)
+        }
+    }
 
 	// 先查询总数
 	var total int64
@@ -311,6 +313,171 @@ func (dao *EvaluatorTagDAOImpl) buildSingleCondition(condition *entity.Evaluator
 	default:
 		return "", nil, fmt.Errorf("unsupported operator type: %v", operator)
 	}
+}
+
+// buildSelfJoinAndWhere 基于自连接实现 AND，基于 WHERE 实现 OR
+// 返回：
+// - joinSQLs/joinArgs: 需要追加到 query.Joins 的 JOIN 片段（按顺序）
+// - whereSQL/whereArgs: 需要追加到 query.Where 的 WHERE 片段
+func (dao *EvaluatorTagDAOImpl) buildSelfJoinAndWhere(filters *entity.EvaluatorFilters, tagType int32, langType string) ([]string, [][]interface{}, string, []interface{}, error) {
+    var joinSQLs []string
+    var joinArgs [][]interface{}
+    var whereParts []string
+    var whereArgs []interface{}
+
+    // 生成唯一别名
+    aliasCounter := 0
+    nextAlias := func() string {
+        aliasCounter++
+        return fmt.Sprintf("t_%d", aliasCounter)
+    }
+
+    var build func(f *entity.EvaluatorFilters, parentIsAnd bool) (string, []interface{}, error)
+    build = func(f *entity.EvaluatorFilters, parentIsAnd bool) (string, []interface{}, error) {
+        if f == nil {
+            return "", nil, nil
+        }
+
+        isOr := f.LogicOp != nil && *f.LogicOp == entity.FilterLogicOp_Or
+
+        // 当前层的原子条件
+        var parts []string
+        var args []interface{}
+
+        if isOr {
+            // OR: 不做自连接，直接在 WHERE 中拼接到 base（evaluator_tag）别名上
+            for _, c := range f.FilterConditions {
+                if c == nil {
+                    continue
+                }
+                sqlFrag, sqlArgs, err := dao.buildSingleConditionWithAlias("evaluator_tag", c)
+                if err != nil {
+                    return "", nil, err
+                }
+                if sqlFrag != "" {
+                    parts = append(parts, "("+sqlFrag+")")
+                    args = append(args, sqlArgs...)
+                }
+            }
+            // 子条件
+            for _, sub := range f.SubFilters {
+                subSQL, subArgs, err := build(sub, false)
+                if err != nil {
+                    return "", nil, err
+                }
+                if subSQL != "" {
+                    parts = append(parts, "("+subSQL+")")
+                    args = append(args, subArgs...)
+                }
+            }
+
+            if len(parts) > 0 {
+                return strings.Join(parts, " OR "), args, nil
+            }
+            return "", nil, nil
+        }
+
+        // AND: 自连接。每个原子条件产生一个 JOIN。
+        for _, c := range f.FilterConditions {
+            if c == nil {
+                continue
+            }
+            alias := nextAlias()
+            onFrag, onArgs, err := dao.buildJoinPredicate(alias, c)
+            if err != nil {
+                return "", nil, err
+            }
+            join := fmt.Sprintf("JOIN evaluator_tag AS %s ON %s.source_id = evaluator_tag.source_id AND %s.tag_type = ? AND %s.deleted_at IS NULL", alias, alias, alias, alias)
+            jArgs := []interface{}{tagType}
+            if langType != "" {
+                join += fmt.Sprintf(" AND %s.lang_type = ?", alias)
+                jArgs = append(jArgs, langType)
+            }
+            if onFrag != "" {
+                join += " AND " + onFrag
+                jArgs = append(jArgs, onArgs...)
+            }
+            joinSQLs = append(joinSQLs, join)
+            joinArgs = append(joinArgs, jArgs)
+        }
+
+        // 子条件：如果子条件是 OR，会返回 where 片段；如果子条件是 AND，会追加更多 JOIN
+        for _, sub := range f.SubFilters {
+            subSQL, subArgs, err := build(sub, true)
+            if err != nil {
+                return "", nil, err
+            }
+            if subSQL != "" { // OR 分支产生的 where 片段
+                parts = append(parts, "("+subSQL+")")
+                args = append(args, subArgs...)
+            }
+        }
+
+        if len(parts) > 0 {
+            // AND 层对 where 片段用 AND 连接
+            return strings.Join(parts, " AND "), args, nil
+        }
+        return "", nil, nil
+    }
+
+    whereSQL, whereArgsLocal, err := build(filters, false)
+    if err != nil {
+        return nil, nil, "", nil, err
+    }
+    if whereSQL != "" {
+        whereParts = append(whereParts, whereSQL)
+        whereArgs = append(whereArgs, whereArgsLocal...)
+    }
+
+    finalWhere := strings.Join(whereParts, " AND ")
+    return joinSQLs, joinArgs, finalWhere, whereArgs, nil
+}
+
+// buildSingleConditionWithAlias 生成基于指定别名的条件子句
+func (dao *EvaluatorTagDAOImpl) buildSingleConditionWithAlias(alias string, condition *entity.EvaluatorFilterCondition) (string, []interface{}, error) {
+    if condition == nil {
+        return "", nil, nil
+    }
+    tagKey := string(condition.TagKey)
+    operator := condition.Operator
+    value := condition.Value
+
+    switch operator {
+    case entity.EvaluatorFilterOperatorType_Equal:
+        return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value = ?", alias, alias), []interface{}{tagKey, value}, nil
+    case entity.EvaluatorFilterOperatorType_NotEqual:
+        return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value != ?", alias, alias), []interface{}{tagKey, value}, nil
+    case entity.EvaluatorFilterOperatorType_In:
+        values := strings.Split(value, ",")
+        if len(values) == 0 {
+            return "", nil, fmt.Errorf("IN operator requires non-empty values")
+        }
+        placeholders := strings.Repeat("?,", len(values))
+        placeholders = placeholders[:len(placeholders)-1]
+        return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value IN (%s)", alias, alias, placeholders), append([]interface{}{tagKey}, convertToInterfaceSlice(values)...), nil
+    case entity.EvaluatorFilterOperatorType_NotIn:
+        values := strings.Split(value, ",")
+        if len(values) == 0 {
+            return "", nil, fmt.Errorf("NOT_IN operator requires non-empty values")
+        }
+        placeholders := strings.Repeat("?,", len(values))
+        placeholders = placeholders[:len(placeholders)-1]
+        return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value NOT IN (%s)", alias, alias, placeholders), append([]interface{}{tagKey}, convertToInterfaceSlice(values)...), nil
+    case entity.EvaluatorFilterOperatorType_Like:
+        likeValue := "%" + value + "%"
+        return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value LIKE ?", alias, alias), []interface{}{tagKey, likeValue}, nil
+    case entity.EvaluatorFilterOperatorType_IsNull:
+        return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value IS NULL", alias, alias), []interface{}{tagKey}, nil
+    case entity.EvaluatorFilterOperatorType_IsNotNull:
+        return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value IS NOT NULL", alias, alias), []interface{}{tagKey}, nil
+    default:
+        return "", nil, fmt.Errorf("unsupported operator type: %v", operator)
+    }
+}
+
+// buildJoinPredicate AND 场景下的 JOIN 条件（别名版）
+func (dao *EvaluatorTagDAOImpl) buildJoinPredicate(alias string, condition *entity.EvaluatorFilterCondition) (string, []interface{}, error) {
+    return dao.buildSingleConditionWithAlias(alias, condition)
 }
 
 // convertToInterfaceSlice 将字符串切片转换为interface{}切片
