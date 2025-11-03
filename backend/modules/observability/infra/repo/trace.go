@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	"strconv"
 	"time"
 
@@ -16,8 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/convertor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao/converter"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -29,32 +29,32 @@ import (
 
 type TraceRepoOption func(*TraceRepoImpl)
 
-func WithTraceStorageDaos(storageType string, spanDao ck.ISpansDao, annoDao ck.IAnnotationDao) TraceRepoOption {
+func WithTraceStorageDaos(storageType string, spanDao dao.ISpansDao, annoDao dao.IAnnotationDao) TraceRepoOption {
 	return func(t *TraceRepoImpl) {
 		WithTraceStorageSpanDao(storageType, spanDao)(t)
 		WithTraceStorageAnnotationDao(storageType, annoDao)(t)
 	}
 }
 
-func WithTraceStorageSpanDao(storageType string, spanDao ck.ISpansDao) TraceRepoOption {
+func WithTraceStorageSpanDao(storageType string, spanDao dao.ISpansDao) TraceRepoOption {
 	return func(t *TraceRepoImpl) {
 		if storageType == "" || spanDao == nil {
 			return
 		}
 		if t.spanDaos == nil {
-			t.spanDaos = make(map[string]ck.ISpansDao)
+			t.spanDaos = make(map[string]dao.ISpansDao)
 		}
 		t.spanDaos[storageType] = spanDao
 	}
 }
 
-func WithTraceStorageAnnotationDao(storageType string, annoDao ck.IAnnotationDao) TraceRepoOption {
+func WithTraceStorageAnnotationDao(storageType string, annoDao dao.IAnnotationDao) TraceRepoOption {
 	return func(t *TraceRepoImpl) {
 		if storageType == "" || annoDao == nil {
 			return
 		}
 		if t.annoDaos == nil {
-			t.annoDaos = make(map[string]ck.IAnnotationDao)
+			t.annoDaos = make(map[string]dao.IAnnotationDao)
 		}
 		t.annoDaos[storageType] = annoDao
 	}
@@ -84,8 +84,8 @@ func newTraceRepoImpl(
 ) (*TraceRepoImpl, error) {
 	impl := &TraceRepoImpl{
 		traceConfig: traceConfig,
-		spanDaos:    make(map[string]ck.ISpansDao),
-		annoDaos:    make(map[string]ck.IAnnotationDao),
+		spanDaos:    make(map[string]dao.ISpansDao),
+		annoDaos:    make(map[string]dao.IAnnotationDao),
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -97,8 +97,8 @@ func newTraceRepoImpl(
 
 type TraceRepoImpl struct {
 	traceConfig config.ITraceConfig
-	spanDaos    map[string]ck.ISpansDao
-	annoDaos    map[string]ck.IAnnotationDao
+	spanDaos    map[string]dao.ISpansDao
+	annoDaos    map[string]dao.IAnnotationDao
 }
 
 type PageToken struct {
@@ -118,9 +118,9 @@ func (t *TraceRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTrace
 	if err != nil {
 		return err
 	}
-	if err := spanDao.Insert(ctx, &ck.InsertParam{
+	if err := spanDao.Insert(ctx, &dao.InsertParam{
 		Table: table,
-		Spans: convertor.SpanListDO2PO(param.Spans, param.TTL),
+		Spans: converter.SpanListDO2PO(param.Spans, param.TTL),
 	}); err != nil {
 		logs.CtxError(ctx, "fail to insert spans, %v", err)
 		return err
@@ -154,7 +154,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		return nil, err
 	}
 	st := time.Now()
-	spans, err := spanDao.Get(ctx, &ck.QueryParam{
+	spans, err := spanDao.Get(ctx, &dao.QueryParam{
 		QueryType:        ck.QueryTypeListSpans,
 		Tables:           tableCfg.SpanTables,
 		AnnoTableMap:     tableCfg.AnnoTableMap,
@@ -169,13 +169,13 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		return nil, err
 	}
 	logs.CtxInfo(ctx, "list spans successfully, spans count %d, cost %v", len(spans), time.Since(st))
-	spanDOList := convertor.SpanListPO2DO(spans)
+	spanDOList := converter.SpanListPO2DO(spans)
 	if tableCfg.NeedQueryAnno && !req.NotQueryAnnotation {
-		spanIDs := lo.UniqMap(spans, func(item *model.ObservabilitySpan, _ int) string {
+		spanIDs := lo.UniqMap(spans, func(item *dao.Span, _ int) string {
 			return item.SpanID
 		})
 		st = time.Now()
-		annotations, err := annoDao.List(ctx, &ck.ListAnnotationsParam{
+		annotations, err := annoDao.List(ctx, &dao.ListAnnotationsParam{
 			Tables:    tableCfg.AnnoTables,
 			SpanIDs:   spanIDs,
 			StartTime: time_util.MillSec2MicroSec(req.StartAt),
@@ -186,7 +186,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		if err != nil {
 			return nil, err
 		}
-		annoDOList := convertor.AnnotationListPO2DO(annotations)
+		annoDOList := converter.AnnotationListPO2DO(annotations)
 		spanDOList.SetAnnotations(annoDOList)
 	}
 	result := &repo.ListSpansResult{
@@ -256,7 +256,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		SubFilter: req.Filters,
 	})
 	st := time.Now()
-	spans, err := spanDao.Get(ctx, &ck.QueryParam{
+	spans, err := spanDao.Get(ctx, &dao.QueryParam{
 		QueryType:     ck.QueryTypeGetTrace,
 		Tables:        tableCfg.SpanTables,
 		AnnoTableMap:  tableCfg.AnnoTableMap,
@@ -272,13 +272,13 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 	}
 	logs.CtxInfo(ctx, "get trace %s successfully, spans count %d, cost %v",
 		req.TraceID, len(spans), time.Since(st))
-	spanDOList := convertor.SpanListPO2DO(spans)
+	spanDOList := converter.SpanListPO2DO(spans)
 	if tableCfg.NeedQueryAnno && !req.NotQueryAnnotation {
-		spanIDs := lo.UniqMap(spans, func(item *model.ObservabilitySpan, _ int) string {
+		spanIDs := lo.UniqMap(spans, func(item *dao.Span, _ int) string {
 			return item.SpanID
 		})
 		st = time.Now()
-		annotations, err := annoDao.List(ctx, &ck.ListAnnotationsParam{
+		annotations, err := annoDao.List(ctx, &dao.ListAnnotationsParam{
 			Tables:    tableCfg.AnnoTables,
 			SpanIDs:   spanIDs,
 			StartTime: time_util.MillSec2MicroSec(req.StartAt),
@@ -289,7 +289,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		if err != nil {
 			return nil, err
 		}
-		annoDOList := convertor.AnnotationListPO2DO(annotations)
+		annoDOList := converter.AnnotationListPO2DO(annotations)
 		spanDOList.SetAnnotations(annoDOList.Uniq())
 	}
 	return spanDOList.Uniq(), nil
@@ -314,7 +314,7 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 		return loop_span.AnnotationList{}, nil
 	}
 	st := time.Now()
-	annotations, err := annoDao.List(ctx, &ck.ListAnnotationsParam{
+	annotations, err := annoDao.List(ctx, &dao.ListAnnotationsParam{
 		Tables:          tableCfg.AnnoTables,
 		SpanIDs:         []string{param.SpanID},
 		StartTime:       time_util.MillSec2MicroSec(param.StartAt),
@@ -327,10 +327,10 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 	}
 	logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 	workspaceIDStr := strconv.FormatInt(param.WorkspaceId, 10)
-	annotations = lo.Filter(annotations, func(item *model.ObservabilityAnnotation, _ int) bool {
+	annotations = lo.Filter(annotations, func(item *dao.Annotation, _ int) bool {
 		return item.TraceID == param.TraceID && item.SpaceID == workspaceIDStr
 	})
-	return convertor.AnnotationListPO2DO(annotations).Uniq(), nil
+	return converter.AnnotationListPO2DO(annotations).Uniq(), nil
 }
 
 func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnotationParam) (*loop_span.Annotation, error) {
@@ -349,7 +349,7 @@ func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnota
 		return nil, nil
 	}
 	st := time.Now()
-	annotation, err := annoDao.Get(ctx, &ck.GetAnnotationParam{
+	annotation, err := annoDao.Get(ctx, &dao.GetAnnotationParam{
 		Tables:    tableCfg.AnnoTables,
 		ID:        param.ID,
 		StartTime: time_util.MillSec2MicroSec(param.StartAt),
@@ -360,7 +360,7 @@ func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnota
 		return nil, err
 	}
 	logs.CtxInfo(ctx, "get annotation successfully, cost %v", time.Since(st))
-	return convertor.AnnotationPO2DO(annotation), nil
+	return converter.AnnotationPO2DO(annotation), nil
 }
 
 func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.InsertAnnotationParam) error {
@@ -376,15 +376,15 @@ func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Inser
 	if err != nil {
 		return err
 	}
-	pos := make([]*model.ObservabilityAnnotation, 0, len(param.Annotations))
+	pos := make([]*dao.Annotation, 0, len(param.Annotations))
 	for _, annotation := range param.Annotations {
-		annotationPO, err := convertor.AnnotationDO2PO(annotation)
+		annotationPO, err := converter.AnnotationDO2PO(annotation)
 		if err != nil {
 			return err
 		}
 		pos = append(pos, annotationPO)
 	}
-	return annoDao.Insert(ctx, &ck.InsertAnnotationParam{
+	return annoDao.Insert(ctx, &dao.InsertAnnotationParam{
 		Table:       table,
 		Annotations: pos,
 	})
@@ -404,7 +404,7 @@ func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMe
 		return nil, err
 	}
 	st := time.Now()
-	metrics, err := spanDao.GetMetrics(ctx, &ck.GetMetricsParam{
+	metrics, err := spanDao.GetMetrics(ctx, &dao.GetMetricsParam{
 		Tables:       tableCfg.SpanTables,
 		Aggregations: param.Aggregations,
 		GroupBys:     param.GroupBys,

@@ -1,20 +1,18 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
-package convertor
+package converter
 
 import (
 	"fmt"
-	"time"
-
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"time"
 )
 
-func AnnotationPO2DO(annotation *model.ObservabilityAnnotation) *loop_span.Annotation {
+func AnnotationPO2DO(annotation *dao.Annotation) *loop_span.Annotation {
 	if annotation == nil {
 		return nil
 	}
@@ -82,8 +80,8 @@ func AnnotationPO2DO(annotation *model.ObservabilityAnnotation) *loop_span.Annot
 	return ret
 }
 
-func AnnotationDO2PO(annotation *loop_span.Annotation) (*model.ObservabilityAnnotation, error) {
-	ret := &model.ObservabilityAnnotation{
+func AnnotationDO2PO(annotation *loop_span.Annotation) (*dao.Annotation, error) {
+	ret := &dao.Annotation{
 		ID:              annotation.ID,
 		SpanID:          annotation.SpanID,
 		TraceID:         annotation.TraceID,
@@ -131,7 +129,7 @@ func AnnotationDO2PO(annotation *loop_span.Annotation) (*model.ObservabilityAnno
 	return ret, nil
 }
 
-func AnnotationListPO2DO(annotations []*model.ObservabilityAnnotation) loop_span.AnnotationList {
+func AnnotationListPO2DO(annotations []*dao.Annotation) loop_span.AnnotationList {
 	ret := make(loop_span.AnnotationList, len(annotations))
 	for i, annotation := range annotations {
 		ret[i] = AnnotationPO2DO(annotation)
