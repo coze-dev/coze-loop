@@ -4720,6 +4720,20 @@ func (p *EvaluatorFilters) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4777,6 +4791,31 @@ func (p *EvaluatorFilters) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluatorFilters) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*EvaluatorFilters, 0, size)
+	values := make([]EvaluatorFilters, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.SubFilters = _field
+	return offset, nil
+}
+
 func (p *EvaluatorFilters) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -4786,6 +4825,7 @@ func (p *EvaluatorFilters) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -4796,6 +4836,7 @@ func (p *EvaluatorFilters) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -4826,6 +4867,22 @@ func (p *EvaluatorFilters) fastWriteField2(buf []byte, w thrift.NocopyWriter) in
 	return offset
 }
 
+func (p *EvaluatorFilters) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSubFilters() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 3)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.SubFilters {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
 func (p *EvaluatorFilters) field1Length() int {
 	l := 0
 	if p.IsSetFilterConditions() {
@@ -4844,6 +4901,19 @@ func (p *EvaluatorFilters) field2Length() int {
 	if p.IsSetLogicOp() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.LogicOp)
+	}
+	return l
+}
+
+func (p *EvaluatorFilters) field3Length() int {
+	l := 0
+	if p.IsSetSubFilters() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.SubFilters {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -4872,6 +4942,21 @@ func (p *EvaluatorFilters) DeepCopy(s interface{}) error {
 	if src.LogicOp != nil {
 		tmp := *src.LogicOp
 		p.LogicOp = &tmp
+	}
+
+	if src.SubFilters != nil {
+		p.SubFilters = make([]*EvaluatorFilters, 0, len(src.SubFilters))
+		for _, elem := range src.SubFilters {
+			var _elem *EvaluatorFilters
+			if elem != nil {
+				_elem = &EvaluatorFilters{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.SubFilters = append(p.SubFilters, _elem)
+		}
 	}
 
 	return nil

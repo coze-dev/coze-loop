@@ -214,6 +214,50 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 			expectedErr: false,
 			description: "复杂组合条件（搜索关键词+多个AND条件），应该正确构建查询",
 		},
+		{
+			name:    "nested sub filters (AND with OR and AND groups)",
+			tagType: 1,
+			filterOption: func() *entity.EvaluatorFilterOption {
+				// 顶层：AND + Category=LLM
+				top := entity.NewEvaluatorFilters().
+					WithLogicOp(entity.FilterLogicOp_And).
+					AddCondition(entity.NewEvaluatorFilterCondition(
+						entity.EvaluatorTagKey_Category,
+						entity.EvaluatorFilterOperatorType_Equal,
+						"LLM",
+					))
+
+				// 子组1：OR => TargetType IN(Text,Image) OR Name LIKE Qual
+				or := entity.FilterLogicOp_Or
+				sub1 := (&entity.EvaluatorFilters{LogicOp: &or}).
+					AddCondition(entity.NewEvaluatorFilterCondition(
+						entity.EvaluatorTagKey_TargetType,
+						entity.EvaluatorFilterOperatorType_In,
+						"Text,Image",
+					)).
+					AddCondition(entity.NewEvaluatorFilterCondition(
+						entity.EvaluatorTagKey_Name,
+						entity.EvaluatorFilterOperatorType_Like,
+						"Qual",
+					))
+
+				// 子组2：AND => Objective = Quality
+				and := entity.FilterLogicOp_And
+				sub2 := (&entity.EvaluatorFilters{LogicOp: &and}).
+					AddCondition(entity.NewEvaluatorFilterCondition(
+						entity.EvaluatorTagKey_Objective,
+						entity.EvaluatorFilterOperatorType_Equal,
+						"Quality",
+					))
+
+				// 绑定子组
+				top.SubFilters = []*entity.EvaluatorFilters{sub1, sub2}
+
+				return (&entity.EvaluatorFilterOption{}).WithFilters(top)
+			}(),
+			expectedErr: false,
+			description: "嵌套子过滤组应正确展开并构造 SQL",
+		},
 	}
 
 	for _, tt := range tests {
@@ -277,7 +321,7 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				// 对于nil或空的filterOption，应该返回空列表
-				if tt.filterOption == nil || (tt.filterOption.SearchKeyword == nil && (tt.filterOption.Filters == nil || len(tt.filterOption.Filters.FilterConditions) == 0)) {
+				if tt.filterOption == nil || (tt.filterOption.SearchKeyword == nil && (tt.filterOption.Filters == nil || (len(tt.filterOption.Filters.FilterConditions) == 0 && len(tt.filterOption.Filters.SubFilters) == 0))) {
 					assert.Empty(t, result)
 				}
 			}

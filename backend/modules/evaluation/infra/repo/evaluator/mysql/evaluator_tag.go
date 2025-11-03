@@ -145,8 +145,8 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	}
 
 	// 处理筛选条件
-	if filterOption.Filters != nil && len(filterOption.Filters.FilterConditions) > 0 {
-		conditions, args, err := dao.buildFilterConditions(filterOption.Filters)
+    if filterOption.Filters != nil {
+        conditions, args, err := dao.buildFilterConditions(filterOption.Filters)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -184,24 +184,40 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 
 // buildFilterConditions 构建筛选条件的SQL和参数
 func (dao *EvaluatorTagDAOImpl) buildFilterConditions(filters *entity.EvaluatorFilters) (string, []interface{}, error) {
-	if filters == nil || len(filters.FilterConditions) == 0 {
-		return "", nil, nil
-	}
+    if filters == nil {
+        return "", nil, nil
+    }
 
 	var conditions []string
 	var args []interface{}
 
-	for _, condition := range filters.FilterConditions {
-		conditionSQL, conditionArgs, err := dao.buildSingleCondition(condition)
-		if err != nil {
-			return "", nil, err
-		}
+    // 1) 本层条件
+    if len(filters.FilterConditions) > 0 {
+        for _, condition := range filters.FilterConditions {
+            conditionSQL, conditionArgs, err := dao.buildSingleCondition(condition)
+            if err != nil {
+                return "", nil, err
+            }
+            if conditionSQL != "" {
+                conditions = append(conditions, conditionSQL)
+                args = append(args, conditionArgs...)
+            }
+        }
+    }
 
-		if conditionSQL != "" {
-			conditions = append(conditions, conditionSQL)
-			args = append(args, conditionArgs...)
-		}
-	}
+    // 2) 递归子条件组
+    if len(filters.SubFilters) > 0 {
+        for _, sub := range filters.SubFilters {
+            subSQL, subArgs, err := dao.buildFilterConditions(sub)
+            if err != nil {
+                return "", nil, err
+            }
+            if subSQL != "" {
+                conditions = append(conditions, "("+subSQL+")")
+                args = append(args, subArgs...)
+            }
+        }
+    }
 
 	if len(conditions) == 0 {
 		return "", nil, nil

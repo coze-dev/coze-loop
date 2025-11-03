@@ -171,6 +171,7 @@ struct EvaluatorFilterOption {
 struct EvaluatorFilters {
     1: optional list<EvaluatorFilterCondition> filter_conditions  // 筛选条件列表
     2: optional EvaluatorFilterLogicOp logic_op  // 逻辑操作符
+    3: optional list<EvaluatorFilters> sub_filters
 }
 
 // 筛选逻辑操作符

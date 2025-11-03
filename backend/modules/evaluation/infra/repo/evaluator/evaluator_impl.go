@@ -700,10 +700,15 @@ func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.
 			hasValidFilters = true
 		}
 
-		// 检查FilterConditions是否有效
-		if req.FilterOption.Filters != nil && len(req.FilterOption.Filters.FilterConditions) > 0 {
-			hasValidFilters = true
-		}
+        // 检查FilterConditions或SubFilters是否有效
+        if req.FilterOption.Filters != nil {
+            if len(req.FilterOption.Filters.FilterConditions) > 0 {
+                hasValidFilters = true
+            }
+            if len(req.FilterOption.Filters.SubFilters) > 0 {
+                hasValidFilters = true
+            }
+        }
 
 		// 如果有有效的筛选条件，进行标签查询
 		if hasValidFilters {

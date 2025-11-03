@@ -6639,7 +6639,8 @@ type EvaluatorFilters struct {
 	// 筛选条件列表
 	FilterConditions []*EvaluatorFilterCondition `thrift:"filter_conditions,1,optional" frugal:"1,optional,list<EvaluatorFilterCondition>" form:"filter_conditions" json:"filter_conditions,omitempty" query:"filter_conditions"`
 	// 逻辑操作符
-	LogicOp *EvaluatorFilterLogicOp `thrift:"logic_op,2,optional" frugal:"2,optional,string" form:"logic_op" json:"logic_op,omitempty" query:"logic_op"`
+	LogicOp    *EvaluatorFilterLogicOp `thrift:"logic_op,2,optional" frugal:"2,optional,string" form:"logic_op" json:"logic_op,omitempty" query:"logic_op"`
+	SubFilters []*EvaluatorFilters     `thrift:"sub_filters,3,optional" frugal:"3,optional,list<EvaluatorFilters>" form:"sub_filters" json:"sub_filters,omitempty" query:"sub_filters"`
 }
 
 func NewEvaluatorFilters() *EvaluatorFilters {
@@ -6672,16 +6673,32 @@ func (p *EvaluatorFilters) GetLogicOp() (v EvaluatorFilterLogicOp) {
 	}
 	return *p.LogicOp
 }
+
+var EvaluatorFilters_SubFilters_DEFAULT []*EvaluatorFilters
+
+func (p *EvaluatorFilters) GetSubFilters() (v []*EvaluatorFilters) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSubFilters() {
+		return EvaluatorFilters_SubFilters_DEFAULT
+	}
+	return p.SubFilters
+}
 func (p *EvaluatorFilters) SetFilterConditions(val []*EvaluatorFilterCondition) {
 	p.FilterConditions = val
 }
 func (p *EvaluatorFilters) SetLogicOp(val *EvaluatorFilterLogicOp) {
 	p.LogicOp = val
 }
+func (p *EvaluatorFilters) SetSubFilters(val []*EvaluatorFilters) {
+	p.SubFilters = val
+}
 
 var fieldIDToName_EvaluatorFilters = map[int16]string{
 	1: "filter_conditions",
 	2: "logic_op",
+	3: "sub_filters",
 }
 
 func (p *EvaluatorFilters) IsSetFilterConditions() bool {
@@ -6690,6 +6707,10 @@ func (p *EvaluatorFilters) IsSetFilterConditions() bool {
 
 func (p *EvaluatorFilters) IsSetLogicOp() bool {
 	return p.LogicOp != nil
+}
+
+func (p *EvaluatorFilters) IsSetSubFilters() bool {
+	return p.SubFilters != nil
 }
 
 func (p *EvaluatorFilters) Read(iprot thrift.TProtocol) (err error) {
@@ -6721,6 +6742,14 @@ func (p *EvaluatorFilters) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6789,6 +6818,29 @@ func (p *EvaluatorFilters) ReadField2(iprot thrift.TProtocol) error {
 	p.LogicOp = _field
 	return nil
 }
+func (p *EvaluatorFilters) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*EvaluatorFilters, 0, size)
+	values := make([]EvaluatorFilters, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.SubFilters = _field
+	return nil
+}
 
 func (p *EvaluatorFilters) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6802,6 +6854,10 @@ func (p *EvaluatorFilters) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -6866,6 +6922,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *EvaluatorFilters) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSubFilters() {
+		if err = oprot.WriteFieldBegin("sub_filters", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.SubFilters)); err != nil {
+			return err
+		}
+		for _, v := range p.SubFilters {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *EvaluatorFilters) String() string {
 	if p == nil {
@@ -6885,6 +6967,9 @@ func (p *EvaluatorFilters) DeepEqual(ano *EvaluatorFilters) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.LogicOp) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SubFilters) {
 		return false
 	}
 	return true
@@ -6912,6 +6997,19 @@ func (p *EvaluatorFilters) Field2DeepEqual(src *EvaluatorFilterLogicOp) bool {
 	}
 	if strings.Compare(*p.LogicOp, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *EvaluatorFilters) Field3DeepEqual(src []*EvaluatorFilters) bool {
+
+	if len(p.SubFilters) != len(src) {
+		return false
+	}
+	for i, v := range p.SubFilters {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

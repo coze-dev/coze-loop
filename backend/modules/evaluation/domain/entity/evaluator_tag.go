@@ -36,6 +36,7 @@ type EvaluatorFilterOption struct {
 type EvaluatorFilters struct {
 	FilterConditions []*EvaluatorFilterCondition `json:"filter_conditions,omitempty"` // 筛选条件列表
 	LogicOp          *FilterLogicOp              `json:"logic_op,omitempty"`          // 逻辑操作符
+    SubFilters       []*EvaluatorFilters          `json:"sub_filters,omitempty"`       // 子条件组（支持嵌套）
 }
 
 // FilterLogicOp 筛选逻辑操作符
