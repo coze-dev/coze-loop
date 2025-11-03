@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 // EvaluatorTagDAO 定义 EvaluatorTag 的 Dao 接口
@@ -169,6 +170,12 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	// 先查询总数
 	var total int64
 	countQuery := query.Session(&gorm.Session{})
+	// 打印 COUNT SQL（完整）
+	countSQL := countQuery.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		var tmp int64
+		return tx.Distinct("evaluator_tag.source_id").Count(&tmp)
+	})
+	logs.CtxInfo(ctx, "[GetSourceIDsByFilterConditions] COUNT SQL: %s", countSQL)
 	if err := countQuery.Distinct("evaluator_tag.source_id").Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -181,6 +188,12 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 
 	// 执行查询（按 Name 标签值排序；无 Name 的排在后面）
 	var sourceIDs []int64
+	// 打印 SELECT SQL（完整）
+	selectSQL := query.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		var tmp []int64
+		return tx.Distinct("evaluator_tag.source_id").Order("t_name.tag_value IS NULL, t_name.tag_value ASC").Pluck("evaluator_tag.source_id", &tmp)
+	})
+	logs.CtxInfo(ctx, "[GetSourceIDsByFilterConditions] SELECT SQL: %s", selectSQL)
 	err := query.
 		Distinct("evaluator_tag.source_id").
 		Order("t_name.tag_value IS NULL, t_name.tag_value ASC").

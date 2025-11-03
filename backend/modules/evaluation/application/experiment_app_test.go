@@ -207,27 +207,27 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
 	// 期望：
 	//  - BuiltinVisible: eid=1 返回可见版本，其版本ID设为 10101
 	//  - 普通对： (2,1.0.0) -> 20200, (3,2.0.0) -> 30300
-	mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
-		{ID: 1, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 1, Version: "1.2.3", ID: 10101}},
-	}, nil)
+    mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+        {ID: 1, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 1, Version: "1.2.3", ID: 10101}},
+    }, nil)
 
-	mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
-		{ID: 2, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 2, Version: "1.0.0", ID: 20200}},
-		{ID: 3, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
-	}, nil)
+    mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+        {ID: 2, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 2, Version: "1.0.0", ID: 20200}},
+        {ID: 3, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
+    }, nil)
 
 	ids, err := app.resolveEvaluatorVersionIDs(ctx, req)
 	if err != nil {
 		t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
 	}
-	// 输入顺序：builtin(10101), (2,1.0.0)->20200, (2,1.0.0) 重复去重, (3,2.0.0)->30300
-	// 去重后期望顺序 [10101,20200,30300]
-	if got, want := len(ids), 3; got != want {
-		t.Fatalf("len(ids)=%d want=%d", got, want)
-	}
-	if ids[0] != 10101 || ids[1] != 20200 || ids[2] != 30300 {
-		t.Fatalf("ids=%v want=[10101 20200 30300]", ids)
-	}
+    // 输入顺序：builtin(10101), (2,1.0.0)->20200, (2,1.0.0)->20200(重复), (3,2.0.0)->30300
+    // 该函数本身不去重（去重发生在 SubmitExperiment 中），因此期望长度为 4
+    if got, want := len(ids), 4; got != want {
+        t.Fatalf("len(ids)=%d want=%d", got, want)
+    }
+    if !(ids[0] == 10101 && ids[1] == 20200 && ids[2] == 20200 && ids[3] == 30300) {
+        t.Fatalf("ids=%v want=[10101 20200 20200 30300]", ids)
+    }
 
     // 本用例不校验映射回填
 }
