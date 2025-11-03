@@ -27,6 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
@@ -117,7 +118,6 @@ var (
 		service.NewIngestionServiceImpl,
 		provideTraceRepo,
 		obconfig.NewTraceConfigCenter,
-		obstorage.NewTraceStorageProvider,
 		NewTraceConfigLoader,
 		NewIngestionCollectorFactory,
 	)
@@ -144,7 +144,6 @@ var (
 		NewTraceConfigLoader,
 		NewTraceProcessorBuilder,
 		obconfig.NewTraceConfigCenter,
-		obstorage.NewTraceStorageProvider,
 		NewMetricDefinitions,
 		file.NewFileRPCProvider,
 	)
@@ -152,24 +151,26 @@ var (
 
 func provideTraceRepo(
 	traceConfig config.ITraceConfig,
+	storageProvider storage.IStorageProvider,
 	ckProvider ck.Provider,
 ) (repo.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return obrepo.NewTraceRepoImpl(traceConfig, options...)
+	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, options...)
 }
 
 func provideTraceMetricRepo(
 	traceConfig config.ITraceConfig,
+	storageProvider storage.IStorageProvider,
 	ckProvider ck.Provider,
 ) (metric_repo.IMetricRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return obrepo.NewTraceMetricCKRepoImpl(traceConfig, options...)
+	return obrepo.NewTraceMetricCKRepoImpl(traceConfig, storageProvider, options...)
 }
 
 func buildTraceRepoOptions(ckProvider ck.Provider) ([]obrepo.TraceRepoOption, error) {
@@ -361,6 +362,7 @@ func InitOpenAPIApplication(
 
 func InitMetricApplication(
 	ckDb ck.Provider,
+	storageProvider storage.IStorageProvider,
 	configFactory conf.IConfigLoaderFactory,
 	fileClient fileservice.Client,
 	benefit benefit.IBenefitService,
@@ -372,6 +374,7 @@ func InitMetricApplication(
 
 func InitTraceIngestionApplication(
 	configFactory conf.IConfigLoaderFactory,
+	storageProvider storage.IStorageProvider,
 	ckDb ck.Provider,
 	mqFactory mq.IFactory,
 ) (ITraceIngestionApplication, error) {

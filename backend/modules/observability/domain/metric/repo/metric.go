@@ -11,7 +11,7 @@ import (
 )
 
 type GetMetricsParam struct {
-	Storage      string
+	WorkSpaceID  string
 	Tenants      []string
 	Aggregations []*entity.Dimension
 	GroupBys     []*entity.Dimension

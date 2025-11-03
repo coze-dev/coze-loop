@@ -27,6 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	storage2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	repo3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
@@ -80,11 +81,11 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis2 redis.Cmdabl
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, ckDb)
+	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, ckDb)
 	if err != nil {
 		return nil, err
 	}
-	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
 	iTraceProducer, err := producer.NewTraceProducerImpl(iTraceConfig, mqFactory)
 	if err != nil {
 		return nil, err
@@ -103,7 +104,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis2 redis.Cmdabl
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
 	iTaskRunDAO := dao.NewTaskRunDAO(redis2)
 	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao, iTaskRunDAO)
-	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iStorageProvider, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
+	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +131,11 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, ckDb)
+	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, ckDb)
 	if err != nil {
 		return nil, err
 	}
-	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
 	iTraceProducer, err := producer.NewTraceProducerImpl(iTraceConfig, mqFactory)
 	if err != nil {
 		return nil, err
@@ -153,7 +154,7 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
 	iTaskRunDAO := dao.NewTaskRunDAO(redis2)
 	iTaskRepo := repo.NewTaskRepoImpl(iTaskDao, idgen2, iTaskDAO, iTaskRunDao, iTaskRunDAO)
-	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iStorageProvider, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
+	iTraceService, err := service.NewTraceServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, traceFilterProcessorBuilder, iTenantProvider, iEvaluatorRPCAdapter, iTaskRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -167,22 +168,21 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	return iObservabilityOpenAPIApplication, nil
 }
 
-func InitMetricApplication(ckDb ck.Provider, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client) (IMetricApplication, error) {
+func InitMetricApplication(ckDb ck.Provider, storageProvider storage2.IStorageProvider, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client) (IMetricApplication, error) {
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
 	if err != nil {
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iMetricRepo, err := provideTraceMetricRepo(iTraceConfig, ckDb)
+	iMetricRepo, err := provideTraceMetricRepo(iTraceConfig, storageProvider, ckDb)
 	if err != nil {
 		return nil, err
 	}
-	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
 	v := NewMetricDefinitions()
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
-	iMetricsService, err := service2.NewMetricsService(iMetricRepo, iStorageProvider, v, iTenantProvider, traceFilterProcessorBuilder)
+	iMetricsService, err := service2.NewMetricsService(iMetricRepo, v, iTenantProvider, traceFilterProcessorBuilder)
 	if err != nil {
 		return nil, err
 	}
@@ -194,13 +194,13 @@ func InitMetricApplication(ckDb ck.Provider, configFactory conf.IConfigLoaderFac
 	return iMetricApplication, nil
 }
 
-func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, mqFactory mq.IFactory) (ITraceIngestionApplication, error) {
+func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, storageProvider storage2.IStorageProvider, ckDb ck.Provider, mqFactory mq.IFactory) (ITraceIngestionApplication, error) {
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
 	if err != nil {
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, ckDb)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, storageProvider, ckDb)
 	if err != nil {
 		return nil, err
 	}
@@ -238,16 +238,16 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 		return nil, err
 	}
 	iAuthProvider := auth.NewAuthProvider(authClient)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, ckDb)
+	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, ckDb)
 	if err != nil {
 		return nil, err
 	}
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
-	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
 	iLocker := NewTaskLocker(redis2)
-	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTraceRepo, iTenantProvider, iStorageProvider, traceFilterProcessorBuilder, processorTaskProcessor, benefit2, aid, iBackfillProducer, iLocker, iConfigLoader)
+	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor, benefit2, aid, iBackfillProducer, iLocker, iConfigLoader)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ var (
 		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(
-		NewIngestionApplication, service.NewIngestionServiceImpl, provideTraceRepo, config.NewTraceConfigCenter, storage.NewTraceStorageProvider, NewTraceConfigLoader,
+		NewIngestionApplication, service.NewIngestionServiceImpl, provideTraceRepo, config.NewTraceConfigCenter, NewTraceConfigLoader,
 		NewIngestionCollectorFactory,
 	)
 	openApiSet = wire.NewSet(
@@ -283,30 +283,32 @@ var (
 	)
 	metricsSet = wire.NewSet(
 		NewMetricApplication, service2.NewMetricsService, provideTraceMetricRepo, tenant.NewTenantProvider, auth.NewAuthProvider, NewTraceConfigLoader,
-		NewTraceProcessorBuilder, config.NewTraceConfigCenter, storage.NewTraceStorageProvider, NewMetricDefinitions, file.NewFileRPCProvider,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, NewMetricDefinitions, file.NewFileRPCProvider,
 	)
 )
 
 func provideTraceRepo(
 	traceConfig config2.ITraceConfig,
+	storageProvider storage2.IStorageProvider,
 	ckProvider ck.Provider,
 ) (repo2.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return repo.NewTraceRepoImpl(traceConfig, options...)
+	return repo.NewTraceRepoImpl(traceConfig, storageProvider, options...)
 }
 
 func provideTraceMetricRepo(
 	traceConfig config2.ITraceConfig,
+	storageProvider storage2.IStorageProvider,
 	ckProvider ck.Provider,
 ) (repo3.IMetricRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return repo.NewTraceMetricCKRepoImpl(traceConfig, options...)
+	return repo.NewTraceMetricCKRepoImpl(traceConfig, storageProvider, options...)
 }
 
 func buildTraceRepoOptions(ckProvider ck.Provider) ([]repo.TraceRepoOption, error) {

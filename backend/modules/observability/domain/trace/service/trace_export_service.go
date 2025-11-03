@@ -98,7 +98,6 @@ func NewTraceExportServiceImpl(
 ) (ITraceExportService, error) {
 	return &TraceExportServiceImpl{
 		traceRepo:             tRepo,
-		storageProvider:       storageProvider,
 		traceConfig:           traceConfig,
 		traceProducer:         traceProducer,
 		annotationProducer:    annotationProducer,
@@ -111,7 +110,6 @@ func NewTraceExportServiceImpl(
 
 type TraceExportServiceImpl struct {
 	traceRepo             repo.ITraceRepo
-	storageProvider       storage.IStorageProvider
 	traceConfig           config.ITraceConfig
 	traceProducer         mq.ITraceProducer
 	annotationProducer    mq.IAnnotationProducer
@@ -265,8 +263,8 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 	spanIDs := lo.Map(sids, func(s SpanID, _ int) string { return s.SpanID })
 	traceIDs := lo.UniqMap(sids, func(s SpanID, _ int) string { return s.TraceID })
 	result, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
-		Storage: r.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(workspaceID, 10)),
-		Tenants: tenant,
+		WorkSpaceID: strconv.FormatInt(workspaceID, 10),
+		Tenants:     tenant,
 		Filters: &loop_span.FilterFields{
 			FilterFields: []*loop_span.FilterField{
 				{
@@ -407,7 +405,7 @@ func (r *TraceExportServiceImpl) addSpanAnnotations(ctx context.Context, spans [
 			continue
 		}
 		err = r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-			Storage:     r.storageProvider.GetTraceStorage(ctx, span.WorkspaceID),
+			WorkSpaceID: span.WorkspaceID,
 			Tenant:      span.GetTenant(),
 			TTL:         span.GetTTL(ctx),
 			Annotations: []*loop_span.Annotation{annotation},

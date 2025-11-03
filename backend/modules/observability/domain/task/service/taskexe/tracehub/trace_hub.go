@@ -5,7 +5,6 @@ package tracehub
 
 import (
 	"context"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"sync"
 	"time"
 
@@ -35,7 +34,6 @@ func NewTraceHubImpl(
 	tRepo repo.ITaskRepo,
 	traceRepo trace_repo.ITraceRepo,
 	tenantProvider tenant.ITenantProvider,
-	storageProvider storage.IStorageProvider,
 	buildHelper service.TraceFilterProcessorBuilder,
 	taskProcessor *processor.TaskProcessor,
 	benefitSvc benefit.IBenefitService,
@@ -54,7 +52,6 @@ func NewTraceHubImpl(
 		stopChan:            make(chan struct{}),
 		traceRepo:           traceRepo,
 		tenantProvider:      tenantProvider,
-		storageProvider:     storageProvider,
 		buildHelper:         buildHelper,
 		taskProcessor:       taskProcessor,
 		benefitSvc:          benefitSvc,
@@ -78,7 +75,6 @@ type TraceHubServiceImpl struct {
 	taskRepo            repo.ITaskRepo
 	traceRepo           trace_repo.ITraceRepo
 	tenantProvider      tenant.ITenantProvider
-	storageProvider     storage.IStorageProvider
 	taskProcessor       *processor.TaskProcessor
 	buildHelper         service.TraceFilterProcessorBuilder
 	benefitSvc          benefit.IBenefitService

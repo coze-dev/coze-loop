@@ -153,7 +153,7 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 
 	// Build query parameters
 	listParam := &repo.ListSpansParam{
-		Storage:            h.storageProvider.GetTraceStorage(ctx, strconv.FormatInt(sub.t.GetWorkspaceID(), 10)),
+		WorkSpaceID:        strconv.FormatInt(sub.t.GetWorkspaceID(), 10),
 		Tenants:            tenants,
 		Filters:            h.buildSpanFilters(ctx, sub.t),
 		StartAt:            backfillTime.GetStartAt(),
