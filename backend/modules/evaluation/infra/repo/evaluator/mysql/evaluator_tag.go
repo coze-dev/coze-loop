@@ -130,13 +130,23 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
     dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
 
 	// 基础查询条件
-    query := dbsession.WithContext(ctx).Table("evaluator_tag").
-        Select("source_id").
-        Where("tag_type = ?", tagType).
-        Where("deleted_at IS NULL")
+	query := dbsession.WithContext(ctx).Table("evaluator_tag").
+		Select("evaluator_tag.source_id").
+		Where("evaluator_tag.tag_type = ?", tagType).
+		Where("evaluator_tag.deleted_at IS NULL")
 	if langType != "" {
-		query = query.Where("lang_type = ?", langType)
+		query = query.Where("evaluator_tag.lang_type = ?", langType)
 	}
+
+	// 为了按 Name 的 tag_value 排序，左连接一份 Name 标签记录
+	// 仅用于排序，不改变筛选逻辑
+	nameJoinSQL := "LEFT JOIN evaluator_tag AS t_name ON t_name.source_id = evaluator_tag.source_id AND t_name.tag_type = ? AND t_name.tag_key = ? AND t_name.deleted_at IS NULL"
+	nameJoinArgs := []interface{}{tagType, "Name"}
+	if langType != "" {
+		nameJoinSQL += " AND t_name.lang_type = ?"
+		nameJoinArgs = append(nameJoinArgs, langType)
+	}
+	query = query.Joins(nameJoinSQL, nameJoinArgs...)
 
 	// 处理搜索关键词
 	if filterOption.SearchKeyword != nil && *filterOption.SearchKeyword != "" {
@@ -145,8 +155,8 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	}
 
 	// 处理筛选条件
-    if filterOption.Filters != nil {
-        conditions, args, err := dao.buildFilterConditions(filterOption.Filters)
+	if filterOption.Filters != nil {
+		conditions, args, err := dao.buildFilterConditions(filterOption.Filters)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -159,7 +169,7 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	// 先查询总数
 	var total int64
 	countQuery := query.Session(&gorm.Session{})
-	if err := countQuery.Distinct("source_id").Count(&total).Error; err != nil {
+	if err := countQuery.Distinct("evaluator_tag.source_id").Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -169,9 +179,12 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 		query = query.Limit(int(pageSize)).Offset(int(offset))
 	}
 
-	// 执行查询
+	// 执行查询（按 Name 标签值排序；无 Name 的排在后面）
 	var sourceIDs []int64
-	err := query.Distinct("source_id").Pluck("source_id", &sourceIDs).Error
+	err := query.
+		Distinct("evaluator_tag.source_id").
+		Order("t_name.tag_value IS NULL, t_name.tag_value ASC").
+		Pluck("evaluator_tag.source_id", &sourceIDs).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return []int64{}, total, nil
@@ -199,7 +212,8 @@ func (dao *EvaluatorTagDAOImpl) buildFilterConditions(filters *entity.EvaluatorF
                 return "", nil, err
             }
             if conditionSQL != "" {
-                conditions = append(conditions, conditionSQL)
+                // 将每个原子条件独立包裹括号，便于与子条件并列组合
+                conditions = append(conditions, "("+conditionSQL+")")
                 args = append(args, conditionArgs...)
             }
         }
@@ -213,6 +227,7 @@ func (dao *EvaluatorTagDAOImpl) buildFilterConditions(filters *entity.EvaluatorF
                 return "", nil, err
             }
             if subSQL != "" {
+                // 子条件整体也以括号包裹，与当前层条件并列
                 conditions = append(conditions, "("+subSQL+")")
                 args = append(args, subArgs...)
             }
@@ -223,16 +238,12 @@ func (dao *EvaluatorTagDAOImpl) buildFilterConditions(filters *entity.EvaluatorF
 		return "", nil, nil
 	}
 
-	// 根据逻辑操作符组合条件
-	var finalCondition string
-	if filters.LogicOp != nil && *filters.LogicOp == entity.FilterLogicOp_Or {
-		finalCondition = "(" + strings.Join(conditions, " OR ") + ")"
-	} else {
-		// 默认为AND操作
-		finalCondition = "(" + strings.Join(conditions, " AND ") + ")"
-	}
-
-	return finalCondition, args, nil
+    // 根据逻辑操作符组合条件：直接使用分隔符合并，不再整体再包一层括号
+    if filters.LogicOp != nil && *filters.LogicOp == entity.FilterLogicOp_Or {
+        return strings.Join(conditions, " OR "), args, nil
+    }
+    // 默认为 AND
+    return strings.Join(conditions, " AND "), args, nil
 }
 
 // buildSingleCondition 构建单个筛选条件的SQL和参数
