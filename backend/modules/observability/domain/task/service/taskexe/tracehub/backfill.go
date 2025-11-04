@@ -417,7 +417,7 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSu
 // processSpansForBackfill handles spans for backfill
 func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
 	// Batch processing spans for efficiency
-	const batchSize = 100
+	const batchSize = 50
 
 	for i := 0; i < len(spans); i += batchSize {
 		end := i + batchSize
@@ -432,6 +432,7 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 			// Continue with the next batch without stopping due to a single failure
 			continue
 		}
+		time.Sleep(5 * time.Second)
 	}
 
 	return nil
