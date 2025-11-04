@@ -175,6 +175,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetTemplateV2": kitex.NewMethodInfo(
+		getTemplateV2Handler,
+		newEvaluatorServiceGetTemplateV2Args,
+		newEvaluatorServiceGetTemplateV2Result,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateEvaluatorTemplate": kitex.NewMethodInfo(
 		createEvaluatorTemplateHandler,
 		newEvaluatorServiceCreateEvaluatorTemplateArgs,
@@ -687,6 +694,25 @@ func newEvaluatorServiceListTemplatesV2Result() interface{} {
 	return evaluator.NewEvaluatorServiceListTemplatesV2Result()
 }
 
+func getTemplateV2Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceGetTemplateV2Args)
+	realResult := result.(*evaluator.EvaluatorServiceGetTemplateV2Result)
+	success, err := handler.(evaluator.EvaluatorService).GetTemplateV2(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceGetTemplateV2Args() interface{} {
+	return evaluator.NewEvaluatorServiceGetTemplateV2Args()
+}
+
+func newEvaluatorServiceGetTemplateV2Result() interface{} {
+	return evaluator.NewEvaluatorServiceGetTemplateV2Result()
+}
+
 func createEvaluatorTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*evaluator.EvaluatorServiceCreateEvaluatorTemplateArgs)
 	realResult := result.(*evaluator.EvaluatorServiceCreateEvaluatorTemplateResult)
@@ -1038,6 +1064,16 @@ func (p *kClient) ListTemplatesV2(ctx context.Context, request *evaluator.ListTe
 	_args.Request = request
 	var _result evaluator.EvaluatorServiceListTemplatesV2Result
 	if err = p.c.Call(ctx, "ListTemplatesV2", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetTemplateV2(ctx context.Context, request *evaluator.GetTemplateV2Request) (r *evaluator.GetTemplateV2Response, err error) {
+	var _args evaluator.EvaluatorServiceGetTemplateV2Args
+	_args.Request = request
+	var _result evaluator.EvaluatorServiceGetTemplateV2Result
+	if err = p.c.Call(ctx, "GetTemplateV2", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

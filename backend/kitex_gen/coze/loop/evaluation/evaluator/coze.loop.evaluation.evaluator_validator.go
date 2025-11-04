@@ -569,7 +569,7 @@ func (p *ListTemplatesV2Response) IsValid() error {
 	}
 	return nil
 }
-func (p *GetTemplateInfoV2Request) IsValid() error {
+func (p *GetTemplateV2Request) IsValid() error {
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -577,7 +577,7 @@ func (p *GetTemplateInfoV2Request) IsValid() error {
 	}
 	return nil
 }
-func (p *GetTemplateInfoV2Response) IsValid() error {
+func (p *GetTemplateV2Response) IsValid() error {
 	if p.EvaluatorTemplate != nil {
 		if err := p.EvaluatorTemplate.IsValid(); err != nil {
 			return fmt.Errorf("field EvaluatorTemplate not valid, %w", err)

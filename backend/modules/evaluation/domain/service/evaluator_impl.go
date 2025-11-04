@@ -197,156 +197,156 @@ func (e *EvaluatorServiceImpl) GetBuiltinEvaluator(ctx context.Context, evaluato
 		return nil, nil
 	}
 
-    // 1) 通过 (evaluator_id, builtin_visible_version) 获取对应版本
-    pairs := [][2]interface{}{{evaluatorID, meta.BuiltinVisibleVersion}}
-    versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
-    if err != nil {
-        return nil, err
-    }
-    if len(versions) == 0 {
-        return nil, nil
-    }
+	// 1) 通过 (evaluator_id, builtin_visible_version) 获取对应版本
+	pairs := [][2]interface{}{{evaluatorID, meta.BuiltinVisibleVersion}}
+	versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+	if err != nil {
+		return nil, err
+	}
+	if len(versions) == 0 {
+		return nil, nil
+	}
 
-    // 2) 回填 metas（元信息）到返回的版本实体根字段
-    v := versions[0]
-    if v != nil && meta != nil {
-        v.ID = meta.ID
-        v.SpaceID = meta.SpaceID
-        v.Name = meta.Name
-        v.Description = meta.Description
-        v.DraftSubmitted = meta.DraftSubmitted
-        v.EvaluatorType = meta.EvaluatorType
-        v.LatestVersion = meta.LatestVersion
-        v.Builtin = meta.Builtin
-        v.EvaluatorInfo = meta.EvaluatorInfo
-        v.BuiltinVisibleVersion = meta.BuiltinVisibleVersion
-        v.BoxType = meta.BoxType
-        v.Tags = meta.Tags
-    }
+	// 2) 回填 metas（元信息）到返回的版本实体根字段
+	v := versions[0]
+	if v != nil && meta != nil {
+		v.ID = meta.ID
+		v.SpaceID = meta.SpaceID
+		v.Name = meta.Name
+		v.Description = meta.Description
+		v.DraftSubmitted = meta.DraftSubmitted
+		v.EvaluatorType = meta.EvaluatorType
+		v.LatestVersion = meta.LatestVersion
+		v.Builtin = meta.Builtin
+		v.EvaluatorInfo = meta.EvaluatorInfo
+		v.BuiltinVisibleVersion = meta.BuiltinVisibleVersion
+		v.BoxType = meta.BoxType
+		v.Tags = meta.Tags
+	}
 
-    return v, nil
+	return v, nil
 }
 
 // BatchGetBuiltinEvaluator 批量获取预置评估器（visible版本）
 func (e *EvaluatorServiceImpl) BatchGetBuiltinEvaluator(ctx context.Context, evaluatorIDs []int64) ([]*entity.Evaluator, error) {
-    if len(evaluatorIDs) == 0 {
-        return []*entity.Evaluator{}, nil
-    }
-    // 批量获取元信息
-    metas, err := e.evaluatorRepo.BatchGetEvaluatorMetaByID(ctx, evaluatorIDs, false)
-    if err != nil {
-        return nil, err
-    }
-    // 组装 (evaluator_id, builtin_visible_version) 对
-    pairs := make([][2]interface{}, 0, len(metas))
-    for _, meta := range metas {
-        if meta == nil || !meta.Builtin || meta.BuiltinVisibleVersion == "" {
-            continue
-        }
-        pairs = append(pairs, [2]interface{}{meta.ID, meta.BuiltinVisibleVersion})
-    }
-    if len(pairs) == 0 {
-        return []*entity.Evaluator{}, nil
-    }
-    // 一次性批量获取版本
-    versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
-    if err != nil {
-        return nil, err
-    }
+	if len(evaluatorIDs) == 0 {
+		return []*entity.Evaluator{}, nil
+	}
+	// 批量获取元信息
+	metas, err := e.evaluatorRepo.BatchGetEvaluatorMetaByID(ctx, evaluatorIDs, false)
+	if err != nil {
+		return nil, err
+	}
+	// 组装 (evaluator_id, builtin_visible_version) 对
+	pairs := make([][2]interface{}, 0, len(metas))
+	for _, meta := range metas {
+		if meta == nil || !meta.Builtin || meta.BuiltinVisibleVersion == "" {
+			continue
+		}
+		pairs = append(pairs, [2]interface{}{meta.ID, meta.BuiltinVisibleVersion})
+	}
+	if len(pairs) == 0 {
+		return []*entity.Evaluator{}, nil
+	}
+	// 一次性批量获取版本
+	versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+	if err != nil {
+		return nil, err
+	}
 
-    // 回填 metas（元信息）到各版本实体根字段
-    id2Meta := make(map[int64]*entity.Evaluator, len(metas))
-    for _, m := range metas {
-        if m != nil {
-            id2Meta[m.ID] = m
-        }
-    }
-    for _, v := range versions {
-        if v == nil {
-            continue
-        }
-        mid := v.GetEvaluatorID()
-        if m, ok := id2Meta[mid]; ok && m != nil {
-            v.ID = m.ID
-            v.SpaceID = m.SpaceID
-            v.Name = m.Name
-            v.Description = m.Description
-            v.DraftSubmitted = m.DraftSubmitted
-            v.EvaluatorType = m.EvaluatorType
-            v.LatestVersion = m.LatestVersion
-            v.Builtin = m.Builtin
-            v.EvaluatorInfo = m.EvaluatorInfo
-            v.BuiltinVisibleVersion = m.BuiltinVisibleVersion
-            v.BoxType = m.BoxType
-            v.Tags = m.Tags
-        }
-    }
-    return versions, nil
+	// 回填 metas（元信息）到各版本实体根字段
+	id2Meta := make(map[int64]*entity.Evaluator, len(metas))
+	for _, m := range metas {
+		if m != nil {
+			id2Meta[m.ID] = m
+		}
+	}
+	for _, v := range versions {
+		if v == nil {
+			continue
+		}
+		mid := v.GetEvaluatorID()
+		if m, ok := id2Meta[mid]; ok && m != nil {
+			v.ID = m.ID
+			v.SpaceID = m.SpaceID
+			v.Name = m.Name
+			v.Description = m.Description
+			v.DraftSubmitted = m.DraftSubmitted
+			v.EvaluatorType = m.EvaluatorType
+			v.LatestVersion = m.LatestVersion
+			v.Builtin = m.Builtin
+			v.EvaluatorInfo = m.EvaluatorInfo
+			v.BuiltinVisibleVersion = m.BuiltinVisibleVersion
+			v.BoxType = m.BoxType
+			v.Tags = m.Tags
+		}
+	}
+	return versions, nil
 }
 
 // BatchGetEvaluatorByIDAndVersion 批量根据 (evaluator_id, version) 查询具体版本
 func (e *EvaluatorServiceImpl) BatchGetEvaluatorByIDAndVersion(ctx context.Context, pairs [][2]interface{}) ([]*entity.Evaluator, error) {
-    if len(pairs) == 0 {
-        return []*entity.Evaluator{}, nil
-    }
-    versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
-    if err != nil {
-        return nil, err
-    }
-    if len(versions) == 0 {
-        return versions, nil
-    }
+	if len(pairs) == 0 {
+		return []*entity.Evaluator{}, nil
+	}
+	versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+	if err != nil {
+		return nil, err
+	}
+	if len(versions) == 0 {
+		return versions, nil
+	}
 
-    // 收集 evaluator 元信息并回填至版本实体根字段
-    evaluatorIDs := make([]int64, 0, len(versions))
-    seen := make(map[int64]struct{}, len(versions))
-    for _, v := range versions {
-        if v == nil {
-            continue
-        }
-        mid := v.GetEvaluatorID()
-        if mid == 0 {
-            continue
-        }
-        if _, ok := seen[mid]; ok {
-            continue
-        }
-        seen[mid] = struct{}{}
-        evaluatorIDs = append(evaluatorIDs, mid)
-    }
-    if len(evaluatorIDs) == 0 {
-        return versions, nil
-    }
-    metas, err := e.evaluatorRepo.BatchGetEvaluatorMetaByID(ctx, evaluatorIDs, false)
-    if err != nil {
-        return nil, err
-    }
-    id2Meta := make(map[int64]*entity.Evaluator, len(metas))
-    for _, m := range metas {
-        if m != nil {
-            id2Meta[m.ID] = m
-        }
-    }
-    for _, v := range versions {
-        if v == nil {
-            continue
-        }
-        if m, ok := id2Meta[v.GetEvaluatorID()]; ok && m != nil {
-            v.ID = m.ID
-            v.SpaceID = m.SpaceID
-            v.Name = m.Name
-            v.Description = m.Description
-            v.DraftSubmitted = m.DraftSubmitted
-            v.EvaluatorType = m.EvaluatorType
-            v.LatestVersion = m.LatestVersion
-            v.Builtin = m.Builtin
-            v.EvaluatorInfo = m.EvaluatorInfo
-            v.BuiltinVisibleVersion = m.BuiltinVisibleVersion
-            v.BoxType = m.BoxType
-            v.Tags = m.Tags
-        }
-    }
-    return versions, nil
+	// 收集 evaluator 元信息并回填至版本实体根字段
+	evaluatorIDs := make([]int64, 0, len(versions))
+	seen := make(map[int64]struct{}, len(versions))
+	for _, v := range versions {
+		if v == nil {
+			continue
+		}
+		mid := v.GetEvaluatorID()
+		if mid == 0 {
+			continue
+		}
+		if _, ok := seen[mid]; ok {
+			continue
+		}
+		seen[mid] = struct{}{}
+		evaluatorIDs = append(evaluatorIDs, mid)
+	}
+	if len(evaluatorIDs) == 0 {
+		return versions, nil
+	}
+	metas, err := e.evaluatorRepo.BatchGetEvaluatorMetaByID(ctx, evaluatorIDs, false)
+	if err != nil {
+		return nil, err
+	}
+	id2Meta := make(map[int64]*entity.Evaluator, len(metas))
+	for _, m := range metas {
+		if m != nil {
+			id2Meta[m.ID] = m
+		}
+	}
+	for _, v := range versions {
+		if v == nil {
+			continue
+		}
+		if m, ok := id2Meta[v.GetEvaluatorID()]; ok && m != nil {
+			v.ID = m.ID
+			v.SpaceID = m.SpaceID
+			v.Name = m.Name
+			v.Description = m.Description
+			v.DraftSubmitted = m.DraftSubmitted
+			v.EvaluatorType = m.EvaluatorType
+			v.LatestVersion = m.LatestVersion
+			v.Builtin = m.Builtin
+			v.EvaluatorInfo = m.EvaluatorInfo
+			v.BuiltinVisibleVersion = m.BuiltinVisibleVersion
+			v.BoxType = m.BoxType
+			v.Tags = m.Tags
+		}
+	}
+	return versions, nil
 }
 
 // CreateEvaluator 创建 evaluator_version
@@ -605,7 +605,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 	if evaluatorSourceService.PreHandle(ctx, evaluatorDO) != nil {
 		return nil, err
 	}
-	outputData, runStatus, traceID := evaluatorSourceService.Run(ctx, evaluatorDO, request.InputData, request.DisableTracing)
+	outputData, runStatus, traceID := evaluatorSourceService.Run(ctx, evaluatorDO, request.InputData, request.SpaceID, request.DisableTracing)
 	if runStatus == entity.EvaluatorRunStatusFail {
 		logs.CtxWarn(ctx, "[RunEvaluator] Run fail, exptID: %d, exptRunID: %d, itemID: %d, turnID: %d, evaluatorVersionID: %d, traceID: %s, err: %v", request.ExperimentID, request.ExperimentRunID, request.ItemID, request.TurnID, request.EvaluatorVersionID, traceID, outputData.EvaluatorRunError)
 	}
@@ -644,7 +644,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 }
 
 // DebugEvaluator 调试 evaluator_version
-func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, error) {
+func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 	if evaluatorDO == nil || (evaluatorDO.EvaluatorType == entity.EvaluatorTypePrompt && evaluatorDO.PromptEvaluatorVersion == nil) {
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
@@ -663,7 +663,8 @@ func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *
 		return nil, err
 	}
 	// 3. 执行Debug
-	return evaluatorSourceService.Debug(ctx, evaluatorDO, inputData)
+	// exptSpaceID 目前不影响执行路径，预留透传用途
+	return evaluatorSourceService.Debug(ctx, evaluatorDO, inputData, exptSpaceID)
 }
 
 func (e *EvaluatorServiceImpl) CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error) {

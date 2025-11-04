@@ -13433,7 +13433,7 @@ func (p *ListTemplatesV2Response) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *GetTemplateInfoV2Request) FastRead(buf []byte) (int, error) {
+func (p *GetTemplateV2Request) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -13497,14 +13497,14 @@ func (p *GetTemplateInfoV2Request) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTemplateInfoV2Request[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTemplateV2Request[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_GetTemplateInfoV2Request[fieldId]))
+	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_GetTemplateV2Request[fieldId]))
 }
 
-func (p *GetTemplateInfoV2Request) FastReadField1(buf []byte) (int, error) {
+func (p *GetTemplateV2Request) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field int64
@@ -13518,7 +13518,7 @@ func (p *GetTemplateInfoV2Request) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTemplateInfoV2Request) FastReadField255(buf []byte) (int, error) {
+func (p *GetTemplateV2Request) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -13530,11 +13530,11 @@ func (p *GetTemplateInfoV2Request) FastReadField255(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTemplateInfoV2Request) FastWrite(buf []byte) int {
+func (p *GetTemplateV2Request) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *GetTemplateInfoV2Request) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *GetTemplateV2Request) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -13544,7 +13544,7 @@ func (p *GetTemplateInfoV2Request) FastWriteNocopy(buf []byte, w thrift.NocopyWr
 	return offset
 }
 
-func (p *GetTemplateInfoV2Request) BLength() int {
+func (p *GetTemplateV2Request) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -13554,14 +13554,14 @@ func (p *GetTemplateInfoV2Request) BLength() int {
 	return l
 }
 
-func (p *GetTemplateInfoV2Request) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *GetTemplateV2Request) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 	offset += thrift.Binary.WriteI64(buf[offset:], p.EvaluatorTemplateID)
 	return offset
 }
 
-func (p *GetTemplateInfoV2Request) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+func (p *GetTemplateV2Request) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -13570,14 +13570,14 @@ func (p *GetTemplateInfoV2Request) fastWriteField255(buf []byte, w thrift.Nocopy
 	return offset
 }
 
-func (p *GetTemplateInfoV2Request) field1Length() int {
+func (p *GetTemplateV2Request) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.I64Length()
 	return l
 }
 
-func (p *GetTemplateInfoV2Request) field255Length() int {
+func (p *GetTemplateV2Request) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
 		l += thrift.Binary.FieldBeginLength()
@@ -13586,8 +13586,8 @@ func (p *GetTemplateInfoV2Request) field255Length() int {
 	return l
 }
 
-func (p *GetTemplateInfoV2Request) DeepCopy(s interface{}) error {
-	src, ok := s.(*GetTemplateInfoV2Request)
+func (p *GetTemplateV2Request) DeepCopy(s interface{}) error {
+	src, ok := s.(*GetTemplateV2Request)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -13606,7 +13606,7 @@ func (p *GetTemplateInfoV2Request) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *GetTemplateInfoV2Response) FastRead(buf []byte) (int, error) {
+func (p *GetTemplateV2Response) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -13664,12 +13664,12 @@ func (p *GetTemplateInfoV2Response) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTemplateInfoV2Response[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTemplateV2Response[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *GetTemplateInfoV2Response) FastReadField1(buf []byte) (int, error) {
+func (p *GetTemplateV2Response) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 	_field := evaluator.NewEvaluatorTemplate()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -13681,7 +13681,7 @@ func (p *GetTemplateInfoV2Response) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTemplateInfoV2Response) FastReadField255(buf []byte) (int, error) {
+func (p *GetTemplateV2Response) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -13693,11 +13693,11 @@ func (p *GetTemplateInfoV2Response) FastReadField255(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTemplateInfoV2Response) FastWrite(buf []byte) int {
+func (p *GetTemplateV2Response) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *GetTemplateInfoV2Response) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *GetTemplateV2Response) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -13707,7 +13707,7 @@ func (p *GetTemplateInfoV2Response) FastWriteNocopy(buf []byte, w thrift.NocopyW
 	return offset
 }
 
-func (p *GetTemplateInfoV2Response) BLength() int {
+func (p *GetTemplateV2Response) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -13717,7 +13717,7 @@ func (p *GetTemplateInfoV2Response) BLength() int {
 	return l
 }
 
-func (p *GetTemplateInfoV2Response) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *GetTemplateV2Response) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEvaluatorTemplate() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
@@ -13726,14 +13726,14 @@ func (p *GetTemplateInfoV2Response) fastWriteField1(buf []byte, w thrift.NocopyW
 	return offset
 }
 
-func (p *GetTemplateInfoV2Response) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+func (p *GetTemplateV2Response) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
 	offset += p.BaseResp.FastWriteNocopy(buf[offset:], w)
 	return offset
 }
 
-func (p *GetTemplateInfoV2Response) field1Length() int {
+func (p *GetTemplateV2Response) field1Length() int {
 	l := 0
 	if p.IsSetEvaluatorTemplate() {
 		l += thrift.Binary.FieldBeginLength()
@@ -13742,15 +13742,15 @@ func (p *GetTemplateInfoV2Response) field1Length() int {
 	return l
 }
 
-func (p *GetTemplateInfoV2Response) field255Length() int {
+func (p *GetTemplateV2Response) field255Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += p.BaseResp.BLength()
 	return l
 }
 
-func (p *GetTemplateInfoV2Response) DeepCopy(s interface{}) error {
-	src, ok := s.(*GetTemplateInfoV2Response)
+func (p *GetTemplateV2Response) DeepCopy(s interface{}) error {
+	src, ok := s.(*GetTemplateV2Response)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -21583,6 +21583,240 @@ func (p *EvaluatorServiceListTemplatesV2Result) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *EvaluatorServiceGetTemplateV2Args) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorServiceGetTemplateV2Args[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+	_field := NewGetTemplateV2Request()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Request = _field
+	return offset, nil
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
+	offset += p.Request.FastWriteNocopy(buf[offset:], w)
+	return offset
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) field1Length() int {
+	l := 0
+	l += thrift.Binary.FieldBeginLength()
+	l += p.Request.BLength()
+	return l
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) DeepCopy(s interface{}) error {
+	src, ok := s.(*EvaluatorServiceGetTemplateV2Args)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _request *GetTemplateV2Request
+	if src.Request != nil {
+		_request = &GetTemplateV2Request{}
+		if err := _request.DeepCopy(src.Request); err != nil {
+			return err
+		}
+	}
+	p.Request = _request
+
+	return nil
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField0(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorServiceGetTemplateV2Result[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) FastReadField0(buf []byte) (int, error) {
+	offset := 0
+	_field := NewGetTemplateV2Response()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Success = _field
+	return offset, nil
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField0(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field0Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuccess() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
+		offset += p.Success.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) field0Length() int {
+	l := 0
+	if p.IsSetSuccess() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Success.BLength()
+	}
+	return l
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) DeepCopy(s interface{}) error {
+	src, ok := s.(*EvaluatorServiceGetTemplateV2Result)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _success *GetTemplateV2Response
+	if src.Success != nil {
+		_success = &GetTemplateV2Response{}
+		if err := _success.DeepCopy(src.Success); err != nil {
+			return err
+		}
+	}
+	p.Success = _success
+
+	return nil
+}
+
 func (p *EvaluatorServiceCreateEvaluatorTemplateArgs) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -23168,6 +23402,14 @@ func (p *EvaluatorServiceListTemplatesV2Args) GetFirstArgument() interface{} {
 }
 
 func (p *EvaluatorServiceListTemplatesV2Result) GetResult() interface{} {
+	return p.Success
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) GetFirstArgument() interface{} {
+	return p.Request
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) GetResult() interface{} {
 	return p.Success
 }
 

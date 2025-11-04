@@ -171,22 +171,6 @@ func ListTemplatesV2(ctx context.Context, c *app.RequestContext) {
 	c.JSON(consts.StatusOK, resp)
 }
 
-// GetTemplateInfoV2 .
-// @router /api/evaluation/v1/evaluators/get_template_info_v2 [POST]
-func GetTemplateInfoV2(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.GetTemplateInfoV2Request
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.GetTemplateInfoV2Response)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
 // DebugBuiltinEvaluator .
 // @router /api/evaluation/v1/evaluators/debug_builtin [POST]
 func DebugBuiltinEvaluator(ctx context.Context, c *app.RequestContext) {
@@ -249,6 +233,22 @@ func UpdateBuiltinEvaluatorTags(ctx context.Context, c *app.RequestContext) {
 	}
 
 	resp := new(evaluator.UpdateBuiltinEvaluatorTagsResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetTemplateV2 .
+// @router /api/evaluation/v1/evaluator_template/:evaluator_template_id [POST]
+func GetTemplateV2(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.GetTemplateV2Request
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.GetTemplateV2Response)
 
 	c.JSON(consts.StatusOK, resp)
 }

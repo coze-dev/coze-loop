@@ -18435,53 +18435,53 @@ func (p *ListTemplatesV2Response) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
-type GetTemplateInfoV2Request struct {
-	EvaluatorTemplateID int64      `thrift:"evaluator_template_id,1,required" frugal:"1,required,i64" json:"evaluator_template_id" form:"evaluator_template_id,required" `
+type GetTemplateV2Request struct {
+	EvaluatorTemplateID int64      `thrift:"evaluator_template_id,1,required" frugal:"1,required,i64" json:"evaluator_template_id" path:"evaluator_template_id,required" `
 	Base                *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewGetTemplateInfoV2Request() *GetTemplateInfoV2Request {
-	return &GetTemplateInfoV2Request{}
+func NewGetTemplateV2Request() *GetTemplateV2Request {
+	return &GetTemplateV2Request{}
 }
 
-func (p *GetTemplateInfoV2Request) InitDefault() {
+func (p *GetTemplateV2Request) InitDefault() {
 }
 
-func (p *GetTemplateInfoV2Request) GetEvaluatorTemplateID() (v int64) {
+func (p *GetTemplateV2Request) GetEvaluatorTemplateID() (v int64) {
 	if p != nil {
 		return p.EvaluatorTemplateID
 	}
 	return
 }
 
-var GetTemplateInfoV2Request_Base_DEFAULT *base.Base
+var GetTemplateV2Request_Base_DEFAULT *base.Base
 
-func (p *GetTemplateInfoV2Request) GetBase() (v *base.Base) {
+func (p *GetTemplateV2Request) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return GetTemplateInfoV2Request_Base_DEFAULT
+		return GetTemplateV2Request_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *GetTemplateInfoV2Request) SetEvaluatorTemplateID(val int64) {
+func (p *GetTemplateV2Request) SetEvaluatorTemplateID(val int64) {
 	p.EvaluatorTemplateID = val
 }
-func (p *GetTemplateInfoV2Request) SetBase(val *base.Base) {
+func (p *GetTemplateV2Request) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_GetTemplateInfoV2Request = map[int16]string{
+var fieldIDToName_GetTemplateV2Request = map[int16]string{
 	1:   "evaluator_template_id",
 	255: "Base",
 }
 
-func (p *GetTemplateInfoV2Request) IsSetBase() bool {
+func (p *GetTemplateV2Request) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *GetTemplateInfoV2Request) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetTemplateV2Request) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetEvaluatorTemplateID bool = false
@@ -18540,7 +18540,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTemplateInfoV2Request[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTemplateV2Request[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -18549,10 +18549,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetTemplateInfoV2Request[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetTemplateV2Request[fieldId]))
 }
 
-func (p *GetTemplateInfoV2Request) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetTemplateV2Request) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -18563,7 +18563,7 @@ func (p *GetTemplateInfoV2Request) ReadField1(iprot thrift.TProtocol) error {
 	p.EvaluatorTemplateID = _field
 	return nil
 }
-func (p *GetTemplateInfoV2Request) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetTemplateV2Request) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -18572,9 +18572,9 @@ func (p *GetTemplateInfoV2Request) ReadField255(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *GetTemplateInfoV2Request) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetTemplateV2Request) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetTemplateInfoV2Request"); err != nil {
+	if err = oprot.WriteStructBegin("GetTemplateV2Request"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -18604,7 +18604,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetTemplateInfoV2Request) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetTemplateV2Request) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("evaluator_template_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -18620,7 +18620,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetTemplateInfoV2Request) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetTemplateV2Request) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -18639,15 +18639,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetTemplateInfoV2Request) String() string {
+func (p *GetTemplateV2Request) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetTemplateInfoV2Request(%+v)", *p)
+	return fmt.Sprintf("GetTemplateV2Request(%+v)", *p)
 
 }
 
-func (p *GetTemplateInfoV2Request) DeepEqual(ano *GetTemplateInfoV2Request) bool {
+func (p *GetTemplateV2Request) DeepEqual(ano *GetTemplateV2Request) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -18662,14 +18662,14 @@ func (p *GetTemplateInfoV2Request) DeepEqual(ano *GetTemplateInfoV2Request) bool
 	return true
 }
 
-func (p *GetTemplateInfoV2Request) Field1DeepEqual(src int64) bool {
+func (p *GetTemplateV2Request) Field1DeepEqual(src int64) bool {
 
 	if p.EvaluatorTemplateID != src {
 		return false
 	}
 	return true
 }
-func (p *GetTemplateInfoV2Request) Field255DeepEqual(src *base.Base) bool {
+func (p *GetTemplateV2Request) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -18677,62 +18677,62 @@ func (p *GetTemplateInfoV2Request) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
-type GetTemplateInfoV2Response struct {
+type GetTemplateV2Response struct {
 	EvaluatorTemplate *evaluator.EvaluatorTemplate `thrift:"evaluator_template,1,optional" frugal:"1,optional,evaluator.EvaluatorTemplate" form:"evaluator_template" json:"evaluator_template,omitempty"`
 	BaseResp          *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
-func NewGetTemplateInfoV2Response() *GetTemplateInfoV2Response {
-	return &GetTemplateInfoV2Response{}
+func NewGetTemplateV2Response() *GetTemplateV2Response {
+	return &GetTemplateV2Response{}
 }
 
-func (p *GetTemplateInfoV2Response) InitDefault() {
+func (p *GetTemplateV2Response) InitDefault() {
 }
 
-var GetTemplateInfoV2Response_EvaluatorTemplate_DEFAULT *evaluator.EvaluatorTemplate
+var GetTemplateV2Response_EvaluatorTemplate_DEFAULT *evaluator.EvaluatorTemplate
 
-func (p *GetTemplateInfoV2Response) GetEvaluatorTemplate() (v *evaluator.EvaluatorTemplate) {
+func (p *GetTemplateV2Response) GetEvaluatorTemplate() (v *evaluator.EvaluatorTemplate) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluatorTemplate() {
-		return GetTemplateInfoV2Response_EvaluatorTemplate_DEFAULT
+		return GetTemplateV2Response_EvaluatorTemplate_DEFAULT
 	}
 	return p.EvaluatorTemplate
 }
 
-var GetTemplateInfoV2Response_BaseResp_DEFAULT *base.BaseResp
+var GetTemplateV2Response_BaseResp_DEFAULT *base.BaseResp
 
-func (p *GetTemplateInfoV2Response) GetBaseResp() (v *base.BaseResp) {
+func (p *GetTemplateV2Response) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return GetTemplateInfoV2Response_BaseResp_DEFAULT
+		return GetTemplateV2Response_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *GetTemplateInfoV2Response) SetEvaluatorTemplate(val *evaluator.EvaluatorTemplate) {
+func (p *GetTemplateV2Response) SetEvaluatorTemplate(val *evaluator.EvaluatorTemplate) {
 	p.EvaluatorTemplate = val
 }
-func (p *GetTemplateInfoV2Response) SetBaseResp(val *base.BaseResp) {
+func (p *GetTemplateV2Response) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_GetTemplateInfoV2Response = map[int16]string{
+var fieldIDToName_GetTemplateV2Response = map[int16]string{
 	1:   "evaluator_template",
 	255: "BaseResp",
 }
 
-func (p *GetTemplateInfoV2Response) IsSetEvaluatorTemplate() bool {
+func (p *GetTemplateV2Response) IsSetEvaluatorTemplate() bool {
 	return p.EvaluatorTemplate != nil
 }
 
-func (p *GetTemplateInfoV2Response) IsSetBaseResp() bool {
+func (p *GetTemplateV2Response) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *GetTemplateInfoV2Response) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetTemplateV2Response) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -18785,7 +18785,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTemplateInfoV2Response[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTemplateV2Response[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -18795,7 +18795,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *GetTemplateInfoV2Response) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetTemplateV2Response) ReadField1(iprot thrift.TProtocol) error {
 	_field := evaluator.NewEvaluatorTemplate()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -18803,7 +18803,7 @@ func (p *GetTemplateInfoV2Response) ReadField1(iprot thrift.TProtocol) error {
 	p.EvaluatorTemplate = _field
 	return nil
 }
-func (p *GetTemplateInfoV2Response) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetTemplateV2Response) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -18812,9 +18812,9 @@ func (p *GetTemplateInfoV2Response) ReadField255(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *GetTemplateInfoV2Response) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetTemplateV2Response) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetTemplateInfoV2Response"); err != nil {
+	if err = oprot.WriteStructBegin("GetTemplateV2Response"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -18844,7 +18844,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetTemplateInfoV2Response) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetTemplateV2Response) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorTemplate() {
 		if err = oprot.WriteFieldBegin("evaluator_template", thrift.STRUCT, 1); err != nil {
 			goto WriteFieldBeginError
@@ -18862,7 +18862,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetTemplateInfoV2Response) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetTemplateV2Response) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -18879,15 +18879,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetTemplateInfoV2Response) String() string {
+func (p *GetTemplateV2Response) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetTemplateInfoV2Response(%+v)", *p)
+	return fmt.Sprintf("GetTemplateV2Response(%+v)", *p)
 
 }
 
-func (p *GetTemplateInfoV2Response) DeepEqual(ano *GetTemplateInfoV2Response) bool {
+func (p *GetTemplateV2Response) DeepEqual(ano *GetTemplateV2Response) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -18902,14 +18902,14 @@ func (p *GetTemplateInfoV2Response) DeepEqual(ano *GetTemplateInfoV2Response) bo
 	return true
 }
 
-func (p *GetTemplateInfoV2Response) Field1DeepEqual(src *evaluator.EvaluatorTemplate) bool {
+func (p *GetTemplateV2Response) Field1DeepEqual(src *evaluator.EvaluatorTemplate) bool {
 
 	if !p.EvaluatorTemplate.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *GetTemplateInfoV2Response) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *GetTemplateV2Response) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -22276,6 +22276,8 @@ type EvaluatorService interface {
 	ValidateEvaluator(ctx context.Context, request *ValidateEvaluatorRequest) (r *ValidateEvaluatorResponse, err error)
 	// 查询评估器模板
 	ListTemplatesV2(ctx context.Context, request *ListTemplatesV2Request) (r *ListTemplatesV2Response, err error)
+
+	GetTemplateV2(ctx context.Context, request *GetTemplateV2Request) (r *GetTemplateV2Response, err error)
 	// 创建评估器模板
 	CreateEvaluatorTemplate(ctx context.Context, request *CreateEvaluatorTemplateRequest) (r *CreateEvaluatorTemplateResponse, err error)
 	// 更新评估器模板
@@ -22523,6 +22525,15 @@ func (p *EvaluatorServiceClient) ListTemplatesV2(ctx context.Context, request *L
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvaluatorServiceClient) GetTemplateV2(ctx context.Context, request *GetTemplateV2Request) (r *GetTemplateV2Response, err error) {
+	var _args EvaluatorServiceGetTemplateV2Args
+	_args.Request = request
+	var _result EvaluatorServiceGetTemplateV2Result
+	if err = p.Client_().Call(ctx, "GetTemplateV2", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *EvaluatorServiceClient) CreateEvaluatorTemplate(ctx context.Context, request *CreateEvaluatorTemplateRequest) (r *CreateEvaluatorTemplateResponse, err error) {
 	var _args EvaluatorServiceCreateEvaluatorTemplateArgs
 	_args.Request = request
@@ -22621,6 +22632,7 @@ func NewEvaluatorServiceProcessor(handler EvaluatorService) *EvaluatorServicePro
 	self.AddToProcessorMap("BatchGetEvaluatorRecords", &evaluatorServiceProcessorBatchGetEvaluatorRecords{handler: handler})
 	self.AddToProcessorMap("ValidateEvaluator", &evaluatorServiceProcessorValidateEvaluator{handler: handler})
 	self.AddToProcessorMap("ListTemplatesV2", &evaluatorServiceProcessorListTemplatesV2{handler: handler})
+	self.AddToProcessorMap("GetTemplateV2", &evaluatorServiceProcessorGetTemplateV2{handler: handler})
 	self.AddToProcessorMap("CreateEvaluatorTemplate", &evaluatorServiceProcessorCreateEvaluatorTemplate{handler: handler})
 	self.AddToProcessorMap("UpdateEvaluatorTemplate", &evaluatorServiceProcessorUpdateEvaluatorTemplate{handler: handler})
 	self.AddToProcessorMap("DeleteEvaluatorTemplate", &evaluatorServiceProcessorDeleteEvaluatorTemplate{handler: handler})
@@ -23734,6 +23746,54 @@ func (p *evaluatorServiceProcessorListTemplatesV2) Process(ctx context.Context, 
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("ListTemplatesV2", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluatorServiceProcessorGetTemplateV2 struct {
+	handler EvaluatorService
+}
+
+func (p *evaluatorServiceProcessorGetTemplateV2) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluatorServiceGetTemplateV2Args{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetTemplateV2", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluatorServiceGetTemplateV2Result{}
+	var retval *GetTemplateV2Response
+	if retval, err2 = p.handler.GetTemplateV2(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetTemplateV2: "+err2.Error())
+		oprot.WriteMessageBegin("GetTemplateV2", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetTemplateV2", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -31944,6 +32004,350 @@ func (p *EvaluatorServiceListTemplatesV2Result) DeepEqual(ano *EvaluatorServiceL
 }
 
 func (p *EvaluatorServiceListTemplatesV2Result) Field0DeepEqual(src *ListTemplatesV2Response) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluatorServiceGetTemplateV2Args struct {
+	Request *GetTemplateV2Request `thrift:"request,1" frugal:"1,default,GetTemplateV2Request"`
+}
+
+func NewEvaluatorServiceGetTemplateV2Args() *EvaluatorServiceGetTemplateV2Args {
+	return &EvaluatorServiceGetTemplateV2Args{}
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) InitDefault() {
+}
+
+var EvaluatorServiceGetTemplateV2Args_Request_DEFAULT *GetTemplateV2Request
+
+func (p *EvaluatorServiceGetTemplateV2Args) GetRequest() (v *GetTemplateV2Request) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequest() {
+		return EvaluatorServiceGetTemplateV2Args_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *EvaluatorServiceGetTemplateV2Args) SetRequest(val *GetTemplateV2Request) {
+	p.Request = val
+}
+
+var fieldIDToName_EvaluatorServiceGetTemplateV2Args = map[int16]string{
+	1: "request",
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorServiceGetTemplateV2Args[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetTemplateV2Request()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetTemplateV2_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorServiceGetTemplateV2Args(%+v)", *p)
+
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) DeepEqual(ano *EvaluatorServiceGetTemplateV2Args) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorServiceGetTemplateV2Args) Field1DeepEqual(src *GetTemplateV2Request) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluatorServiceGetTemplateV2Result struct {
+	Success *GetTemplateV2Response `thrift:"success,0,optional" frugal:"0,optional,GetTemplateV2Response"`
+}
+
+func NewEvaluatorServiceGetTemplateV2Result() *EvaluatorServiceGetTemplateV2Result {
+	return &EvaluatorServiceGetTemplateV2Result{}
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) InitDefault() {
+}
+
+var EvaluatorServiceGetTemplateV2Result_Success_DEFAULT *GetTemplateV2Response
+
+func (p *EvaluatorServiceGetTemplateV2Result) GetSuccess() (v *GetTemplateV2Response) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluatorServiceGetTemplateV2Result_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluatorServiceGetTemplateV2Result) SetSuccess(x interface{}) {
+	p.Success = x.(*GetTemplateV2Response)
+}
+
+var fieldIDToName_EvaluatorServiceGetTemplateV2Result = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorServiceGetTemplateV2Result[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetTemplateV2Response()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetTemplateV2_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorServiceGetTemplateV2Result(%+v)", *p)
+
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) DeepEqual(ano *EvaluatorServiceGetTemplateV2Result) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorServiceGetTemplateV2Result) Field0DeepEqual(src *GetTemplateV2Response) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

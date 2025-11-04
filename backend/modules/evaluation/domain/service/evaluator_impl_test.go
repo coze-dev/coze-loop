@@ -1715,7 +1715,7 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), defaultRequest.SpaceID).Return(true)
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(defaultRecordID, nil)
 				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
-				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData, defaultRequest.DisableTracing).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+                mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData, defaultRequest.SpaceID, defaultRequest.DisableTracing).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
 
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, record *entity.EvaluatorRecord) error {
@@ -1764,7 +1764,7 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 				session.WithCtxUser(ctx, &session.User{ID: defaultUserID})
 				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
 				// 验证DisableTracing参数正确传递给EvaluatorSourceService.Run方法
-				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), true).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+                mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), int64(1), true).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
 
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, record *entity.EvaluatorRecord) error {
@@ -1813,7 +1813,7 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 				session.WithCtxUser(ctx, &session.User{ID: defaultUserID})
 				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
 				// 验证DisableTracing参数正确传递给EvaluatorSourceService.Run方法
-				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), false).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+                mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), int64(1), false).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
 
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, record *entity.EvaluatorRecord) error {
@@ -1948,7 +1948,7 @@ func Test_EvaluatorServiceImpl_DebugEvaluator(t *testing.T) {
 			setupMocks: func(mockEvaluatorSourceService *mocks.MockEvaluatorSourceService) {
 				mockEvaluatorSourceService.EXPECT().PreHandle(ctx, mockEvaluator).Return(nil)
 				mockEvaluatorSourceService.EXPECT().Validate(ctx, mockEvaluator).Return(nil)
-				mockEvaluatorSourceService.EXPECT().Debug(ctx, mockEvaluator, gomock.Any()).Return(defaultOutputData, nil)
+                mockEvaluatorSourceService.EXPECT().Debug(ctx, mockEvaluator, gomock.Any(), int64(0)).Return(defaultOutputData, nil)
 			},
 		},
 	}
@@ -1957,7 +1957,7 @@ func Test_EvaluatorServiceImpl_DebugEvaluator(t *testing.T) {
 			if tc.setupMocks != nil {
 				tc.setupMocks(mockEvaluatorSourceService)
 			}
-			outputData, err := mockService.DebugEvaluator(ctx, mockEvaluator, tc.request.InputData)
+            outputData, err := mockService.DebugEvaluator(ctx, mockEvaluator, tc.request.InputData, int64(0))
 			if tc.expectedErr != nil {
 				assert.Error(t, err)
 				assert.Equal(t, tc.expectedErr, err)
@@ -2072,7 +2072,7 @@ func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(defaultRecordID, nil)
 				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
 				// 关键验证：确保DisableTracing参数正确传递
-				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), true).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+                mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), int64(1), true).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -2085,7 +2085,7 @@ func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(defaultRecordID, nil)
 				mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), defaultEvaluatorDO).Return(nil)
 				// 关键验证：确保DisableTracing参数正确传递
-				mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), false).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
+                mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), defaultEvaluatorDO, gomock.Any(), int64(1), false).Return(defaultOutputData, defaultRunStatus, "trace-id-123")
 				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},

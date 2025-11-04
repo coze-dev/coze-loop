@@ -961,7 +961,7 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 	}
 	do := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
 	inputData := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
-	outputData, err := e.evaluatorService.DebugEvaluator(ctx, do, inputData)
+	outputData, err := e.evaluatorService.DebugEvaluator(ctx, do, inputData, request.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -1292,11 +1292,11 @@ func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request 
 	evaluatorDO := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
 
 	// 并发调试处理
-	return e.batchDebugWithConcurrency(ctx, evaluatorDO, request.InputData)
+	return e.batchDebugWithConcurrency(ctx, evaluatorDO, request.InputData, request.WorkspaceID)
 }
 
 // batchDebugWithConcurrency 使用并发池进行批量调试
-func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, evaluatorDO *entity.Evaluator, inputDataList []*evaluatordto.EvaluatorInputData) (*evaluatorservice.BatchDebugEvaluatorResponse, error) {
+func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, evaluatorDO *entity.Evaluator, inputDataList []*evaluatordto.EvaluatorInputData, exptSpaceID int64) (*evaluatorservice.BatchDebugEvaluatorResponse, error) {
 	// 创建并发池，并发度为10
 	pool, err := goroutine.NewPool(10)
 	if err != nil {
@@ -1317,7 +1317,7 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 			inputDataDO := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(currentInputData)
 
 			// 调用单个评估器调试逻辑
-			outputDataDO, debugErr := e.evaluatorService.DebugEvaluator(ctx, evaluatorDO, inputDataDO)
+			outputDataDO, debugErr := e.evaluatorService.DebugEvaluator(ctx, evaluatorDO, inputDataDO, exptSpaceID)
 
 			// 保护结果收集过程
 			mutex.Lock()
@@ -1402,8 +1402,8 @@ func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *eva
 	}, nil
 }
 
-// GetTemplateInfoV2 获取评估器模板详情
-func (e *EvaluatorHandlerImpl) GetTemplateInfoV2(ctx context.Context, request *evaluatorservice.GetTemplateInfoV2Request) (resp *evaluatorservice.GetTemplateInfoV2Response, err error) {
+// GetTemplateV2 获取评估器模板详情
+func (e *EvaluatorHandlerImpl) GetTemplateV2(ctx context.Context, request *evaluatorservice.GetTemplateV2Request) (resp *evaluatorservice.GetTemplateV2Response, err error) {
 	// 构建service层请求
 	serviceReq := &entity.GetEvaluatorTemplateRequest{
 		ID:             request.GetEvaluatorTemplateID(),
@@ -1417,13 +1417,13 @@ func (e *EvaluatorHandlerImpl) GetTemplateInfoV2(ctx context.Context, request *e
 	}
 
 	if serviceResp.Template == nil {
-		return &evaluatorservice.GetTemplateInfoV2Response{}, nil
+		return &evaluatorservice.GetTemplateV2Response{}, nil
 	}
 
 	// 转换结果
 	template := evaluatorconvertor.ConvertEvaluatorTemplateDO2DTO(serviceResp.Template)
 
-	return &evaluatorservice.GetTemplateInfoV2Response{
+	return &evaluatorservice.GetTemplateV2Response{
 		EvaluatorTemplate: template,
 	}, nil
 }
@@ -1512,7 +1512,7 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, requ
 	// 转换结果
 	template := evaluatorconvertor.ConvertEvaluatorTemplateDO2DTO(serviceResp.Template)
 
-    return &evaluatorservice.UpdateEvaluatorTemplateResponse{
+	return &evaluatorservice.UpdateEvaluatorTemplateResponse{
 		EvaluatorTemplate: template,
 	}, nil
 }
@@ -1553,7 +1553,7 @@ func (e *EvaluatorHandlerImpl) DeleteEvaluatorTemplate(ctx context.Context, requ
 		return nil, err
 	}
 
-    return &evaluatorservice.DeleteEvaluatorTemplateResponse{}, nil
+	return &evaluatorservice.DeleteEvaluatorTemplateResponse{}, nil
 }
 
 // DebugBuiltinEvaluator 调试预置评估器
@@ -1578,13 +1578,13 @@ func (e *EvaluatorHandlerImpl) DebugBuiltinEvaluator(ctx context.Context, reques
 
 	// 2) 调用调试逻辑
 	inputDataDO := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
-	outputDataDO, err := e.evaluatorService.DebugEvaluator(ctx, builtinEvaluatorDO, inputDataDO)
+	outputDataDO, err := e.evaluatorService.DebugEvaluator(ctx, builtinEvaluatorDO, inputDataDO, request.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
 
 	// 3) 返回结果
-    return &evaluatorservice.DebugBuiltinEvaluatorResponse{
+	return &evaluatorservice.DebugBuiltinEvaluatorResponse{
 		OutputData: evaluatorconvertor.ConvertEvaluatorOutputDataDO2DTO(outputDataDO),
 	}, nil
 }

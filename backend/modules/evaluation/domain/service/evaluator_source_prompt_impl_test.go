@@ -212,7 +212,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run(t *testing.T) {
 				tc.setupMocks()
 			}
 
-			output, status, _ := service.Run(ctx, tc.evaluator, tc.input, false)
+            output, status, _ := service.Run(ctx, tc.evaluator, tc.input, tc.evaluator.GetSpaceID(), false)
 
 			assert.Equal(t, tc.expectedStatus, status)
 			if tc.checkOutputFunc != nil {
@@ -400,7 +400,7 @@ func TestEvaluatorSourcePromptServiceImpl_Debug(t *testing.T) {
 				TokenUsage: &entity.TokenUsage{InputTokens: 10, OutputTokens: 10},
 			}, nil)
 		mockMetric.EXPECT().EmitRun(int64(1), gomock.Any(), gomock.Any(), gomock.Any())
-		output, err := service.Debug(ctx, baseMockEvaluator, baseMockInput)
+        output, err := service.Debug(ctx, baseMockEvaluator, baseMockInput, baseMockEvaluator.GetSpaceID())
 		assert.NoError(t, err)
 		assert.NotNil(t, output)
 		assert.NotNil(t, output.EvaluatorResult)
@@ -411,7 +411,7 @@ func TestEvaluatorSourcePromptServiceImpl_Debug(t *testing.T) {
 	t.Run("调试评估器失败", func(t *testing.T) {
 		mockLLMProvider.EXPECT().Call(gomock.Any(), gomock.Any()).Return(nil, errors.New("llm call failed"))
 		mockMetric.EXPECT().EmitRun(int64(1), gomock.Any(), gomock.Any(), gomock.Any())
-		output, err := service.Debug(ctx, baseMockEvaluator, baseMockInput)
+        output, err := service.Debug(ctx, baseMockEvaluator, baseMockInput, baseMockEvaluator.GetSpaceID())
 		assert.Error(t, err)
 		assert.Nil(t, output)
 	})
@@ -980,7 +980,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run_DisableTracing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setupMocks()
 
-			output, status, traceID := service.Run(ctx, evaluator, input, tt.disableTracing)
+            output, status, traceID := service.Run(ctx, evaluator, input, evaluator.GetSpaceID(), tt.disableTracing)
 
 			// 由于输入验证失败，验证错误状态
 			assert.Equal(t, entity.EvaluatorRunStatusFail, status)

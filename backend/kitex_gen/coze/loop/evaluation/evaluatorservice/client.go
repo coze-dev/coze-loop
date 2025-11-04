@@ -34,6 +34,7 @@ type Client interface {
 	BatchGetEvaluatorRecords(ctx context.Context, req *evaluator.BatchGetEvaluatorRecordsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorRecordsResponse, err error)
 	ValidateEvaluator(ctx context.Context, request *evaluator.ValidateEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.ValidateEvaluatorResponse, err error)
 	ListTemplatesV2(ctx context.Context, request *evaluator.ListTemplatesV2Request, callOptions ...callopt.Option) (r *evaluator.ListTemplatesV2Response, err error)
+	GetTemplateV2(ctx context.Context, request *evaluator.GetTemplateV2Request, callOptions ...callopt.Option) (r *evaluator.GetTemplateV2Response, err error)
 	CreateEvaluatorTemplate(ctx context.Context, request *evaluator.CreateEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.CreateEvaluatorTemplateResponse, err error)
 	UpdateEvaluatorTemplate(ctx context.Context, request *evaluator.UpdateEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorTemplateResponse, err error)
 	DeleteEvaluatorTemplate(ctx context.Context, request *evaluator.DeleteEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.DeleteEvaluatorTemplateResponse, err error)
@@ -184,6 +185,11 @@ func (p *kEvaluatorServiceClient) ValidateEvaluator(ctx context.Context, request
 func (p *kEvaluatorServiceClient) ListTemplatesV2(ctx context.Context, request *evaluator.ListTemplatesV2Request, callOptions ...callopt.Option) (r *evaluator.ListTemplatesV2Response, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListTemplatesV2(ctx, request)
+}
+
+func (p *kEvaluatorServiceClient) GetTemplateV2(ctx context.Context, request *evaluator.GetTemplateV2Request, callOptions ...callopt.Option) (r *evaluator.GetTemplateV2Response, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetTemplateV2(ctx, request)
 }
 
 func (p *kEvaluatorServiceClient) CreateEvaluatorTemplate(ctx context.Context, request *evaluator.CreateEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.CreateEvaluatorTemplateResponse, err error) {

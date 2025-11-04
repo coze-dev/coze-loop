@@ -519,6 +519,27 @@ func (l *LocalEvaluatorService) ListTemplatesV2(ctx context.Context, request *ev
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluatorService) GetTemplateV2(ctx context.Context, request *evaluator.GetTemplateV2Request, callOptions ...callopt.Option) (*evaluator.GetTemplateV2Response, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*evaluator.EvaluatorServiceGetTemplateV2Args)
+		result := out.(*evaluator.EvaluatorServiceGetTemplateV2Result)
+		resp, err := l.impl.GetTemplateV2(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &evaluator.EvaluatorServiceGetTemplateV2Args{Request: request}
+	result := &evaluator.EvaluatorServiceGetTemplateV2Result{}
+	ctx = l.injectRPCInfo(ctx, "GetTemplateV2")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // CreateEvaluatorTemplate
 // 创建评估器模板
 func (l *LocalEvaluatorService) CreateEvaluatorTemplate(ctx context.Context, request *evaluator.CreateEvaluatorTemplateRequest, callOptions ...callopt.Option) (*evaluator.CreateEvaluatorTemplateResponse, error) {

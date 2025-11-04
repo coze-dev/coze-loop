@@ -180,23 +180,23 @@ func TestEvaluatorService_Handlers_Smoke(t *testing.T) {
 
 	for _, cs := range cases {
 		t.Run(cs.name, func(t *testing.T) {
-            var c *app.RequestContext
-            switch cs.name {
-            case "DebugBuiltinEvaluator":
-                // 需要必填: evaluator_id, workspace_id, input_data（提供最小可解析结构）
-                c = newJSONCtxWithBody(`{
+			var c *app.RequestContext
+			switch cs.name {
+			case "DebugBuiltinEvaluator":
+				// 需要必填: evaluator_id, workspace_id, input_data（提供最小可解析结构）
+				c = newJSONCtxWithBody(`{
                     "evaluator_id": 1,
                     "workspace_id": 1,
                     "input_data": {"input_fields": {}}
                 }`)
-            case "CreateEvaluatorTemplate":
-                // 需要必填: evaluator_template
-                c = newJSONCtxWithBody(`{
+			case "CreateEvaluatorTemplate":
+				// 需要必填: evaluator_template
+				c = newJSONCtxWithBody(`{
                     "evaluator_template": {}
                 }`)
-            default:
-                c = newJSONCtx()
-            }
+			default:
+				c = newJSONCtx()
+			}
 			cs.fn(ctx, c)
 			assert.Equal(t, http.StatusOK, c.Response.StatusCode())
 		})
@@ -218,7 +218,7 @@ func TestEvaluatorService_Handlers(t *testing.T) {
 		{name: "ValidateEvaluator", fn: ValidateEvaluator},
 		{name: "BatchDebugEvaluator", fn: BatchDebugEvaluator},
 		{name: "ListTemplatesV2", fn: ListTemplatesV2},
-		{name: "GetTemplateInfoV2", fn: GetTemplateInfoV2},
+		{name: "GetTemplateV2", fn: GetTemplateV2},
 		{name: "DebugBuiltinEvaluator", fn: DebugBuiltinEvaluator},
 		{name: "CreateEvaluatorTemplate", fn: CreateEvaluatorTemplate},
 		{name: "UpdateEvaluatorTemplate", fn: UpdateEvaluatorTemplate},

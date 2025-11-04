@@ -186,6 +186,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				{
 					_evaluator_template0 := _v11.Group("/evaluator_template", _evaluator_template0Mw(handler)...)
+					_evaluator_template0.POST("/:evaluator_template_id", append(_gettemplatev2Mw(handler), apis.GetTemplateV2)...)
 					_evaluator_template0.POST("/list", append(_listtemplatesv2Mw(handler), apis.ListTemplatesV2)...)
 				}
 				{
