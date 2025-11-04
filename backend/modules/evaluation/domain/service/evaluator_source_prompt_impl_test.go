@@ -1471,6 +1471,82 @@ func Test_parseContentOutput(t *testing.T) {
 			assert.GreaterOrEqual(t, *output.EvaluatorResult.Score, 0.0)
 		}
 	})
+
+	t.Run("场景34: 通过传统方式提取reason（覆盖551-559行）", func(t *testing.T) {
+		// 测试场景：reason字段格式特殊，无法通过定位字段的方式提取，但可以通过传统方式（reasonRegex）提取
+		// 要触发551-559行，需要：
+		// 1. 策略1-3都失败（让策略4执行）
+		// 2. reasonFieldRegex找不到reason字段的开始位置，或者找到了但无法确定结束位置
+		// 3. 但传统方式（reasonRegex）能够成功提取reason
+		// 使用一个格式特殊的JSON，其中reason字段没有标准的双引号格式，但可以通过reasonRegex匹配
+		// 注意：由于reasonRegex需要匹配 "reason" 和双引号，我们需要确保reason字段格式特殊但仍能被匹配
+		// 例如：reason字段前后有特殊字符，导致无法匹配 "reason": "，但可以匹配 reason[^"]*"([^"]+)"
+		content := `score: 0.85, reason: "This is extracted by traditional regex method"`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数（策略1-3会失败，因为不是标准JSON格式）
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 策略4应该能够通过传统方式（reasonRegex）提取reason
+		// reasonFieldRegex找不到 "reason": " 格式（因为格式是 "reason: "），所以会走到551行
+		// 但reasonRegex可以匹配 reason: "([^"]+)"，所以会走到551-559行的代码路径
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.85, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, "This is extracted by traditional regex method", output.EvaluatorResult.Reasoning)
+		assert.Nil(t, output.EvaluatorRunError)
+	})
+
+	t.Run("场景35: 只有score没有reason字段（覆盖560-564行）", func(t *testing.T) {
+		// 测试场景：内容中只有score字段，没有reason字段
+		// 这种情况会走到560-564行的代码路径：无法提取reason字段，使用完整输出作为reason
+		content := `{"score": 0.9}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 策略4能够提取score，但无法提取reason，因此使用完整内容作为reason
+		// 这种情况会走到560-564行的代码路径
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.9, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning) // 使用完整输出作为reason
+		assert.Nil(t, output.EvaluatorRunError)
+	})
+
+	t.Run("场景36: score存在但reason字段格式无法匹配（覆盖560-564行）", func(t *testing.T) {
+		// 测试场景：score存在，但reason字段格式特殊，无法通过任何方式提取
+		// 要覆盖560-564行，需要确保：
+		// 1. reasonFieldRegex找不到 "reason": " 格式（或找到了但无法确定结束位置）
+		// 2. 传统方式reasonRegex也找不到有效的reason字段
+		// 3. 因此使用完整内容作为reason
+		// 使用一个完全没有reason字段的内容，或者reason字段格式完全无法匹配
+		content := `{"score": 0.75}`
+		replyItem := &entity.ReplyItem{Content: &content}
+		output := &entity.EvaluatorOutputData{
+			EvaluatorResult: &entity.EvaluatorResult{},
+		}
+
+		// Act: 调用被测函数
+		err := parseContentOutput(ctx, evaluatorVersion, replyItem, output)
+
+		// Assert: 策略4能够提取score，但无法提取reason（因为完全没有reason字段），因此使用完整内容作为reason
+		// reasonFieldRegex找不到 "reason": " 格式（因为根本没有reason字段）
+		// 传统方式reasonRegex也找不到reason字段（因为根本没有reason字段）
+		// 因此会走到560-564行的代码路径：使用完整输出作为reason
+		assert.NoError(t, err)
+		assert.NotNil(t, output.EvaluatorResult.Score)
+		assert.InDelta(t, 0.75, *output.EvaluatorResult.Score, 0.0001)
+		assert.Equal(t, content, output.EvaluatorResult.Reasoning) // 使用完整输出作为reason
+		assert.Nil(t, output.EvaluatorRunError)
+	})
 }
 
 // TestEvaluatorSourcePromptServiceImpl_Run_DisableTracing 测试追踪控制核心逻辑
