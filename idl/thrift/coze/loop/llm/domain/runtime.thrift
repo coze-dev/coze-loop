@@ -1,6 +1,7 @@
 namespace go coze.loop.llm.domain.runtime
 
 include "common.thrift"
+include "manage.thrift"
 
 struct ModelConfig {
     1: required i64 model_id  (api.js_conv='true', go.tag='json:"model_id"')// 模型id
@@ -13,11 +14,15 @@ struct ModelConfig {
     8: optional i32 top_k
     9: optional double presence_penalty
     10: optional double frequency_penalty
-    11: optional Thinking thinking
+
+    // 与ParamSchema对应
+    100: optional list<ParamConfigValue> param_config_values
 }
 
-struct Thinking {
-    1: optional ThinkingOption thinking_option
+struct ParamConfigValue {
+    1: optional string name // 传给下游模型的key，与ParamSchema.name对齐
+    2: optional string label // 展示名称
+    3: optional manage.ParamOption value // 传给下游模型的value，与ParamSchema.options对齐
 }
 
 struct Message {
@@ -123,8 +128,3 @@ typedef string ImageURLDetail (ts.enum="true")
 const ImageURLDetail image_url_detail_auto = "auto"
 const ImageURLDetail image_url_detail_low = "low"
 const ImageURLDetail image_url_detail_high = "high"
-
-typedef string ThinkingOption (ts.enum="true")
-const ThinkingOption thinking_option_disabled = "disabled"
-const ThinkingOption thinking_option_enabled = "enabled"
-const ThinkingOption thinking_option_auto = "auto"
