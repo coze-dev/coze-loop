@@ -289,7 +289,7 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 				return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 			}
 		}
-		logs.CtxInfo(ctx, "result.PageToken:%s, hasMore:%v", result.PageToken, result.HasMore)
+
 		if len(spans) > 0 {
 			flush := &flushReq{
 				retrievedSpanCount: int64(len(spans)),
