@@ -500,7 +500,7 @@ service EvaluatorService {
 
     // 查询评估器模板
     ListTemplatesV2Response ListTemplatesV2(1: ListTemplatesV2Request request) (api.post="/api/evaluation/v1/evaluator_template/list")
-    GetTemplateV2Response GetTemplateV2(1: GetTemplateV2Request request) (api.post="/api/evaluation/v1/evaluator_template/:evaluator_template_id")
+    GetTemplateV2Response GetTemplateV2(1: GetTemplateV2Request request) (api.get="/api/evaluation/v1/evaluator_template/:evaluator_template_id")
 
     // 创建评估器模板
     CreateEvaluatorTemplateResponse CreateEvaluatorTemplate(1: CreateEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluator_template")

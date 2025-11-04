@@ -664,7 +664,7 @@ func TestEvaluatorSourceCodeServiceImpl_Debug(t *testing.T) {
 
 			tt.mockSetup(ctrl, mockRuntimeManager, mockCodeBuilderFactory, mockRuntime, mockCodeBuilder)
 
-			output, err := service.Debug(context.Background(), tt.evaluator, tt.input)
+			output, err := service.Debug(context.Background(), tt.evaluator, tt.input, 0)
 
 			if tt.wantErr {
 				assert.Error(t, err)
