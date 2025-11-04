@@ -388,7 +388,7 @@ struct ListExperimentResultOApiRequest {
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
 
-    100: optional i32 page_number (api.body = 'page_number')
+    100: optional i32 page_num (api.body = 'page_num')
     101: optional i32 page_size (api.body = 'page_size')
 
     255: optional base.Base Base

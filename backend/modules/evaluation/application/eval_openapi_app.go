@@ -852,7 +852,7 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 		SpaceID:        req.GetWorkspaceID(),
 		BaseExptID:     req.ExperimentID,
 		ExptIDs:        []int64{req.GetExperimentID()},
-		Page:           entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())),
+		Page:           entity.NewPage(int(req.GetPageNum()), int(req.GetPageSize())),
 		UseAccelerator: true,
 	}
 	columnEvaluators, _, columnEvalSetFields, _, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)

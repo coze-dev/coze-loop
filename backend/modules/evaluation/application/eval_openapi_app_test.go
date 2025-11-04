@@ -1438,6 +1438,6 @@ func newFailedInvokeResultReq(workspaceID, invokeID int64, errorMessage string) 
 }
 
 func TestNewEvalOpenAPIApplication(t *testing.T) {
-	app := NewEvalOpenAPIApplication(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	app := NewEvalOpenAPIApplication(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	assert.NotNil(t, app)
 }

@@ -17425,7 +17425,7 @@ func (p *GetExperimentsOpenAPIDataData) Field255DeepEqual(src *base.BaseResp) bo
 type ListExperimentResultOApiRequest struct {
 	WorkspaceID  *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
 	ExperimentID *int64     `thrift:"experiment_id,2,optional" frugal:"2,optional,i64" json:"experiment_id" path:"experiment_id" `
-	PageNumber   *int32     `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty"`
+	PageNum      *int32     `thrift:"page_num,100,optional" frugal:"100,optional,i32" form:"page_num" json:"page_num,omitempty"`
 	PageSize     *int32     `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
 	Base         *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -17461,16 +17461,16 @@ func (p *ListExperimentResultOApiRequest) GetExperimentID() (v int64) {
 	return *p.ExperimentID
 }
 
-var ListExperimentResultOApiRequest_PageNumber_DEFAULT int32
+var ListExperimentResultOApiRequest_PageNum_DEFAULT int32
 
-func (p *ListExperimentResultOApiRequest) GetPageNumber() (v int32) {
+func (p *ListExperimentResultOApiRequest) GetPageNum() (v int32) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetPageNumber() {
-		return ListExperimentResultOApiRequest_PageNumber_DEFAULT
+	if !p.IsSetPageNum() {
+		return ListExperimentResultOApiRequest_PageNum_DEFAULT
 	}
-	return *p.PageNumber
+	return *p.PageNum
 }
 
 var ListExperimentResultOApiRequest_PageSize_DEFAULT int32
@@ -17502,8 +17502,8 @@ func (p *ListExperimentResultOApiRequest) SetWorkspaceID(val *int64) {
 func (p *ListExperimentResultOApiRequest) SetExperimentID(val *int64) {
 	p.ExperimentID = val
 }
-func (p *ListExperimentResultOApiRequest) SetPageNumber(val *int32) {
-	p.PageNumber = val
+func (p *ListExperimentResultOApiRequest) SetPageNum(val *int32) {
+	p.PageNum = val
 }
 func (p *ListExperimentResultOApiRequest) SetPageSize(val *int32) {
 	p.PageSize = val
@@ -17515,7 +17515,7 @@ func (p *ListExperimentResultOApiRequest) SetBase(val *base.Base) {
 var fieldIDToName_ListExperimentResultOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "experiment_id",
-	100: "page_number",
+	100: "page_num",
 	101: "page_size",
 	255: "Base",
 }
@@ -17528,8 +17528,8 @@ func (p *ListExperimentResultOApiRequest) IsSetExperimentID() bool {
 	return p.ExperimentID != nil
 }
 
-func (p *ListExperimentResultOApiRequest) IsSetPageNumber() bool {
-	return p.PageNumber != nil
+func (p *ListExperimentResultOApiRequest) IsSetPageNum() bool {
+	return p.PageNum != nil
 }
 
 func (p *ListExperimentResultOApiRequest) IsSetPageSize() bool {
@@ -17657,7 +17657,7 @@ func (p *ListExperimentResultOApiRequest) ReadField100(iprot thrift.TProtocol) e
 	} else {
 		_field = &v
 	}
-	p.PageNumber = _field
+	p.PageNum = _field
 	return nil
 }
 func (p *ListExperimentResultOApiRequest) ReadField101(iprot thrift.TProtocol) error {
@@ -17761,11 +17761,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *ListExperimentResultOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
-	if p.IsSetPageNumber() {
-		if err = oprot.WriteFieldBegin("page_number", thrift.I32, 100); err != nil {
+	if p.IsSetPageNum() {
+		if err = oprot.WriteFieldBegin("page_num", thrift.I32, 100); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(*p.PageNumber); err != nil {
+		if err := oprot.WriteI32(*p.PageNum); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -17835,7 +17835,7 @@ func (p *ListExperimentResultOApiRequest) DeepEqual(ano *ListExperimentResultOAp
 	if !p.Field2DeepEqual(ano.ExperimentID) {
 		return false
 	}
-	if !p.Field100DeepEqual(ano.PageNumber) {
+	if !p.Field100DeepEqual(ano.PageNum) {
 		return false
 	}
 	if !p.Field101DeepEqual(ano.PageSize) {
@@ -17873,12 +17873,12 @@ func (p *ListExperimentResultOApiRequest) Field2DeepEqual(src *int64) bool {
 }
 func (p *ListExperimentResultOApiRequest) Field100DeepEqual(src *int32) bool {
 
-	if p.PageNumber == src {
+	if p.PageNum == src {
 		return true
-	} else if p.PageNumber == nil || src == nil {
+	} else if p.PageNum == nil || src == nil {
 		return false
 	}
-	if *p.PageNumber != *src {
+	if *p.PageNum != *src {
 		return false
 	}
 	return true

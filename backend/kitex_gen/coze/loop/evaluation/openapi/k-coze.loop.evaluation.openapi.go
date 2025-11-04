@@ -12505,7 +12505,7 @@ func (p *ListExperimentResultOApiRequest) FastReadField100(buf []byte) (int, err
 		offset += l
 		_field = &v
 	}
-	p.PageNumber = _field
+	p.PageNum = _field
 	return offset, nil
 }
 
@@ -12585,9 +12585,9 @@ func (p *ListExperimentResultOApiRequest) fastWriteField2(buf []byte, w thrift.N
 
 func (p *ListExperimentResultOApiRequest) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetPageNumber() {
+	if p.IsSetPageNum() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 100)
-		offset += thrift.Binary.WriteI32(buf[offset:], *p.PageNumber)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.PageNum)
 	}
 	return offset
 }
@@ -12630,7 +12630,7 @@ func (p *ListExperimentResultOApiRequest) field2Length() int {
 
 func (p *ListExperimentResultOApiRequest) field100Length() int {
 	l := 0
-	if p.IsSetPageNumber() {
+	if p.IsSetPageNum() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I32Length()
 	}
@@ -12671,9 +12671,9 @@ func (p *ListExperimentResultOApiRequest) DeepCopy(s interface{}) error {
 		p.ExperimentID = &tmp
 	}
 
-	if src.PageNumber != nil {
-		tmp := *src.PageNumber
-		p.PageNumber = &tmp
+	if src.PageNum != nil {
+		tmp := *src.PageNum
+		p.PageNum = &tmp
 	}
 
 	if src.PageSize != nil {
