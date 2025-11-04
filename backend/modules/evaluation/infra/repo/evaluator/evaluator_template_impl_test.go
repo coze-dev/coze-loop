@@ -797,3 +797,280 @@ func TestEvaluatorTemplateRepoImpl_IncrPopularityByID(t *testing.T) {
 		})
 	}
 }
+
+// TestEvaluatorTemplateRepoImpl_setTemplateTags 测试 setTemplateTags 方法
+func TestEvaluatorTemplateRepoImpl_setTemplateTags(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		template       *entity.EvaluatorTemplate
+		templateID     int64
+		tagsBySourceID map[int64][]*model.EvaluatorTag
+		expectedTags   map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string
+		description    string
+	}{
+		{
+			name: "成功 - tagsBySourceID中不存在该templateID",
+			template: &entity.EvaluatorTemplate{
+				ID:   1,
+				Name: "Test Template",
+			},
+			templateID:     1,
+			tagsBySourceID: map[int64][]*model.EvaluatorTag{},
+			expectedTags:   nil,
+			description:    "当tagsBySourceID中不存在该templateID时，Tags应该保持为nil",
+		},
+		{
+			name: "成功 - tagsBySourceID[templateID]存在但为空数组",
+			template: &entity.EvaluatorTemplate{
+				ID:   1,
+				Name: "Test Template",
+			},
+			templateID: 1,
+			tagsBySourceID: map[int64][]*model.EvaluatorTag{
+				1: {},
+			},
+			expectedTags: nil,
+			description:  "当tagsBySourceID[templateID]存在但为空数组时，Tags应该保持为nil",
+		},
+		{
+			name: "成功 - 单个标签，模板Tags为nil",
+			template: &entity.EvaluatorTemplate{
+				ID:   1,
+				Name: "Test Template",
+			},
+			templateID: 1,
+			tagsBySourceID: map[int64][]*model.EvaluatorTag{
+				1: {
+					{
+						ID:       10,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_Category),
+						TagValue: "LLM",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+				},
+			},
+			expectedTags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_Zh: {
+					entity.EvaluatorTagKey_Category: {"LLM"},
+				},
+			},
+			description: "当有单个标签且模板Tags为nil时，应该初始化Tags并设置标签",
+		},
+		{
+			name: "成功 - 多个标签不同TagKey，模板Tags为nil",
+			template: &entity.EvaluatorTemplate{
+				ID:   1,
+				Name: "Test Template",
+			},
+			templateID: 1,
+			tagsBySourceID: map[int64][]*model.EvaluatorTag{
+				1: {
+					{
+						ID:       10,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_Category),
+						TagValue: "LLM",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+					{
+						ID:       11,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_BusinessScenario),
+						TagValue: "安全风控",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+				},
+			},
+			expectedTags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_Zh: {
+					entity.EvaluatorTagKey_Category:         {"LLM"},
+					entity.EvaluatorTagKey_BusinessScenario: {"安全风控"},
+				},
+			},
+			description: "当有多个不同TagKey的标签且模板Tags为nil时，应该按TagKey分组设置",
+		},
+		{
+			name: "成功 - 多个标签相同TagKey，模板Tags为nil",
+			template: &entity.EvaluatorTemplate{
+				ID:   1,
+				Name: "Test Template",
+			},
+			templateID: 1,
+			tagsBySourceID: map[int64][]*model.EvaluatorTag{
+				1: {
+					{
+						ID:       10,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_Category),
+						TagValue: "LLM",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+					{
+						ID:       11,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_Category),
+						TagValue: "NLP",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+				},
+			},
+			expectedTags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_Zh: {
+					entity.EvaluatorTagKey_Category: {"LLM", "NLP"},
+				},
+			},
+			description: "当有多个相同TagKey的标签时，应该合并到同一个slice中",
+		},
+		{
+			name: "成功 - 标签设置覆盖模板已有的Tags",
+			template: &entity.EvaluatorTemplate{
+				ID:   1,
+				Name: "Test Template",
+				Tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+					entity.EvaluatorTagLangType_En: {
+						entity.EvaluatorTagKey_Category: {"OldCategory"},
+					},
+				},
+			},
+			templateID: 1,
+			tagsBySourceID: map[int64][]*model.EvaluatorTag{
+				1: {
+					{
+						ID:       10,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_Category),
+						TagValue: "LLM",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+				},
+			},
+			expectedTags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_En: {
+					entity.EvaluatorTagKey_Category: {"OldCategory"},
+				},
+				entity.EvaluatorTagLangType_Zh: {
+					entity.EvaluatorTagKey_Category: {"LLM"},
+				},
+			},
+			description: "当模板已有Tags时，新标签应该添加到对应语言下，不会覆盖其他语言",
+		},
+		{
+			name: "成功 - 混合场景：多个标签不同TagKey，部分相同TagKey",
+			template: &entity.EvaluatorTemplate{
+				ID:   1,
+				Name: "Test Template",
+			},
+			templateID: 1,
+			tagsBySourceID: map[int64][]*model.EvaluatorTag{
+				1: {
+					{
+						ID:       10,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_Category),
+						TagValue: "LLM",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+					{
+						ID:       11,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_Category),
+						TagValue: "NLP",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+					{
+						ID:       12,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_BusinessScenario),
+						TagValue: "安全风控",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+					{
+						ID:       13,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_BusinessScenario),
+						TagValue: "内容审核",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+				},
+			},
+			expectedTags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_Zh: {
+					entity.EvaluatorTagKey_Category:         {"LLM", "NLP"},
+					entity.EvaluatorTagKey_BusinessScenario: {"安全风控", "内容审核"},
+				},
+			},
+			description: "混合场景：多个不同TagKey的标签，每个TagKey有多个值，应该正确分组和合并",
+		},
+		{
+			name: "成功 - 不同templateID的标签不会影响",
+			template: &entity.EvaluatorTemplate{
+				ID:   1,
+				Name: "Test Template",
+			},
+			templateID: 1,
+			tagsBySourceID: map[int64][]*model.EvaluatorTag{
+				1: {
+					{
+						ID:       10,
+						SourceID: 1,
+						TagKey:   string(entity.EvaluatorTagKey_Category),
+						TagValue: "LLM",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+				},
+				2: {
+					{
+						ID:       20,
+						SourceID: 2,
+						TagKey:   string(entity.EvaluatorTagKey_Category),
+						TagValue: "OtherCategory",
+						LangType: string(entity.EvaluatorTagLangType_Zh),
+					},
+				},
+			},
+			expectedTags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_Zh: {
+					entity.EvaluatorTagKey_Category: {"LLM"},
+				},
+			},
+			description: "不同templateID的标签不应该影响当前模板",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockTagDAO := mysqlmocks.NewMockEvaluatorTagDAO(ctrl)
+			mockTemplateDAO := mysqlmocks.NewMockEvaluatorTemplateDAO(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+
+			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO, mockIDGen).(*EvaluatorTemplateRepoImpl)
+
+			// 调用 setTemplateTags 方法
+			repo.setTemplateTags(tt.template, tt.templateID, tt.tagsBySourceID)
+
+			// 验证结果
+			if tt.expectedTags == nil {
+				assert.Nil(t, tt.template.Tags, tt.description)
+			} else {
+				assert.NotNil(t, tt.template.Tags, tt.description)
+				assert.Equal(t, len(tt.expectedTags), len(tt.template.Tags), tt.description)
+				for lang, expectedTagMap := range tt.expectedTags {
+					actualTagMap, exists := tt.template.Tags[lang]
+					assert.True(t, exists, tt.description+" - 语言 %s 应该存在", lang)
+					assert.Equal(t, len(expectedTagMap), len(actualTagMap), tt.description+" - 语言 %s 的TagKey数量应该相等", lang)
+					for tagKey, expectedValues := range expectedTagMap {
+						actualValues, exists := actualTagMap[tagKey]
+						assert.True(t, exists, tt.description+" - TagKey %s 应该存在", tagKey)
+						assert.Equal(t, expectedValues, actualValues, tt.description+" - TagKey %s 的值应该相等", tagKey)
+					}
+				}
+			}
+		})
+	}
+}

@@ -4,14 +4,14 @@
 package evaluator
 
 import (
-    "testing"
+	"testing"
 
-    "github.com/bytedance/gg/gptr"
-    "github.com/stretchr/testify/assert"
+	"github.com/bytedance/gg/gptr"
+	"github.com/stretchr/testify/assert"
 
-    commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
-    evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
-    evaluatordo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
+	evaluatordo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
 func TestConvertEvaluatorTemplateDTO2DO_Nil(t *testing.T) {
@@ -175,6 +175,347 @@ func TestCodeEvaluatorContentDTOAndDO(t *testing.T) {
         assert.NotNil(t, back.LanguageType)
         assert.NotNil(t, back.CodeContent)
     }
+}
+
+// TestConvertEvaluatorTemplateDTO2DO_EvaluatorInfo 测试 ConvertEvaluatorTemplateDTO2DO 的 EvaluatorInfo 处理逻辑
+func TestConvertEvaluatorTemplateDTO2DO_EvaluatorInfo(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		dto            *evaluatordto.EvaluatorTemplate
+		expectedInfo   *evaluatordo.EvaluatorInfo
+		description    string
+	}{
+		{
+			name: "成功 - EvaluatorInfo为nil",
+			dto: &evaluatordto.EvaluatorTemplate{
+				ID:            gptr.Of(int64(1)),
+				WorkspaceID:   gptr.Of(int64(2)),
+				Name:          gptr.Of("Test Template"),
+				EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
+				Popularity:    gptr.Of(int64(0)),
+			},
+			expectedInfo: nil,
+			description:  "当DTO的EvaluatorInfo为nil时，DO的EvaluatorInfo应该为nil",
+		},
+		{
+			name: "成功 - EvaluatorInfo存在但所有字段为nil",
+			dto: &evaluatordto.EvaluatorTemplate{
+				ID:            gptr.Of(int64(1)),
+				WorkspaceID:   gptr.Of(int64(2)),
+				Name:          gptr.Of("Test Template"),
+				EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
+				Popularity:    gptr.Of(int64(0)),
+				EvaluatorInfo: &evaluatordto.EvaluatorInfo{},
+			},
+			expectedInfo: &evaluatordo.EvaluatorInfo{
+				Benchmark:     "",
+				Vendor:        "",
+				VendorURL:     "",
+				UserManualURL: "",
+			},
+			description: "当DTO的EvaluatorInfo存在但所有字段为nil时，DO的EvaluatorInfo应该创建但所有字段为空字符串",
+		},
+		{
+			name: "成功 - EvaluatorInfo存在且所有字段都有值",
+			dto: &evaluatordto.EvaluatorTemplate{
+				ID:            gptr.Of(int64(1)),
+				WorkspaceID:   gptr.Of(int64(2)),
+				Name:          gptr.Of("Test Template"),
+				EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
+				Popularity:    gptr.Of(int64(0)),
+				EvaluatorInfo: &evaluatordto.EvaluatorInfo{
+					Benchmark:     gptr.Of("GLUE"),
+					Vendor:        gptr.Of("OpenAI"),
+					VendorURL:     gptr.Of("https://openai.com"),
+					UserManualURL: gptr.Of("https://docs.openai.com"),
+				},
+			},
+			expectedInfo: &evaluatordo.EvaluatorInfo{
+				Benchmark:     "GLUE",
+				Vendor:        "OpenAI",
+				VendorURL:     "https://openai.com",
+				UserManualURL: "https://docs.openai.com",
+			},
+			description: "当DTO的EvaluatorInfo存在且所有字段都有值时，DO的EvaluatorInfo应该正确转换所有字段",
+		},
+		{
+			name: "成功 - EvaluatorInfo存在但部分字段有值",
+			dto: &evaluatordto.EvaluatorTemplate{
+				ID:            gptr.Of(int64(1)),
+				WorkspaceID:   gptr.Of(int64(2)),
+				Name:          gptr.Of("Test Template"),
+				EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
+				Popularity:    gptr.Of(int64(0)),
+				EvaluatorInfo: &evaluatordto.EvaluatorInfo{
+					Benchmark: gptr.Of("GLUE"),
+					Vendor:    gptr.Of("OpenAI"),
+					// VendorURL 和 UserManualURL 为 nil
+				},
+			},
+			expectedInfo: &evaluatordo.EvaluatorInfo{
+				Benchmark:     "GLUE",
+				Vendor:        "OpenAI",
+				VendorURL:     "",
+				UserManualURL: "",
+			},
+			description: "当DTO的EvaluatorInfo存在但部分字段有值时，DO的EvaluatorInfo应该正确转换，nil字段转为空字符串",
+		},
+		{
+			name: "成功 - EvaluatorInfo字段为空字符串",
+			dto: &evaluatordto.EvaluatorTemplate{
+				ID:            gptr.Of(int64(1)),
+				WorkspaceID:   gptr.Of(int64(2)),
+				Name:          gptr.Of("Test Template"),
+				EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
+				Popularity:    gptr.Of(int64(0)),
+				EvaluatorInfo: &evaluatordto.EvaluatorInfo{
+					Benchmark:     gptr.Of(""),
+					Vendor:        gptr.Of(""),
+					VendorURL:     gptr.Of(""),
+					UserManualURL: gptr.Of(""),
+				},
+			},
+			expectedInfo: &evaluatordo.EvaluatorInfo{
+				Benchmark:     "",
+				Vendor:        "",
+				VendorURL:     "",
+				UserManualURL: "",
+			},
+			description: "当DTO的EvaluatorInfo字段为空字符串时，DO的EvaluatorInfo应该保持为空字符串",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			do := ConvertEvaluatorTemplateDTO2DO(tt.dto)
+
+			assert.NotNil(t, do, tt.description)
+			if tt.expectedInfo == nil {
+				assert.Nil(t, do.EvaluatorInfo, tt.description)
+			} else {
+				assert.NotNil(t, do.EvaluatorInfo, tt.description)
+				assert.Equal(t, tt.expectedInfo.Benchmark, do.EvaluatorInfo.Benchmark, tt.description+" - Benchmark应该相等")
+				assert.Equal(t, tt.expectedInfo.Vendor, do.EvaluatorInfo.Vendor, tt.description+" - Vendor应该相等")
+				assert.Equal(t, tt.expectedInfo.VendorURL, do.EvaluatorInfo.VendorURL, tt.description+" - VendorURL应该相等")
+				assert.Equal(t, tt.expectedInfo.UserManualURL, do.EvaluatorInfo.UserManualURL, tt.description+" - UserManualURL应该相等")
+			}
+		})
+	}
+}
+
+// TestConvertEvaluatorTemplateDO2DTO_EvaluatorInfo 测试 ConvertEvaluatorTemplateDO2DTO 的 EvaluatorInfo 处理逻辑
+func TestConvertEvaluatorTemplateDO2DTO_EvaluatorInfo(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		do             *evaluatordo.EvaluatorTemplate
+		expectedInfo   *evaluatordto.EvaluatorInfo
+		description    string
+	}{
+		{
+			name: "成功 - EvaluatorInfo为nil",
+			do: &evaluatordo.EvaluatorTemplate{
+				ID:            1,
+				SpaceID:       2,
+				Name:          "Test Template",
+				EvaluatorType: evaluatordo.EvaluatorTypePrompt,
+				Popularity:    0,
+			},
+			expectedInfo: nil,
+			description:  "当DO的EvaluatorInfo为nil时，DTO的EvaluatorInfo应该为nil",
+		},
+		{
+			name: "成功 - EvaluatorInfo存在但所有字段为空字符串",
+			do: &evaluatordo.EvaluatorTemplate{
+				ID:            1,
+				SpaceID:       2,
+				Name:          "Test Template",
+				EvaluatorType: evaluatordo.EvaluatorTypePrompt,
+				Popularity:    0,
+				EvaluatorInfo: &evaluatordo.EvaluatorInfo{
+					Benchmark:     "",
+					Vendor:        "",
+					VendorURL:     "",
+					UserManualURL: "",
+				},
+			},
+			expectedInfo: &evaluatordto.EvaluatorInfo{
+				Benchmark:     gptr.Of(""),
+				Vendor:        gptr.Of(""),
+				VendorURL:     gptr.Of(""),
+				UserManualURL: gptr.Of(""),
+			},
+			description: "当DO的EvaluatorInfo存在但所有字段为空字符串时，DTO的EvaluatorInfo应该创建且所有字段为空字符串指针",
+		},
+		{
+			name: "成功 - EvaluatorInfo存在且所有字段都有值",
+			do: &evaluatordo.EvaluatorTemplate{
+				ID:            1,
+				SpaceID:       2,
+				Name:          "Test Template",
+				EvaluatorType: evaluatordo.EvaluatorTypePrompt,
+				Popularity:    0,
+				EvaluatorInfo: &evaluatordo.EvaluatorInfo{
+					Benchmark:     "GLUE",
+					Vendor:        "OpenAI",
+					VendorURL:     "https://openai.com",
+					UserManualURL: "https://docs.openai.com",
+				},
+			},
+			expectedInfo: &evaluatordto.EvaluatorInfo{
+				Benchmark:     gptr.Of("GLUE"),
+				Vendor:        gptr.Of("OpenAI"),
+				VendorURL:     gptr.Of("https://openai.com"),
+				UserManualURL: gptr.Of("https://docs.openai.com"),
+			},
+			description: "当DO的EvaluatorInfo存在且所有字段都有值时，DTO的EvaluatorInfo应该正确转换所有字段",
+		},
+		{
+			name: "成功 - EvaluatorInfo存在但部分字段有值",
+			do: &evaluatordo.EvaluatorTemplate{
+				ID:            1,
+				SpaceID:       2,
+				Name:          "Test Template",
+				EvaluatorType: evaluatordo.EvaluatorTypePrompt,
+				Popularity:    0,
+				EvaluatorInfo: &evaluatordo.EvaluatorInfo{
+					Benchmark: "GLUE",
+					Vendor:    "OpenAI",
+					// VendorURL 和 UserManualURL 为空字符串
+					VendorURL:     "",
+					UserManualURL: "",
+				},
+			},
+			expectedInfo: &evaluatordto.EvaluatorInfo{
+				Benchmark:     gptr.Of("GLUE"),
+				Vendor:        gptr.Of("OpenAI"),
+				VendorURL:     gptr.Of(""),
+				UserManualURL: gptr.Of(""),
+			},
+			description: "当DO的EvaluatorInfo存在但部分字段有值时，DTO的EvaluatorInfo应该正确转换，空字符串字段转为空字符串指针",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			dto := ConvertEvaluatorTemplateDO2DTO(tt.do)
+
+			assert.NotNil(t, dto, tt.description)
+			if tt.expectedInfo == nil {
+				assert.Nil(t, dto.EvaluatorInfo, tt.description)
+			} else {
+				assert.NotNil(t, dto.EvaluatorInfo, tt.description)
+				assert.Equal(t, tt.expectedInfo.GetBenchmark(), dto.EvaluatorInfo.GetBenchmark(), tt.description+" - Benchmark应该相等")
+				assert.Equal(t, tt.expectedInfo.GetVendor(), dto.EvaluatorInfo.GetVendor(), tt.description+" - Vendor应该相等")
+				assert.Equal(t, tt.expectedInfo.GetVendorURL(), dto.EvaluatorInfo.GetVendorURL(), tt.description+" - VendorURL应该相等")
+				assert.Equal(t, tt.expectedInfo.GetUserManualURL(), dto.EvaluatorInfo.GetUserManualURL(), tt.description+" - UserManualURL应该相等")
+			}
+		})
+	}
+}
+
+// TestConvertEvaluatorTemplate_EvaluatorInfo_RoundTrip 测试 EvaluatorInfo 的双向转换
+func TestConvertEvaluatorTemplate_EvaluatorInfo_RoundTrip(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		originalDTO *evaluatordto.EvaluatorTemplate
+		description string
+	}{
+		{
+			name: "成功 - EvaluatorInfo完整字段往返转换",
+			originalDTO: &evaluatordto.EvaluatorTemplate{
+				ID:            gptr.Of(int64(1)),
+				WorkspaceID:   gptr.Of(int64(2)),
+				Name:          gptr.Of("Test Template"),
+				EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
+				Popularity:    gptr.Of(int64(100)),
+				EvaluatorInfo: &evaluatordto.EvaluatorInfo{
+					Benchmark:     gptr.Of("GLUE"),
+					Vendor:        gptr.Of("OpenAI"),
+					VendorURL:     gptr.Of("https://openai.com"),
+					UserManualURL: gptr.Of("https://docs.openai.com"),
+				},
+			},
+			description: "当EvaluatorInfo所有字段都有值时，DTO->DO->DTO往返转换应该保持数据一致性",
+		},
+		{
+			name: "成功 - EvaluatorInfo部分字段往返转换",
+			originalDTO: &evaluatordto.EvaluatorTemplate{
+				ID:            gptr.Of(int64(1)),
+				WorkspaceID:   gptr.Of(int64(2)),
+				Name:          gptr.Of("Test Template"),
+				EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Prompt),
+				Popularity:    gptr.Of(int64(100)),
+				EvaluatorInfo: &evaluatordto.EvaluatorInfo{
+					Benchmark: gptr.Of("GLUE"),
+					Vendor:    gptr.Of("OpenAI"),
+					// VendorURL 和 UserManualURL 为 nil
+				},
+			},
+			description: "当EvaluatorInfo部分字段有值时，DTO->DO->DTO往返转换应该保持数据一致性（nil字段转为空字符串）",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// DTO -> DO
+			do := ConvertEvaluatorTemplateDTO2DO(tt.originalDTO)
+			assert.NotNil(t, do, tt.description)
+
+			// DO -> DTO
+			resultDTO := ConvertEvaluatorTemplateDO2DTO(do)
+			assert.NotNil(t, resultDTO, tt.description)
+
+			// 验证 EvaluatorInfo 的往返转换
+			if tt.originalDTO.EvaluatorInfo == nil {
+				assert.Nil(t, resultDTO.EvaluatorInfo, tt.description)
+			} else {
+				assert.NotNil(t, resultDTO.EvaluatorInfo, tt.description)
+				originalBenchmark := tt.originalDTO.EvaluatorInfo.GetBenchmark()
+				resultBenchmark := resultDTO.EvaluatorInfo.GetBenchmark()
+				if originalBenchmark == "" {
+					assert.Equal(t, "", resultBenchmark, tt.description+" - Benchmark应该保持一致")
+				} else {
+					assert.Equal(t, originalBenchmark, resultBenchmark, tt.description+" - Benchmark应该保持一致")
+				}
+
+				originalVendor := tt.originalDTO.EvaluatorInfo.GetVendor()
+				resultVendor := resultDTO.EvaluatorInfo.GetVendor()
+				if originalVendor == "" {
+					assert.Equal(t, "", resultVendor, tt.description+" - Vendor应该保持一致")
+				} else {
+					assert.Equal(t, originalVendor, resultVendor, tt.description+" - Vendor应该保持一致")
+				}
+
+				originalVendorURL := tt.originalDTO.EvaluatorInfo.GetVendorURL()
+				resultVendorURL := resultDTO.EvaluatorInfo.GetVendorURL()
+				if originalVendorURL == "" {
+					assert.Equal(t, "", resultVendorURL, tt.description+" - VendorURL应该保持一致")
+				} else {
+					assert.Equal(t, originalVendorURL, resultVendorURL, tt.description+" - VendorURL应该保持一致")
+				}
+
+				originalUserManualURL := tt.originalDTO.EvaluatorInfo.GetUserManualURL()
+				resultUserManualURL := resultDTO.EvaluatorInfo.GetUserManualURL()
+				if originalUserManualURL == "" {
+					assert.Equal(t, "", resultUserManualURL, tt.description+" - UserManualURL应该保持一致")
+				} else {
+					assert.Equal(t, originalUserManualURL, resultUserManualURL, tt.description+" - UserManualURL应该保持一致")
+				}
+			}
+		})
+	}
 }
 
 

@@ -379,6 +379,337 @@ func TestEvaluatorHandlerImpl_GetEvaluator(t *testing.T) {
 	}
 }
 
+// TestEvaluatorHandlerImpl_GetEvaluatorVersion 测试 GetEvaluatorVersion 方法
+func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Setup mocks
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		userInfoService:  mockUserInfoService,
+		configer:         mockConfiger,
+	}
+
+	validWorkspaceID := int64(123)
+	validEvaluatorVersionID := int64(456)
+	validEvaluator := &entity.Evaluator{
+		ID:      1,
+		SpaceID: validWorkspaceID,
+		Name:    "test-evaluator",
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:          validEvaluatorVersionID,
+			EvaluatorID: 1,
+			Version:     "1.0.0",
+		},
+	}
+
+	builtinEvaluator := &entity.Evaluator{
+		ID:      2,
+		SpaceID: validWorkspaceID,
+		Name:    "builtin-evaluator",
+		Builtin: true,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:          validEvaluatorVersionID,
+			EvaluatorID: 2,
+			Version:     "1.0.0",
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorservice.GetEvaluatorVersionRequest
+		mockSetup   func()
+		wantResp    *evaluatorservice.GetEvaluatorVersionResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal evaluator version",
+			req: &evaluatorservice.GetEvaluatorVersionRequest{
+				WorkspaceID:        validWorkspaceID,
+				EvaluatorVersionID: validEvaluatorVersionID,
+				Builtin:            gptr.Of(false),
+				IncludeDeleted:    gptr.Of(false),
+			},
+			mockSetup: func() {
+				// Mock service call - non-builtin, with spaceID
+				mockEvaluatorService.EXPECT().
+					GetEvaluatorVersion(gomock.Any(), gptr.Of(validWorkspaceID), validEvaluatorVersionID, false, false).
+					Return(validEvaluator, nil)
+
+				// Mock auth - non-builtin path
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(validEvaluator.ID, 10),
+						SpaceID:       validEvaluator.SpaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+					}).
+					Return(nil)
+
+				// Mock user info service
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return().Times(2)
+			},
+			wantResp: &evaluatorservice.GetEvaluatorVersionResponse{
+				Evaluator: evaluator.ConvertEvaluatorDO2DTO(validEvaluator),
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - builtin evaluator version",
+			req: &evaluatorservice.GetEvaluatorVersionRequest{
+				WorkspaceID:        validWorkspaceID,
+				EvaluatorVersionID: validEvaluatorVersionID,
+				Builtin:            gptr.Of(true),
+				IncludeDeleted:    gptr.Of(false),
+			},
+			mockSetup: func() {
+				// Mock service call - builtin, without spaceID
+				mockEvaluatorService.EXPECT().
+					GetEvaluatorVersion(gomock.Any(), (*int64)(nil), validEvaluatorVersionID, false, true).
+					Return(builtinEvaluator, nil)
+
+				// Mock configer for authBuiltinManagement - spaceID in config, so authBuiltinManagement returns nil without calling Authorization
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{strconv.FormatInt(validWorkspaceID, 10)})
+
+				// Mock auth - builtin path (second auth call in GetEvaluatorVersion)
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(validWorkspaceID, 10),
+						SpaceID:       validWorkspaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+					}).
+					Return(nil)
+
+				// Mock user info service
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return().Times(2)
+			},
+			wantResp: &evaluatorservice.GetEvaluatorVersionResponse{
+				Evaluator: evaluator.ConvertEvaluatorDO2DTO(builtinEvaluator),
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - evaluator not found",
+			req: &evaluatorservice.GetEvaluatorVersionRequest{
+				WorkspaceID:        validWorkspaceID,
+				EvaluatorVersionID: validEvaluatorVersionID,
+				Builtin:            gptr.Of(false),
+				IncludeDeleted:    gptr.Of(false),
+			},
+			mockSetup: func() {
+				// Mock service call - returns nil
+				mockEvaluatorService.EXPECT().
+					GetEvaluatorVersion(gomock.Any(), gptr.Of(validWorkspaceID), validEvaluatorVersionID, false, false).
+					Return(nil, nil)
+			},
+			wantResp: &evaluatorservice.GetEvaluatorVersionResponse{},
+			wantErr:  false,
+		},
+		{
+			name: "error - service error",
+			req: &evaluatorservice.GetEvaluatorVersionRequest{
+				WorkspaceID:        validWorkspaceID,
+				EvaluatorVersionID: validEvaluatorVersionID,
+				Builtin:            gptr.Of(false),
+				IncludeDeleted:    gptr.Of(false),
+			},
+			mockSetup: func() {
+				// Mock service call - returns error
+				mockEvaluatorService.EXPECT().
+					GetEvaluatorVersion(gomock.Any(), gptr.Of(validWorkspaceID), validEvaluatorVersionID, false, false).
+					Return(nil, errors.New("database error"))
+			},
+			wantResp: nil,
+			wantErr:  true,
+		},
+		{
+			name: "error - auth failed for non-builtin",
+			req: &evaluatorservice.GetEvaluatorVersionRequest{
+				WorkspaceID:        validWorkspaceID,
+				EvaluatorVersionID: validEvaluatorVersionID,
+				Builtin:            gptr.Of(false),
+				IncludeDeleted:    gptr.Of(false),
+			},
+			mockSetup: func() {
+				// Mock service call
+				mockEvaluatorService.EXPECT().
+					GetEvaluatorVersion(gomock.Any(), gptr.Of(validWorkspaceID), validEvaluatorVersionID, false, false).
+					Return(validEvaluator, nil)
+
+				// Mock auth - returns error
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(validEvaluator.ID, 10),
+						SpaceID:       validEvaluator.SpaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+					}).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - authBuiltinManagement failed - space not in config",
+			req: &evaluatorservice.GetEvaluatorVersionRequest{
+				WorkspaceID:        validWorkspaceID,
+				EvaluatorVersionID: validEvaluatorVersionID,
+				Builtin:            gptr.Of(true),
+				IncludeDeleted:    gptr.Of(false),
+			},
+			mockSetup: func() {
+				// Mock service call
+				mockEvaluatorService.EXPECT().
+					GetEvaluatorVersion(gomock.Any(), (*int64)(nil), validEvaluatorVersionID, false, true).
+					Return(builtinEvaluator, nil)
+
+				// Mock configer for authBuiltinManagement - returns empty list, which causes error
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{})
+				// When config is empty, authBuiltinManagement returns error immediately without calling Authorization
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - authBuiltinManagement failed - space not allowed",
+			req: &evaluatorservice.GetEvaluatorVersionRequest{
+				WorkspaceID:        validWorkspaceID,
+				EvaluatorVersionID: validEvaluatorVersionID,
+				Builtin:            gptr.Of(true),
+				IncludeDeleted:    gptr.Of(false),
+			},
+			mockSetup: func() {
+				// Mock service call
+				mockEvaluatorService.EXPECT().
+					GetEvaluatorVersion(gomock.Any(), (*int64)(nil), validEvaluatorVersionID, false, true).
+					Return(builtinEvaluator, nil)
+
+				// Mock configer for authBuiltinManagement - returns different space ID
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{"999"}) // Different workspace ID
+
+				// Mock auth - returns error when space not in config
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(validWorkspaceID, 10),
+						SpaceID:       validWorkspaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+					}).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - builtin second auth failed",
+			req: &evaluatorservice.GetEvaluatorVersionRequest{
+				WorkspaceID:        validWorkspaceID,
+				EvaluatorVersionID: validEvaluatorVersionID,
+				Builtin:            gptr.Of(true),
+				IncludeDeleted:    gptr.Of(false),
+			},
+			mockSetup: func() {
+				// Mock service call
+				mockEvaluatorService.EXPECT().
+					GetEvaluatorVersion(gomock.Any(), (*int64)(nil), validEvaluatorVersionID, false, true).
+					Return(builtinEvaluator, nil)
+
+				// Mock configer for authBuiltinManagement - spaceID in config, so authBuiltinManagement returns nil without calling Authorization
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{strconv.FormatInt(validWorkspaceID, 10)})
+
+				// Mock auth - second call in GetEvaluatorVersion fails
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(validWorkspaceID, 10),
+						SpaceID:       validWorkspaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+					}).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "success - include deleted",
+			req: &evaluatorservice.GetEvaluatorVersionRequest{
+				WorkspaceID:        validWorkspaceID,
+				EvaluatorVersionID: validEvaluatorVersionID,
+				Builtin:            gptr.Of(false),
+				IncludeDeleted:    gptr.Of(true),
+			},
+			mockSetup: func() {
+				// Mock service call with includeDeleted=true
+				mockEvaluatorService.EXPECT().
+					GetEvaluatorVersion(gomock.Any(), gptr.Of(validWorkspaceID), validEvaluatorVersionID, true, false).
+					Return(validEvaluator, nil)
+
+				// Mock auth
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(validEvaluator.ID, 10),
+						SpaceID:       validEvaluator.SpaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+					}).
+					Return(nil)
+
+				// Mock user info service
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return().Times(2)
+			},
+			wantResp: &evaluatorservice.GetEvaluatorVersionResponse{
+				Evaluator: evaluator.ConvertEvaluatorDO2DTO(validEvaluator),
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.GetEvaluatorVersion(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				if tt.wantResp != nil {
+					assert.NotNil(t, resp)
+					if tt.wantResp.Evaluator != nil {
+						assert.Equal(t, tt.wantResp.Evaluator.GetEvaluatorID(), resp.Evaluator.GetEvaluatorID())
+						assert.Equal(t, tt.wantResp.Evaluator.GetName(), resp.Evaluator.GetName())
+					}
+				} else {
+					assert.Equal(t, tt.wantResp, resp)
+				}
+			}
+		})
+	}
+}
+
 // 新增的复杂业务逻辑测试
 
 // TestEvaluatorHandlerImpl_ComplexBusinessScenarios 测试复杂业务场景

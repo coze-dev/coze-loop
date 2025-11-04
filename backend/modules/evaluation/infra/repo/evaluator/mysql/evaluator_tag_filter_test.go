@@ -351,7 +351,7 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_Equal,
 				"LLM",
 			),
-			expectedSQL:  "tag_key = ? AND tag_value = ?",
+			expectedSQL:  "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value = ?",
 			expectedArgs: []interface{}{"Category", "LLM"},
 			expectedErr:  false,
 		},
@@ -362,7 +362,7 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_NotEqual,
 				"Code",
 			),
-			expectedSQL:  "tag_key = ? AND tag_value != ?",
+			expectedSQL:  "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value != ?",
 			expectedArgs: []interface{}{"Category", "Code"},
 			expectedErr:  false,
 		},
@@ -373,7 +373,7 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_In,
 				"Text,Image,Video",
 			),
-			expectedSQL:  "tag_key = ? AND tag_value IN (?,?,?)",
+			expectedSQL:  "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value IN (?,?,?)",
 			expectedArgs: []interface{}{"TargetType", "Text", "Image", "Video"},
 			expectedErr:  false,
 		},
@@ -384,7 +384,7 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_Like,
 				"Quality",
 			),
-			expectedSQL:  "tag_key = ? AND tag_value LIKE ?",
+			expectedSQL:  "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value LIKE ?",
 			expectedArgs: []interface{}{"Name", "%Quality%"},
 			expectedErr:  false,
 		},
@@ -395,7 +395,7 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_IsNull,
 				"",
 			),
-			expectedSQL:  "tag_key = ? AND tag_value IS NULL",
+			expectedSQL:  "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value IS NULL",
 			expectedArgs: []interface{}{"Objective"},
 			expectedErr:  false,
 		},
@@ -406,7 +406,7 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_IsNotNull,
 				"",
 			),
-			expectedSQL:  "tag_key = ? AND tag_value IS NOT NULL",
+			expectedSQL:  "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value IS NOT NULL",
 			expectedArgs: []interface{}{"Objective"},
 			expectedErr:  false,
 		},
@@ -417,7 +417,7 @@ func TestBuildSingleCondition(t *testing.T) {
 				entity.EvaluatorFilterOperatorType_In,
 				"",
 			),
-			expectedSQL:  "tag_key = ? AND tag_value IN (?)",
+			expectedSQL:  "evaluator_tag.tag_key = ? AND evaluator_tag.tag_value IN (?)",
 			expectedArgs: []interface{}{"TargetType", ""},
 			expectedErr:  false,
 		},
@@ -473,4 +473,64 @@ func TestConvertToInterfaceSlice(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestGetSourceIDsByFilterConditions_SelfJoinAndLike(t *testing.T) {
+    t.Parallel()
+
+    ctrl := gomock.NewController(t)
+    defer ctrl.Finish()
+
+    // sqlmock
+    sqlDB, mock, err := sqlmock.New()
+    if err != nil {
+        t.Fatalf("failed to create sqlmock: %v", err)
+    }
+    defer sqlDB.Close()
+
+    gormDB, err := gorm.Open(mysql.New(mysql.Config{
+        Conn:                      sqlDB,
+        SkipInitializeWithVersion: true,
+    }), &gorm.Config{})
+    if err != nil {
+        t.Fatalf("failed to open gorm db: %v", err)
+    }
+
+    mockProvider := dbmock.NewMockProvider(ctrl)
+    mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
+
+    // 构造筛选：AND(Category=LLM, BusinessScenario=安全风控) + SearchKeyword("AI")
+    filters := entity.NewEvaluatorFilters().
+        WithLogicOp(entity.FilterLogicOp_And).
+        AddCondition(entity.NewEvaluatorFilterCondition(
+            entity.EvaluatorTagKey_Category,
+            entity.EvaluatorFilterOperatorType_In,
+            "LLM",
+        )).
+        AddCondition(entity.NewEvaluatorFilterCondition(
+            entity.EvaluatorTagKey_BusinessScenario,
+            entity.EvaluatorFilterOperatorType_In,
+            "安全风控",
+        ))
+    option := entity.NewEvaluatorFilterOption().WithSearchKeyword("AI").WithFilters(filters)
+
+    // 断言 COUNT：包含 LEFT JOIN t_name、JOIN t_1 / t_2，且基表为 evaluator_tag
+    countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
+    mock.ExpectQuery(
+        "SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*",
+    ).WillReturnRows(countRows)
+
+    // 断言 SELECT：包含 DISTINCT、LEFT JOIN t_name、JOIN t_1 / t_2、LIKE 与 非 Category 限定
+    selectRows := sqlmock.NewRows([]string{"source_id"})
+    mock.ExpectQuery(
+        "SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*evaluator_tag.tag_key <> .* AND evaluator_tag.tag_value LIKE .*",
+    ).WillReturnRows(selectRows)
+
+    dao := &EvaluatorTagDAOImpl{provider: mockProvider}
+    _, _, err = dao.GetSourceIDsByFilterConditions(context.Background(), 1, option, 12, 1, "zh-CN")
+    assert.NoError(t, err)
+
+    if err := mock.ExpectationsWereMet(); err != nil {
+        t.Errorf("there were unfulfilled expectations: %s", err)
+    }
 }

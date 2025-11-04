@@ -177,6 +177,113 @@ func TestConvertEvaluatorContent2DO(t *testing.T) {
         assert.True(t, gptr.Indirect(e.PromptEvaluatorVersion.ReceiveChatHistory))
         assert.Equal(t, "key", e.PromptEvaluatorVersion.PromptTemplateKey)
     }
+
+    // custom rpc ok - basic fields
+    e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
+        CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+            ProviderEvaluatorCode: gptr.Of("CN:480"),
+            AccessProtocol:        evaluatordto.AccessProtocolRPC,
+            ServiceName:           gptr.Of("test-service"),
+            Cluster:               gptr.Of("test-cluster"),
+            Timeout:               gptr.Of(int64(5000)),
+        },
+    }, evaluatordto.EvaluatorType_CustomRPC)
+    assert.NoError(t, err)
+    if assert.NotNil(t, e) && assert.NotNil(t, e.CustomRPCEvaluatorVersion) {
+        assert.Equal(t, "CN:480", gptr.Indirect(e.CustomRPCEvaluatorVersion.ProviderEvaluatorCode))
+        assert.Equal(t, evaluatordto.AccessProtocolRPC, e.CustomRPCEvaluatorVersion.AccessProtocol)
+        assert.Equal(t, "test-service", gptr.Indirect(e.CustomRPCEvaluatorVersion.ServiceName))
+        assert.Equal(t, "test-cluster", gptr.Indirect(e.CustomRPCEvaluatorVersion.Cluster))
+        assert.Equal(t, int64(5000), gptr.Indirect(e.CustomRPCEvaluatorVersion.Timeout))
+    }
+
+    // custom rpc ok - with input schemas
+    e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
+        CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+            ProviderEvaluatorCode: gptr.Of("CN:480"),
+            AccessProtocol:        evaluatordto.AccessProtocolRPC,
+            ServiceName:           gptr.Of("test-service"),
+        },
+        InputSchemas: []*commondto.ArgsSchema{
+            {Key: gptr.Of("input1"), SupportContentTypes: []string{"text"}},
+            {Key: gptr.Of("input2"), SupportContentTypes: []string{"image"}},
+        },
+    }, evaluatordto.EvaluatorType_CustomRPC)
+    assert.NoError(t, err)
+    if assert.NotNil(t, e) && assert.NotNil(t, e.CustomRPCEvaluatorVersion) {
+        assert.NotNil(t, e.CustomRPCEvaluatorVersion.InputSchemas)
+        assert.Equal(t, 2, len(e.CustomRPCEvaluatorVersion.InputSchemas))
+        assert.Equal(t, "input1", gptr.Indirect(e.CustomRPCEvaluatorVersion.InputSchemas[0].Key))
+        assert.Equal(t, "input2", gptr.Indirect(e.CustomRPCEvaluatorVersion.InputSchemas[1].Key))
+        assert.Equal(t, 1, len(e.CustomRPCEvaluatorVersion.InputSchemas[0].SupportContentTypes))
+        assert.Equal(t, evaluatordo.ContentType("text"), e.CustomRPCEvaluatorVersion.InputSchemas[0].SupportContentTypes[0])
+    }
+
+    // custom rpc ok - with output schemas
+    e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
+        CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+            ProviderEvaluatorCode: gptr.Of("CN:480"),
+            AccessProtocol:        evaluatordto.AccessProtocolRPC,
+            ServiceName:           gptr.Of("test-service"),
+        },
+        OutputSchemas: []*commondto.ArgsSchema{
+            {Key: gptr.Of("output1"), SupportContentTypes: []string{"text"}},
+        },
+    }, evaluatordto.EvaluatorType_CustomRPC)
+    assert.NoError(t, err)
+    if assert.NotNil(t, e) && assert.NotNil(t, e.CustomRPCEvaluatorVersion) {
+        assert.NotNil(t, e.CustomRPCEvaluatorVersion.OutputSchemas)
+        assert.Equal(t, 1, len(e.CustomRPCEvaluatorVersion.OutputSchemas))
+        assert.Equal(t, "output1", gptr.Indirect(e.CustomRPCEvaluatorVersion.OutputSchemas[0].Key))
+    }
+
+    // custom rpc ok - with both input and output schemas
+    e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
+        CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+            ProviderEvaluatorCode: gptr.Of("CN:480"),
+            AccessProtocol:        evaluatordto.AccessProtocolRPC,
+            ServiceName:           gptr.Of("test-service"),
+            Cluster:               gptr.Of("prod-cluster"),
+            Timeout:               gptr.Of(int64(10000)),
+        },
+        InputSchemas: []*commondto.ArgsSchema{
+            {Key: gptr.Of("input1"), SupportContentTypes: []string{"text"}},
+        },
+        OutputSchemas: []*commondto.ArgsSchema{
+            {Key: gptr.Of("output1"), SupportContentTypes: []string{"text"}},
+            {Key: gptr.Of("output2"), SupportContentTypes: []string{"json"}},
+        },
+    }, evaluatordto.EvaluatorType_CustomRPC)
+    assert.NoError(t, err)
+    if assert.NotNil(t, e) && assert.NotNil(t, e.CustomRPCEvaluatorVersion) {
+        assert.Equal(t, "CN:480", gptr.Indirect(e.CustomRPCEvaluatorVersion.ProviderEvaluatorCode))
+        assert.Equal(t, evaluatordto.AccessProtocolRPC, e.CustomRPCEvaluatorVersion.AccessProtocol)
+        assert.Equal(t, "test-service", gptr.Indirect(e.CustomRPCEvaluatorVersion.ServiceName))
+        assert.Equal(t, "prod-cluster", gptr.Indirect(e.CustomRPCEvaluatorVersion.Cluster))
+        assert.Equal(t, int64(10000), gptr.Indirect(e.CustomRPCEvaluatorVersion.Timeout))
+        assert.NotNil(t, e.CustomRPCEvaluatorVersion.InputSchemas)
+        assert.Equal(t, 1, len(e.CustomRPCEvaluatorVersion.InputSchemas))
+        assert.NotNil(t, e.CustomRPCEvaluatorVersion.OutputSchemas)
+        assert.Equal(t, 2, len(e.CustomRPCEvaluatorVersion.OutputSchemas))
+        assert.Equal(t, "input1", gptr.Indirect(e.CustomRPCEvaluatorVersion.InputSchemas[0].Key))
+        assert.Equal(t, "output1", gptr.Indirect(e.CustomRPCEvaluatorVersion.OutputSchemas[0].Key))
+        assert.Equal(t, "output2", gptr.Indirect(e.CustomRPCEvaluatorVersion.OutputSchemas[1].Key))
+    }
+
+    // custom rpc ok - empty schemas
+    e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
+        CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+            ProviderEvaluatorCode: gptr.Of("CN:480"),
+            AccessProtocol:        evaluatordto.AccessProtocolRPC,
+        },
+        InputSchemas:  []*commondto.ArgsSchema{},
+        OutputSchemas: []*commondto.ArgsSchema{},
+    }, evaluatordto.EvaluatorType_CustomRPC)
+    assert.NoError(t, err)
+    if assert.NotNil(t, e) && assert.NotNil(t, e.CustomRPCEvaluatorVersion) {
+        assert.Nil(t, e.CustomRPCEvaluatorVersion.InputSchemas)
+        assert.Nil(t, e.CustomRPCEvaluatorVersion.OutputSchemas)
+    }
 }
 
 func TestTagKeyConvert(t *testing.T) {

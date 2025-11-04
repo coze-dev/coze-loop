@@ -34,6 +34,7 @@ func TestEvaluatorRepoImpl_SubmitEvaluatorVersion(t *testing.T) {
 	mockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
 	mockDBProvider := dbmocks.NewMockProvider(ctrl)
 	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
+	mockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
 
 	tests := []struct {
 		name          string
@@ -118,6 +119,207 @@ func TestEvaluatorRepoImpl_SubmitEvaluatorVersion(t *testing.T) {
 			},
 			expectedError: assert.AnError,
 		},
+		{
+			name: "成功提交内置评估器版本并创建标签",
+			evaluator: &entity.Evaluator{
+				ID:            1,
+				Builtin:       true,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				BaseInfo: &entity.BaseInfo{
+					UpdatedBy: &entity.UserInfo{
+						UserID: gptr.Of("test_user"),
+					},
+				},
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					ID:      100,
+					Version: "1.0.0",
+					BaseInfo: &entity.BaseInfo{
+						UpdatedBy: &entity.UserInfo{
+							UserID: gptr.Of("test_user"),
+						},
+					},
+				},
+				Tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+					entity.EvaluatorTagLangType_Zh: {
+						entity.EvaluatorTagKey_Category:         {"LLM"},
+						entity.EvaluatorTagKey_BusinessScenario: {"安全风控"},
+					},
+					entity.EvaluatorTagLangType_En: {
+						entity.EvaluatorTagKey_Category: {"LLM"},
+					},
+				},
+			},
+			mockSetup: func() {
+				// 设置数据库事务的期望
+				mockDBProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						// 创建一个模拟的 gorm.DB 实例
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				// 设置更新评估器最新版本的期望
+				mockEvaluatorDAO.EXPECT().
+					UpdateEvaluatorLatestVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// 设置创建评估器版本的期望
+				mockEvaluatorVersionDAO.EXPECT().
+					CreateEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// 设置生成标签ID的期望（3个标签：zh-CN的Category、BusinessScenario，en-US的Category）
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 3).
+					Return([]int64{1001, 1002, 1003}, nil)
+
+				// 设置批量创建标签的期望
+				mockTagDAO.EXPECT().
+					BatchCreateEvaluatorTags(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, tags []*model.EvaluatorTag, opts ...db.Option) error {
+						// 验证标签数量
+						assert.Equal(t, 3, len(tags))
+						// 验证标签内容
+						expectedTags := map[string]struct {
+							sourceID int64
+							tagType  int32
+							tagKey   string
+							tagValue string
+							langType string
+						}{
+							"zh-CN:Category":         {100, 1, "Category", "LLM", "zh-CN"},
+							"zh-CN:BusinessScenario": {100, 1, "BusinessScenario", "安全风控", "zh-CN"},
+							"en-US:Category":         {100, 1, "Category", "LLM", "en-US"},
+						}
+						for _, tag := range tags {
+							key := tag.LangType + ":" + tag.TagKey
+							expected, ok := expectedTags[key]
+							assert.True(t, ok, "unexpected tag: %s", key)
+							assert.Equal(t, expected.sourceID, tag.SourceID)
+							assert.Equal(t, expected.tagType, tag.TagType)
+							assert.Equal(t, expected.tagKey, tag.TagKey)
+							assert.Equal(t, expected.tagValue, tag.TagValue)
+							assert.Equal(t, expected.langType, tag.LangType)
+							assert.Equal(t, "", tag.CreatedBy) // session.UserIDInCtxOrEmpty 返回空字符串
+							assert.Equal(t, "", tag.UpdatedBy)
+						}
+						return nil
+					})
+			},
+			expectedError: nil,
+		},
+		{
+			name: "内置评估器创建标签时ID生成失败",
+			evaluator: &entity.Evaluator{
+				ID:            1,
+				Builtin:       true,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				BaseInfo: &entity.BaseInfo{
+					UpdatedBy: &entity.UserInfo{
+						UserID: gptr.Of("test_user"),
+					},
+				},
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					ID:      100,
+					Version: "1.0.0",
+					BaseInfo: &entity.BaseInfo{
+						UpdatedBy: &entity.UserInfo{
+							UserID: gptr.Of("test_user"),
+						},
+					},
+				},
+				Tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+					entity.EvaluatorTagLangType_Zh: {
+						entity.EvaluatorTagKey_Category: {"LLM"},
+					},
+				},
+			},
+			mockSetup: func() {
+				// 设置数据库事务的期望
+				mockDBProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						// 创建一个模拟的 gorm.DB 实例
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				// 设置更新评估器最新版本的期望
+				mockEvaluatorDAO.EXPECT().
+					UpdateEvaluatorLatestVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// 设置创建评估器版本的期望
+				mockEvaluatorVersionDAO.EXPECT().
+					CreateEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// 设置生成标签ID失败
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return(nil, assert.AnError)
+			},
+			expectedError: assert.AnError,
+		},
+		{
+			name: "内置评估器创建标签时批量创建失败",
+			evaluator: &entity.Evaluator{
+				ID:            1,
+				Builtin:       true,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				BaseInfo: &entity.BaseInfo{
+					UpdatedBy: &entity.UserInfo{
+						UserID: gptr.Of("test_user"),
+					},
+				},
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					ID:      100,
+					Version: "1.0.0",
+					BaseInfo: &entity.BaseInfo{
+						UpdatedBy: &entity.UserInfo{
+							UserID: gptr.Of("test_user"),
+						},
+					},
+				},
+				Tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+					entity.EvaluatorTagLangType_Zh: {
+						entity.EvaluatorTagKey_Category: {"LLM"},
+					},
+				},
+			},
+			mockSetup: func() {
+				// 设置数据库事务的期望
+				mockDBProvider.EXPECT().
+					Transaction(gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, fn func(tx *gorm.DB) error, opts ...db.Option) error {
+						// 创建一个模拟的 gorm.DB 实例
+						mockTx := &gorm.DB{}
+						return fn(mockTx)
+					})
+
+				// 设置更新评估器最新版本的期望
+				mockEvaluatorDAO.EXPECT().
+					UpdateEvaluatorLatestVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// 设置创建评估器版本的期望
+				mockEvaluatorVersionDAO.EXPECT().
+					CreateEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// 设置生成标签ID的期望
+				mockIDGen.EXPECT().
+					GenMultiIDs(gomock.Any(), 1).
+					Return([]int64{1001}, nil)
+
+				// 设置批量创建标签失败
+				mockTagDAO.EXPECT().
+					BatchCreateEvaluatorTags(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(assert.AnError)
+			},
+			expectedError: assert.AnError,
+		},
 	}
 
 	for _, tt := range tests {
@@ -128,6 +330,7 @@ func TestEvaluatorRepoImpl_SubmitEvaluatorVersion(t *testing.T) {
 			repo := &EvaluatorRepoImpl{
 				evaluatorDao:        mockEvaluatorDAO,
 				evaluatorVersionDao: mockEvaluatorVersionDAO,
+				tagDAO:              mockTagDAO,
 				dbProvider:          mockDBProvider,
 				idgen:               mockIDGen,
 				lwt:                 mockLWT,

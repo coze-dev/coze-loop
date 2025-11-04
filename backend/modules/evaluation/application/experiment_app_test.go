@@ -232,6 +232,111 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
     // 本用例不校验映射回填
 }
 
+// Test_experimentApplication_resolveEvaluatorVersionIDs_WithEvaluatorFieldMapping 覆盖 EvaluatorFieldMapping 的回填逻辑
+func Test_experimentApplication_resolveEvaluatorVersionIDs_WithEvaluatorFieldMapping(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+
+	app := &experimentApplication{
+		evaluatorService: mockEvaluatorService,
+	}
+
+	ctx := context.Background()
+
+	// 创建测试用的 EvaluatorFieldMapping，其中包含一个缺少 evaluator_version_id 的映射
+	// 这个映射应该引用一个 BuiltinVisible 的评估器
+	mapping1 := expt.NewEvaluatorFieldMapping()
+	mapping1.SetEvaluatorVersionID(0) // 缺少 evaluator_version_id，需要回填
+	mapping1.SetEvaluatorIDVersionItem(&evaluator.EvaluatorIDVersionItem{
+		EvaluatorID: gptr.Of(int64(1)),
+		Version:     gptr.Of("BuiltinVisible"),
+	})
+
+	// 创建另一个映射，引用普通版本
+	mapping2 := expt.NewEvaluatorFieldMapping()
+	mapping2.SetEvaluatorVersionID(0) // 缺少 evaluator_version_id，需要回填
+	mapping2.SetEvaluatorIDVersionItem(&evaluator.EvaluatorIDVersionItem{
+		EvaluatorID: gptr.Of(int64(2)),
+		Version:     gptr.Of("1.0.0"),
+	})
+
+	// 创建一个已经有 evaluator_version_id 的映射，不应该被处理
+	mapping3 := expt.NewEvaluatorFieldMapping()
+	mapping3.SetEvaluatorVersionID(99999) // 已经有值，应该跳过
+	mapping3.SetEvaluatorIDVersionItem(&evaluator.EvaluatorIDVersionItem{
+		EvaluatorID: gptr.Of(int64(3)),
+		Version:     gptr.Of("2.0.0"),
+	})
+
+	// 创建一个没有 EvaluatorIDVersionItem 的映射，应该跳过
+	mapping4 := expt.NewEvaluatorFieldMapping()
+	mapping4.SetEvaluatorVersionID(0) // 缺少 evaluator_version_id
+	// 但没有 EvaluatorIDVersionItem，应该跳过
+
+	req := &exptpb.SubmitExperimentRequest{
+		EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+			{EvaluatorID: gptr.Of(int64(1)), Version: gptr.Of("BuiltinVisible")},
+			{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
+			{EvaluatorID: gptr.Of(int64(3)), Version: gptr.Of("2.0.0")},
+		},
+		EvaluatorFieldMapping: []*expt.EvaluatorFieldMapping{
+			mapping1, // 应该被回填为 10101
+			mapping2, // 应该被回填为 20200
+			mapping3, // 已经有值，应该保持不变
+			mapping4, // 没有 EvaluatorIDVersionItem，应该跳过
+		},
+	}
+
+	// Mock 内置评估器查询
+	mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), []int64{1}).Return([]*entity.Evaluator{
+		{ID: 1, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 1, Version: "1.2.3", ID: 10101}},
+	}, nil)
+
+	// Mock 普通版本查询
+	mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+		{ID: 2, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 2, Version: "1.0.0", ID: 20200}},
+		{ID: 3, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
+	}, nil)
+
+	ids, err := app.resolveEvaluatorVersionIDs(ctx, req)
+	if err != nil {
+		t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
+	}
+
+	// 验证返回的版本ID列表
+	expectedIDs := []int64{10101, 20200, 30300}
+	if len(ids) != len(expectedIDs) {
+		t.Fatalf("len(ids)=%d want=%d", len(ids), len(expectedIDs))
+	}
+	for i, id := range expectedIDs {
+		if ids[i] != id {
+			t.Fatalf("ids[%d]=%d want=%d", i, ids[i], id)
+		}
+	}
+
+	// 验证 mapping1 的 evaluator_version_id 被回填
+	if mapping1.GetEvaluatorVersionID() != 10101 {
+		t.Fatalf("mapping1.EvaluatorVersionID=%d want=10101", mapping1.GetEvaluatorVersionID())
+	}
+
+	// 验证 mapping2 的 evaluator_version_id 被回填
+	if mapping2.GetEvaluatorVersionID() != 20200 {
+		t.Fatalf("mapping2.EvaluatorVersionID=%d want=20200", mapping2.GetEvaluatorVersionID())
+	}
+
+	// 验证 mapping3 的 evaluator_version_id 保持不变
+	if mapping3.GetEvaluatorVersionID() != 99999 {
+		t.Fatalf("mapping3.EvaluatorVersionID=%d want=99999", mapping3.GetEvaluatorVersionID())
+	}
+
+	// 验证 mapping4 的 evaluator_version_id 保持为 0（因为没有 EvaluatorIDVersionItem）
+	if mapping4.GetEvaluatorVersionID() != 0 {
+		t.Fatalf("mapping4.EvaluatorVersionID=%d want=0", mapping4.GetEvaluatorVersionID())
+	}
+}
+
 func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
