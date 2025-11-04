@@ -329,6 +329,13 @@ func (r *EvaluatorTemplateRepoImpl) GetEvaluatorTemplate(ctx context.Context, id
 		return nil, err
 	}
 
+	// 补充查询：回填模板标签（按当前语言）
+	allTags, tagErr := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{id}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), contexts.CtxLocale(ctx))
+	if tagErr == nil && len(allTags) > 0 {
+		tagsBySourceID := map[int64][]*model.EvaluatorTag{id: allTags}
+		r.setTemplateTags(templateDO, id, tagsBySourceID)
+	}
+
 	return templateDO, nil
 }
 

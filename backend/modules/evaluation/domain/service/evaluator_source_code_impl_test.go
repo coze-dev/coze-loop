@@ -1057,7 +1057,7 @@ func TestEvaluatorSourceCodeServiceImpl_Run(t *testing.T) {
 
 			tt.mockSetup(ctrl, mockRuntimeManager, mockCodeBuilderFactory, mockRuntime, mockMetrics)
 
-			output, runStatus, _ := service.Run(context.Background(), tt.evaluator, tt.input, tt.disableTracing)
+			output, runStatus, _ := service.Run(context.Background(), tt.evaluator, tt.input, 0, tt.disableTracing)
 
 			// 验证结果
 			assert.Equal(t, tt.wantStatus, runStatus)

@@ -2760,8 +2760,8 @@ func TestEvaluatorHandlerImpl_ListTemplatesV2(t *testing.T) {
 	}
 }
 
-// TestEvaluatorHandlerImpl_GetTemplateInfoV2 测试 GetTemplateInfoV2 方法
-func TestEvaluatorHandlerImpl_GetTemplateInfoV2(t *testing.T) {
+// TestEvaluatorHandlerImpl_GetTemplateV2 测试 GetTemplateV2 方法
+func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -2780,17 +2780,17 @@ func TestEvaluatorHandlerImpl_GetTemplateInfoV2(t *testing.T) {
 		Description: "test description",
 	}
 
-	tests := []struct {
+    tests := []struct {
 		name        string
-		req         *evaluatorservice.GetTemplateInfoV2Request
+        req         *evaluatorservice.GetTemplateV2Request
 		mockSetup   func()
-		wantResp    *evaluatorservice.GetTemplateInfoV2Response
+        wantResp    *evaluatorservice.GetTemplateV2Response
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &evaluatorservice.GetTemplateInfoV2Request{
+            req: &evaluatorservice.GetTemplateV2Request{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -2803,14 +2803,14 @@ func TestEvaluatorHandlerImpl_GetTemplateInfoV2(t *testing.T) {
 						Template: template,
 					}, nil)
 			},
-			wantResp: &evaluatorservice.GetTemplateInfoV2Response{
+            wantResp: &evaluatorservice.GetTemplateV2Response{
 				EvaluatorTemplate: evaluator.ConvertEvaluatorTemplateDO2DTO(template),
 			},
 			wantErr: false,
 		},
 		{
 			name: "success - template not found",
-			req: &evaluatorservice.GetTemplateInfoV2Request{
+            req: &evaluatorservice.GetTemplateV2Request{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -2820,12 +2820,12 @@ func TestEvaluatorHandlerImpl_GetTemplateInfoV2(t *testing.T) {
 						Template: nil,
 					}, nil)
 			},
-			wantResp: &evaluatorservice.GetTemplateInfoV2Response{},
+            wantResp: &evaluatorservice.GetTemplateV2Response{},
 			wantErr:  false,
 		},
 		{
 			name: "error - service failure",
-			req: &evaluatorservice.GetTemplateInfoV2Request{
+            req: &evaluatorservice.GetTemplateV2Request{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -2843,7 +2843,7 @@ func TestEvaluatorHandlerImpl_GetTemplateInfoV2(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			resp, err := app.GetTemplateInfoV2(context.Background(), tt.req)
+            resp, err := app.GetTemplateV2(context.Background(), tt.req)
 
 			if tt.wantErr {
 				assert.Error(t, err)
