@@ -2614,7 +2614,7 @@ func (p *Experiment) FastReadField11(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.StartTime = _field
+	p.StartedAt = _field
 	return offset, nil
 }
 
@@ -2628,7 +2628,7 @@ func (p *Experiment) FastReadField12(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.EndTime = _field
+	p.EndedAt = _field
 	return offset, nil
 }
 
@@ -2801,18 +2801,18 @@ func (p *Experiment) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *Experiment) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetStartTime() {
+	if p.IsSetStartedAt() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 11)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.StartTime)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.StartedAt)
 	}
 	return offset
 }
 
 func (p *Experiment) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetEndTime() {
+	if p.IsSetEndedAt() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 12)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.EndTime)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EndedAt)
 	}
 	return offset
 }
@@ -2916,7 +2916,7 @@ func (p *Experiment) field10Length() int {
 
 func (p *Experiment) field11Length() int {
 	l := 0
-	if p.IsSetStartTime() {
+	if p.IsSetStartedAt() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -2925,7 +2925,7 @@ func (p *Experiment) field11Length() int {
 
 func (p *Experiment) field12Length() int {
 	l := 0
-	if p.IsSetEndTime() {
+	if p.IsSetEndedAt() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -3022,14 +3022,14 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		p.Status = &tmp
 	}
 
-	if src.StartTime != nil {
-		tmp := *src.StartTime
-		p.StartTime = &tmp
+	if src.StartedAt != nil {
+		tmp := *src.StartedAt
+		p.StartedAt = &tmp
 	}
 
-	if src.EndTime != nil {
-		tmp := *src.EndTime
-		p.EndTime = &tmp
+	if src.EndedAt != nil {
+		tmp := *src.EndedAt
+		p.EndedAt = &tmp
 	}
 
 	if src.ItemConcurNum != nil {

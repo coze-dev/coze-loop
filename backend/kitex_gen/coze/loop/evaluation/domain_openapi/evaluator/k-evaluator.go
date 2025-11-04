@@ -111,7 +111,7 @@ func (p *PromptEvaluator) FastReadField1(buf []byte) (int, error) {
 
 		_field = append(_field, _elem)
 	}
-	p.MessageList = _field
+	p.Messages = _field
 	return offset, nil
 }
 
@@ -153,12 +153,12 @@ func (p *PromptEvaluator) BLength() int {
 
 func (p *PromptEvaluator) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetMessageList() {
+	if p.IsSetMessages() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
 		listBeginOffset := offset
 		offset += thrift.Binary.ListBeginLength()
 		var length int
-		for _, v := range p.MessageList {
+		for _, v := range p.Messages {
 			length++
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
@@ -178,10 +178,10 @@ func (p *PromptEvaluator) fastWriteField2(buf []byte, w thrift.NocopyWriter) int
 
 func (p *PromptEvaluator) field1Length() int {
 	l := 0
-	if p.IsSetMessageList() {
+	if p.IsSetMessages() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.MessageList {
+		for _, v := range p.Messages {
 			_ = v
 			l += v.BLength()
 		}
@@ -204,9 +204,9 @@ func (p *PromptEvaluator) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.MessageList != nil {
-		p.MessageList = make([]*common.Message, 0, len(src.MessageList))
-		for _, elem := range src.MessageList {
+	if src.Messages != nil {
+		p.Messages = make([]*common.Message, 0, len(src.Messages))
+		for _, elem := range src.Messages {
 			var _elem *common.Message
 			if elem != nil {
 				_elem = &common.Message{}
@@ -215,7 +215,7 @@ func (p *PromptEvaluator) DeepCopy(s interface{}) error {
 				}
 			}
 
-			p.MessageList = append(p.MessageList, _elem)
+			p.Messages = append(p.Messages, _elem)
 		}
 	}
 
@@ -505,7 +505,7 @@ func (p *EvaluatorContent) FastReadField1(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.ReceiveChatHistory = _field
+	p.IsReceiveChatHistory = _field
 	return offset, nil
 }
 
@@ -588,9 +588,9 @@ func (p *EvaluatorContent) BLength() int {
 
 func (p *EvaluatorContent) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetReceiveChatHistory() {
+	if p.IsSetIsReceiveChatHistory() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 1)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.ReceiveChatHistory)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsReceiveChatHistory)
 	}
 	return offset
 }
@@ -631,7 +631,7 @@ func (p *EvaluatorContent) fastWriteField102(buf []byte, w thrift.NocopyWriter) 
 
 func (p *EvaluatorContent) field1Length() int {
 	l := 0
-	if p.IsSetReceiveChatHistory() {
+	if p.IsSetIsReceiveChatHistory() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
 	}
@@ -675,9 +675,9 @@ func (p *EvaluatorContent) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.ReceiveChatHistory != nil {
-		tmp := *src.ReceiveChatHistory
-		p.ReceiveChatHistory = &tmp
+	if src.IsReceiveChatHistory != nil {
+		tmp := *src.IsReceiveChatHistory
+		p.IsReceiveChatHistory = &tmp
 	}
 
 	if src.InputSchemas != nil {
@@ -1268,7 +1268,7 @@ func (p *Evaluator) FastReadField5(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.DraftSubmitted = _field
+	p.IsDraftSubmitted = _field
 	return offset, nil
 }
 
@@ -1384,9 +1384,9 @@ func (p *Evaluator) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *Evaluator) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetDraftSubmitted() {
+	if p.IsSetIsDraftSubmitted() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.DraftSubmitted)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsDraftSubmitted)
 	}
 	return offset
 }
@@ -1456,7 +1456,7 @@ func (p *Evaluator) field4Length() int {
 
 func (p *Evaluator) field5Length() int {
 	l := 0
-	if p.IsSetDraftSubmitted() {
+	if p.IsSetIsDraftSubmitted() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
 	}
@@ -1522,9 +1522,9 @@ func (p *Evaluator) DeepCopy(s interface{}) error {
 		p.EvaluatorType = &tmp
 	}
 
-	if src.DraftSubmitted != nil {
-		tmp := *src.DraftSubmitted
-		p.DraftSubmitted = &tmp
+	if src.IsDraftSubmitted != nil {
+		tmp := *src.IsDraftSubmitted
+		p.IsDraftSubmitted = &tmp
 	}
 
 	if src.LatestVersion != nil {

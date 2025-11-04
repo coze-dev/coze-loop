@@ -3383,9 +3383,9 @@ type Experiment struct {
 	// 运行信息
 	Status *ExperimentStatus `thrift:"status,10,optional" frugal:"10,optional,string" form:"status" json:"status,omitempty" query:"status"`
 	// ISO 8601格式
-	StartTime *int64 `thrift:"start_time,11,optional" frugal:"11,optional,i64" json:"start_time" form:"start_time" query:"start_time"`
+	StartedAt *int64 `thrift:"started_at,11,optional" frugal:"11,optional,i64" json:"started_at" form:"started_at" query:"started_at"`
 	// ISO 8601格式
-	EndTime *int64 `thrift:"end_time,12,optional" frugal:"12,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
+	EndedAt *int64 `thrift:"ended_at,12,optional" frugal:"12,optional,i64" json:"ended_at" form:"ended_at" query:"ended_at"`
 	// 评测集并发数
 	ItemConcurNum *int32 `thrift:"item_concur_num,13,optional" frugal:"13,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
 	// 运行时参数
@@ -3453,28 +3453,28 @@ func (p *Experiment) GetStatus() (v ExperimentStatus) {
 	return *p.Status
 }
 
-var Experiment_StartTime_DEFAULT int64
+var Experiment_StartedAt_DEFAULT int64
 
-func (p *Experiment) GetStartTime() (v int64) {
+func (p *Experiment) GetStartedAt() (v int64) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetStartTime() {
-		return Experiment_StartTime_DEFAULT
+	if !p.IsSetStartedAt() {
+		return Experiment_StartedAt_DEFAULT
 	}
-	return *p.StartTime
+	return *p.StartedAt
 }
 
-var Experiment_EndTime_DEFAULT int64
+var Experiment_EndedAt_DEFAULT int64
 
-func (p *Experiment) GetEndTime() (v int64) {
+func (p *Experiment) GetEndedAt() (v int64) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetEndTime() {
-		return Experiment_EndTime_DEFAULT
+	if !p.IsSetEndedAt() {
+		return Experiment_EndedAt_DEFAULT
 	}
-	return *p.EndTime
+	return *p.EndedAt
 }
 
 var Experiment_ItemConcurNum_DEFAULT int32
@@ -3560,11 +3560,11 @@ func (p *Experiment) SetDescription(val *string) {
 func (p *Experiment) SetStatus(val *ExperimentStatus) {
 	p.Status = val
 }
-func (p *Experiment) SetStartTime(val *int64) {
-	p.StartTime = val
+func (p *Experiment) SetStartedAt(val *int64) {
+	p.StartedAt = val
 }
-func (p *Experiment) SetEndTime(val *int64) {
-	p.EndTime = val
+func (p *Experiment) SetEndedAt(val *int64) {
+	p.EndedAt = val
 }
 func (p *Experiment) SetItemConcurNum(val *int32) {
 	p.ItemConcurNum = val
@@ -3590,8 +3590,8 @@ var fieldIDToName_Experiment = map[int16]string{
 	2:   "name",
 	3:   "description",
 	10:  "status",
-	11:  "start_time",
-	12:  "end_time",
+	11:  "started_at",
+	12:  "ended_at",
 	13:  "item_concur_num",
 	14:  "target_runtime_param",
 	31:  "target_field_mapping",
@@ -3616,12 +3616,12 @@ func (p *Experiment) IsSetStatus() bool {
 	return p.Status != nil
 }
 
-func (p *Experiment) IsSetStartTime() bool {
-	return p.StartTime != nil
+func (p *Experiment) IsSetStartedAt() bool {
+	return p.StartedAt != nil
 }
 
-func (p *Experiment) IsSetEndTime() bool {
-	return p.EndTime != nil
+func (p *Experiment) IsSetEndedAt() bool {
+	return p.EndedAt != nil
 }
 
 func (p *Experiment) IsSetItemConcurNum() bool {
@@ -3843,7 +3843,7 @@ func (p *Experiment) ReadField11(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.StartTime = _field
+	p.StartedAt = _field
 	return nil
 }
 func (p *Experiment) ReadField12(iprot thrift.TProtocol) error {
@@ -3854,7 +3854,7 @@ func (p *Experiment) ReadField12(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.EndTime = _field
+	p.EndedAt = _field
 	return nil
 }
 func (p *Experiment) ReadField13(iprot thrift.TProtocol) error {
@@ -4069,11 +4069,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 func (p *Experiment) writeField11(oprot thrift.TProtocol) (err error) {
-	if p.IsSetStartTime() {
-		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 11); err != nil {
+	if p.IsSetStartedAt() {
+		if err = oprot.WriteFieldBegin("started_at", thrift.I64, 11); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.StartTime); err != nil {
+		if err := oprot.WriteI64(*p.StartedAt); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -4087,11 +4087,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 func (p *Experiment) writeField12(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEndTime() {
-		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 12); err != nil {
+	if p.IsSetEndedAt() {
+		if err = oprot.WriteFieldBegin("ended_at", thrift.I64, 12); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.EndTime); err != nil {
+		if err := oprot.WriteI64(*p.EndedAt); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -4247,10 +4247,10 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 	if !p.Field10DeepEqual(ano.Status) {
 		return false
 	}
-	if !p.Field11DeepEqual(ano.StartTime) {
+	if !p.Field11DeepEqual(ano.StartedAt) {
 		return false
 	}
-	if !p.Field12DeepEqual(ano.EndTime) {
+	if !p.Field12DeepEqual(ano.EndedAt) {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.ItemConcurNum) {
@@ -4324,24 +4324,24 @@ func (p *Experiment) Field10DeepEqual(src *ExperimentStatus) bool {
 }
 func (p *Experiment) Field11DeepEqual(src *int64) bool {
 
-	if p.StartTime == src {
+	if p.StartedAt == src {
 		return true
-	} else if p.StartTime == nil || src == nil {
+	} else if p.StartedAt == nil || src == nil {
 		return false
 	}
-	if *p.StartTime != *src {
+	if *p.StartedAt != *src {
 		return false
 	}
 	return true
 }
 func (p *Experiment) Field12DeepEqual(src *int64) bool {
 
-	if p.EndTime == src {
+	if p.EndedAt == src {
 		return true
-	} else if p.EndTime == nil || src == nil {
+	} else if p.EndedAt == nil || src == nil {
 		return false
 	}
-	if *p.EndTime != *src {
+	if *p.EndedAt != *src {
 		return false
 	}
 	return true

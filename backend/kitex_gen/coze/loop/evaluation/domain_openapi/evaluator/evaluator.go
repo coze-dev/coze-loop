@@ -36,7 +36,7 @@ type EvaluatorRunStatus = string
 
 // Prompt评估器
 type PromptEvaluator struct {
-	MessageList []*common.Message   `thrift:"message_list,1,optional" frugal:"1,optional,list<common.Message>" form:"message_list" json:"message_list,omitempty" query:"message_list"`
+	Messages    []*common.Message   `thrift:"messages,1,optional" frugal:"1,optional,list<common.Message>" form:"messages" json:"messages,omitempty" query:"messages"`
 	ModelConfig *common.ModelConfig `thrift:"model_config,2,optional" frugal:"2,optional,common.ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
 }
 
@@ -47,16 +47,16 @@ func NewPromptEvaluator() *PromptEvaluator {
 func (p *PromptEvaluator) InitDefault() {
 }
 
-var PromptEvaluator_MessageList_DEFAULT []*common.Message
+var PromptEvaluator_Messages_DEFAULT []*common.Message
 
-func (p *PromptEvaluator) GetMessageList() (v []*common.Message) {
+func (p *PromptEvaluator) GetMessages() (v []*common.Message) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetMessageList() {
-		return PromptEvaluator_MessageList_DEFAULT
+	if !p.IsSetMessages() {
+		return PromptEvaluator_Messages_DEFAULT
 	}
-	return p.MessageList
+	return p.Messages
 }
 
 var PromptEvaluator_ModelConfig_DEFAULT *common.ModelConfig
@@ -70,20 +70,20 @@ func (p *PromptEvaluator) GetModelConfig() (v *common.ModelConfig) {
 	}
 	return p.ModelConfig
 }
-func (p *PromptEvaluator) SetMessageList(val []*common.Message) {
-	p.MessageList = val
+func (p *PromptEvaluator) SetMessages(val []*common.Message) {
+	p.Messages = val
 }
 func (p *PromptEvaluator) SetModelConfig(val *common.ModelConfig) {
 	p.ModelConfig = val
 }
 
 var fieldIDToName_PromptEvaluator = map[int16]string{
-	1: "message_list",
+	1: "messages",
 	2: "model_config",
 }
 
-func (p *PromptEvaluator) IsSetMessageList() bool {
-	return p.MessageList != nil
+func (p *PromptEvaluator) IsSetMessages() bool {
+	return p.Messages != nil
 }
 
 func (p *PromptEvaluator) IsSetModelConfig() bool {
@@ -173,7 +173,7 @@ func (p *PromptEvaluator) ReadField1(iprot thrift.TProtocol) error {
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.MessageList = _field
+	p.Messages = _field
 	return nil
 }
 func (p *PromptEvaluator) ReadField2(iprot thrift.TProtocol) error {
@@ -218,14 +218,14 @@ WriteStructEndError:
 }
 
 func (p *PromptEvaluator) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetMessageList() {
-		if err = oprot.WriteFieldBegin("message_list", thrift.LIST, 1); err != nil {
+	if p.IsSetMessages() {
+		if err = oprot.WriteFieldBegin("messages", thrift.LIST, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.MessageList)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Messages)); err != nil {
 			return err
 		}
-		for _, v := range p.MessageList {
+		for _, v := range p.Messages {
 			if err := v.Write(oprot); err != nil {
 				return err
 			}
@@ -276,7 +276,7 @@ func (p *PromptEvaluator) DeepEqual(ano *PromptEvaluator) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.MessageList) {
+	if !p.Field1DeepEqual(ano.Messages) {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.ModelConfig) {
@@ -287,10 +287,10 @@ func (p *PromptEvaluator) DeepEqual(ano *PromptEvaluator) bool {
 
 func (p *PromptEvaluator) Field1DeepEqual(src []*common.Message) bool {
 
-	if len(p.MessageList) != len(src) {
+	if len(p.Messages) != len(src) {
 		return false
 	}
-	for i, v := range p.MessageList {
+	for i, v := range p.Messages {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false
@@ -567,8 +567,8 @@ func (p *CodeEvaluator) Field2DeepEqual(src *string) bool {
 
 // 评估器内容
 type EvaluatorContent struct {
-	ReceiveChatHistory *bool                `thrift:"receive_chat_history,1,optional" frugal:"1,optional,bool" form:"receive_chat_history" json:"receive_chat_history,omitempty" query:"receive_chat_history"`
-	InputSchemas       []*common.ArgsSchema `thrift:"input_schemas,2,optional" frugal:"2,optional,list<common.ArgsSchema>" form:"input_schemas" json:"input_schemas,omitempty" query:"input_schemas"`
+	IsReceiveChatHistory *bool                `thrift:"is_receive_chat_history,1,optional" frugal:"1,optional,bool" form:"is_receive_chat_history" json:"is_receive_chat_history,omitempty" query:"is_receive_chat_history"`
+	InputSchemas         []*common.ArgsSchema `thrift:"input_schemas,2,optional" frugal:"2,optional,list<common.ArgsSchema>" form:"input_schemas" json:"input_schemas,omitempty" query:"input_schemas"`
 	// 101-200 Evaluator类型
 	PromptEvaluator *PromptEvaluator `thrift:"prompt_evaluator,101,optional" frugal:"101,optional,PromptEvaluator" form:"prompt_evaluator" json:"prompt_evaluator,omitempty" query:"prompt_evaluator"`
 	CodeEvaluator   *CodeEvaluator   `thrift:"code_evaluator,102,optional" frugal:"102,optional,CodeEvaluator" form:"code_evaluator" json:"code_evaluator,omitempty" query:"code_evaluator"`
@@ -581,16 +581,16 @@ func NewEvaluatorContent() *EvaluatorContent {
 func (p *EvaluatorContent) InitDefault() {
 }
 
-var EvaluatorContent_ReceiveChatHistory_DEFAULT bool
+var EvaluatorContent_IsReceiveChatHistory_DEFAULT bool
 
-func (p *EvaluatorContent) GetReceiveChatHistory() (v bool) {
+func (p *EvaluatorContent) GetIsReceiveChatHistory() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetReceiveChatHistory() {
-		return EvaluatorContent_ReceiveChatHistory_DEFAULT
+	if !p.IsSetIsReceiveChatHistory() {
+		return EvaluatorContent_IsReceiveChatHistory_DEFAULT
 	}
-	return *p.ReceiveChatHistory
+	return *p.IsReceiveChatHistory
 }
 
 var EvaluatorContent_InputSchemas_DEFAULT []*common.ArgsSchema
@@ -628,8 +628,8 @@ func (p *EvaluatorContent) GetCodeEvaluator() (v *CodeEvaluator) {
 	}
 	return p.CodeEvaluator
 }
-func (p *EvaluatorContent) SetReceiveChatHistory(val *bool) {
-	p.ReceiveChatHistory = val
+func (p *EvaluatorContent) SetIsReceiveChatHistory(val *bool) {
+	p.IsReceiveChatHistory = val
 }
 func (p *EvaluatorContent) SetInputSchemas(val []*common.ArgsSchema) {
 	p.InputSchemas = val
@@ -642,14 +642,14 @@ func (p *EvaluatorContent) SetCodeEvaluator(val *CodeEvaluator) {
 }
 
 var fieldIDToName_EvaluatorContent = map[int16]string{
-	1:   "receive_chat_history",
+	1:   "is_receive_chat_history",
 	2:   "input_schemas",
 	101: "prompt_evaluator",
 	102: "code_evaluator",
 }
 
-func (p *EvaluatorContent) IsSetReceiveChatHistory() bool {
-	return p.ReceiveChatHistory != nil
+func (p *EvaluatorContent) IsSetIsReceiveChatHistory() bool {
+	return p.IsReceiveChatHistory != nil
 }
 
 func (p *EvaluatorContent) IsSetInputSchemas() bool {
@@ -751,7 +751,7 @@ func (p *EvaluatorContent) ReadField1(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.ReceiveChatHistory = _field
+	p.IsReceiveChatHistory = _field
 	return nil
 }
 func (p *EvaluatorContent) ReadField2(iprot thrift.TProtocol) error {
@@ -835,11 +835,11 @@ WriteStructEndError:
 }
 
 func (p *EvaluatorContent) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetReceiveChatHistory() {
-		if err = oprot.WriteFieldBegin("receive_chat_history", thrift.BOOL, 1); err != nil {
+	if p.IsSetIsReceiveChatHistory() {
+		if err = oprot.WriteFieldBegin("is_receive_chat_history", thrift.BOOL, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.ReceiveChatHistory); err != nil {
+		if err := oprot.WriteBool(*p.IsReceiveChatHistory); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -929,7 +929,7 @@ func (p *EvaluatorContent) DeepEqual(ano *EvaluatorContent) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.ReceiveChatHistory) {
+	if !p.Field1DeepEqual(ano.IsReceiveChatHistory) {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.InputSchemas) {
@@ -946,12 +946,12 @@ func (p *EvaluatorContent) DeepEqual(ano *EvaluatorContent) bool {
 
 func (p *EvaluatorContent) Field1DeepEqual(src *bool) bool {
 
-	if p.ReceiveChatHistory == src {
+	if p.IsReceiveChatHistory == src {
 		return true
-	} else if p.ReceiveChatHistory == nil || src == nil {
+	} else if p.IsReceiveChatHistory == nil || src == nil {
 		return false
 	}
-	if *p.ReceiveChatHistory != *src {
+	if *p.IsReceiveChatHistory != *src {
 		return false
 	}
 	return true
@@ -1461,14 +1461,14 @@ func (p *EvaluatorVersion) Field100DeepEqual(src *common.BaseInfo) bool {
 
 // 评估器
 type Evaluator struct {
-	ID             *int64            `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
-	Name           *string           `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description    *string           `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
-	EvaluatorType  *EvaluatorType    `thrift:"evaluator_type,4,optional" frugal:"4,optional,string" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
-	DraftSubmitted *bool             `thrift:"draft_submitted,5,optional" frugal:"5,optional,bool" form:"draft_submitted" json:"draft_submitted,omitempty" query:"draft_submitted"`
-	LatestVersion  *string           `thrift:"latest_version,6,optional" frugal:"6,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
-	CurrentVersion *EvaluatorVersion `thrift:"current_version,20,optional" frugal:"20,optional,EvaluatorVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
-	BaseInfo       *common.BaseInfo  `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	ID               *int64            `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	Name             *string           `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Description      *string           `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	EvaluatorType    *EvaluatorType    `thrift:"evaluator_type,4,optional" frugal:"4,optional,string" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
+	IsDraftSubmitted *bool             `thrift:"is_draft_submitted,5,optional" frugal:"5,optional,bool" form:"is_draft_submitted" json:"is_draft_submitted,omitempty" query:"is_draft_submitted"`
+	LatestVersion    *string           `thrift:"latest_version,6,optional" frugal:"6,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
+	CurrentVersion   *EvaluatorVersion `thrift:"current_version,20,optional" frugal:"20,optional,EvaluatorVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
+	BaseInfo         *common.BaseInfo  `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewEvaluator() *Evaluator {
@@ -1526,16 +1526,16 @@ func (p *Evaluator) GetEvaluatorType() (v EvaluatorType) {
 	return *p.EvaluatorType
 }
 
-var Evaluator_DraftSubmitted_DEFAULT bool
+var Evaluator_IsDraftSubmitted_DEFAULT bool
 
-func (p *Evaluator) GetDraftSubmitted() (v bool) {
+func (p *Evaluator) GetIsDraftSubmitted() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetDraftSubmitted() {
-		return Evaluator_DraftSubmitted_DEFAULT
+	if !p.IsSetIsDraftSubmitted() {
+		return Evaluator_IsDraftSubmitted_DEFAULT
 	}
-	return *p.DraftSubmitted
+	return *p.IsDraftSubmitted
 }
 
 var Evaluator_LatestVersion_DEFAULT string
@@ -1585,8 +1585,8 @@ func (p *Evaluator) SetDescription(val *string) {
 func (p *Evaluator) SetEvaluatorType(val *EvaluatorType) {
 	p.EvaluatorType = val
 }
-func (p *Evaluator) SetDraftSubmitted(val *bool) {
-	p.DraftSubmitted = val
+func (p *Evaluator) SetIsDraftSubmitted(val *bool) {
+	p.IsDraftSubmitted = val
 }
 func (p *Evaluator) SetLatestVersion(val *string) {
 	p.LatestVersion = val
@@ -1603,7 +1603,7 @@ var fieldIDToName_Evaluator = map[int16]string{
 	2:   "name",
 	3:   "description",
 	4:   "evaluator_type",
-	5:   "draft_submitted",
+	5:   "is_draft_submitted",
 	6:   "latest_version",
 	20:  "current_version",
 	100: "base_info",
@@ -1625,8 +1625,8 @@ func (p *Evaluator) IsSetEvaluatorType() bool {
 	return p.EvaluatorType != nil
 }
 
-func (p *Evaluator) IsSetDraftSubmitted() bool {
-	return p.DraftSubmitted != nil
+func (p *Evaluator) IsSetIsDraftSubmitted() bool {
+	return p.IsDraftSubmitted != nil
 }
 
 func (p *Evaluator) IsSetLatestVersion() bool {
@@ -1804,7 +1804,7 @@ func (p *Evaluator) ReadField5(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.DraftSubmitted = _field
+	p.IsDraftSubmitted = _field
 	return nil
 }
 func (p *Evaluator) ReadField6(iprot thrift.TProtocol) error {
@@ -1964,11 +1964,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *Evaluator) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDraftSubmitted() {
-		if err = oprot.WriteFieldBegin("draft_submitted", thrift.BOOL, 5); err != nil {
+	if p.IsSetIsDraftSubmitted() {
+		if err = oprot.WriteFieldBegin("is_draft_submitted", thrift.BOOL, 5); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.DraftSubmitted); err != nil {
+		if err := oprot.WriteBool(*p.IsDraftSubmitted); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2062,7 +2062,7 @@ func (p *Evaluator) DeepEqual(ano *Evaluator) bool {
 	if !p.Field4DeepEqual(ano.EvaluatorType) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.DraftSubmitted) {
+	if !p.Field5DeepEqual(ano.IsDraftSubmitted) {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.LatestVersion) {
@@ -2127,12 +2127,12 @@ func (p *Evaluator) Field4DeepEqual(src *EvaluatorType) bool {
 }
 func (p *Evaluator) Field5DeepEqual(src *bool) bool {
 
-	if p.DraftSubmitted == src {
+	if p.IsDraftSubmitted == src {
 		return true
-	} else if p.DraftSubmitted == nil || src == nil {
+	} else if p.IsDraftSubmitted == nil || src == nil {
 		return false
 	}
-	if *p.DraftSubmitted != *src {
+	if *p.IsDraftSubmitted != *src {
 		return false
 	}
 	return true

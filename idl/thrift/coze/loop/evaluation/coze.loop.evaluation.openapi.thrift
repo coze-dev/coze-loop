@@ -469,9 +469,9 @@ service EvaluationOpenAPIService {
     // 创建评测实验
     SubmitExperimentOApiResponse SubmitExperimentOApi(1: SubmitExperimentOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/experiments")
     // 获取评测实验
-    GetExperimentsOApiResponse GetExperimentsOApi(1: GetExperimentsOApiRequest req) (api.tag="evaluation_set", api.get = '/v1/loop/evaluation/experiments/:experiment_id')
+    GetExperimentsOApiResponse GetExperimentsOApi(1: GetExperimentsOApiRequest req) (api.tag="openapi", api.get = '/v1/loop/evaluation/experiments/:experiment_id')
     // 查询评测实验结果
     ListExperimentResultOApiResponse ListExperimentResultOApi(1: ListExperimentResultOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/results")
     // 获取聚合结果
-    GetExperimentAggrResultOApiResponse GetExperimentAggrResultOApi(1: GetExperimentAggrResultOApiRequest req) (api.tag="evaluation_set", api.post = "/v1/loop/evaluation/experiments/:experiment_id/aggr_results")
+    GetExperimentAggrResultOApiResponse GetExperimentAggrResultOApi(1: GetExperimentAggrResultOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/aggr_results")
 }

@@ -13937,7 +13937,7 @@ type SubmitExperimentOApiRequest struct {
 	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty"`
 	// 三元组信息
 	EvalSetParam          *SubmitExperimentEvalSetParam       `thrift:"eval_set_param,4,optional" frugal:"4,optional,SubmitExperimentEvalSetParam" form:"eval_set_param" json:"eval_set_param,omitempty"`
-	EvaluatorParams       []*SubmitExperimentEvaluatorParam   `thrift:"evaluator_params,5,optional" frugal:"5,optional,list<SubmitExperimentEvaluatorParam>" form:"evaluator_param" json:"evaluator_param,omitempty"`
+	EvaluatorParams       []*SubmitExperimentEvaluatorParam   `thrift:"evaluator_params,5,optional" frugal:"5,optional,list<SubmitExperimentEvaluatorParam>" form:"evaluator_params" json:"evaluator_params,omitempty"`
 	EvalTargetParam       *SubmitExperimentEvalTargetParam    `thrift:"eval_target_param,6,optional" frugal:"6,optional,SubmitExperimentEvalTargetParam" form:"eval_target_param" json:"eval_target_param,omitempty"`
 	TargetFieldMapping    *experiment.TargetFieldMapping      `thrift:"target_field_mapping,7,optional" frugal:"7,optional,experiment.TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty"`
 	EvaluatorFieldMapping []*experiment.EvaluatorFieldMapping `thrift:"evaluator_field_mapping,8,optional" frugal:"8,optional,list<experiment.EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty"`

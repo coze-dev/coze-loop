@@ -194,8 +194,8 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	}
 
 	result.Status = mapExperimentStatus(dto.Status)
-	result.StartTime = dto.StartTime
-	result.EndTime = dto.EndTime
+	result.StartedAt = dto.StartTime
+	result.EndedAt = dto.EndTime
 	result.ExptStats = DomainExperimentStatsDTO2OpenAPI(dto.ExptStats)
 	result.BaseInfo = DomainBaseInfoDTO2OpenAPI(dto.BaseInfo)
 	return result
@@ -468,10 +468,10 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	}
 
 	if experiment.StartAt != nil {
-		result.StartTime = gptr.Of(experiment.StartAt.Unix())
+		result.StartedAt = gptr.Of(experiment.StartAt.Unix())
 	}
 	if experiment.EndAt != nil {
-		result.EndTime = gptr.Of(experiment.EndAt.Unix())
+		result.EndedAt = gptr.Of(experiment.EndAt.Unix())
 	}
 
 	if experiment.EvalConf != nil {
