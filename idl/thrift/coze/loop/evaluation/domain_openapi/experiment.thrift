@@ -124,8 +124,8 @@ struct Experiment {
 
     // 运行信息
     10: optional ExperimentStatus status // 实验状态
-    11: optional i64 start_time  (api.js_conv='true', go.tag='json:"start_time"') // ISO 8601格式
-    12: optional i64 end_time    (api.js_conv='true', go.tag='json:"end_time"') // ISO 8601格式
+    11: optional i64 started_at  (api.js_conv='true', go.tag='json:"started_at"') // ISO 8601格式
+    12: optional i64 ended_at    (api.js_conv='true', go.tag='json:"ended_at"') // ISO 8601格式
     13: optional i32 item_concur_num // 评测集并发数
     14: optional common.RuntimeParam target_runtime_param   // 运行时参数
 

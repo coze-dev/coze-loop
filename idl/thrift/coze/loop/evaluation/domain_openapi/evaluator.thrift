@@ -21,7 +21,7 @@ const EvaluatorRunStatus EvaluatorRunStatus_Processing = "processing"
 
 // Prompt评估器
 struct PromptEvaluator {
-    1: optional list<common.Message> message_list
+    1: optional list<common.Message> messages
     2: optional common.ModelConfig model_config
 }
 
@@ -33,7 +33,7 @@ struct CodeEvaluator {
 
 // 评估器内容
 struct EvaluatorContent {
-    1: optional bool receive_chat_history
+    1: optional bool is_receive_chat_history
     2: optional list<common.ArgsSchema> input_schemas
 
     // 101-200 Evaluator类型
@@ -58,7 +58,7 @@ struct Evaluator {
     2: optional string name
     3: optional string description
     4: optional EvaluatorType evaluator_type
-    5: optional bool draft_submitted
+    5: optional bool is_draft_submitted
     6: optional string latest_version
 
     20: optional EvaluatorVersion current_version

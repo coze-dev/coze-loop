@@ -441,7 +441,7 @@ service EvaluationOpenAPIService {
     // 获取评测集详情
     GetEvaluationSetOApiResponse GetEvaluationSetOApi(1: GetEvaluationSetOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
     // 更新评测集详情
-    UpdateEvaluationSetOApiResponse UpdateEvaluationSetOApi(1: UpdateEvaluationSetOApiRequest req) (api.tag="openapi", api.patch = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
+    UpdateEvaluationSetOApiResponse UpdateEvaluationSetOApi(1: UpdateEvaluationSetOApiRequest req) (api.tag="openapi", api.put = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
     // 删除评测集
     DeleteEvaluationSetOApiResponse DeleteEvaluationSetOApi(1: DeleteEvaluationSetOApiRequest req) (api.tag="openapi", api.delete = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id")
 
@@ -450,7 +450,7 @@ service EvaluationOpenAPIService {
     // 创建评测集版本
     CreateEvaluationSetVersionOApiResponse CreateEvaluationSetVersionOApi(1: CreateEvaluationSetVersionOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions")
     // 获取评测集版本列表
-    ListEvaluationSetVersionsOApiResponse ListEvaluationSetVersionsOApi(1: ListEvaluationSetVersionsOApiRequest req) (api.category="evaluation_set", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions")
+    ListEvaluationSetVersionsOApiResponse ListEvaluationSetVersionsOApi(1: ListEvaluationSetVersionsOApiRequest req) (api.tag="evaluation_set", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/versions")
     // 批量添加评测集数据
     BatchCreateEvaluationSetItemsOApiResponse BatchCreateEvaluationSetItemsOApi(1: BatchCreateEvaluationSetItemsOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
     // 批量更新评测集数据
@@ -469,9 +469,9 @@ service EvaluationOpenAPIService {
     // 创建评测实验
     SubmitExperimentOApiResponse SubmitExperimentOApi(1: SubmitExperimentOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/experiments")
     // 获取评测实验
-    GetExperimentsOApiResponse GetExperimentsOApi(1: GetExperimentsOApiRequest req) (api.get = '/v1/loop/evaluation/experiments/:experiment_id')
+    GetExperimentsOApiResponse GetExperimentsOApi(1: GetExperimentsOApiRequest req) (api.tag="evaluation_set", api.get = '/v1/loop/evaluation/experiments/:experiment_id')
     // 查询评测实验结果
     ListExperimentResultOApiResponse ListExperimentResultOApi(1: ListExperimentResultOApiRequest req) (api.tag="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/results")
     // 获取聚合结果
-    GetExperimentAggrResultOApiResponse GetExperimentAggrResultOApi(1: GetExperimentAggrResultOApiRequest req) (api.post = "/v1/loop/evaluation/experiments/:experiment_id/aggr_results")
+    GetExperimentAggrResultOApiResponse GetExperimentAggrResultOApi(1: GetExperimentAggrResultOApiRequest req) (api.tag="evaluation_set", api.post = "/v1/loop/evaluation/experiments/:experiment_id/aggr_results")
 }
