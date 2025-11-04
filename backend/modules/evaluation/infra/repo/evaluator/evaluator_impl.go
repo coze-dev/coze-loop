@@ -510,16 +510,9 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorMeta(ctx context.Context, req *entity
 	if req.BoxType != nil {
 		po.BoxType = int32(*req.BoxType)
 	}
-    // 写入 EvaluatorInfo JSON（由旧字段组装）
-    if req.Benchmark != nil || req.Vendor != nil {
-        info := &entity.EvaluatorInfo{}
-        if req.Benchmark != nil {
-            info.Benchmark = *req.Benchmark
-        }
-        if req.Vendor != nil {
-            info.Vendor = *req.Vendor
-        }
-        if b, err := json.Marshal(info); err == nil {
+    // 写入 EvaluatorInfo JSON
+    if req.EvaluatorInfo != nil {
+        if b, err := json.Marshal(req.EvaluatorInfo); err == nil {
             po.EvaluatorInfo = &b
         }
     }

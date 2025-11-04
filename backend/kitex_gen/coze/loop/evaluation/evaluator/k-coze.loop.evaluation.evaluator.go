@@ -2989,7 +2989,7 @@ func (p *UpdateEvaluatorRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 12:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField12(buf[offset:])
 				offset += l
 				if err != nil {
@@ -3019,20 +3019,6 @@ func (p *UpdateEvaluatorRequest) FastRead(buf []byte) (int, error) {
 		case 14:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField14(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 15:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField15(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -3179,15 +3165,13 @@ func (p *UpdateEvaluatorRequest) FastReadField11(buf []byte) (int, error) {
 
 func (p *UpdateEvaluatorRequest) FastReadField12(buf []byte) (int, error) {
 	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+	_field := evaluator.NewEvaluatorInfo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = &v
 	}
-	p.Benchmark = _field
+	p.EvaluatorInfo = _field
 	return offset, nil
 }
 
@@ -3201,25 +3185,11 @@ func (p *UpdateEvaluatorRequest) FastReadField13(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.Vendor = _field
-	return offset, nil
-}
-
-func (p *UpdateEvaluatorRequest) FastReadField14(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
 	p.BuiltinVisibleVersion = _field
 	return offset, nil
 }
 
-func (p *UpdateEvaluatorRequest) FastReadField15(buf []byte) (int, error) {
+func (p *UpdateEvaluatorRequest) FastReadField14(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *evaluator.EvaluatorBoxType
@@ -3261,7 +3231,6 @@ func (p *UpdateEvaluatorRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField14(buf[offset:], w)
-		offset += p.fastWriteField15(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -3280,7 +3249,6 @@ func (p *UpdateEvaluatorRequest) BLength() int {
 		l += p.field12Length()
 		l += p.field13Length()
 		l += p.field14Length()
-		l += p.field15Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -3337,35 +3305,26 @@ func (p *UpdateEvaluatorRequest) fastWriteField11(buf []byte, w thrift.NocopyWri
 
 func (p *UpdateEvaluatorRequest) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetBenchmark() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Benchmark)
+	if p.IsSetEvaluatorInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 12)
+		offset += p.EvaluatorInfo.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
 
 func (p *UpdateEvaluatorRequest) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetVendor() {
+	if p.IsSetBuiltinVisibleVersion() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 13)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Vendor)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BuiltinVisibleVersion)
 	}
 	return offset
 }
 
 func (p *UpdateEvaluatorRequest) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetBuiltinVisibleVersion() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 14)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BuiltinVisibleVersion)
-	}
-	return offset
-}
-
-func (p *UpdateEvaluatorRequest) fastWriteField15(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
 	if p.IsSetBoxType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 15)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 14)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BoxType)
 	}
 	return offset
@@ -3430,23 +3389,14 @@ func (p *UpdateEvaluatorRequest) field11Length() int {
 
 func (p *UpdateEvaluatorRequest) field12Length() int {
 	l := 0
-	if p.IsSetBenchmark() {
+	if p.IsSetEvaluatorInfo() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.Benchmark)
+		l += p.EvaluatorInfo.BLength()
 	}
 	return l
 }
 
 func (p *UpdateEvaluatorRequest) field13Length() int {
-	l := 0
-	if p.IsSetVendor() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.Vendor)
-	}
-	return l
-}
-
-func (p *UpdateEvaluatorRequest) field14Length() int {
 	l := 0
 	if p.IsSetBuiltinVisibleVersion() {
 		l += thrift.Binary.FieldBeginLength()
@@ -3455,7 +3405,7 @@ func (p *UpdateEvaluatorRequest) field14Length() int {
 	return l
 }
 
-func (p *UpdateEvaluatorRequest) field15Length() int {
+func (p *UpdateEvaluatorRequest) field14Length() int {
 	l := 0
 	if p.IsSetBoxType() {
 		l += thrift.Binary.FieldBeginLength()
@@ -3506,21 +3456,14 @@ func (p *UpdateEvaluatorRequest) DeepCopy(s interface{}) error {
 		p.Builtin = &tmp
 	}
 
-	if src.Benchmark != nil {
-		var tmp string
-		if *src.Benchmark != "" {
-			tmp = kutils.StringDeepCopy(*src.Benchmark)
+	var _evaluatorInfo *evaluator.EvaluatorInfo
+	if src.EvaluatorInfo != nil {
+		_evaluatorInfo = &evaluator.EvaluatorInfo{}
+		if err := _evaluatorInfo.DeepCopy(src.EvaluatorInfo); err != nil {
+			return err
 		}
-		p.Benchmark = &tmp
 	}
-
-	if src.Vendor != nil {
-		var tmp string
-		if *src.Vendor != "" {
-			tmp = kutils.StringDeepCopy(*src.Vendor)
-		}
-		p.Vendor = &tmp
-	}
+	p.EvaluatorInfo = _evaluatorInfo
 
 	if src.BuiltinVisibleVersion != nil {
 		var tmp string

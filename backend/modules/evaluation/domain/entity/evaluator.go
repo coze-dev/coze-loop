@@ -59,8 +59,7 @@ type UpdateEvaluatorMetaRequest struct {
 	Name                  *string
 	Description           *string
 	Builtin               *bool
-	Benchmark             *string
-	Vendor                *string
+	EvaluatorInfo         *EvaluatorInfo
 	BuiltinVisibleVersion *string
 	BoxType               *EvaluatorBoxType
 	UpdatedBy             string

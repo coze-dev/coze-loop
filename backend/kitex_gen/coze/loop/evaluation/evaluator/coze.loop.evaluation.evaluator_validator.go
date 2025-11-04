@@ -137,6 +137,11 @@ func (p *UpdateEvaluatorDraftResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateEvaluatorRequest) IsValid() error {
+	if p.EvaluatorInfo != nil {
+		if err := p.EvaluatorInfo.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorInfo not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

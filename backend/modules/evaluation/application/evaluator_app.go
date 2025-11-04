@@ -358,10 +358,18 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluator(ctx context.Context, request *eva
 		Name:                  request.Name,
 		Description:           request.Description,
 		Builtin:               request.Builtin,
-		Benchmark:             request.Benchmark,
-		Vendor:                request.Vendor,
+		EvaluatorInfo:         nil,
 		BuiltinVisibleVersion: request.BuiltinVisibleVersion,
 		UpdatedBy:             userIDInContext,
+	}
+	// 转换 EvaluatorInfo
+	if request.IsSetEvaluatorInfo() && request.GetEvaluatorInfo() != nil {
+		req.EvaluatorInfo = &entity.EvaluatorInfo{
+			Benchmark:     request.GetEvaluatorInfo().GetBenchmark(),
+			Vendor:        request.GetEvaluatorInfo().GetVendor(),
+			VendorURL:     request.GetEvaluatorInfo().GetVendorURL(),
+			UserManualURL: request.GetEvaluatorInfo().GetUserManualURL(),
+		}
 	}
 	// box_type 映射（White/Black -> 1/2）
 	if request.IsSetBoxType() {

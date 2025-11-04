@@ -91,10 +91,9 @@ struct UpdateEvaluatorRequest {
     5: optional string description (api.body='description', go.tag='json:"description"') // 描述
 
     11: optional bool builtin (api.body='builtin', go.tag = 'json:"builtin"') // 是否预置评估器
-    12: optional string benchmark (api.body='benchmark', go.tag = 'json:"benchmark"')
-    13: optional string vendor (api.body='vendor', go.tag = 'json:"vendor"')
-    14: optional string builtin_visible_version (api.body='builtin_visible_version', go.tag = 'json:"builtin_visible_version"')
-    15: optional evaluator.EvaluatorBoxType box_type (api.body='box_type', go.tag = 'json:"box_type"')
+    12: optional evaluator.EvaluatorInfo evaluator_info (api.body='evaluator_info', go.tag = 'json:"evaluator_info"')
+    13: optional string builtin_visible_version (api.body='builtin_visible_version', go.tag = 'json:"builtin_visible_version"')
+    14: optional evaluator.EvaluatorBoxType box_type (api.body='box_type', go.tag = 'json:"box_type"')
 
     255: optional base.Base Base
 }

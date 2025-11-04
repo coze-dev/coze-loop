@@ -2142,13 +2142,15 @@ func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorMeta(t *testing.T) {
 			}
 
 			err := repo.UpdateEvaluatorMeta(context.Background(), &entity.UpdateEvaluatorMetaRequest{
-				ID:          tt.id,
-				SpaceID:     100, // 使用测试用的spaceID
-				Name:        gptr.Of(""),
-				Description: gptr.Of(""),
-				Benchmark:   &tt.benchmark,
-				Vendor:      &tt.vendor,
-				UpdatedBy:   tt.userID,
+				ID:           tt.id,
+				SpaceID:      100, // 使用测试用的spaceID
+				Name:         gptr.Of(""),
+				Description:  gptr.Of(""),
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					Benchmark: tt.benchmark,
+					Vendor:    tt.vendor,
+				},
+				UpdatedBy: tt.userID,
 			})
 			if tt.expectedError != nil {
 				assert.Error(t, err)
