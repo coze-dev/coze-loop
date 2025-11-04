@@ -216,11 +216,11 @@ func (r *EvaluatorTemplateRepoImpl) UpdateEvaluatorTemplate(ctx context.Context,
 		return nil, err
 	}
 
-	// 标签全量对齐：新增补充、删除不在集合内的，保持未变化的不动
-	if template != nil {
-		// 针对每种语言分别全量对齐
-		userID := session.UserIDInCtxOrEmpty(ctx)
-		for lang, tagMap := range template.Tags {
+    // 标签全量对齐：新增补充、删除不在集合内的，保持未变化的不动
+    // 此处 template 已在入参校验中判空，无需再判空
+    // 针对每种语言分别全量对齐
+    userID := session.UserIDInCtxOrEmpty(ctx)
+    for lang, tagMap := range template.Tags {
 			existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{template.ID}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), string(lang))
 			if err != nil {
 				return nil, err
@@ -240,8 +240,7 @@ func (r *EvaluatorTemplateRepoImpl) UpdateEvaluatorTemplate(ctx context.Context,
 				}
 				for _, v := range vs {
 					target[kstr][v] = true
-				}
-			}
+    }
 			del := make(map[string][]string)
 			for k, vals := range existing {
 				for v := range vals {

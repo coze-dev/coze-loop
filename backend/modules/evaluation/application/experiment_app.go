@@ -434,9 +434,6 @@ func (e *experimentApplication) ListExperimentStats(ctx context.Context, req *ex
 
 func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.UpdateExperimentRequest) (r *expt.UpdateExperimentResponse, err error) {
 	session := entity.NewSession(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {

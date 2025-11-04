@@ -40,7 +40,7 @@ func (TaskRunConverter) ToDO(b []byte) (*entity.TaskRun, error) {
 
 // toTaskRunBytes
 //
-//nolint:staticcheck,S1034
+//nolint:staticcheck,gosimple
 func toTaskRunBytes(v any) []byte {
 	switch v.(type) {
 	case string:

@@ -23,7 +23,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	evaluatorcommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	evaluatorservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	evaluatorconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -1430,7 +1429,7 @@ func (e *EvaluatorHandlerImpl) GetTemplateInfoV2(ctx context.Context, request *e
 }
 
 // CreateEvaluatorTemplate 创建评估器模板
-func (e *EvaluatorHandlerImpl) CreateEvaluatorTemplate(ctx context.Context, request *evaluator.CreateEvaluatorTemplateRequest) (resp *evaluator.CreateEvaluatorTemplateResponse, err error) {
+func (e *EvaluatorHandlerImpl) CreateEvaluatorTemplate(ctx context.Context, request *evaluatorservice.CreateEvaluatorTemplateRequest) (resp *evaluatorservice.CreateEvaluatorTemplateResponse, err error) {
 	// 参数验证
 	if request.GetEvaluatorTemplate() == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_template is nil"))
@@ -1469,13 +1468,13 @@ func (e *EvaluatorHandlerImpl) CreateEvaluatorTemplate(ctx context.Context, requ
 	// 转换结果
 	template := evaluatorconvertor.ConvertEvaluatorTemplateDO2DTO(serviceResp.Template)
 
-	return &evaluator.CreateEvaluatorTemplateResponse{
+    return &evaluatorservice.CreateEvaluatorTemplateResponse{
 		EvaluatorTemplate: template,
 	}, nil
 }
 
 // UpdateEvaluatorTemplate 更新评估器模板
-func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, request *evaluator.UpdateEvaluatorTemplateRequest) (resp *evaluator.UpdateEvaluatorTemplateResponse, err error) {
+func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, request *evaluatorservice.UpdateEvaluatorTemplateRequest) (resp *evaluatorservice.UpdateEvaluatorTemplateResponse, err error) {
 	// 参数验证
 	if request.GetEvaluatorTemplate() == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_template is nil"))
@@ -1513,13 +1512,13 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, requ
 	// 转换结果
 	template := evaluatorconvertor.ConvertEvaluatorTemplateDO2DTO(serviceResp.Template)
 
-	return &evaluator.UpdateEvaluatorTemplateResponse{
+    return &evaluatorservice.UpdateEvaluatorTemplateResponse{
 		EvaluatorTemplate: template,
 	}, nil
 }
 
 // DeleteEvaluatorTemplate 删除评估器模板
-func (e *EvaluatorHandlerImpl) DeleteEvaluatorTemplate(ctx context.Context, request *evaluator.DeleteEvaluatorTemplateRequest) (resp *evaluator.DeleteEvaluatorTemplateResponse, err error) {
+func (e *EvaluatorHandlerImpl) DeleteEvaluatorTemplate(ctx context.Context, request *evaluatorservice.DeleteEvaluatorTemplateRequest) (resp *evaluatorservice.DeleteEvaluatorTemplateResponse, err error) {
 	// 参数验证
 	if request.GetEvaluatorTemplateID() == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_template_id is 0"))
@@ -1554,11 +1553,11 @@ func (e *EvaluatorHandlerImpl) DeleteEvaluatorTemplate(ctx context.Context, requ
 		return nil, err
 	}
 
-	return &evaluator.DeleteEvaluatorTemplateResponse{}, nil
+    return &evaluatorservice.DeleteEvaluatorTemplateResponse{}, nil
 }
 
 // DebugBuiltinEvaluator 调试预置评估器
-func (e *EvaluatorHandlerImpl) DebugBuiltinEvaluator(ctx context.Context, request *evaluator.DebugBuiltinEvaluatorRequest) (resp *evaluator.DebugBuiltinEvaluatorResponse, err error) {
+func (e *EvaluatorHandlerImpl) DebugBuiltinEvaluator(ctx context.Context, request *evaluatorservice.DebugBuiltinEvaluatorRequest) (resp *evaluatorservice.DebugBuiltinEvaluatorResponse, err error) {
 	// 预置评估器复用空间下列表查询鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
@@ -1585,7 +1584,7 @@ func (e *EvaluatorHandlerImpl) DebugBuiltinEvaluator(ctx context.Context, reques
 	}
 
 	// 3) 返回结果
-	return &evaluator.DebugBuiltinEvaluatorResponse{
+    return &evaluatorservice.DebugBuiltinEvaluatorResponse{
 		OutputData: evaluatorconvertor.ConvertEvaluatorOutputDataDO2DTO(outputDataDO),
 	}, nil
 }

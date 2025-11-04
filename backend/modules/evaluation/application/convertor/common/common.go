@@ -221,12 +221,12 @@ func ConvertArgsSchemaDTO2DO(schema *commondto.ArgsSchema) *commonentity.ArgsSch
 	for _, ct := range schema.SupportContentTypes {
 		contentTypes = append(contentTypes, commonentity.ContentType(ct))
 	}
-    return &commonentity.ArgsSchema{
-        Key:                 schema.Key,
-        SupportContentTypes: contentTypes,
-        JsonSchema:          schema.JSONSchema,
-        DefaultValue:        ConvertContentDTO2DO(schema.DefaultValue),
-    }
+	return &commonentity.ArgsSchema{
+		Key:                 schema.Key,
+		SupportContentTypes: contentTypes,
+		JsonSchema:          schema.JSONSchema,
+		DefaultValue:        ConvertContentDTO2DO(schema.DefaultValue),
+	}
 }
 
 func ConvertArgsSchemaListDTO2DO(schemas []*commondto.ArgsSchema) []*commonentity.ArgsSchema {
@@ -249,12 +249,12 @@ func ConvertArgsSchemaDO2DTO(schema *commonentity.ArgsSchema) *commondto.ArgsSch
 	for _, ct := range schema.SupportContentTypes {
 		contentTypes = append(contentTypes, string(ct))
 	}
-    return &commondto.ArgsSchema{
-        Key:                 schema.Key,
-        SupportContentTypes: contentTypes,
-        JSONSchema:          schema.JsonSchema,
-        DefaultValue:        ConvertContentDO2DTO(schema.DefaultValue),
-    }
+	return &commondto.ArgsSchema{
+		Key:                 schema.Key,
+		SupportContentTypes: contentTypes,
+		JSONSchema:          schema.JsonSchema,
+		DefaultValue:        ConvertContentDO2DTO(schema.DefaultValue),
+	}
 }
 
 func ConvertArgsSchemaListDO2DTO(schemas []*commonentity.ArgsSchema) []*commondto.ArgsSchema {

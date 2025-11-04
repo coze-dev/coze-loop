@@ -320,6 +320,7 @@ func (e *EvaluatorServiceImpl) makeCreateIdemKey(cid string) string {
 	return consts.IdemKeyCreateEvaluator + cid
 }
 
+// nolint:unused // 保留备用：内置评估器创建的幂等键构造
 func (e *EvaluatorServiceImpl) makeCreateBuiltinIdemKey(cid string) string {
 	return consts.IdemKeyCreateEvaluator + "_builtin_" + cid
 }

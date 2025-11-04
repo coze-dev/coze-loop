@@ -211,6 +211,7 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 }
 
 // buildFilterConditions 构建筛选条件的SQL和参数
+// nolint:unused // 保留备用：复杂筛选条件的 SQL 生成
 func (dao *EvaluatorTagDAOImpl) buildFilterConditions(filters *entity.EvaluatorFilters) (string, []interface{}, error) {
     if filters == nil {
         return "", nil, nil

@@ -202,7 +202,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
 			{EvaluatorID: gptr.Of(int64(3)), Version: gptr.Of("2.0.0")},
 		},
 	}
-    // 不增加映射，专注验证版本ID解析与去重
+	// 不增加映射，专注验证版本ID解析与去重
 
 	// 期望：
 	//  - BuiltinVisible: eid=1 返回可见版本，其版本ID设为 10101
@@ -225,7 +225,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
     if got, want := len(ids), 4; got != want {
         t.Fatalf("len(ids)=%d want=%d", got, want)
     }
-    if !(ids[0] == 10101 && ids[1] == 20200 && ids[2] == 20200 && ids[3] == 30300) {
+    if ids[0] != 10101 || ids[1] != 20200 || ids[2] != 20200 || ids[3] != 30300 {
         t.Fatalf("ids=%v want=[10101 20200 20200 30300]", ids)
     }
 

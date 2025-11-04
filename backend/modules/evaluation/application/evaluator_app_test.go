@@ -22,8 +22,7 @@ import (
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
-	evaluatorservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
-	evaluatorapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
+    evaluatorservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmock "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
@@ -2891,15 +2890,15 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *evaluatorapi.CreateEvaluatorTemplateRequest
+    req         *evaluatorservice.CreateEvaluatorTemplateRequest
 		mockSetup   func()
-		wantResp    *evaluatorapi.CreateEvaluatorTemplateResponse
+    wantResp    *evaluatorservice.CreateEvaluatorTemplateResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &evaluatorapi.CreateEvaluatorTemplateRequest{
+            req: &evaluatorservice.CreateEvaluatorTemplateRequest{
 				EvaluatorTemplate: templateDTO,
 			},
 			mockSetup: func() {
@@ -2913,14 +2912,14 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 						Template: evaluator.ConvertEvaluatorTemplateDTO2DO(templateDTO),
 					}, nil)
 			},
-			wantResp: &evaluatorapi.CreateEvaluatorTemplateResponse{
+            wantResp: &evaluatorservice.CreateEvaluatorTemplateResponse{
 				EvaluatorTemplate: templateDTO,
 			},
 			wantErr: false,
 		},
 		{
 			name: "error - nil template",
-			req: &evaluatorapi.CreateEvaluatorTemplateRequest{
+            req: &evaluatorservice.CreateEvaluatorTemplateRequest{
 				EvaluatorTemplate: nil,
 			},
 			mockSetup:   func() {},
@@ -2930,7 +2929,7 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-			req: &evaluatorapi.CreateEvaluatorTemplateRequest{
+            req: &evaluatorservice.CreateEvaluatorTemplateRequest{
 				EvaluatorTemplate: &evaluatordto.EvaluatorTemplate{
 					ID:          gptr.Of(int64(1)),
 					WorkspaceID: gptr.Of(int64(789)), // 不在允许列表中
@@ -2953,7 +2952,7 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - service failure",
-			req: &evaluatorapi.CreateEvaluatorTemplateRequest{
+            req: &evaluatorservice.CreateEvaluatorTemplateRequest{
 				EvaluatorTemplate: templateDTO,
 			},
 			mockSetup: func() {
@@ -3021,15 +3020,15 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *evaluatorapi.UpdateEvaluatorTemplateRequest
+    req         *evaluatorservice.UpdateEvaluatorTemplateRequest
 		mockSetup   func()
-		wantResp    *evaluatorapi.UpdateEvaluatorTemplateResponse
+    wantResp    *evaluatorservice.UpdateEvaluatorTemplateResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &evaluatorapi.UpdateEvaluatorTemplateRequest{
+            req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 				EvaluatorTemplate:   templateDTO,
 			},
@@ -3044,14 +3043,14 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 						Template: evaluator.ConvertEvaluatorTemplateDTO2DO(templateDTO),
 					}, nil)
 			},
-			wantResp: &evaluatorapi.UpdateEvaluatorTemplateResponse{
+            wantResp: &evaluatorservice.UpdateEvaluatorTemplateResponse{
 				EvaluatorTemplate: templateDTO,
 			},
 			wantErr: false,
 		},
 		{
 			name: "error - nil template",
-			req: &evaluatorapi.UpdateEvaluatorTemplateRequest{
+            req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 				EvaluatorTemplate:   nil,
 			},
@@ -3062,7 +3061,7 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-			req: &evaluatorapi.UpdateEvaluatorTemplateRequest{
+            req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 				EvaluatorTemplate: &evaluatordto.EvaluatorTemplate{
 					ID:          gptr.Of(templateID),
@@ -3086,7 +3085,7 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - service failure",
-			req: &evaluatorapi.UpdateEvaluatorTemplateRequest{
+            req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 				EvaluatorTemplate:   templateDTO,
 			},
@@ -3154,15 +3153,15 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *evaluatorapi.DeleteEvaluatorTemplateRequest
+    req         *evaluatorservice.DeleteEvaluatorTemplateRequest
 		mockSetup   func()
-		wantResp    *evaluatorapi.DeleteEvaluatorTemplateResponse
+    wantResp    *evaluatorservice.DeleteEvaluatorTemplateResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &evaluatorapi.DeleteEvaluatorTemplateRequest{
+            req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -3185,12 +3184,12 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 					}).
 					Return(&entity.DeleteEvaluatorTemplateResponse{}, nil)
 			},
-			wantResp: &evaluatorapi.DeleteEvaluatorTemplateResponse{},
+            wantResp: &evaluatorservice.DeleteEvaluatorTemplateResponse{},
 			wantErr:  false,
 		},
 		{
 			name: "error - template id is 0",
-			req: &evaluatorapi.DeleteEvaluatorTemplateRequest{
+            req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
 				EvaluatorTemplateID: 0,
 			},
 			mockSetup:   func() {},
@@ -3200,7 +3199,7 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - template not found",
-			req: &evaluatorapi.DeleteEvaluatorTemplateRequest{
+            req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -3216,7 +3215,7 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-			req: &evaluatorapi.DeleteEvaluatorTemplateRequest{
+            req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -3309,15 +3308,15 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		req         *evaluatorapi.DebugBuiltinEvaluatorRequest
+    req         *evaluatorservice.DebugBuiltinEvaluatorRequest
 		mockSetup   func()
-		wantResp    *evaluatorapi.DebugBuiltinEvaluatorResponse
+    wantResp    *evaluatorservice.DebugBuiltinEvaluatorResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-			req: &evaluatorapi.DebugBuiltinEvaluatorRequest{
+            req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
 				EvaluatorID: evaluatorID,
 				WorkspaceID: workspaceID,
 				InputData:   inputData,
@@ -3339,14 +3338,14 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 					DebugEvaluator(gomock.Any(), builtinEvaluator, gomock.Any()).
 					Return(outputData, nil)
 			},
-			wantResp: &evaluatorapi.DebugBuiltinEvaluatorResponse{
+            wantResp: &evaluatorservice.DebugBuiltinEvaluatorResponse{
 				OutputData: evaluator.ConvertEvaluatorOutputDataDO2DTO(outputData),
 			},
 			wantErr: false,
 		},
 		{
 			name: "error - auth failed",
-			req: &evaluatorapi.DebugBuiltinEvaluatorRequest{
+            req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
 				EvaluatorID: evaluatorID,
 				WorkspaceID: workspaceID,
 				InputData:   inputData,
@@ -3362,7 +3361,7 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 		},
 		{
 			name: "error - evaluator not found",
-			req: &evaluatorapi.DebugBuiltinEvaluatorRequest{
+            req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
 				EvaluatorID: evaluatorID,
 				WorkspaceID: workspaceID,
 				InputData:   inputData,
@@ -3382,7 +3381,7 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 		},
 		{
 			name: "error - debug failure",
-			req: &evaluatorapi.DebugBuiltinEvaluatorRequest{
+            req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
 				EvaluatorID: evaluatorID,
 				WorkspaceID: workspaceID,
 				InputData:   inputData,
