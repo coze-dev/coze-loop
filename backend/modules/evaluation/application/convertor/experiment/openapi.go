@@ -560,6 +560,7 @@ func OpenAPIColumnEvalSetFieldsDO2DTOs(from []*entity.ColumnEvalSetField) []*ope
 	}
 	return result
 }
+
 func OpenAPIColumnEvaluatorsDO2DTOs(from []*entity.ColumnEvaluator) []*openapiExperiment.ColumnEvaluator {
 	if len(from) == 0 {
 		return nil
