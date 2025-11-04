@@ -3640,7 +3640,7 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "success - tags sorted",
+			name: "success - tags kept order from config",
 			req:   &evaluatorservice.ListEvaluatorTagsRequest{},
 			mockSetup: func() {
 				mockConfiger.EXPECT().
@@ -3652,8 +3652,8 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 			},
 			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
 				Tags: map[string][]string{
-					evaluatordto.EvaluatorTagKeyCategory: {"a", "m", "z"},
-					evaluatordto.EvaluatorTagKeyTargetType: {"b", "x"},
+					evaluatordto.EvaluatorTagKeyCategory: {"z", "a", "m"},
+					evaluatordto.EvaluatorTagKeyTargetType: {"x", "b"},
 				},
 			},
 			wantErr: false,
@@ -3677,10 +3677,10 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
 				if tt.wantResp.Tags != nil {
-					// 验证标签是否已排序
+					// 验证标签与配置一致（不再强制排序）
 					for key, expectedValues := range tt.wantResp.Tags {
 						actualValues := resp.Tags[key]
-						assert.Equal(t, expectedValues, actualValues, "Tags for key %v should be sorted", key)
+						assert.Equal(t, expectedValues, actualValues, "Tags for key %v should match config order", key)
 					}
 				}
 			}

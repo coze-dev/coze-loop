@@ -1446,12 +1446,12 @@ func (e *EvaluatorHandlerImpl) CreateEvaluatorTemplate(ctx context.Context, requ
 	templateDO := evaluatorconvertor.ConvertEvaluatorTemplateDTO2DO(request.GetEvaluatorTemplate())
 
 	// 构建service层请求
-    serviceReq := &entity.CreateEvaluatorTemplateRequest{
+	serviceReq := &entity.CreateEvaluatorTemplateRequest{
 		SpaceID:                templateDO.SpaceID,
 		Name:                   templateDO.Name,
 		Description:            templateDO.Description,
 		EvaluatorType:          templateDO.EvaluatorType,
-        EvaluatorInfo:          templateDO.EvaluatorInfo,
+		EvaluatorInfo:          templateDO.EvaluatorInfo,
 		InputSchemas:           templateDO.InputSchemas,
 		OutputSchemas:          templateDO.OutputSchemas,
 		ReceiveChatHistory:     templateDO.ReceiveChatHistory,
@@ -1491,11 +1491,11 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, requ
 	templateDO := evaluatorconvertor.ConvertEvaluatorTemplateDTO2DO(request.GetEvaluatorTemplate())
 
 	// 构建service层请求
-    serviceReq := &entity.UpdateEvaluatorTemplateRequest{
+	serviceReq := &entity.UpdateEvaluatorTemplateRequest{
 		ID:                     request.EvaluatorTemplateID,
 		Name:                   gptr.Of(templateDO.Name),
 		Description:            gptr.Of(templateDO.Description),
-        EvaluatorInfo:          templateDO.EvaluatorInfo,
+		EvaluatorInfo:          templateDO.EvaluatorInfo,
 		InputSchemas:           templateDO.InputSchemas,
 		OutputSchemas:          templateDO.OutputSchemas,
 		ReceiveChatHistory:     templateDO.ReceiveChatHistory,
@@ -1621,15 +1621,6 @@ func (e *EvaluatorHandlerImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, r
 func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *evaluatorservice.ListEvaluatorTagsRequest) (resp *evaluatorservice.ListEvaluatorTagsResponse, err error) {
 	// 直接从配置获取可用的标签配置
 	tags := e.configer.GetEvaluatorTagConf(ctx)
-	// 对每个 tagKey 下的列表按字母顺序排序
-	if len(tags) > 0 {
-		for k, vs := range tags {
-			if len(vs) > 1 {
-				sort.Strings(vs)
-				tags[k] = vs
-			}
-		}
-	}
 	return &evaluatorservice.ListEvaluatorTagsResponse{
 		Tags: tags,
 	}, nil
