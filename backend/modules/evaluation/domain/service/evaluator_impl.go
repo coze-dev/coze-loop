@@ -293,6 +293,59 @@ func (e *EvaluatorServiceImpl) BatchGetEvaluatorByIDAndVersion(ctx context.Conte
     if err != nil {
         return nil, err
     }
+    if len(versions) == 0 {
+        return versions, nil
+    }
+
+    // 收集 evaluator 元信息并回填至版本实体根字段
+    evaluatorIDs := make([]int64, 0, len(versions))
+    seen := make(map[int64]struct{}, len(versions))
+    for _, v := range versions {
+        if v == nil {
+            continue
+        }
+        mid := v.GetEvaluatorID()
+        if mid == 0 {
+            continue
+        }
+        if _, ok := seen[mid]; ok {
+            continue
+        }
+        seen[mid] = struct{}{}
+        evaluatorIDs = append(evaluatorIDs, mid)
+    }
+    if len(evaluatorIDs) == 0 {
+        return versions, nil
+    }
+    metas, err := e.evaluatorRepo.BatchGetEvaluatorMetaByID(ctx, evaluatorIDs, false)
+    if err != nil {
+        return nil, err
+    }
+    id2Meta := make(map[int64]*entity.Evaluator, len(metas))
+    for _, m := range metas {
+        if m != nil {
+            id2Meta[m.ID] = m
+        }
+    }
+    for _, v := range versions {
+        if v == nil {
+            continue
+        }
+        if m, ok := id2Meta[v.GetEvaluatorID()]; ok && m != nil {
+            v.ID = m.ID
+            v.SpaceID = m.SpaceID
+            v.Name = m.Name
+            v.Description = m.Description
+            v.DraftSubmitted = m.DraftSubmitted
+            v.EvaluatorType = m.EvaluatorType
+            v.LatestVersion = m.LatestVersion
+            v.Builtin = m.Builtin
+            v.EvaluatorInfo = m.EvaluatorInfo
+            v.BuiltinVisibleVersion = m.BuiltinVisibleVersion
+            v.BoxType = m.BoxType
+            v.Tags = m.Tags
+        }
+    }
     return versions, nil
 }
 

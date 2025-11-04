@@ -161,7 +161,7 @@ func Test_BatchGetBuiltinEvaluator(t *testing.T) {
     })
 }
 
-// Test_BatchGetEvaluatorByIDAndVersion 覆盖简单透传
+// Test_BatchGetEvaluatorByIDAndVersion 回填 evaluator 元信息
 func Test_BatchGetEvaluatorByIDAndVersion(t *testing.T) {
     ctrl := gomock.NewController(t)
     defer ctrl.Finish()
@@ -171,11 +171,33 @@ func Test_BatchGetEvaluatorByIDAndVersion(t *testing.T) {
     ctx := context.Background()
 
     pairs := [][2]interface{}{{int64(11), "0.1.0"}, {int64(22), "1.0.0"}}
-    expect := []*entity.Evaluator{{ID: 11}, {ID: 22}}
-    mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), pairs).Return(expect, nil)
+    // 版本侧仅带有 EvaluatorID（置于具体版本字段中）
+    versions := []*entity.Evaluator{
+        {EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 11}},
+        {EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 22}},
+    }
+    mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), pairs).Return(versions, nil)
+    // 元信息补充
+    metas := []*entity.Evaluator{
+        {ID: 11, SpaceID: 101, Name: "evA", EvaluatorType: entity.EvaluatorTypePrompt},
+        {ID: 22, SpaceID: 202, Name: "evB", EvaluatorType: entity.EvaluatorTypeCode},
+    }
+    mockRepo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{11, 22}, false).Return(metas, nil)
+
     got, err := s.BatchGetEvaluatorByIDAndVersion(ctx, pairs)
     assert.NoError(t, err)
-    assert.Equal(t, expect, got)
+    assert.Equal(t, 2, len(got))
+    // 校验已回填
+    if got[0].GetEvaluatorID() == 11 {
+        assert.Equal(t, int64(11), got[0].ID)
+        assert.Equal(t, int64(101), got[0].SpaceID)
+        assert.Equal(t, "evA", got[0].Name)
+    }
+    if got[1].GetEvaluatorID() == 22 {
+        assert.Equal(t, int64(22), got[1].ID)
+        assert.Equal(t, int64(202), got[1].SpaceID)
+        assert.Equal(t, "evB", got[1].Name)
+    }
 
     // 空入参
     got2, err2 := s.BatchGetEvaluatorByIDAndVersion(ctx, [][2]interface{}{})

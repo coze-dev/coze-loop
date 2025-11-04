@@ -190,33 +190,13 @@ func GetTemplateInfoV2(ctx context.Context, c *app.RequestContext) {
 // DebugBuiltinEvaluator .
 // @router /api/evaluation/v1/evaluators/debug_builtin [POST]
 func DebugBuiltinEvaluator(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.DebugBuiltinEvaluatorRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.DebugBuiltinEvaluatorResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvaluatorSvc.DebugBuiltinEvaluator)
 }
 
 // CreateEvaluatorTemplate .
 // @router /api/evaluation/v1/evaluators/create_template [POST]
 func CreateEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.CreateEvaluatorTemplateRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.CreateEvaluatorTemplateResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvaluatorSvc.CreateEvaluatorTemplate)
 }
 
 // UpdateEvaluatorTemplate .
