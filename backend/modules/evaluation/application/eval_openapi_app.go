@@ -774,8 +774,19 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		if len(version) == 0 {
 			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
 		}
-		evaluatorVersionIDs = append(evaluatorVersionIDs, version[0].ID)
-		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = version[0].ID
+		var versionID int64
+		switch version[0].EvaluatorType {
+		case entity.EvaluatorTypePrompt:
+			if version[0].PromptEvaluatorVersion != nil {
+				versionID = version[0].PromptEvaluatorVersion.ID
+			}
+		case entity.EvaluatorTypeCode:
+			if version[0].CodeEvaluatorVersion != nil {
+				versionID = version[0].CodeEvaluatorVersion.ID
+			}
+		}
+		evaluatorVersionIDs = append(evaluatorVersionIDs, versionID)
+		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
 	}
 
 	createReq := &exptpb.SubmitExperimentRequest{
