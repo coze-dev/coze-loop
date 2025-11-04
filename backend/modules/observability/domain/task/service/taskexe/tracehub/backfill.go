@@ -29,6 +29,7 @@ const (
 	pageSize                = 500
 	backfillLockKeyTemplate = "observability:tracehub:backfill:%d"
 	backfillLockMaxHold     = 24 * time.Hour
+	backfillLockTTL         = 3 * time.Minute
 )
 
 // 定时任务+锁
@@ -43,7 +44,7 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	)
 	if h.locker != nil && event != nil {
 		lockKey = fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
-		locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
+		locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, backfillLockTTL, backfillLockMaxHold)
 		if lockErr != nil {
 			logs.CtxError(ctx, "backfill acquire lock failed", "task_id", event.TaskID, "err", lockErr)
 			return lockErr
@@ -306,7 +307,7 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 			totalCount += int64(len(spans))
 			logs.CtxInfo(ctx, "processed %d spans, total=%d, task_id=%d", len(spans), totalCount, sub.t.GetID())
 		}
-
+		logs.CtxInfo(ctx, "result.PageToken:%v", result.PageToken)
 		if !result.HasMore {
 			logs.CtxInfo(ctx, "completed listing spans, total_count=%d, task_id=%d", totalCount, sub.t.GetID())
 			break
