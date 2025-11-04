@@ -149,12 +149,12 @@ func newJSONCtx() *app.RequestContext {
 }
 
 func newJSONCtxWithBody(body string) *app.RequestContext {
-    c := &app.RequestContext{}
-    c.Request.Header.Set("Content-Type", "application/json")
-    c.Request.SetRequestURI("/")
-    c.Request.SetMethod("POST")
-    c.Request.SetBody([]byte(body))
-    return c
+	c := &app.RequestContext{}
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.SetRequestURI("/")
+	c.Request.SetMethod("POST")
+	c.Request.SetBody([]byte(body))
+	return c
 }
 
 func TestEvaluatorService_Handlers_Smoke(t *testing.T) {

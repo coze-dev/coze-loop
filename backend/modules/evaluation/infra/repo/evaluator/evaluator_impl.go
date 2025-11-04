@@ -680,62 +680,34 @@ func (r *EvaluatorRepoImpl) ListEvaluator(ctx context.Context, req *repo.ListEva
 
 // ListBuiltinEvaluator 根据筛选条件查询内置评估器列表，支持tag筛选和分页
 func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.ListBuiltinEvaluatorRequest) (*repo.ListBuiltinEvaluatorResponse, error) {
-	evaluatorIDs := []int64{}
-	var err error
+    // 统一通过 tagDAO 获取分页与总数（即使无筛选条件也走该逻辑）
+    evaluatorIDs, total, err := r.tagDAO.GetSourceIDsByFilterConditions(
+        ctx,
+        int32(entity.EvaluatorTagKeyType_Evaluator),
+        req.FilterOption,
+        req.PageSize,
+        req.PageNum,
+        contexts.CtxLocale(ctx),
+    )
+    if err != nil {
+        return nil, err
+    }
+    if len(evaluatorIDs) == 0 {
+        return &repo.ListBuiltinEvaluatorResponse{TotalCount: total, Evaluators: []*entity.Evaluator{}}, nil
+    }
 
-	// 处理筛选条件
-	if req.FilterOption != nil {
-		// 检查是否有有效的筛选条件
-		hasValidFilters := false
+    // 基于获得的 ID 集查询内置评估器实体；此处不再做分页，避免与 tagDAO 的分页重复
+    daoReq := &mysql.ListBuiltinEvaluatorRequest{
+        IDs:      evaluatorIDs,
+        PageSize: 0,
+        PageNum:  0,
+        OrderBy:  []*mysql.OrderBy{{Field: "name", ByDesc: false}},
+    }
 
-		// 检查SearchKeyword是否有效
-		if req.FilterOption.SearchKeyword != nil && *req.FilterOption.SearchKeyword != "" {
-			hasValidFilters = true
-		}
-
-        // 检查FilterConditions或SubFilters是否有效
-        if req.FilterOption.Filters != nil {
-            if len(req.FilterOption.Filters.FilterConditions) > 0 {
-                hasValidFilters = true
-            }
-            if len(req.FilterOption.Filters.SubFilters) > 0 {
-                hasValidFilters = true
-            }
-        }
-
-		// 如果有有效的筛选条件，进行标签查询
-		if hasValidFilters {
-			// 使用EvaluatorTagDAO查询符合条件的evaluator IDs（不分页）
-			filteredIDs, _, err := r.tagDAO.GetSourceIDsByFilterConditions(ctx, int32(entity.EvaluatorTagKeyType_Evaluator), req.FilterOption, req.PageSize, req.PageNum, contexts.CtxLocale(ctx))
-			if err != nil {
-				return nil, err
-			}
-
-			if len(filteredIDs) == 0 {
-				return &repo.ListBuiltinEvaluatorResponse{
-					TotalCount: 0,
-					Evaluators: []*entity.Evaluator{},
-				}, nil
-			}
-
-			// 使用筛选后的IDs
-			evaluatorIDs = filteredIDs
-		}
-	}
-
-	// 构建DAO层查询请求（专用内置接口，默认按 name 排序）
-	daoReq := &mysql.ListBuiltinEvaluatorRequest{
-		IDs:      evaluatorIDs,
-		PageSize: req.PageSize,
-		PageNum:  req.PageNum,
-		OrderBy:  []*mysql.OrderBy{{Field: "name", ByDesc: false}},
-	}
-
-	// 调用DAO层查询
-	daoResp, err := r.evaluatorDao.ListBuiltinEvaluator(ctx, daoReq)
-	if err != nil {
-		return nil, err
-	}
+    daoResp, err := r.evaluatorDao.ListBuiltinEvaluator(ctx, daoReq)
+    if err != nil {
+        return nil, err
+    }
 
 	// 直接以 evaluatorID 为 source_id 批量查标签
 	var allTags []*model.EvaluatorTag
@@ -760,7 +732,7 @@ func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.
 		r.setEvaluatorTags(evaluatorDO, evaluatorPO.ID, tagsBySourceID)
 		evaluators = append(evaluators, evaluatorDO)
 	}
-	return &repo.ListBuiltinEvaluatorResponse{TotalCount: daoResp.TotalCount, Evaluators: evaluators}, nil
+    return &repo.ListBuiltinEvaluatorResponse{TotalCount: total, Evaluators: evaluators}, nil
 }
 
 // 已合并内置与普通查询至 BatchGetEvaluatorByVersionID(builtin)

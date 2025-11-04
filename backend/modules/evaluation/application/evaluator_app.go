@@ -1468,7 +1468,7 @@ func (e *EvaluatorHandlerImpl) CreateEvaluatorTemplate(ctx context.Context, requ
 	// 转换结果
 	template := evaluatorconvertor.ConvertEvaluatorTemplateDO2DTO(serviceResp.Template)
 
-    return &evaluatorservice.CreateEvaluatorTemplateResponse{
+	return &evaluatorservice.CreateEvaluatorTemplateResponse{
 		EvaluatorTemplate: template,
 	}, nil
 }

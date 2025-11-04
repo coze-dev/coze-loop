@@ -124,9 +124,10 @@ func (dao *EvaluatorTagDAOImpl) DeleteEvaluatorTagsByConditions(ctx context.Cont
 
 // GetSourceIDsByFilterConditions 根据筛选条件查询source_id列表，支持复杂的AND/OR逻辑和分页
 func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, langType string, opts ...db.Option) ([]int64, int64, error) {
-	if filterOption == nil {
-		return []int64{}, 0, nil
-	}
+    if filterOption == nil {
+        // 视为无筛选条件：统计并分页全部该 tagType 的 source_id（按 Name 排序）
+        filterOption = &entity.EvaluatorFilterOption{}
+    }
 
     dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
 
