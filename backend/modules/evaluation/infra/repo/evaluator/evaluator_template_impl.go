@@ -48,15 +48,15 @@ func (r *EvaluatorTemplateRepoImpl) ListEvaluatorTemplate(ctx context.Context, r
 			hasValidFilters = true
 		}
 
-        // 检查FilterConditions或SubFilters是否有效
-        if req.FilterOption.Filters != nil {
-            if len(req.FilterOption.Filters.FilterConditions) > 0 {
-                hasValidFilters = true
-            }
-            if len(req.FilterOption.Filters.SubFilters) > 0 {
-                hasValidFilters = true
-            }
-        }
+		// 检查FilterConditions或SubFilters是否有效
+		if req.FilterOption.Filters != nil {
+			if len(req.FilterOption.Filters.FilterConditions) > 0 {
+				hasValidFilters = true
+			}
+			if len(req.FilterOption.Filters.SubFilters) > 0 {
+				hasValidFilters = true
+			}
+		}
 
 		// 如果有有效的筛选条件，进行标签查询
 		if hasValidFilters {
@@ -216,82 +216,82 @@ func (r *EvaluatorTemplateRepoImpl) UpdateEvaluatorTemplate(ctx context.Context,
 		return nil, err
 	}
 
-    // 标签全量对齐：新增补充、删除不在集合内的，保持未变化的不动
-    // 此处 template 已在入参校验中判空，无需再判空
-    // 针对每种语言分别全量对齐
-    userID := session.UserIDInCtxOrEmpty(ctx)
-    for lang, tagMap := range template.Tags {
-			existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{template.ID}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), string(lang))
-			if err != nil {
+	// 标签全量对齐：新增补充、删除不在集合内的，保持未变化的不动
+	// 此处 template 已在入参校验中判空，无需再判空
+	// 针对每种语言分别全量对齐
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	for lang, tagMap := range template.Tags {
+		existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{template.ID}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), string(lang))
+		if err != nil {
+			return nil, err
+		}
+		existing := make(map[string]map[string]bool)
+		for _, t := range existingTags {
+			if _, ok := existing[t.TagKey]; !ok {
+				existing[t.TagKey] = make(map[string]bool)
+			}
+			existing[t.TagKey][t.TagValue] = true
+		}
+		target := make(map[string]map[string]bool)
+		for k, vs := range tagMap {
+			kstr := string(k)
+			if _, ok := target[kstr]; !ok {
+				target[kstr] = make(map[string]bool)
+			}
+			for _, v := range vs {
+				target[kstr][v] = true
+			}
+		}
+		del := make(map[string][]string)
+		for k, vals := range existing {
+			for v := range vals {
+				if !target[k][v] {
+					del[k] = append(del[k], v)
+				}
+			}
+		}
+		if len(del) > 0 {
+			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, template.ID, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), string(lang), del); err != nil {
 				return nil, err
 			}
-			existing := make(map[string]map[string]bool)
-			for _, t := range existingTags {
-				if _, ok := existing[t.TagKey]; !ok {
-					existing[t.TagKey] = make(map[string]bool)
-				}
-				existing[t.TagKey][t.TagValue] = true
-			}
-			target := make(map[string]map[string]bool)
-			for k, vs := range tagMap {
-				kstr := string(k)
-				if _, ok := target[kstr]; !ok {
-					target[kstr] = make(map[string]bool)
-				}
-				for _, v := range vs {
-					target[kstr][v] = true
-    }
-			del := make(map[string][]string)
-			for k, vals := range existing {
-				for v := range vals {
-					if !target[k][v] {
-						del[k] = append(del[k], v)
-					}
+		}
+		add := make(map[string][]string)
+		for k, vals := range target {
+			for v := range vals {
+				if !existing[k][v] {
+					add[k] = append(add[k], v)
 				}
 			}
-			if len(del) > 0 {
-				if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, template.ID, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), string(lang), del); err != nil {
+		}
+		if len(add) > 0 {
+			total := 0
+			for _, vs := range add {
+				total += len(vs)
+			}
+			if total > 0 {
+				ids, err := r.idgen.GenMultiIDs(ctx, total)
+				if err != nil {
 					return nil, err
 				}
-			}
-			add := make(map[string][]string)
-			for k, vals := range target {
-				for v := range vals {
-					if !existing[k][v] {
-						add[k] = append(add[k], v)
+				idx := 0
+				evaluatorTags := make([]*model.EvaluatorTag, 0, total)
+				for k, vs := range add {
+					for _, v := range vs {
+						evaluatorTags = append(evaluatorTags, &model.EvaluatorTag{
+							ID:        ids[idx],
+							SourceID:  template.ID,
+							TagType:   int32(entity.EvaluatorTagKeyType_EvaluatorTemplate),
+							TagKey:    k,
+							TagValue:  v,
+							LangType:  string(lang),
+							CreatedBy: userID,
+							UpdatedBy: userID,
+						})
+						idx++
 					}
 				}
-			}
-			if len(add) > 0 {
-				total := 0
-				for _, vs := range add {
-					total += len(vs)
-				}
-				if total > 0 {
-					ids, err := r.idgen.GenMultiIDs(ctx, total)
-					if err != nil {
-						return nil, err
-					}
-					idx := 0
-					evaluatorTags := make([]*model.EvaluatorTag, 0, total)
-					for k, vs := range add {
-						for _, v := range vs {
-							evaluatorTags = append(evaluatorTags, &model.EvaluatorTag{
-								ID:        ids[idx],
-								SourceID:  template.ID,
-								TagType:   int32(entity.EvaluatorTagKeyType_EvaluatorTemplate),
-								TagKey:    k,
-								TagValue:  v,
-								LangType:  string(lang),
-								CreatedBy: userID,
-								UpdatedBy: userID,
-							})
-							idx++
-						}
-					}
-					if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorTags); err != nil {
-						return nil, err
-					}
+				if err := r.tagDAO.BatchCreateEvaluatorTags(ctx, evaluatorTags); err != nil {
+					return nil, err
 				}
 			}
 		}
