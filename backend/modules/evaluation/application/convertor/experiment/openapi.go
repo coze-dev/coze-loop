@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Bytedance Ltd. and/or its affiliates
+// Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package experiment
@@ -313,17 +313,6 @@ func DomainUserInfoDTO2OpenAPI(info *domainCommon.UserInfo) *openapiCommon.UserI
 	}
 }
 
-func convertInt64SliceToStringSlice(values []int64) []string {
-	if len(values) == 0 {
-		return nil
-	}
-	result := make([]string, 0, len(values))
-	for _, v := range values {
-		result = append(result, strconv.FormatInt(v, 10))
-	}
-	return result
-}
-
 func mapExperimentStatus(status *domainExpt.ExptStatus) *openapiExperiment.ExperimentStatus {
 	if status == nil {
 		return nil
@@ -350,99 +339,7 @@ func mapExperimentStatus(status *domainExpt.ExptStatus) *openapiExperiment.Exper
 	return &openapiStatus
 }
 
-func mapExperimentType(exptType domainExpt.ExptType) openapiExperiment.ExperimentType {
-	switch exptType {
-	case domainExpt.ExptType_Online:
-		return openapiExperiment.ExperimentTypeOnline
-	default:
-		return openapiExperiment.ExperimentTypeOffline
-	}
-}
-
 // ---------- Column Result Converters ----------
-
-func DomainColumnEvalSetFieldsDTO2OpenAPI(fields []*domainExpt.ColumnEvalSetField) []*openapiExperiment.ColumnEvalSetField {
-	if len(fields) == 0 {
-		return nil
-	}
-	result := make([]*openapiExperiment.ColumnEvalSetField, 0, len(fields))
-	for _, field := range fields {
-		if field == nil {
-			continue
-		}
-		result = append(result, &openapiExperiment.ColumnEvalSetField{
-			Key:         field.Key,
-			Name:        field.Name,
-			Description: field.Description,
-			ContentType: convertContentTypeToOpenAPI(field.ContentType),
-			TextSchema:  field.TextSchema,
-		})
-	}
-	return result
-}
-
-func DomainColumnEvaluatorsDTO2OpenAPI(columnEvaluators []*domainExpt.ColumnEvaluator) []*openapiExperiment.ColumnEvaluator {
-	if len(columnEvaluators) == 0 {
-		return nil
-	}
-	result := make([]*openapiExperiment.ColumnEvaluator, 0, len(columnEvaluators))
-	for _, evaluator := range columnEvaluators {
-		if evaluator == nil {
-			continue
-		}
-		result = append(result, &openapiExperiment.ColumnEvaluator{
-			EvaluatorVersionID: gptr.Of(evaluator.EvaluatorVersionID),
-			EvaluatorID:        gptr.Of(evaluator.EvaluatorID),
-			EvaluatorType:      mapEvaluatorType(&evaluator.EvaluatorType),
-			Name:               evaluator.Name,
-			Version:            evaluator.Version,
-			Description:        evaluator.Description,
-		})
-	}
-	return result
-}
-
-func convertInt64PtrToStringPtr(value *int64) *string {
-	if value == nil {
-		return nil
-	}
-	str := strconv.FormatInt(*value, 10)
-	return &str
-}
-
-func mapEvaluatorType(typ *domainEvaluator.EvaluatorType) *openapiEvaluator.EvaluatorType {
-	if typ == nil {
-		return nil
-	}
-	var openapiType openapiEvaluator.EvaluatorType
-	switch *typ {
-	case domainEvaluator.EvaluatorType_Prompt:
-		openapiType = openapiEvaluator.EvaluatorTypePrompt
-	case domainEvaluator.EvaluatorType_Code:
-		openapiType = openapiEvaluator.EvaluatorTypeCode
-	}
-	return &openapiType
-}
-
-func convertContentTypeToOpenAPI(contentType *domainCommon.ContentType) *openapiCommon.ContentType {
-	if contentType == nil {
-		return nil
-	}
-	var openapiContentType openapiCommon.ContentType
-	switch *contentType {
-	case domainCommon.ContentTypeText:
-		openapiContentType = openapiCommon.ContentTypeText
-	case domainCommon.ContentTypeImage:
-		openapiContentType = openapiCommon.ContentTypeImage
-	case domainCommon.ContentTypeAudio:
-		openapiContentType = openapiCommon.ContentTypeAudio
-	case domainCommon.ContentTypeMultiPart:
-		openapiContentType = openapiCommon.ContentTypeMultiPart
-	default:
-		openapiContentType = openapiCommon.ContentTypeText
-	}
-	return &openapiContentType
-}
 
 func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experiment {
 	if experiment == nil {

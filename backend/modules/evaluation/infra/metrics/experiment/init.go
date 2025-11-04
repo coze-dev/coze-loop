@@ -57,7 +57,6 @@ func NewExperimentMetric(meter imetrics.Meter) metrics.ExptMetric {
 		}
 	})
 	return exptMetricsImpl
-
 }
 
 type ExperimentMetricImpl struct {

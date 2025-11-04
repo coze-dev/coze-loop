@@ -68,7 +68,8 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	manager service.IExptManager,
 	resultSvc service.ExptResultService,
 	aggResultSvc service.ExptAggrResultService,
-	evaluatorService service.EvaluatorService) IEvalOpenAPIApplication {
+	evaluatorService service.EvaluatorService,
+) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
 		publisher:                   publisher,
@@ -897,7 +898,7 @@ func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
-	if aggrResults == nil || len(aggrResults) == 0 {
+	if len(aggrResults) == 0 {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("experiment aggr result not found"))
 	}
 	aggrResult := aggrResults[0]
