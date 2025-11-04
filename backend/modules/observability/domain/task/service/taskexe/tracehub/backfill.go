@@ -6,6 +6,7 @@ package tracehub
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -37,33 +38,33 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	ctx = h.fillCtx(ctx)
 	logs.CtxInfo(ctx, "BackFill msg %+v", event)
 
-	//var (
-	//	lockKey    string
-	//	lockCancel func()
-	//)
-	//if h.locker != nil && event != nil {
-	//	lockKey = fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
-	//	locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, backfillLockTTL, backfillLockMaxHold)
-	//	if lockErr != nil {
-	//		logs.CtxError(ctx, "backfill acquire lock failed", "task_id", event.TaskID, "err", lockErr)
-	//		return lockErr
-	//	}
-	//	if !locked {
-	//		logs.CtxInfo(ctx, "backfill lock held by others, skip execution", "task_id", event.TaskID)
-	//		return nil
-	//	}
-	//	lockCancel = cancel
-	//	ctx = lockCtx
-	//	defer func(cancel func()) {
-	//		if cancel != nil {
-	//			cancel()
-	//		} else if lockKey != "" {
-	//			if _, err := h.locker.Unlock(lockKey); err != nil {
-	//				logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
-	//			}
-	//		}
-	//	}(lockCancel)
-	//}
+	var (
+		lockKey    string
+		lockCancel func()
+	)
+	if h.locker != nil && event != nil {
+		lockKey = fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
+		locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, backfillLockTTL, backfillLockMaxHold)
+		if lockErr != nil {
+			logs.CtxError(ctx, "backfill acquire lock failed", "task_id", event.TaskID, "err", lockErr)
+			return lockErr
+		}
+		if !locked {
+			logs.CtxInfo(ctx, "backfill lock held by others, skip execution", "task_id", event.TaskID)
+			return nil
+		}
+		lockCancel = cancel
+		ctx = lockCtx
+		defer func(cancel func()) {
+			if cancel != nil {
+				cancel()
+			} else if lockKey != "" {
+				if _, err := h.locker.Unlock(lockKey); err != nil {
+					logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
+				}
+			}
+		}(lockCancel)
+	}
 
 	sub, err := h.setBackfillTask(ctx, event)
 	if err != nil {
@@ -74,16 +75,16 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 		ctx = session.WithCtxUser(ctx, &session.User{ID: sub.t.GetBaseInfo().GetCreatedBy().GetUserID()})
 	}
 
-	// 2. Determine whether the backfill task is completed to avoid repeated execution
-	//isDone, err := h.isBackfillDone(ctx, sub)
-	//if err != nil {
-	//	logs.CtxError(ctx, "check backfill task done failed, task_id=%d, err=%v", sub.t.GetID(), err)
-	//	return err
-	//}
-	//if isDone {
-	//	logs.CtxInfo(ctx, "backfill already completed, task_id=%d", sub.t.GetID())
-	//	return nil
-	//}
+	//2. Determine whether the backfill task is completed to avoid repeated execution
+	isDone, err := h.isBackfillDone(ctx, sub)
+	if err != nil {
+		logs.CtxError(ctx, "check backfill task done failed, task_id=%d, err=%v", sub.t.GetID(), err)
+		return err
+	}
+	if isDone {
+		logs.CtxInfo(ctx, "backfill already completed, task_id=%d", sub.t.GetID())
+		return nil
+	}
 
 	// 顺序执行时重置 flush 错误收集器
 	h.flushErrLock.Lock()
