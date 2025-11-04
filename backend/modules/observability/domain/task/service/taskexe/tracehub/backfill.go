@@ -75,7 +75,7 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 		ctx = session.WithCtxUser(ctx, &session.User{ID: sub.t.GetBaseInfo().GetCreatedBy().GetUserID()})
 	}
 
-	//2. Determine whether the backfill task is completed to avoid repeated execution
+	// 2. Determine whether the backfill task is completed to avoid repeated execution
 	isDone, err := h.isBackfillDone(ctx, sub)
 	if err != nil {
 		logs.CtxError(ctx, "check backfill task done failed, task_id=%d, err=%v", sub.t.GetID(), err)
