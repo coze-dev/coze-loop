@@ -307,7 +307,7 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 			totalCount += int64(len(spans))
 			logs.CtxInfo(ctx, "processed %d spans, total=%d, task_id=%d", len(spans), totalCount, sub.t.GetID())
 		}
-		logs.CtxInfo(ctx, "result.PageToken:%v", result.PageToken)
+		logs.CtxInfo(ctx, "result.PageToken:%s, hasMore:%v", result.PageToken, result.HasMore)
 		if !result.HasMore {
 			logs.CtxInfo(ctx, "completed listing spans, total_count=%d, task_id=%d", totalCount, sub.t.GetID())
 			break
