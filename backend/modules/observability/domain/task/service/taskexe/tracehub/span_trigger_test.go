@@ -96,6 +96,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		},
 	}
 
+	mockRepo.EXPECT().ListNonFinalTaskBySpaceID(gomock.Any(), gomock.Any()).Return([]int64{taskDO.ID}, nil).AnyTimes()
+
 	configLoader.EXPECT().UnmarshalKey(gomock.Any(), "consumer_listening", gomock.Any()).DoAndReturn(
 		func(_ context.Context, _ string, value any, _ ...pkgconf.DecodeOptionFn) error {
 			cfg := value.(*componentconfig.ConsumerListening)
@@ -123,7 +125,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 
 	proc := &stubProcessor{invokeErr: errors.New("invoke error"), createTaskRunErr: errors.New("create run error")}
 	taskProcessor := processor.NewTaskProcessor()
-	taskProcessor.Register(task.TaskTypeAutoEval, proc)
+	taskProcessor.Register(entity.TaskTypeAutoEval, proc)
 
 	impl := &TraceHubServiceImpl{
 		taskRepo:      mockRepo,

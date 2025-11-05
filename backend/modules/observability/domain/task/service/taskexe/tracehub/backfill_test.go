@@ -43,7 +43,7 @@ func TestTraceHubServiceImpl_SetBackfillTask(t *testing.T) {
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	taskProcessor := processor.NewTaskProcessor()
 	proc := &stubProcessor{}
-	taskProcessor.Register(task.TaskTypeAutoEval, proc)
+	taskProcessor.Register(entity.TaskTypeAutoEval, proc)
 
 	impl := &TraceHubServiceImpl{
 		taskRepo:      mockRepo,

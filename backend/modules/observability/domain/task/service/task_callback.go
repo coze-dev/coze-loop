@@ -1,7 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package tracehub
+package service
 
 import (
 	"context"
@@ -11,20 +11,21 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/samber/lo"
 )
 
-func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
+func (h *tracehub.TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
 	for _, turn := range event.TurnEvalResults {
 		workspaceIDStr, workspaceID := turn.GetWorkspaceIDFromExt()
 		tenants, err := h.getTenants(ctx, loop_span.PlatformType("callback_all"))
 		if err != nil {
 			return err
 		}
-		var storageDuration int64 = 1
+		storageDuration := h.config.GetTraceDataMaxDurationDay(ctx, loop_span.PlatformDefault)
 		res, err := h.benefitSvc.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
 			ConnectorUID: turn.BaseInfo.CreatedBy.UserID,
 			SpaceID:      workspaceID,
@@ -33,7 +34,7 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 			logs.CtxWarn(ctx, "fail to check trace benefit, %v", err)
 		} else if res == nil {
 			logs.CtxWarn(ctx, "fail to get trace benefit, got nil response")
-		} else if res != nil {
+		} else {
 			storageDuration = res.StorageDuration
 		}
 
@@ -99,7 +100,7 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 	return nil
 }
 
-func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.CorrectionEvent) error {
+func (h *tracehub.TraceHubServiceImpl) Correction(ctx context.Context, event *entity.CorrectionEvent) error {
 	workspaceIDStr, workspaceID := event.GetWorkspaceIDFromExt()
 	if workspaceID == 0 {
 		return fmt.Errorf("workspace_id is empty")

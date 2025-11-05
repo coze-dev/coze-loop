@@ -32,14 +32,14 @@ func newTrackingProcessor() *trackingProcessor {
 	return &trackingProcessor{stubProcessor: &stubProcessor{}}
 }
 
-func (p *trackingProcessor) OnFinishTaskChange(ctx context.Context, req taskexe.OnTaskFinishedReq) error {
+func (p *trackingProcessor) OnTaskFinished(ctx context.Context, req taskexe.OnTaskFinishedReq) error {
 	p.finishReqs = append(p.finishReqs, req)
-	return p.stubProcessor.OnFinishTaskChange(ctx, req)
+	return p.stubProcessor.OnTaskFinished(ctx, req)
 }
 
-func (p *trackingProcessor) OnCreateTaskRunChange(ctx context.Context, req taskexe.OnTaskRunCreatedReq) error {
+func (p *trackingProcessor) OnTaskRunCreated(ctx context.Context, req taskexe.OnTaskRunCreatedReq) error {
 	p.createRunReqs = append(p.createRunReqs, req)
-	return p.stubProcessor.OnCreateTaskRunChange(ctx, req)
+	return p.stubProcessor.OnTaskRunCreated(ctx, req)
 }
 
 func (p *trackingProcessor) OnTaskUpdated(ctx context.Context, obsTask *entity.ObservabilityTask, status entity.TaskStatus) error {
@@ -142,7 +142,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				require.Len(t, proc.createRunReqs, 1)
 				require.Equal(t, entity.TaskRunTypeNewData, proc.createRunReqs[0].RunType)
 				require.Len(t, proc.updateStatuses, 1)
-				require.Equal(t, string(entity.TaskStatusRunning), proc.updateStatuses[0])
+				require.Equal(t, entity.TaskStatusRunning, proc.updateStatuses[0])
 			},
 		},
 		{
@@ -336,9 +336,26 @@ func TestTraceHubServiceImpl_syncTaskCache(t *testing.T) {
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
 	impl.taskCache.Store("ObjListWithTask", TaskCacheInfo{})
 
-	workspaceIDs := []string{"space-1"}
+	tasks := []*entity.ObservabilityTask{
+		{
+			ID:          100,
+			WorkspaceID: 1,
+			SpanFilter: &entity.SpanFilterFields{
+				Filters: loop_span.FilterFields{
+					FilterFields: []*loop_span.FilterField{
+						{
+							FieldName: "bot_id",
+							Values:    []string{"bot-1"},
+						},
+					},
+				},
+			},
+		},
+	}
+	workspaceIDs := []string{"1"}
 	botIDs := []string{"bot-1"}
-	tasks := []*entity.ObservabilityTask{{ID: 100}}
+
+	mockRepo.EXPECT().ListNonFinalTasks(gomock.Any()).Return(tasks, nil)
 
 	before := time.Now()
 	impl.syncTaskCache()

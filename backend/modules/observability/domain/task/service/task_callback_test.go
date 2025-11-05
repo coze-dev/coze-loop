@@ -1,7 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package tracehub
+package service
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -33,7 +34,7 @@ func TestTraceHubServiceImpl_CallBackSuccess(t *testing.T) {
 	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
 	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
 
-	impl := &TraceHubServiceImpl{
+	impl := &tracehub.TraceHubServiceImpl{
 		benefitSvc:     mockBenefit,
 		tenantProvider: mockTenant,
 		traceRepo:      mockTraceRepo,
@@ -98,7 +99,7 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
 	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
 
-	impl := &TraceHubServiceImpl{
+	impl := &tracehub.TraceHubServiceImpl{
 		benefitSvc:     mockBenefit,
 		tenantProvider: mockTenant,
 		traceRepo:      mockTraceRepo,

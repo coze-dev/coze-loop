@@ -54,7 +54,7 @@ func (s *stubProcessor) OnTaskUpdated(context.Context, *entity.ObservabilityTask
 	return s.updateErr
 }
 
-func (s *stubProcessor) OnFinishTaskChange(_ context.Context, req taskexe.OnTaskFinishedReq) error {
+func (s *stubProcessor) OnTaskFinished(_ context.Context, req taskexe.OnTaskFinishedReq) error {
 	idx := len(s.finishChangeReqs)
 	s.finishChangeReqs = append(s.finishChangeReqs, req)
 	s.finishChangeInvoked++
@@ -64,7 +64,7 @@ func (s *stubProcessor) OnFinishTaskChange(_ context.Context, req taskexe.OnTask
 	return s.finishErr
 }
 
-func (s *stubProcessor) OnCreateTaskRunChange(_ context.Context, req taskexe.OnTaskRunCreatedReq) error {
+func (s *stubProcessor) OnTaskRunCreated(_ context.Context, req taskexe.OnTaskRunCreatedReq) error {
 	s.createTaskRunReqs = append(s.createTaskRunReqs, req)
 	idx := len(s.createTaskRunReqs) - 1
 	if idx >= 0 && idx < len(s.createTaskRunErrSeq) {
@@ -75,7 +75,7 @@ func (s *stubProcessor) OnCreateTaskRunChange(_ context.Context, req taskexe.OnT
 	return s.createTaskRunErr
 }
 
-func (s *stubProcessor) OnFinishTaskRunChange(context.Context, taskexe.OnTaskRunFinishedReq) error {
+func (s *stubProcessor) OnTaskRunFinished(context.Context, taskexe.OnTaskRunFinishedReq) error {
 	return s.finishTaskRunErr
 }
 
