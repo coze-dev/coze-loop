@@ -92,3 +92,6 @@ func (p *Session) IsValid() error {
 func (p *RuntimeParam) IsValid() error {
 	return nil
 }
+func (p *RateLimit) IsValid() error {
+	return nil
+}

@@ -35,6 +35,7 @@ type CustomRPCEvaluatorVersion struct {
 	ServiceName           *string        `json:"service_name"`
 	Cluster               *string        `json:"cluster"`
 	Timeout               *int64         `json:"timeout"` // timeout duration in milliseconds(ms)
+	RateLimit             *RateLimit     `json:"rate_limit,omitempty"`
 }
 
 func (do *CustomRPCEvaluatorVersion) SetID(id int64) {

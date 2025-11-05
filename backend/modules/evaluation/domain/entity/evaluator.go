@@ -437,3 +437,13 @@ func (e *Evaluator) SetEvaluatorVersion(version *Evaluator) {
 		return
 	}
 }
+
+func (e *Evaluator) GetRateLimit() *RateLimit {
+	switch e.EvaluatorType {
+	case EvaluatorTypeCustomRPC:
+		if e.CustomRPCEvaluatorVersion != nil {
+			return e.CustomRPCEvaluatorVersion.RateLimit
+		}
+	}
+	return nil
+}

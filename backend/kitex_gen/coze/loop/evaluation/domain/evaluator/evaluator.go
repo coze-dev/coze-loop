@@ -1982,6 +1982,8 @@ type CustomRPCEvaluator struct {
 	Cluster        *string        `thrift:"cluster,4,optional" frugal:"4,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
 	// ms
 	Timeout *int64 `thrift:"timeout,10,optional" frugal:"10,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
+	// 自定义评估器的限流配置
+	RateLimit *common.RateLimit `thrift:"rate_limit,11,optional" frugal:"11,optional,common.RateLimit" form:"rate_limit" json:"rate_limit,omitempty" query:"rate_limit"`
 }
 
 func NewCustomRPCEvaluator() *CustomRPCEvaluator {
@@ -2045,6 +2047,18 @@ func (p *CustomRPCEvaluator) GetTimeout() (v int64) {
 	}
 	return *p.Timeout
 }
+
+var CustomRPCEvaluator_RateLimit_DEFAULT *common.RateLimit
+
+func (p *CustomRPCEvaluator) GetRateLimit() (v *common.RateLimit) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRateLimit() {
+		return CustomRPCEvaluator_RateLimit_DEFAULT
+	}
+	return p.RateLimit
+}
 func (p *CustomRPCEvaluator) SetProviderEvaluatorCode(val *string) {
 	p.ProviderEvaluatorCode = val
 }
@@ -2060,6 +2074,9 @@ func (p *CustomRPCEvaluator) SetCluster(val *string) {
 func (p *CustomRPCEvaluator) SetTimeout(val *int64) {
 	p.Timeout = val
 }
+func (p *CustomRPCEvaluator) SetRateLimit(val *common.RateLimit) {
+	p.RateLimit = val
+}
 
 var fieldIDToName_CustomRPCEvaluator = map[int16]string{
 	1:  "provider_evaluator_code",
@@ -2067,6 +2084,7 @@ var fieldIDToName_CustomRPCEvaluator = map[int16]string{
 	3:  "service_name",
 	4:  "cluster",
 	10: "timeout",
+	11: "rate_limit",
 }
 
 func (p *CustomRPCEvaluator) IsSetProviderEvaluatorCode() bool {
@@ -2083,6 +2101,10 @@ func (p *CustomRPCEvaluator) IsSetCluster() bool {
 
 func (p *CustomRPCEvaluator) IsSetTimeout() bool {
 	return p.Timeout != nil
+}
+
+func (p *CustomRPCEvaluator) IsSetRateLimit() bool {
+	return p.RateLimit != nil
 }
 
 func (p *CustomRPCEvaluator) Read(iprot thrift.TProtocol) (err error) {
@@ -2140,6 +2162,14 @@ func (p *CustomRPCEvaluator) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2235,6 +2265,14 @@ func (p *CustomRPCEvaluator) ReadField10(iprot thrift.TProtocol) error {
 	p.Timeout = _field
 	return nil
 }
+func (p *CustomRPCEvaluator) ReadField11(iprot thrift.TProtocol) error {
+	_field := common.NewRateLimit()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RateLimit = _field
+	return nil
+}
 
 func (p *CustomRPCEvaluator) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2260,6 +2298,10 @@ func (p *CustomRPCEvaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -2368,6 +2410,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *CustomRPCEvaluator) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRateLimit() {
+		if err = oprot.WriteFieldBegin("rate_limit", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RateLimit.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 
 func (p *CustomRPCEvaluator) String() string {
 	if p == nil {
@@ -2396,6 +2456,9 @@ func (p *CustomRPCEvaluator) DeepEqual(ano *CustomRPCEvaluator) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.Timeout) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.RateLimit) {
 		return false
 	}
 	return true
@@ -2452,6 +2515,13 @@ func (p *CustomRPCEvaluator) Field10DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.Timeout != *src {
+		return false
+	}
+	return true
+}
+func (p *CustomRPCEvaluator) Field11DeepEqual(src *common.RateLimit) bool {
+
+	if !p.RateLimit.DeepEqual(src) {
 		return false
 	}
 	return true

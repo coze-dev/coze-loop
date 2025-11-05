@@ -93,6 +93,7 @@ struct CustomRPCEvaluator {
     4: optional string cluster
 
     10: optional i64 timeout    // ms
+    11: optional common.RateLimit rate_limit     // 自定义评估器的限流配置
 }
 
 struct EvaluatorVersion {

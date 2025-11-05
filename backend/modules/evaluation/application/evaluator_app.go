@@ -247,7 +247,10 @@ func (e *EvaluatorHandlerImpl) CreateEvaluator(ctx context.Context, request *eva
 		e.metrics.EmitCreate(request.GetEvaluator().GetWorkspaceID(), err)
 	}()
 	// 转换请求参数为领域对象
-	evaluatorDO := evaluatorconvertor.ConvertEvaluatorDTO2DO(request.GetEvaluator())
+	evaluatorDO, err := evaluatorconvertor.ConvertEvaluatorDTO2DO(request.GetEvaluator())
+	if err != nil {
+		return nil, err
+	}
 
 	// 统一走 CreateEvaluator，是否创建tag由repo层依据 do.Builtin 决定
 	var evaluatorID int64
@@ -449,7 +452,11 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 	evaluatorDTO := evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
 	evaluatorDTO.CurrentVersion.EvaluatorContent = request.EvaluatorContent
 	evaluatorDTO.DraftSubmitted = ptr.Of(false)
-	err = e.evaluatorService.UpdateEvaluatorDraft(ctx, evaluatorconvertor.ConvertEvaluatorDTO2DO(evaluatorDTO))
+	evaluatorDO, err = evaluatorconvertor.ConvertEvaluatorDTO2DO(evaluatorDTO)
+	if err != nil {
+		return nil, err
+	}
+	err = e.evaluatorService.UpdateEvaluatorDraft(ctx, evaluatorDO)
 	if err != nil {
 		return nil, err
 	}
@@ -959,7 +966,10 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 			EvaluatorContent: request.EvaluatorContent,
 		},
 	}
-	do := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
+	do, err := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
+	if err != nil {
+		return nil, err
+	}
 	inputData := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
 	outputData, err := e.evaluatorService.DebugEvaluator(ctx, do, inputData, request.WorkspaceID)
 	if err != nil {
@@ -1289,7 +1299,10 @@ func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request 
 			EvaluatorContent: request.EvaluatorContent,
 		},
 	}
-	evaluatorDO := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
+	evaluatorDO, err := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
+	if err != nil {
+		return nil, err
+	}
 
 	// 并发调试处理
 	return e.batchDebugWithConcurrency(ctx, evaluatorDO, request.InputData, request.WorkspaceID)

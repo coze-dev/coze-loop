@@ -6,6 +6,7 @@ package common
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -378,4 +379,38 @@ func ConvertFieldDisplayFormatDTO2DO(fdf int64) commonentity.FieldDisplayFormat 
 // ConvertFieldDisplayFormatDO2DTO 将 FieldDisplayFormat 枚举转换为 DTO 类型
 func ConvertFieldDisplayFormatDO2DTO(fdf commonentity.FieldDisplayFormat) int64 {
 	return int64(fdf)
+}
+
+func ConvertRateLimitDO2DTO(rateLimit *commonentity.RateLimit) *commondto.RateLimit {
+	if rateLimit == nil {
+		return nil
+	}
+	var period *string = nil
+	if rateLimit.Period != nil {
+		period = gptr.Of(rateLimit.Period.String())
+	}
+	return &commondto.RateLimit{
+		Rate:   rateLimit.Rate,
+		Burst:  rateLimit.Burst,
+		Period: period,
+	}
+}
+
+func ConvertRateLimitDTO2DO(limit *commondto.RateLimit) (*commonentity.RateLimit, error) {
+	if limit == nil {
+		return nil, nil
+	}
+	var period *time.Duration = nil
+	if limit.Period != nil {
+		p, err := time.ParseDuration(*limit.Period)
+		if err != nil {
+			return nil, err
+		}
+		period = gptr.Of(p)
+	}
+	return &commonentity.RateLimit{
+		Rate:   limit.Rate,
+		Burst:  limit.Burst,
+		Period: period,
+	}, nil
 }
