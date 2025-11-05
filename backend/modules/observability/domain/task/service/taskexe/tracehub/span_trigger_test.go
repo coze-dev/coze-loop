@@ -13,6 +13,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	taskconvertor "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	componentconfig "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
@@ -188,19 +189,19 @@ func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) 
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          303,
@@ -265,19 +266,19 @@ func TestTraceHubServiceImpl_preDispatchHandlesMissingTaskRunConfig(t *testing.T
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusRunning),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusRunning),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, nil)
 
@@ -325,19 +326,19 @@ func TestTraceHubServiceImpl_preDispatchHandlesNonCycle(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          707,
@@ -394,19 +395,19 @@ func TestTraceHubServiceImpl_preDispatchHandlesCycleDefaultUnit(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, nil)
 
@@ -456,19 +457,19 @@ func TestTraceHubServiceImpl_preDispatchTimeLimitFinishError(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusRunning),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusRunning),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          1101,
@@ -523,19 +524,19 @@ func TestTraceHubServiceImpl_preDispatchSampleLimitFinishError(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusRunning),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusRunning),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          1404,
@@ -590,19 +591,19 @@ func TestTraceHubServiceImpl_preDispatchCycleTimeLimitFinishError(t *testing.T) 
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusRunning),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusRunning),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          1707,
@@ -657,19 +658,19 @@ func TestTraceHubServiceImpl_preDispatchCycleCountFinishError(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusRunning),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusRunning),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          2009,
@@ -720,19 +721,19 @@ func TestTraceHubServiceImpl_preDispatchCreativeError(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
 	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
@@ -741,6 +742,10 @@ func TestTraceHubServiceImpl_preDispatchCreativeError(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorContains(t, err, "creative fail")
 	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
+}
+
+func toObservabilityTask(dto *task.Task) *entity.ObservabilityTask {
+	return taskconvertor.TaskDTO2DO(dto)
 }
 
 func TestTraceHubServiceImpl_preDispatchAggregatesErrors(t *testing.T) {
@@ -759,22 +764,22 @@ func TestTraceHubServiceImpl_preDispatchAggregatesErrors(t *testing.T) {
 		CycleTimeUnit: &firstSamplerUnit,
 	}
 	firstSub := &spanSubscriber{
-		taskID: 11,
-		t: &task.Task{
-			ID:          ptr.Of(int64(11)),
-			WorkspaceID: ptr.Of(int64(21)),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
-			Rule: &task.Rule{
-				EffectiveTime: &task.EffectiveTime{StartAt: ptr.Of(firstStartAt), EndAt: ptr.Of(now.Add(time.Hour).UnixMilli())},
-				Sampler:       firstSampler,
-			},
-			BaseInfo: &common.BaseInfo{},
-		},
+		taskID:    11,
 		processor: firstProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	firstSub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(int64(11)),
+		WorkspaceID: ptr.Of(int64(21)),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+		Rule: &task.Rule{
+			EffectiveTime: &task.EffectiveTime{StartAt: ptr.Of(firstStartAt), EndAt: ptr.Of(now.Add(time.Hour).UnixMilli())},
+			Sampler:       firstSampler,
+		},
+		BaseInfo: &common.BaseInfo{},
+	})
 
 	secondStartAt := now.Add(-2 * time.Hour).UnixMilli()
 	secondEndAt := now.Add(-time.Minute).UnixMilli()
@@ -798,22 +803,22 @@ func TestTraceHubServiceImpl_preDispatchAggregatesErrors(t *testing.T) {
 	}
 	secondProc := &stubProcessor{finishErrSeq: []error{errors.New("second fail")}}
 	secondSub := &spanSubscriber{
-		taskID: secondTaskID,
-		t: &task.Task{
-			ID:          ptr.Of(secondTaskID),
-			WorkspaceID: ptr.Of(secondWorkspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusRunning),
-			Rule: &task.Rule{
-				EffectiveTime: &task.EffectiveTime{StartAt: ptr.Of(secondStartAt), EndAt: ptr.Of(secondEndAt)},
-				Sampler:       secondSampler,
-			},
-			BaseInfo: &common.BaseInfo{},
-		},
+		taskID:    secondTaskID,
 		processor: secondProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	secondSub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(secondTaskID),
+		WorkspaceID: ptr.Of(secondWorkspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusRunning),
+		Rule: &task.Rule{
+			EffectiveTime: &task.EffectiveTime{StartAt: ptr.Of(secondStartAt), EndAt: ptr.Of(secondEndAt)},
+			Sampler:       secondSampler,
+		},
+		BaseInfo: &common.BaseInfo{},
+	})
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), secondTaskID).Return(secondRun, nil)
 	mockRepo.EXPECT().GetTaskCount(gomock.Any(), secondTaskID).Return(int64(0), nil)
@@ -857,19 +862,19 @@ func TestTraceHubServiceImpl_preDispatchUpdateError(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
 	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
@@ -903,19 +908,19 @@ func TestTraceHubServiceImpl_preDispatchListTaskRunError(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusRunning),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusRunning),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, errors.New("repo fail"))
 
@@ -953,19 +958,19 @@ func TestTraceHubServiceImpl_preDispatchTaskRunConfigDay(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusRunning),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusRunning),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, nil)
 
@@ -1010,19 +1015,19 @@ func TestTraceHubServiceImpl_preDispatchCycleCreativeError(t *testing.T) {
 	}
 
 	sub := &spanSubscriber{
-		taskID: taskID,
-		t: &task.Task{
-			ID:          ptr.Of(taskID),
-			WorkspaceID: ptr.Of(workspaceID),
-			TaskType:    task.TaskTypeAutoEval,
-			TaskStatus:  ptr.Of(task.TaskStatusRunning),
-			Rule:        rule,
-			BaseInfo:    &common.BaseInfo{},
-		},
+		taskID:    taskID,
 		processor: stubProc,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusRunning),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
 
 	taskRunConfig := &entity.TaskRun{
 		ID:          3102,

@@ -9,7 +9,6 @@ import (
 
 	"go.uber.org/mock/gomock"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -69,21 +68,9 @@ func TestTraceHubServiceImpl_applySampling(t *testing.T) {
 	spans := []*loop_span.Span{{SpanID: "1"}, {SpanID: "2"}, {SpanID: "3"}}
 	impl := &TraceHubServiceImpl{}
 
-	fullRate := &spanSubscriber{
-		t: &task.Task{
-			Rule: &task.Rule{Sampler: &task.Sampler{SampleRate: floatPtr(1.0)}},
-		},
-	}
-	zeroRate := &spanSubscriber{
-		t: &task.Task{
-			Rule: &task.Rule{Sampler: &task.Sampler{SampleRate: floatPtr(0.0)}},
-		},
-	}
-	halfRate := &spanSubscriber{
-		t: &task.Task{
-			Rule: &task.Rule{Sampler: &task.Sampler{SampleRate: floatPtr(0.5)}},
-		},
-	}
+	fullRate := &spanSubscriber{t: &entity.ObservabilityTask{Sampler: &entity.Sampler{SampleRate: 1.0}}}
+	zeroRate := &spanSubscriber{t: &entity.ObservabilityTask{Sampler: &entity.Sampler{SampleRate: 0}}}
+	halfRate := &spanSubscriber{t: &entity.ObservabilityTask{Sampler: &entity.Sampler{SampleRate: 0.5}}}
 
 	require.Len(t, impl.applySampling(spans, fullRate), len(spans))
 	require.Nil(t, impl.applySampling(spans, zeroRate))
