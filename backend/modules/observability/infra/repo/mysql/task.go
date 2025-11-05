@@ -191,6 +191,8 @@ func (v *TaskDaoImpl) buildSingleFilterExpr(q *genquery.Query, f *filter.TaskFil
 		return v.buildTaskIDFilter(q, f)
 	case "updated_at":
 		return v.buildUpdateAtFilter(q, f)
+	case "task_source":
+		return v.buildTaskSourceFilter(q, f)
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid filter field name: %s", *f.FieldName))
 	}
@@ -335,6 +337,14 @@ func (v *TaskDaoImpl) buildUpdateAtFilter(q *genquery.Query, f *filter.TaskFilte
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for update at"))
 	}
+}
+
+func (v *TaskDaoImpl) buildTaskSourceFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+	if len(f.Values) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task source"))
+	}
+
+	return q.ObservabilityTask.TaskSource.In(f.Values...), nil
 }
 
 // 计算分页参数
