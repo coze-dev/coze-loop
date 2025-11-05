@@ -21,6 +21,7 @@ import (
 type MockITaskService struct {
 	ctrl     *gomock.Controller
 	recorder *MockITaskServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockITaskServiceMockRecorder is the mock recorder for MockITaskService.
@@ -41,75 +42,75 @@ func (m *MockITaskService) EXPECT() *MockITaskServiceMockRecorder {
 }
 
 // CheckTaskName mocks base method.
-func (m *MockITaskService) CheckTaskName(arg0 context.Context, arg1 *service.CheckTaskNameReq) (*service.CheckTaskNameResp, error) {
+func (m *MockITaskService) CheckTaskName(ctx context.Context, req *service.CheckTaskNameReq) (*service.CheckTaskNameResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckTaskName", arg0, arg1)
+	ret := m.ctrl.Call(m, "CheckTaskName", ctx, req)
 	ret0, _ := ret[0].(*service.CheckTaskNameResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CheckTaskName indicates an expected call of CheckTaskName.
-func (mr *MockITaskServiceMockRecorder) CheckTaskName(arg0, arg1 any) *gomock.Call {
+func (mr *MockITaskServiceMockRecorder) CheckTaskName(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckTaskName", reflect.TypeOf((*MockITaskService)(nil).CheckTaskName), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckTaskName", reflect.TypeOf((*MockITaskService)(nil).CheckTaskName), ctx, req)
 }
 
 // CreateTask mocks base method.
-func (m *MockITaskService) CreateTask(arg0 context.Context, arg1 *service.CreateTaskReq) (*service.CreateTaskResp, error) {
+func (m *MockITaskService) CreateTask(ctx context.Context, req *service.CreateTaskReq) (*service.CreateTaskResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateTask", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateTask", ctx, req)
 	ret0, _ := ret[0].(*service.CreateTaskResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateTask indicates an expected call of CreateTask.
-func (mr *MockITaskServiceMockRecorder) CreateTask(arg0, arg1 any) *gomock.Call {
+func (mr *MockITaskServiceMockRecorder) CreateTask(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTask", reflect.TypeOf((*MockITaskService)(nil).CreateTask), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTask", reflect.TypeOf((*MockITaskService)(nil).CreateTask), ctx, req)
 }
 
 // GetTask mocks base method.
-func (m *MockITaskService) GetTask(arg0 context.Context, arg1 *service.GetTaskReq) (*service.GetTaskResp, error) {
+func (m *MockITaskService) GetTask(ctx context.Context, req *service.GetTaskReq) (*service.GetTaskResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTask", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetTask", ctx, req)
 	ret0, _ := ret[0].(*service.GetTaskResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTask indicates an expected call of GetTask.
-func (mr *MockITaskServiceMockRecorder) GetTask(arg0, arg1 any) *gomock.Call {
+func (mr *MockITaskServiceMockRecorder) GetTask(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTask", reflect.TypeOf((*MockITaskService)(nil).GetTask), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTask", reflect.TypeOf((*MockITaskService)(nil).GetTask), ctx, req)
 }
 
 // ListTasks mocks base method.
-func (m *MockITaskService) ListTasks(arg0 context.Context, arg1 *service.ListTasksReq) (*service.ListTasksResp, error) {
+func (m *MockITaskService) ListTasks(ctx context.Context, req *service.ListTasksReq) (*service.ListTasksResp, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListTasks", arg0, arg1)
+	ret := m.ctrl.Call(m, "ListTasks", ctx, req)
 	ret0, _ := ret[0].(*service.ListTasksResp)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListTasks indicates an expected call of ListTasks.
-func (mr *MockITaskServiceMockRecorder) ListTasks(arg0, arg1 any) *gomock.Call {
+func (mr *MockITaskServiceMockRecorder) ListTasks(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTasks", reflect.TypeOf((*MockITaskService)(nil).ListTasks), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTasks", reflect.TypeOf((*MockITaskService)(nil).ListTasks), ctx, req)
 }
 
 // UpdateTask mocks base method.
-func (m *MockITaskService) UpdateTask(arg0 context.Context, arg1 *service.UpdateTaskReq) error {
+func (m *MockITaskService) UpdateTask(ctx context.Context, req *service.UpdateTaskReq) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateTask", arg0, arg1)
+	ret := m.ctrl.Call(m, "UpdateTask", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateTask indicates an expected call of UpdateTask.
-func (mr *MockITaskServiceMockRecorder) UpdateTask(arg0, arg1 any) *gomock.Call {
+func (mr *MockITaskServiceMockRecorder) UpdateTask(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTask", reflect.TypeOf((*MockITaskService)(nil).UpdateTask), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTask", reflect.TypeOf((*MockITaskService)(nil).UpdateTask), ctx, req)
 }
