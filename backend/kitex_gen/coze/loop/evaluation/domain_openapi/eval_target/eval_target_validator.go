@@ -21,6 +21,9 @@ var (
 	_ = time.Nanosecond
 )
 
+func (p *CustomEvalTarget) IsValid() error {
+	return nil
+}
 func (p *EvalTargetRecord) IsValid() error {
 	if p.EvalTargetOutputData != nil {
 		if err := p.EvalTargetOutputData.IsValid(); err != nil {

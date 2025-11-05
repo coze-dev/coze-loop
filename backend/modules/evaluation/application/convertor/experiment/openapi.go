@@ -103,6 +103,7 @@ func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalT
 		SourceTargetID:      param.SourceTargetID,
 		SourceTargetVersion: param.SourceTargetVersion,
 		BotPublishVersion:   param.BotPublishVersion,
+		Env:                 param.Env,
 	}
 
 	if param.EvalTargetType != nil {
@@ -119,6 +120,22 @@ func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalT
 			return nil
 		}
 		result.BotInfoType = &botInfoType
+	}
+	if param.Region != nil {
+		region, err := mapOpenAPIRegion(*param.Region)
+		if err != nil {
+			return nil
+		}
+		result.Region = &region
+	}
+	if param.CustomEvalTarget != nil {
+		customTarget := &domaindoEvalTarget.CustomEvalTarget{
+			ID:        param.CustomEvalTarget.ID,
+			Name:      param.CustomEvalTarget.Name,
+			AvatarURL: param.CustomEvalTarget.AvatarURL,
+			Ext:       param.CustomEvalTarget.Ext,
+		}
+		result.CustomEvalTarget = customTarget
 	}
 
 	return result
@@ -173,6 +190,19 @@ func mapOpenAPICozeBotInfoType(openapiType openapiEvalTarget.CozeBotInfoType) (d
 		return domaindoEvalTarget.CozeBotInfoType_DraftBot, nil
 	default:
 		return 0, fmt.Errorf("unsupported coze bot info type: %s", openapiType)
+	}
+}
+
+func mapOpenAPIRegion(region openapiEvalTarget.Region) (domaindoEvalTarget.Region, error) {
+	switch region {
+	case openapiEvalTarget.RegionBOE:
+		return domaindoEvalTarget.RegionBOE, nil
+	case openapiEvalTarget.RegionCN:
+		return domaindoEvalTarget.RegionCN, nil
+	case openapiEvalTarget.RegionI18N:
+		return domaindoEvalTarget.RegionI18N, nil
+	default:
+		return "", fmt.Errorf("unsupported region: %s", region)
 	}
 }
 

@@ -347,6 +347,9 @@ struct SubmitExperimentEvalTargetParam {
     3: optional eval_target.EvalTargetType eval_target_type
     4: optional eval_target.CozeBotInfoType bot_info_type
     5: optional string bot_publish_version // 如果是发布版本则需要填充这个字段
+    6: optional eval_target.CustomEvalTarget custom_eval_target // type=6,并且有搜索对象，搜索结果信息通过这个字段透传
+    7: optional eval_target.Region region   // 有区域限制需要填充这个字段
+    8: optional string env  // 有环境限制需要填充这个字段
 }
 
 struct SubmitExperimentOApiResponse {

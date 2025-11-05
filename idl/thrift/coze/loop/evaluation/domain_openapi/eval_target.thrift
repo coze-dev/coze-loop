@@ -19,7 +19,18 @@ typedef string EvalTargetRunStatus(ts.enum="true")
 const EvalTargetRunStatus EvalTargetRunStatus_Success = "success"
 const EvalTargetRunStatus EvalTargetRunStatus_Fail = "fail"
 
+typedef string Region (ts.enum="true")
+const Region Region_BOE = "boe"
+const Region Region_CN = "cn"
+const Region Region_I18N = "i18n"
 
+struct CustomEvalTarget {
+    1: optional string id // 唯一键，平台不消费，仅做透传
+    2: optional string name    // 名称，平台用于展示在对象搜索下拉列表
+    3: optional string avatar_url    // 头像url，平台用于展示在对象搜索下拉列表
+
+    10: optional map<string, string> ext    // 扩展字段，目前主要存储旧版协议response中的额外字段：object_type(旧版ID)、object_meta、space_id
+}
 
 struct EvalTargetRecord  {
     // 基础信息

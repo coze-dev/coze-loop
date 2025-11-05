@@ -15409,6 +15409,12 @@ type SubmitExperimentEvalTargetParam struct {
 	BotInfoType         *eval_target.CozeBotInfoType `thrift:"bot_info_type,4,optional" frugal:"4,optional,string" form:"bot_info_type" json:"bot_info_type,omitempty" query:"bot_info_type"`
 	// 如果是发布版本则需要填充这个字段
 	BotPublishVersion *string `thrift:"bot_publish_version,5,optional" frugal:"5,optional,string" form:"bot_publish_version" json:"bot_publish_version,omitempty" query:"bot_publish_version"`
+	// type=6,并且有搜索对象，搜索结果信息通过这个字段透传
+	CustomEvalTarget *eval_target.CustomEvalTarget `thrift:"custom_eval_target,6,optional" frugal:"6,optional,eval_target.CustomEvalTarget" form:"custom_eval_target" json:"custom_eval_target,omitempty" query:"custom_eval_target"`
+	// 有区域限制需要填充这个字段
+	Region *eval_target.Region `thrift:"region,7,optional" frugal:"7,optional,string" form:"region" json:"region,omitempty" query:"region"`
+	// 有环境限制需要填充这个字段
+	Env *string `thrift:"env,8,optional" frugal:"8,optional,string" form:"env" json:"env,omitempty" query:"env"`
 }
 
 func NewSubmitExperimentEvalTargetParam() *SubmitExperimentEvalTargetParam {
@@ -15477,6 +15483,42 @@ func (p *SubmitExperimentEvalTargetParam) GetBotPublishVersion() (v string) {
 	}
 	return *p.BotPublishVersion
 }
+
+var SubmitExperimentEvalTargetParam_CustomEvalTarget_DEFAULT *eval_target.CustomEvalTarget
+
+func (p *SubmitExperimentEvalTargetParam) GetCustomEvalTarget() (v *eval_target.CustomEvalTarget) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomEvalTarget() {
+		return SubmitExperimentEvalTargetParam_CustomEvalTarget_DEFAULT
+	}
+	return p.CustomEvalTarget
+}
+
+var SubmitExperimentEvalTargetParam_Region_DEFAULT eval_target.Region
+
+func (p *SubmitExperimentEvalTargetParam) GetRegion() (v eval_target.Region) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRegion() {
+		return SubmitExperimentEvalTargetParam_Region_DEFAULT
+	}
+	return *p.Region
+}
+
+var SubmitExperimentEvalTargetParam_Env_DEFAULT string
+
+func (p *SubmitExperimentEvalTargetParam) GetEnv() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnv() {
+		return SubmitExperimentEvalTargetParam_Env_DEFAULT
+	}
+	return *p.Env
+}
 func (p *SubmitExperimentEvalTargetParam) SetSourceTargetID(val *string) {
 	p.SourceTargetID = val
 }
@@ -15492,6 +15534,15 @@ func (p *SubmitExperimentEvalTargetParam) SetBotInfoType(val *eval_target.CozeBo
 func (p *SubmitExperimentEvalTargetParam) SetBotPublishVersion(val *string) {
 	p.BotPublishVersion = val
 }
+func (p *SubmitExperimentEvalTargetParam) SetCustomEvalTarget(val *eval_target.CustomEvalTarget) {
+	p.CustomEvalTarget = val
+}
+func (p *SubmitExperimentEvalTargetParam) SetRegion(val *eval_target.Region) {
+	p.Region = val
+}
+func (p *SubmitExperimentEvalTargetParam) SetEnv(val *string) {
+	p.Env = val
+}
 
 var fieldIDToName_SubmitExperimentEvalTargetParam = map[int16]string{
 	1: "source_target_id",
@@ -15499,6 +15550,9 @@ var fieldIDToName_SubmitExperimentEvalTargetParam = map[int16]string{
 	3: "eval_target_type",
 	4: "bot_info_type",
 	5: "bot_publish_version",
+	6: "custom_eval_target",
+	7: "region",
+	8: "env",
 }
 
 func (p *SubmitExperimentEvalTargetParam) IsSetSourceTargetID() bool {
@@ -15519,6 +15573,18 @@ func (p *SubmitExperimentEvalTargetParam) IsSetBotInfoType() bool {
 
 func (p *SubmitExperimentEvalTargetParam) IsSetBotPublishVersion() bool {
 	return p.BotPublishVersion != nil
+}
+
+func (p *SubmitExperimentEvalTargetParam) IsSetCustomEvalTarget() bool {
+	return p.CustomEvalTarget != nil
+}
+
+func (p *SubmitExperimentEvalTargetParam) IsSetRegion() bool {
+	return p.Region != nil
+}
+
+func (p *SubmitExperimentEvalTargetParam) IsSetEnv() bool {
+	return p.Env != nil
 }
 
 func (p *SubmitExperimentEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
@@ -15574,6 +15640,30 @@ func (p *SubmitExperimentEvalTargetParam) Read(iprot thrift.TProtocol) (err erro
 		case 5:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -15663,6 +15753,36 @@ func (p *SubmitExperimentEvalTargetParam) ReadField5(iprot thrift.TProtocol) err
 	p.BotPublishVersion = _field
 	return nil
 }
+func (p *SubmitExperimentEvalTargetParam) ReadField6(iprot thrift.TProtocol) error {
+	_field := eval_target.NewCustomEvalTarget()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CustomEvalTarget = _field
+	return nil
+}
+func (p *SubmitExperimentEvalTargetParam) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *eval_target.Region
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Region = _field
+	return nil
+}
+func (p *SubmitExperimentEvalTargetParam) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Env = _field
+	return nil
+}
 
 func (p *SubmitExperimentEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -15688,6 +15808,18 @@ func (p *SubmitExperimentEvalTargetParam) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -15798,6 +15930,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *SubmitExperimentEvalTargetParam) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomEvalTarget() {
+		if err = oprot.WriteFieldBegin("custom_eval_target", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CustomEvalTarget.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *SubmitExperimentEvalTargetParam) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRegion() {
+		if err = oprot.WriteFieldBegin("region", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Region); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *SubmitExperimentEvalTargetParam) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnv() {
+		if err = oprot.WriteFieldBegin("env", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Env); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 
 func (p *SubmitExperimentEvalTargetParam) String() string {
 	if p == nil {
@@ -15826,6 +16012,15 @@ func (p *SubmitExperimentEvalTargetParam) DeepEqual(ano *SubmitExperimentEvalTar
 		return false
 	}
 	if !p.Field5DeepEqual(ano.BotPublishVersion) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.CustomEvalTarget) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.Region) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.Env) {
 		return false
 	}
 	return true
@@ -15887,6 +16082,37 @@ func (p *SubmitExperimentEvalTargetParam) Field5DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.BotPublishVersion, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvalTargetParam) Field6DeepEqual(src *eval_target.CustomEvalTarget) bool {
+
+	if !p.CustomEvalTarget.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvalTargetParam) Field7DeepEqual(src *eval_target.Region) bool {
+
+	if p.Region == src {
+		return true
+	} else if p.Region == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Region, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvalTargetParam) Field8DeepEqual(src *string) bool {
+
+	if p.Env == src {
+		return true
+	} else if p.Env == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Env, *src) != 0 {
 		return false
 	}
 	return true

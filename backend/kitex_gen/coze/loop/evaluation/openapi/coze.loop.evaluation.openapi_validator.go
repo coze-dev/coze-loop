@@ -439,6 +439,11 @@ func (p *SubmitExperimentEvaluatorParam) IsValid() error {
 	return nil
 }
 func (p *SubmitExperimentEvalTargetParam) IsValid() error {
+	if p.CustomEvalTarget != nil {
+		if err := p.CustomEvalTarget.IsValid(); err != nil {
+			return fmt.Errorf("field CustomEvalTarget not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *SubmitExperimentOApiResponse) IsValid() error {

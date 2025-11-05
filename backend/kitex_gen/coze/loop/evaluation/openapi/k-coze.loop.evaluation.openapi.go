@@ -11039,6 +11039,48 @@ func (p *SubmitExperimentEvalTargetParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -11127,6 +11169,46 @@ func (p *SubmitExperimentEvalTargetParam) FastReadField5(buf []byte) (int, error
 	return offset, nil
 }
 
+func (p *SubmitExperimentEvalTargetParam) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_target.NewCustomEvalTarget()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.CustomEvalTarget = _field
+	return offset, nil
+}
+
+func (p *SubmitExperimentEvalTargetParam) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *eval_target.Region
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Region = _field
+	return offset, nil
+}
+
+func (p *SubmitExperimentEvalTargetParam) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Env = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentEvalTargetParam) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -11139,6 +11221,9 @@ func (p *SubmitExperimentEvalTargetParam) FastWriteNocopy(buf []byte, w thrift.N
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -11152,6 +11237,9 @@ func (p *SubmitExperimentEvalTargetParam) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+		l += p.field8Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -11202,6 +11290,33 @@ func (p *SubmitExperimentEvalTargetParam) fastWriteField5(buf []byte, w thrift.N
 	return offset
 }
 
+func (p *SubmitExperimentEvalTargetParam) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCustomEvalTarget() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 6)
+		offset += p.CustomEvalTarget.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentEvalTargetParam) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRegion() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Region)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentEvalTargetParam) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnv() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 8)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Env)
+	}
+	return offset
+}
+
 func (p *SubmitExperimentEvalTargetParam) field1Length() int {
 	l := 0
 	if p.IsSetSourceTargetID() {
@@ -11247,6 +11362,33 @@ func (p *SubmitExperimentEvalTargetParam) field5Length() int {
 	return l
 }
 
+func (p *SubmitExperimentEvalTargetParam) field6Length() int {
+	l := 0
+	if p.IsSetCustomEvalTarget() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.CustomEvalTarget.BLength()
+	}
+	return l
+}
+
+func (p *SubmitExperimentEvalTargetParam) field7Length() int {
+	l := 0
+	if p.IsSetRegion() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Region)
+	}
+	return l
+}
+
+func (p *SubmitExperimentEvalTargetParam) field8Length() int {
+	l := 0
+	if p.IsSetEnv() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Env)
+	}
+	return l
+}
+
 func (p *SubmitExperimentEvalTargetParam) DeepCopy(s interface{}) error {
 	src, ok := s.(*SubmitExperimentEvalTargetParam)
 	if !ok {
@@ -11285,6 +11427,28 @@ func (p *SubmitExperimentEvalTargetParam) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.BotPublishVersion)
 		}
 		p.BotPublishVersion = &tmp
+	}
+
+	var _customEvalTarget *eval_target.CustomEvalTarget
+	if src.CustomEvalTarget != nil {
+		_customEvalTarget = &eval_target.CustomEvalTarget{}
+		if err := _customEvalTarget.DeepCopy(src.CustomEvalTarget); err != nil {
+			return err
+		}
+	}
+	p.CustomEvalTarget = _customEvalTarget
+
+	if src.Region != nil {
+		tmp := *src.Region
+		p.Region = &tmp
+	}
+
+	if src.Env != nil {
+		var tmp string
+		if *src.Env != "" {
+			tmp = kutils.StringDeepCopy(*src.Env)
+		}
+		p.Env = &tmp
 	}
 
 	return nil
