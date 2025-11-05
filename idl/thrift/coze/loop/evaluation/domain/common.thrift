@@ -102,3 +102,9 @@ struct RuntimeParam {
     1: optional string json_value
     2: optional string json_demo
 }
+
+struct RateLimit {
+    1: optional i32 rate
+    2: optional i32 burst
+    3: optional string period
+}

@@ -3,9 +3,14 @@
 
 package repo
 
-import "context"
+import (
+	"context"
+
+	commonentity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+)
 
 //go:generate mockgen -destination mocks/ratelimiter_mock.go -package mocks . RateLimiter
 type RateLimiter interface {
 	AllowInvoke(ctx context.Context, spaceID int64) bool
+	AllowInvokeWithKeyLimit(ctx context.Context, key string, limit *commonentity.RateLimit) bool
 }

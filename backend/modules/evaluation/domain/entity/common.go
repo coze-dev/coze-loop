@@ -3,7 +3,10 @@
 
 package entity
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // ContentType 定义内容类型
 type ContentType string
@@ -356,3 +359,9 @@ func StorageProviderFromString(s string) (StorageProvider, error) {
 }
 
 func StorageProviderPtr(v StorageProvider) *StorageProvider { return &v }
+
+type RateLimit struct {
+	Rate   *int32         `json:"rate,omitempty"`
+	Burst  *int32         `json:"burst,omitempty"`
+	Period *time.Duration `json:"period,omitempty"`
+}

@@ -44,6 +44,11 @@ func (p *CodeEvaluator) IsValid() error {
 	return nil
 }
 func (p *CustomRPCEvaluator) IsValid() error {
+	if p.RateLimit != nil {
+		if err := p.RateLimit.IsValid(); err != nil {
+			return fmt.Errorf("field RateLimit not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *EvaluatorVersion) IsValid() error {

@@ -16,7 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
-func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.Evaluator {
+func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) (*evaluatordo.Evaluator, error) {
 	// 从DTO转换为DO
 	evaluatorDO := &evaluatordo.Evaluator{
 		ID:                     evaluatorDTO.GetEvaluatorID(),
@@ -48,10 +48,14 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 		case evaluatordto.EvaluatorType_Code:
 			evaluatorDO.CodeEvaluatorVersion = ConvertCodeEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
 		case evaluatordto.EvaluatorType_CustomRPC:
-			evaluatorDO.CustomRPCEvaluatorVersion = ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
+			customRPCEvaluatorVersion, err := ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
+			if err != nil {
+				return nil, err
+			}
+			evaluatorDO.CustomRPCEvaluatorVersion = customRPCEvaluatorVersion
 		}
 	}
-	return evaluatorDO
+	return evaluatorDO, nil
 }
 
 func ConvertEvaluatorDOList2DTO(doList []*evaluatordo.Evaluator) []*evaluatordto.Evaluator {
@@ -293,6 +297,13 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 			Cluster:               content.CustomRPCEvaluator.Cluster,
 			Timeout:               content.CustomRPCEvaluator.Timeout,
 		}
+		if content.CustomRPCEvaluator.RateLimit != nil {
+			rateLimit, err := commonconvertor.ConvertRateLimitDTO2DO(content.CustomRPCEvaluator.RateLimit)
+			if err != nil {
+				return nil, err
+			}
+			customRPCVersion.RateLimit = rateLimit
+		}
 
 		// 转换输入模式
 		if len(content.InputSchemas) > 0 {
@@ -457,9 +468,9 @@ func ConvertEvaluatorTagKeyDO2DTO(doKey evaluatordo.EvaluatorTagKey) evaluatordt
 	}
 }
 
-func ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *evaluatordto.EvaluatorVersion) *evaluatordo.CustomRPCEvaluatorVersion {
+func ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *evaluatordto.EvaluatorVersion) (*evaluatordo.CustomRPCEvaluatorVersion, error) {
 	if dto == nil {
-		return nil
+		return nil, nil
 	}
 	customRPCEvaluatorVersion := &evaluatordo.CustomRPCEvaluatorVersion{
 		ID:            dto.GetID(),
@@ -479,9 +490,16 @@ func ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *eva
 			customRPCEvaluatorVersion.ServiceName = dto.EvaluatorContent.CustomRPCEvaluator.ServiceName
 			customRPCEvaluatorVersion.Cluster = dto.EvaluatorContent.CustomRPCEvaluator.Cluster
 			customRPCEvaluatorVersion.Timeout = dto.EvaluatorContent.CustomRPCEvaluator.Timeout
+			if dto.EvaluatorContent.CustomRPCEvaluator.RateLimit != nil {
+				rateLimit, err := commonconvertor.ConvertRateLimitDTO2DO(dto.EvaluatorContent.CustomRPCEvaluator.RateLimit)
+				if err != nil {
+					return nil, err
+				}
+				customRPCEvaluatorVersion.RateLimit = rateLimit
+			}
 		}
 	}
-	return customRPCEvaluatorVersion
+	return customRPCEvaluatorVersion, nil
 }
 
 func ConvertCustomRPCEvaluatorVersionDO2DTO(do *evaluatordo.CustomRPCEvaluatorVersion) *evaluatordto.EvaluatorVersion {
@@ -503,6 +521,7 @@ func ConvertCustomRPCEvaluatorVersionDO2DTO(do *evaluatordo.CustomRPCEvaluatorVe
 				ServiceName:           do.ServiceName,
 				Cluster:               do.Cluster,
 				Timeout:               do.Timeout,
+				RateLimit:             commonconvertor.ConvertRateLimitDO2DTO(do.RateLimit),
 			},
 		},
 	}

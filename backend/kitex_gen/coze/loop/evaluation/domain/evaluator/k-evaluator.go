@@ -1340,6 +1340,20 @@ func (p *CustomRPCEvaluator) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1434,6 +1448,18 @@ func (p *CustomRPCEvaluator) FastReadField10(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CustomRPCEvaluator) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewRateLimit()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RateLimit = _field
+	return offset, nil
+}
+
 func (p *CustomRPCEvaluator) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1446,6 +1472,7 @@ func (p *CustomRPCEvaluator) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1459,6 +1486,7 @@ func (p *CustomRPCEvaluator) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1507,6 +1535,15 @@ func (p *CustomRPCEvaluator) fastWriteField10(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
+func (p *CustomRPCEvaluator) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRateLimit() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
+		offset += p.RateLimit.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *CustomRPCEvaluator) field1Length() int {
 	l := 0
 	if p.IsSetProviderEvaluatorCode() {
@@ -1550,6 +1587,15 @@ func (p *CustomRPCEvaluator) field10Length() int {
 	return l
 }
 
+func (p *CustomRPCEvaluator) field11Length() int {
+	l := 0
+	if p.IsSetRateLimit() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RateLimit.BLength()
+	}
+	return l
+}
+
 func (p *CustomRPCEvaluator) DeepCopy(s interface{}) error {
 	src, ok := s.(*CustomRPCEvaluator)
 	if !ok {
@@ -1586,6 +1632,15 @@ func (p *CustomRPCEvaluator) DeepCopy(s interface{}) error {
 		tmp := *src.Timeout
 		p.Timeout = &tmp
 	}
+
+	var _rateLimit *common.RateLimit
+	if src.RateLimit != nil {
+		_rateLimit = &common.RateLimit{}
+		if err := _rateLimit.DeepCopy(src.RateLimit); err != nil {
+			return err
+		}
+	}
+	p.RateLimit = _rateLimit
 
 	return nil
 }

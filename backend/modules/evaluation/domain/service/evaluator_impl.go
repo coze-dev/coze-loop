@@ -594,9 +594,11 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 			return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version not found in current space"))
 		}
 	}
-	allow := e.limiter.AllowInvoke(ctx, request.SpaceID)
-	if !allow {
-		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode)
+	if allow := e.limiter.AllowInvoke(ctx, request.SpaceID); !allow {
+		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
+	}
+	if allow := e.limiter.AllowInvokeWithKeyLimit(ctx, fmt.Sprintf("run_evaluator:%v", evaluatorDO.ID), evaluatorDO.GetRateLimit()); !allow {
+		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to evaluator-level rate limit"))
 	}
 	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
 	if !ok {
