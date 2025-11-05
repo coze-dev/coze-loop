@@ -543,10 +543,10 @@ func TestGetSourceIDsByFilterConditions_SelfJoinAndLike(t *testing.T) {
     ).WillReturnRows(countRows)
 
     // 断言 SELECT：包含 DISTINCT、LEFT JOIN t_name、JOIN t_1 / t_2、LIKE 与 Name 标签限定
-    // SearchKeyword 现在只搜索 tag_key=Name
+    // SearchKeyword 现在只搜索 tag_key=Name（使用参数化查询，且可能被括号包裹）
     selectRows := sqlmock.NewRows([]string{"source_id"})
     mock.ExpectQuery(
-        "SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*evaluator_tag.tag_key = .*Name.* AND evaluator_tag.tag_value LIKE .*",
+        "SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*tag_key.*=.*AND.*tag_value.*LIKE.*ORDER BY.*",
     ).WillReturnRows(selectRows)
 
     dao := &EvaluatorTagDAOImpl{provider: mockProvider}
