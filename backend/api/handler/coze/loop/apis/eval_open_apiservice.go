@@ -9,9 +9,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
-	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 )
 
 var localEvalOpenAPIClient evalopenapiservice.Client
@@ -85,95 +83,35 @@ func UpdateEvaluationSetSchemaOApi(ctx context.Context, c *app.RequestContext) {
 // SubmitExperimentOApi .
 // @router /v1/loop/evaluation/experiments [POST]
 func SubmitExperimentOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.SubmitExperimentOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.SubmitExperimentOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.SubmitExperimentOApi)
 }
 
 // GetExperimentsOApi .
 // @router /api/evaluation/v1/experiments/:experiment_id [GET]
 func GetExperimentsOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.GetExperimentsOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.GetExperimentsOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentsOApi)
 }
 
 // ListExperimentResultOApi .
 // @router /v1/loop/evaluation/experiments/:experiment_id/results [POST]
 func ListExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.ListExperimentResultOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.ListExperimentResultOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListExperimentResultOApi)
 }
 
 // GetExperimentAggrResultOApi .
 // @router /v1/loop/evaluation/experiments/:experiment_id/aggr_results [POST]
 func GetExperimentAggrResultOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.GetExperimentAggrResultOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.GetExperimentAggrResultOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentAggrResultOApi)
 }
 
 // UpdateEvaluationSetOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id [PATCH]
 func UpdateEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.UpdateEvaluationSetOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.UpdateEvaluationSetOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateEvaluationSetOApi)
 }
 
 // DeleteEvaluationSetOApi .
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id [DELETE]
 func DeleteEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.DeleteEvaluationSetOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.DeleteEvaluationSetOApiResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.DeleteEvaluationSetOApi)
 }
