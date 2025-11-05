@@ -1108,6 +1108,34 @@ func (p *AbilityMultiModal) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1152,6 +1180,32 @@ func (p *AbilityMultiModal) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *AbilityMultiModal) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Video = _field
+	return offset, nil
+}
+
+func (p *AbilityMultiModal) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+	_field := NewAbilityVideo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.AbilityVideo = _field
+	return offset, nil
+}
+
 func (p *AbilityMultiModal) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1160,7 +1214,9 @@ func (p *AbilityMultiModal) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1171,6 +1227,8 @@ func (p *AbilityMultiModal) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1194,6 +1252,24 @@ func (p *AbilityMultiModal) fastWriteField2(buf []byte, w thrift.NocopyWriter) i
 	return offset
 }
 
+func (p *AbilityMultiModal) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVideo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 3)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.Video)
+	}
+	return offset
+}
+
+func (p *AbilityMultiModal) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAbilityVideo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 4)
+		offset += p.AbilityVideo.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *AbilityMultiModal) field1Length() int {
 	l := 0
 	if p.IsSetImage() {
@@ -1208,6 +1284,24 @@ func (p *AbilityMultiModal) field2Length() int {
 	if p.IsSetAbilityImage() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.AbilityImage.BLength()
+	}
+	return l
+}
+
+func (p *AbilityMultiModal) field3Length() int {
+	l := 0
+	if p.IsSetVideo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *AbilityMultiModal) field4Length() int {
+	l := 0
+	if p.IsSetAbilityVideo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.AbilityVideo.BLength()
 	}
 	return l
 }
@@ -1231,6 +1325,20 @@ func (p *AbilityMultiModal) DeepCopy(s interface{}) error {
 		}
 	}
 	p.AbilityImage = _abilityImage
+
+	if src.Video != nil {
+		tmp := *src.Video
+		p.Video = &tmp
+	}
+
+	var _abilityVideo *AbilityVideo
+	if src.AbilityVideo != nil {
+		_abilityVideo = &AbilityVideo{}
+		if err := _abilityVideo.DeepCopy(src.AbilityVideo); err != nil {
+			return err
+		}
+	}
+	p.AbilityVideo = _abilityVideo
 
 	return nil
 }
@@ -1297,6 +1405,20 @@ func (p *AbilityImage) FastRead(buf []byte) (int, error) {
 		case 4:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField5(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -1382,6 +1504,20 @@ func (p *AbilityImage) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *AbilityImage) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ImageGenEnabled = _field
+	return offset, nil
+}
+
 func (p *AbilityImage) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1393,6 +1529,7 @@ func (p *AbilityImage) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1405,6 +1542,7 @@ func (p *AbilityImage) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1446,6 +1584,15 @@ func (p *AbilityImage) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *AbilityImage) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetImageGenEnabled() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.ImageGenEnabled)
+	}
+	return offset
+}
+
 func (p *AbilityImage) field1Length() int {
 	l := 0
 	if p.IsSetURLEnabled() {
@@ -1482,6 +1629,15 @@ func (p *AbilityImage) field4Length() int {
 	return l
 }
 
+func (p *AbilityImage) field5Length() int {
+	l := 0
+	if p.IsSetImageGenEnabled() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *AbilityImage) DeepCopy(s interface{}) error {
 	src, ok := s.(*AbilityImage)
 	if !ok {
@@ -1506,6 +1662,206 @@ func (p *AbilityImage) DeepCopy(s interface{}) error {
 	if src.MaxImageCount != nil {
 		tmp := *src.MaxImageCount
 		p.MaxImageCount = &tmp
+	}
+
+	if src.ImageGenEnabled != nil {
+		tmp := *src.ImageGenEnabled
+		p.ImageGenEnabled = &tmp
+	}
+
+	return nil
+}
+
+func (p *AbilityVideo) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AbilityVideo[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *AbilityVideo) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MaxVideoSizeInMb = _field
+	return offset, nil
+}
+
+func (p *AbilityVideo) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]VideoFormat, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem VideoFormat
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.SupportedVideoFormats = _field
+	return offset, nil
+}
+
+func (p *AbilityVideo) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *AbilityVideo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *AbilityVideo) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *AbilityVideo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxVideoSizeInMb() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 1)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.MaxVideoSizeInMb)
+	}
+	return offset
+}
+
+func (p *AbilityVideo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSupportedVideoFormats() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.SupportedVideoFormats {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+	}
+	return offset
+}
+
+func (p *AbilityVideo) field1Length() int {
+	l := 0
+	if p.IsSetMaxVideoSizeInMb() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *AbilityVideo) field2Length() int {
+	l := 0
+	if p.IsSetSupportedVideoFormats() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.SupportedVideoFormats {
+			_ = v
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
+func (p *AbilityVideo) DeepCopy(s interface{}) error {
+	src, ok := s.(*AbilityVideo)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.MaxVideoSizeInMb != nil {
+		tmp := *src.MaxVideoSizeInMb
+		p.MaxVideoSizeInMb = &tmp
+	}
+
+	if src.SupportedVideoFormats != nil {
+		p.SupportedVideoFormats = make([]VideoFormat, 0, len(src.SupportedVideoFormats))
+		for _, elem := range src.SupportedVideoFormats {
+			var _elem VideoFormat
+			_elem = elem
+			p.SupportedVideoFormats = append(p.SupportedVideoFormats, _elem)
+		}
 	}
 
 	return nil
