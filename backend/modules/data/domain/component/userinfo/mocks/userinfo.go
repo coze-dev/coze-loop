@@ -20,6 +20,7 @@ import (
 type MockUserInfoService struct {
 	ctrl     *gomock.Controller
 	recorder *MockUserInfoServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockUserInfoServiceMockRecorder is the mock recorder for MockUserInfoService.
@@ -40,13 +41,13 @@ func (m *MockUserInfoService) EXPECT() *MockUserInfoServiceMockRecorder {
 }
 
 // PackUserInfo mocks base method.
-func (m *MockUserInfoService) PackUserInfo(arg0 context.Context, arg1 any) {
+func (m *MockUserInfoService) PackUserInfo(ctx context.Context, userInfoCarrier any) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PackUserInfo", arg0, arg1)
+	m.ctrl.Call(m, "PackUserInfo", ctx, userInfoCarrier)
 }
 
 // PackUserInfo indicates an expected call of PackUserInfo.
-func (mr *MockUserInfoServiceMockRecorder) PackUserInfo(arg0, arg1 any) *gomock.Call {
+func (mr *MockUserInfoServiceMockRecorder) PackUserInfo(ctx, userInfoCarrier any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PackUserInfo", reflect.TypeOf((*MockUserInfoService)(nil).PackUserInfo), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PackUserInfo", reflect.TypeOf((*MockUserInfoService)(nil).PackUserInfo), ctx, userInfoCarrier)
 }

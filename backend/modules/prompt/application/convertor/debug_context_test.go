@@ -123,6 +123,7 @@ func mockDebugContextCases() []debugContextTestCase {
 							PromptDetail: &prompt.PromptDetail{
 								PromptTemplate: &prompt.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+									HasSnippet:   ptr.Of(false),
 									Messages: []*prompt.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
@@ -152,6 +153,7 @@ func mockDebugContextCases() []debugContextTestCase {
 							PromptDetail: &entity.PromptDetail{
 								PromptTemplate: &entity.PromptTemplate{
 									TemplateType: entity.TemplateTypeNormal,
+									HasSnippets:  false,
 									Messages: []*entity.Message{
 										{
 											Role:    entity.RoleSystem,
@@ -205,6 +207,7 @@ func mockDebugContextCases() []debugContextTestCase {
 							PromptDetail: &prompt.PromptDetail{
 								PromptTemplate: &prompt.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+									HasSnippet:   ptr.Of(false),
 									Messages: []*prompt.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
@@ -247,6 +250,7 @@ func mockDebugContextCases() []debugContextTestCase {
 							PromptDetail: &entity.PromptDetail{
 								PromptTemplate: &entity.PromptTemplate{
 									TemplateType: entity.TemplateTypeNormal,
+									HasSnippets:  false,
 									Messages: []*entity.Message{
 										{
 											Role:    entity.RoleSystem,

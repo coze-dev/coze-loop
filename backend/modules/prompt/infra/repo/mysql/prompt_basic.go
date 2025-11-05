@@ -44,6 +44,7 @@ type ListPromptBasicParam struct {
 	KeyWord       string
 	CreatedBys    []string
 	CommittedOnly bool
+	PromptTypes   []string // Add prompt type filtering
 
 	Offset  int
 	Limit   int
@@ -184,6 +185,9 @@ func (d *PromptBasicDAOImpl) List(ctx context.Context, param ListPromptBasicPara
 	}
 	if param.CommittedOnly {
 		tx = tx.Where(q.PromptBasic.LatestVersion.Neq(""))
+	}
+	if len(param.PromptTypes) > 0 {
+		tx = tx.Where(q.PromptBasic.PromptType.In(param.PromptTypes...))
 	}
 	total, err = tx.Count()
 	if err != nil {
