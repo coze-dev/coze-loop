@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -213,11 +214,12 @@ func (s *SpansCkDaoImpl) formatAggregationExpression(ctx context.Context, dimens
 }
 
 type buildSqlParam struct {
-	spanTable   string
-	annoTable   string
-	queryParam  *QueryParam
-	db          *gorm.DB
-	omitColumns []string
+	spanTable     string
+	annoTable     string
+	queryParam    *QueryParam
+	db            *gorm.DB
+	selectColumns []string
+	omitColumns   []string
 }
 
 func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm.DB, error) {
@@ -225,11 +227,12 @@ func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm
 	var tableQueries []*gorm.DB
 	for _, table := range param.Tables {
 		query, err := s.buildSingleSql(ctx, &buildSqlParam{
-			spanTable:   table,
-			annoTable:   param.AnnoTableMap[table],
-			queryParam:  param,
-			db:          db,
-			omitColumns: param.OmitColumns,
+			spanTable:     table,
+			annoTable:     param.AnnoTableMap[table],
+			queryParam:    param,
+			db:            db,
+			selectColumns: param.SelectColumns,
+			omitColumns:   param.OmitColumns,
 		})
 		if err != nil {
 			return nil, err
@@ -265,9 +268,9 @@ func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, param *buildSqlPara
 		return nil, err
 	}
 	queryColumns := lo.Ternary(
-		len(param.SelectColumns) == 0,
-		getColumnStr(spanColumns, param.OmitColumns),
-		getColumnStr(param.SelectColumns, param.OmitColumns),
+		len(param.selectColumns) == 0,
+		getColumnStr(spanColumns, param.omitColumns),
+		getColumnStr(param.selectColumns, param.omitColumns),
 	)
 	sqlQuery = param.db.
 		Table(param.spanTable).Select(queryColumns).
@@ -370,11 +373,11 @@ func (s *SpansCkDaoImpl) buildFieldCondition(ctx context.Context, db *gorm.DB, f
 		}
 		queryChain = queryChain.Where(fmt.Sprintf("%s like ?", filter.FieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
 	case loop_span.QueryTypeEnumNotMatch:
-			if len(fieldValues) != 1 {
-				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s NOT like ?", fieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
-		case loop_span.QueryTypeEnumEq:
+		if len(fieldValues) != 1 {
+			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s NOT like ?", filter.FieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
+	case loop_span.QueryTypeEnumEq:
 		if len(fieldValues) != 1 {
 			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
 		}
@@ -680,27 +683,26 @@ var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
 func isSafeColumnName(name string) bool {
 	return validColumnRegex.MatchString(name)
 }
-var (
-	defSuperFieldsMap = map[string]bool{
-		loop_span.SpanFieldStartTime:       true,
-		loop_span.SpanFieldSpanId:          true,
-		loop_span.SpanFieldTraceId:         true,
-		loop_span.SpanFieldParentID:        true,
-		loop_span.SpanFieldDuration:        true,
-		loop_span.SpanFieldCallType:        true,
-		loop_span.SpanFieldPSM:             true,
-		loop_span.SpanFieldLogID:           true,
-		loop_span.SpanFieldSpaceId:         true,
-		loop_span.SpanFieldSpanType:        true,
-		loop_span.SpanFieldSpanName:        true,
-		loop_span.SpanFieldMethod:          true,
-		loop_span.SpanFieldStatusCode:      true,
-		loop_span.SpanFieldInput:           true,
-		loop_span.SpanFieldOutput:          true,
-		loop_span.SpanFieldObjectStorage:   true,
-		loop_span.SpanFieldLogicDeleteDate: true,
-	}
-)
+
+var defSuperFieldsMap = map[string]bool{
+	loop_span.SpanFieldStartTime:       true,
+	loop_span.SpanFieldSpanId:          true,
+	loop_span.SpanFieldTraceId:         true,
+	loop_span.SpanFieldParentID:        true,
+	loop_span.SpanFieldDuration:        true,
+	loop_span.SpanFieldCallType:        true,
+	loop_span.SpanFieldPSM:             true,
+	loop_span.SpanFieldLogID:           true,
+	loop_span.SpanFieldSpaceId:         true,
+	loop_span.SpanFieldSpanType:        true,
+	loop_span.SpanFieldSpanName:        true,
+	loop_span.SpanFieldMethod:          true,
+	loop_span.SpanFieldStatusCode:      true,
+	loop_span.SpanFieldInput:           true,
+	loop_span.SpanFieldOutput:          true,
+	loop_span.SpanFieldObjectStorage:   true,
+	loop_span.SpanFieldLogicDeleteDate: true,
+}
 
 func getTimeInterval(granularity metrics_entity.MetricGranularity) string {
 	switch granularity {

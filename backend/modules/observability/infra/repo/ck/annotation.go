@@ -67,9 +67,11 @@ func (a *AnnotationCkDaoImpl) Insert(ctx context.Context, params *InsertAnnotati
 		if err := db.Table(params.Table).Create(params.Annotations).Error; err != nil {
 			lastErr = err
 		} else {
+			logs.CtxInfo(ctx, "insert annotations successfully")
 			return nil
 		}
 	}
+	logs.CtxError(ctx, "fail to insert annotations: %v", lastErr)
 	return errorx.WrapByCode(lastErr, obErrorx.CommercialCommonInternalErrorCodeCode)
 }
 
