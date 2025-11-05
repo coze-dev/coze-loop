@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -30,11 +31,13 @@ func NewTraceCKRepoImpl(
 	spanDao ck.ISpansDao,
 	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
+	spanRedisDao dao.ISpansRedisDao,
 ) (repo.ITraceRepo, error) {
 	return &TraceCkRepoImpl{
-		spansDao:    spanDao,
-		annoDao:     annoDao,
-		traceConfig: traceConfig,
+		spansDao:     spanDao,
+		annoDao:      annoDao,
+		traceConfig:  traceConfig,
+		spanRedisDao: spanRedisDao,
 	}, nil
 }
 
@@ -51,9 +54,14 @@ func NewTraceMetricCKRepoImpl(
 }
 
 type TraceCkRepoImpl struct {
-	spansDao    ck.ISpansDao
-	annoDao     ck.IAnnotationDao
-	traceConfig config.ITraceConfig
+	spansDao     ck.ISpansDao
+	annoDao      ck.IAnnotationDao
+	traceConfig  config.ITraceConfig
+	spanRedisDao dao.ISpansRedisDao
+}
+
+func (t *TraceCkRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error) {
+	return t.spanRedisDao.GetPreSpans(ctx, param.PreRespID)
 }
 
 type PageToken struct {
@@ -143,6 +151,30 @@ func (t *TraceCkRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansPara
 	}
 	result.Spans = result.Spans.Uniq()
 	return result, nil
+}
+
+func (t *TraceCkRepoImpl) ListPreSpans(ctx context.Context, req *repo.ListPreSpansParam) (loop_span.SpanList, error) {
+	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
+	if err != nil {
+		return nil, err
+	}
+	st := time.Now()
+	spans, err := t.spansDao.Get(ctx, &ck.QueryParam{
+		QueryType:     ck.QueryTypeListSpans,
+		Tables:        tableCfg.SpanTables,
+		StartTime:     time_util.MillSec2MicroSec(req.StartAt),
+		EndTime:       time_util.MillSec2MicroSec(req.EndAt),
+		Filters:       req.Filters,
+		Limit:         req.Limit + 1,
+		OmitColumns:   req.OmitColumns,
+		SelectColumns: req.SelectColumns,
+	})
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "list spans successfully, spans count %d, cost %v", len(spans), time.Since(st))
+	spanDOList := convertor.SpanListPO2DO(spans)
+	return spanDOList.Uniq(), nil
 }
 
 func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (loop_span.SpanList, error) {

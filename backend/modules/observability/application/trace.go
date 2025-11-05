@@ -91,6 +91,65 @@ type TraceApplication struct {
 	tagSvc             rpc.ITagRPCAdapter
 }
 
+func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
+	// req check
+	if err := t.validateListPreSpanReq(ctx, req); err != nil {
+		return nil, err
+	}
+	// space auth check
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	// invoke domain.service.ListPreSpan
+	sReq, err := t.buildListPreSpanSvcReq(req)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("list spans req is invalid"))
+	}
+	preSpan, err := t.traceService.ListPreSpan(ctx, sReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// additional auth check: At least 1 span on this trace belongs to this space
+
+	return &trace.ListPreSpanResponse{
+		Spans: tconv.SpanListDO2DTO(preSpan.Spans, nil, nil, nil),
+	}, nil
+
+}
+
+func (t *TraceApplication) validateListPreSpanReq(ctx context.Context, req *trace.ListPreSpanRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if req.GetTraceID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+	} else if req.GetPreviousResponseID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid previous_response_id"))
+	} else if req.GetSpanID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid span_id"))
+	}
+
+	return nil
+}
+
+func (t *TraceApplication) buildListPreSpanSvcReq(req *trace.ListPreSpanRequest) (*service.ListPreSpanReq, error) {
+	ret := &service.ListPreSpanReq{
+		WorkspaceID:        req.GetWorkspaceID(),
+		StartTime:          req.GetStartTime(),
+		TraceID:            req.GetTraceID(),
+		SpanID:             req.GetSpanID(),
+		PreviousResponseID: req.GetPreviousResponseID(),
+		PlatformType:       loop_span.PlatformType(req.GetPlatformType()),
+	}
+
+	return ret, nil
+}
+
 func (t *TraceApplication) ListSpans(ctx context.Context, req *trace.ListSpansRequest) (*trace.ListSpansResponse, error) {
 	if err := t.validateListSpansReq(ctx, req); err != nil {
 		return nil, err

@@ -52,7 +52,7 @@ func main() {
 		panic(err)
 	}
 
-	handler, err := api.Init(ctx, c.idgen, c.db, c.redis, c.cfgFactory, c.mqFactory, c.objectStorage, c.batchObjectStorage, c.benefitSvc, c.auditClient, c.metric, c.limiterFactory, c.ckDb, c.translater)
+	handler, err := api.Init(ctx, c.idgen, c.db, c.redis, c.redis, c.cfgFactory, c.mqFactory, c.objectStorage, c.batchObjectStorage, c.benefitSvc, c.auditClient, c.metric, c.limiterFactory, c.ckDb, c.translater)
 	if err != nil {
 		panic(err)
 	}

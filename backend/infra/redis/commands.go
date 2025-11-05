@@ -17,6 +17,10 @@ type Cmdable interface {
 	Pipeline() Pipeliner
 }
 
+type PersistentCmdable interface {
+	Cmdable
+}
+
 type SimpleCmdable interface {
 	StringCmdable
 	HashCmdable

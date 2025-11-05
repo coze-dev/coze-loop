@@ -309,6 +309,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_spans := _v14.Group("/spans", _spansMw(handler)...)
 					_spans.POST("/list", append(_listspansMw(handler), apis.ListSpans)...)
+					_spans.POST("/pre_list", append(_listprespanMw(handler), apis.ListPreSpan)...)
 				}
 				{
 					_tasks0 := _v14.Group("/tasks", _tasks0Mw(handler)...)
