@@ -312,6 +312,16 @@ func (a AnnotationList) Uniq() AnnotationList {
 	})
 }
 
+func (a AnnotationList) FindByEvaluatorRecordID(evaluatorRecordID int64) (*Annotation, bool) {
+	for _, annotation := range a {
+		meta := annotation.GetAutoEvaluateMetadata()
+		if meta != nil && meta.EvaluatorRecordID == evaluatorRecordID {
+			return annotation, true
+		}
+	}
+	return nil, false
+}
+
 func NewStringValue(v string) AnnotationValue {
 	return AnnotationValue{
 		ValueType:   AnnotationValueTypeString,

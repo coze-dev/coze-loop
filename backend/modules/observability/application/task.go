@@ -25,8 +25,8 @@ import (
 
 type ITaskQueueConsumer interface {
 	SpanTrigger(ctx context.Context, event *entity.RawSpan) error
-	CallBack(ctx context.Context, event *entity.AutoEvalEvent) error
-	Correction(ctx context.Context, event *entity.CorrectionEvent) error
+	AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error
+	AutoEvalCorrection(ctx context.Context, event *entity.CorrectionEvent) error
 	BackFill(ctx context.Context, event *entity.BackFillEvent) error
 }
 
@@ -43,26 +43,29 @@ func NewTaskApplication(
 	userService rpc.IUserProvider,
 	tracehubSvc tracehub.ITraceHubService,
 	taskProcessor processor.TaskProcessor,
+	taskCallbackService service.ITaskCallbackService,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
-		taskSvc:       taskService,
-		authSvc:       authService,
-		evalSvc:       evalService,
-		evaluationSvc: evaluationService,
-		userSvc:       userService,
-		tracehubSvc:   tracehubSvc,
-		taskProcessor: taskProcessor,
+		taskSvc:         taskService,
+		authSvc:         authService,
+		evalSvc:         evalService,
+		evaluationSvc:   evaluationService,
+		userSvc:         userService,
+		tracehubSvc:     tracehubSvc,
+		taskProcessor:   taskProcessor,
+		taskCallbackSvc: taskCallbackService,
 	}, nil
 }
 
 type TaskApplication struct {
-	taskSvc       service.ITaskService
-	authSvc       rpc.IAuthProvider
-	evalSvc       rpc.IEvaluatorRPCAdapter
-	evaluationSvc rpc.IEvaluationRPCAdapter
-	userSvc       rpc.IUserProvider
-	tracehubSvc   tracehub.ITraceHubService
-	taskProcessor processor.TaskProcessor
+	taskSvc         service.ITaskService
+	authSvc         rpc.IAuthProvider
+	evalSvc         rpc.IEvaluatorRPCAdapter
+	evaluationSvc   rpc.IEvaluationRPCAdapter
+	userSvc         rpc.IUserProvider
+	tracehubSvc     tracehub.ITraceHubService
+	taskProcessor   processor.TaskProcessor
+	taskCallbackSvc service.ITaskCallbackService
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
@@ -261,14 +264,31 @@ func (t *TaskApplication) SpanTrigger(ctx context.Context, event *entity.RawSpan
 	return t.tracehubSvc.SpanTrigger(ctx, event)
 }
 
-func (t *TaskApplication) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
-	return t.tracehubSvc.CallBack(ctx, event)
+func (t *TaskApplication) AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error {
+	if err := event.Validate(); err != nil {
+		logs.CtxError(ctx, "event is invalid, event: %#v, err: %v", event, err)
+		// 结构校验失败，不处理
+		return nil
+	}
+
+	return t.taskCallbackSvc.AutoEvalCallback(ctx, event)
 }
 
-func (t *TaskApplication) Correction(ctx context.Context, event *entity.CorrectionEvent) error {
-	return t.tracehubSvc.Correction(ctx, event)
+func (t *TaskApplication) AutoEvalCorrection(ctx context.Context, event *entity.CorrectionEvent) error {
+	if err := event.Validate(); err != nil {
+		logs.CtxError(ctx, "event is invalid, event: %#v, err: %v", event, err)
+		// 结构校验失败，不处理
+		return nil
+	}
+
+	return t.taskCallbackSvc.AutoEvalCorrection(ctx, event)
 }
 
 func (t *TaskApplication) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
+	if err := event.Validate(); err != nil {
+		logs.CtxError(ctx, "event is invalid, event: %#v, err: %v", event, err)
+		// 结构校验失败，不处理
+		return nil
+	}
 	return t.tracehubSvc.BackFill(ctx, event)
 }

@@ -4,9 +4,12 @@
 package entity
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 type RawSpan struct {
@@ -174,6 +177,14 @@ type AutoEvalEvent struct {
 	ExptID          int64                       `json:"expt_id"`
 	TurnEvalResults []*OnlineExptTurnEvalResult `json:"turn_eval_results"`
 }
+
+func (e *AutoEvalEvent) Validate() error {
+	if e.TurnEvalResults == nil || len(e.TurnEvalResults) == 0 {
+		return fmt.Errorf("turn_eval_results is required")
+	}
+	return nil
+}
+
 type OnlineExptTurnEvalResult struct {
 	EvaluatorVersionID int64              `json:"evaluator_version_id"`
 	EvaluatorRecordID  int64              `json:"evaluator_record_id"`
@@ -251,6 +262,22 @@ func (s *OnlineExptTurnEvalResult) GetWorkspaceIDFromExt() (string, int64) {
 	return workspaceIDStr, workspaceID
 }
 
+func (s *OnlineExptTurnEvalResult) GetRunID() (int64, error) {
+	taskRunIDStr := s.Ext["run_id"]
+	if taskRunIDStr == "" {
+		return 0, fmt.Errorf("run_id not found in ext")
+	}
+
+	return strconv.ParseInt(taskRunIDStr, 10, 64)
+}
+
+func (s *OnlineExptTurnEvalResult) GetUserID() string {
+	if s.BaseInfo == nil || s.BaseInfo.UpdatedBy == nil {
+		return ""
+	}
+	return s.BaseInfo.UpdatedBy.UserID
+}
+
 type EvaluatorRunError struct {
 	Code    int32  `json:"code"`
 	Message string `json:"message"`
@@ -277,9 +304,14 @@ type CorrectionEvent struct {
 	UpdatedAt          int64             `json:"updated_at"`
 }
 
-type BackFillEvent struct {
-	SpaceID int64 `json:"space_id"`
-	TaskID  int64 `json:"task_id"`
+func (c *CorrectionEvent) Validate() error {
+	if c.EvaluatorRecordID == 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("evaluator_record_id is empty"))
+	}
+	if c.EvaluatorResult == nil || c.EvaluatorResult.Correction == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("correction is empty"))
+	}
+	return nil
 }
 
 func (c *CorrectionEvent) GetSpanIDFromExt() string {
@@ -330,4 +362,26 @@ func (c *CorrectionEvent) GetWorkspaceIDFromExt() (string, int64) {
 		return "", 0
 	}
 	return workspaceIDStr, workspaceID
+}
+
+func (c *CorrectionEvent) GetUpdateBy() string {
+	if c == nil || c.EvaluatorResult == nil || c.EvaluatorResult.Correction == nil {
+		return ""
+	}
+	return c.EvaluatorResult.Correction.UpdatedBy
+}
+
+type BackFillEvent struct {
+	SpaceID int64 `json:"space_id"`
+	TaskID  int64 `json:"task_id"`
+}
+
+func (b *BackFillEvent) Validate() error {
+	if b.SpaceID == 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("space_id is empty"))
+	}
+	if b.TaskID == 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("task_id is empty"))
+	}
+	return nil
 }

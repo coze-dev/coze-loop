@@ -186,9 +186,9 @@ func (p *AutoEvaluteProcessor) OnTaskCreated(ctx context.Context, currentTask *t
 			runEndAt = currentTask.EffectiveTime.EndAt
 		} else {
 			switch currentTask.Sampler.CycleTimeUnit {
-			case task.TimeUnitDay:
+			case task_entity.TimeUnitDay:
 				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
-			case task.TimeUnitWeek:
+			case task_entity.TimeUnitWeek:
 				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*7*24*time.Hour.Milliseconds()
 			default:
 				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*10*time.Minute.Milliseconds()

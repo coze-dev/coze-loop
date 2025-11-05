@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -424,8 +427,8 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 	t.Parallel()
 
 	taskListResp := &svc.ListTasksResp{
-		Tasks: []*taskdto.Task{{Name: "task1"}},
-		Total: gptr.Of(int64(1)),
+		Tasks: []*entity.ObservabilityTask{{Name: "task1"}},
+		Total: int64(1),
 	}
 	tests := []struct {
 		name          string
@@ -485,10 +488,13 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 			},
 		},
 		{
-			name:       "success",
-			ctx:        context.Background(),
-			req:        &taskapi.ListTasksRequest{WorkspaceID: 789},
-			expectResp: &taskapi.ListTasksResponse{Tasks: taskListResp.Tasks, Total: taskListResp.Total},
+			name: "success",
+			ctx:  context.Background(),
+			req:  &taskapi.ListTasksRequest{WorkspaceID: 789},
+			expectResp: &taskapi.ListTasksResponse{
+				Tasks: tconv.TaskDOs2DTOs(context.Background(), taskListResp.Tasks, map[string]*common.UserInfo{}),
+				Total: lo.ToPtr(taskListResp.Total),
+			},
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(789, 10), false).Return(nil)
@@ -536,7 +542,7 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 func TestTaskApplication_GetTask(t *testing.T) {
 	t.Parallel()
 
-	taskResp := &svc.GetTaskResp{Task: &taskdto.Task{Name: "task"}}
+	taskResp := &svc.GetTaskResp{Task: &entity.ObservabilityTask{Name: "task"}}
 
 	tests := []struct {
 		name          string
@@ -597,7 +603,7 @@ func TestTaskApplication_GetTask(t *testing.T) {
 			name:       "success",
 			ctx:        context.Background(),
 			req:        &taskapi.GetTaskRequest{WorkspaceID: 202, TaskID: 3},
-			expectResp: &taskapi.GetTaskResponse{Task: taskResp.Task},
+			expectResp: &taskapi.GetTaskResponse{Task: tconv.TaskDO2DTO(context.Background(), taskResp.Task, map[string]*common.UserInfo{})},
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(202, 10), false).Return(nil)
@@ -694,23 +700,23 @@ func TestTaskApplication_CallBack(t *testing.T) {
 	event := &entity.AutoEvalEvent{}
 	tests := []struct {
 		name      string
-		mockSvc   func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService
+		mockSvc   func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService
 		expectErr bool
 	}{
 		{
 			name: "trace hub error",
-			mockSvc: func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService {
-				svc := tracehubmock.NewMockITraceHubService(ctrl)
-				svc.EXPECT().CallBack(gomock.Any(), event).Return(errors.New("hub error"))
+			mockSvc: func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService {
+				svc := svcmock.NewMockITaskCallbackService(ctrl)
+				svc.EXPECT().AutoEvalCallback(gomock.Any(), event).Return(errors.New("hub error"))
 				return svc
 			},
 			expectErr: true,
 		},
 		{
 			name: "success",
-			mockSvc: func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService {
-				svc := tracehubmock.NewMockITraceHubService(ctrl)
-				svc.EXPECT().CallBack(gomock.Any(), event).Return(nil)
+			mockSvc: func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService {
+				svc := svcmock.NewMockITaskCallbackService(ctrl)
+				svc.EXPECT().AutoEvalCallback(gomock.Any(), event).Return(nil)
 				return svc
 			},
 		},
@@ -724,8 +730,8 @@ func TestTaskApplication_CallBack(t *testing.T) {
 			defer ctrl.Finish()
 
 			traceSvc := caseItem.mockSvc(ctrl)
-			app := &TaskApplication{tracehubSvc: traceSvc}
-			err := app.CallBack(context.Background(), event)
+			app := &TaskApplication{taskCallbackSvc: traceSvc}
+			err := app.AutoEvalCallback(context.Background(), event)
 			if caseItem.expectErr {
 				assert.Error(t, err)
 			} else {
@@ -741,23 +747,23 @@ func TestTaskApplication_Correction(t *testing.T) {
 	event := &entity.CorrectionEvent{}
 	tests := []struct {
 		name      string
-		mockSvc   func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService
+		mockSvc   func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService
 		expectErr bool
 	}{
 		{
 			name: "trace hub error",
-			mockSvc: func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService {
-				svc := tracehubmock.NewMockITraceHubService(ctrl)
-				svc.EXPECT().Correction(gomock.Any(), event).Return(errors.New("hub error"))
+			mockSvc: func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService {
+				svc := svcmock.NewMockITaskCallbackService(ctrl)
+				svc.EXPECT().AutoEvalCorrection(gomock.Any(), event).Return(errors.New("hub error"))
 				return svc
 			},
 			expectErr: true,
 		},
 		{
 			name: "success",
-			mockSvc: func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService {
-				svc := tracehubmock.NewMockITraceHubService(ctrl)
-				svc.EXPECT().Correction(gomock.Any(), event).Return(nil)
+			mockSvc: func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService {
+				svc := svcmock.NewMockITaskCallbackService(ctrl)
+				svc.EXPECT().AutoEvalCorrection(gomock.Any(), event).Return(nil)
 				return svc
 			},
 		},
@@ -771,8 +777,8 @@ func TestTaskApplication_Correction(t *testing.T) {
 			defer ctrl.Finish()
 
 			traceSvc := caseItem.mockSvc(ctrl)
-			app := &TaskApplication{tracehubSvc: traceSvc}
-			err := app.Correction(context.Background(), event)
+			app := &TaskApplication{taskCallbackSvc: traceSvc}
+			err := app.AutoEvalCorrection(context.Background(), event)
 			if caseItem.expectErr {
 				assert.Error(t, err)
 			} else {

@@ -15,6 +15,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+type TimeUnit string
+
+const (
+	TimeUnitDay  = "day"
+	TimeUnitWeek = "week"
+	TimeUnitNull = "null"
+)
+
 type TaskStatus string
 
 const (
@@ -91,12 +99,12 @@ type EffectiveTime struct {
 	EndAt int64 `json:"end_at"`
 }
 type Sampler struct {
-	SampleRate    float64 `json:"sample_rate"`
-	SampleSize    int64   `json:"sample_size"`
-	IsCycle       bool    `json:"is_cycle"`
-	CycleCount    int64   `json:"cycle_count"`
-	CycleInterval int64   `json:"cycle_interval"`
-	CycleTimeUnit string  `json:"cycle_time_unit"`
+	SampleRate    float64  `json:"sample_rate"`
+	SampleSize    int64    `json:"sample_size"`
+	IsCycle       bool     `json:"is_cycle"`
+	CycleCount    int64    `json:"cycle_count"`
+	CycleInterval int64    `json:"cycle_interval"`
+	CycleTimeUnit TimeUnit `json:"cycle_time_unit"`
 }
 type TaskConfig struct {
 	AutoEvaluateConfigs []*AutoEvaluateConfig `json:"auto_evaluate_configs"`
@@ -176,18 +184,18 @@ func (t *ObservabilityTask) IsFinished() bool {
 }
 
 func (t *ObservabilityTask) GetBackfillTaskRun() *TaskRun {
-	for _, taskRunPO := range t.TaskRuns {
-		if taskRunPO.TaskType == TaskRunTypeBackFill {
-			return taskRunPO
+	for _, taskRun := range t.TaskRuns {
+		if taskRun.TaskType == TaskRunTypeBackFill {
+			return taskRun
 		}
 	}
 	return nil
 }
 
 func (t *ObservabilityTask) GetCurrentTaskRun() *TaskRun {
-	for _, taskRunPO := range t.TaskRuns {
-		if taskRunPO.TaskType == TaskRunTypeNewData && taskRunPO.RunStatus == TaskRunStatusRunning {
-			return taskRunPO
+	for _, taskRun := range t.TaskRuns {
+		if taskRun.TaskType == TaskRunTypeNewData && taskRun.RunStatus == TaskRunStatusRunning {
+			return taskRun
 		}
 	}
 	return nil

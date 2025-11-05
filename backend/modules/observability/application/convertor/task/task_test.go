@@ -100,7 +100,7 @@ func TestTaskDOs2DTOs(t *testing.T) {
 				IsCycle:       true,
 				CycleCount:    2,
 				CycleInterval: 3,
-				CycleTimeUnit: kitTask.TimeUnitDay,
+				CycleTimeUnit: entity.TimeUnitDay,
 			},
 			TaskConfig: &entity.TaskConfig{},
 			CreatedAt:  now,

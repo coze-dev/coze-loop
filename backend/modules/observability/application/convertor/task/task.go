@@ -204,7 +204,7 @@ func SamplerDO2DTO(sampler *entity.Sampler) *task.Sampler {
 		IsCycle:       ptr.Of(sampler.IsCycle),
 		CycleCount:    ptr.Of(sampler.CycleCount),
 		CycleInterval: ptr.Of(sampler.CycleInterval),
-		CycleTimeUnit: ptr.Of(sampler.CycleTimeUnit),
+		CycleTimeUnit: ptr.Of(string(sampler.CycleTimeUnit)),
 	}
 }
 
@@ -381,7 +381,7 @@ func SamplerDTO2DO(sampler *task.Sampler) *entity.Sampler {
 		IsCycle:       sampler.GetIsCycle(),
 		CycleCount:    sampler.GetCycleCount(),
 		CycleInterval: sampler.GetCycleInterval(),
-		CycleTimeUnit: sampler.GetCycleTimeUnit(),
+		CycleTimeUnit: entity.TimeUnit(sampler.GetCycleTimeUnit()),
 	}
 }
 

@@ -6,12 +6,10 @@ package tracehub
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -81,23 +79,18 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 		logs.CtxError(ctx, "Failed to get non-final task list, err: %v", err)
 		return nil, err
 	}
-	taskList := tconv.TaskDOs2DTOs(ctx, taskDOs, nil)
-	for _, taskDO := range taskList {
-		if !cfg.IsAllSpace && !gslice.Contains(cfg.SpaceList, taskDO.GetWorkspaceID()) {
+	for _, taskDO := range taskDOs {
+		if !cfg.IsAllSpace && !gslice.Contains(cfg.SpaceList, taskDO.WorkspaceID) {
 			continue
 		}
 		proc := h.taskProcessor.GetTaskProcessor(entity.TaskType(taskDO.TaskType))
 		subscribers = append(subscribers, &spanSubscriber{
-			taskID:           taskDO.GetID(),
-			RWMutex:          sync.RWMutex{},
-			t:                taskDO,
-			processor:        proc,
-			bufCap:           0,
-			flushWait:        sync.WaitGroup{},
-			maxFlushInterval: time.Second * 5,
-			taskRepo:         h.taskRepo,
-			runType:          entity.TaskRunTypeNewData,
-			buildHelper:      h.buildHelper,
+			taskID:      taskDO.ID,
+			t:           taskDO,
+			processor:   proc,
+			taskRepo:    h.taskRepo,
+			runType:     entity.TaskRunTypeNewData,
+			buildHelper: h.buildHelper,
 		})
 	}
 
@@ -124,59 +117,59 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
 	merr := &multierror.Error{}
 	for _, sub := range subs {
-		if sub.t.GetRule().GetEffectiveTime() == nil || sub.t.GetRule().GetEffectiveTime().GetStartAt() == 0 {
+		if sub.t.EffectiveTime == nil || sub.t.EffectiveTime.StartAt == 0 {
 			continue
 		}
-		if span.StartTime < sub.t.GetRule().GetEffectiveTime().GetStartAt() {
+		if span.StartTime < sub.t.EffectiveTime.StartAt {
 			logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
 			continue
 		}
 		// First step: lock for task status change
 		// Task run status
 		var runStartAt, runEndAt int64
-		if sub.t.GetTaskStatus() == task.TaskStatusUnstarted {
+		if sub.t.TaskStatus == entity.TaskStatusUnstarted {
 			logs.CtxWarn(ctx, "task is unstarted, need sub.Creative")
-			runStartAt = sub.t.GetRule().GetEffectiveTime().GetStartAt()
-			if !sub.t.GetRule().GetSampler().GetIsCycle() {
-				runEndAt = sub.t.GetRule().GetEffectiveTime().GetEndAt()
+			runStartAt = sub.t.EffectiveTime.StartAt
+			if !sub.t.Sampler.IsCycle {
+				runEndAt = sub.t.EffectiveTime.EndAt
 			} else {
-				switch *sub.t.GetRule().GetSampler().CycleTimeUnit {
-				case task.TimeUnitDay:
-					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*24*time.Hour.Milliseconds()
-				case task.TimeUnitWeek:
-					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*7*24*time.Hour.Milliseconds()
+				switch sub.t.Sampler.CycleTimeUnit {
+				case entity.TimeUnitDay:
+					runEndAt = runStartAt + (sub.t.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
+				case entity.TimeUnitWeek:
+					runEndAt = runStartAt + (sub.t.Sampler.CycleInterval)*7*24*time.Hour.Milliseconds()
 				default:
-					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*10*time.Minute.Milliseconds()
+					runEndAt = runStartAt + (sub.t.Sampler.CycleInterval)*10*time.Minute.Milliseconds()
 				}
 			}
 			if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
 				merr = multierror.Append(merr, errors.WithMessagef(err, "task is unstarted, need sub.Creative,creative processor, task_id=%d", sub.taskID))
 				continue
 			}
-			if err := sub.processor.OnTaskUpdated(ctx, tconv.TaskDTO2DO(sub.t), entity.TaskStatusRunning); err != nil {
+			if err := sub.processor.OnTaskUpdated(ctx, sub.t, entity.TaskStatusRunning); err != nil {
 				logs.CtxWarn(ctx, "OnTaskUpdated, task_id=%d, err=%v", sub.taskID, err)
 				continue
 			}
 		}
 		// Fetch the corresponding task config
-		taskRunConfig, err := h.taskRepo.GetLatestNewDataTaskRun(ctx, sub.t.WorkspaceID, sub.taskID)
+		taskRunConfig, err := h.taskRepo.GetLatestNewDataTaskRun(ctx, &sub.t.WorkspaceID, sub.taskID)
 		if err != nil {
 			logs.CtxWarn(ctx, "GetLatestNewDataTaskRun, task_id=%d, err=%v", sub.taskID, err)
 			continue
 		}
 		if taskRunConfig == nil {
 			logs.CtxWarn(ctx, "task run config not found, task_id=%d", sub.taskID)
-			runStartAt = sub.t.GetRule().GetEffectiveTime().GetStartAt()
-			if !sub.t.GetRule().GetSampler().GetIsCycle() {
-				runEndAt = sub.t.GetRule().GetEffectiveTime().GetEndAt()
+			runStartAt = sub.t.EffectiveTime.StartAt
+			if !sub.t.Sampler.IsCycle {
+				runEndAt = sub.t.EffectiveTime.EndAt
 			} else {
-				switch *sub.t.GetRule().GetSampler().CycleTimeUnit {
+				switch sub.t.Sampler.CycleTimeUnit {
 				case task.TimeUnitDay:
-					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*24*time.Hour.Milliseconds()
+					runEndAt = runStartAt + sub.t.Sampler.CycleInterval*24*time.Hour.Milliseconds()
 				case task.TimeUnitWeek:
-					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*7*24*time.Hour.Milliseconds()
+					runEndAt = runStartAt + sub.t.Sampler.CycleInterval*7*24*time.Hour.Milliseconds()
 				default:
-					runEndAt = runStartAt + (*sub.t.GetRule().GetSampler().CycleInterval)*10*time.Minute.Milliseconds()
+					runEndAt = runStartAt + sub.t.Sampler.CycleInterval*10*time.Minute.Milliseconds()
 				}
 			}
 			if err = sub.Creative(ctx, runStartAt, runEndAt); err != nil {
@@ -184,17 +177,17 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 			continue
 		}
-		sampler := sub.t.GetRule().GetSampler()
+		sampler := sub.t.Sampler
 		// Fetch the corresponding task count and subtask count
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, taskRunConfig.ID)
 		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
-		endTime := time.UnixMilli(sub.t.GetRule().GetEffectiveTime().GetEndAt())
+		endTime := time.UnixMilli(sub.t.EffectiveTime.EndAt)
 		// Reached task time limit
 		if time.Now().After(endTime) {
 			logs.CtxWarn(ctx, "[OnTaskFinished]time.Now().After(endTime) Finish processor, task_id=%d, endTime=%v, now=%v", sub.taskID, endTime, time.Now())
 			if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-				Task:     tconv.TaskDTO2DO(sub.t),
+				Task:     sub.t,
 				TaskRun:  taskRunConfig,
 				IsFinish: true,
 			}); err != nil {
@@ -204,10 +197,10 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 			}
 		}
 		// Reached task limit
-		if taskCount+1 > sampler.GetSampleSize() {
+		if taskCount+1 > sampler.SampleSize {
 			logs.CtxWarn(ctx, "[OnTaskFinished]taskCount+1 > sampler.GetSampleSize() Finish processor, task_id=%d", sub.taskID)
 			if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-				Task:     tconv.TaskDTO2DO(sub.t),
+				Task:     sub.t,
 				TaskRun:  taskRunConfig,
 				IsFinish: true,
 			}); err != nil {
@@ -215,13 +208,13 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				continue
 			}
 		}
-		if sampler.GetIsCycle() {
+		if sampler.IsCycle {
 			cycleEndTime := time.Unix(0, taskRunConfig.RunEndAt.UnixMilli()*1e6)
 			// Reached single cycle task time limit
 			if time.Now().After(cycleEndTime) {
 				logs.CtxInfo(ctx, "[OnTaskFinished]time.Now().After(cycleEndTime) Finish processor, task_id=%d", sub.taskID)
 				if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-					Task:     tconv.TaskDTO2DO(sub.t),
+					Task:     sub.t,
 					TaskRun:  taskRunConfig,
 					IsFinish: false,
 				}); err != nil {
@@ -236,10 +229,10 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				}
 			}
 			// Reached single cycle task limit
-			if taskRunCount+1 > sampler.GetCycleCount() {
+			if taskRunCount+1 > sampler.CycleCount {
 				logs.CtxWarn(ctx, "[OnTaskFinished]taskRunCount+1 > sampler.GetCycleCount(), task_id=%d", sub.taskID)
 				if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-					Task:     tconv.TaskDTO2DO(sub.t),
+					Task:     sub.t,
 					TaskRun:  taskRunConfig,
 					IsFinish: false,
 				}); err != nil {
@@ -255,16 +248,17 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
 	merr := &multierror.Error{}
 	for _, sub := range subs {
-		if sub.t.GetTaskStatus() != task.TaskStatusRunning {
+		if sub.t.TaskStatus != task.TaskStatusRunning {
 			continue
 		}
 		logs.CtxInfo(ctx, " sub.AddSpan: %v", sub)
 		if err := sub.AddSpan(ctx, span); err != nil {
-			merr = multierror.Append(merr, errors.WithMessagef(err, "add span to subscriber, task_id=%d", sub.taskID))
-			continue
+			merr = multierror.Append(merr, errors.WithMessagef(err, "add span to subscriber, log_id=%s, trace_id=%s, span_id=%s, task_id=%d",
+				span.LogID, span.TraceID, span.SpanID, sub.taskID))
+		} else {
+			logs.CtxInfo(ctx, "add span to subscriber, task_id=%d, log_id=%s, trace_id=%s, span_id=%s", sub.taskID,
+				span.LogID, span.TraceID, span.SpanID)
 		}
-		logs.CtxInfo(ctx, "add span to subscriber, task_id=%d, log_id=%s, trace_id=%s, span_id=%s", sub.taskID,
-			span.LogID, span.TraceID, span.SpanID)
 	}
 	return merr.ErrorOrNil()
 }

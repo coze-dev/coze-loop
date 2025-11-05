@@ -79,7 +79,7 @@ func TestTraceHubServiceImpl_SetBackfillTask(t *testing.T) {
 	mockRepo.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Nil(), gomock.Nil()).Return(obsTask, nil)
 	mockRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), int64(1)).Return(backfillRun, nil)
 
-	sub, err := impl.setBackfillTask(context.Background(), &entity.BackFillEvent{TaskID: 1})
+	sub, err := impl.buildSubscriber(context.Background(), &entity.BackFillEvent{TaskID: 1})
 	require.NoError(t, err)
 	require.NotNil(t, sub)
 	require.Equal(t, int64(1), sub.taskID)
@@ -97,7 +97,7 @@ func TestTraceHubServiceImpl_SetBackfillTaskNotFound(t *testing.T) {
 
 	mockRepo.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Nil(), gomock.Nil()).Return(nil, nil)
 
-	_, err := impl.setBackfillTask(context.Background(), &entity.BackFillEvent{TaskID: 1})
+	_, err := impl.buildSubscriber(context.Background(), &entity.BackFillEvent{TaskID: 1})
 	require.Error(t, err)
 }
 

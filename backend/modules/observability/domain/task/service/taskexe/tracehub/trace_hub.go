@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
@@ -25,8 +24,6 @@ import (
 
 type ITraceHubService interface {
 	SpanTrigger(ctx context.Context, event *entity.RawSpan) error
-	CallBack(ctx context.Context, event *entity.AutoEvalEvent) error
-	Correction(ctx context.Context, event *entity.CorrectionEvent) error
 	BackFill(ctx context.Context, event *entity.BackFillEvent) error
 }
 
@@ -36,7 +33,6 @@ func NewTraceHubImpl(
 	tenantProvider tenant.ITenantProvider,
 	buildHelper service.TraceFilterProcessorBuilder,
 	taskProcessor *processor.TaskProcessor,
-	benefitSvc benefit.IBenefitService,
 	aid int32,
 	backfillProducer mq.IBackfillProducer,
 	locker lock.ILocker,
@@ -54,7 +50,6 @@ func NewTraceHubImpl(
 		tenantProvider:      tenantProvider,
 		buildHelper:         buildHelper,
 		taskProcessor:       taskProcessor,
-		benefitSvc:          benefitSvc,
 		aid:                 aid,
 		backfillProducer:    backfillProducer,
 		locker:              locker,
@@ -77,13 +72,9 @@ type TraceHubServiceImpl struct {
 	tenantProvider      tenant.ITenantProvider
 	taskProcessor       *processor.TaskProcessor
 	buildHelper         service.TraceFilterProcessorBuilder
-	benefitSvc          benefit.IBenefitService
 	backfillProducer    mq.IBackfillProducer
 	locker              lock.ILocker
 	loader              conf.IConfigLoader
-
-	flushErrLock sync.Mutex
-	flushErr     []error
 
 	// Local cache - caching non-terminal task information
 	taskCache     sync.Map
@@ -98,8 +89,6 @@ type flushReq struct {
 	spans              []*loop_span.Span
 	noMore             bool
 }
-
-const TagKeyResult = "tag_key"
 
 func (h *TraceHubServiceImpl) Close() {
 	close(h.stopChan)

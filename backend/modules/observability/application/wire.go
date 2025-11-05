@@ -134,6 +134,7 @@ var (
 		evaluation.NewEvaluationRPCProvider,
 		NewTaskLocker,
 		traceDomainSet,
+		taskSvc.NewTaskCallbackServiceImpl,
 	)
 	metricsSet = wire.NewSet(
 		NewMetricApplication,

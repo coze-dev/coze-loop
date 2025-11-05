@@ -17,19 +17,19 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-type AutoEvalCallbackConsumer struct {
+type AutoTaskCallbackConsumer struct {
 	handler obapp.ITaskQueueConsumer
 	conf.IConfigLoader
 }
 
 func newCallbackConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
-	return &AutoEvalCallbackConsumer{
+	return &AutoTaskCallbackConsumer{
 		handler:       handler,
 		IConfigLoader: loader,
 	}
 }
 
-func (e *AutoEvalCallbackConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
+func (e *AutoTaskCallbackConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
 	const key = "autotask_callback_mq_consumer_config"
 	cfg := &config.MqConsumerCfg{}
 	if err := e.UnmarshalKey(ctx, key, cfg); err != nil {
@@ -46,7 +46,7 @@ func (e *AutoEvalCallbackConsumer) ConsumerCfg(ctx context.Context) (*mq.Consume
 	return res, nil
 }
 
-func (e *AutoEvalCallbackConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
+func (e *AutoTaskCallbackConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.AutoEvalEvent)

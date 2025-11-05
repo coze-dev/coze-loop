@@ -142,7 +142,7 @@ func buildTestTask(t *testing.T) *taskentity.ObservabilityTask {
 			IsCycle:       false,
 			CycleCount:    0,
 			CycleInterval: 1,
-			CycleTimeUnit: task.TimeUnitDay,
+			CycleTimeUnit: taskentity.TimeUnitDay,
 		},
 		TaskConfig: &taskentity.TaskConfig{
 			AutoEvaluateConfigs: []*taskentity.AutoEvaluateConfig{

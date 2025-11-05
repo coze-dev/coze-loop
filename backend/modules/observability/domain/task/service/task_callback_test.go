@@ -5,11 +5,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTraceHubServiceImpl_CallBackSuccess(t *testing.T) {
+func TestTaskCallbackServiceImpl_CallBackSuccess(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -34,7 +34,7 @@ func TestTraceHubServiceImpl_CallBackSuccess(t *testing.T) {
 	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
 	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
 
-	impl := &tracehub.TraceHubServiceImpl{
+	impl := &TaskCallbackServiceImpl{
 		benefitSvc:     mockBenefit,
 		tenantProvider: mockTenant,
 		traceRepo:      mockTraceRepo,
@@ -86,7 +86,7 @@ func TestTraceHubServiceImpl_CallBackSuccess(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, impl.CallBack(context.Background(), event))
+	require.NoError(t, impl.AutoEvalCallback(context.Background(), event))
 }
 
 func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
@@ -99,7 +99,7 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
 	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
 
-	impl := &tracehub.TraceHubServiceImpl{
+	impl := &TaskCallbackServiceImpl{
 		benefitSvc:     mockBenefit,
 		tenantProvider: mockTenant,
 		traceRepo:      mockTraceRepo,
@@ -128,5 +128,184 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 		},
 	}
 
-	require.Error(t, impl.CallBack(context.Background(), event))
+	require.Error(t, impl.AutoEvalCallback(context.Background(), event))
+}
+
+func TestTaskCallbackServiceImpl_getSpan(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	tenants := []string{"tenant"}
+	spanIDs := []string{"span-1"}
+	traceID := "trace-1"
+	workspaceID := "ws-1"
+	start := int64(1000)
+	end := int64(2000)
+
+	t.Run("with_trace_id", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		impl := &TaskCallbackServiceImpl{traceRepo: mockTraceRepo}
+		expectedSpan := &loop_span.Span{SpanID: spanIDs[0], TraceID: traceID}
+
+		mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).DoAndReturn(
+			func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+				require.Equal(t, tenants, param.Tenants)
+				require.Equal(t, start, param.StartAt)
+				require.Equal(t, end, param.EndAt)
+				require.True(t, param.NotQueryAnnotation)
+				require.Equal(t, int32(2), param.Limit)
+				require.Len(t, param.Filters.FilterFields, 3)
+				return &repo.ListSpansResult{Spans: loop_span.SpanList{expectedSpan}}, nil
+			},
+		)
+
+		spans, err := impl.getSpan(ctx, tenants, spanIDs, traceID, workspaceID, start, end)
+		require.NoError(t, err)
+		require.Equal(t, []*loop_span.Span{expectedSpan}, spans)
+	})
+
+	t.Run("without_trace_id", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		impl := &TaskCallbackServiceImpl{traceRepo: mockTraceRepo}
+		expectedSpan := &loop_span.Span{SpanID: spanIDs[0]}
+
+		mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).DoAndReturn(
+			func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+				require.Equal(t, tenants, param.Tenants)
+				require.Len(t, param.Filters.FilterFields, 2)
+				return &repo.ListSpansResult{Spans: loop_span.SpanList{expectedSpan}}, nil
+			},
+		)
+
+		spans, err := impl.getSpan(ctx, tenants, spanIDs, "", workspaceID, start, end)
+		require.NoError(t, err)
+		require.Equal(t, []*loop_span.Span{expectedSpan}, spans)
+	})
+
+	t.Run("empty_span_ids", func(t *testing.T) {
+		t.Parallel()
+		impl := &TaskCallbackServiceImpl{}
+		_, err := impl.getSpan(ctx, tenants, nil, traceID, workspaceID, start, end)
+		require.Error(t, err)
+	})
+
+	t.Run("empty_workspace", func(t *testing.T) {
+		t.Parallel()
+		impl := &TaskCallbackServiceImpl{}
+		_, err := impl.getSpan(ctx, tenants, spanIDs, traceID, "", start, end)
+		require.Error(t, err)
+	})
+
+	t.Run("repo_error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		impl := &TaskCallbackServiceImpl{traceRepo: mockTraceRepo}
+
+		mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(nil, errors.New("list error"))
+
+		_, err := impl.getSpan(ctx, tenants, spanIDs, traceID, workspaceID, start, end)
+		require.Error(t, err)
+	})
+
+	t.Run("no_data", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		impl := &TaskCallbackServiceImpl{traceRepo: mockTraceRepo}
+
+		mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{}, nil)
+
+		spans, err := impl.getSpan(ctx, tenants, spanIDs, traceID, workspaceID, start, end)
+		require.NoError(t, err)
+		require.Nil(t, spans)
+	})
+}
+
+func TestTaskCallbackServiceImpl_updateTaskRunDetailsCount(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	taskID := int64(101)
+	runIDStr := "202"
+	runID := int64(202)
+
+	tests := []struct {
+		name          string
+		status        entity.EvaluatorRunStatus
+		expectSuccess bool
+		expectFail    bool
+		expectErr     bool
+	}{
+		{
+			name:          "success_status",
+			status:        entity.EvaluatorRunStatus_Success,
+			expectSuccess: true,
+		},
+		{
+			name:       "fail_status",
+			status:     entity.EvaluatorRunStatus_Fail,
+			expectFail: true,
+		},
+		{
+			name:   "unknown_status",
+			status: entity.EvaluatorRunStatus_Unknown,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			t.Cleanup(ctrl.Finish)
+
+			mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+			impl := &TaskCallbackServiceImpl{taskRepo: mockRepo}
+
+			turn := &entity.OnlineExptTurnEvalResult{
+				Status: tt.status,
+				Ext: map[string]string{
+					"run_id": runIDStr,
+				},
+			}
+
+			if tt.expectSuccess {
+				mockRepo.EXPECT().IncrTaskRunSuccessCount(ctx, taskID, runID, gomock.Any()).Return(nil)
+			}
+			if tt.expectFail {
+				mockRepo.EXPECT().IncrTaskRunFailCount(ctx, taskID, runID, gomock.Any()).Return(nil)
+			}
+
+			err := impl.updateTaskRunDetailsCount(ctx, taskID, turn, 0)
+			if tt.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+
+	t.Run("missing_run_id", func(t *testing.T) {
+		t.Parallel()
+		impl := &TaskCallbackServiceImpl{}
+		err := impl.updateTaskRunDetailsCount(ctx, taskID, &entity.OnlineExptTurnEvalResult{Ext: map[string]string{}}, 0)
+		require.Error(t, err)
+	})
+
+	t.Run("invalid_run_id", func(t *testing.T) {
+		t.Parallel()
+		impl := &TaskCallbackServiceImpl{}
+		err := impl.updateTaskRunDetailsCount(ctx, taskID, &entity.OnlineExptTurnEvalResult{Ext: map[string]string{"run_id": "abc"}}, 0)
+		require.Error(t, err)
+	})
 }
