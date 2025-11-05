@@ -191,7 +191,7 @@ func (p *AutoEvaluteProcessor) OnTaskCreated(ctx context.Context, currentTask *t
 			case task_entity.TimeUnitWeek:
 				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*7*24*time.Hour.Milliseconds()
 			default:
-				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*10*time.Minute.Milliseconds()
+				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
 			}
 		}
 		err = p.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
@@ -334,6 +334,7 @@ func (p *AutoEvaluteProcessor) OnTaskRunCreated(ctx context.Context, param taske
 		category,
 		schema,
 		sessionInfo,
+		ptr.Of(entity.BizCategoryFromOnlineTrace),
 	))
 	if err != nil {
 		logs.CtxError(ctx, "CreateDataset failed, workspace_id=%d, err=%#v", currentTask.WorkspaceID, err)
