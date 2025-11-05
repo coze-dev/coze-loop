@@ -14,13 +14,13 @@ import (
 
 func main() {
 	db := initDB()
-	generateForPrompt(db)
-	generateForData(db)
-	generateForEvaluationTarget(db)
-	generateForEvaluationEvaluator(db)
-	generateForEvaluationExpt(db)
+	//generateForPrompt(db)
+	//generateForData(db)
+	//generateForEvaluationTarget(db)
+	//generateForEvaluationEvaluator(db)
+	//generateForEvaluationExpt(db)
 	generateForObservability(db)
-	generateForFoundation(db)
+	//generateForFoundation(db)
 }
 
 func initDB() *gorm.DB {

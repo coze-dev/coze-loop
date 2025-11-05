@@ -66,6 +66,20 @@ func (p *CreateTaskRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -116,6 +130,18 @@ func (p *CreateTaskRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateTaskRequest) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSession()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Session = _field
+	return offset, nil
+}
+
 func (p *CreateTaskRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -136,6 +162,7 @@ func (p *CreateTaskRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -146,6 +173,7 @@ func (p *CreateTaskRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -156,6 +184,15 @@ func (p *CreateTaskRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) i
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
 	offset += p.Task.FastWriteNocopy(buf[offset:], w)
+	return offset
+}
+
+func (p *CreateTaskRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSession() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
+		offset += p.Session.FastWriteNocopy(buf[offset:], w)
+	}
 	return offset
 }
 
@@ -172,6 +209,15 @@ func (p *CreateTaskRequest) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += p.Task.BLength()
+	return l
+}
+
+func (p *CreateTaskRequest) field2Length() int {
+	l := 0
+	if p.IsSetSession() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Session.BLength()
+	}
 	return l
 }
 
@@ -198,6 +244,15 @@ func (p *CreateTaskRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Task = _task
+
+	var _session *common.Session
+	if src.Session != nil {
+		_session = &common.Session{}
+		if err := _session.DeepCopy(src.Session); err != nil {
+			return err
+		}
+	}
+	p.Session = _session
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -488,6 +543,20 @@ func (p *UpdateTaskRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -613,6 +682,18 @@ func (p *UpdateTaskRequest) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *UpdateTaskRequest) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewSession()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Session = _field
+	return offset, nil
+}
+
 func (p *UpdateTaskRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -638,6 +719,7 @@ func (p *UpdateTaskRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -653,6 +735,7 @@ func (p *UpdateTaskRequest) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -705,6 +788,15 @@ func (p *UpdateTaskRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) i
 	if p.IsSetSampleRate() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.DOUBLE, 6)
 		offset += thrift.Binary.WriteDouble(buf[offset:], *p.SampleRate)
+	}
+	return offset
+}
+
+func (p *UpdateTaskRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSession() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 7)
+		offset += p.Session.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -768,6 +860,15 @@ func (p *UpdateTaskRequest) field6Length() int {
 	return l
 }
 
+func (p *UpdateTaskRequest) field7Length() int {
+	l := 0
+	if p.IsSetSession() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Session.BLength()
+	}
+	return l
+}
+
 func (p *UpdateTaskRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -813,6 +914,15 @@ func (p *UpdateTaskRequest) DeepCopy(s interface{}) error {
 		tmp := *src.SampleRate
 		p.SampleRate = &tmp
 	}
+
+	var _session *common.Session
+	if src.Session != nil {
+		_session = &common.Session{}
+		if err := _session.DeepCopy(src.Session); err != nil {
+			return err
+		}
+	}
+	p.Session = _session
 
 	var _base *base.Base
 	if src.Base != nil {
