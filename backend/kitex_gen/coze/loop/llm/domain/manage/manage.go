@@ -35,11 +35,43 @@ const (
 	ParamTypeBoolean = "boolean"
 
 	ParamTypeString = "string"
+
+	VideoFormatUndefined = "undefined"
+
+	VideoFormatMp4 = "mp4"
+
+	VideoFormatAvi = "avi"
+
+	VideoFormatMov = "mov"
+
+	VideoFormatMpg = "mpg"
+
+	VideoFormatWebm = "webm"
+
+	VideoFormatRvmb = "rvmb"
+
+	VideoFormatWmv = "wmv"
+
+	VideoFormatMkv = "mkv"
+
+	VideoFormatT3gp = "t3gp"
+
+	VideoFormatFlv = "flv"
+
+	VideoFormatMpeg = "mpeg"
+
+	VideoFormatTs = "ts"
+
+	VideoFormatRm = "rm"
+
+	VideoFormatM4v = "m4v"
 )
 
 type Protocol = string
 
 type ParamType = string
+
+type VideoFormat = string
 
 type Model struct {
 	ModelID         *int64                              `thrift:"model_id,1,optional" frugal:"1,optional,i64" json:"model_id" form:"model_id" query:"model_id"`
@@ -1482,6 +1514,8 @@ func (p *Ability) Field7DeepEqual(src *AbilityMultiModal) bool {
 type AbilityMultiModal struct {
 	Image        *bool         `thrift:"image,1,optional" frugal:"1,optional,bool" form:"image" json:"image,omitempty" query:"image"`
 	AbilityImage *AbilityImage `thrift:"ability_image,2,optional" frugal:"2,optional,AbilityImage" form:"ability_image" json:"ability_image,omitempty" query:"ability_image"`
+	Video        *bool         `thrift:"video,3,optional" frugal:"3,optional,bool" form:"video" json:"video,omitempty" query:"video"`
+	AbilityVideo *AbilityVideo `thrift:"ability_video,4,optional" frugal:"4,optional,AbilityVideo" form:"ability_video" json:"ability_video,omitempty" query:"ability_video"`
 }
 
 func NewAbilityMultiModal() *AbilityMultiModal {
@@ -1514,16 +1548,48 @@ func (p *AbilityMultiModal) GetAbilityImage() (v *AbilityImage) {
 	}
 	return p.AbilityImage
 }
+
+var AbilityMultiModal_Video_DEFAULT bool
+
+func (p *AbilityMultiModal) GetVideo() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVideo() {
+		return AbilityMultiModal_Video_DEFAULT
+	}
+	return *p.Video
+}
+
+var AbilityMultiModal_AbilityVideo_DEFAULT *AbilityVideo
+
+func (p *AbilityMultiModal) GetAbilityVideo() (v *AbilityVideo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAbilityVideo() {
+		return AbilityMultiModal_AbilityVideo_DEFAULT
+	}
+	return p.AbilityVideo
+}
 func (p *AbilityMultiModal) SetImage(val *bool) {
 	p.Image = val
 }
 func (p *AbilityMultiModal) SetAbilityImage(val *AbilityImage) {
 	p.AbilityImage = val
 }
+func (p *AbilityMultiModal) SetVideo(val *bool) {
+	p.Video = val
+}
+func (p *AbilityMultiModal) SetAbilityVideo(val *AbilityVideo) {
+	p.AbilityVideo = val
+}
 
 var fieldIDToName_AbilityMultiModal = map[int16]string{
 	1: "image",
 	2: "ability_image",
+	3: "video",
+	4: "ability_video",
 }
 
 func (p *AbilityMultiModal) IsSetImage() bool {
@@ -1532,6 +1598,14 @@ func (p *AbilityMultiModal) IsSetImage() bool {
 
 func (p *AbilityMultiModal) IsSetAbilityImage() bool {
 	return p.AbilityImage != nil
+}
+
+func (p *AbilityMultiModal) IsSetVideo() bool {
+	return p.Video != nil
+}
+
+func (p *AbilityMultiModal) IsSetAbilityVideo() bool {
+	return p.AbilityVideo != nil
 }
 
 func (p *AbilityMultiModal) Read(iprot thrift.TProtocol) (err error) {
@@ -1563,6 +1637,22 @@ func (p *AbilityMultiModal) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1616,6 +1706,25 @@ func (p *AbilityMultiModal) ReadField2(iprot thrift.TProtocol) error {
 	p.AbilityImage = _field
 	return nil
 }
+func (p *AbilityMultiModal) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Video = _field
+	return nil
+}
+func (p *AbilityMultiModal) ReadField4(iprot thrift.TProtocol) error {
+	_field := NewAbilityVideo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.AbilityVideo = _field
+	return nil
+}
 
 func (p *AbilityMultiModal) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1629,6 +1738,14 @@ func (p *AbilityMultiModal) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -1685,6 +1802,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *AbilityMultiModal) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVideo() {
+		if err = oprot.WriteFieldBegin("video", thrift.BOOL, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Video); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *AbilityMultiModal) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAbilityVideo() {
+		if err = oprot.WriteFieldBegin("ability_video", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.AbilityVideo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *AbilityMultiModal) String() string {
 	if p == nil {
@@ -1704,6 +1857,12 @@ func (p *AbilityMultiModal) DeepEqual(ano *AbilityMultiModal) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.AbilityImage) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Video) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.AbilityVideo) {
 		return false
 	}
 	return true
@@ -1728,12 +1887,32 @@ func (p *AbilityMultiModal) Field2DeepEqual(src *AbilityImage) bool {
 	}
 	return true
 }
+func (p *AbilityMultiModal) Field3DeepEqual(src *bool) bool {
+
+	if p.Video == src {
+		return true
+	} else if p.Video == nil || src == nil {
+		return false
+	}
+	if *p.Video != *src {
+		return false
+	}
+	return true
+}
+func (p *AbilityMultiModal) Field4DeepEqual(src *AbilityVideo) bool {
+
+	if !p.AbilityVideo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 
 type AbilityImage struct {
-	URLEnabled    *bool  `thrift:"url_enabled,1,optional" frugal:"1,optional,bool" form:"url_enabled" json:"url_enabled,omitempty" query:"url_enabled"`
-	BinaryEnabled *bool  `thrift:"binary_enabled,2,optional" frugal:"2,optional,bool" form:"binary_enabled" json:"binary_enabled,omitempty" query:"binary_enabled"`
-	MaxImageSize  *int64 `thrift:"max_image_size,3,optional" frugal:"3,optional,i64" json:"max_image_size" form:"max_image_size" query:"max_image_size"`
-	MaxImageCount *int64 `thrift:"max_image_count,4,optional" frugal:"4,optional,i64" json:"max_image_count" form:"max_image_count" query:"max_image_count"`
+	URLEnabled      *bool  `thrift:"url_enabled,1,optional" frugal:"1,optional,bool" form:"url_enabled" json:"url_enabled,omitempty" query:"url_enabled"`
+	BinaryEnabled   *bool  `thrift:"binary_enabled,2,optional" frugal:"2,optional,bool" form:"binary_enabled" json:"binary_enabled,omitempty" query:"binary_enabled"`
+	MaxImageSize    *int64 `thrift:"max_image_size,3,optional" frugal:"3,optional,i64" json:"max_image_size" form:"max_image_size" query:"max_image_size"`
+	MaxImageCount   *int64 `thrift:"max_image_count,4,optional" frugal:"4,optional,i64" json:"max_image_count" form:"max_image_count" query:"max_image_count"`
+	ImageGenEnabled *bool  `thrift:"image_gen_enabled,5,optional" frugal:"5,optional,bool" form:"image_gen_enabled" json:"image_gen_enabled,omitempty" query:"image_gen_enabled"`
 }
 
 func NewAbilityImage() *AbilityImage {
@@ -1790,6 +1969,18 @@ func (p *AbilityImage) GetMaxImageCount() (v int64) {
 	}
 	return *p.MaxImageCount
 }
+
+var AbilityImage_ImageGenEnabled_DEFAULT bool
+
+func (p *AbilityImage) GetImageGenEnabled() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetImageGenEnabled() {
+		return AbilityImage_ImageGenEnabled_DEFAULT
+	}
+	return *p.ImageGenEnabled
+}
 func (p *AbilityImage) SetURLEnabled(val *bool) {
 	p.URLEnabled = val
 }
@@ -1802,12 +1993,16 @@ func (p *AbilityImage) SetMaxImageSize(val *int64) {
 func (p *AbilityImage) SetMaxImageCount(val *int64) {
 	p.MaxImageCount = val
 }
+func (p *AbilityImage) SetImageGenEnabled(val *bool) {
+	p.ImageGenEnabled = val
+}
 
 var fieldIDToName_AbilityImage = map[int16]string{
 	1: "url_enabled",
 	2: "binary_enabled",
 	3: "max_image_size",
 	4: "max_image_count",
+	5: "image_gen_enabled",
 }
 
 func (p *AbilityImage) IsSetURLEnabled() bool {
@@ -1824,6 +2019,10 @@ func (p *AbilityImage) IsSetMaxImageSize() bool {
 
 func (p *AbilityImage) IsSetMaxImageCount() bool {
 	return p.MaxImageCount != nil
+}
+
+func (p *AbilityImage) IsSetImageGenEnabled() bool {
+	return p.ImageGenEnabled != nil
 }
 
 func (p *AbilityImage) Read(iprot thrift.TProtocol) (err error) {
@@ -1871,6 +2070,14 @@ func (p *AbilityImage) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1949,6 +2156,17 @@ func (p *AbilityImage) ReadField4(iprot thrift.TProtocol) error {
 	p.MaxImageCount = _field
 	return nil
 }
+func (p *AbilityImage) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ImageGenEnabled = _field
+	return nil
+}
 
 func (p *AbilityImage) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1970,6 +2188,10 @@ func (p *AbilityImage) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -2062,6 +2284,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *AbilityImage) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetImageGenEnabled() {
+		if err = oprot.WriteFieldBegin("image_gen_enabled", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.ImageGenEnabled); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *AbilityImage) String() string {
 	if p == nil {
@@ -2087,6 +2327,9 @@ func (p *AbilityImage) DeepEqual(ano *AbilityImage) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.MaxImageCount) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ImageGenEnabled) {
 		return false
 	}
 	return true
@@ -2137,6 +2380,298 @@ func (p *AbilityImage) Field4DeepEqual(src *int64) bool {
 	}
 	if *p.MaxImageCount != *src {
 		return false
+	}
+	return true
+}
+func (p *AbilityImage) Field5DeepEqual(src *bool) bool {
+
+	if p.ImageGenEnabled == src {
+		return true
+	} else if p.ImageGenEnabled == nil || src == nil {
+		return false
+	}
+	if *p.ImageGenEnabled != *src {
+		return false
+	}
+	return true
+}
+
+type AbilityVideo struct {
+	// the size limit of single video
+	MaxVideoSizeInMb      *int32        `thrift:"max_video_size_in_mb,1,optional" frugal:"1,optional,i32" form:"max_video_size_in_mb" json:"max_video_size_in_mb,omitempty" query:"max_video_size_in_mb"`
+	SupportedVideoFormats []VideoFormat `thrift:"supported_video_formats,2,optional" frugal:"2,optional,list<string>" form:"supported_video_formats" json:"supported_video_formats,omitempty" query:"supported_video_formats"`
+}
+
+func NewAbilityVideo() *AbilityVideo {
+	return &AbilityVideo{}
+}
+
+func (p *AbilityVideo) InitDefault() {
+}
+
+var AbilityVideo_MaxVideoSizeInMb_DEFAULT int32
+
+func (p *AbilityVideo) GetMaxVideoSizeInMb() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMaxVideoSizeInMb() {
+		return AbilityVideo_MaxVideoSizeInMb_DEFAULT
+	}
+	return *p.MaxVideoSizeInMb
+}
+
+var AbilityVideo_SupportedVideoFormats_DEFAULT []VideoFormat
+
+func (p *AbilityVideo) GetSupportedVideoFormats() (v []VideoFormat) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSupportedVideoFormats() {
+		return AbilityVideo_SupportedVideoFormats_DEFAULT
+	}
+	return p.SupportedVideoFormats
+}
+func (p *AbilityVideo) SetMaxVideoSizeInMb(val *int32) {
+	p.MaxVideoSizeInMb = val
+}
+func (p *AbilityVideo) SetSupportedVideoFormats(val []VideoFormat) {
+	p.SupportedVideoFormats = val
+}
+
+var fieldIDToName_AbilityVideo = map[int16]string{
+	1: "max_video_size_in_mb",
+	2: "supported_video_formats",
+}
+
+func (p *AbilityVideo) IsSetMaxVideoSizeInMb() bool {
+	return p.MaxVideoSizeInMb != nil
+}
+
+func (p *AbilityVideo) IsSetSupportedVideoFormats() bool {
+	return p.SupportedVideoFormats != nil
+}
+
+func (p *AbilityVideo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AbilityVideo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *AbilityVideo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MaxVideoSizeInMb = _field
+	return nil
+}
+func (p *AbilityVideo) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]VideoFormat, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem VideoFormat
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.SupportedVideoFormats = _field
+	return nil
+}
+
+func (p *AbilityVideo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AbilityVideo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AbilityVideo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxVideoSizeInMb() {
+		if err = oprot.WriteFieldBegin("max_video_size_in_mb", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.MaxVideoSizeInMb); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *AbilityVideo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSupportedVideoFormats() {
+		if err = oprot.WriteFieldBegin("supported_video_formats", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.SupportedVideoFormats)); err != nil {
+			return err
+		}
+		for _, v := range p.SupportedVideoFormats {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *AbilityVideo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AbilityVideo(%+v)", *p)
+
+}
+
+func (p *AbilityVideo) DeepEqual(ano *AbilityVideo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.MaxVideoSizeInMb) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SupportedVideoFormats) {
+		return false
+	}
+	return true
+}
+
+func (p *AbilityVideo) Field1DeepEqual(src *int32) bool {
+
+	if p.MaxVideoSizeInMb == src {
+		return true
+	} else if p.MaxVideoSizeInMb == nil || src == nil {
+		return false
+	}
+	if *p.MaxVideoSizeInMb != *src {
+		return false
+	}
+	return true
+}
+func (p *AbilityVideo) Field2DeepEqual(src []VideoFormat) bool {
+
+	if len(p.SupportedVideoFormats) != len(src) {
+		return false
+	}
+	for i, v := range p.SupportedVideoFormats {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }
