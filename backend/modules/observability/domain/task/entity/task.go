@@ -138,7 +138,7 @@ func (t ObservabilityTask) GetRunTimeRange() (startAt, endAt int64) {
 		case task.TimeUnitWeek:
 			runEndAt = runStartAt + (t.Sampler.CycleInterval)*7*24*time.Hour.Milliseconds()
 		default:
-			runEndAt = runStartAt + (t.Sampler.CycleInterval)*10*time.Minute.Milliseconds()
+			runEndAt = runStartAt + (t.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
 		}
 	}
 	return runStartAt, runEndAt
