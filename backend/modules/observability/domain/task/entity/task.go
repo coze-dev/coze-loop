@@ -126,6 +126,24 @@ type DataReflowRunConfig struct {
 	Status       string `json:"status"`
 }
 
+func (t ObservabilityTask) GetRunTimeRange() (startAt, endAt int64) {
+	var runStartAt, runEndAt int64
+	runStartAt = t.EffectiveTime.StartAt
+	if !t.Sampler.IsCycle {
+		runEndAt = t.EffectiveTime.EndAt
+	} else {
+		switch t.Sampler.CycleTimeUnit {
+		case task.TimeUnitDay:
+			runEndAt = runStartAt + (t.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
+		case task.TimeUnitWeek:
+			runEndAt = runStartAt + (t.Sampler.CycleInterval)*7*24*time.Hour.Milliseconds()
+		default:
+			runEndAt = runStartAt + (t.Sampler.CycleInterval)*10*time.Minute.Milliseconds()
+		}
+	}
+	return runStartAt, runEndAt
+}
+
 func (t ObservabilityTask) IsFinished() bool {
 	switch t.TaskStatus {
 	case task.TaskStatusSuccess, task.TaskStatusDisabled, task.TaskStatusPending:
