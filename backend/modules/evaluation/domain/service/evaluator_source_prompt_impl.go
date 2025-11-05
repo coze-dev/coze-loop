@@ -77,13 +77,13 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 	var rootSpan *evaluatorSpan
 
     if !disableTracing {
-		rootSpan, ctx = newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), false)
+        rootSpan, ctx = newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(exptSpaceID, 10), false)
 		traceID = rootSpan.GetTraceID()
 	} else {
 		traceID = ""
 	}
 
-	defer func() {
+    defer func() {
 		if output == nil {
 			output = &entity.EvaluatorOutputData{
 				EvaluatorRunError: &entity.EvaluatorRunError{},
@@ -137,10 +137,10 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 			modelID = strconv.FormatInt(evaluator.PromptEvaluatorVersion.ModelConfig.ModelID, 10)
 		}
 
-		p.metric.EmitRun(evaluator.SpaceID, err, startTime, modelID)
+        p.metric.EmitRun(exptSpaceID, err, startTime, modelID)
 	}()
 	// 渲染变量
-	err = renderTemplate(ctx, evaluator.PromptEvaluatorVersion, input, disableTracing)
+    err = renderTemplate(ctx, evaluator.PromptEvaluatorVersion, input, exptSpaceID, disableTracing)
 	if err != nil {
 		logs.CtxError(ctx, "[RunEvaluator] renderTemplate fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
@@ -148,13 +148,13 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 	}
 	// 执行评估逻辑
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-	llmResp, err := p.chat(ctx, evaluator.PromptEvaluatorVersion, userIDInContext, disableTracing)
+    llmResp, err := p.chat(ctx, evaluator.PromptEvaluatorVersion, exptSpaceID, userIDInContext, disableTracing)
 	if err != nil {
 		logs.CtxError(ctx, "[RunEvaluator] chat fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
 		return nil, runStatus, traceID
 	}
-	output, err = parseOutput(ctx, evaluator.PromptEvaluatorVersion, llmResp, disableTracing)
+    output, err = parseOutput(ctx, evaluator.PromptEvaluatorVersion, llmResp, exptSpaceID, disableTracing)
 	if err != nil {
 		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
@@ -163,12 +163,12 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 	return output, entity.EvaluatorRunStatusSuccess, traceID
 }
 
-func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, userIDInContext string, disableTracing bool) (resp *entity.ReplyItem, err error) {
+func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, exptSpaceID int64, userIDInContext string, disableTracing bool) (resp *entity.ReplyItem, err error) {
 	var modelSpan *evaluatorSpan
 	modelCtx := ctx
 
-	if !disableTracing {
-		modelSpan, modelCtx = newEvaluatorSpan(ctx, evaluatorVersion.ModelConfig.ModelName, "model", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
+    if !disableTracing {
+        modelSpan, modelCtx = newEvaluatorSpan(ctx, evaluatorVersion.ModelConfig.ModelName, "model", strconv.FormatInt(exptSpaceID, 10), true)
 		defer func() {
 			modelSpan.reportModelSpan(modelCtx, evaluatorVersion, resp, err)
 		}()
@@ -182,8 +182,8 @@ func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVe
 		}
 	}
 
-	llmCallParam := &entity.LLMCallParam{
-		SpaceID:     evaluatorVersion.GetSpaceID(),
+    llmCallParam := &entity.LLMCallParam{
+        SpaceID:     exptSpaceID,
 		EvaluatorID: strconv.FormatInt(evaluatorVersion.EvaluatorID, 10),
 		UserID:      gptr.Of(userIDInContext),
 		Scenario:    entity.ScenarioEvaluator,
@@ -326,14 +326,14 @@ func (e *evaluatorSpan) reportOutputParserSpan(ctx context.Context, replyItem *e
 	e.Finish(ctx)
 }
 
-func parseOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, disableTracing bool) (output *entity.EvaluatorOutputData, err error) {
+func parseOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, err error) {
 	// 输出数据全空直接返回
 	var outputParserSpan *evaluatorSpan
-	if !disableTracing {
-		outputParserSpan, ctx = newEvaluatorSpan(ctx, "ParseOutput", "LoopEvaluation", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
-		defer func() {
-			outputParserSpan.reportOutputParserSpan(ctx, replyItem, output, strconv.FormatInt(evaluatorVersion.SpaceID, 10), err)
-		}()
+    if !disableTracing {
+        outputParserSpan, ctx = newEvaluatorSpan(ctx, "ParseOutput", "LoopEvaluation", strconv.FormatInt(exptSpaceID, 10), true)
+        defer func() {
+            outputParserSpan.reportOutputParserSpan(ctx, replyItem, output, strconv.FormatInt(exptSpaceID, 10), err)
+        }()
 	}
 	output = &entity.EvaluatorOutputData{
 		EvaluatorResult: &entity.EvaluatorResult{},
@@ -481,7 +481,7 @@ func parseFunctionCallOutput(ctx context.Context, evaluatorVersion *entity.Promp
 	return nil
 }
 
-func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, input *entity.EvaluatorInputData, disableTracing bool) error {
+func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, input *entity.EvaluatorInputData, exptSpaceID int64, disableTracing bool) error {
 	// 实现渲染模板的逻辑
 	variables := make([]*tracespec.PromptArgument, 0)
 	for k, v := range input.InputFields {
@@ -511,8 +511,8 @@ func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluato
 	}
 
 	var renderTemplateSpan *evaluatorSpan
-	if !disableTracing {
-		renderTemplateSpan, ctx = newEvaluatorSpan(ctx, "RenderTemplate", "prompt", strconv.FormatInt(evaluatorVersion.SpaceID, 10), true)
+    if !disableTracing {
+        renderTemplateSpan, ctx = newEvaluatorSpan(ctx, "RenderTemplate", "prompt", strconv.FormatInt(exptSpaceID, 10), true)
 		renderTemplateSpan.SetInput(ctx, tracer.Convert2TraceString(tracer.ConvertPrompt2Ob(evaluatorVersion.MessageList, variables)))
 	}
 	for _, message := range evaluatorVersion.MessageList {

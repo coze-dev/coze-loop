@@ -204,7 +204,7 @@ func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *ent
 	var code string
 	startTime := time.Now()
 	// 创建trace span
-    rootSpan, ctx := c.newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(evaluator.SpaceID, 10), disableTracing)
+    rootSpan, ctx := c.newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(exptSpaceID, 10), disableTracing)
 	traceID = rootSpan.GetTraceID()
 
 	defer func() {
