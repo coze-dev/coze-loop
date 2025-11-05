@@ -192,33 +192,21 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		}
 		// If the task status is unstarted, create it once the task start time is reached
 		if taskPO.TaskStatus == entity.TaskStatusUnstarted && time.Now().After(startTime) {
-			if !taskPO.Sampler.IsCycle {
-				err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
-					CurrentTask: taskPO,
-					RunType:     entity.TaskRunTypeNewData,
-					RunStartAt:  taskPO.EffectiveTime.StartAt,
-					RunEndAt:    taskPO.EffectiveTime.EndAt,
-				})
-				if err != nil {
-					logs.CtxError(ctx, "OnTaskRunCreated err:%v", err)
-					continue
-				}
-				err = proc.OnTaskUpdated(ctx, taskPO, entity.TaskStatusRunning)
-				if err != nil {
-					logs.CtxError(ctx, "OnTaskUpdated err:%v", err)
-					continue
-				}
-			} else {
-				err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
-					CurrentTask: taskPO,
-					RunType:     entity.TaskRunTypeNewData,
-					RunStartAt:  taskRun.RunEndAt.UnixMilli(),
-					RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
-				})
-				if err != nil {
-					logs.CtxError(ctx, "OnTaskRunCreated err:%v", err)
-					continue
-				}
+			runStartAt, runEndAt := taskPO.GetRunTimeRange()
+			err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
+				CurrentTask: taskPO,
+				RunType:     entity.TaskRunTypeNewData,
+				RunStartAt:  runStartAt,
+				RunEndAt:    runEndAt,
+			})
+			if err != nil {
+				logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+				continue
+			}
+			err = proc.OnTaskUpdated(ctx, taskPO, entity.TaskStatusRunning)
+			if err != nil {
+				logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
+				continue
 			}
 		}
 		// Handle taskRun
