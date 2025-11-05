@@ -433,6 +433,7 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 			// Continue with the next batch without stopping due to a single failure
 			continue
 		}
+		// ml_flow rate-limited: 50/5s
 		time.Sleep(5 * time.Second)
 	}
 

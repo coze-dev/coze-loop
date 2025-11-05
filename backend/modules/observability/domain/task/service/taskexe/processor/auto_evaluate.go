@@ -191,7 +191,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTa
 			case task.TimeUnitWeek:
 				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*7*24*time.Hour.Milliseconds()
 			default:
-				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*10*time.Minute.Milliseconds()
+				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
 			}
 		}
 		err = p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
