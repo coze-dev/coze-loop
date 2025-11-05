@@ -5,9 +5,11 @@ package ck
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -298,9 +300,15 @@ func TestBuildSql(t *testing.T) {
 						Values:    []string{},
 						QueryType: ptr.Of(loop_span.QueryTypeEnumNotExist),
 					},
+					{
+						FieldName: "custom_tag_long2",
+						FieldType: loop_span.FieldTypeLong,
+						Values:    []string{},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumExist),
+					},
 				},
 			},
-			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE ((tags_string['custom_tag_string'] IS NULL OR tags_string['custom_tag_string'] = '') AND (tags_bool['custom_tag_bool'] IS NULL OR tags_bool['custom_tag_bool'] = 0) AND (tags_float['custom_tag_double'] IS NULL OR tags_float['custom_tag_double'] = 0) AND (tags_long['custom_tag_long'] IS NULL OR tags_long['custom_tag_long'] = 0)) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE ((tags_string['custom_tag_string'] IS NULL OR tags_string['custom_tag_string'] = '') AND (tags_bool['custom_tag_bool'] IS NULL OR tags_bool['custom_tag_bool'] = 0) AND (tags_float['custom_tag_double'] IS NULL OR tags_float['custom_tag_double'] = 0) AND (tags_long['custom_tag_long'] IS NULL OR tags_long['custom_tag_long'] = 0) AND (tags_long['custom_tag_long2'] IS NOT NULL AND tags_long['custom_tag_long2'] != 0)) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			filter: &loop_span.FilterFields{
@@ -345,6 +353,56 @@ func TestBuildSql(t *testing.T) {
 			filter: &loop_span.FilterFields{
 				FilterFields: []*loop_span.FilterField{
 					{
+						FieldName: loop_span.SpanFieldDuration,
+						FieldType: loop_span.FieldTypeLong,
+						Values:    []string{"121"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumGt),
+					},
+				},
+			},
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `duration` > 121 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: loop_span.SpanFieldDuration,
+						FieldType: loop_span.FieldTypeLong,
+						Values:    []string{"121"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumLte),
+					},
+				},
+			},
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `duration` <= 121 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: loop_span.SpanFieldDuration,
+						FieldType: loop_span.FieldTypeLong,
+						Values:    []string{"121"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumLt),
+					},
+				},
+			},
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE `duration` < 121 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "a",
+						QueryType: ptr.Of(loop_span.QueryTypeEnumAlwaysTrue),
+					},
+				},
+			},
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE 1 = 1 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
 						FieldName: "custom_tag_bool",
 						FieldType: loop_span.FieldTypeBool,
 						Values:    []string{"true"},
@@ -353,6 +411,19 @@ func TestBuildSql(t *testing.T) {
 				},
 			},
 			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE tags_bool['custom_tag_bool'] = 1 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "custom_tag_bool",
+						FieldType: loop_span.FieldTypeBool,
+						Values:    []string{"true"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumNotEq),
+					},
+				},
+			},
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE tags_bool['custom_tag_bool'] != 1 AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 		{
 			filter: &loop_span.FilterFields{
@@ -392,6 +463,64 @@ func TestBuildSql(t *testing.T) {
 				},
 			},
 			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE span_id in (SELECT span_id FROM `observability_annotations` WHERE (annotation_type = 'manual_feedback' AND key = 'abc' AND value_string IN ('123')) AND deleted_at = 0 AND start_time >= 1 AND start_time <= 2 SETTINGS final = 1) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "manual_feedback_abc",
+						FieldType: loop_span.FieldTypeLong,
+						Values:    []string{"123"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+				},
+			},
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE span_id in (SELECT span_id FROM `observability_annotations` WHERE (annotation_type = 'manual_feedback' AND key = 'abc' AND value_long IN (123)) AND deleted_at = 0 AND start_time >= 1 AND start_time <= 2 SETTINGS final = 1) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "manual_feedback_abc",
+						FieldType: loop_span.FieldTypeDouble,
+						Values:    []string{"123.1"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+				},
+			},
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE span_id in (SELECT span_id FROM `observability_annotations` WHERE (annotation_type = 'manual_feedback' AND key = 'abc' AND value_float IN (123.1)) AND deleted_at = 0 AND start_time >= 1 AND start_time <= 2 SETTINGS final = 1) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "manual_feedback_abc",
+						FieldType: loop_span.FieldTypeBool,
+						Values:    []string{"true"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+				},
+			},
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE span_id in (SELECT span_id FROM `observability_annotations` WHERE (annotation_type = 'manual_feedback' AND key = 'abc' AND value_bool IN (1)) AND deleted_at = 0 AND start_time >= 1 AND start_time <= 2 SETTINGS final = 1) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
+		},
+		{
+			filter: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "manual_feedback_abc",
+						FieldType: loop_span.FieldTypeBool,
+						Values:    []string{"true"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+					{
+						FieldName: loop_span.SpanFieldSpaceId,
+						FieldType: loop_span.FieldTypeString,
+						Values:    []string{"123"},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+				},
+			},
+			expectedSql: "SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE (span_id in (SELECT span_id FROM `observability_annotations` WHERE (annotation_type = 'manual_feedback' AND key = 'abc' AND value_bool IN (1) AND space_id IN ('123')) AND deleted_at = 0 AND start_time >= 1 AND start_time <= 2 SETTINGS final = 1) AND `space_id` IN ('123')) AND start_time >= 1 AND start_time <= 2 LIMIT 100",
 		},
 	}
 	for _, tc := range testCases {
@@ -753,4 +882,162 @@ func TestQueryTypeEnumNotMatchComplexScenarios(t *testing.T) {
 			assert.Equal(t, tc.expectedSql, sql, "SQL mismatch for test case: %s", tc.name)
 		})
 	}
+}
+
+func TestNewSpansCkDaoImpl(t *testing.T) {
+	t.Parallel()
+
+	provider := &recordingProvider{}
+	dao, err := NewSpansCkDaoImpl(provider)
+	assert.NoError(t, err)
+
+	impl, ok := dao.(*SpansCkDaoImpl)
+	assert.True(t, ok)
+	assert.Equal(t, provider, impl.db)
+}
+
+func TestSpansCkDaoImpl_buildMetricsSql(t *testing.T) {
+	t.Parallel()
+
+	baseDB, cleanup := newTestGormDB(t)
+	defer cleanup()
+
+	dao := &testSpansDao{
+		SpansCkDaoImpl: SpansCkDaoImpl{db: &stubCKProvider{db: baseDB}},
+	}
+
+	dao.buildSqlFunc = func(ctx context.Context, param *QueryParam) (*gorm.DB, error) {
+		return baseDB.Session(&gorm.Session{DryRun: true}).Raw("SELECT * FROM base"), nil
+	}
+	dao.convertFieldNameFunc = func(ctx context.Context, filter *loop_span.FilterField) (string, error) {
+		return "converted_" + filter.FieldName, nil
+	}
+
+	durationField := &loop_span.FilterField{FieldName: "duration", FieldType: loop_span.FieldTypeLong}
+	spanTypeField := &loop_span.FilterField{FieldName: "span_type", FieldType: loop_span.FieldTypeString}
+
+	sql, err := dao.buildMetricsSql(context.Background(), &GetMetricsParam{
+		Tables: []string{"observability_spans"},
+		Aggregations: []*metrics_entity.Dimension{
+			{
+				Alias: "avg_duration",
+				Expression: &metrics_entity.Expression{
+					Expression: "avg(%s)",
+					Fields:     []*loop_span.FilterField{durationField},
+				},
+			},
+		},
+		GroupBys: []*metrics_entity.Dimension{
+			{
+				Alias: "type",
+				Field: spanTypeField,
+			},
+		},
+		Filters:     &loop_span.FilterFields{},
+		StartAt:     1,
+		EndAt:       2,
+		Granularity: metrics_entity.MetricGranularity1Min,
+	})
+	assert.NoError(t, err)
+
+	expected := "SELECT toUnixTimestamp(toStartOfInterval(fromUnixTimestamp64Micro(start_time), INTERVAL 1 MINUTE)) * 1000 AS time_bucket, avg(`duration`) AS avg_duration, `span_type` AS type FROM (SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `observability_spans` WHERE start_time >= 1 AND start_time <= 2 ) GROUP BY time_bucket, `span_type` ORDER BY time_bucket"
+	assert.Equal(t, expected, sql)
+}
+
+func TestSpansCkDaoImpl_buildSql_MultiTables(t *testing.T) {
+	t.Parallel()
+
+	baseDB, cleanup := newTestGormDB(t)
+	defer cleanup()
+
+	dao := &testSpansDao{
+		SpansCkDaoImpl: SpansCkDaoImpl{db: &stubCKProvider{db: baseDB}},
+	}
+
+	dryRun := baseDB.Session(&gorm.Session{DryRun: true})
+	dao.buildSingleSqlFunc = func(ctx context.Context, param *buildSqlParam) (*gorm.DB, error) {
+		switch param.spanTable {
+		case "t1":
+			return dryRun.Raw("SELECT * FROM t1"), nil
+		case "t2":
+			return dryRun.Raw("SELECT * FROM t2"), nil
+		default:
+			return nil, fmt.Errorf("unexpected table %s", param.spanTable)
+		}
+	}
+
+	q, err := dao.buildSql(context.Background(), &QueryParam{
+		Tables:           []string{"t1", "t2"},
+		StartTime:        0,
+		EndTime:          1,
+		Limit:            5,
+		OrderByStartTime: true,
+	})
+	assert.NoError(t, err)
+
+	sql := q.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Find(nil)
+	})
+	assert.Equal(t, "SELECT * FROM ((SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `t1` WHERE start_time >= 0 AND start_time <= 1 ORDER BY `start_time` DESC,`span_id` DESC LIMIT 5) UNION ALL (SELECT start_time, logid, span_id, trace_id, parent_id, duration, psm, call_type, space_id, span_type, span_name, method, status_code, input, output, object_storage, system_tags_string, system_tags_long, system_tags_float, tags_string, tags_long, tags_bool, tags_float, tags_byte, reserve_create_time, logic_delete_date FROM `t2` WHERE start_time >= 0 AND start_time <= 1 ORDER BY `start_time` DESC,`span_id` DESC LIMIT 5)) ORDER BY start_time DESC, span_id DESC LIMIT 5", sql)
+}
+
+func TestGetTimeInterval(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "INTERVAL 1 MINUTE", getTimeInterval(metrics_entity.MetricGranularity1Min))
+	assert.Equal(t, "INTERVAL 1 HOUR", getTimeInterval(metrics_entity.MetricGranularity1Hour))
+	assert.Equal(t, "INTERVAL 1 DAY", getTimeInterval(metrics_entity.MetricGranularity1Day))
+	assert.Equal(t, "INTERVAL 1 DAY", getTimeInterval(metrics_entity.MetricGranularity1Week))
+	assert.Equal(t, "INTERVAL 1 DAY", getTimeInterval(metrics_entity.MetricGranularity("unsupported")))
+}
+
+type stubCKProvider struct {
+	db *gorm.DB
+}
+
+func (s *stubCKProvider) NewSession(ctx context.Context) *gorm.DB {
+	return s.db.Session(&gorm.Session{
+		DryRun:  true,
+		Context: ctx,
+	})
+}
+
+type recordingProvider struct {
+	lastCtx  context.Context
+	returnDB *gorm.DB
+}
+
+func (p *recordingProvider) NewSession(ctx context.Context) *gorm.DB {
+	p.lastCtx = ctx
+	return p.returnDB
+}
+
+type testSpansDao struct {
+	SpansCkDaoImpl
+	buildSqlFunc         func(context.Context, *QueryParam) (*gorm.DB, error)
+	buildSingleSqlFunc   func(context.Context, *buildSqlParam) (*gorm.DB, error)
+	convertFieldNameFunc func(context.Context, *loop_span.FilterField) (string, error)
+}
+
+func (s *testSpansDao) buildSql(ctx context.Context, param *QueryParam) (*gorm.DB, error) {
+	if s.buildSqlFunc != nil {
+		return s.buildSqlFunc(ctx, param)
+	}
+	return s.SpansCkDaoImpl.buildSql(ctx, param)
+}
+
+func newTestGormDB(t *testing.T) (*gorm.DB, func()) {
+	sqlDB, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	gormDB, err := gorm.Open(clickhouse.New(clickhouse.Config{Conn: sqlDB, SkipInitializeWithVersion: true}), &gorm.Config{})
+	if err != nil {
+		_ = sqlDB.Close()
+		t.Fatalf("failed to open gorm: %v", err)
+	}
+	cleanup := func() {
+		_ = sqlDB.Close()
+	}
+	return gormDB, cleanup
 }

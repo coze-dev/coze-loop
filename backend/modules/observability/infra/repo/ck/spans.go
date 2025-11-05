@@ -115,6 +115,9 @@ func (s *SpansCkDaoImpl) Get(ctx context.Context, param *QueryParam) ([]*model.O
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
 	}
 	for _, span := range spans {
+		if span.SystemTagsString == nil {
+			span.SystemTagsString = make(map[string]string)
+		}
 		span.SystemTagsString[loop_span.SpanFieldTenant] = "cozeloop" // tenant
 	}
 	return spans, nil
