@@ -62,7 +62,8 @@ func (s *RateLimiterImpl) AllowInvokeWithKeyLimit(ctx context.Context, key strin
 		return true
 	}
 	if res.Allowed {
-		logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] allow invoke")
+		logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] allow invoke, key=%v, rate=%v, burst=%v, period=%v",
+			key, gptr.Indirect(limit.Rate), gptr.Indirect(limit.Burst), gptr.Indirect(limit.Period))
 		return true
 	}
 	logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] not allow invoke")
