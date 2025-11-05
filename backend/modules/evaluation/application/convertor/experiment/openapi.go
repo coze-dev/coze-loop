@@ -614,6 +614,7 @@ func OpenAPIColumnEvaluatorsDO2DTOs(from []*entity.ColumnEvaluator) []*openapiEx
 	}
 	return result
 }
+
 func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.ItemResult_ {
 	if len(from) == 0 {
 		return nil
