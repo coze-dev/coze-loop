@@ -18,7 +18,7 @@ func ConvertEvaluatorTemplateDTO2DO(dto *evaluatordto.EvaluatorTemplate) *evalua
 		return nil
 	}
 
-    do := &evaluatordo.EvaluatorTemplate{
+	do := &evaluatordo.EvaluatorTemplate{
 		ID:            dto.GetID(),
 		SpaceID:       dto.GetWorkspaceID(),
 		Name:          dto.GetName(),
@@ -29,14 +29,14 @@ func ConvertEvaluatorTemplateDTO2DO(dto *evaluatordto.EvaluatorTemplate) *evalua
 		OutputSchemas: make([]*evaluatordo.ArgsSchema, 0),
 		Tags:          make(map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string),
 	}
-    if dto.GetEvaluatorInfo() != nil {
-        do.EvaluatorInfo = &evaluatordo.EvaluatorInfo{
-            Benchmark:     dto.GetEvaluatorInfo().GetBenchmark(),
-            Vendor:        dto.GetEvaluatorInfo().GetVendor(),
-            VendorURL:     dto.GetEvaluatorInfo().GetVendorURL(),
-            UserManualURL: dto.GetEvaluatorInfo().GetUserManualURL(),
-        }
-    }
+	if dto.GetEvaluatorInfo() != nil {
+		do.EvaluatorInfo = &evaluatordo.EvaluatorInfo{
+			Benchmark:     dto.GetEvaluatorInfo().GetBenchmark(),
+			Vendor:        dto.GetEvaluatorInfo().GetVendor(),
+			VendorURL:     dto.GetEvaluatorInfo().GetVendorURL(),
+			UserManualURL: dto.GetEvaluatorInfo().GetUserManualURL(),
+		}
+	}
 
 	// 处理标签
 	if len(dto.GetTags()) > 0 {
@@ -95,7 +95,7 @@ func ConvertEvaluatorTemplateDO2DTO(do *evaluatordo.EvaluatorTemplate) *evaluato
 		return nil
 	}
 
-    dto := &evaluatordto.EvaluatorTemplate{
+	dto := &evaluatordto.EvaluatorTemplate{
 		ID:            gptr.Of(do.ID),
 		WorkspaceID:   gptr.Of(do.SpaceID),
 		Name:          gptr.Of(do.Name),
@@ -104,14 +104,14 @@ func ConvertEvaluatorTemplateDO2DTO(do *evaluatordo.EvaluatorTemplate) *evaluato
 		Popularity:    gptr.Of(do.Popularity),
 		Tags:          make(map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string),
 	}
-    if do.EvaluatorInfo != nil {
-        dto.EvaluatorInfo = &evaluatordto.EvaluatorInfo{
-            Benchmark:     gptr.Of(do.EvaluatorInfo.Benchmark),
-            Vendor:        gptr.Of(do.EvaluatorInfo.Vendor),
-            VendorURL:     gptr.Of(do.EvaluatorInfo.VendorURL),
-            UserManualURL: gptr.Of(do.EvaluatorInfo.UserManualURL),
-        }
-    }
+	if do.EvaluatorInfo != nil {
+		dto.EvaluatorInfo = &evaluatordto.EvaluatorInfo{
+			Benchmark:     gptr.Of(do.EvaluatorInfo.Benchmark),
+			Vendor:        gptr.Of(do.EvaluatorInfo.Vendor),
+			VendorURL:     gptr.Of(do.EvaluatorInfo.VendorURL),
+			UserManualURL: gptr.Of(do.EvaluatorInfo.UserManualURL),
+		}
+	}
 
 	// 处理标签
 	if len(do.Tags) > 0 {
@@ -249,21 +249,21 @@ func ConvertCodeEvaluatorContentDTO2DO(dto *evaluatordto.CodeEvaluator) *evaluat
 	if dto == nil {
 		return nil
 	}
-    // 新字段优先：lang_2_code_content
-    if len(dto.GetLang2CodeContent()) > 0 {
-        // 直接映射为 DO 的 Lang2CodeContent
-        lang2 := make(map[evaluatordo.LanguageType]string, len(dto.GetLang2CodeContent()))
-        for k, v := range dto.GetLang2CodeContent() {
-            lang2[evaluatordo.LanguageType(k)] = v
-        }
-        return &evaluatordo.CodeEvaluatorContent{Lang2CodeContent: lang2}
-    }
-    // 兼容旧字段：language_type + code_content
-    return &evaluatordo.CodeEvaluatorContent{
-        Lang2CodeContent: map[evaluatordo.LanguageType]string{
-            evaluatordo.LanguageType(dto.GetLanguageType()): dto.GetCodeContent(),
-        },
-    }
+	// 新字段优先：lang_2_code_content
+	if len(dto.GetLang2CodeContent()) > 0 {
+		// 直接映射为 DO 的 Lang2CodeContent
+		lang2 := make(map[evaluatordo.LanguageType]string, len(dto.GetLang2CodeContent()))
+		for k, v := range dto.GetLang2CodeContent() {
+			lang2[evaluatordo.LanguageType(k)] = v
+		}
+		return &evaluatordo.CodeEvaluatorContent{Lang2CodeContent: lang2}
+	}
+	// 兼容旧字段：language_type + code_content
+	return &evaluatordo.CodeEvaluatorContent{
+		Lang2CodeContent: map[evaluatordo.LanguageType]string{
+			evaluatordo.LanguageType(dto.GetLanguageType()): dto.GetCodeContent(),
+		},
+	}
 }
 
 // ConvertCodeEvaluatorContentDO2DTO 将 CodeEvaluatorContent DO 转换为 DTO
@@ -271,21 +271,21 @@ func ConvertCodeEvaluatorContentDO2DTO(do *evaluatordo.CodeEvaluatorContent) *ev
 	if do == nil {
 		return nil
 	}
-    dto := &evaluatordto.CodeEvaluator{}
-    if len(do.Lang2CodeContent) > 0 {
-        lang2 := make(map[evaluatordto.LanguageType]string, len(do.Lang2CodeContent))
-        for k, v := range do.Lang2CodeContent {
-            lang2[evaluatordto.LanguageType(k)] = v
-        }
-        dto.SetLang2CodeContent(lang2)
-        // 兼容旧字段：选择一个主语言回填（稳定选择）
-        for k, v := range do.Lang2CodeContent {
-            // 回填后跳出
-            dto.LanguageType = gptr.Of(evaluatordto.LanguageType(k))
-            dto.CodeContent = gptr.Of(v)
-            break
-        }
-        return dto
-    }
-    return dto
+	dto := &evaluatordto.CodeEvaluator{}
+	if len(do.Lang2CodeContent) > 0 {
+		lang2 := make(map[evaluatordto.LanguageType]string, len(do.Lang2CodeContent))
+		for k, v := range do.Lang2CodeContent {
+			lang2[evaluatordto.LanguageType(k)] = v
+		}
+		dto.SetLang2CodeContent(lang2)
+		// 兼容旧字段：选择一个主语言回填（稳定选择）
+		for k, v := range do.Lang2CodeContent {
+			// 回填后跳出
+			dto.LanguageType = gptr.Of(evaluatordto.LanguageType(k))
+			dto.CodeContent = gptr.Of(v)
+			break
+		}
+		return dto
+	}
+	return dto
 }

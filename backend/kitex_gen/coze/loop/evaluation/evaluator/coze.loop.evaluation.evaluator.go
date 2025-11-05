@@ -18436,8 +18436,10 @@ func (p *ListTemplatesV2Response) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type GetTemplateV2Request struct {
-	EvaluatorTemplateID int64      `thrift:"evaluator_template_id,1,required" frugal:"1,required,i64" json:"evaluator_template_id" path:"evaluator_template_id,required" `
-	Base                *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	EvaluatorTemplateID *int64 `thrift:"evaluator_template_id,1,optional" frugal:"1,optional,i64" json:"evaluator_template_id" path:"evaluator_template_id" `
+	// 是否查询自定义code评估器模板，默认不查询
+	CustomCode *bool      `thrift:"custom_code,2,optional" frugal:"2,optional,bool" json:"custom_code,omitempty" query:"custom_code"`
+	Base       *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetTemplateV2Request() *GetTemplateV2Request {
@@ -18447,11 +18449,28 @@ func NewGetTemplateV2Request() *GetTemplateV2Request {
 func (p *GetTemplateV2Request) InitDefault() {
 }
 
+var GetTemplateV2Request_EvaluatorTemplateID_DEFAULT int64
+
 func (p *GetTemplateV2Request) GetEvaluatorTemplateID() (v int64) {
-	if p != nil {
-		return p.EvaluatorTemplateID
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetEvaluatorTemplateID() {
+		return GetTemplateV2Request_EvaluatorTemplateID_DEFAULT
+	}
+	return *p.EvaluatorTemplateID
+}
+
+var GetTemplateV2Request_CustomCode_DEFAULT bool
+
+func (p *GetTemplateV2Request) GetCustomCode() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomCode() {
+		return GetTemplateV2Request_CustomCode_DEFAULT
+	}
+	return *p.CustomCode
 }
 
 var GetTemplateV2Request_Base_DEFAULT *base.Base
@@ -18465,8 +18484,11 @@ func (p *GetTemplateV2Request) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
-func (p *GetTemplateV2Request) SetEvaluatorTemplateID(val int64) {
+func (p *GetTemplateV2Request) SetEvaluatorTemplateID(val *int64) {
 	p.EvaluatorTemplateID = val
+}
+func (p *GetTemplateV2Request) SetCustomCode(val *bool) {
+	p.CustomCode = val
 }
 func (p *GetTemplateV2Request) SetBase(val *base.Base) {
 	p.Base = val
@@ -18474,7 +18496,16 @@ func (p *GetTemplateV2Request) SetBase(val *base.Base) {
 
 var fieldIDToName_GetTemplateV2Request = map[int16]string{
 	1:   "evaluator_template_id",
+	2:   "custom_code",
 	255: "Base",
+}
+
+func (p *GetTemplateV2Request) IsSetEvaluatorTemplateID() bool {
+	return p.EvaluatorTemplateID != nil
+}
+
+func (p *GetTemplateV2Request) IsSetCustomCode() bool {
+	return p.CustomCode != nil
 }
 
 func (p *GetTemplateV2Request) IsSetBase() bool {
@@ -18484,7 +18515,6 @@ func (p *GetTemplateV2Request) IsSetBase() bool {
 func (p *GetTemplateV2Request) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetEvaluatorTemplateID bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -18505,7 +18535,14 @@ func (p *GetTemplateV2Request) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetEvaluatorTemplateID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -18530,10 +18567,6 @@ func (p *GetTemplateV2Request) Read(iprot thrift.TProtocol) (err error) {
 		goto ReadStructEndError
 	}
 
-	if !issetEvaluatorTemplateID {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
 	return nil
 ReadStructBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
@@ -18548,19 +18581,28 @@ ReadFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetTemplateV2Request[fieldId]))
 }
 
 func (p *GetTemplateV2Request) ReadField1(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.EvaluatorTemplateID = _field
+	return nil
+}
+func (p *GetTemplateV2Request) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CustomCode = _field
 	return nil
 }
 func (p *GetTemplateV2Request) ReadField255(iprot thrift.TProtocol) error {
@@ -18580,6 +18622,10 @@ func (p *GetTemplateV2Request) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -18605,20 +18651,40 @@ WriteStructEndError:
 }
 
 func (p *GetTemplateV2Request) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("evaluator_template_id", thrift.I64, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.EvaluatorTemplateID); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetEvaluatorTemplateID() {
+		if err = oprot.WriteFieldBegin("evaluator_template_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EvaluatorTemplateID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetTemplateV2Request) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomCode() {
+		if err = oprot.WriteFieldBegin("custom_code", thrift.BOOL, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.CustomCode); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *GetTemplateV2Request) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -18656,15 +18722,35 @@ func (p *GetTemplateV2Request) DeepEqual(ano *GetTemplateV2Request) bool {
 	if !p.Field1DeepEqual(ano.EvaluatorTemplateID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.CustomCode) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
 	return true
 }
 
-func (p *GetTemplateV2Request) Field1DeepEqual(src int64) bool {
+func (p *GetTemplateV2Request) Field1DeepEqual(src *int64) bool {
 
-	if p.EvaluatorTemplateID != src {
+	if p.EvaluatorTemplateID == src {
+		return true
+	} else if p.EvaluatorTemplateID == nil || src == nil {
+		return false
+	}
+	if *p.EvaluatorTemplateID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetTemplateV2Request) Field2DeepEqual(src *bool) bool {
+
+	if p.CustomCode == src {
+		return true
+	} else if p.CustomCode == nil || src == nil {
+		return false
+	}
+	if *p.CustomCode != *src {
 		return false
 	}
 	return true

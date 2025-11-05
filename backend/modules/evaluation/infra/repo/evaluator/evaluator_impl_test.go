@@ -2340,7 +2340,7 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 				for _, evaluator := range tt.mockDaoResult.Evaluators {
 					evaluatorIDsFromFilter = append(evaluatorIDsFromFilter, evaluator.ID)
 				}
-				totalFromFilter = int64(tt.mockDaoResult.TotalCount)
+				totalFromFilter = tt.mockDaoResult.TotalCount
 			} else {
 				// 其他情况（如无筛选条件但有结果），返回对应的evaluator IDs
 				evaluatorIDsFromFilter = make([]int64, 0)
@@ -2349,7 +2349,7 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 						evaluatorIDsFromFilter = append(evaluatorIDsFromFilter, evaluator.ID)
 					}
 				}
-				totalFromFilter = int64(tt.expectedCount)
+				totalFromFilter = tt.expectedCount
 			}
 
 			// Mock GetSourceIDsByFilterConditions

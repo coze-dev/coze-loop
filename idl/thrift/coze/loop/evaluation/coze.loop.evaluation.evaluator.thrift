@@ -381,7 +381,8 @@ struct ListTemplatesV2Response {
 }
 
 struct GetTemplateV2Request {
-    1: required i64 evaluator_template_id (api.path='evaluator_template_id', api.js_conv='true', go.tag='json:"evaluator_template_id"')
+    1: optional i64 evaluator_template_id (api.path='evaluator_template_id', api.js_conv='true', go.tag='json:"evaluator_template_id"')
+    2: optional bool custom_code (api.query='custom_code') // 是否查询自定义code评估器模板，默认不查询
 
     255: optional base.Base Base
 }

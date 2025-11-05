@@ -13440,7 +13440,6 @@ func (p *GetTemplateV2Request) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetEvaluatorTemplateID bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -13458,7 +13457,20 @@ func (p *GetTemplateV2Request) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetEvaluatorTemplateID = true
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -13489,10 +13501,6 @@ func (p *GetTemplateV2Request) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetEvaluatorTemplateID {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -13500,21 +13508,33 @@ ReadFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTemplateV2Request[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_GetTemplateV2Request[fieldId]))
 }
 
 func (p *GetTemplateV2Request) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.EvaluatorTemplateID = _field
+	return offset, nil
+}
+
+func (p *GetTemplateV2Request) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.CustomCode = _field
 	return offset, nil
 }
 
@@ -13538,6 +13558,7 @@ func (p *GetTemplateV2Request) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -13548,6 +13569,7 @@ func (p *GetTemplateV2Request) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -13556,8 +13578,19 @@ func (p *GetTemplateV2Request) BLength() int {
 
 func (p *GetTemplateV2Request) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.EvaluatorTemplateID)
+	if p.IsSetEvaluatorTemplateID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EvaluatorTemplateID)
+	}
+	return offset
+}
+
+func (p *GetTemplateV2Request) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCustomCode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 2)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.CustomCode)
+	}
 	return offset
 }
 
@@ -13572,8 +13605,19 @@ func (p *GetTemplateV2Request) fastWriteField255(buf []byte, w thrift.NocopyWrit
 
 func (p *GetTemplateV2Request) field1Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetEvaluatorTemplateID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *GetTemplateV2Request) field2Length() int {
+	l := 0
+	if p.IsSetCustomCode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
 	return l
 }
 
@@ -13592,7 +13636,15 @@ func (p *GetTemplateV2Request) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	p.EvaluatorTemplateID = src.EvaluatorTemplateID
+	if src.EvaluatorTemplateID != nil {
+		tmp := *src.EvaluatorTemplateID
+		p.EvaluatorTemplateID = &tmp
+	}
+
+	if src.CustomCode != nil {
+		tmp := *src.CustomCode
+		p.CustomCode = &tmp
+	}
 
 	var _base *base.Base
 	if src.Base != nil {

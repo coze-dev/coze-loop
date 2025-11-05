@@ -18,7 +18,7 @@ import (
 
 func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.Evaluator {
 	// 从DTO转换为DO
-    evaluatorDO := &evaluatordo.Evaluator{
+	evaluatorDO := &evaluatordo.Evaluator{
 		ID:                     evaluatorDTO.GetEvaluatorID(),
 		SpaceID:                evaluatorDTO.GetWorkspaceID(),
 		Name:                   evaluatorDTO.GetName(),
@@ -33,14 +33,14 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 		BaseInfo:               commonconvertor.ConvertBaseInfoDTO2DO(evaluatorDTO.GetBaseInfo()),
 		Tags:                   ConvertEvaluatorLangTagsDTO2DO(evaluatorDTO.GetTags()),
 	}
-    if evaluatorDTO.GetEvaluatorInfo() != nil {
-        evaluatorDO.EvaluatorInfo = &evaluatordo.EvaluatorInfo{
-            Benchmark:     evaluatorDTO.GetEvaluatorInfo().GetBenchmark(),
-            Vendor:        evaluatorDTO.GetEvaluatorInfo().GetVendor(),
-            VendorURL:     evaluatorDTO.GetEvaluatorInfo().GetVendorURL(),
-            UserManualURL: evaluatorDTO.GetEvaluatorInfo().GetUserManualURL(),
-        }
-    }
+	if evaluatorDTO.GetEvaluatorInfo() != nil {
+		evaluatorDO.EvaluatorInfo = &evaluatordo.EvaluatorInfo{
+			Benchmark:     evaluatorDTO.GetEvaluatorInfo().GetBenchmark(),
+			Vendor:        evaluatorDTO.GetEvaluatorInfo().GetVendor(),
+			VendorURL:     evaluatorDTO.GetEvaluatorInfo().GetVendorURL(),
+			UserManualURL: evaluatorDTO.GetEvaluatorInfo().GetUserManualURL(),
+		}
+	}
 	if evaluatorDTO.CurrentVersion != nil {
 		switch evaluatorDTO.GetEvaluatorType() {
 		case evaluatordto.EvaluatorType_Prompt:
@@ -67,7 +67,7 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 	if do == nil {
 		return nil
 	}
-    dto := &evaluatordto.Evaluator{
+	dto := &evaluatordto.Evaluator{
 		EvaluatorID:           gptr.Of(do.ID),
 		WorkspaceID:           gptr.Of(do.SpaceID),
 		Name:                  gptr.Of(do.Name),
@@ -80,14 +80,14 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 		BaseInfo:              commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
 		Tags:                  ConvertEvaluatorLangTagsDO2DTO(do.Tags),
 	}
-    if do.EvaluatorInfo != nil {
-        dto.EvaluatorInfo = &evaluatordto.EvaluatorInfo{
-            Benchmark:     gptr.Of(do.EvaluatorInfo.Benchmark),
-            Vendor:        gptr.Of(do.EvaluatorInfo.Vendor),
-            VendorURL:     gptr.Of(do.EvaluatorInfo.VendorURL),
-            UserManualURL: gptr.Of(do.EvaluatorInfo.UserManualURL),
-        }
-    }
+	if do.EvaluatorInfo != nil {
+		dto.EvaluatorInfo = &evaluatordto.EvaluatorInfo{
+			Benchmark:     gptr.Of(do.EvaluatorInfo.Benchmark),
+			Vendor:        gptr.Of(do.EvaluatorInfo.Vendor),
+			VendorURL:     gptr.Of(do.EvaluatorInfo.VendorURL),
+			UserManualURL: gptr.Of(do.EvaluatorInfo.UserManualURL),
+		}
+	}
 	// 设置 BoxType
 	{
 		val := convertBoxTypeDO2DTO(do.BoxType)

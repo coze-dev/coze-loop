@@ -1404,6 +1404,30 @@ func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *eva
 
 // GetTemplateV2 获取评估器模板详情
 func (e *EvaluatorHandlerImpl) GetTemplateV2(ctx context.Context, request *evaluatorservice.GetTemplateV2Request) (resp *evaluatorservice.GetTemplateV2Response, err error) {
+	// 若请求指定custom_code，则直接返回自定义code评估器模板（包含所有语言），无需查询DB
+	if request.GetCustomCode() {
+		customTemplates := e.configer.GetCustomCodeEvaluatorTemplateConf(ctx)
+		lang2 := make(map[evaluatordto.LanguageType]string)
+		if len(customTemplates) > 0 {
+			if langMap, ok := customTemplates["custom"]; ok {
+				for lang, content := range langMap {
+					if content == nil || content.CodeEvaluator == nil || content.CodeEvaluator.CodeContent == nil {
+						continue
+					}
+					lt := lang
+					lang2[lt] = content.CodeEvaluator.GetCodeContent()
+				}
+			}
+		}
+		template := &evaluatordto.EvaluatorTemplate{
+			EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Code),
+			EvaluatorContent: &evaluatordto.EvaluatorContent{
+				CodeEvaluator: &evaluatordto.CodeEvaluator{Lang2CodeContent: lang2},
+			},
+		}
+		return &evaluatorservice.GetTemplateV2Response{EvaluatorTemplate: template}, nil
+	}
+
 	// 构建service层请求
 	serviceReq := &entity.GetEvaluatorTemplateRequest{
 		ID:             request.GetEvaluatorTemplateID(),
