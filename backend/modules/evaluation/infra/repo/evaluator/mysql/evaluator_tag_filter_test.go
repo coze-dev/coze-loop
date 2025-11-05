@@ -286,20 +286,42 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 			// 创建mock provider
 			mockProvider := dbmock.NewMockProvider(ctrl)
 
-			// 对于nil的filterOption，方法会直接返回，不需要数据库调用
-			if tt.filterOption == nil {
-				// 这种情况下方法直接返回，不需要设置mock期望
+			// GetSourceIDsByFilterConditions 即使 filterOption 为 nil，也会创建一个空的 EvaluatorFilterOption 并继续执行查询
+			// 所以所有测试用例都需要 mock NewSession 和数据库查询
+			mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
+
+			// Mock COUNT 查询（放宽匹配，兼容 JOIN、别名与列限定）
+			// 所有查询都会包含 LEFT JOIN t_name（用于排序）
+			countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
+			mock.ExpectQuery("SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*").WillReturnRows(countRows)
+
+			// Mock SELECT 查询（放宽匹配，兼容 DISTINCT、JOIN、ORDER BY 等）
+			// 所有查询都会包含 LEFT JOIN t_name（用于排序）和 ORDER BY t_name.tag_value
+			selectRows := sqlmock.NewRows([]string{"source_id"})
+			hasSearchKeyword := tt.filterOption != nil && tt.filterOption.SearchKeyword != nil && *tt.filterOption.SearchKeyword != ""
+			hasFilters := tt.filterOption != nil && tt.filterOption.Filters != nil
+
+			if hasSearchKeyword && hasFilters {
+				// 既有 SearchKeyword 又有 Filters 时，SQL 包含：
+				// - LEFT JOIN t_name
+				// - JOIN t_1, JOIN t_2 等（自连接，来自 Filters 的 AND 条件）
+				// - WHERE evaluator_tag.tag_key = ? AND evaluator_tag.tag_value LIKE ? (来自 SearchKeyword，参数化查询)
+				// - 可能还有其他 WHERE 条件（来自 Filters 的 OR 条件）
+				// - ORDER BY
+				// 注意：WHERE 条件可能包含括号，且使用参数化查询（?），需要更宽松的匹配
+				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS.*WHERE .*tag_key.*=.*AND.*tag_value.*LIKE.*ORDER BY.*").WillReturnRows(selectRows)
+			} else if hasSearchKeyword {
+				// 只有 SearchKeyword 时，SQL 包含 WHERE evaluator_tag.tag_key = ? AND evaluator_tag.tag_value LIKE ? (参数化查询)
+				// 注意：WHERE 条件可能包含括号，且还有其他基础 WHERE 条件（tag_type, deleted_at），使用参数化查询
+				// 匹配模式：tag_key = ? 和 tag_value LIKE ?
+				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*WHERE .*tag_key.*=.*AND.*tag_value.*LIKE.*ORDER BY.*").WillReturnRows(selectRows)
+			} else if hasFilters {
+				// 只有 Filters 时，SQL 可能包含 JOIN 其他表（自连接）和 WHERE 条件
+				// 需要匹配可能包含的 JOIN 自连接
+				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*ORDER BY.*").WillReturnRows(selectRows)
 			} else {
-				// 对于非nil的filterOption，方法会调用NewSession并执行查询
-				mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
-
-                // Mock COUNT 查询（放宽匹配，兼容 JOIN、别名与列限定）
-                countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
-                mock.ExpectQuery("SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*").WillReturnRows(countRows)
-
-                // Mock SELECT 查询（放宽匹配，兼容 DISTINCT、JOIN、ORDER BY 等）
-                selectRows := sqlmock.NewRows([]string{"source_id"})
-                mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*").WillReturnRows(selectRows)
+				// 无 SearchKeyword 和 Filters 时，SQL 只包含基础查询和 LEFT JOIN t_name
+				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*ORDER BY.*").WillReturnRows(selectRows)
 			}
 
 			// 创建DAO实例
@@ -520,10 +542,11 @@ func TestGetSourceIDsByFilterConditions_SelfJoinAndLike(t *testing.T) {
         "SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*",
     ).WillReturnRows(countRows)
 
-    // 断言 SELECT：包含 DISTINCT、LEFT JOIN t_name、JOIN t_1 / t_2、LIKE 与 非 Category 限定
+    // 断言 SELECT：包含 DISTINCT、LEFT JOIN t_name、JOIN t_1 / t_2、LIKE 与 Name 标签限定
+    // SearchKeyword 现在只搜索 tag_key=Name
     selectRows := sqlmock.NewRows([]string{"source_id"})
     mock.ExpectQuery(
-        "SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*evaluator_tag.tag_key <> .* AND evaluator_tag.tag_value LIKE .*",
+        "SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*evaluator_tag.tag_key = .*Name.* AND evaluator_tag.tag_value LIKE .*",
     ).WillReturnRows(selectRows)
 
     dao := &EvaluatorTagDAOImpl{provider: mockProvider}

@@ -17,8 +17,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
-	mysqlmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
+	mysqlmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/mocks"
 )
 
 // TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate 测试查询评估器模板列表
@@ -721,6 +721,22 @@ func TestEvaluatorTemplateRepoImpl_GetEvaluatorTemplate(t *testing.T) {
 			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 
 			tt.mockSetup(mockTemplateDAO)
+
+			// Mock tagDAO.BatchGetTagsBySourceIDsAndType 调用（GetEvaluatorTemplate 现在会查询标签）
+			// 对于成功的测试用例，mock tag查询返回空标签列表（不会影响结果）
+			// 对于模板不存在的用例，不需要mock tag查询（因为会提前返回）
+			// 对于数据库错误的用例，也不需要mock tag查询（因为会在tag查询之前就失败）
+			if !tt.expectedError && tt.name != "成功 - 模板不存在" {
+				mockTagDAO.EXPECT().
+					BatchGetTagsBySourceIDsAndType(
+						gomock.Any(),
+						[]int64{tt.id},
+						int32(entity.EvaluatorTagKeyType_EvaluatorTemplate),
+						gomock.Any(),
+					).
+					Return([]*model.EvaluatorTag{}, nil).
+					AnyTimes()
+			}
 
 			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO, mockIDGen)
 

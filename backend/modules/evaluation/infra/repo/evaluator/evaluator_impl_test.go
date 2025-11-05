@@ -2320,67 +2320,59 @@ func TestEvaluatorRepoImpl_ListBuiltinEvaluator(t *testing.T) {
 			mockEvaluatorVersionDao := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
 			mockTagDao := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
 
-			// 处理筛选条件
-			if tt.request.FilterOption != nil {
-				hasValidFilters := false
-				if tt.request.FilterOption.SearchKeyword != nil && *tt.request.FilterOption.SearchKeyword != "" {
-					hasValidFilters = true
-				}
-				if tt.request.FilterOption.Filters != nil && len(tt.request.FilterOption.Filters.FilterConditions) > 0 {
-					hasValidFilters = true
-				}
+			// ListBuiltinEvaluator 现在总是会调用 GetSourceIDsByFilterConditions（即使 FilterOption 为 nil）
+			// 根据 GetSourceIDsByFilterConditions 返回的 IDs 来决定是否调用 ListBuiltinEvaluator
+			var evaluatorIDsFromFilter []int64
+			var totalFromFilter int64
 
-				if hasValidFilters {
-					// 设置标签筛选查询的期望
-					if tt.name == "成功 - 筛选后无结果" {
-						mockTagDao.EXPECT().
-							GetSourceIDsByFilterConditions(
-								gomock.Any(),
-								int32(entity.EvaluatorTagKeyType_Evaluator),
-								tt.request.FilterOption,
-								tt.request.PageSize,
-								tt.request.PageNum,
-								gomock.Any(),
-							).Return([]int64{}, int64(0), nil)
-					} else {
-						mockTagDao.EXPECT().
-							GetSourceIDsByFilterConditions(
-								gomock.Any(),
-								int32(entity.EvaluatorTagKeyType_Evaluator),
-								tt.request.FilterOption,
-								tt.request.PageSize,
-								tt.request.PageNum,
-								gomock.Any(),
-							).Return([]int64{1}, int64(1), nil)
+			// 计算 GetSourceIDsByFilterConditions 应该返回的 IDs
+			if tt.name == "成功 - 筛选后无结果" {
+				evaluatorIDsFromFilter = []int64{}
+				totalFromFilter = 0
+			} else if tt.name == "失败 - DAO查询错误" {
+				// DAO查询错误的情况：需要让 GetSourceIDsByFilterConditions 返回非空 IDs
+				// 这样才能调用 ListBuiltinEvaluator，然后测试 DAO 查询错误
+				evaluatorIDsFromFilter = []int64{1}
+				totalFromFilter = 1
+			} else if tt.mockDaoResult != nil && len(tt.mockDaoResult.Evaluators) > 0 {
+				// 有结果的情况，返回对应的evaluator IDs
+				evaluatorIDsFromFilter = make([]int64, 0, len(tt.mockDaoResult.Evaluators))
+				for _, evaluator := range tt.mockDaoResult.Evaluators {
+					evaluatorIDsFromFilter = append(evaluatorIDsFromFilter, evaluator.ID)
+				}
+				totalFromFilter = int64(tt.mockDaoResult.TotalCount)
+			} else {
+				// 其他情况（如无筛选条件但有结果），返回对应的evaluator IDs
+				evaluatorIDsFromFilter = make([]int64, 0)
+				if tt.mockDaoResult != nil {
+					for _, evaluator := range tt.mockDaoResult.Evaluators {
+						evaluatorIDsFromFilter = append(evaluatorIDsFromFilter, evaluator.ID)
 					}
 				}
+				totalFromFilter = int64(tt.expectedCount)
 			}
 
-			// 设置evaluatorDao的期望
-			if tt.mockDaoResult != nil || tt.mockDaoError != nil {
-				expectedIDs := []int64{}
-				if tt.request.FilterOption != nil {
-					hasValidFilters := false
-					if tt.request.FilterOption.SearchKeyword != nil && *tt.request.FilterOption.SearchKeyword != "" {
-						hasValidFilters = true
-					}
-					if tt.request.FilterOption.Filters != nil && len(tt.request.FilterOption.Filters.FilterConditions) > 0 {
-						hasValidFilters = true
-					}
-					if hasValidFilters {
-						if tt.name != "成功 - 筛选后无结果" {
-							expectedIDs = []int64{1}
-						}
-					}
-				}
+			// Mock GetSourceIDsByFilterConditions
+			mockTagDao.EXPECT().
+				GetSourceIDsByFilterConditions(
+					gomock.Any(),
+					int32(entity.EvaluatorTagKeyType_Evaluator),
+					tt.request.FilterOption,
+					tt.request.PageSize,
+					tt.request.PageNum,
+					gomock.Any(),
+				).Return(evaluatorIDsFromFilter, totalFromFilter, nil)
 
+			// 只有当 GetSourceIDsByFilterConditions 返回的 IDs 不为空时，才会调用 ListBuiltinEvaluator
+			// 并且根据实现，ListBuiltinEvaluator 的请求中 PageSize 和 PageNum 都是 0
+			if len(evaluatorIDsFromFilter) > 0 {
 				mockEvaluatorDao.EXPECT().
 					ListBuiltinEvaluator(
 						gomock.Any(),
 						&mysql.ListBuiltinEvaluatorRequest{
-							IDs:      expectedIDs,
-							PageSize: tt.request.PageSize,
-							PageNum:  tt.request.PageNum,
+							IDs:      evaluatorIDsFromFilter,
+							PageSize: 0,
+							PageNum:  0,
 							OrderBy:  []*mysql.OrderBy{{Field: "name", ByDesc: false}},
 						},
 					).Return(tt.mockDaoResult, tt.mockDaoError)
@@ -2968,3 +2960,4 @@ func TestEvaluatorRepoImpl_UpdateEvaluatorTags(t *testing.T) {
 		})
 	}
 }
+

@@ -399,9 +399,9 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 	validWorkspaceID := int64(123)
 	validEvaluatorVersionID := int64(456)
 	validEvaluator := &entity.Evaluator{
-		ID:      1,
-		SpaceID: validWorkspaceID,
-		Name:    "test-evaluator",
+		ID:            1,
+		SpaceID:       validWorkspaceID,
+		Name:          "test-evaluator",
 		EvaluatorType: entity.EvaluatorTypePrompt,
 		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
 			ID:          validEvaluatorVersionID,
@@ -411,10 +411,10 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 	}
 
 	builtinEvaluator := &entity.Evaluator{
-		ID:      2,
-		SpaceID: validWorkspaceID,
-		Name:    "builtin-evaluator",
-		Builtin: true,
+		ID:            2,
+		SpaceID:       validWorkspaceID,
+		Name:          "builtin-evaluator",
+		Builtin:       true,
 		EvaluatorType: entity.EvaluatorTypePrompt,
 		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
 			ID:          validEvaluatorVersionID,
@@ -437,7 +437,7 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				WorkspaceID:        validWorkspaceID,
 				EvaluatorVersionID: validEvaluatorVersionID,
 				Builtin:            gptr.Of(false),
-				IncludeDeleted:    gptr.Of(false),
+				IncludeDeleted:     gptr.Of(false),
 			},
 			mockSetup: func() {
 				// Mock service call - non-builtin, with spaceID
@@ -468,7 +468,7 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				WorkspaceID:        validWorkspaceID,
 				EvaluatorVersionID: validEvaluatorVersionID,
 				Builtin:            gptr.Of(true),
-				IncludeDeleted:    gptr.Of(false),
+				IncludeDeleted:     gptr.Of(false),
 			},
 			mockSetup: func() {
 				// Mock service call - builtin, without spaceID
@@ -504,7 +504,7 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				WorkspaceID:        validWorkspaceID,
 				EvaluatorVersionID: validEvaluatorVersionID,
 				Builtin:            gptr.Of(false),
-				IncludeDeleted:    gptr.Of(false),
+				IncludeDeleted:     gptr.Of(false),
 			},
 			mockSetup: func() {
 				// Mock service call - returns nil
@@ -521,7 +521,7 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				WorkspaceID:        validWorkspaceID,
 				EvaluatorVersionID: validEvaluatorVersionID,
 				Builtin:            gptr.Of(false),
-				IncludeDeleted:    gptr.Of(false),
+				IncludeDeleted:     gptr.Of(false),
 			},
 			mockSetup: func() {
 				// Mock service call - returns error
@@ -538,7 +538,7 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				WorkspaceID:        validWorkspaceID,
 				EvaluatorVersionID: validEvaluatorVersionID,
 				Builtin:            gptr.Of(false),
-				IncludeDeleted:    gptr.Of(false),
+				IncludeDeleted:     gptr.Of(false),
 			},
 			mockSetup: func() {
 				// Mock service call
@@ -565,7 +565,7 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				WorkspaceID:        validWorkspaceID,
 				EvaluatorVersionID: validEvaluatorVersionID,
 				Builtin:            gptr.Of(true),
-				IncludeDeleted:    gptr.Of(false),
+				IncludeDeleted:     gptr.Of(false),
 			},
 			mockSetup: func() {
 				// Mock service call
@@ -589,7 +589,7 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				WorkspaceID:        validWorkspaceID,
 				EvaluatorVersionID: validEvaluatorVersionID,
 				Builtin:            gptr.Of(true),
-				IncludeDeleted:    gptr.Of(false),
+				IncludeDeleted:     gptr.Of(false),
 			},
 			mockSetup: func() {
 				// Mock service call
@@ -621,7 +621,7 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				WorkspaceID:        validWorkspaceID,
 				EvaluatorVersionID: validEvaluatorVersionID,
 				Builtin:            gptr.Of(true),
-				IncludeDeleted:    gptr.Of(false),
+				IncludeDeleted:     gptr.Of(false),
 			},
 			mockSetup: func() {
 				// Mock service call
@@ -653,7 +653,7 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				WorkspaceID:        validWorkspaceID,
 				EvaluatorVersionID: validEvaluatorVersionID,
 				Builtin:            gptr.Of(false),
-				IncludeDeleted:    gptr.Of(true),
+				IncludeDeleted:     gptr.Of(true),
 			},
 			mockSetup: func() {
 				// Mock service call with includeDeleted=true
@@ -821,9 +821,9 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					Times(1)
 
 				// 4. 评估器调试
-                mockEvaluatorService.EXPECT().
-                    DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-                    DoAndReturn(func(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
+				mockEvaluatorService.EXPECT().
+					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 						// 验证输入数据已被正确处理
 						assert.Equal(t, int64(123), evaluator.SpaceID)
 						assert.Equal(t, entity.EvaluatorTypePrompt, evaluator.EvaluatorType)
@@ -2123,7 +2123,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
-                mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.8),
@@ -2182,14 +2182,14 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 
 				// 使用 InOrder 来确保调用顺序
 				gomock.InOrder(
-                    mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						&entity.EvaluatorOutputData{
 							EvaluatorResult: &entity.EvaluatorResult{
 								Score:     gptr.Of(0.9),
 								Reasoning: "result 1",
 							},
 						}, nil),
-                    mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						&entity.EvaluatorOutputData{
 							EvaluatorResult: &entity.EvaluatorResult{
 								Score:     gptr.Of(0.7),
@@ -2366,14 +2366,14 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 
 				// 使用 InOrder 来确保调用顺序
 				gomock.InOrder(
-                    mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						&entity.EvaluatorOutputData{
 							EvaluatorResult: &entity.EvaluatorResult{
 								Score:     gptr.Of(0.8),
 								Reasoning: "success result",
 							},
 						}, nil),
-                    mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						nil, errors.New("evaluation failed")),
 				)
 			},
@@ -2450,7 +2450,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
 				// Mock 100次调用
-                mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.8),
@@ -2492,7 +2492,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
 				// 返回 nil output 和 error
-                mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("code execution failed"))
 			},
 			wantResp: &evaluatorservice.BatchDebugEvaluatorResponse{
@@ -2551,7 +2551,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
 				// 第一个成功
-                mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.9),
@@ -2560,7 +2560,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 					}, nil).Times(1)
 
 				// 第二个失败 (nil output + error)
-                mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("processing error")).Times(1)
 
 				// 第三个成功但有 evaluator run error
@@ -2702,8 +2702,8 @@ func TestEvaluatorHandlerImpl_ListTemplatesV2(t *testing.T) {
 		{
 			name: "success - with filter option",
 			req: &evaluatorservice.ListTemplatesV2Request{
-				PageSize:   gptr.Of(int32(20)),
-				PageNumber: gptr.Of(int32(1)),
+				PageSize:     gptr.Of(int32(20)),
+				PageNumber:   gptr.Of(int32(1)),
 				FilterOption: &evaluatordto.EvaluatorFilterOption{},
 			},
 			mockSetup: func() {
@@ -2780,17 +2780,17 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 		Description: "test description",
 	}
 
-    tests := []struct {
+	tests := []struct {
 		name        string
-        req         *evaluatorservice.GetTemplateV2Request
+		req         *evaluatorservice.GetTemplateV2Request
 		mockSetup   func()
-        wantResp    *evaluatorservice.GetTemplateV2Response
+		wantResp    *evaluatorservice.GetTemplateV2Response
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-            req: &evaluatorservice.GetTemplateV2Request{
+			req: &evaluatorservice.GetTemplateV2Request{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -2803,14 +2803,14 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 						Template: template,
 					}, nil)
 			},
-            wantResp: &evaluatorservice.GetTemplateV2Response{
+			wantResp: &evaluatorservice.GetTemplateV2Response{
 				EvaluatorTemplate: evaluator.ConvertEvaluatorTemplateDO2DTO(template),
 			},
 			wantErr: false,
 		},
 		{
 			name: "success - template not found",
-            req: &evaluatorservice.GetTemplateV2Request{
+			req: &evaluatorservice.GetTemplateV2Request{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -2820,12 +2820,12 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 						Template: nil,
 					}, nil)
 			},
-            wantResp: &evaluatorservice.GetTemplateV2Response{},
+			wantResp: &evaluatorservice.GetTemplateV2Response{},
 			wantErr:  false,
 		},
 		{
 			name: "error - service failure",
-            req: &evaluatorservice.GetTemplateV2Request{
+			req: &evaluatorservice.GetTemplateV2Request{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -2843,7 +2843,7 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-            resp, err := app.GetTemplateV2(context.Background(), tt.req)
+			resp, err := app.GetTemplateV2(context.Background(), tt.req)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2890,15 +2890,15 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name        string
-    req         *evaluatorservice.CreateEvaluatorTemplateRequest
+		req         *evaluatorservice.CreateEvaluatorTemplateRequest
 		mockSetup   func()
-    wantResp    *evaluatorservice.CreateEvaluatorTemplateResponse
+		wantResp    *evaluatorservice.CreateEvaluatorTemplateResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-            req: &evaluatorservice.CreateEvaluatorTemplateRequest{
+			req: &evaluatorservice.CreateEvaluatorTemplateRequest{
 				EvaluatorTemplate: templateDTO,
 			},
 			mockSetup: func() {
@@ -2912,14 +2912,14 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 						Template: evaluator.ConvertEvaluatorTemplateDTO2DO(templateDTO),
 					}, nil)
 			},
-            wantResp: &evaluatorservice.CreateEvaluatorTemplateResponse{
+			wantResp: &evaluatorservice.CreateEvaluatorTemplateResponse{
 				EvaluatorTemplate: templateDTO,
 			},
 			wantErr: false,
 		},
 		{
 			name: "error - nil template",
-            req: &evaluatorservice.CreateEvaluatorTemplateRequest{
+			req: &evaluatorservice.CreateEvaluatorTemplateRequest{
 				EvaluatorTemplate: nil,
 			},
 			mockSetup:   func() {},
@@ -2929,7 +2929,7 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-            req: &evaluatorservice.CreateEvaluatorTemplateRequest{
+			req: &evaluatorservice.CreateEvaluatorTemplateRequest{
 				EvaluatorTemplate: &evaluatordto.EvaluatorTemplate{
 					ID:          gptr.Of(int64(1)),
 					WorkspaceID: gptr.Of(int64(789)), // 不在允许列表中
@@ -2952,7 +2952,7 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - service failure",
-            req: &evaluatorservice.CreateEvaluatorTemplateRequest{
+			req: &evaluatorservice.CreateEvaluatorTemplateRequest{
 				EvaluatorTemplate: templateDTO,
 			},
 			mockSetup: func() {
@@ -3020,15 +3020,15 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name        string
-    req         *evaluatorservice.UpdateEvaluatorTemplateRequest
+		req         *evaluatorservice.UpdateEvaluatorTemplateRequest
 		mockSetup   func()
-    wantResp    *evaluatorservice.UpdateEvaluatorTemplateResponse
+		wantResp    *evaluatorservice.UpdateEvaluatorTemplateResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-            req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
+			req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 				EvaluatorTemplate:   templateDTO,
 			},
@@ -3043,14 +3043,14 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 						Template: evaluator.ConvertEvaluatorTemplateDTO2DO(templateDTO),
 					}, nil)
 			},
-            wantResp: &evaluatorservice.UpdateEvaluatorTemplateResponse{
+			wantResp: &evaluatorservice.UpdateEvaluatorTemplateResponse{
 				EvaluatorTemplate: templateDTO,
 			},
 			wantErr: false,
 		},
 		{
 			name: "error - nil template",
-            req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
+			req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 				EvaluatorTemplate:   nil,
 			},
@@ -3061,7 +3061,7 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-            req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
+			req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 				EvaluatorTemplate: &evaluatordto.EvaluatorTemplate{
 					ID:          gptr.Of(templateID),
@@ -3085,7 +3085,7 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - service failure",
-            req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
+			req: &evaluatorservice.UpdateEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 				EvaluatorTemplate:   templateDTO,
 			},
@@ -3153,15 +3153,15 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 
 	tests := []struct {
 		name        string
-    req         *evaluatorservice.DeleteEvaluatorTemplateRequest
+		req         *evaluatorservice.DeleteEvaluatorTemplateRequest
 		mockSetup   func()
-    wantResp    *evaluatorservice.DeleteEvaluatorTemplateResponse
+		wantResp    *evaluatorservice.DeleteEvaluatorTemplateResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-            req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
+			req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -3184,12 +3184,12 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 					}).
 					Return(&entity.DeleteEvaluatorTemplateResponse{}, nil)
 			},
-            wantResp: &evaluatorservice.DeleteEvaluatorTemplateResponse{},
+			wantResp: &evaluatorservice.DeleteEvaluatorTemplateResponse{},
 			wantErr:  false,
 		},
 		{
 			name: "error - template id is 0",
-            req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
+			req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
 				EvaluatorTemplateID: 0,
 			},
 			mockSetup:   func() {},
@@ -3199,7 +3199,7 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - template not found",
-            req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
+			req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -3215,7 +3215,7 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 		},
 		{
 			name: "error - auth failed",
-            req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
+			req: &evaluatorservice.DeleteEvaluatorTemplateRequest{
 				EvaluatorTemplateID: templateID,
 			},
 			mockSetup: func() {
@@ -3308,15 +3308,15 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 
 	tests := []struct {
 		name        string
-    req         *evaluatorservice.DebugBuiltinEvaluatorRequest
+		req         *evaluatorservice.DebugBuiltinEvaluatorRequest
 		mockSetup   func()
-    wantResp    *evaluatorservice.DebugBuiltinEvaluatorResponse
+		wantResp    *evaluatorservice.DebugBuiltinEvaluatorResponse
 		wantErr     bool
 		wantErrCode int32
 	}{
 		{
 			name: "success - normal request",
-            req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
+			req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
 				EvaluatorID: evaluatorID,
 				WorkspaceID: workspaceID,
 				InputData:   inputData,
@@ -3335,17 +3335,17 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 					Return(builtinEvaluator, nil)
 
 				mockEvaluatorService.EXPECT().
-                    DebugEvaluator(gomock.Any(), builtinEvaluator, gomock.Any(), gomock.Any()).
+					DebugEvaluator(gomock.Any(), builtinEvaluator, gomock.Any(), gomock.Any()).
 					Return(outputData, nil)
 			},
-            wantResp: &evaluatorservice.DebugBuiltinEvaluatorResponse{
+			wantResp: &evaluatorservice.DebugBuiltinEvaluatorResponse{
 				OutputData: evaluator.ConvertEvaluatorOutputDataDO2DTO(outputData),
 			},
 			wantErr: false,
 		},
 		{
 			name: "error - auth failed",
-            req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
+			req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
 				EvaluatorID: evaluatorID,
 				WorkspaceID: workspaceID,
 				InputData:   inputData,
@@ -3361,7 +3361,7 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 		},
 		{
 			name: "error - evaluator not found",
-            req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
+			req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
 				EvaluatorID: evaluatorID,
 				WorkspaceID: workspaceID,
 				InputData:   inputData,
@@ -3381,7 +3381,7 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 		},
 		{
 			name: "error - debug failure",
-            req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
+			req: &evaluatorservice.DebugBuiltinEvaluatorRequest{
 				EvaluatorID: evaluatorID,
 				WorkspaceID: workspaceID,
 				InputData:   inputData,
@@ -3395,8 +3395,8 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 					GetBuiltinEvaluator(gomock.Any(), evaluatorID).
 					Return(builtinEvaluator, nil)
 
-                mockEvaluatorService.EXPECT().
-                    DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().
+					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantResp:    nil,
@@ -3600,7 +3600,7 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 	}
 
 	tags := map[string][]string{
-		evaluatordto.EvaluatorTagKeyCategory: {"category1", "category2"},
+		evaluatordto.EvaluatorTagKeyCategory:   {"category1", "category2"},
 		evaluatordto.EvaluatorTagKeyTargetType: {"domain1"},
 	}
 
@@ -3614,7 +3614,7 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 	}{
 		{
 			name: "success - normal request",
-			req:   &evaluatorservice.ListEvaluatorTagsRequest{},
+			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
 			mockSetup: func() {
 				mockConfiger.EXPECT().
 					GetEvaluatorTagConf(gomock.Any()).
@@ -3627,7 +3627,7 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 		},
 		{
 			name: "success - empty tags",
-			req:   &evaluatorservice.ListEvaluatorTagsRequest{},
+			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
 			mockSetup: func() {
 				mockConfiger.EXPECT().
 					GetEvaluatorTagConf(gomock.Any()).
@@ -3640,18 +3640,18 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 		},
 		{
 			name: "success - tags kept order from config",
-			req:   &evaluatorservice.ListEvaluatorTagsRequest{},
+			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
 			mockSetup: func() {
 				mockConfiger.EXPECT().
 					GetEvaluatorTagConf(gomock.Any()).
 					Return(map[string][]string{
-						evaluatordto.EvaluatorTagKeyCategory: {"z", "a", "m"},
+						evaluatordto.EvaluatorTagKeyCategory:   {"z", "a", "m"},
 						evaluatordto.EvaluatorTagKeyTargetType: {"x", "b"},
 					})
 			},
 			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
 				Tags: map[string][]string{
-					evaluatordto.EvaluatorTagKeyCategory: {"z", "a", "m"},
+					evaluatordto.EvaluatorTagKeyCategory:   {"z", "a", "m"},
 					evaluatordto.EvaluatorTagKeyTargetType: {"x", "b"},
 				},
 			},

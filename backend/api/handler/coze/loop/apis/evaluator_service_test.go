@@ -112,7 +112,7 @@ func (m *mockEvaluatorClient) ListTemplatesV2(ctx context.Context, req *evaluato
 }
 
 func (m *mockEvaluatorClient) GetTemplateV2(ctx context.Context, req *evaluator.GetTemplateV2Request, callOptions ...callopt.Option) (r *evaluator.GetTemplateV2Response, err error) {
-    return &evaluator.GetTemplateV2Response{}, nil
+	return &evaluator.GetTemplateV2Response{}, nil
 }
 
 func (m *mockEvaluatorClient) CreateEvaluatorTemplate(ctx context.Context, req *evaluator.CreateEvaluatorTemplateRequest, callOptions ...callopt.Option) (r *evaluator.CreateEvaluatorTemplateResponse, err error) {
