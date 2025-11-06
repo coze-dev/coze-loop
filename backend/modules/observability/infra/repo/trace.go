@@ -488,9 +488,9 @@ func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, t
 	}
 	tableCfg, ok := tenantTableCfg.TenantTables[tenant][ttl]
 	if !ok {
-		return "", fmt.Errorf("no annotation table config found for tenant %s with ttl %s", tenant, ttl)
+		return "", nil
 	} else if tableCfg.AnnoTable == "" {
-		return "", fmt.Errorf("no annotation table config found for tenant %s with ttl %s", tenant, ttl)
+		return "", nil
 	}
 	return tableCfg.AnnoTable, nil
 }
