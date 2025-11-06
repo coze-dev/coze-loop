@@ -183,6 +183,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 			StartTime: time_util.MillSec2MicroSec(req.StartAt),
 			EndTime:   time_util.MillSec2MicroSec(req.EndAt),
 			Limit:     int32(min(len(spanIDs)*100, 10000)),
+			Extra:     spanStorage.StorageConfig,
 		})
 		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		if err != nil {
@@ -285,6 +286,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 			StartTime: time_util.MillSec2MicroSec(req.StartAt),
 			EndTime:   time_util.MillSec2MicroSec(req.EndAt),
 			Limit:     int32(min(len(spanIDs)*100, 10000)),
+			Extra:     spanStorage.StorageConfig,
 		})
 		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		if err != nil {
