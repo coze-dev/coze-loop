@@ -180,20 +180,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTa
 		}
 	}
 	if ShouldTriggerNewData(ctx, currentTask) {
-		var runStartAt, runEndAt int64
-		runStartAt = currentTask.EffectiveTime.StartAt
-		if !currentTask.Sampler.IsCycle {
-			runEndAt = currentTask.EffectiveTime.EndAt
-		} else {
-			switch currentTask.Sampler.CycleTimeUnit {
-			case task.TimeUnitDay:
-				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
-			case task.TimeUnitWeek:
-				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*7*24*time.Hour.Milliseconds()
-			default:
-				runEndAt = runStartAt + (currentTask.Sampler.CycleInterval)*10*time.Minute.Milliseconds()
-			}
-		}
+		runStartAt, runEndAt := currentTask.GetRunTimeRange()
 		err = p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
 			CurrentTask: currentTask,
 			RunType:     task.TaskRunTypeNewData,
