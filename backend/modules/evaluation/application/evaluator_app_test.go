@@ -2791,7 +2791,7 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 		{
 			name: "success - normal request",
 			req: &evaluatorservice.GetTemplateV2Request{
-				EvaluatorTemplateID: templateID,
+				EvaluatorTemplateID: gptr.Of(templateID),
 			},
 			mockSetup: func() {
 				mockTemplateService.EXPECT().
@@ -2811,7 +2811,7 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 		{
 			name: "success - template not found",
 			req: &evaluatorservice.GetTemplateV2Request{
-				EvaluatorTemplateID: templateID,
+				EvaluatorTemplateID: gptr.Of(templateID),
 			},
 			mockSetup: func() {
 				mockTemplateService.EXPECT().
@@ -2826,7 +2826,7 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 		{
 			name: "error - service failure",
 			req: &evaluatorservice.GetTemplateV2Request{
-				EvaluatorTemplateID: templateID,
+				EvaluatorTemplateID: gptr.Of(templateID),
 			},
 			mockSetup: func() {
 				mockTemplateService.EXPECT().
@@ -3706,6 +3706,7 @@ func TestEvaluatorHandlerImpl_authBuiltinManagement(t *testing.T) {
 		name        string
 		workspaceID int64
 		spaceType   SpaceType
+		authWrite   bool
 		mockSetup   func()
 		wantErr     bool
 		wantErrCode int32
@@ -3714,6 +3715,7 @@ func TestEvaluatorHandlerImpl_authBuiltinManagement(t *testing.T) {
 			name:        "success - workspace in allowed list for builtin",
 			workspaceID: 123,
 			spaceType:   spaceTypeBuiltin,
+			authWrite:   false,
 			mockSetup: func() {
 				mockConfiger.EXPECT().
 					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
@@ -3725,6 +3727,7 @@ func TestEvaluatorHandlerImpl_authBuiltinManagement(t *testing.T) {
 			name:        "success - workspace in allowed list for template",
 			workspaceID: 456,
 			spaceType:   spaceTypeTemplate,
+			authWrite:   false,
 			mockSetup: func() {
 				mockConfiger.EXPECT().
 					GetEvaluatorTemplateSpaceConf(gomock.Any()).
@@ -3736,6 +3739,7 @@ func TestEvaluatorHandlerImpl_authBuiltinManagement(t *testing.T) {
 			name:        "error - empty config for builtin",
 			workspaceID: 123,
 			spaceType:   spaceTypeBuiltin,
+			authWrite:   false,
 			mockSetup: func() {
 				mockConfiger.EXPECT().
 					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
@@ -3748,6 +3752,7 @@ func TestEvaluatorHandlerImpl_authBuiltinManagement(t *testing.T) {
 			name:        "error - empty config for template",
 			workspaceID: 123,
 			spaceType:   spaceTypeTemplate,
+			authWrite:   false,
 			mockSetup: func() {
 				mockConfiger.EXPECT().
 					GetEvaluatorTemplateSpaceConf(gomock.Any()).
@@ -3760,14 +3765,14 @@ func TestEvaluatorHandlerImpl_authBuiltinManagement(t *testing.T) {
 			name:        "error - workspace not in allowed list",
 			workspaceID: 789,
 			spaceType:   spaceTypeBuiltin,
+			authWrite:   true,
 			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
-					Return([]string{"123", "456"})
-
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), gomock.Any()).
 					Return(nil)
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{"123", "456"})
 			},
 			wantErr:     true,
 			wantErrCode: errno.CommonInvalidParamCode,
@@ -3776,11 +3781,8 @@ func TestEvaluatorHandlerImpl_authBuiltinManagement(t *testing.T) {
 			name:        "error - auth failed",
 			workspaceID: 789,
 			spaceType:   spaceTypeBuiltin,
+			authWrite:   true,
 			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
-					Return([]string{"123", "456"})
-
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), gomock.Any()).
 					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
@@ -3794,7 +3796,7 @@ func TestEvaluatorHandlerImpl_authBuiltinManagement(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			err := app.authBuiltinManagement(context.Background(), tt.workspaceID, tt.spaceType)
+			err := app.authBuiltinManagement(context.Background(), tt.workspaceID, tt.spaceType, tt.authWrite)
 
 			if tt.wantErr {
 				assert.Error(t, err)
