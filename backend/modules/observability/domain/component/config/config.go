@@ -128,6 +128,7 @@ type ITraceConfig interface {
 	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
 	GetKeySpanTypes(ctx context.Context) map[string][]string
 	GetBackfillMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
+	GetConsumerListening(ctx context.Context) (*ConsumerListening, error)
 
 	conf.IConfigLoader
 }

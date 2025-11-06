@@ -156,8 +156,37 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 	if sub.tr.BackfillDetail != nil && sub.tr.BackfillDetail.LastSpanPageToken != nil {
 		listParam.PageToken = *sub.tr.BackfillDetail.LastSpanPageToken
 	}
-	// Paginate query and send data
-	return h.fetchAndSendSpans(ctx, listParam, sub)
+
+	totalCount := int64(0)
+	for {
+		logs.CtxInfo(ctx, "TaskID: %d, ListSpansParam:%v", sub.t.ID, listParam)
+		spans, pageToken, err := h.fetchSpans(ctx, listParam, sub)
+		if err != nil {
+			logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", sub.t.ID, err)
+			return err
+		}
+
+		err, shouldFinish := h.flushSpans(ctx, spans, sub)
+		if err != nil {
+			return err
+		}
+
+		totalCount += int64(len(spans))
+		logs.CtxInfo(ctx, "Processed %d spans completed, total=%d, task_id=%d", len(spans), totalCount, sub.t.ID)
+
+		if pageToken == "" || shouldFinish {
+			logs.CtxInfo(ctx, "no more spans to process, task_id=%d", sub.t.ID)
+			if err = sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
+				Task:     sub.t,
+				TaskRun:  sub.tr,
+				IsFinish: false,
+			}); err != nil {
+				return err
+			}
+			return nil
+		}
+		listParam.PageToken = pageToken
+	}
 }
 
 type ListSpansReq struct {
@@ -257,84 +286,62 @@ func (h *TraceHubServiceImpl) combineFilters(filters ...*loop_span.FilterFields)
 	return filterAggr
 }
 
-// fetchAndSendSpans paginates and sends span data
-func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *repo.ListSpansParam, sub *spanSubscriber) error {
-	totalCount := int64(0)
-	pageToken := listParam.PageToken
-	for {
-		logs.CtxInfo(ctx, "TaskID: %d, ListSpansParam:%v", sub.t.ID, listParam)
-		result, err := h.traceRepo.ListSpans(ctx, listParam)
-		if err != nil {
-			logs.CtxError(ctx, "List spans failed, task_id=%d, page_token=%s, err=%v", sub.t.ID, pageToken, err)
-			return err
-		}
-		logs.CtxInfo(ctx, "Fetch %d spans, total=%d, task_id=%d", len(result.Spans), totalCount, sub.t.ID)
-
-		spans := result.Spans
-		processors, err := h.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
-			WorkspaceId:    sub.t.WorkspaceID,
-			PlatformType:   sub.t.SpanFilter.PlatformType,
-			QueryStartTime: listParam.StartAt,
-			QueryEndTime:   listParam.EndAt,
-		})
-		if err != nil {
-			return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
-		}
-		for _, p := range processors {
-			spans, err = p.Transform(ctx, spans)
-			if err != nil {
-				return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
-			}
-		}
-
-		if len(spans) > 0 {
-			flush := &flushReq{
-				retrievedSpanCount: int64(len(spans)),
-				pageToken:          result.PageToken,
-				spans:              spans,
-				noMore:             !result.HasMore,
-			}
-
-			if err = h.flushSpans(ctx, flush, sub); err != nil {
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					return err
-				}
-			}
-
-			totalCount += int64(len(spans))
-			logs.CtxInfo(ctx, "Processed %d spans completed, total=%d, task_id=%d", len(spans), totalCount, sub.t.ID)
-		}
-
-		if !result.HasMore {
-			logs.CtxInfo(ctx, "Completed listing spans, total_count=%d, task_id=%d", totalCount, sub.t.ID)
-			break
-		}
-		listParam.PageToken = result.PageToken
-		pageToken = result.PageToken
+// fetchSpans paginates span data
+func (h *TraceHubServiceImpl) fetchSpans(ctx context.Context, listParam *repo.ListSpansParam,
+	sub *spanSubscriber) ([]*loop_span.Span, string, error) {
+	result, err := h.traceRepo.ListSpans(ctx, listParam)
+	if err != nil {
+		logs.CtxError(ctx, "List spans failed, parma=%v, err=%v", listParam, err)
+		return nil, "", err
+	}
+	logs.CtxInfo(ctx, "Fetch %d spans", len(result.Spans))
+	spans := result.Spans
+	if len(spans) == 0 {
+		return nil, "", nil
 	}
 
-	return nil
+	processors, err := h.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
+		WorkspaceId:    sub.t.WorkspaceID,
+		PlatformType:   sub.t.SpanFilter.PlatformType,
+		QueryStartTime: listParam.StartAt,
+		QueryEndTime:   listParam.EndAt,
+	})
+	if err != nil {
+		return nil, "", errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	for _, p := range processors {
+		spans, err = p.Transform(ctx, spans)
+		if err != nil {
+			return nil, "", errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+		}
+	}
+
+	if !result.HasMore {
+		logs.CtxInfo(ctx, "Completed listing spans, task_id=%d", sub.t.ID)
+		return spans, "", nil
+	}
+
+	return spans, result.PageToken, nil
 }
 
-func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, fr *flushReq, sub *spanSubscriber) error {
-	if fr == nil || len(fr.spans) == 0 {
-		return nil
+func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
+	logs.CtxInfo(ctx, "Start processing %d spans for backfill, task_id=%d", len(spans), sub.t.ID)
+	if len(spans) == 0 {
+		return nil, false
 	}
 
-	logs.CtxInfo(ctx, "Start processing %d spans for backfill, task_id=%d", len(fr.spans), sub.t.ID)
-
 	// Apply sampling logic
-	sampledSpans := h.applySampling(fr.spans, sub)
+	sampledSpans := h.applySampling(spans, sub)
 	if len(sampledSpans) == 0 {
 		logs.CtxInfo(ctx, "no spans after sampling, task_id=%d", sub.t.ID)
-		return nil
+		return nil, false
 	}
 
 	// Execute specific business logic
-	err := h.processSpansForBackfill(ctx, sampledSpans, sub)
+	err, shouldFinish = h.processSpansForBackfill(ctx, sampledSpans, sub)
 	if err != nil {
 		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", sub.t.ID, err)
-		return err
+		return
 	}
 
 	// todo 不应该这里直接写po字段
@@ -343,22 +350,12 @@ func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, fr *flushReq, sub 
 	})
 	if err != nil {
 		logs.CtxError(ctx, "update task run failed, task_id=%d, err=%v", sub.t.ID, err)
-		return err
-	}
-	if fr.noMore {
-		logs.CtxInfo(ctx, "no more spans to process, task_id=%d", sub.t.ID)
-		if err = sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-			Task:     sub.t,
-			TaskRun:  sub.tr,
-			IsFinish: false,
-		}); err != nil {
-			return err
-		}
+		return
 	}
 
 	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d",
-		len(sampledSpans), len(fr.spans), sub.t.ID)
-	return nil
+		len(sampledSpans), len(spans), sub.t.ID)
+	return
 }
 
 // applySampling applies sampling logic
@@ -391,7 +388,7 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSu
 }
 
 // processSpansForBackfill handles spans for backfill
-func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
+func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
 	// Batch processing spans for efficiency
 	const batchSize = 50
 
@@ -402,46 +399,40 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 		}
 
 		batch := spans[i:end]
-		if err := h.processBatchSpans(ctx, batch, sub); err != nil {
+		err, shouldFinish = h.processBatchSpans(ctx, batch, sub)
+		if err != nil {
 			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v",
 				sub.t.ID, i, err)
-			// Continue with the next batch without stopping due to a single failure
-			continue
+			return
+		}
+		if shouldFinish {
+			return
 		}
 		// ml_flow rate-limited: 50/5s
 		time.Sleep(5 * time.Second)
 	}
 
-	return nil
+	return err, shouldFinish
 }
 
 // processBatchSpans processes a batch of span data
-func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
+func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
 	for _, span := range spans {
 		// Execute processing logic according to the task type
 		logs.CtxInfo(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
 			span.SpanID, span.TraceID, sub.t.ID)
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
-		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, sub.tr.ID)
 		sampler := sub.t.Sampler
 		if taskCount+1 > sampler.SampleSize {
 			logs.CtxInfo(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d,SampleSize=%d", sub.taskID, sampler.SampleSize)
-			if err := sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-				Task:     sub.t,
-				TaskRun:  sub.tr,
-				IsFinish: true,
-			}); err != nil {
-				return err
-			}
-			break
+			return nil, true
 		}
-		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
-		if err := h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
-			return err
+		if err = h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
+			return err, false
 		}
 	}
 
-	return nil
+	return nil, false
 }
 
 // onHandleDone handles completion callback

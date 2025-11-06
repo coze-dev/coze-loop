@@ -77,6 +77,8 @@ const (
 	MaxKeySize         = 100
 	MaxTextSize        = 1024 * 1024
 	MaxCommonValueSize = 1024
+
+	CallTypeEvaluator = "Evaluator"
 )
 
 type TTL string

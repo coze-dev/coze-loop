@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	trepo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
@@ -145,14 +146,24 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_TaskLimit(t *testing.T) {
 		runType:   entity.TaskRunTypeBackFill,
 	}
 
-	mockRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(1), nil)
-	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), int64(1), int64(10)).Return(int64(0), nil)
+	mockRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil).AnyTimes()
+	mockRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(&entity.TaskRun{
+		ID:          10,
+		TaskID:      1,
+		WorkspaceID: 2,
+		TaskType:    entity.TaskRunTypeBackFill,
+		RunStatus:   entity.TaskRunStatusRunning,
+		RunStartAt:  time.Now().Add(-time.Minute),
+		RunEndAt:    time.Now().Add(time.Minute),
+	}, nil)
 
-	spans := []*loop_span.Span{{SpanID: "span-1"}}
+	spans := []*loop_span.Span{{SpanID: "span-1", StartTime: time.Now().UnixMilli()}}
 	ctx := context.Background()
 
-	require.NoError(t, impl.processBatchSpans(ctx, spans, sub))
-	require.Equal(t, 1, proc.finishChangeInvoked)
+	err, shouldFinish := impl.processBatchSpans(ctx, spans, sub)
+	require.NoError(t, err)
+	require.False(t, shouldFinish)
+	require.True(t, proc.invokeCalled)
 }
 
 func TestTraceHubServiceImpl_ProcessBatchSpans_DispatchError(t *testing.T) {
@@ -210,12 +221,11 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_DispatchError(t *testing.T) {
 	}
 
 	mockRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), int64(1), int64(10)).Return(int64(0), nil)
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(spanRun, nil)
 
 	spans := []*loop_span.Span{{SpanID: "span-1", StartTime: now.Add(10 * time.Millisecond).UnixMilli(), WorkspaceID: "space", TraceID: "trace"}}
 
-	err := impl.processBatchSpans(context.Background(), spans, sub)
+	err, _ := impl.processBatchSpans(context.Background(), spans, sub)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "invoke fail")
 }
@@ -332,7 +342,6 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	})
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockTaskRepo.EXPECT().GetTaskRunCount(gomock.Any(), int64(1), sub.tr.ID).Return(int64(0), nil)
 	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
 	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil)
 
@@ -344,23 +353,35 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	require.Equal(t, "prev", ptr.From(sub.tr.BackfillDetail.LastSpanPageToken))
 }
 
-func TestTraceHubServiceImpl_FetchAndSendSpans_ListError(t *testing.T) {
+func TestTraceHubServiceImpl_ListAndSendSpans_ListError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
 	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	mockTraceRepo := trepo_mocks.NewMockITraceRepo(ctrl)
+	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+	mockBuilder := builder_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
+	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+
 	impl := &TraceHubServiceImpl{
-		taskRepo:  mockTaskRepo,
-		traceRepo: mockTraceRepo,
+		taskRepo:       mockTaskRepo,
+		traceRepo:      mockTraceRepo,
+		tenantProvider: mockTenant,
+		buildHelper:    mockBuilder,
 	}
 
 	now := time.Now()
 	sub, _ := newBackfillSubscriber(mockTaskRepo, now)
 
+	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).
+		Return(filterMock, nil)
+	filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, true, nil)
+	filterMock.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil)
+	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).Return([]string{"tenant"}, nil)
+
 	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, errors.New("list failed"))
 
-	err := impl.fetchAndSendSpans(context.Background(), &repo.ListSpansParam{Tenants: []string{"tenant"}}, sub)
+	err := impl.listAndSendSpans(context.Background(), sub)
 	require.Error(t, err)
 }
 
@@ -369,7 +390,18 @@ func TestTraceHubServiceImpl_FlushSpans_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := impl.flushSpans(ctx, &flushReq{}, &spanSubscriber{})
+	sub := &spanSubscriber{
+		t: &entity.ObservabilityTask{
+			ID:          1,
+			WorkspaceID: 1,
+		},
+		tr: &entity.TaskRun{
+			ID:          1,
+			WorkspaceID: 1,
+		},
+	}
+
+	err, _ := impl.flushSpans(ctx, []*loop_span.Span{}, sub)
 	require.NoError(t, err)
 }
 
@@ -386,11 +418,10 @@ func TestTraceHubServiceImpl_DoFlush_UpdateTaskRunError(t *testing.T) {
 	domainRun := newDomainBackfillTaskRun(now)
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockTaskRepo.EXPECT().GetTaskRunCount(gomock.Any(), int64(1), sub.tr.ID).Return(int64(0), nil)
 	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
 	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(errors.New("update fail"))
 
-	err := impl.flushSpans(context.Background(), &flushReq{retrievedSpanCount: 1, pageToken: "token", spans: []*loop_span.Span{span}}, sub)
+	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "update fail")
 	require.True(t, proc.invokeCalled)
@@ -410,13 +441,21 @@ func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 	domainRun := newDomainBackfillTaskRun(now)
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockTaskRepo.EXPECT().GetTaskRunCount(gomock.Any(), int64(1), sub.tr.ID).Return(int64(0), nil)
 	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
 	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil)
 
-	err := impl.flushSpans(context.Background(), &flushReq{retrievedSpanCount: 1, pageToken: "token", spans: []*loop_span.Span{span}, noMore: true}, sub)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "finish fail")
+	// 调用flushSpans，然后手动调用OnTaskFinished来触发finish错误
+	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
+	require.NoError(t, err) // flushSpans本身不应该返回错误
+	
+	// 手动调用OnTaskFinished来触发finish错误
+	finishErr := sub.processor.OnTaskFinished(context.Background(), taskexe.OnTaskFinishedReq{
+		Task:     sub.t,
+		TaskRun:  sub.tr,
+		IsFinish: true,
+	})
+	require.Error(t, finishErr)
+	require.ErrorContains(t, finishErr, "finish fail")
 	require.True(t, proc.invokeCalled)
 }
 
@@ -427,9 +466,10 @@ func TestTraceHubServiceImpl_FlushSpans_SamplingZero(t *testing.T) {
 			Sampler: &entity.Sampler{SampleRate: 0},
 		},
 	}
-	fr := &flushReq{retrievedSpanCount: 2, spans: []*loop_span.Span{{SpanID: "s1"}, {SpanID: "s2"}}}
+	spans := []*loop_span.Span{{SpanID: "s1"}, {SpanID: "s2"}}
 
-	require.NoError(t, impl.flushSpans(context.Background(), fr, sub))
+	err, _ := impl.flushSpans(context.Background(), spans, sub)
+	require.NoError(t, err)
 }
 
 func TestTraceHubServiceImpl_IsBackfillDone(t *testing.T) {

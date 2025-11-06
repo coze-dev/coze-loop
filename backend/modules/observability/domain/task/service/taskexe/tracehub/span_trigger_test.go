@@ -46,7 +46,7 @@ func TestTraceHubServiceImpl_SpanTriggerSkipNoWorkspace(t *testing.T) {
 		ServerEnv:     &entity.ServerInRawSpan{},
 	}
 
-	require.NoError(t, impl.SpanTrigger(context.Background(), raw))
+	require.NoError(t, impl.SpanTrigger(context.Background(), raw.RawSpanConvertToLoopSpan()))
 }
 
 func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
@@ -153,7 +153,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		ServerEnv:     &entity.ServerInRawSpan{},
 	}
 
-	err := impl.SpanTrigger(context.Background(), raw)
+	err := impl.SpanTrigger(context.Background(), raw.RawSpanConvertToLoopSpan())
 	require.NoError(t, err)
 	require.True(t, proc.invokeCalled)
 }

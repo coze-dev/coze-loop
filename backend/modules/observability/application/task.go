@@ -261,7 +261,15 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 }
 
 func (t *TaskApplication) SpanTrigger(ctx context.Context, event *entity.RawSpan) error {
-	return t.tracehubSvc.SpanTrigger(ctx, event)
+	span := event.RawSpanConvertToLoopSpan()
+	if span != nil {
+		if err := t.tracehubSvc.SpanTrigger(ctx, span); err != nil {
+			logs.CtxError(ctx, "SpanTrigger err:%v", err)
+			// span trigger 失败，不处理
+			return nil
+		}
+	}
+	return nil
 }
 
 func (t *TaskApplication) AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error {
@@ -290,5 +298,6 @@ func (t *TaskApplication) BackFill(ctx context.Context, event *entity.BackFillEv
 		// 结构校验失败，不处理
 		return nil
 	}
+
 	return t.tracehubSvc.BackFill(ctx, event)
 }

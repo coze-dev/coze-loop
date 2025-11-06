@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gslice"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -19,57 +17,62 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan) error {
+func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, span *loop_span.Span) error {
 	ctx = h.fillCtx(ctx)
-	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", rawSpan.LogID, rawSpan.TraceID, rawSpan.SpanID)
-	logs.CtxInfo(ctx, "auto_task start, log_suffix=%s", logSuffix)
-	// 1、Convert to standard span and perform initial filtering based on space_id
-	span := rawSpan.RawSpanConvertToLoopSpan()
+	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
+	logs.CtxInfo(ctx, "auto_task start, %s", logSuffix)
+
+	// 1. perform initial filtering based on space_id
 	// 1.1 Filter out spans that do not belong to any space or bot
-	spaceIDs, botIDs, _ := h.getObjListWithTaskFromCache(ctx)
+	cacheInfo := h.localCache.LoadTaskCache(ctx)
+	spaceIDs, botIDs := cacheInfo.WorkspaceIDs, cacheInfo.BotIDs
 	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
-		logs.CtxInfo(ctx, "no space or bot found for span, space_id=%s,bot_id=%s, log_suffix=%s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
+		logs.CtxInfo(ctx, "no space or bot found for span, space_id=%s, bot_id=%s, %s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
 		return nil
 	}
 	// 1.2 Filter out spans of type Evaluator
-	if gslice.Contains([]string{"Evaluator"}, span.CallType) {
+	if gslice.Contains([]string{loop_span.CallTypeEvaluator}, span.CallType) {
 		return nil
 	}
+
 	// 2、Match spans against task rules
-	subs, err := h.getSubscriberOfSpan(ctx, span)
+	subs, err := h.buildSubscriberOfSpan(ctx, span)
 	if err != nil {
 		logs.CtxWarn(ctx, "get subscriber of flow span failed, %s, err: %v", logSuffix, err)
+		return err
 	}
 
 	logs.CtxInfo(ctx, "%d subscriber of flow span found, %s", len(subs), logSuffix)
 	if len(subs) == 0 {
 		return nil
 	}
+
 	// 3、Sample
 	subs = gslice.Filter(subs, func(sub *spanSubscriber) bool { return sub.Sampled() })
 	logs.CtxInfo(ctx, "%d subscriber of flow span sampled, %s", len(subs), logSuffix)
 	if len(subs) == 0 {
 		return nil
 	}
-	// 3. PreDispatch
-	err = h.preDispatch(ctx, span, subs)
-	if err != nil {
+
+	// 4. PreDispatch
+	if err = h.preDispatch(ctx, subs); err != nil {
 		logs.CtxWarn(ctx, "preDispatch flow span failed, %s, err: %v", logSuffix, err)
+		return err
 	}
 	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(subs), subs)
-	// 4、Dispatch
+
+	// 5、Dispatch
 	if err = h.dispatch(ctx, span, subs); err != nil {
 		logs.CtxError(ctx, "dispatch flow span failed, %s, err: %v", logSuffix, err)
-		// Dispatch failed, continue to the next span
-		return nil
+		return err
 	}
 	return nil
 }
 
-func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loop_span.Span) ([]*spanSubscriber, error) {
-	const key = "consumer_listening"
-	cfg := &config.ConsumerListening{}
-	if err := h.loader.UnmarshalKey(ctx, key, cfg); err != nil {
+func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *loop_span.Span) ([]*spanSubscriber, error) {
+	cfg, err := h.config.GetConsumerListening(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "Failed to get consumer listening config, err: %v", err)
 		return nil, err
 	}
 
@@ -83,7 +86,15 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 		if !cfg.IsAllSpace && !gslice.Contains(cfg.SpaceList, taskDO.WorkspaceID) {
 			continue
 		}
-		proc := h.taskProcessor.GetTaskProcessor(entity.TaskType(taskDO.TaskType))
+		if taskDO.EffectiveTime == nil || taskDO.EffectiveTime.StartAt == 0 {
+			continue
+		}
+		if span.StartTime < taskDO.EffectiveTime.StartAt {
+			logs.CtxInfo(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
+			continue
+		}
+
+		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
 		subscribers = append(subscribers, &spanSubscriber{
 			taskID:      taskDO.ID,
 			t:           taskDO,
@@ -114,16 +125,9 @@ func (h *TraceHubServiceImpl) getSubscriberOfSpan(ctx context.Context, span *loo
 	return subscribers[:keep], merr.ErrorOrNil()
 }
 
-func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
+func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, subs []*spanSubscriber) error {
 	merr := &multierror.Error{}
 	for _, sub := range subs {
-		if sub.t.EffectiveTime == nil || sub.t.EffectiveTime.StartAt == 0 {
-			continue
-		}
-		if span.StartTime < sub.t.EffectiveTime.StartAt {
-			logs.CtxWarn(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
-			continue
-		}
 		// First step: lock for task status change
 		// Task run status
 		var runStartAt, runEndAt int64
@@ -164,9 +168,9 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 				runEndAt = sub.t.EffectiveTime.EndAt
 			} else {
 				switch sub.t.Sampler.CycleTimeUnit {
-				case task.TimeUnitDay:
+				case entity.TimeUnitDay:
 					runEndAt = runStartAt + sub.t.Sampler.CycleInterval*24*time.Hour.Milliseconds()
-				case task.TimeUnitWeek:
+				case entity.TimeUnitWeek:
 					runEndAt = runStartAt + sub.t.Sampler.CycleInterval*7*24*time.Hour.Milliseconds()
 				default:
 					runEndAt = runStartAt + sub.t.Sampler.CycleInterval*10*time.Minute.Milliseconds()
@@ -248,7 +252,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, span *loop_span.S
 func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) error {
 	merr := &multierror.Error{}
 	for _, sub := range subs {
-		if sub.t.TaskStatus != task.TaskStatusRunning {
+		if sub.t.TaskStatus != entity.TaskStatusRunning {
 			continue
 		}
 		logs.CtxInfo(ctx, " sub.AddSpan: %v", sub)
@@ -261,24 +265,4 @@ func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span
 		}
 	}
 	return merr.ErrorOrNil()
-}
-
-// getObjListWithTaskFromCache retrieves the task list from cache, falling back to the database if cache is empty
-func (h *TraceHubServiceImpl) getObjListWithTaskFromCache(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask) {
-	// First, try to retrieve tasks from cache
-	objListWithTask, ok := h.taskCache.Load("ObjListWithTask")
-	if !ok {
-		// Cache is empty, fallback to the database
-		logs.CtxError(ctx, "Cache is empty, retrieving task list from database")
-		return nil, nil, nil
-	}
-
-	cacheInfo, ok := objListWithTask.(TaskCacheInfo)
-	if !ok {
-		logs.CtxError(ctx, "Cache data type mismatch")
-		return nil, nil, nil
-	}
-
-	logs.CtxInfo(ctx, "Retrieve task list from cache, taskCount=%d, spaceCount=%d, botCount=%d", len(cacheInfo.Tasks), len(cacheInfo.WorkspaceIDs), len(cacheInfo.BotIDs))
-	return cacheInfo.WorkspaceIDs, cacheInfo.BotIDs, cacheInfo.Tasks
 }

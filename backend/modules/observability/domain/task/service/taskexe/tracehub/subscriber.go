@@ -6,7 +6,6 @@ package tracehub
 import (
 	"context"
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -22,8 +21,6 @@ import (
 )
 
 type spanSubscriber struct {
-	sync.RWMutex // protect t, buf
-
 	taskID    int64
 	t         *entity.ObservabilityTask
 	tr        *entity.TaskRun
@@ -36,21 +33,14 @@ type spanSubscriber struct {
 
 // Sampled determines whether a span is sampled based on the sampling rate; the sample size will be validated during flush.
 func (s *spanSubscriber) Sampled() bool {
-	t := s.getTask()
-	if t == nil || t.Sampler == nil {
+	if s.t == nil || s.t.Sampler == nil {
 		return false
 	}
 
 	const base = 10000
-	threshold := int64(float64(base) * t.Sampler.SampleRate)
+	threshold := int64(float64(base) * s.t.Sampler.SampleRate)
 	r := rand.Int63n(base)
 	return r <= threshold
-}
-
-func (s *spanSubscriber) getTask() *entity.ObservabilityTask {
-	s.RLock()
-	defer s.RUnlock()
-	return s.t
 }
 
 func combineFilters(filters ...*loop_span.FilterFields) *loop_span.FilterFields {

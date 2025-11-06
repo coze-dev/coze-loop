@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -56,15 +57,15 @@ func (mr *MockITraceHubServiceMockRecorder) BackFill(ctx, event any) *gomock.Cal
 }
 
 // SpanTrigger mocks base method.
-func (m *MockITraceHubService) SpanTrigger(ctx context.Context, event *entity.RawSpan) error {
+func (m *MockITraceHubService) SpanTrigger(ctx context.Context, span *loop_span.Span) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpanTrigger", ctx, event)
+	ret := m.ctrl.Call(m, "SpanTrigger", ctx, span)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SpanTrigger indicates an expected call of SpanTrigger.
-func (mr *MockITraceHubServiceMockRecorder) SpanTrigger(ctx, event any) *gomock.Call {
+func (mr *MockITraceHubServiceMockRecorder) SpanTrigger(ctx, span any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpanTrigger", reflect.TypeOf((*MockITraceHubService)(nil).SpanTrigger), ctx, event)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpanTrigger", reflect.TypeOf((*MockITraceHubService)(nil).SpanTrigger), ctx, span)
 }

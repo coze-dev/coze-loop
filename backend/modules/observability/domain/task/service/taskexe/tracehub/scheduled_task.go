@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -29,14 +28,6 @@ type TaskRunCountInfo struct {
 	TaskRunCount     int64
 	TaskRunSuccCount int64
 	TaskRunFailCount int64
-}
-
-// TaskCacheInfo represents task cache information
-type TaskCacheInfo struct {
-	WorkspaceIDs []string
-	BotIDs       []string
-	Tasks        []*entity.ObservabilityTask
-	UpdateTime   time.Time
 }
 
 const (
@@ -78,9 +69,11 @@ func (h *TraceHubServiceImpl) startScheduledTask() {
 }
 
 func (h *TraceHubServiceImpl) transformTaskStatus() {
-	const key = "consumer_listening"
-	cfg := &config.ConsumerListening{}
-	if err := h.loader.UnmarshalKey(context.Background(), key, cfg); err != nil {
+	ctx := context.Background()
+	ctx = h.fillCtx(ctx)
+
+	cfg, err := h.config.GetConsumerListening(ctx)
+	if err != nil {
 		return
 	}
 	if !cfg.IsEnabled || !cfg.IsAllSpace {
@@ -90,8 +83,6 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 	if slices.Contains([]string{TracehubClusterName, InjectClusterName}, os.Getenv(TceCluster)) {
 		return
 	}
-	ctx := context.Background()
-	ctx = h.fillCtx(ctx)
 
 	if h.locker != nil {
 		locked, lockErr := h.locker.Lock(ctx, transformTaskStatusLockKey, transformTaskStatusLockTTL)
@@ -325,22 +316,12 @@ func (h *TraceHubServiceImpl) syncTaskCache() {
 	}
 	logs.CtxInfo(ctx, "Retrieved task information, taskCount:%d, spaceCount:%d, botCount:%d", len(tasks), len(spaceIDs), len(botIDs))
 
-	// 2. Build a new cache map
-	newCache := TaskCacheInfo{
+	h.localCache.StoneTaskCache(TaskCacheInfo{
 		WorkspaceIDs: spaceIDs,
 		BotIDs:       botIDs,
 		Tasks:        tasks,
 		UpdateTime:   time.Now(), // Set the current time as the update time
-	}
-
-	// 3. Clear old cache and update with new cache
-	h.taskCacheLock.Lock()
-	defer h.taskCacheLock.Unlock()
-
-	// 4. Write new cache into local cache
-	h.taskCache.Store("ObjListWithTask", newCache)
-
-	logs.CtxInfo(ctx, "Task cache sync completed, taskCount:%d, updateTime:%s", len(tasks), newCache.UpdateTime.Format(time.RFC3339))
+	})
 }
 
 // processBatch synchronizes TaskRun counts in batches

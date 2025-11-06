@@ -5,10 +5,10 @@ package tracehub
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -17,13 +17,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	trace_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
-	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
 
 //go:generate mockgen -destination=mocks/trace_hub_service.go -package=mocks . ITraceHubService
 
 type ITraceHubService interface {
-	SpanTrigger(ctx context.Context, event *entity.RawSpan) error
+	SpanTrigger(ctx context.Context, span *loop_span.Span) error
 	BackFill(ctx context.Context, event *entity.BackFillEvent) error
 }
 
@@ -36,7 +35,7 @@ func NewTraceHubImpl(
 	aid int32,
 	backfillProducer mq.IBackfillProducer,
 	locker lock.ILocker,
-	loader conf.IConfigLoader,
+	config config.ITraceConfig,
 ) (ITraceHubService, error) {
 	// Create two independent timers with different intervals
 	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // Task status lifecycle management - 5-minute interval
@@ -53,7 +52,8 @@ func NewTraceHubImpl(
 		aid:                 aid,
 		backfillProducer:    backfillProducer,
 		locker:              locker,
-		loader:              loader,
+		config:              config,
+		localCache:          NewLocalCache(),
 	}
 
 	// Start the scheduled tasks immediately
@@ -74,20 +74,12 @@ type TraceHubServiceImpl struct {
 	buildHelper         service.TraceFilterProcessorBuilder
 	backfillProducer    mq.IBackfillProducer
 	locker              lock.ILocker
-	loader              conf.IConfigLoader
+	config              config.ITraceConfig
 
 	// Local cache - caching non-terminal task information
-	taskCache     sync.Map
-	taskCacheLock sync.RWMutex
+	localCache *LocalCache
 
 	aid int32
-}
-
-type flushReq struct {
-	retrievedSpanCount int64
-	pageToken          string
-	spans              []*loop_span.Span
-	noMore             bool
 }
 
 func (h *TraceHubServiceImpl) Close() {
