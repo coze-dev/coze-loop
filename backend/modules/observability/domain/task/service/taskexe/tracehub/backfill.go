@@ -81,6 +81,13 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 		return err
 	}
 	if isDone {
+		if err = sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
+			Task:     tconv.TaskDTO2DO(sub.t, "", nil),
+			TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
+			IsFinish: true,
+		}); err != nil {
+			return err
+		}
 		logs.CtxInfo(ctx, "backfill already completed, task_id=%d", sub.t.GetID())
 		return nil
 	}
