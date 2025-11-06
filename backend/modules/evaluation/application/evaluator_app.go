@@ -344,7 +344,7 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluator(ctx context.Context, request *eva
 	}
 	// 如果是builtin分支，补充管理空间校验
 	if request.GetBuiltin() {
-		if err := e.authBuiltinManagement(ctx, request.GetWorkspaceID(), spaceTypeBuiltin); err != nil {
+		if err := e.authBuiltinManagement(ctx, request.GetWorkspaceID(), spaceTypeBuiltin, true); err != nil {
 			return nil, err
 		}
 	}
@@ -583,7 +583,7 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorVersion(ctx context.Context, request 
 	}
 	// 鉴权
 	if request.GetBuiltin() {
-		err = e.authBuiltinManagement(ctx, evaluatorDO.SpaceID, spaceTypeBuiltin)
+		err = e.authBuiltinManagement(ctx, evaluatorDO.SpaceID, spaceTypeBuiltin, false)
 		if err != nil {
 			return nil, err
 		}
@@ -1473,7 +1473,7 @@ func (e *EvaluatorHandlerImpl) CreateEvaluatorTemplate(ctx context.Context, requ
 	}
 
 	// 校验评估器模板管理权限
-	err = e.authBuiltinManagement(ctx, request.GetEvaluatorTemplate().GetWorkspaceID(), spaceTypeTemplate)
+	err = e.authBuiltinManagement(ctx, request.GetEvaluatorTemplate().GetWorkspaceID(), spaceTypeTemplate, true)
 	if err != nil {
 		return nil, err
 	}
@@ -1518,7 +1518,7 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorTemplate(ctx context.Context, requ
 	}
 
 	// 校验评估器模板管理权限
-	err = e.authBuiltinManagement(ctx, request.GetEvaluatorTemplate().GetWorkspaceID(), spaceTypeTemplate)
+	err = e.authBuiltinManagement(ctx, request.GetEvaluatorTemplate().GetWorkspaceID(), spaceTypeTemplate, true)
 	if err != nil {
 		return nil, err
 	}
@@ -1574,7 +1574,7 @@ func (e *EvaluatorHandlerImpl) DeleteEvaluatorTemplate(ctx context.Context, requ
 	}
 
 	// 校验评估器模板管理权限
-	err = e.authBuiltinManagement(ctx, templateDO.Template.SpaceID, spaceTypeTemplate)
+	err = e.authBuiltinManagement(ctx, templateDO.Template.SpaceID, spaceTypeTemplate, true)
 	if err != nil {
 		return nil, err
 	}
@@ -1637,7 +1637,7 @@ func (e *EvaluatorHandlerImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, r
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
 	// 校验是否在builtin管理空间
-	if err := e.authBuiltinManagement(ctx, request.GetWorkspaceID(), spaceTypeBuiltin); err != nil {
+	if err := e.authBuiltinManagement(ctx, request.GetWorkspaceID(), spaceTypeBuiltin, true); err != nil {
 		return nil, err
 	}
 
@@ -1670,7 +1670,19 @@ const (
 )
 
 // validate 校验评估器管理权限
-func (e *EvaluatorHandlerImpl) authBuiltinManagement(ctx context.Context, workspaceID int64, spaceType SpaceType) error {
+func (e *EvaluatorHandlerImpl) authBuiltinManagement(ctx context.Context, workspaceID int64, spaceType SpaceType, authWrite bool) error {
+	if authWrite {
+		// 鉴权
+		err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(workspaceID, 10),
+			SpaceID:       workspaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}}, // listLoopEvaluator为暂时复用的权限点
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	var allowedSpaceIDs []string
 	switch spaceType {
 	case spaceTypeBuiltin:
@@ -1692,16 +1704,6 @@ func (e *EvaluatorHandlerImpl) authBuiltinManagement(ctx context.Context, worksp
 		if allowedID == workspaceIDStr {
 			return nil
 		}
-	}
-
-	// 鉴权
-	err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(workspaceID, 10),
-		SpaceID:       workspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return err
 	}
 
 	return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id not in allowed evaluator template spaces"))
