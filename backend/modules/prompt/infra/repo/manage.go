@@ -813,6 +813,7 @@ func (d *ManageRepoImpl) CommitDraft(ctx context.Context, param repo.CommitDraft
 		err = d.promptBasicDAO.Update(ctx, basicPO.ID, map[string]interface{}{
 			q.PromptBasic.LatestCommitTime.ColumnName().String(): timeNow,
 			q.PromptBasic.LatestVersion.ColumnName().String():    param.CommitVersion,
+			q.PromptBasic.UpdatedBy.ColumnName().String():        param.UserID,
 		}, opt)
 		if err != nil {
 			return err
