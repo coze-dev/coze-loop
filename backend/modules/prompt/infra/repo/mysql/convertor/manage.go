@@ -148,6 +148,7 @@ func PromptDO2BasicPO(do *entity.Prompt) *model.PromptBasic {
 		LatestVersion: do.PromptBasic.LatestVersion,
 		CreatedAt:     do.PromptBasic.CreatedAt,
 		UpdatedAt:     do.PromptBasic.UpdatedAt,
+		PromptType:    PromptTypeDO2PO(do.PromptBasic.PromptType),
 	}
 }
 
@@ -393,5 +394,16 @@ func PromptTypePO2DO(po string) entity.PromptType {
 		return entity.PromptTypeNormal
 	default:
 		return entity.PromptTypeNormal
+	}
+}
+
+func PromptTypeDO2PO(do entity.PromptType) string {
+	switch do {
+	case entity.PromptTypeSnippet:
+		return string(entity.PromptTypeSnippet)
+	case entity.PromptTypeNormal:
+		return string(entity.PromptTypeNormal)
+	default:
+		return string(entity.PromptTypeNormal)
 	}
 }
