@@ -9,6 +9,7 @@ import (
 type InsertAnnotationParam struct {
 	Table       string
 	Annotations []*Annotation
+	Extra       map[string]string
 }
 
 type GetAnnotationParam struct {
@@ -17,6 +18,7 @@ type GetAnnotationParam struct {
 	StartTime int64 // us
 	EndTime   int64 // us
 	Limit     int32
+	Extra     map[string]string
 }
 
 type ListAnnotationsParam struct {
@@ -26,6 +28,7 @@ type ListAnnotationsParam struct {
 	EndTime         int64 // us
 	DescByUpdatedAt bool
 	Limit           int32
+	Extra           map[string]string
 }
 
 //go:generate mockgen -destination=mocks/annotation_dao.go -package=mocks . IAnnotationDao

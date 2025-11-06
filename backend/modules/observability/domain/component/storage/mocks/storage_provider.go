@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	storage "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,10 +42,10 @@ func (m *MockIStorageProvider) EXPECT() *MockIStorageProviderMockRecorder {
 }
 
 // GetTraceStorage mocks base method.
-func (m *MockIStorageProvider) GetTraceStorage(ctx context.Context, WorkSpaceID string) string {
+func (m *MockIStorageProvider) GetTraceStorage(ctx context.Context, WorkSpaceID string) storage.Storage {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTraceStorage", ctx, WorkSpaceID)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(storage.Storage)
 	return ret0
 }
 

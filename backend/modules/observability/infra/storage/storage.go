@@ -18,6 +18,8 @@ func NewTraceStorageProvider(traceConfig config.ITraceConfig) storage.IStoragePr
 	}
 }
 
-func (r *TraceStorageProviderImpl) GetTraceStorage(ctx context.Context, workspaceID string) string {
-	return "ck"
+func (r *TraceStorageProviderImpl) GetTraceStorage(ctx context.Context, workspaceID string) storage.Storage {
+	return storage.Storage{
+		StorageName: "ck",
+	}
 }

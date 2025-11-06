@@ -24,6 +24,7 @@ type QueryParam struct {
 	OrderByStartTime bool
 	SelectColumns    []string
 	OmitColumns      []string // omit specific columns
+	Extra            map[string]string
 }
 
 type InsertParam struct {
@@ -40,6 +41,7 @@ type GetMetricsParam struct {
 	StartAt      int64
 	EndAt        int64
 	Granularity  metrics_entity.MetricGranularity
+	Extra        map[string]string
 }
 
 //go:generate mockgen -destination=mocks/spans_dao.go -package=mocks . ISpansDao
