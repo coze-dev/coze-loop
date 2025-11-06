@@ -13,6 +13,7 @@ import (
 	commonentity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -61,9 +62,10 @@ func (s *RateLimiterImpl) AllowInvokeWithKeyLimit(ctx context.Context, key strin
 		logs.CtxError(ctx, "[AllowInvokeWithKeyLimit] allow invoke failed, err=%v", err)
 		return true
 	}
+	logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] AllowN finish, key=%v, rate=%v, burst=%v, period=%v, result=%v",
+		key, gptr.Indirect(limit.Rate), gptr.Indirect(limit.Burst), gptr.Indirect(limit.Period), json.Jsonify(res))
 	if res.Allowed {
-		logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] allow invoke, key=%v, rate=%v, burst=%v, period=%v",
-			key, gptr.Indirect(limit.Rate), gptr.Indirect(limit.Burst), gptr.Indirect(limit.Period))
+		logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] allow invoke")
 		return true
 	}
 	logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] not allow invoke")
