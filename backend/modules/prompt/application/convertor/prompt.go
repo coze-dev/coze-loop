@@ -386,14 +386,50 @@ func ModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
 	}
 
 	return &entity.ModelConfig{
-		ModelID:          dto.GetModelID(),
-		MaxTokens:        dto.MaxTokens,
-		Temperature:      dto.Temperature,
-		TopK:             dto.TopK,
-		TopP:             dto.TopP,
-		PresencePenalty:  dto.PresencePenalty,
-		FrequencyPenalty: dto.FrequencyPenalty,
-		JSONMode:         dto.JSONMode,
+		ModelID:           dto.GetModelID(),
+		MaxTokens:         dto.MaxTokens,
+		Temperature:       dto.Temperature,
+		TopK:              dto.TopK,
+		TopP:              dto.TopP,
+		PresencePenalty:   dto.PresencePenalty,
+		FrequencyPenalty:  dto.FrequencyPenalty,
+		JSONMode:          dto.JSONMode,
+		ParamConfigValues: BatchParamConfigValueDTO2DO(dto.ParamConfigValues),
+	}
+}
+
+func BatchParamConfigValueDTO2DO(dtos []*prompt.ParamConfigValue) []*entity.ParamConfigValue {
+	if dtos == nil {
+		return nil
+	}
+	result := make([]*entity.ParamConfigValue, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		result = append(result, ParamConfigValueDTO2DO(dto))
+	}
+	return result
+}
+
+func ParamConfigValueDTO2DO(dto *prompt.ParamConfigValue) *entity.ParamConfigValue {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ParamConfigValue{
+		Name:  ptr.From(dto.Name),
+		Label: ptr.From(dto.Label),
+		Value: ParamOptionDTO2DO(dto.Value),
+	}
+}
+
+func ParamOptionDTO2DO(dto *prompt.ParamOption) *entity.ParamOption {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ParamOption{
+		Value: ptr.From(dto.Value),
+		Label: ptr.From(dto.Label),
 	}
 }
 
@@ -765,14 +801,50 @@ func ModelConfigDO2DTO(do *entity.ModelConfig) *prompt.ModelConfig {
 		return nil
 	}
 	return &prompt.ModelConfig{
-		ModelID:          ptr.Of(do.ModelID),
-		MaxTokens:        do.MaxTokens,
-		Temperature:      do.Temperature,
-		TopK:             do.TopK,
-		TopP:             do.TopP,
-		PresencePenalty:  do.PresencePenalty,
-		FrequencyPenalty: do.FrequencyPenalty,
-		JSONMode:         do.JSONMode,
+		ModelID:           ptr.Of(do.ModelID),
+		MaxTokens:         do.MaxTokens,
+		Temperature:       do.Temperature,
+		TopK:              do.TopK,
+		TopP:              do.TopP,
+		PresencePenalty:   do.PresencePenalty,
+		FrequencyPenalty:  do.FrequencyPenalty,
+		JSONMode:          do.JSONMode,
+		ParamConfigValues: BatchParamConfigValueDO2DTO(do.ParamConfigValues),
+	}
+}
+
+func BatchParamConfigValueDO2DTO(dos []*entity.ParamConfigValue) []*prompt.ParamConfigValue {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*prompt.ParamConfigValue, 0, len(dos))
+	for _, do := range dos {
+		if do == nil {
+			continue
+		}
+		result = append(result, ParamConfigValueDO2DTO(do))
+	}
+	return result
+}
+
+func ParamConfigValueDO2DTO(do *entity.ParamConfigValue) *prompt.ParamConfigValue {
+	if do == nil {
+		return nil
+	}
+	return &prompt.ParamConfigValue{
+		Name:  ptr.Of(do.Name),
+		Label: ptr.Of(do.Label),
+		Value: ParamOptionDO2DTO(do.Value),
+	}
+}
+
+func ParamOptionDO2DTO(do *entity.ParamOption) *prompt.ParamOption {
+	if do == nil {
+		return nil
+	}
+	return &prompt.ParamOption{
+		Value: ptr.Of(do.Value),
+		Label: ptr.Of(do.Label),
 	}
 }
 
