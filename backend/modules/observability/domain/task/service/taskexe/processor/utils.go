@@ -213,7 +213,7 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 			continue
 		}
 		for _, fieldSchema := range evaluationSetSchemas {
-			if fieldSchema.Key == mapping.EvalSetName {
+			if *fieldSchema.Key == *mapping.EvalSetName {
 				key := fieldSchema.Key
 				if key == nil {
 					logs.CtxInfo(ctx, "Evaluator field key is empty, name:%v", fieldSchema.Name)
