@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -24,7 +25,7 @@ import (
 )
 
 type ITaskQueueConsumer interface {
-	SpanTrigger(ctx context.Context, event *entity.RawSpan) error
+	SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan, Span *loop_span.Span) error
 	AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error
 	AutoEvalCorrection(ctx context.Context, event *entity.CorrectionEvent) error
 	BackFill(ctx context.Context, event *entity.BackFillEvent) error
@@ -260,8 +261,8 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	}, nil
 }
 
-func (t *TaskApplication) SpanTrigger(ctx context.Context, event *entity.RawSpan) error {
-	span := event.RawSpanConvertToLoopSpan()
+func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan, Span *loop_span.Span) error {
+	span := rawSpan.RawSpanConvertToLoopSpan()
 	if span != nil {
 		if err := t.tracehubSvc.SpanTrigger(ctx, span); err != nil {
 			logs.CtxError(ctx, "SpanTrigger err:%v", err)

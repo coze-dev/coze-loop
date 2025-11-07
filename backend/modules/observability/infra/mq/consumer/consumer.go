@@ -21,6 +21,7 @@ func NewConsumerWorkers(
 		newCallbackConsumer(taskConsumer, loader),
 		newCorrectionConsumer(taskConsumer, loader),
 		newBackFillConsumer(taskConsumer, loader),
+		newSpanWithAnnotationConsumer(handler, loader),
 	)
 
 	return workers, nil

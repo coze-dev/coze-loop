@@ -92,6 +92,7 @@ var (
 		obcollector.NewEventCollectorProvider,
 		mq2.NewTraceProducerImpl,
 		mq2.NewAnnotationProducerImpl,
+		mq2.NewSpanWithAnnotationProducerImpl,
 		file.NewFileRPCProvider,
 		NewTraceConfigLoader,
 		NewTraceProcessorBuilder,
