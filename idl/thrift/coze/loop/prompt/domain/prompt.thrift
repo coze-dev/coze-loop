@@ -67,6 +67,7 @@ struct PromptTemplate {
     2: optional list<Message> messages
     3: optional list<VariableDef> variable_defs
     4: optional bool has_snippet
+    5: optional list<Prompt> snippets
 
     100: optional map<string, string> metadata
 }

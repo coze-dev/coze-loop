@@ -106,6 +106,7 @@ struct GetPromptResponse {
     1: optional prompt.Prompt prompt
 
     11: optional prompt.PromptDetail default_config
+    12: optional i32 total_parent_references
 
     255: optional base.BaseResp  BaseResp
 }
@@ -214,6 +215,7 @@ struct ListCommitResponse {
     1: optional list<prompt.CommitInfo> prompt_commit_infos
     2: optional map<string, list<prompt.Label>> commit_version_label_mapping
     3: optional map<string, i32> parent_references_mapping
+    4: optional map<string, i32> sub_references_mapping
 
     11: optional list<user.UserInfoDetail> users
 
