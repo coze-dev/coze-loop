@@ -101,3 +101,60 @@ struct RuntimeParam {
     1: optional string json_value
     2: optional string json_demo
 }
+
+struct Trajectory  {
+    // 核心轨迹的steps
+    1: optional list<Step> Steps (api.js_conv="true", go.tag = 'json:"steps"')
+
+    10: optional map<string, string> metadata
+
+    20: optional BasicInfo basic_info (api.js_conv="true", go.tag = 'json:"basic_info"')
+}
+
+struct Step {
+    1: optional string id
+    2: optional string parent_id
+    // 类型：必选字段，model、tool、agent、planner
+    3: optional StepType type
+    // 内容：必选字段（所有角色均有 content，assistant
+    4: optional Content content
+    5: optional string reasoning
+    6: optional list<ToolCall> tool_calls
+    // 工具名称：可选字段，仅 "tool" 角色会包含
+    7: optional string tool_name
+    // 元信息扩展，比如Agent的状态、思考的过程等
+    8: optional map<string, string> metadata
+
+
+    20: optional BasicInfo basic_info (api.js_conv="true", go.tag = 'json:"basic_info"')
+}
+
+typedef string StepType(ts.enum="true")
+
+const ContentType StepType_Model = "model"
+const ContentType StepType_Tool = "tool"
+const ContentType StepType_Agent = "agent"
+const ContentType StepType_Prompt = "prompt"
+
+struct BasicInfo {
+    1: required i64 started_at (api.js_conv='true', go.tag='json:"started_at"')
+
+    2: required i64 duration (api.js_conv='true', go.tag='json:"duration"')
+    // token消耗等继续扩展
+}
+
+
+struct ToolCall {
+    1: optional i64 index (api.js_conv="true", go.tag='json:"index"')
+    2: optional string id
+    3: optional ToolType type
+    4: optional FunctionCall function_call
+}
+
+struct FunctionCall {
+    1: optional string name
+    2: optional string arguments
+}
+
+typedef string ToolType (ts.enum="true")
+const ToolType ToolType_Function = "function"
