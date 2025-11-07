@@ -213,11 +213,11 @@ func TestBuildItem(t *testing.T) {
 		TraceFieldJsonpath: "",
 		EvalSetName:        gptr.Of("field_1"),
 	}
-	evalSchema := []*eval_set.FieldSchema{
+	evalSchema := []*entity.FieldSchema{
 		{
 			Key:         gptr.Of("field_1"),
-			Name:        gptr.Of("field_1"),
-			ContentType: gptr.Of(common.ContentTypeText),
+			Name:        "field_1",
+			ContentType: common.ContentTypeText,
 		},
 	}
 	evalSchemaBytes, err := json.Marshal(evalSchema)
@@ -235,11 +235,11 @@ func TestBuildItem(t *testing.T) {
 	// content error path should return nil
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
 	badSpan := &loop_span.Span{TraceID: span.TraceID, SpanID: span.SpanID, Input: "invalid json"}
-	badSchema := []*eval_set.FieldSchema{
+	badSchema := []*entity.FieldSchema{
 		{
 			Key:         gptr.Of("field_1"),
-			Name:        gptr.Of("field_1"),
-			ContentType: gptr.Of(common.ContentTypeMultiPart),
+			Name:        "field_1",
+			ContentType: common.ContentTypeMultiPart,
 		},
 	}
 	badBytes, err := json.Marshal(badSchema)
