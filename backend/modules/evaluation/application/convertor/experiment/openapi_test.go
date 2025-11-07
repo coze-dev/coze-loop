@@ -747,3 +747,88 @@ func TestOpenAPIEvaluatorRecordDO2DTO(t *testing.T) {
 	}
 	assert.Nil(t, openAPIEvaluatorRecordDO2DTO(nil))
 }
+
+func TestOpenAPIAggregatorTypeDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		input entity.AggregatorType
+		want  *openapiExperiment.AggregatorType
+	}{
+		{"average", entity.Average, gptr.Of(openapiExperiment.AggregatorTypeAverage)},
+		{"sum", entity.Sum, gptr.Of(openapiExperiment.AggregatorTypeSum)},
+		{"max", entity.Max, gptr.Of(openapiExperiment.AggregatorTypeMax)},
+		{"min", entity.Min, gptr.Of(openapiExperiment.AggregatorTypeMin)},
+		{"distribution", entity.Distribution, gptr.Of(openapiExperiment.AggregatorTypeDistribution)},
+		{"unknown", entity.AggregatorType(999), nil},
+	}
+
+	for _, tt := range cases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			converted := openAPIAggregatorTypeDO2DTO(tt.input)
+			if tt.want == nil {
+				assert.Nil(t, converted)
+				return
+			}
+			if assert.NotNil(t, converted) {
+				assert.Equal(t, *tt.want, *converted)
+			}
+		})
+	}
+}
+
+func TestOpenAPIScoreDistributionDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	// 测试正常情况
+	score1 := "0.8"
+	count1 := int64(10)
+	percentage1 := 0.25
+	score2 := "0.9"
+	count2 := int64(20)
+	percentage2 := 0.75
+
+	data := &entity.ScoreDistributionData{
+		ScoreDistributionItems: []*entity.ScoreDistributionItem{
+			{Score: score1, Count: count1, Percentage: percentage1},
+			{Score: score2, Count: count2, Percentage: percentage2},
+		},
+	}
+
+	converted := openAPIScoreDistributionDO2DTO(data)
+	if assert.NotNil(t, converted) {
+		if assert.Len(t, converted.ScoreDistributionItems, 2) {
+			assert.Equal(t, score1, gptr.Indirect(converted.ScoreDistributionItems[0].Score))
+			assert.Equal(t, count1, gptr.Indirect(converted.ScoreDistributionItems[0].Count))
+			assert.Equal(t, percentage1, gptr.Indirect(converted.ScoreDistributionItems[0].Percentage))
+			assert.Equal(t, score2, gptr.Indirect(converted.ScoreDistributionItems[1].Score))
+			assert.Equal(t, count2, gptr.Indirect(converted.ScoreDistributionItems[1].Count))
+			assert.Equal(t, percentage2, gptr.Indirect(converted.ScoreDistributionItems[1].Percentage))
+		}
+	}
+
+	// 测试空数据
+	assert.Nil(t, openAPIScoreDistributionDO2DTO(nil))
+
+	// 测试空项目列表
+	emptyData := &entity.ScoreDistributionData{
+		ScoreDistributionItems: []*entity.ScoreDistributionItem{},
+	}
+	assert.Nil(t, openAPIScoreDistributionDO2DTO(emptyData))
+
+	// 测试包含nil项目
+	dataWithNil := &entity.ScoreDistributionData{
+		ScoreDistributionItems: []*entity.ScoreDistributionItem{
+			{Score: score1, Count: count1, Percentage: percentage1},
+			nil,
+			{Score: score2, Count: count2, Percentage: percentage2},
+		},
+	}
+	convertedWithNil := openAPIScoreDistributionDO2DTO(dataWithNil)
+	if assert.NotNil(t, convertedWithNil) {
+		// nil项目应该被跳过，只剩2个有效项目
+		assert.Len(t, convertedWithNil.ScoreDistributionItems, 2)
+	}
+}
