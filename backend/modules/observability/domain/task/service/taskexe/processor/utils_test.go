@@ -279,11 +279,11 @@ func TestBuildItems(t *testing.T) {
 	goodSpan := &loop_span.Span{TraceID: "1234567890abcdef1234567890abcdef", SpanID: "deadc0debeefcafe", Input: "hello"}
 	badSpan := &loop_span.Span{TraceID: goodSpan.TraceID, SpanID: "badbadbadbadbad", Input: "invalid"}
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
-	multipartSchema := []*eval_set.FieldSchema{
+	multipartSchema := []*entity.FieldSchema{
 		{
 			Key:         gptr.Of("field_1"),
-			Name:        gptr.Of("field_1"),
-			ContentType: gptr.Of(common.ContentTypeMultiPart),
+			Name:        "field_1",
+			ContentType: common.ContentTypeMultiPart,
 		},
 	}
 	multipartBytes, err := json.Marshal(multipartSchema)
