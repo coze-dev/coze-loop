@@ -67,7 +67,7 @@ import (
 
 // Injectors from wire.go:
 
-func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, auditClient audit.IAuditService, meter metrics.Meter, authClient authservice.Client, evalSetService evaluation.EvaluationSetService, evaluatorService evaluation.EvaluatorService, targetService evaluation.EvalTargetService, uc userservice.Client, pms promptmanageservice.Client, pes promptexecuteservice.Client, sds datasetservice.Client, limiterFactory limiter.IRateLimiterFactory, llmcli llmruntimeservice.Client, benefitSvc benefit.IBenefitService, ckDb ck.Provider, tagClient tagservice.Client, objectStorage fileserver.ObjectStorage) (IExperimentApplication, error) {
+func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, auditClient audit.IAuditService, meter metrics.Meter, authClient authservice.Client, evalSetService evaluation.EvaluationSetService, evaluatorService evaluation.EvaluatorService, targetService evaluation.EvalTargetService, uc userservice.Client, pms promptmanageservice.Client, pes promptexecuteservice.Client, sds datasetservice.Client, limiterFactory limiter.IRateLimiterFactory, llmcli llmruntimeservice.Client, benefitSvc benefit.IBenefitService, ckDb ck.Provider, tagClient tagservice.Client, objectStorage fileserver.ObjectStorage, plainLimiterFactory limiter.IPlainRateLimiterFactory) (IExperimentApplication, error) {
 	exptTurnResultDAO := mysql.NewExptTurnResultDAO(db2)
 	iExptTurnEvaluatorResultRefDAO := mysql.NewExptTurnEvaluatorResultRefDAO(db2)
 	iExptTurnResultRepo := experiment.NewExptTurnResultRepo(idgen2, exptTurnResultDAO, iExptTurnEvaluatorResultRefDAO)
@@ -97,7 +97,8 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iRuntimeManager := NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
 	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
-	serviceEvaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v)
+	iPlainRateLimiter := evaluator.NewPlainRateLimiterImpl(plainLimiterFactory)
+	serviceEvaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v, iPlainRateLimiter)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
 	if err != nil {
 		return nil, err
@@ -166,7 +167,7 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return iExperimentApplication, nil
 }
 
-func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, authClient authservice.Client, db2 db.Provider, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, llmClient llmruntimeservice.Client, meter metrics.Meter, userClient userservice.Client, auditClient audit.IAuditService, cmdable redis.Cmdable, benefitSvc benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, fileClient fileservice.Client) (evaluation.EvaluatorService, error) {
+func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, authClient authservice.Client, db2 db.Provider, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, llmClient llmruntimeservice.Client, meter metrics.Meter, userClient userservice.Client, auditClient audit.IAuditService, cmdable redis.Cmdable, benefitSvc benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, fileClient fileservice.Client, plainLimiterFactory limiter.IPlainRateLimiterFactory) (evaluation.EvaluatorService, error) {
 	iConfiger := conf2.NewEvaluatorConfiger(configFactory)
 	iAuthProvider := foundation.NewAuthRPCProvider(authClient)
 	rateLimiter := evaluator.NewRateLimiterImpl(ctx, limiterFactory, iConfiger)
@@ -188,7 +189,8 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	iRuntimeManager := NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
 	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
-	evaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v)
+	iPlainRateLimiter := evaluator.NewPlainRateLimiterImpl(plainLimiterFactory)
+	evaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v, iPlainRateLimiter)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
 	if err != nil {
 		return nil, err
@@ -241,7 +243,7 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	return evalTargetService
 }
 
-func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider) (IEvalOpenAPIApplication, error) {
+func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigLoaderFactory, rmqFactory mq.IFactory, cmdable redis.Cmdable, idgen2 idgen.IIDGenerator, db2 db.Provider, client promptmanageservice.Client, executeClient promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, dataClient datasetservice.Client, userClient userservice.Client, llmClient llmruntimeservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, objectStorage fileserver.ObjectStorage, auditClient audit.IAuditService, benefitService benefit.IBenefitService, ckProvider ck.Provider) (evaluation.EvalOpenAPIService, error) {
 	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
 	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
@@ -266,8 +268,8 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	openAPIEvaluationMetrics := openapi.NewEvaluationOApiMetrics(meter)
 	iUserProvider := foundation.NewUserRPCProvider(userClient)
 	userInfoService := userinfo.NewUserInfoServiceImpl(iUserProvider)
-	v2 := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService)
-	return v2, nil
+	evalOpenAPIService := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService)
+	return evalOpenAPIService, nil
 }
 
 // wire.go:
@@ -287,7 +289,7 @@ var (
 	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, service.NewEvaluatorTemplateService, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, NewRuntimeFactory,
 		NewRuntimeManagerFromFactory,
 		NewSandboxConfig,
-		NewLogger, service.NewCodeBuilderFactory, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, evaluator.NewEvaluatorTemplateRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, mysql2.NewEvaluatorTemplateDAO, mysql2.NewEvaluatorTagDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher,
+		NewLogger, service.NewCodeBuilderFactory, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, evaluator.NewEvaluatorTemplateRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, mysql2.NewEvaluatorTemplateDAO, mysql2.NewEvaluatorTagDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher, evaluator.NewPlainRateLimiterImpl,
 	)
 
 	evaluatorSet = wire.NewSet(
@@ -314,7 +316,7 @@ var (
 
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
-		targetDomainService, metrics3.NewEvalTargetMetrics, flagSet, producer.NewExptEventPublisher, evalAsyncRepoSet, service.NewEvaluationSetServiceImpl, service.NewEvaluationSetVersionServiceImpl, service.NewEvaluationSetItemServiceImpl, service.NewEvaluationSetSchemaServiceImpl, data.NewDatasetRPCAdapter, openapi.NewEvaluationOApiMetrics, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl,
+		experimentSet, openapi.NewEvaluationOApiMetrics, service.NewEvaluationSetSchemaServiceImpl,
 	)
 )
 

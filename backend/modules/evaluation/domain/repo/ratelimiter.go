@@ -12,5 +12,9 @@ import (
 //go:generate mockgen -destination mocks/ratelimiter_mock.go -package mocks . RateLimiter
 type RateLimiter interface {
 	AllowInvoke(ctx context.Context, spaceID int64) bool
+}
+
+//go:generate mockgen -destination mocks/plainratelimiter_mock.go -package mocks . IPlainRateLimiter
+type IPlainRateLimiter interface {
 	AllowInvokeWithKeyLimit(ctx context.Context, key string, limit *commonentity.RateLimit) bool
 }

@@ -43,7 +43,17 @@ func (s *RateLimiterImpl) AllowInvoke(ctx context.Context, spaceID int64) bool {
 	return false
 }
 
-func (s *RateLimiterImpl) AllowInvokeWithKeyLimit(ctx context.Context, key string, limit *commonentity.RateLimit) bool {
+type PlainRateLimiterImpl struct {
+	limiter limiter.IPlainRateLimiter
+}
+
+func NewPlainRateLimiterImpl(limiterFactory limiter.IPlainRateLimiterFactory) repo.IPlainRateLimiter {
+	return &PlainRateLimiterImpl{
+		limiter: limiterFactory.NewPlainRateLimiter(),
+	}
+}
+
+func (s *PlainRateLimiterImpl) AllowInvokeWithKeyLimit(ctx context.Context, key string, limit *commonentity.RateLimit) bool {
 	if len(key) == 0 {
 		logs.CtxError(ctx, "[AllowInvokeWithKeyLimit] key is empty")
 		return false
