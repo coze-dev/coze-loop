@@ -404,6 +404,7 @@ func (r *TraceExportServiceImpl) addSpanAnnotations(ctx context.Context, spans [
 			Tenant:      span.GetTenant(),
 			TTL:         span.GetTTL(ctx),
 			Annotations: []*loop_span.Annotation{annotation},
+			Span:        span,
 		})
 		if err != nil {
 			// 忽略add annotations的错误，防止用户重复导入数据集。

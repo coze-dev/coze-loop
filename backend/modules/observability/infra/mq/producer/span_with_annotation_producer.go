@@ -35,7 +35,7 @@ func (a *SpanWithAnnotationProducerImpl) SendSpanWithAnnotation(ctx context.Cont
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	msg := mq.NewDeferMessage(a.topic, 10*time.Second, bytes)
+	msg := mq.NewDeferMessage(a.topic, 60*time.Second, bytes)
 	_, err = a.mqProducer.Send(ctx, msg)
 	if err != nil {
 		logs.CtxWarn(ctx, "send annotation msg err: %v", err)

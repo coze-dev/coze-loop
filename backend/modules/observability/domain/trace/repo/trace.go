@@ -67,6 +67,7 @@ type InsertAnnotationParam struct {
 	Tenant      string
 	TTL         loop_span.TTL
 	Annotations []*loop_span.Annotation
+	Span        *loop_span.Span
 }
 
 //go:generate mockgen -destination=mocks/trace.go -package=mocks . ITraceRepo

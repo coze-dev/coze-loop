@@ -732,6 +732,7 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
+		Span:        span,
 	}); err != nil {
 		return nil, err
 	}
@@ -788,6 +789,7 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
+		Span:        span,
 	})
 }
 
@@ -826,6 +828,7 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
+		Span:        span,
 	})
 }
 
@@ -890,6 +893,7 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
+		Span:        span,
 	})
 }
 
@@ -941,6 +945,7 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
+		Span:        span,
 	})
 }
 
@@ -982,6 +987,7 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{event.Annotation},
+		Span:        span,
 	})
 }
 
@@ -1174,6 +1180,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
+		Span:        span,
 	}
 	if err = r.traceRepo.InsertAnnotations(ctx, param); err != nil {
 		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)

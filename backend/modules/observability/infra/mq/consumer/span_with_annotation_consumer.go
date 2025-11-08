@@ -41,6 +41,11 @@ func (e *SpanWithAnnotationConsumer) ConsumerCfg(ctx context.Context) (*mq.Consu
 		ConsumerGroup:        cfg.ConsumerGroup,
 		ConsumeTimeout:       time.Duration(cfg.Timeout) * time.Millisecond,
 		ConsumeGoroutineNums: cfg.WorkerNum,
+		EnablePPE:            cfg.EnablePPE,
+		IsEnabled:            cfg.IsEnabled,
+	}
+	if cfg.TagExpression != nil {
+		res.TagExpression = *cfg.TagExpression
 	}
 	return res, nil
 }

@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
@@ -51,9 +53,10 @@ func NewTraceMetricCKRepoImpl(
 }
 
 type TraceCkRepoImpl struct {
-	spansDao    ck.ISpansDao
-	annoDao     ck.IAnnotationDao
-	traceConfig config.ITraceConfig
+	spansDao     ck.ISpansDao
+	annoDao      ck.IAnnotationDao
+	traceConfig  config.ITraceConfig
+	spanProducer mq.ISpanProducer
 }
 
 type PageToken struct {
@@ -284,9 +287,17 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 		}
 		pos = append(pos, annotationPO)
 	}
-	return t.annoDao.Insert(ctx, &ck.InsertAnnotationParam{
+	err = t.annoDao.Insert(ctx, &ck.InsertAnnotationParam{
 		Table:       table,
 		Annotations: pos,
+	})
+	if err != nil {
+		return nil
+	}
+	span := param.Span
+	span.Annotations = append(span.Annotations, param.Annotations...)
+	return t.spanProducer.SendSpanWithAnnotation(ctx, &entity.SpanEvent{
+		Span: span,
 	})
 }
 
