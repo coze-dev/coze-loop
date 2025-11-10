@@ -186,7 +186,7 @@ func TestListEvaluationSetVersions(t *testing.T) {
 	nextCursor := ""
 
 	// 模拟成功情况
-	mockAdapter.EXPECT().ListDatasetVersions(gomock.Any(), param.SpaceID, param.EvaluationSetID, param.PageToken, param.PageNumber, param.PageSize, param.VersionLike).Return(expectedSets, &total, &nextCursor, nil)
+	mockAdapter.EXPECT().ListDatasetVersions(gomock.Any(), param.SpaceID, param.EvaluationSetID, param.PageToken, param.PageNumber, param.PageSize, param.VersionLike, gomock.Any()).Return(expectedSets, &total, &nextCursor, nil)
 	sets, totalResult, nextCursorResult, err := service.ListEvaluationSetVersions(context.Background(), param)
 	if err != nil {
 		t.Errorf("ListEvaluationSetVersions failed with error: %v", err)

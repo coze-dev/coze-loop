@@ -4,49 +4,59 @@
 package metrics
 
 import (
+	"sync"
+
 	imetrics "github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
+var (
+	exptSetMetricsOnce = sync.Once{}
+	exptMetricsImpl    metrics.ExptMetric
+)
+
 func NewExperimentMetric(meter imetrics.Meter) metrics.ExptMetric {
-	if meter == nil {
-		return nil
-	}
-	var err error
+	exptSetMetricsOnce.Do(func() {
+		if meter == nil {
+			return
+		}
+		var err error
 
-	if exptEvalMtr, err = meter.NewMetric(exptEvalMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, exptEvalMtrTags()); err != nil {
-		panic(errorx.Wrapf(err, "new metric fail"))
-	}
+		if exptEvalMtr, err = meter.NewMetric(exptEvalMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, exptEvalMtrTags()); err != nil {
+			panic(errorx.Wrapf(err, "new metric fail"))
+		}
 
-	if exptItemEvalMtr, err = meter.NewMetric(exptItemEvalMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, exptItemEvalMtrTags()); err != nil {
-		panic(errorx.Wrapf(err, "new metric fail"))
-	}
+		if exptItemEvalMtr, err = meter.NewMetric(exptItemEvalMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, exptItemEvalMtrTags()); err != nil {
+			panic(errorx.Wrapf(err, "new metric fail"))
+		}
 
-	if exptTurnEvalMtr, err = meter.NewMetric(exptTurnEvalMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, exptTurnEvalMtrTags()); err != nil {
-		panic(errorx.Wrapf(err, "new metric fail"))
-	}
+		if exptTurnEvalMtr, err = meter.NewMetric(exptTurnEvalMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, exptTurnEvalMtrTags()); err != nil {
+			panic(errorx.Wrapf(err, "new metric fail"))
+		}
 
-	if getExptResultMtr, err = meter.NewMetric(getExptResultMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter}, getExptResultMtrTags()); err != nil {
-		panic(errorx.Wrapf(err, "new metric fail"))
-	}
+		if getExptResultMtr, err = meter.NewMetric(getExptResultMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter}, getExptResultMtrTags()); err != nil {
+			panic(errorx.Wrapf(err, "new metric fail"))
+		}
 
-	if calculateExptAggrResultMtr, err = meter.NewMetric(calculateExptAggrResultMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, calculateExptAggrResultTags()); err != nil {
-		panic(errorx.Wrapf(err, "new metric fail"))
-	}
+		if calculateExptAggrResultMtr, err = meter.NewMetric(calculateExptAggrResultMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, calculateExptAggrResultTags()); err != nil {
+			panic(errorx.Wrapf(err, "new metric fail"))
+		}
 
-	if exptTurnResultFilterMtr, err = meter.NewMetric(exptTurnResultFilterMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, exptTurnResultFilterTags()); err != nil {
-		panic(errorx.Wrapf(err, "new metric fail"))
-	}
+		if exptTurnResultFilterMtr, err = meter.NewMetric(exptTurnResultFilterMtrName, []imetrics.MetricType{imetrics.MetricTypeCounter, imetrics.MetricTypeTimer}, exptTurnResultFilterTags()); err != nil {
+			panic(errorx.Wrapf(err, "new metric fail"))
+		}
 
-	return &ExperimentMetricImpl{
-		exptEvalMtr:                exptEvalMtr,
-		exptItemMtr:                exptItemEvalMtr,
-		exptTurnMtr:                exptTurnEvalMtr,
-		getExptResultMtr:           getExptResultMtr,
-		calculateExptAggrResultMtr: calculateExptAggrResultMtr,
-		exptTurnResultFilterMtr:    exptTurnResultFilterMtr,
-	}
+		exptMetricsImpl = &ExperimentMetricImpl{
+			exptEvalMtr:                exptEvalMtr,
+			exptItemMtr:                exptItemEvalMtr,
+			exptTurnMtr:                exptTurnEvalMtr,
+			getExptResultMtr:           getExptResultMtr,
+			calculateExptAggrResultMtr: calculateExptAggrResultMtr,
+			exptTurnResultFilterMtr:    exptTurnResultFilterMtr,
+		}
+	})
+	return exptMetricsImpl
 }
 
 type ExperimentMetricImpl struct {

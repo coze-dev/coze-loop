@@ -219,7 +219,6 @@ var (
 		experimentSet,
 		evalmtr.NewEvaluationOApiMetrics,
 		domainservice.NewEvaluationSetSchemaServiceImpl,
-		data.NewDatasetRPCAdapter,
 	)
 )
 
