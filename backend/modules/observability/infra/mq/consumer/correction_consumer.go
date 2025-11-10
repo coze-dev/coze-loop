@@ -21,7 +21,7 @@ type CorrectionConsumer struct {
 	conf.IConfigLoader
 }
 
-func newCorrectionConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewCorrectionConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &CorrectionConsumer{
 		handler:       handler,
 		IConfigLoader: loader,

@@ -22,7 +22,7 @@ type AutoTaskCallbackConsumer struct {
 	conf.IConfigLoader
 }
 
-func newCallbackConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewCallbackConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &AutoTaskCallbackConsumer{
 		handler:       handler,
 		IConfigLoader: loader,

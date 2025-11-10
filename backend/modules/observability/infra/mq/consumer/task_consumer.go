@@ -22,7 +22,7 @@ type TaskConsumer struct {
 	conf.IConfigLoader
 }
 
-func newTaskConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewTaskConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &TaskConsumer{
 		handler:       handler,
 		IConfigLoader: loader,
