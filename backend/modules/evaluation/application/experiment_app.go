@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	loopsession "github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 
 	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -1248,6 +1249,12 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 	if req.Session != nil && req.Session.UserID != nil {
 		session = &entity.Session{
 			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	} else {
+		logs.CtxInfo(ctx, "InsightAnalysisExperiment found empty userID, expt_id: %v, workspace_id: %v", req.GetExptID(), req.GetWorkspaceID())
+		userId := loopsession.UserIDInCtxOrEmpty(ctx)
+		session = &entity.Session{
+			UserID: userId,
 		}
 	}
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
