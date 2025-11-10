@@ -43,13 +43,27 @@ func (s *RateLimiterImpl) AllowInvoke(ctx context.Context, spaceID int64) bool {
 	return false
 }
 
-func (s *RateLimiterImpl) AllowInvokeWithKeyLimit(ctx context.Context, key string, limit *commonentity.RateLimit) bool {
+type PlainRateLimiterImpl struct {
+	limiter limiter.IPlainRateLimiter
+}
+
+func NewPlainRateLimiterImpl(limiterFactory limiter.IPlainRateLimiterFactory) repo.IPlainRateLimiter {
+	return &PlainRateLimiterImpl{
+		limiter: limiterFactory.NewPlainRateLimiter(),
+	}
+}
+
+func (s *PlainRateLimiterImpl) AllowInvokeWithKeyLimit(ctx context.Context, key string, limit *commonentity.RateLimit) bool {
 	if len(key) == 0 {
 		logs.CtxError(ctx, "[AllowInvokeWithKeyLimit] key is empty")
 		return false
 	}
 	if limit == nil {
 		logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] limit is not set, skip invoke limit")
+		return true
+	}
+	if limit.Period == nil || limit.Rate == nil {
+		logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] essential period or rate is not set, skip invoke limit")
 		return true
 	}
 	res, err := s.limiter.AllowN(ctx, key, 1, limiter.WithLimit(&limiter.Limit{

@@ -79,3 +79,13 @@ type Limit struct {
 	Burst  int           `json:"burst" yaml:"burst" mapstructure:"burst"`
 	Period time.Duration `json:"period" yaml:"period" mapstructure:"period"`
 }
+
+//go:generate mockgen -destination=mocks/rate_limiter_factory.go -package=mocks . IPlainRateLimiterFactory
+type IPlainRateLimiterFactory interface {
+	NewPlainRateLimiter(opts ...FactoryOptionFn) IPlainRateLimiter
+}
+
+//go:generate mockgen -destination=mocks/rate_limiter.go -package=mocks . IPlainRateLimiter
+type IPlainRateLimiter interface {
+	AllowN(ctx context.Context, key string, n int, opts ...LimitOptionFn) (*Result, error)
+}

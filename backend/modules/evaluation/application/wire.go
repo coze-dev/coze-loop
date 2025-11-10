@@ -9,9 +9,10 @@ package application
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	"github.com/google/wire"
 	"github.com/sirupsen/logrus"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -159,6 +160,7 @@ var (
 		evalconf.NewEvaluatorConfiger,
 		evaluatormtr.NewEvaluatorMetrics,
 		rmqproducer.NewEvaluatorEventPublisher,
+		evaluatorrepo.NewPlainRateLimiterImpl,
 	)
 
 	evaluatorSet = wire.NewSet(
@@ -223,7 +225,6 @@ var (
 		experimentSet,
 		evalmtr.NewEvaluationOApiMetrics,
 		domainservice.NewEvaluationSetSchemaServiceImpl,
-		data.NewDatasetRPCAdapter,
 	)
 )
 
@@ -260,6 +261,7 @@ func InitExperimentApplication(
 	ckDb ck.Provider,
 	tagClient tagservice.Client,
 	objectStorage fileserver.ObjectStorage,
+	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 ) (IExperimentApplication, error) {
 	wire.Build(
 		experimentSet,
@@ -282,6 +284,7 @@ func InitEvaluatorApplication(
 	benefitSvc benefit.IBenefitService,
 	limiterFactory limiter.IRateLimiterFactory,
 	fileClient fileservice.Client,
+	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 ) (evaluation.EvaluatorService, error) {
 	wire.Build(
 		evaluatorSet,

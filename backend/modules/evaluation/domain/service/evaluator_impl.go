@@ -40,6 +40,7 @@ func NewEvaluatorServiceImpl(
 	idem idem.IdempotentService,
 	configer conf.IConfiger,
 	evaluatorSourceServices map[entity.EvaluatorType]EvaluatorSourceService,
+	plainRateLimiter repo.IPlainRateLimiter,
 ) EvaluatorService {
 	onceEvaluatorService.Do(func() {
 		singletonEvaluatorService = &EvaluatorServiceImpl{
@@ -51,6 +52,7 @@ func NewEvaluatorServiceImpl(
 			idem:                    idem,
 			configer:                configer,
 			evaluatorSourceServices: evaluatorSourceServices,
+			plainRateLimiter:        plainRateLimiter,
 		}
 	})
 	return singletonEvaluatorService
@@ -66,6 +68,7 @@ type EvaluatorServiceImpl struct {
 	idem                    idem.IdempotentService
 	configer                conf.IConfiger
 	evaluatorSourceServices map[entity.EvaluatorType]EvaluatorSourceService
+	plainRateLimiter        repo.IPlainRateLimiter
 }
 
 // ListEvaluator 按查询条件查询 evaluator_version
@@ -597,7 +600,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 	if allow := e.limiter.AllowInvoke(ctx, request.SpaceID); !allow {
 		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
 	}
-	if allow := e.limiter.AllowInvokeWithKeyLimit(ctx, fmt.Sprintf("run_evaluator:%v", evaluatorDO.ID), evaluatorDO.GetRateLimit()); !allow {
+	if allow := e.plainRateLimiter.AllowInvokeWithKeyLimit(ctx, fmt.Sprintf("run_evaluator:%v", evaluatorDO.ID), evaluatorDO.GetRateLimit()); !allow {
 		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to evaluator-level rate limit"))
 	}
 	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
