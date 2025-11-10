@@ -308,7 +308,13 @@ func (r *EvaluatorTemplateRepoImpl) UpdateEvaluatorTemplate(ctx context.Context,
 
 // DeleteEvaluatorTemplate 删除评估器模板（软删除）
 func (r *EvaluatorTemplateRepoImpl) DeleteEvaluatorTemplate(ctx context.Context, id int64, userID string) error {
-	return r.templateDAO.DeleteEvaluatorTemplate(ctx, id, userID)
+	if err := r.templateDAO.DeleteEvaluatorTemplate(ctx, id, userID); err != nil {
+		return err
+	}
+	if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, id, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), "", nil); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetEvaluatorTemplate 根据ID获取评估器模板

@@ -633,6 +633,11 @@ func (r *EvaluatorRepoImpl) BatchDeleteEvaluator(ctx context.Context, ids []int6
 		if err != nil {
 			return err
 		}
+		for _, id := range ids {
+			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, id, int32(entity.EvaluatorTagKeyType_Evaluator), "", nil); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 }
