@@ -3412,6 +3412,7 @@ type PromptTemplate struct {
 	Messages     []*Message        `thrift:"messages,2,optional" frugal:"2,optional,list<Message>" form:"messages" json:"messages,omitempty" query:"messages"`
 	VariableDefs []*VariableDef    `thrift:"variable_defs,3,optional" frugal:"3,optional,list<VariableDef>" form:"variable_defs" json:"variable_defs,omitempty" query:"variable_defs"`
 	HasSnippet   *bool             `thrift:"has_snippet,4,optional" frugal:"4,optional,bool" form:"has_snippet" json:"has_snippet,omitempty" query:"has_snippet"`
+	Snippets     []*Prompt         `thrift:"snippets,5,optional" frugal:"5,optional,list<Prompt>" form:"snippets" json:"snippets,omitempty" query:"snippets"`
 	Metadata     map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
 }
 
@@ -3470,6 +3471,18 @@ func (p *PromptTemplate) GetHasSnippet() (v bool) {
 	return *p.HasSnippet
 }
 
+var PromptTemplate_Snippets_DEFAULT []*Prompt
+
+func (p *PromptTemplate) GetSnippets() (v []*Prompt) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSnippets() {
+		return PromptTemplate_Snippets_DEFAULT
+	}
+	return p.Snippets
+}
+
 var PromptTemplate_Metadata_DEFAULT map[string]string
 
 func (p *PromptTemplate) GetMetadata() (v map[string]string) {
@@ -3493,6 +3506,9 @@ func (p *PromptTemplate) SetVariableDefs(val []*VariableDef) {
 func (p *PromptTemplate) SetHasSnippet(val *bool) {
 	p.HasSnippet = val
 }
+func (p *PromptTemplate) SetSnippets(val []*Prompt) {
+	p.Snippets = val
+}
 func (p *PromptTemplate) SetMetadata(val map[string]string) {
 	p.Metadata = val
 }
@@ -3502,6 +3518,7 @@ var fieldIDToName_PromptTemplate = map[int16]string{
 	2:   "messages",
 	3:   "variable_defs",
 	4:   "has_snippet",
+	5:   "snippets",
 	100: "metadata",
 }
 
@@ -3519,6 +3536,10 @@ func (p *PromptTemplate) IsSetVariableDefs() bool {
 
 func (p *PromptTemplate) IsSetHasSnippet() bool {
 	return p.HasSnippet != nil
+}
+
+func (p *PromptTemplate) IsSetSnippets() bool {
+	return p.Snippets != nil
 }
 
 func (p *PromptTemplate) IsSetMetadata() bool {
@@ -3570,6 +3591,14 @@ func (p *PromptTemplate) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3680,6 +3709,29 @@ func (p *PromptTemplate) ReadField4(iprot thrift.TProtocol) error {
 	p.HasSnippet = _field
 	return nil
 }
+func (p *PromptTemplate) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*Prompt, 0, size)
+	values := make([]Prompt, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Snippets = _field
+	return nil
+}
 func (p *PromptTemplate) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -3730,6 +3782,10 @@ func (p *PromptTemplate) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -3842,6 +3898,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *PromptTemplate) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSnippets() {
+		if err = oprot.WriteFieldBegin("snippets", thrift.LIST, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Snippets)); err != nil {
+			return err
+		}
+		for _, v := range p.Snippets {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *PromptTemplate) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMetadata() {
 		if err = oprot.WriteFieldBegin("metadata", thrift.MAP, 100); err != nil {
@@ -3898,6 +3980,9 @@ func (p *PromptTemplate) DeepEqual(ano *PromptTemplate) bool {
 	if !p.Field4DeepEqual(ano.HasSnippet) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.Snippets) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Metadata) {
 		return false
 	}
@@ -3951,6 +4036,19 @@ func (p *PromptTemplate) Field4DeepEqual(src *bool) bool {
 	}
 	if *p.HasSnippet != *src {
 		return false
+	}
+	return true
+}
+func (p *PromptTemplate) Field5DeepEqual(src []*Prompt) bool {
+
+	if len(p.Snippets) != len(src) {
+		return false
+	}
+	for i, v := range p.Snippets {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

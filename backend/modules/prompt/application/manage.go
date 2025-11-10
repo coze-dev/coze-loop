@@ -316,6 +316,28 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 		}
 		r.DefaultConfig = defaultConfig
 	}
+
+	// [prompt片段]返回被引用总次数
+	if promptDO.PromptBasic != nil && promptDO.PromptBasic.PromptType == entity.PromptTypeSnippet {
+		commitVersions, err := app.collectAllCommitVersions(ctx, request.GetPromptID())
+		if err != nil {
+			return r, err
+		}
+		parentPromptCommitVersions, err := app.manageRepo.ListParentPrompt(ctx, repo.ListParentPromptParam{
+			SubPromptID:       request.GetPromptID(),
+			SubPromptVersions: commitVersions,
+		})
+		if err != nil {
+			return r, err
+		}
+		if len(parentPromptCommitVersions) > 0 {
+			var total int32
+			for _, parents := range parentPromptCommitVersions {
+				total += int32(len(parents.CommitVersions))
+			}
+			r.TotalParentReferences = ptr.Of(total)
+		}
+	}
 	return r, err
 }
 
@@ -664,8 +686,8 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 
 			r.CommitVersionLabelMapping = commitVersionLabelMapping
 		}
-		// 填充被引用次数映射
-		if len(commitVersions) > 0 {
+		// 填充被引用次数映射、及引用子片段次数映射
+		if len(commitVersions) > 0 && promptDO.PromptBasic != nil && promptDO.PromptBasic.PromptType == entity.PromptTypeSnippet {
 			// 查询这些版本的被引用次数，使用labelService
 			parentPromptCommitVersions, err := app.manageRepo.ListParentPrompt(ctx, repo.ListParentPromptParam{
 				SubPromptID:       request.GetPromptID(),
@@ -682,6 +704,15 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 			}
 
 			r.ParentReferencesMapping = commitVersionReferencesMapping
+
+			// 查询这些版本的引用子片段次数
+			subReferencesMapping, err := app.countSubSnippetReferences(ctx, request.GetPromptID(), commitVersions)
+			if err != nil {
+				return r, err
+			}
+			if len(subReferencesMapping) > 0 {
+				r.SubReferencesMapping = subReferencesMapping
+			}
 		}
 	}
 
@@ -729,6 +760,74 @@ func (app *PromptManageApplicationImpl) RevertDraftFromCommit(ctx context.Contex
 	}
 	_, err = app.promptService.SaveDraft(ctx, promptDO)
 	return r, err
+}
+
+func (app *PromptManageApplicationImpl) collectAllCommitVersions(ctx context.Context, promptID int64) ([]string, error) {
+	const pageSize = 100
+	var (
+		pageToken *int64
+		versions  []string
+	)
+	for {
+		result, err := app.manageRepo.ListCommitInfo(ctx, repo.ListCommitInfoParam{
+			PromptID:  promptID,
+			PageSize:  pageSize,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if result == nil || len(result.CommitInfoDOs) == 0 {
+			break
+		}
+		for _, info := range result.CommitInfoDOs {
+			if info == nil || lo.IsEmpty(info.Version) {
+				continue
+			}
+			versions = append(versions, info.Version)
+		}
+		if result.NextPageToken <= 0 {
+			break
+		}
+		pageToken = ptr.Of(result.NextPageToken)
+	}
+	return lo.Uniq(versions), nil
+}
+
+func (app *PromptManageApplicationImpl) countSubSnippetReferences(ctx context.Context, promptID int64, commitVersions []string) (map[string]int32, error) {
+	uniqueVersions := lo.Uniq(commitVersions)
+	if len(uniqueVersions) == 0 {
+		return nil, nil
+	}
+	queries := make([]repo.GetPromptParam, 0, len(uniqueVersions))
+	for _, version := range uniqueVersions {
+		if lo.IsEmpty(version) {
+			continue
+		}
+		queries = append(queries, repo.GetPromptParam{
+			PromptID:      promptID,
+			WithCommit:    true,
+			CommitVersion: version,
+		})
+	}
+	if len(queries) == 0 {
+		return nil, nil
+	}
+	promptMap, err := app.manageRepo.MGetPrompt(ctx, queries)
+	if err != nil {
+		return nil, err
+	}
+	mapping := make(map[string]int32, len(queries))
+	for _, query := range queries {
+		promptDO := promptMap[query]
+		var count int32
+		if promptDO != nil && promptDO.PromptCommit != nil && promptDO.PromptCommit.PromptDetail != nil &&
+			promptDO.PromptCommit.PromptDetail.PromptTemplate != nil {
+			count = int32(len(promptDO.PromptCommit.PromptDetail.PromptTemplate.Snippets))
+		}
+		mapping[query.CommitVersion] = count
+	}
+	return mapping, nil
 }
 
 func (app *PromptManageApplicationImpl) listPromptOrderBy(dtoEnum *manage.ListPromptOrderBy) int {

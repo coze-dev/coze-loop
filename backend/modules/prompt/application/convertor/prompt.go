@@ -25,6 +25,23 @@ func PromptDTO2DO(dto *prompt.Prompt) *entity.Prompt {
 	}
 }
 
+func BatchPromptDTO2DO(dtos []*prompt.Prompt) []*entity.Prompt {
+	if len(dtos) == 0 {
+		return nil
+	}
+	prompts := make([]*entity.Prompt, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		prompts = append(prompts, PromptDTO2DO(dto))
+	}
+	if len(prompts) == 0 {
+		return nil
+	}
+	return prompts
+}
+
 func PromptDraftDTO2DO(dto *prompt.PromptDraft) *entity.PromptDraft {
 	if dto == nil {
 		return nil
@@ -111,6 +128,7 @@ func PromptTemplateDTO2DO(dto *prompt.PromptTemplate) *entity.PromptTemplate {
 		Messages:     BatchMessageDTO2DO(dto.Messages),
 		VariableDefs: BatchVariableDefDTO2DO(dto.VariableDefs),
 		HasSnippets:  dto.GetHasSnippet(),
+		Snippets:     BatchPromptDTO2DO(dto.Snippets),
 		Metadata:     dto.Metadata,
 	}
 }
@@ -911,6 +929,7 @@ func PromptTemplateDO2DTO(do *entity.PromptTemplate) *prompt.PromptTemplate {
 		Messages:     BatchMessageDO2DTO(do.Messages),
 		VariableDefs: BatchVariableDefDO2DTO(do.VariableDefs),
 		HasSnippet:   ptr.Of(do.HasSnippets),
+		Snippets:     BatchPromptDO2DTO(do.Snippets),
 		Metadata:     do.Metadata,
 	}
 }

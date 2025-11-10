@@ -2476,6 +2476,20 @@ func (p *PromptTemplate) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -2586,6 +2600,31 @@ func (p *PromptTemplate) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *PromptTemplate) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*Prompt, 0, size)
+	values := make([]Prompt, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.Snippets = _field
+	return offset, nil
+}
+
 func (p *PromptTemplate) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -2629,6 +2668,7 @@ func (p *PromptTemplate) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -2642,6 +2682,7 @@ func (p *PromptTemplate) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -2694,6 +2735,22 @@ func (p *PromptTemplate) fastWriteField4(buf []byte, w thrift.NocopyWriter) int 
 	if p.IsSetHasSnippet() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 4)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.HasSnippet)
+	}
+	return offset
+}
+
+func (p *PromptTemplate) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSnippets() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 5)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.Snippets {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -2759,6 +2816,19 @@ func (p *PromptTemplate) field4Length() int {
 	return l
 }
 
+func (p *PromptTemplate) field5Length() int {
+	l := 0
+	if p.IsSetSnippets() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.Snippets {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
 func (p *PromptTemplate) field100Length() int {
 	l := 0
 	if p.IsSetMetadata() {
@@ -2818,6 +2888,21 @@ func (p *PromptTemplate) DeepCopy(s interface{}) error {
 	if src.HasSnippet != nil {
 		tmp := *src.HasSnippet
 		p.HasSnippet = &tmp
+	}
+
+	if src.Snippets != nil {
+		p.Snippets = make([]*Prompt, 0, len(src.Snippets))
+		for _, elem := range src.Snippets {
+			var _elem *Prompt
+			if elem != nil {
+				_elem = &Prompt{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.Snippets = append(p.Snippets, _elem)
+		}
 	}
 
 	if src.Metadata != nil {

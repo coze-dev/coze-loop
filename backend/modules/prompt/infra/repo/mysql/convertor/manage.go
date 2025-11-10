@@ -300,6 +300,7 @@ func PromptCommitPO2PromptDetailDO(commitPO *model.PromptCommit) *entity.PromptD
 			VariableDefs: UnmarshalVariableDefDOs(commitPO.VariableDefs),
 			TemplateType: UnmarshalTemplateType(commitPO.TemplateType),
 			Metadata:     UnmarshalMetadata(commitPO.Metadata),
+			HasSnippets:  commitPO.HasSnippets,
 		},
 		Tools:          UnmarshalToolDOs(commitPO.Tools),
 		ToolCallConfig: UnmarshalToolCallConfig(commitPO.ToolCallConfig),

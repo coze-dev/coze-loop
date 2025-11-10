@@ -2048,6 +2048,20 @@ func (p *GetPromptResponse) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -2104,6 +2118,20 @@ func (p *GetPromptResponse) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetPromptResponse) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TotalParentReferences = _field
+	return offset, nil
+}
+
 func (p *GetPromptResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -2123,6 +2151,7 @@ func (p *GetPromptResponse) FastWrite(buf []byte) int {
 func (p *GetPromptResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -2136,6 +2165,7 @@ func (p *GetPromptResponse) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field11Length()
+		l += p.field12Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -2156,6 +2186,15 @@ func (p *GetPromptResponse) fastWriteField11(buf []byte, w thrift.NocopyWriter) 
 	if p.IsSetDefaultConfig() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
 		offset += p.DefaultConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *GetPromptResponse) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTotalParentReferences() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 12)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.TotalParentReferences)
 	}
 	return offset
 }
@@ -2183,6 +2222,15 @@ func (p *GetPromptResponse) field11Length() int {
 	if p.IsSetDefaultConfig() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.DefaultConfig.BLength()
+	}
+	return l
+}
+
+func (p *GetPromptResponse) field12Length() int {
+	l := 0
+	if p.IsSetTotalParentReferences() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -2219,6 +2267,11 @@ func (p *GetPromptResponse) DeepCopy(s interface{}) error {
 		}
 	}
 	p.DefaultConfig = _defaultConfig
+
+	if src.TotalParentReferences != nil {
+		tmp := *src.TotalParentReferences
+		p.TotalParentReferences = &tmp
+	}
 
 	var _baseResp *base.BaseResp
 	if src.BaseResp != nil {
@@ -5713,6 +5766,20 @@ func (p *ListCommitResponse) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 11:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField11(buf[offset:])
@@ -5887,6 +5954,38 @@ func (p *ListCommitResponse) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListCommitResponse) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]int32, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		var _val int32
+		if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	p.SubReferencesMapping = _field
+	return offset, nil
+}
+
 func (p *ListCommitResponse) FastReadField11(buf []byte) (int, error) {
 	offset := 0
 
@@ -5963,6 +6062,7 @@ func (p *ListCommitResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField128(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -5977,6 +6077,7 @@ func (p *ListCommitResponse) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field11Length()
 		l += p.field127Length()
 		l += p.field128Length()
@@ -6034,6 +6135,23 @@ func (p *ListCommitResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) 
 		offset += thrift.Binary.MapBeginLength()
 		var length int
 		for k, v := range p.ParentReferencesMapping {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += thrift.Binary.WriteI32(buf[offset:], v)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.I32, length)
+	}
+	return offset
+}
+
+func (p *ListCommitResponse) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSubReferencesMapping() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 4)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.SubReferencesMapping {
 			length++
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
 			offset += thrift.Binary.WriteI32(buf[offset:], v)
@@ -6124,6 +6242,21 @@ func (p *ListCommitResponse) field3Length() int {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.MapBeginLength()
 		for k, v := range p.ParentReferencesMapping {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.I32Length()
+		}
+	}
+	return l
+}
+
+func (p *ListCommitResponse) field4Length() int {
+	l := 0
+	if p.IsSetSubReferencesMapping() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.SubReferencesMapping {
 			_, _ = k, v
 
 			l += thrift.Binary.StringLengthNocopy(k)
@@ -6234,6 +6367,21 @@ func (p *ListCommitResponse) DeepCopy(s interface{}) error {
 			_val = val
 
 			p.ParentReferencesMapping[_key] = _val
+		}
+	}
+
+	if src.SubReferencesMapping != nil {
+		p.SubReferencesMapping = make(map[string]int32, len(src.SubReferencesMapping))
+		for key, val := range src.SubReferencesMapping {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val int32
+			_val = val
+
+			p.SubReferencesMapping[_key] = _val
 		}
 	}
 
