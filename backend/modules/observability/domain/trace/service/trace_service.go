@@ -596,6 +596,7 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 					loop_span.SpanFieldInput,
 					loop_span.SpanFieldOutput,
 				},
+				Filters: loop_span.GetModelSpansFilter(),
 			}
 			st := time.Now()
 			spans, err := r.traceRepo.GetTrace(ctx, qReq)
