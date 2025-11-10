@@ -26,7 +26,7 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 	if do.Builtin {
 		builtinVal = 1
 	}
-    po := &model.Evaluator{
+	po := &model.Evaluator{
 		ID:                    do.ID,
 		SpaceID:               do.SpaceID,
 		Name:                  ptr.Of(do.Name),
@@ -38,12 +38,12 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 		Builtin:               builtinVal,
 		BoxType:               int32(do.BoxType),
 	}
-    if do.EvaluatorInfo != nil {
-        b, err := json.Marshal(do.EvaluatorInfo)
-        if err == nil {
-            po.EvaluatorInfo = ptr.Of(b)
-        }
-    }
+	if do.EvaluatorInfo != nil {
+		b, err := json.Marshal(do.EvaluatorInfo)
+		if err == nil {
+			po.EvaluatorInfo = ptr.Of(b)
+		}
+	}
 	if do.BaseInfo != nil {
 		if do.BaseInfo.CreatedBy != nil {
 			po.CreatedBy = gptr.Indirect(do.BaseInfo.CreatedBy.UserID) // ignore_security_alert SQL_INJECTION
@@ -66,7 +66,7 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 	if po == nil {
 		return nil
 	}
-    do := &evaluatordo.Evaluator{
+	do := &evaluatordo.Evaluator{
 		ID:                    po.ID,
 		SpaceID:               po.SpaceID,
 		Name:                  gptr.Indirect(po.Name),
@@ -78,12 +78,12 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 		Builtin:               po.Builtin == 1,
 		BoxType:               evaluatordo.EvaluatorBoxType(po.BoxType),
 	}
-    if po.EvaluatorInfo != nil {
-        var info evaluatordo.EvaluatorInfo
-        if err := json.Unmarshal(*po.EvaluatorInfo, &info); err == nil {
-            do.EvaluatorInfo = &info
-        }
-    }
+	if po.EvaluatorInfo != nil {
+		var info evaluatordo.EvaluatorInfo
+		if err := json.Unmarshal(*po.EvaluatorInfo, &info); err == nil {
+			do.EvaluatorInfo = &info
+		}
+	}
 	do.BaseInfo = &evaluatordo.BaseInfo{
 		CreatedBy: &evaluatordo.UserInfo{
 			UserID: ptr.Of(po.CreatedBy),
@@ -204,7 +204,9 @@ func ConvertEvaluatorVersionPO2DO(po *model.EvaluatorVersion) (*evaluatordo.Eval
 	}
 	switch do.EvaluatorType {
 	case evaluatordo.EvaluatorTypePrompt:
-		do.PromptEvaluatorVersion = &evaluatordo.PromptEvaluatorVersion{}
+		do.PromptEvaluatorVersion = &evaluatordo.PromptEvaluatorVersion{
+			ReceiveChatHistory: po.ReceiveChatHistory,
+		}
 		// 反序列化Metainfo获取完整配置
 		if po.Metainfo != nil {
 			var meta struct {
