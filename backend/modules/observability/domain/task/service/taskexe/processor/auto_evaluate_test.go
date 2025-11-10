@@ -16,7 +16,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
@@ -192,11 +191,12 @@ func buildSpan(input string) *loop_span.Span {
 
 func makeSchemaJSON(t *testing.T, fieldName string, contentType common.ContentType) string {
 	t.Helper()
-	fieldSchemas := []*eval_set.FieldSchema{
+	fieldSchemas := []traceentity.FieldSchema{
 		{
 			Key:         gptr.Of(fieldName),
-			Name:        gptr.Of(fieldName),
-			ContentType: gptr.Of(contentType),
+			Name:        fieldName,
+			ContentType: traceentity.ContentType(contentType),
+			TextSchema:  "{}",
 		},
 	}
 	bytes, err := json.Marshal(fieldSchemas)
