@@ -158,6 +158,14 @@ func (e ExptInsightAnalysisServiceImpl) checkAnalysisReportGenStatus(ctx context
 	if err != nil {
 		return err
 	}
+
+	// 超过3小时，未生成分析报告，认为是失败
+	if status == entity.ReportStatus_Running && record.CreatedAt.Add(entity.ThreeHour).Unix() >= CreateAt {
+		record.Status = entity.InsightAnalysisStatus_Failed
+		logs.CtxWarn(ctx, "checkAnalysisReportGenStatus found timeout event, expt_id: %v, record_id: %v", record.ExptID, record.ID)
+		return e.repo.UpdateAnalysisRecord(ctx, record)
+	}
+
 	if status == entity.ReportStatus_Failed {
 		record.Status = entity.InsightAnalysisStatus_Failed
 		return e.repo.UpdateAnalysisRecord(ctx, record)
