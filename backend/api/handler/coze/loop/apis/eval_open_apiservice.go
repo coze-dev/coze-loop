@@ -79,3 +79,39 @@ func ListEvaluationSetVersionItemsOApi(ctx context.Context, c *app.RequestContex
 func UpdateEvaluationSetSchemaOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateEvaluationSetSchemaOApi)
 }
+
+// SubmitExperimentOApi .
+// @router /v1/loop/evaluation/experiments [POST]
+func SubmitExperimentOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.SubmitExperimentOApi)
+}
+
+// GetExperimentsOApi .
+// @router /api/evaluation/v1/experiments/:experiment_id [GET]
+func GetExperimentsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentsOApi)
+}
+
+// ListExperimentResultOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/results [POST]
+func ListExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListExperimentResultOApi)
+}
+
+// GetExperimentAggrResultOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/aggr_results [POST]
+func GetExperimentAggrResultOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentAggrResultOApi)
+}
+
+// UpdateEvaluationSetOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id [PATCH]
+func UpdateEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateEvaluationSetOApi)
+}
+
+// DeleteEvaluationSetOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id [DELETE]
+func DeleteEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.DeleteEvaluationSetOApi)
+}

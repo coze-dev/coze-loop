@@ -360,6 +360,10 @@ func StorageProviderFromString(s string) (StorageProvider, error) {
 
 func StorageProviderPtr(v StorageProvider) *StorageProvider { return &v }
 
+type SystemMaintainerConf struct {
+	UserIDs []string `json:"user_ids" mapstructure:"user_ids"`
+}
+
 type RateLimit struct {
 	Rate   *int32         `json:"rate,omitempty"`
 	Burst  *int32         `json:"burst,omitempty"`

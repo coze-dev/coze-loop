@@ -382,6 +382,7 @@ func InitEvalOpenAPIApplication(
 	auditClient audit.IAuditService,
 	benefitService benefit.IBenefitService,
 	ckProvider ck.Provider,
+	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(
 		evalOpenAPISet,

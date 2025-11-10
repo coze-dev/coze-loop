@@ -88,6 +88,12 @@ error_code:
     description: custom eval target invoke fail
     no_affect_stability: true
 
+  - name: TerminateNonRunningExperimentError
+    code: 4011
+    message: cannot terminate an non-running experiment, please try again later
+    description: cannot terminate an non-running experiment, please try again later
+    no_affect_stability: true
+
   - name: ContentTypeNotSupported
     code: 5000
     message: content type is not supported

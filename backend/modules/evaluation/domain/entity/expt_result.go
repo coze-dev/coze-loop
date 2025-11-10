@@ -145,6 +145,7 @@ type ExptAggregateResult struct {
 }
 
 type EvaluatorAggregateResult struct {
+	EvaluatorID        int64
 	EvaluatorVersionID int64
 	AggregatorResults  []*AggregatorResult
 	Name               *string
