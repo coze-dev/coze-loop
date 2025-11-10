@@ -21,6 +21,7 @@ import (
 type MockITraceHubService struct {
 	ctrl     *gomock.Controller
 	recorder *MockITraceHubServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockITraceHubServiceMockRecorder is the mock recorder for MockITraceHubService.
@@ -41,57 +42,57 @@ func (m *MockITraceHubService) EXPECT() *MockITraceHubServiceMockRecorder {
 }
 
 // BackFill mocks base method.
-func (m *MockITraceHubService) BackFill(arg0 context.Context, arg1 *entity.BackFillEvent) error {
+func (m *MockITraceHubService) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BackFill", arg0, arg1)
+	ret := m.ctrl.Call(m, "BackFill", ctx, event)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BackFill indicates an expected call of BackFill.
-func (mr *MockITraceHubServiceMockRecorder) BackFill(arg0, arg1 any) *gomock.Call {
+func (mr *MockITraceHubServiceMockRecorder) BackFill(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackFill", reflect.TypeOf((*MockITraceHubService)(nil).BackFill), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackFill", reflect.TypeOf((*MockITraceHubService)(nil).BackFill), ctx, event)
 }
 
 // CallBack mocks base method.
-func (m *MockITraceHubService) CallBack(arg0 context.Context, arg1 *entity.AutoEvalEvent) error {
+func (m *MockITraceHubService) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CallBack", arg0, arg1)
+	ret := m.ctrl.Call(m, "CallBack", ctx, event)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CallBack indicates an expected call of CallBack.
-func (mr *MockITraceHubServiceMockRecorder) CallBack(arg0, arg1 any) *gomock.Call {
+func (mr *MockITraceHubServiceMockRecorder) CallBack(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallBack", reflect.TypeOf((*MockITraceHubService)(nil).CallBack), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallBack", reflect.TypeOf((*MockITraceHubService)(nil).CallBack), ctx, event)
 }
 
 // Correction mocks base method.
-func (m *MockITraceHubService) Correction(arg0 context.Context, arg1 *entity.CorrectionEvent) error {
+func (m *MockITraceHubService) Correction(ctx context.Context, event *entity.CorrectionEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Correction", arg0, arg1)
+	ret := m.ctrl.Call(m, "Correction", ctx, event)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Correction indicates an expected call of Correction.
-func (mr *MockITraceHubServiceMockRecorder) Correction(arg0, arg1 any) *gomock.Call {
+func (mr *MockITraceHubServiceMockRecorder) Correction(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Correction", reflect.TypeOf((*MockITraceHubService)(nil).Correction), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Correction", reflect.TypeOf((*MockITraceHubService)(nil).Correction), ctx, event)
 }
 
 // SpanTrigger mocks base method.
-func (m *MockITraceHubService) SpanTrigger(arg0 context.Context, arg1 *entity.RawSpan) error {
+func (m *MockITraceHubService) SpanTrigger(ctx context.Context, event *entity.RawSpan) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SpanTrigger", arg0, arg1)
+	ret := m.ctrl.Call(m, "SpanTrigger", ctx, event)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SpanTrigger indicates an expected call of SpanTrigger.
-func (mr *MockITraceHubServiceMockRecorder) SpanTrigger(arg0, arg1 any) *gomock.Call {
+func (mr *MockITraceHubServiceMockRecorder) SpanTrigger(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpanTrigger", reflect.TypeOf((*MockITraceHubService)(nil).SpanTrigger), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpanTrigger", reflect.TypeOf((*MockITraceHubService)(nil).SpanTrigger), ctx, event)
 }

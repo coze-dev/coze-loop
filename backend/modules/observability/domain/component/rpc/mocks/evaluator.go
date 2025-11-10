@@ -21,6 +21,7 @@ import (
 type MockIEvaluatorRPCAdapter struct {
 	ctrl     *gomock.Controller
 	recorder *MockIEvaluatorRPCAdapterMockRecorder
+	isgomock struct{}
 }
 
 // MockIEvaluatorRPCAdapterMockRecorder is the mock recorder for MockIEvaluatorRPCAdapter.
@@ -41,9 +42,9 @@ func (m *MockIEvaluatorRPCAdapter) EXPECT() *MockIEvaluatorRPCAdapterMockRecorde
 }
 
 // BatchGetEvaluatorVersions mocks base method.
-func (m *MockIEvaluatorRPCAdapter) BatchGetEvaluatorVersions(arg0 context.Context, arg1 *rpc.BatchGetEvaluatorVersionsParam) ([]*rpc.Evaluator, map[int64]*rpc.Evaluator, error) {
+func (m *MockIEvaluatorRPCAdapter) BatchGetEvaluatorVersions(ctx context.Context, param *rpc.BatchGetEvaluatorVersionsParam) ([]*rpc.Evaluator, map[int64]*rpc.Evaluator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetEvaluatorVersions", arg0, arg1)
+	ret := m.ctrl.Call(m, "BatchGetEvaluatorVersions", ctx, param)
 	ret0, _ := ret[0].([]*rpc.Evaluator)
 	ret1, _ := ret[1].(map[int64]*rpc.Evaluator)
 	ret2, _ := ret[2].(error)
@@ -51,36 +52,36 @@ func (m *MockIEvaluatorRPCAdapter) BatchGetEvaluatorVersions(arg0 context.Contex
 }
 
 // BatchGetEvaluatorVersions indicates an expected call of BatchGetEvaluatorVersions.
-func (mr *MockIEvaluatorRPCAdapterMockRecorder) BatchGetEvaluatorVersions(arg0, arg1 any) *gomock.Call {
+func (mr *MockIEvaluatorRPCAdapterMockRecorder) BatchGetEvaluatorVersions(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorVersions", reflect.TypeOf((*MockIEvaluatorRPCAdapter)(nil).BatchGetEvaluatorVersions), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorVersions", reflect.TypeOf((*MockIEvaluatorRPCAdapter)(nil).BatchGetEvaluatorVersions), ctx, param)
 }
 
 // ListEvaluators mocks base method.
-func (m *MockIEvaluatorRPCAdapter) ListEvaluators(arg0 context.Context, arg1 *rpc.ListEvaluatorsParam) ([]*rpc.Evaluator, error) {
+func (m *MockIEvaluatorRPCAdapter) ListEvaluators(ctx context.Context, param *rpc.ListEvaluatorsParam) ([]*rpc.Evaluator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEvaluators", arg0, arg1)
+	ret := m.ctrl.Call(m, "ListEvaluators", ctx, param)
 	ret0, _ := ret[0].([]*rpc.Evaluator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListEvaluators indicates an expected call of ListEvaluators.
-func (mr *MockIEvaluatorRPCAdapterMockRecorder) ListEvaluators(arg0, arg1 any) *gomock.Call {
+func (mr *MockIEvaluatorRPCAdapterMockRecorder) ListEvaluators(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluators", reflect.TypeOf((*MockIEvaluatorRPCAdapter)(nil).ListEvaluators), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluators", reflect.TypeOf((*MockIEvaluatorRPCAdapter)(nil).ListEvaluators), ctx, param)
 }
 
 // UpdateEvaluatorRecord mocks base method.
-func (m *MockIEvaluatorRPCAdapter) UpdateEvaluatorRecord(arg0 context.Context, arg1 *rpc.UpdateEvaluatorRecordParam) error {
+func (m *MockIEvaluatorRPCAdapter) UpdateEvaluatorRecord(ctx context.Context, param *rpc.UpdateEvaluatorRecordParam) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEvaluatorRecord", arg0, arg1)
+	ret := m.ctrl.Call(m, "UpdateEvaluatorRecord", ctx, param)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateEvaluatorRecord indicates an expected call of UpdateEvaluatorRecord.
-func (mr *MockIEvaluatorRPCAdapterMockRecorder) UpdateEvaluatorRecord(arg0, arg1 any) *gomock.Call {
+func (mr *MockIEvaluatorRPCAdapterMockRecorder) UpdateEvaluatorRecord(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecord", reflect.TypeOf((*MockIEvaluatorRPCAdapter)(nil).UpdateEvaluatorRecord), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecord", reflect.TypeOf((*MockIEvaluatorRPCAdapter)(nil).UpdateEvaluatorRecord), ctx, param)
 }

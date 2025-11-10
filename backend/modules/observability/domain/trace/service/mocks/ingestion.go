@@ -20,6 +20,7 @@ import (
 type MockIngestionService struct {
 	ctrl     *gomock.Controller
 	recorder *MockIngestionServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockIngestionServiceMockRecorder is the mock recorder for MockIngestionService.
@@ -40,27 +41,27 @@ func (m *MockIngestionService) EXPECT() *MockIngestionServiceMockRecorder {
 }
 
 // RunAsync mocks base method.
-func (m *MockIngestionService) RunAsync(arg0 context.Context) {
+func (m *MockIngestionService) RunAsync(ctx context.Context) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RunAsync", arg0)
+	m.ctrl.Call(m, "RunAsync", ctx)
 }
 
 // RunAsync indicates an expected call of RunAsync.
-func (mr *MockIngestionServiceMockRecorder) RunAsync(arg0 any) *gomock.Call {
+func (mr *MockIngestionServiceMockRecorder) RunAsync(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunAsync", reflect.TypeOf((*MockIngestionService)(nil).RunAsync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunAsync", reflect.TypeOf((*MockIngestionService)(nil).RunAsync), ctx)
 }
 
 // RunSync mocks base method.
-func (m *MockIngestionService) RunSync(arg0 context.Context) error {
+func (m *MockIngestionService) RunSync(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RunSync", arg0)
+	ret := m.ctrl.Call(m, "RunSync", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RunSync indicates an expected call of RunSync.
-func (mr *MockIngestionServiceMockRecorder) RunSync(arg0 any) *gomock.Call {
+func (mr *MockIngestionServiceMockRecorder) RunSync(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunSync", reflect.TypeOf((*MockIngestionService)(nil).RunSync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunSync", reflect.TypeOf((*MockIngestionService)(nil).RunSync), ctx)
 }
