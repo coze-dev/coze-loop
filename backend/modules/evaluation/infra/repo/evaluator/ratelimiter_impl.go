@@ -62,6 +62,10 @@ func (s *PlainRateLimiterImpl) AllowInvokeWithKeyLimit(ctx context.Context, key 
 		logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] limit is not set, skip invoke limit")
 		return true
 	}
+	if limit.Period == nil || limit.Rate == nil {
+		logs.CtxInfo(ctx, "[AllowInvokeWithKeyLimit] essential period or rate is not set, skip invoke limit")
+		return true
+	}
 	res, err := s.limiter.AllowN(ctx, key, 1, limiter.WithLimit(&limiter.Limit{
 		Rate:   int(gptr.Indirect(limit.Rate)),
 		Burst:  int(gptr.Indirect(limit.Burst)),
