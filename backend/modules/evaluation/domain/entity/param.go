@@ -3,6 +3,10 @@
 
 package entity
 
+import (
+	"time"
+)
+
 type CreateEvaluationSetParam struct {
 	SpaceID             int64
 	Name                string
@@ -214,12 +218,33 @@ func WithCheckBenefit() ExptRunCheckOptionFn {
 }
 
 type CompleteExptOption struct {
-	Status        ExptStatus
-	StatusMessage string
-	CID           string
+	Status             ExptStatus
+	StatusMessage      string
+	CID                string
+	CompleteInterval   time.Duration
+	NoAggrCalculate    bool
+	NoCompleteItemTurn bool
 }
 
 type CompleteExptOptionFn func(*CompleteExptOption)
+
+func NoAggrCalculate() CompleteExptOptionFn {
+	return func(c *CompleteExptOption) {
+		c.NoAggrCalculate = true
+	}
+}
+
+func NoCompleteItemTurn() CompleteExptOptionFn {
+	return func(c *CompleteExptOption) {
+		c.NoCompleteItemTurn = true
+	}
+}
+
+func WithCompleteInterval(interval time.Duration) CompleteExptOptionFn {
+	return func(c *CompleteExptOption) {
+		c.CompleteInterval = interval
+	}
+}
 
 func WithStatus(status ExptStatus) CompleteExptOptionFn {
 	return func(c *CompleteExptOption) {
