@@ -121,6 +121,7 @@ var (
 		obconfig.NewTraceConfigCenter,
 		NewTraceConfigLoader,
 		NewIngestionCollectorFactory,
+		mq2.NewSpanWithAnnotationProducerImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,

@@ -86,7 +86,11 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
+	iSpanProducer, err := producer.NewSpanWithAnnotationProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpanProducer)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +147,11 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
+	iSpanProducer, err := producer.NewSpanWithAnnotationProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpanProducer)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +235,11 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
+	iSpanProducer, err := producer.NewSpanWithAnnotationProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpanProducer)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +287,11 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	if err != nil {
 		return nil, err
 	}
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig)
+	iSpanProducer, err := producer.NewSpanWithAnnotationProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpanProducer)
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +324,7 @@ var (
 	)
 	traceIngestionSet = wire.NewSet(
 		NewIngestionApplication, service.NewIngestionServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, config.NewTraceConfigCenter, NewTraceConfigLoader,
-		NewIngestionCollectorFactory,
+		NewIngestionCollectorFactory, producer.NewSpanWithAnnotationProducerImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,

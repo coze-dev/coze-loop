@@ -32,11 +32,13 @@ func NewTraceCKRepoImpl(
 	spanDao ck.ISpansDao,
 	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
+	spanProducer mq.ISpanProducer,
 ) (repo.ITraceRepo, error) {
 	return &TraceCkRepoImpl{
-		spansDao:    spanDao,
-		annoDao:     annoDao,
-		traceConfig: traceConfig,
+		spansDao:     spanDao,
+		annoDao:      annoDao,
+		traceConfig:  traceConfig,
+		spanProducer: spanProducer,
 	}, nil
 }
 
