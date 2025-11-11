@@ -204,6 +204,7 @@ struct CommitDraftResponse {
 // 搜索Prompt提交版本
 struct ListCommitRequest {
     1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
+    2: optional bool with_commit_detail (api.query="with_commit_detail")
 
     127: optional i32 page_size (vt.not_nil="true", vt.gt="0")
     128: optional string page_token
@@ -215,7 +216,7 @@ struct ListCommitResponse {
     1: optional list<prompt.CommitInfo> prompt_commit_infos
     2: optional map<string, list<prompt.Label>> commit_version_label_mapping
     3: optional map<string, i32> parent_references_mapping
-    4: optional map<string, i32> sub_references_mapping
+    4: optional map<string, prompt.PromptDetail> prompt_commit_detail_mapping
 
     11: optional list<user.UserInfoDetail> users
 

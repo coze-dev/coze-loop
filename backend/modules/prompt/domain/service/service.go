@@ -29,6 +29,7 @@ type IPromptService interface {
 	// Prompt管理相关方法
 	CreatePrompt(ctx context.Context, promptDO *entity.Prompt) (promptID int64, err error)
 	SaveDraft(ctx context.Context, promptDO *entity.Prompt) (*entity.DraftInfo, error)
+	GetPrompt(ctx context.Context, param GetPromptParam) (*entity.Prompt, error)
 
 	// Snippet扩展相关方法
 	ExpandSnippets(ctx context.Context, promptDO *entity.Prompt) error
@@ -84,6 +85,17 @@ type PromptServiceImpl struct {
 	llm              rpc.ILLMProvider
 	file             rpc.IFileProvider
 	snippetParser    SnippetParser
+}
+
+type GetPromptParam struct {
+	PromptID int64
+
+	WithCommit    bool
+	CommitVersion string
+
+	WithDraft     bool
+	UserID        string
+	ExpandSnippet bool
 }
 
 func NewPromptService(

@@ -7518,11 +7518,12 @@ func (p *CommitDraftResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 // 搜索Prompt提交版本
 type ListCommitRequest struct {
-	PromptID  *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
-	PageSize  *int32     `thrift:"page_size,127,optional" frugal:"127,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
-	PageToken *string    `thrift:"page_token,128,optional" frugal:"128,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
-	Asc       *bool      `thrift:"asc,129,optional" frugal:"129,optional,bool" form:"asc" json:"asc,omitempty" query:"asc"`
-	Base      *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PromptID         *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	WithCommitDetail *bool      `thrift:"with_commit_detail,2,optional" frugal:"2,optional,bool" json:"with_commit_detail,omitempty" query:"with_commit_detail"`
+	PageSize         *int32     `thrift:"page_size,127,optional" frugal:"127,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
+	PageToken        *string    `thrift:"page_token,128,optional" frugal:"128,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
+	Asc              *bool      `thrift:"asc,129,optional" frugal:"129,optional,bool" form:"asc" json:"asc,omitempty" query:"asc"`
+	Base             *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListCommitRequest() *ListCommitRequest {
@@ -7542,6 +7543,18 @@ func (p *ListCommitRequest) GetPromptID() (v int64) {
 		return ListCommitRequest_PromptID_DEFAULT
 	}
 	return *p.PromptID
+}
+
+var ListCommitRequest_WithCommitDetail_DEFAULT bool
+
+func (p *ListCommitRequest) GetWithCommitDetail() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWithCommitDetail() {
+		return ListCommitRequest_WithCommitDetail_DEFAULT
+	}
+	return *p.WithCommitDetail
 }
 
 var ListCommitRequest_PageSize_DEFAULT int32
@@ -7594,6 +7607,9 @@ func (p *ListCommitRequest) GetBase() (v *base.Base) {
 func (p *ListCommitRequest) SetPromptID(val *int64) {
 	p.PromptID = val
 }
+func (p *ListCommitRequest) SetWithCommitDetail(val *bool) {
+	p.WithCommitDetail = val
+}
 func (p *ListCommitRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
@@ -7609,6 +7625,7 @@ func (p *ListCommitRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_ListCommitRequest = map[int16]string{
 	1:   "prompt_id",
+	2:   "with_commit_detail",
 	127: "page_size",
 	128: "page_token",
 	129: "asc",
@@ -7617,6 +7634,10 @@ var fieldIDToName_ListCommitRequest = map[int16]string{
 
 func (p *ListCommitRequest) IsSetPromptID() bool {
 	return p.PromptID != nil
+}
+
+func (p *ListCommitRequest) IsSetWithCommitDetail() bool {
+	return p.WithCommitDetail != nil
 }
 
 func (p *ListCommitRequest) IsSetPageSize() bool {
@@ -7656,6 +7677,14 @@ func (p *ListCommitRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7733,6 +7762,17 @@ func (p *ListCommitRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.PromptID = _field
 	return nil
 }
+func (p *ListCommitRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WithCommitDetail = _field
+	return nil
+}
 func (p *ListCommitRequest) ReadField127(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -7783,6 +7823,10 @@ func (p *ListCommitRequest) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField127(oprot); err != nil {
@@ -7836,6 +7880,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListCommitRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWithCommitDetail() {
+		if err = oprot.WriteFieldBegin("with_commit_detail", thrift.BOOL, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.WithCommitDetail); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *ListCommitRequest) writeField127(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageSize() {
@@ -7927,6 +7989,9 @@ func (p *ListCommitRequest) DeepEqual(ano *ListCommitRequest) bool {
 	if !p.Field1DeepEqual(ano.PromptID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.WithCommitDetail) {
+		return false
+	}
 	if !p.Field127DeepEqual(ano.PageSize) {
 		return false
 	}
@@ -7950,6 +8015,18 @@ func (p *ListCommitRequest) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.PromptID != *src {
+		return false
+	}
+	return true
+}
+func (p *ListCommitRequest) Field2DeepEqual(src *bool) bool {
+
+	if p.WithCommitDetail == src {
+		return true
+	} else if p.WithCommitDetail == nil || src == nil {
+		return false
+	}
+	if *p.WithCommitDetail != *src {
 		return false
 	}
 	return true
@@ -7999,14 +8076,14 @@ func (p *ListCommitRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type ListCommitResponse struct {
-	PromptCommitInfos         []*prompt.CommitInfo       `thrift:"prompt_commit_infos,1,optional" frugal:"1,optional,list<prompt.CommitInfo>" form:"prompt_commit_infos" json:"prompt_commit_infos,omitempty" query:"prompt_commit_infos"`
-	CommitVersionLabelMapping map[string][]*prompt.Label `thrift:"commit_version_label_mapping,2,optional" frugal:"2,optional,map<string:list<prompt.Label>>" form:"commit_version_label_mapping" json:"commit_version_label_mapping,omitempty" query:"commit_version_label_mapping"`
-	ParentReferencesMapping   map[string]int32           `thrift:"parent_references_mapping,3,optional" frugal:"3,optional,map<string:i32>" form:"parent_references_mapping" json:"parent_references_mapping,omitempty" query:"parent_references_mapping"`
-	SubReferencesMapping      map[string]int32           `thrift:"sub_references_mapping,4,optional" frugal:"4,optional,map<string:i32>" form:"sub_references_mapping" json:"sub_references_mapping,omitempty" query:"sub_references_mapping"`
-	Users                     []*user.UserInfoDetail     `thrift:"users,11,optional" frugal:"11,optional,list<user.UserInfoDetail>" form:"users" json:"users,omitempty" query:"users"`
-	HasMore                   *bool                      `thrift:"has_more,127,optional" frugal:"127,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
-	NextPageToken             *string                    `thrift:"next_page_token,128,optional" frugal:"128,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
-	BaseResp                  *base.BaseResp             `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	PromptCommitInfos         []*prompt.CommitInfo            `thrift:"prompt_commit_infos,1,optional" frugal:"1,optional,list<prompt.CommitInfo>" form:"prompt_commit_infos" json:"prompt_commit_infos,omitempty" query:"prompt_commit_infos"`
+	CommitVersionLabelMapping map[string][]*prompt.Label      `thrift:"commit_version_label_mapping,2,optional" frugal:"2,optional,map<string:list<prompt.Label>>" form:"commit_version_label_mapping" json:"commit_version_label_mapping,omitempty" query:"commit_version_label_mapping"`
+	ParentReferencesMapping   map[string]int32                `thrift:"parent_references_mapping,3,optional" frugal:"3,optional,map<string:i32>" form:"parent_references_mapping" json:"parent_references_mapping,omitempty" query:"parent_references_mapping"`
+	PromptCommitDetailMapping map[string]*prompt.PromptDetail `thrift:"prompt_commit_detail_mapping,4,optional" frugal:"4,optional,map<string:prompt.PromptDetail>" form:"prompt_commit_detail_mapping" json:"prompt_commit_detail_mapping,omitempty" query:"prompt_commit_detail_mapping"`
+	Users                     []*user.UserInfoDetail          `thrift:"users,11,optional" frugal:"11,optional,list<user.UserInfoDetail>" form:"users" json:"users,omitempty" query:"users"`
+	HasMore                   *bool                           `thrift:"has_more,127,optional" frugal:"127,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
+	NextPageToken             *string                         `thrift:"next_page_token,128,optional" frugal:"128,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
+	BaseResp                  *base.BaseResp                  `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewListCommitResponse() *ListCommitResponse {
@@ -8052,16 +8129,16 @@ func (p *ListCommitResponse) GetParentReferencesMapping() (v map[string]int32) {
 	return p.ParentReferencesMapping
 }
 
-var ListCommitResponse_SubReferencesMapping_DEFAULT map[string]int32
+var ListCommitResponse_PromptCommitDetailMapping_DEFAULT map[string]*prompt.PromptDetail
 
-func (p *ListCommitResponse) GetSubReferencesMapping() (v map[string]int32) {
+func (p *ListCommitResponse) GetPromptCommitDetailMapping() (v map[string]*prompt.PromptDetail) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetSubReferencesMapping() {
-		return ListCommitResponse_SubReferencesMapping_DEFAULT
+	if !p.IsSetPromptCommitDetailMapping() {
+		return ListCommitResponse_PromptCommitDetailMapping_DEFAULT
 	}
-	return p.SubReferencesMapping
+	return p.PromptCommitDetailMapping
 }
 
 var ListCommitResponse_Users_DEFAULT []*user.UserInfoDetail
@@ -8120,8 +8197,8 @@ func (p *ListCommitResponse) SetCommitVersionLabelMapping(val map[string][]*prom
 func (p *ListCommitResponse) SetParentReferencesMapping(val map[string]int32) {
 	p.ParentReferencesMapping = val
 }
-func (p *ListCommitResponse) SetSubReferencesMapping(val map[string]int32) {
-	p.SubReferencesMapping = val
+func (p *ListCommitResponse) SetPromptCommitDetailMapping(val map[string]*prompt.PromptDetail) {
+	p.PromptCommitDetailMapping = val
 }
 func (p *ListCommitResponse) SetUsers(val []*user.UserInfoDetail) {
 	p.Users = val
@@ -8140,7 +8217,7 @@ var fieldIDToName_ListCommitResponse = map[int16]string{
 	1:   "prompt_commit_infos",
 	2:   "commit_version_label_mapping",
 	3:   "parent_references_mapping",
-	4:   "sub_references_mapping",
+	4:   "prompt_commit_detail_mapping",
 	11:  "users",
 	127: "has_more",
 	128: "next_page_token",
@@ -8159,8 +8236,8 @@ func (p *ListCommitResponse) IsSetParentReferencesMapping() bool {
 	return p.ParentReferencesMapping != nil
 }
 
-func (p *ListCommitResponse) IsSetSubReferencesMapping() bool {
-	return p.SubReferencesMapping != nil
+func (p *ListCommitResponse) IsSetPromptCommitDetailMapping() bool {
+	return p.PromptCommitDetailMapping != nil
 }
 
 func (p *ListCommitResponse) IsSetUsers() bool {
@@ -8388,7 +8465,8 @@ func (p *ListCommitResponse) ReadField4(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	_field := make(map[string]int32, size)
+	_field := make(map[string]*prompt.PromptDetail, size)
+	values := make([]prompt.PromptDetail, size)
 	for i := 0; i < size; i++ {
 		var _key string
 		if v, err := iprot.ReadString(); err != nil {
@@ -8397,11 +8475,10 @@ func (p *ListCommitResponse) ReadField4(iprot thrift.TProtocol) error {
 			_key = v
 		}
 
-		var _val int32
-		if v, err := iprot.ReadI32(); err != nil {
+		_val := &values[i]
+		_val.InitDefault()
+		if err := _val.Read(iprot); err != nil {
 			return err
-		} else {
-			_val = v
 		}
 
 		_field[_key] = _val
@@ -8409,7 +8486,7 @@ func (p *ListCommitResponse) ReadField4(iprot thrift.TProtocol) error {
 	if err := iprot.ReadMapEnd(); err != nil {
 		return err
 	}
-	p.SubReferencesMapping = _field
+	p.PromptCommitDetailMapping = _field
 	return nil
 }
 func (p *ListCommitResponse) ReadField11(iprot thrift.TProtocol) error {
@@ -8615,18 +8692,18 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *ListCommitResponse) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSubReferencesMapping() {
-		if err = oprot.WriteFieldBegin("sub_references_mapping", thrift.MAP, 4); err != nil {
+	if p.IsSetPromptCommitDetailMapping() {
+		if err = oprot.WriteFieldBegin("prompt_commit_detail_mapping", thrift.MAP, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.I32, len(p.SubReferencesMapping)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.PromptCommitDetailMapping)); err != nil {
 			return err
 		}
-		for k, v := range p.SubReferencesMapping {
+		for k, v := range p.PromptCommitDetailMapping {
 			if err := oprot.WriteString(k); err != nil {
 				return err
 			}
-			if err := oprot.WriteI32(v); err != nil {
+			if err := v.Write(oprot); err != nil {
 				return err
 			}
 		}
@@ -8747,7 +8824,7 @@ func (p *ListCommitResponse) DeepEqual(ano *ListCommitResponse) bool {
 	if !p.Field3DeepEqual(ano.ParentReferencesMapping) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.SubReferencesMapping) {
+	if !p.Field4DeepEqual(ano.PromptCommitDetailMapping) {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.Users) {
@@ -8810,14 +8887,14 @@ func (p *ListCommitResponse) Field3DeepEqual(src map[string]int32) bool {
 	}
 	return true
 }
-func (p *ListCommitResponse) Field4DeepEqual(src map[string]int32) bool {
+func (p *ListCommitResponse) Field4DeepEqual(src map[string]*prompt.PromptDetail) bool {
 
-	if len(p.SubReferencesMapping) != len(src) {
+	if len(p.PromptCommitDetailMapping) != len(src) {
 		return false
 	}
-	for k, v := range p.SubReferencesMapping {
+	for k, v := range p.PromptCommitDetailMapping {
 		_src := src[k]
-		if v != _src {
+		if !v.DeepEqual(_src) {
 			return false
 		}
 	}

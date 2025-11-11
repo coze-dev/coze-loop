@@ -160,6 +160,21 @@ func (mr *MockIPromptServiceMockRecorder) FormatPrompt(ctx, prompt, messages, va
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FormatPrompt", reflect.TypeOf((*MockIPromptService)(nil).FormatPrompt), ctx, prompt, messages, variableVals)
 }
 
+// GetPrompt mocks base method.
+func (m *MockIPromptService) GetPrompt(ctx context.Context, param service.GetPromptParam) (*entity.Prompt, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPrompt", ctx, param)
+	ret0, _ := ret[0].(*entity.Prompt)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPrompt indicates an expected call of GetPrompt.
+func (mr *MockIPromptServiceMockRecorder) GetPrompt(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrompt", reflect.TypeOf((*MockIPromptService)(nil).GetPrompt), ctx, param)
+}
+
 // ListLabel mocks base method.
 func (m *MockIPromptService) ListLabel(ctx context.Context, param service.ListLabelParam) ([]*entity.PromptLabel, *int64, error) {
 	m.ctrl.T.Helper()

@@ -5404,6 +5404,20 @@ func (p *ListCommitRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 127:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField127(buf[offset:])
@@ -5492,6 +5506,20 @@ func (p *ListCommitRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListCommitRequest) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WithCommitDetail = _field
+	return offset, nil
+}
+
 func (p *ListCommitRequest) FastReadField127(buf []byte) (int, error) {
 	offset := 0
 
@@ -5554,6 +5582,7 @@ func (p *ListCommitRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField127(buf[offset:], w)
 		offset += p.fastWriteField129(buf[offset:], w)
 		offset += p.fastWriteField128(buf[offset:], w)
@@ -5567,6 +5596,7 @@ func (p *ListCommitRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field127Length()
 		l += p.field128Length()
 		l += p.field129Length()
@@ -5581,6 +5611,15 @@ func (p *ListCommitRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) i
 	if p.IsSetPromptID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.PromptID)
+	}
+	return offset
+}
+
+func (p *ListCommitRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWithCommitDetail() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 2)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithCommitDetail)
 	}
 	return offset
 }
@@ -5630,6 +5669,15 @@ func (p *ListCommitRequest) field1Length() int {
 	return l
 }
 
+func (p *ListCommitRequest) field2Length() int {
+	l := 0
+	if p.IsSetWithCommitDetail() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ListCommitRequest) field127Length() int {
 	l := 0
 	if p.IsSetPageSize() {
@@ -5675,6 +5723,11 @@ func (p *ListCommitRequest) DeepCopy(s interface{}) error {
 	if src.PromptID != nil {
 		tmp := *src.PromptID
 		p.PromptID = &tmp
+	}
+
+	if src.WithCommitDetail != nil {
+		tmp := *src.WithCommitDetail
+		p.WithCommitDetail = &tmp
 	}
 
 	if src.PageSize != nil {
@@ -5962,7 +6015,8 @@ func (p *ListCommitResponse) FastReadField4(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	_field := make(map[string]int32, size)
+	_field := make(map[string]*prompt.PromptDetail, size)
+	values := make([]prompt.PromptDetail, size)
 	for i := 0; i < size; i++ {
 		var _key string
 		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
@@ -5972,17 +6026,17 @@ func (p *ListCommitResponse) FastReadField4(buf []byte) (int, error) {
 			_key = v
 		}
 
-		var _val int32
-		if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		_val := &values[i]
+		_val.InitDefault()
+		if l, err := _val.FastRead(buf[offset:]); err != nil {
 			return offset, err
 		} else {
 			offset += l
-			_val = v
 		}
 
 		_field[_key] = _val
 	}
-	p.SubReferencesMapping = _field
+	p.PromptCommitDetailMapping = _field
 	return offset, nil
 }
 
@@ -6146,17 +6200,17 @@ func (p *ListCommitResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) 
 
 func (p *ListCommitResponse) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetSubReferencesMapping() {
+	if p.IsSetPromptCommitDetailMapping() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 4)
 		mapBeginOffset := offset
 		offset += thrift.Binary.MapBeginLength()
 		var length int
-		for k, v := range p.SubReferencesMapping {
+		for k, v := range p.PromptCommitDetailMapping {
 			length++
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-			offset += thrift.Binary.WriteI32(buf[offset:], v)
+			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.I32, length)
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -6253,14 +6307,14 @@ func (p *ListCommitResponse) field3Length() int {
 
 func (p *ListCommitResponse) field4Length() int {
 	l := 0
-	if p.IsSetSubReferencesMapping() {
+	if p.IsSetPromptCommitDetailMapping() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.MapBeginLength()
-		for k, v := range p.SubReferencesMapping {
+		for k, v := range p.PromptCommitDetailMapping {
 			_, _ = k, v
 
 			l += thrift.Binary.StringLengthNocopy(k)
-			l += thrift.Binary.I32Length()
+			l += v.BLength()
 		}
 	}
 	return l
@@ -6370,18 +6424,23 @@ func (p *ListCommitResponse) DeepCopy(s interface{}) error {
 		}
 	}
 
-	if src.SubReferencesMapping != nil {
-		p.SubReferencesMapping = make(map[string]int32, len(src.SubReferencesMapping))
-		for key, val := range src.SubReferencesMapping {
+	if src.PromptCommitDetailMapping != nil {
+		p.PromptCommitDetailMapping = make(map[string]*prompt.PromptDetail, len(src.PromptCommitDetailMapping))
+		for key, val := range src.PromptCommitDetailMapping {
 			var _key string
 			if key != "" {
 				_key = kutils.StringDeepCopy(key)
 			}
 
-			var _val int32
-			_val = val
+			var _val *prompt.PromptDetail
+			if val != nil {
+				_val = &prompt.PromptDetail{}
+				if err := _val.DeepCopy(val); err != nil {
+					return err
+				}
+			}
 
-			p.SubReferencesMapping[_key] = _val
+			p.PromptCommitDetailMapping[_key] = _val
 		}
 	}
 

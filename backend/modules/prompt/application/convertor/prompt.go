@@ -806,6 +806,20 @@ func PromptTypeDO2DTO(do entity.PromptType) prompt.PromptType {
 	}
 }
 
+func BatchPromptCommitDO2DTO(dos []*entity.PromptCommit) []*prompt.PromptCommit {
+	if len(dos) == 0 {
+		return nil
+	}
+	dtos := make([]*prompt.PromptCommit, 0, len(dos))
+	for _, do := range dos {
+		if do == nil {
+			continue
+		}
+		dtos = append(dtos, PromptCommitDO2DTO(do))
+	}
+	return dtos
+}
+
 func PromptCommitDO2DTO(do *entity.PromptCommit) *prompt.PromptCommit {
 	if do == nil {
 		return nil

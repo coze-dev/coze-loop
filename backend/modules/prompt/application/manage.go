@@ -272,16 +272,17 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 	}
 
 	// prompt
-	getPromptParam := repo.GetPromptParam{
+	getPromptParam := service.GetPromptParam{
 		PromptID: request.GetPromptID(),
 
 		WithCommit:    !lo.IsEmpty(commitVersion),
 		CommitVersion: commitVersion,
 
-		WithDraft: request.GetWithDraft(),
-		UserID:    userID,
+		WithDraft:     request.GetWithDraft(),
+		UserID:        userID,
+		ExpandSnippet: request.GetExpandSnippet(),
 	}
-	promptDO, err := app.manageRepo.GetPrompt(ctx, getPromptParam)
+	promptDO, err := app.promptService.GetPrompt(ctx, getPromptParam)
 	if err != nil {
 		return r, err
 	}
@@ -295,14 +296,6 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 	// 空间权限
 	if request.GetWorkspaceID() > 0 && request.GetWorkspaceID() != promptDO.SpaceID {
 		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
-	}
-
-	if request.GetExpandSnippet() {
-		// expand snippets
-		err = app.promptService.ExpandSnippets(ctx, promptDO)
-		if err != nil {
-			return r, err
-		}
 	}
 
 	// 返回
@@ -652,6 +645,17 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 		r.HasMore = ptr.Of(true)
 	}
 	r.PromptCommitInfos = convertor.BatchCommitInfoDO2DTO(listCommitResult.CommitInfoDOs)
+	if request.GetWithCommitDetail() {
+		commitDTOs := convertor.BatchPromptCommitDO2DTO(listCommitResult.CommitDOs)
+		promptCommitDetailMap := make(map[string]*prompt.PromptDetail)
+		for _, commitDTO := range commitDTOs {
+			if commitDTO == nil || commitDTO.CommitInfo == nil || lo.IsEmpty(commitDTO.CommitInfo.Version) {
+				continue
+			}
+			promptCommitDetailMap[commitDTO.GetCommitInfo().GetVersion()] = commitDTO.Detail
+		}
+		r.PromptCommitDetailMapping = promptCommitDetailMap
+	}
 	userIDSet := make(map[string]struct{})
 	for _, commitInfoDTO := range r.PromptCommitInfos {
 		if commitInfoDTO == nil || lo.IsEmpty(commitInfoDTO.GetCommittedBy()) {
@@ -695,7 +699,7 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 
 			r.CommitVersionLabelMapping = commitVersionLabelMapping
 		}
-		// 填充被引用次数映射、及引用子片段次数映射
+		// 填充被引用次数映射
 		if len(commitVersions) > 0 && promptDO.PromptBasic != nil && promptDO.PromptBasic.PromptType == entity.PromptTypeSnippet {
 			// 查询这些版本的被引用次数，使用labelService
 			parentPromptCommitVersions, err := app.manageRepo.ListParentPrompt(ctx, repo.ListParentPromptParam{
@@ -713,15 +717,6 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 			}
 
 			r.ParentReferencesMapping = commitVersionReferencesMapping
-
-			// 查询这些版本的引用子片段次数
-			subReferencesMapping, err := app.countSubSnippetReferences(ctx, request.GetPromptID(), commitVersions)
-			if err != nil {
-				return r, err
-			}
-			if len(subReferencesMapping) > 0 {
-				r.SubReferencesMapping = subReferencesMapping
-			}
 		}
 	}
 
@@ -769,42 +764,6 @@ func (app *PromptManageApplicationImpl) RevertDraftFromCommit(ctx context.Contex
 	}
 	_, err = app.promptService.SaveDraft(ctx, promptDO)
 	return r, err
-}
-
-func (app *PromptManageApplicationImpl) countSubSnippetReferences(ctx context.Context, promptID int64, commitVersions []string) (map[string]int32, error) {
-	uniqueVersions := lo.Uniq(commitVersions)
-	if len(uniqueVersions) == 0 {
-		return nil, nil
-	}
-	queries := make([]repo.GetPromptParam, 0, len(uniqueVersions))
-	for _, version := range uniqueVersions {
-		if lo.IsEmpty(version) {
-			continue
-		}
-		queries = append(queries, repo.GetPromptParam{
-			PromptID:      promptID,
-			WithCommit:    true,
-			CommitVersion: version,
-		})
-	}
-	if len(queries) == 0 {
-		return nil, nil
-	}
-	promptMap, err := app.manageRepo.MGetPrompt(ctx, queries)
-	if err != nil {
-		return nil, err
-	}
-	mapping := make(map[string]int32, len(queries))
-	for _, query := range queries {
-		promptDO := promptMap[query]
-		var count int32
-		if promptDO != nil && promptDO.PromptCommit != nil && promptDO.PromptCommit.PromptDetail != nil &&
-			promptDO.PromptCommit.PromptDetail.PromptTemplate != nil {
-			count = int32(len(promptDO.PromptCommit.PromptDetail.PromptTemplate.Snippets))
-		}
-		mapping[query.CommitVersion] = count
-	}
-	return mapping, nil
 }
 
 func (app *PromptManageApplicationImpl) listPromptOrderBy(dtoEnum *manage.ListPromptOrderBy) int {

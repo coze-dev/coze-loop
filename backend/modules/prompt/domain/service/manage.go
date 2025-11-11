@@ -306,6 +306,34 @@ func (p *PromptServiceImpl) MParseCommitVersion(ctx context.Context, spaceID int
 	return promptKeyCommitVersionMap, nil
 }
 
+// GetPrompt retrieves a prompt by its ID
+func (p *PromptServiceImpl) GetPrompt(ctx context.Context, param GetPromptParam) (*entity.Prompt, error) {
+	promptDO, err := p.manageRepo.GetPrompt(ctx, repo.GetPromptParam{
+		PromptID:      param.PromptID,
+		WithCommit:    param.WithCommit,
+		CommitVersion: param.CommitVersion,
+		WithDraft:     param.WithDraft,
+		UserID:        param.UserID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.parseAndValidateSnippets(ctx, promptDO)
+	if err != nil {
+		return nil, err
+	}
+
+	if param.ExpandSnippet {
+		// expand snippets
+		err = p.ExpandSnippets(ctx, promptDO)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return promptDO, nil
+}
+
 // CreatePrompt creates a prompt with optional snippet validation
 func (p *PromptServiceImpl) CreatePrompt(ctx context.Context, promptDO *entity.Prompt) (promptID int64, err error) {
 	if promptDO == nil {
