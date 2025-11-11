@@ -1419,6 +1419,11 @@ func _listexptinsightanalysisrecordMw(handler *apis.APIHandler) []app.HandlerFun
 	return nil
 }
 
+func _open_apisMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _v2Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
@@ -1429,22 +1434,7 @@ func _evaluation_sets0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _traces1Mw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _gettracev2Mw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
 func _createevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _trace_treeMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1454,25 +1444,7 @@ func _evaluation_set_id0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _searchtracetreeMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
 func _getevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
-	return nil
-}
-
-func _searchtracetreeoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
-	return nil
-}
-
-func _annotations0Mw(handler *apis.APIHandler) []app.HandlerFunc {
-	return nil
-}
-
-func _open_apisMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1522,7 +1494,17 @@ func _evaluators1Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _traces1Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _createevaluatoroapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _gettracev2Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1577,12 +1559,22 @@ func _evaluator_records0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _trace_treeMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _getevaluatorrecordoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
 func _v18Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _searchtracetreeMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1596,8 +1588,11 @@ func _updateevaluationsetschemaoapiMw(handler *apis.APIHandler) []app.HandlerFun
 	return nil
 }
 
-func _listevaluationsetversionsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
-	// your code...
+func _searchtracetreeoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
+func _annotations0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
@@ -1616,7 +1611,37 @@ func _getdrilldownvaluesMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _listpromptbasicMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _listevaluationsetversionsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getexperimentsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _submitexperimentoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getexperimentaggrresultoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listexperimentresultoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _deleteevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updateevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

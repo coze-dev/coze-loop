@@ -190,6 +190,20 @@ func (mr *MockIExperimentRepoMockRecorder) Update(ctx, expt any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExperimentRepo)(nil).Update), ctx, expt)
 }
 
+// UpdateFields mocks base method.
+func (m *MockIExperimentRepo) UpdateFields(ctx context.Context, exptID int64, ufields map[string]any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateFields", ctx, exptID, ufields)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateFields indicates an expected call of UpdateFields.
+func (mr *MockIExperimentRepoMockRecorder) UpdateFields(ctx, exptID, ufields any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFields", reflect.TypeOf((*MockIExperimentRepo)(nil).UpdateFields), ctx, exptID, ufields)
+}
+
 // MockIExptStatsRepo is a mock of IExptStatsRepo interface.
 type MockIExptStatsRepo struct {
 	ctrl     *gomock.Controller

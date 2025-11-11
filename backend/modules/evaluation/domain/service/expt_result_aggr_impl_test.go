@@ -387,6 +387,7 @@ func TestExptAggrResultServiceImpl_BatchGetExptAggrResultByExperimentIDs(t *test
 					EvaluatorResults: map[int64]*entity.EvaluatorAggregateResult{
 						1: {
 							EvaluatorVersionID: 1,
+							EvaluatorID:        1,
 							AggregatorResults: []*entity.AggregatorResult{
 								{
 									AggregatorType: entity.Average,

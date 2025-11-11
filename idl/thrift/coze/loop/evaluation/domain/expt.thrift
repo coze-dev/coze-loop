@@ -16,6 +16,7 @@ enum ExptStatus {
     Failed = 12    // Execution failed
     Terminated = 13   // User terminated
     SystemTerminated = 14 // System terminated
+    Terminating = 15 // Terminating
 
     Draining = 21 // online expt draining
 }
