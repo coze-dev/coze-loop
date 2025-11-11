@@ -22,7 +22,7 @@ type SpanWithAnnotationConsumer struct {
 	conf.IConfigLoader
 }
 
-func newSpanWithAnnotationConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewSpanWithAnnotationConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &SpanWithAnnotationConsumer{
 		handler:       handler,
 		IConfigLoader: loader,

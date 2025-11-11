@@ -16,12 +16,12 @@ func NewConsumerWorkers(
 ) ([]mq.IConsumerWorker, error) {
 	workers := []mq.IConsumerWorker{}
 	workers = append(workers,
-		newAnnotationConsumer(handler, loader),
-		newTaskConsumer(taskConsumer, loader),
-		newCallbackConsumer(taskConsumer, loader),
-		newCorrectionConsumer(taskConsumer, loader),
-		newBackFillConsumer(taskConsumer, loader),
-		newSpanWithAnnotationConsumer(taskConsumer, loader),
+		NewAnnotationConsumer(handler, loader),
+		NewTaskConsumer(taskConsumer, loader),
+		NewCallbackConsumer(taskConsumer, loader),
+		NewCorrectionConsumer(taskConsumer, loader),
+		NewBackFillConsumer(taskConsumer, loader),
+		NewSpanWithAnnotationConsumer(taskConsumer, loader),
 	)
 
 	return workers, nil
