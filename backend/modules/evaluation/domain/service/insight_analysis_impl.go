@@ -207,6 +207,15 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 		return nil, err
 	}
 
+	if analysisRecord.Status == entity.InsightAnalysisStatus_Running && analysisRecord.CreatedAt.Add(entity.ThreeHour).Unix() < time.Now().Unix() {
+		analysisRecord.Status = entity.InsightAnalysisStatus_Failed
+		err = e.repo.UpdateAnalysisRecord(ctx, analysisRecord)
+		if err != nil {
+			logs.CtxError(ctx, "GetAnalysisRecordByID: UpdateAnalysisRecord failed: %v", err)
+		}
+		return analysisRecord, err
+	}
+
 	if analysisRecord.Status == entity.InsightAnalysisStatus_Running ||
 		analysisRecord.Status == entity.InsightAnalysisStatus_Failed {
 		return analysisRecord, nil
