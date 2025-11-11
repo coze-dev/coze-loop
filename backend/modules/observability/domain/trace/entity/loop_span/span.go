@@ -300,7 +300,25 @@ func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 	} else if val, ok := s.TagsByte[fieldName]; ok {
 		return val
 	}
-	return nil
+	annotationMap := make(map[string]AnnotationValue)
+	for _, annotation := range s.Annotations {
+		annotationMap[fmt.Sprintf("%s_%s", annotation.AnnotationType, annotation.Key)] = annotation.Value
+	}
+	if val, ok := annotationMap[fieldName]; ok {
+		switch val.ValueType {
+		case AnnotationValueTypeLong:
+			return val.LongValue
+		case AnnotationValueTypeDouble, AnnotationValueTypeNumber:
+			return val.FloatValue
+		case AnnotationValueTypeBool:
+			return val.BoolValue
+		case AnnotationValueTypeString:
+			return val.StringValue
+		default:
+			return nil
+		}
+	}
+	return annotationMap
 }
 
 func (s *Span) IsValidSpan() error {
