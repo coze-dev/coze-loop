@@ -15,7 +15,7 @@ const (
 )
 
 const (
-	ThreeHour = 3 * time.Hour
+	InsightAnalysisRunningTimeout = 2 * time.Hour
 )
 
 type ExptInsightAnalysisRecord struct {
