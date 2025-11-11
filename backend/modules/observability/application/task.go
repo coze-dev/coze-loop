@@ -47,6 +47,7 @@ func NewTaskApplication(
 	tracehubSvc tracehub.ITraceHubService,
 	taskProcessor processor.TaskProcessor,
 	taskCallbackService service.ITaskCallbackService,
+	traceRepo tracerepo.ITraceRepo,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
 		taskSvc:         taskService,
@@ -57,6 +58,7 @@ func NewTaskApplication(
 		tracehubSvc:     tracehubSvc,
 		taskProcessor:   taskProcessor,
 		taskCallbackSvc: taskCallbackService,
+		traceRepo:       traceRepo,
 	}, nil
 }
 
