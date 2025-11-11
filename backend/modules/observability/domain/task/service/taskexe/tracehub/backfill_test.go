@@ -599,7 +599,15 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 		t.Parallel()
 		ch := make(chan *entity.BackFillEvent, 1)
 		impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
-		sub := &spanSubscriber{t: &task.Task{ID: ptr.Of(int64(10)), WorkspaceID: ptr.Of(int64(20))}}
+		sub := &spanSubscriber{t: &task.Task{ID: ptr.Of(int64(10)), WorkspaceID: ptr.Of(int64(20))}, tr: &task.TaskRun{
+			ID:          1,
+			WorkspaceID: 20,
+			TaskID:      10,
+			TaskType:    "new_data",
+			RunStatus:   "done",
+			RunStartAt:  time.Now().Add(-24 * time.Hour).UnixMilli(),
+			RunEndAt:    time.Now().UnixMilli(),
+		}}
 
 		err := impl.onHandleDone(context.Background(), nil, sub)
 		require.NoError(t, err)
