@@ -75,6 +75,7 @@ struct SearchTraceOApiRequest {
     6: required i32 limit (api.body="limit")
     8: optional common.PlatformType platform_type (api.body="platform_type")
     9: optional list<string> span_ids (api.body="span_ids")
+    100: optional bool need_original_tags (api.body='need_original_tags')
 
     255: optional base.Base Base
 }
@@ -127,6 +128,8 @@ struct ListSpansOApiRequest {
     7: optional string page_token (api.body="page_token")
     8: optional common.PlatformType platform_type (api.body="platform_type")
     9: optional common.SpanListType span_list_type (api.body="span_list_type")
+
+    100: optional bool need_original_tags (api.body='need_original_tags')
 
     255: optional base.Base Base
 }
