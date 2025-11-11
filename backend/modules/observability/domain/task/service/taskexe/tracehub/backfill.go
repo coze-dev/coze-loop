@@ -371,7 +371,7 @@ func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *sp
 		if err = sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
 			Task:     tconv.TaskDTO2DO(sub.t, "", nil),
 			TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
-			IsFinish: true,
+			IsFinish: false,
 		}); err != nil {
 			return len(fr.spans), len(sampledSpans), err
 		}
