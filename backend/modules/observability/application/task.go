@@ -287,12 +287,13 @@ func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSp
 			SpanID:      loopSpan.SpanID,
 			TraceID:     loopSpan.TraceID,
 			WorkspaceId: workspaceID,
-			StartAt:     loopSpan.StartTime - 5*time.Second.Milliseconds(),
-			EndAt:       loopSpan.StartTime + 5*time.Second.Milliseconds(),
+			StartAt:     loopSpan.StartTime/1000 - 5*time.Second.Milliseconds(),
+			EndAt:       loopSpan.StartTime/1000 + 5*time.Second.Milliseconds(),
 		})
 		if err != nil {
 			return err
 		}
+		loopSpan.StartTime = loopSpan.StartTime / 1000
 		loopSpan.Annotations = append(loopSpan.Annotations, annotations...)
 		if loopSpan != nil {
 			if err := t.tracehubSvc.SpanTrigger(ctx, loopSpan); err != nil {
