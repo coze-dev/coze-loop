@@ -28,6 +28,7 @@ You could go to [README](./README.md) to find more information.
 <summary>Detailed Submission Process (Click to expand)</summary>
 
 1. Create a feature branch from the `main` branch:
+
    ```bash
    git checkout main
    git pull
@@ -37,11 +38,13 @@ You could go to [README](./README.md) to find more information.
 2. Develop and commit on the feature branch
 
 3. Ensure the code passes all tests:
+
    ```bash
-   cd ./backend && go test -gcflags="all=-N -l" ./... 
+   cd ./backend && go test -gcflags="all=-N -l" ./...
    ```
 
 4. Push the branch to the remote repository:
+
    ```bash
    git push origin feat/your-feature-name
    ```
@@ -49,6 +52,7 @@ You could go to [README](./README.md) to find more information.
 5. Create a Pull Request to the `main` branch
 
 6. After code review is passed, merge into the `main` branch
+
 </details>
 
 ```mermaid
@@ -79,6 +83,7 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/
 ```
 
 Types include:
+
 * `feat`: New feature
 * `fix`: Bug fix
 * `docs`: Documentation changes
@@ -89,6 +94,7 @@ Types include:
 * `chore`: Changes to the build process or auxiliary tools
 
 Example:
+
 ```
 feat(api): add user authentication interface
 
@@ -133,6 +139,7 @@ Closes #123
 * It is better to Use mockgen to generate mock struct instead of using patch
 
 Run unit tests:
+
 ```bash
 cd ./backend && go test  -gcflags="all=-N -l" ./...
 ```
@@ -146,6 +153,7 @@ cd ./backend && go test  -gcflags="all=-N -l" ./...
 * Use [GoDoc](https://blog.golang.org/godoc) format for writing comments
 
 Example:
+
 ```go
 // UserService provides operations related to users.
 type UserService struct {

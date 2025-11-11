@@ -21,11 +21,6 @@
   },
   "telemetryEnabled": true,
   "allowedProjectTags": [
-    "rush-x",
-    "team-automation",
-    "team-builder",
-    "team-community",
-    "team-data",
     "team-devops",
     "team-arch",
     "team-studio",
@@ -33,11 +28,6 @@
     "level-2",
     "level-3",
     "level-4",
-    "team-qa",
-    "enabled-bundle-diff",
-    "team-fullcode-app",
-    "phase-prebuild",
-    "channel-coze",
     "rush-tools",
     "core"
   ],
