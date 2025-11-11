@@ -78,6 +78,7 @@ struct Tool {
 
 typedef string ToolType (ts.enum="true")
 const ToolType ToolType_Function = "function"
+const ToolType ToolType_GoogleSearch = "google_search"
 
 struct Function {
     1: optional string name
@@ -87,11 +88,18 @@ struct Function {
 
 struct ToolCallConfig {
     1: optional ToolChoiceType tool_choice
+    2: optional ToolChoiceSpecification tool_choice_specification
+}
+
+struct ToolChoiceSpecification {
+    1: optional ToolType type
+    2: optional string name
 }
 
 typedef string ToolChoiceType (ts.enum="true")
 const ToolChoiceType ToolChoiceType_None = "none"
 const ToolChoiceType ToolChoiceType_Auto = "auto"
+const ToolChoiceType ToolChoiceType_Specific = "specific"
 
 struct ModelConfig {
     1: optional i64 model_id (api.js_conv="true", go.tag='json:"model_id"')

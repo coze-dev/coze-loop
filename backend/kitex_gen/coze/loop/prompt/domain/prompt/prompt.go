@@ -19,9 +19,13 @@ const (
 
 	ToolTypeFunction = "function"
 
+	ToolTypeGoogleSearch = "google_search"
+
 	ToolChoiceTypeNone = "none"
 
 	ToolChoiceTypeAuto = "auto"
+
+	ToolChoiceTypeSpecific = "specific"
 
 	RoleSystem = "system"
 
@@ -4394,7 +4398,8 @@ func (p *Function) Field3DeepEqual(src *string) bool {
 }
 
 type ToolCallConfig struct {
-	ToolChoice *ToolChoiceType `thrift:"tool_choice,1,optional" frugal:"1,optional,string" form:"tool_choice" json:"tool_choice,omitempty" query:"tool_choice"`
+	ToolChoice              *ToolChoiceType          `thrift:"tool_choice,1,optional" frugal:"1,optional,string" form:"tool_choice" json:"tool_choice,omitempty" query:"tool_choice"`
+	ToolChoiceSpecification *ToolChoiceSpecification `thrift:"tool_choice_specification,2,optional" frugal:"2,optional,ToolChoiceSpecification" form:"tool_choice_specification" json:"tool_choice_specification,omitempty" query:"tool_choice_specification"`
 }
 
 func NewToolCallConfig() *ToolCallConfig {
@@ -4415,16 +4420,36 @@ func (p *ToolCallConfig) GetToolChoice() (v ToolChoiceType) {
 	}
 	return *p.ToolChoice
 }
+
+var ToolCallConfig_ToolChoiceSpecification_DEFAULT *ToolChoiceSpecification
+
+func (p *ToolCallConfig) GetToolChoiceSpecification() (v *ToolChoiceSpecification) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetToolChoiceSpecification() {
+		return ToolCallConfig_ToolChoiceSpecification_DEFAULT
+	}
+	return p.ToolChoiceSpecification
+}
 func (p *ToolCallConfig) SetToolChoice(val *ToolChoiceType) {
 	p.ToolChoice = val
+}
+func (p *ToolCallConfig) SetToolChoiceSpecification(val *ToolChoiceSpecification) {
+	p.ToolChoiceSpecification = val
 }
 
 var fieldIDToName_ToolCallConfig = map[int16]string{
 	1: "tool_choice",
+	2: "tool_choice_specification",
 }
 
 func (p *ToolCallConfig) IsSetToolChoice() bool {
 	return p.ToolChoice != nil
+}
+
+func (p *ToolCallConfig) IsSetToolChoiceSpecification() bool {
+	return p.ToolChoiceSpecification != nil
 }
 
 func (p *ToolCallConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -4448,6 +4473,14 @@ func (p *ToolCallConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4493,6 +4526,14 @@ func (p *ToolCallConfig) ReadField1(iprot thrift.TProtocol) error {
 	p.ToolChoice = _field
 	return nil
 }
+func (p *ToolCallConfig) ReadField2(iprot thrift.TProtocol) error {
+	_field := NewToolChoiceSpecification()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ToolChoiceSpecification = _field
+	return nil
+}
 
 func (p *ToolCallConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4502,6 +4543,10 @@ func (p *ToolCallConfig) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -4540,6 +4585,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *ToolCallConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetToolChoiceSpecification() {
+		if err = oprot.WriteFieldBegin("tool_choice_specification", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ToolChoiceSpecification.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 
 func (p *ToolCallConfig) String() string {
 	if p == nil {
@@ -4558,6 +4621,9 @@ func (p *ToolCallConfig) DeepEqual(ano *ToolCallConfig) bool {
 	if !p.Field1DeepEqual(ano.ToolChoice) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.ToolChoiceSpecification) {
+		return false
+	}
 	return true
 }
 
@@ -4569,6 +4635,271 @@ func (p *ToolCallConfig) Field1DeepEqual(src *ToolChoiceType) bool {
 		return false
 	}
 	if strings.Compare(*p.ToolChoice, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ToolCallConfig) Field2DeepEqual(src *ToolChoiceSpecification) bool {
+
+	if !p.ToolChoiceSpecification.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ToolChoiceSpecification struct {
+	Type *ToolType `thrift:"type,1,optional" frugal:"1,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	Name *string   `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+}
+
+func NewToolChoiceSpecification() *ToolChoiceSpecification {
+	return &ToolChoiceSpecification{}
+}
+
+func (p *ToolChoiceSpecification) InitDefault() {
+}
+
+var ToolChoiceSpecification_Type_DEFAULT ToolType
+
+func (p *ToolChoiceSpecification) GetType() (v ToolType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetType() {
+		return ToolChoiceSpecification_Type_DEFAULT
+	}
+	return *p.Type
+}
+
+var ToolChoiceSpecification_Name_DEFAULT string
+
+func (p *ToolChoiceSpecification) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return ToolChoiceSpecification_Name_DEFAULT
+	}
+	return *p.Name
+}
+func (p *ToolChoiceSpecification) SetType(val *ToolType) {
+	p.Type = val
+}
+func (p *ToolChoiceSpecification) SetName(val *string) {
+	p.Name = val
+}
+
+var fieldIDToName_ToolChoiceSpecification = map[int16]string{
+	1: "type",
+	2: "name",
+}
+
+func (p *ToolChoiceSpecification) IsSetType() bool {
+	return p.Type != nil
+}
+
+func (p *ToolChoiceSpecification) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *ToolChoiceSpecification) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ToolChoiceSpecification[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ToolChoiceSpecification) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *ToolType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Type = _field
+	return nil
+}
+func (p *ToolChoiceSpecification) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+
+func (p *ToolChoiceSpecification) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ToolChoiceSpecification"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ToolChoiceSpecification) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetType() {
+		if err = oprot.WriteFieldBegin("type", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Type); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ToolChoiceSpecification) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ToolChoiceSpecification) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ToolChoiceSpecification(%+v)", *p)
+
+}
+
+func (p *ToolChoiceSpecification) DeepEqual(ano *ToolChoiceSpecification) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Type) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Name) {
+		return false
+	}
+	return true
+}
+
+func (p *ToolChoiceSpecification) Field1DeepEqual(src *ToolType) bool {
+
+	if p.Type == src {
+		return true
+	} else if p.Type == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Type, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ToolChoiceSpecification) Field2DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
 		return false
 	}
 	return true

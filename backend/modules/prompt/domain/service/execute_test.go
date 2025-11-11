@@ -994,3 +994,277 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 		assert.Equal(t, prompt.PromptCommit.PromptDetail.ModelConfig.Extra, got.ModelConfig.Extra)
 	}
 }
+
+func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
+	t.Parallel()
+	svc := &PromptServiceImpl{
+		formatter: NewPromptFormatter(),
+	}
+
+	tests := []struct {
+		name        string
+		param       ExecuteParam
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "specific tool choice without single step mode - should error",
+			param: ExecuteParam{
+				Prompt: &entity.Prompt{
+					ID:        1,
+					SpaceID:   42,
+					PromptKey: "test_prompt",
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version: "v1",
+						},
+						PromptDetail: &entity.PromptDetail{
+							ToolCallConfig: &entity.ToolCallConfig{
+								ToolChoice: entity.ToolChoiceTypeSpecific,
+								ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+									Type: entity.ToolTypeFunction,
+									Name: "get_weather",
+								},
+							},
+							Tools: []*entity.Tool{
+								{
+									Type: entity.ToolTypeFunction,
+									Function: &entity.Function{
+										Name:        "get_weather",
+										Description: "Get weather",
+										Parameters:  "{}",
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID: 1,
+							},
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("Test"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Messages:   []*entity.Message{},
+				SingleStep: false, // Should be true for specific tool choice
+				Scenario:   entity.ScenarioPromptDebug,
+			},
+			wantErr:     true,
+			errContains: "single step mode",
+		},
+		{
+			name: "specific tool choice without specification - should error",
+			param: ExecuteParam{
+				Prompt: &entity.Prompt{
+					ID:        1,
+					SpaceID:   42,
+					PromptKey: "test_prompt",
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version: "v1",
+						},
+						PromptDetail: &entity.PromptDetail{
+							ToolCallConfig: &entity.ToolCallConfig{
+								ToolChoice:              entity.ToolChoiceTypeSpecific,
+								ToolChoiceSpecification: nil, // Should not be nil
+							},
+							Tools: []*entity.Tool{
+								{
+									Type: entity.ToolTypeFunction,
+									Function: &entity.Function{
+										Name:        "get_weather",
+										Description: "Get weather",
+										Parameters:  "{}",
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID: 1,
+							},
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("Test"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Messages:   []*entity.Message{},
+				SingleStep: true,
+				Scenario:   entity.ScenarioPromptDebug,
+			},
+			wantErr:     true,
+			errContains: "must not be empty",
+		},
+		{
+			name: "specific tool choice with single step and specification - should succeed",
+			param: ExecuteParam{
+				Prompt: &entity.Prompt{
+					ID:        1,
+					SpaceID:   42,
+					PromptKey: "test_prompt",
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version: "v1",
+						},
+						PromptDetail: &entity.PromptDetail{
+							ToolCallConfig: &entity.ToolCallConfig{
+								ToolChoice: entity.ToolChoiceTypeSpecific,
+								ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+									Type: entity.ToolTypeFunction,
+									Name: "get_weather",
+								},
+							},
+							Tools: []*entity.Tool{
+								{
+									Type: entity.ToolTypeFunction,
+									Function: &entity.Function{
+										Name:        "get_weather",
+										Description: "Get weather",
+										Parameters:  "{}",
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID: 1,
+							},
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("Test"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Messages:   []*entity.Message{},
+				SingleStep: true,
+				Scenario:   entity.ScenarioPromptDebug,
+			},
+			wantErr: false,
+		},
+		{
+			name: "specific tool choice with google_search - should succeed",
+			param: ExecuteParam{
+				Prompt: &entity.Prompt{
+					ID:        1,
+					SpaceID:   42,
+					PromptKey: "test_prompt",
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version: "v1",
+						},
+						PromptDetail: &entity.PromptDetail{
+							ToolCallConfig: &entity.ToolCallConfig{
+								ToolChoice: entity.ToolChoiceTypeSpecific,
+								ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+									Type: entity.ToolTypeGoogleSearch,
+									Name: "search",
+								},
+							},
+							Tools: []*entity.Tool{
+								{
+									Type: entity.ToolTypeGoogleSearch,
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID: 1,
+							},
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("Test"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Messages:   []*entity.Message{},
+				SingleStep: true,
+				Scenario:   entity.ScenarioPromptDebug,
+			},
+			wantErr: false,
+		},
+		{
+			name: "auto tool choice - should succeed without validation",
+			param: ExecuteParam{
+				Prompt: &entity.Prompt{
+					ID:        1,
+					SpaceID:   42,
+					PromptKey: "test_prompt",
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{
+							Version: "v1",
+						},
+						PromptDetail: &entity.PromptDetail{
+							ToolCallConfig: &entity.ToolCallConfig{
+								ToolChoice: entity.ToolChoiceTypeAuto,
+							},
+							Tools: []*entity.Tool{
+								{
+									Type: entity.ToolTypeFunction,
+									Function: &entity.Function{
+										Name:        "get_weather",
+										Description: "Get weather",
+										Parameters:  "{}",
+									},
+								},
+							},
+							ModelConfig: &entity.ModelConfig{
+								ModelID: 1,
+							},
+							PromptTemplate: &entity.PromptTemplate{
+								TemplateType: entity.TemplateTypeNormal,
+								Messages: []*entity.Message{
+									{
+										Role:    entity.RoleSystem,
+										Content: ptr.Of("Test"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Messages:   []*entity.Message{},
+				SingleStep: false,
+				Scenario:   entity.ScenarioPromptDebug,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := svc.prepareLLMCallParam(context.Background(), tt.param)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, got)
+				if tt.param.Prompt.PromptCommit.PromptDetail.ToolCallConfig != nil {
+					assert.Equal(t, tt.param.Prompt.PromptCommit.PromptDetail.ToolCallConfig, got.ToolCallConfig)
+				}
+			}
+		})
+	}
+}

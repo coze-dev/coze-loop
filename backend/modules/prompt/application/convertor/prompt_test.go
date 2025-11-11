@@ -810,3 +810,310 @@ func TestPromptTemplateWithDifferentTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestToolTypeDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   entity.ToolType
+		want prompt.ToolType
+	}{
+		{
+			name: "function type",
+			do:   entity.ToolTypeFunction,
+			want: prompt.ToolTypeFunction,
+		},
+		{
+			name: "google_search type",
+			do:   entity.ToolTypeGoogleSearch,
+			want: prompt.ToolTypeGoogleSearch,
+		},
+		{
+			name: "unknown type defaults to function",
+			do:   entity.ToolType("unknown"),
+			want: prompt.ToolTypeFunction,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolTypeDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestToolTypeDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  prompt.ToolType
+		want entity.ToolType
+	}{
+		{
+			name: "function type",
+			dto:  prompt.ToolTypeFunction,
+			want: entity.ToolTypeFunction,
+		},
+		{
+			name: "google_search type",
+			dto:  prompt.ToolTypeGoogleSearch,
+			want: entity.ToolTypeGoogleSearch,
+		},
+		{
+			name: "unknown type defaults to function",
+			dto:  prompt.ToolType("unknown"),
+			want: entity.ToolTypeFunction,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolTypeDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestToolChoiceSpecificationDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   *entity.ToolChoiceSpecification
+		want *prompt.ToolChoiceSpecification
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "specification with function type",
+			do: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeFunction,
+				Name: "get_weather",
+			},
+			want: &prompt.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeFunction),
+				Name: ptr.Of("get_weather"),
+			},
+		},
+		{
+			name: "specification with google_search type",
+			do: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeGoogleSearch,
+				Name: "search",
+			},
+			want: &prompt.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+				Name: ptr.Of("search"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolChoiceSpecificationDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestToolChoiceSpecificationDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *prompt.ToolChoiceSpecification
+		want *entity.ToolChoiceSpecification
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "specification with function type",
+			dto: &prompt.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeFunction),
+				Name: ptr.Of("get_weather"),
+			},
+			want: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeFunction,
+				Name: "get_weather",
+			},
+		},
+		{
+			name: "specification with google_search type",
+			dto: &prompt.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+				Name: ptr.Of("search"),
+			},
+			want: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeGoogleSearch,
+				Name: "search",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolChoiceSpecificationDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
+	tests := []struct {
+		name string
+		do   *entity.ToolCallConfig
+		want *prompt.ToolCallConfig
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "auto without specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeAuto,
+			},
+			want: &prompt.ToolCallConfig{
+				ToolChoice:              ptr.Of(prompt.ToolChoiceTypeAuto),
+				ToolChoiceSpecification: nil,
+			},
+		},
+		{
+			name: "specific with specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeFunction,
+					Name: "get_weather",
+				},
+			},
+			want: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &prompt.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeFunction),
+					Name: ptr.Of("get_weather"),
+				},
+			},
+		},
+		{
+			name: "specific with google_search specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeGoogleSearch,
+					Name: "search",
+				},
+			},
+			want: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &prompt.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+					Name: ptr.Of("search"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolCallConfigDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestToolCallConfigDTO2DO_WithSpecification(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *prompt.ToolCallConfig
+		want *entity.ToolCallConfig
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "auto without specification",
+			dto: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeAuto),
+			},
+			want: &entity.ToolCallConfig{
+				ToolChoice:              entity.ToolChoiceTypeAuto,
+				ToolChoiceSpecification: nil,
+			},
+		},
+		{
+			name: "specific with specification",
+			dto: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &prompt.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeFunction),
+					Name: ptr.Of("get_weather"),
+				},
+			},
+			want: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeFunction,
+					Name: "get_weather",
+				},
+			},
+		},
+		{
+			name: "specific with google_search specification",
+			dto: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &prompt.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+					Name: ptr.Of("search"),
+				},
+			},
+			want: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeGoogleSearch,
+					Name: "search",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolCallConfigDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestToolChoiceTypeDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  prompt.ToolChoiceType
+		want entity.ToolChoiceType
+	}{
+		{
+			name: "none type",
+			dto:  prompt.ToolChoiceTypeNone,
+			want: entity.ToolChoiceTypeNone,
+		},
+		{
+			name: "auto type",
+			dto:  prompt.ToolChoiceTypeAuto,
+			want: entity.ToolChoiceTypeAuto,
+		},
+		{
+			name: "specific type",
+			dto:  prompt.ToolChoiceTypeSpecific,
+			want: entity.ToolChoiceTypeSpecific,
+		},
+		{
+			name: "unknown type defaults to auto",
+			dto:  prompt.ToolChoiceType("unknown"),
+			want: entity.ToolChoiceTypeAuto,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolChoiceTypeDTO2DO(tt.dto))
+		})
+	}
+}

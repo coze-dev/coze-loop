@@ -138,7 +138,18 @@ func OpenAPIToolCallConfigDO2DTO(do *entity.ToolCallConfig) *openapi.ToolCallCon
 		return nil
 	}
 	return &openapi.ToolCallConfig{
-		ToolChoice: ptr.Of(prompt.ToolChoiceType(do.ToolChoice)),
+		ToolChoice:              ptr.Of(prompt.ToolChoiceType(do.ToolChoice)),
+		ToolChoiceSpecification: OpenAPIToolChoiceSpecificationDO2DTO(do.ToolChoiceSpecification),
+	}
+}
+
+func OpenAPIToolChoiceSpecificationDO2DTO(do *entity.ToolChoiceSpecification) *openapi.ToolChoiceSpecification {
+	if do == nil {
+		return nil
+	}
+	return &openapi.ToolChoiceSpecification{
+		Type: ptr.Of(prompt.ToolType(do.Type)),
+		Name: ptr.Of(do.Name),
 	}
 }
 
@@ -389,6 +400,8 @@ func OpenAPIToolTypeDO2DTO(do entity.ToolType) openapi.ToolType {
 	switch do {
 	case entity.ToolTypeFunction:
 		return openapi.ToolTypeFunction
+	case entity.ToolTypeGoogleSearch:
+		return openapi.ToolTypeGoogleSearch
 	default:
 		return openapi.ToolTypeFunction
 	}
@@ -438,6 +451,8 @@ func OpenAPIToolTypeDTO2DO(dto openapi.ToolType) entity.ToolType {
 	switch dto {
 	case openapi.ToolTypeFunction:
 		return entity.ToolTypeFunction
+	case openapi.ToolTypeGoogleSearch:
+		return entity.ToolTypeGoogleSearch
 	default:
 		return entity.ToolTypeFunction
 	}
