@@ -10,7 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	obapp "github.com/coze-dev/coze-loop/backend/modules/observability/application"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
@@ -53,11 +53,11 @@ func (e *SpanWithAnnotationConsumer) ConsumerCfg(ctx context.Context) (*mq.Consu
 func (e *SpanWithAnnotationConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
-	event := new(loop_span.Span)
+	event := new(entity.SpanEvent)
 	if err := json.Unmarshal(ext.Body, event); err != nil {
 		logs.CtxError(ctx, "Task msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
 		return nil
 	}
-	logs.CtxInfo(ctx, "Span with annotation msg,log_id=%s, trace_id=%s, span_id=%s,msgID=%s", event.LogID, event.TraceID, event.SpanID, ext.MsgID)
-	return e.handler.SpanTrigger(ctx, nil, event)
+	logs.CtxInfo(ctx, "Span with annotation msg,log_id=%s, trace_id=%s, span_id=%s,msgID=%s", event.Span.LogID, event.Span.TraceID, event.Span.SpanID, ext.MsgID)
+	return e.handler.SpanTrigger(ctx, nil, event.Span)
 }
