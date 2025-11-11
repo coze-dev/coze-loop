@@ -202,7 +202,7 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 			logs.CtxInfo(ctx, "Evaluator field name is nil")
 			continue
 		}
-		var evaluationSetSchemas []*eval_set.FieldSchema
+		var evaluationSetSchemas []*entity.FieldSchema
 		if evaluationSetSchema == "" {
 			logs.CtxInfo(ctx, "Evaluation set schema is nil")
 			continue
@@ -213,10 +213,10 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 			continue
 		}
 		for _, fieldSchema := range evaluationSetSchemas {
-			if fieldSchema.GetKey() == *mapping.EvalSetName {
-				key := fieldSchema.GetKey()
-				if key == "" {
-					logs.CtxInfo(ctx, "Evaluator field key is empty, name:%v", *mapping.FieldSchema.Name)
+			if *fieldSchema.Key == *mapping.EvalSetName {
+				key := fieldSchema.Key
+				if key == nil {
+					logs.CtxInfo(ctx, "Evaluator field key is empty, name:%v", fieldSchema.Name)
 					continue
 				}
 				value, err := span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
@@ -224,14 +224,14 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 					logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
 					continue
 				}
-				content, err := GetContentInfo(ctx, fieldSchema.GetContentType(), value)
+				content, err := GetContentInfo(ctx, fieldSchema.ContentType, value)
 				if err != nil {
 					logs.CtxInfo(ctx, "GetContentInfo failed, err:%v", err)
 					return nil
 				}
 				fieldDatas = append(fieldDatas, &eval_set.FieldData{
-					Key:     gptr.Of(key),
-					Name:    gptr.Of(fieldSchema.GetName()),
+					Key:     key,
+					Name:    gptr.Of(fieldSchema.Name),
 					Content: content,
 				})
 			}
@@ -241,10 +241,10 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 }
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-func GetContentInfo(ctx context.Context, contentType common.ContentType, value string) (*common.Content, error) {
+func GetContentInfo(ctx context.Context, contentType entity.ContentType, value string) (*common.Content, error) {
 	var content *common.Content
 	switch contentType {
-	case common.ContentTypeMultiPart:
+	case entity.ContentType_MultiPart:
 		var parts []tracespec.ModelMessagePart
 		err := json.Unmarshal([]byte(value), &parts)
 		if err != nil {

@@ -140,7 +140,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint)
 			return err
 		}
 
-		if entity.IsExptFinished(entity.ExptStatus(runLog.Status)) {
+		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
 			logs.CtxInfo(ctx, "ExptRecordEvalConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			return nil
 		}
@@ -174,12 +174,12 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		if retryConf.IsInDebt {
 			completeCID := fmt.Sprintf("terminate:indebt:%d", event.ExptRunID)
 
-			if err := e.manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.ExptRunMode, event.SpaceID, event.Session, entity.WithCID(completeCID)); err != nil {
+			if err := e.manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 				return errorx.Wrapf(err, "terminate expt run fail, expt_id: %v", event.ExptID)
 			}
 
 			if err := e.manager.CompleteExpt(ctx, event.ExptID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Terminated),
-				entity.WithStatusMessage(nextErr.Error()), entity.WithCID(completeCID)); err != nil {
+				entity.WithStatusMessage(nextErr.Error()), entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 				return errorx.Wrapf(err, "complete expt fail, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			}
 

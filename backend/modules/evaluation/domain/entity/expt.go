@@ -35,6 +35,7 @@ const (
 	ExptStatus_Terminated ExptStatus = 13
 	// System terminated
 	ExptStatus_SystemTerminated ExptStatus = 14
+	ExptStatus_Terminating      ExptStatus = 15
 
 	// 流式执行完成，不再接收新的请求
 	ExptStatus_Draining ExptStatus = 21
@@ -265,8 +266,6 @@ type ExptCalculateStats struct {
 	SuccessItemCnt    int
 	ProcessingItemCnt int
 	TerminatedItemCnt int
-
-	IncompleteTurnIDs []*ItemTurnID
 }
 
 type ItemTurnID struct {

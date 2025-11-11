@@ -327,10 +327,6 @@ func (e *ExptSubmitExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptSubmitExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
-	if !nextTick {
-		return nil
-	}
-	time.Sleep(time.Second * 3)
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
@@ -522,10 +518,6 @@ func (e *ExptFailRetryExec) ScheduleStart(ctx context.Context, event *entity.Exp
 }
 
 func (e *ExptFailRetryExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
-	if !nextTick {
-		return nil
-	}
-	time.Sleep(time.Second * 3)
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
@@ -651,10 +643,6 @@ func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptAppendExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
-	if !nextTick {
-		return nil
-	}
-	time.Sleep(time.Second * 3)
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	event.CreatedAt = time.Now().Unix()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
@@ -758,11 +746,11 @@ func (e *exptBaseExec) exptEnd(ctx context.Context, event *entity.ExptScheduleEv
 	}
 
 	completeCID := fmt.Sprintf("exptexec:onend:%d", event.ExptRunID)
-	if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.ExptRunMode, event.SpaceID, event.Session, entity.WithCID(completeCID)); err != nil {
+	if err := e.Manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 		return err
 	}
 
-	if err := e.Manager.CompleteExpt(ctx, event.ExptID, event.SpaceID, event.Session, entity.WithCID(completeCID)); err != nil {
+	if err := e.Manager.CompleteExpt(ctx, event.ExptID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 		return err
 	}
 

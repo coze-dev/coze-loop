@@ -166,6 +166,24 @@ func TestExptItemEventEvalServiceImpl_HandleEventCheck(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "实验正在终止-直接返回nil",
+			prepare: func() {
+				mockManager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Terminating)}, nil)
+			},
+			event:   &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},
+			wantErr: false,
+		},
+		{
+			name: "实验正在排空-直接返回nil",
+			prepare: func() {
+				mockManager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Draining)}, nil)
+			},
+			event:   &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},
+			wantErr: false,
+		},
+		{
 			name: "实验运行中-继续执行",
 			prepare: func() {
 				mockManager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -288,8 +306,10 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr(t *testing.T) {
 						RetryIntervalSecond: 60,
 						IsInDebt:            true,
 					})
+				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7个参数)
 				mockManager.EXPECT().CompleteRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockManager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				// CompleteExpt: ctx, exptID, spaceID, session, WithStatus, WithStatusMessage, WithCID, WithCompleteInterval (8个参数)
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockMetric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 			},
 			event:   &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},

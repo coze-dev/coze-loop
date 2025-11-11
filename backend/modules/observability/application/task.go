@@ -143,6 +143,9 @@ func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.C
 			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("The start time must be earlier than the end time."))
 		}
 	}
+	if req.GetTask().GetRule().GetSampler().GetIsCycle() && req.GetTask().GetRule().GetSampler().GetCycleInterval() == 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid cycle_interval"))
+	}
 
 	return nil
 }

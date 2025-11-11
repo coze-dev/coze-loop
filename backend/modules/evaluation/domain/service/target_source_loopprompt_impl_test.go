@@ -268,12 +268,13 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 						DisplayName: gptr.Of("Test Prompt"),
 					},
 				}
-				mockPromptRPCAdapter.EXPECT().GetPrompt(
-					ctx,
-					defaultSpaceID,
-					defaultSourceTargetIDInt,
-					rpc.GetPromptParams{CommitVersion: &defaultSourceTargetVersion},
-				).Return(mockPrompt, nil)
+				// mockPromptRPCAdapter.EXPECT().GetPrompt(
+				// 	ctx,
+				// 	defaultSpaceID,
+				// 	defaultSourceTargetIDInt,
+				// 	rpc.GetPromptParams{CommitVersion: &defaultSourceTargetVersion},
+				// ).Return(mockPrompt, nil)
+				mockPromptRPCAdapter.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*rpc.LoopPrompt{mockPrompt}, nil)
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.NotNil(t, evalTarget)
@@ -324,7 +325,8 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 						CommitInfo: &rpc.CommitInfo{Version: gptr.Of(defaultSourceTargetVersion)},
 					},
 				}
-				mockPromptRPCAdapter.EXPECT().GetPrompt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPrompt, nil)
+				mockPromptRPCAdapter.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*rpc.LoopPrompt{mockPrompt}, nil)
+				// mockPromptRPCAdapter.EXPECT().GetPrompt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPrompt, nil)
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.NotNil(t, evalTarget)
@@ -347,7 +349,8 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 						CommitInfo: &rpc.CommitInfo{Version: gptr.Of(defaultSourceTargetVersion)},
 					},
 				}
-				mockPromptRPCAdapter.EXPECT().GetPrompt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPrompt, nil)
+				mockPromptRPCAdapter.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*rpc.LoopPrompt{mockPrompt}, nil)
+				// mockPromptRPCAdapter.EXPECT().GetPrompt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPrompt, nil)
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.NotNil(t, evalTarget)
@@ -368,7 +371,8 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 						CommitInfo: &rpc.CommitInfo{Version: gptr.Of(defaultSourceTargetVersion)},
 					},
 				}
-				mockPromptRPCAdapter.EXPECT().GetPrompt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPrompt, nil)
+				mockPromptRPCAdapter.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*rpc.LoopPrompt{mockPrompt}, nil)
+				// mockPromptRPCAdapter.EXPECT().GetPrompt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPrompt, nil)
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.NotNil(t, evalTarget)
@@ -386,7 +390,8 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 					PromptKey:    "test_prompt_key",
 					PromptCommit: nil,
 				}
-				mockPromptRPCAdapter.EXPECT().GetPrompt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPrompt, nil)
+				mockPromptRPCAdapter.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*rpc.LoopPrompt{mockPrompt}, nil)
+				// mockPromptRPCAdapter.EXPECT().GetPrompt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockPrompt, nil)
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.NotNil(t, evalTarget)
@@ -416,12 +421,13 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup: func() {
 				expectedErr := errors.New("RPC GetPrompt error")
-				mockPromptRPCAdapter.EXPECT().GetPrompt(
-					ctx,
-					defaultSpaceID,
-					defaultSourceTargetIDInt,
-					rpc.GetPromptParams{CommitVersion: &defaultSourceTargetVersion},
-				).Return(nil, expectedErr)
+				// mockPromptRPCAdapter.EXPECT().GetPrompt(
+				// 	ctx,
+				// 	defaultSpaceID,
+				// 	defaultSourceTargetIDInt,
+				// 	rpc.GetPromptParams{CommitVersion: &defaultSourceTargetVersion},
+				// ).Return(nil, expectedErr)
+				mockPromptRPCAdapter.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, expectedErr)
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.Nil(t, evalTarget)
@@ -437,12 +443,13 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			sourceTargetID:      defaultSourceTargetIDStr,
 			sourceTargetVersion: defaultSourceTargetVersion,
 			mockSetup: func() {
-				mockPromptRPCAdapter.EXPECT().GetPrompt(
-					ctx,
-					defaultSpaceID,
-					defaultSourceTargetIDInt,
-					rpc.GetPromptParams{CommitVersion: &defaultSourceTargetVersion},
-				).Return(nil, nil)
+				// mockPromptRPCAdapter.EXPECT().GetPrompt(
+				// 	ctx,
+				// 	defaultSpaceID,
+				// 	defaultSourceTargetIDInt,
+				// 	rpc.GetPromptParams{CommitVersion: &defaultSourceTargetVersion},
+				// ).Return(nil, nil)
+				mockPromptRPCAdapter.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.Nil(t, evalTarget)
