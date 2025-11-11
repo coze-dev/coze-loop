@@ -2084,3 +2084,169 @@ func TestOpenAPIPromptBasicDO2DTO(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenAPIToolTypeDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   entity.ToolType
+		want openapi.ToolType
+	}{
+		{
+			name: "function type",
+			do:   entity.ToolTypeFunction,
+			want: openapi.ToolTypeFunction,
+		},
+		{
+			name: "google_search type",
+			do:   entity.ToolTypeGoogleSearch,
+			want: openapi.ToolTypeGoogleSearch,
+		},
+		{
+			name: "unknown type defaults to function",
+			do:   entity.ToolType("unknown"),
+			want: openapi.ToolTypeFunction,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolTypeDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestOpenAPIToolTypeDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  openapi.ToolType
+		want entity.ToolType
+	}{
+		{
+			name: "function type",
+			dto:  openapi.ToolTypeFunction,
+			want: entity.ToolTypeFunction,
+		},
+		{
+			name: "google_search type",
+			dto:  openapi.ToolTypeGoogleSearch,
+			want: entity.ToolTypeGoogleSearch,
+		},
+		{
+			name: "unknown type defaults to function",
+			dto:  openapi.ToolType("unknown"),
+			want: entity.ToolTypeFunction,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolTypeDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestOpenAPIToolChoiceSpecificationDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   *entity.ToolChoiceSpecification
+		want *openapi.ToolChoiceSpecification
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "specification with function type",
+			do: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeFunction,
+				Name: "get_weather",
+			},
+			want: &openapi.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeFunction),
+				Name: ptr.Of("get_weather"),
+			},
+		},
+		{
+			name: "specification with google_search type",
+			do: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeGoogleSearch,
+				Name: "search",
+			},
+			want: &openapi.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+				Name: ptr.Of("search"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolChoiceSpecificationDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
+	tests := []struct {
+		name string
+		do   *entity.ToolCallConfig
+		want *openapi.ToolCallConfig
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "auto without specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeAuto,
+			},
+			want: &openapi.ToolCallConfig{
+				ToolChoice:              ptr.Of(prompt.ToolChoiceTypeAuto),
+				ToolChoiceSpecification: nil,
+			},
+		},
+		{
+			name: "specific with specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeFunction,
+					Name: "get_weather",
+				},
+			},
+			want: &openapi.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeFunction),
+					Name: ptr.Of("get_weather"),
+				},
+			},
+		},
+		{
+			name: "specific with google_search specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeGoogleSearch,
+					Name: "search",
+				},
+			},
+			want: &openapi.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+					Name: ptr.Of("search"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolCallConfigDO2DTO(tt.do))
+		})
+	}
+}

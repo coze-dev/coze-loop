@@ -383,9 +383,22 @@ func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param Execu
 	// call llm
 	promptDetail := param.Prompt.GetPromptDetail()
 	var tools []*entity.Tool
+	var toolCallConfig *entity.ToolCallConfig
 	if promptDetail != nil {
 		if promptDetail.ToolCallConfig != nil && promptDetail.ToolCallConfig.ToolChoice != entity.ToolChoiceTypeNone {
 			tools = promptDetail.Tools
+			toolCallConfig = promptDetail.ToolCallConfig
+		}
+	}
+	// Validate tool choice specification
+	if toolCallConfig != nil && toolCallConfig.ToolChoice == entity.ToolChoiceTypeSpecific {
+		// When tool choice is specific, must be in single step mode
+		if !param.SingleStep {
+			return rpc.LLMCallParam{}, errorx.New("tool choice specific must be used with single step mode to avoid infinite loops")
+		}
+		// ToolChoiceSpecification must not be empty
+		if toolCallConfig.ToolChoiceSpecification == nil {
+			return rpc.LLMCallParam{}, errorx.New("tool_choice_specification must not be empty when tool choice is specific")
 		}
 	}
 	var modelConfig *entity.ModelConfig
@@ -405,7 +418,7 @@ func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param Execu
 		UserID:         userID,
 		Messages:       messages,
 		Tools:          tools,
-		ToolCallConfig: nil,
+		ToolCallConfig: toolCallConfig,
 		ModelConfig:    modelConfig,
 	}, nil
 }

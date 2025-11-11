@@ -374,6 +374,10 @@ func ToolCallDTO2DO(dto *prompt.ToolCall) *entity.ToolCall {
 
 func ToolTypeDTO2DO(dto prompt.ToolType) entity.ToolType {
 	switch dto {
+	case prompt.ToolTypeFunction:
+		return entity.ToolTypeFunction
+	case prompt.ToolTypeGoogleSearch:
+		return entity.ToolTypeGoogleSearch
 	default:
 		return entity.ToolTypeFunction
 	}
@@ -396,7 +400,19 @@ func ToolCallConfigDTO2DO(dto *prompt.ToolCallConfig) *entity.ToolCallConfig {
 	}
 
 	return &entity.ToolCallConfig{
-		ToolChoice: ToolChoiceTypeDTO2DO(dto.GetToolChoice()),
+		ToolChoice:              ToolChoiceTypeDTO2DO(dto.GetToolChoice()),
+		ToolChoiceSpecification: ToolChoiceSpecificationDTO2DO(dto.ToolChoiceSpecification),
+	}
+}
+
+func ToolChoiceSpecificationDTO2DO(dto *prompt.ToolChoiceSpecification) *entity.ToolChoiceSpecification {
+	if dto == nil {
+		return nil
+	}
+
+	return &entity.ToolChoiceSpecification{
+		Type: ToolTypeDTO2DO(dto.GetType()),
+		Name: dto.GetName(),
 	}
 }
 
@@ -406,6 +422,8 @@ func ToolChoiceTypeDTO2DO(dto prompt.ToolChoiceType) entity.ToolChoiceType {
 		return entity.ToolChoiceTypeNone
 	case prompt.ToolChoiceTypeAuto:
 		return entity.ToolChoiceTypeAuto
+	case prompt.ToolChoiceTypeSpecific:
+		return entity.ToolChoiceTypeSpecific
 	default:
 		return entity.ToolChoiceTypeAuto
 	}
@@ -511,6 +529,10 @@ func ToolCallDO2DTO(do *entity.ToolCall) *prompt.ToolCall {
 
 func ToolTypeDO2DTO(do entity.ToolType) prompt.ToolType {
 	switch do {
+	case entity.ToolTypeFunction:
+		return prompt.ToolTypeFunction
+	case entity.ToolTypeGoogleSearch:
+		return prompt.ToolTypeGoogleSearch
 	default:
 		return prompt.ToolTypeFunction
 	}
@@ -838,7 +860,18 @@ func ToolCallConfigDO2DTO(do *entity.ToolCallConfig) *prompt.ToolCallConfig {
 		return nil
 	}
 	return &prompt.ToolCallConfig{
-		ToolChoice: ptr.Of(prompt.ToolChoiceType(do.ToolChoice)),
+		ToolChoice:              ptr.Of(prompt.ToolChoiceType(do.ToolChoice)),
+		ToolChoiceSpecification: ToolChoiceSpecificationDO2DTO(do.ToolChoiceSpecification),
+	}
+}
+
+func ToolChoiceSpecificationDO2DTO(do *entity.ToolChoiceSpecification) *prompt.ToolChoiceSpecification {
+	if do == nil {
+		return nil
+	}
+	return &prompt.ToolChoiceSpecification{
+		Type: ptr.Of(prompt.ToolType(do.Type)),
+		Name: ptr.Of(do.Name),
 	}
 }
 
