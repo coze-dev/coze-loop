@@ -57,6 +57,7 @@ struct OutputSpan {
     21: optional map<string, double> tags_double
     22: optional map<string, bool> tags_bool
     23: optional map<string, string> tags_bytes
+    24: optional string call_type
 
     101: optional map<string, string> custom_tags
     102: optional AttrTos attr_tos

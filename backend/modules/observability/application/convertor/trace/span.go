@@ -30,6 +30,7 @@ func SpanDO2DTO(
 		ParentID:        s.ParentID,
 		SpanName:        s.SpanName,
 		SpanType:        s.SpanType,
+		CallType:        &s.CallType,
 		StartedAt:       time_util.MicroSec2MillSec(s.StartTime),      // to ms
 		Duration:        time_util.MicroSec2MillSec(s.DurationMicros), // to ms
 		StatusCode:      s.StatusCode,

@@ -663,6 +663,20 @@ func (p *OutputSpan) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 24:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField24(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 101:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField101(buf[offset:])
@@ -1264,6 +1278,20 @@ func (p *OutputSpan) FastReadField23(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *OutputSpan) FastReadField24(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.CallType = _field
+	return offset, nil
+}
+
 func (p *OutputSpan) FastReadField101(buf []byte) (int, error) {
 	offset := 0
 
@@ -1395,6 +1423,7 @@ func (p *OutputSpan) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField23(buf[offset:], w)
+		offset += p.fastWriteField24(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
@@ -1430,6 +1459,7 @@ func (p *OutputSpan) BLength() int {
 		l += p.field21Length()
 		l += p.field22Length()
 		l += p.field23Length()
+		l += p.field24Length()
 		l += p.field101Length()
 		l += p.field102Length()
 		l += p.field103Length()
@@ -1682,6 +1712,15 @@ func (p *OutputSpan) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
 		}
 		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+	}
+	return offset
+}
+
+func (p *OutputSpan) fastWriteField24(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCallType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 24)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.CallType)
 	}
 	return offset
 }
@@ -1976,6 +2015,15 @@ func (p *OutputSpan) field23Length() int {
 	return l
 }
 
+func (p *OutputSpan) field24Length() int {
+	l := 0
+	if p.IsSetCallType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.CallType)
+	}
+	return l
+}
+
 func (p *OutputSpan) field101Length() int {
 	l := 0
 	if p.IsSetCustomTags() {
@@ -2217,6 +2265,14 @@ func (p *OutputSpan) DeepCopy(s interface{}) error {
 
 			p.TagsBytes[_key] = _val
 		}
+	}
+
+	if src.CallType != nil {
+		var tmp string
+		if *src.CallType != "" {
+			tmp = kutils.StringDeepCopy(*src.CallType)
+		}
+		p.CallType = &tmp
 	}
 
 	if src.CustomTags != nil {
