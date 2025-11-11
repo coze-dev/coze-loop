@@ -143,7 +143,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			if backfillTaskRun.RunStatus != task.RunStatusDone {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
-				if lockErr != nil || !locked {
+				if (lockErr != nil || !locked) && time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
 					_ = h.sendBackfillMessage(ctx, &entity.BackFillEvent{
 						TaskID:  taskPO.ID,
 						SpaceID: taskPO.WorkspaceID,
@@ -167,7 +167,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			if backfillTaskRun.RunStatus != task.RunStatusDone {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
-				if lockErr != nil || !locked {
+				if (lockErr != nil || !locked) && time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
 					_ = h.sendBackfillMessage(ctx, &entity.BackFillEvent{
 						TaskID:  taskPO.ID,
 						SpaceID: taskPO.WorkspaceID,
