@@ -28,6 +28,7 @@ import (
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -978,6 +979,44 @@ func (d *ManageRepoImpl) ListCommitInfo(ctx context.Context, param repo.ListComm
 	return result, nil
 }
 
+func (d *ManageRepoImpl) CollectAllCommitVersions(ctx context.Context, promptID int64) ([]string, error) {
+	if promptID <= 0 {
+		return nil, errorx.New("promptID is invalid, promptID = %d", promptID)
+	}
+
+	const pageSize = 100
+	var (
+		pageToken *int64
+		versions  []string
+	)
+
+	for {
+		result, err := d.ListCommitInfo(ctx, repo.ListCommitInfoParam{
+			PromptID:  promptID,
+			PageSize:  pageSize,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if result == nil || len(result.CommitInfoDOs) == 0 {
+			break
+		}
+		for _, info := range result.CommitInfoDOs {
+			if info == nil || lo.IsEmpty(info.Version) {
+				continue
+			}
+			versions = append(versions, info.Version)
+		}
+		if result.NextPageToken <= 0 {
+			break
+		}
+		pageToken = ptr.Of(result.NextPageToken)
+	}
+
+	return lo.Uniq(versions), nil
+}
+
 func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListParentPromptParam) (result map[string]*repo.PromptCommitVersions, err error) {
 	if param.SubPromptID <= 0 {
 		return nil, errorx.New("param(SubPromptID) is invalid, param = %s", json.Jsonify(param))
@@ -1062,4 +1101,66 @@ func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListPa
 	}
 
 	return result, nil
+}
+
+func (d *ManageRepoImpl) ListSubPrompt(ctx context.Context, param repo.ListSubPromptParam) ([]*entity.Prompt, error) {
+	if param.PromptID <= 0 {
+		return nil, errorx.New("param(PromptID) is invalid, param = %s", json.Jsonify(param))
+	}
+
+	listParam := mysql.ListPromptRelationParam{
+		MainPromptID: ptr.Of(param.PromptID),
+	}
+	if len(param.PromptVersions) > 0 {
+		listParam.MainPromptVersions = param.PromptVersions
+	}
+	if param.PromptDraftUserID != "" {
+		listParam.MainDraftUserID = ptr.Of(param.PromptDraftUserID)
+	}
+
+	relations, err := d.promptRelationDAO.List(ctx, listParam)
+	if err != nil {
+		return nil, err
+	}
+	if len(relations) == 0 {
+		return nil, nil
+	}
+
+	querySet := make(map[repo.GetPromptParam]struct{})
+	queries := make([]repo.GetPromptParam, 0, len(relations))
+	for _, relation := range relations {
+		if relation == nil || relation.SubPromptID <= 0 {
+			continue
+		}
+		query := repo.GetPromptParam{
+			PromptID: relation.SubPromptID,
+		}
+		if relation.SubPromptVersion != "" {
+			query.WithCommit = true
+			query.CommitVersion = relation.SubPromptVersion
+		}
+		if _, exists := querySet[query]; exists {
+			continue
+		}
+		querySet[query] = struct{}{}
+		queries = append(queries, query)
+	}
+
+	if len(queries) == 0 {
+		return nil, nil
+	}
+
+	promptMap, err := d.MGetPrompt(ctx, queries)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]*entity.Prompt, 0, len(queries))
+	for _, query := range queries {
+		if promptDO, ok := promptMap[query]; ok && promptDO != nil {
+			results = append(results, promptDO)
+		}
+	}
+
+	return results, nil
 }

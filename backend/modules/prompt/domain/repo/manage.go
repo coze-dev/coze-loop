@@ -18,10 +18,12 @@ type IManageRepo interface {
 	MGetPromptBasicByPromptKey(ctx context.Context, spaceID int64, promptKeys []string, opts ...GetPromptBasicOptionFunc) (promptDOs []*entity.Prompt, err error)
 	ListPrompt(ctx context.Context, param ListPromptParam) (result *ListPromptResult, err error)
 	ListParentPrompt(ctx context.Context, param ListParentPromptParam) (result map[string]*PromptCommitVersions, err error)
+	ListSubPrompt(ctx context.Context, param ListSubPromptParam) (promptDOs []*entity.Prompt, err error)
 	UpdatePrompt(ctx context.Context, param UpdatePromptParam) (err error)
 	SaveDraft(ctx context.Context, promptDO *entity.Prompt) (draftInfo *entity.DraftInfo, err error)
 	CommitDraft(ctx context.Context, param CommitDraftParam) (err error)
 	ListCommitInfo(ctx context.Context, param ListCommitInfoParam) (result *ListCommitResult, err error)
+	CollectAllCommitVersions(ctx context.Context, promptID int64) (versions []string, err error)
 }
 
 type GetPromptParam struct {
@@ -88,6 +90,12 @@ type ListCommitResult struct {
 type ListParentPromptParam struct {
 	SubPromptID       int64
 	SubPromptVersions []string
+}
+
+type ListSubPromptParam struct {
+	PromptID          int64
+	PromptVersions    []string
+	PromptDraftUserID string
 }
 
 type PromptCommitVersions struct {

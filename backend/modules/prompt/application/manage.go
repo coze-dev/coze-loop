@@ -319,23 +319,32 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 
 	// [prompt片段]返回被引用总次数
 	if promptDO.PromptBasic != nil && promptDO.PromptBasic.PromptType == entity.PromptTypeSnippet {
-		commitVersions, err := app.collectAllCommitVersions(ctx, request.GetPromptID())
-		if err != nil {
-			return r, err
+		var commitVersionParams []string
+		if request.GetWithCommit() && lo.IsEmpty(commitVersion) {
+			commitVersionParams = append(commitVersionParams, commitVersion)
 		}
-		parentPromptCommitVersions, err := app.manageRepo.ListParentPrompt(ctx, repo.ListParentPromptParam{
-			SubPromptID:       request.GetPromptID(),
-			SubPromptVersions: commitVersions,
-		})
-		if err != nil {
-			return r, err
-		}
-		if len(parentPromptCommitVersions) > 0 {
-			var total int32
-			for _, parents := range parentPromptCommitVersions {
-				total += int32(len(parents.CommitVersions))
+		if request.GetWithDraft() {
+			commitVersions, err := app.manageRepo.CollectAllCommitVersions(ctx, request.GetPromptID())
+			if err != nil {
+				return r, err
 			}
-			r.TotalParentReferences = ptr.Of(total)
+			commitVersionParams = append(commitVersionParams, commitVersions...)
+		}
+		if len(commitVersionParams) > 0 {
+			parentPromptCommitVersions, err := app.manageRepo.ListParentPrompt(ctx, repo.ListParentPromptParam{
+				SubPromptID:       request.GetPromptID(),
+				SubPromptVersions: commitVersionParams,
+			})
+			if err != nil {
+				return r, err
+			}
+			if len(parentPromptCommitVersions) > 0 {
+				var total int32
+				for _, parents := range parentPromptCommitVersions {
+					total += int32(len(parents.CommitVersions))
+				}
+				r.TotalParentReferences = ptr.Of(total)
+			}
 		}
 	}
 	return r, err
@@ -760,38 +769,6 @@ func (app *PromptManageApplicationImpl) RevertDraftFromCommit(ctx context.Contex
 	}
 	_, err = app.promptService.SaveDraft(ctx, promptDO)
 	return r, err
-}
-
-func (app *PromptManageApplicationImpl) collectAllCommitVersions(ctx context.Context, promptID int64) ([]string, error) {
-	const pageSize = 100
-	var (
-		pageToken *int64
-		versions  []string
-	)
-	for {
-		result, err := app.manageRepo.ListCommitInfo(ctx, repo.ListCommitInfoParam{
-			PromptID:  promptID,
-			PageSize:  pageSize,
-			PageToken: pageToken,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if result == nil || len(result.CommitInfoDOs) == 0 {
-			break
-		}
-		for _, info := range result.CommitInfoDOs {
-			if info == nil || lo.IsEmpty(info.Version) {
-				continue
-			}
-			versions = append(versions, info.Version)
-		}
-		if result.NextPageToken <= 0 {
-			break
-		}
-		pageToken = ptr.Of(result.NextPageToken)
-	}
-	return lo.Uniq(versions), nil
 }
 
 func (app *PromptManageApplicationImpl) countSubSnippetReferences(ctx context.Context, promptID int64, commitVersions []string) (map[string]int32, error) {
