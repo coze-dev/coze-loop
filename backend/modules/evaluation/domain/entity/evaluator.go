@@ -25,10 +25,10 @@ type Evaluator struct {
 }
 
 type EvaluatorInfo struct {
-	Benchmark     string `json:"benchmark"`
-	Vendor        string `json:"vendor"`
-	VendorURL     string `json:"vendor_url"`
-	UserManualURL string `json:"user_manual_url"`
+	Benchmark     *string `json:"benchmark"`
+	Vendor        *string `json:"vendor"`
+	VendorURL     *string `json:"vendor_url"`
+	UserManualURL *string `json:"user_manual_url"`
 }
 
 type EvaluatorBoxType int64

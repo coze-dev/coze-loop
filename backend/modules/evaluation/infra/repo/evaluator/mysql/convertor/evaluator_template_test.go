@@ -50,7 +50,7 @@ func TestConvertEvaluatorTemplateDO2PO(t *testing.T) {
 				EvaluatorType:      evaluatordo.EvaluatorTypePrompt,
 				ReceiveChatHistory: gptr.Of(true),
 				Popularity:         100,
-				EvaluatorInfo:      &evaluatordo.EvaluatorInfo{Benchmark: "benchmark1", Vendor: "vendor1", VendorURL: "u1", UserManualURL: "m1"},
+				EvaluatorInfo:      &evaluatordo.EvaluatorInfo{Benchmark: gptr.Of("benchmark1"), Vendor: gptr.Of("vendor1"), VendorURL: gptr.Of("u1"), UserManualURL: gptr.Of("m1")},
 				BaseInfo: &evaluatordo.BaseInfo{
 					CreatedBy: &evaluatordo.UserInfo{
 						UserID: ptr.Of("user1"),
@@ -77,10 +77,10 @@ func TestConvertEvaluatorTemplateDO2PO(t *testing.T) {
 				if assert.NotNil(t, po.EvaluatorInfo) {
 					var info evaluatordo.EvaluatorInfo
 					_ = json.Unmarshal(*po.EvaluatorInfo, &info)
-					assert.Equal(t, "benchmark1", info.Benchmark)
-					assert.Equal(t, "vendor1", info.Vendor)
-					assert.Equal(t, "u1", info.VendorURL)
-					assert.Equal(t, "m1", info.UserManualURL)
+					assert.Equal(t, "benchmark1", gptr.Indirect(info.Benchmark))
+					assert.Equal(t, "vendor1", gptr.Indirect(info.Vendor))
+					assert.Equal(t, "u1", gptr.Indirect(info.VendorURL))
+					assert.Equal(t, "m1", gptr.Indirect(info.UserManualURL))
 				}
 				assert.Equal(t, "user1", po.CreatedBy)
 				assert.Equal(t, "user1", po.UpdatedBy)
@@ -250,10 +250,10 @@ func TestConvertEvaluatorTemplatePO2DO(t *testing.T) {
 				assert.True(t, gptr.Indirect(do.ReceiveChatHistory))
 				assert.Equal(t, int64(100), do.Popularity)
 				if assert.NotNil(t, do.EvaluatorInfo) {
-					assert.Equal(t, "benchmark1", do.EvaluatorInfo.Benchmark)
-					assert.Equal(t, "vendor1", do.EvaluatorInfo.Vendor)
-					assert.Equal(t, "u1", do.EvaluatorInfo.VendorURL)
-					assert.Equal(t, "m1", do.EvaluatorInfo.UserManualURL)
+					assert.Equal(t, "benchmark1", gptr.Indirect(do.EvaluatorInfo.Benchmark))
+					assert.Equal(t, "vendor1", gptr.Indirect(do.EvaluatorInfo.Vendor))
+					assert.Equal(t, "u1", gptr.Indirect(do.EvaluatorInfo.VendorURL))
+					assert.Equal(t, "m1", gptr.Indirect(do.EvaluatorInfo.UserManualURL))
 				}
 				assert.NotNil(t, do.Tags)
 			},

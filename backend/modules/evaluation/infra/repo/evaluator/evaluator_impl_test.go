@@ -2142,13 +2142,13 @@ func TestEvaluatorRepoImpl_UpdateBuiltinEvaluatorMeta(t *testing.T) {
 			}
 
 			err := repo.UpdateEvaluatorMeta(context.Background(), &entity.UpdateEvaluatorMetaRequest{
-				ID:           tt.id,
-				SpaceID:      100, // 使用测试用的spaceID
-				Name:         gptr.Of(""),
-				Description:  gptr.Of(""),
+				ID:          tt.id,
+				SpaceID:     100, // 使用测试用的spaceID
+				Name:        gptr.Of(""),
+				Description: gptr.Of(""),
 				EvaluatorInfo: &entity.EvaluatorInfo{
-					Benchmark: tt.benchmark,
-					Vendor:    tt.vendor,
+					Benchmark: gptr.Of(tt.benchmark),
+					Vendor:    gptr.Of(tt.vendor),
 				},
 				UpdatedBy: tt.userID,
 			})
@@ -2586,13 +2586,13 @@ func TestEvaluatorRepoImpl_UpdateEvaluatorTags(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		evaluatorID   int64
-		tags          map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string
-		mockSetup     func()
+		name               string
+		evaluatorID        int64
+		tags               map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string
+		mockSetup          func()
 		mockSetupWithMocks func(idgen *idgenmocks.MockIIDGenerator, evaluatorDAO *evaluatormocks.MockEvaluatorDAO, evaluatorVersionDAO *evaluatormocks.MockEvaluatorVersionDAO, tagDAO *evaluatormocks.MockEvaluatorTagDAO, dbProvider *dbmocks.MockProvider, lwt *platestwritemocks.MockILatestWriteTracker, templateDAO *evaluatormocks.MockEvaluatorTemplateDAO)
-		expectedError error
-		description   string
+		expectedError      error
+		description        string
 	}{
 		{
 			name:        "成功 - 新增标签",
@@ -2960,4 +2960,3 @@ func TestEvaluatorRepoImpl_UpdateEvaluatorTags(t *testing.T) {
 		})
 	}
 }
-

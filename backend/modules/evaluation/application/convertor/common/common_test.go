@@ -118,8 +118,7 @@ func TestConvertImageDTO2DO(t *testing.T) {
 				Name: gptr.Of("minimal.jpg"),
 			},
 			expected: &commonentity.Image{
-				Name:            gptr.Of("minimal.jpg"),
-				StorageProvider: gptr.Of(commonentity.StorageProvider(0)),
+				Name: gptr.Of("minimal.jpg"),
 			},
 		},
 	}
@@ -169,8 +168,7 @@ func TestConvertImageDO2DTO(t *testing.T) {
 				Name: gptr.Of("minimal.jpg"),
 			},
 			expected: &commondto.Image{
-				Name:            gptr.Of("minimal.jpg"),
-				StorageProvider: gptr.Of(dataset.StorageProvider(0)),
+				Name: gptr.Of("minimal.jpg"),
 			},
 		},
 	}
@@ -308,9 +306,8 @@ func TestConvertContentDTO2DO(t *testing.T) {
 			expected: &commonentity.Content{
 				ContentType: gptr.Of(commonentity.ContentType("image")),
 				Image: &commonentity.Image{
-					Name:            gptr.Of("test.jpg"),
-					URL:             gptr.Of("https://example.com/test.jpg"),
-					StorageProvider: gptr.Of(commonentity.StorageProvider(0)),
+					Name: gptr.Of("test.jpg"),
+					URL:  gptr.Of("https://example.com/test.jpg"),
 				},
 			},
 		},
@@ -407,9 +404,8 @@ func TestConvertContentDO2DTO(t *testing.T) {
 			expected: &commondto.Content{
 				ContentType: gptr.Of("image"),
 				Image: &commondto.Image{
-					Name:            gptr.Of("test.jpg"),
-					URL:             gptr.Of("https://example.com/test.jpg"),
-					StorageProvider: gptr.Of(dataset.StorageProvider(0)),
+					Name: gptr.Of("test.jpg"),
+					URL:  gptr.Of("https://example.com/test.jpg"),
 				},
 			},
 		},

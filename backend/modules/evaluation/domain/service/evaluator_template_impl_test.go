@@ -25,12 +25,12 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		req            *entity.CreateEvaluatorTemplateRequest
-		mockSetup      func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
-		expectedError  bool
+		name            string
+		req             *entity.CreateEvaluatorTemplateRequest
+		mockSetup       func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
+		expectedError   bool
 		expectedErrCode int32
-		description    string
+		description     string
 	}{
 		{
 			name: "成功 - 创建Prompt类型模板",
@@ -58,20 +58,20 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 					})
 			},
 			expectedError: false,
-			description:  "成功创建Prompt类型评估器模板",
+			description:   "成功创建Prompt类型评估器模板",
 		},
 		{
 			name: "成功 - 创建Code类型模板",
-            req: &entity.CreateEvaluatorTemplateRequest{
+			req: &entity.CreateEvaluatorTemplateRequest{
 				SpaceID:       100,
 				Name:          "Test Template",
 				Description:   "Test Description",
 				EvaluatorType: entity.EvaluatorTypeCode,
-                CodeEvaluatorContent: &entity.CodeEvaluatorContent{
-                    Lang2CodeContent: map[entity.LanguageType]string{
-                        entity.LanguageTypePython: "def evaluate(): pass",
-                    },
-                },
+				CodeEvaluatorContent: &entity.CodeEvaluatorContent{
+					Lang2CodeContent: map[entity.LanguageType]string{
+						entity.LanguageTypePython: "def evaluate(): pass",
+					},
+				},
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
 				mockRepo.EXPECT().
@@ -82,7 +82,7 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 					})
 			},
 			expectedError: false,
-			description:  "成功创建Code类型评估器模板",
+			description:   "成功创建Code类型评估器模板",
 		},
 		{
 			name: "失败 - 无效的SpaceID",
@@ -91,10 +91,10 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 				Name:          "Test Template",
 				EvaluatorType: entity.EvaluatorTypePrompt,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "无效的空间ID应该返回错误",
+			description:     "无效的空间ID应该返回错误",
 		},
 		{
 			name: "失败 - 空的模板名称",
@@ -103,10 +103,10 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 				Name:          "",
 				EvaluatorType: entity.EvaluatorTypePrompt,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "空的模板名称应该返回错误",
+			description:     "空的模板名称应该返回错误",
 		},
 		{
 			name: "失败 - 模板名称过长",
@@ -118,10 +118,10 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 					MessageList: []*entity.Message{},
 				},
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "模板名称长度超过100应该返回错误",
+			description:     "模板名称长度超过100应该返回错误",
 		},
 		{
 			name: "失败 - Prompt类型缺少PromptEvaluatorContent",
@@ -130,10 +130,10 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 				Name:          "Test Template",
 				EvaluatorType: entity.EvaluatorTypePrompt,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "Prompt类型评估器缺少PromptEvaluatorContent应该返回错误",
+			description:     "Prompt类型评估器缺少PromptEvaluatorContent应该返回错误",
 		},
 		{
 			name: "失败 - Code类型缺少CodeEvaluatorContent",
@@ -142,10 +142,10 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 				Name:          "Test Template",
 				EvaluatorType: entity.EvaluatorTypeCode,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "Code类型评估器缺少CodeEvaluatorContent应该返回错误",
+			description:     "Code类型评估器缺少CodeEvaluatorContent应该返回错误",
 		},
 		{
 			name: "失败 - 用户ID缺失",
@@ -157,10 +157,10 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 					MessageList: []*entity.Message{},
 				},
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "用户ID缺失应该返回错误",
+			description:     "用户ID缺失应该返回错误",
 		},
 		{
 			name: "失败 - repo创建错误",
@@ -177,9 +177,9 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 					CreateEvaluatorTemplate(gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("repo error"))
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.CommonInternalErrorCode,
-			description:   "repo创建错误应该返回内部错误",
+			description:     "repo创建错误应该返回内部错误",
 		},
 	}
 
@@ -226,12 +226,12 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		req            *entity.UpdateEvaluatorTemplateRequest
-		mockSetup      func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
-		expectedError  bool
+		name            string
+		req             *entity.UpdateEvaluatorTemplateRequest
+		mockSetup       func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
+		expectedError   bool
 		expectedErrCode int32
-		description    string
+		description     string
 	}{
 		{
 			name: "成功 - 更新模板名称",
@@ -241,9 +241,9 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
 				existingTemplate := &entity.EvaluatorTemplate{
-					ID:      1,
-					SpaceID: 100,
-					Name:    "Original Template",
+					ID:       1,
+					SpaceID:  100,
+					Name:     "Original Template",
 					BaseInfo: &entity.BaseInfo{},
 				}
 				mockRepo.EXPECT().
@@ -257,21 +257,21 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 					})
 			},
 			expectedError: false,
-			description:  "成功更新评估器模板名称",
+			description:   "成功更新评估器模板名称",
 		},
 		{
 			name: "成功 - 更新多个字段",
-            req: &entity.UpdateEvaluatorTemplateRequest{
-				ID:          1,
-				Name:        gptr.Of("Updated Template"),
-				Description: gptr.Of("Updated Description"),
-                EvaluatorInfo: &entity.EvaluatorInfo{Benchmark: "benchmark1", Vendor: "vendor1"},
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID:            1,
+				Name:          gptr.Of("Updated Template"),
+				Description:   gptr.Of("Updated Description"),
+				EvaluatorInfo: &entity.EvaluatorInfo{Benchmark: gptr.Of("benchmark1"), Vendor: gptr.Of("vendor1")},
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
 				existingTemplate := &entity.EvaluatorTemplate{
-					ID:      1,
-					SpaceID: 100,
-					Name:    "Original Template",
+					ID:       1,
+					SpaceID:  100,
+					Name:     "Original Template",
 					BaseInfo: &entity.BaseInfo{},
 				}
 				mockRepo.EXPECT().
@@ -285,17 +285,17 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 					})
 			},
 			expectedError: false,
-			description:  "成功更新多个字段",
+			description:   "成功更新多个字段",
 		},
 		{
 			name: "失败 - 无效的模板ID",
 			req: &entity.UpdateEvaluatorTemplateRequest{
 				ID: 0,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "无效的模板ID应该返回错误",
+			description:     "无效的模板ID应该返回错误",
 		},
 		{
 			name: "失败 - 空的模板名称",
@@ -303,10 +303,10 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 				ID:   1,
 				Name: gptr.Of(""),
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "空的模板名称应该返回错误",
+			description:     "空的模板名称应该返回错误",
 		},
 		{
 			name: "失败 - 模板名称过长",
@@ -314,10 +314,10 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 				ID:   1,
 				Name: gptr.Of(string(make([]byte, 101))),
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "模板名称长度超过100应该返回错误",
+			description:     "模板名称长度超过100应该返回错误",
 		},
 		{
 			name: "失败 - 用户ID缺失",
@@ -325,10 +325,10 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 				ID:   1,
 				Name: gptr.Of("Updated Template"),
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "用户ID缺失应该返回错误",
+			description:     "用户ID缺失应该返回错误",
 		},
 		{
 			name: "失败 - 模板不存在",
@@ -341,9 +341,9 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
 					Return(nil, nil)
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.ResourceNotFoundCode,
-			description:   "模板不存在应该返回错误",
+			description:     "模板不存在应该返回错误",
 		},
 		{
 			name: "失败 - 获取模板错误",
@@ -356,9 +356,9 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
 					Return(nil, errors.New("repo error"))
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.CommonInternalErrorCode,
-			description:   "获取模板错误应该返回内部错误",
+			description:     "获取模板错误应该返回内部错误",
 		},
 		{
 			name: "失败 - 更新模板错误",
@@ -368,9 +368,9 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
 				existingTemplate := &entity.EvaluatorTemplate{
-					ID:      1,
-					SpaceID: 100,
-					Name:    "Original Template",
+					ID:       1,
+					SpaceID:  100,
+					Name:     "Original Template",
 					BaseInfo: &entity.BaseInfo{},
 				}
 				mockRepo.EXPECT().
@@ -381,9 +381,9 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 					UpdateEvaluatorTemplate(gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("repo error"))
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.CommonInternalErrorCode,
-			description:   "更新模板错误应该返回内部错误",
+			description:     "更新模板错误应该返回内部错误",
 		},
 	}
 
@@ -429,12 +429,12 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		req            *entity.DeleteEvaluatorTemplateRequest
-		mockSetup      func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
-		expectedError  bool
+		name            string
+		req             *entity.DeleteEvaluatorTemplateRequest
+		mockSetup       func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
+		expectedError   bool
 		expectedErrCode int32
-		description    string
+		description     string
 	}{
 		{
 			name: "成功 - 删除模板",
@@ -443,7 +443,7 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
 				existingTemplate := &entity.EvaluatorTemplate{
-					ID:     1,
+					ID:      1,
 					SpaceID: 100,
 				}
 				mockRepo.EXPECT().
@@ -455,27 +455,27 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 					Return(nil)
 			},
 			expectedError: false,
-			description:  "成功删除评估器模板",
+			description:   "成功删除评估器模板",
 		},
 		{
 			name: "失败 - 无效的模板ID",
 			req: &entity.DeleteEvaluatorTemplateRequest{
 				ID: 0,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "无效的模板ID应该返回错误",
+			description:     "无效的模板ID应该返回错误",
 		},
 		{
 			name: "失败 - 用户ID缺失",
 			req: &entity.DeleteEvaluatorTemplateRequest{
 				ID: 1,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "用户ID缺失应该返回错误",
+			description:     "用户ID缺失应该返回错误",
 		},
 		{
 			name: "失败 - 模板不存在",
@@ -487,9 +487,9 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
 					Return(nil, nil)
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.ResourceNotFoundCode,
-			description:   "模板不存在应该返回错误",
+			description:     "模板不存在应该返回错误",
 		},
 		{
 			name: "失败 - 获取模板错误",
@@ -501,9 +501,9 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
 					Return(nil, errors.New("repo error"))
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.CommonInternalErrorCode,
-			description:   "获取模板错误应该返回内部错误",
+			description:     "获取模板错误应该返回内部错误",
 		},
 		{
 			name: "失败 - 删除模板错误",
@@ -512,7 +512,7 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
 				existingTemplate := &entity.EvaluatorTemplate{
-					ID:     1,
+					ID:      1,
 					SpaceID: 100,
 				}
 				mockRepo.EXPECT().
@@ -523,9 +523,9 @@ func TestEvaluatorTemplateServiceImpl_DeleteEvaluatorTemplate(t *testing.T) {
 					DeleteEvaluatorTemplate(gomock.Any(), int64(1), "user123").
 					Return(errors.New("repo error"))
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.CommonInternalErrorCode,
-			description:   "删除模板错误应该返回内部错误",
+			description:     "删除模板错误应该返回内部错误",
 		},
 	}
 
@@ -568,12 +568,12 @@ func TestEvaluatorTemplateServiceImpl_GetEvaluatorTemplate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		req            *entity.GetEvaluatorTemplateRequest
-		mockSetup      func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
-		expectedError  bool
+		name            string
+		req             *entity.GetEvaluatorTemplateRequest
+		mockSetup       func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
+		expectedError   bool
 		expectedErrCode int32
-		description    string
+		description     string
 	}{
 		{
 			name: "成功 - 获取模板",
@@ -591,12 +591,12 @@ func TestEvaluatorTemplateServiceImpl_GetEvaluatorTemplate(t *testing.T) {
 					Return(mockTemplate, nil)
 			},
 			expectedError: false,
-			description:  "成功获取评估器模板",
+			description:   "成功获取评估器模板",
 		},
 		{
 			name: "成功 - 包含已删除记录",
 			req: &entity.GetEvaluatorTemplateRequest{
-				ID:            1,
+				ID:             1,
 				IncludeDeleted: true,
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
@@ -610,17 +610,17 @@ func TestEvaluatorTemplateServiceImpl_GetEvaluatorTemplate(t *testing.T) {
 					Return(mockTemplate, nil)
 			},
 			expectedError: false,
-			description:  "成功获取已删除的模板",
+			description:   "成功获取已删除的模板",
 		},
 		{
 			name: "失败 - 无效的模板ID",
 			req: &entity.GetEvaluatorTemplateRequest{
 				ID: 0,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "无效的模板ID应该返回错误",
+			description:     "无效的模板ID应该返回错误",
 		},
 		{
 			name: "失败 - 模板不存在",
@@ -632,9 +632,9 @@ func TestEvaluatorTemplateServiceImpl_GetEvaluatorTemplate(t *testing.T) {
 					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
 					Return(nil, nil)
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.ResourceNotFoundCode,
-			description:   "模板不存在应该返回错误",
+			description:     "模板不存在应该返回错误",
 		},
 		{
 			name: "失败 - 获取模板错误",
@@ -646,9 +646,9 @@ func TestEvaluatorTemplateServiceImpl_GetEvaluatorTemplate(t *testing.T) {
 					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
 					Return(nil, errors.New("repo error"))
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.CommonInternalErrorCode,
-			description:   "获取模板错误应该返回内部错误",
+			description:     "获取模板错误应该返回内部错误",
 		},
 	}
 
@@ -687,13 +687,13 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		req            *entity.ListEvaluatorTemplateRequest
-		mockSetup      func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
-		expectedError  bool
-		expectedErrCode int32
+		name               string
+		req                *entity.ListEvaluatorTemplateRequest
+		mockSetup          func(mockRepo *repomocks.MockEvaluatorTemplateRepo)
+		expectedError      bool
+		expectedErrCode    int32
 		expectedTotalPages int32
-		description    string
+		description        string
 	}{
 		{
 			name: "成功 - 正常查询",
@@ -718,9 +718,9 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 						},
 					}, nil)
 			},
-			expectedError: false,
+			expectedError:      false,
 			expectedTotalPages: 3, // (25 + 10 - 1) / 10 = 3
-			description:   "成功查询评估器模板列表",
+			description:        "成功查询评估器模板列表",
 		},
 		{
 			name: "成功 - 包含筛选条件",
@@ -746,16 +746,16 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 						},
 					}, nil)
 			},
-			expectedError: false,
+			expectedError:      false,
 			expectedTotalPages: 1, // (5 + 10 - 1) / 10 = 1
-			description:   "成功查询带筛选条件的模板列表",
+			description:        "成功查询带筛选条件的模板列表",
 		},
 		{
 			name: "成功 - 包含已删除记录",
 			req: &entity.ListEvaluatorTemplateRequest{
-				SpaceID:       100,
-				PageSize:      10,
-				PageNum:       1,
+				SpaceID:        100,
+				PageSize:       10,
+				PageNum:        1,
 				IncludeDeleted: true,
 			},
 			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
@@ -773,9 +773,9 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 						},
 					}, nil)
 			},
-			expectedError: false,
+			expectedError:      false,
 			expectedTotalPages: 1,
-			description:   "成功查询包含已删除记录的模板列表",
+			description:        "成功查询包含已删除记录的模板列表",
 		},
 		{
 			name: "失败 - 无效的分页大小（为0）",
@@ -784,10 +784,10 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 				PageSize: 0,
 				PageNum:  1,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "无效的分页大小应该返回错误",
+			description:     "无效的分页大小应该返回错误",
 		},
 		{
 			name: "失败 - 分页大小超过100",
@@ -796,10 +796,10 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 				PageSize: 101,
 				PageNum:  1,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "分页大小超过100应该返回错误",
+			description:     "分页大小超过100应该返回错误",
 		},
 		{
 			name: "失败 - 无效的页码",
@@ -808,10 +808,10 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 				PageSize: 10,
 				PageNum:  0,
 			},
-			mockSetup:     func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
-			expectedError: true,
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
 			expectedErrCode: errno.CommonInvalidParamCode,
-			description:   "无效的页码应该返回错误",
+			description:     "无效的页码应该返回错误",
 		},
 		{
 			name: "失败 - repo查询错误",
@@ -825,9 +825,9 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 					ListEvaluatorTemplate(gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("repo error"))
 			},
-			expectedError: true,
+			expectedError:   true,
 			expectedErrCode: errno.CommonInternalErrorCode,
-			description:   "repo查询错误应该返回内部错误",
+			description:     "repo查询错误应该返回内部错误",
 		},
 		{
 			name: "成功 - 计算总页数（整除）",
@@ -846,9 +846,9 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 						},
 					}, nil)
 			},
-			expectedError: false,
+			expectedError:      false,
 			expectedTotalPages: 2, // 20 / 10 = 2
-			description:   "正确计算总页数（整除）",
+			description:        "正确计算总页数（整除）",
 		},
 		{
 			name: "成功 - 计算总页数（不整除）",
@@ -867,9 +867,9 @@ func TestEvaluatorTemplateServiceImpl_ListEvaluatorTemplate(t *testing.T) {
 						},
 					}, nil)
 			},
-			expectedError: false,
+			expectedError:      false,
 			expectedTotalPages: 3, // (21 + 10 - 1) / 10 = 3
-			description:   "正确计算总页数（不整除）",
+			description:        "正确计算总页数（不整除）",
 		},
 	}
 

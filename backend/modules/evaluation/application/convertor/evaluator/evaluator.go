@@ -35,10 +35,10 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) (*evaluatordo.
 	}
 	if evaluatorDTO.GetEvaluatorInfo() != nil {
 		evaluatorDO.EvaluatorInfo = &evaluatordo.EvaluatorInfo{
-			Benchmark:     evaluatorDTO.GetEvaluatorInfo().GetBenchmark(),
-			Vendor:        evaluatorDTO.GetEvaluatorInfo().GetVendor(),
-			VendorURL:     evaluatorDTO.GetEvaluatorInfo().GetVendorURL(),
-			UserManualURL: evaluatorDTO.GetEvaluatorInfo().GetUserManualURL(),
+			Benchmark:     evaluatorDTO.GetEvaluatorInfo().Benchmark,
+			Vendor:        evaluatorDTO.GetEvaluatorInfo().Vendor,
+			VendorURL:     evaluatorDTO.GetEvaluatorInfo().VendorURL,
+			UserManualURL: evaluatorDTO.GetEvaluatorInfo().UserManualURL,
 		}
 	}
 	if evaluatorDTO.CurrentVersion != nil {
@@ -86,10 +86,10 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 	}
 	if do.EvaluatorInfo != nil {
 		dto.EvaluatorInfo = &evaluatordto.EvaluatorInfo{
-			Benchmark:     gptr.Of(do.EvaluatorInfo.Benchmark),
-			Vendor:        gptr.Of(do.EvaluatorInfo.Vendor),
-			VendorURL:     gptr.Of(do.EvaluatorInfo.VendorURL),
-			UserManualURL: gptr.Of(do.EvaluatorInfo.UserManualURL),
+			Benchmark:     do.EvaluatorInfo.Benchmark,
+			Vendor:        do.EvaluatorInfo.Vendor,
+			VendorURL:     do.EvaluatorInfo.VendorURL,
+			UserManualURL: do.EvaluatorInfo.UserManualURL,
 		}
 	}
 	// 设置 BoxType

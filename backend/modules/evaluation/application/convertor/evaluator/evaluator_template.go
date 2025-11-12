@@ -31,10 +31,10 @@ func ConvertEvaluatorTemplateDTO2DO(dto *evaluatordto.EvaluatorTemplate) *evalua
 	}
 	if dto.GetEvaluatorInfo() != nil {
 		do.EvaluatorInfo = &evaluatordo.EvaluatorInfo{
-			Benchmark:     dto.GetEvaluatorInfo().GetBenchmark(),
-			Vendor:        dto.GetEvaluatorInfo().GetVendor(),
-			VendorURL:     dto.GetEvaluatorInfo().GetVendorURL(),
-			UserManualURL: dto.GetEvaluatorInfo().GetUserManualURL(),
+			Benchmark:     dto.GetEvaluatorInfo().Benchmark,
+			Vendor:        dto.GetEvaluatorInfo().Vendor,
+			VendorURL:     dto.GetEvaluatorInfo().VendorURL,
+			UserManualURL: dto.GetEvaluatorInfo().UserManualURL,
 		}
 	}
 
@@ -106,10 +106,10 @@ func ConvertEvaluatorTemplateDO2DTO(do *evaluatordo.EvaluatorTemplate) *evaluato
 	}
 	if do.EvaluatorInfo != nil {
 		dto.EvaluatorInfo = &evaluatordto.EvaluatorInfo{
-			Benchmark:     gptr.Of(do.EvaluatorInfo.Benchmark),
-			Vendor:        gptr.Of(do.EvaluatorInfo.Vendor),
-			VendorURL:     gptr.Of(do.EvaluatorInfo.VendorURL),
-			UserManualURL: gptr.Of(do.EvaluatorInfo.UserManualURL),
+			Benchmark:     do.EvaluatorInfo.Benchmark,
+			Vendor:        do.EvaluatorInfo.Vendor,
+			VendorURL:     do.EvaluatorInfo.VendorURL,
+			UserManualURL: do.EvaluatorInfo.UserManualURL,
 		}
 	}
 

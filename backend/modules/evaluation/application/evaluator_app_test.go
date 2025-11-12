@@ -601,19 +601,10 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 				mockConfiger.EXPECT().
 					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
 					Return([]string{"999"}) // Different workspace ID
-
-				// Mock auth - returns error when space not in config
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), &rpc.AuthorizationParam{
-						ObjectID:      strconv.FormatInt(validWorkspaceID, 10),
-						SpaceID:       validWorkspaceID,
-						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-					}).
-					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
 			},
 			wantResp:    nil,
 			wantErr:     true,
-			wantErrCode: errno.CommonNoPermissionCode,
+			wantErrCode: errno.CommonInvalidParamCode,
 		},
 		{
 			name: "error - builtin second auth failed",
