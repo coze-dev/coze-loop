@@ -7,20 +7,17 @@ export interface LoggerCommonProperties {
   scope?: string;
 }
 
-export interface SlardarMeta {
-  meta?: Record<string, unknown>; // Combination of `categories` and `metrics`, check more:
-}
-
-export interface CustomLog extends SlardarMeta, LoggerCommonProperties {
+export interface CustomLog extends LoggerCommonProperties {
   message: string;
+  meta?: Record<string, unknown>;
 }
 
 export type CustomErrorLog = CustomLog & { error: Error };
 
 export interface CustomEvent<EventEnum extends string>
-  extends SlardarMeta,
-    LoggerCommonProperties {
+  extends LoggerCommonProperties {
   eventName: EventEnum;
+  meta?: Record<string, unknown>;
 }
 
 export interface ErrorEvent<EventEnum extends string>
@@ -34,11 +31,14 @@ export interface TraceEvent<EventEnum extends string>
   eventName: EventEnum;
 }
 
-export interface TraceOptions extends SlardarMeta {
+export interface TraceOptions {
   error?: Error;
+  meta?: Record<string, unknown>;
 }
 
-type ReporterConfig = LoggerCommonProperties & SlardarMeta;
+type ReporterConfig = LoggerCommonProperties & {
+  meta?: Record<string, unknown>;
+};
 
 type LogType = 'info' | 'success' | 'warning' | 'error';
 
@@ -278,7 +278,7 @@ export class Reporter {
       ...e,
       meta: {
         ...e.meta,
-        // !NOTE: Slardar不支持`a.b`的字段的正则搜索（会报错），需要把`error.message`和`error.name`铺平放到第一层
+        // !NOTE: 需要把`error.message`和`error.name`铺平放到第一层
         errorMessage: event.error.message,
         errorName: event.error.name,
         level: event.level ?? 'error',
