@@ -5,7 +5,6 @@ package tracehub
 
 import (
 	"context"
-	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
@@ -24,6 +23,7 @@ import (
 type ITraceHubService interface {
 	SpanTrigger(ctx context.Context, span *loop_span.Span) error
 	BackFill(ctx context.Context, event *entity.BackFillEvent) error
+	StoneTaskCache(ctx context.Context, cacheInfo TaskCacheInfo) error
 }
 
 func NewTraceHubImpl(
@@ -37,44 +37,31 @@ func NewTraceHubImpl(
 	locker lock.ILocker,
 	config config.ITraceConfig,
 ) (ITraceHubService, error) {
-	// Create two independent timers with different intervals
-	scheduledTaskTicker := time.NewTicker(5 * time.Minute) // Task status lifecycle management - 5-minute interval
-	syncTaskTicker := time.NewTicker(2 * time.Minute)      // Data synchronization - 1-minute interval
 	impl := &TraceHubServiceImpl{
-		taskRepo:            tRepo,
-		scheduledTaskTicker: scheduledTaskTicker,
-		syncTaskTicker:      syncTaskTicker,
-		stopChan:            make(chan struct{}),
-		traceRepo:           traceRepo,
-		tenantProvider:      tenantProvider,
-		buildHelper:         buildHelper,
-		taskProcessor:       taskProcessor,
-		aid:                 aid,
-		backfillProducer:    backfillProducer,
-		locker:              locker,
-		config:              config,
-		localCache:          NewLocalCache(),
+		taskRepo:         tRepo,
+		traceRepo:        traceRepo,
+		tenantProvider:   tenantProvider,
+		buildHelper:      buildHelper,
+		taskProcessor:    taskProcessor,
+		aid:              aid,
+		backfillProducer: backfillProducer,
+		locker:           locker,
+		config:           config,
+		localCache:       NewLocalCache(),
 	}
 
-	// Start the scheduled tasks immediately
-	impl.startScheduledTask()
-
-	// default+lane?+新集群？——定时任务和任务处理分开——内场
 	return impl, nil
 }
 
 type TraceHubServiceImpl struct {
-	scheduledTaskTicker *time.Ticker // Task status lifecycle management timer - 5-minute interval
-	syncTaskTicker      *time.Ticker // Data synchronization timer - 1-minute interval
-	stopChan            chan struct{}
-	taskRepo            repo.ITaskRepo
-	traceRepo           trace_repo.ITraceRepo
-	tenantProvider      tenant.ITenantProvider
-	taskProcessor       *processor.TaskProcessor
-	buildHelper         service.TraceFilterProcessorBuilder
-	backfillProducer    mq.IBackfillProducer
-	locker              lock.ILocker
-	config              config.ITraceConfig
+	taskRepo         repo.ITaskRepo
+	traceRepo        trace_repo.ITraceRepo
+	tenantProvider   tenant.ITenantProvider
+	taskProcessor    *processor.TaskProcessor
+	buildHelper      service.TraceFilterProcessorBuilder
+	backfillProducer mq.IBackfillProducer
+	locker           lock.ILocker
+	config           config.ITraceConfig
 
 	// Local cache - caching non-terminal task information
 	localCache *LocalCache
@@ -82,6 +69,7 @@ type TraceHubServiceImpl struct {
 	aid int32
 }
 
-func (h *TraceHubServiceImpl) Close() {
-	close(h.stopChan)
+func (h *TraceHubServiceImpl) StoneTaskCache(ctx context.Context, cacheInfo TaskCacheInfo) error {
+	h.localCache.StoneTaskCache(ctx, cacheInfo)
+	return nil
 }

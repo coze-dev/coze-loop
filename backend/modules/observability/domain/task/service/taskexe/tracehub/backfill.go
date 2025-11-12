@@ -33,35 +33,35 @@ const (
 // 定时任务+锁
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. Set the current task context
-	ctx = h.fillCtx(ctx)
 	logs.CtxInfo(ctx, "BackFill msg %+v", event)
 
 	var (
 		lockKey    string
 		lockCancel func()
 	)
-	if h.locker != nil && event != nil {
-		lockKey = fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
-		locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, backfillLockTTL, backfillLockMaxHold)
-		if lockErr != nil {
-			logs.CtxError(ctx, "backfill acquire lock failed", "task_id", event.TaskID, "err", lockErr)
-			return lockErr
+
+	if h.locker != nil {
+		var err error
+		ctx, lockCancel, lockKey, err = h.acquireBackfillLock(ctx, event.TaskID)
+		if err != nil {
+			return err
 		}
-		if !locked {
-			logs.CtxInfo(ctx, "backfill lock held by others, skip execution", "task_id", event.TaskID)
+
+		// 如果lockKey不为空，说明成功获取了锁，需要在函数退出时释放
+		if lockKey != "" {
+			defer func(cancel func(), key string) {
+				if cancel != nil {
+					cancel()
+				} else if key != "" {
+					if _, err := h.locker.Unlock(key); err != nil {
+						logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
+					}
+				}
+			}(lockCancel, lockKey)
+		} else if lockCancel == nil {
+			// 如果lockKey为空且lockCancel为nil，说明锁被其他实例持有，直接返回
 			return nil
 		}
-		lockCancel = cancel
-		ctx = lockCtx
-		defer func(cancel func()) {
-			if cancel != nil {
-				cancel()
-			} else if lockKey != "" {
-				if _, err := h.locker.Unlock(lockKey); err != nil {
-					logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
-				}
-			}
-		}(lockCancel)
 	}
 
 	sub, err := h.buildSubscriber(ctx, event)
@@ -463,4 +463,22 @@ func (h *TraceHubServiceImpl) sendBackfillMessage(ctx context.Context, event *en
 	}
 
 	return h.backfillProducer.SendBackfill(ctx, event)
+}
+
+// acquireBackfillLock 尝试获取回填任务的分布式锁
+// 返回值: 新的上下文, 取消函数, 锁键, 错误
+func (h *TraceHubServiceImpl) acquireBackfillLock(ctx context.Context, taskID int64) (context.Context, func(), string, error) {
+	lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskID)
+	locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, backfillLockTTL, backfillLockMaxHold)
+	if lockErr != nil {
+		logs.CtxError(ctx, "backfill acquire lock failed", "task_id", taskID, "err", lockErr)
+		return ctx, nil, "", lockErr
+	}
+
+	if !locked {
+		logs.CtxInfo(ctx, "backfill lock held by others, skip execution", "task_id", taskID)
+		return ctx, nil, "", nil
+	}
+
+	return lockCtx, cancel, lockKey, nil
 }

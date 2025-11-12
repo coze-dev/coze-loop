@@ -125,6 +125,9 @@ func Init(
 	if err != nil {
 		return nil, err
 	}
+	if err = observabilityHandler.RunTaskScheduleTask(ctx); err != nil {
+		return nil, err
+	}
 	observabilityHandler.RunAsync(ctx)
 
 	return &apis.APIHandler{

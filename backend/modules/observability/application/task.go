@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
@@ -33,6 +34,7 @@ type ITaskQueueConsumer interface {
 type ITaskApplication interface {
 	task.TaskService
 	ITaskQueueConsumer
+	RunTaskScheduleTask(ctx context.Context) error
 }
 
 func NewTaskApplication(
@@ -44,6 +46,7 @@ func NewTaskApplication(
 	tracehubSvc tracehub.ITraceHubService,
 	taskProcessor processor.TaskProcessor,
 	taskCallbackService service.ITaskCallbackService,
+	scheduledTasks []scheduledtask.ScheduledTask,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
 		taskSvc:         taskService,
@@ -54,6 +57,7 @@ func NewTaskApplication(
 		tracehubSvc:     tracehubSvc,
 		taskProcessor:   taskProcessor,
 		taskCallbackSvc: taskCallbackService,
+		scheduledTasks:  scheduledTasks,
 	}, nil
 }
 
@@ -66,6 +70,7 @@ type TaskApplication struct {
 	tracehubSvc     tracehub.ITraceHubService
 	taskProcessor   processor.TaskProcessor
 	taskCallbackSvc service.ITaskCallbackService
+	scheduledTasks  []scheduledtask.ScheduledTask
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
@@ -303,4 +308,14 @@ func (t *TaskApplication) BackFill(ctx context.Context, event *entity.BackFillEv
 	}
 
 	return t.tracehubSvc.BackFill(ctx, event)
+}
+
+func (t *TaskApplication) RunTaskScheduleTask(ctx context.Context) error {
+	for _, scheduledTask := range t.scheduledTasks {
+		if err := scheduledTask.Run(); err != nil {
+			logs.CtxError(ctx, "RunTaskScheduleTask err:%v", err)
+			return err
+		}
+	}
+	return nil
 }

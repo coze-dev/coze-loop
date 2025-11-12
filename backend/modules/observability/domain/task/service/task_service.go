@@ -73,6 +73,8 @@ type ITaskService interface {
 	ListTasks(ctx context.Context, req *ListTasksReq) (resp *ListTasksResp, err error)
 	GetTask(ctx context.Context, req *GetTaskReq) (resp *GetTaskResp, err error)
 	CheckTaskName(ctx context.Context, req *CheckTaskNameReq) (resp *CheckTaskNameResp, err error)
+
+	SendBackfillMessage(ctx context.Context, event *entity.BackFillEvent) error
 }
 
 func NewTaskServiceImpl(
@@ -150,7 +152,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 			TaskID:  id,
 		}
 
-		if err := t.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
+		if err := t.SendBackfillMessage(context.Background(), backfillEvent); err != nil {
 			// 失败了会有定时任务进行补偿
 			logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", id, err)
 		}
@@ -346,8 +348,8 @@ func (t *TaskServiceImpl) CheckTaskName(ctx context.Context, req *CheckTaskNameR
 	return &CheckTaskNameResp{Pass: gptr.Of(pass)}, nil
 }
 
-// sendBackfillMessage 发送MQ消息
-func (t *TaskServiceImpl) sendBackfillMessage(ctx context.Context, event *entity.BackFillEvent) error {
+// SendBackfillMessage 发送MQ消息
+func (t *TaskServiceImpl) SendBackfillMessage(ctx context.Context, event *entity.BackFillEvent) error {
 	if t.backfillProducer == nil {
 		return errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg("backfill producer not initialized"))
 	}

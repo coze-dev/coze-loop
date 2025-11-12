@@ -174,7 +174,7 @@ type DataReflowRunConfig struct {
 	Status       string `json:"status"`
 }
 
-func (t ObservabilityTask) GetRunTimeRange() (startAt, endAt int64) {
+func (t *ObservabilityTask) GetRunTimeRange() (startAt, endAt int64) {
 	if t.EffectiveTime == nil {
 		return 0, 0
 	}
@@ -194,7 +194,7 @@ func (t ObservabilityTask) GetRunTimeRange() (startAt, endAt int64) {
 	return startAt, endAt
 }
 
-func (t ObservabilityTask) IsFinished() bool {
+func (t *ObservabilityTask) IsFinished() bool {
 	switch t.TaskStatus {
 	case TaskStatusSuccess, TaskStatusDisabled, TaskStatusPending:
 		return true

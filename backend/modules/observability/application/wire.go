@@ -26,6 +26,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	metric_general "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
@@ -36,6 +37,7 @@ import (
 	trepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	taskst "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/scheduledtask"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
@@ -81,6 +83,7 @@ var (
 		redis2.NewTaskRunDAO,
 		mysqldao.NewTaskRunDaoImpl,
 		mq2.NewBackfillProducerImpl,
+		NewScheduledTask,
 	)
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
@@ -284,6 +287,20 @@ func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
 	taskProcessor := task_processor.NewTaskProcessor()
 	taskProcessor.Register(task_entity.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
 	return taskProcessor
+}
+
+func NewScheduledTask(
+	locker lock.ILocker,
+	config config.ITraceConfig,
+	traceHubService tracehub.ITraceHubService,
+	taskService taskSvc.ITaskService,
+	taskProcessor task_processor.TaskProcessor,
+	taskRepo trepo.ITaskRepo,
+) []scheduledtask.ScheduledTask {
+	return []scheduledtask.ScheduledTask{
+		taskst.NewStatusCheckTask(locker, config, traceHubService, taskService, taskProcessor, taskRepo),
+		taskst.NewLocalCacheRefreshTask(traceHubService, taskRepo),
+	}
 }
 
 func InitTraceApplication(

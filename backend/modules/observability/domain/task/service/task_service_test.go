@@ -636,7 +636,7 @@ func TestTaskServiceImpl_shouldTriggerBackfill(t *testing.T) {
 func TestTaskServiceImpl_sendBackfillMessage(t *testing.T) {
 	t.Run("producer nil", func(t *testing.T) {
 		svc := &TaskServiceImpl{}
-		err := svc.sendBackfillMessage(context.Background(), &entity.BackFillEvent{})
+		err := svc.SendBackfillMessage(context.Background(), &entity.BackFillEvent{})
 		statusErr, ok := errorx.FromStatusError(err)
 		if assert.True(t, ok) {
 			assert.EqualValues(t, obErrorx.CommonInternalErrorCode, statusErr.Code())
@@ -646,7 +646,7 @@ func TestTaskServiceImpl_sendBackfillMessage(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		ch := make(chan *entity.BackFillEvent, 1)
 		svc := &TaskServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
-		err := svc.sendBackfillMessage(context.Background(), &entity.BackFillEvent{TaskID: 1})
+		err := svc.SendBackfillMessage(context.Background(), &entity.BackFillEvent{TaskID: 1})
 		assert.NoError(t, err)
 		select {
 		case event := <-ch:

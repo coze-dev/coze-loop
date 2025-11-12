@@ -18,7 +18,6 @@ import (
 )
 
 func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, span *loop_span.Span) error {
-	ctx = h.fillCtx(ctx)
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
 	logs.CtxInfo(ctx, "auto_task start, %s", logSuffix)
 
@@ -47,21 +46,14 @@ func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, span *loop_span.S
 		return nil
 	}
 
-	// 3、Sample
-	subs = gslice.Filter(subs, func(sub *spanSubscriber) bool { return sub.Sampled() })
-	logs.CtxInfo(ctx, "%d subscriber of flow span sampled, %s", len(subs), logSuffix)
-	if len(subs) == 0 {
-		return nil
-	}
-
-	// 4. PreDispatch
+	// 3. PreDispatch
 	if err = h.preDispatch(ctx, subs); err != nil {
 		logs.CtxWarn(ctx, "preDispatch flow span failed, %s, err: %v", logSuffix, err)
 		return err
 	}
 	logs.CtxInfo(ctx, "%d preDispatch success, %v", len(subs), subs)
 
-	// 5、Dispatch
+	// 4、Dispatch
 	if err = h.dispatch(ctx, span, subs); err != nil {
 		logs.CtxError(ctx, "dispatch flow span failed, %s, err: %v", logSuffix, err)
 		return err
@@ -118,8 +110,12 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 			continue
 		}
 		if ok {
-			subscribers[keep] = s
-			keep++
+			if s.Sampled() {
+				subscribers[keep] = s
+				keep++
+			} else {
+				logs.CtxInfo(ctx, "span not sampled, task_id=%d, trace_id=%s, span_id=%s", s.taskID, span.TraceID, span.SpanID)
+			}
 		}
 	}
 	return subscribers[:keep], merr.ErrorOrNil()
@@ -181,11 +177,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, subs []*spanSubsc
 			}
 			continue
 		}
-		sampler := sub.t.Sampler
-		// Fetch the corresponding task count and subtask count
-		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
-		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, taskRunConfig.ID)
-		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
+
 		endTime := time.UnixMilli(sub.t.EffectiveTime.EndAt)
 		// Reached task time limit
 		if time.Now().After(endTime) {
@@ -200,6 +192,12 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, subs []*spanSubsc
 				continue
 			}
 		}
+
+		sampler := sub.t.Sampler
+		// Fetch the corresponding task count and subtask count
+		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
+		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, taskRunConfig.ID)
+		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
 		// Reached task limit
 		if taskCount+1 > sampler.SampleSize {
 			logs.CtxWarn(ctx, "[OnTaskFinished]taskCount+1 > sampler.GetSampleSize() Finish processor, task_id=%d", sub.taskID)
@@ -265,4 +263,29 @@ func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span
 		}
 	}
 	return merr.ErrorOrNil()
+}
+
+func (h *TraceHubServiceImpl) listNonFinalTaskByRedis(ctx context.Context, spaceID string) ([]*entity.ObservabilityTask, error) {
+	var taskPOs []*entity.ObservabilityTask
+	nonFinalTaskIDs, err := h.taskRepo.ListNonFinalTaskBySpaceID(ctx, spaceID)
+	if err != nil {
+		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "Start listing non-final tasks, taskCount:%d, nonFinalTaskIDs:%v", len(nonFinalTaskIDs), nonFinalTaskIDs)
+	if len(nonFinalTaskIDs) == 0 {
+		return taskPOs, nil
+	}
+	for _, taskID := range nonFinalTaskIDs {
+		taskPO, err := h.taskRepo.GetTaskByCache(ctx, taskID)
+		if err != nil {
+			logs.CtxError(ctx, "Failed to get task", "err", err)
+			return nil, err
+		}
+		if taskPO == nil {
+			continue
+		}
+		taskPOs = append(taskPOs, taskPO)
+	}
+	return taskPOs, nil
 }

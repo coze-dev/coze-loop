@@ -30,7 +30,7 @@ func NewLocalCache() *LocalCache {
 	return &LocalCache{}
 }
 
-func (l *LocalCache) StoneTaskCache(info TaskCacheInfo) {
+func (l *LocalCache) StoneTaskCache(ctx context.Context, info TaskCacheInfo) {
 	l.taskCache.Store(CacheKeyObjListWithTask, info)
 }
 
