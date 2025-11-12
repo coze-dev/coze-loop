@@ -1,5 +1,4 @@
 import { type CommonLogOptions, LogAction, LogLevel } from '../types';
-import { SlardarReportClient, type SlardarInstance } from '../slardar';
 import { Logger } from '../logger';
 import { genDurationTracer, type TracePointName } from './duration-tracer';
 
@@ -9,7 +8,7 @@ export interface LoggerCommonProperties {
 }
 
 export interface SlardarMeta {
-  meta?: Record<string, unknown>; // Combination of `categories` and `metrics`, check more: 
+  meta?: Record<string, unknown>; // Combination of `categories` and `metrics`, check more:
 }
 
 export interface CustomLog extends SlardarMeta, LoggerCommonProperties {
@@ -48,7 +47,6 @@ export class Reporter {
   private logger: Logger;
   private pendingQueue: CommonLogOptions[] = [];
   private pendingInstance: Reporter[] = [];
-  public slardarInstance: SlardarInstance | null = null;
 
   private log(type: LogType, payload: CommonLogOptions) {
     if (!this.check(payload)) {
@@ -77,8 +75,7 @@ export class Reporter {
   createReporterWithPreset(preset: ReporterConfig) {
     const r = new Reporter(preset);
     if (this.initialized) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      r.init(this.slardarInstance!);
+      r.init();
     } else {
       this.pendingInstance.push(r);
     }
@@ -87,17 +84,9 @@ export class Reporter {
 
   /**
    * 初始化reporter
-   * @param slardarInstance 需要上报的slardar实例
    * @returns
    */
-  init(slardarInstance: SlardarInstance) {
-    if (!slardarInstance) {
-      console.warn('You should use reporter with a valid slardar instance');
-      return;
-    }
-    const slardarReportClient = new SlardarReportClient(slardarInstance);
-    this.slardarInstance = slardarReportClient.slardarInstance;
-    this.logger.persist.addClient(slardarReportClient);
+  init() {
     this.initialized = true;
 
     // Execute all pending items which are collected before initialization
@@ -110,7 +99,7 @@ export class Reporter {
 
     // Run init for all pending reporter instances
     this.pendingInstance.forEach(instance => {
-      instance.init(slardarInstance);
+      instance.init();
     });
     this.pendingInstance = [];
   }
@@ -122,7 +111,7 @@ export class Reporter {
   /// Custom Log
   /**
    * 上报一个info日志
-   * @param event 
+   * @param event
    * @returns
    */
   info(log: CustomLog) {
@@ -131,7 +120,7 @@ export class Reporter {
 
   /**
    * 上报一个success日志
-   * @param event 
+   * @param event
    * @returns
    */
   success(log: CustomLog) {
@@ -141,7 +130,7 @@ export class Reporter {
 
   /**
    * 上报一个warning日志
-   * @param event 
+   * @param event
    * @returns
    */
   warning(log: CustomLog) {
@@ -151,7 +140,7 @@ export class Reporter {
 
   /**
    * 上报一个error日志
-   * @param event 
+   * @param event
    * @returns
    */
   error(log: CustomErrorLog) {
@@ -165,7 +154,7 @@ export class Reporter {
   /// Custom Event
   /**
    * 上报一个自定义event事件
-   * @param event 
+   * @param event
    * @returns
    */
   event<EventEnum extends string>(event: CustomEvent<EventEnum>) {
@@ -175,7 +164,7 @@ export class Reporter {
 
   /**
    * 上报一个错误event事件（LogLevel = 'error'）
-   * @param event 
+   * @param event
    * @returns
    */
   errorEvent<EventEnum extends string>(event: ErrorEvent<EventEnum>) {
@@ -187,7 +176,7 @@ export class Reporter {
 
   /**
    * 上报一个成功event事件（LogLevel = 'success'）
-   * @param event 
+   * @param event
    * @returns
    */
   successEvent<EventEnum extends string>(event: CustomEvent<EventEnum>) {

@@ -10,7 +10,6 @@
     "test:cov": "npm run test -- --coverage"
   },
   "dependencies": {
-    "@coze-studio/slardar-interface": "workspace:*",
     "@coze-arch/bot-env": "workspace:*",
     "@coze-arch/bot-typings": "workspace:*",
     "lodash-es": "^4.17.21",
@@ -28,4 +27,3 @@
     "vitest": "~3.0.5"
   }
 }
-
