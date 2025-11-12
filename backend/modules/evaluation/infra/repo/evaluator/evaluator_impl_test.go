@@ -1448,6 +1448,7 @@ func TestEvaluatorRepoImpl_BatchDeleteEvaluator(t *testing.T) {
 	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 	mockEvaluatorDAO := evaluatormocks.NewMockEvaluatorDAO(ctrl)
 	mockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
+	mockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
 	mockDBProvider := dbmocks.NewMockProvider(ctrl)
 	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
 
@@ -1477,6 +1478,9 @@ func TestEvaluatorRepoImpl_BatchDeleteEvaluator(t *testing.T) {
 				mockEvaluatorVersionDAO.EXPECT().
 					BatchDeleteEvaluatorVersionByEvaluatorIDs(gomock.Any(), []int64{1, 2}, "test_user", gomock.Any()).
 					Return(nil)
+				mockTagDAO.EXPECT().
+					DeleteEvaluatorTagsByConditions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).Times(2)
 			},
 			expectedError: nil,
 		},
@@ -1507,6 +1511,7 @@ func TestEvaluatorRepoImpl_BatchDeleteEvaluator(t *testing.T) {
 			repo := &EvaluatorRepoImpl{
 				evaluatorDao:        mockEvaluatorDAO,
 				evaluatorVersionDao: mockEvaluatorVersionDAO,
+				tagDAO:              mockTagDAO,
 				dbProvider:          mockDBProvider,
 				idgen:               mockIDGen,
 				lwt:                 mockLWT,

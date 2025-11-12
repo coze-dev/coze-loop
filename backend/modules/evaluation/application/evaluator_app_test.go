@@ -2893,6 +2893,10 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 				EvaluatorTemplate: templateDTO,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				mockConfiger.EXPECT().
 					GetEvaluatorTemplateSpaceConf(gomock.Any()).
 					Return([]string{"123"})
@@ -2929,10 +2933,6 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetEvaluatorTemplateSpaceConf(gomock.Any()).
-					Return([]string{"123"})
-
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), gomock.Any()).
 					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
@@ -2947,6 +2947,10 @@ func TestEvaluatorHandlerImpl_CreateEvaluatorTemplate(t *testing.T) {
 				EvaluatorTemplate: templateDTO,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				mockConfiger.EXPECT().
 					GetEvaluatorTemplateSpaceConf(gomock.Any()).
 					Return([]string{"123"})
@@ -3024,6 +3028,10 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 				EvaluatorTemplate:   templateDTO,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				mockConfiger.EXPECT().
 					GetEvaluatorTemplateSpaceConf(gomock.Any()).
 					Return([]string{"456"})
@@ -3062,10 +3070,6 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetEvaluatorTemplateSpaceConf(gomock.Any()).
-					Return([]string{"456"})
-
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), gomock.Any()).
 					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
@@ -3081,6 +3085,10 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorTemplate(t *testing.T) {
 				EvaluatorTemplate:   templateDTO,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				mockConfiger.EXPECT().
 					GetEvaluatorTemplateSpaceConf(gomock.Any()).
 					Return([]string{"456"})
@@ -3165,6 +3173,10 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 						Template: template,
 					}, nil)
 
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				mockConfiger.EXPECT().
 					GetEvaluatorTemplateSpaceConf(gomock.Any()).
 					Return([]string{"456"})
@@ -3221,10 +3233,6 @@ func TestEvaluatorHandlerImpl_DeleteEvaluatorTemplate(t *testing.T) {
 					Return(&entity.GetEvaluatorTemplateResponse{
 						Template: testTemplate,
 					}, nil)
-
-				mockConfiger.EXPECT().
-					GetEvaluatorTemplateSpaceConf(gomock.Any()).
-					Return([]string{"456"})
 
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), gomock.Any()).
@@ -3466,6 +3474,10 @@ func TestEvaluatorHandlerImpl_UpdateBuiltinEvaluatorTags(t *testing.T) {
 				Tags:        tags,
 			},
 			mockSetup: func() {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				mockEvaluatorService.EXPECT().
 					GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
 					Return(evaluatorDO, nil)
@@ -3517,10 +3529,6 @@ func TestEvaluatorHandlerImpl_UpdateBuiltinEvaluatorTags(t *testing.T) {
 					GetEvaluator(gomock.Any(), int64(789), evaluatorID, false).
 					Return(testEvaluatorDO, nil)
 
-				mockConfiger.EXPECT().
-					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
-					Return([]string{"456"})
-
 				mockAuth.EXPECT().
 					Authorization(gomock.Any(), gomock.Any()).
 					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
@@ -3540,6 +3548,10 @@ func TestEvaluatorHandlerImpl_UpdateBuiltinEvaluatorTags(t *testing.T) {
 				mockEvaluatorService.EXPECT().
 					GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
 					Return(evaluatorDO, nil)
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					Return(nil)
 
 				mockConfiger.EXPECT().
 					GetBuiltinEvaluatorSpaceConf(gomock.Any()).

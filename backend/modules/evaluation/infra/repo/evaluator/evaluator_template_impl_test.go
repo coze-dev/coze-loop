@@ -54,13 +54,13 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 					Return(&mysql.ListEvaluatorTemplateResponse{
 						TotalCount: 2,
 						Templates: []*model.EvaluatorTemplate{
-                            {
+							{
 								ID:            1,
 								SpaceID:       gptr.Of(int64(123)),
 								Name:          gptr.Of("Template A"),
 								Description:   gptr.Of("Description A"),
 								EvaluatorType: gptr.Of(int32(1)),
-                                EvaluatorInfo: gptr.Of([]byte(`{"benchmark":"benchmark1","vendor":"vendor1"}`)),
+								EvaluatorInfo: gptr.Of([]byte(`{"benchmark":"benchmark1","vendor":"vendor1"}`)),
 								Popularity:    100,
 								CreatedBy:     "user1",
 								UpdatedBy:     "user1",
@@ -71,7 +71,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 								Name:          gptr.Of("Template B"),
 								Description:   gptr.Of("Description B"),
 								EvaluatorType: gptr.Of(int32(2)),
-                                EvaluatorInfo: gptr.Of([]byte(`{"benchmark":"benchmark2","vendor":"vendor2"}`)),
+								EvaluatorInfo: gptr.Of([]byte(`{"benchmark":"benchmark2","vendor":"vendor2"}`)),
 								Popularity:    200,
 								CreatedBy:     "user2",
 								UpdatedBy:     "user2",
@@ -137,13 +137,13 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 					Return(&mysql.ListEvaluatorTemplateResponse{
 						TotalCount: 1,
 						Templates: []*model.EvaluatorTemplate{
-                            {
+							{
 								ID:            1,
 								SpaceID:       gptr.Of(int64(123)),
 								Name:          gptr.Of("Template A"),
 								Description:   gptr.Of("Description A"),
 								EvaluatorType: gptr.Of(int32(1)),
-                                EvaluatorInfo: gptr.Of([]byte(`{"benchmark":"benchmark1","vendor":"vendor1"}`)),
+								EvaluatorInfo: gptr.Of([]byte(`{"benchmark":"benchmark1","vendor":"vendor1"}`)),
 								Popularity:    100,
 								CreatedBy:     "user1",
 								UpdatedBy:     "user1",
@@ -239,7 +239,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 				Templates:  []*entity.EvaluatorTemplate{},
 			},
 			expectedError: false,
-			description:  "筛选条件命中数为0时，应该直接返回空结果",
+			description:   "筛选条件命中数为0时，应该直接返回空结果",
 		},
 		{
 			name: "失败 - 模板查询错误",
@@ -311,11 +311,11 @@ func TestEvaluatorTemplateRepoImpl_CreateEvaluatorTemplate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		template       *entity.EvaluatorTemplate
-		mockSetup      func(mockTagDAO *mysqlmocks.MockEvaluatorTagDAO, mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO, mockIDGen *idgenmocks.MockIIDGenerator)
-		expectedError  bool
-		description    string
+		name          string
+		template      *entity.EvaluatorTemplate
+		mockSetup     func(mockTagDAO *mysqlmocks.MockEvaluatorTagDAO, mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO, mockIDGen *idgenmocks.MockIIDGenerator)
+		expectedError bool
+		description   string
 	}{
 		{
 			name: "成功 - 创建模板无标签",
@@ -338,7 +338,7 @@ func TestEvaluatorTemplateRepoImpl_CreateEvaluatorTemplate(t *testing.T) {
 					})
 			},
 			expectedError: false,
-			description:  "成功创建评估器模板（无标签）",
+			description:   "成功创建评估器模板（无标签）",
 		},
 		{
 			name: "成功 - 创建模板带标签",
@@ -374,16 +374,16 @@ func TestEvaluatorTemplateRepoImpl_CreateEvaluatorTemplate(t *testing.T) {
 					Return(nil)
 			},
 			expectedError: false,
-			description:  "成功创建评估器模板（带标签）",
+			description:   "成功创建评估器模板（带标签）",
 		},
 		{
-			name: "失败 - nil模板",
+			name:     "失败 - nil模板",
 			template: nil,
 			mockSetup: func(mockTagDAO *mysqlmocks.MockEvaluatorTagDAO, mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO, mockIDGen *idgenmocks.MockIIDGenerator) {
 				// 不设置任何mock期望
 			},
 			expectedError: true,
-			description:  "传入nil模板应该返回错误",
+			description:   "传入nil模板应该返回错误",
 		},
 		{
 			name: "失败 - ID生成错误",
@@ -399,7 +399,7 @@ func TestEvaluatorTemplateRepoImpl_CreateEvaluatorTemplate(t *testing.T) {
 					Return(nil, errors.New("id generation error"))
 			},
 			expectedError: true,
-			description:  "ID生成失败应该返回错误",
+			description:   "ID生成失败应该返回错误",
 		},
 		{
 			name: "失败 - 模板创建错误",
@@ -419,7 +419,7 @@ func TestEvaluatorTemplateRepoImpl_CreateEvaluatorTemplate(t *testing.T) {
 					Return(nil, errors.New("template creation error"))
 			},
 			expectedError: true,
-			description:  "模板创建失败应该返回错误",
+			description:   "模板创建失败应该返回错误",
 		},
 	}
 
@@ -459,11 +459,11 @@ func TestEvaluatorTemplateRepoImpl_UpdateEvaluatorTemplate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		template       *entity.EvaluatorTemplate
-		mockSetup      func(mockTagDAO *mysqlmocks.MockEvaluatorTagDAO, mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO, mockIDGen *idgenmocks.MockIIDGenerator)
-		expectedError  bool
-		description    string
+		name          string
+		template      *entity.EvaluatorTemplate
+		mockSetup     func(mockTagDAO *mysqlmocks.MockEvaluatorTagDAO, mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO, mockIDGen *idgenmocks.MockIIDGenerator)
+		expectedError bool
+		description   string
 	}{
 		{
 			name: "成功 - 更新模板无标签",
@@ -483,7 +483,7 @@ func TestEvaluatorTemplateRepoImpl_UpdateEvaluatorTemplate(t *testing.T) {
 					})
 			},
 			expectedError: false,
-			description:  "成功更新评估器模板（无标签）",
+			description:   "成功更新评估器模板（无标签）",
 		},
 		{
 			name: "成功 - 更新模板标签对齐",
@@ -534,16 +534,16 @@ func TestEvaluatorTemplateRepoImpl_UpdateEvaluatorTemplate(t *testing.T) {
 					Return(nil)
 			},
 			expectedError: false,
-			description:  "成功更新评估器模板（标签对齐）",
+			description:   "成功更新评估器模板（标签对齐）",
 		},
 		{
-			name: "失败 - nil模板",
+			name:     "失败 - nil模板",
 			template: nil,
 			mockSetup: func(mockTagDAO *mysqlmocks.MockEvaluatorTagDAO, mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO, mockIDGen *idgenmocks.MockIIDGenerator) {
 				// 不设置任何mock期望
 			},
 			expectedError: true,
-			description:  "传入nil模板应该返回错误",
+			description:   "传入nil模板应该返回错误",
 		},
 		{
 			name: "失败 - 模板更新错误",
@@ -560,7 +560,7 @@ func TestEvaluatorTemplateRepoImpl_UpdateEvaluatorTemplate(t *testing.T) {
 					Return(nil, errors.New("template update error"))
 			},
 			expectedError: true,
-			description:  "模板更新失败应该返回错误",
+			description:   "模板更新失败应该返回错误",
 		},
 	}
 
@@ -601,7 +601,7 @@ func TestEvaluatorTemplateRepoImpl_DeleteEvaluatorTemplate(t *testing.T) {
 		name          string
 		id            int64
 		userID        string
-		mockSetup     func(mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO)
+		mockSetup     func(mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO, mockTagDAO *mysqlmocks.MockEvaluatorTagDAO)
 		expectedError bool
 		description   string
 	}{
@@ -609,25 +609,28 @@ func TestEvaluatorTemplateRepoImpl_DeleteEvaluatorTemplate(t *testing.T) {
 			name:   "成功 - 删除模板",
 			id:     1,
 			userID: "user123",
-			mockSetup: func(mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO) {
+			mockSetup: func(mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO, mockTagDAO *mysqlmocks.MockEvaluatorTagDAO) {
 				mockTemplateDAO.EXPECT().
 					DeleteEvaluatorTemplate(gomock.Any(), int64(1), "user123").
 					Return(nil)
+				mockTagDAO.EXPECT().
+					DeleteEvaluatorTagsByConditions(gomock.Any(), int64(1), int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), gomock.Any(), gomock.Any()).
+					Return(nil)
 			},
 			expectedError: false,
-			description:  "成功删除评估器模板",
+			description:   "成功删除评估器模板",
 		},
 		{
 			name:   "失败 - 删除错误",
 			id:     1,
 			userID: "user123",
-			mockSetup: func(mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO) {
+			mockSetup: func(mockTemplateDAO *mysqlmocks.MockEvaluatorTemplateDAO, mockTagDAO *mysqlmocks.MockEvaluatorTagDAO) {
 				mockTemplateDAO.EXPECT().
 					DeleteEvaluatorTemplate(gomock.Any(), int64(1), "user123").
 					Return(errors.New("database error"))
 			},
 			expectedError: true,
-			description:  "删除时发生数据库错误",
+			description:   "删除时发生数据库错误",
 		},
 	}
 
@@ -640,7 +643,7 @@ func TestEvaluatorTemplateRepoImpl_DeleteEvaluatorTemplate(t *testing.T) {
 			mockTemplateDAO := mysqlmocks.NewMockEvaluatorTemplateDAO(ctrl)
 			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
 
-			tt.mockSetup(mockTemplateDAO)
+			tt.mockSetup(mockTemplateDAO, mockTagDAO)
 
 			repo := NewEvaluatorTemplateRepo(mockTagDAO, mockTemplateDAO, mockIDGen)
 
@@ -683,7 +686,7 @@ func TestEvaluatorTemplateRepoImpl_GetEvaluatorTemplate(t *testing.T) {
 					}, nil)
 			},
 			expectedError: false,
-			description:  "成功获取评估器模板",
+			description:   "成功获取评估器模板",
 		},
 		{
 			name:           "成功 - 模板不存在",
@@ -695,7 +698,7 @@ func TestEvaluatorTemplateRepoImpl_GetEvaluatorTemplate(t *testing.T) {
 					Return(nil, nil)
 			},
 			expectedError: false,
-			description:  "模板不存在时返回nil",
+			description:   "模板不存在时返回nil",
 		},
 		{
 			name:           "失败 - 数据库错误",
@@ -707,7 +710,7 @@ func TestEvaluatorTemplateRepoImpl_GetEvaluatorTemplate(t *testing.T) {
 					Return(nil, errors.New("database error"))
 			},
 			expectedError: true,
-			description:  "数据库查询错误",
+			description:   "数据库查询错误",
 		},
 	}
 
@@ -775,7 +778,7 @@ func TestEvaluatorTemplateRepoImpl_IncrPopularityByID(t *testing.T) {
 					Return(nil)
 			},
 			expectedError: false,
-			description:  "成功增加模板热度",
+			description:   "成功增加模板热度",
 		},
 		{
 			name: "失败 - 数据库错误",
@@ -786,7 +789,7 @@ func TestEvaluatorTemplateRepoImpl_IncrPopularityByID(t *testing.T) {
 					Return(errors.New("database error"))
 			},
 			expectedError: true,
-			description:  "数据库更新错误",
+			description:   "数据库更新错误",
 		},
 	}
 
