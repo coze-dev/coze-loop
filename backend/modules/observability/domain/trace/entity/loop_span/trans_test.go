@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -519,4 +520,27 @@ func TestParentIdRedirectChaos(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestRace(t *testing.T) {
+	p := SpanTransCfgList{
+		{
+			SpanFilter: &FilterFields{},
+			TagFilter: &TagFilter{
+				KeyBlackList: []string{
+					"custom_a",
+					"custom_c",
+				},
+			},
+		},
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func() {
+			p.init()
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }

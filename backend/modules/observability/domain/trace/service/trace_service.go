@@ -573,15 +573,6 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 	resp := &GetTracesAdvanceInfoResp{
 		Infos: []*loop_span.TraceAdvanceInfo{},
 	}
-	// use one processor...
-	processors, err := r.buildHelper.BuildAdvanceInfoProcessors(ctx, span_processor.Settings{
-		WorkspaceId:  req.WorkspaceID,
-		PlatformType: req.PlatformType,
-	})
-	if err != nil {
-		logs.CtxError(ctx, "Fail to build advance info processor, %v", err)
-		return nil, err
-	}
 	for _, v := range req.Traces {
 		g.Go(func() error {
 			defer goroutine.Recovery(ctx)
@@ -596,12 +587,26 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 					loop_span.SpanFieldInput,
 					loop_span.SpanFieldOutput,
 				},
+				Filters: loop_span.GetModelSpansFilter(),
 			}
 			st := time.Now()
 			spans, err := r.traceRepo.GetTrace(ctx, qReq)
 			r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 			if err != nil {
 				logs.CtxError(ctx, "Fail to get trace %v, %v", *qReq, err)
+				return err
+			}
+			processors, err := r.buildHelper.BuildAdvanceInfoProcessors(ctx, span_processor.Settings{
+				WorkspaceId:     req.WorkspaceID,
+				PlatformType:    req.PlatformType,
+				QueryStartTime:  v.StartTime,
+				QueryEndTime:    v.EndTime + defaultTimeRange,
+				SpanDoubleCheck: true,
+				QueryTenants:    tenants,
+				QueryTraceID:    v.TraceID,
+			})
+			if err != nil {
+				logs.CtxError(ctx, "Fail to build advance info processor, %v", err)
 				return err
 			}
 			for _, p := range processors {
