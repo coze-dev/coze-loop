@@ -152,11 +152,6 @@
       "tags": ["team-arch", "level-1"]
     },
     {
-      "packageName": "@coze-studio/slardar-interface",
-      "projectFolder": "frontend/packages/arch/slardar-interface",
-      "tags": ["level-1"]
-    },
-    {
       "packageName": "@coze-arch/subspace-resolve-plugin",
       "projectFolder": "frontend/packages/arch/subspace-resolve-plugin",
       "tags": ["level-3"]

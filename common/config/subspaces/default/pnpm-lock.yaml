@@ -1199,9 +1199,6 @@ importers:
       '@coze-arch/bot-typings':
         specifier: workspace:*
         version: link:../bot-typings
-      '@coze-studio/slardar-interface':
-        specifier: workspace:*
-        version: link:../slardar-interface
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -1233,30 +1230,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
-
-  ../../../frontend/packages/arch/slardar-interface:
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      sucrase:
-        specifier: ^3.32.0
-        version: 3.35.0
       vitest:
         specifier: ~3.0.5
         version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
