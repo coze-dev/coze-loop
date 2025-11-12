@@ -275,7 +275,40 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 }
 
 func (e ExptInsightAnalysisServiceImpl) ListAnalysisRecord(ctx context.Context, spaceID, exptID int64, page entity.Page, session *entity.Session) ([]*entity.ExptInsightAnalysisRecord, int64, error) {
-	return e.repo.ListAnalysisRecord(ctx, spaceID, exptID, page)
+	analysisRecords, total, err := e.repo.ListAnalysisRecord(ctx, spaceID, exptID, page)
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return analysisRecords, total, nil
+	}
+
+	firstAnalysisRecord := analysisRecords[0]
+
+	upvoteCount, downvoteCount, err := e.repo.CountFeedbackVote(ctx, spaceID, exptID, firstAnalysisRecord.ID)
+	if err != nil {
+		// side path, don't block the main flow
+		logs.CtxWarn(ctx, "CountFeedbackVote failed for space_id: %v, expt_id: %v, record_id: %v, err=%v", spaceID, exptID, firstAnalysisRecord.ID, err)
+		return analysisRecords, total, nil
+	}
+
+	curUserFeedbackVote, err := e.repo.GetFeedbackVoteByUser(ctx, spaceID, exptID, firstAnalysisRecord.ID, session.UserID)
+	if err != nil {
+		// side path, don't block the main flow
+		logs.CtxWarn(ctx, "GetFeedbackVoteByUser failed for space_id: %v, expt_id: %v, record_id: %v, err=%v", spaceID, exptID, firstAnalysisRecord.ID, err)
+		return analysisRecords, total, nil
+	}
+	firstAnalysisRecord.ExptInsightAnalysisFeedback = entity.ExptInsightAnalysisFeedback{
+		UpvoteCount:         upvoteCount,
+		DownvoteCount:       downvoteCount,
+		CurrentUserVoteType: entity.None,
+	}
+	firstAnalysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = entity.None
+	if curUserFeedbackVote != nil {
+		firstAnalysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = curUserFeedbackVote.VoteType
+	}
+
+	return analysisRecords, total, nil
 }
 
 func (e ExptInsightAnalysisServiceImpl) DeleteAnalysisRecord(ctx context.Context, spaceID, exptID, recordID int64) error {
