@@ -90,10 +90,34 @@ func (mr *MockIExptInsightAnalysisFeedbackCommentDAOMockRecorder) GetByRecordID(
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByRecordID", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackCommentDAO)(nil).GetByRecordID), varargs...)
 }
 
-// List mocks base method.
-func (m *MockIExptInsightAnalysisFeedbackCommentDAO) List(arg0 context.Context, arg1, arg2, arg3 int64, arg4 entity.Page) ([]*model.ExptInsightAnalysisFeedbackComment, int64, error) {
+// GetByID mocks base method.
+func (m *MockIExptInsightAnalysisFeedbackCommentDAO) GetByID(arg0 context.Context, arg1, arg2, arg3 int64, arg4 ...db.Option) (*model.ExptInsightAnalysisFeedbackComment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3, arg4)
+	varargs := []interface{}{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetByID", varargs...)
+	ret0, _ := ret[0].(*model.ExptInsightAnalysisFeedbackComment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockIExptInsightAnalysisFeedbackCommentDAOMockRecorder) GetByID(arg0, arg1, arg2, arg3 interface{}, arg4 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3}, arg4...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackCommentDAO)(nil).GetByID), varargs...)
+}
+
+// List mocks base method.
+func (m *MockIExptInsightAnalysisFeedbackCommentDAO) List(arg0 context.Context, arg1, arg2, arg3 int64, arg4 entity.Page, arg5 ...db.Option) ([]*model.ExptInsightAnalysisFeedbackComment, int64, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4}
+	for _, a := range arg5 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
 	ret0, _ := ret[0].([]*model.ExptInsightAnalysisFeedbackComment)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -101,9 +125,10 @@ func (m *MockIExptInsightAnalysisFeedbackCommentDAO) List(arg0 context.Context, 
 }
 
 // List indicates an expected call of List.
-func (mr *MockIExptInsightAnalysisFeedbackCommentDAOMockRecorder) List(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockIExptInsightAnalysisFeedbackCommentDAOMockRecorder) List(arg0, arg1, arg2, arg3, arg4 interface{}, arg5 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackCommentDAO)(nil).List), arg0, arg1, arg2, arg3, arg4)
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackCommentDAO)(nil).List), varargs...)
 }
 
 // Update mocks base method.
