@@ -19,8 +19,9 @@ type IExptInsightAnalysisFeedbackCommentDAO interface {
 	Create(ctx context.Context, feedbackComment *model.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error
 	Update(ctx context.Context, feedbackComment *model.ExptInsightAnalysisFeedbackComment, opts ...db.Option) error
 	GetByRecordID(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackComment, error)
+	GetByID(ctx context.Context, spaceID, exptID, commentID int64, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackComment, error)
 	Delete(ctx context.Context, spaceID, exptID, commentID int64) error
-	List(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page) ([]*model.ExptInsightAnalysisFeedbackComment, int64, error)
+	List(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page, opts ...db.Option) ([]*model.ExptInsightAnalysisFeedbackComment, int64, error)
 }
 
 func NewExptInsightAnalysisFeedbackCommentDAO(db db.Provider) IExptInsightAnalysisFeedbackCommentDAO {
@@ -50,7 +51,7 @@ func (e exptInsightAnalysisFeedbackCommentDAO) Update(ctx context.Context, feedb
 }
 
 func (e exptInsightAnalysisFeedbackCommentDAO) GetByRecordID(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackComment, error) {
-	db := e.db.NewSession(ctx)
+	db := e.db.NewSession(ctx, opts...)
 	q := query.Use(db).ExptInsightAnalysisFeedbackComment
 
 	feedbackVote, err := q.WithContext(ctx).Where(
@@ -65,6 +66,22 @@ func (e exptInsightAnalysisFeedbackCommentDAO) GetByRecordID(ctx context.Context
 	return feedbackVote, nil
 }
 
+func (e exptInsightAnalysisFeedbackCommentDAO) GetByID(ctx context.Context, spaceID, exptID, commentID int64, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackComment, error) {
+	db := e.db.NewSession(ctx, opts...)
+	q := query.Use(db).ExptInsightAnalysisFeedbackComment
+
+	comment, err := q.WithContext(ctx).Where(
+		q.SpaceID.Eq(spaceID),
+		q.ExptID.Eq(exptID),
+		q.ID.Eq(commentID),
+	).First()
+	if err != nil {
+		return nil, errorx.Wrapf(err, "exptInsightAnalysisFeedbackCommentDAO GetByID fail, commentID: %v", commentID)
+	}
+
+	return comment, nil
+}
+
 func (e exptInsightAnalysisFeedbackCommentDAO) Delete(ctx context.Context, spaceID, exptID, commentID int64) error {
 	po := &model.ExptInsightAnalysisFeedbackComment{}
 	db := e.db.NewSession(ctx)
@@ -77,12 +94,12 @@ func (e exptInsightAnalysisFeedbackCommentDAO) Delete(ctx context.Context, space
 	return nil
 }
 
-func (e exptInsightAnalysisFeedbackCommentDAO) List(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page) ([]*model.ExptInsightAnalysisFeedbackComment, int64, error) {
+func (e exptInsightAnalysisFeedbackCommentDAO) List(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page, opts ...db.Option) ([]*model.ExptInsightAnalysisFeedbackComment, int64, error) {
 	var (
 		finds []*model.ExptInsightAnalysisFeedbackComment
 		total int64
 	)
-	db := e.db.NewSession(ctx).Model(&model.ExptInsightAnalysisFeedbackComment{}).
+	db := e.db.NewSession(ctx, opts...).Model(&model.ExptInsightAnalysisFeedbackComment{}).
 		Where("space_id =?", spaceID).
 		Where("expt_id =?", exptID).
 		Where("analysis_record_id =?", recordID).Order("created_at DESC")
