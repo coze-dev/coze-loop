@@ -153,15 +153,22 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 	if err != nil {
 		return nil, err
 	}
-	prompt, err := t.promptRPCAdapter.GetPrompt(ctx, spaceID, promptID, rpc.GetPromptParams{
-		CommitVersion: &sourceTargetVersion,
+	prompts, err := t.promptRPCAdapter.MGetPrompt(ctx, spaceID, []*rpc.MGetPromptQuery{
+		{
+			PromptID: promptID,
+			Version:  &sourceTargetVersion,
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	if prompt == nil {
+	if len(prompts) == 0 {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
 	}
+	if prompts[0] == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
+	}
+	prompt := prompts[0]
 	var inputSchema []*entity.ArgsSchema
 	if prompt.PromptCommit != nil && prompt.PromptCommit.Detail != nil && prompt.PromptCommit.Detail.PromptTemplate != nil {
 		inputSchema = make([]*entity.ArgsSchema, 0)

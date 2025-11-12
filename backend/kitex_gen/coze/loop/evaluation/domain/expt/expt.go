@@ -71,6 +71,8 @@ const (
 	ExptStatus_Terminated ExptStatus = 13
 	// System terminated
 	ExptStatus_SystemTerminated ExptStatus = 14
+	// Terminating
+	ExptStatus_Terminating ExptStatus = 15
 	// online expt draining
 	ExptStatus_Draining ExptStatus = 21
 )
@@ -91,6 +93,8 @@ func (p ExptStatus) String() string {
 		return "Terminated"
 	case ExptStatus_SystemTerminated:
 		return "SystemTerminated"
+	case ExptStatus_Terminating:
+		return "Terminating"
 	case ExptStatus_Draining:
 		return "Draining"
 	}
@@ -113,6 +117,8 @@ func ExptStatusFromString(s string) (ExptStatus, error) {
 		return ExptStatus_Terminated, nil
 	case "SystemTerminated":
 		return ExptStatus_SystemTerminated, nil
+	case "Terminating":
+		return ExptStatus_Terminating, nil
 	case "Draining":
 		return ExptStatus_Draining, nil
 	}

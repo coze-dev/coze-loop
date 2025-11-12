@@ -64,6 +64,10 @@ func IsTurnRunFinished(state TurnRunState) bool {
 	return state == TurnRunState_Success || state == TurnRunState_Fail || state == TurnRunState_Terminal
 }
 
+func IsExptFinishing(status ExptStatus) bool {
+	return status == ExptStatus_Terminating || status == ExptStatus_Draining
+}
+
 func IsExptFinished(status ExptStatus) bool {
 	return status == ExptStatus_Success || status == ExptStatus_Failed || status == ExptStatus_Terminated || status == ExptStatus_SystemTerminated
 }

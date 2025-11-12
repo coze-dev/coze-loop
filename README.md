@@ -23,6 +23,7 @@ English | [中文](README.cn.md)
 Based on the commercial version, Coze Loop introduces an open-source edition that offers developers free access to core foundational feature modules. By sharing its core technology framework in an open-source model, developers can customize and extend according to business needs, facilitating community co-construction, sharing, and exchange, helping developers participate in AI agent exploration and practice with zero barriers.
 
 ## What can Coze Loop do?
+
 Coze Loop helps developers develop and operate AI Agent more efficiently by providing full lifecycle management capabilities. Whether it is prompt engineering, AI Agent evaluation, or monitoring and optimization after deployment, Coze Loop provides powerful tools and intelligent support, greatly simplifying the development process of AI Agents and enhancing their operational performance and stability.
 
 * **Prompt development**: The Prompt development module of Coze Loop provides developers with end-to-end support for writing, debugging, optimizing, and version management. Through a visual Playground, it enables real-time interactive testing of prompts, allowing developers to intuitively compare the output of different LLMs.
@@ -30,28 +31,33 @@ Coze Loop helps developers develop and operate AI Agent more efficiently by prov
 * **Observability**: Coze Loop provides developers with observability for the entire execution process, fully recording every stage from user input to AI output, including key stages such as prompt parsing, model invocation, and tool execution, and automatically capturing intermediate results and exceptions.
 
 ## Feature list
+
 | **Feature** | **Functional points** |
 | --- | --- |
-| Prompt debugging | * Playground debugging and comparison <br> * Prompt version management |
-| Evaluation | * Manage evaluation sets <br> Management evaluator <br> * Manage experiments |
+| Prompt debugging | *Playground debugging and comparison <br>* Prompt version management |
+| Evaluation | *Manage evaluation sets <br> Management evaluator <br>* Manage experiments |
 | Observation | SDK trace reporting <br> * Trace data observation |
 | Model | Support integration with OpenAI, Volcengine Ark, and other models |
+
 ## Quick Start
+>
 > Refer to [Quick Start](https://github.com/coze-dev/coze-loop/wiki/2.-Quickstart) to learn in detail how to install and deploy the latest version of Coze Loop.
 
 ### Deployment method 1: Docker deployment (Docker Compose)
+>
 > Please install and start Docker Engine before you start.
 
 Procedure:
 
 1. Clone the source code.
    Run the following command to obtain the latest version of the Coze Loop source code.
+
    ```Bash
    # Clone the code
    git clone https://github.com/coze-dev/coze-loop.git
-   
+
    # Enter the coze-loop directory
-   cd coze-loop 
+   cd coze-loop
    ```
 
 2. Configure a model.
@@ -62,10 +68,11 @@ Procedure:
       * model: The Endpoint ID of the Volcengine Ark model access point. Users within China can refer to [the Volcengine Ark documentation](https://www.volcengine.com/docs/82379/1099522); users outside China can refer to [the BytePlus ModelArk documentation](https://docs.byteplus.com/en/docs/ModelArk/1099522?utm_source=github&utm_medium=readme&utm_campaign=coze_open_source).
 3. Start the service.
    Run the following commands to quickly deploy the open-source version of Coze Loop using Docker Compose.
+
    ```Bash
    # Start the service (default: development mode)
    # Run in the coze-loop/ directory
-   make compose-up 
+   make compose-up
    ```
 
 4. Access the Coze Loop open-source version through your browser `http://localhost:8082`.
@@ -78,6 +85,7 @@ Procedure:
 Procedure:
 
 1. Run the following command to obtain the Helm Chart package.
+
    ```Bash
    helm pull oci://docker.io/cozedev/coze-loop --version 1.0.0-helm
    tar -zxvf coze-loop-1.0.0-helm.tgz && cd coze-loop && rm -f ../coze-loop-1.0.0-helm.tgz
@@ -91,6 +99,7 @@ Procedure:
    Ingress is used to expose services to external networks. You need to configure the `templates/ingress.yaml` file in the project directory according to the actual cluster situation, manually modify parameters such as ingressClassName, and configure elements such as class, instance, host, and IP allocation.
 4. Deploy and start the service.
    Execute the following commands to quickly deploy the open-source version of Coze Loop using Helm.
+
    ```Bash
    # Run in the coze-loop/ directory
    make helm-up
@@ -140,11 +149,14 @@ Please **do not** create public GitHub Issues.
 We are committed to building an open and friendly developer community. All developers interested in AI Agent development are welcome to join us!
 
 ### Issue Reports & Feature Requests
+
 To efficiently track and resolve issues while ensuring transparency and collaboration, we recommend participating through:
-- **GitHub Issues**: [Submit bug reports or feature requests](https://github.com/coze-dev/coze-loop/issues)
-- **Pull Requests**: [Contribute code or documentation improvements](https://github.com/coze-dev/coze-loop/pulls)
+
+* **GitHub Issues**: [Submit bug reports or feature requests](https://github.com/coze-dev/coze-loop/issues)
+* **Pull Requests**: [Contribute code or documentation improvements](https://github.com/coze-dev/coze-loop/pulls)
 
 ### Technical Discussion & Communication
+
 Join our technical discussion groups to share experiences with other developers and stay updated with the latest project developments:
 
 * Lark Group Chat: Scan the QR code below on the Lark mobile app to join the Coze Loop technical discussion group.
@@ -156,9 +168,9 @@ Join our technical discussion groups to share experiences with other developers 
 * Telegram Group: [Coze](https://t.me/+pP9CkPnomDA0Mjgx)
 
 ## Acknowledgments
+
 Thanks to all developers and community members who contributed to the Coze Loop project Special thanks:
 
 * LLM integration support provided by the [Eino](https://github.com/cloudwego/eino) framework team
 * High-performance frameworks developed by the [CloudWeGo](https://www.cloudwego.io) team
 * All users who participated in testing and feedback
-

@@ -355,3 +355,7 @@ func StorageProviderFromString(s string) (StorageProvider, error) {
 }
 
 func StorageProviderPtr(v StorageProvider) *StorageProvider { return &v }
+
+type SystemMaintainerConf struct {
+	UserIDs []string `json:"user_ids" mapstructure:"user_ids"`
+}
