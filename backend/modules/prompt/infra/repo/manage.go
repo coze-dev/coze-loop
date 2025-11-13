@@ -28,6 +28,7 @@ import (
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -952,11 +953,11 @@ func (d *ManageRepoImpl) ListCommitInfo(ctx context.Context, param repo.ListComm
 	}
 
 	listCommitParam := mysql.ListCommitParam{
-		PromptID:    param.PromptID,
-		Cursor:      param.PageToken,
-		Limit:       param.PageSize + 1,
-		Asc:         param.Asc,
-		HasSnippets: param.HasSnippets,
+		PromptID: param.PromptID,
+
+		Cursor: param.PageToken,
+		Limit:  param.PageSize + 1,
+		Asc:    param.Asc,
 	}
 	commitPOs, err := d.promptCommitDAO.List(ctx, listCommitParam)
 	if err != nil {
@@ -980,18 +981,41 @@ func (d *ManageRepoImpl) ListCommitInfo(ctx context.Context, param repo.ListComm
 	return result, nil
 }
 
-func (d *ManageRepoImpl) MGetVersionsByPromptID(ctx context.Context, promptID int64) ([]string, error) {
+func (d *ManageRepoImpl) CollectAllCommitVersions(ctx context.Context, promptID int64) ([]string, error) {
 	if promptID <= 0 {
 		return nil, errorx.New("promptID is invalid, promptID = %d", promptID)
 	}
 
-	versions, err := d.promptCommitDAO.MGetVersionsByPromptID(ctx, promptID)
-	if err != nil {
-		return nil, err
+	const pageSize = 100
+	var (
+		pageToken *int64
+		versions  []string
+	)
+
+	for {
+		result, err := d.ListCommitInfo(ctx, repo.ListCommitInfoParam{
+			PromptID:  promptID,
+			PageSize:  pageSize,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if result == nil || len(result.CommitInfoDOs) == 0 {
+			break
+		}
+		for _, info := range result.CommitInfoDOs {
+			if info == nil || lo.IsEmpty(info.Version) {
+				continue
+			}
+			versions = append(versions, info.Version)
+		}
+		if result.NextPageToken <= 0 {
+			break
+		}
+		pageToken = ptr.Of(result.NextPageToken)
 	}
-	if len(versions) == 0 {
-		return nil, nil
-	}
+
 	return lo.Uniq(versions), nil
 }
 

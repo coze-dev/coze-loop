@@ -11,8 +11,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/samber/lo"
-
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
@@ -29,16 +27,14 @@ type IPromptCommitDAO interface {
 	Get(ctx context.Context, promptID int64, commitVersion string, opts ...db.Option) (promptCommitPO *model.PromptCommit, err error)
 	MGet(ctx context.Context, pairs []PromptIDCommitVersionPair, opts ...db.Option) (pairCommitPOMap map[PromptIDCommitVersionPair]*model.PromptCommit, err error)
 	List(ctx context.Context, param ListCommitParam, opts ...db.Option) (commitPOs []*model.PromptCommit, err error)
-	MGetVersionsByPromptID(ctx context.Context, promptID int64, opts ...db.Option) (versions []string, err error)
 }
 
 type ListCommitParam struct {
 	PromptID int64
 
-	Cursor      *int64
-	Limit       int
-	Asc         bool
-	HasSnippets *bool
+	Cursor *int64
+	Limit  int
+	Asc    bool
 }
 
 type PromptCommitDAOImpl struct {
@@ -135,9 +131,6 @@ func (d *PromptCommitDAOImpl) List(ctx context.Context, param ListCommitParam, o
 	q := query.Use(d.db.NewSession(ctx, opts...))
 	tx := q.WithContext(ctx).PromptCommit
 	tx = tx.Where(q.PromptCommit.PromptID.Eq(param.PromptID))
-	if param.HasSnippets != nil {
-		tx = tx.Where(q.PromptCommit.HasSnippets.Is(*param.HasSnippets))
-	}
 	if param.Cursor == nil {
 		if param.Asc {
 			tx = tx.Order(q.PromptCommit.ID.Asc())
@@ -160,35 +153,4 @@ func (d *PromptCommitDAOImpl) List(ctx context.Context, param ListCommitParam, o
 		return nil, nil
 	}
 	return commitPOs, nil
-}
-
-func (d *PromptCommitDAOImpl) MGetVersionsByPromptID(ctx context.Context, promptID int64, opts ...db.Option) (versions []string, err error) {
-	if promptID <= 0 {
-		return nil, errorx.New("promptID is invalid, promptID = %d", promptID)
-	}
-
-	if d.writeTracker.CheckWriteFlagByID(ctx, platestwrite.ResourceTypePromptCommit, promptID) {
-		opts = append(opts, db.WithMaster())
-	}
-
-	q := query.Use(d.db.NewSession(ctx, opts...))
-	tx := q.WithContext(ctx).PromptCommit
-	commitPOs, err := tx.Select(q.PromptCommit.Version).Where(q.PromptCommit.PromptID.Eq(promptID)).Order(q.PromptCommit.ID.Desc()).Find()
-	if err != nil {
-		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
-	}
-	if len(commitPOs) == 0 {
-		return nil, nil
-	}
-	versions = make([]string, 0, len(commitPOs))
-	for _, commitPO := range commitPOs {
-		if commitPO == nil || lo.IsEmpty(commitPO.Version) {
-			continue
-		}
-		versions = append(versions, commitPO.Version)
-	}
-	if len(versions) == 0 {
-		return nil, nil
-	}
-	return versions, nil
 }

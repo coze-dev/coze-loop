@@ -7520,7 +7520,6 @@ func (p *CommitDraftResponse) Field255DeepEqual(src *base.BaseResp) bool {
 type ListCommitRequest struct {
 	PromptID         *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
 	WithCommitDetail *bool      `thrift:"with_commit_detail,2,optional" frugal:"2,optional,bool" json:"with_commit_detail,omitempty" query:"with_commit_detail"`
-	HasSnippets      *bool      `thrift:"has_snippets,3,optional" frugal:"3,optional,bool" json:"has_snippets,omitempty" query:"has_snippets"`
 	PageSize         *int32     `thrift:"page_size,127,optional" frugal:"127,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
 	PageToken        *string    `thrift:"page_token,128,optional" frugal:"128,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
 	Asc              *bool      `thrift:"asc,129,optional" frugal:"129,optional,bool" form:"asc" json:"asc,omitempty" query:"asc"`
@@ -7556,18 +7555,6 @@ func (p *ListCommitRequest) GetWithCommitDetail() (v bool) {
 		return ListCommitRequest_WithCommitDetail_DEFAULT
 	}
 	return *p.WithCommitDetail
-}
-
-var ListCommitRequest_HasSnippets_DEFAULT bool
-
-func (p *ListCommitRequest) GetHasSnippets() (v bool) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetHasSnippets() {
-		return ListCommitRequest_HasSnippets_DEFAULT
-	}
-	return *p.HasSnippets
 }
 
 var ListCommitRequest_PageSize_DEFAULT int32
@@ -7623,9 +7610,6 @@ func (p *ListCommitRequest) SetPromptID(val *int64) {
 func (p *ListCommitRequest) SetWithCommitDetail(val *bool) {
 	p.WithCommitDetail = val
 }
-func (p *ListCommitRequest) SetHasSnippets(val *bool) {
-	p.HasSnippets = val
-}
 func (p *ListCommitRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
@@ -7642,7 +7626,6 @@ func (p *ListCommitRequest) SetBase(val *base.Base) {
 var fieldIDToName_ListCommitRequest = map[int16]string{
 	1:   "prompt_id",
 	2:   "with_commit_detail",
-	3:   "has_snippets",
 	127: "page_size",
 	128: "page_token",
 	129: "asc",
@@ -7655,10 +7638,6 @@ func (p *ListCommitRequest) IsSetPromptID() bool {
 
 func (p *ListCommitRequest) IsSetWithCommitDetail() bool {
 	return p.WithCommitDetail != nil
-}
-
-func (p *ListCommitRequest) IsSetHasSnippets() bool {
-	return p.HasSnippets != nil
 }
 
 func (p *ListCommitRequest) IsSetPageSize() bool {
@@ -7706,14 +7685,6 @@ func (p *ListCommitRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7802,17 +7773,6 @@ func (p *ListCommitRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.WithCommitDetail = _field
 	return nil
 }
-func (p *ListCommitRequest) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field *bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.HasSnippets = _field
-	return nil
-}
 func (p *ListCommitRequest) ReadField127(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -7867,10 +7827,6 @@ func (p *ListCommitRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField127(oprot); err != nil {
@@ -7942,24 +7898,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-func (p *ListCommitRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetHasSnippets() {
-		if err = oprot.WriteFieldBegin("has_snippets", thrift.BOOL, 3); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteBool(*p.HasSnippets); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *ListCommitRequest) writeField127(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageSize() {
@@ -8054,9 +7992,6 @@ func (p *ListCommitRequest) DeepEqual(ano *ListCommitRequest) bool {
 	if !p.Field2DeepEqual(ano.WithCommitDetail) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.HasSnippets) {
-		return false
-	}
 	if !p.Field127DeepEqual(ano.PageSize) {
 		return false
 	}
@@ -8092,18 +8027,6 @@ func (p *ListCommitRequest) Field2DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.WithCommitDetail != *src {
-		return false
-	}
-	return true
-}
-func (p *ListCommitRequest) Field3DeepEqual(src *bool) bool {
-
-	if p.HasSnippets == src {
-		return true
-	} else if p.HasSnippets == nil || src == nil {
-		return false
-	}
-	if *p.HasSnippets != *src {
 		return false
 	}
 	return true

@@ -205,7 +205,6 @@ struct CommitDraftResponse {
 struct ListCommitRequest {
     1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
     2: optional bool with_commit_detail (api.query="with_commit_detail")
-    3: optional bool has_snippets (api.query="has_snippets")
 
     127: optional i32 page_size (vt.not_nil="true", vt.gt="0")
     128: optional string page_token
