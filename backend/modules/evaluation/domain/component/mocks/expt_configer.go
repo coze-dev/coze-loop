@@ -138,3 +138,17 @@ func (mr *MockIConfigerMockRecorder) GetExptTurnResultFilterBmqProducerCfg(ctx a
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnResultFilterBmqProducerCfg", reflect.TypeOf((*MockIConfiger)(nil).GetExptTurnResultFilterBmqProducerCfg), ctx)
 }
+
+// GetMaintainerUserIDs mocks base method.
+func (m *MockIConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMaintainerUserIDs", ctx)
+	ret0, _ := ret[0].(map[string]bool)
+	return ret0
+}
+
+// GetMaintainerUserIDs indicates an expected call of GetMaintainerUserIDs.
+func (mr *MockIConfigerMockRecorder) GetMaintainerUserIDs(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaintainerUserIDs", reflect.TypeOf((*MockIConfiger)(nil).GetMaintainerUserIDs), ctx)
+}
