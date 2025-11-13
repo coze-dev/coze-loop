@@ -514,7 +514,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	return &openapi.SearchTraceOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
-			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
+			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, req.GetNeedOriginalTags()),
 			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 				Tokens: &trace.TokenCost{
 					Input:  inTokens,
@@ -620,7 +620,7 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 
 	return &openapi.SearchTraceTreeOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
-			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
+			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, false),
 			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 				Tokens: &trace.TokenCost{
 					Input:  inTokens,
@@ -725,7 +725,7 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	spansSize = loop_span.SizeofSpans(sResp.Spans)
 
 	resp.Data = &openapi.ListSpansOApiData{
-		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil),
+		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, req.GetNeedOriginalTags()),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}

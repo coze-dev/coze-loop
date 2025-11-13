@@ -419,25 +419,34 @@ func (p *AttrTos) Field3DeepEqual(src map[string]string) bool {
 }
 
 type OutputSpan struct {
-	TraceID         string                   `thrift:"trace_id,1,required" frugal:"1,required,string" form:"trace_id,required" json:"trace_id,required" query:"trace_id,required"`
-	SpanID          string                   `thrift:"span_id,2,required" frugal:"2,required,string" form:"span_id,required" json:"span_id,required" query:"span_id,required"`
-	ParentID        string                   `thrift:"parent_id,3,required" frugal:"3,required,string" form:"parent_id,required" json:"parent_id,required" query:"parent_id,required"`
-	SpanName        string                   `thrift:"span_name,4,required" frugal:"4,required,string" form:"span_name,required" json:"span_name,required" query:"span_name,required"`
-	SpanType        string                   `thrift:"span_type,5,required" frugal:"5,required,string" form:"span_type,required" json:"span_type,required" query:"span_type,required"`
-	Type            SpanType                 `thrift:"type,6,required" frugal:"6,required,string" form:"type,required" json:"type,required" query:"type,required"`
-	StartedAt       int64                    `thrift:"started_at,7,required" frugal:"7,required,i64" json:"started_at" form:"started_at,required" query:"started_at,required"`
-	Duration        int64                    `thrift:"duration,8,required" frugal:"8,required,i64" json:"duration" form:"duration,required" query:"duration,required"`
-	Status          SpanStatus               `thrift:"status,9,required" frugal:"9,required,string" form:"status,required" json:"status,required" query:"status,required"`
-	StatusCode      int32                    `thrift:"status_code,10,required" frugal:"10,required,i32" form:"status_code,required" json:"status_code,required" query:"status_code,required"`
-	Input           string                   `thrift:"input,11,required" frugal:"11,required,string" form:"input,required" json:"input,required" query:"input,required"`
-	Output          string                   `thrift:"output,12,required" frugal:"12,required,string" form:"output,required" json:"output,required" query:"output,required"`
-	LogicDeleteDate *int64                   `thrift:"logic_delete_date,13,optional" frugal:"13,optional,i64" json:"logic_delete_date" form:"logic_delete_date" query:"logic_delete_date"`
-	ServiceName     *string                  `thrift:"service_name,14,optional" frugal:"14,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
-	Logid           *string                  `thrift:"logid,15,optional" frugal:"15,optional,string" form:"logid" json:"logid,omitempty" query:"logid"`
-	CustomTags      map[string]string        `thrift:"custom_tags,101,optional" frugal:"101,optional,map<string:string>" form:"custom_tags" json:"custom_tags,omitempty" query:"custom_tags"`
-	AttrTos         *AttrTos                 `thrift:"attr_tos,102,optional" frugal:"102,optional,AttrTos" form:"attr_tos" json:"attr_tos,omitempty" query:"attr_tos"`
-	SystemTags      map[string]string        `thrift:"system_tags,103,optional" frugal:"103,optional,map<string:string>" form:"system_tags" json:"system_tags,omitempty" query:"system_tags"`
-	Annotations     []*annotation.Annotation `thrift:"annotations,104,optional" frugal:"104,optional,list<annotation.Annotation>" form:"annotations" json:"annotations,omitempty" query:"annotations"`
+	TraceID          string                   `thrift:"trace_id,1,required" frugal:"1,required,string" form:"trace_id,required" json:"trace_id,required" query:"trace_id,required"`
+	SpanID           string                   `thrift:"span_id,2,required" frugal:"2,required,string" form:"span_id,required" json:"span_id,required" query:"span_id,required"`
+	ParentID         string                   `thrift:"parent_id,3,required" frugal:"3,required,string" form:"parent_id,required" json:"parent_id,required" query:"parent_id,required"`
+	SpanName         string                   `thrift:"span_name,4,required" frugal:"4,required,string" form:"span_name,required" json:"span_name,required" query:"span_name,required"`
+	SpanType         string                   `thrift:"span_type,5,required" frugal:"5,required,string" form:"span_type,required" json:"span_type,required" query:"span_type,required"`
+	Type             SpanType                 `thrift:"type,6,required" frugal:"6,required,string" form:"type,required" json:"type,required" query:"type,required"`
+	StartedAt        int64                    `thrift:"started_at,7,required" frugal:"7,required,i64" json:"started_at" form:"started_at,required" query:"started_at,required"`
+	Duration         int64                    `thrift:"duration,8,required" frugal:"8,required,i64" json:"duration" form:"duration,required" query:"duration,required"`
+	Status           SpanStatus               `thrift:"status,9,required" frugal:"9,required,string" form:"status,required" json:"status,required" query:"status,required"`
+	StatusCode       int32                    `thrift:"status_code,10,required" frugal:"10,required,i32" form:"status_code,required" json:"status_code,required" query:"status_code,required"`
+	Input            string                   `thrift:"input,11,required" frugal:"11,required,string" form:"input,required" json:"input,required" query:"input,required"`
+	Output           string                   `thrift:"output,12,required" frugal:"12,required,string" form:"output,required" json:"output,required" query:"output,required"`
+	LogicDeleteDate  *int64                   `thrift:"logic_delete_date,13,optional" frugal:"13,optional,i64" json:"logic_delete_date" form:"logic_delete_date" query:"logic_delete_date"`
+	ServiceName      *string                  `thrift:"service_name,14,optional" frugal:"14,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
+	Logid            *string                  `thrift:"logid,15,optional" frugal:"15,optional,string" form:"logid" json:"logid,omitempty" query:"logid"`
+	SystemTagsString map[string]string        `thrift:"system_tags_string,16,optional" frugal:"16,optional,map<string:string>" form:"system_tags_string" json:"system_tags_string,omitempty" query:"system_tags_string"`
+	SystemTagsLong   map[string]int64         `thrift:"system_tags_long,17,optional" frugal:"17,optional,map<string:i64>" json:"system_tags_long" form:"system_tags_long" query:"system_tags_long"`
+	SystemTagsDouble map[string]float64       `thrift:"system_tags_double,18,optional" frugal:"18,optional,map<string:double>" form:"system_tags_double" json:"system_tags_double,omitempty" query:"system_tags_double"`
+	TagsString       map[string]string        `thrift:"tags_string,19,optional" frugal:"19,optional,map<string:string>" form:"tags_string" json:"tags_string,omitempty" query:"tags_string"`
+	TagsLong         map[string]int64         `thrift:"tags_long,20,optional" frugal:"20,optional,map<string:i64>" json:"tags_long" form:"tags_long" query:"tags_long"`
+	TagsDouble       map[string]float64       `thrift:"tags_double,21,optional" frugal:"21,optional,map<string:double>" form:"tags_double" json:"tags_double,omitempty" query:"tags_double"`
+	TagsBool         map[string]bool          `thrift:"tags_bool,22,optional" frugal:"22,optional,map<string:bool>" form:"tags_bool" json:"tags_bool,omitempty" query:"tags_bool"`
+	TagsBytes        map[string]string        `thrift:"tags_bytes,23,optional" frugal:"23,optional,map<string:string>" form:"tags_bytes" json:"tags_bytes,omitempty" query:"tags_bytes"`
+	CallType         *string                  `thrift:"call_type,24,optional" frugal:"24,optional,string" form:"call_type" json:"call_type,omitempty" query:"call_type"`
+	CustomTags       map[string]string        `thrift:"custom_tags,101,optional" frugal:"101,optional,map<string:string>" form:"custom_tags" json:"custom_tags,omitempty" query:"custom_tags"`
+	AttrTos          *AttrTos                 `thrift:"attr_tos,102,optional" frugal:"102,optional,AttrTos" form:"attr_tos" json:"attr_tos,omitempty" query:"attr_tos"`
+	SystemTags       map[string]string        `thrift:"system_tags,103,optional" frugal:"103,optional,map<string:string>" form:"system_tags" json:"system_tags,omitempty" query:"system_tags"`
+	Annotations      []*annotation.Annotation `thrift:"annotations,104,optional" frugal:"104,optional,list<annotation.Annotation>" form:"annotations" json:"annotations,omitempty" query:"annotations"`
 }
 
 func NewOutputSpan() *OutputSpan {
@@ -567,6 +576,114 @@ func (p *OutputSpan) GetLogid() (v string) {
 	return *p.Logid
 }
 
+var OutputSpan_SystemTagsString_DEFAULT map[string]string
+
+func (p *OutputSpan) GetSystemTagsString() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSystemTagsString() {
+		return OutputSpan_SystemTagsString_DEFAULT
+	}
+	return p.SystemTagsString
+}
+
+var OutputSpan_SystemTagsLong_DEFAULT map[string]int64
+
+func (p *OutputSpan) GetSystemTagsLong() (v map[string]int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSystemTagsLong() {
+		return OutputSpan_SystemTagsLong_DEFAULT
+	}
+	return p.SystemTagsLong
+}
+
+var OutputSpan_SystemTagsDouble_DEFAULT map[string]float64
+
+func (p *OutputSpan) GetSystemTagsDouble() (v map[string]float64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSystemTagsDouble() {
+		return OutputSpan_SystemTagsDouble_DEFAULT
+	}
+	return p.SystemTagsDouble
+}
+
+var OutputSpan_TagsString_DEFAULT map[string]string
+
+func (p *OutputSpan) GetTagsString() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagsString() {
+		return OutputSpan_TagsString_DEFAULT
+	}
+	return p.TagsString
+}
+
+var OutputSpan_TagsLong_DEFAULT map[string]int64
+
+func (p *OutputSpan) GetTagsLong() (v map[string]int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagsLong() {
+		return OutputSpan_TagsLong_DEFAULT
+	}
+	return p.TagsLong
+}
+
+var OutputSpan_TagsDouble_DEFAULT map[string]float64
+
+func (p *OutputSpan) GetTagsDouble() (v map[string]float64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagsDouble() {
+		return OutputSpan_TagsDouble_DEFAULT
+	}
+	return p.TagsDouble
+}
+
+var OutputSpan_TagsBool_DEFAULT map[string]bool
+
+func (p *OutputSpan) GetTagsBool() (v map[string]bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagsBool() {
+		return OutputSpan_TagsBool_DEFAULT
+	}
+	return p.TagsBool
+}
+
+var OutputSpan_TagsBytes_DEFAULT map[string]string
+
+func (p *OutputSpan) GetTagsBytes() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagsBytes() {
+		return OutputSpan_TagsBytes_DEFAULT
+	}
+	return p.TagsBytes
+}
+
+var OutputSpan_CallType_DEFAULT string
+
+func (p *OutputSpan) GetCallType() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCallType() {
+		return OutputSpan_CallType_DEFAULT
+	}
+	return *p.CallType
+}
+
 var OutputSpan_CustomTags_DEFAULT map[string]string
 
 func (p *OutputSpan) GetCustomTags() (v map[string]string) {
@@ -659,6 +776,33 @@ func (p *OutputSpan) SetServiceName(val *string) {
 func (p *OutputSpan) SetLogid(val *string) {
 	p.Logid = val
 }
+func (p *OutputSpan) SetSystemTagsString(val map[string]string) {
+	p.SystemTagsString = val
+}
+func (p *OutputSpan) SetSystemTagsLong(val map[string]int64) {
+	p.SystemTagsLong = val
+}
+func (p *OutputSpan) SetSystemTagsDouble(val map[string]float64) {
+	p.SystemTagsDouble = val
+}
+func (p *OutputSpan) SetTagsString(val map[string]string) {
+	p.TagsString = val
+}
+func (p *OutputSpan) SetTagsLong(val map[string]int64) {
+	p.TagsLong = val
+}
+func (p *OutputSpan) SetTagsDouble(val map[string]float64) {
+	p.TagsDouble = val
+}
+func (p *OutputSpan) SetTagsBool(val map[string]bool) {
+	p.TagsBool = val
+}
+func (p *OutputSpan) SetTagsBytes(val map[string]string) {
+	p.TagsBytes = val
+}
+func (p *OutputSpan) SetCallType(val *string) {
+	p.CallType = val
+}
 func (p *OutputSpan) SetCustomTags(val map[string]string) {
 	p.CustomTags = val
 }
@@ -688,6 +832,15 @@ var fieldIDToName_OutputSpan = map[int16]string{
 	13:  "logic_delete_date",
 	14:  "service_name",
 	15:  "logid",
+	16:  "system_tags_string",
+	17:  "system_tags_long",
+	18:  "system_tags_double",
+	19:  "tags_string",
+	20:  "tags_long",
+	21:  "tags_double",
+	22:  "tags_bool",
+	23:  "tags_bytes",
+	24:  "call_type",
 	101: "custom_tags",
 	102: "attr_tos",
 	103: "system_tags",
@@ -704,6 +857,42 @@ func (p *OutputSpan) IsSetServiceName() bool {
 
 func (p *OutputSpan) IsSetLogid() bool {
 	return p.Logid != nil
+}
+
+func (p *OutputSpan) IsSetSystemTagsString() bool {
+	return p.SystemTagsString != nil
+}
+
+func (p *OutputSpan) IsSetSystemTagsLong() bool {
+	return p.SystemTagsLong != nil
+}
+
+func (p *OutputSpan) IsSetSystemTagsDouble() bool {
+	return p.SystemTagsDouble != nil
+}
+
+func (p *OutputSpan) IsSetTagsString() bool {
+	return p.TagsString != nil
+}
+
+func (p *OutputSpan) IsSetTagsLong() bool {
+	return p.TagsLong != nil
+}
+
+func (p *OutputSpan) IsSetTagsDouble() bool {
+	return p.TagsDouble != nil
+}
+
+func (p *OutputSpan) IsSetTagsBool() bool {
+	return p.TagsBool != nil
+}
+
+func (p *OutputSpan) IsSetTagsBytes() bool {
+	return p.TagsBytes != nil
+}
+
+func (p *OutputSpan) IsSetCallType() bool {
+	return p.CallType != nil
 }
 
 func (p *OutputSpan) IsSetCustomTags() bool {
@@ -879,6 +1068,78 @@ func (p *OutputSpan) Read(iprot thrift.TProtocol) (err error) {
 		case 15:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 16:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField16(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 17:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField17(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 18:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 19:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField19(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 22:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 24:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField24(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1171,6 +1432,249 @@ func (p *OutputSpan) ReadField15(iprot thrift.TProtocol) error {
 	p.Logid = _field
 	return nil
 }
+func (p *OutputSpan) ReadField16(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.SystemTagsString = _field
+	return nil
+}
+func (p *OutputSpan) ReadField17(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]int64, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.SystemTagsLong = _field
+	return nil
+}
+func (p *OutputSpan) ReadField18(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]float64, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val float64
+		if v, err := iprot.ReadDouble(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.SystemTagsDouble = _field
+	return nil
+}
+func (p *OutputSpan) ReadField19(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.TagsString = _field
+	return nil
+}
+func (p *OutputSpan) ReadField20(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]int64, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.TagsLong = _field
+	return nil
+}
+func (p *OutputSpan) ReadField21(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]float64, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val float64
+		if v, err := iprot.ReadDouble(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.TagsDouble = _field
+	return nil
+}
+func (p *OutputSpan) ReadField22(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]bool, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val bool
+		if v, err := iprot.ReadBool(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.TagsBool = _field
+	return nil
+}
+func (p *OutputSpan) ReadField23(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.TagsBytes = _field
+	return nil
+}
+func (p *OutputSpan) ReadField24(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CallType = _field
+	return nil
+}
 func (p *OutputSpan) ReadField101(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -1325,6 +1829,42 @@ func (p *OutputSpan) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField16(oprot); err != nil {
+			fieldId = 16
+			goto WriteFieldError
+		}
+		if err = p.writeField17(oprot); err != nil {
+			fieldId = 17
+			goto WriteFieldError
+		}
+		if err = p.writeField18(oprot); err != nil {
+			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField24(oprot); err != nil {
+			fieldId = 24
 			goto WriteFieldError
 		}
 		if err = p.writeField101(oprot); err != nil {
@@ -1607,6 +2147,256 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
+func (p *OutputSpan) writeField16(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSystemTagsString() {
+		if err = oprot.WriteFieldBegin("system_tags_string", thrift.MAP, 16); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.SystemTagsString)); err != nil {
+			return err
+		}
+		for k, v := range p.SystemTagsString {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 16 end error: ", p), err)
+}
+func (p *OutputSpan) writeField17(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSystemTagsLong() {
+		if err = oprot.WriteFieldBegin("system_tags_long", thrift.MAP, 17); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.I64, len(p.SystemTagsLong)); err != nil {
+			return err
+		}
+		for k, v := range p.SystemTagsLong {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 17 end error: ", p), err)
+}
+func (p *OutputSpan) writeField18(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSystemTagsDouble() {
+		if err = oprot.WriteFieldBegin("system_tags_double", thrift.MAP, 18); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.DOUBLE, len(p.SystemTagsDouble)); err != nil {
+			return err
+		}
+		for k, v := range p.SystemTagsDouble {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteDouble(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
+}
+func (p *OutputSpan) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagsString() {
+		if err = oprot.WriteFieldBegin("tags_string", thrift.MAP, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.TagsString)); err != nil {
+			return err
+		}
+		for k, v := range p.TagsString {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
+func (p *OutputSpan) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagsLong() {
+		if err = oprot.WriteFieldBegin("tags_long", thrift.MAP, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.I64, len(p.TagsLong)); err != nil {
+			return err
+		}
+		for k, v := range p.TagsLong {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+func (p *OutputSpan) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagsDouble() {
+		if err = oprot.WriteFieldBegin("tags_double", thrift.MAP, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.DOUBLE, len(p.TagsDouble)); err != nil {
+			return err
+		}
+		for k, v := range p.TagsDouble {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteDouble(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
+func (p *OutputSpan) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagsBool() {
+		if err = oprot.WriteFieldBegin("tags_bool", thrift.MAP, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.BOOL, len(p.TagsBool)); err != nil {
+			return err
+		}
+		for k, v := range p.TagsBool {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteBool(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
+func (p *OutputSpan) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagsBytes() {
+		if err = oprot.WriteFieldBegin("tags_bytes", thrift.MAP, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.TagsBytes)); err != nil {
+			return err
+		}
+		for k, v := range p.TagsBytes {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
+func (p *OutputSpan) writeField24(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCallType() {
+		if err = oprot.WriteFieldBegin("call_type", thrift.STRING, 24); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CallType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
+}
 func (p *OutputSpan) writeField101(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCustomTags() {
 		if err = oprot.WriteFieldBegin("custom_tags", thrift.MAP, 101); err != nil {
@@ -1769,6 +2559,33 @@ func (p *OutputSpan) DeepEqual(ano *OutputSpan) bool {
 	if !p.Field15DeepEqual(ano.Logid) {
 		return false
 	}
+	if !p.Field16DeepEqual(ano.SystemTagsString) {
+		return false
+	}
+	if !p.Field17DeepEqual(ano.SystemTagsLong) {
+		return false
+	}
+	if !p.Field18DeepEqual(ano.SystemTagsDouble) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.TagsString) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.TagsLong) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.TagsDouble) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.TagsBool) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.TagsBytes) {
+		return false
+	}
+	if !p.Field24DeepEqual(ano.CallType) {
+		return false
+	}
 	if !p.Field101DeepEqual(ano.CustomTags) {
 		return false
 	}
@@ -1900,6 +2717,122 @@ func (p *OutputSpan) Field15DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Logid, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *OutputSpan) Field16DeepEqual(src map[string]string) bool {
+
+	if len(p.SystemTagsString) != len(src) {
+		return false
+	}
+	for k, v := range p.SystemTagsString {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *OutputSpan) Field17DeepEqual(src map[string]int64) bool {
+
+	if len(p.SystemTagsLong) != len(src) {
+		return false
+	}
+	for k, v := range p.SystemTagsLong {
+		_src := src[k]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *OutputSpan) Field18DeepEqual(src map[string]float64) bool {
+
+	if len(p.SystemTagsDouble) != len(src) {
+		return false
+	}
+	for k, v := range p.SystemTagsDouble {
+		_src := src[k]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *OutputSpan) Field19DeepEqual(src map[string]string) bool {
+
+	if len(p.TagsString) != len(src) {
+		return false
+	}
+	for k, v := range p.TagsString {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *OutputSpan) Field20DeepEqual(src map[string]int64) bool {
+
+	if len(p.TagsLong) != len(src) {
+		return false
+	}
+	for k, v := range p.TagsLong {
+		_src := src[k]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *OutputSpan) Field21DeepEqual(src map[string]float64) bool {
+
+	if len(p.TagsDouble) != len(src) {
+		return false
+	}
+	for k, v := range p.TagsDouble {
+		_src := src[k]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *OutputSpan) Field22DeepEqual(src map[string]bool) bool {
+
+	if len(p.TagsBool) != len(src) {
+		return false
+	}
+	for k, v := range p.TagsBool {
+		_src := src[k]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *OutputSpan) Field23DeepEqual(src map[string]string) bool {
+
+	if len(p.TagsBytes) != len(src) {
+		return false
+	}
+	for k, v := range p.TagsBytes {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *OutputSpan) Field24DeepEqual(src *string) bool {
+
+	if p.CallType == src {
+		return true
+	} else if p.CallType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CallType, *src) != 0 {
 		return false
 	}
 	return true

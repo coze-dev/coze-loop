@@ -22,6 +22,7 @@ func SpanDO2DTO(
 	userMap map[string]*common.UserInfo,
 	evalMap map[int64]*rpc.Evaluator,
 	tagMap map[int64]*rpc.TagInfo,
+	needOriginalTags bool,
 ) *span.OutputSpan {
 	outSpan := &span.OutputSpan{
 		TraceID:         s.TraceID,
@@ -29,12 +30,23 @@ func SpanDO2DTO(
 		ParentID:        s.ParentID,
 		SpanName:        s.SpanName,
 		SpanType:        s.SpanType,
+		CallType:        &s.CallType,
 		StartedAt:       time_util.MicroSec2MillSec(s.StartTime),      // to ms
 		Duration:        time_util.MicroSec2MillSec(s.DurationMicros), // to ms
 		StatusCode:      s.StatusCode,
 		Input:           s.Input,
 		Output:          s.Output,
 		LogicDeleteDate: ptr.Of(time_util.MicroSec2MillSec(s.LogicDeleteTime)), // to ms
+	}
+	if needOriginalTags {
+		outSpan.SystemTagsString = s.SystemTagsString
+		outSpan.SystemTagsLong = s.SystemTagsLong
+		outSpan.SystemTagsDouble = s.SystemTagsDouble
+		outSpan.TagsString = s.TagsString
+		outSpan.TagsLong = s.TagsLong
+		outSpan.TagsDouble = s.TagsDouble
+		outSpan.TagsBool = s.TagsBool
+		outSpan.TagsBytes = s.TagsByte
 	}
 	if s.PSM != "" {
 		outSpan.ServiceName = ptr.Of(s.PSM)
@@ -157,10 +169,11 @@ func SpanListDO2DTO(
 	userMap map[string]*common.UserInfo,
 	evalMap map[int64]*rpc.Evaluator,
 	tagMap map[int64]*rpc.TagInfo,
+	needOriginalTags bool,
 ) []*span.OutputSpan {
 	ret := make([]*span.OutputSpan, len(spans))
 	for i, s := range spans {
-		ret[i] = SpanDO2DTO(s, userMap, evalMap, tagMap)
+		ret[i] = SpanDO2DTO(s, userMap, evalMap, tagMap, needOriginalTags)
 	}
 	return ret
 }

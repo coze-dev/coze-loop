@@ -115,7 +115,7 @@ func (t *TraceApplication) ListSpans(ctx context.Context, req *trace.ListSpansRe
 		sResp.Spans.GetEvaluatorVersionIDs(),
 		sResp.Spans.GetAnnotationTagIDs())
 	return &trace.ListSpansResponse{
-		Spans:         tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap),
+		Spans:         tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap, false),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}, nil
@@ -209,7 +209,7 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 		sResp.Spans.GetEvaluatorVersionIDs(),
 		sResp.Spans.GetAnnotationTagIDs())
 	return &trace.GetTraceResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap, false),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{
@@ -287,7 +287,7 @@ func (t *TraceApplication) SearchTraceTree(ctx context.Context, req *trace.Searc
 		sResp.Spans.GetEvaluatorVersionIDs(),
 		sResp.Spans.GetAnnotationTagIDs())
 	return &trace.SearchTraceTreeResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap, false),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{
