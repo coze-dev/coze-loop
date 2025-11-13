@@ -291,12 +291,15 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 				assert.Equal(t, defaultSourceTargetIDInt, evalTarget.EvalTargetVersion.Prompt.PromptID)
 				assert.Equal(t, defaultSourceTargetVersion, evalTarget.EvalTargetVersion.Prompt.Version)
 
-				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 10)
-				if len(evalTarget.EvalTargetVersion.InputSchema) == 10 {
+				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 11) // 10 variables + 1 user query schema
+				if len(evalTarget.EvalTargetVersion.InputSchema) == 11 {
 					assert.Equal(t, "var1", *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText}, evalTarget.EvalTargetVersion.InputSchema[0].SupportContentTypes)
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[0].JsonSchema)
 					assert.Equal(t, "var2", *evalTarget.EvalTargetVersion.InputSchema[1].Key)
+					// Check user query schema is the last one
+					assert.Equal(t, consts.InputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[10].Key)
+					assert.Equal(t, []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart}, evalTarget.EvalTargetVersion.InputSchema[10].SupportContentTypes)
 				}
 
 				assert.Len(t, evalTarget.EvalTargetVersion.OutputSchema, 1)
@@ -355,7 +358,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 					assert.Equal(t, "var1", *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText}, evalTarget.EvalTargetVersion.InputSchema[0].SupportContentTypes)
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[0].JsonSchema)
-					
+
 					assert.Equal(t, consts.InputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[1].Key)
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart}, evalTarget.EvalTargetVersion.InputSchema[1].SupportContentTypes)
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[1].JsonSchema)
@@ -392,7 +395,13 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.NotNil(t, evalTarget)
-				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 0)
+				// Even when VariableDefs is empty, user query schema should still be added
+				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 1)
+				if len(evalTarget.EvalTargetVersion.InputSchema) == 1 {
+					assert.Equal(t, consts.InputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[0].Key)
+					assert.Equal(t, []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart}, evalTarget.EvalTargetVersion.InputSchema[0].SupportContentTypes)
+					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[0].JsonSchema)
+				}
 			},
 			wantErr: false,
 		},
@@ -1917,40 +1926,6 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithUserQuery(t *testing.T) {
 				TargetType: entity.EvalTargetTypeLoopPrompt,
 			},
 			mockSetup: func() {
-				expectedParam := &rpc.ExecutePromptParam{
-					PromptID:      456,
-					PromptVersion: "v1",
-					Variables: []*entity.VariableVal{
-						{
-							Key:   gptr.Of("var1"),
-							Value: gptr.Of("test input"),
-							Content: &entity.Content{
-								ContentType: gptr.Of(entity.ContentTypeText),
-								Text:        gptr.Of("test input"),
-							},
-						},
-					},
-					History: []*entity.Message{},
-					UserQuery: &entity.Message{
-						Role: entity.RoleUser,
-						Content: &entity.Content{
-							ContentType: gptr.Of(entity.ContentTypeMultipart),
-							MultiPart: []*entity.Content{
-								{
-									ContentType: gptr.Of(entity.ContentTypeText),
-									Text:        gptr.Of("text part"),
-								},
-								{
-									ContentType: gptr.Of(entity.ContentTypeImage),
-									Image: &entity.Image{
-										URL: gptr.Of("http://example.com/image.jpg"),
-									},
-								},
-							},
-						},
-					},
-					RuntimeParam: nil,
-				}
 				mockPromptRPCAdapter.EXPECT().
 					ExecutePrompt(gomock.Any(), int64(123), gomock.Any()).
 					Return(&rpc.ExecutePromptResult{
@@ -1995,20 +1970,6 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithUserQuery(t *testing.T) {
 				TargetType: entity.EvalTargetTypeLoopPrompt,
 			},
 			mockSetup: func() {
-				expectedParam := &rpc.ExecutePromptParam{
-					PromptID:      456,
-					PromptVersion: "v1",
-					Variables:     []*entity.VariableVal{},
-					History:       []*entity.Message{},
-					UserQuery: &entity.Message{
-						Role: entity.RoleUser,
-						Content: &entity.Content{
-							ContentType: gptr.Of(entity.ContentTypeText),
-							Text:        gptr.Of("user query only"),
-						},
-					},
-					RuntimeParam: nil,
-				}
 				mockPromptRPCAdapter.EXPECT().
 					ExecutePrompt(gomock.Any(), int64(123), gomock.Any()).
 					Return(&rpc.ExecutePromptResult{
@@ -2053,20 +2014,6 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithUserQuery(t *testing.T) {
 				TargetType: entity.EvalTargetTypeLoopPrompt,
 			},
 			mockSetup: func() {
-				expectedParam := &rpc.ExecutePromptParam{
-					PromptID:      456,
-					PromptVersion: "v1",
-					Variables:     []*entity.VariableVal{},
-					History:       []*entity.Message{},
-					UserQuery: &entity.Message{
-						Role: entity.RoleUser,
-						Content: &entity.Content{
-							ContentType: gptr.Of(entity.ContentTypeText),
-							Text:        gptr.Of("test user query"),
-						},
-					},
-					RuntimeParam: nil,
-				}
 				multiContentResult := &entity.Content{
 					ContentType: gptr.Of(entity.ContentTypeMultipart),
 					MultiPart: []*entity.Content{
@@ -2199,22 +2146,6 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithRuntimeParam(t *testing.T
 				TargetType: entity.EvalTargetTypeLoopPrompt,
 			},
 			mockSetup: func() {
-				expectedParam := &rpc.ExecutePromptParam{
-					PromptID:      456,
-					PromptVersion: "v1",
-					Variables: []*entity.VariableVal{
-						{
-							Key:   gptr.Of("var1"),
-							Value: gptr.Of("test input"),
-							Content: &entity.Content{
-								ContentType: gptr.Of(entity.ContentTypeText),
-								Text:        gptr.Of("test input"),
-							},
-						},
-					},
-					History:      nil,
-					RuntimeParam: gptr.Of(`{"model_config":{"model_id":"test_model","temperature":0.7}}`),
-				}
 				mockPromptRPCAdapter.EXPECT().
 					ExecutePrompt(gomock.Any(), int64(123), gomock.Any()).
 					Return(&rpc.ExecutePromptResult{
@@ -2260,22 +2191,6 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithRuntimeParam(t *testing.T
 				TargetType: entity.EvalTargetTypeLoopPrompt,
 			},
 			mockSetup: func() {
-				expectedParam := &rpc.ExecutePromptParam{
-					PromptID:      456,
-					PromptVersion: "v1",
-					Variables: []*entity.VariableVal{
-						{
-							Key:   gptr.Of("var1"),
-							Value: gptr.Of("test input"),
-							Content: &entity.Content{
-								ContentType: gptr.Of(entity.ContentTypeText),
-								Text:        gptr.Of("test input"),
-							},
-						},
-					},
-					History:      nil,
-					RuntimeParam: nil, // No runtime param
-				}
 				mockPromptRPCAdapter.EXPECT().
 					ExecutePrompt(gomock.Any(), int64(123), gomock.Any()).
 					Return(&rpc.ExecutePromptResult{
@@ -2318,13 +2233,6 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithRuntimeParam(t *testing.T
 				TargetType: entity.EvalTargetTypeLoopPrompt,
 			},
 			mockSetup: func() {
-				expectedParam := &rpc.ExecutePromptParam{
-					PromptID:      456,
-					PromptVersion: "v1",
-					Variables:     []*entity.VariableVal{},
-					History:       nil,
-					RuntimeParam:  nil, // Empty string should not set RuntimeParam
-				}
 				mockPromptRPCAdapter.EXPECT().
 					ExecutePrompt(gomock.Any(), int64(123), gomock.Any()).
 					Return(&rpc.ExecutePromptResult{
@@ -2360,13 +2268,6 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithRuntimeParam(t *testing.T
 				TargetType: entity.EvalTargetTypeLoopPrompt,
 			},
 			mockSetup: func() {
-				expectedParam := &rpc.ExecutePromptParam{
-					PromptID:      456,
-					PromptVersion: "v1",
-					Variables:     []*entity.VariableVal{},
-					History:       nil,
-					RuntimeParam:  gptr.Of(`{"model_config":{"model_id":"test_model"}}`),
-				}
 				mockPromptRPCAdapter.EXPECT().
 					ExecutePrompt(gomock.Any(), int64(123), gomock.Any()).
 					Return(&rpc.ExecutePromptResult{
