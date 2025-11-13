@@ -42,6 +42,7 @@ func TestNewPromptService(t *testing.T) {
 			mockConfigProvider,
 			mockLLM,
 			mockFile,
+			NewCozeLoopSnippetParser(),
 		)
 
 		// Verify
