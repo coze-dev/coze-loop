@@ -1894,6 +1894,7 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -2196,6 +2197,7 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			err := r.DeleteAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -2214,6 +2216,7 @@ func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -2437,6 +2440,7 @@ func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			err := r.DeleteManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
