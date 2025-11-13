@@ -52,7 +52,7 @@ func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (span
 			preSpanIDs = append(preSpanIDs, spanID) // do not need order, only for select from db
 		}
 		respIDByOrder = append([]string{preRespID}, respIDByOrder...) // need order, for order SpanList
-		preRespID, _ = redisValue[keyPreviousResponseID]
+		preRespID, _ = redisValue[keyPreviousResponseID]              //nolint:staticcheck
 
 		spanNum++
 		if spanNum >= int(spanNumLimit) {
