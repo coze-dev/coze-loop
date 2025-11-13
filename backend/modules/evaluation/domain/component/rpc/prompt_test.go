@@ -235,8 +235,8 @@ func TestExecutePromptResult_MultiContent(t *testing.T) {
 			expectedMulti: false,
 		},
 		{
-			name:         "with_content_and_multi_content",
-			content:      gptr.Of("regular content"),
+			name:    "with_content_and_multi_content",
+			content: gptr.Of("regular content"),
 			multiContent: &entity.Content{
 				ContentType: gptr.Of(entity.ContentTypeText),
 				Text:        gptr.Of("multi content"),
