@@ -14,6 +14,10 @@ const (
 	InsightAnalysisStatus_Failed  InsightAnalysisStatus = 3
 )
 
+const (
+	InsightAnalysisRunningTimeout = 2 * time.Hour
+)
+
 type ExptInsightAnalysisRecord struct {
 	ID                    int64
 	SpaceID               int64

@@ -55,18 +55,20 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 	}
 }
 
-func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, session *entity.Session) (int64, error) {
+func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, session *entity.Session, startTime, endTime int64) (int64, error) {
 	recordID, err := e.repo.CreateAnalysisRecord(ctx, record)
 	if err != nil {
 		return 0, err
 	}
 
 	exportEvent := &entity.ExportCSVEvent{
-		ExportID:     recordID,
-		ExperimentID: record.ExptID,
-		SpaceID:      record.SpaceID,
-		ExportScene:  entity.ExportSceneInsightAnalysis,
-		CreatedAt:    time.Now().Unix(),
+		ExportID:      recordID,
+		ExperimentID:  record.ExptID,
+		SpaceID:       record.SpaceID,
+		ExportScene:   entity.ExportSceneInsightAnalysis,
+		CreatedAt:     time.Now().Unix(),
+		ExptStartTime: startTime,
+		ExptEndTime:   endTime,
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Second*3))
 	if err != nil {
@@ -76,7 +78,7 @@ func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context
 	return recordID, nil
 }
 
-func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID, CreateAt int64) (err error) {
+func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID, CreateAt, startTime, endTime int64) (err error) {
 	analysisRecord, err := e.repo.GetAnalysisRecordByID(ctx, spaceID, exptID, recordID)
 	if err != nil {
 		return err
@@ -125,7 +127,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		return err
 	}
 
-	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url)
+	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url, startTime, endTime)
 	if err != nil {
 		return err
 	}
@@ -135,11 +137,13 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 
 	// 发送时间检查分析报告生成状态
 	exportEvent := &entity.ExportCSVEvent{
-		ExportID:     recordID,
-		ExperimentID: exptID,
-		SpaceID:      spaceID,
-		ExportScene:  entity.ExportSceneInsightAnalysis,
-		CreatedAt:    CreateAt,
+		ExportID:      recordID,
+		ExperimentID:  exptID,
+		SpaceID:       spaceID,
+		ExportScene:   entity.ExportSceneInsightAnalysis,
+		CreatedAt:     CreateAt,
+		ExptStartTime: startTime,
+		ExptEndTime:   endTime,
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Minute*3))
 	if err != nil {
@@ -154,6 +158,14 @@ func (e ExptInsightAnalysisServiceImpl) checkAnalysisReportGenStatus(ctx context
 	if err != nil {
 		return err
 	}
+
+	// 超过3小时，未生成分析报告，认为是失败
+	if status == entity.ReportStatus_Running && record.CreatedAt.Add(entity.InsightAnalysisRunningTimeout).Unix() <= time.Now().Unix() {
+		record.Status = entity.InsightAnalysisStatus_Failed
+		logs.CtxWarn(ctx, "checkAnalysisReportGenStatus found timeout event, expt_id: %v, record_id: %v", record.ExptID, record.ID)
+		return e.repo.UpdateAnalysisRecord(ctx, record)
+	}
+
 	if status == entity.ReportStatus_Failed {
 		record.Status = entity.InsightAnalysisStatus_Failed
 		return e.repo.UpdateAnalysisRecord(ctx, record)
@@ -193,6 +205,15 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 	analysisRecord, err := e.repo.GetAnalysisRecordByID(ctx, spaceID, exptID, recordID)
 	if err != nil {
 		return nil, err
+	}
+
+	if analysisRecord.Status == entity.InsightAnalysisStatus_Running && analysisRecord.CreatedAt.Add(entity.InsightAnalysisRunningTimeout).Unix() < time.Now().Unix() {
+		analysisRecord.Status = entity.InsightAnalysisStatus_Failed
+		err = e.repo.UpdateAnalysisRecord(ctx, analysisRecord)
+		if err != nil {
+			logs.CtxError(ctx, "GetAnalysisRecordByID: UpdateAnalysisRecord failed: %v", err)
+		}
+		return analysisRecord, err
 	}
 
 	if analysisRecord.Status == entity.InsightAnalysisStatus_Running ||
@@ -254,7 +275,40 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 }
 
 func (e ExptInsightAnalysisServiceImpl) ListAnalysisRecord(ctx context.Context, spaceID, exptID int64, page entity.Page, session *entity.Session) ([]*entity.ExptInsightAnalysisRecord, int64, error) {
-	return e.repo.ListAnalysisRecord(ctx, spaceID, exptID, page)
+	analysisRecords, total, err := e.repo.ListAnalysisRecord(ctx, spaceID, exptID, page)
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return analysisRecords, total, nil
+	}
+
+	firstAnalysisRecord := analysisRecords[0]
+
+	upvoteCount, downvoteCount, err := e.repo.CountFeedbackVote(ctx, spaceID, exptID, firstAnalysisRecord.ID)
+	if err != nil {
+		// side path, don't block the main flow
+		logs.CtxWarn(ctx, "CountFeedbackVote failed for space_id: %v, expt_id: %v, record_id: %v, err=%v", spaceID, exptID, firstAnalysisRecord.ID, err)
+		return analysisRecords, total, nil
+	}
+
+	curUserFeedbackVote, err := e.repo.GetFeedbackVoteByUser(ctx, spaceID, exptID, firstAnalysisRecord.ID, session.UserID)
+	if err != nil {
+		// side path, don't block the main flow
+		logs.CtxWarn(ctx, "GetFeedbackVoteByUser failed for space_id: %v, expt_id: %v, record_id: %v, err=%v", spaceID, exptID, firstAnalysisRecord.ID, err)
+		return analysisRecords, total, nil
+	}
+	firstAnalysisRecord.ExptInsightAnalysisFeedback = entity.ExptInsightAnalysisFeedback{
+		UpvoteCount:         upvoteCount,
+		DownvoteCount:       downvoteCount,
+		CurrentUserVoteType: entity.None,
+	}
+	firstAnalysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = entity.None
+	if curUserFeedbackVote != nil {
+		firstAnalysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = curUserFeedbackVote.VoteType
+	}
+
+	return analysisRecords, total, nil
 }
 
 func (e ExptInsightAnalysisServiceImpl) DeleteAnalysisRecord(ctx context.Context, spaceID, exptID, recordID int64) error {
