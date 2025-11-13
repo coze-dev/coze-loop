@@ -105,15 +105,9 @@ importers:
       classnames:
         specifier: ^2.3.2
         version: 2.5.1
-      copy-to-clipboard:
-        specifier: ^3.3.3
-        version: 3.3.3
       immer:
         specifier: ^10.0.3
         version: 10.1.1
-      query-string:
-        specifier: ^8.1.0
-        version: 8.2.0
       react:
         specifier: 18.2.0
         version: 18.2.0
