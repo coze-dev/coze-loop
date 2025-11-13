@@ -5,6 +5,7 @@ package evaluator
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -459,6 +460,52 @@ func TestConvertEvaluatorDTO2DO_WithCurrentVersion(t *testing.T) {
 				assert.Equal(t, int64(890), result.CodeEvaluatorVersion.ID)
 				assert.Equal(t, "print('hello world')", result.CodeEvaluatorVersion.CodeContent)
 				assert.Equal(t, evaluatordo.LanguageTypePython, result.CodeEvaluatorVersion.LanguageType)
+			},
+		},
+		{
+			name: "CustomRPC评估器带版本信息",
+			evaluatorDTO: &evaluatordto.Evaluator{
+				EvaluatorID:    gptr.Of(int64(123)),
+				WorkspaceID:    gptr.Of(int64(456)),
+				Name:           gptr.Of("Test Prompt Evaluator"),
+				Description:    gptr.Of("Test description"),
+				DraftSubmitted: gptr.Of(true),
+				EvaluatorType:  evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_CustomRPC),
+				LatestVersion:  gptr.Of("1"),
+				CurrentVersion: &evaluatordto.EvaluatorVersion{
+					ID:          gptr.Of(int64(789)),
+					Version:     gptr.Of("1"),
+					Description: gptr.Of("Version description"),
+					EvaluatorContent: &evaluatordto.EvaluatorContent{
+						ReceiveChatHistory: gptr.Of(true),
+						CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+							ProviderEvaluatorCode: gptr.Of("mock provider evaluator code"),
+							AccessProtocol:        evaluatordto.AccessProtocolRPC,
+							ServiceName:           gptr.Of("mock service name"),
+							Cluster:               gptr.Of("mock cluster"),
+							Timeout:               gptr.Of(int64(time.Second)),
+							RateLimit: &commondto.RateLimit{
+								Rate:   gptr.Of(int32(10)),
+								Burst:  gptr.Of(int32(10)),
+								Period: gptr.Of("1s"),
+							},
+						},
+					},
+				},
+				EvaluatorInfo: &evaluatordto.EvaluatorInfo{
+					Benchmark:     gptr.Of("mock benchmark"),
+					Vendor:        gptr.Of("mock vendor"),
+					VendorURL:     gptr.Of("https://mock.vendor.url"),
+					UserManualURL: gptr.Of("https://mock.user.manual.url"),
+				},
+			},
+			validate: func(t *testing.T, result *evaluatordo.Evaluator, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, int64(123), result.ID)
+				assert.Equal(t, evaluatordo.EvaluatorTypeCustomRPC, result.EvaluatorType)
+				assert.NotNil(t, result.CustomRPCEvaluatorVersion)
+				assert.Equal(t, int64(789), result.CustomRPCEvaluatorVersion.ID)
+				assert.Equal(t, "mock provider evaluator code", *result.CustomRPCEvaluatorVersion.ProviderEvaluatorCode)
 			},
 		},
 	}
