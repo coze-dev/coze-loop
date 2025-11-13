@@ -109,6 +109,7 @@ func PromptTemplateDTO2DO(dto *prompt.PromptTemplate) *entity.PromptTemplate {
 		TemplateType: TemplateTypeDTO2DO(dto.GetTemplateType()),
 		Messages:     BatchMessageDTO2DO(dto.Messages),
 		VariableDefs: BatchVariableDefDTO2DO(dto.VariableDefs),
+		Metadata:     dto.Metadata,
 	}
 }
 
@@ -118,6 +119,10 @@ func TemplateTypeDTO2DO(dto prompt.TemplateType) entity.TemplateType {
 		return entity.TemplateTypeNormal
 	case prompt.TemplateTypeJinja2:
 		return entity.TemplateTypeJinja2
+	case prompt.TemplateTypeGoTemplate:
+		return entity.TemplateTypeGoTemplate
+	case prompt.TemplateTypeCustomTemplateM:
+		return entity.TemplateTYpeCustomTemplateM
 	default:
 		return entity.TemplateTypeNormal
 	}
@@ -149,6 +154,7 @@ func MessageDTO2DO(dto *prompt.Message) *entity.Message {
 		Parts:            BatchContentPartDTO2DO(dto.Parts),
 		ToolCallID:       dto.ToolCallID,
 		ToolCalls:        BatchToolCallDTO2DO(dto.ToolCalls),
+		Metadata:         dto.Metadata,
 	}
 }
 
@@ -189,9 +195,11 @@ func ContentPartDTO2DO(dto *prompt.ContentPart) *entity.ContentPart {
 	}
 
 	return &entity.ContentPart{
-		Type:     ContentTypeDTO2DO(dto.GetType()),
-		Text:     dto.Text,
-		ImageURL: ImageURLDTO2DO(dto.ImageURL),
+		Type:        ContentTypeDTO2DO(dto.GetType()),
+		Text:        dto.Text,
+		ImageURL:    ImageURLDTO2DO(dto.ImageURL),
+		VideoURL:    VideoURLDTO2DO(dto.VideoURL),
+		MediaConfig: MediaConfigDTO2DO(dto.MediaConfig),
 	}
 }
 
@@ -201,6 +209,8 @@ func ContentTypeDTO2DO(dto prompt.ContentType) entity.ContentType {
 		return entity.ContentTypeText
 	case prompt.ContentTypeImageURL:
 		return entity.ContentTypeImageURL
+	case prompt.ContentTypeVideoURL:
+		return entity.ContentTypeVideoURL
 	case prompt.ContentTypeMultiPartVariable:
 		return entity.ContentTypeMultiPartVariable
 	default:
@@ -216,6 +226,27 @@ func ImageURLDTO2DO(dto *prompt.ImageURL) *entity.ImageURL {
 	return &entity.ImageURL{
 		URI: dto.GetURI(),
 		URL: dto.GetURL(),
+	}
+}
+
+func VideoURLDTO2DO(dto *prompt.VideoURL) *entity.VideoURL {
+	if dto == nil {
+		return nil
+	}
+
+	return &entity.VideoURL{
+		URI: dto.GetURI(),
+		URL: dto.GetURL(),
+	}
+}
+
+func MediaConfigDTO2DO(dto *prompt.MediaConfig) *entity.MediaConfig {
+	if dto == nil {
+		return nil
+	}
+
+	return &entity.MediaConfig{
+		Fps: dto.Fps,
 	}
 }
 
@@ -343,6 +374,10 @@ func ToolCallDTO2DO(dto *prompt.ToolCall) *entity.ToolCall {
 
 func ToolTypeDTO2DO(dto prompt.ToolType) entity.ToolType {
 	switch dto {
+	case prompt.ToolTypeFunction:
+		return entity.ToolTypeFunction
+	case prompt.ToolTypeGoogleSearch:
+		return entity.ToolTypeGoogleSearch
 	default:
 		return entity.ToolTypeFunction
 	}
@@ -365,7 +400,19 @@ func ToolCallConfigDTO2DO(dto *prompt.ToolCallConfig) *entity.ToolCallConfig {
 	}
 
 	return &entity.ToolCallConfig{
-		ToolChoice: ToolChoiceTypeDTO2DO(dto.GetToolChoice()),
+		ToolChoice:              ToolChoiceTypeDTO2DO(dto.GetToolChoice()),
+		ToolChoiceSpecification: ToolChoiceSpecificationDTO2DO(dto.ToolChoiceSpecification),
+	}
+}
+
+func ToolChoiceSpecificationDTO2DO(dto *prompt.ToolChoiceSpecification) *entity.ToolChoiceSpecification {
+	if dto == nil {
+		return nil
+	}
+
+	return &entity.ToolChoiceSpecification{
+		Type: ToolTypeDTO2DO(dto.GetType()),
+		Name: dto.GetName(),
 	}
 }
 
@@ -375,6 +422,8 @@ func ToolChoiceTypeDTO2DO(dto prompt.ToolChoiceType) entity.ToolChoiceType {
 		return entity.ToolChoiceTypeNone
 	case prompt.ToolChoiceTypeAuto:
 		return entity.ToolChoiceTypeAuto
+	case prompt.ToolChoiceTypeSpecific:
+		return entity.ToolChoiceTypeSpecific
 	default:
 		return entity.ToolChoiceTypeAuto
 	}
@@ -394,6 +443,7 @@ func ModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
 		PresencePenalty:  dto.PresencePenalty,
 		FrequencyPenalty: dto.FrequencyPenalty,
 		JSONMode:         dto.JSONMode,
+		Extra:            dto.Extra,
 	}
 }
 
@@ -479,6 +529,10 @@ func ToolCallDO2DTO(do *entity.ToolCall) *prompt.ToolCall {
 
 func ToolTypeDO2DTO(do entity.ToolType) prompt.ToolType {
 	switch do {
+	case entity.ToolTypeFunction:
+		return prompt.ToolTypeFunction
+	case entity.ToolTypeGoogleSearch:
+		return prompt.ToolTypeGoogleSearch
 	default:
 		return prompt.ToolTypeFunction
 	}
@@ -523,9 +577,11 @@ func ContentPartDO2DTO(do *entity.ContentPart) *prompt.ContentPart {
 		return nil
 	}
 	return &prompt.ContentPart{
-		Type:     ptr.Of(ContentTypeDO2DTO(do.Type)),
-		Text:     do.Text,
-		ImageURL: ImageURLDO2DTO(do.ImageURL),
+		Type:        ptr.Of(ContentTypeDO2DTO(do.Type)),
+		Text:        do.Text,
+		ImageURL:    ImageURLDO2DTO(do.ImageURL),
+		VideoURL:    VideoURLDO2DTO(do.VideoURL),
+		MediaConfig: MediaConfigDO2DTO(do.MediaConfig),
 	}
 }
 
@@ -535,6 +591,8 @@ func ContentTypeDO2DTO(do entity.ContentType) prompt.ContentType {
 		return prompt.ContentTypeText
 	case entity.ContentTypeImageURL:
 		return prompt.ContentTypeImageURL
+	case entity.ContentTypeVideoURL:
+		return prompt.ContentType("video_url")
 	case entity.ContentTypeMultiPartVariable:
 		return prompt.ContentTypeMultiPartVariable
 	default:
@@ -549,6 +607,25 @@ func ImageURLDO2DTO(do *entity.ImageURL) *prompt.ImageURL {
 	return &prompt.ImageURL{
 		URI: ptr.Of(do.URI),
 		URL: ptr.Of(do.URL),
+	}
+}
+
+func VideoURLDO2DTO(do *entity.VideoURL) *prompt.VideoURL {
+	if do == nil {
+		return nil
+	}
+	return &prompt.VideoURL{
+		URI: ptr.Of(do.URI),
+		URL: ptr.Of(do.URL),
+	}
+}
+
+func MediaConfigDO2DTO(do *entity.MediaConfig) *prompt.MediaConfig {
+	if do == nil {
+		return nil
+	}
+	return &prompt.MediaConfig{
+		Fps: do.Fps,
 	}
 }
 
@@ -628,6 +705,7 @@ func MessageDO2DTO(do *entity.Message) *prompt.Message {
 		Parts:            BatchContentPartDO2DTO(do.Parts),
 		ToolCallID:       do.ToolCallID,
 		ToolCalls:        BatchToolCallDO2DTO(do.ToolCalls),
+		Metadata:         do.Metadata,
 	}
 }
 
@@ -773,6 +851,7 @@ func ModelConfigDO2DTO(do *entity.ModelConfig) *prompt.ModelConfig {
 		PresencePenalty:  do.PresencePenalty,
 		FrequencyPenalty: do.FrequencyPenalty,
 		JSONMode:         do.JSONMode,
+		Extra:            do.Extra,
 	}
 }
 
@@ -781,7 +860,18 @@ func ToolCallConfigDO2DTO(do *entity.ToolCallConfig) *prompt.ToolCallConfig {
 		return nil
 	}
 	return &prompt.ToolCallConfig{
-		ToolChoice: ptr.Of(prompt.ToolChoiceType(do.ToolChoice)),
+		ToolChoice:              ptr.Of(prompt.ToolChoiceType(do.ToolChoice)),
+		ToolChoiceSpecification: ToolChoiceSpecificationDO2DTO(do.ToolChoiceSpecification),
+	}
+}
+
+func ToolChoiceSpecificationDO2DTO(do *entity.ToolChoiceSpecification) *prompt.ToolChoiceSpecification {
+	if do == nil {
+		return nil
+	}
+	return &prompt.ToolChoiceSpecification{
+		Type: ptr.Of(prompt.ToolType(do.Type)),
+		Name: ptr.Of(do.Name),
 	}
 }
 
@@ -828,6 +918,7 @@ func PromptTemplateDO2DTO(do *entity.PromptTemplate) *prompt.PromptTemplate {
 		TemplateType: ptr.Of(prompt.TemplateType(do.TemplateType)),
 		Messages:     BatchMessageDO2DTO(do.Messages),
 		VariableDefs: BatchVariableDefDO2DTO(do.VariableDefs),
+		Metadata:     do.Metadata,
 	}
 }
 

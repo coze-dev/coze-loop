@@ -54,3 +54,18 @@ func (mr *MockIFileProviderMockRecorder) MGetFileURL(ctx, keys any) *gomock.Call
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetFileURL", reflect.TypeOf((*MockIFileProvider)(nil).MGetFileURL), ctx, keys)
 }
+
+// UploadFileForServer mocks base method.
+func (m *MockIFileProvider) UploadFileForServer(ctx context.Context, mimeType string, body []byte, workspaceID int64) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadFileForServer", ctx, mimeType, body, workspaceID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadFileForServer indicates an expected call of UploadFileForServer.
+func (mr *MockIFileProviderMockRecorder) UploadFileForServer(ctx, mimeType, body, workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFileForServer", reflect.TypeOf((*MockIFileProvider)(nil).UploadFileForServer), ctx, mimeType, body, workspaceID)
+}

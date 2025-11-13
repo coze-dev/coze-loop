@@ -79,6 +79,12 @@ func (p *PromptExecuteApplicationImpl) ExecuteInternal(ctx context.Context, req 
 		return r, err
 	}
 	if reply != nil && reply.Item != nil {
+		// Convert base64 files to download URLs
+		if reply.Item.Message != nil {
+			if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
+				return r, err
+			}
+		}
 		r.Message = convertor.MessageDO2DTO(reply.Item.Message)
 		r.FinishReason = ptr.Of(reply.Item.FinishReason)
 		r.Usage = convertor.TokenUsageDO2DTO(reply.Item.TokenUsage)

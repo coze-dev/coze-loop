@@ -161,6 +161,34 @@ func (mr *MockIPromptServiceMockRecorder) MCompleteMultiModalFileURL(ctx, messag
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MCompleteMultiModalFileURL", reflect.TypeOf((*MockIPromptService)(nil).MCompleteMultiModalFileURL), ctx, messages, variableVals)
 }
 
+// MConvertBase64DataURLToFileURI mocks base method.
+func (m *MockIPromptService) MConvertBase64DataURLToFileURI(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MConvertBase64DataURLToFileURI", ctx, messages, workspaceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MConvertBase64DataURLToFileURI indicates an expected call of MConvertBase64DataURLToFileURI.
+func (mr *MockIPromptServiceMockRecorder) MConvertBase64DataURLToFileURI(ctx, messages, workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MConvertBase64DataURLToFileURI", reflect.TypeOf((*MockIPromptService)(nil).MConvertBase64DataURLToFileURI), ctx, messages, workspaceID)
+}
+
+// MConvertBase64DataURLToFileURL mocks base method.
+func (m *MockIPromptService) MConvertBase64DataURLToFileURL(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MConvertBase64DataURLToFileURL", ctx, messages, workspaceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MConvertBase64DataURLToFileURL indicates an expected call of MConvertBase64DataURLToFileURL.
+func (mr *MockIPromptServiceMockRecorder) MConvertBase64DataURLToFileURL(ctx, messages, workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MConvertBase64DataURLToFileURL", reflect.TypeOf((*MockIPromptService)(nil).MConvertBase64DataURLToFileURL), ctx, messages, workspaceID)
+}
+
 // MGetPromptIDs mocks base method.
 func (m *MockIPromptService) MGetPromptIDs(ctx context.Context, spaceID int64, promptKeys []string) (map[string]int64, error) {
 	m.ctrl.T.Helper()

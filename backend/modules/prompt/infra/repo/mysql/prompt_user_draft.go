@@ -151,6 +151,7 @@ func (d *PromptUserDraftDAOImpl) Update(ctx context.Context, promptDraftPO *mode
 			q.PromptUserDraft.ToolCallConfig.ColumnName().String(): promptDraftPO.ToolCallConfig,
 			q.PromptUserDraft.TemplateType.ColumnName().String():   promptDraftPO.TemplateType,
 			q.PromptUserDraft.VariableDefs.ColumnName().String():   promptDraftPO.VariableDefs,
+			q.PromptUserDraft.Metadata.ColumnName().String():       promptDraftPO.Metadata,
 			q.PromptUserDraft.IsDraftEdited.ColumnName().String():  promptDraftPO.IsDraftEdited,
 		})
 	if err != nil {

@@ -61,11 +61,15 @@ struct PromptTemplate {
     1: optional TemplateType template_type
     2: optional list<Message> messages
     3: optional list<VariableDef> variable_defs
+
+    100: optional map<string, string> metadata
 }
 
 typedef string TemplateType (ts.enum="true")
 const TemplateType TemplateType_Normal = "normal"
 const TemplateType TemplateType_Jinja2 = "jinja2"
+const TemplateType TemplateType_GoTemplate = "go_template"
+const TemplateType TemplateType_CustomTemplate_M = "custom_template_m"
 
 struct Tool {
     1: optional ToolType type
@@ -74,6 +78,7 @@ struct Tool {
 
 typedef string ToolType (ts.enum="true")
 const ToolType ToolType_Function = "function"
+const ToolType ToolType_GoogleSearch = "google_search"
 
 struct Function {
     1: optional string name
@@ -83,11 +88,18 @@ struct Function {
 
 struct ToolCallConfig {
     1: optional ToolChoiceType tool_choice
+    2: optional ToolChoiceSpecification tool_choice_specification
+}
+
+struct ToolChoiceSpecification {
+    1: optional ToolType type
+    2: optional string name
 }
 
 typedef string ToolChoiceType (ts.enum="true")
 const ToolChoiceType ToolChoiceType_None = "none"
 const ToolChoiceType ToolChoiceType_Auto = "auto"
+const ToolChoiceType ToolChoiceType_Specific = "specific"
 
 struct ModelConfig {
     1: optional i64 model_id (api.js_conv="true", go.tag='json:"model_id"')
@@ -98,6 +110,7 @@ struct ModelConfig {
     6: optional double presence_penalty
     7: optional double frequency_penalty
     8: optional bool json_mode
+    9: optional string extra
 }
 
 struct Message {
@@ -107,6 +120,8 @@ struct Message {
     4: optional list<ContentPart> parts
     5: optional string tool_call_id
     6: optional list<ToolCall> tool_calls
+
+    100: optional map<string, string> metadata
 }
 
 typedef string Role (ts.enum="true")
@@ -120,16 +135,28 @@ struct ContentPart {
     1: optional ContentType type
     2: optional string text
     3: optional ImageURL image_url
+    4: optional VideoURL video_url
+    5: optional MediaConfig media_config
 }
 
 typedef string ContentType (ts.enum="true")
 const ContentType ContentType_Text = "text"
 const ContentType ContentType_ImageURL = "image_url"
+const ContentType ContentType_VideoURL = "video_url"
 const ContentType ContentType_MultiPartVariable = "multi_part_variable"
 
 struct ImageURL {
     1: optional string uri
     2: optional string url
+}
+
+struct VideoURL {
+    1: optional string url
+    2: optional string uri
+}
+
+struct MediaConfig {
+    1: optional double fps (vt.ge="0.2", vt.le="5")
 }
 
 struct ToolCall {
