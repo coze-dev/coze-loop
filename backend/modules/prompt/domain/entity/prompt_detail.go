@@ -158,14 +158,26 @@ type FunctionCall struct {
 }
 
 type ModelConfig struct {
-	ModelID          int64    `json:"model_id"`
-	MaxTokens        *int32   `json:"max_tokens,omitempty"`
-	Temperature      *float64 `json:"temperature,omitempty"`
-	TopK             *int32   `json:"top_k,omitempty"`
-	TopP             *float64 `json:"top_p,omitempty"`
-	PresencePenalty  *float64 `json:"presence_penalty,omitempty"`
-	FrequencyPenalty *float64 `json:"frequency_penalty,omitempty"`
-	JSONMode         *bool    `json:"json_mode,omitempty"`
+	ModelID           int64               `json:"model_id"`
+	MaxTokens         *int32              `json:"max_tokens,omitempty"`
+	Temperature       *float64            `json:"temperature,omitempty"`
+	TopK              *int32              `json:"top_k,omitempty"`
+	TopP              *float64            `json:"top_p,omitempty"`
+	PresencePenalty   *float64            `json:"presence_penalty,omitempty"`
+	FrequencyPenalty  *float64            `json:"frequency_penalty,omitempty"`
+	JSONMode          *bool               `json:"json_mode,omitempty"`
+	ParamConfigValues []*ParamConfigValue `json:"param_config_values,omitempty"`
+}
+
+type ParamConfigValue struct {
+	Name  string       `json:"name"`
+	Label string       `json:"label"`
+	Value *ParamOption `json:"value,omitempty"`
+}
+
+type ParamOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
 }
 
 func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*VariableVal) ([]*Message, error) {

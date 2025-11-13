@@ -116,6 +116,24 @@ func mockPromptCases() []promptTestCase {
 							ModelID:     ptr.Of(int64(789)),
 							Temperature: ptr.Of(0.7),
 							MaxTokens:   ptr.Of(int32(1000)),
+							ParamConfigValues: []*prompt.ParamConfigValue{
+								{
+									Name:  ptr.Of("temperature"),
+									Label: ptr.Of("Temperature"),
+									Value: &prompt.ParamOption{
+										Value: ptr.Of("0.7"),
+										Label: ptr.Of("0.7"),
+									},
+								},
+								{
+									Name:  ptr.Of("top_p"),
+									Label: ptr.Of("Top P"),
+									Value: &prompt.ParamOption{
+										Value: ptr.Of("0.9"),
+										Label: ptr.Of("0.9"),
+									},
+								},
+							},
 						},
 						Tools: []*prompt.Tool{
 							{
@@ -211,6 +229,24 @@ func mockPromptCases() []promptTestCase {
 							ModelID:     789,
 							Temperature: ptr.Of(0.7),
 							MaxTokens:   ptr.Of(int32(1000)),
+							ParamConfigValues: []*entity.ParamConfigValue{
+								{
+									Name:  "temperature",
+									Label: "Temperature",
+									Value: &entity.ParamOption{
+										Value: "0.7",
+										Label: "0.7",
+									},
+								},
+								{
+									Name:  "top_p",
+									Label: "Top P",
+									Value: &entity.ParamOption{
+										Value: "0.9",
+										Label: "0.9",
+									},
+								},
+							},
 						},
 						Tools: []*entity.Tool{
 							{
@@ -561,6 +597,427 @@ func TestMessageDO2DTO(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.dto, MessageDO2DTO(tt.do))
+		})
+	}
+}
+
+type paramOptionTestCase struct {
+	name string
+	dto  *prompt.ParamOption
+	do   *entity.ParamOption
+}
+
+func mockParamOptionCases() []paramOptionTestCase {
+	return []paramOptionTestCase{
+		{
+			name: "nil input",
+			dto:  nil,
+			do:   nil,
+		},
+		{
+			name: "empty param option",
+			dto: &prompt.ParamOption{
+				Value: ptr.Of(""),
+				Label: ptr.Of(""),
+			},
+			do: &entity.ParamOption{
+				Value: "",
+				Label: "",
+			},
+		},
+		{
+			name: "basic param option",
+			dto: &prompt.ParamOption{
+				Value: ptr.Of("value1"),
+				Label: ptr.Of("Label 1"),
+			},
+			do: &entity.ParamOption{
+				Value: "value1",
+				Label: "Label 1",
+			},
+		},
+		{
+			name: "param option with special characters",
+			dto: &prompt.ParamOption{
+				Value: ptr.Of("option_value_123"),
+				Label: ptr.Of("Option Label (Special: 测试)"),
+			},
+			do: &entity.ParamOption{
+				Value: "option_value_123",
+				Label: "Option Label (Special: 测试)",
+			},
+		},
+	}
+}
+
+func TestParamOptionDTO2DO(t *testing.T) {
+	for _, tt := range mockParamOptionCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.do, ParamOptionDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestParamOptionDO2DTO(t *testing.T) {
+	for _, tt := range mockParamOptionCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.dto, ParamOptionDO2DTO(tt.do))
+		})
+	}
+}
+
+type paramConfigValueTestCase struct {
+	name string
+	dto  *prompt.ParamConfigValue
+	do   *entity.ParamConfigValue
+}
+
+func mockParamConfigValueCases() []paramConfigValueTestCase {
+	return []paramConfigValueTestCase{
+		{
+			name: "nil input",
+			dto:  nil,
+			do:   nil,
+		},
+		{
+			name: "empty param config value",
+			dto: &prompt.ParamConfigValue{
+				Name:  ptr.Of(""),
+				Label: ptr.Of(""),
+				Value: nil,
+			},
+			do: &entity.ParamConfigValue{
+				Name:  "",
+				Label: "",
+				Value: nil,
+			},
+		},
+		{
+			name: "basic param config value",
+			dto: &prompt.ParamConfigValue{
+				Name:  ptr.Of("temperature"),
+				Label: ptr.Of("Temperature"),
+				Value: &prompt.ParamOption{
+					Value: ptr.Of("0.7"),
+					Label: ptr.Of("0.7"),
+				},
+			},
+			do: &entity.ParamConfigValue{
+				Name:  "temperature",
+				Label: "Temperature",
+				Value: &entity.ParamOption{
+					Value: "0.7",
+					Label: "0.7",
+				},
+			},
+		},
+		{
+			name: "param config value with complex option",
+			dto: &prompt.ParamConfigValue{
+				Name:  ptr.Of("top_p"),
+				Label: ptr.Of("Top P"),
+				Value: &prompt.ParamOption{
+					Value: ptr.Of("0.9"),
+					Label: ptr.Of("Top P: 0.9 (Recommended)"),
+				},
+			},
+			do: &entity.ParamConfigValue{
+				Name:  "top_p",
+				Label: "Top P",
+				Value: &entity.ParamOption{
+					Value: "0.9",
+					Label: "Top P: 0.9 (Recommended)",
+				},
+			},
+		},
+		{
+			name: "param config value without value",
+			dto: &prompt.ParamConfigValue{
+				Name:  ptr.Of("max_tokens"),
+				Label: ptr.Of("Max Tokens"),
+				Value: nil,
+			},
+			do: &entity.ParamConfigValue{
+				Name:  "max_tokens",
+				Label: "Max Tokens",
+				Value: nil,
+			},
+		},
+	}
+}
+
+func TestParamConfigValueDTO2DO(t *testing.T) {
+	for _, tt := range mockParamConfigValueCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.do, ParamConfigValueDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestParamConfigValueDO2DTO(t *testing.T) {
+	for _, tt := range mockParamConfigValueCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.dto, ParamConfigValueDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestBatchParamConfigValueDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dtos []*prompt.ParamConfigValue
+		dos  []*entity.ParamConfigValue
+	}{
+		{
+			name: "nil input",
+			dtos: nil,
+			dos:  nil,
+		},
+		{
+			name: "empty slice",
+			dtos: []*prompt.ParamConfigValue{},
+			dos:  []*entity.ParamConfigValue{},
+		},
+		{
+			name: "single param config value",
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+			},
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple param config values",
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+				{
+					Name:  ptr.Of("top_p"),
+					Label: ptr.Of("Top P"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.9"),
+						Label: ptr.Of("0.9"),
+					},
+				},
+			},
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+				{
+					Name:  "top_p",
+					Label: "Top P",
+					Value: &entity.ParamOption{
+						Value: "0.9",
+						Label: "0.9",
+					},
+				},
+			},
+		},
+		{
+			name: "with nil elements (should be skipped)",
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+				nil,
+				{
+					Name:  ptr.Of("top_p"),
+					Label: ptr.Of("Top P"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.9"),
+						Label: ptr.Of("0.9"),
+					},
+				},
+			},
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+				{
+					Name:  "top_p",
+					Label: "Top P",
+					Value: &entity.ParamOption{
+						Value: "0.9",
+						Label: "0.9",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.dos, BatchParamConfigValueDTO2DO(tt.dtos))
+		})
+	}
+}
+
+func TestBatchParamConfigValueDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		dos  []*entity.ParamConfigValue
+		dtos []*prompt.ParamConfigValue
+	}{
+		{
+			name: "nil input",
+			dos:  nil,
+			dtos: nil,
+		},
+		{
+			name: "empty slice",
+			dos:  []*entity.ParamConfigValue{},
+			dtos: []*prompt.ParamConfigValue{},
+		},
+		{
+			name: "single param config value",
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+			},
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+			},
+		},
+		{
+			name: "multiple param config values",
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+				{
+					Name:  "top_p",
+					Label: "Top P",
+					Value: &entity.ParamOption{
+						Value: "0.9",
+						Label: "0.9",
+					},
+				},
+			},
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+				{
+					Name:  ptr.Of("top_p"),
+					Label: ptr.Of("Top P"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.9"),
+						Label: ptr.Of("0.9"),
+					},
+				},
+			},
+		},
+		{
+			name: "with nil elements (should be skipped)",
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+				nil,
+				{
+					Name:  "top_p",
+					Label: "Top P",
+					Value: &entity.ParamOption{
+						Value: "0.9",
+						Label: "0.9",
+					},
+				},
+			},
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+				{
+					Name:  ptr.Of("top_p"),
+					Label: ptr.Of("Top P"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.9"),
+						Label: ptr.Of("0.9"),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.dtos, BatchParamConfigValueDO2DTO(tt.dos))
 		})
 	}
 }

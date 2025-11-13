@@ -29,6 +29,14 @@ func (p *ModelConfig) IsValid() error {
 	}
 	return nil
 }
+func (p *ParamConfigValue) IsValid() error {
+	if p.Value != nil {
+		if err := p.Value.IsValid(); err != nil {
+			return fmt.Errorf("field Value not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *Message) IsValid() error {
 	if p.ResponseMeta != nil {
 		if err := p.ResponseMeta.IsValid(); err != nil {

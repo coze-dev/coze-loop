@@ -26,6 +26,8 @@ type Options struct {
 	PresencePenalty *float32
 	// FrequencyPenalty is the frequency penalty for the model, which controls the diversity of the model.
 	FrequencyPenalty *float32
+	// Parameters is the extra parameters for the model.
+	Parameters map[string]string
 }
 
 type Option struct {
@@ -164,6 +166,14 @@ func WithPresencePenalty(p float32) Option {
 	return Option{
 		apply: func(opts *Options) {
 			opts.PresencePenalty = &p
+		},
+	}
+}
+
+func WithParameters(p map[string]string) Option {
+	return Option{
+		apply: func(opts *Options) {
+			opts.Parameters = p
 		},
 	}
 }

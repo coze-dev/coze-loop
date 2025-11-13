@@ -10,9 +10,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
-	"github.com/pkg/errors"
-
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
@@ -30,6 +27,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
+	"github.com/pkg/errors"
 )
 
 type runtimeApp struct {
@@ -77,7 +76,7 @@ func (r *runtimeApp) Chat(ctx context.Context, req *runtime.ChatRequest) (resp *
 	if err != nil {
 		return resp, errorx.NewByCode(llm_errorx.RequestNotValidCode, errorx.WithExtraMsg(err.Error()))
 	}
-	options := convertor.ModelAndTools2OptionDOs(req.GetModelConfig(), req.GetTools())
+	options := convertor.ModelAndTools2OptionDOs(req.GetModelConfig(), req.GetTools(), nil)
 	var respMsg *entity.Message
 	// 5. start span
 	var span looptracer.Span
@@ -137,7 +136,7 @@ func (r *runtimeApp) ChatStream(ctx context.Context, req *runtime.ChatRequest, s
 	if err != nil {
 		return errorx.NewByCode(llm_errorx.RequestNotValidCode, errorx.WithExtraMsg(err.Error()))
 	}
-	options := convertor.ModelAndTools2OptionDOs(req.GetModelConfig(), req.GetTools())
+	options := convertor.ModelAndTools2OptionDOs(req.GetModelConfig(), req.GetTools(), nil)
 	// 4. start trace
 	var span looptracer.Span
 	ctx, span = looptracer.GetTracer().StartSpan(ctx, model.Name, tracespec.VModelSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(req.GetBizParam().GetWorkspaceID(), 10)))

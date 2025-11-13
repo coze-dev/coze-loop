@@ -112,6 +112,17 @@ func (p *ToolCallConfig) IsValid() error {
 func (p *ModelConfig) IsValid() error {
 	return nil
 }
+func (p *ParamConfigValue) IsValid() error {
+	if p.Value != nil {
+		if err := p.Value.IsValid(); err != nil {
+			return fmt.Errorf("field Value not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ParamOption) IsValid() error {
+	return nil
+}
 func (p *Message) IsValid() error {
 	return nil
 }
