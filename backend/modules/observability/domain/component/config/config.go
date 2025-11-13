@@ -23,7 +23,9 @@ type PlatformTenantsCfg struct {
 }
 
 type SpanTransHandlerConfig struct {
-	PlatformCfg map[string]loop_span.SpanTransCfgList `mapstructure:"platform_cfg" json:"platform_cfg"`
+	BasicConfig         map[string]loop_span.SpanTransCfgList `mapstructure:"basic_config" json:"basic_config"`
+	PlatformCfg         map[string]loop_span.SpanTransCfgList `mapstructure:"platform_cfg" json:"platform_cfg"`
+	PlatformInheritance map[string][]string                   `mapstructure:"platform_basic" json:"platform_basic"`
 }
 
 type IngestConfig struct {
@@ -116,7 +118,7 @@ type ConsumerListening struct {
 type ITraceConfig interface {
 	GetSystemViews(ctx context.Context) ([]*SystemView, error)
 	GetPlatformTenants(ctx context.Context) (*PlatformTenantsCfg, error)
-	GetPlatformSpansTrans(ctx context.Context) (*SpanTransHandlerConfig, error)
+	GetPlatformSpansTrans(ctx context.Context, platformType loop_span.PlatformType) (loop_span.SpanTransCfgList, error)
 	GetTraceIngestTenantProducerCfg(ctx context.Context) (map[string]*IngestConfig, error)
 	GetAnnotationMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 	GetTraceCkCfg(ctx context.Context) (*TraceCKCfg, error)

@@ -145,42 +145,42 @@ func TestTraceConfigCenter_GetPlatformSpansTrans(t *testing.T) {
 		configLoader *confmocks.MockIConfigLoader
 	}
 	type args struct {
-		ctx context.Context
+		ctx          context.Context
+		platformType loop_span.PlatformType
 	}
 	tests := []struct {
 		name         string
 		fieldsGetter func(ctrl *gomock.Controller) fields
 		args         args
-		want         *config.SpanTransHandlerConfig
+		want         loop_span.SpanTransCfgList
 		wantErr      bool
 	}{
 		{
 			name: "get platform spans trans successfully",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
-				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), platformSpanHandlerCfgKey, gomock.Any()).
-					DoAndReturn(func(ctx context.Context, key string, v interface{}, opts ...interface{}) error {
-						cfg := v.(*config.SpanTransHandlerConfig)
-						cfg.PlatformCfg = make(map[string]loop_span.SpanTransCfgList)
-						return nil
-					})
+				mockLoader.EXPECT().Get(gomock.Any(), platformSpanHandlerCfgKey).Return(`{"platform_cfg":{"test_platform":[]}}`)
 				return fields{configLoader: mockLoader}
 			},
-			args: args{ctx: context.Background()},
-			want: &config.SpanTransHandlerConfig{
-				PlatformCfg: make(map[string]loop_span.SpanTransCfgList),
+			args: args{
+				ctx:          context.Background(),
+				platformType: "test_platform",
 			},
+			want:    loop_span.SpanTransCfgList{},
 			wantErr: false,
 		},
 		{
 			name: "unmarshal key failed",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockLoader := confmocks.NewMockIConfigLoader(ctrl)
-				mockLoader.EXPECT().UnmarshalKey(gomock.Any(), platformSpanHandlerCfgKey, gomock.Any()).
-					Return(fmt.Errorf("unmarshal error"))
+				mockLoader.EXPECT().Get(gomock.Any(), platformSpanHandlerCfgKey).
+					Return(nil)
 				return fields{configLoader: mockLoader}
 			},
-			args:    args{ctx: context.Background()},
+			args: args{
+				ctx:          context.Background(),
+				platformType: "test_platform",
+			},
 			want:    nil,
 			wantErr: true,
 		},
@@ -193,7 +193,7 @@ func TestTraceConfigCenter_GetPlatformSpansTrans(t *testing.T) {
 			tr := &TraceConfigCenter{
 				IConfigLoader: f.configLoader,
 			}
-			got, err := tr.GetPlatformSpansTrans(tt.args.ctx)
+			got, err := tr.GetPlatformSpansTrans(tt.args.ctx, tt.args.platformType)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
 		})
