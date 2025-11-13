@@ -459,6 +459,7 @@ func (d *ManageRepoImpl) ListPrompt(ctx context.Context, param repo.ListPromptPa
 		CreatedBys:    param.CreatedBys,
 		CommittedOnly: param.CommittedOnly,
 		PromptTypes:   promptTypes,
+		PromptIDs:     param.PromptIDs,
 
 		Offset:  (param.PageNum - 1) * param.PageSize,
 		Limit:   param.PageSize,

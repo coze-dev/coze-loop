@@ -43,6 +43,7 @@ type ListPromptParam struct {
 	UserID            string
 	CommittedOnly     bool
 	FilterPromptTypes []entity.PromptType
+	PromptIDs         []int64
 
 	PageNum  int
 	PageSize int
