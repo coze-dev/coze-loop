@@ -1,12 +1,17 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package dao
 
 import (
 	"context"
+	"errors"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	redis2 "github.com/redis/go-redis/v9"
 )
 
 const (
@@ -37,19 +42,22 @@ func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (span
 	spanNumLimit := int32(100)
 	for preRespID != "" {
 		rawVal, err := s.r.Get(ctx, preRespID).Result()
+		if errors.Is(err, redis2.Nil) { // break chain, just end
+			break
+		}
 		if err != nil {
 			return nil, nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 		}
 		redisValue := make(map[string]string)
 		if err = json.Unmarshal([]byte(rawVal), &redisValue); err != nil {
-			return nil,nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+			return nil, nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 		}
 		spanID, ok := redisValue[keySpanID]
 		if ok {
 			preSpanIDs = append(preSpanIDs, spanID) // do not need order, only for select from db
 		}
 		respIDByOrder = append([]string{preRespID}, respIDByOrder...) // need order, for order SpanList
-		preRespID, _ = redisValue[keyPreviousResponseID]
+		preRespID, _ = redisValue[keyPreviousResponseID]              //nolint:staticcheck
 
 		spanNum++
 		if spanNum >= int(spanNumLimit) {
@@ -59,4 +67,3 @@ func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (span
 
 	return preSpanIDs, respIDByOrder, nil
 }
-

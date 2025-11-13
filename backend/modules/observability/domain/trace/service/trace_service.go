@@ -461,8 +461,8 @@ func (r *TraceServiceImpl) checkGetPreSpanAuth(ctx context.Context, req *ListPre
 	if currentSpan == nil {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("current span not found"))
 	}
-	if currentSpan.SystemTagsString[keyPreviousResponseID] != req.PreviousResponseID {
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("previous_response_id is not equal to current span's"))
+	if preRespID, ok := currentSpan.SystemTagsString[keyPreviousResponseID]; !ok || preRespID != req.PreviousResponseID {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg(fmt.Sprintf("req previous_response_id is not current span's[%s]", preRespID)))
 	}
 	if currentSpan.WorkspaceID == strconv.FormatInt(req.WorkspaceID, 10) {
 		isAuthPass = true

@@ -92,18 +92,15 @@ type TraceApplication struct {
 }
 
 func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
-	// req check
 	if err := t.validateListPreSpanReq(ctx, req); err != nil {
 		return nil, err
 	}
-	// space auth check
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
 		return nil, err
 	}
 
-	// invoke domain.service.ListPreSpan
 	sReq, err := t.buildListPreSpanSvcReq(req)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("list spans req is invalid"))
@@ -113,12 +110,9 @@ func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSp
 		return nil, err
 	}
 
-	// additional auth check: At least 1 span on this trace belongs to this space
-
 	return &trace.ListPreSpanResponse{
 		Spans: tconv.SpanListDO2DTO(preSpan.Spans, nil, nil, nil),
 	}, nil
-
 }
 
 func (t *TraceApplication) validateListPreSpanReq(ctx context.Context, req *trace.ListPreSpanRequest) error {
