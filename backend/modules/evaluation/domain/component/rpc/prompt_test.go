@@ -6,6 +6,7 @@ package rpc
 import (
 	"testing"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -115,6 +116,162 @@ func TestExecutePromptParam_Structure_Integrity(t *testing.T) {
 			// Verify struct can be used in interface contexts
 			assert.NotNil(t, param)
 			assert.IsType(t, &ExecutePromptParam{}, param)
+		})
+	}
+}
+
+func TestExecutePromptParam_UserQuery(t *testing.T) {
+	tests := []struct {
+		name      string
+		userQuery *entity.Message
+		wantNil   bool
+	}{
+		{
+			name: "with_user_query_text_message",
+			userQuery: &entity.Message{
+				Role: entity.RoleUser,
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeText),
+					Text:        gptr.Of("test user query"),
+				},
+			},
+			wantNil: false,
+		},
+		{
+			name: "with_user_query_multipart_message",
+			userQuery: &entity.Message{
+				Role: entity.RoleUser,
+				Content: &entity.Content{
+					ContentType: gptr.Of(entity.ContentTypeMultipart),
+					MultiPart: []*entity.Content{
+						{
+							ContentType: gptr.Of(entity.ContentTypeText),
+							Text:        gptr.Of("part 1"),
+						},
+						{
+							ContentType: gptr.Of(entity.ContentTypeImage),
+							Image: &entity.Image{
+								URL: gptr.Of("http://example.com/image.jpg"),
+							},
+						},
+					},
+				},
+			},
+			wantNil: false,
+		},
+		{
+			name:      "without_user_query_nil",
+			userQuery: nil,
+			wantNil:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			param := &ExecutePromptParam{
+				PromptID:      12345,
+				PromptVersion: "v1.0",
+				Variables:     []*entity.VariableVal{},
+				History:       []*entity.Message{},
+				UserQuery:     tt.userQuery,
+			}
+
+			// Test that UserQuery field is correctly set
+			if tt.wantNil {
+				assert.Nil(t, param.UserQuery)
+			} else {
+				assert.NotNil(t, param.UserQuery)
+				assert.Equal(t, tt.userQuery, param.UserQuery)
+				assert.Equal(t, entity.RoleUser, param.UserQuery.Role)
+			}
+		})
+	}
+}
+
+func TestExecutePromptResult_MultiContent(t *testing.T) {
+	tests := []struct {
+		name          string
+		content       *string
+		toolCalls     []*entity.ToolCall
+		tokenUsage    *entity.TokenUsage
+		multiContent  *entity.Content
+		expectedType  entity.ContentType
+		expectedText  string
+		expectedMulti bool
+	}{
+		{
+			name: "with_multi_content_text",
+			multiContent: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of("multi content text"),
+			},
+			expectedType:  entity.ContentTypeText,
+			expectedText:  "multi content text",
+			expectedMulti: true,
+		},
+		{
+			name: "with_multi_content_multipart",
+			multiContent: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeMultipart),
+				MultiPart: []*entity.Content{
+					{
+						ContentType: gptr.Of(entity.ContentTypeText),
+						Text:        gptr.Of("text part"),
+					},
+					{
+						ContentType: gptr.Of(entity.ContentTypeImage),
+						Image: &entity.Image{
+							URL: gptr.Of("http://example.com/image.jpg"),
+						},
+					},
+				},
+			},
+			expectedType:  entity.ContentTypeMultipart,
+			expectedMulti: true,
+		},
+		{
+			name:          "without_multi_content_nil",
+			multiContent:  nil,
+			expectedMulti: false,
+		},
+		{
+			name:         "with_content_and_multi_content",
+			content:      gptr.Of("regular content"),
+			multiContent: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of("multi content"),
+			},
+			expectedType:  entity.ContentTypeText,
+			expectedText:  "multi content",
+			expectedMulti: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &ExecutePromptResult{
+				Content:      tt.content,
+				ToolCalls:    tt.toolCalls,
+				TokenUsage:   tt.tokenUsage,
+				MultiContent: tt.multiContent,
+			}
+
+			// Test that MultiContent field is correctly set
+			if tt.expectedMulti {
+				assert.NotNil(t, result.MultiContent)
+				assert.Equal(t, tt.multiContent, result.MultiContent)
+				assert.Equal(t, tt.expectedType, gptr.Indirect(result.MultiContent.ContentType))
+				if tt.expectedText != "" {
+					assert.Equal(t, tt.expectedText, gptr.Indirect(result.MultiContent.Text))
+				}
+			} else {
+				assert.Nil(t, result.MultiContent)
+			}
+
+			// Test that other fields are preserved
+			assert.Equal(t, tt.content, result.Content)
+			assert.Equal(t, tt.toolCalls, result.ToolCalls)
+			assert.Equal(t, tt.tokenUsage, result.TokenUsage)
 		})
 	}
 }

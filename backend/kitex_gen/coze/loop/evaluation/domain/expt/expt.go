@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	PromptUserQueryFieldKey = "builtin_prompt_user_query"
+
 	ExptResultExportTypeCSV = "CSV"
 
 	CSVExportStatusUnknown = "Unknown"

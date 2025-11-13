@@ -23,13 +23,15 @@ type ExecutePromptParam struct {
 	PromptVersion string
 	Variables     []*entity.VariableVal
 	History       []*entity.Message
+	UserQuery     *entity.Message
 	RuntimeParam  *string
 }
 
 type ExecutePromptResult struct {
-	Content    *string            `json:"content,omitempty"`
-	ToolCalls  []*entity.ToolCall `json:"tool_calls,omitempty"`
-	TokenUsage *entity.TokenUsage `json:"token_usage,omitempty"`
+	Content      *string            `json:"content,omitempty"`
+	ToolCalls    []*entity.ToolCall `json:"tool_calls,omitempty"`
+	TokenUsage   *entity.TokenUsage `json:"token_usage,omitempty"`
+	MultiContent *entity.Content    `json:"multi_content,omitempty"`
 }
 
 type GetPromptParams struct {
