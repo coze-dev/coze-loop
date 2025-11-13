@@ -317,7 +317,7 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 			commitVersionParams = append(commitVersionParams, commitVersion)
 		}
 		if request.GetWithDraft() {
-			commitVersions, err := app.manageRepo.CollectAllCommitVersions(ctx, request.GetPromptID())
+			commitVersions, err := app.manageRepo.MGetVersionsByPromptID(ctx, request.GetPromptID())
 			if err != nil {
 				return r, err
 			}
@@ -627,11 +627,11 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 
 	// list commit
 	listCommitParam := repo.ListCommitInfoParam{
-		PromptID: request.GetPromptID(),
-
-		PageSize:  int(request.GetPageSize()),
-		PageToken: pageTokenPtr,
-		Asc:       request.GetAsc(),
+		PromptID:    request.GetPromptID(),
+		PageSize:    int(request.GetPageSize()),
+		PageToken:   pageTokenPtr,
+		Asc:         request.GetAsc(),
+		HasSnippets: request.HasSnippets,
 	}
 	listCommitResult, err := app.manageRepo.ListCommitInfo(ctx, listCommitParam)
 	if err != nil {

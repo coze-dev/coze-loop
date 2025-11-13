@@ -5418,6 +5418,20 @@ func (p *ListCommitRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 127:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField127(buf[offset:])
@@ -5520,6 +5534,20 @@ func (p *ListCommitRequest) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListCommitRequest) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.HasSnippets = _field
+	return offset, nil
+}
+
 func (p *ListCommitRequest) FastReadField127(buf []byte) (int, error) {
 	offset := 0
 
@@ -5583,6 +5611,7 @@ func (p *ListCommitRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField127(buf[offset:], w)
 		offset += p.fastWriteField129(buf[offset:], w)
 		offset += p.fastWriteField128(buf[offset:], w)
@@ -5597,6 +5626,7 @@ func (p *ListCommitRequest) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 		l += p.field127Length()
 		l += p.field128Length()
 		l += p.field129Length()
@@ -5620,6 +5650,15 @@ func (p *ListCommitRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) i
 	if p.IsSetWithCommitDetail() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 2)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithCommitDetail)
+	}
+	return offset
+}
+
+func (p *ListCommitRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetHasSnippets() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 3)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.HasSnippets)
 	}
 	return offset
 }
@@ -5678,6 +5717,15 @@ func (p *ListCommitRequest) field2Length() int {
 	return l
 }
 
+func (p *ListCommitRequest) field3Length() int {
+	l := 0
+	if p.IsSetHasSnippets() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ListCommitRequest) field127Length() int {
 	l := 0
 	if p.IsSetPageSize() {
@@ -5728,6 +5776,11 @@ func (p *ListCommitRequest) DeepCopy(s interface{}) error {
 	if src.WithCommitDetail != nil {
 		tmp := *src.WithCommitDetail
 		p.WithCommitDetail = &tmp
+	}
+
+	if src.HasSnippets != nil {
+		tmp := *src.HasSnippets
+		p.HasSnippets = &tmp
 	}
 
 	if src.PageSize != nil {

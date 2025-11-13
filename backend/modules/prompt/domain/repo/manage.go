@@ -22,7 +22,7 @@ type IManageRepo interface {
 	SaveDraft(ctx context.Context, promptDO *entity.Prompt) (draftInfo *entity.DraftInfo, err error)
 	CommitDraft(ctx context.Context, param CommitDraftParam) (err error)
 	ListCommitInfo(ctx context.Context, param ListCommitInfoParam) (result *ListCommitResult, err error)
-	CollectAllCommitVersions(ctx context.Context, promptID int64) (versions []string, err error)
+	MGetVersionsByPromptID(ctx context.Context, promptID int64) (versions []string, err error)
 }
 
 type GetPromptParam struct {
@@ -76,9 +76,10 @@ type CommitDraftParam struct {
 type ListCommitInfoParam struct {
 	PromptID int64
 
-	PageSize  int
-	PageToken *int64
-	Asc       bool
+	PageSize    int
+	PageToken   *int64
+	Asc         bool
+	HasSnippets *bool
 }
 
 type ListCommitResult struct {
