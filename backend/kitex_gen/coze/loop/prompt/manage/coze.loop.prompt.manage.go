@@ -4355,7 +4355,6 @@ type ListPromptRequest struct {
 	CommittedOnly *bool    `thrift:"committed_only,13,optional" frugal:"13,optional,bool" form:"committed_only" json:"committed_only,omitempty" query:"committed_only"`
 	// 向前兼容，如果不传，默认查询normal类型的Prompt
 	FilterPromptTypes []prompt.PromptType `thrift:"filter_prompt_types,14,optional" frugal:"14,optional,list<string>" form:"filter_prompt_types" json:"filter_prompt_types,omitempty" query:"filter_prompt_types"`
-	PromptIds         []int64             `thrift:"prompt_ids,15,optional" frugal:"15,optional,list<i64>" form:"prompt_ids" json:"prompt_ids,omitempty" query:"prompt_ids"`
 	PageNum           *int32              `thrift:"page_num,127,optional" frugal:"127,optional,i32" form:"page_num" json:"page_num,omitempty" query:"page_num"`
 	PageSize          *int32              `thrift:"page_size,128,optional" frugal:"128,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
 	OrderBy           *ListPromptOrderBy  `thrift:"order_by,129,optional" frugal:"129,optional,string" form:"order_by" json:"order_by,omitempty" query:"order_by"`
@@ -4428,18 +4427,6 @@ func (p *ListPromptRequest) GetFilterPromptTypes() (v []prompt.PromptType) {
 		return ListPromptRequest_FilterPromptTypes_DEFAULT
 	}
 	return p.FilterPromptTypes
-}
-
-var ListPromptRequest_PromptIds_DEFAULT []int64
-
-func (p *ListPromptRequest) GetPromptIds() (v []int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetPromptIds() {
-		return ListPromptRequest_PromptIds_DEFAULT
-	}
-	return p.PromptIds
 }
 
 var ListPromptRequest_PageNum_DEFAULT int32
@@ -4516,9 +4503,6 @@ func (p *ListPromptRequest) SetCommittedOnly(val *bool) {
 func (p *ListPromptRequest) SetFilterPromptTypes(val []prompt.PromptType) {
 	p.FilterPromptTypes = val
 }
-func (p *ListPromptRequest) SetPromptIds(val []int64) {
-	p.PromptIds = val
-}
 func (p *ListPromptRequest) SetPageNum(val *int32) {
 	p.PageNum = val
 }
@@ -4541,7 +4525,6 @@ var fieldIDToName_ListPromptRequest = map[int16]string{
 	12:  "created_bys",
 	13:  "committed_only",
 	14:  "filter_prompt_types",
-	15:  "prompt_ids",
 	127: "page_num",
 	128: "page_size",
 	129: "order_by",
@@ -4567,10 +4550,6 @@ func (p *ListPromptRequest) IsSetCommittedOnly() bool {
 
 func (p *ListPromptRequest) IsSetFilterPromptTypes() bool {
 	return p.FilterPromptTypes != nil
-}
-
-func (p *ListPromptRequest) IsSetPromptIds() bool {
-	return p.PromptIds != nil
 }
 
 func (p *ListPromptRequest) IsSetPageNum() bool {
@@ -4646,14 +4625,6 @@ func (p *ListPromptRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 14:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField14(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 15:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4807,29 +4778,6 @@ func (p *ListPromptRequest) ReadField14(iprot thrift.TProtocol) error {
 	p.FilterPromptTypes = _field
 	return nil
 }
-func (p *ListPromptRequest) ReadField15(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]int64, 0, size)
-	for i := 0; i < size; i++ {
-
-		var _elem int64
-		if v, err := iprot.ReadI64(); err != nil {
-			return err
-		} else {
-			_elem = v
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	p.PromptIds = _field
-	return nil
-}
 func (p *ListPromptRequest) ReadField127(iprot thrift.TProtocol) error {
 
 	var _field *int32
@@ -4907,10 +4855,6 @@ func (p *ListPromptRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField14(oprot); err != nil {
 			fieldId = 14
-			goto WriteFieldError
-		}
-		if err = p.writeField15(oprot); err != nil {
-			fieldId = 15
 			goto WriteFieldError
 		}
 		if err = p.writeField127(oprot); err != nil {
@@ -5057,32 +5001,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
-func (p *ListPromptRequest) writeField15(oprot thrift.TProtocol) (err error) {
-	if p.IsSetPromptIds() {
-		if err = oprot.WriteFieldBegin("prompt_ids", thrift.LIST, 15); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteListBegin(thrift.I64, len(p.PromptIds)); err != nil {
-			return err
-		}
-		for _, v := range p.PromptIds {
-			if err := oprot.WriteI64(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
-}
 func (p *ListPromptRequest) writeField127(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageNum() {
 		if err = oprot.WriteFieldBegin("page_num", thrift.I32, 127); err != nil {
@@ -5203,9 +5121,6 @@ func (p *ListPromptRequest) DeepEqual(ano *ListPromptRequest) bool {
 	if !p.Field14DeepEqual(ano.FilterPromptTypes) {
 		return false
 	}
-	if !p.Field15DeepEqual(ano.PromptIds) {
-		return false
-	}
 	if !p.Field127DeepEqual(ano.PageNum) {
 		return false
 	}
@@ -5281,19 +5196,6 @@ func (p *ListPromptRequest) Field14DeepEqual(src []prompt.PromptType) bool {
 	for i, v := range p.FilterPromptTypes {
 		_src := src[i]
 		if strings.Compare(v, _src) != 0 {
-			return false
-		}
-	}
-	return true
-}
-func (p *ListPromptRequest) Field15DeepEqual(src []int64) bool {
-
-	if len(p.PromptIds) != len(src) {
-		return false
-	}
-	for i, v := range p.PromptIds {
-		_src := src[i]
-		if v != _src {
 			return false
 		}
 	}

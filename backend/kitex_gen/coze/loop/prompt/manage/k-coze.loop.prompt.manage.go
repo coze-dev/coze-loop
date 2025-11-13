@@ -3180,20 +3180,6 @@ func (p *ListPromptRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 15:
-			if fieldTypeId == thrift.LIST {
-				l, err = p.FastReadField15(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 127:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField127(buf[offset:])
@@ -3372,30 +3358,6 @@ func (p *ListPromptRequest) FastReadField14(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ListPromptRequest) FastReadField15(buf []byte) (int, error) {
-	offset := 0
-
-	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
-	offset += l
-	if err != nil {
-		return offset, err
-	}
-	_field := make([]int64, 0, size)
-	for i := 0; i < size; i++ {
-		var _elem int64
-		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_elem = v
-		}
-
-		_field = append(_field, _elem)
-	}
-	p.PromptIds = _field
-	return offset, nil
-}
-
 func (p *ListPromptRequest) FastReadField127(buf []byte) (int, error) {
 	offset := 0
 
@@ -3479,7 +3441,6 @@ func (p *ListPromptRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField14(buf[offset:], w)
-		offset += p.fastWriteField15(buf[offset:], w)
 		offset += p.fastWriteField129(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -3495,7 +3456,6 @@ func (p *ListPromptRequest) BLength() int {
 		l += p.field12Length()
 		l += p.field13Length()
 		l += p.field14Length()
-		l += p.field15Length()
 		l += p.field127Length()
 		l += p.field128Length()
 		l += p.field129Length()
@@ -3561,22 +3521,6 @@ func (p *ListPromptRequest) fastWriteField14(buf []byte, w thrift.NocopyWriter) 
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
-	}
-	return offset
-}
-
-func (p *ListPromptRequest) fastWriteField15(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetPromptIds() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 15)
-		listBeginOffset := offset
-		offset += thrift.Binary.ListBeginLength()
-		var length int
-		for _, v := range p.PromptIds {
-			length++
-			offset += thrift.Binary.WriteI64(buf[offset:], v)
-		}
-		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
 	}
 	return offset
 }
@@ -3679,17 +3623,6 @@ func (p *ListPromptRequest) field14Length() int {
 	return l
 }
 
-func (p *ListPromptRequest) field15Length() int {
-	l := 0
-	if p.IsSetPromptIds() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.ListBeginLength()
-		l +=
-			thrift.Binary.I64Length() * len(p.PromptIds)
-	}
-	return l
-}
-
 func (p *ListPromptRequest) field127Length() int {
 	l := 0
 	if p.IsSetPageNum() {
@@ -3776,15 +3709,6 @@ func (p *ListPromptRequest) DeepCopy(s interface{}) error {
 			var _elem prompt.PromptType
 			_elem = elem
 			p.FilterPromptTypes = append(p.FilterPromptTypes, _elem)
-		}
-	}
-
-	if src.PromptIds != nil {
-		p.PromptIds = make([]int64, 0, len(src.PromptIds))
-		for _, elem := range src.PromptIds {
-			var _elem int64
-			_elem = elem
-			p.PromptIds = append(p.PromptIds, _elem)
 		}
 	}
 
