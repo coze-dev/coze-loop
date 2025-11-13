@@ -174,12 +174,9 @@ func (t ObservabilityTask) GetCurrentTaskRun() *TaskRun {
 }
 
 func (t ObservabilityTask) GetTaskttl() int64 {
-	var ttl int64
+	ttl := 30 * 24 * time.Hour.Milliseconds()
 	if t.EffectiveTime != nil {
-		ttl = t.EffectiveTime.EndAt - t.EffectiveTime.StartAt
-	}
-	if t.BackfillEffectiveTime != nil {
-		ttl += t.BackfillEffectiveTime.EndAt - t.BackfillEffectiveTime.StartAt
+		ttl += t.EffectiveTime.EndAt - time.Now().UnixMilli()
 	}
 	return ttl
 }
