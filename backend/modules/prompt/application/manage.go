@@ -313,10 +313,9 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 	// [prompt片段]返回被引用总次数
 	if promptDO.PromptBasic != nil && promptDO.PromptBasic.PromptType == entity.PromptTypeSnippet {
 		var commitVersionParams []string
-		if request.GetWithCommit() && lo.IsEmpty(commitVersion) {
+		if request.GetWithCommit() && lo.IsNotEmpty(commitVersion) {
 			commitVersionParams = append(commitVersionParams, commitVersion)
-		}
-		if request.GetWithDraft() {
+		} else {
 			commitVersions, err := app.manageRepo.MGetVersionsByPromptID(ctx, request.GetPromptID())
 			if err != nil {
 				return r, err
