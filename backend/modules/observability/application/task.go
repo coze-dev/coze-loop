@@ -10,6 +10,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
+	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
@@ -18,6 +19,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	tracerepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -25,7 +28,7 @@ import (
 )
 
 type ITaskQueueConsumer interface {
-	SpanTrigger(ctx context.Context, event *entity.RawSpan) error
+	SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan, Span *loop_span.Span) error
 	AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error
 	AutoEvalCorrection(ctx context.Context, event *entity.CorrectionEvent) error
 	BackFill(ctx context.Context, event *entity.BackFillEvent) error
@@ -47,6 +50,7 @@ func NewTaskApplication(
 	taskProcessor processor.TaskProcessor,
 	taskCallbackService service.ITaskCallbackService,
 	scheduledTasks []scheduledtask.ScheduledTask,
+	traceRepo tracerepo.ITraceRepo,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
 		taskSvc:         taskService,
@@ -58,6 +62,7 @@ func NewTaskApplication(
 		taskProcessor:   taskProcessor,
 		taskCallbackSvc: taskCallbackService,
 		scheduledTasks:  scheduledTasks,
+		traceRepo:       traceRepo,
 	}, nil
 }
 
@@ -71,6 +76,7 @@ type TaskApplication struct {
 	taskProcessor   processor.TaskProcessor
 	taskCallbackSvc service.ITaskCallbackService
 	scheduledTasks  []scheduledtask.ScheduledTask
+	traceRepo       tracerepo.ITraceRepo
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
@@ -268,15 +274,44 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 	}, nil
 }
 
-func (t *TaskApplication) SpanTrigger(ctx context.Context, event *entity.RawSpan) error {
-	span := event.RawSpanConvertToLoopSpan()
-	if span != nil {
-		if err := t.tracehubSvc.SpanTrigger(ctx, span); err != nil {
-			logs.CtxError(ctx, "SpanTrigger err:%v", err)
-			// span trigger 失败，不处理
-			return nil
+func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan, loopSpan *loop_span.Span) error {
+	if rawSpan != nil {
+		span := rawSpan.RawSpanConvertToLoopSpan()
+		if span != nil {
+			if err := t.tracehubSvc.SpanTrigger(ctx, span); err != nil {
+				logs.CtxError(ctx, "SpanTrigger err:%v", err)
+				// span trigger 失败，不处理
+				return nil
+			}
 		}
 	}
+	if loopSpan != nil {
+		workspaceID, err := strconv.ParseInt(loopSpan.WorkspaceID, 10, 64)
+		if err != nil {
+			return errno.InternalErr(err, "convert %s to int64", loopSpan.WorkspaceID)
+		}
+		annotations, err := t.traceRepo.ListAnnotations(ctx, &tracerepo.ListAnnotationsParam{
+			Tenants:     []string{loopSpan.GetTenant()},
+			SpanID:      loopSpan.SpanID,
+			TraceID:     loopSpan.TraceID,
+			WorkspaceId: workspaceID,
+			StartAt:     loopSpan.StartTime/1000 - 5*time.Second.Milliseconds(),
+			EndAt:       loopSpan.StartTime/1000 + 5*time.Second.Milliseconds(),
+		})
+		if err != nil {
+			return err
+		}
+		loopSpan.StartTime = loopSpan.StartTime / 1000
+		loopSpan.Annotations = append(loopSpan.Annotations, annotations...)
+		if loopSpan != nil {
+			if err := t.tracehubSvc.SpanTrigger(ctx, loopSpan); err != nil {
+				logs.CtxError(ctx, "SpanTrigger err:%v", err)
+				// span trigger 失败，不处理
+				return nil
+			}
+		}
+	}
+
 	return nil
 }
 

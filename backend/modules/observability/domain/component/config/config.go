@@ -129,6 +129,7 @@ type ITraceConfig interface {
 	GetKeySpanTypes(ctx context.Context) map[string][]string
 	GetBackfillMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 	GetConsumerListening(ctx context.Context) (*ConsumerListening, error)
+	GetSpanWithAnnotationMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 
 	conf.IConfigLoader
 }

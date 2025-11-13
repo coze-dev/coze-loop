@@ -117,6 +117,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			Tenant:      span.GetTenant(),
 			TTL:         span.GetTTL(ctx),
 			Annotations: []*loop_span.Annotation{annotation},
+			Span:        span,
 		})
 		if err != nil {
 			return err
@@ -175,6 +176,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 		Tenant:      span.GetTenant(),
 		TTL:         span.GetTTL(ctx),
 		Annotations: []*loop_span.Annotation{annotation},
+		Span:        span,
 	}
 	if err = t.traceRepo.InsertAnnotations(ctx, param); err != nil {
 		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)

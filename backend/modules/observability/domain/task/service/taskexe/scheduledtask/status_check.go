@@ -37,6 +37,8 @@ const (
 	checkTaskStatusLockTTL  = 3 * time.Minute
 	backfillLockKeyTemplate = "observability:tracehub:backfill:%d"
 	backfillLockMaxHold     = 24 * time.Hour
+
+	limit = 500
 )
 
 type StatusCheckTask struct {
@@ -90,11 +92,18 @@ func (t *StatusCheckTask) RunOnce(ctx context.Context) error {
 		}
 	}
 
-	if err = t.checkTaskStatus(ctx); err != nil {
+	tasks, err := t.listTasks(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "Failed to get tasks", "err", err)
+		return err
+	}
+	logs.CtxInfo(ctx, "Got [%d] tasks", len(tasks))
+
+	if err = t.checkTaskStatus(ctx, tasks); err != nil {
 		logs.CtxError(ctx, "Failed to check task status", "err", err)
 		return err
 	}
-	if err = t.syncTaskRunCount(ctx); err != nil {
+	if err = t.syncTaskRunCount(ctx, tasks); err != nil {
 		logs.CtxError(ctx, "Failed to sync task run count", "err", err)
 		return err
 	}
@@ -102,36 +111,35 @@ func (t *StatusCheckTask) RunOnce(ctx context.Context) error {
 	return nil
 }
 
-func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
-	logs.CtxInfo(ctx, "Scheduled task started...")
-
-	// Read all non-final (success/disabled) tasks
-	taskPOs, err := t.listNonFinalTask(ctx)
-	if err != nil {
-		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
-		return err
-	}
-	logs.CtxInfo(ctx, "Scheduled task retrieved number of tasks:%d", len(taskPOs))
-	for _, taskPO := range taskPOs {
-		var taskRun, backfillTaskRun *entity.TaskRun
-		backfillTaskRun = taskPO.GetBackfillTaskRun()
-		taskRun = taskPO.GetCurrentTaskRun()
-		var startTime, endTime time.Time
-		// taskInfo := tconv.TaskDO2DTO(ctx, taskPO, nil)
-
-		if taskPO.EffectiveTime != nil {
-			endTime = time.UnixMilli(taskPO.EffectiveTime.EndAt)
-			startTime = time.UnixMilli(taskPO.EffectiveTime.StartAt)
+func (t *StatusCheckTask) checkTaskStatus(ctx context.Context, tasks []*entity.ObservabilityTask) error {
+	startTime := time.Now()
+	logs.CtxInfo(ctx, "Check task status started...")
+	for _, taskDO := range tasks {
+		if taskDO.TaskStatus == entity.TaskStatusSuccess ||
+			taskDO.TaskStatus == entity.TaskStatusFailed ||
+			taskDO.TaskStatus == entity.TaskStatusDisabled {
+			continue
 		}
-		proc := t.taskProcessor.GetTaskProcessor(taskPO.TaskType)
+
+		var taskRun, backfillTaskRun *entity.TaskRun
+		var err error
+		backfillTaskRun = taskDO.GetBackfillTaskRun()
+		taskRun = taskDO.GetCurrentTaskRun()
+		var startTime, endTime time.Time
+
+		if taskDO.EffectiveTime != nil {
+			endTime = time.UnixMilli(taskDO.EffectiveTime.EndAt)
+			startTime = time.UnixMilli(taskDO.EffectiveTime.StartAt)
+		}
+		proc := t.taskProcessor.GetTaskProcessor(taskDO.TaskType)
 		// Task time horizon reached
 		// End when the task end time is reached
-		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskPO.ID, endTime, startTime)
-		if taskPO.BackfillEffectiveTime != nil && taskPO.EffectiveTime != nil && backfillTaskRun != nil {
+		logs.CtxInfo(ctx, "[auto_task]taskID:%d, endTime:%v, startTime:%v", taskDO.ID, endTime, startTime)
+		if taskDO.BackfillEffectiveTime != nil && taskDO.EffectiveTime != nil && backfillTaskRun != nil {
 			if time.Now().After(endTime) && backfillTaskRun.RunStatus == entity.TaskRunStatusDone {
-				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
+				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, time.Now().After(endTime) && backfillTaskRun.RunStatus == task.RunStatusDone", taskDO.ID)
 				err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-					Task:     taskPO,
+					Task:     taskDO,
 					TaskRun:  backfillTaskRun,
 					IsFinish: true,
 				})
@@ -142,18 +150,18 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 			}
 			if backfillTaskRun.RunStatus != entity.TaskRunStatusDone {
 				if time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
-					lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
+					lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskDO.ID)
 					locked, _, cancel, lockErr := t.locker.LockWithRenew(ctx, lockKey, syncTaskRunCountLockTTL, backfillLockMaxHold)
 					if lockErr != nil || !locked {
 						_ = t.taskService.SendBackfillMessage(ctx, &entity.BackFillEvent{
-							TaskID:  taskPO.ID,
-							SpaceID: taskPO.WorkspaceID,
+							TaskID:  taskDO.ID,
+							SpaceID: taskDO.WorkspaceID,
 						})
 					}
 					defer cancel()
 				} else {
 					err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-						Task:     taskPO,
+						Task:     taskDO,
 						TaskRun:  backfillTaskRun,
 						IsFinish: false,
 					})
@@ -163,11 +171,11 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 					}
 				}
 			}
-		} else if taskPO.BackfillEffectiveTime != nil && backfillTaskRun != nil {
+		} else if taskDO.BackfillEffectiveTime != nil && backfillTaskRun != nil {
 			if backfillTaskRun.RunStatus == entity.TaskRunStatusDone {
-				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskPO.ID)
+				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, backfillTaskRun.RunStatus == task.RunStatusDone", taskDO.ID)
 				err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-					Task:     taskPO,
+					Task:     taskDO,
 					TaskRun:  backfillTaskRun,
 					IsFinish: true,
 				})
@@ -178,18 +186,18 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 			}
 			if backfillTaskRun.RunStatus != entity.TaskRunStatusDone {
 				if time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
-					lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
+					lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskDO.ID)
 					locked, _, cancel, lockErr := t.locker.LockWithRenew(ctx, lockKey, syncTaskRunCountLockTTL, backfillLockMaxHold)
 					if lockErr != nil || !locked {
 						_ = t.taskService.SendBackfillMessage(ctx, &entity.BackFillEvent{
-							TaskID:  taskPO.ID,
-							SpaceID: taskPO.WorkspaceID,
+							TaskID:  taskDO.ID,
+							SpaceID: taskDO.WorkspaceID,
 						})
 					}
 					defer cancel()
 				} else {
 					err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-						Task:     taskPO,
+						Task:     taskDO,
 						TaskRun:  backfillTaskRun,
 						IsFinish: false,
 					})
@@ -199,11 +207,11 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 					}
 				}
 			}
-		} else if taskPO.EffectiveTime != nil {
+		} else if taskDO.EffectiveTime != nil {
 			if time.Now().After(endTime) {
-				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, time.Now().After(endTime)", taskPO.ID)
+				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, time.Now().After(endTime)", taskDO.ID)
 				err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-					Task:     taskPO,
+					Task:     taskDO,
 					TaskRun:  taskRun,
 					IsFinish: true,
 				})
@@ -214,10 +222,10 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 			}
 		}
 		// If the task status is unstarted, create it once the task start time is reached
-		if taskPO.TaskStatus == entity.TaskStatusUnstarted && time.Now().After(startTime) {
-			runStartAt, runEndAt := taskPO.GetRunTimeRange()
+		if taskDO.TaskStatus == entity.TaskStatusUnstarted && time.Now().After(startTime) {
+			runStartAt, runEndAt := taskDO.GetRunTimeRange()
 			err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
-				CurrentTask: taskPO,
+				CurrentTask: taskDO,
 				RunType:     entity.TaskRunTypeNewData,
 				RunStartAt:  runStartAt,
 				RunEndAt:    runEndAt,
@@ -226,24 +234,24 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 				logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
 				continue
 			}
-			err = proc.OnTaskUpdated(ctx, taskPO, entity.TaskStatusRunning)
+			err = proc.OnTaskUpdated(ctx, taskDO, entity.TaskStatusRunning)
 			if err != nil {
 				logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
 				continue
 			}
 		}
 		// Handle taskRun
-		if taskPO.TaskStatus == entity.TaskStatusRunning || taskPO.TaskStatus == entity.TaskStatusPending {
+		if taskDO.TaskStatus == entity.TaskStatusRunning || taskDO.TaskStatus == entity.TaskStatusPending {
 			if taskRun == nil {
-				logs.CtxError(ctx, "taskID:%d, taskRun is nil", taskPO.ID)
+				logs.CtxError(ctx, "taskID:%d, taskRun is nil", taskDO.ID)
 				continue
 			}
-			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskPO.ID, taskRun.RunEndAt)
+			logs.CtxInfo(ctx, "taskID:%d, taskRun.RunEndAt:%v", taskDO.ID, taskRun.RunEndAt)
 			// Handling repeated tasks: single task time horizon reached
 			if time.Now().After(taskRun.RunEndAt) {
-				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, time.Now().After(cycleEndTime)", taskPO.ID)
+				logs.CtxInfo(ctx, "[OnTaskFinished]taskID:%d, time.Now().After(cycleEndTime)", taskDO.ID)
 				err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
-					Task:     taskPO,
+					Task:     taskDO,
 					TaskRun:  taskRun,
 					IsFinish: false,
 				})
@@ -251,9 +259,9 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 					logs.CtxError(ctx, "OnTaskFinished err:%v", err)
 					continue
 				}
-				if taskPO.Sampler.IsCycle {
+				if taskDO.Sampler.IsCycle {
 					err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
-						CurrentTask: taskPO,
+						CurrentTask: taskDO,
 						RunType:     entity.TaskRunTypeNewData,
 						RunStartAt:  taskRun.RunEndAt.UnixMilli(),
 						RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
@@ -266,32 +274,25 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 			}
 		}
 	}
+
+	logs.CtxInfo(ctx, "Check task status finished. Cost time:%v", time.Since(startTime))
 	return nil
 }
 
-func (t *StatusCheckTask) syncTaskRunCount(ctx context.Context) error {
+func (t *StatusCheckTask) syncTaskRunCount(ctx context.Context, tasks []*entity.ObservabilityTask) error {
+	startTime := time.Now()
 	logs.CtxInfo(ctx, "Start syncing TaskRunCounts to database...")
-	// 1. Retrieve non-final task list
-	taskDOs, err := t.listSyncTaskRunTask(ctx)
-	if err != nil {
-		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
-		return err
-	}
-	if len(taskDOs) == 0 {
-		logs.CtxInfo(ctx, "No non-final tasks need syncing")
-		return nil
-	}
 
 	// 2. Collect all TaskRun information that needs syncing
 	var taskRunInfos []*TaskRunCountInfo
-	for _, taskPO := range taskDOs {
-		if len(taskPO.TaskRuns) == 0 {
+	for _, taskDO := range tasks {
+		if len(taskDO.TaskRuns) == 0 {
 			continue
 		}
 
-		for _, taskRun := range taskPO.TaskRuns {
+		for _, taskRun := range taskDO.TaskRuns {
 			taskRunInfos = append(taskRunInfos, &TaskRunCountInfo{
-				TaskID:    taskPO.ID,
+				TaskID:    taskDO.ID,
 				TaskRunID: taskRun.ID,
 			})
 		}
@@ -315,18 +316,15 @@ func (t *StatusCheckTask) syncTaskRunCount(ctx context.Context) error {
 		batch := taskRunInfos[i:end]
 		t.processBatch(ctx, batch)
 	}
+
+	logs.CtxInfo(ctx, "Finish syncing TaskRunCounts to database. Cost time:%v", time.Since(startTime))
 	return nil
 }
 
-func (t *StatusCheckTask) listSyncTaskRunTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
+func (t *StatusCheckTask) listRecentTasks(ctx context.Context) ([]*entity.ObservabilityTask, error) {
 	var taskDOs []*entity.ObservabilityTask
-	taskDOs, err := t.listNonFinalTask(ctx)
-	if err != nil {
-		logs.CtxError(ctx, "Failed to get non-final task list", "err", err)
-		return nil, err
-	}
+
 	var offset int32 = 0
-	const limit int32 = 1000
 	// Paginate through all tasks
 	for {
 		tasklist, _, err := t.taskRepo.ListTasks(ctx, repo.ListTaskParam{
@@ -363,20 +361,20 @@ func (t *StatusCheckTask) listSyncTaskRunTask(ctx context.Context) ([]*entity.Ob
 		taskDOs = append(taskDOs, tasklist...)
 
 		// If fewer tasks than limit are returned, this is the last page
-		if len(tasklist) < int(limit) {
+		if len(tasklist) < limit {
 			break
 		}
 
 		// Move to the next page, increasing offset by 1000
 		offset += limit
 	}
+	logs.CtxInfo(ctx, "Get recent task list. Total count:%d", len(taskDOs))
 	return taskDOs, nil
 }
 
-func (t *StatusCheckTask) listNonFinalTask(ctx context.Context) ([]*entity.ObservabilityTask, error) {
+func (t *StatusCheckTask) listNonFinalTasks(ctx context.Context) ([]*entity.ObservabilityTask, error) {
 	var taskPOs []*entity.ObservabilityTask
 	var offset int32 = 0
-	const limit int32 = 500
 	// Paginate through all tasks
 	for {
 		tasklist, _, err := t.taskRepo.ListTasks(ctx, repo.ListTaskParam{
@@ -406,13 +404,14 @@ func (t *StatusCheckTask) listNonFinalTask(ctx context.Context) ([]*entity.Obser
 		taskPOs = append(taskPOs, tasklist...)
 
 		// If fewer tasks than limit are returned, this is the last page
-		if len(tasklist) < int(limit) {
+		if len(tasklist) < limit {
 			break
 		}
 
 		// Move to the next page, increasing offset by 1000
 		offset += limit
 	}
+	logs.CtxInfo(ctx, "Got non-final task list, total:%d", len(taskPOs))
 	return taskPOs, nil
 }
 
@@ -488,4 +487,21 @@ func (t *StatusCheckTask) updateTaskRunDetail(ctx context.Context, info *TaskRun
 	}
 
 	return nil
+}
+
+func (t *StatusCheckTask) listTasks(ctx context.Context) ([]*entity.ObservabilityTask, error) {
+	tasks := make([]*entity.ObservabilityTask, 0)
+	nonFinalTasks, err := t.listNonFinalTasks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tasks = append(tasks, nonFinalTasks...)
+
+	recentTasks, err := t.listRecentTasks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tasks = append(tasks, recentTasks...)
+
+	return tasks, nil
 }
