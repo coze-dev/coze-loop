@@ -77,6 +77,8 @@ const (
 	MaxKeySize         = 100
 	MaxTextSize        = 1024 * 1024
 	MaxCommonValueSize = 1024
+
+	CallTypeEvaluator = "Evaluator"
 )
 
 type TTL string
@@ -411,6 +413,35 @@ func (s *Span) AddManualDatasetAnnotation(datasetID int64, userID string, annota
 	a.Key = strconv.FormatInt(datasetID, 10)
 	a.Value = NewBoolValue(true)
 	a.Metadata = &ManualDatasetMetadata{}
+	a.Status = AnnotationStatusNormal
+	a.CreatedAt = time.Now()
+	a.CreatedBy = userID
+	a.UpdatedAt = time.Now()
+	a.UpdatedBy = userID
+
+	if err := a.GenID(); err != nil {
+		return nil, err
+	}
+
+	s.AddAnnotation(a)
+	return a, nil
+}
+
+func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersionID int64, score float64, reasoning, userID string) (*Annotation, error) {
+	a := &Annotation{}
+	a.SpanID = s.SpanID
+	a.TraceID = s.TraceID
+	a.StartTime = time.UnixMicro(s.StartTime)
+	a.WorkspaceID = s.WorkspaceID
+	a.AnnotationType = AnnotationTypeAutoEvaluate
+	a.Key = fmt.Sprintf("%d:%d", taskID, evaluatorVersionID)
+	a.Value = NewDoubleValue(score)
+	a.Reasoning = reasoning
+	a.Metadata = &AutoEvaluateMetadata{
+		TaskID:             taskID,
+		EvaluatorRecordID:  evaluatorRecordID,
+		EvaluatorVersionID: evaluatorVersionID,
+	}
 	a.Status = AnnotationStatusNormal
 	a.CreatedAt = time.Now()
 	a.CreatedBy = userID

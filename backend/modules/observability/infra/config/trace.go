@@ -26,6 +26,7 @@ const (
 	queryTraceRateLimitCfgKey  = "query_trace_rate_limit_config"
 	keySpanTypeCfgKey          = "key_span_type"
 	backfillMqProducerCfgKey   = "backfill_mq_producer_config"
+	consumerListeningCfgKey    = "consumer_listening"
 )
 
 type TraceConfigCenter struct {
@@ -169,6 +170,14 @@ func (t *TraceConfigCenter) GetKeySpanTypes(ctx context.Context) map[string][]st
 		return keyColumns
 	}
 	return keyColumns
+}
+
+func (t *TraceConfigCenter) GetConsumerListening(ctx context.Context) (*config.ConsumerListening, error) {
+	consumerListening := new(config.ConsumerListening)
+	if err := t.UnmarshalKey(ctx, consumerListeningCfgKey, &consumerListening); err != nil {
+		return nil, err
+	}
+	return consumerListening, nil
 }
 
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {
