@@ -26,16 +26,6 @@ vi.mock('../src/logger', () => {
     Logger,
   };
 });
-vi.mock('../src/slardar', () => {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  function SlardarReportClient() {
-    return null;
-  }
-
-  return {
-    SlardarReportClient,
-  };
-});
 
 // A constant interval just to test the tracer is valid
 const CONSTANT_INTERVAL = 100;
@@ -49,13 +39,6 @@ vi.stubGlobal('performance', {
 describe('reporter', () => {
   afterEach(() => {
     vi.clearAllMocks();
-  });
-
-  test('With on slardar instance', () => {
-    const reporter = new Reporter({});
-    reporter.init(null);
-    // @ts-expect-error private member
-    expect(reporter.initialized).equal(false);
   });
 
   test('Should not call the logger function if `init` is not called, also the messages will be inserted into `pendingQueue`', () => {
@@ -83,7 +66,7 @@ describe('reporter', () => {
 
   test('Should call logger function if init is called, also the `pendingQueue` should be empty', () => {
     const reporter = new Reporter({});
-    reporter.init({} as any);
+    reporter.init();
     // @ts-expect-error private member
     const logger = reporter.logger.persist;
     reporter.success({ message: 'success' });
@@ -129,7 +112,7 @@ describe('reporter', () => {
     const RANDOM_DURATION = 100;
     await wait(RANDOM_DURATION);
 
-    reporter.init({} as any);
+    reporter.init();
     expect(logger.success).toHaveBeenCalled();
     expect(logger.info).toHaveBeenCalled();
     expect(logger.warning).toHaveBeenCalled();
@@ -141,7 +124,6 @@ describe('reporter', () => {
   test('createReporterWithPreset', () => {
     const presetReporter = rawReporter.createReporterWithPreset({});
     expect(presetReporter.getLogger()).not.undefined;
-    expect(presetReporter.slardarInstance).not.undefined;
   });
 
   describe('Error Event', () => {
@@ -157,14 +139,14 @@ describe('reporter', () => {
       expect(queue.length).equal(1);
       const item = queue[0];
       expect(item.error).instanceOf(Error);
-      expect(item.meta.errorMessage).equal('custom_message');
+      expect(item.meta?.errorMessage).equal('custom_message');
     });
   });
 
   describe('Success Event', () => {
     test('The logger.success should be called', () => {
       const reporter = new Reporter({});
-      reporter.init({} as any);
+      reporter.init();
       reporter.successEvent({
         eventName: 'e',
       });
@@ -178,7 +160,7 @@ describe('reporter', () => {
   describe('Trace Event', () => {
     test('No any trace should not call the logger function', () => {
       const reporter = new Reporter({});
-      reporter.init({} as any);
+      reporter.init();
       // Generate but ot use the tracer
       reporter.tracer({ eventName: 'e' });
 
@@ -200,7 +182,7 @@ describe('reporter', () => {
       const queue = reporter.pendingQueue;
       expect(queue.length).equal(3);
       const lastItem = queue[queue.length - 1];
-      const duration = lastItem.meta.duration as TraceDuration;
+      const duration = lastItem.meta?.duration as TraceDuration;
       expect(duration.points).toStrictEqual(['step1', 'step2', 'success']);
       expect(duration.interval.step2).equal(CONSTANT_INTERVAL);
       expect(duration.interval.success).equal(CONSTANT_INTERVAL);
@@ -219,7 +201,7 @@ describe('reporter', () => {
       const queue = reporter.pendingQueue;
       expect(queue.length).equal(1);
       const item = queue[0];
-      expect(item.meta.error).instanceOf(Error);
+      expect(item.meta?.error).instanceOf(Error);
     });
 
     test('The meta should be recorded correctly', () => {
@@ -238,8 +220,8 @@ describe('reporter', () => {
       const queue = reporter.pendingQueue;
       expect(queue.length).equal(1);
       const item = queue[0];
-      expect(item.meta.m1).equal(1);
-      expect(item.meta.c1).equal('any');
+      expect(item.meta?.m1).equal(1);
+      expect(item.meta?.c1).equal('any');
     });
   });
 });
