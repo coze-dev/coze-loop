@@ -1,3 +1,6 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package dao
 
 import (
@@ -42,7 +45,7 @@ func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (span
 		}
 		redisValue := make(map[string]string)
 		if err = json.Unmarshal([]byte(rawVal), &redisValue); err != nil {
-			return nil,nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+			return nil, nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 		}
 		spanID, ok := redisValue[keySpanID]
 		if ok {
@@ -59,4 +62,3 @@ func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (span
 
 	return preSpanIDs, respIDByOrder, nil
 }
-

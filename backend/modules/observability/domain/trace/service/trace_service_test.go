@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/infra/redis"
+	"github.com/coze-dev/coze-loop/backend/infra/redis/mocks"
 	annotationpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	kitexdataset "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
@@ -84,6 +86,7 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -111,12 +114,14 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				persistCmdMock := mocks.NewMockPersistentCmdable(ctrl)
 				return fields{
 					traceRepo:      repoMock,
 					traceConfig:    confMock,
 					buildHelper:    buildHelper,
 					metrics:        metricsMock,
 					tenantProvider: tenantProviderMock,
+					persistCmd:     persistCmdMock,
 				}
 			},
 			args: args{
@@ -239,6 +244,7 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			got, err := r.GetTracesAdvanceInfo(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -258,6 +264,7 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -345,6 +352,7 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			err := r.IngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -363,6 +371,7 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -464,6 +473,7 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			got, err := r.GetTracesMetaInfo(tt.args.ctx, tt.args.req)
 			if tt.wantErr {
@@ -487,6 +497,7 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -606,6 +617,7 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			got, err := r.ListAnnotations(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -625,6 +637,7 @@ func TestTraceServiceImpl_UpdateManualAnnotation(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -817,6 +830,7 @@ func TestTraceServiceImpl_UpdateManualAnnotation(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			err := r.UpdateManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -835,6 +849,7 @@ func TestTraceServiceImpl_CreateManualAnnotation(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -1058,6 +1073,7 @@ func TestTraceServiceImpl_CreateManualAnnotation(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			got, err := r.CreateManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1079,6 +1095,7 @@ func TestTraceServiceImpl_ListSpans(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -1497,6 +1514,7 @@ func TestTraceServiceImpl_ListSpans(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			got, err := r.ListSpans(tt.args.ctx, tt.args.req)
 			assert.Equal(t, err != nil, tt.wantErr)
@@ -1516,6 +1534,7 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 		tenantProvider     tenant.ITenantProvider
 		evalSvc            rpc.IEvaluatorRPCAdapter
 		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
 	}
 	type args struct {
 		ctx context.Context
@@ -1855,6 +1874,7 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 				fields.tenantProvider,
 				fields.evalSvc,
 				fields.taskRepo,
+				fields.persistCmd,
 			)
 			err := r.CreateAnnotation(tt.args.ctx, tt.args.req)
 			t.Log(err)
