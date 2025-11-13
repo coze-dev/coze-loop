@@ -404,6 +404,7 @@ func (app *PromptManageApplicationImpl) ListPrompt(ctx context.Context, request 
 		UserID:            userID,
 		CommittedOnly:     request.GetCommittedOnly(),
 		FilterPromptTypes: entityFilterPromptTypes,
+		PromptIDs:         request.GetPromptIds(),
 
 		PageNum:  int(request.GetPageNum()),
 		PageSize: int(request.GetPageSize()),

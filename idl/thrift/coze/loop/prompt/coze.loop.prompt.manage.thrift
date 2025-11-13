@@ -142,6 +142,7 @@ struct ListPromptRequest {
     12: optional list<string> created_bys
     13: optional bool committed_only
     14: optional list<prompt.PromptType> filter_prompt_types // 向前兼容，如果不传，默认查询normal类型的Prompt
+    15: optional list<i64> prompt_ids
 
     127: optional i32 page_num (vt.not_nil="true", vt.gt="0")
     128: optional i32 page_size (vt.not_nil="true", vt.gt="0", vt.le="100")
