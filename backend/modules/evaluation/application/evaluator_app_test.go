@@ -267,11 +267,13 @@ func TestEvaluatorHandlerImpl_GetEvaluator(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
 	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
 
 	app := &EvaluatorHandlerImpl{
 		auth:             mockAuth,
 		evaluatorService: mockEvaluatorService,
 		userInfoService:  mockUserInfoService,
+		configer:         mockConfiger,
 	}
 
 	// Test data
@@ -284,6 +286,27 @@ func TestEvaluatorHandlerImpl_GetEvaluator(t *testing.T) {
 		EvaluatorType:  entity.EvaluatorTypePrompt,
 		Description:    "Test Description",
 		DraftSubmitted: true,
+	}
+	validBuiltinSpaceID := int64(111)
+	validBuiltinEvaluatorID := int64(333)
+	validBuiltinEvaluator := &entity.Evaluator{
+		ID:             validBuiltinEvaluatorID,
+		SpaceID:        validBuiltinSpaceID,
+		Name:           "Test Evaluator",
+		EvaluatorType:  entity.EvaluatorTypePrompt,
+		Description:    "Test Description",
+		DraftSubmitted: true,
+		Builtin:        true,
+	}
+	invalidBuiltinSpaceID := int64(1111)
+	invalidBuiltinEvaluator := &entity.Evaluator{
+		ID:             validBuiltinEvaluatorID,
+		SpaceID:        invalidBuiltinSpaceID,
+		Name:           "Test Evaluator",
+		EvaluatorType:  entity.EvaluatorTypePrompt,
+		Description:    "Test Description",
+		DraftSubmitted: true,
+		Builtin:        true,
 	}
 
 	tests := []struct {
@@ -354,6 +377,45 @@ func TestEvaluatorHandlerImpl_GetEvaluator(t *testing.T) {
 			wantResp:    nil,
 			wantErr:     true,
 			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "success - normal request for builtin",
+			req: &evaluatorservice.GetEvaluatorRequest{
+				WorkspaceID: validSpaceID,
+				EvaluatorID: &validBuiltinEvaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					GetEvaluator(gomock.Any(), validSpaceID, validBuiltinEvaluatorID, false).
+					Return(validBuiltinEvaluator, nil)
+
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).Return([]string{strconv.FormatInt(validBuiltinSpaceID, 10)})
+
+				mockUserInfoService.EXPECT().
+					PackUserInfo(gomock.Any(), gomock.Any()).
+					Return()
+			},
+			wantResp: &evaluatorservice.GetEvaluatorResponse{
+				Evaluator: evaluator.ConvertEvaluatorDO2DTO(validBuiltinEvaluator),
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - invalid builtin space",
+			req: &evaluatorservice.GetEvaluatorRequest{
+				WorkspaceID: validSpaceID,
+				EvaluatorID: &validBuiltinEvaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					GetEvaluator(gomock.Any(), validSpaceID, validBuiltinEvaluatorID, false).
+					Return(invalidBuiltinEvaluator, nil)
+
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).Return([]string{strconv.FormatInt(validBuiltinEvaluatorID, 10)})
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
 		},
 	}
 

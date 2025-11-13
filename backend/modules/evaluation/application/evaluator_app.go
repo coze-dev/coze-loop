@@ -183,14 +183,40 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluators(ctx context.Context, request *
 	if len(drafts) == 0 {
 		return &evaluatorservice.BatchGetEvaluatorsResponse{}, nil
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(drafts[0].SpaceID, 10),
-		SpaceID:       drafts[0].SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return nil, err
+	// 对预置评估器/普通评估器需要分别鉴权
+	builtinSpaceIDs := make(map[int64]struct{})
+	normalSpaceIDs := make(map[int64]struct{})
+	for _, draft := range drafts {
+		if draft == nil {
+			continue
+		}
+		if draft.Builtin {
+			builtinSpaceIDs[draft.SpaceID] = struct{}{}
+		} else {
+			normalSpaceIDs[draft.SpaceID] = struct{}{}
+		}
+	}
+	if len(builtinSpaceIDs) > 0 {
+		for spaceID := range builtinSpaceIDs {
+			// 预置评估器鉴权
+			err = e.authBuiltinManagement(ctx, spaceID, spaceTypeBuiltin, false)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	if len(normalSpaceIDs) > 0 {
+		for spaceID := range normalSpaceIDs {
+			// 普通评估器鉴权
+			err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+				ObjectID:      strconv.FormatInt(spaceID, 10),
+				SpaceID:       spaceID,
+				ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+			})
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	dtoList := make([]*evaluatordto.Evaluator, 0, len(drafts))
 	for _, draft := range drafts {
@@ -212,14 +238,22 @@ func (e *EvaluatorHandlerImpl) GetEvaluator(ctx context.Context, request *evalua
 	if draft == nil {
 		return &evaluatorservice.GetEvaluatorResponse{}, nil
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(draft.ID, 10),
-		SpaceID:       draft.SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-	})
-	if err != nil {
-		return nil, err
+	if draft.Builtin {
+		// 预置评估器鉴权
+		err = e.authBuiltinManagement(ctx, draft.SpaceID, spaceTypeBuiltin, false)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// 普通评估器鉴权
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(draft.ID, 10),
+			SpaceID:       draft.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	dto := evaluatorconvertor.ConvertEvaluatorDO2DTO(draft)
 	e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier([]*evaluatordto.Evaluator{dto}))
