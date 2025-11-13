@@ -42,10 +42,16 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 		VariableVals: nil,
 		Scenario:     gptr.Of(prompt.ScenarioEvalTarget),
 	}
-	// logs.CtxInfo(ctx, "ExecutePrompt History=%v, Variables=%v", json.Jsonify(param.History), json.Jsonify(param.Variables))
 	req.VariableVals = ConvertVariables2Prompt(param.Variables)
 
-	req.Messages = ConvertMessages2Prompt(param.History)
+	var messages []*entity.Message
+	if len(param.History) > 0 {
+		messages = append(messages, param.History...)
+	}
+	if param.UserQuery != nil {
+		messages = append(messages, param.UserQuery)
+	}
+	req.Messages = ConvertMessages2Prompt(messages)
 
 	if runtimeParam, err := p.parseRuntimeParam(ctx, gptr.Indirect(param.RuntimeParam)); err != nil {
 		logs.CtxError(ctx, "prompt execute parse runtime param fail, err=%v", err)
@@ -84,7 +90,18 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 		InputTokens:  resp.GetUsage().GetInputTokens(),
 		OutputTokens: resp.GetUsage().GetOutputTokens(),
 	}
+	result.MultiContent = p.convMsgToContent(resp.Message)
 	return result, nil
+}
+
+func (p PromptRPCAdapter) convMsgToContent(msg *prompt.Message) *entity.Content {
+	if len(msg.GetParts()) == 0 {
+		return &entity.Content{
+			ContentType: gptr.Of(entity.ContentTypeText),
+			Text:        msg.Content,
+		}
+	}
+	return ConvertFromContent(msg.GetParts())
 }
 
 func (p PromptRPCAdapter) parseRuntimeParam(ctx context.Context, rtp string) (*entity.PromptRuntimeParam, error) {
