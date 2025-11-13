@@ -1,12 +1,11 @@
 # @coze-arch/logger
 
-A comprehensive logging and error reporting library for the Coze architecture ecosystem, providing unified console logging, Slardar integration, React error boundaries, and performance tracing capabilities.
+A comprehensive logging and error reporting library for the Coze architecture ecosystem, providing unified console logging, React error boundaries, and performance tracing capabilities.
 
 ## Features
 
 - **Unified Logging Interface**: Centralized logging with support for multiple log levels (info, success, warning, error, fatal)
-- **Console & Remote Reporting**: Dual output support for both console debugging and remote telemetry
-- **Slardar Integration**: Built-in support for Slardar error tracking and event reporting
+- **Console Logging**: Console output for debugging and development
 - **React Error Boundaries**: Ready-to-use error boundary components with automatic error reporting
 - **Performance Tracing**: Duration tracking for multi-step operations and workflows
 - **Context-Aware Logging**: Namespace and scope-based log organization
@@ -51,14 +50,13 @@ logger.info({
 });
 ```
 
-#### Remote Reporting
+#### Event Reporting
 
 ```typescript
 import { reporter } from '@coze-arch/logger';
 
-// Initialize with Slardar instance
-const slardarInstance = getSlardarInstance();
-reporter.init(slardarInstance);
+// Initialize reporter
+reporter.init();
 
 // Log custom events
 reporter.event({
@@ -101,7 +99,6 @@ logger.info(message | options);
 logger.success(message | options);
 logger.warning(message | options);
 logger.error(options); // requires error object
-logger.fatal(options); // requires error object
 
 // Setup configuration
 logger.setup({ 'no-console': true }); // Disable console output
@@ -109,13 +106,13 @@ logger.setup({ 'no-console': true }); // Disable console output
 
 ### Reporter
 
-Handles remote logging and event reporting with Slardar integration.
+Handles event reporting and structured logging.
 
 ```typescript
 import { reporter, Reporter } from '@coze-arch/logger';
 
 // Initialize reporter
-reporter.init(slardarInstance);
+reporter.init();
 
 // Create reporter with preset context
 const moduleReporter = reporter.createReporterWithPreset({
@@ -206,7 +203,7 @@ import { useErrorBoundary, useErrorHandler } from '@coze-arch/logger';
 function ComponentWithErrorHandling() {
   const { showBoundary } = useErrorBoundary();
   const handleError = useErrorHandler();
-  
+
   const handleAsyncOperation = async () => {
     try {
       await riskyOperation();
@@ -232,7 +229,7 @@ function App() {
   const logger = new Logger({
     ctx: { namespace: 'app' }
   });
-  
+
   return (
     <LoggerContext.Provider value={logger}>
       <YourComponents />
@@ -243,7 +240,7 @@ function App() {
 // Consumer
 function Component() {
   const logger = useLogger();
-  
+
   logger.info('Component mounted');
 }
 ```
@@ -323,7 +320,6 @@ rushx ts-check
 
 ### Production Dependencies
 
-- **@coze-studio/slardar-interface**: Slardar integration interface
 - **@coze-arch/bot-env**: Environment configuration utilities
 - **@coze-arch/bot-typings**: Shared type definitions
 - **lodash-es**: Utility functions library

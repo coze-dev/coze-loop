@@ -447,7 +447,7 @@ func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 	// 调用flushSpans，然后手动调用OnTaskFinished来触发finish错误
 	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
 	require.NoError(t, err) // flushSpans本身不应该返回错误
-	
+
 	// 手动调用OnTaskFinished来触发finish错误
 	finishErr := sub.processor.OnTaskFinished(context.Background(), taskexe.OnTaskFinishedReq{
 		Task:     sub.t,
@@ -605,8 +605,22 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 	t.Run("with errors triggers retry", func(t *testing.T) {
 		t.Parallel()
 		ch := make(chan *entity.BackFillEvent, 1)
-		impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
-		sub := &spanSubscriber{t: &entity.ObservabilityTask{ID: 10, WorkspaceID: 20}}
+		now := time.Now()
+		impl := &TraceHubServiceImpl{
+			backfillProducer: &stubBackfillProducer{ch: ch},
+		}
+		sub := &spanSubscriber{
+			t: &entity.ObservabilityTask{ID: 10, WorkspaceID: 20},
+			tr: &entity.TaskRun{
+				ID:          1,
+				WorkspaceID: 20,
+				TaskID:      10,
+				TaskType:    entity.TaskRunTypeBackFill,
+				RunStatus:   entity.TaskRunStatusRunning,
+				RunStartAt:  now.Add(-time.Hour),
+				RunEndAt:    now.Add(time.Hour),
+			},
+		}
 
 		err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub)
 		require.NoError(t, err)
@@ -623,8 +637,20 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 	t.Run("no errors", func(t *testing.T) {
 		t.Parallel()
 		ch := make(chan *entity.BackFillEvent, 1)
+		now := time.Now()
 		impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
-		sub := &spanSubscriber{t: &entity.ObservabilityTask{ID: 10, WorkspaceID: 20}}
+		sub := &spanSubscriber{
+			t: &entity.ObservabilityTask{ID: 10, WorkspaceID: 20},
+			tr: &entity.TaskRun{
+				ID:          1,
+				WorkspaceID: 20,
+				TaskID:      10,
+				TaskType:    entity.TaskRunTypeBackFill,
+				RunStatus:   entity.TaskRunStatusRunning,
+				RunStartAt:  now.Add(-time.Hour),
+				RunEndAt:    now.Add(time.Hour),
+			},
+		}
 
 		err := impl.onHandleDone(context.Background(), nil, sub)
 		require.NoError(t, err)

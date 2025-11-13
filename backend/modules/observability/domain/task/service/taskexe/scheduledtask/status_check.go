@@ -141,15 +141,27 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 				}
 			}
 			if backfillTaskRun.RunStatus != entity.TaskRunStatusDone {
-				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
-				locked, _, cancel, lockErr := t.locker.LockWithRenew(ctx, lockKey, syncTaskRunCountLockTTL, backfillLockMaxHold)
-				if (lockErr != nil || !locked) && time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
-					_ = t.taskService.SendBackfillMessage(ctx, &entity.BackFillEvent{
-						TaskID:  taskPO.ID,
-						SpaceID: taskPO.WorkspaceID,
+				if time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
+					lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
+					locked, _, cancel, lockErr := t.locker.LockWithRenew(ctx, lockKey, syncTaskRunCountLockTTL, backfillLockMaxHold)
+					if lockErr != nil || !locked {
+						_ = t.taskService.SendBackfillMessage(ctx, &entity.BackFillEvent{
+							TaskID:  taskPO.ID,
+							SpaceID: taskPO.WorkspaceID,
+						})
+					}
+					defer cancel()
+				} else {
+					err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
+						Task:     taskPO,
+						TaskRun:  backfillTaskRun,
+						IsFinish: false,
 					})
+					if err != nil {
+						logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+						continue
+					}
 				}
-				defer cancel()
 			}
 		} else if taskPO.BackfillEffectiveTime != nil && backfillTaskRun != nil {
 			if backfillTaskRun.RunStatus == entity.TaskRunStatusDone {
@@ -165,15 +177,27 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context) error {
 				}
 			}
 			if backfillTaskRun.RunStatus != entity.TaskRunStatusDone {
-				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
-				locked, _, cancel, lockErr := t.locker.LockWithRenew(ctx, lockKey, syncTaskRunCountLockTTL, backfillLockMaxHold)
-				if (lockErr != nil || !locked) && time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
-					_ = t.taskService.SendBackfillMessage(ctx, &entity.BackFillEvent{
-						TaskID:  taskPO.ID,
-						SpaceID: taskPO.WorkspaceID,
+				if time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
+					lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
+					locked, _, cancel, lockErr := t.locker.LockWithRenew(ctx, lockKey, syncTaskRunCountLockTTL, backfillLockMaxHold)
+					if lockErr != nil || !locked {
+						_ = t.taskService.SendBackfillMessage(ctx, &entity.BackFillEvent{
+							TaskID:  taskPO.ID,
+							SpaceID: taskPO.WorkspaceID,
+						})
+					}
+					defer cancel()
+				} else {
+					err = proc.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
+						Task:     taskPO,
+						TaskRun:  backfillTaskRun,
+						IsFinish: false,
 					})
+					if err != nil {
+						logs.CtxError(ctx, "OnFinishTaskChange err:%v", err)
+						continue
+					}
 				}
-				defer cancel()
 			}
 		} else if taskPO.EffectiveTime != nil {
 			if time.Now().After(endTime) {

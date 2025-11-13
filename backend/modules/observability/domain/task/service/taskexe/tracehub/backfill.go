@@ -448,9 +448,12 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, err error, sub *
 		SpaceID: sub.t.WorkspaceID,
 		TaskID:  sub.t.ID,
 	}
-	if sendErr := h.sendBackfillMessage(context.Background(), backfillEvent); sendErr != nil {
-		logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.ID, sendErr)
-		return sendErr
+
+	if time.Now().UnixMilli()-(sub.tr.RunEndAt.UnixMilli()-sub.tr.RunStartAt.UnixMilli()) < sub.tr.RunEndAt.UnixMilli() {
+		if sendErr := h.sendBackfillMessage(context.Background(), backfillEvent); sendErr != nil {
+			logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.ID, sendErr)
+			return sendErr
+		}
 	}
 	// 依靠MQ进行重试
 	return nil

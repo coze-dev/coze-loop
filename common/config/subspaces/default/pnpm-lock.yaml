@@ -174,7 +174,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/config/eslint-config:
     dependencies:
@@ -440,14 +440,14 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       sucrase:
         specifier: ^3.32.0
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/eslint-plugin:
     dependencies:
@@ -529,7 +529,7 @@ importers:
         version: 10.9.2(@types/node@18.18.9)(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/idl/idl-parser:
     dependencies:
@@ -563,7 +563,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/idl/idl2ts-cli:
     dependencies:
@@ -840,7 +840,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/plugins/postcss-plugin:
     dependencies:
@@ -874,7 +874,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/utils/monorepo-kits:
     dependencies:
@@ -902,7 +902,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/utils/rush-logger:
     dependencies:
@@ -924,7 +924,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-env:
     dependencies:
@@ -955,7 +955,7 @@ importers:
         version: 20.0.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-env-adapter:
     devDependencies:
@@ -982,7 +982,7 @@ importers:
         version: 20.0.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-flags:
     dependencies:
@@ -1031,7 +1031,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-md-box-adapter:
     dependencies:
@@ -1113,7 +1113,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-typings:
     devDependencies:
@@ -1189,7 +1189,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/logger:
     dependencies:
@@ -1199,9 +1199,6 @@ importers:
       '@coze-arch/bot-typings':
         specifier: workspace:*
         version: link:../bot-typings
-      '@coze-studio/slardar-interface':
-        specifier: workspace:*
-        version: link:../slardar-interface
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -1235,31 +1232,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
-
-  ../../../frontend/packages/arch/slardar-interface:
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      sucrase:
-        specifier: ^3.32.0
-        version: 3.35.0
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/subspace-resolve-plugin:
     dependencies:
@@ -1293,7 +1266,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/account:
     dependencies:
@@ -1333,7 +1306,7 @@ importers:
         version: 18.2.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/adapter-interfaces:
     devDependencies:
@@ -1366,7 +1339,7 @@ importers:
         version: 18.2.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/api-schema:
     dependencies:
@@ -1403,7 +1376,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/auth-pages:
     dependencies:
@@ -1461,7 +1434,7 @@ importers:
         version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/base-hooks:
     dependencies:
@@ -1498,7 +1471,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/biz-components:
     dependencies:
@@ -1562,7 +1535,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/biz-config:
     devDependencies:
@@ -1586,7 +1559,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/biz-hooks:
     dependencies:
@@ -1638,7 +1611,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/components:
     dependencies:
@@ -1716,8 +1689,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
@@ -1735,7 +1708,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/env:
     devDependencies:
@@ -1756,7 +1729,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/evaluate:
     dependencies:
@@ -1886,7 +1859,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/evaluate-adapter:
     dependencies:
@@ -1959,7 +1932,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/evaluate-components:
     dependencies:
@@ -2240,7 +2213,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/guard:
     dependencies:
@@ -2295,7 +2268,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/i18n:
     dependencies:
@@ -2454,7 +2427,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/observation/trace-detail:
     dependencies:
@@ -2562,8 +2535,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
@@ -2578,7 +2551,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/observation/trace-detail-open:
     dependencies:
@@ -2687,7 +2660,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/observation/trace-list:
     dependencies:
@@ -2811,7 +2784,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/observation/trace-struct-data:
     dependencies:
@@ -2941,7 +2914,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/prompt-components:
     dependencies:
@@ -3082,8 +3055,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
@@ -3101,7 +3074,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/prompt-pages:
     dependencies:
@@ -3206,8 +3179,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -3231,7 +3204,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/resources/loop-lng:
     devDependencies:
@@ -3252,7 +3225,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/route:
     dependencies:
@@ -3289,7 +3262,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/rsbuild-config:
     dependencies:
@@ -3365,7 +3338,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
       webpack:
         specifier: ~5.91.0
         version: 5.91.0
@@ -3405,7 +3378,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/tag-components:
     dependencies:
@@ -3520,7 +3493,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/tag-pages:
     dependencies:
@@ -3584,7 +3557,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/tailwind-config:
     dependencies:
@@ -3669,14 +3642,14 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       typescript:
         specifier: 5.8.2
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/toolkit:
     dependencies:
@@ -3707,7 +3680,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
 packages:
 
@@ -12132,6 +12105,10 @@ packages:
       '@types/vfile-message': 2.0.0
     dev: true
 
+  /@types/whatwg-mimetype@3.0.2:
+    resolution: {integrity: sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA==}
+    dev: true
+
   /@types/yaml@1.9.7:
     resolution: {integrity: sha512-8WMXRDD1D+wCohjfslHDgICd2JtMATZU8CkhH8LVJqcJs6dyYj5TGptzP8wApbmEullGBSsCEzzap73DQ1HJaA==}
     deprecated: This is a stub types definition. yaml provides its own type definitions, so you do not need this installed.
@@ -13093,7 +13070,7 @@ packages:
       std-env: 3.9.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+      vitest: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -18137,12 +18114,12 @@ packages:
       uglify-js: 3.19.3
     dev: true
 
-  /happy-dom@15.11.7:
-    resolution: {integrity: sha512-KyrFvnl+J9US63TEzwoiJOQzZBJY7KgBushJA8X61DMbNsH+2ONkDuLDnCnwUiPTF42tLoEmrPyoqbenVA5zrg==}
-    engines: {node: '>=18.0.0'}
+  /happy-dom@20.0.10:
+    resolution: {integrity: sha512-6umCCHcjQrhP5oXhrHQQvLB0bwb1UzHAHdsXy+FjtKoYjUhmNZsQL8NivwM1vDvNEChJabVrUYxUnp/ZdYmy2g==}
+    engines: {node: '>=20.0.0'}
     dependencies:
-      entities: 4.5.0
-      webidl-conversions: 7.0.0
+      '@types/node': 18.18.9
+      '@types/whatwg-mimetype': 3.0.2
       whatwg-mimetype: 3.0.0
     dev: true
 
@@ -26863,7 +26840,7 @@ packages:
       fsevents: 2.3.3
     dev: true
 
-  /vitest@3.0.9(@types/node@18.18.9)(happy-dom@15.11.7):
+  /vitest@3.0.9(@types/node@18.18.9)(happy-dom@20.0.10):
     resolution: {integrity: sha512-BbcFDqNyBlfSpATmTtXOAOj71RNKDDvjBM/uPfnxxVGrG+FSH2RQIwgeEngTaTkuU/h0ScFvf+tRcKfYXzBybQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
@@ -26902,7 +26879,7 @@ packages:
       chai: 5.2.0
       debug: 4.3.3
       expect-type: 1.2.1
-      happy-dom: 15.11.7
+      happy-dom: 20.0.10
       magic-string: 0.30.17
       pathe: 2.0.3
       std-env: 3.9.0
@@ -27056,7 +27033,7 @@ packages:
       - yaml
     dev: true
 
-  /vitest@3.0.9(happy-dom@15.11.7):
+  /vitest@3.0.9(happy-dom@20.0.10):
     resolution: {integrity: sha512-BbcFDqNyBlfSpATmTtXOAOj71RNKDDvjBM/uPfnxxVGrG+FSH2RQIwgeEngTaTkuU/h0ScFvf+tRcKfYXzBybQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
@@ -27094,7 +27071,7 @@ packages:
       chai: 5.2.0
       debug: 4.3.3
       expect-type: 1.2.1
-      happy-dom: 15.11.7
+      happy-dom: 20.0.10
       magic-string: 0.30.17
       pathe: 2.0.3
       std-env: 3.9.0
@@ -27222,6 +27199,7 @@ packages:
   /webidl-conversions@7.0.0:
     resolution: {integrity: sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g==}
     engines: {node: '>=12'}
+    dev: false
 
   /webpack-sources@3.2.3:
     resolution: {integrity: sha512-/DyMEOrDgLKKIG0fmvtz+4dUX/3Ghozwgm6iPp8KRhvn+eQf9+Q7GWxVNMk3+uCPWfdXYC4ExGBckIXdFEfH1w==}
