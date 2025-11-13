@@ -8,6 +8,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/coze-dev/coze-loop/backend/pkg/mcache/byted"
 )
 
 type plainLimiterFactory struct {
@@ -28,6 +29,7 @@ func (f *plainLimiterFactory) NewPlainRateLimiter(opts ...limiter.FactoryOptionF
 	rl := &rateLimiter{
 		rules:   make([]*rule, 0, len(opt.Rules)),
 		limiter: redis_rate.NewLimiter(rawRedis),
+		vmCache: byted.NewLRUCache(5 * 1024 * 1024), // 默认5MB缓存
 	}
 
 	for _, r := range opt.Rules {
