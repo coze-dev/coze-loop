@@ -317,7 +317,7 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 			commitVersionParams = append(commitVersionParams, commitVersion)
 		}
 		if request.GetWithDraft() {
-			commitVersions, err := app.manageRepo.CollectAllCommitVersions(ctx, request.GetPromptID())
+			commitVersions, err := app.manageRepo.MGetVersionsByPromptID(ctx, request.GetPromptID())
 			if err != nil {
 				return r, err
 			}
