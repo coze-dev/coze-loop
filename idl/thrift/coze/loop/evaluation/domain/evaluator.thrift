@@ -79,14 +79,14 @@ struct EvaluatorContent {
 }
 
 struct Evaluator {
-    1: optional i64 evaluator_id (api.js_conv = 'true', go.tag = 'json:"evaluator_id"')
-    2: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    3: optional EvaluatorType evaluator_type
-    4: optional string name
-    5: optional string description
+    1: optional i64 evaluator_id (api.js_conv = 'true', go.tag = 'json:"evaluator_id"',vt.not_nil="true")
+    2: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"',vt.not_nil="true")
+    3: optional EvaluatorType evaluator_type (vt.not_nil="true")
+    4: optional string name (vt.not_nil="true")
+    5: optional string description  (vt.not_nil="true")
     6: optional bool draft_submitted
-    7: optional common.BaseInfo base_info
-    11: optional EvaluatorVersion current_version
+    7: optional common.BaseInfo base_info (vt.not_nil="true")
+    11: optional EvaluatorVersion current_version (vt.not_nil="true")
     12: optional string latest_version
 }
 
