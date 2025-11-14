@@ -150,6 +150,7 @@ struct ColumnEvaluator {
     4: optional string name
     5: optional string version
     6: optional string description
+    7: optional bool builtin
 }
 
 struct ColumnEvalSetField {

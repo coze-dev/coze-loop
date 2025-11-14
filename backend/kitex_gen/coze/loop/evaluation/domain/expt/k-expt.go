@@ -3901,6 +3901,20 @@ func (p *ColumnEvaluator) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4020,6 +4034,20 @@ func (p *ColumnEvaluator) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ColumnEvaluator) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Builtin = _field
+	return offset, nil
+}
+
 func (p *ColumnEvaluator) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -4029,6 +4057,7 @@ func (p *ColumnEvaluator) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
@@ -4047,6 +4076,7 @@ func (p *ColumnEvaluator) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -4100,6 +4130,15 @@ func (p *ColumnEvaluator) fastWriteField6(buf []byte, w thrift.NocopyWriter) int
 	return offset
 }
 
+func (p *ColumnEvaluator) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBuiltin() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 7)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.Builtin)
+	}
+	return offset
+}
+
 func (p *ColumnEvaluator) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -4148,6 +4187,15 @@ func (p *ColumnEvaluator) field6Length() int {
 	return l
 }
 
+func (p *ColumnEvaluator) field7Length() int {
+	l := 0
+	if p.IsSetBuiltin() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ColumnEvaluator) DeepCopy(s interface{}) error {
 	src, ok := s.(*ColumnEvaluator)
 	if !ok {
@@ -4182,6 +4230,11 @@ func (p *ColumnEvaluator) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Description)
 		}
 		p.Description = &tmp
+	}
+
+	if src.Builtin != nil {
+		tmp := *src.Builtin
+		p.Builtin = &tmp
 	}
 
 	return nil

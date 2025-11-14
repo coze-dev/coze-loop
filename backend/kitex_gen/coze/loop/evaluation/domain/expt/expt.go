@@ -6113,6 +6113,7 @@ type ColumnEvaluator struct {
 	Name               *string                 `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Version            *string                 `thrift:"version,5,optional" frugal:"5,optional,string" form:"version" json:"version,omitempty" query:"version"`
 	Description        *string                 `thrift:"description,6,optional" frugal:"6,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	Builtin            *bool                   `thrift:"builtin,7,optional" frugal:"7,optional,bool" form:"builtin" json:"builtin,omitempty" query:"builtin"`
 }
 
 func NewColumnEvaluator() *ColumnEvaluator {
@@ -6178,6 +6179,18 @@ func (p *ColumnEvaluator) GetDescription() (v string) {
 	}
 	return *p.Description
 }
+
+var ColumnEvaluator_Builtin_DEFAULT bool
+
+func (p *ColumnEvaluator) GetBuiltin() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBuiltin() {
+		return ColumnEvaluator_Builtin_DEFAULT
+	}
+	return *p.Builtin
+}
 func (p *ColumnEvaluator) SetEvaluatorVersionID(val int64) {
 	p.EvaluatorVersionID = val
 }
@@ -6196,6 +6209,9 @@ func (p *ColumnEvaluator) SetVersion(val *string) {
 func (p *ColumnEvaluator) SetDescription(val *string) {
 	p.Description = val
 }
+func (p *ColumnEvaluator) SetBuiltin(val *bool) {
+	p.Builtin = val
+}
 
 var fieldIDToName_ColumnEvaluator = map[int16]string{
 	1: "evaluator_version_id",
@@ -6204,6 +6220,7 @@ var fieldIDToName_ColumnEvaluator = map[int16]string{
 	4: "name",
 	5: "version",
 	6: "description",
+	7: "builtin",
 }
 
 func (p *ColumnEvaluator) IsSetName() bool {
@@ -6216,6 +6233,10 @@ func (p *ColumnEvaluator) IsSetVersion() bool {
 
 func (p *ColumnEvaluator) IsSetDescription() bool {
 	return p.Description != nil
+}
+
+func (p *ColumnEvaluator) IsSetBuiltin() bool {
+	return p.Builtin != nil
 }
 
 func (p *ColumnEvaluator) Read(iprot thrift.TProtocol) (err error) {
@@ -6285,6 +6306,14 @@ func (p *ColumnEvaluator) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6401,6 +6430,17 @@ func (p *ColumnEvaluator) ReadField6(iprot thrift.TProtocol) error {
 	p.Description = _field
 	return nil
 }
+func (p *ColumnEvaluator) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Builtin = _field
+	return nil
+}
 
 func (p *ColumnEvaluator) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6430,6 +6470,10 @@ func (p *ColumnEvaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -6552,6 +6596,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *ColumnEvaluator) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBuiltin() {
+		if err = oprot.WriteFieldBegin("builtin", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Builtin); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 
 func (p *ColumnEvaluator) String() string {
 	if p == nil {
@@ -6583,6 +6645,9 @@ func (p *ColumnEvaluator) DeepEqual(ano *ColumnEvaluator) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.Builtin) {
 		return false
 	}
 	return true
@@ -6641,6 +6706,18 @@ func (p *ColumnEvaluator) Field6DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ColumnEvaluator) Field7DeepEqual(src *bool) bool {
+
+	if p.Builtin == src {
+		return true
+	} else if p.Builtin == nil || src == nil {
+		return false
+	}
+	if *p.Builtin != *src {
 		return false
 	}
 	return true
