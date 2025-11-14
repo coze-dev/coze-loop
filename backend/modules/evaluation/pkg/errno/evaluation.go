@@ -319,6 +319,30 @@ const (
 	ExecutionResultNilCode              = 601205060 // execution result object is nil
 	executionResultNilMessage           = "execution result is nil"
 	executionResultNilNoAffectStability = true
+
+	InvalidProviderEvaluatorCodeCode              = 601205061 // the provider evaluator code is invalid, check if it is empty or invalid
+	invalidProviderEvaluatorCodeMessage           = "invalid provider evaluator code"
+	invalidProviderEvaluatorCodeNoAffectStability = true
+
+	InvalidAccessProtocolCode              = 601205062 // the access protocol is invalid, check if it is empty or invalid
+	invalidAccessProtocolMessage           = "invalid access protocol"
+	invalidAccessProtocolNoAffectStability = true
+
+	InvalidServiceNameCode              = 601205063 // the service name is invalid, check if it is empty or invalid
+	invalidServiceNameMessage           = "invalid service name"
+	invalidServiceNameNoAffectStability = true
+
+	InvalidClusterCode              = 601205064 // the cluster is invalid, check if it is empty or invalid
+	invalidClusterMessage           = "invalid cluster"
+	invalidClusterNoAffectStability = true
+
+	CustomRPCEvaluatorRunFailedCode              = 601205065 // the custom rpc evaluator run failed, check if the configuration is correct
+	customRPCEvaluatorRunFailedMessage           = "custom rpc evaluator run failed"
+	customRPCEvaluatorRunFailedNoAffectStability = true
+
+	UnsupportedCustomRPCEvaluatorCode              = 601205066 // the custom rpc evaluator is not supported, check if the configuration is correct
+	unsupportedCustomRPCEvaluatorMessage           = "unsupported custom rpc evaluator"
+	unsupportedCustomRPCEvaluatorNoAffectStability = true
 )
 
 func init() {
@@ -789,6 +813,42 @@ func init() {
 		ExecutionResultNilCode,
 		executionResultNilMessage,
 		code.WithAffectStability(!executionResultNilNoAffectStability),
+	)
+
+	code.Register(
+		InvalidProviderEvaluatorCodeCode,
+		invalidProviderEvaluatorCodeMessage,
+		code.WithAffectStability(!invalidProviderEvaluatorCodeNoAffectStability),
+	)
+
+	code.Register(
+		InvalidAccessProtocolCode,
+		invalidAccessProtocolMessage,
+		code.WithAffectStability(!invalidAccessProtocolNoAffectStability),
+	)
+
+	code.Register(
+		InvalidServiceNameCode,
+		invalidServiceNameMessage,
+		code.WithAffectStability(!invalidServiceNameNoAffectStability),
+	)
+
+	code.Register(
+		InvalidClusterCode,
+		invalidClusterMessage,
+		code.WithAffectStability(!invalidClusterNoAffectStability),
+	)
+
+	code.Register(
+		CustomRPCEvaluatorRunFailedCode,
+		customRPCEvaluatorRunFailedMessage,
+		code.WithAffectStability(!customRPCEvaluatorRunFailedNoAffectStability),
+	)
+
+	code.Register(
+		UnsupportedCustomRPCEvaluatorCode,
+		unsupportedCustomRPCEvaluatorMessage,
+		code.WithAffectStability(!unsupportedCustomRPCEvaluatorNoAffectStability),
 	)
 
 }

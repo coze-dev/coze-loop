@@ -168,6 +168,62 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListTemplatesV2": kitex.NewMethodInfo(
+		listTemplatesV2Handler,
+		newEvaluatorServiceListTemplatesV2Args,
+		newEvaluatorServiceListTemplatesV2Result,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetTemplateV2": kitex.NewMethodInfo(
+		getTemplateV2Handler,
+		newEvaluatorServiceGetTemplateV2Args,
+		newEvaluatorServiceGetTemplateV2Result,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CreateEvaluatorTemplate": kitex.NewMethodInfo(
+		createEvaluatorTemplateHandler,
+		newEvaluatorServiceCreateEvaluatorTemplateArgs,
+		newEvaluatorServiceCreateEvaluatorTemplateResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateEvaluatorTemplate": kitex.NewMethodInfo(
+		updateEvaluatorTemplateHandler,
+		newEvaluatorServiceUpdateEvaluatorTemplateArgs,
+		newEvaluatorServiceUpdateEvaluatorTemplateResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteEvaluatorTemplate": kitex.NewMethodInfo(
+		deleteEvaluatorTemplateHandler,
+		newEvaluatorServiceDeleteEvaluatorTemplateArgs,
+		newEvaluatorServiceDeleteEvaluatorTemplateResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DebugBuiltinEvaluator": kitex.NewMethodInfo(
+		debugBuiltinEvaluatorHandler,
+		newEvaluatorServiceDebugBuiltinEvaluatorArgs,
+		newEvaluatorServiceDebugBuiltinEvaluatorResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateBuiltinEvaluatorTags": kitex.NewMethodInfo(
+		updateBuiltinEvaluatorTagsHandler,
+		newEvaluatorServiceUpdateBuiltinEvaluatorTagsArgs,
+		newEvaluatorServiceUpdateBuiltinEvaluatorTagsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListEvaluatorTags": kitex.NewMethodInfo(
+		listEvaluatorTagsHandler,
+		newEvaluatorServiceListEvaluatorTagsArgs,
+		newEvaluatorServiceListEvaluatorTagsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -619,6 +675,158 @@ func newEvaluatorServiceValidateEvaluatorResult() interface{} {
 	return evaluator.NewEvaluatorServiceValidateEvaluatorResult()
 }
 
+func listTemplatesV2Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceListTemplatesV2Args)
+	realResult := result.(*evaluator.EvaluatorServiceListTemplatesV2Result)
+	success, err := handler.(evaluator.EvaluatorService).ListTemplatesV2(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceListTemplatesV2Args() interface{} {
+	return evaluator.NewEvaluatorServiceListTemplatesV2Args()
+}
+
+func newEvaluatorServiceListTemplatesV2Result() interface{} {
+	return evaluator.NewEvaluatorServiceListTemplatesV2Result()
+}
+
+func getTemplateV2Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceGetTemplateV2Args)
+	realResult := result.(*evaluator.EvaluatorServiceGetTemplateV2Result)
+	success, err := handler.(evaluator.EvaluatorService).GetTemplateV2(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceGetTemplateV2Args() interface{} {
+	return evaluator.NewEvaluatorServiceGetTemplateV2Args()
+}
+
+func newEvaluatorServiceGetTemplateV2Result() interface{} {
+	return evaluator.NewEvaluatorServiceGetTemplateV2Result()
+}
+
+func createEvaluatorTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceCreateEvaluatorTemplateArgs)
+	realResult := result.(*evaluator.EvaluatorServiceCreateEvaluatorTemplateResult)
+	success, err := handler.(evaluator.EvaluatorService).CreateEvaluatorTemplate(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceCreateEvaluatorTemplateArgs() interface{} {
+	return evaluator.NewEvaluatorServiceCreateEvaluatorTemplateArgs()
+}
+
+func newEvaluatorServiceCreateEvaluatorTemplateResult() interface{} {
+	return evaluator.NewEvaluatorServiceCreateEvaluatorTemplateResult()
+}
+
+func updateEvaluatorTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceUpdateEvaluatorTemplateArgs)
+	realResult := result.(*evaluator.EvaluatorServiceUpdateEvaluatorTemplateResult)
+	success, err := handler.(evaluator.EvaluatorService).UpdateEvaluatorTemplate(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceUpdateEvaluatorTemplateArgs() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateEvaluatorTemplateArgs()
+}
+
+func newEvaluatorServiceUpdateEvaluatorTemplateResult() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateEvaluatorTemplateResult()
+}
+
+func deleteEvaluatorTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceDeleteEvaluatorTemplateArgs)
+	realResult := result.(*evaluator.EvaluatorServiceDeleteEvaluatorTemplateResult)
+	success, err := handler.(evaluator.EvaluatorService).DeleteEvaluatorTemplate(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceDeleteEvaluatorTemplateArgs() interface{} {
+	return evaluator.NewEvaluatorServiceDeleteEvaluatorTemplateArgs()
+}
+
+func newEvaluatorServiceDeleteEvaluatorTemplateResult() interface{} {
+	return evaluator.NewEvaluatorServiceDeleteEvaluatorTemplateResult()
+}
+
+func debugBuiltinEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceDebugBuiltinEvaluatorArgs)
+	realResult := result.(*evaluator.EvaluatorServiceDebugBuiltinEvaluatorResult)
+	success, err := handler.(evaluator.EvaluatorService).DebugBuiltinEvaluator(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceDebugBuiltinEvaluatorArgs() interface{} {
+	return evaluator.NewEvaluatorServiceDebugBuiltinEvaluatorArgs()
+}
+
+func newEvaluatorServiceDebugBuiltinEvaluatorResult() interface{} {
+	return evaluator.NewEvaluatorServiceDebugBuiltinEvaluatorResult()
+}
+
+func updateBuiltinEvaluatorTagsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs)
+	realResult := result.(*evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult)
+	success, err := handler.(evaluator.EvaluatorService).UpdateBuiltinEvaluatorTags(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceUpdateBuiltinEvaluatorTagsArgs() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateBuiltinEvaluatorTagsArgs()
+}
+
+func newEvaluatorServiceUpdateBuiltinEvaluatorTagsResult() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateBuiltinEvaluatorTagsResult()
+}
+
+func listEvaluatorTagsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceListEvaluatorTagsArgs)
+	realResult := result.(*evaluator.EvaluatorServiceListEvaluatorTagsResult)
+	success, err := handler.(evaluator.EvaluatorService).ListEvaluatorTags(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceListEvaluatorTagsArgs() interface{} {
+	return evaluator.NewEvaluatorServiceListEvaluatorTagsArgs()
+}
+
+func newEvaluatorServiceListEvaluatorTagsResult() interface{} {
+	return evaluator.NewEvaluatorServiceListEvaluatorTagsResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -846,6 +1054,86 @@ func (p *kClient) ValidateEvaluator(ctx context.Context, request *evaluator.Vali
 	_args.Request = request
 	var _result evaluator.EvaluatorServiceValidateEvaluatorResult
 	if err = p.c.Call(ctx, "ValidateEvaluator", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListTemplatesV2(ctx context.Context, request *evaluator.ListTemplatesV2Request) (r *evaluator.ListTemplatesV2Response, err error) {
+	var _args evaluator.EvaluatorServiceListTemplatesV2Args
+	_args.Request = request
+	var _result evaluator.EvaluatorServiceListTemplatesV2Result
+	if err = p.c.Call(ctx, "ListTemplatesV2", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetTemplateV2(ctx context.Context, request *evaluator.GetTemplateV2Request) (r *evaluator.GetTemplateV2Response, err error) {
+	var _args evaluator.EvaluatorServiceGetTemplateV2Args
+	_args.Request = request
+	var _result evaluator.EvaluatorServiceGetTemplateV2Result
+	if err = p.c.Call(ctx, "GetTemplateV2", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateEvaluatorTemplate(ctx context.Context, request *evaluator.CreateEvaluatorTemplateRequest) (r *evaluator.CreateEvaluatorTemplateResponse, err error) {
+	var _args evaluator.EvaluatorServiceCreateEvaluatorTemplateArgs
+	_args.Request = request
+	var _result evaluator.EvaluatorServiceCreateEvaluatorTemplateResult
+	if err = p.c.Call(ctx, "CreateEvaluatorTemplate", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateEvaluatorTemplate(ctx context.Context, request *evaluator.UpdateEvaluatorTemplateRequest) (r *evaluator.UpdateEvaluatorTemplateResponse, err error) {
+	var _args evaluator.EvaluatorServiceUpdateEvaluatorTemplateArgs
+	_args.Request = request
+	var _result evaluator.EvaluatorServiceUpdateEvaluatorTemplateResult
+	if err = p.c.Call(ctx, "UpdateEvaluatorTemplate", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteEvaluatorTemplate(ctx context.Context, request *evaluator.DeleteEvaluatorTemplateRequest) (r *evaluator.DeleteEvaluatorTemplateResponse, err error) {
+	var _args evaluator.EvaluatorServiceDeleteEvaluatorTemplateArgs
+	_args.Request = request
+	var _result evaluator.EvaluatorServiceDeleteEvaluatorTemplateResult
+	if err = p.c.Call(ctx, "DeleteEvaluatorTemplate", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DebugBuiltinEvaluator(ctx context.Context, req *evaluator.DebugBuiltinEvaluatorRequest) (r *evaluator.DebugBuiltinEvaluatorResponse, err error) {
+	var _args evaluator.EvaluatorServiceDebugBuiltinEvaluatorArgs
+	_args.Req = req
+	var _result evaluator.EvaluatorServiceDebugBuiltinEvaluatorResult
+	if err = p.c.Call(ctx, "DebugBuiltinEvaluator", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest) (r *evaluator.UpdateBuiltinEvaluatorTagsResponse, err error) {
+	var _args evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsArgs
+	_args.Req = req
+	var _result evaluator.EvaluatorServiceUpdateBuiltinEvaluatorTagsResult
+	if err = p.c.Call(ctx, "UpdateBuiltinEvaluatorTags", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluatorTags(ctx context.Context, req *evaluator.ListEvaluatorTagsRequest) (r *evaluator.ListEvaluatorTagsResponse, err error) {
+	var _args evaluator.EvaluatorServiceListEvaluatorTagsArgs
+	_args.Req = req
+	var _result evaluator.EvaluatorServiceListEvaluatorTagsResult
+	if err = p.c.Call(ctx, "ListEvaluatorTags", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

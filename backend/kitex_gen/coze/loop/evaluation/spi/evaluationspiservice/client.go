@@ -14,6 +14,7 @@ type Client interface {
 	SearchEvalTarget(ctx context.Context, req *spi.SearchEvalTargetRequest, callOptions ...callopt.Option) (r *spi.SearchEvalTargetResponse, err error)
 	InvokeEvalTarget(ctx context.Context, req *spi.InvokeEvalTargetRequest, callOptions ...callopt.Option) (r *spi.InvokeEvalTargetResponse, err error)
 	AsyncInvokeEvalTarget(ctx context.Context, req *spi.AsyncInvokeEvalTargetRequest, callOptions ...callopt.Option) (r *spi.AsyncInvokeEvalTargetResponse, err error)
+	InvokeEvaluator(ctx context.Context, req *spi.InvokeEvaluatorRequest, callOptions ...callopt.Option) (r *spi.InvokeEvaluatorResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -58,4 +59,9 @@ func (p *kEvaluationSPIServiceClient) InvokeEvalTarget(ctx context.Context, req 
 func (p *kEvaluationSPIServiceClient) AsyncInvokeEvalTarget(ctx context.Context, req *spi.AsyncInvokeEvalTargetRequest, callOptions ...callopt.Option) (r *spi.AsyncInvokeEvalTargetResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.AsyncInvokeEvalTarget(ctx, req)
+}
+
+func (p *kEvaluationSPIServiceClient) InvokeEvaluator(ctx context.Context, req *spi.InvokeEvaluatorRequest, callOptions ...callopt.Option) (r *spi.InvokeEvaluatorResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.InvokeEvaluator(ctx, req)
 }

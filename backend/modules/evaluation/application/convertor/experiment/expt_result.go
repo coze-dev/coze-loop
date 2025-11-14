@@ -68,6 +68,7 @@ func ColumnEvaluatorsDO2DTO(from *entity.ColumnEvaluator) *domain_expt.ColumnEva
 		Name:               from.Name,
 		Version:            from.Version,
 		Description:        from.Description,
+		Builtin:            from.Builtin,
 	}
 }
 

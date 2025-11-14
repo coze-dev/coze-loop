@@ -236,10 +236,10 @@ func generateForEvaluationEvaluator(db *gorm.DB) {
 	g.UseDB(db)
 
 	evaluatorModel := g.GenerateModelAs("evaluator", "Evaluator")
-	evaluatorVersionModel := g.GenerateModelAs("evaluator_version", "EvaluatorVersion")
-	evaluatorRecordModel := g.GenerateModelAs("evaluator_record", "EvaluatorRecord")
+	evaluatorTagModel := g.GenerateModelAs("evaluator_tag", "EvaluatorTag")
+	evaluatorRecordModel := g.GenerateModelAs("evaluator_template", "EvaluatorTemplate")
 
-	g.ApplyBasic(evaluatorModel, evaluatorVersionModel, evaluatorRecordModel)
+	g.ApplyBasic(evaluatorModel, evaluatorTagModel, evaluatorRecordModel)
 	g.Execute()
 }
 

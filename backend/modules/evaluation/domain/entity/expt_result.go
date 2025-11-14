@@ -615,6 +615,7 @@ type ColumnEvaluator struct {
 	Name               *string
 	Version            *string
 	Description        *string
+	Builtin            *bool
 }
 
 type ExptColumnEvaluator struct {

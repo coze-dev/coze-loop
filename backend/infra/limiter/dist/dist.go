@@ -36,3 +36,9 @@ func WithExprCacheSize(size int) FactoryOpt {
 type factoryOpt struct {
 	exprCacheSize int
 }
+
+func NewPlainLimiterFactory(cmdable redis.Cmdable) limiter.IPlainRateLimiterFactory {
+	return &plainLimiterFactory{
+		cmdable: cmdable,
+	}
+}

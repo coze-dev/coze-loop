@@ -34,6 +34,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"InvokeEvaluator": kitex.NewMethodInfo(
+		invokeEvaluatorHandler,
+		newEvaluationSPIServiceInvokeEvaluatorArgs,
+		newEvaluationSPIServiceInvokeEvaluatorResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -124,6 +131,25 @@ func newEvaluationSPIServiceAsyncInvokeEvalTargetResult() interface{} {
 	return spi.NewEvaluationSPIServiceAsyncInvokeEvalTargetResult()
 }
 
+func invokeEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*spi.EvaluationSPIServiceInvokeEvaluatorArgs)
+	realResult := result.(*spi.EvaluationSPIServiceInvokeEvaluatorResult)
+	success, err := handler.(spi.EvaluationSPIService).InvokeEvaluator(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSPIServiceInvokeEvaluatorArgs() interface{} {
+	return spi.NewEvaluationSPIServiceInvokeEvaluatorArgs()
+}
+
+func newEvaluationSPIServiceInvokeEvaluatorResult() interface{} {
+	return spi.NewEvaluationSPIServiceInvokeEvaluatorResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -161,6 +187,16 @@ func (p *kClient) AsyncInvokeEvalTarget(ctx context.Context, req *spi.AsyncInvok
 	_args.Req = req
 	var _result spi.EvaluationSPIServiceAsyncInvokeEvalTargetResult
 	if err = p.c.Call(ctx, "AsyncInvokeEvalTarget", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) InvokeEvaluator(ctx context.Context, req *spi.InvokeEvaluatorRequest) (r *spi.InvokeEvaluatorResponse, err error) {
+	var _args spi.EvaluationSPIServiceInvokeEvaluatorArgs
+	_args.Req = req
+	var _result spi.EvaluationSPIServiceInvokeEvaluatorResult
+	if err = p.c.Call(ctx, "InvokeEvaluator", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

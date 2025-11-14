@@ -72,6 +72,11 @@ func (p *TargetFieldMapping) IsValid() error {
 	return nil
 }
 func (p *EvaluatorFieldMapping) IsValid() error {
+	if p.EvaluatorIDVersionItem != nil {
+		if err := p.EvaluatorIDVersionItem.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorIDVersionItem not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *FieldMapping) IsValid() error {

@@ -9,7 +9,6 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	evaluatorentity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -120,9 +119,8 @@ func TestConvertEvaluatorInputDataDTO2DO(t *testing.T) {
 					"input2": {
 						ContentType: gptr.Of(evaluatorentity.ContentType("image")),
 						Image: &evaluatorentity.Image{
-							Name:            gptr.Of("test.jpg"),
-							URL:             gptr.Of("https://example.com/test.jpg"),
-							StorageProvider: gptr.Of(evaluatorentity.StorageProvider(0)),
+							Name: gptr.Of("test.jpg"),
+							URL:  gptr.Of("https://example.com/test.jpg"),
 						},
 					},
 				},
@@ -344,9 +342,8 @@ func TestConvertEvaluatorInputDataDO2DTO(t *testing.T) {
 					"input2": {
 						ContentType: gptr.Of("image"),
 						Image: &commondto.Image{
-							Name:            gptr.Of("test.jpg"),
-							URL:             gptr.Of("https://example.com/test.jpg"),
-							StorageProvider: gptr.Of(dataset.StorageProvider(0)),
+							Name: gptr.Of("test.jpg"),
+							URL:  gptr.Of("https://example.com/test.jpg"),
 						},
 					},
 				},
@@ -985,8 +982,7 @@ func TestConvertEvaluatorInputDataDTO2DO_ComplexContentTypes(t *testing.T) {
 					"image": {
 						ContentType: gptr.Of(evaluatorentity.ContentType("image")),
 						Image: &evaluatorentity.Image{
-							URL:             gptr.Of("https://example.com/image.jpg"),
-							StorageProvider: gptr.Of(evaluatorentity.StorageProvider(0)),
+							URL: gptr.Of("https://example.com/image.jpg"),
 						},
 					},
 				},

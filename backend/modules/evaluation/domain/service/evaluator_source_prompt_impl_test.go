@@ -212,7 +212,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run(t *testing.T) {
 				tc.setupMocks()
 			}
 
-			output, status, _ := service.Run(ctx, tc.evaluator, tc.input, false)
+			output, status, _ := service.Run(ctx, tc.evaluator, tc.input, tc.evaluator.GetSpaceID(), false)
 
 			assert.Equal(t, tc.expectedStatus, status)
 			if tc.checkOutputFunc != nil {
@@ -400,7 +400,7 @@ func TestEvaluatorSourcePromptServiceImpl_Debug(t *testing.T) {
 				TokenUsage: &entity.TokenUsage{InputTokens: 10, OutputTokens: 10},
 			}, nil)
 		mockMetric.EXPECT().EmitRun(int64(1), gomock.Any(), gomock.Any(), gomock.Any())
-		output, err := service.Debug(ctx, baseMockEvaluator, baseMockInput)
+		output, err := service.Debug(ctx, baseMockEvaluator, baseMockInput, baseMockEvaluator.GetSpaceID())
 		assert.NoError(t, err)
 		assert.NotNil(t, output)
 		assert.NotNil(t, output.EvaluatorResult)
@@ -411,7 +411,7 @@ func TestEvaluatorSourcePromptServiceImpl_Debug(t *testing.T) {
 	t.Run("调试评估器失败", func(t *testing.T) {
 		mockLLMProvider.EXPECT().Call(gomock.Any(), gomock.Any()).Return(nil, errors.New("llm call failed"))
 		mockMetric.EXPECT().EmitRun(int64(1), gomock.Any(), gomock.Any(), gomock.Any())
-		output, err := service.Debug(ctx, baseMockEvaluator, baseMockInput)
+		output, err := service.Debug(ctx, baseMockEvaluator, baseMockInput, baseMockEvaluator.GetSpaceID())
 		assert.Error(t, err)
 		assert.Nil(t, output)
 	})
@@ -490,7 +490,7 @@ func TestEvaluatorSourcePromptServiceImpl_ComplexBusinessLogic(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				err := renderTemplate(ctx, evaluatorVersion, input, false)
+				err := renderTemplate(ctx, evaluatorVersion, input, evaluatorVersion.GetSpaceID(), false)
 
 				assert.NoError(t, err)
 				assert.Len(t, evaluatorVersion.MessageList, 1)
@@ -544,7 +544,7 @@ func TestEvaluatorSourcePromptServiceImpl_ComplexBusinessLogic(t *testing.T) {
 
 				ctx := context.Background()
 				start := time.Now()
-				err := renderTemplate(ctx, evaluatorVersion, largeInput, false)
+				err := renderTemplate(ctx, evaluatorVersion, largeInput, evaluatorVersion.GetSpaceID(), false)
 				duration := time.Since(start)
 
 				assert.NoError(t, err)
@@ -717,7 +717,7 @@ func TestParseOutput_ParseTypeContent(t *testing.T) {
 			Content:    gptr.Of("{score: 1.5, reason: 'good'}"),
 			TokenUsage: &entity.TokenUsage{InputTokens: 5, OutputTokens: 6},
 		}
-		output, err := parseOutput(context.Background(), evaluatorVersion, replyItem, false)
+		output, err := parseOutput(context.Background(), evaluatorVersion, replyItem, evaluatorVersion.GetSpaceID(), false)
 		assert.NoError(t, err)
 		assert.NotNil(t, output)
 		assert.NotNil(t, output.EvaluatorResult)
@@ -1656,7 +1656,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run_DisableTracing(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setupMocks()
 
-			output, status, traceID := service.Run(ctx, evaluator, input, tt.disableTracing)
+			output, status, traceID := service.Run(ctx, evaluator, input, evaluator.GetSpaceID(), tt.disableTracing)
 
 			// 由于输入验证失败，验证错误状态
 			assert.Equal(t, entity.EvaluatorRunStatusFail, status)
