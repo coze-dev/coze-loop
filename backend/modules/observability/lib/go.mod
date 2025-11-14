@@ -1,4 +1,4 @@
-module github.com/coze-loop/backend/modules/observability/lib
+module github.com/coze-dev/coze-loop/backend/modules/observability/lib
 
 go 1.24.6
 
