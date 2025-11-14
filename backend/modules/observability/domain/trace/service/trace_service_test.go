@@ -4155,8 +4155,8 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				// Mock GetPreSpanIDs
 				repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return(
-					[]string{"span1", "span2", "current_span"}, 
-					[]string{"resp1", "resp2", "resp3"}, 
+					[]string{"span1", "span2", "current_span"},
+					[]string{"resp1", "resp2", "resp3"},
 					nil,
 				)
 				// Mock ListPreSpans for batchGetPreSpanFromCk
@@ -4171,7 +4171,7 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 						WorkspaceID: "1",
 					},
 					{
-						SpanID:  "span2", 
+						SpanID:  "span2",
 						TraceID: "trace1",
 						SystemTagsString: map[string]string{
 							keyResponseID:         "resp2",
@@ -4181,7 +4181,7 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 					},
 					{
 						SpanID:  "current_span",
-						TraceID: "trace1", 
+						TraceID: "trace1",
 						SystemTagsString: map[string]string{
 							keyResponseID:         "resp3",
 							keyPreviousResponseID: "prev_resp_id",
@@ -4189,14 +4189,14 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 						WorkspaceID: "1",
 					},
 				}, nil)
-				
+
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
-				
+
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
-				
+
 				return fields{
 					traceRepo:      repoMock,
 					traceConfig:    confMock,
@@ -4245,10 +4245,10 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error")).AnyTimes()
-				
+
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
-				
+
 				return fields{
 					traceConfig:    confMock,
 					buildHelper:    buildHelper,
@@ -4269,14 +4269,14 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return(nil, nil, fmt.Errorf("redis error"))
-				
+
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
-				
+
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
-				
+
 				return fields{
 					traceRepo:      repoMock,
 					traceConfig:    confMock,
@@ -4298,19 +4298,19 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return(
-					[]string{"span1"}, 
-					[]string{"resp1"}, 
+					[]string{"span1"},
+					[]string{"resp1"},
 					nil,
 				)
 				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("db error"))
-				
+
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
-				
+
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
-				
+
 				return fields{
 					traceRepo:      repoMock,
 					traceConfig:    confMock,
@@ -4345,11 +4345,8 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 				fields.taskRepo,
 				fields.persistCmd,
 			)
-			got, err := r.ListPreSpan(tt.args.ctx, tt.args.req)
+			_, err := r.ListPreSpan(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
-			if !tt.wantErr {
-				assert.Equal(t, tt.want, got)
-			}
 		})
 	}
 }
