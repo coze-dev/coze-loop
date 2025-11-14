@@ -6,6 +6,7 @@ package otel
 import (
 	"context"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/otel/open_inference"
 	"slices"
 	"strconv"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/otel/open_inference"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 
 	semconv1_26_0 "go.opentelemetry.io/otel/semconv/v1.26.0"

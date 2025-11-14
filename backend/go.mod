@@ -99,7 +99,10 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+require (
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+	go.opentelemetry.io/collector/model v0.48.0 // indirect
+)
 
 require github.com/brianvoe/gofakeit/v6 v6.28.0
 
