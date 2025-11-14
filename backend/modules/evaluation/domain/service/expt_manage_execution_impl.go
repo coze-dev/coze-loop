@@ -493,7 +493,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 
 	status := opt.Status
 	if !entity.IsExptFinished(status) {
-		if stats.FailItemCnt > 0 || stats.TerminatedItemCnt > 0 {
+		if stats.FailItemCnt > 0 || stats.TerminatedItemCnt > 0 || stats.ProcessingItemCnt > 0 || stats.PendingItemCnt > 0 {
 			status = entity.ExptStatus_Failed
 		} else {
 			status = entity.ExptStatus_Success
