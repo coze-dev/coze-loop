@@ -723,7 +723,7 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 					if parent == nil {
 						continue
 					}
-					commitVersionReferencesMapping[version] = int32(len(parent.CommitVersions))
+					commitVersionReferencesMapping[version] += int32(len(parent.CommitVersions))
 				}
 			}
 
