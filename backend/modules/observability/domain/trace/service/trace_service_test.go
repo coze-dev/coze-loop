@@ -4350,3 +4350,320 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 		})
 	}
 }
+
+func TestTraceServiceImpl_checkGetPreSpanAuth_Comprehensive(t *testing.T) {
+	type fields struct {
+		traceRepo repo.ITraceRepo
+	}
+	type args struct {
+		ctx               context.Context
+		req               *ListPreSpanReq
+		tenants           []string
+		preAndCurrentSpans []*loop_span.Span
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      bool
+		errMsg       string
+	}{
+		{
+			name: "auth check success - current span in workspace",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{traceRepo: repomocks.NewMockITraceRepo(ctrl)}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					SpanID:             "span1",
+					TraceID:            "trace1",
+					PreviousResponseID: "prev1",
+				},
+				tenants: []string{"tenant1"},
+				preAndCurrentSpans: []*loop_span.Span{
+					{
+						SpanID:  "span1",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyPreviousResponseID: "prev1",
+						},
+						WorkspaceID: "1", // Same workspace
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "auth check success - database verification with result",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{SpanID: "found_span", TraceID: "trace1", WorkspaceID: "1"},
+					},
+				}, nil)
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					SpanID:             "span2",
+					TraceID:            "trace1",
+					PreviousResponseID: "prev2",
+					StartTime:          time.Now().UnixMilli(),
+				},
+				tenants: []string{"tenant1"},
+				preAndCurrentSpans: []*loop_span.Span{
+					{
+						SpanID:  "span2",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyPreviousResponseID: "prev2",
+						},
+						WorkspaceID: "999", // Different workspace
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "auth check failed - current span not found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{traceRepo: repomocks.NewMockITraceRepo(ctrl)}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					SpanID:             "missing_span",
+					TraceID:            "trace1",
+					PreviousResponseID: "prev1",
+				},
+				tenants: []string{"tenant1"},
+				preAndCurrentSpans: []*loop_span.Span{
+					{
+						SpanID:  "span1",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyPreviousResponseID: "prev1",
+						},
+						WorkspaceID: "1",
+					},
+				},
+			},
+			wantErr: true,
+			errMsg:  "current span not found",
+		},
+		{
+			name: "auth check failed - previous response ID mismatch",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{traceRepo: repomocks.NewMockITraceRepo(ctrl)}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					SpanID:             "span1",
+					TraceID:            "trace1",
+					PreviousResponseID: "expected_prev",
+				},
+				tenants: []string{"tenant1"},
+				preAndCurrentSpans: []*loop_span.Span{
+					{
+						SpanID:  "span1",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyPreviousResponseID: "actual_prev", // Mismatch
+						},
+						WorkspaceID: "1",
+					},
+				},
+			},
+			wantErr: true,
+			errMsg:  "previous_response_id is not equal to current span's",
+		},
+		{
+			name: "auth check failed - database verification with no result",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{}, // No spans found
+				}, nil)
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					SpanID:             "span2",
+					TraceID:            "trace1",
+					PreviousResponseID: "prev2",
+					StartTime:          time.Now().UnixMilli(),
+				},
+				tenants: []string{"tenant1"},
+				preAndCurrentSpans: []*loop_span.Span{
+					{
+						SpanID:  "span2",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyPreviousResponseID: "prev2",
+						},
+						WorkspaceID: "999", // Different workspace
+					},
+				},
+			},
+			wantErr: true,
+			errMsg:  "no span in this workspace",
+		},
+		{
+			name: "auth check failed - database verification error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("db error"))
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					SpanID:             "span2",
+					TraceID:            "trace1",
+					PreviousResponseID: "prev2",
+					StartTime:          time.Now().UnixMilli(),
+				},
+				tenants: []string{"tenant1"},
+				preAndCurrentSpans: []*loop_span.Span{
+					{
+						SpanID:  "span2",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyPreviousResponseID: "prev2",
+						},
+						WorkspaceID: "999", // Different workspace
+					},
+				},
+			},
+			wantErr: true,
+			errMsg:  "db error",
+		},
+		{
+			name: "auth check - empty preAndCurrentSpans",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					SpanID:             "span1",
+					TraceID:            "trace1",
+					PreviousResponseID: "prev1",
+					StartTime:          time.Now().UnixMilli(),
+				},
+				tenants:            []string{"tenant1"},
+				preAndCurrentSpans: []*loop_span.Span{}, // Empty
+			},
+			wantErr: true,
+			errMsg:  "current span not found",
+		},
+		{
+			name: "auth check - nil preAndCurrentSpans",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					SpanID:             "span1",
+					TraceID:            "trace1",
+					PreviousResponseID: "prev1",
+					StartTime:          time.Now().UnixMilli(),
+				},
+				tenants:            []string{"tenant1"},
+				preAndCurrentSpans: nil, // Nil
+			},
+			wantErr: true,
+			errMsg:  "current span not found",
+		},
+		{
+			name: "auth check - workspace ID conversion edge case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{traceRepo: repomocks.NewMockITraceRepo(ctrl)}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        0, // Zero workspace ID
+					SpanID:             "span1",
+					TraceID:            "trace1",
+					PreviousResponseID: "prev1",
+				},
+				tenants: []string{"tenant1"},
+				preAndCurrentSpans: []*loop_span.Span{
+					{
+						SpanID:  "span1",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyPreviousResponseID: "prev1",
+						},
+						WorkspaceID: "0", // String "0"
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "auth check - current span with missing previous response ID",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{traceRepo: repomocks.NewMockITraceRepo(ctrl)}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					SpanID:             "span1",
+					TraceID:            "trace1",
+					PreviousResponseID: "prev1",
+				},
+				tenants: []string{"tenant1"},
+				preAndCurrentSpans: []*loop_span.Span{
+					{
+						SpanID:  "span1",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							// Missing keyPreviousResponseID
+						},
+						WorkspaceID: "1",
+					},
+				},
+			},
+			wantErr: true,
+			errMsg:  "previous_response_id is not equal to current span's",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r := &TraceServiceImpl{
+				traceRepo: fields.traceRepo,
+			}
+			err := r.checkGetPreSpanAuth(tt.args.ctx, tt.args.req, tt.args.tenants, tt.args.preAndCurrentSpans)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
