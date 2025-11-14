@@ -9342,8 +9342,7 @@ func (p *ListParentPromptResponse) FastReadField1(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	_field := make(map[string]*prompt.PromptCommitVersions, size)
-	values := make([]prompt.PromptCommitVersions, size)
+	_field := make(map[string][]*prompt.PromptCommitVersions, size)
 	for i := 0; i < size; i++ {
 		var _key string
 		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
@@ -9353,12 +9352,23 @@ func (p *ListParentPromptResponse) FastReadField1(buf []byte) (int, error) {
 			_key = v
 		}
 
-		_val := &values[i]
-		_val.InitDefault()
-		if l, err := _val.FastRead(buf[offset:]); err != nil {
+		_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+		offset += l
+		if err != nil {
 			return offset, err
-		} else {
-			offset += l
+		}
+		_val := make([]*prompt.PromptCommitVersions, 0, size)
+		values := make([]prompt.PromptCommitVersions, size)
+		for i := 0; i < size; i++ {
+			_elem := &values[i]
+			_elem.InitDefault()
+			if l, err := _elem.FastRead(buf[offset:]); err != nil {
+				return offset, err
+			} else {
+				offset += l
+			}
+
+			_val = append(_val, _elem)
 		}
 
 		_field[_key] = _val
@@ -9413,9 +9423,16 @@ func (p *ListParentPromptResponse) fastWriteField1(buf []byte, w thrift.NocopyWr
 		for k, v := range p.ParentPrompts {
 			length++
 			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-			offset += v.FastWriteNocopy(buf[offset:], w)
+			listBeginOffset := offset
+			offset += thrift.Binary.ListBeginLength()
+			var length int
+			for _, v := range v {
+				length++
+				offset += v.FastWriteNocopy(buf[offset:], w)
+			}
+			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRUCT, length)
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
 	}
 	return offset
 }
@@ -9438,7 +9455,11 @@ func (p *ListParentPromptResponse) field1Length() int {
 			_, _ = k, v
 
 			l += thrift.Binary.StringLengthNocopy(k)
-			l += v.BLength()
+			l += thrift.Binary.ListBeginLength()
+			for _, v := range v {
+				_ = v
+				l += v.BLength()
+			}
 		}
 	}
 	return l
@@ -9460,18 +9481,26 @@ func (p *ListParentPromptResponse) DeepCopy(s interface{}) error {
 	}
 
 	if src.ParentPrompts != nil {
-		p.ParentPrompts = make(map[string]*prompt.PromptCommitVersions, len(src.ParentPrompts))
+		p.ParentPrompts = make(map[string][]*prompt.PromptCommitVersions, len(src.ParentPrompts))
 		for key, val := range src.ParentPrompts {
 			var _key string
 			if key != "" {
 				_key = kutils.StringDeepCopy(key)
 			}
 
-			var _val *prompt.PromptCommitVersions
+			var _val []*prompt.PromptCommitVersions
 			if val != nil {
-				_val = &prompt.PromptCommitVersions{}
-				if err := _val.DeepCopy(val); err != nil {
-					return err
+				_val = make([]*prompt.PromptCommitVersions, 0, len(val))
+				for _, elem := range val {
+					var _elem *prompt.PromptCommitVersions
+					if elem != nil {
+						_elem = &prompt.PromptCommitVersions{}
+						if err := _elem.DeepCopy(elem); err != nil {
+							return err
+						}
+					}
+
+					_val = append(_val, _elem)
 				}
 			}
 

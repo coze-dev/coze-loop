@@ -993,7 +993,7 @@ func (d *ManageRepoImpl) MGetVersionsByPromptID(ctx context.Context, promptID in
 	return versions, nil
 }
 
-func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListParentPromptParam) (result map[string]*repo.PromptCommitVersions, err error) {
+func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListParentPromptParam) (result map[string][]*repo.PromptCommitVersions, err error) {
 	if param.SubPromptID <= 0 {
 		return nil, errorx.New("param(SubPromptID) is invalid, param = %s", json.Jsonify(param))
 	}
@@ -1044,34 +1044,34 @@ func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListPa
 		return nil, err
 	}
 
-	// Build result map
-	result = make(map[string]*repo.PromptCommitVersions)
+	if len(mainPromptBasics) <= 0 {
+		return nil, nil
+	}
 
+	// Build result map
+	result = make(map[string][]*repo.PromptCommitVersions)
 	// Organize results by sub-prompt version
 	for subVersion, relations := range relationsBySubVersion {
-		promptCommitVersions := &repo.PromptCommitVersions{}
+		promptCommitVersions := make([]*repo.PromptCommitVersions, len(mainPromptBasics))
 
-		for _, relation := range relations {
-			if basicDO, exists := mainPromptBasics[repo.GetPromptParam{
-				PromptID: relation.MainPromptID,
-			}]; exists {
-				if promptCommitVersions.PromptID == 0 {
-					promptCommitVersions.PromptID = basicDO.ID
+		for _, prompt := range mainPromptBasics {
+			promptCommitVersion := &repo.PromptCommitVersions{
+				PromptID:    prompt.ID,
+				SpaceID:     prompt.SpaceID,
+				PromptKey:   prompt.PromptKey,
+				PromptBasic: prompt.PromptBasic,
+			}
+			for _, relation := range relations {
+				if prompt.ID == relation.MainPromptID {
+					promptCommitVersion.CommitVersions = append(promptCommitVersion.CommitVersions, relation.MainPromptVersion)
 				}
-				if promptCommitVersions.SpaceID == 0 {
-					promptCommitVersions.SpaceID = basicDO.SpaceID
-				}
-				if promptCommitVersions.PromptKey == "" {
-					promptCommitVersions.PromptKey = basicDO.PromptKey
-				}
-				if promptCommitVersions.PromptBasic == nil {
-					promptCommitVersions.PromptBasic = basicDO.PromptBasic
-				}
-				promptCommitVersions.CommitVersions = append(promptCommitVersions.CommitVersions, relation.MainPromptVersion)
+			}
+			if len(promptCommitVersion.CommitVersions) > 0 {
+				promptCommitVersions = append(promptCommitVersions, promptCommitVersion)
 			}
 		}
 
-		if len(promptCommitVersions.CommitVersions) > 0 {
+		if len(promptCommitVersions) > 0 {
 			result[subVersion] = promptCommitVersions
 		}
 	}

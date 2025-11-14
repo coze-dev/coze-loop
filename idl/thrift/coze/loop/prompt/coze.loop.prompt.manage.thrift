@@ -307,7 +307,7 @@ struct ListParentPromptRequest {
 }
 
 struct ListParentPromptResponse {
-    1: optional map<string, prompt.PromptCommitVersions> parent_prompts // 不同片段版本被引用的父prompt记录
+    1: optional map<string, list<prompt.PromptCommitVersions>> parent_prompts // 不同片段版本被引用的父prompt记录
 
     255: optional base.BaseResp  BaseResp
 }

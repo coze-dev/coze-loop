@@ -12828,8 +12828,8 @@ func (p *ListParentPromptRequest) Field255DeepEqual(src *base.Base) bool {
 
 type ListParentPromptResponse struct {
 	// 不同片段版本被引用的父prompt记录
-	ParentPrompts map[string]*prompt.PromptCommitVersions `thrift:"parent_prompts,1,optional" frugal:"1,optional,map<string:prompt.PromptCommitVersions>" form:"parent_prompts" json:"parent_prompts,omitempty" query:"parent_prompts"`
-	BaseResp      *base.BaseResp                          `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	ParentPrompts map[string][]*prompt.PromptCommitVersions `thrift:"parent_prompts,1,optional" frugal:"1,optional,map<string:list<prompt.PromptCommitVersions>>" form:"parent_prompts" json:"parent_prompts,omitempty" query:"parent_prompts"`
+	BaseResp      *base.BaseResp                            `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewListParentPromptResponse() *ListParentPromptResponse {
@@ -12839,9 +12839,9 @@ func NewListParentPromptResponse() *ListParentPromptResponse {
 func (p *ListParentPromptResponse) InitDefault() {
 }
 
-var ListParentPromptResponse_ParentPrompts_DEFAULT map[string]*prompt.PromptCommitVersions
+var ListParentPromptResponse_ParentPrompts_DEFAULT map[string][]*prompt.PromptCommitVersions
 
-func (p *ListParentPromptResponse) GetParentPrompts() (v map[string]*prompt.PromptCommitVersions) {
+func (p *ListParentPromptResponse) GetParentPrompts() (v map[string][]*prompt.PromptCommitVersions) {
 	if p == nil {
 		return
 	}
@@ -12862,7 +12862,7 @@ func (p *ListParentPromptResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *ListParentPromptResponse) SetParentPrompts(val map[string]*prompt.PromptCommitVersions) {
+func (p *ListParentPromptResponse) SetParentPrompts(val map[string][]*prompt.PromptCommitVersions) {
 	p.ParentPrompts = val
 }
 func (p *ListParentPromptResponse) SetBaseResp(val *base.BaseResp) {
@@ -12950,8 +12950,7 @@ func (p *ListParentPromptResponse) ReadField1(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	_field := make(map[string]*prompt.PromptCommitVersions, size)
-	values := make([]prompt.PromptCommitVersions, size)
+	_field := make(map[string][]*prompt.PromptCommitVersions, size)
 	for i := 0; i < size; i++ {
 		var _key string
 		if v, err := iprot.ReadString(); err != nil {
@@ -12959,10 +12958,23 @@ func (p *ListParentPromptResponse) ReadField1(iprot thrift.TProtocol) error {
 		} else {
 			_key = v
 		}
+		_, size, err := iprot.ReadListBegin()
+		if err != nil {
+			return err
+		}
+		_val := make([]*prompt.PromptCommitVersions, 0, size)
+		values := make([]prompt.PromptCommitVersions, size)
+		for i := 0; i < size; i++ {
+			_elem := &values[i]
+			_elem.InitDefault()
 
-		_val := &values[i]
-		_val.InitDefault()
-		if err := _val.Read(iprot); err != nil {
+			if err := _elem.Read(iprot); err != nil {
+				return err
+			}
+
+			_val = append(_val, _elem)
+		}
+		if err := iprot.ReadListEnd(); err != nil {
 			return err
 		}
 
@@ -13020,14 +13032,22 @@ func (p *ListParentPromptResponse) writeField1(oprot thrift.TProtocol) (err erro
 		if err = oprot.WriteFieldBegin("parent_prompts", thrift.MAP, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.ParentPrompts)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.ParentPrompts)); err != nil {
 			return err
 		}
 		for k, v := range p.ParentPrompts {
 			if err := oprot.WriteString(k); err != nil {
 				return err
 			}
-			if err := v.Write(oprot); err != nil {
+			if err := oprot.WriteListBegin(thrift.STRUCT, len(v)); err != nil {
+				return err
+			}
+			for _, v := range v {
+				if err := v.Write(oprot); err != nil {
+					return err
+				}
+			}
+			if err := oprot.WriteListEnd(); err != nil {
 				return err
 			}
 		}
@@ -13086,15 +13106,21 @@ func (p *ListParentPromptResponse) DeepEqual(ano *ListParentPromptResponse) bool
 	return true
 }
 
-func (p *ListParentPromptResponse) Field1DeepEqual(src map[string]*prompt.PromptCommitVersions) bool {
+func (p *ListParentPromptResponse) Field1DeepEqual(src map[string][]*prompt.PromptCommitVersions) bool {
 
 	if len(p.ParentPrompts) != len(src) {
 		return false
 	}
 	for k, v := range p.ParentPrompts {
 		_src := src[k]
-		if !v.DeepEqual(_src) {
+		if len(v) != len(_src) {
 			return false
+		}
+		for i, v := range v {
+			_src1 := _src[i]
+			if !v.DeepEqual(_src1) {
+				return false
+			}
 		}
 	}
 	return true

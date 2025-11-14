@@ -88,15 +88,20 @@ func (app *PromptManageApplicationImpl) ListParentPrompt(ctx context.Context, re
 	}
 
 	// 转换结果
-	parentPrompts := make(map[string]*prompt.PromptCommitVersions)
+	parentPrompts := make(map[string][]*prompt.PromptCommitVersions)
 	for version, promptCommitVersions := range result {
-		parentPrompts[version] = &prompt.PromptCommitVersions{
-			ID:             ptr.Of(promptCommitVersions.PromptID),
-			WorkspaceID:    ptr.Of(promptCommitVersions.SpaceID),
-			PromptKey:      ptr.Of(promptCommitVersions.PromptKey),
-			PromptBasic:    convertor.PromptBasicDO2DTO(promptCommitVersions.PromptBasic),
-			CommitVersions: promptCommitVersions.CommitVersions,
+		promptVersionDTOs := make([]*prompt.PromptCommitVersions, len(promptCommitVersions))
+		for _, promptCommitVersion := range promptCommitVersions {
+			promptVersionDTO := &prompt.PromptCommitVersions{
+				ID:             ptr.Of(promptCommitVersion.PromptID),
+				WorkspaceID:    ptr.Of(promptCommitVersion.SpaceID),
+				PromptKey:      ptr.Of(promptCommitVersion.PromptKey),
+				PromptBasic:    convertor.PromptBasicDO2DTO(promptCommitVersion.PromptBasic),
+				CommitVersions: promptCommitVersion.CommitVersions,
+			}
+			promptVersionDTOs = append(promptVersionDTOs, promptVersionDTO)
 		}
+		parentPrompts[version] = promptVersionDTOs
 	}
 
 	r.ParentPrompts = parentPrompts
@@ -333,7 +338,9 @@ func (app *PromptManageApplicationImpl) GetPrompt(ctx context.Context, request *
 			if len(parentPromptCommitVersions) > 0 {
 				var total int32
 				for _, parents := range parentPromptCommitVersions {
-					total += int32(len(parents.CommitVersions))
+					for _, parent := range parents {
+						total += int32(len(parent.CommitVersions))
+					}
 				}
 				r.TotalParentReferences = ptr.Of(total)
 			}
@@ -712,7 +719,12 @@ func (app *PromptManageApplicationImpl) ListCommit(ctx context.Context, request 
 			// 构建版本到被引用次数的映射
 			commitVersionReferencesMapping := make(map[string]int32)
 			for version, parents := range parentPromptCommitVersions {
-				commitVersionReferencesMapping[version] = int32(len(parents.CommitVersions))
+				for _, parent := range parents {
+					if parent == nil {
+						continue
+					}
+					commitVersionReferencesMapping[version] = int32(len(parent.CommitVersions))
+				}
 			}
 
 			r.ParentReferencesMapping = commitVersionReferencesMapping
