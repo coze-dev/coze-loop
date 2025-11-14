@@ -1052,7 +1052,7 @@ func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListPa
 	result = make(map[string][]*repo.PromptCommitVersions)
 	// Organize results by sub-prompt version
 	for subVersion, relations := range relationsBySubVersion {
-		promptCommitVersions := make([]*repo.PromptCommitVersions, len(mainPromptBasics))
+		promptCommitVersions := make([]*repo.PromptCommitVersions, 0, len(mainPromptBasics))
 
 		for _, prompt := range mainPromptBasics {
 			promptCommitVersion := &repo.PromptCommitVersions{

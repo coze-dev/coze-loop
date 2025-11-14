@@ -90,7 +90,7 @@ func (app *PromptManageApplicationImpl) ListParentPrompt(ctx context.Context, re
 	// 转换结果
 	parentPrompts := make(map[string][]*prompt.PromptCommitVersions)
 	for version, promptCommitVersions := range result {
-		promptVersionDTOs := make([]*prompt.PromptCommitVersions, len(promptCommitVersions))
+		promptVersionDTOs := make([]*prompt.PromptCommitVersions, 0, len(promptCommitVersions))
 		for _, promptCommitVersion := range promptCommitVersions {
 			promptVersionDTO := &prompt.PromptCommitVersions{
 				ID:             ptr.Of(promptCommitVersion.PromptID),
