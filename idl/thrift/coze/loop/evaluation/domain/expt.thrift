@@ -84,6 +84,8 @@ struct EvaluatorFmtResult {
     2: optional double score
 }
 
+const string PromptUserQueryFieldKey = "builtin_prompt_user_query"
+
 struct TargetFieldMapping {
     1: optional list<FieldMapping> from_eval_set
 }

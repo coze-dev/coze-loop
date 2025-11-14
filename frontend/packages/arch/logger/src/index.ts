@@ -1,6 +1,6 @@
 export { reporter, Reporter } from './reporter';
 
-// reporter 需要上报到 slardar 的方法导出
+// reporter 相关类型导出
 export type {
   LoggerCommonProperties,
   CustomEvent,
@@ -20,8 +20,4 @@ export {
   type FallbackProps,
 } from './error-boundary';
 
-export { SlardarReportClient, type SlardarInstance } from './slardar';
-
 export { LogLevel } from './types';
-
-export { getSlardarInstance, setUserInfoContext } from './slardar/runtime';

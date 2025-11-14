@@ -15,30 +15,27 @@ test: Adding missing tests or correcting existing tests
 chore: Changes to the build process or auxiliary tools and libraries such as documentation generation
 -->
 
-#### Check the PR title.
+#### Check the PR title
 <!--
 The description of the title will be attached in Release Notes,
 so please describe it from user-oriented, what this PR does / why we need it.
 Please check your PR title with the below requirements:
 -->
-- [ ] This PR title match the format: \[\<type\>\]\[\<scope\>\]: \<description\>. For example: \[fix\]\[backend\] flaky fix
+- [ ] This PR title match the format: \[\<type\>\]\[\<scope\>\] \<description\>. For example: \[fix\]\[backend\] flaky fix
 - [ ] The description of this PR title is user-oriented and clear enough for others to understand.
 - [ ] Add documentation if the current PR requires user awareness at the usage level.
 - [ ] This PR is written in English. PRs not in English will not be reviewed.
 
+#### (Optional) Translate the PR title into Chinese
 
-#### (Optional) Translate the PR title into Chinese.
-
-
-#### (Optional) More detailed description for this PR(en: English/zh: Chinese).
+#### (Optional) More detailed description for this PR(en: English/zh: Chinese)
 <!--
 Provide more detailed info for review(e.g., it's recommended to provide perf data if this is a perf type PR).
 -->
 en:
 zh(optional):
 
-
-#### (Optional) Which issue(s) this PR fixes:
+#### (Optional) Which issue(s) this PR fixes
 <!--
 Automatically closes linked issue when PR is merged.
 Eg: `Fixes #<issue number>`, or `Fixes (paste link of issue)`.

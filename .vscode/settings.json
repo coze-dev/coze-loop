@@ -169,13 +169,13 @@
   "[svg]": {
     "editor.defaultFormatter": "jock.svg"
   },
-  "svg.preview.background": "white",
   "[xml]": {
     "editor.defaultFormatter": "mblode.pretty-formatter"
   },
   "[sql]": {
     "editor.defaultFormatter": "adpyke.vscode-sql-formatter"
   },
+  "svg.preview.background": "white",
   "git.openRepositoryInParentFolders": "always",
   "references.preferredLocation": "view"
 }
