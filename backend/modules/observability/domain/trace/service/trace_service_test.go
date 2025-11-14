@@ -3974,3 +3974,382 @@ func Test_buildContent(t *testing.T) {
 		assert.Equal(t, value, result.GetText())
 	})
 }
+
+func TestTraceServiceImpl_batchGetPreSpanFromCk(t *testing.T) {
+	type fields struct {
+		traceRepo repo.ITraceRepo
+	}
+	type args struct {
+		ctx       context.Context
+		spanIDs   []string
+		tenants   []string
+		startTime int64
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         []*loop_span.Span
+		wantErr      bool
+	}{
+		{
+			name: "batch get pre span - normal case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
+					{SpanID: "span1", TraceID: "trace1"},
+					{SpanID: "span2", TraceID: "trace1"},
+				}, nil)
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx:       context.Background(),
+				spanIDs:   []string{"span1", "span2"},
+				tenants:   []string{"tenant1"},
+				startTime: time.Now().UnixMilli(),
+			},
+			want: []*loop_span.Span{
+				{SpanID: "span1", TraceID: "trace1"},
+				{SpanID: "span2", TraceID: "trace1"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "batch get pre span - empty span IDs",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{traceRepo: repomocks.NewMockITraceRepo(ctrl)}
+			},
+			args: args{
+				ctx:       context.Background(),
+				spanIDs:   []string{},
+				tenants:   []string{"tenant1"},
+				startTime: time.Now().UnixMilli(),
+			},
+			want:    []*loop_span.Span{},
+			wantErr: false,
+		},
+		{
+			name: "batch get pre span - single span",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
+					{SpanID: "span1", TraceID: "trace1"},
+				}, nil)
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx:       context.Background(),
+				spanIDs:   []string{"span1"},
+				tenants:   []string{"tenant1"},
+				startTime: time.Now().UnixMilli(),
+			},
+			want: []*loop_span.Span{
+				{SpanID: "span1", TraceID: "trace1"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "batch get pre span - exactly 100 spans",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				// Should be called once since we have exactly 100 spans
+				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
+					{SpanID: "span1", TraceID: "trace1"},
+				}, nil)
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx:       context.Background(),
+				spanIDs:   make([]string, 100), // Exactly 100 spans
+				tenants:   []string{"tenant1"},
+				startTime: time.Now().UnixMilli(),
+			},
+			want: []*loop_span.Span{
+				{SpanID: "span1", TraceID: "trace1"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "batch get pre span - more than 100 spans",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				// Should be called twice since we have 150 spans
+				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
+					{SpanID: "span1", TraceID: "trace1"},
+				}, nil).Times(2)
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx:       context.Background(),
+				spanIDs:   make([]string, 150), // More than 100 spans
+				tenants:   []string{"tenant1"},
+				startTime: time.Now().UnixMilli(),
+			},
+			want: []*loop_span.Span{
+				{SpanID: "span1", TraceID: "trace1"},
+				{SpanID: "span1", TraceID: "trace1"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "batch get pre span - db error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("db error"))
+				return fields{traceRepo: repoMock}
+			},
+			args: args{
+				ctx:       context.Background(),
+				spanIDs:   []string{"span1"},
+				tenants:   []string{"tenant1"},
+				startTime: time.Now().UnixMilli(),
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r := &TraceServiceImpl{
+				traceRepo: fields.traceRepo,
+			}
+			got, err := r.batchGetPreSpanFromCk(tt.args.ctx, tt.args.spanIDs, tt.args.tenants, tt.args.startTime)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr {
+				assert.Equal(t, len(tt.want), len(got))
+			}
+		})
+	}
+}
+
+func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
+	type fields struct {
+		traceRepo          repo.ITraceRepo
+		traceConfig        config.ITraceConfig
+		traceProducer      mq.ITraceProducer
+		annotationProducer mq.IAnnotationProducer
+		metrics            metrics.ITraceMetrics
+		buildHelper        TraceFilterProcessorBuilder
+		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
+		persistCmd         redis.PersistentCmdable
+	}
+	type args struct {
+		ctx context.Context
+		req *ListPreSpanReq
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *ListPreSpanResp
+		wantErr      bool
+	}{
+		{
+			name: "list pre span successfully - full flow",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				// Mock GetPreSpanIDs
+				repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return(
+					[]string{"span1", "span2", "current_span"}, 
+					[]string{"resp1", "resp2", "resp3"}, 
+					nil,
+				)
+				// Mock ListPreSpans for batchGetPreSpanFromCk
+				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
+					{
+						SpanID:  "span1",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyResponseID:         "resp1",
+							keyPreviousResponseID: "prev1",
+						},
+						WorkspaceID: "1",
+					},
+					{
+						SpanID:  "span2", 
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyResponseID:         "resp2",
+							keyPreviousResponseID: "prev2",
+						},
+						WorkspaceID: "1",
+					},
+					{
+						SpanID:  "current_span",
+						TraceID: "trace1", 
+						SystemTagsString: map[string]string{
+							keyResponseID:         "resp3",
+							keyPreviousResponseID: "prev_resp_id",
+						},
+						WorkspaceID: "1",
+					},
+				}, nil)
+				
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:        1,
+					StartTime:          time.Now().UnixMilli(),
+					TraceID:            "trace1",
+					SpanID:             "current_span",
+					PreviousResponseID: "prev_resp_id",
+					PlatformType:       loop_span.PlatformCozeLoop,
+				},
+			},
+			want: &ListPreSpanResp{
+				Spans: loop_span.SpanList{
+					{
+						SpanID:  "span1",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyResponseID:         "resp1",
+							keyPreviousResponseID: "prev1",
+						},
+						WorkspaceID: "1",
+					},
+					{
+						SpanID:  "span2",
+						TraceID: "trace1",
+						SystemTagsString: map[string]string{
+							keyResponseID:         "resp2",
+							keyPreviousResponseID: "prev2",
+						},
+						WorkspaceID: "1",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "get tenants failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error")).AnyTimes()
+				
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				
+				return fields{
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "get pre span IDs failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return(nil, nil, fmt.Errorf("redis error"))
+				
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "batch get pre span failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return(
+					[]string{"span1"}, 
+					[]string{"resp1"}, 
+					nil,
+				)
+				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("db error"))
+				
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanReq{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r, _ := NewTraceServiceImpl(
+				fields.traceRepo,
+				fields.traceConfig,
+				fields.traceProducer,
+				fields.annotationProducer,
+				fields.metrics,
+				fields.buildHelper,
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+				fields.persistCmd,
+			)
+			got, err := r.ListPreSpan(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr {
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
