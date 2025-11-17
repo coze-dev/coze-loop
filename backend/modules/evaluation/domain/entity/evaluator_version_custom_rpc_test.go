@@ -18,11 +18,11 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		evaluator *CustomRPCEvaluatorVersion
-		input     *EvaluatorInputData
-		wantErr   bool
-		errCode   int32
+		name        string
+		evaluator   *CustomRPCEvaluatorVersion
+		input       *EvaluatorInputData
+		wantErr     bool
+		errCode     int32
 		description string
 	}{
 		{
@@ -44,7 +44,7 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:     false,
 			description: "有效输入应该通过验证",
 		},
 		{
@@ -66,7 +66,7 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:     false,
 			description: "输入字段不在schema中应该通过验证",
 		},
 		{
@@ -85,7 +85,7 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 					"input1": nil,
 				},
 			},
-			wantErr: false,
+			wantErr:     false,
 			description: "空输入字段应该跳过验证",
 		},
 		{
@@ -107,8 +107,8 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
-			errCode: errno.ContentTypeNotSupportedCode,
+			wantErr:     true,
+			errCode:     errno.ContentTypeNotSupportedCode,
 			description: "不支持的内容类型应该返回错误",
 		},
 		{
@@ -130,8 +130,8 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
-			errCode: errno.ContentSchemaInvalidCode,
+			wantErr:     true,
+			errCode:     errno.ContentSchemaInvalidCode,
 			description: "JSON Schema验证失败应该返回错误",
 		},
 		{
@@ -147,7 +147,7 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:     false,
 			description: "无InputSchemas时应该通过验证",
 		},
 		{
@@ -178,7 +178,7 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:     false,
 			description: "多个有效输入字段应该通过验证",
 		},
 		{
@@ -199,7 +199,7 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr:     false,
 			description: "非Text类型应该跳过JSON Schema验证",
 		},
 	}
@@ -229,10 +229,10 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		evaluator *CustomRPCEvaluatorVersion
-		wantErr   bool
-		errCode   int32
+		name        string
+		evaluator   *CustomRPCEvaluatorVersion
+		wantErr     bool
+		errCode     int32
 		description string
 	}{
 		{
@@ -242,14 +242,14 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 				AccessProtocol:        AccessProtocol("HTTP"),
 				ServiceName:           gptr.Of("test_service"),
 			},
-			wantErr: false,
+			wantErr:     false,
 			description: "有效的基础信息应该通过验证",
 		},
 		{
-			name:      "失败 - nil evaluator",
-			evaluator: nil,
-			wantErr:   true,
-			errCode:   errno.EvaluatorNotExistCode,
+			name:        "失败 - nil evaluator",
+			evaluator:   nil,
+			wantErr:     true,
+			errCode:     errno.EvaluatorNotExistCode,
 			description: "nil evaluator应该返回错误",
 		},
 		{
@@ -259,8 +259,8 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 				AccessProtocol:        AccessProtocol("HTTP"),
 				ServiceName:           gptr.Of("test_service"),
 			},
-			wantErr: true,
-			errCode: errno.InvalidProviderEvaluatorCodeCode,
+			wantErr:     true,
+			errCode:     errno.InvalidProviderEvaluatorCodeCode,
 			description: "空的ProviderEvaluatorCode应该返回错误",
 		},
 		{
@@ -270,8 +270,8 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 				AccessProtocol:        AccessProtocol("HTTP"),
 				ServiceName:           gptr.Of("test_service"),
 			},
-			wantErr: true,
-			errCode: errno.InvalidProviderEvaluatorCodeCode,
+			wantErr:     true,
+			errCode:     errno.InvalidProviderEvaluatorCodeCode,
 			description: "nil ProviderEvaluatorCode应该返回错误",
 		},
 		{
@@ -281,8 +281,8 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 				AccessProtocol:        AccessProtocol(""),
 				ServiceName:           gptr.Of("test_service"),
 			},
-			wantErr: true,
-			errCode: errno.InvalidAccessProtocolCode,
+			wantErr:     true,
+			errCode:     errno.InvalidAccessProtocolCode,
 			description: "空的AccessProtocol应该返回错误",
 		},
 		{
@@ -292,8 +292,8 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 				AccessProtocol:        AccessProtocol("HTTP"),
 				ServiceName:           gptr.Of(""),
 			},
-			wantErr: true,
-			errCode: errno.InvalidServiceNameCode,
+			wantErr:     true,
+			errCode:     errno.InvalidServiceNameCode,
 			description: "空的ServiceName应该返回错误",
 		},
 		{
@@ -303,8 +303,8 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 				AccessProtocol:        AccessProtocol("HTTP"),
 				ServiceName:           nil,
 			},
-			wantErr: true,
-			errCode: errno.InvalidServiceNameCode,
+			wantErr:     true,
+			errCode:     errno.InvalidServiceNameCode,
 			description: "nil ServiceName应该返回错误",
 		},
 		{
@@ -316,7 +316,7 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 				Cluster:               gptr.Of("test_cluster"),
 				Timeout:               gptr.Of(int64(5000)),
 			},
-			wantErr: false,
+			wantErr:     false,
 			description: "所有字段都有值应该通过验证",
 		},
 	}
@@ -376,4 +376,3 @@ func TestCustomRPCEvaluatorVersion_GettersAndSetters(t *testing.T) {
 	evaluator.SetBaseInfo(baseInfo)
 	assert.Equal(t, baseInfo, evaluator.GetBaseInfo())
 }
-
