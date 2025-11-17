@@ -100,7 +100,9 @@ func ConvertEvaluatorFiltersDTO2DO(dto *evaluatordto.EvaluatorFilters) *evaluato
 	// 递归转换子筛选组
 	var subFilters []*evaluatordo.EvaluatorFilters
 	// 通过接口断言兼容存在 GetSubFilters 方法的生成版本
-	type hasSubFilters interface{ GetSubFilters() []*evaluatordto.EvaluatorFilters }
+	type hasSubFilters interface {
+		GetSubFilters() []*evaluatordto.EvaluatorFilters
+	}
 	if sfProvider, ok := any(dto).(hasSubFilters); ok {
 		if sf := sfProvider.GetSubFilters(); sf != nil {
 			subFilters = make([]*evaluatordo.EvaluatorFilters, 0, len(sf))

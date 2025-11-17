@@ -354,7 +354,7 @@ type CreateEvaluatorTemplateRequest struct {
 	Name               string                                                `json:"name" validate:"required,min=1,max=100"` // 模板名称
 	Description        string                                                `json:"description" validate:"max=500"`         // 模板描述
 	EvaluatorType      EvaluatorType                                         `json:"evaluator_type" validate:"required"`     // 评估器类型
-    EvaluatorInfo      *EvaluatorInfo                                        `json:"evaluator_info,omitempty"`                // 评估器补充信息
+	EvaluatorInfo      *EvaluatorInfo                                        `json:"evaluator_info,omitempty"`               // 评估器补充信息
 	InputSchemas       []*ArgsSchema                                         `json:"input_schemas,omitempty"`                // 输入模式
 	OutputSchemas      []*ArgsSchema                                         `json:"output_schemas,omitempty"`               // 输出模式
 	ReceiveChatHistory *bool                                                 `json:"receive_chat_history,omitempty"`         // 是否接收聊天历史
@@ -375,7 +375,7 @@ type UpdateEvaluatorTemplateRequest struct {
 	ID                 int64                                                 `json:"id" validate:"required,gt=0"`                        // 模板ID
 	Name               *string                                               `json:"name,omitempty" validate:"omitempty,min=1,max=100"`  // 模板名称
 	Description        *string                                               `json:"description,omitempty" validate:"omitempty,max=500"` // 模板描述
-    EvaluatorInfo      *EvaluatorInfo                                        `json:"evaluator_info,omitempty"`                            // 评估器补充信息
+	EvaluatorInfo      *EvaluatorInfo                                        `json:"evaluator_info,omitempty"`                           // 评估器补充信息
 	InputSchemas       []*ArgsSchema                                         `json:"input_schemas,omitempty"`                            // 输入模式
 	OutputSchemas      []*ArgsSchema                                         `json:"output_schemas,omitempty"`                           // 输出模式
 	ReceiveChatHistory *bool                                                 `json:"receive_chat_history,omitempty"`                     // 是否接收聊天历史
