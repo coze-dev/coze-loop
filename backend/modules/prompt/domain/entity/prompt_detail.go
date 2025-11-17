@@ -145,7 +145,8 @@ type Tool struct {
 type ToolType string
 
 const (
-	ToolTypeFunction ToolType = "function"
+	ToolTypeFunction     ToolType = "function"
+	ToolTypeGoogleSearch ToolType = "google_search"
 )
 
 type Function struct {
@@ -155,15 +156,22 @@ type Function struct {
 }
 
 type ToolCallConfig struct {
-	ToolChoice ToolChoiceType `json:"tool_choice"`
+	ToolChoice              ToolChoiceType           `json:"tool_choice"`
+	ToolChoiceSpecification *ToolChoiceSpecification `json:"tool_choice_specification,omitempty"`
 }
 
 type ToolChoiceType string
 
 const (
-	ToolChoiceTypeNone ToolChoiceType = "none"
-	ToolChoiceTypeAuto ToolChoiceType = "auto"
+	ToolChoiceTypeNone     ToolChoiceType = "none"
+	ToolChoiceTypeAuto     ToolChoiceType = "auto"
+	ToolChoiceTypeSpecific ToolChoiceType = "specific"
 )
+
+type ToolChoiceSpecification struct {
+	Type ToolType `json:"type"`
+	Name string   `json:"name"`
+}
 
 type ToolCall struct {
 	Index        int64         `json:"index"`

@@ -148,6 +148,14 @@ func (p *PromptTemplate) IsValid() error {
 	return nil
 }
 func (p *ToolCallConfig) IsValid() error {
+	if p.ToolChoiceSpecification != nil {
+		if err := p.ToolChoiceSpecification.IsValid(); err != nil {
+			return fmt.Errorf("field ToolChoiceSpecification not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ToolChoiceSpecification) IsValid() error {
 	return nil
 }
 func (p *Message) IsValid() error {

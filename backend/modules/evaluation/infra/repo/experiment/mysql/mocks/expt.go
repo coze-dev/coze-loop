@@ -158,3 +158,17 @@ func (mr *MockIExptDAOMockRecorder) Update(ctx, expt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockIExptDAO)(nil).Update), ctx, expt)
 }
+
+// UpdateFields mocks base method.
+func (m *MockIExptDAO) UpdateFields(ctx context.Context, id int64, ufields map[string]any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateFields", ctx, id, ufields)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateFields indicates an expected call of UpdateFields.
+func (mr *MockIExptDAOMockRecorder) UpdateFields(ctx, id, ufields any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFields", reflect.TypeOf((*MockIExptDAO)(nil).UpdateFields), ctx, id, ufields)
+}

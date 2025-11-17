@@ -109,9 +109,16 @@ const TemplateType TemplateType_CustomTemplate_M = "custom_template_m"
 typedef string ToolChoiceType
 const ToolChoiceType ToolChoiceType_Auto = "auto"
 const ToolChoiceType ToolChoiceType_None = "none"
+const ToolChoiceType ToolChoiceType_Specific = "specific"
 
 struct ToolCallConfig {
     1: optional ToolChoiceType tool_choice
+    2: optional ToolChoiceSpecification tool_choice_specification
+}
+
+struct ToolChoiceSpecification {
+    1: optional ToolType type
+    2: optional string name
 }
 
 struct Message {
@@ -179,6 +186,7 @@ struct Tool {
 
 typedef string ToolType (ts.enum="true")
 const ToolType ToolType_Function = "function"
+const ToolType ToolType_GoogleSearch = "google_search"
 
 struct Function {
     1: optional string name

@@ -18,4 +18,5 @@ type IConfiger interface {
 	GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg
 	GetCKDBName(ctx context.Context) *entity.CKDBConfig
 	GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList
+	GetMaintainerUserIDs(ctx context.Context) map[string]bool
 }

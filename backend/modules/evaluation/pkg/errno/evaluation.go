@@ -108,6 +108,10 @@ const (
 	customEvalTargetInvokeFailMessage           = "custom eval target invoke fail"
 	customEvalTargetInvokeFailNoAffectStability = true
 
+	TerminateNonRunningExperimentErrorCode              = 601204011 // cannot terminate an non-running experiment, please try again later
+	terminateNonRunningExperimentErrorMessage           = "cannot terminate an non-running experiment, please try again later"
+	terminateNonRunningExperimentErrorNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -467,6 +471,12 @@ func init() {
 		CustomEvalTargetInvokeFailCode,
 		customEvalTargetInvokeFailMessage,
 		code.WithAffectStability(!customEvalTargetInvokeFailNoAffectStability),
+	)
+
+	code.Register(
+		TerminateNonRunningExperimentErrorCode,
+		terminateNonRunningExperimentErrorMessage,
+		code.WithAffectStability(!terminateNonRunningExperimentErrorNoAffectStability),
 	)
 
 	code.Register(

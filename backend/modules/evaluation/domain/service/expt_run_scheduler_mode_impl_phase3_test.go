@@ -157,8 +157,10 @@ func TestExptAppendExec_ExptEnd_WithTargetSkip(t *testing.T) {
 			incomplete: 0,
 			mockSetup: func(f *mockFields) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
-				f.manager.EXPECT().CompleteRun(gomock.Any(), int64(1), int64(2), entity.EvaluationModeAppend, int64(100), gomock.Any(), gomock.Any()).Return(nil)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), int64(100), gomock.Any(), gomock.Any()).Return(nil)
+				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7个参数)
+				f.manager.EXPECT().CompleteRun(gomock.Any(), int64(1), int64(2), int64(100), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				// CompleteExpt: ctx, exptID, spaceID, session, WithCID, WithCompleteInterval (6个参数)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), int64(1), int64(100), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), int64(100)).Return(&entity.ExptExecConf{ZombieIntervalSecond: 60})
 				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},

@@ -143,7 +143,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			if backfillTaskRun.RunStatus != task.RunStatusDone {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
-				if lockErr != nil || !locked {
+				if (lockErr != nil || !locked) && time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
 					_ = h.sendBackfillMessage(ctx, &entity.BackFillEvent{
 						TaskID:  taskPO.ID,
 						SpaceID: taskPO.WorkspaceID,
@@ -167,7 +167,7 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 			if backfillTaskRun.RunStatus != task.RunStatusDone {
 				lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskPO.ID)
 				locked, _, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
-				if lockErr != nil || !locked {
+				if (lockErr != nil || !locked) && time.Now().Add(-backfillTaskRun.RunEndAt.Sub(backfillTaskRun.RunStartAt)).Before(backfillTaskRun.RunEndAt) {
 					_ = h.sendBackfillMessage(ctx, &entity.BackFillEvent{
 						TaskID:  taskPO.ID,
 						SpaceID: taskPO.WorkspaceID,
@@ -191,33 +191,21 @@ func (h *TraceHubServiceImpl) transformTaskStatus() {
 		}
 		// If the task status is unstarted, create it once the task start time is reached
 		if taskPO.TaskStatus == task.TaskStatusUnstarted && time.Now().After(startTime) {
-			if !taskPO.Sampler.IsCycle {
-				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
-					CurrentTask: taskPO,
-					RunType:     task.TaskRunTypeNewData,
-					RunStartAt:  taskPO.EffectiveTime.StartAt,
-					RunEndAt:    taskPO.EffectiveTime.EndAt,
-				})
-				if err != nil {
-					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
-					continue
-				}
-				err = proc.OnUpdateTaskChange(ctx, taskPO, task.TaskStatusRunning)
-				if err != nil {
-					logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
-					continue
-				}
-			} else {
-				err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
-					CurrentTask: taskPO,
-					RunType:     task.TaskRunTypeNewData,
-					RunStartAt:  taskRun.RunEndAt.UnixMilli(),
-					RunEndAt:    taskRun.RunEndAt.UnixMilli() + (taskRun.RunEndAt.UnixMilli() - taskRun.RunStartAt.UnixMilli()),
-				})
-				if err != nil {
-					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
-					continue
-				}
+			runStartAt, runEndAt := taskPO.GetRunTimeRange()
+			err = proc.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+				CurrentTask: taskPO,
+				RunType:     task.TaskRunTypeNewData,
+				RunStartAt:  runStartAt,
+				RunEndAt:    runEndAt,
+			})
+			if err != nil {
+				logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+				continue
+			}
+			err = proc.OnUpdateTaskChange(ctx, taskPO, task.TaskStatusRunning)
+			if err != nil {
+				logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
+				continue
 			}
 		}
 		// Handle taskRun
