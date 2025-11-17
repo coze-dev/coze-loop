@@ -277,6 +277,13 @@ func (e *EvaluatorHandlerImpl) CreateEvaluator(ctx context.Context, request *eva
 	if err != nil {
 		return nil, err
 	}
+	if request.GetEvaluator().GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
+		err = e.authCustomRPCEvaluatorContentWritable(ctx, request.GetEvaluator().GetWorkspaceID())
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	defer func() {
 		e.metrics.EmitCreate(request.GetEvaluator().GetWorkspaceID(), err)
 	}()
@@ -482,6 +489,12 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 	})
 	if err != nil {
 		return nil, err
+	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
+		err = e.authCustomRPCEvaluatorContentWritable(ctx, evaluatorDO.SpaceID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	evaluatorDTO := evaluatorconvertor.ConvertEvaluatorDO2DTO(evaluatorDO)
 	evaluatorDTO.CurrentVersion.EvaluatorContent = request.EvaluatorContent
@@ -1771,4 +1784,17 @@ func (e *EvaluatorHandlerImpl) authBuiltinManagement(ctx context.Context, worksp
 	}
 
 	return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id not in allowed evaluator template spaces"))
+}
+
+func (e *EvaluatorHandlerImpl) authCustomRPCEvaluatorContentWritable(ctx context.Context, workspaceID int64) error {
+	allowedSpaceIDs := e.configer.GetBuiltinEvaluatorSpaceConf(ctx)
+
+	ok, err := e.configer.CheckCustomRPCEvaluatorWritable(ctx, strconv.FormatInt(workspaceID, 10), allowedSpaceIDs)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current space does not support custom RPC evaluator"))
+	}
+	return nil
 }

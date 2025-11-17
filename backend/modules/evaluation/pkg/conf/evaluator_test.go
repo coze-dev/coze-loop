@@ -525,3 +525,86 @@ func TestDefaultEvaluatorTemplateSpaceConf(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Equal(t, 0, len(result))
 }
+
+func TestConfiger_CheckCustomRPCEvaluatorWritable(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockLoader := mock_conf.NewMockIConfigLoader(ctrl)
+	c := &evaluatorConfiger{loader: mockLoader}
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name            string
+		spaceID         string
+		builtinSpaceIDs []string
+		expectedResult  bool
+		expectedError   error
+	}{
+		{
+			name:            "spaceID在builtinSpaceIDs列表中",
+			spaceID:         "space123",
+			builtinSpaceIDs: []string{"space123", "space456", "space789"},
+			expectedResult:  true,
+			expectedError:   nil,
+		},
+		{
+			name:            "spaceID不在builtinSpaceIDs列表中",
+			spaceID:         "space999",
+			builtinSpaceIDs: []string{"space123", "space456", "space789"},
+			expectedResult:  false,
+			expectedError:   nil,
+		},
+		{
+			name:            "builtinSpaceIDs为空列表",
+			spaceID:         "space123",
+			builtinSpaceIDs: []string{},
+			expectedResult:  false,
+			expectedError:   nil,
+		},
+		{
+			name:            "spaceID为空字符串",
+			spaceID:         "",
+			builtinSpaceIDs: []string{"space123", "space456"},
+			expectedResult:  false,
+			expectedError:   nil,
+		},
+		{
+			name:            "builtinSpaceIDs包含空字符串",
+			spaceID:         "",
+			builtinSpaceIDs: []string{"", "space123", "space456"},
+			expectedResult:  true,
+			expectedError:   nil,
+		},
+		{
+			name:            "spaceID在builtinSpaceIDs列表末尾",
+			spaceID:         "space789",
+			builtinSpaceIDs: []string{"space123", "space456", "space789"},
+			expectedResult:  true,
+			expectedError:   nil,
+		},
+		{
+			name:            "spaceID在builtinSpaceIDs列表中间",
+			spaceID:         "space456",
+			builtinSpaceIDs: []string{"space123", "space456", "space789"},
+			expectedResult:  true,
+			expectedError:   nil,
+		},
+		{
+			name:            "重复的builtinSpaceIDs",
+			spaceID:         "space123",
+			builtinSpaceIDs: []string{"space123", "space456", "space123", "space789"},
+			expectedResult:  true,
+			expectedError:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := c.CheckCustomRPCEvaluatorWritable(ctx, tt.spaceID, tt.builtinSpaceIDs)
+			assert.Equal(t, tt.expectedResult, result)
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
