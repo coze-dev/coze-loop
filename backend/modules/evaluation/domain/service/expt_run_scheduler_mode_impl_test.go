@@ -222,14 +222,6 @@ func TestExptSubmitExec_NextTick(t *testing.T) {
 		assertErr func(t *testing.T, err error)
 	}{
 		{
-			name:      "nextTick=false 不触发",
-			nextTick:  false,
-			mockSetup: nil,
-			event:     &entity.ExptScheduleEvent{SpaceID: 1},
-			wantErr:   false,
-			assertErr: func(t *testing.T, err error) { assert.NoError(t, err) },
-		},
-		{
 			name:     "nextTick=true 正常发布",
 			nextTick: true,
 			mockSetup: func(f *exptSubmitExecFields) {
@@ -1163,8 +1155,10 @@ func TestExptFailRetryExec_ExptEnd(t *testing.T) {
 			},
 			prepareMock: func(f *exptFailRetryExecFields, ctrl *gomock.Controller, args args) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
-				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.ExptRunMode, args.event.SpaceID, args.event.Session, gomock.Any()).Return(nil).Times(1)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any()).Return(nil).Times(1)
+				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7个参数)
+				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				// CompleteExpt: ctx, exptID, spaceID, session, WithCID, WithCompleteInterval (6个参数)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{ZombieIntervalSecond: 100}).Times(1)
 				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
@@ -1258,7 +1252,8 @@ func TestExptFailRetryExec_ExptEnd(t *testing.T) {
 			},
 			prepareMock: func(f *exptFailRetryExecFields, ctrl *gomock.Controller, args args) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
-				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.ExptRunMode, args.event.SpaceID, args.event.Session, gomock.Any()).Return(errors.New("test error")).Times(1)
+				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7个参数)
+				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(errors.New("test error")).Times(1)
 			},
 			wantNextTick: false,
 			wantErr:      true,
@@ -1281,8 +1276,10 @@ func TestExptFailRetryExec_ExptEnd(t *testing.T) {
 			},
 			prepareMock: func(f *exptFailRetryExecFields, ctrl *gomock.Controller, args args) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
-				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.ExptRunMode, args.event.SpaceID, args.event.Session, gomock.Any()).Return(nil).Times(1)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any()).Return(errors.New("complete expt error")).Times(1)
+				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7个参数)
+				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				// CompleteExpt: ctx, exptID, spaceID, session, WithCID, WithCompleteInterval (6个参数)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(errors.New("complete expt error")).Times(1)
 			},
 			wantNextTick: false,
 			wantErr:      true,
@@ -1700,8 +1697,10 @@ func TestExptAppendExec_ExptEnd(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
-				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.ExptRunMode, args.event.SpaceID, args.event.Session, gomock.Any()).Return(nil).Times(1)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any()).Return(nil).Times(1)
+				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7个参数)
+				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				// CompleteExpt: ctx, exptID, spaceID, session, WithCID, WithCompleteInterval (6个参数)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{ZombieIntervalSecond: 100}).Times(1)
 				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
@@ -1989,20 +1988,6 @@ func TestExptAppendExec_NextTick(t *testing.T) {
 				// 显式指定调用次数为 1 次
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{DaemonIntervalSecond: 5}).Times(1)
 				f.publisher.EXPECT().PublishExptScheduleEvent(gomock.Any(), args.event, gomock.Any()).Return(nil).Times(1)
-			},
-			wantErr:   false,
-			assertErr: func(t *testing.T, err error) { assert.NoError(t, err) },
-		},
-		{
-			name: "正常流程-不需要下一次调度",
-			args: args{
-				ctx:      session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
-				event:    &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptRunMode: 1, Session: &entity.Session{UserID: testUserID}},
-				nextTick: false,
-			},
-			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
-				// 不需要下一次调度时，不应该调用 GetExptExecConf 和 PublishExptScheduleEvent
-				// 这里不设置预期调用
 			},
 			wantErr:   false,
 			assertErr: func(t *testing.T, err error) { assert.NoError(t, err) },

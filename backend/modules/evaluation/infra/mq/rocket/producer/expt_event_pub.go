@@ -6,6 +6,7 @@ package producer
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -21,6 +22,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+)
+
+const (
+	CtxKeyEnv = "K_ENV"
+	XttEnv    = "x_tt_env"
 )
 
 var (
@@ -160,7 +166,9 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 		}
 		msgs = append(msgs, msg)
 	}
-
+	if env := os.Getenv(XttEnv); env != "" {
+		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck
+	}
 	resp, err := p.p.SendBatch(ctx, msgs)
 	if err != nil {
 		return errorx.Wrapf(err, "send batch message fail, msgs: %v", json.Jsonify(msgs))

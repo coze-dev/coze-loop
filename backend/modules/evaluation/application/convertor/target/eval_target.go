@@ -70,6 +70,7 @@ func EvalTargetVersionDTO2DO(targetVersionDTO *dto.EvalTargetVersion) (targetVer
 				Description:  targetVersionDTO.GetEvalTargetContent().GetPrompt().GetDescription(),
 			}
 		}
+		targetVersionDO.CustomRPCServer = CustomRPCServerDTO2DO(targetVersionDTO.GetEvalTargetContent().GetCustomRPCServer())
 		targetVersionDO.RuntimeParamDemo = gptr.Of(targetVersionDTO.GetEvalTargetContent().GetRuntimeParamJSONDemo())
 	}
 
@@ -183,8 +184,17 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				Name:                     &targetVersionDO.VolcengineAgent.Name,
 				Description:              &targetVersionDO.VolcengineAgent.Description,
 				VolcengineAgentEndpoints: endpoints,
+				Protocol:                 gptr.Of(gptr.Indirect(targetVersionDO.VolcengineAgent.Protocol)),
 				BaseInfo:                 commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.VolcengineAgent.BaseInfo),
 			}
+		}
+	case do.EvalTargetTypeCustomRPCServer:
+		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
+			InputSchemas:  make([]*commondto.ArgsSchema, 0),
+			OutputSchemas: make([]*commondto.ArgsSchema, 0),
+		}
+		if targetVersionDO.CustomRPCServer != nil {
+			targetVersionDTO.EvalTargetContent.CustomRPCServer = CustomRPCServerDO2DTO(targetVersionDO.CustomRPCServer)
 		}
 	default:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
@@ -201,4 +211,111 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 	targetVersionDTO.BaseInfo = commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.BaseInfo)
 
 	return targetVersionDTO
+}
+
+func CustomRPCServerDO2DTO(do *do.CustomRPCServer) (dtoRes *dto.CustomRPCServer) {
+	return &dto.CustomRPCServer{
+		ID:                  &do.ID,
+		Name:                &do.Name,
+		Description:         &do.Description,
+		ServerName:          &do.ServerName,
+		AccessProtocol:      &do.AccessProtocol,
+		Regions:             do.Regions,
+		Cluster:             &do.Cluster,
+		InvokeHTTPInfo:      HttpInfoDO2DTO(do.InvokeHTTPInfo),
+		AsyncInvokeHTTPInfo: HttpInfoDO2DTO(do.AsyncInvokeHTTPInfo),
+		NeedSearchTarget:    do.NeedSearchTarget,
+		SearchHTTPInfo:      HttpInfoDO2DTO(do.SearchHTTPInfo),
+		CustomEvalTarget:    CustomEvalTargetDO2DTO(do.CustomEvalTarget),
+		IsAsync:             do.IsAsync,
+		ExecRegion:          gptr.Of(do.ExecRegion),
+		ExecEnv:             do.ExecEnv,
+		Timeout:             do.Timeout,
+		AsyncTimeout:        do.AsyncTimeout,
+		Ext:                 do.Ext,
+	}
+}
+
+func CustomRPCServerDTO2DO(dto *dto.CustomRPCServer) (doRes *do.CustomRPCServer) {
+	if dto == nil {
+		return nil
+	}
+	return &do.CustomRPCServer{
+		ID:                  gptr.Indirect(dto.ID),
+		Name:                gptr.Indirect(dto.Name),
+		Description:         gptr.Indirect(dto.Description),
+		ServerName:          gptr.Indirect(dto.ServerName),
+		AccessProtocol:      gptr.Indirect(dto.AccessProtocol),
+		Regions:             dto.Regions,
+		Cluster:             gptr.Indirect(dto.Cluster),
+		NeedSearchTarget:    dto.NeedSearchTarget,
+		IsAsync:             dto.IsAsync,
+		InvokeHTTPInfo:      HttpInfoDTO2DO(dto.InvokeHTTPInfo),
+		AsyncInvokeHTTPInfo: HttpInfoDTO2DO(dto.AsyncInvokeHTTPInfo),
+		SearchHTTPInfo:      HttpInfoDTO2DO(dto.SearchHTTPInfo),
+		CustomEvalTarget:    CustomEvalTargetDTO2DO(dto.CustomEvalTarget),
+		ExecRegion:          gptr.Indirect(dto.ExecRegion),
+		ExecEnv:             dto.ExecEnv,
+		Timeout:             dto.Timeout,
+		AsyncTimeout:        dto.AsyncTimeout,
+		Ext:                 dto.Ext,
+	}
+}
+
+func HttpInfoDTO2DO(httpInfoDTO *dto.HTTPInfo) (httpInfoDO *do.HTTPInfo) {
+	if httpInfoDTO == nil {
+		return nil
+	}
+	return &do.HTTPInfo{
+		Method: gptr.Indirect(httpInfoDTO.Method),
+		Path:   gptr.Indirect(httpInfoDTO.Path),
+	}
+}
+
+func HttpInfoDO2DTO(httpInfoDO *do.HTTPInfo) (httpInfoDTO *dto.HTTPInfo) {
+	if httpInfoDO == nil {
+		return nil
+	}
+	return &dto.HTTPInfo{
+		Method: gptr.Of(httpInfoDO.Method),
+		Path:   gptr.Of(httpInfoDO.Path),
+	}
+}
+
+func CustomEvalTargetDTO2DO(customEvalTargetDTO *dto.CustomEvalTarget) (customEvalTargetDO *do.CustomEvalTarget) {
+	if customEvalTargetDTO == nil {
+		return nil
+	}
+	return &do.CustomEvalTarget{
+		ID:        customEvalTargetDTO.ID,
+		Name:      customEvalTargetDTO.Name,
+		AvatarURL: customEvalTargetDTO.AvatarURL,
+		Ext:       customEvalTargetDTO.Ext,
+	}
+}
+
+func CustomEvalTargetDO2DTO(customEvalTargetDO *do.CustomEvalTarget) (customEvalTargetDTO *dto.CustomEvalTarget) {
+	if customEvalTargetDO == nil {
+		return nil
+	}
+	return &dto.CustomEvalTarget{
+		ID:        customEvalTargetDO.ID,
+		Name:      customEvalTargetDO.Name,
+		AvatarURL: customEvalTargetDO.AvatarURL,
+		Ext:       customEvalTargetDO.Ext,
+	}
+}
+
+func CustomEvalTargetDO2DTOs(customEvalTargetDOs []*do.CustomEvalTarget) (customEvalTargetDTOs []*dto.CustomEvalTarget) {
+	if customEvalTargetDOs == nil {
+		return nil
+	}
+	customEvalTargetDTOs = make([]*dto.CustomEvalTarget, 0)
+	for _, customEvalTargetDO := range customEvalTargetDOs {
+		if customEvalTargetDO == nil {
+			continue
+		}
+		customEvalTargetDTOs = append(customEvalTargetDTOs, CustomEvalTargetDO2DTO(customEvalTargetDO))
+	}
+	return customEvalTargetDTOs
 }

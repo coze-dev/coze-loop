@@ -18,6 +18,7 @@ import (
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 
 	idgenmock "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -74,6 +75,9 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 				Desc:        gptr.Of("test description"),
 				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
 					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+					CustomEvalTarget: &domain_eval_target.CustomEvalTarget{
+						Name: gptr.Of("test"),
+					},
 				},
 				Session: &common.Session{
 					UserID: gptr.Of(int64(789)),
@@ -1811,11 +1815,13 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 	// Create mock objects
 	mockManager := servicemocks.NewMockIExptManager(ctrl)
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
 
 	// Test data
 	validWorkspaceID := int64(123)
 	validExptID := int64(456)
 	validUserID := int64(789)
+	validRunID := int64(999)
 
 	tests := []struct {
 		name      string
@@ -1825,7 +1831,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name: "successfully terminate experiment",
+			name: "successfully terminate experiment with maintainer permission",
 			req: &exptpb.KillExperimentRequest{
 				WorkspaceID: gptr.Of(validWorkspaceID),
 				ExptID:      gptr.Of(validExptID),
@@ -1833,10 +1839,50 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 			mockSetup: func() {
 				// 获取实验信息
 				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&entity.Experiment{
-					ID:        validExptID,
-					SpaceID:   validWorkspaceID,
-					CreatedBy: strconv.FormatInt(validUserID, 10),
+					ID:          validExptID,
+					SpaceID:     validWorkspaceID,
+					CreatedBy:   strconv.FormatInt(validUserID, 10),
+					LatestRunID: validRunID,
+					Status:      entity.ExptStatus_Processing,
 				}, nil)
+
+				// Maintainer权限检查 - 用户是maintainer
+				mockConfiger.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(map[string]bool{
+					strconv.FormatInt(validUserID, 10): true,
+				})
+
+				// 设置终止中状态（实现中同步执行）
+				mockManager.EXPECT().SetExptTerminating(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any()).Return(nil)
+
+				// 异步终止：允许在后台调用，不校验调用次数
+				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			wantResp: &exptpb.KillExperimentResponse{
+				BaseResp: base.NewBaseResp(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "successfully terminate experiment with regular permission",
+			req: &exptpb.KillExperimentRequest{
+				WorkspaceID: gptr.Of(validWorkspaceID),
+				ExptID:      gptr.Of(validExptID),
+			},
+			mockSetup: func() {
+				// 获取实验信息
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&entity.Experiment{
+					ID:          validExptID,
+					SpaceID:     validWorkspaceID,
+					CreatedBy:   strconv.FormatInt(validUserID, 10),
+					LatestRunID: validRunID,
+					Status:      entity.ExptStatus_Processing,
+				}, nil)
+
+				// Maintainer权限检查 - 用户不是maintainer
+				mockConfiger.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(map[string]bool{
+					"other_user": true,
+				})
 
 				// 权限验证
 				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), &rpc.AuthorizationWithoutSPIParam{
@@ -1847,19 +1893,12 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 					ResourceSpaceID: validWorkspaceID,
 				}).Return(nil)
 
-				// 终止实验
-				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
-						// 验证传入的 opts 是否包含正确的状态设置
-						opt := &entity.CompleteExptOption{}
-						for _, fn := range opts {
-							fn(opt)
-						}
-						if opt.Status != entity.ExptStatus_Terminated {
-							t.Errorf("expected status %v, got %v", entity.ExptStatus_Terminated, opt.Status)
-						}
-						return nil
-					})
+				// 设置终止中状态（实现中同步执行）
+				mockManager.EXPECT().SetExptTerminating(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any()).Return(nil)
+
+				// 异步终止：允许在后台调用，不校验调用次数
+				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{
 				BaseResp: base.NewBaseResp(),
@@ -1878,6 +1917,102 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 			wantResp: nil,
 			wantErr:  true,
 		},
+		{
+			name: "permission validation failed for regular user",
+			req: &exptpb.KillExperimentRequest{
+				WorkspaceID: gptr.Of(validWorkspaceID),
+				ExptID:      gptr.Of(validExptID),
+			},
+			mockSetup: func() {
+				// 获取实验信息
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&entity.Experiment{
+					ID:          validExptID,
+					SpaceID:     validWorkspaceID,
+					CreatedBy:   strconv.FormatInt(validUserID, 10),
+					LatestRunID: validRunID,
+					Status:      entity.ExptStatus_Processing,
+				}, nil)
+
+				// Maintainer权限检查 - 用户不是maintainer
+				mockConfiger.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(map[string]bool{
+					"other_user": true,
+				})
+
+				// 权限验证失败
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), &rpc.AuthorizationWithoutSPIParam{
+					ObjectID:        strconv.FormatInt(validExptID, 10),
+					SpaceID:         validWorkspaceID,
+					ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+					OwnerID:         gptr.Of(strconv.FormatInt(validUserID, 10)),
+					ResourceSpaceID: validWorkspaceID,
+				}).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp: nil,
+			wantErr:  true,
+		},
+		{
+			name: "complete run failed",
+			req: &exptpb.KillExperimentRequest{
+				WorkspaceID: gptr.Of(validWorkspaceID),
+				ExptID:      gptr.Of(validExptID),
+			},
+			mockSetup: func() {
+				// 获取实验信息
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&entity.Experiment{
+					ID:          validExptID,
+					SpaceID:     validWorkspaceID,
+					CreatedBy:   strconv.FormatInt(validUserID, 10),
+					LatestRunID: validRunID,
+					Status:      entity.ExptStatus_Processing,
+				}, nil)
+
+				// Maintainer权限检查 - 用户是maintainer
+				mockConfiger.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(map[string]bool{
+					strconv.FormatInt(validUserID, 10): true,
+				})
+
+				// 设置终止中状态
+				mockManager.EXPECT().SetExptTerminating(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any()).Return(nil)
+
+				// 异步终止运行失败：允许后台调用
+				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(
+					errorx.NewByCode(errno.CommonInternalErrorCode)).AnyTimes()
+			},
+			wantResp: &exptpb.KillExperimentResponse{BaseResp: base.NewBaseResp()},
+			wantErr:  false,
+		},
+		{
+			name: "complete experiment failed",
+			req: &exptpb.KillExperimentRequest{
+				WorkspaceID: gptr.Of(validWorkspaceID),
+				ExptID:      gptr.Of(validExptID),
+			},
+			mockSetup: func() {
+				// 获取实验信息
+				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&entity.Experiment{
+					ID:          validExptID,
+					SpaceID:     validWorkspaceID,
+					CreatedBy:   strconv.FormatInt(validUserID, 10),
+					LatestRunID: validRunID,
+					Status:      entity.ExptStatus_Processing,
+				}, nil)
+
+				// Maintainer权限检查 - 用户是maintainer
+				mockConfiger.EXPECT().GetMaintainerUserIDs(gomock.Any()).Return(map[string]bool{
+					strconv.FormatInt(validUserID, 10): true,
+				})
+
+				// 设置终止中状态
+				mockManager.EXPECT().SetExptTerminating(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any()).Return(nil)
+
+				// 异步终止
+				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					errorx.NewByCode(errno.CommonInternalErrorCode)).AnyTimes()
+			},
+			wantResp: &exptpb.KillExperimentResponse{BaseResp: base.NewBaseResp()},
+			wantErr:  false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1893,7 +2028,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // scheduler
 				nil, // recordEval
 				nil,
-				nil, // configer
+				mockConfiger, // configer
 				mockAuth,
 				nil, // userInfoService
 				nil, // evalTargetService
@@ -1904,8 +2039,13 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil,
 			)
 
+			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
+			ctx := session.WithCtxUser(context.Background(), &session.User{
+				ID: strconv.FormatInt(validUserID, 10),
+			})
+
 			// 执行测试
-			gotResp, err := app.KillExperiment(context.Background(), tt.req)
+			gotResp, err := app.KillExperiment(ctx, tt.req)
 
 			// 验证结果
 			if tt.wantErr {
@@ -2073,7 +2213,7 @@ func TestExperimentApplication_BatchGetExperimentResult_(t *testing.T) {
 						},
 					},
 
-					//{
+					// {
 					//	TagKeyID:    ptr.Of(int64(1)),
 					//	TagKeyName:  ptr.Of("name"),
 					//	Description: ptr.Of("desc"),
@@ -2092,7 +2232,7 @@ func TestExperimentApplication_BatchGetExperimentResult_(t *testing.T) {
 					//		MaxValueDescription: ptr.Of("2"),
 					//	}},
 					//	Status: ptr.Of(tag.TagStatusActive),
-					//},
+					// },
 				},
 				ItemResults: []*expt.ItemResult_{
 					{
@@ -2633,12 +2773,12 @@ func TestExperimentApplication_InvokeExperiment(t *testing.T) {
 						gomock.Any(),
 						gomock.Any(), // 使用 Any 匹配器，因为结构体内部包含指针
 					).
-					DoAndReturn(func(_ context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, error) {
+					DoAndReturn(func(_ context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, []*entity.DatasetItemOutput, error) {
 						// 验证关键字段
 						if param.SpaceID != validSpaceID || param.EvaluationSetID != validEvalSetID {
 							t.Errorf("unexpected param values: got SpaceID=%v, EvaluationSetID=%v", param.SpaceID, param.EvaluationSetID)
 						}
-						return map[int64]int64{int64(0): 6001, int64(1): 6002}, nil, nil
+						return map[int64]int64{int64(0): 6001, int64(1): 6002}, nil, nil, nil
 					})
 
 				// Mock Invoke experiment with matcher

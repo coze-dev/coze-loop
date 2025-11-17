@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/authn"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file"
@@ -24,12 +25,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
 	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
-	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
+	openapi2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/debug"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
-	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 )
 
 var (
@@ -39,6 +42,7 @@ var (
 	_ = eval_target.KitexUnusedProtection
 	_ = evaluator.KitexUnusedProtection
 	_ = expt.KitexUnusedProtection
+	_ = openapi0.KitexUnusedProtection
 	_ = auth.KitexUnusedProtection
 	_ = authn.KitexUnusedProtection
 	_ = file.KitexUnusedProtection
@@ -47,12 +51,14 @@ var (
 	_ = user.KitexUnusedProtection
 	_ = manage0.KitexUnusedProtection
 	_ = runtime.KitexUnusedProtection
-	_ = openapi1.KitexUnusedProtection
+	_ = metric.KitexUnusedProtection
+	_ = openapi2.KitexUnusedProtection
+	_ = task.KitexUnusedProtection
 	_ = trace.KitexUnusedProtection
 	_ = debug.KitexUnusedProtection
 	_ = execute.KitexUnusedProtection
 	_ = manage.KitexUnusedProtection
-	_ = openapi0.KitexUnusedProtection
+	_ = openapi1.KitexUnusedProtection
 )
 
 // unused protection

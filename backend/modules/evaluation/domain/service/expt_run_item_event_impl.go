@@ -51,6 +51,7 @@ type ExptItemEventEvalServiceImpl struct {
 	evaluatorRecordService   EvaluatorRecordService
 	idgen                    idgen.IIDGenerator
 	benefitService           benefit.IBenefitService
+	evalAsyncRepo            repo.IEvalAsyncRepo
 }
 
 func NewExptRecordEvalService(
@@ -73,6 +74,7 @@ func NewExptRecordEvalService(
 	evaluatorService EvaluatorService,
 	idgen idgen.IIDGenerator,
 	benefitService benefit.IBenefitService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
 ) ExptItemEvalEvent {
 	i := &ExptItemEventEvalServiceImpl{
 		manager:                  manager,
@@ -94,6 +96,7 @@ func NewExptRecordEvalService(
 		evaluatorService:         evaluatorService,
 		idgen:                    idgen,
 		benefitService:           benefitService,
+		evalAsyncRepo:            evalAsyncRepo,
 	}
 
 	i.endpoints = RecordEvalChain(
@@ -110,7 +113,7 @@ func (e *ExptItemEventEvalServiceImpl) Eval(ctx context.Context, event *entity.E
 	ctx = ctxcache.Init(ctx)
 
 	if err := e.endpoints(ctx, event); err != nil {
-		logs.CtxError(ctx, "[ExptRecordEval] expt record eval fail, event: %v, err: %v", json.Jsonify(event), err)
+		logs.CtxError(ctx, "[ExptTurnEval] expt record eval fail, event: %v, err: %v", json.Jsonify(event), err)
 		return err
 	}
 
@@ -137,7 +140,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventCheck(next RecordEvalEndPoint)
 			return err
 		}
 
-		if entity.IsExptFinished(entity.ExptStatus(runLog.Status)) {
+		if status := entity.ExptStatus(runLog.Status); entity.IsExptFinished(status) || entity.IsExptFinishing(status) {
 			logs.CtxInfo(ctx, "ExptRecordEvalConsumer consume finished expt run event, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			return nil
 		}
@@ -161,7 +164,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 			e.metric.EmitItemExecResult(event.SpaceID, int64(event.ExptRunMode), nextErr != nil, needRetry, stable, int64(code), event.CreateAt)
 		}()
 
-		logs.CtxInfo(ctx, "[ExptRecordEval] handle event done, success: %v, retry: %v, retry_times: %v, err: %v, indebt: %v, event: %v",
+		logs.CtxInfo(ctx, "[ExptTurnEval] handle event done, success: %v, retry: %v, retry_times: %v, err: %v, indebt: %v, event: %v",
 			nextErr == nil, needRetry, retryConf.GetRetryTimes(), nextErr, retryConf.IsInDebt, json.Jsonify(event))
 
 		if nextErr == nil {
@@ -171,12 +174,12 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		if retryConf.IsInDebt {
 			completeCID := fmt.Sprintf("terminate:indebt:%d", event.ExptRunID)
 
-			if err := e.manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.ExptRunMode, event.SpaceID, event.Session, entity.WithCID(completeCID)); err != nil {
+			if err := e.manager.CompleteRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session, entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 				return errorx.Wrapf(err, "terminate expt run fail, expt_id: %v", event.ExptID)
 			}
 
 			if err := e.manager.CompleteExpt(ctx, event.ExptID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Terminated),
-				entity.WithStatusMessage(nextErr.Error()), entity.WithCID(completeCID)); err != nil {
+				entity.WithStatusMessage(nextErr.Error()), entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 				return errorx.Wrapf(err, "complete expt fail, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			}
 
@@ -252,7 +255,7 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		return err
 	}
 
-	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService).
+	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo).
 		Eval(ctx, eiec); err != nil {
 		return err
 	}
@@ -384,6 +387,15 @@ func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.Exp
 	//	return err
 	// }
 
+	got, err := e.exptTurnResultRepo.GetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
+	if err != nil {
+		return err
+	}
+
+	for _, turnResult := range got {
+		eiec.ExistItemEvalResult.TurnResultRunLogs[turnResult.TurnID] = turnResult
+	}
+
 	absentRunLogTurnIDs := make([]int64, 0, len(turns))
 	for _, turn := range turns {
 		if turn == nil {
@@ -419,19 +431,6 @@ func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.Exp
 		if err := e.exptTurnResultRepo.BatchCreateNXRunLog(ctx, turnRunResults); err != nil {
 			return err
 		}
-
-		// turnRunLogDOs := make([]*entity.ExptTurnResultRunLog, 0, len(turnRunResults))
-		// for _, trr := range turnRunResults {
-		//	_, err := convert2.NewExptTurnResultRunLogConvertor().ConvertModelToEntity(trr)
-		//	if err != nil {
-		//		return err
-		//	}
-		//	turnRunLogDOs = append(turnRunLogDOs, nil)
-		// }
-		//
-		// eiec.ExistItemEvalResult.TurnResultRunLogs = gslice.ToMap(turnRunLogDOs, func(t *entity.ExptTurnResultRunLog) (int64, *entity.ExptTurnResultRunLog) {
-		//	return t.TurnID, t
-		// })
 
 		eiec.ExistItemEvalResult.TurnResultRunLogs = gslice.ToMap(turnRunResults, func(t *entity.ExptTurnResultRunLog) (int64, *entity.ExptTurnResultRunLog) {
 			return t.TurnID, t

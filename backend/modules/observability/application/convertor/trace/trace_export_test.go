@@ -589,7 +589,7 @@ func TestConvertFieldMappingsDTO2DO(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := convertFieldMappingsDTO2DO(tt.mappings)
+			got := ConvertFieldMappingsDTO2DO(tt.mappings)
 			assert.Equal(t, tt.want, got)
 		})
 	}

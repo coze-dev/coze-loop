@@ -46,6 +46,7 @@ trace_platform_tenants:
       - "cozeloop"
 
 trace_max_duration_day:
+  default: 180
   cozeloop: 180
   prompt: 180
   evaluator: 180
@@ -177,6 +178,46 @@ trace_field_meta_info:
         - "not_exist"
       support_custom: true
   field_metas:
+    default:
+      root_span:
+        - "input"
+        - "output"
+        - "status"
+        - "duration"
+        - "latency_first_resp"
+        - "span_name"
+        - "trace_id"
+        - "span_type"
+        - "message_id"
+        - "user_id"
+      all_span:
+        - "input"
+        - "output"
+        - "status"
+        - "duration"
+        - "latency_first_resp"
+        - "span_name"
+        - "trace_id"
+        - "span_type"
+        - "message_id"
+        - "user_id"
+        - "input_tokens"
+        - "output_tokens"
+        - "prompt_key"
+        - "tokens"
+      llm_span:
+        - "input"
+        - "output"
+        - "status"
+        - "duration"
+        - "latency_first_resp"
+        - "span_name"
+        - "trace_id"
+        - "message_id"
+        - "user_id"
+        - "input_tokens"
+        - "output_tokens"
+        - "tokens"
     cozeloop:
       root_span:
         - "input"
@@ -288,3 +329,55 @@ query_trace_rate_limit_config:
   default_max_qps: 10
   space_max_qps:
     123456: 100
+
+key_span_type:
+  default:
+    - "model"
+    - "tool"
+    - "root"
+    - "UserInput"
+    - "UserInputV2"
+    - "LLMCall"
+    - "WorkflowLLMCall"
+    - "WorkflowPluginTool"
+    - "PluginTool"
+
+correction_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "cozeloop_evaluation_correction_evaluator_result"
+  consumer_group: "cozeloop_evaluation_correction_evaluator_result_evaluation_cg"
+  worker_num: 4
+
+backfill_mq_producer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 200
+  retry_times: 3
+  topic: "cozeloop_async_tasks"
+  producer_group: "cozeloop_async_tasks_backfill_cg"
+
+backfill_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "cozeloop_async_tasks"
+  consumer_group: "cozeloop_async_tasks_backfill_cg"
+  worker_num: 4
+
+autotask_callback_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "cozeloop_evaluation_online_expt_eval_result"
+  consumer_group: "cozeloop_evaluation_online_expt_eval_result_cg"
+  worker_num: 4
+
+task_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "trace_to_task"
+  consumer_group: "trace_to_task_cg"
+  worker_num: 4

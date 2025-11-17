@@ -31,9 +31,9 @@ func NewEvaluationSetItemServiceImpl(datasetRPCAdapter rpc.IDatasetRPCAdapter) E
 	return evaluationSetItemServiceImpl
 }
 
-func (d *EvaluationSetItemServiceImpl) BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (idMap map[int64]int64, errors []*entity.ItemErrorGroup, err error) {
+func (d *EvaluationSetItemServiceImpl) BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (idMap map[int64]int64, errors []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error) {
 	if param == nil {
-		return nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode)
+		return nil, nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 	return d.datasetRPCAdapter.BatchCreateDatasetItems(ctx, &rpc.BatchCreateDatasetItemsParam{
 		SpaceID:          param.SpaceID,
@@ -41,6 +41,18 @@ func (d *EvaluationSetItemServiceImpl) BatchCreateEvaluationSetItems(ctx context
 		Items:            param.Items,
 		SkipInvalidItems: param.SkipInvalidItems,
 		AllowPartialAdd:  param.AllowPartialAdd,
+	})
+}
+
+func (d *EvaluationSetItemServiceImpl) BatchUpdateEvaluationSetItems(ctx context.Context, param *entity.BatchUpdateEvaluationSetItemsParam) (errors []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error) {
+	if param == nil {
+		return nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode)
+	}
+	return d.datasetRPCAdapter.BatchUpdateDatasetItems(ctx, &rpc.BatchUpdateDatasetItemsParam{
+		SpaceID:          param.SpaceID,
+		EvaluationSetID:  param.EvaluationSetID,
+		Items:            param.Items,
+		SkipInvalidItems: param.SkipInvalidItems,
 	})
 }
 

@@ -43,3 +43,7 @@ coze-loop-rmq-namesrv:
   custom: *custom
 coze-loop-rmq-broker:
   custom: *custom
+coze-loop-python-faas:
+  custom: *custom
+coze-loop-js-faas:
+  custom: *custom

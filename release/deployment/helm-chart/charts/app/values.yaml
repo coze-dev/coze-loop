@@ -18,7 +18,7 @@ init_image:
     image: "redis"
     tag: "8.2.0"
   mysql:
-    registry: "docker.iom"
+    registry: "docker.io"
     repository: "library"
     image: "mysql"
     tag: "8.4.6"
@@ -79,6 +79,12 @@ env:
       port: "9876"
       user: ""
       password: ""
+
+  # faas
+  pythonFaas:
+    port: 8000
+  jsFaas:
+    port: 8000
 
 # customization
 custom:

@@ -6,20 +6,27 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
-
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	annotationpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	kitexdataset "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	metricmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	mqmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	tenantmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
+	taskentity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	taskRepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
+	taskRepomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -28,8 +35,43 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
+
+const defaultUserID = "user-1"
+
+type taskRepoMock struct {
+	*taskRepomocks.MockITaskRepo
+}
+
+func newTaskRepoMock(ctrl *gomock.Controller) *taskRepoMock {
+	return &taskRepoMock{MockITaskRepo: taskRepomocks.NewMockITaskRepo(ctrl)}
+}
+
+func (m *taskRepoMock) ListNonFinalTask(context.Context, string) ([]int64, error) {
+	panic("unexpected call to ListNonFinalTask in taskRepoMock")
+}
+
+func (m *taskRepoMock) AddNonFinalTask(context.Context, string, int64) error {
+	panic("unexpected call to AddNonFinalTask in taskRepoMock")
+}
+
+func (m *taskRepoMock) RemoveNonFinalTask(context.Context, string, int64) error {
+	panic("unexpected call to RemoveNonFinalTask in taskRepoMock")
+}
+
+func (m *taskRepoMock) GetTaskByRedis(context.Context, int64) (*taskentity.ObservabilityTask, error) {
+	panic("unexpected call to GetTaskByRedis in taskRepoMock")
+}
+
+func (m *taskRepoMock) SetTask(context.Context, *taskentity.ObservabilityTask) error {
+	panic("unexpected call to SetTask in taskRepoMock")
+}
+
+var _ taskRepo.ITaskRepo = (*taskRepoMock)(nil)
 
 func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 	type fields struct {
@@ -40,6 +82,8 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -192,7 +236,10 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.GetTracesAdvanceInfo(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, got, tt.want)
@@ -209,6 +256,8 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -293,7 +342,10 @@ func TestTraceServiceImpl_IngestTraces(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.IngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
@@ -309,6 +361,8 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -327,8 +381,11 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				confMock.EXPECT().GetTraceFieldMetaInfo(gomock.Any()).Return(&config.TraceFieldMetaInfoCfg{
 					FieldMetas: map[loop_span.PlatformType]map[loop_span.SpanListType][]string{
-						loop_span.PlatformCozeLoop: {
+						loop_span.PlatformDefault: {
 							loop_span.SpanListTypeAllSpan: {"field1", "field2"},
+						},
+						loop_span.PlatformCozeLoop: {
+							loop_span.SpanListTypeAllSpan: {},
 						},
 					},
 					AvailableFields: map[string]*config.FieldMeta{
@@ -336,6 +393,10 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 						"field2": {FieldType: "int"},
 					},
 				}, nil)
+				confMock.EXPECT().GetKeySpanTypes(gomock.Any()).Return(map[string][]string{
+					string(loop_span.PlatformDefault):  {},
+					string(loop_span.PlatformCozeLoop): {},
+				})
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
@@ -359,6 +420,7 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 					"field1": {FieldType: "string"},
 					"field2": {FieldType: "int"},
 				},
+				KeySpanTypeList: []string{},
 			},
 		},
 		{
@@ -399,10 +461,17 @@ func TestTraceServiceImpl_GetTracesMetaInfo(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.GetTracesMetaInfo(tt.args.ctx, tt.args.req)
-			assert.Equal(t, tt.wantErr, err != nil)
-			assert.Equal(t, got, tt.want)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
 		})
 	}
 }
@@ -416,6 +485,8 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -532,7 +603,10 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.ListAnnotations(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
@@ -549,6 +623,8 @@ func TestTraceServiceImpl_UpdateManualAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -738,7 +814,10 @@ func TestTraceServiceImpl_UpdateManualAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.UpdateManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
@@ -754,6 +833,8 @@ func TestTraceServiceImpl_CreateManualAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -974,7 +1055,10 @@ func TestTraceServiceImpl_CreateManualAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.CreateManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 			if !tt.wantErr {
@@ -993,6 +1077,8 @@ func TestTraceServiceImpl_ListSpans(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -1408,7 +1494,10 @@ func TestTraceServiceImpl_ListSpans(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			got, err := r.ListSpans(tt.args.ctx, tt.args.req)
 			assert.Equal(t, err != nil, tt.wantErr)
 			assert.Equal(t, got, tt.want)
@@ -1425,6 +1514,8 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -1660,24 +1751,12 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 				// Mock ListSpans call with ParentID filter for root span
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
-						// Verify that the filter contains ParentID filter when span_id is empty
-						hasParentIDFilter := false
-						for _, filter := range param.Filters.FilterFields {
-							if filter.FieldName == loop_span.SpanFieldParentID {
-								hasParentIDFilter = true
-								assert.Equal(t, []string{"0", ""}, filter.Values)
-								assert.Equal(t, loop_span.QueryTypeEnumIn, *filter.QueryType)
-							}
-						}
-						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
-
-						// Return a root span (ParentID = "0")
 						return &repo.ListSpansResult{
 							Spans: loop_span.SpanList{
 								{
 									TraceID:     "test-trace-id",
 									SpanID:      "root-span-id",
-									ParentID:    "0", // This is a root span
+									ParentID:    "0",
 									WorkspaceID: "1",
 									SystemTagsString: map[string]string{
 										loop_span.SpanFieldTenant: "spans",
@@ -1731,23 +1810,7 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 				}, nil)
 
 				// Mock ListSpans call with ParentID filter but return no spans
-				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
-						// Verify that the filter contains ParentID filter when span_id is empty
-						hasParentIDFilter := false
-						for _, filter := range param.Filters.FilterFields {
-							if filter.FieldName == loop_span.SpanFieldParentID {
-								hasParentIDFilter = true
-								assert.Equal(t, []string{"0", ""}, filter.Values)
-								assert.Equal(t, loop_span.QueryTypeEnumIn, *filter.QueryType)
-							}
-						}
-						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
-
-						// Return empty result (no root span found)
-						return &repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil
-					},
-				)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
 				// Expect annotation to be sent via producer when no span found
 				annoProducerMock.EXPECT().SendAnnotation(gomock.Any(), gomock.Any()).Return(nil)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
@@ -1789,7 +1852,10 @@ func TestTraceServiceImpl_CreateAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.CreateAnnotation(tt.args.ctx, tt.args.req)
 			t.Log(err)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1806,6 +1872,8 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -1884,24 +1952,12 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 				// Mock ListSpans call with ParentID filter for root span
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
-						// Verify that the filter contains ParentID filter when span_id is empty
-						hasParentIDFilter := false
-						for _, filter := range param.Filters.FilterFields {
-							if filter.FieldName == loop_span.SpanFieldParentID {
-								hasParentIDFilter = true
-								assert.Equal(t, []string{"0", ""}, filter.Values)
-								assert.Equal(t, loop_span.QueryTypeEnumIn, *filter.QueryType)
-							}
-						}
-						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
-
-						// Return a root span (ParentID = "0")
 						return &repo.ListSpansResult{
 							Spans: loop_span.SpanList{
 								{
 									TraceID:     "test-trace-id",
 									SpanID:      "root-span-id",
-									ParentID:    "0", // This is a root span
+									ParentID:    "0",
 									WorkspaceID: "1",
 									SystemTagsString: map[string]string{
 										loop_span.SpanFieldTenant: "spans",
@@ -1952,23 +2008,7 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 				}, nil)
 
 				// Mock ListSpans call with ParentID filter but return no spans
-				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
-					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
-						// Verify that the filter contains ParentID filter when span_id is empty
-						hasParentIDFilter := false
-						for _, filter := range param.Filters.FilterFields {
-							if filter.FieldName == loop_span.SpanFieldParentID {
-								hasParentIDFilter = true
-								assert.Equal(t, []string{"0", ""}, filter.Values)
-								assert.Equal(t, loop_span.QueryTypeEnumIn, *filter.QueryType)
-							}
-						}
-						assert.True(t, hasParentIDFilter, "Should have ParentID filter when span_id is empty")
-
-						// Return empty result (no root span found)
-						return &repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil
-					},
-				)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
 				// Expect annotation to be sent via producer when no span found
 				annoProducerMock.EXPECT().SendAnnotation(gomock.Any(), gomock.Any()).Return(nil)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
@@ -2133,7 +2173,10 @@ func TestTraceServiceImpl_DeleteAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.DeleteAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
@@ -2149,6 +2192,8 @@ func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
 		metrics            metrics.ITraceMetrics
 		buildHelper        TraceFilterProcessorBuilder
 		tenantProvider     tenant.ITenantProvider
+		evalSvc            rpc.IEvaluatorRPCAdapter
+		taskRepo           taskRepo.ITaskRepo
 	}
 	type args struct {
 		ctx context.Context
@@ -2369,7 +2414,10 @@ func TestTraceServiceImpl_DeleteManualAnnotation(t *testing.T) {
 				fields.annotationProducer,
 				fields.metrics,
 				fields.buildHelper,
-				fields.tenantProvider)
+				fields.tenantProvider,
+				fields.evalSvc,
+				fields.taskRepo,
+			)
 			err := r.DeleteManualAnnotation(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
@@ -2689,10 +2737,13 @@ func TestTraceServiceImpl_SearchTraceOApi(t *testing.T) {
 					Tenants:            []string{"tenant1"},
 					TraceID:            "trace-123",
 					LogID:              "",
+					SpanIDs:            nil,
 					StartAt:            1640995200000,
 					EndAt:              1640995800000,
 					Limit:              100,
 					NotQueryAnnotation: false,
+					Filters:            nil,
+					OmitColumns:        []string{"input", "output"},
 				}).Return(loop_span.SpanList{
 					{
 						TraceID:   "trace-123",
@@ -2846,4 +2897,1056 @@ func TestTraceServiceImpl_ListSpansOApi(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTraceFilterProcessorBuilderImpl_BuildListSpansOApiProcessors(t *testing.T) {
+	tests := []struct {
+		name                            string
+		listSpansOApiProcessorFactories []span_processor.Factory
+		want                            int
+		wantErr                         bool
+	}{
+		{
+			name:                            "build processors successfully with empty factories",
+			listSpansOApiProcessorFactories: []span_processor.Factory{},
+			want:                            0,
+			wantErr:                         false,
+		},
+		{
+			name: "build processors successfully with multiple factories",
+			listSpansOApiProcessorFactories: []span_processor.Factory{
+				span_processor.NewCheckProcessorFactory(),
+				span_processor.NewCheckProcessorFactory(),
+			},
+			want:    2,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+			builder := NewTraceFilterProcessorBuilder(
+				filterFactoryMock,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				tt.listSpansOApiProcessorFactories,
+			)
+
+			got, err := builder.BuildListSpansOApiProcessors(context.Background(), span_processor.Settings{
+				WorkspaceId:    123,
+				QueryStartTime: 1640995200000,
+				QueryEndTime:   1640995800000,
+			})
+
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr {
+				assert.Equal(t, tt.want, len(got))
+			}
+		})
+	}
+}
+
+func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
+	type fields struct {
+		traceRepo      repo.ITraceRepo
+		tenantProvider tenant.ITenantProvider
+		evalSvc        rpc.IEvaluatorRPCAdapter
+		after          func(t *testing.T, resp *ChangeEvaluatorScoreResp)
+	}
+	type args struct {
+		ctx context.Context
+		req *ChangeEvaluatorScoreRequest
+	}
+
+	buildSpan := func(req *ChangeEvaluatorScoreRequest) *loop_span.Span {
+		now := time.Now()
+		return &loop_span.Span{
+			SpanID:          req.SpanID,
+			TraceID:         "trace-" + req.SpanID,
+			WorkspaceID:     strconv.FormatInt(req.WorkspaceID, 10),
+			StartTime:       now.UnixMicro(),
+			LogicDeleteTime: now.Add(24 * time.Hour).UnixMicro(),
+			SystemTagsString: map[string]string{
+				loop_span.SpanFieldTenant: "tenant",
+			},
+		}
+	}
+	buildAnnotation := func(req *ChangeEvaluatorScoreRequest, span *loop_span.Span) *loop_span.Annotation {
+		now := time.Now()
+		return &loop_span.Annotation{
+			ID:             req.AnnotationID,
+			SpanID:         span.SpanID,
+			TraceID:        span.TraceID,
+			StartTime:      time.UnixMicro(span.StartTime),
+			WorkspaceID:    span.WorkspaceID,
+			AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+			Metadata:       loop_span.AutoEvaluateMetadata{EvaluatorRecordID: 100},
+			Reasoning:      "origin reason",
+			Value:          loop_span.NewDoubleValue(1.1),
+			CreatedAt:      now.Add(-time.Hour),
+			CreatedBy:      "origin",
+			UpdatedAt:      now.Add(-time.Minute),
+			UpdatedBy:      "origin",
+		}
+	}
+
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields
+		args         args
+		wantErr      bool
+		wantResp     bool
+	}{
+		{
+			name: "success",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+
+				span := buildSpan(req)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
+
+				annotation := buildAnnotation(req, span)
+				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(annotation, nil)
+
+				var capturedUpsert *repo.InsertAnnotationParam
+				traceRepoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.InsertAnnotationParam) error {
+					capturedUpsert = param
+					return nil
+				})
+
+				var capturedUpdate *rpc.UpdateEvaluatorRecordParam
+				evalMock.EXPECT().UpdateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *rpc.UpdateEvaluatorRecordParam) error {
+					capturedUpdate = param
+					return nil
+				})
+
+				return fields{
+					traceRepo:      traceRepoMock,
+					tenantProvider: tenantMock,
+					evalSvc:        evalMock,
+					after: func(t *testing.T, resp *ChangeEvaluatorScoreResp) {
+						assert.NotNil(t, resp)
+						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Annotations) {
+							updated := capturedUpsert.Annotations[0]
+							assert.Len(t, updated.Corrections, 2)
+							assert.InDelta(t, req.Correction.GetScore(), updated.Value.FloatValue, 1e-9)
+							assert.Equal(t, defaultUserID, updated.UpdatedBy)
+							assert.Equal(t, "tenant", capturedUpsert.Tenant)
+						}
+						if assert.NotNil(t, capturedUpdate) {
+							assert.Equal(t, strconv.FormatInt(req.WorkspaceID, 10), capturedUpdate.WorkspaceID)
+							assert.InDelta(t, req.Correction.GetScore(), capturedUpdate.Score, 1e-9)
+							assert.Equal(t, req.Correction.GetExplain(), capturedUpdate.Reasoning)
+							assert.Equal(t, defaultUserID, capturedUpdate.UpdatedBy)
+						}
+					},
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: defaultUserID}),
+				req: func() *ChangeEvaluatorScoreRequest {
+					score := 2.5
+					explain := "new reason"
+					correction := annotationpb.NewCorrection()
+					correction.SetScore(&score)
+					correction.SetExplain(&explain)
+					return &ChangeEvaluatorScoreRequest{
+						WorkspaceID:  123,
+						AnnotationID: "anno-1",
+						SpanID:       "span-1",
+						StartTime:    time.Now().UnixMilli(),
+						PlatformType: loop_span.PlatformCozeLoop,
+						Correction:   correction,
+					}
+				}(),
+			},
+			wantResp: true,
+		},
+		{
+			name: "upsert failed returns nil resp",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				span := buildSpan(req)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
+				annotation := buildAnnotation(req, span)
+				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(annotation, nil)
+				evalMock.EXPECT().UpdateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+
+				var capturedUpsert *repo.InsertAnnotationParam
+				traceRepoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.InsertAnnotationParam) error {
+					capturedUpsert = param
+					return fmt.Errorf("upsert error")
+				})
+
+				return fields{
+					traceRepo:      traceRepoMock,
+					tenantProvider: tenantMock,
+					evalSvc:        evalMock,
+					after: func(t *testing.T, _ *ChangeEvaluatorScoreResp) {
+						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Annotations) {
+							assert.Len(t, capturedUpsert.Annotations[0].Corrections, 2)
+						}
+					},
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: defaultUserID}),
+				req: func() *ChangeEvaluatorScoreRequest {
+					score := 3.3
+					explain := "another"
+					correction := annotationpb.NewCorrection()
+					correction.SetScore(&score)
+					correction.SetExplain(&explain)
+					return &ChangeEvaluatorScoreRequest{
+						WorkspaceID:  222,
+						AnnotationID: "anno-2",
+						SpanID:       "span-2",
+						StartTime:    time.Now().UnixMilli(),
+						PlatformType: loop_span.PlatformCozeLoop,
+						Correction:   correction,
+					}
+				}(),
+			},
+			wantResp: false,
+			wantErr:  false,
+		},
+		{
+			name: "get tenants error",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return(nil, fmt.Errorf("tenant err"))
+				return fields{
+					tenantProvider: tenantMock,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: defaultUserID}),
+				req: func() *ChangeEvaluatorScoreRequest {
+					score := 1.1
+					correction := annotationpb.NewCorrection()
+					correction.SetScore(&score)
+					return &ChangeEvaluatorScoreRequest{
+						WorkspaceID:  1,
+						AnnotationID: "anno-3",
+						SpanID:       "span-3",
+						StartTime:    time.Now().UnixMilli(),
+						PlatformType: loop_span.PlatformCozeLoop,
+						Correction:   correction,
+					}
+				}(),
+			},
+			wantResp: false,
+			wantErr:  true,
+		},
+		{
+			name: "list span error",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("list error"))
+
+				return fields{
+					traceRepo:      traceRepoMock,
+					tenantProvider: tenantMock,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: defaultUserID}),
+				req: func() *ChangeEvaluatorScoreRequest {
+					score := 2.2
+					correction := annotationpb.NewCorrection()
+					correction.SetScore(&score)
+					return &ChangeEvaluatorScoreRequest{
+						WorkspaceID:  3,
+						AnnotationID: "anno-4",
+						SpanID:       "span-4",
+						StartTime:    time.Now().UnixMilli(),
+						PlatformType: loop_span.PlatformCozeLoop,
+						Correction:   correction,
+					}
+				}(),
+			},
+			wantResp: false,
+			wantErr:  true,
+		},
+		{
+			name: "span not found",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
+
+				return fields{
+					traceRepo:      traceRepoMock,
+					tenantProvider: tenantMock,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: defaultUserID}),
+				req: func() *ChangeEvaluatorScoreRequest {
+					score := 4.4
+					correction := annotationpb.NewCorrection()
+					correction.SetScore(&score)
+					return &ChangeEvaluatorScoreRequest{
+						WorkspaceID:  4,
+						AnnotationID: "anno-5",
+						SpanID:       "span-5",
+						StartTime:    time.Now().UnixMilli(),
+						PlatformType: loop_span.PlatformCozeLoop,
+						Correction:   correction,
+					}
+				}(),
+			},
+			wantResp: false,
+			wantErr:  true,
+		},
+		{
+			name: "get annotation error",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				span := buildSpan(req)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
+				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("annotation error"))
+
+				return fields{
+					traceRepo:      traceRepoMock,
+					tenantProvider: tenantMock,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: defaultUserID}),
+				req: func() *ChangeEvaluatorScoreRequest {
+					score := 5.5
+					correction := annotationpb.NewCorrection()
+					correction.SetScore(&score)
+					return &ChangeEvaluatorScoreRequest{
+						WorkspaceID:  5,
+						AnnotationID: "anno-6",
+						SpanID:       "span-6",
+						StartTime:    time.Now().UnixMilli(),
+						PlatformType: loop_span.PlatformCozeLoop,
+						Correction:   correction,
+					}
+				}(),
+			},
+			wantResp: false,
+			wantErr:  true,
+		},
+		{
+			name: "annotation not found",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				span := buildSpan(req)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
+				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(nil, nil)
+
+				return fields{
+					traceRepo:      traceRepoMock,
+					tenantProvider: tenantMock,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: defaultUserID}),
+				req: func() *ChangeEvaluatorScoreRequest {
+					score := 6.6
+					correction := annotationpb.NewCorrection()
+					correction.SetScore(&score)
+					return &ChangeEvaluatorScoreRequest{
+						WorkspaceID:  6,
+						AnnotationID: "anno-7",
+						SpanID:       "span-7",
+						StartTime:    time.Now().UnixMilli(),
+						PlatformType: loop_span.PlatformCozeLoop,
+						Correction:   correction,
+					}
+				}(),
+			},
+			wantResp: false,
+			wantErr:  true,
+		},
+		{
+			name: "user id missing",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				span := buildSpan(req)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
+				annotation := buildAnnotation(req, span)
+				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(annotation, nil)
+
+				return fields{
+					traceRepo:      traceRepoMock,
+					tenantProvider: tenantMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: func() *ChangeEvaluatorScoreRequest {
+					score := 7.7
+					correction := annotationpb.NewCorrection()
+					correction.SetScore(&score)
+					return &ChangeEvaluatorScoreRequest{
+						WorkspaceID:  7,
+						AnnotationID: "anno-8",
+						SpanID:       "span-8",
+						StartTime:    time.Now().UnixMilli(),
+						PlatformType: loop_span.PlatformCozeLoop,
+						Correction:   correction,
+					}
+				}(),
+			},
+			wantResp: false,
+			wantErr:  true,
+		},
+		{
+			name: "correct evaluator records error",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				span := buildSpan(req)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
+				annotation := buildAnnotation(req, span)
+				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(annotation, nil)
+				evalMock.EXPECT().UpdateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(fmt.Errorf("rpc error"))
+
+				return fields{
+					traceRepo:      traceRepoMock,
+					tenantProvider: tenantMock,
+					evalSvc:        evalMock,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: defaultUserID}),
+				req: func() *ChangeEvaluatorScoreRequest {
+					score := 8.8
+					correction := annotationpb.NewCorrection()
+					correction.SetScore(&score)
+					return &ChangeEvaluatorScoreRequest{
+						WorkspaceID:  8,
+						AnnotationID: "anno-9",
+						SpanID:       "span-9",
+						StartTime:    time.Now().UnixMilli(),
+						PlatformType: loop_span.PlatformCozeLoop,
+						Correction:   correction,
+					}
+				}(),
+			},
+			wantResp: false,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			f := tt.fieldsGetter(ctrl, tt.args.req)
+			svc := &TraceServiceImpl{
+				traceRepo:      f.traceRepo,
+				tenantProvider: f.tenantProvider,
+				evalSvc:        f.evalSvc,
+			}
+			resp, err := svc.ChangeEvaluatorScore(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if tt.wantResp {
+				assert.NotNil(t, resp)
+			} else {
+				assert.Nil(t, resp)
+			}
+			if f.after != nil {
+				f.after(t, resp)
+			}
+		})
+	}
+}
+
+func TestTraceFilterProcessorBuilderImpl_BuildIngestTraceProcessors_ErrorHandling(t *testing.T) {
+	tests := []struct {
+		name                          string
+		ingestTraceProcessorFactories []span_processor.Factory
+		want                          int
+		wantErr                       bool
+	}{
+		{
+			name:                          "build ingest processors successfully with empty factories",
+			ingestTraceProcessorFactories: []span_processor.Factory{},
+			want:                          0,
+			wantErr:                       false,
+		},
+		{
+			name: "build ingest processors successfully with multiple factories",
+			ingestTraceProcessorFactories: []span_processor.Factory{
+				span_processor.NewCheckProcessorFactory(),
+			},
+			want:    1,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+
+			builder := NewTraceFilterProcessorBuilder(
+				filterFactoryMock,
+				nil,
+				nil,
+				nil,
+				tt.ingestTraceProcessorFactories,
+				nil,
+				nil,
+			)
+
+			got, err := builder.BuildIngestTraceProcessors(context.Background(), span_processor.Settings{})
+
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr {
+				assert.Equal(t, tt.want, len(got))
+			}
+		})
+	}
+}
+
+func TestTraceServiceImpl_correctEvaluatorRecords(t *testing.T) {
+	type testCase struct {
+		name       string
+		annotation *loop_span.Annotation
+		mockSetup  func(mock *rpcmocks.MockIEvaluatorRPCAdapter, captured **rpc.UpdateEvaluatorRecordParam)
+		after      func(t *testing.T, captured *rpc.UpdateEvaluatorRecordParam)
+		wantErr    bool
+	}
+
+	newAnnotation := func() *loop_span.Annotation {
+		return &loop_span.Annotation{
+			AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+			Metadata:       loop_span.AutoEvaluateMetadata{EvaluatorRecordID: 100},
+			WorkspaceID:    "123",
+			Corrections: []loop_span.AnnotationCorrection{
+				{
+					Reasoning: "reason",
+					Value:     loop_span.NewDoubleValue(9.9),
+					UpdatedBy: defaultUserID,
+				},
+			},
+		}
+	}
+
+	tests := []testCase{
+		{
+			name:    "annotation nil",
+			wantErr: true,
+		},
+		{
+			name: "metadata nil",
+			annotation: &loop_span.Annotation{
+				AnnotationType: loop_span.AnnotationTypeManualFeedback,
+				WorkspaceID:    "1",
+				Corrections: []loop_span.AnnotationCorrection{
+					{Value: loop_span.NewDoubleValue(1)},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "corrections empty",
+			annotation: &loop_span.Annotation{
+				AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+				Metadata:       loop_span.AutoEvaluateMetadata{EvaluatorRecordID: 1},
+				WorkspaceID:    "1",
+				Corrections:    nil,
+			},
+			wantErr: true,
+		},
+		{
+			name:       "update evaluator error",
+			annotation: newAnnotation(),
+			mockSetup: func(mock *rpcmocks.MockIEvaluatorRPCAdapter, _ **rpc.UpdateEvaluatorRecordParam) {
+				mock.EXPECT().UpdateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(fmt.Errorf("rpc error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:       "success",
+			annotation: newAnnotation(),
+			mockSetup: func(mock *rpcmocks.MockIEvaluatorRPCAdapter, captured **rpc.UpdateEvaluatorRecordParam) {
+				mock.EXPECT().UpdateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *rpc.UpdateEvaluatorRecordParam) error {
+					*captured = param
+					return nil
+				})
+			},
+			after: func(t *testing.T, captured *rpc.UpdateEvaluatorRecordParam) {
+				if assert.NotNil(t, captured) {
+					assert.Equal(t, "123", captured.WorkspaceID)
+					assert.InDelta(t, 9.9, captured.Score, 1e-9)
+					assert.Equal(t, "reason", captured.Reasoning)
+					assert.Equal(t, defaultUserID, captured.UpdatedBy)
+				}
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
+			var captured *rpc.UpdateEvaluatorRecordParam
+			if tt.mockSetup != nil {
+				tt.mockSetup(evalMock, &captured)
+			}
+			svc := &TraceServiceImpl{}
+			err := svc.correctEvaluatorRecords(context.Background(), evalMock, tt.annotation)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if tt.after != nil {
+				tt.after(t, captured)
+			}
+		})
+	}
+}
+
+func TestTraceFilterProcessorBuilderImpl_BuildSearchTraceOApiProcessors_ErrorHandling(t *testing.T) {
+	tests := []struct {
+		name                              string
+		searchTraceOApiProcessorFactories []span_processor.Factory
+		want                              int
+		wantErr                           bool
+	}{
+		{
+			name:                              "build search trace oapi processors successfully with empty factories",
+			searchTraceOApiProcessorFactories: []span_processor.Factory{},
+			want:                              0,
+			wantErr:                           false,
+		},
+		{
+			name: "build search trace oapi processors successfully with multiple factories",
+			searchTraceOApiProcessorFactories: []span_processor.Factory{
+				span_processor.NewCheckProcessorFactory(),
+			},
+			want:    1,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+			builder := NewTraceFilterProcessorBuilder(
+				filterFactoryMock,
+				nil,
+				nil,
+				nil,
+				nil,
+				tt.searchTraceOApiProcessorFactories,
+				nil,
+			)
+
+			got, err := builder.BuildSearchTraceOApiProcessors(context.Background(), span_processor.Settings{
+				WorkspaceId:    123,
+				QueryStartTime: 1640995200000,
+				QueryEndTime:   1640995800000,
+			})
+
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr {
+				assert.Equal(t, tt.want, len(got))
+			}
+		})
+	}
+}
+
+func TestTraceServiceImpl_ListAnnotationEvaluators(t *testing.T) {
+	type fields struct {
+		taskRepo taskRepo.ITaskRepo
+		evalSvc  rpc.IEvaluatorRPCAdapter
+		after    func(t *testing.T, resp *ListAnnotationEvaluatorsResp)
+	}
+	type args struct {
+		ctx context.Context
+		req *ListAnnotationEvaluatorsRequest
+	}
+
+	name := "evaluator"
+
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller, req *ListAnnotationEvaluatorsRequest) fields
+		args         args
+		wantErr      bool
+	}{
+		{
+			name: "name provided success",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ListAnnotationEvaluatorsRequest) fields {
+				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
+				var capturedParam *rpc.ListEvaluatorsParam
+				evalMock.EXPECT().ListEvaluators(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *rpc.ListEvaluatorsParam) ([]*rpc.Evaluator, error) {
+					capturedParam = param
+					return []*rpc.Evaluator{{EvaluatorVersionID: 11, EvaluatorName: "ev", EvaluatorVersion: "v1"}}, nil
+				})
+				return fields{
+					evalSvc: evalMock,
+					after: func(t *testing.T, resp *ListAnnotationEvaluatorsResp) {
+						assert.NotNil(t, capturedParam)
+						if assert.NotNil(t, resp) {
+							assert.Len(t, resp.Evaluators, 1)
+							assert.Equal(t, int64(11), resp.Evaluators[0].EvaluatorVersionID)
+						}
+					},
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListAnnotationEvaluatorsRequest{
+					WorkspaceID: 10,
+					Name:        &name,
+				},
+			},
+		},
+		{
+			name: "name provided error",
+			fieldsGetter: func(ctrl *gomock.Controller, _ *ListAnnotationEvaluatorsRequest) fields {
+				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
+				evalMock.EXPECT().ListEvaluators(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("rpc error"))
+				return fields{evalSvc: evalMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListAnnotationEvaluatorsRequest{WorkspaceID: 10, Name: &name},
+			},
+			wantErr: true,
+		},
+		{
+			name: "name nil success",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ListAnnotationEvaluatorsRequest) fields {
+				taskRepoMock := newTaskRepoMock(ctrl)
+				returnTasks := []*taskentity.ObservabilityTask{
+					{TaskConfig: &taskentity.TaskConfig{AutoEvaluateConfigs: []*taskentity.AutoEvaluateConfig{{EvaluatorVersionID: 101}}}},
+				}
+				taskRepoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return(returnTasks, int64(1), nil)
+				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
+				var capturedParam *rpc.BatchGetEvaluatorVersionsParam
+				evalMock.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *rpc.BatchGetEvaluatorVersionsParam) ([]*rpc.Evaluator, map[int64]*rpc.Evaluator, error) {
+					capturedParam = param
+					return []*rpc.Evaluator{{EvaluatorVersionID: 101, EvaluatorName: "alpha", EvaluatorVersion: "v1"}}, nil, nil
+				})
+				return fields{
+					taskRepo: taskRepoMock,
+					evalSvc:  evalMock,
+					after: func(t *testing.T, resp *ListAnnotationEvaluatorsResp) {
+						assert.NotNil(t, capturedParam)
+						if assert.NotNil(t, capturedParam) {
+							assert.Contains(t, capturedParam.EvaluatorVersionIds, int64(101))
+						}
+						if assert.NotNil(t, resp) {
+							assert.Len(t, resp.Evaluators, 1)
+							assert.Equal(t, int64(101), resp.Evaluators[0].EvaluatorVersionID)
+						}
+					},
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListAnnotationEvaluatorsRequest{WorkspaceID: 20},
+			},
+		},
+		{
+			name: "name nil list tasks error",
+			fieldsGetter: func(ctrl *gomock.Controller, _ *ListAnnotationEvaluatorsRequest) fields {
+				taskRepoMock := newTaskRepoMock(ctrl)
+				taskRepoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return(nil, int64(0), fmt.Errorf("list error"))
+				return fields{taskRepo: taskRepoMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListAnnotationEvaluatorsRequest{WorkspaceID: 30},
+			},
+			wantErr: true,
+		},
+		{
+			name: "name nil tasks empty",
+			fieldsGetter: func(ctrl *gomock.Controller, _ *ListAnnotationEvaluatorsRequest) fields {
+				taskRepoMock := newTaskRepoMock(ctrl)
+				taskRepoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*taskentity.ObservabilityTask{}, int64(0), nil)
+				return fields{
+					taskRepo: taskRepoMock,
+					after: func(t *testing.T, resp *ListAnnotationEvaluatorsResp) {
+						if assert.NotNil(t, resp) {
+							assert.Empty(t, resp.Evaluators)
+						}
+					},
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListAnnotationEvaluatorsRequest{WorkspaceID: 40},
+			},
+		},
+		{
+			name: "name nil batch get error",
+			fieldsGetter: func(ctrl *gomock.Controller, _ *ListAnnotationEvaluatorsRequest) fields {
+				taskRepoMock := newTaskRepoMock(ctrl)
+				taskRepoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*taskentity.ObservabilityTask{
+					{TaskConfig: &taskentity.TaskConfig{AutoEvaluateConfigs: []*taskentity.AutoEvaluateConfig{{EvaluatorVersionID: 202}}}},
+				}, int64(1), nil)
+				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
+				evalMock.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return(nil, nil, fmt.Errorf("batch error"))
+				return fields{taskRepo: taskRepoMock, evalSvc: evalMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListAnnotationEvaluatorsRequest{WorkspaceID: 50},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			f := tt.fieldsGetter(ctrl, tt.args.req)
+			svc := &TraceServiceImpl{
+				taskRepo: f.taskRepo,
+				evalSvc:  f.evalSvc,
+			}
+			resp, err := svc.ListAnnotationEvaluators(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if f.after != nil {
+				f.after(t, resp)
+			}
+		})
+	}
+}
+
+func TestTraceServiceImpl_ExtractSpanInfo(t *testing.T) {
+	type fields struct {
+		traceRepo      repo.ITraceRepo
+		tenantProvider tenant.ITenantProvider
+		after          func(t *testing.T, resp *ExtractSpanInfoResp)
+	}
+	type args struct {
+		ctx context.Context
+		req *ExtractSpanInfoRequest
+	}
+
+	makeSpan := func(req *ExtractSpanInfoRequest) *loop_span.Span {
+		now := time.Now()
+		return &loop_span.Span{
+			SpanID:          req.SpanIds[0],
+			TraceID:         req.TraceID,
+			WorkspaceID:     strconv.FormatInt(req.WorkspaceID, 10),
+			StartTime:       now.UnixMicro(),
+			LogicDeleteTime: now.Add(24 * time.Hour).UnixMicro(),
+			Input:           "hello world",
+			SystemTagsString: map[string]string{
+				loop_span.SpanFieldTenant: "tenant",
+			},
+		}
+	}
+
+	fieldKey := "input"
+	fieldMapping := entity.FieldMapping{
+		FieldSchema: entity.FieldSchema{
+			Key:         ptr.Of(fieldKey),
+			Name:        "Input",
+			ContentType: entity.ContentType_Text,
+		},
+		TraceFieldKey:      "Input",
+		TraceFieldJsonpath: "",
+	}
+
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields
+		args         args
+		wantErr      bool
+	}{
+		{
+			name: "success",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				span := makeSpan(req)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
+				return fields{
+					traceRepo:      traceRepoMock,
+					tenantProvider: tenantMock,
+					after: func(t *testing.T, resp *ExtractSpanInfoResp) {
+						if assert.NotNil(t, resp) {
+							assert.Len(t, resp.SpanInfos, 1)
+							assert.Equal(t, span.SpanID, resp.SpanInfos[0].SpanID)
+							assert.Len(t, resp.SpanInfos[0].FieldList, 1)
+							assert.Equal(t, fieldKey, resp.SpanInfos[0].FieldList[0].GetKey())
+							assert.Equal(t, "hello world", resp.SpanInfos[0].FieldList[0].Content.GetText())
+						}
+					},
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ExtractSpanInfoRequest{
+					WorkspaceID:   100,
+					TraceID:       "trace-1",
+					SpanIds:       []string{"span-1"},
+					StartTime:     time.Now().Add(-time.Minute).UnixMilli(),
+					EndTime:       time.Now().UnixMilli(),
+					PlatformType:  loop_span.PlatformCozeLoop,
+					FieldMappings: []entity.FieldMapping{fieldMapping},
+				},
+			},
+		},
+		{
+			name: "tenant error",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return(nil, fmt.Errorf("tenant error"))
+				return fields{tenantProvider: tenantMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ExtractSpanInfoRequest{WorkspaceID: 1, TraceID: "trace", SpanIds: []string{"span"}, PlatformType: loop_span.PlatformCozeLoop},
+			},
+			wantErr: true,
+		},
+		{
+			name: "list spans error",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("list error"))
+				return fields{traceRepo: traceRepoMock, tenantProvider: tenantMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ExtractSpanInfoRequest{WorkspaceID: 2, TraceID: "trace", SpanIds: []string{"span"}, PlatformType: loop_span.PlatformCozeLoop, FieldMappings: []entity.FieldMapping{fieldMapping}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "no spans",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
+				return fields{traceRepo: traceRepoMock, tenantProvider: tenantMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ExtractSpanInfoRequest{WorkspaceID: 3, TraceID: "trace", SpanIds: []string{"span"}, PlatformType: loop_span.PlatformCozeLoop, FieldMappings: []entity.FieldMapping{fieldMapping}},
+			},
+			wantErr: true,
+		},
+		{
+			name: "build extract info error",
+			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
+				span := makeSpan(req)
+				span.Input = "invalid-json"
+				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
+				return fields{traceRepo: traceRepoMock, tenantProvider: tenantMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ExtractSpanInfoRequest{
+					WorkspaceID:  4,
+					TraceID:      "trace",
+					SpanIds:      []string{"span"},
+					PlatformType: loop_span.PlatformCozeLoop,
+					FieldMappings: []entity.FieldMapping{
+						{
+							FieldSchema: entity.FieldSchema{
+								Key:         ptr.Of(fieldKey),
+								Name:        "Input",
+								ContentType: entity.ContentType_MultiPart,
+							},
+							TraceFieldKey:      "Input",
+							TraceFieldJsonpath: "",
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			f := tt.fieldsGetter(ctrl, tt.args.req)
+			svc := &TraceServiceImpl{
+				traceRepo:      f.traceRepo,
+				tenantProvider: f.tenantProvider,
+			}
+			resp, err := svc.ExtractSpanInfo(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if f.after != nil {
+				f.after(t, resp)
+			}
+		})
+	}
+}
+
+func Test_buildContent(t *testing.T) {
+	t.Run("valid json", func(t *testing.T) {
+		content := kitexdataset.NewContent()
+		ct := common.ContentTypeText
+		text := "hello"
+		content.SetContentType(&ct)
+		content.SetText(&text)
+		data, err := json.Marshal(content)
+		assert.NoError(t, err)
+		result := buildContent(string(data))
+		assert.Equal(t, ct, result.GetContentType())
+		assert.Equal(t, text, result.GetText())
+	})
+
+	t.Run("fallback for invalid json", func(t *testing.T) {
+		value := "plain"
+		result := buildContent(value)
+		assert.Equal(t, common.ContentTypeText, result.GetContentType())
+		assert.Equal(t, value, result.GetText())
+	})
 }

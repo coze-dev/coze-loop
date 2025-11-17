@@ -13,6 +13,7 @@ import (
 )
 
 func TestSpan(t *testing.T) {
+	t.Parallel()
 	span := &Span{
 		StartTime:      1234,
 		TraceID:        "123",
@@ -71,30 +72,31 @@ func TestSpan(t *testing.T) {
 			"x":  "11",
 		},
 	}
-	assert.Equal(t, span.GetFieldValue(SpanFieldTraceId, false), "123")
-	assert.Equal(t, span.GetFieldValue(SpanFieldSpanId, false), "456")
-	assert.Equal(t, span.GetFieldValue(SpanFieldPSM, false), "1")
-	assert.Equal(t, span.GetFieldValue(SpanFieldLogID, false), "2")
-	assert.Equal(t, span.GetFieldValue(SpanFieldCallType, false), "custom")
-	assert.Equal(t, span.GetFieldValue(SpanFieldDuration, false), int64(123))
-	assert.Equal(t, span.GetFieldValue(SpanFieldStartTime, false), int64(1234))
-	assert.Equal(t, span.GetFieldValue(SpanFieldParentID, false), "123456")
-	assert.Equal(t, span.GetFieldValue(SpanFieldSpaceId, false), "987")
-	assert.Equal(t, span.GetFieldValue(SpanFieldSpanType, false), "span_type")
-	assert.Equal(t, span.GetFieldValue(SpanFieldSpanName, false), "span_name")
-	assert.Equal(t, span.GetFieldValue(SpanFieldInput, false), "input")
-	assert.Equal(t, span.GetFieldValue(SpanFieldOutput, false), "output")
-	assert.Equal(t, span.GetFieldValue(SpanFieldMethod, false), "method")
-	assert.Equal(t, span.GetFieldValue(SpanFieldObjectStorage, false), "os")
-	assert.Equal(t, span.GetFieldValue("tag1", false), "1")
-	assert.Equal(t, span.GetFieldValue("tag2", false), int64(2))
-	assert.Equal(t, span.GetFieldValue("tag3", false), 3.0)
-	assert.Equal(t, span.GetFieldValue("tag4", false), true)
-	assert.Equal(t, span.GetFieldValue("tag5", false), "12")
-	assert.Equal(t, span.GetFieldValue("tag6", true), nil)
-	assert.Equal(t, span.GetFieldValue("stag1", true), 0.0)
-	assert.Equal(t, span.GetFieldValue("stag2", true), "1")
-	assert.Equal(t, span.GetFieldValue("stag3", true), int64(2))
+	assert.Equal(t, span.GetFieldValue(SpanFieldTraceId, false, false), "123")
+	assert.Equal(t, span.GetFieldValue(SpanFieldSpanId, false, false), "456")
+	assert.Equal(t, span.GetFieldValue(SpanFieldPSM, false, false), "1")
+	assert.Equal(t, span.GetFieldValue(SpanFieldLogID, false, false), "2")
+	assert.Equal(t, span.GetFieldValue(SpanFieldCallType, false, false), "custom")
+	assert.Equal(t, span.GetFieldValue(SpanFieldDuration, false, false), int64(123))
+	assert.Equal(t, span.GetFieldValue(SpanFieldStartTime, false, false), int64(1234))
+	assert.Equal(t, span.GetFieldValue(SpanFieldParentID, false, false), "123456")
+	assert.Equal(t, span.GetFieldValue(SpanFieldSpaceId, false, false), "987")
+	assert.Equal(t, span.GetFieldValue(SpanFieldSpanType, false, false), "span_type")
+	assert.Equal(t, span.GetFieldValue(SpanFieldSpanName, false, false), "span_name")
+	assert.Equal(t, span.GetFieldValue(SpanFieldInput, false, false), "input")
+	assert.Equal(t, span.GetFieldValue(SpanFieldOutput, false, false), "output")
+	assert.Equal(t, span.GetFieldValue(SpanFieldMethod, false, false), "method")
+	assert.Equal(t, span.GetFieldValue(SpanFieldObjectStorage, false, false), "os")
+	assert.Equal(t, span.GetFieldValue("tag1", false, false), "1")
+	assert.Equal(t, span.GetFieldValue("tag2", false, false), int64(2))
+	assert.Equal(t, span.GetFieldValue("tag3", false, false), 3.0)
+	assert.Equal(t, span.GetFieldValue("tag4", false, false), true)
+	assert.Equal(t, span.GetFieldValue("tag5", false, false), "12")
+	assert.Equal(t, span.GetFieldValue("tag6", true, false), nil)
+	assert.Equal(t, span.GetFieldValue("stag1", true, false), 0.0)
+	assert.Equal(t, span.GetFieldValue("stag2", true, false), "1")
+	assert.Equal(t, span.GetFieldValue("stag3", true, false), int64(2))
+	assert.Equal(t, span.GetFieldValue("tag1", false, true), "1")
 	assert.Equal(t, span.IsValidSpan() != nil, true)
 	assert.Equal(t, validSpan.IsValidSpan() == nil, true)
 	assert.Equal(t, span.GetSystemTags(), map[string]string{"stag1": "0", "stag2": "1", "stag3": "2"})
@@ -127,6 +129,7 @@ func TestSpan(t *testing.T) {
 }
 
 func TestSpan_AddAnnotation(t *testing.T) {
+	t.Parallel()
 	// 测试向空列表添加注解
 	span := &Span{
 		SpanID:  "test-span-id",
@@ -167,6 +170,7 @@ func TestSpan_AddAnnotation(t *testing.T) {
 }
 
 func TestSpan_AddManualDatasetAnnotation(t *testing.T) {
+	t.Parallel()
 	span := &Span{
 		SpanID:      "test-span-id",
 		TraceID:     "test-trace-id",
@@ -210,6 +214,7 @@ func TestSpan_AddManualDatasetAnnotation(t *testing.T) {
 }
 
 func TestSpan_ExtractByJsonpath(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 
 	span := &Span{
@@ -308,6 +313,7 @@ func TestSpan_ExtractByJsonpath(t *testing.T) {
 
 // TestGetFieldValue_SystemTags tests the GetFieldValue method with system tags
 func TestGetFieldValue_SystemTags(t *testing.T) {
+	t.Parallel()
 	span := &Span{
 		SystemTagsString: map[string]string{
 			"system_tag1": "system_value1",
@@ -339,6 +345,7 @@ func TestGetFieldValue_SystemTags(t *testing.T) {
 		name      string
 		fieldName string
 		isSystem  bool
+		isCustom  bool
 		want      interface{}
 	}{
 		// System tags tests
@@ -371,36 +378,42 @@ func TestGetFieldValue_SystemTags(t *testing.T) {
 			name:      "get user string tag",
 			fieldName: "user_tag1",
 			isSystem:  false,
+			isCustom:  true,
 			want:      "user_value1",
 		},
 		{
 			name:      "get user long tag",
 			fieldName: "user_tag2",
 			isSystem:  false,
+			isCustom:  true,
 			want:      int64(456),
 		},
 		{
 			name:      "get user double tag",
 			fieldName: "user_tag3",
 			isSystem:  false,
+			isCustom:  true,
 			want:      2.71,
 		},
 		{
 			name:      "get user bool tag",
 			fieldName: "user_tag4",
 			isSystem:  false,
+			isCustom:  true,
 			want:      true,
 		},
 		{
 			name:      "get user byte tag",
 			fieldName: "user_tag5",
 			isSystem:  false,
+			isCustom:  true,
 			want:      "byte_value",
 		},
 		{
 			name:      "get non-existent user tag",
 			fieldName: "non_existent",
 			isSystem:  false,
+			isCustom:  true,
 			want:      nil,
 		},
 		// System field should not return user tags
@@ -408,6 +421,7 @@ func TestGetFieldValue_SystemTags(t *testing.T) {
 			name:      "system field should not return user tag",
 			fieldName: "user_tag1",
 			isSystem:  true,
+			isCustom:  false,
 			want:      nil,
 		},
 		// User field should not return system tags
@@ -415,13 +429,14 @@ func TestGetFieldValue_SystemTags(t *testing.T) {
 			name:      "user field should not return system tag",
 			fieldName: "system_tag1",
 			isSystem:  false,
+			isCustom:  false,
 			want:      nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := span.GetFieldValue(tt.fieldName, tt.isSystem)
+			got := span.GetFieldValue(tt.fieldName, tt.isSystem, tt.isCustom)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -429,6 +444,7 @@ func TestGetFieldValue_SystemTags(t *testing.T) {
 
 // TestSizeofSpans tests the SizeofSpans function
 func TestSizeofSpans(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		spans SpanList
@@ -570,6 +586,7 @@ func TestSizeofSpans(t *testing.T) {
 
 // TestSizeOfString tests the SizeOfString function
 func TestSizeOfString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		s    string
@@ -617,6 +634,7 @@ func TestSizeOfString(t *testing.T) {
 
 // TestSpan_GetFieldValue_AllFields tests GetFieldValue for all supported fields
 func TestSpan_GetFieldValue_AllFields(t *testing.T) {
+	t.Parallel()
 	span := &Span{
 		StartTime:      1234567890,
 		SpanID:         "test-span-id",
@@ -634,12 +652,16 @@ func TestSpan_GetFieldValue_AllFields(t *testing.T) {
 		Input:          "test-input",
 		Output:         "test-output",
 		ObjectStorage:  "test-object-storage",
+		TagsString: map[string]string{
+			"custom_tag": "custom-value",
+		},
 	}
 
 	tests := []struct {
 		name      string
 		fieldName string
 		isSystem  bool
+		isCustom  bool
 		want      interface{}
 	}{
 		{name: "StartTime", fieldName: SpanFieldStartTime, isSystem: false, want: int64(1234567890)},
@@ -655,15 +677,17 @@ func TestSpan_GetFieldValue_AllFields(t *testing.T) {
 		{name: "SpanType", fieldName: SpanFieldSpanType, isSystem: false, want: "test-span-type"},
 		{name: "Method", fieldName: SpanFieldMethod, isSystem: false, want: "test-method"},
 		{name: "StatusCode", fieldName: SpanFieldStatusCode, isSystem: false, want: int32(200)},
+		{name: "Status", fieldName: SpanFieldStatus, isSystem: false, want: SpanStatusError},
 		{name: "Input", fieldName: SpanFieldInput, isSystem: false, want: "test-input"},
 		{name: "Output", fieldName: SpanFieldOutput, isSystem: false, want: "test-output"},
 		{name: "ObjectStorage", fieldName: SpanFieldObjectStorage, isSystem: false, want: "test-object-storage"},
+		{name: "Custom tag with isCustom", fieldName: "custom_tag", isSystem: false, isCustom: true, want: "custom-value"},
 		{name: "Unknown field", fieldName: "unknown_field", isSystem: false, want: nil},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := span.GetFieldValue(tt.fieldName, tt.isSystem)
+			got := span.GetFieldValue(tt.fieldName, tt.isSystem, tt.isCustom)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -671,6 +695,7 @@ func TestSpan_GetFieldValue_AllFields(t *testing.T) {
 
 // TestSpanList_FilterModelSpans tests the FilterModelSpans method
 func TestSpanList_FilterModelSpans(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		spans SpanList
@@ -719,8 +744,14 @@ func TestSpanList_FilterModelSpans(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.spans.FilterModelSpans()
-			assert.Equal(t, tt.want, len(got))
+			f := GetModelSpansFilter()
+			got := 0
+			for _, span := range tt.spans {
+				if f.Satisfied(span) {
+					got++
+				}
+			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

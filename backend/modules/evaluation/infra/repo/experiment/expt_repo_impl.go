@@ -66,6 +66,10 @@ func (e *exptRepoImpl) Update(ctx context.Context, expt *entity.Experiment) erro
 	return e.exptDAO.Update(ctx, po)
 }
 
+func (e *exptRepoImpl) UpdateFields(ctx context.Context, exptID int64, ufields map[string]any) error {
+	return e.exptDAO.UpdateFields(ctx, exptID, ufields)
+}
+
 func (e *exptRepoImpl) Delete(ctx context.Context, id, spaceID int64) error {
 	return e.exptDAO.Delete(ctx, id)
 }

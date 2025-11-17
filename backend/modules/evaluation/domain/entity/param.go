@@ -3,6 +3,10 @@
 
 package entity
 
+import (
+	"time"
+)
+
 type CreateEvaluationSetParam struct {
 	SpaceID             int64
 	Name                string
@@ -61,6 +65,14 @@ type BatchCreateEvaluationSetItemsParam struct {
 	AllowPartialAdd *bool
 }
 
+type BatchUpdateEvaluationSetItemsParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	Items           []*EvaluationSetItem
+	// items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
+	SkipInvalidItems *bool
+}
+
 type CreateEvaluationSetVersionParam struct {
 	SpaceID         int64
 	EvaluationSetID int64
@@ -75,6 +87,7 @@ type ListEvaluationSetVersionsParam struct {
 	PageSize        *int32
 	PageNumber      *int32
 	VersionLike     *string
+	Versions        []string // 精确查询
 }
 
 type BatchGetEvaluationSetVersionsResult struct {
@@ -85,8 +98,11 @@ type BatchGetEvaluationSetVersionsResult struct {
 type Option func(option *Opt)
 
 type Opt struct {
-	PublishVersion *string
-	BotInfoType    CozeBotInfoType
+	PublishVersion   *string
+	BotInfoType      CozeBotInfoType
+	CustomEvalTarget *CustomEvalTarget
+	Region           *Region
+	Env              *string
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -98,6 +114,24 @@ func WithCozeBotPublishVersion(publishVersion *string) Option {
 func WithCozeBotInfoType(botInfoType CozeBotInfoType) Option {
 	return func(option *Opt) {
 		option.BotInfoType = botInfoType
+	}
+}
+
+func WithCustomEvalTarget(customTarget *CustomEvalTarget) Option {
+	return func(option *Opt) {
+		option.CustomEvalTarget = customTarget
+	}
+}
+
+func WithRegion(region *Region) Option {
+	return func(option *Opt) {
+		option.Region = region
+	}
+}
+
+func WithEnv(env *string) Option {
+	return func(option *Opt) {
+		option.Env = env
 	}
 }
 
@@ -184,12 +218,33 @@ func WithCheckBenefit() ExptRunCheckOptionFn {
 }
 
 type CompleteExptOption struct {
-	Status        ExptStatus
-	StatusMessage string
-	CID           string
+	Status             ExptStatus
+	StatusMessage      string
+	CID                string
+	CompleteInterval   time.Duration
+	NoAggrCalculate    bool
+	NoCompleteItemTurn bool
 }
 
 type CompleteExptOptionFn func(*CompleteExptOption)
+
+func NoAggrCalculate() CompleteExptOptionFn {
+	return func(c *CompleteExptOption) {
+		c.NoAggrCalculate = true
+	}
+}
+
+func NoCompleteItemTurn() CompleteExptOptionFn {
+	return func(c *CompleteExptOption) {
+		c.NoCompleteItemTurn = true
+	}
+}
+
+func WithCompleteInterval(interval time.Duration) CompleteExptOptionFn {
+	return func(c *CompleteExptOption) {
+		c.CompleteInterval = interval
+	}
+}
 
 func WithStatus(status ExptStatus) CompleteExptOptionFn {
 	return func(c *CompleteExptOption) {
@@ -257,4 +312,30 @@ type LLMCallParam struct {
 	Tools          []*Tool
 	ToolCallConfig *ToolCallConfig
 	ModelConfig    *ModelConfig
+}
+
+type SearchCustomEvalTargetParam struct {
+	WorkspaceID     *int64
+	Keyword         *string
+	ApplicationID   *int64
+	CustomRPCServer *CustomRPCServer
+	Region          *Region
+	Env             *string
+	PageSize        *int32
+	PageToken       *string
+}
+
+type ReportTargetRecordParam struct {
+	SpaceID    int64
+	RecordID   int64
+	Status     EvalTargetRunStatus
+	OutputData *EvalTargetOutputData
+
+	Session *Session
+}
+
+type DebugTargetParam struct {
+	SpaceID      int64
+	PatchyTarget *EvalTarget
+	InputData    *EvalTargetInputData
 }

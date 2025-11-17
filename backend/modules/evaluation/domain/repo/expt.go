@@ -10,10 +10,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IExptInsightAnalysisRecordRepo
+//go:generate  mockgen -destination  ./mocks/expt.go  --package mocks . IExperimentRepo,IExptStatsRepo,IExptItemResultRepo,IExptTurnResultRepo,IExptRunLogRepo,IExptAggrResultRepo,QuotaRepo,IExptTurnResultFilterRepo,IExptAnnotateRepo,IExptResultExportRecordRepo,IEvalAsyncRepo,IExptInsightAnalysisRecordRepo
 type IExperimentRepo interface {
 	Create(ctx context.Context, expt *entity.Experiment, exptEvaluatorRefs []*entity.ExptEvaluatorRef) error
 	Update(ctx context.Context, expt *entity.Experiment) error
+	UpdateFields(ctx context.Context, exptID int64, ufields map[string]any) error
 	Delete(ctx context.Context, id, spaceID int64) error
 	MDelete(ctx context.Context, ids []int64, spaceID int64) error
 	List(ctx context.Context, page, size int32, filter *entity.ExptListFilter, orders []*entity.OrderBy, spaceID int64) ([]*entity.Experiment, int64, error)
@@ -133,6 +134,11 @@ type IExptResultExportRecordRepo interface {
 	Update(ctx context.Context, exportRecord *entity.ExptResultExportRecord, opts ...db.Option) error
 	List(ctx context.Context, spaceID, exptID int64, page entity.Page, csvExportStatus *int32) ([]*entity.ExptResultExportRecord, int64, error)
 	Get(ctx context.Context, spaceID, exportID int64) (*entity.ExptResultExportRecord, error)
+}
+
+type IEvalAsyncRepo interface {
+	GetEvalAsyncCtx(ctx context.Context, invokeID string) (*entity.EvalAsyncCtx, error)
+	SetEvalAsyncCtx(ctx context.Context, invokeID string, actx *entity.EvalAsyncCtx) error
 }
 
 type IExptInsightAnalysisRecordRepo interface {

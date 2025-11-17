@@ -104,6 +104,14 @@ const (
 	exportRunningCountLimitMessage           = "number of export in running has reached the maximum limit"
 	exportRunningCountLimitNoAffectStability = true
 
+	CustomEvalTargetInvokeFailCode              = 601204010 // custom eval target invoke fail
+	customEvalTargetInvokeFailMessage           = "custom eval target invoke fail"
+	customEvalTargetInvokeFailNoAffectStability = true
+
+	TerminateNonRunningExperimentErrorCode              = 601204011 // cannot terminate an non-running experiment, please try again later
+	terminateNonRunningExperimentErrorMessage           = "cannot terminate an non-running experiment, please try again later"
+	terminateNonRunningExperimentErrorNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -457,6 +465,18 @@ func init() {
 		ExportRunningCountLimitCode,
 		exportRunningCountLimitMessage,
 		code.WithAffectStability(!exportRunningCountLimitNoAffectStability),
+	)
+
+	code.Register(
+		CustomEvalTargetInvokeFailCode,
+		customEvalTargetInvokeFailMessage,
+		code.WithAffectStability(!customEvalTargetInvokeFailNoAffectStability),
+	)
+
+	code.Register(
+		TerminateNonRunningExperimentErrorCode,
+		terminateNonRunningExperimentErrorMessage,
+		code.WithAffectStability(!terminateNonRunningExperimentErrorNoAffectStability),
 	)
 
 	code.Register(

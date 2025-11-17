@@ -47,6 +47,7 @@ import (
 	evalsetmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluation_set"
 	evaluatormtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
 	exptmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
+	evalmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
 	rmqproducer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
 	evaluatorrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	evaluatormysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
@@ -64,6 +65,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -130,6 +132,7 @@ var (
 		targetDomainService,
 		evaluatorDomainService,
 		flagSet,
+		evalAsyncRepoSet,
 	)
 
 	evaluatorDomainService = wire.NewSet(
@@ -137,8 +140,8 @@ var (
 		domainservice.NewEvaluatorRecordServiceImpl,
 		NewEvaluatorSourceServices,
 		llm.NewLLMRPCProvider,
-		NewStubRuntimeFactory,
-		NewStubRuntimeManagerFromFactory,
+		NewRuntimeFactory,
+		NewRuntimeManagerFromFactory,
 		NewSandboxConfig,
 		NewLogger,
 
@@ -203,6 +206,19 @@ var (
 		foundation.NewAuthRPCProvider,
 		targetDomainService,
 		flagSet,
+		evalAsyncRepoSet,
+	)
+
+	evalAsyncRepoSet = wire.NewSet(
+		experiment.NewEvalAsyncRepo,
+		exptredis.NewEvalAsyncDAO,
+	)
+
+	evalOpenAPISet = wire.NewSet(
+		NewEvalOpenAPIApplication,
+		experimentSet,
+		evalmtr.NewEvaluationOApiMetrics,
+		domainservice.NewEvaluationSetSchemaServiceImpl,
 	)
 )
 
@@ -306,14 +322,14 @@ func NewLogger() *logrus.Logger {
 	return logger
 }
 
-// NewStubRuntimeFactory 创建存根运行时工厂
-func NewStubRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
-	return service.NewStubRuntimeFactory(logger, sandboxConfig)
+// NewRuntimeFactory 创建运行时工厂
+func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
+	return runtime.NewRuntimeFactory(logger, sandboxConfig)
 }
 
-// NewStubRuntimeManagerFromFactory 从工厂创建存根运行时管理器
-func NewStubRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
-	return service.NewStubRuntimeManager(factory, logger)
+// NewRuntimeManagerFromFactory 从工厂创建运行时管理器
+func NewRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
+	return runtime.NewRuntimeManager(factory, logger)
 }
 
 func NewEvaluatorSourceServices(
@@ -336,4 +352,31 @@ func NewEvaluatorSourceServices(
 		serviceMap[svc.EvaluatorType()] = svc
 	}
 	return serviceMap
+}
+
+func InitEvalOpenAPIApplication(
+	ctx context.Context,
+	configFactory conf.IConfigLoaderFactory,
+	rmqFactory mq.IFactory,
+	cmdable redis.Cmdable,
+	idgen idgen.IIDGenerator,
+	db db.Provider,
+	client promptmanageservice.Client,
+	executeClient promptexecuteservice.Client,
+	authClient authservice.Client,
+	meter metrics.Meter,
+	dataClient datasetservice.Client,
+	userClient userservice.Client,
+	llmClient llmruntimeservice.Client,
+	tagClient tagservice.Client,
+	limiterFactory limiter.IRateLimiterFactory,
+	objectStorage fileserver.ObjectStorage,
+	auditClient audit.IAuditService,
+	benefitService benefit.IBenefitService,
+	ckProvider ck.Provider,
+) (IEvalOpenAPIApplication, error) {
+	wire.Build(
+		evalOpenAPISet,
+	)
+	return nil, nil
 }

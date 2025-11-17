@@ -9,6 +9,7 @@ import {
   ColumnsManage,
   RefreshButton,
 } from '@cozeloop/evaluate-components';
+import { IS_HIDDEN_EXPERIMENT_DETAIL_FILTER } from '@cozeloop/biz-hooks-adapter';
 import {
   type ColumnEvaluator,
   type Experiment,
@@ -198,5 +199,10 @@ export default function ExperimentContrastTableHeader({
       <RefreshButton onRefresh={onRefresh} />
     </>
   );
-  return <TableHeader filters={filters} actions={actions} />;
+  return (
+    <TableHeader
+      filters={IS_HIDDEN_EXPERIMENT_DETAIL_FILTER ? null : filters}
+      actions={actions}
+    />
+  );
 }

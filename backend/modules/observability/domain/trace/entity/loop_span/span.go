@@ -217,8 +217,15 @@ func (s *Span) getTokens(ctx context.Context) (inputTokens, outputTokens int64, 
 	return inputToken, outputToken, nil
 }
 
+func (s *Span) getStatus() string {
+	if s.StatusCode == 0 {
+		return SpanStatusSuccess
+	}
+	return SpanStatusError
+}
+
 // filter使用, 当前只支持特定参数,后续有需要可拓展到其他参数
-func (s *Span) GetFieldValue(fieldName string, isSystem bool) any {
+func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 	switch fieldName {
 	case SpanFieldStartTime:
 		return s.StartTime
@@ -252,6 +259,22 @@ func (s *Span) GetFieldValue(fieldName string, isSystem bool) any {
 		return s.ObjectStorage
 	case SpanFieldMethod:
 		return s.Method
+	case SpanFieldStatus:
+		return s.getStatus()
+	}
+	if isCustom {
+		if val, ok := s.TagsString[fieldName]; ok {
+			return val
+		} else if val, ok := s.TagsLong[fieldName]; ok {
+			return val
+		} else if val, ok := s.TagsDouble[fieldName]; ok {
+			return val
+		} else if val, ok := s.TagsBool[fieldName]; ok {
+			return val
+		} else if val, ok := s.TagsByte[fieldName]; ok {
+			return val
+		}
+		return nil
 	}
 	if isSystem {
 		if val, ok := s.SystemTagsString[fieldName]; ok {
@@ -412,7 +435,7 @@ func (s *Span) ExtractByJsonpath(ctx context.Context, key string, jsonpath strin
 		data = s.Output
 	} else if strings.HasPrefix(key, "Tags.") {
 		key = strings.TrimPrefix(key, "Tags.")
-		tag := s.GetFieldValue(key, false)
+		tag := s.GetFieldValue(key, false, false)
 		data = conv.ToString(tag)
 	} else {
 		return "", errors.Errorf("unsupported mapping key: %s", key)
@@ -527,8 +550,11 @@ func (s *Span) ClipSpan() {
 }
 
 func (s SpanList) Stat(ctx context.Context) (inputTokens, outputTokens int64, err error) {
-	modelSpans := s.FilterModelSpans()
-	for _, v := range modelSpans {
+	filter := GetModelSpansFilter()
+	for _, v := range s {
+		if !filter.Satisfied(v) {
+			continue
+		}
 		in, out, err := v.getTokens(ctx)
 		if err != nil {
 			return -1, -1, err
@@ -536,7 +562,7 @@ func (s SpanList) Stat(ctx context.Context) (inputTokens, outputTokens int64, er
 		inputTokens += in
 		outputTokens += out
 	}
-	return
+	return inputTokens, outputTokens, err
 }
 
 func (s SpanList) FilterSpans(f *FilterFields) SpanList {
@@ -549,10 +575,7 @@ func (s SpanList) FilterSpans(f *FilterFields) SpanList {
 	return ret
 }
 
-func (s SpanList) FilterModelSpans() SpanList {
-	if len(s) == 0 {
-		return s
-	}
+func GetModelSpansFilter() *FilterFields {
 	modelFilter := &FilterFields{
 		QueryAndOr: ptr.Of(QueryAndOrEnumOr),
 		FilterFields: []*FilterField{
@@ -571,7 +594,7 @@ func (s SpanList) FilterModelSpans() SpanList {
 			},
 		},
 	}
-	return s.FilterSpans(modelFilter)
+	return modelFilter
 }
 
 func (s SpanList) SortByStartTime(desc bool) {

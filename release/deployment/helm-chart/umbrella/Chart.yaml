@@ -38,3 +38,11 @@ dependencies:
     version: 1.0.0
     repository: "file://../charts/rmq-broker"
     condition: custom.rmq.disabled
+
+  - name: coze-loop-python-faas
+    version: 1.2.0
+    repository: "file://../charts/python-faas"
+    
+  - name: coze-loop-js-faas
+    version: 1.2.0
+    repository: "file://../charts/js-faas"

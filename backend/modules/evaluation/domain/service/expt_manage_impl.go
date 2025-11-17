@@ -36,7 +36,6 @@ import (
 )
 
 func NewExptManager(
-	// tupleSvc IExptTupleService,
 	exptResultService ExptResultService,
 	exptRepo repo.IExperimentRepo,
 	exptRunLogRepo repo.IExptRunLogRepo,
@@ -481,9 +480,21 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 
 	var versionedTargetID *entity.VersionedTargetID
 	if !req.CreateEvalTargetParam.IsNull() {
+		opts := make([]entity.Option, 0)
+		opts = append(opts, entity.WithCozeBotPublishVersion(req.CreateEvalTargetParam.BotPublishVersion),
+			entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)),
+			entity.WithRegion(req.CreateEvalTargetParam.Region),
+			entity.WithEnv(req.CreateEvalTargetParam.Env))
+		if req.CreateEvalTargetParam.CustomEvalTarget != nil {
+			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
+				ID:        req.CreateEvalTargetParam.CustomEvalTarget.ID,
+				Name:      req.CreateEvalTargetParam.CustomEvalTarget.Name,
+				AvatarURL: req.CreateEvalTargetParam.CustomEvalTarget.AvatarURL,
+				Ext:       req.CreateEvalTargetParam.CustomEvalTarget.Ext,
+			}))
+		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, req.WorkspaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
-			entity.WithCozeBotPublishVersion(req.CreateEvalTargetParam.BotPublishVersion),
-			entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)))
+			opts...)
 		if err != nil {
 			return nil, errorx.Wrapf(err, "CreateEvalTarget failed, param: %v", json.Jsonify(req.CreateEvalTargetParam))
 		}
@@ -549,10 +560,12 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		EvalSet:    tuple.EvalSet,
 	}
 
-	if req.CreateEvalTargetParam != nil {
+	if !req.CreateEvalTargetParam.IsNull() {
 		do.TargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
-		do.TargetID = versionedTargetID.TargetID
-		do.TargetVersionID = versionedTargetID.VersionID
+		if versionedTargetID != nil {
+			do.TargetID = versionedTargetID.TargetID
+			do.TargetVersionID = versionedTargetID.VersionID
+		}
 		if do.EvalConf != nil && do.EvalConf.ConnectorConf.TargetConf != nil {
 			do.EvalConf.ConnectorConf.TargetConf.TargetVersionID = do.TargetVersionID
 		}

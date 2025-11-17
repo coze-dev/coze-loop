@@ -95,7 +95,7 @@ func TestNewDataset(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewDataset(tt.args.id, tt.args.spaceID, tt.args.name, tt.args.category, tt.args.schema)
+			got := NewDataset(tt.args.id, tt.args.spaceID, tt.args.name, tt.args.category, tt.args.schema, nil, nil)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -224,7 +224,7 @@ func TestNewDatasetItem(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewDatasetItem(tt.args.workspaceID, tt.args.datasetID, tt.args.span)
+			got := NewDatasetItem(tt.args.workspaceID, tt.args.datasetID, tt.args.span, nil)
 			assert.Equal(t, tt.want, got)
 		})
 	}

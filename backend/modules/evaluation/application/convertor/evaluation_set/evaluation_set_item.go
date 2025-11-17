@@ -165,6 +165,29 @@ func ItemErrorGroupDO2DTOs(dos []*entity.ItemErrorGroup) []*dataset.ItemErrorGro
 	return result
 }
 
+func CreateDatasetItemOutputDO2DTOs(dos []*entity.DatasetItemOutput) []*dataset.CreateDatasetItemOutput {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*dataset.CreateDatasetItemOutput, 0)
+	for _, do := range dos {
+		result = append(result, CreateDatasetItemOutputDO2DTO(do))
+	}
+	return result
+}
+
+func CreateDatasetItemOutputDO2DTO(do *entity.DatasetItemOutput) *dataset.CreateDatasetItemOutput {
+	if do == nil {
+		return nil
+	}
+	return &dataset.CreateDatasetItemOutput{
+		ItemIndex: do.ItemIndex,
+		ItemKey:   do.ItemKey,
+		ItemID:    do.ItemID,
+		IsNewItem: do.IsNewItem,
+	}
+}
+
 func ItemErrorGroupDO2DTO(do *entity.ItemErrorGroup) *dataset.ItemErrorGroup {
 	if do == nil {
 		return nil

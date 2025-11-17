@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -46,6 +47,7 @@ const (
 	FieldTypeDouble FieldType = "double"
 	FieldTypeBool   FieldType = "bool"
 
+	PlatformDefault    PlatformType = "default"
 	PlatformCozeLoop   PlatformType = "cozeloop"
 	PlatformPrompt     PlatformType = "prompt"
 	PlatformEvaluator  PlatformType = "evaluator"
@@ -108,7 +110,7 @@ type FieldOptions struct {
 }
 
 type FilterObject interface {
-	GetFieldValue(fieldName string, isSystem bool) any
+	GetFieldValue(fieldName string, isSystem, isCustom bool) any
 }
 
 type FilterFields struct {
@@ -173,6 +175,9 @@ func (f *FilterFields) Satisfied(obj FilterObject) bool {
 			}
 		}
 	}
+	if len(f.FilterFields) == 0 {
+		hit = true
+	}
 	return hit
 }
 
@@ -189,6 +194,8 @@ type FilterField struct {
 	QueryAndOr *QueryAndOrEnum `mapstructure:"query_and_or" json:"query_and_or"`
 	SubFilter  *FilterFields   `mapstructure:"sub_filter" json:"sub_filter"`
 	IsSystem   bool            `mapstructure:"is_system" json:"is_system"`
+	IsCustom   bool            `mapstructure:"is_custom" json:"is_custom"`
+	Hidden     bool            `mapstructure:"hidden" json:"hidden"`
 }
 
 func (f *FilterField) Validate() error {
@@ -245,19 +252,36 @@ func (f *FilterField) ValidateField() error {
 }
 
 func (f *FilterField) Satisfied(obj FilterObject) bool {
+	op := QueryAndOrEnumAnd
+	hit := true
+	if f.QueryAndOr != nil && *f.QueryAndOr == QueryAndOrEnumOr {
+		op = QueryAndOrEnumOr
+		hit = false
+	}
 	// 检测是否满足筛选条件
 	if f.FieldName != "" {
 		// 不满足field过滤条件
-		if !f.CheckValue(obj.GetFieldValue(f.FieldName, f.IsSystem)) {
-			return false
+		if !f.CheckValue(obj.GetFieldValue(f.FieldName, f.IsSystem, f.IsCustom)) {
+			if op == QueryAndOrEnumAnd {
+				return false
+			}
+		} else if op == QueryAndOrEnumOr {
+			return true
 		}
 	}
 	if f.SubFilter != nil {
 		if !f.SubFilter.Satisfied(obj) {
-			return false
+			if op == QueryAndOrEnumAnd {
+				return false
+			}
+		} else if op == QueryAndOrEnumOr {
+			return true
 		}
 	}
-	return true
+	if f.FieldName == "" && f.SubFilter == nil {
+		hit = true
+	}
+	return hit
 }
 
 // 当前支持特定类型, 满足可用性和可拓展性
@@ -475,4 +499,20 @@ func anyToFloat64(val any) (float64, error) {
 	default:
 		return 0, fmt.Errorf("invalid float")
 	}
+}
+
+func CombineFilters(filters ...*FilterFields) *FilterFields {
+	filterAggr := &FilterFields{
+		QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+	}
+	for _, f := range filters {
+		if f == nil {
+			continue
+		}
+		filterAggr.FilterFields = append(filterAggr.FilterFields, &FilterField{
+			QueryAndOr: ptr.Of(QueryAndOrEnumAnd),
+			SubFilter:  f,
+		})
+	}
+	return filterAggr
 }

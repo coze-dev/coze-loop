@@ -48,7 +48,7 @@ func TestBatchCreateEvaluationSetItems(t *testing.T) {
 			expectedErrors: nil,
 			expectedErr:    nil,
 			mockSetup: func() {
-				mockAdapter.EXPECT().BatchCreateDatasetItems(gomock.Any(), gomock.Any()).Return(map[int64]int64{1: 100, 2: 200}, nil, nil)
+				mockAdapter.EXPECT().BatchCreateDatasetItems(gomock.Any(), gomock.Any()).Return(map[int64]int64{1: 100, 2: 200}, nil, nil, nil)
 			},
 		},
 		{
@@ -65,7 +65,7 @@ func TestBatchCreateEvaluationSetItems(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.mockSetup()
 
-			idMap, errors, err := service.BatchCreateEvaluationSetItems(context.Background(), tc.param)
+			idMap, errors, _, err := service.BatchCreateEvaluationSetItems(context.Background(), tc.param)
 
 			if !equalIDMaps(idMap, tc.expectedIDMap) {
 				t.Errorf("期望 IDMap 为 %v, 但得到 %v", tc.expectedIDMap, idMap)
@@ -363,6 +363,166 @@ func TestEvaluationSetItemServiceImpl_BatchGetEvaluationSetItems(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantItems, items)
+		})
+	}
+}
+
+func TestEvaluationSetItemServiceImpl_BatchUpdateEvaluationSetItems(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	evaluationSetItemServiceOnce = sync.Once{}
+	mockDatasetRPCAdapter := mocks.NewMockIDatasetRPCAdapter(ctrl)
+	service := NewEvaluationSetItemServiceImpl(mockDatasetRPCAdapter)
+
+	tests := []struct {
+		name            string
+		param           *entity.BatchUpdateEvaluationSetItemsParam
+		mockSetup       func()
+		wantErrors      []*entity.ItemErrorGroup
+		wantItemOutputs []*entity.DatasetItemOutput
+		wantErr         bool
+	}{
+		{
+			name: "成功批量更新评估集项",
+			param: &entity.BatchUpdateEvaluationSetItemsParam{
+				SpaceID:         1,
+				EvaluationSetID: 100,
+				Items: []*entity.EvaluationSetItem{
+					{
+						ID:              1,
+						ItemKey:         "item1",
+						EvaluationSetID: 100,
+						Turns: []*entity.Turn{
+							{
+								ID: 1,
+								FieldDataList: []*entity.FieldData{
+									{
+										Key:     "field1",
+										Name:    "Field 1",
+										Content: &entity.Content{Text: gptr.Of("updated content")},
+									},
+								},
+							},
+						},
+					},
+				},
+				SkipInvalidItems: gptr.Of(true),
+			},
+			mockSetup: func() {
+				mockDatasetRPCAdapter.EXPECT().
+					BatchUpdateDatasetItems(gomock.Any(), gomock.Any()).
+					Return(nil, []*entity.DatasetItemOutput{
+						{
+							ItemIndex: gptr.Of[int32](0),
+							ItemKey:   gptr.Of("item1"),
+							ItemID:    gptr.Of[int64](1),
+							IsNewItem: gptr.Of(false),
+						},
+					}, nil)
+			},
+			wantErrors: nil,
+			wantItemOutputs: []*entity.DatasetItemOutput{
+				{
+					ItemIndex: gptr.Of[int32](0),
+					ItemKey:   gptr.Of("item1"),
+					ItemID:    gptr.Of[int64](1),
+					IsNewItem: gptr.Of(false),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "批量更新失败 - 存在错误",
+			param: &entity.BatchUpdateEvaluationSetItemsParam{
+				SpaceID:         1,
+				EvaluationSetID: 100,
+				Items: []*entity.EvaluationSetItem{
+					{
+						ID:              1,
+						ItemKey:         "invalid_item",
+						EvaluationSetID: 100,
+					},
+				},
+				SkipInvalidItems: gptr.Of(false),
+			},
+			mockSetup: func() {
+				mockDatasetRPCAdapter.EXPECT().
+					BatchUpdateDatasetItems(gomock.Any(), gomock.Any()).
+					Return([]*entity.ItemErrorGroup{
+						{
+							Type:       gptr.Of(entity.ItemErrorType_MismatchSchema),
+							Summary:    gptr.Of("Schema validation failed"),
+							ErrorCount: gptr.Of[int32](1),
+							Details: []*entity.ItemErrorDetail{
+								{
+									Message: gptr.Of("Field validation error"),
+									Index:   gptr.Of[int32](0),
+								},
+							},
+						},
+					}, nil, nil)
+			},
+			wantErrors: []*entity.ItemErrorGroup{
+				{
+					Type:       gptr.Of(entity.ItemErrorType_MismatchSchema),
+					Summary:    gptr.Of("Schema validation failed"),
+					ErrorCount: gptr.Of[int32](1),
+					Details: []*entity.ItemErrorDetail{
+						{
+							Message: gptr.Of("Field validation error"),
+							Index:   gptr.Of[int32](0),
+						},
+					},
+				},
+			},
+			wantItemOutputs: nil,
+			wantErr:         false,
+		},
+		{
+			name: "批量更新失败 - RPC错误",
+			param: &entity.BatchUpdateEvaluationSetItemsParam{
+				SpaceID:         1,
+				EvaluationSetID: 100,
+				Items: []*entity.EvaluationSetItem{
+					{
+						ID:              1,
+						ItemKey:         "item1",
+						EvaluationSetID: 100,
+					},
+				},
+			},
+			mockSetup: func() {
+				mockDatasetRPCAdapter.EXPECT().
+					BatchUpdateDatasetItems(gomock.Any(), gomock.Any()).
+					Return(nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantErrors:      nil,
+			wantItemOutputs: nil,
+			wantErr:         true,
+		},
+		{
+			name:            "批量更新失败 - 参数为空",
+			param:           nil,
+			mockSetup:       func() {},
+			wantErrors:      nil,
+			wantItemOutputs: nil,
+			wantErr:         true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			errors, itemOutputs, err := service.BatchUpdateEvaluationSetItems(context.Background(), tt.param)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantErrors, errors)
+			assert.Equal(t, tt.wantItemOutputs, itemOutputs)
 		})
 	}
 }

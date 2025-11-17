@@ -10,9 +10,18 @@ type VolcengineAgent struct {
 	Description              string `json:"-"`
 	VolcengineAgentEndpoints []*VolcengineAgentEndpoint
 	BaseInfo                 *BaseInfo `json:"-"` // 基础信息
+	Protocol                 *VolcengineAgentProtocol
 }
 
 type VolcengineAgentEndpoint struct {
 	EndpointID string
 	APIKey     string
 }
+
+type VolcengineAgentProtocol = string
+
+const (
+	VolcengineAgentProtocolMCP   = "mcp"
+	VolcengineAgentProtocolA2A   = "a2a"
+	VolcengineAgentProtocolOther = "other"
+)

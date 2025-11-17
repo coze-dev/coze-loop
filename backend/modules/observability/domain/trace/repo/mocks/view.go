@@ -21,7 +21,6 @@ import (
 type MockIViewRepo struct {
 	ctrl     *gomock.Controller
 	recorder *MockIViewRepoMockRecorder
-	isgomock struct{}
 }
 
 // MockIViewRepoMockRecorder is the mock recorder for MockIViewRepo.
@@ -42,74 +41,74 @@ func (m *MockIViewRepo) EXPECT() *MockIViewRepoMockRecorder {
 }
 
 // CreateView mocks base method.
-func (m *MockIViewRepo) CreateView(ctx context.Context, do *entity.ObservabilityView) (int64, error) {
+func (m *MockIViewRepo) CreateView(arg0 context.Context, arg1 *entity.ObservabilityView) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateView", ctx, do)
+	ret := m.ctrl.Call(m, "CreateView", arg0, arg1)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateView indicates an expected call of CreateView.
-func (mr *MockIViewRepoMockRecorder) CreateView(ctx, do any) *gomock.Call {
+func (mr *MockIViewRepoMockRecorder) CreateView(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateView", reflect.TypeOf((*MockIViewRepo)(nil).CreateView), ctx, do)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateView", reflect.TypeOf((*MockIViewRepo)(nil).CreateView), arg0, arg1)
 }
 
 // DeleteView mocks base method.
-func (m *MockIViewRepo) DeleteView(ctx context.Context, id, workspaceID int64, userID string) error {
+func (m *MockIViewRepo) DeleteView(arg0 context.Context, arg1, arg2 int64, arg3 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteView", ctx, id, workspaceID, userID)
+	ret := m.ctrl.Call(m, "DeleteView", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteView indicates an expected call of DeleteView.
-func (mr *MockIViewRepoMockRecorder) DeleteView(ctx, id, workspaceID, userID any) *gomock.Call {
+func (mr *MockIViewRepoMockRecorder) DeleteView(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteView", reflect.TypeOf((*MockIViewRepo)(nil).DeleteView), ctx, id, workspaceID, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteView", reflect.TypeOf((*MockIViewRepo)(nil).DeleteView), arg0, arg1, arg2, arg3)
 }
 
 // GetView mocks base method.
-func (m *MockIViewRepo) GetView(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.ObservabilityView, error) {
+func (m *MockIViewRepo) GetView(arg0 context.Context, arg1 int64, arg2 *int64, arg3 *string) (*entity.ObservabilityView, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetView", ctx, id, workspaceID, userID)
+	ret := m.ctrl.Call(m, "GetView", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*entity.ObservabilityView)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetView indicates an expected call of GetView.
-func (mr *MockIViewRepoMockRecorder) GetView(ctx, id, workspaceID, userID any) *gomock.Call {
+func (mr *MockIViewRepoMockRecorder) GetView(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetView", reflect.TypeOf((*MockIViewRepo)(nil).GetView), ctx, id, workspaceID, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetView", reflect.TypeOf((*MockIViewRepo)(nil).GetView), arg0, arg1, arg2, arg3)
 }
 
 // ListViews mocks base method.
-func (m *MockIViewRepo) ListViews(ctx context.Context, workspaceID int64, userID string) ([]*entity.ObservabilityView, error) {
+func (m *MockIViewRepo) ListViews(arg0 context.Context, arg1 int64, arg2 string) ([]*entity.ObservabilityView, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListViews", ctx, workspaceID, userID)
+	ret := m.ctrl.Call(m, "ListViews", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]*entity.ObservabilityView)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListViews indicates an expected call of ListViews.
-func (mr *MockIViewRepoMockRecorder) ListViews(ctx, workspaceID, userID any) *gomock.Call {
+func (mr *MockIViewRepoMockRecorder) ListViews(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListViews", reflect.TypeOf((*MockIViewRepo)(nil).ListViews), ctx, workspaceID, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListViews", reflect.TypeOf((*MockIViewRepo)(nil).ListViews), arg0, arg1, arg2)
 }
 
 // UpdateView mocks base method.
-func (m *MockIViewRepo) UpdateView(ctx context.Context, do *entity.ObservabilityView) error {
+func (m *MockIViewRepo) UpdateView(arg0 context.Context, arg1 *entity.ObservabilityView) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateView", ctx, do)
+	ret := m.ctrl.Call(m, "UpdateView", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateView indicates an expected call of UpdateView.
-func (mr *MockIViewRepoMockRecorder) UpdateView(ctx, do any) *gomock.Call {
+func (mr *MockIViewRepoMockRecorder) UpdateView(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateView", reflect.TypeOf((*MockIViewRepo)(nil).UpdateView), ctx, do)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateView", reflect.TypeOf((*MockIViewRepo)(nil).UpdateView), arg0, arg1)
 }

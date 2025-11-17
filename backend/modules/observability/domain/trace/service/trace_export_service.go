@@ -217,6 +217,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 			*config.DatasetName,
 			category,
 			config.DatasetSchema,
+			nil, nil,
 		))
 		if err != nil {
 			return nil, err
@@ -240,6 +241,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 				"",
 				category,
 				config.DatasetSchema,
+				nil, nil,
 			)); err != nil {
 				return nil, err
 			}
@@ -435,7 +437,7 @@ func (r *TraceExportServiceImpl) buildDatasetItems(ctx context.Context, spans []
 func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.Span, i int, fieldMappings []entity.FieldMapping, workspaceID int64,
 	dataset *entity.Dataset,
 ) *entity.DatasetItem {
-	item := entity.NewDatasetItem(workspaceID, dataset.ID, span)
+	item := entity.NewDatasetItem(workspaceID, dataset.ID, span, nil)
 	for _, mapping := range fieldMappings {
 		value, err := span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
 		if err != nil {
@@ -477,6 +479,7 @@ func (r *TraceExportServiceImpl) buildPreviewDataset(ctx context.Context, worksp
 		"",
 		category,
 		schema,
+		nil, nil,
 	)
 	if config.DatasetID != nil {
 		dataset.ID = *config.DatasetID
@@ -488,7 +491,7 @@ func (r *TraceExportServiceImpl) buildPreviewDataset(ctx context.Context, worksp
 }
 
 func (r *TraceExportServiceImpl) getDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
-	return r.DatasetServiceAdaptor.getDatasetProvider(category)
+	return r.DatasetServiceAdaptor.GetDatasetProvider(category)
 }
 
 type DatasetServiceAdaptor struct {
@@ -506,7 +509,7 @@ func (d *DatasetServiceAdaptor) Register(category entity.DatasetCategory, provid
 	d.datasetServiceMap[category] = provider
 }
 
-func (d *DatasetServiceAdaptor) getDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
+func (d *DatasetServiceAdaptor) GetDatasetProvider(category entity.DatasetCategory) rpc.IDatasetProvider {
 	datasetProvider, ok := d.datasetServiceMap[category]
 	if !ok {
 		return rpc.NoopDatasetProvider

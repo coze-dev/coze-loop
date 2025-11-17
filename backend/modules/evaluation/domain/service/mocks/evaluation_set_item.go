@@ -42,13 +42,14 @@ func (m *MockEvaluationSetItemService) EXPECT() *MockEvaluationSetItemServiceMoc
 }
 
 // BatchCreateEvaluationSetItems mocks base method.
-func (m *MockEvaluationSetItemService) BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, error) {
+func (m *MockEvaluationSetItemService) BatchCreateEvaluationSetItems(ctx context.Context, param *entity.BatchCreateEvaluationSetItemsParam) (map[int64]int64, []*entity.ItemErrorGroup, []*entity.DatasetItemOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BatchCreateEvaluationSetItems", ctx, param)
 	ret0, _ := ret[0].(map[int64]int64)
 	ret1, _ := ret[1].([]*entity.ItemErrorGroup)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].([]*entity.DatasetItemOutput)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // BatchCreateEvaluationSetItems indicates an expected call of BatchCreateEvaluationSetItems.
@@ -84,6 +85,22 @@ func (m *MockEvaluationSetItemService) BatchGetEvaluationSetItems(ctx context.Co
 func (mr *MockEvaluationSetItemServiceMockRecorder) BatchGetEvaluationSetItems(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluationSetItems", reflect.TypeOf((*MockEvaluationSetItemService)(nil).BatchGetEvaluationSetItems), ctx, param)
+}
+
+// BatchUpdateEvaluationSetItems mocks base method.
+func (m *MockEvaluationSetItemService) BatchUpdateEvaluationSetItems(ctx context.Context, param *entity.BatchUpdateEvaluationSetItemsParam) ([]*entity.ItemErrorGroup, []*entity.DatasetItemOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchUpdateEvaluationSetItems", ctx, param)
+	ret0, _ := ret[0].([]*entity.ItemErrorGroup)
+	ret1, _ := ret[1].([]*entity.DatasetItemOutput)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// BatchUpdateEvaluationSetItems indicates an expected call of BatchUpdateEvaluationSetItems.
+func (mr *MockEvaluationSetItemServiceMockRecorder) BatchUpdateEvaluationSetItems(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchUpdateEvaluationSetItems", reflect.TypeOf((*MockEvaluationSetItemService)(nil).BatchUpdateEvaluationSetItems), ctx, param)
 }
 
 // ClearEvaluationSetDraftItem mocks base method.
