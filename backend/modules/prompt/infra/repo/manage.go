@@ -581,7 +581,7 @@ func (d *ManageRepoImpl) SaveDraft(ctx context.Context, promptDO *entity.Prompt)
 			}
 
 			// 使用统一的方法管理 snippet relations（无需区分创建/更新场景）
-			err = d.manageDraftSnippetRelations(ctx, promptDO, userID, opt)
+			err = d.manageDraftSnippetRelations(ctx, promptDO, userID, basicPO.SpaceID, opt)
 			if err != nil {
 				return err
 			}
@@ -621,7 +621,7 @@ func (d *ManageRepoImpl) SaveDraft(ctx context.Context, promptDO *entity.Prompt)
 
 		// Handle snippet relationships incrementally for update scenario
 		// 使用统一的方法管理 snippet relations（无需区分创建/更新场景）
-		err = d.manageDraftSnippetRelations(ctx, promptDO, userID, opt)
+		err = d.manageDraftSnippetRelations(ctx, promptDO, userID, basicPO.SpaceID, opt)
 		if err != nil {
 			return err
 		}
@@ -638,7 +638,7 @@ func (d *ManageRepoImpl) SaveDraft(ctx context.Context, promptDO *entity.Prompt)
 // manageDraftSnippetRelations统一管理snippet关系，统一处理创建和更新场景
 // 只要has_snippets为true，就查询已有的relation，和当前草稿嵌入的片段对比，
 // 判断哪些需要增加，哪些需要删除，哪些保持不动
-func (d *ManageRepoImpl) manageDraftSnippetRelations(ctx context.Context, promptDO *entity.Prompt, userID string, opt db.Option) error {
+func (d *ManageRepoImpl) manageDraftSnippetRelations(ctx context.Context, promptDO *entity.Prompt, userID string, spaceID int64, opt db.Option) error {
 	if promptDO == nil || promptDO.PromptDraft == nil || promptDO.PromptDraft.PromptDetail == nil {
 		return nil
 	}
@@ -731,7 +731,7 @@ func (d *ManageRepoImpl) manageDraftSnippetRelations(ctx context.Context, prompt
 		for i, ref := range relationsToAdd {
 			relationPO := &model.PromptRelation{
 				ID:                ids[i],
-				SpaceID:           promptDO.SpaceID,
+				SpaceID:           spaceID,
 				MainPromptID:      promptDO.ID,
 				MainPromptVersion: "", // Empty for draft
 				MainDraftUserID:   userID,
