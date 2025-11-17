@@ -151,9 +151,10 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	query = query.Joins(nameJoinSQL, nameJoinArgs...)
 
     // 处理搜索关键词（只在 Name 标签范围内 LIKE 匹配）
+    // 使用已 JOIN 的 t_name 别名，避免与后续筛选条件中的其他 tag_key 冲突
     if filterOption.SearchKeyword != nil && *filterOption.SearchKeyword != "" {
         keyword := "%" + *filterOption.SearchKeyword + "%"
-        query = query.Where("evaluator_tag.tag_key = ? AND evaluator_tag.tag_value LIKE ?", "Name", keyword)
+        query = query.Where("t_name.tag_value LIKE ?", keyword)
     }
 
     // 处理筛选条件（自连接实现 AND，WHERE 实现 OR）
