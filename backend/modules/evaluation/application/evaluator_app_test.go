@@ -3659,15 +3659,15 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
 
 	app := &EvaluatorHandlerImpl{
-		configer: mockConfiger,
+		evaluatorService: mockEvaluatorService,
 	}
 
-	tags := map[string][]string{
-		evaluatordto.EvaluatorTagKeyCategory:   {"category1", "category2"},
-		evaluatordto.EvaluatorTagKeyTargetType: {"domain1"},
+	tags := map[entity.EvaluatorTagKey][]string{
+		entity.EvaluatorTagKey_Category:   {"category1", "category2"},
+		entity.EvaluatorTagKey_TargetType: {"domain1"},
 	}
 
 	tests := []struct {
@@ -3682,12 +3682,15 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 			name: "success - normal request",
 			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
 			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetEvaluatorTagConf(gomock.Any()).
+				mockEvaluatorService.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
 					Return(tags)
 			},
 			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
-				Tags: tags,
+				Tags: map[string][]string{
+					evaluatordto.EvaluatorTagKeyCategory:   {"category1", "category2"},
+					evaluatordto.EvaluatorTagKeyTargetType: {"domain1"},
+				},
 			},
 			wantErr: false,
 		},
@@ -3695,9 +3698,9 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 			name: "success - empty tags",
 			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
 			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetEvaluatorTagConf(gomock.Any()).
-					Return(map[string][]string{})
+				mockEvaluatorService.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
+					Return(map[entity.EvaluatorTagKey][]string{})
 			},
 			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
 				Tags: map[string][]string{},
@@ -3705,20 +3708,22 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "success - tags kept order from config",
-			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
+			name: "success - template tag type sorts alphabetically",
+			req: &evaluatorservice.ListEvaluatorTagsRequest{
+				TagType: gptr.Of(evaluatordto.EvaluatorTagTypeTemplate),
+			},
 			mockSetup: func() {
-				mockConfiger.EXPECT().
-					GetEvaluatorTagConf(gomock.Any()).
-					Return(map[string][]string{
-						evaluatordto.EvaluatorTagKeyCategory:   {"z", "a", "m"},
-						evaluatordto.EvaluatorTagKeyTargetType: {"x", "b"},
+				mockEvaluatorService.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Template).
+					Return(map[entity.EvaluatorTagKey][]string{
+						entity.EvaluatorTagKey_Category:   {"a", "m", "z"},
+						entity.EvaluatorTagKey_TargetType: {"b", "x"},
 					})
 			},
 			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
 				Tags: map[string][]string{
-					evaluatordto.EvaluatorTagKeyCategory:   {"z", "a", "m"},
-					evaluatordto.EvaluatorTagKeyTargetType: {"x", "b"},
+					evaluatordto.EvaluatorTagKeyCategory:   {"a", "m", "z"},
+					evaluatordto.EvaluatorTagKeyTargetType: {"b", "x"},
 				},
 			},
 			wantErr: false,
@@ -3742,11 +3747,7 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
 				if tt.wantResp.Tags != nil {
-					// 验证标签与配置一致（不再强制排序）
-					for key, expectedValues := range tt.wantResp.Tags {
-						actualValues := resp.Tags[key]
-						assert.Equal(t, expectedValues, actualValues, "Tags for key %v should match config order", key)
-					}
+					assert.Equal(t, tt.wantResp.Tags, resp.Tags)
 				}
 			}
 		})

@@ -38,6 +38,9 @@ type IEvaluatorRepo interface {
 
 	// ListBuiltinEvaluator 根据筛选条件查询内置评估器列表，支持tag筛选和分页
 	ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest) (*ListBuiltinEvaluatorResponse, error)
+
+	// ListEvaluatorTags 根据 tagType 聚合标签
+	ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error)
 }
 
 type ListEvaluatorRequest struct {

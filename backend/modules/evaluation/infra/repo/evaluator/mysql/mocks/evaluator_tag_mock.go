@@ -43,6 +43,26 @@ func (m *MockEvaluatorTagDAO) EXPECT() *MockEvaluatorTagDAOMockRecorder {
 	return m.recorder
 }
 
+// AggregateTagValuesByType mocks base method.
+func (m *MockEvaluatorTagDAO) AggregateTagValuesByType(ctx context.Context, tagType int32, langType string, opts ...db.Option) ([]*entity.AggregatedEvaluatorTag, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, tagType, langType}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AggregateTagValuesByType", varargs...)
+	ret0, _ := ret[0].([]*entity.AggregatedEvaluatorTag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AggregateTagValuesByType indicates an expected call of AggregateTagValuesByType.
+func (mr *MockEvaluatorTagDAOMockRecorder) AggregateTagValuesByType(ctx, tagType, langType any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, tagType, langType}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AggregateTagValuesByType", reflect.TypeOf((*MockEvaluatorTagDAO)(nil).AggregateTagValuesByType), varargs...)
+}
+
 // BatchCreateEvaluatorTags mocks base method.
 func (m *MockEvaluatorTagDAO) BatchCreateEvaluatorTags(ctx context.Context, evaluatorTags []*model.EvaluatorTag, opts ...db.Option) error {
 	m.ctrl.T.Helper()

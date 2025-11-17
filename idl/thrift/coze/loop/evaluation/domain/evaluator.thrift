@@ -35,6 +35,10 @@ enum EvaluatorRunStatus { // 运行状态, 异步下状态流转, 同步下只�
     Fail = 2
 }
 
+typedef string EvaluatorTagType(ts.enum="true")
+const EvaluatorTagType EvaluatorTagType_Evaluator = "Evaluator"
+const EvaluatorTagType EvaluatorTagType_Template = "Template"
+
 typedef string EvaluatorTagLangType(ts.enum="true")
 const EvaluatorTagLangType EvaluatorTagLangType_Zh = "zh-CN"
 const EvaluatorTagLangType EvaluatorTagLangType_En = "en-US"

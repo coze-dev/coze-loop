@@ -237,6 +237,21 @@ func (mr *MockEvaluatorServiceMockRecorder) ListEvaluator(ctx, request any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).ListEvaluator), ctx, request)
 }
 
+// ListEvaluatorTags mocks base method.
+func (m *MockEvaluatorService) ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEvaluatorTags", ctx, tagType)
+	ret0, _ := ret[0].(map[entity.EvaluatorTagKey][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEvaluatorTags indicates an expected call of ListEvaluatorTags.
+func (mr *MockEvaluatorServiceMockRecorder) ListEvaluatorTags(ctx, tagType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluatorTags", reflect.TypeOf((*MockEvaluatorService)(nil).ListEvaluatorTags), ctx, tagType)
+}
+
 // ListEvaluatorVersion mocks base method.
 func (m *MockEvaluatorService) ListEvaluatorVersion(ctx context.Context, request *entity.ListEvaluatorVersionRequest) ([]*entity.Evaluator, int64, error) {
 	m.ctrl.T.Helper()

@@ -80,7 +80,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 					}, nil)
 
 				mockTagDAO.EXPECT().
-					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{1, 2}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), gomock.Any()).
+					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{1, 2}, int32(entity.EvaluatorTagKeyType_Template), gomock.Any()).
 					Return([]*model.EvaluatorTag{}, nil)
 			},
 			expectedResult: &repo.ListEvaluatorTemplateResponse{
@@ -123,7 +123,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 							)),
 					)
 				mockTagDAO.EXPECT().
-					GetSourceIDsByFilterConditions(gomock.Any(), int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), filterOption, int32(0), int32(0), gomock.Any()).
+					GetSourceIDsByFilterConditions(gomock.Any(), int32(entity.EvaluatorTagKeyType_Template), filterOption, int32(0), int32(0), gomock.Any()).
 					Return([]int64{1, 3}, int64(2), nil)
 
 				expectedDAOReq := &mysql.ListEvaluatorTemplateRequest{
@@ -152,7 +152,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 					}, nil)
 
 				mockTagDAO.EXPECT().
-					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{1}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), gomock.Any()).
+					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{1}, int32(entity.EvaluatorTagKeyType_Template), gomock.Any()).
 					Return([]*model.EvaluatorTag{}, nil)
 			},
 			expectedResult: &repo.ListEvaluatorTemplateResponse{
@@ -194,7 +194,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 							)),
 					)
 				mockTagDAO.EXPECT().
-					GetSourceIDsByFilterConditions(gomock.Any(), int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), filterOption, int32(0), int32(0), gomock.Any()).
+					GetSourceIDsByFilterConditions(gomock.Any(), int32(entity.EvaluatorTagKeyType_Template), filterOption, int32(0), int32(0), gomock.Any()).
 					Return(nil, int64(0), errors.New("tag query error"))
 			},
 			expectedResult: nil,
@@ -231,7 +231,7 @@ func TestEvaluatorTemplateRepoImpl_ListEvaluatorTemplate(t *testing.T) {
 							)),
 					)
 				mockTagDAO.EXPECT().
-					GetSourceIDsByFilterConditions(gomock.Any(), int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), filterOption, int32(0), int32(0), gomock.Any()).
+					GetSourceIDsByFilterConditions(gomock.Any(), int32(entity.EvaluatorTagKeyType_Template), filterOption, int32(0), int32(0), gomock.Any()).
 					Return([]int64{}, int64(0), nil)
 			},
 			expectedResult: &repo.ListEvaluatorTemplateResponse{
@@ -508,7 +508,7 @@ func TestEvaluatorTemplateRepoImpl_UpdateEvaluatorTemplate(t *testing.T) {
 
 				// 获取现有标签
 				mockTagDAO.EXPECT().
-					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{1}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), string(entity.EvaluatorTagLangType_Zh)).
+					BatchGetTagsBySourceIDsAndType(gomock.Any(), []int64{1}, int32(entity.EvaluatorTagKeyType_Template), string(entity.EvaluatorTagLangType_Zh)).
 					Return([]*model.EvaluatorTag{
 						{
 							ID:       10,
@@ -521,7 +521,7 @@ func TestEvaluatorTemplateRepoImpl_UpdateEvaluatorTemplate(t *testing.T) {
 
 				// 删除不需要的标签
 				mockTagDAO.EXPECT().
-					DeleteEvaluatorTagsByConditions(gomock.Any(), int64(1), int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), string(entity.EvaluatorTagLangType_Zh), gomock.Any()).
+					DeleteEvaluatorTagsByConditions(gomock.Any(), int64(1), int32(entity.EvaluatorTagKeyType_Template), string(entity.EvaluatorTagLangType_Zh), gomock.Any()).
 					Return(nil)
 
 				// 添加新标签
@@ -614,7 +614,7 @@ func TestEvaluatorTemplateRepoImpl_DeleteEvaluatorTemplate(t *testing.T) {
 					DeleteEvaluatorTemplate(gomock.Any(), int64(1), "user123").
 					Return(nil)
 				mockTagDAO.EXPECT().
-					DeleteEvaluatorTagsByConditions(gomock.Any(), int64(1), int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), gomock.Any(), gomock.Any()).
+					DeleteEvaluatorTagsByConditions(gomock.Any(), int64(1), int32(entity.EvaluatorTagKeyType_Template), gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			expectedError: false,
@@ -734,7 +734,7 @@ func TestEvaluatorTemplateRepoImpl_GetEvaluatorTemplate(t *testing.T) {
 					BatchGetTagsBySourceIDsAndType(
 						gomock.Any(),
 						[]int64{tt.id},
-						int32(entity.EvaluatorTagKeyType_EvaluatorTemplate),
+						int32(entity.EvaluatorTagKeyType_Template),
 						gomock.Any(),
 					).
 					Return([]*model.EvaluatorTag{}, nil).

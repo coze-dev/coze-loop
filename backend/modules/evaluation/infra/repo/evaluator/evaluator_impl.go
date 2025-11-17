@@ -740,6 +740,24 @@ func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.
 	return &repo.ListBuiltinEvaluatorResponse{TotalCount: total, Evaluators: evaluators}, nil
 }
 
+// ListEvaluatorTags 根据 tagType 聚合唯一标签
+func (r *EvaluatorRepoImpl) ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error) {
+	lang := contexts.CtxLocale(ctx)
+	aggregated, err := r.tagDAO.AggregateTagValuesByType(ctx, int32(tagType), lang)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[entity.EvaluatorTagKey][]string, len(aggregated))
+	for _, tag := range aggregated {
+		if tag == nil || tag.TagKey == "" || tag.TagValue == "" {
+			continue
+		}
+		key := entity.EvaluatorTagKey(tag.TagKey)
+		result[key] = append(result[key], tag.TagValue)
+	}
+	return result, nil
+}
+
 // setEvaluatorTags 设置评估器的tag信息
 func (r *EvaluatorRepoImpl) setEvaluatorTags(evaluatorDO *entity.Evaluator, evaluatorID int64, tagsBySourceID map[int64][]*model.EvaluatorTag) {
 	if tags, exists := tagsBySourceID[evaluatorID]; exists && len(tags) > 0 {

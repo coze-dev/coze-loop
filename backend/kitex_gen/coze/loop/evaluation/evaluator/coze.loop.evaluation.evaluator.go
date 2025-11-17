@@ -21838,7 +21838,9 @@ func (p *DeleteEvaluatorTemplateResponse) Field255DeepEqual(src *base.BaseResp) 
 }
 
 type ListEvaluatorTagsRequest struct {
-	Base *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 评估器标签类型，默认预置评估器
+	TagType *evaluator.EvaluatorTagType `thrift:"tag_type,1,optional" frugal:"1,optional,string" json:"tag_type" query:"tag_type" `
+	Base    *base.Base                  `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListEvaluatorTagsRequest() *ListEvaluatorTagsRequest {
@@ -21846,6 +21848,18 @@ func NewListEvaluatorTagsRequest() *ListEvaluatorTagsRequest {
 }
 
 func (p *ListEvaluatorTagsRequest) InitDefault() {
+}
+
+var ListEvaluatorTagsRequest_TagType_DEFAULT evaluator.EvaluatorTagType
+
+func (p *ListEvaluatorTagsRequest) GetTagType() (v evaluator.EvaluatorTagType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagType() {
+		return ListEvaluatorTagsRequest_TagType_DEFAULT
+	}
+	return *p.TagType
 }
 
 var ListEvaluatorTagsRequest_Base_DEFAULT *base.Base
@@ -21859,12 +21873,20 @@ func (p *ListEvaluatorTagsRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *ListEvaluatorTagsRequest) SetTagType(val *evaluator.EvaluatorTagType) {
+	p.TagType = val
+}
 func (p *ListEvaluatorTagsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
 var fieldIDToName_ListEvaluatorTagsRequest = map[int16]string{
+	1:   "tag_type",
 	255: "Base",
+}
+
+func (p *ListEvaluatorTagsRequest) IsSetTagType() bool {
+	return p.TagType != nil
 }
 
 func (p *ListEvaluatorTagsRequest) IsSetBase() bool {
@@ -21889,6 +21911,14 @@ func (p *ListEvaluatorTagsRequest) Read(iprot thrift.TProtocol) (err error) {
 		}
 
 		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField255(iprot); err != nil {
@@ -21926,6 +21956,17 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
+func (p *ListEvaluatorTagsRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *evaluator.EvaluatorTagType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TagType = _field
+	return nil
+}
 func (p *ListEvaluatorTagsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -21941,6 +21982,10 @@ func (p *ListEvaluatorTagsRequest) Write(oprot thrift.TProtocol) (err error) {
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
 		if err = p.writeField255(oprot); err != nil {
 			fieldId = 255
 			goto WriteFieldError
@@ -21963,6 +22008,24 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *ListEvaluatorTagsRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagType() {
+		if err = oprot.WriteFieldBegin("tag_type", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TagType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
 func (p *ListEvaluatorTagsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -21996,12 +22059,27 @@ func (p *ListEvaluatorTagsRequest) DeepEqual(ano *ListEvaluatorTagsRequest) bool
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field1DeepEqual(ano.TagType) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
 	return true
 }
 
+func (p *ListEvaluatorTagsRequest) Field1DeepEqual(src *evaluator.EvaluatorTagType) bool {
+
+	if p.TagType == src {
+		return true
+	} else if p.TagType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TagType, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *ListEvaluatorTagsRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {

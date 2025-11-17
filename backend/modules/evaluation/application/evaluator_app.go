@@ -1689,11 +1689,41 @@ func (e *EvaluatorHandlerImpl) UpdateBuiltinEvaluatorTags(ctx context.Context, r
 }
 
 func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *evaluatorservice.ListEvaluatorTagsRequest) (resp *evaluatorservice.ListEvaluatorTagsResponse, err error) {
-	// 直接从配置获取可用的标签配置
-	tags := e.configer.GetEvaluatorTagConf(ctx)
+	tagType := convertListEvaluatorTagType(request.GetTagType())
+	tags, err := e.evaluatorService.ListEvaluatorTags(ctx, tagType)
+	if err != nil {
+		return nil, err
+	}
 	return &evaluatorservice.ListEvaluatorTagsResponse{
-		Tags: tags,
+		Tags: convertEvaluatorTagsDO2DTO(tags),
 	}, nil
+}
+
+func convertListEvaluatorTagType(tagType evaluatordto.EvaluatorTagType) entity.EvaluatorTagKeyType {
+	switch tagType {
+	case evaluatordto.EvaluatorTagTypeTemplate:
+		return entity.EvaluatorTagKeyType_Template
+	default:
+		return entity.EvaluatorTagKeyType_Evaluator
+	}
+}
+
+func convertEvaluatorTagsDO2DTO(tags map[entity.EvaluatorTagKey][]string) map[evaluatordto.EvaluatorTagKey][]string {
+	if len(tags) == 0 {
+		return map[evaluatordto.EvaluatorTagKey][]string{}
+	}
+	result := make(map[evaluatordto.EvaluatorTagKey][]string, len(tags))
+	for key, values := range tags {
+		dtoKey := evaluatordto.EvaluatorTagKey(key)
+		if len(values) == 0 {
+			result[dtoKey] = []string{}
+			continue
+		}
+		copied := make([]string, len(values))
+		copy(copied, values)
+		result[dtoKey] = copied
+	}
+	return result
 }
 
 type SpaceType string

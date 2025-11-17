@@ -15913,6 +15913,20 @@ func (p *ListEvaluatorTagsRequest) FastRead(buf []byte) (int, error) {
 			break
 		}
 		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -15945,6 +15959,20 @@ SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
+func (p *ListEvaluatorTagsRequest) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *evaluator.EvaluatorTagType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TagType = _field
+	return offset, nil
+}
+
 func (p *ListEvaluatorTagsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -15964,6 +15992,7 @@ func (p *ListEvaluatorTagsRequest) FastWrite(buf []byte) int {
 func (p *ListEvaluatorTagsRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -15973,10 +16002,20 @@ func (p *ListEvaluatorTagsRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWr
 func (p *ListEvaluatorTagsRequest) BLength() int {
 	l := 0
 	if p != nil {
+		l += p.field1Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
+}
+
+func (p *ListEvaluatorTagsRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTagType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TagType)
+	}
+	return offset
 }
 
 func (p *ListEvaluatorTagsRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
@@ -15986,6 +16025,15 @@ func (p *ListEvaluatorTagsRequest) fastWriteField255(buf []byte, w thrift.Nocopy
 		offset += p.Base.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
+}
+
+func (p *ListEvaluatorTagsRequest) field1Length() int {
+	l := 0
+	if p.IsSetTagType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.TagType)
+	}
+	return l
 }
 
 func (p *ListEvaluatorTagsRequest) field255Length() int {
@@ -16001,6 +16049,11 @@ func (p *ListEvaluatorTagsRequest) DeepCopy(s interface{}) error {
 	src, ok := s.(*ListEvaluatorTagsRequest)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.TagType != nil {
+		tmp := *src.TagType
+		p.TagType = &tmp
 	}
 
 	var _base *base.Base

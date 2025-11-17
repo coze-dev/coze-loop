@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -155,6 +156,25 @@ func buildListEvaluatorRequest(ctx context.Context, request *entity.ListEvaluato
 		req.OrderBy = orderBy
 	}
 	return req, nil
+}
+
+// ListEvaluatorTags 根据 tagType 聚合标签并按字母序排序
+func (e *EvaluatorServiceImpl) ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error) {
+	if tagType == 0 {
+		tagType = entity.EvaluatorTagKeyType_Evaluator
+	}
+	tags, err := e.evaluatorRepo.ListEvaluatorTags(ctx, tagType)
+	if err != nil {
+		return nil, err
+	}
+	for key, values := range tags {
+		if len(values) == 0 {
+			continue
+		}
+		sort.Strings(values)
+		tags[key] = values
+	}
+	return tags, nil
 }
 
 // BatchGetEvaluator 按 id 批量查询 evaluator草稿

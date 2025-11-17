@@ -221,6 +221,21 @@ func (mr *MockIEvaluatorRepoMockRecorder) ListEvaluatorVersion(ctx, req any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluatorVersion", reflect.TypeOf((*MockIEvaluatorRepo)(nil).ListEvaluatorVersion), ctx, req)
 }
 
+// ListEvaluatorTags mocks base method.
+func (m *MockIEvaluatorRepo) ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEvaluatorTags", ctx, tagType)
+	ret0, _ := ret[0].(map[entity.EvaluatorTagKey][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEvaluatorTags indicates an expected call of ListEvaluatorTags.
+func (mr *MockIEvaluatorRepoMockRecorder) ListEvaluatorTags(ctx, tagType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluatorTags", reflect.TypeOf((*MockIEvaluatorRepo)(nil).ListEvaluatorTags), ctx, tagType)
+}
+
 // SubmitEvaluatorVersion mocks base method.
 func (m *MockIEvaluatorRepo) SubmitEvaluatorVersion(ctx context.Context, evaluatorVersionDO *entity.Evaluator) error {
 	m.ctrl.T.Helper()

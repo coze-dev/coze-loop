@@ -61,7 +61,7 @@ func (r *EvaluatorTemplateRepoImpl) ListEvaluatorTemplate(ctx context.Context, r
 		// 如果有有效的筛选条件，进行标签查询
 		if hasValidFilters {
 			// 使用EvaluatorTagDAO查询符合条件的template IDs（不分页）
-			filteredIDs, _, err := r.tagDAO.GetSourceIDsByFilterConditions(ctx, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), req.FilterOption, 0, 0, contexts.CtxLocale(ctx))
+			filteredIDs, _, err := r.tagDAO.GetSourceIDsByFilterConditions(ctx, int32(entity.EvaluatorTagKeyType_Template), req.FilterOption, 0, 0, contexts.CtxLocale(ctx))
 			if err != nil {
 				return nil, err
 			}
@@ -106,7 +106,7 @@ func (r *EvaluatorTemplateRepoImpl) ListEvaluatorTemplate(ctx context.Context, r
 
 	// 批量查询并填充标签（以模板ID为source_id）
 	if len(ids) > 0 {
-		allTags, tagErr := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, ids, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), contexts.CtxLocale(ctx))
+		allTags, tagErr := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, ids, int32(entity.EvaluatorTagKeyType_Template), contexts.CtxLocale(ctx))
 		if tagErr == nil && len(allTags) > 0 {
 			tagsBySourceID := make(map[int64][]*model.EvaluatorTag)
 			for _, tag := range allTags {
@@ -172,7 +172,7 @@ func (r *EvaluatorTemplateRepoImpl) CreateEvaluatorTemplate(ctx context.Context,
 						evaluatorTags = append(evaluatorTags, &model.EvaluatorTag{
 							ID:        ids[idx],
 							SourceID:  createdPO.ID,
-							TagType:   int32(entity.EvaluatorTagKeyType_EvaluatorTemplate),
+							TagType:   int32(entity.EvaluatorTagKeyType_Template),
 							TagKey:    string(tagKey),
 							TagValue:  tagValue,
 							LangType:  string(lang),
@@ -221,7 +221,7 @@ func (r *EvaluatorTemplateRepoImpl) UpdateEvaluatorTemplate(ctx context.Context,
 	// 针对每种语言分别全量对齐
 	userID := session.UserIDInCtxOrEmpty(ctx)
 	for lang, tagMap := range template.Tags {
-		existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{template.ID}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), string(lang))
+		existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{template.ID}, int32(entity.EvaluatorTagKeyType_Template), string(lang))
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +251,7 @@ func (r *EvaluatorTemplateRepoImpl) UpdateEvaluatorTemplate(ctx context.Context,
 			}
 		}
 		if len(del) > 0 {
-			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, template.ID, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), string(lang), del); err != nil {
+			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, template.ID, int32(entity.EvaluatorTagKeyType_Template), string(lang), del); err != nil {
 				return nil, err
 			}
 		}
@@ -280,7 +280,7 @@ func (r *EvaluatorTemplateRepoImpl) UpdateEvaluatorTemplate(ctx context.Context,
 						evaluatorTags = append(evaluatorTags, &model.EvaluatorTag{
 							ID:        ids[idx],
 							SourceID:  template.ID,
-							TagType:   int32(entity.EvaluatorTagKeyType_EvaluatorTemplate),
+							TagType:   int32(entity.EvaluatorTagKeyType_Template),
 							TagKey:    k,
 							TagValue:  v,
 							LangType:  string(lang),
@@ -311,7 +311,7 @@ func (r *EvaluatorTemplateRepoImpl) DeleteEvaluatorTemplate(ctx context.Context,
 	if err := r.templateDAO.DeleteEvaluatorTemplate(ctx, id, userID); err != nil {
 		return err
 	}
-	if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, id, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), "", nil); err != nil {
+	if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, id, int32(entity.EvaluatorTagKeyType_Template), "", nil); err != nil {
 		return err
 	}
 	return nil
@@ -336,7 +336,7 @@ func (r *EvaluatorTemplateRepoImpl) GetEvaluatorTemplate(ctx context.Context, id
 	}
 
 	// 补充查询：回填模板标签（按当前语言）
-	allTags, tagErr := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{id}, int32(entity.EvaluatorTagKeyType_EvaluatorTemplate), contexts.CtxLocale(ctx))
+	allTags, tagErr := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{id}, int32(entity.EvaluatorTagKeyType_Template), contexts.CtxLocale(ctx))
 	if tagErr == nil && len(allTags) > 0 {
 		tagsBySourceID := map[int64][]*model.EvaluatorTag{id: allTags}
 		r.setTemplateTags(templateDO, id, tagsBySourceID)

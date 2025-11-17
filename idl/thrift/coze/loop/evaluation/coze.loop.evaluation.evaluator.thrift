@@ -454,6 +454,8 @@ struct DeleteEvaluatorTemplateResponse {
 }
 
 struct ListEvaluatorTagsRequest {
+    1: optional evaluator.EvaluatorTagType tag_type (api.query='tag_type', go.tag='json:"tag_type"') // 评估器标签类型，默认预置评估器
+
     255: optional base.Base Base
 }
 

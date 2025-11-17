@@ -51,6 +51,8 @@ type EvaluatorService interface {
 	SubmitEvaluatorVersion(ctx context.Context, evaluatorVersionDO *entity.Evaluator, version, description, cid string) (*entity.Evaluator, error)
 	// CheckNameExist
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error)
+	// ListEvaluatorTags 根据 tagType 聚合标签，并按字母序返回
+	ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error)
 }
 
 //go:generate mockgen -destination mocks/evaluator_record_service_mock.go -package mocks . EvaluatorRecordService

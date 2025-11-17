@@ -22,9 +22,15 @@ const (
 type EvaluatorTagKeyType int32
 
 const (
-	EvaluatorTagKeyType_Evaluator         EvaluatorTagKeyType = 1 // 评估器标签
-	EvaluatorTagKeyType_EvaluatorTemplate EvaluatorTagKeyType = 2 // 评估器模板标签
+	EvaluatorTagKeyType_Evaluator EvaluatorTagKeyType = 1 // 评估器标签
+	EvaluatorTagKeyType_Template  EvaluatorTagKeyType = 2 // 评估器模板标签
 )
+
+// AggregatedEvaluatorTag 聚合后的标签键值
+type AggregatedEvaluatorTag struct {
+	TagKey   string
+	TagValue string
+}
 
 // EvaluatorFilterOption Evaluator筛选器选项
 type EvaluatorFilterOption struct {

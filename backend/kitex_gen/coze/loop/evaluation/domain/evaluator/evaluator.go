@@ -16,6 +16,10 @@ const (
 
 	LanguageTypeJS = "JS"
 
+	EvaluatorTagTypeEvaluator = "Evaluator"
+
+	EvaluatorTagTypeTemplate = "Template"
+
 	EvaluatorTagLangTypeZh = "zh-CN"
 
 	EvaluatorTagLangTypeEn = "en-US"
@@ -291,6 +295,8 @@ func (p *EvaluatorRunStatus) Value() (driver.Value, error) {
 }
 
 type LanguageType = string
+
+type EvaluatorTagType = string
 
 type EvaluatorTagLangType = string
 
