@@ -2130,14 +2130,15 @@ func (p *DeletePromptResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type GetPromptRequest struct {
-	PromptID          *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
-	WorkspaceID       *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" query:"workspace_id" `
-	WithCommit        *bool      `thrift:"with_commit,11,optional" frugal:"11,optional,bool" json:"with_commit,omitempty" query:"with_commit"`
-	CommitVersion     *string    `thrift:"commit_version,12,optional" frugal:"12,optional,string" json:"commit_version,omitempty" query:"commit_version"`
-	WithDraft         *bool      `thrift:"with_draft,21,optional" frugal:"21,optional,bool" json:"with_draft,omitempty" query:"with_draft"`
-	WithDefaultConfig *bool      `thrift:"with_default_config,31,optional" frugal:"31,optional,bool" json:"with_default_config,omitempty" query:"with_default_config"`
-	ExpandSnippet     *bool      `thrift:"expand_snippet,32,optional" frugal:"32,optional,bool" json:"expand_snippet,omitempty" query:"expand_snippet"`
-	Base              *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PromptID          *int64  `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	WorkspaceID       *int64  `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" query:"workspace_id" `
+	WithCommit        *bool   `thrift:"with_commit,11,optional" frugal:"11,optional,bool" json:"with_commit,omitempty" query:"with_commit"`
+	CommitVersion     *string `thrift:"commit_version,12,optional" frugal:"12,optional,string" json:"commit_version,omitempty" query:"commit_version"`
+	WithDraft         *bool   `thrift:"with_draft,21,optional" frugal:"21,optional,bool" json:"with_draft,omitempty" query:"with_draft"`
+	WithDefaultConfig *bool   `thrift:"with_default_config,31,optional" frugal:"31,optional,bool" json:"with_default_config,omitempty" query:"with_default_config"`
+	// 是否展开子片段
+	ExpandSnippet *bool      `thrift:"expand_snippet,32,optional" frugal:"32,optional,bool" json:"expand_snippet,omitempty" query:"expand_snippet"`
+	Base          *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetPromptRequest() *GetPromptRequest {
@@ -2842,10 +2843,11 @@ func (p *GetPromptRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type GetPromptResponse struct {
-	Prompt                *prompt.Prompt       `thrift:"prompt,1,optional" frugal:"1,optional,prompt.Prompt" form:"prompt" json:"prompt,omitempty" query:"prompt"`
-	DefaultConfig         *prompt.PromptDetail `thrift:"default_config,11,optional" frugal:"11,optional,prompt.PromptDetail" form:"default_config" json:"default_config,omitempty" query:"default_config"`
-	TotalParentReferences *int32               `thrift:"total_parent_references,12,optional" frugal:"12,optional,i32" form:"total_parent_references" json:"total_parent_references,omitempty" query:"total_parent_references"`
-	BaseResp              *base.BaseResp       `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	Prompt        *prompt.Prompt       `thrift:"prompt,1,optional" frugal:"1,optional,prompt.Prompt" form:"prompt" json:"prompt,omitempty" query:"prompt"`
+	DefaultConfig *prompt.PromptDetail `thrift:"default_config,11,optional" frugal:"11,optional,prompt.PromptDetail" form:"default_config" json:"default_config,omitempty" query:"default_config"`
+	// [片段]被引用的总数
+	TotalParentReferences *int32         `thrift:"total_parent_references,12,optional" frugal:"12,optional,i32" form:"total_parent_references" json:"total_parent_references,omitempty" query:"total_parent_references"`
+	BaseResp              *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewGetPromptResponse() *GetPromptResponse {
@@ -7518,7 +7520,8 @@ func (p *CommitDraftResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 // 搜索Prompt提交版本
 type ListCommitRequest struct {
-	PromptID         *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	PromptID *int64 `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	// 是否查询详情
 	WithCommitDetail *bool      `thrift:"with_commit_detail,2,optional" frugal:"2,optional,bool" json:"with_commit_detail,omitempty" query:"with_commit_detail"`
 	PageSize         *int32     `thrift:"page_size,127,optional" frugal:"127,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
 	PageToken        *string    `thrift:"page_token,128,optional" frugal:"128,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
@@ -8076,9 +8079,11 @@ func (p *ListCommitRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type ListCommitResponse struct {
-	PromptCommitInfos         []*prompt.CommitInfo            `thrift:"prompt_commit_infos,1,optional" frugal:"1,optional,list<prompt.CommitInfo>" form:"prompt_commit_infos" json:"prompt_commit_infos,omitempty" query:"prompt_commit_infos"`
-	CommitVersionLabelMapping map[string][]*prompt.Label      `thrift:"commit_version_label_mapping,2,optional" frugal:"2,optional,map<string:list<prompt.Label>>" form:"commit_version_label_mapping" json:"commit_version_label_mapping,omitempty" query:"commit_version_label_mapping"`
-	ParentReferencesMapping   map[string]int32                `thrift:"parent_references_mapping,3,optional" frugal:"3,optional,map<string:i32>" form:"parent_references_mapping" json:"parent_references_mapping,omitempty" query:"parent_references_mapping"`
+	PromptCommitInfos         []*prompt.CommitInfo       `thrift:"prompt_commit_infos,1,optional" frugal:"1,optional,list<prompt.CommitInfo>" form:"prompt_commit_infos" json:"prompt_commit_infos,omitempty" query:"prompt_commit_infos"`
+	CommitVersionLabelMapping map[string][]*prompt.Label `thrift:"commit_version_label_mapping,2,optional" frugal:"2,optional,map<string:list<prompt.Label>>" form:"commit_version_label_mapping" json:"commit_version_label_mapping,omitempty" query:"commit_version_label_mapping"`
+	// key: version, value:被引用数
+	ParentReferencesMapping map[string]int32 `thrift:"parent_references_mapping,3,optional" frugal:"3,optional,map<string:i32>" form:"parent_references_mapping" json:"parent_references_mapping,omitempty" query:"parent_references_mapping"`
+	// key:version, value:PromptDetail
 	PromptCommitDetailMapping map[string]*prompt.PromptDetail `thrift:"prompt_commit_detail_mapping,4,optional" frugal:"4,optional,map<string:prompt.PromptDetail>" form:"prompt_commit_detail_mapping" json:"prompt_commit_detail_mapping,omitempty" query:"prompt_commit_detail_mapping"`
 	Users                     []*user.UserInfoDetail          `thrift:"users,11,optional" frugal:"11,optional,list<user.UserInfoDetail>" form:"users" json:"users,omitempty" query:"users"`
 	HasMore                   *bool                           `thrift:"has_more,127,optional" frugal:"127,optional,bool" form:"has_more" json:"has_more,omitempty" query:"has_more"`
