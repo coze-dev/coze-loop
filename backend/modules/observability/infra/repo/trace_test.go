@@ -18,7 +18,7 @@ import (
 	metric_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
 	ckmock "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/mocks"

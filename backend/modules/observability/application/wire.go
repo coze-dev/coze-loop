@@ -31,6 +31,7 @@ import (
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	metric_general "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	metric_model "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
+	metric_agent "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/agent"
 	metric_service_def "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
 	metric_tool "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -238,6 +239,7 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		metric_model.NewModelTPOTMetric(),
 		metric_model.NewModelTPSMetric(),
 		metric_model.NewModelTTFTMetric(),
+		metric_model.NewModelTotalCountMetric(),
 
 		metric_service_def.NewServiceDurationMetric(),
 		metric_service_def.NewServiceExecutionStepCountMetric(),
@@ -257,6 +259,10 @@ func NewMetricDefinitions() []metrics_entity.IMetricDefinition {
 		metric_tool.NewToolNamePieMetric(),
 		metric_tool.NewToolSuccessRatioMetric(),
 		metric_tool.NewToolTotalCountMetric(),
+
+		metric_agent.NewAgentExecutionStepAvgMetric(),
+		metric_agent.NewAgentToolExecutionStepAvgMetric(),
+		metric_agent.NewAgentModelExecutionStepAvgMetric(),
 	}
 }
 

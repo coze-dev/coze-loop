@@ -65,6 +65,7 @@ const (
 	MetricNameModelTTFT                 = "model_ttft"
 	MetricNameModelTPOT                 = "model_tpot"
 	MetricNameModelNamePie              = "model_name_pie"
+	MetricNameModelTotalCount           = "model_total_count"
 
 	// Tool 工具统计指标
 	MetricNameToolTotalCount   = "tool_total_count"
@@ -86,6 +87,11 @@ const (
 	MetricNameServiceDuration           = "service_duration"
 	MetricNameServiceSuccessRatio       = "service_success_ratio"
 	MetricNameServiceExecutionStepCount = "service_execution_step_count"
+
+	// Agent相关指标
+	MetricNameAgentStepAvg      = "agent_step_avg"
+	MetricNameAgentToolStepAvg  = "agent_tool_step_avg"
+	MetricNameAgentModelStepAvg = "agent_model_step_avg"
 
 	// 复合指标计算
 	MetricOperatorDivide = "divide"
