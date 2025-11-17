@@ -98,7 +98,7 @@ struct GetPromptRequest {
     21: optional bool with_draft (api.query="with_draft")
 
     31: optional bool with_default_config (api.query="with_default_config")
-    32: optional bool expand_snippet (api.query="expand_snippet")
+    32: optional bool expand_snippet (api.query="expand_snippet") // 是否展开子片段
 
     255: optional base.Base Base
 }
@@ -106,7 +106,7 @@ struct GetPromptResponse {
     1: optional prompt.Prompt prompt
 
     11: optional prompt.PromptDetail default_config
-    12: optional i32 total_parent_references
+    12: optional i32 total_parent_references // [片段]被引用的总数
 
     255: optional base.BaseResp  BaseResp
 }
@@ -204,7 +204,7 @@ struct CommitDraftResponse {
 // 搜索Prompt提交版本
 struct ListCommitRequest {
     1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
-    2: optional bool with_commit_detail (api.query="with_commit_detail")
+    2: optional bool with_commit_detail (api.query="with_commit_detail") // 是否查询详情
 
     127: optional i32 page_size (vt.not_nil="true", vt.gt="0")
     128: optional string page_token
@@ -215,8 +215,8 @@ struct ListCommitRequest {
 struct ListCommitResponse {
     1: optional list<prompt.CommitInfo> prompt_commit_infos
     2: optional map<string, list<prompt.Label>> commit_version_label_mapping
-    3: optional map<string, i32> parent_references_mapping
-    4: optional map<string, prompt.PromptDetail> prompt_commit_detail_mapping
+    3: optional map<string, i32> parent_references_mapping // key: version, value:被引用数
+    4: optional map<string, prompt.PromptDetail> prompt_commit_detail_mapping // key:version, value:PromptDetail
 
     11: optional list<user.UserInfoDetail> users
 
