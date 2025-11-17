@@ -101,6 +101,7 @@ const (
 	tagKeyUserID             = "user_id"
 	tagKeyMessageID          = "message_id"
 	tagKeyStartTimeFirstResp = "start_time_first_resp"
+	tagKeyCallOptions        = "call_options"
 )
 
 var otelModelSpanTypeMap = map[string]string{
@@ -129,3 +130,27 @@ const (
 	dataTypeBool        = "bool"
 	dataTypeArrayString = "array_string"
 )
+
+var LoopStringTags = []string{
+	tagKeyThreadID,
+	tagKeyUserID,
+	tagKeyMessageID,
+	tracespec.Error,
+	tracespec.PromptProvider,
+	tracespec.ModelName,
+	tagKeyCallOptions,
+	tracespec.PromptKey,
+	tracespec.PromptVersion,
+	tracespec.PromptProvider,
+}
+
+var LoopLongTags = []string{
+	tracespec.LatencyFirstResp,
+	tracespec.InputTokens,
+	tracespec.OutputTokens,
+	tracespec.Tokens,
+}
+
+var LoopBoolTags = []string{
+	tracespec.Stream,
+}
