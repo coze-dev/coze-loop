@@ -3365,7 +3365,10 @@ func (p *ToolCallConfig) FastRead(buf []byte) (int, error) {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
-					goto Re
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
 				if err != nil {
 					goto SkipFieldError
@@ -3403,10 +3406,7 @@ func (p *ToolCallConfig) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ToolCallConfig) FastWrite(buf []byte) int {
-	return p.FastWriteNocopy(buf, nil)
-}
-nc (p *ToolCallConfig) FastReadField2(buf []byte) (int, error) {
+func (p *ToolCallConfig) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 	_field := NewToolChoiceSpecification()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -3418,25 +3418,29 @@ nc (p *ToolCallConfig) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ToolCallConfig) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
 func (p *ToolCallConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
 }
 
-
 func (p *ToolCallConfig) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
 }
-
 
 func (p *ToolCallConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
@@ -3447,49 +3451,34 @@ func (p *ToolCallConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
-func (p *ToolCallConfig) field1Length() int {
-	l := 0
-	if p.IsSetToolChoice() {
-		l += thrift.Binary.FieldBeginLength()
-, w, *p.ToolChoice)
+func (p *ToolCallConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetToolChoiceSpecification() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
+		offset += p.ToolChoiceSpecification.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
 
-func (p *ToolCallConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetToolChoiceSpecification() {
-		offset += thrift.Binary.WriteFieldBegin(buf[of
+func (p *ToolCallConfig) field1Length() int {
+	l := 0
+	if p.IsSetToolChoice() {
+		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.ToolChoice)
+	}
+	return l
+}
+
+func (p *ToolCallConfig) field2Length() int {
+	l := 0
+	if p.IsSetToolChoiceSpecification() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ToolChoiceSpecification.BLength()
 	}
 	return l
 }
 
 func (p *ToolCallConfig) DeepCopy(s interface{}) error {
-	src, ok := s.(*ToolCallConfig)
-	if !ok {
-
-	if p.IsSetToolChoice() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.ToolChoice)
-	}
-	return l
-}
-
-func (p *T
-		return fmt.Errorf("%T's type not matched %T", s, p)
-	}
-
-	if src.ToolChoice != nil {
-		tmp := *src.ToolChoice
-		p.ToolChoice = &tmp
-	}
-
-	return nil
-}
-
-func (p *ModelConfig) FastRead(buf []byte) (int, error) {
-Copy(s interface{}) error {
 	src, ok := s.(*ToolCallConfig)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
@@ -3655,7 +3644,37 @@ func (p *ToolChoiceSpecification) field1Length() int {
 }
 
 func (p *ToolChoiceSpecification) field2Length() int {
-	
+	l := 0
+	if p.IsSetName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Name)
+	}
+	return l
+}
+
+func (p *ToolChoiceSpecification) DeepCopy(s interface{}) error {
+	src, ok := s.(*ToolChoiceSpecification)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Type != nil {
+		tmp := *src.Type
+		p.Type = &tmp
+	}
+
+	if src.Name != nil {
+		var tmp string
+		if *src.Name != "" {
+			tmp = kutils.StringDeepCopy(*src.Name)
+		}
+		p.Name = &tmp
+	}
+
+	return nil
+}
+
+func (p *ModelConfig) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
