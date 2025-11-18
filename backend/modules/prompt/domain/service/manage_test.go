@@ -2649,3 +2649,212 @@ func TestPromptServiceImpl_MConvertBase64ToFileURL(t *testing.T) {
 		})
 	}
 }
+
+func TestPromptServiceImpl_GetPrompt(t *testing.T) {
+	type fields struct {
+		manageRepo    repo.IManageRepo
+		snippetParser SnippetParser
+	}
+	type args struct {
+		ctx   context.Context
+		param GetPromptParam
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      error
+	}{
+		{
+			name: "repo error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockIManageRepo(ctrl)
+				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 1, WithCommit: true, CommitVersion: "1.0.0", WithDraft: false, UserID: ""}).Return(nil, errorx.New("repo error"))
+				return fields{manageRepo: repoMock}
+			},
+			args: args{
+				ctx:   context.Background(),
+				param: GetPromptParam{PromptID: 1, WithCommit: true, CommitVersion: "1.0.0"},
+			},
+			wantErr: errorx.New("repo error"),
+		},
+		{
+			name: "parse snippet error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockIManageRepo(ctrl)
+				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 2, WithCommit: true, CommitVersion: "1.0.0", WithDraft: false, UserID: ""}).Return(&entity.Prompt{
+					ID: 2,
+					PromptCommit: &entity.PromptCommit{
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: true,
+								Messages:    []*entity.Message{{Content: ptr.Of("content")}},
+							},
+						},
+					},
+				}, nil)
+				parser := fakeSnippetParser{
+					parseFunc: func(string) ([]*SnippetReference, error) { return nil, errors.New("parse fail") },
+				}
+				return fields{manageRepo: repoMock, snippetParser: parser}
+			},
+			args: args{
+				ctx:   context.Background(),
+				param: GetPromptParam{PromptID: 2, WithCommit: true, CommitVersion: "1.0.0"},
+			},
+			wantErr: errorx.WrapByCode(errors.New("parse fail"), prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("failed to parse snippet references")),
+		},
+		{
+			name: "success expand snippet",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockIManageRepo(ctrl)
+				promptDO := &entity.Prompt{
+					ID: 3,
+					PromptDraft: &entity.PromptDraft{
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: true,
+								Messages:    []*entity.Message{{Content: ptr.Of("hello <cozeloop_snippet>id=4&version=v1</cozeloop_snippet>")}},
+							},
+						},
+					},
+				}
+				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 3, WithCommit: false, CommitVersion: "", WithDraft: false, UserID: "user"}).Return(promptDO, nil)
+				repoMock.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[repo.GetPromptParam]*entity.Prompt{
+					{PromptID: 4, WithCommit: true, CommitVersion: "v1"}: {
+						ID:          4,
+						PromptBasic: &entity.PromptBasic{PromptType: entity.PromptTypeSnippet},
+						PromptCommit: &entity.PromptCommit{
+							CommitInfo:   &entity.CommitInfo{Version: "v1"},
+							PromptDetail: &entity.PromptDetail{PromptTemplate: &entity.PromptTemplate{Messages: []*entity.Message{{Content: ptr.Of("snippet content")}}}},
+						},
+					},
+				}, nil).AnyTimes()
+				return fields{manageRepo: repoMock, snippetParser: NewCozeLoopSnippetParser()}
+			},
+			args: args{
+				ctx:   context.Background(),
+				param: GetPromptParam{PromptID: 3, UserID: "user", ExpandSnippet: true},
+			},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		caseData := tt
+		t.Run(caseData.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			tFields := caseData.fieldsGetter(ctrl)
+			service := &PromptServiceImpl{
+				manageRepo:    tFields.manageRepo,
+				snippetParser: tFields.snippetParser,
+			}
+
+			got, err := service.GetPrompt(caseData.args.ctx, caseData.args.param)
+			unittest.AssertErrorEqual(t, caseData.wantErr, err)
+			if err == nil {
+				assert.NotNil(t, got)
+				if caseData.name == "success expand snippet" {
+					assert.Contains(t, ptr.From(got.PromptDraft.PromptDetail.PromptTemplate.Messages[0].Content), "snippet content")
+				}
+			}
+		})
+	}
+}
+
+func TestPromptServiceImpl_doExpandSnippets_MaxDepth(t *testing.T) {
+	t.Parallel()
+	service := &PromptServiceImpl{snippetParser: NewCozeLoopSnippetParser()}
+	err := service.doExpandSnippets(context.Background(), &entity.Prompt{
+		PromptDraft: &entity.PromptDraft{
+			PromptDetail: &entity.PromptDetail{
+				PromptTemplate: &entity.PromptTemplate{HasSnippets: true},
+			},
+		},
+	}, 0)
+	unittest.AssertErrorEqual(t, errorx.New("max recursion depth reached"), err)
+}
+
+func TestPromptServiceImpl_doExpandSnippets_NoTemplate(t *testing.T) {
+	t.Parallel()
+	service := &PromptServiceImpl{snippetParser: NewCozeLoopSnippetParser()}
+	err := service.doExpandSnippets(context.Background(), &entity.Prompt{}, 2)
+	unittest.AssertErrorEqual(t, nil, err)
+}
+
+func TestPromptServiceImpl_doExpandSnippets_Nested(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoMock := repomocks.NewMockIManageRepo(ctrl)
+	repoMock.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, params []repo.GetPromptParam, _ ...repo.GetPromptOptionFunc) (map[repo.GetPromptParam]*entity.Prompt, error) {
+		assert.Len(t, params, 1)
+		switch params[0].PromptID {
+		case 4:
+			return map[repo.GetPromptParam]*entity.Prompt{
+				params[0]: {
+					ID:          4,
+					PromptBasic: &entity.PromptBasic{PromptType: entity.PromptTypeSnippet},
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{Version: params[0].CommitVersion},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								HasSnippets: true,
+								Messages:    []*entity.Message{{Content: ptr.Of("<cozeloop_snippet>id=5&version=v2</cozeloop_snippet>")}},
+							},
+						},
+					},
+				},
+				{PromptID: 0}: {
+					ID:           0,
+					PromptCommit: &entity.PromptCommit{PromptDetail: &entity.PromptDetail{}},
+				},
+				{PromptID: 99}: {
+					ID:           99,
+					PromptCommit: &entity.PromptCommit{PromptDetail: &entity.PromptDetail{}},
+				},
+			}, nil
+		case 5:
+			return map[repo.GetPromptParam]*entity.Prompt{
+				params[0]: {
+					ID:          5,
+					PromptBasic: &entity.PromptBasic{PromptType: entity.PromptTypeSnippet},
+					PromptCommit: &entity.PromptCommit{
+						CommitInfo: &entity.CommitInfo{Version: params[0].CommitVersion},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{
+								Messages: []*entity.Message{{Content: ptr.Of("deep snippet")}},
+							},
+						},
+					},
+				},
+				{PromptID: 101}: {
+					ID:           101,
+					PromptCommit: &entity.PromptCommit{PromptDetail: &entity.PromptDetail{}},
+				},
+			}, nil
+		default:
+			return map[repo.GetPromptParam]*entity.Prompt{}, nil
+		}
+	}).AnyTimes()
+
+	service := &PromptServiceImpl{manageRepo: repoMock, snippetParser: NewCozeLoopSnippetParser()}
+	prompt := &entity.Prompt{
+		PromptDraft: &entity.PromptDraft{
+			PromptDetail: &entity.PromptDetail{
+				PromptTemplate: &entity.PromptTemplate{
+					HasSnippets: true,
+					Messages:    []*entity.Message{{Content: ptr.Of("outer <cozeloop_snippet>id=4&version=v1</cozeloop_snippet>")}},
+				},
+			},
+		},
+	}
+
+	err := service.doExpandSnippets(context.Background(), prompt, 2)
+	unittest.AssertErrorEqual(t, nil, err)
+	assert.Equal(t, "outer deep snippet", ptr.From(prompt.PromptDraft.PromptDetail.PromptTemplate.Messages[0].Content))
+}
