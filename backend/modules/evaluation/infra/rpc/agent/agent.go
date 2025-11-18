@@ -18,7 +18,7 @@ func NewAgentAdapter() rpc.IAgentAdapter {
 	return &AgentAdapter{}
 }
 
-func (a AgentAdapter) CallTraceAgent(ctx context.Context, spaceID int64, url string, startTime, endTime int64) (int64, error) {
+func (a AgentAdapter) CallTraceAgent(ctx context.Context, spaceID int64, url string, exptId int64, startTime, endTime int64) (int64, error) {
 	return 0, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("CallTraceAgent not implement"))
 }
 
