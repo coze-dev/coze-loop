@@ -3260,18 +3260,20 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 				mockRepo.EXPECT().ListParentPrompt(gomock.Any(), repo.ListParentPromptParam{
 					SubPromptID:       1,
 					SubPromptVersions: []string{"v1.0.0"},
-				}).Return(map[string]*repo.PromptCommitVersions{
+				}).Return(map[string][]*repo.PromptCommitVersions{
 					"v1.0.0": {
-						PromptID:  2,
-						PromptKey: "parent_prompt",
-						SpaceID:   1,
-						PromptBasic: &entity.PromptBasic{
-							DisplayName:   "parent name",
-							Description:   "parent description",
-							LatestVersion: "2.0.0",
-							PromptType:    entity.PromptTypeSnippet,
+						{
+							PromptID:  2,
+							PromptKey: "parent_prompt",
+							SpaceID:   1,
+							PromptBasic: &entity.PromptBasic{
+								DisplayName:   "parent name",
+								Description:   "parent description",
+								LatestVersion: "2.0.0",
+								PromptType:    entity.PromptTypeSnippet,
+							},
+							CommitVersions: []string{"v2.0.0"},
 						},
-						CommitVersions: []string{"v2.0.0"},
 					},
 				}, nil)
 
@@ -3294,22 +3296,24 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 				},
 			},
 			want: &manage.ListParentPromptResponse{
-				ParentPrompts: map[string]*prompt.PromptCommitVersions{
+				ParentPrompts: map[string][]*prompt.PromptCommitVersions{
 					"v1.0.0": {
-						ID:          ptr.Of(int64(2)),
-						WorkspaceID: ptr.Of(int64(1)),
-						PromptKey:   ptr.Of("parent_prompt"),
-						PromptBasic: &prompt.PromptBasic{
-							DisplayName:   ptr.Of("parent name"),
-							Description:   ptr.Of("parent description"),
-							LatestVersion: ptr.Of("2.0.0"),
-							PromptType:    ptr.Of(prompt.PromptTypeSnippet),
-							CreatedBy:     ptr.Of(""),
-							UpdatedBy:     ptr.Of(""),
-							CreatedAt:     ptr.Of(time.Time{}.UnixMilli()),
-							UpdatedAt:     ptr.Of(time.Time{}.UnixMilli()),
+						{
+							ID:          ptr.Of(int64(2)),
+							WorkspaceID: ptr.Of(int64(1)),
+							PromptKey:   ptr.Of("parent_prompt"),
+							PromptBasic: &prompt.PromptBasic{
+								DisplayName:   ptr.Of("parent name"),
+								Description:   ptr.Of("parent description"),
+								LatestVersion: ptr.Of("2.0.0"),
+								PromptType:    ptr.Of(prompt.PromptTypeSnippet),
+								CreatedBy:     ptr.Of(""),
+								UpdatedBy:     ptr.Of(""),
+								CreatedAt:     ptr.Of(time.Time{}.UnixMilli()),
+								UpdatedAt:     ptr.Of(time.Time{}.UnixMilli()),
+							},
+							CommitVersions: []string{"v2.0.0"},
 						},
-						CommitVersions: []string{"v2.0.0"},
 					},
 				},
 			},
