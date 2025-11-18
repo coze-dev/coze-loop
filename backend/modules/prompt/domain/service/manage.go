@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bytedance/gg/gmap"
+
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -301,4 +304,294 @@ func (p *PromptServiceImpl) MParseCommitVersion(ctx context.Context, spaceID int
 	}
 
 	return promptKeyCommitVersionMap, nil
+}
+
+// GetPrompt retrieves a prompt by its ID
+func (p *PromptServiceImpl) GetPrompt(ctx context.Context, param GetPromptParam) (*entity.Prompt, error) {
+	promptDO, err := p.manageRepo.GetPrompt(ctx, repo.GetPromptParam{
+		PromptID:      param.PromptID,
+		WithCommit:    param.WithCommit,
+		CommitVersion: param.CommitVersion,
+		WithDraft:     param.WithDraft,
+		UserID:        param.UserID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.parseAndValidateSnippets(ctx, promptDO)
+	if err != nil {
+		return nil, err
+	}
+
+	if param.ExpandSnippet {
+		// expand snippets
+		err = p.ExpandSnippets(ctx, promptDO)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return promptDO, nil
+}
+
+// CreatePrompt creates a prompt with optional snippet validation
+func (p *PromptServiceImpl) CreatePrompt(ctx context.Context, promptDO *entity.Prompt) (promptID int64, err error) {
+	if promptDO == nil {
+		return 0, errorx.New("promptDO is empty")
+	}
+
+	// Validate basic prompt information
+	if promptDO.SpaceID <= 0 {
+		return 0, errorx.New("spaceID is invalid: %d", promptDO.SpaceID)
+	}
+	if promptDO.PromptKey == "" {
+		return 0, errorx.New("promptKey is empty")
+	}
+	if promptDO.PromptBasic == nil {
+		return 0, errorx.New("promptBasic is empty")
+	}
+
+	err = p.parseAndValidateSnippets(ctx, promptDO)
+	if err != nil {
+		return 0, err
+	}
+
+	// Create the prompt through repository
+	promptID, err = p.manageRepo.CreatePrompt(ctx, promptDO)
+	if err != nil {
+		return 0, err
+	}
+
+	return promptID, nil
+}
+
+func (p *PromptServiceImpl) parseAndValidateSnippets(ctx context.Context, promptDO *entity.Prompt) error {
+	// Check if prompt has snippets based on the flag
+	hasSnippets := false
+	if promptDetail := promptDO.GetPromptDetail(); promptDetail != nil && promptDetail.PromptTemplate != nil {
+		hasSnippets = promptDetail.PromptTemplate.HasSnippets
+	}
+	if !hasSnippets {
+		return nil
+	}
+
+	// Only parse and validate snippets if hasSnippets is true
+	if promptDetail := promptDO.GetPromptDetail(); promptDetail != nil && promptDetail.PromptTemplate != nil {
+		var allContent string
+		for _, message := range promptDetail.PromptTemplate.Messages {
+			if ptr.From(message.Content) != "" {
+				allContent += ptr.From(message.Content)
+			}
+			for _, part := range message.Parts {
+				if ptr.From(part.Text) != "" {
+					allContent += ptr.From(part.Text)
+				}
+			}
+		}
+
+		var snippetRefs []*SnippetReference
+		var err error
+		if allContent != "" {
+			snippetRefs, err = p.snippetParser.ParseReferences(allContent)
+			if err != nil {
+				return errorx.WrapByCode(err, prompterr.CommonInvalidParamCode,
+					errorx.WithExtraMsg("failed to parse snippet references"))
+			}
+		}
+
+		// Validate that snippets were actually found
+		if len(snippetRefs) == 0 {
+			return errorx.NewByCode(prompterr.CommonInvalidParamCode,
+				errorx.WithExtraMsg("has_snippets is true but no snippet references found in content"))
+		}
+
+		// Validate snippet references exist and are of correct type with valid versions
+		queriesMap := make(map[repo.GetPromptParam]bool)
+		for _, ref := range snippetRefs {
+			queriesMap[repo.GetPromptParam{
+				PromptID:      ref.PromptID,
+				WithCommit:    true,
+				CommitVersion: ref.CommitVersion,
+			}] = true
+		}
+
+		snippetPrompts, err := p.manageRepo.MGetPrompt(ctx, gmap.Keys(queriesMap), repo.WithPromptCacheEnable())
+		if err != nil {
+			return errorx.WrapByCode(err, prompterr.CommonInvalidParamCode,
+				errorx.WithExtraMsg("failed to get snippet prompts"))
+		}
+		// fill snippets
+		promptDetail.PromptTemplate.Snippets = gmap.Values(snippetPrompts)
+
+		// Validate each snippet reference using map access
+		for _, ref := range snippetRefs {
+			key := repo.GetPromptParam{
+				PromptID:      ref.PromptID,
+				WithCommit:    true,
+				CommitVersion: ref.CommitVersion,
+			}
+
+			prompt, exists := snippetPrompts[key]
+			if !exists || prompt == nil {
+				return errorx.NewByCode(prompterr.ResourceNotFoundCode,
+					errorx.WithExtraMsg(fmt.Sprintf("snippet prompt %d with version %s not found", ref.PromptID, ref.CommitVersion)))
+			}
+
+			// Check if prompt is a snippet type
+			if prompt.PromptBasic == nil || prompt.PromptBasic.PromptType != entity.PromptTypeSnippet {
+				return errorx.NewByCode(prompterr.CommonInvalidParamCode,
+					errorx.WithExtraMsg(fmt.Sprintf("prompt %d is not a snippet type", ref.PromptID)))
+			}
+		}
+	}
+	return nil
+}
+
+// SaveDraft saves a draft with snippet validation and relationship management
+func (p *PromptServiceImpl) SaveDraft(ctx context.Context, promptDO *entity.Prompt) (*entity.DraftInfo, error) {
+	if promptDO == nil || promptDO.PromptDraft == nil {
+		return nil, errorx.New("promptDO or promptDO.PromptDraft is empty")
+	}
+
+	// Parse and validate snippets in the draft content
+	err := p.parseAndValidateSnippets(ctx, promptDO)
+	if err != nil {
+		return nil, err
+	}
+
+	// Save the draft through repository (which will handle snippet relationships)
+	draftInfo, err := p.manageRepo.SaveDraft(ctx, promptDO)
+	if err != nil {
+		return nil, err
+	}
+
+	return draftInfo, nil
+}
+
+// ExpandSnippets expands all snippet references in the prompt's messages
+func (p *PromptServiceImpl) ExpandSnippets(ctx context.Context, promptDO *entity.Prompt) error {
+	maxDepth := 2
+	return p.doExpandSnippets(ctx, promptDO, maxDepth)
+}
+
+func (p *PromptServiceImpl) doExpandSnippets(ctx context.Context, promptDO *entity.Prompt, maxDepth int) error {
+	if promptDO == nil {
+		return errorx.New("promptDO is empty")
+	}
+
+	// Get the prompt detail
+	promptDetail := promptDO.GetPromptDetail()
+	if promptDetail == nil || promptDetail.PromptTemplate == nil {
+		return nil // No template to expand
+	}
+
+	// Check if prompt has snippets
+	if !promptDetail.PromptTemplate.HasSnippets {
+		return nil // No snippets to expand
+	}
+
+	// Validate max depth to prevent infinite recursion
+	if maxDepth <= 0 {
+		return errorx.New("max recursion depth reached")
+	}
+	// First, parse and validate snippets to populate the Snippets field
+	// This will call MGetPrompt once to get all snippet data
+	err := p.parseAndValidateSnippets(ctx, promptDO)
+	if err != nil {
+		return err
+	}
+
+	for _, snippet := range promptDetail.PromptTemplate.Snippets {
+		if snippet.GetPromptDetail().PromptTemplate == nil || !snippet.GetPromptDetail().PromptTemplate.HasSnippets {
+			continue
+		}
+		err = p.doExpandSnippets(ctx, snippet, maxDepth-1)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Build map for quick lookup of snippet content
+	snippetContentMap := make(map[string]string)
+	for _, snippet := range promptDetail.PromptTemplate.Snippets {
+		if snippet == nil || snippet.PromptBasic == nil {
+			continue
+		}
+
+		snippetDetail := snippet.GetPromptDetail()
+		if snippetDetail == nil || snippetDetail.PromptTemplate == nil {
+			continue
+		}
+
+		// Build lookup key: "promptID_version"
+		key := fmt.Sprintf("%d_%s", snippet.ID, snippet.GetVersion())
+		// Get snippet content from the first message
+		if len(snippetDetail.PromptTemplate.Messages) > 0 {
+			snippetContent := ptr.From(snippetDetail.PromptTemplate.Messages[0].Content)
+			snippetContentMap[key] = snippetContent
+		}
+	}
+
+	// Expand all snippet references in messages using the pre-built content map
+	for _, message := range promptDetail.PromptTemplate.Messages {
+		if message == nil {
+			continue
+		}
+
+		// Expand content if it exists
+		if message.Content != nil && *message.Content != "" {
+			expandedContent, err := p.expandWithSnippetMap(ctx, *message.Content, snippetContentMap)
+			if err != nil {
+				return err
+			}
+			message.Content = &expandedContent
+		}
+
+		// Expand text in parts
+		for _, part := range message.Parts {
+			if part == nil || part.Text == nil || *part.Text == "" {
+				continue
+			}
+			expandedText, err := p.expandWithSnippetMap(ctx, *part.Text, snippetContentMap)
+			if err != nil {
+				return err
+			}
+			part.Text = &expandedText
+		}
+	}
+
+	return nil
+}
+
+// expandWithSnippetMap expands snippet references using a pre-built content map and returns expanded content
+func (p *PromptServiceImpl) expandWithSnippetMap(ctx context.Context, content string, snippetContentMap map[string]string) (string, error) {
+	// Parse snippet references from content
+	snippetRefs, err := p.snippetParser.ParseReferences(content)
+	if err != nil {
+		return "", err
+	}
+
+	// If no references found, return original content and empty variable definitions
+	if len(snippetRefs) == 0 {
+		return content, nil
+	}
+
+	// Replace each reference with expanded content from the map
+	expandedContent := content
+
+	for _, ref := range snippetRefs {
+		// Build lookup key: "promptID_version"
+		key := fmt.Sprintf("%d_%s", ref.PromptID, ref.CommitVersion)
+		expandedSnippetContent, exists := snippetContentMap[key]
+		if !exists {
+			return "", errorx.NewByCode(prompterr.ResourceNotFoundCode,
+				errorx.WithExtraMsg(fmt.Sprintf("snippet content for prompt %d with version %s not found in cache", ref.PromptID, ref.CommitVersion)))
+		}
+
+		// Replace the reference with expanded content
+		refString := p.snippetParser.SerializeReference(ref)
+		expandedContent = strings.ReplaceAll(expandedContent, refString, expandedSnippetContent)
+	}
+
+	return expandedContent, nil
 }

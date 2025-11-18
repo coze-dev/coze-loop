@@ -25,6 +25,23 @@ func PromptDTO2DO(dto *prompt.Prompt) *entity.Prompt {
 	}
 }
 
+func BatchPromptDTO2DO(dtos []*prompt.Prompt) []*entity.Prompt {
+	if len(dtos) == 0 {
+		return nil
+	}
+	prompts := make([]*entity.Prompt, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		prompts = append(prompts, PromptDTO2DO(dto))
+	}
+	if len(prompts) == 0 {
+		return nil
+	}
+	return prompts
+}
+
 func PromptDraftDTO2DO(dto *prompt.PromptDraft) *entity.PromptDraft {
 	if dto == nil {
 		return nil
@@ -76,6 +93,7 @@ func PromptBasicDTO2DO(dto *prompt.PromptBasic) *entity.PromptBasic {
 		return nil
 	}
 	return &entity.PromptBasic{
+		PromptType:    PromptTypeDTO2DO(dto.GetPromptType()),
 		DisplayName:   dto.GetDisplayName(),
 		Description:   dto.GetDescription(),
 		LatestVersion: dto.GetLatestVersion(),
@@ -109,6 +127,8 @@ func PromptTemplateDTO2DO(dto *prompt.PromptTemplate) *entity.PromptTemplate {
 		TemplateType: TemplateTypeDTO2DO(dto.GetTemplateType()),
 		Messages:     BatchMessageDTO2DO(dto.Messages),
 		VariableDefs: BatchVariableDefDTO2DO(dto.VariableDefs),
+		HasSnippets:  dto.GetHasSnippet(),
+		Snippets:     BatchPromptDTO2DO(dto.Snippets),
 		Metadata:     dto.Metadata,
 	}
 }
@@ -125,6 +145,17 @@ func TemplateTypeDTO2DO(dto prompt.TemplateType) entity.TemplateType {
 		return entity.TemplateTYpeCustomTemplateM
 	default:
 		return entity.TemplateTypeNormal
+	}
+}
+
+func PromptTypeDTO2DO(dto prompt.PromptType) entity.PromptType {
+	switch dto {
+	case prompt.PromptTypeNormal:
+		return entity.PromptTypeNormal
+	case prompt.PromptTypeSnippet:
+		return entity.PromptTypeSnippet
+	default:
+		return entity.PromptTypeNormal
 	}
 }
 
@@ -782,7 +813,33 @@ func PromptBasicDO2DTO(do *entity.PromptBasic) *prompt.PromptBasic {
 			}
 			return ptr.Of(do.LatestCommittedAt.UnixMilli())
 		}(),
+		PromptType: ptr.Of(PromptTypeDO2DTO(do.PromptType)),
 	}
+}
+
+func PromptTypeDO2DTO(do entity.PromptType) prompt.PromptType {
+	switch do {
+	case entity.PromptTypeNormal:
+		return prompt.PromptTypeNormal
+	case entity.PromptTypeSnippet:
+		return prompt.PromptTypeSnippet
+	default:
+		return prompt.PromptTypeNormal
+	}
+}
+
+func BatchPromptCommitDO2DTO(dos []*entity.PromptCommit) []*prompt.PromptCommit {
+	if len(dos) == 0 {
+		return nil
+	}
+	dtos := make([]*prompt.PromptCommit, 0, len(dos))
+	for _, do := range dos {
+		if do == nil {
+			continue
+		}
+		dtos = append(dtos, PromptCommitDO2DTO(do))
+	}
+	return dtos
 }
 
 func PromptCommitDO2DTO(do *entity.PromptCommit) *prompt.PromptCommit {
@@ -918,6 +975,8 @@ func PromptTemplateDO2DTO(do *entity.PromptTemplate) *prompt.PromptTemplate {
 		TemplateType: ptr.Of(prompt.TemplateType(do.TemplateType)),
 		Messages:     BatchMessageDO2DTO(do.Messages),
 		VariableDefs: BatchVariableDefDO2DTO(do.VariableDefs),
+		HasSnippet:   ptr.Of(do.HasSnippets),
+		Snippets:     BatchPromptDO2DTO(do.Snippets),
 		Metadata:     do.Metadata,
 	}
 }

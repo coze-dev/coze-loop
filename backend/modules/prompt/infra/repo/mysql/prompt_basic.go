@@ -44,6 +44,8 @@ type ListPromptBasicParam struct {
 	KeyWord       string
 	CreatedBys    []string
 	CommittedOnly bool
+	PromptTypes   []string // Add prompt type filtering
+	PromptIDs     []int64
 
 	Offset  int
 	Limit   int
@@ -175,6 +177,9 @@ func (d *PromptBasicDAOImpl) List(ctx context.Context, param ListPromptBasicPara
 	if len(param.CreatedBys) > 0 {
 		tx = tx.Where(q.PromptBasic.CreatedBy.In(param.CreatedBys...))
 	}
+	if len(param.PromptIDs) > 0 {
+		tx = tx.Where(q.PromptBasic.ID.In(param.PromptIDs...))
+	}
 	if !lo.IsEmpty(param.KeyWord) {
 		likeExpr := field.Or(
 			q.PromptBasic.PromptKey.Like(fmt.Sprintf("%%%s%%", param.KeyWord)),
@@ -184,6 +189,9 @@ func (d *PromptBasicDAOImpl) List(ctx context.Context, param ListPromptBasicPara
 	}
 	if param.CommittedOnly {
 		tx = tx.Where(q.PromptBasic.LatestVersion.Neq(""))
+	}
+	if len(param.PromptTypes) > 0 {
+		tx = tx.Where(q.PromptBasic.PromptType.In(param.PromptTypes...))
 	}
 	total, err = tx.Count()
 	if err != nil {

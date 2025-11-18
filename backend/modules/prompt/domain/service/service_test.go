@@ -42,6 +42,7 @@ func TestNewPromptService(t *testing.T) {
 			mockConfigProvider,
 			mockLLM,
 			mockFile,
+			NewCozeLoopSnippetParser(),
 		)
 
 		// Verify
@@ -88,6 +89,7 @@ func TestNewPromptService(t *testing.T) {
 			mockConfigProvider,
 			mockLLM,
 			mockFile,
+			NewCozeLoopSnippetParser(),
 		)
 
 		impl := service.(*PromptServiceImpl)

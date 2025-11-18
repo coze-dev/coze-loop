@@ -45,6 +45,7 @@ func newPromptCommit(db *gorm.DB, opts ...gen.DOOption) promptCommit {
 	_promptCommit.ExtInfo = field.NewString(tableName, "ext_info")
 	_promptCommit.CreatedAt = field.NewTime(tableName, "created_at")
 	_promptCommit.UpdatedAt = field.NewTime(tableName, "updated_at")
+	_promptCommit.HasSnippets = field.NewBool(tableName, "has_snippets")
 
 	_promptCommit.fillFieldMap()
 
@@ -74,6 +75,7 @@ type promptCommit struct {
 	ExtInfo        field.String // 扩展字段
 	CreatedAt      field.Time   // 创建时间
 	UpdatedAt      field.Time   // 更新时间
+	HasSnippets    field.Bool   // 是否包含prompt片段
 
 	fieldMap map[string]field.Expr
 }
@@ -108,6 +110,7 @@ func (p *promptCommit) updateTableName(table string) *promptCommit {
 	p.ExtInfo = field.NewString(table, "ext_info")
 	p.CreatedAt = field.NewTime(table, "created_at")
 	p.UpdatedAt = field.NewTime(table, "updated_at")
+	p.HasSnippets = field.NewBool(table, "has_snippets")
 
 	p.fillFieldMap()
 
@@ -136,7 +139,7 @@ func (p *promptCommit) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (p *promptCommit) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 18)
+	p.fieldMap = make(map[string]field.Expr, 19)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["space_id"] = p.SpaceID
 	p.fieldMap["prompt_id"] = p.PromptID
@@ -155,6 +158,7 @@ func (p *promptCommit) fillFieldMap() {
 	p.fieldMap["ext_info"] = p.ExtInfo
 	p.fieldMap["created_at"] = p.CreatedAt
 	p.fieldMap["updated_at"] = p.UpdatedAt
+	p.fieldMap["has_snippets"] = p.HasSnippets
 }
 
 func (p promptCommit) clone(db *gorm.DB) promptCommit {

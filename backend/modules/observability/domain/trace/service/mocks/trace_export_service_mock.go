@@ -21,6 +21,7 @@ import (
 type MockITraceExportService struct {
 	ctrl     *gomock.Controller
 	recorder *MockITraceExportServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockITraceExportServiceMockRecorder is the mock recorder for MockITraceExportService.
@@ -41,31 +42,31 @@ func (m *MockITraceExportService) EXPECT() *MockITraceExportServiceMockRecorder 
 }
 
 // ExportTracesToDataset mocks base method.
-func (m *MockITraceExportService) ExportTracesToDataset(arg0 context.Context, arg1 *service.ExportTracesToDatasetRequest) (*service.ExportTracesToDatasetResponse, error) {
+func (m *MockITraceExportService) ExportTracesToDataset(ctx context.Context, req *service.ExportTracesToDatasetRequest) (*service.ExportTracesToDatasetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExportTracesToDataset", arg0, arg1)
+	ret := m.ctrl.Call(m, "ExportTracesToDataset", ctx, req)
 	ret0, _ := ret[0].(*service.ExportTracesToDatasetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ExportTracesToDataset indicates an expected call of ExportTracesToDataset.
-func (mr *MockITraceExportServiceMockRecorder) ExportTracesToDataset(arg0, arg1 any) *gomock.Call {
+func (mr *MockITraceExportServiceMockRecorder) ExportTracesToDataset(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportTracesToDataset", reflect.TypeOf((*MockITraceExportService)(nil).ExportTracesToDataset), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportTracesToDataset", reflect.TypeOf((*MockITraceExportService)(nil).ExportTracesToDataset), ctx, req)
 }
 
 // PreviewExportTracesToDataset mocks base method.
-func (m *MockITraceExportService) PreviewExportTracesToDataset(arg0 context.Context, arg1 *service.ExportTracesToDatasetRequest) (*service.PreviewExportTracesToDatasetResponse, error) {
+func (m *MockITraceExportService) PreviewExportTracesToDataset(ctx context.Context, req *service.ExportTracesToDatasetRequest) (*service.PreviewExportTracesToDatasetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreviewExportTracesToDataset", arg0, arg1)
+	ret := m.ctrl.Call(m, "PreviewExportTracesToDataset", ctx, req)
 	ret0, _ := ret[0].(*service.PreviewExportTracesToDatasetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PreviewExportTracesToDataset indicates an expected call of PreviewExportTracesToDataset.
-func (mr *MockITraceExportServiceMockRecorder) PreviewExportTracesToDataset(arg0, arg1 any) *gomock.Call {
+func (mr *MockITraceExportServiceMockRecorder) PreviewExportTracesToDataset(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreviewExportTracesToDataset", reflect.TypeOf((*MockITraceExportService)(nil).PreviewExportTracesToDataset), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreviewExportTracesToDataset", reflect.TypeOf((*MockITraceExportService)(nil).PreviewExportTracesToDataset), ctx, req)
 }

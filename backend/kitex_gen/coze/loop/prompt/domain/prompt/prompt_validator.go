@@ -246,3 +246,11 @@ func (p *OverridePromptParams) IsValid() error {
 	}
 	return nil
 }
+func (p *PromptCommitVersions) IsValid() error {
+	if p.PromptBasic != nil {
+		if err := p.PromptBasic.IsValid(); err != nil {
+			return fmt.Errorf("field PromptBasic not valid, %w", err)
+		}
+	}
+	return nil
+}
