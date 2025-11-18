@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	otel2 "github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	"io"
 	"strconv"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
 
@@ -266,9 +266,9 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 			return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
 		}
 
-		spans := otel2.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans)
+		spans := otel.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans)
 
-		tenantSpanMap := o.unpackTenant(ctx, spans)
+		tenantSpanMap := o.unpackTenant(ctx, tconv.OtelSpans2LoopSpans(spans))
 		for ingestTenant := range tenantSpanMap {
 			if e = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
 				Tenant:           ingestTenant,
@@ -297,7 +297,7 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 	}
 	return &openapi.OtelIngestTracesResponse{
 		Body:        rawResp,
-		ContentType: gptr.Of(otel2.ContentTypeProtoBuf),
+		ContentType: gptr.Of(otel.ContentTypeProtoBuf),
 	}, nil
 }
 
@@ -307,7 +307,7 @@ func (o *OpenAPIApplication) validateOtelIngestTracesReq(ctx context.Context, re
 	} else if len(req.Body) == 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("req body is nil"))
 	}
-	if !strings.Contains(req.ContentType, otel2.ContentTypeJson) && !strings.Contains(req.ContentType, otel2.ContentTypeProtoBuf) {
+	if !strings.Contains(req.ContentType, otel.ContentTypeJson) && !strings.Contains(req.ContentType, otel.ContentTypeProtoBuf) {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("contentType is invalid"))
 	}
 	return nil
@@ -336,17 +336,17 @@ func ungzip(contentEncoding string, data []byte) ([]byte, error) {
 	return uncompressedData.Bytes(), nil
 }
 
-func unpackSpace(outerSpaceID string, reqSpanProto *otel2.ExportTraceServiceRequest) map[string][]*otel2.ResourceScopeSpan {
+func unpackSpace(outerSpaceID string, reqSpanProto *otel.ExportTraceServiceRequest) map[string][]*otel.ResourceScopeSpan {
 	if reqSpanProto == nil {
 		return nil
 	}
-	spansMap := make(map[string][]*otel2.ResourceScopeSpan)
+	spansMap := make(map[string][]*otel.ResourceScopeSpan)
 	for _, resourceSpans := range reqSpanProto.ResourceSpans {
 		for _, scopeSpans := range resourceSpans.ScopeSpans {
 			for _, span := range scopeSpans.Spans {
 				spaceID := ""
 				for _, attribute := range span.Attributes {
-					if attribute.Key == otel2.OtelAttributeWorkSpaceID {
+					if attribute.Key == otel.OtelAttributeWorkSpaceID {
 						spaceID = attribute.Value.GetStringValue()
 						break
 					}
@@ -355,9 +355,9 @@ func unpackSpace(outerSpaceID string, reqSpanProto *otel2.ExportTraceServiceRequ
 					spaceID = outerSpaceID
 				}
 				if spansMap[spaceID] == nil {
-					spansMap[spaceID] = make([]*otel2.ResourceScopeSpan, 0)
+					spansMap[spaceID] = make([]*otel.ResourceScopeSpan, 0)
 				}
-				spansMap[spaceID] = append(spansMap[spaceID], &otel2.ResourceScopeSpan{
+				spansMap[spaceID] = append(spansMap[spaceID], &otel.ResourceScopeSpan{
 					Resource: resourceSpans.Resource,
 					Scope:    scopeSpans.Scope,
 					Span:     span,
@@ -370,15 +370,15 @@ func unpackSpace(outerSpaceID string, reqSpanProto *otel2.ExportTraceServiceRequ
 	return spansMap
 }
 
-func unmarshalOtelSpan(spanSrc []byte, contentType string) (*otel2.ExportTraceServiceRequest, error) {
-	finalResult := &otel2.ExportTraceServiceRequest{}
-	if strings.Contains(contentType, otel2.ContentTypeProtoBuf) {
+func unmarshalOtelSpan(spanSrc []byte, contentType string) (*otel.ExportTraceServiceRequest, error) {
+	finalResult := &otel.ExportTraceServiceRequest{}
+	if strings.Contains(contentType, otel.ContentTypeProtoBuf) {
 		tempReq := &coltracepb.ExportTraceServiceRequest{}
 		if err := proto.Unmarshal(spanSrc, tempReq); err != nil {
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode, errorx.WithExtraMsg("proto Unmarshal err"))
 		}
-		finalResult = otel2.OtelTraceRequestPbToJson(tempReq)
-	} else if strings.Contains(contentType, otel2.ContentTypeJson) {
+		finalResult = otel.OtelTraceRequestPbToJson(tempReq)
+	} else if strings.Contains(contentType, otel.ContentTypeJson) {
 		if err := sonic.Unmarshal(spanSrc, finalResult); err != nil {
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode, errorx.WithExtraMsg("json Unmarshal err"))
 		}
