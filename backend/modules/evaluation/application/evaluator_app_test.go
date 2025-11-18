@@ -40,6 +40,109 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
+func TestEvaluatorHandlerImpl_authCustomRPCEvaluatorContentWritable(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Setup mocks
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		configer: mockConfiger,
+	}
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name              string
+		workspaceID       int64
+		allowedSpaceIDs   []string
+		checkWritableResp bool
+		checkWritableErr  error
+		wantErr           bool
+		wantErrCode       int32
+	}{
+		{
+			name:              "成功 - workspaceID在允许列表中",
+			workspaceID:       123456,
+			allowedSpaceIDs:   []string{"123456", "789012"},
+			checkWritableResp: true,
+			checkWritableErr:  nil,
+			wantErr:           false,
+		},
+		{
+			name:              "失败 - workspaceID不在允许列表中",
+			workspaceID:       345678,
+			allowedSpaceIDs:   []string{"123456", "789012"},
+			checkWritableResp: false,
+			checkWritableErr:  nil,
+			wantErr:           true,
+			wantErrCode:       errno.CommonInvalidParamCode,
+		},
+		{
+			name:              "失败 - 配置返回空列表",
+			workspaceID:       123456,
+			allowedSpaceIDs:   []string{},
+			checkWritableResp: false,
+			checkWritableErr:  nil,
+			wantErr:           true,
+			wantErrCode:       errno.CommonInvalidParamCode,
+		},
+		{
+			name:              "失败 - CheckCustomRPCEvaluatorWritable返回错误",
+			workspaceID:       123456,
+			allowedSpaceIDs:   []string{"123456"},
+			checkWritableResp: false,
+			checkWritableErr:  errors.New("配置检查失败"),
+			wantErr:           true,
+			wantErrCode:       0, // 错误码由底层错误决定
+		},
+		{
+			name:              "边界情况 - workspaceID为0",
+			workspaceID:       0,
+			allowedSpaceIDs:   []string{"0", "123456"},
+			checkWritableResp: true,
+			checkWritableErr:  nil,
+			wantErr:           false,
+		},
+		{
+			name:              "边界情况 - 负数workspaceID",
+			workspaceID:       -123,
+			allowedSpaceIDs:   []string{"-123", "123456"},
+			checkWritableResp: true,
+			checkWritableErr:  nil,
+			wantErr:           false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock GetBuiltinEvaluatorSpaceConf
+			mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return(tt.allowedSpaceIDs)
+
+			// Mock CheckCustomRPCEvaluatorWritable
+			mockConfiger.EXPECT().CheckCustomRPCEvaluatorWritable(
+				ctx,
+				strconv.FormatInt(tt.workspaceID, 10),
+				tt.allowedSpaceIDs,
+			).Return(tt.checkWritableResp, tt.checkWritableErr)
+
+			err := app.authCustomRPCEvaluatorContentWritable(ctx, tt.workspaceID)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					if statusErr, ok := errorx.FromStatusError(err); ok {
+						assert.Equal(t, tt.wantErrCode, statusErr.Code())
+					}
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestEvaluatorHandlerImpl_ListEvaluators(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2914,6 +3017,284 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 					assert.Equal(t, templateID, resp.GetEvaluatorTemplate().GetID())
 				}
 			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_CreateEvaluator_CustomRPC(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Setup mocks
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+	mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		auditClient:      mockAuditClient,
+		metrics:          mockMetrics,
+		configer:         mockConfiger,
+	}
+
+	ctx := context.Background()
+	workspaceID := int64(123456)
+
+	tests := []struct {
+		name            string
+		evaluatorType   evaluatordto.EvaluatorType
+		allowedSpaceIDs []string
+		checkWritable   bool
+		checkError      error
+		wantErr         bool
+		wantErrCode     int32
+	}{
+		{
+			name:            "成功 - CustomRPC类型且空间有权限",
+			evaluatorType:   evaluatordto.EvaluatorType_CustomRPC,
+			allowedSpaceIDs: []string{"123456", "789012"},
+			checkWritable:   true,
+			checkError:      nil,
+			wantErr:         false,
+		},
+		{
+			name:            "失败 - CustomRPC类型但空间无权限",
+			evaluatorType:   evaluatordto.EvaluatorType_CustomRPC,
+			allowedSpaceIDs: []string{"789012", "345678"},
+			checkWritable:   false,
+			checkError:      nil,
+			wantErr:         true,
+			wantErrCode:     errno.CommonInvalidParamCode,
+		},
+		{
+			name:            "失败 - CustomRPC类型但配置检查失败",
+			evaluatorType:   evaluatordto.EvaluatorType_CustomRPC,
+			allowedSpaceIDs: []string{"123456"},
+			checkWritable:   false,
+			checkError:      errors.New("配置检查失败"),
+			wantErr:         true,
+			wantErrCode:     0,
+		},
+		{
+			name:            "成功 - 非CustomRPC类型无需额外权限校验",
+			evaluatorType:   evaluatordto.EvaluatorType_Prompt,
+			allowedSpaceIDs: []string{},
+			checkWritable:   false,
+			checkError:      nil,
+			wantErr:         false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var request *evaluatorservice.CreateEvaluatorRequest
+			if tt.evaluatorType == evaluatordto.EvaluatorType_CustomRPC {
+				request = &evaluatorservice.CreateEvaluatorRequest{
+					Evaluator: &evaluatordto.Evaluator{
+						WorkspaceID:   gptr.Of(workspaceID),
+						Name:          gptr.Of("测试CustomRPC评估器"),
+						Description:   gptr.Of("测试描述"),
+						EvaluatorType: gptr.Of(tt.evaluatorType),
+						CurrentVersion: &evaluatordto.EvaluatorVersion{
+							Version:     gptr.Of("1.0.0"),
+							Description: gptr.Of("版本描述"),
+							EvaluatorContent: &evaluatordto.EvaluatorContent{
+								CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+									ServiceName:    gptr.Of("test.psm.service"),
+									AccessProtocol: evaluatordto.AccessProtocol("RPC"),
+								},
+							},
+						},
+					},
+				}
+			} else {
+				request = &evaluatorservice.CreateEvaluatorRequest{
+					Evaluator: &evaluatordto.Evaluator{
+						WorkspaceID:   gptr.Of(workspaceID),
+						Name:          gptr.Of("测试CustomRPC评估器"),
+						Description:   gptr.Of("测试描述"),
+						EvaluatorType: gptr.Of(tt.evaluatorType),
+						CurrentVersion: &evaluatordto.EvaluatorVersion{
+							Version:     gptr.Of("1.0.0"),
+							Description: gptr.Of("版本描述"),
+							EvaluatorContent: &evaluatordto.EvaluatorContent{
+								PromptEvaluator: &evaluatordto.PromptEvaluator{
+									PromptTemplateKey: gptr.Of("test_template"),
+								},
+							},
+						},
+					},
+				}
+			}
+
+			// Mock 基础权限校验
+			mockAuth.EXPECT().
+				Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(workspaceID, 10),
+					SpaceID:       workspaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).
+				Return(nil).
+				Times(1)
+
+			// Mock 机审
+			mockAuditClient.EXPECT().
+				Audit(gomock.Any(), gomock.Any()).
+				Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).
+				Times(1)
+
+			// 如果是CustomRPC类型，需要Mock额外的权限校验
+			if tt.evaluatorType == evaluatordto.EvaluatorType_CustomRPC {
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return(tt.allowedSpaceIDs).
+					Times(1)
+
+				mockConfiger.EXPECT().
+					CheckCustomRPCEvaluatorWritable(gomock.Any(), strconv.FormatInt(workspaceID, 10), tt.allowedSpaceIDs).
+					Return(tt.checkWritable, tt.checkError).
+					Times(1)
+			}
+
+			// Mock 创建评估器
+			if !tt.wantErr {
+				mockMetrics.EXPECT().
+					EmitCreate(workspaceID, nil).
+					Times(1)
+
+				mockEvaluatorService.EXPECT().
+					CreateEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(int64(12345), nil).
+					Times(1)
+			}
+
+			resp, err := app.CreateEvaluator(ctx, request)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					if statusErr, ok := errorx.FromStatusError(err); ok {
+						assert.Equal(t, tt.wantErrCode, statusErr.Code())
+					}
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.Equal(t, int64(12345), gptr.Indirect(resp.EvaluatorID))
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_UpdateEvaluatorDraft_CustomRPC(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Setup mocks
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		configer:         mockConfiger,
+		userInfoService:  mockUserInfoService,
+	}
+
+	ctx := context.Background()
+	workspaceID := int64(123456)
+	evaluatorID := int64(789)
+
+	tests := []struct {
+		name            string
+		spaceID         int64
+		allowedSpaceIDs []string
+		checkWritable   bool
+		checkError      error
+		wantErr         bool
+		wantErrCode     int32
+	}{
+		{
+			name:            "失败 - CustomRPC类型但空间无权限",
+			spaceID:         workspaceID,
+			allowedSpaceIDs: []string{"789012", "345678"},
+			checkWritable:   false,
+			checkError:      nil,
+			wantErr:         true,
+			wantErrCode:     errno.CommonInvalidParamCode,
+		},
+		{
+			name:            "失败 - CustomRPC类型但配置检查失败",
+			spaceID:         workspaceID,
+			allowedSpaceIDs: []string{"123456"},
+			checkWritable:   false,
+			checkError:      errors.New("配置检查失败"),
+			wantErr:         true,
+			wantErrCode:     0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := &evaluatorservice.UpdateEvaluatorDraftRequest{
+				WorkspaceID:   workspaceID,
+				EvaluatorID:   evaluatorID,
+				EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+						ServiceName:    gptr.Of("test.psm.service"),
+						AccessProtocol: evaluatordto.AccessProtocol("RPC"),
+					},
+				},
+			}
+
+			// Mock 获取评估器信息
+			evaluatorDO := &entity.Evaluator{
+				ID:      evaluatorID,
+				SpaceID: tt.spaceID,
+				Name:    "测试评估器",
+			}
+
+			mockEvaluatorService.EXPECT().
+				GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+				Return(evaluatorDO, nil).
+				Times(1)
+
+			// Mock 基础权限校验
+			mockAuth.EXPECT().
+				Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(evaluatorID, 10),
+					SpaceID:       tt.spaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+				}).
+				Return(nil).
+				Times(1)
+
+			// Mock 额外的权限校验
+			mockConfiger.EXPECT().
+				GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+				Return(tt.allowedSpaceIDs).
+				Times(1)
+
+			mockConfiger.EXPECT().
+				CheckCustomRPCEvaluatorWritable(gomock.Any(), strconv.FormatInt(tt.spaceID, 10), tt.allowedSpaceIDs).
+				Return(tt.checkWritable, tt.checkError).
+				Times(1)
+
+			resp, err := app.UpdateEvaluatorDraft(ctx, request)
+
+			assert.Error(t, err)
+			if tt.wantErrCode != 0 {
+				if statusErr, ok := errorx.FromStatusError(err); ok {
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			}
+			assert.Nil(t, resp)
 		})
 	}
 }

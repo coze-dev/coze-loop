@@ -14,6 +14,7 @@ import (
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 )
 
 //go:generate mockgen -destination=mocks/evaluator_configer.go -package=mocks . IConfiger
@@ -34,6 +35,8 @@ type IConfiger interface {
 	GetBuiltinEvaluatorSpaceConf(ctx context.Context) (spaceIDs []string)
 	// 新增方法：获取评估器Tag配置
 	GetEvaluatorTagConf(ctx context.Context) (etf map[evaluatordto.EvaluatorTagKey][]string)
+	// 检查当前空间是否可写自定义RPC评估器
+	CheckCustomRPCEvaluatorWritable(ctx context.Context, spaceID string, builtinSpaceIDs []string) (bool, error)
 }
 
 func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
@@ -260,4 +263,13 @@ func (c *evaluatorConfiger) GetEvaluatorTagConf(ctx context.Context) (etf map[ev
 
 func DefaultEvaluatorTagConf() map[evaluatordto.EvaluatorTagKey][]string {
 	return make(map[evaluatordto.EvaluatorTagKey][]string)
+}
+
+func (c *evaluatorConfiger) CheckCustomRPCEvaluatorWritable(ctx context.Context, spaceID string, builtinSpaceIDs []string) (bool, error) {
+	// builtin space can write custom rpc evaluator, whatever App is
+	if slices.Contains(builtinSpaceIDs, spaceID) {
+		return true, nil
+	}
+	// otherwise, not writable
+	return false, nil
 }
