@@ -20,11 +20,11 @@ import (
 	semconv1_32_0 "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
-// Field configuration, supports configuring data sources and export methods for fields, currently supports attribute, event, is_tag, data_type
+// FieldConfMap Field configuration, supports configuring data sources and export methods for fields, currently supports attribute, event, is_tag, data_type
 // Among them, attributes and events support configuring multiple, while tags and datatypes only support configuring one.
 // Other types of configurations need to be manually processed in the code.
 var (
-	fieldConfMap = map[string]fieldConf{
+	FieldConfMap = map[string]fieldConf{
 		// common
 		"span_type": {
 			attributeKey: []string{
@@ -249,7 +249,7 @@ var (
 func init() {
 	registeredAttributeMap = make(map[string]bool)
 	registeredAttributePrefixMap = make(map[string]bool)
-	for _, fieldConf := range fieldConfMap {
+	for _, fieldConf := range FieldConfMap {
 		for _, attribute := range fieldConf.attributeKey {
 			registeredAttributeMap[attribute] = true
 		}
@@ -299,7 +299,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 		if srcValue == nil {
 			continue
 		}
-		conf, ok := fieldConfMap[fieldKey]
+		conf, ok := FieldConfMap[fieldKey]
 		if !ok {
 			continue
 		}
@@ -561,7 +561,7 @@ func processAttributesAndEvents(ctx context.Context, attributeMap map[string]*An
 
 	// for a certain field, process it gradually according to its value priority,
 	// first processing the low priority ones, and then processing the high priority ones.
-	for fieldKey, conf := range fieldConfMap {
+	for fieldKey, conf := range FieldConfMap {
 		var singleRes interface{}
 		// attribute key
 		attributeKeyRes := processAttributeKey(ctx, conf, attributeMap)
