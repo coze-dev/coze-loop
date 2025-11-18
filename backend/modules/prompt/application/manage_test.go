@@ -603,7 +603,6 @@ func TestPromptManageApplicationImpl_CreatePrompt(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestPromptManageApplicationImpl_GetPrompt(t *testing.T) {
