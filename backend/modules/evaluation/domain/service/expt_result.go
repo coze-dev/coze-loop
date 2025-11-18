@@ -20,6 +20,7 @@ type ExptResultService interface {
 	GetStats(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.ExptStats, error)
 	MGetStats(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.ExptStats, error)
 	CalculateStats(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.ExptCalculateStats, error)
+	GetIncompleteTurns(ctx context.Context, exptID, spaceID int64, session *entity.Session) ([]*entity.ItemTurnID, error)
 
 	ManualUpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, itemIDs []int64) error
 	UpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, itemID []int64) error

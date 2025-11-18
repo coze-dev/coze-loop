@@ -14,6 +14,62 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
+func TestIsExptFinishing(t *testing.T) {
+	tests := []struct {
+		name   string
+		status ExptStatus
+		want   bool
+	}{
+		{
+			name:   "terminating status should return true",
+			status: ExptStatus_Terminating,
+			want:   true,
+		},
+		{
+			name:   "draining status should return true",
+			status: ExptStatus_Draining,
+			want:   true,
+		},
+		{
+			name:   "processing status should return false",
+			status: ExptStatus_Processing,
+			want:   false,
+		},
+		{
+			name:   "pending status should return false",
+			status: ExptStatus_Pending,
+			want:   false,
+		},
+		{
+			name:   "success status should return false",
+			status: ExptStatus_Success,
+			want:   false,
+		},
+		{
+			name:   "failed status should return false",
+			status: ExptStatus_Failed,
+			want:   false,
+		},
+		{
+			name:   "terminated status should return false",
+			status: ExptStatus_Terminated,
+			want:   false,
+		},
+		{
+			name:   "system terminated status should return false",
+			status: ExptStatus_SystemTerminated,
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsExptFinishing(tt.status)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestExptTurnRunResult_AbortWithTargetResult(t *testing.T) {
 	tests := []struct {
 		name            string

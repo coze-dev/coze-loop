@@ -16,6 +16,7 @@ enum ExptStatus {
     Failed = 12    // Execution failed
     Terminated = 13   // User terminated
     SystemTerminated = 14 // System terminated
+    Terminating = 15 // Terminating
 
     Draining = 21 // online expt draining
 }
@@ -82,6 +83,8 @@ struct EvaluatorFmtResult {
     1: optional string name
     2: optional double score
 }
+
+const string PromptUserQueryFieldKey = "builtin_prompt_user_query"
 
 struct TargetFieldMapping {
     1: optional list<FieldMapping> from_eval_set

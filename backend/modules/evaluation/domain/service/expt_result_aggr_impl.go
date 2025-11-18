@@ -353,6 +353,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 			}
 
 			evaluatorAggrResult := entity.EvaluatorAggregateResult{
+				EvaluatorID:        evaluator.ID,
 				EvaluatorVersionID: evaluatorVersionID,
 				AggregatorResults:  aggregateResultDO.AggregatorResults,
 				Name:               gptr.Of(evaluator.Name),

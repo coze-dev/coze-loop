@@ -29,6 +29,7 @@ const (
 	pageSize                = 500
 	backfillLockKeyTemplate = "observability:tracehub:backfill:%d"
 	backfillLockMaxHold     = 24 * time.Hour
+	backfillLockTTL         = 3 * time.Minute
 )
 
 // 定时任务+锁
@@ -43,7 +44,7 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	)
 	if h.locker != nil && event != nil {
 		lockKey = fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
-		locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, transformTaskStatusLockTTL, backfillLockMaxHold)
+		locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, backfillLockTTL, backfillLockMaxHold)
 		if lockErr != nil {
 			logs.CtxError(ctx, "backfill acquire lock failed", "task_id", event.TaskID, "err", lockErr)
 			return lockErr
@@ -311,7 +312,7 @@ func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *
 			logs.CtxInfo(ctx, "completed listing spans, total_count=%d, task_id=%d", totalCount, sub.t.GetID())
 			break
 		}
-
+		listParam.PageToken = result.PageToken
 		pageToken = result.PageToken
 	}
 
@@ -417,7 +418,7 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSu
 // processSpansForBackfill handles spans for backfill
 func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
 	// Batch processing spans for efficiency
-	const batchSize = 100
+	const batchSize = 50
 
 	for i := 0; i < len(spans); i += batchSize {
 		end := i + batchSize
@@ -432,6 +433,8 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 			// Continue with the next batch without stopping due to a single failure
 			continue
 		}
+		// ml_flow rate-limited: 50/5s
+		time.Sleep(5 * time.Second)
 	}
 
 	return nil
@@ -484,8 +487,10 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error, s
 
 		// Send MQ message asynchronously without blocking task creation flow
 		go func() {
-			if err := h.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
-				logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.GetID(), err)
+			if time.Now().UnixMilli()-(sub.tr.RunEndAt-sub.tr.RunStartAt) < sub.tr.RunEndAt {
+				if err := h.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
+					logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.GetID(), err)
+				}
 			}
 		}()
 		logs.CtxWarn(ctx, "backfill completed with %d errors, task_id=%d", len(allErrors), sub.t.GetID())

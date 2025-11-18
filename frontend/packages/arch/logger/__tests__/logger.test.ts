@@ -2,7 +2,6 @@ import { type Mock } from 'vitest';
 
 import { Logger } from '../src/logger/logger';
 import { shouldCloseConsole } from '../src/console-disable';
-import { type SlardarInstance } from '../src';
 
 vi.mock('../src/console-disable');
 vi.stubGlobal('IS_RELEASE_VERSION', undefined);
@@ -20,7 +19,6 @@ describe('logger', () => {
 
   test('should trigger disable-console when calling logger.xxx functions', () => {
     const logger = new Logger();
-    logger.init({} as unknown as SlardarInstance);
 
     ['info', 'success', 'warning', 'error'].forEach(fnName => {
       logger[fnName]({ message: 'test' });

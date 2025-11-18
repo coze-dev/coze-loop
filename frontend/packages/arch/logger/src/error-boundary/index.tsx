@@ -8,7 +8,6 @@ import {
 import { type ErrorInfo, type ComponentType } from 'react';
 import React, { useCallback, version } from 'react';
 
-import { ApiError } from '../slardar/utils';
 import { useLogger, type Logger } from '../logger';
 
 // 拷贝自 react-error-boundary@3.1.4版本源码
@@ -83,7 +82,7 @@ export const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({
     const { componentStack } = info;
 
     const meta = {
-      reportJsError: true, // 标记为 JS Error，上报走 slardar.captureException
+      reportJsError: true, // 标记为 JS Error
       errorBoundaryName,
       reactInfo: {
         componentStack,
@@ -91,19 +90,11 @@ export const ErrorBoundary: React.FC<ErrorBoundaryProps> = ({
       },
     };
 
-    if (error instanceof ApiError) {
-      logger?.persist.error({
-        eventName: 'react_error_by_api_collection',
-        error,
-        meta,
-      });
-    } else {
-      logger?.persist.error({
-        eventName: 'react_error_collection',
-        error,
-        meta,
-      });
-    }
+    logger?.persist.error({
+      eventName: 'react_error_collection',
+      error,
+      meta,
+    });
     propsOnError?.(error, info);
   }, []);
 
