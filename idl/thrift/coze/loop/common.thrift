@@ -12,12 +12,12 @@ struct Trajectory {
 struct RootStep {
     1: optional string id       // 唯一ID，trace导入时取span_id
     2: optional string name     // name，trace导入时取span_name
-    4: optional string input    // 输入
-    5: optional string output   // 输出
+    3: optional string input    // 输入
+    4: optional string output   // 输出
 
     // 系统属性
-    50: optional map<string, string> metadata   // 保留字段，可以承载业务自定义的属性
-    100: optional BasicInfo basic_info
+    100: optional map<string, string> metadata   // 保留字段，可以承载业务自定义的属性
+    101: optional BasicInfo basic_info
 }
 
 struct AgentStep {
@@ -31,8 +31,8 @@ struct AgentStep {
     20: optional list<Step> steps   // 子节点，agent执行内部经历了哪些步骤
 
     // 系统属性
-    50: optional map<string, string> metadata   // 保留字段，可以承载业务自定义的属性
-    100: optional BasicInfo basic_info
+    100: optional map<string, string> metadata   // 保留字段，可以承载业务自定义的属性
+    101: optional BasicInfo basic_info
 }
 
 struct Step {
@@ -48,8 +48,8 @@ struct Step {
     20: optional ModelInfo model_info // type=model时填充
 
     // 系统属性
-    50: optional map<string, string> metadata   // 保留字段，可以承载业务自定义的属性
-    100: optional BasicInfo basic_info
+    100: optional map<string, string> metadata   // 保留字段，可以承载业务自定义的属性
+    101: optional BasicInfo basic_info
 }
 
 typedef string StepType(ts.enum="true")
@@ -65,7 +65,7 @@ struct ModelInfo {
 struct BasicInfo {
     1: optional i64 started_at (api.js_conv='true', go.tag='json:"started_at"') // 单位微秒
     2: optional i64 duration (api.js_conv='true', go.tag='json:"duration"')    // 单位微秒
-    4: optional Error error
+    3: optional Error error
 }
 
 struct Error {
