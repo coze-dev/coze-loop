@@ -4,12 +4,12 @@ service:
   targetPort: 8888
 
 image:
-  registry: ""
-  repository: ""
+  registry: "docker.io"
+  repository: "cozedev"
   image: "coze-loop"
-  tag: "dev"
-  pullPolicy: Never
-  pullSecrets: ""
+  tag: "1.4.1"
+  pullPolicy: Always
+  pullSecrets: "coze-loop-image-secret"
 
 init_image:
   redis:
