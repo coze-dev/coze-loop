@@ -42,21 +42,6 @@ func (m *MockIManageRepo) EXPECT() *MockIManageRepoMockRecorder {
 	return m.recorder
 }
 
-// MGetVersionsByPromptID mocks base method.
-func (m *MockIManageRepo) MGetVersionsByPromptID(ctx context.Context, promptID int64) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MGetVersionsByPromptID", ctx, promptID)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// MGetVersionsByPromptID indicates an expected call of MGetVersionsByPromptID.
-func (mr *MockIManageRepoMockRecorder) MGetVersionsByPromptID(ctx, promptID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetVersionsByPromptID", reflect.TypeOf((*MockIManageRepo)(nil).MGetVersionsByPromptID), ctx, promptID)
-}
-
 // CommitDraft mocks base method.
 func (m *MockIManageRepo) CommitDraft(ctx context.Context, param repo.CommitDraftParam) error {
 	m.ctrl.T.Helper()
@@ -131,10 +116,10 @@ func (mr *MockIManageRepoMockRecorder) ListCommitInfo(ctx, param any) *gomock.Ca
 }
 
 // ListParentPrompt mocks base method.
-func (m *MockIManageRepo) ListParentPrompt(ctx context.Context, param repo.ListParentPromptParam) (map[string]*repo.PromptCommitVersions, error) {
+func (m *MockIManageRepo) ListParentPrompt(ctx context.Context, param repo.ListParentPromptParam) (map[string][]*repo.PromptCommitVersions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListParentPrompt", ctx, param)
-	ret0, _ := ret[0].(map[string]*repo.PromptCommitVersions)
+	ret0, _ := ret[0].(map[string][]*repo.PromptCommitVersions)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -198,6 +183,21 @@ func (mr *MockIManageRepoMockRecorder) MGetPromptBasicByPromptKey(ctx, spaceID, 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, spaceID, promptKeys}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetPromptBasicByPromptKey", reflect.TypeOf((*MockIManageRepo)(nil).MGetPromptBasicByPromptKey), varargs...)
+}
+
+// MGetVersionsByPromptID mocks base method.
+func (m *MockIManageRepo) MGetVersionsByPromptID(ctx context.Context, promptID int64) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MGetVersionsByPromptID", ctx, promptID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MGetVersionsByPromptID indicates an expected call of MGetVersionsByPromptID.
+func (mr *MockIManageRepoMockRecorder) MGetVersionsByPromptID(ctx, promptID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetVersionsByPromptID", reflect.TypeOf((*MockIManageRepo)(nil).MGetVersionsByPromptID), ctx, promptID)
 }
 
 // SaveDraft mocks base method.
