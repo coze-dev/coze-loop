@@ -24,7 +24,7 @@ import (
 // Among them, attributes and events support configuring multiple, while tags and datatypes only support configuring one.
 // Other types of configurations need to be manually processed in the code.
 var (
-	FieldConfMap = map[string]fieldConf{
+	FieldConfMap = map[string]FieldConf{
 		// common
 		"span_type": {
 			attributeKey: []string{
@@ -219,7 +219,7 @@ var (
 	}
 )
 
-type fieldConf struct {
+type FieldConf struct {
 	attributeKey          []string
 	attributeKeyPrefix    []string
 	eventName             []string
@@ -598,7 +598,7 @@ func getSamePrefixAttributesMap(attributeMap map[string]*AnyValue, prefixKey str
 	return samePrefixAttributesMap
 }
 
-func processAttributeKey(ctx context.Context, conf fieldConf, attributeMap map[string]*AnyValue) interface{} {
+func processAttributeKey(ctx context.Context, conf FieldConf, attributeMap map[string]*AnyValue) interface{} {
 	if attributeKeys := conf.attributeKey; len(attributeKeys) > 0 {
 		for _, key := range attributeKeys {
 			if x, ok := attributeMap[key]; ok {
@@ -610,7 +610,7 @@ func processAttributeKey(ctx context.Context, conf fieldConf, attributeMap map[s
 	return nil
 }
 
-func processAttributePrefix(ctx context.Context, fieldKey string, conf fieldConf, attributeMap map[string]*AnyValue) string {
+func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf, attributeMap map[string]*AnyValue) string {
 	for _, attributePrefixKey := range conf.attributeKeyPrefix {
 		srcAttrAggrRes := aggregateAttributesByPrefix(attributeMap, attributePrefixKey)
 		if srcAttrAggrRes == nil {
@@ -682,7 +682,7 @@ func aggregateAttributesByPrefix(attributeMap map[string]*AnyValue, attributePre
 	return srcAttrAggrRes
 }
 
-func processEvent(ctx context.Context, fieldKey string, conf fieldConf, events []*SpanEvent, attributeMap map[string]*AnyValue) string {
+func processEvent(ctx context.Context, fieldKey string, conf FieldConf, events []*SpanEvent, attributeMap map[string]*AnyValue) string {
 	if len(events) == 0 || len(conf.eventName) == 0 {
 		return ""
 	}
