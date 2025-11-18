@@ -98,7 +98,7 @@ struct GetPromptRequest {
     21: optional bool with_draft (api.query="with_draft")
 
     31: optional bool with_default_config (api.query="with_default_config")
-    32: optional bool expand_snippet (api.query="expand_snippet") // 是否展开子片段
+    32: optional bool expand_snippet (api.query="expand_snippet") // 是否展开子片段，true:展开
 
     255: optional base.Base Base
 }
