@@ -4634,7 +4634,7 @@ func TestManageRepoImpl_ListParentPrompt(t *testing.T) {
 		args         args
 		wantErr      error
 		wantErrMsg   string
-		check        func(t *testing.T, got map[string]*repo.PromptCommitVersions)
+		check        func(t *testing.T, got map[string][]*repo.PromptCommitVersions)
 	}{
 		{
 			name: "invalid sub prompt id",
@@ -4681,7 +4681,7 @@ func TestManageRepoImpl_ListParentPrompt(t *testing.T) {
 					SubPromptID: 200,
 				},
 			},
-			check: func(t *testing.T, got map[string]*repo.PromptCommitVersions) {
+			check: func(t *testing.T, got map[string][]*repo.PromptCommitVersions) {
 				assert.Nil(t, got)
 			},
 		},
@@ -4753,10 +4753,12 @@ func TestManageRepoImpl_ListParentPrompt(t *testing.T) {
 					SubPromptVersions: []string{"v1", "v2"},
 				},
 			},
-			check: func(t *testing.T, got map[string]*repo.PromptCommitVersions) {
+			check: func(t *testing.T, got map[string][]*repo.PromptCommitVersions) {
 				assert.Len(t, got, 2)
-				v1, ok := got["v1"]
+				v1List, ok := got["v1"]
 				assert.True(t, ok)
+				assert.Len(t, v1List, 1)
+				v1 := v1List[0]
 				assert.Equal(t, int64(101), v1.PromptID)
 				assert.Equal(t, int64(1), v1.SpaceID)
 				assert.Equal(t, "parent_a", v1.PromptKey)
@@ -4765,8 +4767,10 @@ func TestManageRepoImpl_ListParentPrompt(t *testing.T) {
 				}
 				assert.Equal(t, []string{"1.0.0"}, v1.CommitVersions)
 
-				v2, ok := got["v2"]
+				v2List, ok := got["v2"]
 				assert.True(t, ok)
+				assert.Len(t, v2List, 1)
+				v2 := v2List[0]
 				assert.Equal(t, int64(102), v2.PromptID)
 				assert.Equal(t, "parent_b", v2.PromptKey)
 				if assert.NotNil(t, v2.PromptBasic) {
