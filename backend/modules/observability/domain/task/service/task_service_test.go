@@ -264,7 +264,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			Sampler:       &entity.Sampler{SampleRate: 0.1},
 			TaskRuns:      []*entity.TaskRun{{RunStatus: task.RunStatusRunning}},
 			UpdatedAt:     now,
-			UpdatedBy:     "",
+			UpdatedBy:     "user1",
 		}
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)

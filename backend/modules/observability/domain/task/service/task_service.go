@@ -221,7 +221,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 }
 
 func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (resp *ListTasksResp, err error) {
-	var taskFilters *filter.TaskFilterFields
+	taskFilters := filter.NewTaskFilterFields()
 	if req.TaskFilters != nil {
 		taskFilters = req.TaskFilters
 	}
