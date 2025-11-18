@@ -6,22 +6,18 @@ package otel
 import (
 	"context"
 	"fmt"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/otel/open_inference"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/bytedance/gg/gptr"
-
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/bytedance/sonic"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/open_inference"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 
 	semconv1_26_0 "go.opentelemetry.io/otel/semconv/v1.26.0"
 	semconv1_27_0 "go.opentelemetry.io/otel/semconv/v1.27.0"
 	semconv1_32_0 "go.opentelemetry.io/otel/semconv/v1.32.0"
-
-	"github.com/bytedance/sonic"
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
 // Field configuration, supports configuring data sources and export methods for fields, currently supports attribute, event, is_tag, data_type
@@ -263,8 +259,8 @@ func init() {
 	}
 }
 
-func OtelSpansConvertToSendSpans(ctx context.Context, spaceID string, spans []*ResourceScopeSpan) loop_span.SpanList {
-	result := make(loop_span.SpanList, 0)
+func OtelSpansConvertToSendSpans(ctx context.Context, spaceID string, spans []*ResourceScopeSpan) []*LoopSpan {
+	result := make([]*LoopSpan, 0)
 	for i := range spans {
 		if span := OtelSpanConvertToSendSpan(ctx, spaceID, spans[i]); span != nil {
 			result = append(result, span)
@@ -273,19 +269,13 @@ func OtelSpansConvertToSendSpans(ctx context.Context, spaceID string, spans []*R
 	return result
 }
 
-func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScopeSpan *ResourceScopeSpan) *loop_span.Span {
+func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScopeSpan *ResourceScopeSpan) *LoopSpan {
 	if resourceScopeSpan == nil || resourceScopeSpan.Span == nil {
 		return nil
 	}
 	span := resourceScopeSpan.Span
-	startTimeUnixNanoInt64, err := strconv.ParseInt(span.StartTimeUnixNano, 10, 64)
-	if err != nil {
-		logs.CtxError(ctx, "startTimeUnixNano convert to int64 failed err=%+v", err)
-	}
-	endTimeUnixNanoInt64, err := strconv.ParseInt(span.EndTimeUnixNano, 10, 64)
-	if err != nil {
-		logs.CtxError(ctx, "endTimeUnixNano convert to int64 failed err=%+v", err)
-	}
+	startTimeUnixNanoInt64, _ := strconv.ParseInt(span.StartTimeUnixNano, 10, 64)
+	endTimeUnixNanoInt64, _ := strconv.ParseInt(span.EndTimeUnixNano, 10, 64)
 
 	attributeMap := make(map[string]*AnyValue)
 	for _, spanAttribute := range span.Attributes {
@@ -383,7 +373,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 	// set runtime
 	calRuntime(systemTagsString, resourceScopeSpan)
 
-	result := &loop_span.Span{
+	result := &LoopSpan{
 		StartTime:        startTimeUnixNanoInt64 / 1000,
 		SpanID:           span.SpanId,
 		ParentID:         span.ParentSpanId,
@@ -414,7 +404,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 	return result
 }
 
-func setLogID(span *loop_span.Span) {
+func setLogID(span *LoopSpan) {
 	if span == nil || span.TagsString == nil {
 		return
 	}
@@ -471,9 +461,7 @@ func calCallOptions(ctx context.Context, tagsDouble map[string]float64, tagsLong
 		modelCallOption.Stop = strings.Split(stopSequences, ",")
 		delete(tagsLong, "stop_sequences")
 		bytes, err := sonic.Marshal(modelCallOption)
-		if err != nil {
-			logs.CtxError(ctx, "modelCallOption marshal failed err=%+v", err)
-		} else {
+		if err == nil {
 			tagsString[tracespec.CallOptions] = string(bytes)
 		}
 	}
@@ -659,33 +647,26 @@ func processAttributePrefix(ctx context.Context, fieldKey string, conf fieldConf
 		case openInferenceAttributeModelInputMessages: // openInference input message
 			srcInput, err := open_inference.ConvertToModelInput(srcAttrAggrRes)
 			if err != nil {
-				logs.CtxWarn(ctx, "input ConvertToModelInput failed err=%+v", err)
 				continue
 			}
 			// pack tools
 			srcTools := aggregateAttributesByPrefix(attributeMap, openInferenceAttributeModelInputTools)
 			toBeMarshalObject, err = open_inference.AddTools2ModelInput(srcInput, srcTools)
 			if err != nil {
-				logs.CtxWarn(ctx, "openInference AddTools2ModelInput failed err=%+v", err)
 				continue
 			}
 		case openInferenceAttributeModelOutputMessages: // openInference output message
 			resObject, err := open_inference.ConvertToModelOutput(srcAttrAggrRes)
-			if err != nil {
-				logs.CtxWarn(ctx, "input ConvertToModelOutput failed err=%+v", err)
-			} else {
+			if err == nil {
 				toBeMarshalObject = resObject
 			}
 		default:
 		}
 
 		tempBytes, err := sonic.Marshal(toBeMarshalObject)
-		if err != nil {
-			logs.CtxError(ctx, "input aggregateAttributes failed err=%+v", err)
-		} else {
+		if err == nil {
 			return string(tempBytes)
 		}
-
 	}
 
 	return ""
@@ -754,9 +735,7 @@ func processEvent(ctx context.Context, fieldKey string, conf fieldConf, events [
 			}
 		}
 		bytes, err := sonic.Marshal(toBeMarshalObject)
-		if err != nil {
-			logs.CtxError(ctx, "modelInputEventMessageSlice marshal failed err=%+v", err)
-		} else {
+		if err == nil {
 			resBytes = bytes
 		}
 
@@ -775,9 +754,7 @@ func getModelTools(ctx context.Context, attributeMap map[string]*AnyValue) inter
 				if fParam, ok := fMap["parameters"]; ok {
 					if fParamStr, ok := fParam.(string); ok {
 						tempParameter := make(map[string]interface{}, 0)
-						if err := sonic.UnmarshalString(fParamStr, &tempParameter); err != nil {
-							logs.CtxInfo(ctx, "getModelTools UnmarshalString failed err=%+v", err)
-						} else {
+						if err := sonic.UnmarshalString(fParamStr, &tempParameter); err == nil {
 							fMap["parameters"] = tempParameter
 						}
 					}

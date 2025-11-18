@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	"github.com/stretchr/testify/assert"
 	semconv1_27_0 "go.opentelemetry.io/otel/semconv/v1.27.0"
@@ -200,7 +199,7 @@ func TestSpanTypeMapping(t *testing.T) {
 func TestSetLogID(t *testing.T) {
 	tests := []struct {
 		name            string
-		span            *loop_span.Span
+		span            *LoopSpan
 		expectedLogID   string
 		shouldHaveLogID bool
 	}{
@@ -212,7 +211,7 @@ func TestSetLogID(t *testing.T) {
 		},
 		{
 			name: "span with nil TagsString",
-			span: &loop_span.Span{
+			span: &LoopSpan{
 				TagsString: nil,
 			},
 			expectedLogID:   "",
@@ -220,7 +219,7 @@ func TestSetLogID(t *testing.T) {
 		},
 		{
 			name: "span with logid in TagsString",
-			span: &loop_span.Span{
+			span: &LoopSpan{
 				TagsString: map[string]string{
 					"logid": "test-log-id",
 					"other": "value",
@@ -231,7 +230,7 @@ func TestSetLogID(t *testing.T) {
 		},
 		{
 			name: "span without logid in TagsString",
-			span: &loop_span.Span{
+			span: &LoopSpan{
 				TagsString: map[string]string{
 					"other": "value",
 				},
