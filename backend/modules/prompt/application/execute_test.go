@@ -147,6 +147,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
 				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
 

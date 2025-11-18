@@ -41,6 +41,7 @@ func TestPromptDO2BasicPO(t *testing.T) {
 				SpaceID:   100,
 				PromptKey: "test_key",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "test_name",
 					Description:   "test_description",
 					CreatedBy:     "test_creator",
@@ -61,6 +62,7 @@ func TestPromptDO2BasicPO(t *testing.T) {
 				LatestVersion: "1.0.0",
 				CreatedAt:     time.Unix(1000, 0),
 				UpdatedAt:     time.Unix(2000, 0),
+				PromptType:    "normal",
 			},
 		},
 	}

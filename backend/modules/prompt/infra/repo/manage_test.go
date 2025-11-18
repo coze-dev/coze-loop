@@ -1303,6 +1303,32 @@ func TestManageRepoImpl_ListCommitInfo(t *testing.T) {
 						CommittedAt: time.Unix(2000, 0),
 					},
 				},
+				CommitDOs: []*entity.PromptCommit{
+					{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.0.0",
+							BaseVersion: "0.9.0",
+							Description: "test commit 1",
+							CommittedBy: "test_user",
+							CommittedAt: time.Unix(1000, 0),
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{},
+						},
+					},
+					{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.1.0",
+							BaseVersion: "1.0.0",
+							Description: "test commit 2",
+							CommittedBy: "test_user",
+							CommittedAt: time.Unix(2000, 0),
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{},
+						},
+					},
+				},
 			},
 			wantErr: nil,
 		},
@@ -1370,6 +1396,32 @@ func TestManageRepoImpl_ListCommitInfo(t *testing.T) {
 					},
 				},
 				NextPageToken: 3,
+				CommitDOs: []*entity.PromptCommit{
+					{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.0.0",
+							BaseVersion: "0.9.0",
+							Description: "test commit 1",
+							CommittedBy: "test_user",
+							CommittedAt: time.Unix(1000, 0),
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{},
+						},
+					},
+					{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.1.0",
+							BaseVersion: "1.0.0",
+							Description: "test commit 2",
+							CommittedBy: "test_user",
+							CommittedAt: time.Unix(2000, 0),
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{},
+						},
+					},
+				},
 			},
 			wantErr: nil,
 		},
@@ -1429,6 +1481,32 @@ func TestManageRepoImpl_ListCommitInfo(t *testing.T) {
 						Description: "test commit 4",
 						CommittedBy: "test_user",
 						CommittedAt: time.Unix(4000, 0),
+					},
+				},
+				CommitDOs: []*entity.PromptCommit{
+					{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.2.0",
+							BaseVersion: "1.1.0",
+							Description: "test commit 3",
+							CommittedBy: "test_user",
+							CommittedAt: time.Unix(3000, 0),
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{},
+						},
+					},
+					{
+						CommitInfo: &entity.CommitInfo{
+							Version:     "1.3.0",
+							BaseVersion: "1.2.0",
+							Description: "test commit 4",
+							CommittedBy: "test_user",
+							CommittedAt: time.Unix(4000, 0),
+						},
+						PromptDetail: &entity.PromptDetail{
+							PromptTemplate: &entity.PromptTemplate{},
+						},
 					},
 				},
 			},
@@ -4216,7 +4294,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":0,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"FilterPromptTypes\":null,\"PageNum\":1,\"PageSize\":10,\"OrderBy\":0,\"Asc\":false}"),
+			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":0,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"FilterPromptTypes\":null,\"PromptIDs\":null,\"PageNum\":1,\"PageSize\":10,\"OrderBy\":0,\"Asc\":false}"),
 		},
 		{
 			name: "invalid page num",
@@ -4232,7 +4310,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":123,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"FilterPromptTypes\":null,\"PageNum\":0,\"PageSize\":10,\"OrderBy\":0,\"Asc\":false}"),
+			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":123,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"FilterPromptTypes\":null,\"PromptIDs\":null,\"PageNum\":0,\"PageSize\":10,\"OrderBy\":0,\"Asc\":false}"),
 		},
 		{
 			name: "invalid page size",
@@ -4248,7 +4326,7 @@ func TestManageRepoImpl_ListPrompt(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":123,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"FilterPromptTypes\":null,\"PageNum\":1,\"PageSize\":0,\"OrderBy\":0,\"Asc\":false}"),
+			wantErr: errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = {\"SpaceID\":123,\"KeyWord\":\"\",\"CreatedBys\":null,\"UserID\":\"\",\"CommittedOnly\":false,\"FilterPromptTypes\":null,\"PromptIDs\":null,\"PageNum\":1,\"PageSize\":0,\"OrderBy\":0,\"Asc\":false}"),
 		},
 		{
 			name: "empty result",
