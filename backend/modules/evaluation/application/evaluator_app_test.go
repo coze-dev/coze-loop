@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -3665,11 +3666,6 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 		evaluatorService: mockEvaluatorService,
 	}
 
-	tags := map[entity.EvaluatorTagKey][]string{
-		entity.EvaluatorTagKey_Category:   {"category1", "category2"},
-		entity.EvaluatorTagKey_TargetType: {"domain1"},
-	}
-
 	tests := []struct {
 		name        string
 		req         *evaluatorservice.ListEvaluatorTagsRequest
@@ -3679,12 +3675,15 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 		wantErrCode int32
 	}{
 		{
-			name: "success - normal request",
+			name: "success - default tag type (evaluator)",
 			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
 			mockSetup: func() {
 				mockEvaluatorService.EXPECT().
 					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
-					Return(tags)
+					Return(map[entity.EvaluatorTagKey][]string{
+						entity.EvaluatorTagKey_Category:   {"category1", "category2"},
+						entity.EvaluatorTagKey_TargetType: {"domain1"},
+					}, nil)
 			},
 			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
 				Tags: map[string][]string{
@@ -3695,12 +3694,40 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "success - template tag type",
+			req: func() *evaluatorservice.ListEvaluatorTagsRequest {
+				req := evaluatorservice.NewListEvaluatorTagsRequest()
+				// 使用反射设置TagType字段，因为字段类型在evaluatorservice包内部使用不同的类型别名
+				tagTypeStr := "Template"
+				rv := reflect.ValueOf(req).Elem()
+				field := rv.FieldByName("TagType")
+				if field.IsValid() && field.CanSet() {
+					// EvaluatorTagType是string的别名，创建字符串指针
+					field.Set(reflect.ValueOf(&tagTypeStr))
+				}
+				return req
+			}(),
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Template).
+					Return(map[entity.EvaluatorTagKey][]string{
+						entity.EvaluatorTagKey_Category: {"prompt", "code"},
+					}, nil)
+			},
+			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
+				Tags: map[string][]string{
+					evaluatordto.EvaluatorTagKeyCategory: {"prompt", "code"},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "success - empty tags",
 			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
 			mockSetup: func() {
 				mockEvaluatorService.EXPECT().
 					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
-					Return(map[entity.EvaluatorTagKey][]string{})
+					Return(map[entity.EvaluatorTagKey][]string{}, nil)
 			},
 			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
 				Tags: map[string][]string{},
@@ -3708,17 +3735,16 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "success - template tag type sorts alphabetically",
-			req: &evaluatorservice.ListEvaluatorTagsRequest{
-				TagType: gptr.Of(evaluatordto.EvaluatorTagTypeTemplate),
-			},
+			name: "success - tags sorted alphabetically",
+			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
 			mockSetup: func() {
+				// Service层会排序，所以mock返回的数据应该是排序后的
 				mockEvaluatorService.EXPECT().
-					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Template).
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
 					Return(map[entity.EvaluatorTagKey][]string{
 						entity.EvaluatorTagKey_Category:   {"a", "m", "z"},
 						entity.EvaluatorTagKey_TargetType: {"b", "x"},
-					})
+					}, nil)
 			},
 			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
 				Tags: map[string][]string{
@@ -3727,6 +3753,45 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "success - unknown tag type defaults to evaluator",
+			req: func() *evaluatorservice.ListEvaluatorTagsRequest {
+				req := evaluatorservice.NewListEvaluatorTagsRequest()
+				// 使用反射设置TagType字段
+				unknownTypeStr := "Unknown"
+				rv := reflect.ValueOf(req).Elem()
+				field := rv.FieldByName("TagType")
+				if field.IsValid() && field.CanSet() {
+					field.Set(reflect.ValueOf(&unknownTypeStr))
+				}
+				return req
+			}(),
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
+					Return(map[entity.EvaluatorTagKey][]string{
+						entity.EvaluatorTagKey_Category: {"LLM"},
+					}, nil)
+			},
+			wantResp: &evaluatorservice.ListEvaluatorTagsResponse{
+				Tags: map[string][]string{
+					evaluatordto.EvaluatorTagKeyCategory: {"LLM"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - service error",
+			req:  &evaluatorservice.ListEvaluatorTagsRequest{},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
 		},
 	}
 
@@ -3746,8 +3811,13 @@ func TestEvaluatorHandlerImpl_ListEvaluatorTags(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
-				if tt.wantResp.Tags != nil {
-					assert.Equal(t, tt.wantResp.Tags, resp.Tags)
+				if tt.wantResp != nil && tt.wantResp.Tags != nil {
+					assert.Equal(t, len(tt.wantResp.Tags), len(resp.Tags))
+					for key, expectedValues := range tt.wantResp.Tags {
+						actualValues, ok := resp.Tags[key]
+						assert.True(t, ok, "key %s should exist", key)
+						assert.Equal(t, expectedValues, actualValues, "values for key %s should match", key)
+					}
 				}
 			}
 		})

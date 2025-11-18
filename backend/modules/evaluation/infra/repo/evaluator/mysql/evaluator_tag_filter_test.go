@@ -5,6 +5,7 @@ package mysql
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -563,4 +564,182 @@ func TestGetSourceIDsByFilterConditions_SelfJoinAndLike(t *testing.T) {
     if err := mock.ExpectationsWereMet(); err != nil {
         t.Errorf("there were unfulfilled expectations: %s", err)
     }
+}
+
+func TestEvaluatorTagDAOImpl_AggregateTagValuesByType(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		tagType      int32
+		langType     string
+		mockSetup    func(*sqlmock.Sqlmock)
+		expectedTags []*entity.AggregatedEvaluatorTag
+		expectedErr  bool
+		description  string
+	}{
+		{
+			name:     "success - with lang type",
+			tagType:  1,
+			langType: "zh-CN",
+			mockSetup: func(mock *sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"tag_key", "tag_value"}).
+					AddRow("Category", "LLM").
+					AddRow("Category", "Code").
+					AddRow("TargetType", "Text").
+					AddRow("TargetType", "Image")
+				(*mock).ExpectQuery("SELECT tag_key, tag_value FROM `evaluator_tag` WHERE tag_type = \\? AND deleted_at IS NULL AND lang_type = \\? GROUP BY tag_key, tag_value").
+					WithArgs(1, "zh-CN").
+					WillReturnRows(rows)
+			},
+			expectedTags: []*entity.AggregatedEvaluatorTag{
+				{TagKey: "Category", TagValue: "LLM"},
+				{TagKey: "Category", TagValue: "Code"},
+				{TagKey: "TargetType", TagValue: "Text"},
+				{TagKey: "TargetType", TagValue: "Image"},
+			},
+			expectedErr: false,
+			description: "有语言类型时，应该正确聚合标签",
+		},
+		{
+			name:     "success - without lang type",
+			tagType:  1,
+			langType: "",
+			mockSetup: func(mock *sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"tag_key", "tag_value"}).
+					AddRow("Category", "LLM").
+					AddRow("TargetType", "Text")
+				(*mock).ExpectQuery("SELECT tag_key, tag_value FROM `evaluator_tag` WHERE tag_type = \\? AND deleted_at IS NULL GROUP BY tag_key, tag_value").
+					WithArgs(1).
+					WillReturnRows(rows)
+			},
+			expectedTags: []*entity.AggregatedEvaluatorTag{
+				{TagKey: "Category", TagValue: "LLM"},
+				{TagKey: "TargetType", TagValue: "Text"},
+			},
+			expectedErr: false,
+			description: "无语言类型时，应该正确聚合标签",
+		},
+		{
+			name:     "success - empty result",
+			tagType:  1,
+			langType: "zh-CN",
+			mockSetup: func(mock *sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"tag_key", "tag_value"})
+				(*mock).ExpectQuery("SELECT tag_key, tag_value FROM `evaluator_tag` WHERE tag_type = \\? AND deleted_at IS NULL AND lang_type = \\? GROUP BY tag_key, tag_value").
+					WithArgs(1, "zh-CN").
+					WillReturnRows(rows)
+			},
+			expectedTags: []*entity.AggregatedEvaluatorTag{},
+			expectedErr:  false,
+			description: "无结果时，应该返回空切片",
+		},
+		{
+			name:     "success - record not found",
+			tagType:  1,
+			langType: "zh-CN",
+			mockSetup: func(mock *sqlmock.Sqlmock) {
+				(*mock).ExpectQuery("SELECT tag_key, tag_value FROM `evaluator_tag` WHERE tag_type = \\? AND deleted_at IS NULL AND lang_type = \\? GROUP BY tag_key, tag_value").
+					WithArgs(1, "zh-CN").
+					WillReturnError(gorm.ErrRecordNotFound)
+			},
+			expectedTags: []*entity.AggregatedEvaluatorTag{},
+			expectedErr:  false,
+			description: "记录不存在时，应该返回空切片",
+		},
+		{
+			name:     "error - database error",
+			tagType:  1,
+			langType: "zh-CN",
+			mockSetup: func(mock *sqlmock.Sqlmock) {
+				(*mock).ExpectQuery("SELECT tag_key, tag_value FROM `evaluator_tag` WHERE tag_type = \\? AND deleted_at IS NULL AND lang_type = \\? GROUP BY tag_key, tag_value").
+					WithArgs(1, "zh-CN").
+					WillReturnError(errors.New("database error"))
+			},
+			expectedTags: nil,
+			expectedErr:  true,
+			description: "数据库错误时，应该返回错误",
+		},
+		{
+			name:     "success - template tag type",
+			tagType:  2,
+			langType: "en-US",
+			mockSetup: func(mock *sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"tag_key", "tag_value"}).
+					AddRow("Category", "Prompt").
+					AddRow("Category", "Code")
+				(*mock).ExpectQuery("SELECT tag_key, tag_value FROM `evaluator_tag` WHERE tag_type = \\? AND deleted_at IS NULL AND lang_type = \\? GROUP BY tag_key, tag_value").
+					WithArgs(2, "en-US").
+					WillReturnRows(rows)
+			},
+			expectedTags: []*entity.AggregatedEvaluatorTag{
+				{TagKey: "Category", TagValue: "Prompt"},
+				{TagKey: "Category", TagValue: "Code"},
+			},
+			expectedErr: false,
+			description: "模板标签类型时，应该正确聚合标签",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// 创建sqlmock连接
+			sqlDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to create sqlmock: %v", err)
+			}
+			defer func() { _ = sqlDB.Close() }()
+
+			// 创建真实的GORM数据库连接
+			gormDB, err := gorm.Open(mysql.New(mysql.Config{
+				Conn:                      sqlDB,
+				SkipInitializeWithVersion: true,
+			}), &gorm.Config{})
+			if err != nil {
+				t.Fatalf("failed to open gorm db: %v", err)
+			}
+
+			// 创建mock provider
+			mockProvider := dbmock.NewMockProvider(ctrl)
+			mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
+
+			// 设置mock期望
+			tt.mockSetup(&mock)
+
+			// 创建DAO实例
+			dao := &EvaluatorTagDAOImpl{
+				provider: mockProvider,
+			}
+
+			// 执行测试
+			ctx := context.Background()
+			result, err := dao.AggregateTagValuesByType(ctx, tt.tagType, tt.langType)
+
+			// 验证结果
+			if tt.expectedErr {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.Equal(t, len(tt.expectedTags), len(result))
+				for i, expected := range tt.expectedTags {
+					if i < len(result) {
+						assert.Equal(t, expected.TagKey, result[i].TagKey)
+						assert.Equal(t, expected.TagValue, result[i].TagValue)
+					}
+				}
+			}
+
+			// 验证所有期望的SQL查询都被执行
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
 }

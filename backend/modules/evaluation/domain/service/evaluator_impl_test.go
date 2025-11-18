@@ -2455,3 +2455,133 @@ func TestEvaluatorServiceImpl_ListBuiltinEvaluator(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluatorServiceImpl_ListEvaluatorTags(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+	s := &EvaluatorServiceImpl{evaluatorRepo: mockRepo}
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		tagType        entity.EvaluatorTagKeyType
+		mockSetup      func()
+		expectedResult map[entity.EvaluatorTagKey][]string
+		expectedError  error
+		description    string
+	}{
+		{
+			name:    "成功 - 评估器标签类型",
+			tagType: entity.EvaluatorTagKeyType_Evaluator,
+			mockSetup: func() {
+				mockRepo.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
+					Return(map[entity.EvaluatorTagKey][]string{
+						entity.EvaluatorTagKey_Category:   {"Code", "LLM"},
+						entity.EvaluatorTagKey_TargetType: {"Image", "Text"},
+					}, nil)
+			},
+			expectedResult: map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagKey_Category:   {"Code", "LLM"},
+				entity.EvaluatorTagKey_TargetType: {"Image", "Text"},
+			},
+			expectedError: nil,
+			description:   "评估器标签类型时，应该正确返回并排序标签",
+		},
+		{
+			name:    "成功 - 默认标签类型",
+			tagType: 0,
+			mockSetup: func() {
+				mockRepo.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
+					Return(map[entity.EvaluatorTagKey][]string{
+						entity.EvaluatorTagKey_Category: {"LLM"},
+					}, nil)
+			},
+			expectedResult: map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagKey_Category: {"LLM"},
+			},
+			expectedError: nil,
+			description:   "tagType为0时，应该默认使用评估器标签类型",
+		},
+		{
+			name:    "成功 - 模板标签类型",
+			tagType: entity.EvaluatorTagKeyType_Template,
+			mockSetup: func() {
+				mockRepo.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Template).
+					Return(map[entity.EvaluatorTagKey][]string{
+						entity.EvaluatorTagKey_Category: {"Code", "Prompt"},
+					}, nil)
+			},
+			expectedResult: map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagKey_Category: {"Code", "Prompt"},
+			},
+			expectedError: nil,
+			description:   "模板标签类型时，应该正确返回并排序标签",
+		},
+		{
+			name:    "成功 - 空结果",
+			tagType: entity.EvaluatorTagKeyType_Evaluator,
+			mockSetup: func() {
+				mockRepo.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
+					Return(map[entity.EvaluatorTagKey][]string{}, nil)
+			},
+			expectedResult: map[entity.EvaluatorTagKey][]string{},
+			expectedError:  nil,
+			description:    "无结果时，应该返回空map",
+		},
+		{
+			name:    "成功 - 标签值按字母顺序排序",
+			tagType: entity.EvaluatorTagKeyType_Evaluator,
+			mockSetup: func() {
+				mockRepo.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
+					Return(map[entity.EvaluatorTagKey][]string{
+						entity.EvaluatorTagKey_Category: {"z", "a", "m"},
+					}, nil)
+			},
+			expectedResult: map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagKey_Category: {"a", "m", "z"},
+			},
+			expectedError: nil,
+			description:   "标签值应该按字母顺序排序",
+		},
+		{
+			name:    "失败 - Repo错误",
+			tagType: entity.EvaluatorTagKeyType_Evaluator,
+			mockSetup: func() {
+				mockRepo.EXPECT().
+					ListEvaluatorTags(gomock.Any(), entity.EvaluatorTagKeyType_Evaluator).
+					Return(nil, errors.New("repo error"))
+			},
+			expectedResult: nil,
+			expectedError:  errors.New("repo error"),
+			description:    "Repo错误时，应该返回错误",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			result, err := s.ListEvaluatorTags(ctx, tt.tagType)
+
+			if tt.expectedError != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tt.expectedError.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, len(tt.expectedResult), len(result))
+				for key, expectedValues := range tt.expectedResult {
+					actualValues, ok := result[key]
+					assert.True(t, ok, "key %s should exist", key)
+					assert.Equal(t, expectedValues, actualValues)
+				}
+			}
+		})
+	}
+}

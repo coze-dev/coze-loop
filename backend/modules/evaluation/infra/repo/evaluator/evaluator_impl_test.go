@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	platestwritemocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
+	"github.com/coze-dev/coze-loop/backend/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
@@ -2962,6 +2963,138 @@ func TestEvaluatorRepoImpl_UpdateEvaluatorTags(t *testing.T) {
 			err := repo.UpdateEvaluatorTags(ctx, tt.evaluatorID, tt.tags)
 
 			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
+func TestEvaluatorRepoImpl_ListEvaluatorTags(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
+
+	tests := []struct {
+		name           string
+		tagType        entity.EvaluatorTagKeyType
+		ctx            context.Context
+		mockSetup      func()
+		expectedResult map[entity.EvaluatorTagKey][]string
+		expectedError  error
+		description    string
+	}{
+		{
+			name:    "成功 - 评估器标签类型",
+			tagType: entity.EvaluatorTagKeyType_Evaluator,
+			ctx:     context.WithValue(context.Background(), "locale", "zh-CN"),
+			mockSetup: func() {
+				mockTagDAO.EXPECT().
+					AggregateTagValuesByType(gomock.Any(), int32(entity.EvaluatorTagKeyType_Evaluator), "zh-CN", gomock.Any()).
+					Return([]*entity.AggregatedEvaluatorTag{
+						{TagKey: "Category", TagValue: "LLM"},
+						{TagKey: "Category", TagValue: "Code"},
+						{TagKey: "TargetType", TagValue: "Text"},
+						{TagKey: "TargetType", TagValue: "Image"},
+					}, nil)
+			},
+			expectedResult: map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagKey_Category:   {"LLM", "Code"},
+				entity.EvaluatorTagKey_TargetType: {"Text", "Image"},
+			},
+			expectedError: nil,
+			description:   "评估器标签类型时，应该正确聚合标签",
+		},
+		{
+			name:    "成功 - 模板标签类型",
+			tagType: entity.EvaluatorTagKeyType_Template,
+			ctx:     context.WithValue(context.Background(), "locale", "en-US"),
+			mockSetup: func() {
+				mockTagDAO.EXPECT().
+					AggregateTagValuesByType(gomock.Any(), int32(entity.EvaluatorTagKeyType_Template), "en-US", gomock.Any()).
+					Return([]*entity.AggregatedEvaluatorTag{
+						{TagKey: "Category", TagValue: "Prompt"},
+						{TagKey: "Category", TagValue: "Code"},
+					}, nil)
+			},
+			expectedResult: map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagKey_Category: {"Prompt", "Code"},
+			},
+			expectedError: nil,
+			description:   "模板标签类型时，应该正确聚合标签",
+		},
+		{
+			name:    "成功 - 空结果",
+			tagType: entity.EvaluatorTagKeyType_Evaluator,
+			ctx:     context.WithValue(context.Background(), "locale", "zh-CN"),
+			mockSetup: func() {
+				mockTagDAO.EXPECT().
+					AggregateTagValuesByType(gomock.Any(), int32(entity.EvaluatorTagKeyType_Evaluator), "zh-CN", gomock.Any()).
+					Return([]*entity.AggregatedEvaluatorTag{}, nil)
+			},
+			expectedResult: map[entity.EvaluatorTagKey][]string{},
+			expectedError:  nil,
+			description:    "无结果时，应该返回空map",
+		},
+		{
+			name:    "成功 - 过滤空值",
+			tagType: entity.EvaluatorTagKeyType_Evaluator,
+			ctx:     context.WithValue(context.Background(), "locale", "zh-CN"),
+			mockSetup: func() {
+				mockTagDAO.EXPECT().
+					AggregateTagValuesByType(gomock.Any(), int32(entity.EvaluatorTagKeyType_Evaluator), "zh-CN", gomock.Any()).
+					Return([]*entity.AggregatedEvaluatorTag{
+						{TagKey: "Category", TagValue: "LLM"},
+						{TagKey: "", TagValue: "Invalid"},
+						{TagKey: "TargetType", TagValue: ""},
+						{TagKey: "Objective", TagValue: "Quality"},
+					}, nil)
+			},
+			expectedResult: map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagKey_Category:  {"LLM"},
+				entity.EvaluatorTagKey_Objective: {"Quality"},
+			},
+			expectedError: nil,
+			description:   "应该过滤掉空键值",
+		},
+		{
+			name:    "失败 - DAO错误",
+			tagType: entity.EvaluatorTagKeyType_Evaluator,
+			ctx:     context.WithValue(context.Background(), "locale", "zh-CN"),
+			mockSetup: func() {
+				mockTagDAO.EXPECT().
+					AggregateTagValuesByType(gomock.Any(), int32(entity.EvaluatorTagKeyType_Evaluator), "zh-CN", gomock.Any()).
+					Return(nil, assert.AnError)
+			},
+			expectedResult: nil,
+			expectedError:  assert.AnError,
+			description:    "DAO错误时，应该返回错误",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			repo := &EvaluatorRepoImpl{
+				tagDAO: mockTagDAO,
+			}
+
+			// 设置上下文语言
+			ctx := contexts.WithLocale(tt.ctx, "zh-CN")
+			if tt.name == "成功 - 模板标签类型" {
+				ctx = contexts.WithLocale(tt.ctx, "en-US")
+			}
+
+			result, err := repo.ListEvaluatorTags(ctx, tt.tagType)
+
+			assert.Equal(t, tt.expectedError, err)
+			if err == nil {
+				assert.Equal(t, len(tt.expectedResult), len(result))
+				for key, expectedValues := range tt.expectedResult {
+					actualValues, ok := result[key]
+					assert.True(t, ok, "key %s should exist", key)
+					assert.Equal(t, expectedValues, actualValues)
+				}
+			}
 		})
 	}
 }
