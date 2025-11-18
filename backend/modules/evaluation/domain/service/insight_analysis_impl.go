@@ -127,7 +127,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		return err
 	}
 
-	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url, startTime, endTime)
+	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url, exptID, startTime, endTime)
 	if err != nil {
 		return err
 	}
