@@ -331,7 +331,7 @@ struct ChangeEvaluatorScoreResponse {
 
 struct ListAnnotationEvaluatorsRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.query="workspace_id", vt.gt="0")
-    2: optional string name (api.body = "name")
+    2: optional string name (api.query = "name")
 
     255: optional base.Base Base (api.none="true")
 }
