@@ -81,6 +81,14 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 	}
 	vals := make([]*entity.VariableVal, 0)
 	for key, content := range param.Input.InputFields {
+		if key == consts.InputFieldKeyPromptUserQuery {
+			exePromptParam.UserQuery = &entity.Message{
+				Role:    entity.RoleUser,
+				Content: content,
+			}
+			delete(param.Input.InputFields, key)
+			continue
+		}
 		if content != nil {
 			variable := &entity.VariableVal{
 				Key:                 gptr.Of(key),
@@ -118,24 +126,29 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 		return evaluatorOutputData, entity.EvalTargetRunStatusFail, err
 	}
 
-	var outputStr string
-
-	if executePromptResult == nil {
-		outputStr = ""
-	} else if executePromptResult.Content != nil {
-		outputStr = *executePromptResult.Content
-	} else if executePromptResult.ToolCalls != nil {
-		outputStr, err = json.MarshalString(executePromptResult.ToolCalls)
+	var outputContent *entity.Content
+	if executePromptResult != nil && executePromptResult.MultiContent != nil {
+		outputContent = executePromptResult.MultiContent
 	} else {
-		outputStr = ""
-	}
-
-	evaluatorOutputData.OutputFields = map[string]*entity.Content{
-		consts.OutputSchemaKey: {
+		var outputStr string
+		if executePromptResult == nil {
+			outputStr = ""
+		} else if executePromptResult.Content != nil {
+			outputStr = *executePromptResult.Content
+		} else if executePromptResult.ToolCalls != nil {
+			outputStr, err = json.MarshalString(executePromptResult.ToolCalls)
+		} else {
+			outputStr = ""
+		}
+		outputContent = &entity.Content{
 			ContentType: gptr.Of(entity.ContentTypeText),
 			Format:      gptr.Of(entity.Markdown),
 			Text:        &outputStr,
-		},
+		}
+	}
+
+	evaluatorOutputData.OutputFields = map[string]*entity.Content{
+		consts.OutputSchemaKey: outputContent,
 	}
 
 	if executePromptResult != nil && executePromptResult.TokenUsage != nil {
@@ -153,15 +166,22 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 	if err != nil {
 		return nil, err
 	}
-	prompt, err := t.promptRPCAdapter.GetPrompt(ctx, spaceID, promptID, rpc.GetPromptParams{
-		CommitVersion: &sourceTargetVersion,
+	prompts, err := t.promptRPCAdapter.MGetPrompt(ctx, spaceID, []*rpc.MGetPromptQuery{
+		{
+			PromptID: promptID,
+			Version:  &sourceTargetVersion,
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	if prompt == nil {
+	if len(prompts) == 0 {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
 	}
+	if prompts[0] == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode)
+	}
+	prompt := prompts[0]
 	var inputSchema []*entity.ArgsSchema
 	if prompt.PromptCommit != nil && prompt.PromptCommit.Detail != nil && prompt.PromptCommit.Detail.PromptTemplate != nil {
 		inputSchema = make([]*entity.ArgsSchema, 0)
@@ -200,6 +220,11 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 				JsonSchema:          gptr.Of(jsonschema),
 			})
 		}
+		inputSchema = append(inputSchema, &entity.ArgsSchema{
+			Key:                 gptr.Of(consts.InputFieldKeyPromptUserQuery),
+			SupportContentTypes: []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart},
+			JsonSchema:          gptr.Of(consts.StringJsonSchema),
+		})
 	}
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	do := &entity.EvalTarget{
@@ -399,6 +424,20 @@ func (t *PromptSourceEvalTargetServiceImpl) PackSourceVersionInfo(ctx context.Co
 			PromptID: do.EvalTargetVersion.Prompt.PromptID,
 			Version:  &do.EvalTargetVersion.SourceTargetVersion,
 		})
+		existUserQueryKey := false
+		for _, schema := range do.EvalTargetVersion.InputSchema {
+			if gptr.Indirect(schema.Key) == consts.InputFieldKeyPromptUserQuery {
+				existUserQueryKey = true
+				break
+			}
+		}
+		if !existUserQueryKey { // compatibility with historical data
+			do.EvalTargetVersion.InputSchema = append(do.EvalTargetVersion.InputSchema, &entity.ArgsSchema{
+				Key:                 gptr.Of(consts.InputFieldKeyPromptUserQuery),
+				SupportContentTypes: []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart},
+				JsonSchema:          gptr.Of(consts.StringJsonSchema),
+			})
+		}
 	}
 	if len(promptQueries) == 0 {
 		return nil

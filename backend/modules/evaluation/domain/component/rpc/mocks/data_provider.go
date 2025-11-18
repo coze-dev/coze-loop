@@ -273,9 +273,9 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) ListDatasetItemsByVersion(ctx, par
 }
 
 // ListDatasetVersions mocks base method.
-func (m *MockIDatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceID, evaluationSetID int64, pageToken *string, pageNumber, pageSize *int32, versionLike *string) ([]*entity.EvaluationSetVersion, *int64, *string, error) {
+func (m *MockIDatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceID, evaluationSetID int64, pageToken *string, pageNumber, pageSize *int32, versionLike *string, versions []string) ([]*entity.EvaluationSetVersion, *int64, *string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDatasetVersions", ctx, spaceID, evaluationSetID, pageToken, pageNumber, pageSize, versionLike)
+	ret := m.ctrl.Call(m, "ListDatasetVersions", ctx, spaceID, evaluationSetID, pageToken, pageNumber, pageSize, versionLike, versions)
 	ret0, _ := ret[0].([]*entity.EvaluationSetVersion)
 	ret1, _ := ret[1].(*int64)
 	ret2, _ := ret[2].(*string)
@@ -284,9 +284,9 @@ func (m *MockIDatasetRPCAdapter) ListDatasetVersions(ctx context.Context, spaceI
 }
 
 // ListDatasetVersions indicates an expected call of ListDatasetVersions.
-func (mr *MockIDatasetRPCAdapterMockRecorder) ListDatasetVersions(ctx, spaceID, evaluationSetID, pageToken, pageNumber, pageSize, versionLike any) *gomock.Call {
+func (mr *MockIDatasetRPCAdapterMockRecorder) ListDatasetVersions(ctx, spaceID, evaluationSetID, pageToken, pageNumber, pageSize, versionLike, versions any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasetVersions", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ListDatasetVersions), ctx, spaceID, evaluationSetID, pageToken, pageNumber, pageSize, versionLike)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasetVersions", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ListDatasetVersions), ctx, spaceID, evaluationSetID, pageToken, pageNumber, pageSize, versionLike, versions)
 }
 
 // ListDatasets mocks base method.

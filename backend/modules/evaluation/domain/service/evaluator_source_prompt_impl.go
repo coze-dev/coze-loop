@@ -6,7 +6,6 @@ package service
 import (
 	"context"
 	json2 "encoding/json"
-	"fmt"
 	"io"
 	"regexp"
 	"strconv"
@@ -363,46 +362,81 @@ type outputMsgFormat struct {
 	Reason string       `json:"reason"`
 }
 
-// 优化后的正则表达式，支持 score 为 number 或 string 类型
-var jsonRe = regexp.MustCompile(`\{(?s:.*?"score"\s*:\s*(?:"([\d.]+)"|([\d.]+)).*?"reason"\s*:\s*"((?:[^"\\]|\\.)*)".*?)}`)
+// 优化后的正则表达式，支持 score 和 reason 任意顺序，score 为 number 或 string 类型
+var jsonRe = regexp.MustCompile(`\{(?s:[^{}]*(?:"score"\s*:\s*(?:"[\d.]+"|\d+(?:\.\d+)?)[^{}]*"reason"\s*:\s*"(?:[^"\\]|\\.)*"|"reason"\s*:\s*"(?:[^"\\]|\\.)*"[^{}]*"score"\s*:\s*(?:"[\d.]+"|\d+(?:\.\d+)?))[^{}]*)}`)
 
 func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {
 	content := gptr.Indirect(replyItem.Content)
-	var outputMsg outputMsgFormat
-	b := []byte(content)
 
-	// 尝试直接解析整个 content
-	if err := sonic.Unmarshal(b, &outputMsg); err == nil {
-		if outputMsg.Reason != "" {
-			score, err := outputMsg.Score.Float64()
-			if err != nil {
-				err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-				return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
-			}
-			output.EvaluatorResult.Score = &score
-			output.EvaluatorResult.Reasoning = outputMsg.Reason
+	// 按优先级顺序执行解析策略
+	strategies := []func(context.Context, string, *entity.EvaluatorOutputData) (bool, error){
+		parseDirectJSON,         // 策略1：直接解析完整JSON
+		parseRepairedJSON,       // 策略2：修复后解析完整JSON
+		parseRegexExtractedJSON, // 策略3：正则提取JSON片段并解析
+		parseScoreWithRegex,     // 策略4：正则提取score，优先尝试用正则提取reason字段作为reason，否则使用完整内容作为reason
+	}
+
+	for _, strategy := range strategies {
+		success, err := strategy(ctx, content, output)
+		if err != nil {
+			return err
+		}
+		if success {
 			return nil
 		}
 	}
 
-	// 新增：尝试使用jsonrepair修复整个content
+	// 当所有解析策略都失败时，返回错误（Run方法的defer会处理错误并设置EvaluatorRunError）
+	logs.CtxWarn(ctx, "[parseContentOutput] All parsing strategies failed, original content: %s", content)
+	return errorx.NewByCode(errno.InvalidOutputFromModelCode, errorx.WithExtraMsg("All parsing strategies failed. Original content: "+content))
+}
+
+// parseDirectJSON 策略1：直接解析完整JSON内容
+func parseDirectJSON(ctx context.Context, content string, output *entity.EvaluatorOutputData) (bool, error) {
+	var outputMsg outputMsgFormat
+	b := []byte(content)
+
+	if err := sonic.Unmarshal(b, &outputMsg); err == nil {
+		if outputMsg.Reason != "" {
+			score, err := outputMsg.Score.Float64()
+			if err != nil {
+				return false, errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+			}
+			output.EvaluatorResult.Score = &score
+			output.EvaluatorResult.Reasoning = outputMsg.Reason
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// parseRepairedJSON 策略2：使用jsonrepair修复后解析完整JSON内容
+func parseRepairedJSON(ctx context.Context, content string, output *entity.EvaluatorOutputData) (bool, error) {
+	var outputMsg outputMsgFormat
+
 	repairedContent, repairErr := jsonrepair.JSONRepair(content)
 	if repairErr == nil {
 		if err := sonic.Unmarshal([]byte(repairedContent), &outputMsg); err == nil {
 			if outputMsg.Reason != "" {
 				score, err := outputMsg.Score.Float64()
 				if err != nil {
-					err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-					return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+					return false, errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 				}
 				output.EvaluatorResult.Score = &score
 				output.EvaluatorResult.Reasoning = outputMsg.Reason
-				return nil
+				return true, nil
 			}
 		}
 	}
+	return false, nil
+}
 
-	// 保留原有逻辑：使用正则表达式查找 JSON 片段
+// parseRegexExtractedJSON 策略3：使用正则表达式提取JSON片段并解析
+func parseRegexExtractedJSON(ctx context.Context, content string, output *entity.EvaluatorOutputData) (bool, error) {
+	var outputMsg outputMsgFormat
+	b := []byte(content)
+
+	// 使用正则表达式查找JSON片段
 	all := jsonRe.FindAll(b, -1)
 	for _, bb := range all {
 		// 首先尝试直接解析原始片段
@@ -410,12 +444,11 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 			if outputMsg.Reason != "" {
 				score, err := outputMsg.Score.Float64()
 				if err != nil {
-					err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-					return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+					return false, errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 				}
 				output.EvaluatorResult.Score = &score
 				output.EvaluatorResult.Reasoning = outputMsg.Reason
-				return nil
+				return true, nil
 			}
 		}
 
@@ -426,20 +459,112 @@ func parseContentOutput(ctx context.Context, evaluatorVersion *entity.PromptEval
 				if outputMsg.Reason != "" {
 					score, err := outputMsg.Score.Float64()
 					if err != nil {
-						err := fmt.Errorf("[parseContentOutput] convert score to float64 failed, score=%s", outputMsg.Score)
-						return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+						return false, errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
 					}
 					output.EvaluatorResult.Score = &score
 					output.EvaluatorResult.Reasoning = outputMsg.Reason
-					return nil
+					return true, nil
 				}
 			}
 		}
 	}
+	return false, nil
+}
 
-	// 若都没有找到合法的解析结果，返回错误
-	err := fmt.Errorf("[parseContentOutput] parse failed, content does not contain both score and reason: %s", content)
-	return errorx.WrapByCode(err, errno.InvalidOutputFromModelCode)
+// parseScoreWithRegex 策略4：通过正则解析score字段，优先尝试用正则提取reason字段作为reason，否则使用完整内容作为reason
+func parseScoreWithRegex(ctx context.Context, content string, output *entity.EvaluatorOutputData) (bool, error) {
+	scoreRegex := regexp.MustCompile(`(?i)score[^0-9]*([0-9]+(?:\.[0-9]+)?)`)
+	scoreMatches := scoreRegex.FindStringSubmatch(content)
+	if len(scoreMatches) > 1 {
+		scoreStr := scoreMatches[1]
+		score, err := strconv.ParseFloat(scoreStr, 64)
+		if err == nil {
+			// 尝试提取reason字段，处理未转义双引号的情况
+			// 方法：找到 "reason": " 后面的内容，提取到下一个字段或JSON对象结束之前
+			reasonFieldRegex := regexp.MustCompile(`(?i)"reason"\s*:\s*"`)
+			reasonStartMatches := reasonFieldRegex.FindStringIndex(content)
+			if reasonStartMatches != nil {
+				// 找到了reason字段的开始位置，reasonStartPos是reason值内容开始的位置（最后一个双引号之后）
+				reasonStartPos := reasonStartMatches[1]
+				reasonEndPos := -1
+
+				// 首先检查reason值是否为空字符串（连续的两个双引号）
+				if reasonStartPos < len(content) && content[reasonStartPos] == '"' {
+					// reason值为空字符串，结束位置就是开始位置（不包含任何内容）
+					reasonEndPos = reasonStartPos
+				} else {
+					// reason值不为空，需要找到结束位置
+					// 查找下一个字段的开始位置（如 ", "score": 或其他字段）
+					// 注意：需要查找reason之后的下一个字段
+					nextFieldRegex := regexp.MustCompile(`(?i)",\s*"[^"]+"\s*:`)
+					nextFieldMatches := nextFieldRegex.FindStringIndex(content[reasonStartPos:])
+					if nextFieldMatches != nil {
+						// 找到了下一个字段，且它在reason之后
+						potentialEndPos := reasonStartPos + nextFieldMatches[0]
+						// 从potentialEndPos向前查找最后一个双引号（reason值的结束双引号）
+						for i := potentialEndPos - 1; i >= reasonStartPos; i-- {
+							if content[i] == '"' {
+								// 检查这是否是真正的结束双引号（前面不是转义符）
+								if i == 0 || content[i-1] != '\\' {
+									reasonEndPos = i
+									break
+								}
+								// 如果是转义的双引号，继续向前查找
+							}
+						}
+					} else {
+						// 没找到下一个字段，尝试找到JSON对象的结束位置
+						// 从reasonStartPos开始，向后查找第一个未转义的双引号
+						for i := reasonStartPos; i < len(content); i++ {
+							if content[i] == '"' {
+								// 检查这是否是真正的结束双引号（前面不是转义符）
+								if i == 0 || content[i-1] != '\\' {
+									// 检查这个双引号后面是否是逗号、空格、}或其他字段
+									if i+1 < len(content) {
+										nextChar := content[i+1]
+										if nextChar == ',' || nextChar == '}' || nextChar == ' ' || nextChar == '\n' || nextChar == '\r' {
+											reasonEndPos = i
+											break
+										}
+									} else {
+										// 到达内容末尾
+										reasonEndPos = i
+										break
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if reasonEndPos >= reasonStartPos {
+					// 提取reason值（从开始位置到结束位置，如果reason为空则extractedReason为空字符串）
+					extractedReason := content[reasonStartPos:reasonEndPos]
+					// 即使是空字符串也接受（reason可以为空）
+					logs.CtxWarn(ctx, "[parseScoreWithRegex] Hit regex parsing strategy with reason extraction (handling unescaped quotes), original content: %s", content)
+					output.EvaluatorResult.Score = &score
+					output.EvaluatorResult.Reasoning = extractedReason
+					return true, nil
+				}
+			}
+			// 如果无法通过定位字段的方式提取reason，尝试传统方式（可能在无未转义双引号时有效）
+			reasonRegex := regexp.MustCompile(`(?i)reason[^"]*"([^"]+)"`)
+			reasonMatches := reasonRegex.FindStringSubmatch(content)
+			if len(reasonMatches) > 1 && len(reasonMatches[1]) > 0 {
+				// 成功提取到reason字段（传统方式，适用于无未转义双引号的情况）
+				logs.CtxWarn(ctx, "[parseScoreWithRegex] Hit regex parsing strategy with reason extraction, original content: %s", content)
+				output.EvaluatorResult.Score = &score
+				output.EvaluatorResult.Reasoning = reasonMatches[1]
+				return true, nil
+			}
+			// 如果无法提取reason字段，使用完整输出作为reason
+			logs.CtxWarn(ctx, "[parseScoreWithRegex] Hit regex parsing strategy without reason extraction, original content: %s", content)
+			output.EvaluatorResult.Score = &score
+			output.EvaluatorResult.Reasoning = content // 使用完整输出作为reason
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func parseFunctionCallOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, output *entity.EvaluatorOutputData) error {

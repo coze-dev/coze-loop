@@ -29,6 +29,8 @@ type IExptDAO interface {
 
 	Update(ctx context.Context, expt *model.Experiment) error
 
+	UpdateFields(ctx context.Context, id int64, ufields map[string]any) error
+
 	Delete(ctx context.Context, id int64) error
 
 	MDelete(ctx context.Context, ids []int64) error
@@ -54,6 +56,17 @@ const defaultLimit = 20
 type exptDAOImpl struct {
 	db    db.Provider
 	query *query.Query
+}
+
+func (d *exptDAOImpl) UpdateFields(ctx context.Context, id int64, ufields map[string]any) error {
+	q := query.Use(d.db.NewSession(ctx)).Experiment
+	_, err := q.WithContext(ctx).
+		Where(q.ID.Eq(id)).
+		UpdateColumns(ufields)
+	if err != nil {
+		return errorx.Wrapf(err, "update expt fail, expt_id: %v, ufields: %v", id, ufields)
+	}
+	return nil
 }
 
 func (d *exptDAOImpl) Create(ctx context.Context, expt *model.Experiment) error {

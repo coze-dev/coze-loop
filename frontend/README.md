@@ -16,7 +16,9 @@ _____________________________________
                ||----w |
                ||     ||
 ```
+
 Environment requirements:
+
 * Node.js 18+ (lts/iron recommended)
 * pnpm 8.15.8
 * Rush 5.147.1
@@ -92,4 +94,5 @@ rush update-api
 ```
 
 ## 📄 License
+
 * [Apache License, Version 2.0](../LICENSE)
