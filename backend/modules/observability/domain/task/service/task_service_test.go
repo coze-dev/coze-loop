@@ -229,7 +229,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		}
 	})
 
-	t.Run("user parse failed", func(t *testing.T) {
+	t.Run("update sample rate success", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -237,16 +237,17 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		taskDO := &entity.ObservabilityTask{TaskType: task.TaskTypeAutoEval, TaskStatus: task.TaskStatusUnstarted, EffectiveTime: &entity.EffectiveTime{}, Sampler: &entity.Sampler{}}
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
+		repoMock.EXPECT().UpdateTask(gomock.Any(), taskDO).Return(nil)
 
 		proc := &fakeProcessor{}
 		svc := &TaskServiceImpl{TaskRepo: repoMock}
 		svc.taskProcessor.Register(task.TaskTypeAutoEval, proc)
 
-		err := svc.UpdateTask(context.Background(), &UpdateTaskReq{TaskID: 1, WorkspaceID: 2})
-		statusErr, ok := errorx.FromStatusError(err)
-		if assert.True(t, ok) {
-			assert.EqualValues(t, obErrorx.UserParseFailedCode, statusErr.Code())
-		}
+		sampleRate := 0.25
+		err := svc.UpdateTask(context.Background(), &UpdateTaskReq{TaskID: 1, WorkspaceID: 2, SampleRate: &sampleRate, UserID: "user"})
+		assert.NoError(t, err)
+		assert.Equal(t, sampleRate, taskDO.Sampler.SampleRate)
+		assert.Equal(t, "user", taskDO.UpdatedBy)
 	})
 
 	t.Run("disable success", func(t *testing.T) {
@@ -286,6 +287,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			EffectiveTime: &task.EffectiveTime{StartAt: &newStart, EndAt: &newEnd},
 			SampleRate:    &sampleRate,
 			TaskStatus:    gptr.Of(task.TaskStatusDisabled),
+			UserID:        "user1",
 		})
 		assert.NoError(t, err)
 		assert.True(t, proc.onFinishRunCalled)
@@ -327,6 +329,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			WorkspaceID: 2,
 			SampleRate:  &sampleRate,
 			TaskStatus:  gptr.Of(task.TaskStatusDisabled),
+			UserID:      "user",
 		})
 		assert.NoError(t, err)
 		assert.True(t, proc.onFinishRunCalled)
@@ -363,6 +366,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			EffectiveTime: &task.EffectiveTime{StartAt: &newStart, EndAt: &newEnd},
 			SampleRate:    &sampleRate,
 			TaskStatus:    gptr.Of(task.TaskStatusDisabled),
+			UserID:        "user",
 		})
 		assert.EqualError(t, err, "finish fail")
 	})
