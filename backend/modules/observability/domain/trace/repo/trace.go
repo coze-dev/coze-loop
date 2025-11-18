@@ -33,22 +33,13 @@ type ListSpansParam struct {
 	PageToken          string
 	NotQueryAnnotation bool
 	OmitColumns        []string // omit specific columns
+	SelectColumns      []string // select specific columns, default select all columns
 }
 
 type ListSpansResult struct {
 	Spans     loop_span.SpanList
 	PageToken string
 	HasMore   bool
-}
-
-type ListPreSpansParam struct {
-	Tenants       []string
-	Filters       *loop_span.FilterFields
-	StartAt       int64 // ms
-	EndAt         int64 // ms
-	Limit         int32
-	OmitColumns   []string // omit specific columns
-	SelectColumns []string // select specific columns, default select all columns
 }
 
 type GetPreSpanIDsParam struct {
@@ -87,7 +78,6 @@ type InsertAnnotationParam struct {
 type ITraceRepo interface {
 	InsertSpans(context.Context, *InsertTraceParam) error
 	ListSpans(context.Context, *ListSpansParam) (*ListSpansResult, error)
-	ListPreSpans(context.Context, *ListPreSpansParam) (loop_span.SpanList, error)
 	GetPreSpanIDs(context.Context, *GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error)
 	GetTrace(context.Context, *GetTraceParam) (loop_span.SpanList, error)
 	ListAnnotations(context.Context, *ListAnnotationsParam) (loop_span.AnnotationList, error)

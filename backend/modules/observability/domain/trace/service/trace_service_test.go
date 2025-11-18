@@ -3996,10 +3996,10 @@ func TestTraceServiceImpl_batchGetPreSpanFromCk(t *testing.T) {
 			name: "batch get pre span - normal case",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: []*loop_span.Span{
 					{SpanID: "span1", TraceID: "trace1"},
 					{SpanID: "span2", TraceID: "trace1"},
-				}, nil)
+				}}, nil)
 				return fields{traceRepo: repoMock}
 			},
 			args: args{
@@ -4032,9 +4032,9 @@ func TestTraceServiceImpl_batchGetPreSpanFromCk(t *testing.T) {
 			name: "batch get pre span - single span",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: []*loop_span.Span{
 					{SpanID: "span1", TraceID: "trace1"},
-				}, nil)
+				}}, nil)
 				return fields{traceRepo: repoMock}
 			},
 			args: args{
@@ -4053,9 +4053,9 @@ func TestTraceServiceImpl_batchGetPreSpanFromCk(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				// Should be called once since we have exactly 100 spans
-				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: []*loop_span.Span{
 					{SpanID: "span1", TraceID: "trace1"},
-				}, nil)
+				}}, nil)
 				return fields{traceRepo: repoMock}
 			},
 			args: args{
@@ -4074,9 +4074,9 @@ func TestTraceServiceImpl_batchGetPreSpanFromCk(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				// Should be called twice since we have 150 spans
-				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: []*loop_span.Span{
 					{SpanID: "span1", TraceID: "trace1"},
-				}, nil).Times(2)
+				}}, nil).Times(2)
 				return fields{traceRepo: repoMock}
 			},
 			args: args{
@@ -4095,7 +4095,7 @@ func TestTraceServiceImpl_batchGetPreSpanFromCk(t *testing.T) {
 			name: "batch get pre span - db error",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("db error"))
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("db error"))
 				return fields{traceRepo: repoMock}
 			},
 			args: args{
@@ -4116,7 +4116,7 @@ func TestTraceServiceImpl_batchGetPreSpanFromCk(t *testing.T) {
 			r := &TraceServiceImpl{
 				traceRepo: fields.traceRepo,
 			}
-			got, err := r.batchGetPreSpanFromCk(tt.args.ctx, tt.args.spanIDs, tt.args.tenants, tt.args.startTime)
+			got, err := r.batchGetPreSpan(tt.args.ctx, tt.args.spanIDs, tt.args.tenants, tt.args.startTime)
 			assert.Equal(t, tt.wantErr, err != nil)
 			if !tt.wantErr {
 				assert.Equal(t, len(tt.want), len(got))
@@ -4159,36 +4159,37 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 					[]string{"resp1", "resp2", "resp3"},
 					nil,
 				)
-				// Mock ListPreSpans for batchGetPreSpanFromCk
-				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return([]*loop_span.Span{
-					{
-						SpanID:  "span1",
-						TraceID: "trace1",
-						SystemTagsString: map[string]string{
-							keyResponseID:         "resp1",
-							keyPreviousResponseID: "prev1",
+				// Mock ListSpans for batchGetPreSpan
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: []*loop_span.Span{
+						{
+							SpanID:  "span1",
+							TraceID: "trace1",
+							SystemTagsString: map[string]string{
+								keyResponseID:         "resp1",
+								keyPreviousResponseID: "prev1",
+							},
+							WorkspaceID: "1",
 						},
-						WorkspaceID: "1",
-					},
-					{
-						SpanID:  "span2",
-						TraceID: "trace1",
-						SystemTagsString: map[string]string{
-							keyResponseID:         "resp2",
-							keyPreviousResponseID: "prev2",
+						{
+							SpanID:  "span2",
+							TraceID: "trace1",
+							SystemTagsString: map[string]string{
+								keyResponseID:         "resp2",
+								keyPreviousResponseID: "prev2",
+							},
+							WorkspaceID: "1",
 						},
-						WorkspaceID: "1",
-					},
-					{
-						SpanID:  "current_span",
-						TraceID: "trace1",
-						SystemTagsString: map[string]string{
-							keyResponseID:         "resp3",
-							keyPreviousResponseID: "prev_resp_id",
+						{
+							SpanID:  "current_span",
+							TraceID: "trace1",
+							SystemTagsString: map[string]string{
+								keyResponseID:         "resp3",
+								keyPreviousResponseID: "prev_resp_id",
+							},
+							WorkspaceID: "1",
 						},
-						WorkspaceID: "1",
-					},
-				}, nil)
+					}}, nil)
 
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
@@ -4302,7 +4303,7 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 					[]string{"resp1"},
 					nil,
 				)
-				repoMock.EXPECT().ListPreSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("db error"))
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("db error"))
 
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)

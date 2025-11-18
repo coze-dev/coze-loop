@@ -17,6 +17,8 @@ import (
 const (
 	keySpanID             = "span_id"
 	keyPreviousResponseID = "previous_response_id"
+
+	redisKeyPreRelationPrefix = "ob:pre_relation:"
 )
 
 //go:generate mockgen -destination=mocks/spans_dao.go -package=mocks . ISpansRedisDao
@@ -34,6 +36,11 @@ type SpansRedisDaoImpl struct {
 	r redis.PersistentCmdable
 }
 
+type redisValuePreRelation struct {
+	SpanID             string `json:"span_id"`
+	PreviousResponseID string `json:"previous_response_id"`
+}
+
 func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (spanIDs, responseIDs []string, err error) {
 	preSpanIDs := make([]string, 0, 8)
 	respIDByOrder := make([]string, 0, 8)
@@ -41,23 +48,23 @@ func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (span
 	spanNum := 0
 	spanNumLimit := int32(100)
 	for preRespID != "" {
-		rawVal, err := s.r.Get(ctx, preRespID).Result()
+		rawVal, err := s.r.Get(ctx, redisKeyPreRelationPrefix+preRespID).Result()
 		if errors.Is(err, redis2.Nil) { // break chain, just end
 			break
 		}
 		if err != nil {
 			return nil, nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 		}
-		redisValue := make(map[string]string)
+		redisValue := &redisValuePreRelation{}
 		if err = json.Unmarshal([]byte(rawVal), &redisValue); err != nil {
 			return nil, nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 		}
-		spanID, ok := redisValue[keySpanID]
-		if ok {
+		spanID := redisValue.SpanID
+		if spanID != "" {
 			preSpanIDs = append(preSpanIDs, spanID) // do not need order, only for select from db
 		}
 		respIDByOrder = append([]string{preRespID}, respIDByOrder...) // need order, for order SpanList
-		preRespID, _ = redisValue[keyPreviousResponseID]              //nolint:staticcheck
+		preRespID = redisValue.PreviousResponseID
 
 		spanNum++
 		if spanNum >= int(spanNumLimit) {

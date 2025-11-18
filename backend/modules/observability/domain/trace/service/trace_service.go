@@ -323,7 +323,6 @@ type TraceServiceImpl struct {
 }
 
 const (
-	keySpanID             = "span_id"
 	keyPreviousResponseID = "previous_response_id"
 	keyResponseID         = "response_id"
 )
@@ -344,7 +343,7 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 	preAndCurrentSpanIDs = append(preAndCurrentSpanIDs, req.SpanID) // for select current span together
 
 	// batch select from ck
-	preAndCurrentSpans, err := r.batchGetPreSpanFromCk(ctx, preAndCurrentSpanIDs, tenants, req.StartTime)
+	preAndCurrentSpans, err := r.batchGetPreSpan(ctx, preAndCurrentSpanIDs, tenants, req.StartTime)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
@@ -353,7 +352,7 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 	processors, err := r.buildHelper.BuildListSpansProcessors(ctx, span_processor.Settings{
 		WorkspaceId:    req.WorkspaceID,
 		PlatformType:   req.PlatformType,
-		QueryStartTime: req.StartTime - int64(60*60*1000*24*30), // past 30 days
+		QueryStartTime: req.StartTime - time_util.Day2MillSec(30), // past 30 days
 		QueryEndTime:   req.StartTime,
 		QueryTenants:   tenants,
 	})
@@ -375,36 +374,10 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 	// order SpanList: remove duplicate span_id, and remove current span
 	orderSpans := r.orderPreSpans(preAndCurrentSpans, respIDByOrder)
 
-	// Simplify core fields Input and Output
-	// todo: Temporarily delete it. Is it unnecessary to simplify?
-	//coreField := []string{"input", "output", "messages", "choices"}
-	//for i := range orderSpans {
-	//	rawInputMap := make(map[string]interface{})
-	//	if err := json.Unmarshal([]byte(orderSpans[i].Input), &rawInputMap); err == nil {
-	//		m := make(map[string]interface{})
-	//		for _, field := range coreField {
-	//			if v, ok := rawInputMap[field]; ok {
-	//				m[field] = v
-	//			}
-	//		}
-	//		orderSpans[i].Input = json.MarshalStringIgnoreErr(m)
-	//	}
-	//	rawOutputMap := make(map[string]interface{})
-	//	if err := json.Unmarshal([]byte(orderSpans[i].Output), &rawOutputMap); err == nil {
-	//		m := make(map[string]interface{})
-	//		for _, field := range coreField {
-	//			if v, ok := rawOutputMap[field]; ok {
-	//				m[field] = v
-	//			}
-	//		}
-	//		orderSpans[i].Output = json.MarshalStringIgnoreErr(m)
-	//	}
-	//}
-
 	return &ListPreSpanResp{Spans: orderSpans}, nil
 }
 
-func (r *TraceServiceImpl) batchGetPreSpanFromCk(ctx context.Context, spanIDs []string, tenants []string, startTime int64) ([]*loop_span.Span, error) {
+func (r *TraceServiceImpl) batchGetPreSpan(ctx context.Context, spanIDs []string, tenants []string, startTime int64) ([]*loop_span.Span, error) {
 	batchNum := 100
 	batchPreSpan := make([][]string, 0)
 	oneBatchPreSpan := make([]string, 0)
@@ -420,7 +393,7 @@ func (r *TraceServiceImpl) batchGetPreSpanFromCk(ctx context.Context, spanIDs []
 		batchPreSpan = append(batchPreSpan, oneBatchPreSpan)
 	}
 	for _, oneBatchSpan := range batchPreSpan {
-		dbSpans, err := r.traceRepo.ListPreSpans(ctx, &repo.ListPreSpansParam{
+		dbSpans, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
 			Tenants: tenants,
 			Filters: &loop_span.FilterFields{
 				FilterFields: []*loop_span.FilterField{
@@ -432,14 +405,16 @@ func (r *TraceServiceImpl) batchGetPreSpanFromCk(ctx context.Context, spanIDs []
 					},
 				},
 			},
-			StartAt: startTime - int64(60*60*1000*24*30), // past 30 days
+			StartAt: startTime - time_util.Day2MillSec(30), // past 30 days
 			EndAt:   startTime + 1,
 			Limit:   200,
 		})
 		if err != nil {
 			return nil, err
 		}
-		preAndCurrentSpans = append(preAndCurrentSpans, dbSpans...)
+		if dbSpans != nil && len(dbSpans.Spans) > 0 {
+			preAndCurrentSpans = append(preAndCurrentSpans, dbSpans.Spans...)
+		}
 	}
 
 	return preAndCurrentSpans, nil
@@ -497,9 +472,10 @@ func (r *TraceServiceImpl) checkGetPreSpanAuth(ctx context.Context, req *ListPre
 					},
 				},
 			},
-			StartAt: req.StartTime - int64(60*60*1000*24*30), // past 30 days
-			EndAt:   req.StartTime,
-			Limit:   1,
+			StartAt:       req.StartTime - time_util.Day2MillSec(30), // past 30 days
+			EndAt:         req.StartTime,
+			SelectColumns: []string{loop_span.SpanFieldSpanId},
+			Limit:         1,
 		})
 		if err != nil {
 			return err
