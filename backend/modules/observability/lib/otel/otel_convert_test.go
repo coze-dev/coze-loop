@@ -1212,7 +1212,7 @@ func TestProcessAttributeKey(t *testing.T) {
 		{
 			name: "no attribute keys in config",
 			conf: FieldConf{
-				attributeKey: []string{},
+				AttributeKey: []string{},
 			},
 			attributeMap: map[string]*AnyValue{},
 			expected:     nil,
@@ -1220,8 +1220,8 @@ func TestProcessAttributeKey(t *testing.T) {
 		{
 			name: "attribute key found",
 			conf: FieldConf{
-				attributeKey: []string{"test.key"},
-				dataType:     dataTypeString,
+				AttributeKey: []string{"test.key"},
+				DataType:     dataTypeString,
 			},
 			attributeMap: map[string]*AnyValue{
 				"test.key": {Value: &AnyValue_StringValue{StringValue: "test-value"}},
@@ -1231,8 +1231,8 @@ func TestProcessAttributeKey(t *testing.T) {
 		{
 			name: "attribute key not found",
 			conf: FieldConf{
-				attributeKey: []string{"missing.key"},
-				dataType:     dataTypeString,
+				AttributeKey: []string{"missing.key"},
+				DataType:     dataTypeString,
 			},
 			attributeMap: map[string]*AnyValue{
 				"other.key": {Value: &AnyValue_StringValue{StringValue: "other-value"}},
@@ -1242,8 +1242,8 @@ func TestProcessAttributeKey(t *testing.T) {
 		{
 			name: "multiple attribute keys, first found",
 			conf: FieldConf{
-				attributeKey: []string{"first.key", "second.key"},
-				dataType:     dataTypeString,
+				AttributeKey: []string{"first.key", "second.key"},
+				DataType:     dataTypeString,
 			},
 			attributeMap: map[string]*AnyValue{
 				"first.key":  {Value: &AnyValue_StringValue{StringValue: "first-value"}},
@@ -1542,7 +1542,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "no attribute prefix keys",
 			fieldKey: "test_field",
 			conf: FieldConf{
-				attributeKeyPrefix: []string{},
+				AttributeKeyPrefix: []string{},
 			},
 			attributeMap: map[string]*AnyValue{},
 			expected:     "",
@@ -1551,7 +1551,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "no matching attributes",
 			fieldKey: "test_field",
 			conf: FieldConf{
-				attributeKeyPrefix: []string{"non.existing.prefix"},
+				AttributeKeyPrefix: []string{"non.existing.prefix"},
 			},
 			attributeMap: map[string]*AnyValue{},
 			expected:     "",
@@ -1560,7 +1560,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "basic attribute aggregation",
 			fieldKey: "test_field",
 			conf: FieldConf{
-				attributeKeyPrefix: []string{"test.prefix"},
+				AttributeKeyPrefix: []string{"test.prefix"},
 			},
 			attributeMap: map[string]*AnyValue{
 				"test.prefix.child1": {Value: &AnyValue_StringValue{StringValue: "value1"}},
@@ -1580,7 +1580,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "GenAI completion output special process",
 			fieldKey: tracespec.Output,
 			conf: FieldConf{
-				attributeKeyPrefix: []string{string(semconv1_27_0.GenAICompletionKey)},
+				AttributeKeyPrefix: []string{string(semconv1_27_0.GenAICompletionKey)},
 			},
 			attributeMap: map[string]*AnyValue{
 				string(semconv1_27_0.GenAICompletionKey) + ".0.content": {Value: &AnyValue_StringValue{StringValue: "response1"}},
@@ -1611,7 +1611,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "GenAI prompt input special process",
 			fieldKey: tracespec.Input,
 			conf: FieldConf{
-				attributeKeyPrefix:    []string{string(semconv1_27_0.GenAIPromptKey)},
+				AttributeKeyPrefix:    []string{string(semconv1_27_0.GenAIPromptKey)},
 				attributeHighLevelKey: []highLevelKeyRuleConf{{key: "messages", rule: highLevelKeyRuleMap}},
 			},
 			attributeMap: map[string]*AnyValue{
@@ -1634,7 +1634,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "GenAI prompt input with tools special process",
 			fieldKey: tracespec.Input,
 			conf: FieldConf{
-				attributeKeyPrefix:    []string{string(semconv1_27_0.GenAIPromptKey)},
+				AttributeKeyPrefix:    []string{string(semconv1_27_0.GenAIPromptKey)},
 				attributeHighLevelKey: []highLevelKeyRuleConf{{key: "messages", rule: highLevelKeyRuleMap}},
 			},
 			attributeMap: map[string]*AnyValue{
@@ -1669,7 +1669,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "OpenInference input messages special process",
 			fieldKey: tracespec.Input,
 			conf: FieldConf{
-				attributeKeyPrefix: []string{openInferenceAttributeModelInputMessages},
+				AttributeKeyPrefix: []string{openInferenceAttributeModelInputMessages},
 			},
 			attributeMap: map[string]*AnyValue{
 				openInferenceAttributeModelInputMessages + ".0.message.role":    {Value: &AnyValue_StringValue{StringValue: "user"}},
@@ -1690,7 +1690,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "OpenInference input messages with tools special process",
 			fieldKey: tracespec.Input,
 			conf: FieldConf{
-				attributeKeyPrefix: []string{openInferenceAttributeModelInputMessages},
+				AttributeKeyPrefix: []string{openInferenceAttributeModelInputMessages},
 			},
 			attributeMap: map[string]*AnyValue{
 				openInferenceAttributeModelInputMessages + ".0.message.role":    {Value: &AnyValue_StringValue{StringValue: "user"}},
@@ -1713,7 +1713,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "OpenInference output messages special process",
 			fieldKey: tracespec.Output,
 			conf: FieldConf{
-				attributeKeyPrefix: []string{openInferenceAttributeModelOutputMessages},
+				AttributeKeyPrefix: []string{openInferenceAttributeModelOutputMessages},
 			},
 			attributeMap: map[string]*AnyValue{
 				openInferenceAttributeModelOutputMessages + ".0.message.role":    {Value: &AnyValue_StringValue{StringValue: "assistant"}},
@@ -1734,7 +1734,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "default case no special processing",
 			fieldKey: "custom_field",
 			conf: FieldConf{
-				attributeKeyPrefix: []string{"custom.prefix"},
+				AttributeKeyPrefix: []string{"custom.prefix"},
 			},
 			attributeMap: map[string]*AnyValue{
 				"custom.prefix.child1": {Value: &AnyValue_StringValue{StringValue: "value1"}},
@@ -1754,7 +1754,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 			name:     "empty aggregation result",
 			fieldKey: "test_field",
 			conf: FieldConf{
-				attributeKeyPrefix: []string{"empty.prefix"},
+				AttributeKeyPrefix: []string{"empty.prefix"},
 			},
 			attributeMap: map[string]*AnyValue{
 				"empty.prefix": {Value: &AnyValue_StringValue{StringValue: ""}},

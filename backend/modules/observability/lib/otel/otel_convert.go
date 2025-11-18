@@ -27,64 +27,64 @@ var (
 	FieldConfMap = map[string]FieldConf{
 		// common
 		"span_type": {
-			attributeKey: []string{
+			AttributeKey: []string{
 				otelAttributeSpanType,
 				otelTraceLoopAttributeModelSpanType,
 				string(semconv1_32_0.GenAIOperationNameKey),
 				openInferenceAttributeSpanKind,
 			},
-			isTag:    false,
-			dataType: dataTypeString,
+			IsTag:    false,
+			DataType: dataTypeString,
 		},
 		tagKeyThreadID: {
-			attributeKey: []string{string(semconv1_26_0.SessionIDKey)},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{string(semconv1_26_0.SessionIDKey)},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tagKeyLogID: {
-			attributeKey: []string{otelAttributeLogID},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{otelAttributeLogID},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tagKeyUserID: {
-			attributeKey: []string{string(semconv1_32_0.UserIDKey)},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{string(semconv1_32_0.UserIDKey)},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tagKeyMessageID: {
-			attributeKey: []string{string(semconv1_32_0.MessagingMessageIDKey)},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{string(semconv1_32_0.MessagingMessageIDKey)},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tracespec.Error: {
-			attributeKeyPrefix: []string{
+			AttributeKeyPrefix: []string{
 				otelAttributeErrorPrefix,
 				openInferenceAttributeException,
 			},
-			eventName: []string{semconv1_32_0.ExceptionEventName},
-			isTag:     true,
-			dataType:  dataTypeString,
+			EventName: []string{semconv1_32_0.ExceptionEventName},
+			IsTag:     true,
+			DataType:  dataTypeString,
 		},
 
 		// model
 		tracespec.ModelProvider: {
-			attributeKey: []string{string(semconv1_32_0.GenAISystemKey)},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{string(semconv1_32_0.GenAISystemKey)},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tracespec.Input: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				openInferenceAttributeInput,
 				springAIAttributeToolInput,
 				otelAttributeInput,
 			},
-			attributeKeyPrefix: []string{
+			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelInputMessages,
 				openInferenceAttributeToolInput,
 				string(semconv1_27_0.GenAIPromptKey),
 			},
-			eventName: []string{otelEventModelSystemMessage, otelEventModelUserMessage, otelEventModelToolMessage, otelEventModelAssistantMessage, otelSpringAIEventModelPrompt},
-			dataType:  dataTypeString,
+			EventName: []string{otelEventModelSystemMessage, otelEventModelUserMessage, otelEventModelToolMessage, otelEventModelAssistantMessage, otelSpringAIEventModelPrompt},
+			DataType:  dataTypeString,
 			eventHighLevelKey: []highLevelKeyRuleConf{
 				{
 					key:  "messages",
@@ -99,17 +99,17 @@ var (
 			},
 		},
 		tracespec.Output: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				openInferenceAttributeOutput,
 				springAIAttributeToolOutput,
 				otelAttributeOutput,
 			},
-			attributeKeyPrefix: []string{
+			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelOutputMessages,
 				string(semconv1_27_0.GenAICompletionKey),
 			},
-			eventName: []string{otelEventModelChoice, otelSpringAIEventModelCompletion},
-			dataType:  dataTypeString,
+			EventName: []string{otelEventModelChoice, otelSpringAIEventModelCompletion},
+			DataType:  dataTypeString,
 			eventHighLevelKey: []highLevelKeyRuleConf{
 				{
 					key:  "choices",
@@ -128,103 +128,103 @@ var (
 			},
 		},
 		tagKeyStartTimeFirstResp: {
-			attributeKey: []string{otelAttributeModelTimeToFirstToken},
-			isTag:        true,
-			dataType:     dataTypeInt64,
+			AttributeKey: []string{otelAttributeModelTimeToFirstToken},
+			IsTag:        true,
+			DataType:     dataTypeInt64,
 		},
 		tracespec.Stream: {
-			attributeKey: []string{otelAttributeModelStream},
-			isTag:        true,
-			dataType:     dataTypeBool,
+			AttributeKey: []string{otelAttributeModelStream},
+			IsTag:        true,
+			DataType:     dataTypeBool,
 		},
 		tracespec.ModelName: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				string(semconv1_32_0.GenAIRequestModelKey),
 				string(semconv1_27_0.GenAIResponseModelKey),
 				openInferenceAttributeModelName,
 			},
-			isTag:    true,
-			dataType: dataTypeString,
+			IsTag:    true,
+			DataType: dataTypeString,
 		},
 		"temperature": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestTemperatureKey)},
-			isTag:        true,
-			dataType:     dataTypeFloat64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestTemperatureKey)},
+			IsTag:        true,
+			DataType:     dataTypeFloat64,
 		},
 		"top_p": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestTopPKey)},
-			isTag:        true,
-			dataType:     dataTypeFloat64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestTopPKey)},
+			IsTag:        true,
+			DataType:     dataTypeFloat64,
 		},
 		"top_k": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestTopKKey)},
-			isTag:        true,
-			dataType:     dataTypeInt64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestTopKKey)},
+			IsTag:        true,
+			DataType:     dataTypeInt64,
 		},
 		"max_tokens": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestMaxTokensKey)},
-			isTag:        true,
-			dataType:     dataTypeInt64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestMaxTokensKey)},
+			IsTag:        true,
+			DataType:     dataTypeInt64,
 		},
 		"frequency_penalty": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestFrequencyPenaltyKey)},
-			isTag:        true,
-			dataType:     dataTypeFloat64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestFrequencyPenaltyKey)},
+			IsTag:        true,
+			DataType:     dataTypeFloat64,
 		},
 		"presence_penalty": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestPresencePenaltyKey)},
-			isTag:        true,
-			dataType:     dataTypeFloat64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestPresencePenaltyKey)},
+			IsTag:        true,
+			DataType:     dataTypeFloat64,
 		},
 		"stop_sequences": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestStopSequencesKey)},
-			isTag:        true,
-			dataType:     dataTypeArrayString,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestStopSequencesKey)},
+			IsTag:        true,
+			DataType:     dataTypeArrayString,
 		},
 		tracespec.InputTokens: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				string(semconv1_32_0.GenAIUsageInputTokensKey),
 				string(semconv1_26_0.GenAiUsagePromptTokensKey),
 				openInferenceAttributeModelInputTokens,
 			},
-			isTag:    true,
-			dataType: dataTypeInt64,
+			IsTag:    true,
+			DataType: dataTypeInt64,
 		},
 		tracespec.OutputTokens: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				string(semconv1_32_0.GenAIUsageOutputTokensKey),
 				string(semconv1_26_0.GenAiUsageCompletionTokensKey),
 				openInferenceAttributeModelOutputTokens,
 			},
-			isTag:    true,
-			dataType: dataTypeInt64,
+			IsTag:    true,
+			DataType: dataTypeInt64,
 		},
 
 		// prompt
 		tracespec.PromptKey: {
-			attributeKey: []string{otelAttributePromptKey},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{otelAttributePromptKey},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tracespec.PromptVersion: {
-			attributeKey: []string{otelAttributePromptVersion},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{otelAttributePromptVersion},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tracespec.PromptProvider: {
-			attributeKey: []string{otelAttributePromptProvider},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{otelAttributePromptProvider},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 	}
 )
 
 type FieldConf struct {
-	attributeKey          []string
-	attributeKeyPrefix    []string
-	eventName             []string
-	isTag                 bool
-	dataType              string
+	AttributeKey          []string
+	AttributeKeyPrefix    []string
+	EventName             []string
+	IsTag                 bool
+	DataType              string
 	eventHighLevelKey     []highLevelKeyRuleConf // config from inner to outer, such as choices.message.xxx, config is ["message", "choices"]
 	attributeHighLevelKey []highLevelKeyRuleConf // config from inner to outer, such as choices.message.xxx, config is ["message", "choices"]
 }
@@ -250,10 +250,10 @@ func init() {
 	registeredAttributeMap = make(map[string]bool)
 	registeredAttributePrefixMap = make(map[string]bool)
 	for _, fieldConf := range FieldConfMap {
-		for _, attribute := range fieldConf.attributeKey {
+		for _, attribute := range fieldConf.AttributeKey {
 			registeredAttributeMap[attribute] = true
 		}
-		for _, attributePrefix := range fieldConf.attributeKeyPrefix {
+		for _, attributePrefix := range fieldConf.AttributeKeyPrefix {
 			registeredAttributePrefixMap[attributePrefix] = true
 		}
 	}
@@ -304,13 +304,13 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			continue
 		}
 
-		switch conf.dataType {
+		switch conf.DataType {
 		case dataTypeString, dataTypeDefault:
 			value, ok := srcValue.(string)
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsString[fieldKey] = value
 			} else {
 				switch fieldKey {
@@ -328,7 +328,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsLong[fieldKey] = value
 			}
 		case dataTypeBool:
@@ -336,7 +336,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsBool[fieldKey] = value
 			}
 		case dataTypeFloat64:
@@ -344,7 +344,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsDouble[fieldKey] = value
 			}
 		case dataTypeArrayString:
@@ -352,7 +352,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsString[fieldKey] = strings.Join(value, ",")
 			}
 		default:
@@ -599,10 +599,10 @@ func getSamePrefixAttributesMap(attributeMap map[string]*AnyValue, prefixKey str
 }
 
 func processAttributeKey(ctx context.Context, conf FieldConf, attributeMap map[string]*AnyValue) interface{} {
-	if attributeKeys := conf.attributeKey; len(attributeKeys) > 0 {
+	if attributeKeys := conf.AttributeKey; len(attributeKeys) > 0 {
 		for _, key := range attributeKeys {
 			if x, ok := attributeMap[key]; ok {
-				return getValueByDataType(x, conf.dataType)
+				return getValueByDataType(x, conf.DataType)
 			}
 		}
 	}
@@ -611,7 +611,7 @@ func processAttributeKey(ctx context.Context, conf FieldConf, attributeMap map[s
 }
 
 func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf, attributeMap map[string]*AnyValue) string {
-	for _, attributePrefixKey := range conf.attributeKeyPrefix {
+	for _, attributePrefixKey := range conf.AttributeKeyPrefix {
 		srcAttrAggrRes := aggregateAttributesByPrefix(attributeMap, attributePrefixKey)
 		if srcAttrAggrRes == nil {
 			continue
@@ -683,13 +683,13 @@ func aggregateAttributesByPrefix(attributeMap map[string]*AnyValue, attributePre
 }
 
 func processEvent(ctx context.Context, fieldKey string, conf FieldConf, events []*SpanEvent, attributeMap map[string]*AnyValue) string {
-	if len(events) == 0 || len(conf.eventName) == 0 {
+	if len(events) == 0 || len(conf.EventName) == 0 {
 		return ""
 	}
 	eventSlice := make([]map[string]interface{}, 0)
 	isAllOtelMessage := true // only otel standard message events require packaging on the outer layer, the rest are not included
 	for _, event := range events {
-		if !slices.Contains(conf.eventName, event.Name) {
+		if !slices.Contains(conf.EventName, event.Name) {
 			continue
 		}
 		if !slices.Contains(otelMessageEventNameMap, event.Name) {
