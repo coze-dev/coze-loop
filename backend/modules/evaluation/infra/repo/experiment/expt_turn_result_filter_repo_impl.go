@@ -6,6 +6,7 @@ package experiment
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -40,6 +41,7 @@ func (e *ExptTurnResultFilterRepoImpl) Save(ctx context.Context, filter []*entit
 	// 转换为 model.ExptTurnResultFilterAccelerator
 	models := make([]*model.ExptTurnResultFilter, 0, len(filter))
 	for _, filterEntity := range filter {
+		filterEntity.UpdatedAt = time.Now()
 		models = append(models, convertor.ExptTurnResultFilterEntity2PO(filterEntity))
 	}
 	logs.CtxInfo(ctx, "ExptTurnResultFilterRepoImpl.Save: %v", json.Jsonify(models))
