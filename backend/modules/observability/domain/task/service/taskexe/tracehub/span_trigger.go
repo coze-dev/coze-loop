@@ -18,7 +18,7 @@ import (
 )
 
 func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, span *loop_span.Span) error {
-	ctx = h.fillCtx(ctx)
+	ctx = taskexe.FillCtx(ctx, int64(h.aid))
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
 	logs.CtxInfo(ctx, "auto_task start, %s", logSuffix)
 

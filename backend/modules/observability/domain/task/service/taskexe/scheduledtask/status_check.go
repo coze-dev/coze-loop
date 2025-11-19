@@ -50,6 +50,7 @@ type StatusCheckTask struct {
 	taskService     service.ITaskService
 	taskProcessor   processor.TaskProcessor
 	taskRepo        repo.ITaskRepo
+	aid             int32
 }
 
 func NewStatusCheckTask(
@@ -59,6 +60,7 @@ func NewStatusCheckTask(
 	taskService service.ITaskService,
 	taskProcessor processor.TaskProcessor,
 	taskRepo repo.ITaskRepo,
+	aid int32,
 ) scheduledtask.ScheduledTask {
 	return &StatusCheckTask{
 		BaseScheduledTask: scheduledtask.NewBaseScheduledTask("StatusCheckTask", 5*time.Minute),
@@ -68,10 +70,12 @@ func NewStatusCheckTask(
 		taskService:       taskService,
 		taskProcessor:     taskProcessor,
 		taskRepo:          taskRepo,
+		aid:               aid,
 	}
 }
 
 func (t *StatusCheckTask) RunOnce(ctx context.Context) error {
+	ctx = taskexe.FillCtx(ctx, int64(t.aid))
 	cfg, err := t.config.GetConsumerListening(ctx)
 	if err != nil {
 		return err
