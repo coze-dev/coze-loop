@@ -1,7 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package tracehub
+package scheduledtask
 
 import (
 	"context"
@@ -13,38 +13,38 @@ import (
 	"go.uber.org/mock/gomock"
 
 	lock_mocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/stretchr/testify/require"
 )
 
 type trackingProcessor struct {
 	*stubProcessor
-	finishReqs     []taskexe.OnFinishTaskChangeReq
-	createRunReqs  []taskexe.OnCreateTaskRunChangeReq
-	updateStatuses []string
+	finishReqs     []taskexe.OnTaskFinishedReq
+	createRunReqs  []taskexe.OnTaskRunCreatedReq
+	updateStatuses []entity.TaskStatus
 }
 
 func newTrackingProcessor() *trackingProcessor {
 	return &trackingProcessor{stubProcessor: &stubProcessor{}}
 }
 
-func (p *trackingProcessor) OnFinishTaskChange(ctx context.Context, req taskexe.OnFinishTaskChangeReq) error {
+func (p *trackingProcessor) OnTaskFinished(ctx context.Context, req taskexe.OnTaskFinishedReq) error {
 	p.finishReqs = append(p.finishReqs, req)
-	return p.stubProcessor.OnFinishTaskChange(ctx, req)
+	return p.stubProcessor.OnTaskFinished(ctx, req)
 }
 
-func (p *trackingProcessor) OnCreateTaskRunChange(ctx context.Context, req taskexe.OnCreateTaskRunChangeReq) error {
+func (p *trackingProcessor) OnTaskRunCreated(ctx context.Context, req taskexe.OnTaskRunCreatedReq) error {
 	p.createRunReqs = append(p.createRunReqs, req)
-	return p.stubProcessor.OnCreateTaskRunChange(ctx, req)
+	return p.stubProcessor.OnTaskRunCreated(ctx, req)
 }
 
-func (p *trackingProcessor) OnUpdateTaskChange(ctx context.Context, obsTask *entity.ObservabilityTask, status string) error {
+func (p *trackingProcessor) OnTaskUpdated(ctx context.Context, obsTask *entity.ObservabilityTask, status entity.TaskStatus) error {
 	p.updateStatuses = append(p.updateStatuses, status)
-	return p.stubProcessor.OnUpdateTaskChange(ctx, obsTask, status)
+	return p.stubProcessor.OnTaskUpdated(ctx, obsTask, status)
 }
 
 func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
@@ -63,23 +63,23 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				backfillRun := &entity.TaskRun{
 					ID:         2,
 					TaskID:     1,
-					TaskType:   string(task.TaskRunTypeBackFill),
-					RunStatus:  string(task.RunStatusDone),
+					TaskType:   entity.TaskRunTypeBackFill,
+					RunStatus:  entity.TaskRunStatusDone,
 					RunStartAt: now.Add(-3 * time.Hour),
 					RunEndAt:   now.Add(-2 * time.Hour),
 				}
 				currentRun := &entity.TaskRun{
 					ID:         3,
 					TaskID:     1,
-					TaskType:   string(task.TaskRunTypeNewData),
-					RunStatus:  string(task.TaskStatusRunning),
+					TaskType:   entity.TaskRunTypeNewData,
+					RunStatus:  entity.TaskRunStatusRunning,
 					RunStartAt: now.Add(-4 * time.Hour),
 					RunEndAt:   now.Add(2 * time.Hour),
 				}
 				taskPO := &entity.ObservabilityTask{
 					ID:         1,
-					TaskType:   string(task.TaskTypeAutoEval),
-					TaskStatus: string(task.TaskStatusRunning),
+					TaskType:   entity.TaskTypeAutoEval,
+					TaskStatus: entity.TaskStatusRunning,
 					EffectiveTime: &entity.EffectiveTime{
 						StartAt: now.Add(-5 * time.Hour).UnixMilli(),
 						EndAt:   now.Add(-1 * time.Hour).UnixMilli(),
@@ -95,7 +95,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 
 				proc := newTrackingProcessor()
 				tp := processor.NewTaskProcessor()
-				tp.Register(task.TaskTypeAutoEval, proc)
+				tp.Register(entity.TaskTypeAutoEval, proc)
 
 				impl := &TraceHubServiceImpl{
 					taskRepo:      mockRepo,
@@ -117,8 +117,8 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				now := time.Now()
 				taskPO := &entity.ObservabilityTask{
 					ID:         10,
-					TaskType:   string(task.TaskTypeAutoEval),
-					TaskStatus: string(task.TaskStatusUnstarted),
+					TaskType:   entity.TaskTypeAutoEval,
+					TaskStatus: entity.TaskStatusUnstarted,
 					EffectiveTime: &entity.EffectiveTime{
 						StartAt: now.Add(-2 * time.Hour).UnixMilli(),
 						EndAt:   now.Add(time.Hour).UnixMilli(),
@@ -129,7 +129,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 
 				proc := newTrackingProcessor()
 				tp := processor.NewTaskProcessor()
-				tp.Register(task.TaskTypeAutoEval, proc)
+				tp.Register(entity.TaskTypeAutoEval, proc)
 
 				impl := &TraceHubServiceImpl{
 					taskRepo:      mockRepo,
@@ -140,9 +140,9 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 			},
 			assert: func(t *testing.T, _ *TraceHubServiceImpl, proc *trackingProcessor) {
 				require.Len(t, proc.createRunReqs, 1)
-				require.Equal(t, task.TaskRunTypeNewData, proc.createRunReqs[0].RunType)
+				require.Equal(t, entity.TaskRunTypeNewData, proc.createRunReqs[0].RunType)
 				require.Len(t, proc.updateStatuses, 1)
-				require.Equal(t, string(task.TaskStatusRunning), proc.updateStatuses[0])
+				require.Equal(t, entity.TaskStatusRunning, proc.updateStatuses[0])
 			},
 		},
 		{
@@ -153,15 +153,15 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				currentRun := &entity.TaskRun{
 					ID:         30,
 					TaskID:     20,
-					TaskType:   string(task.TaskRunTypeNewData),
-					RunStatus:  string(task.TaskStatusRunning),
+					TaskType:   entity.TaskRunTypeNewData,
+					RunStatus:  entity.TaskRunStatusRunning,
 					RunStartAt: now.Add(-2 * time.Hour),
 					RunEndAt:   now.Add(-time.Minute),
 				}
 				taskPO := &entity.ObservabilityTask{
 					ID:         20,
-					TaskType:   string(task.TaskTypeAutoEval),
-					TaskStatus: string(task.TaskStatusRunning),
+					TaskType:   entity.TaskTypeAutoEval,
+					TaskStatus: entity.TaskStatusRunning,
 					Sampler:    &entity.Sampler{IsCycle: true},
 					TaskRuns:   []*entity.TaskRun{currentRun},
 				}
@@ -169,7 +169,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 
 				proc := newTrackingProcessor()
 				tp := processor.NewTaskProcessor()
-				tp.Register(task.TaskTypeAutoEval, proc)
+				tp.Register(entity.TaskTypeAutoEval, proc)
 
 				impl := &TraceHubServiceImpl{
 					taskRepo:      mockRepo,
@@ -194,24 +194,24 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 				backfillRun := &entity.TaskRun{
 					ID:         40,
 					TaskID:     40,
-					TaskType:   string(task.TaskRunTypeBackFill),
-					RunStatus:  string(task.TaskStatusRunning),
+					TaskType:   entity.TaskRunTypeBackFill,
+					RunStatus:  entity.TaskRunStatusRunning,
 					RunStartAt: now.Add(-time.Hour),
 					RunEndAt:   now.Add(time.Hour),
 				}
 				currentRun := &entity.TaskRun{
 					ID:         41,
 					TaskID:     40,
-					TaskType:   string(task.TaskRunTypeNewData),
-					RunStatus:  string(task.TaskStatusRunning),
+					TaskType:   entity.TaskRunTypeNewData,
+					RunStatus:  entity.TaskRunStatusRunning,
 					RunStartAt: now.Add(-time.Hour),
 					RunEndAt:   now.Add(time.Hour),
 				}
 				taskPO := &entity.ObservabilityTask{
 					ID:                    40,
 					WorkspaceID:           99,
-					TaskType:              string(task.TaskTypeAutoEval),
-					TaskStatus:            string(task.TaskStatusRunning),
+					TaskType:              entity.TaskTypeAutoEval,
+					TaskStatus:            entity.TaskStatusRunning,
 					BackfillEffectiveTime: &entity.EffectiveTime{StartAt: now.Add(-2 * time.Hour).UnixMilli(), EndAt: now.Add(time.Hour).UnixMilli()},
 					Sampler:               &entity.Sampler{IsCycle: false},
 					TaskRuns:              []*entity.TaskRun{backfillRun, currentRun},
@@ -223,7 +223,7 @@ func TestTraceHubServiceImpl_transformTaskStatus(t *testing.T) {
 
 				proc := newTrackingProcessor()
 				tp := processor.NewTaskProcessor()
-				tp.Register(task.TaskTypeAutoEval, proc)
+				tp.Register(entity.TaskTypeAutoEval, proc)
 
 				producer := &stubBackfillProducer{ch: make(chan *entity.BackFillEvent, 1)}
 				impl := &TraceHubServiceImpl{
@@ -336,10 +336,26 @@ func TestTraceHubServiceImpl_syncTaskCache(t *testing.T) {
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
 	impl.taskCache.Store("ObjListWithTask", TaskCacheInfo{})
 
-	workspaceIDs := []string{"space-1"}
+	tasks := []*entity.ObservabilityTask{
+		{
+			ID:          100,
+			WorkspaceID: 1,
+			SpanFilter: &entity.SpanFilterFields{
+				Filters: loop_span.FilterFields{
+					FilterFields: []*loop_span.FilterField{
+						{
+							FieldName: "bot_id",
+							Values:    []string{"bot-1"},
+						},
+					},
+				},
+			},
+		},
+	}
+	workspaceIDs := []string{"1"}
 	botIDs := []string{"bot-1"}
-	tasks := []*entity.ObservabilityTask{{ID: 100}}
-	mockRepo.EXPECT().GetObjListWithTask(gomock.Any()).Return(workspaceIDs, botIDs, tasks)
+
+	mockRepo.EXPECT().ListNonFinalTasks(gomock.Any()).Return(tasks, nil)
 
 	before := time.Now()
 	impl.syncTaskCache()
@@ -448,6 +464,91 @@ func TestTraceHubServiceImpl_listNonFinalTask(t *testing.T) {
 
 		tasks, err := impl.listNonFinalTask(context.Background())
 		require.Error(t, err)
+		require.Nil(t, tasks)
+	})
+}
+
+func TestTraceHubServiceImpl_getNonFinalTaskInfos(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		impl := &TraceHubServiceImpl{taskRepo: mockRepo}
+
+		tasks := []*entity.ObservabilityTask{
+			{
+				WorkspaceID: 101,
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						FilterFields: []*loop_span.FilterField{
+							{
+								FieldName: "bot_id",
+								Values:    []string{"bot-a", "bot-b"},
+							},
+							{
+								FieldName: "ignored",
+								SubFilter: &loop_span.FilterFields{
+									FilterFields: []*loop_span.FilterField{
+										{
+											FieldName: "bot_id",
+											Values:    []string{"bot-c"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				WorkspaceID: 202,
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						FilterFields: []*loop_span.FilterField{
+							{
+								FieldName: "other",
+								Values:    []string{"value"},
+							},
+						},
+					},
+				},
+			},
+			{
+				WorkspaceID: 101,
+			},
+		}
+
+		mockRepo.EXPECT().ListNonFinalTasks(gomock.Any()).Return(tasks, nil)
+
+		workspaceIDs, botIDs, resultTasks, err := impl.getNonFinalTaskInfos(context.Background())
+		require.NoError(t, err)
+		require.ElementsMatch(t, []string{"101", "202"}, workspaceIDs)
+		require.ElementsMatch(t, []string{"bot-a", "bot-b", "bot-c"}, botIDs)
+		require.Equal(t, tasks, resultTasks)
+	})
+
+	t.Run("repo error", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		impl := &TraceHubServiceImpl{taskRepo: mockRepo}
+
+		expectErr := errors.New("repo err")
+		mockRepo.EXPECT().ListNonFinalTasks(gomock.Any()).Return(nil, expectErr)
+
+		workspaceIDs, botIDs, tasks, err := impl.getNonFinalTaskInfos(context.Background())
+		require.Error(t, err)
+		require.ErrorIs(t, err, expectErr)
+		require.Nil(t, workspaceIDs)
+		require.Nil(t, botIDs)
 		require.Nil(t, tasks)
 	})
 }

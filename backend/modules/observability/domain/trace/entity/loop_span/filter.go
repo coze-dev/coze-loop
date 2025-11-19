@@ -364,6 +364,15 @@ func (f *FilterField) CheckValue(val any) bool {
 	}
 }
 
+func (f *FilterField) SetHidden(hidden bool) {
+	f.Hidden = hidden
+	if f.SubFilter != nil {
+		for _, subFilters := range f.SubFilter.FilterFields {
+			subFilters.SetHidden(hidden)
+		}
+	}
+}
+
 func CompareBool(val bool, values []bool, qType QueryTypeEnum) bool {
 	switch qType {
 	case QueryTypeEnumEq:

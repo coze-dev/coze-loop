@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -25,11 +28,6 @@ import (
 	svc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	svcmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/mocks"
 	tracehubmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub/mocks"
-	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	traceSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
-	traceSvcMock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
-	span_filter "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
-	filtermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -310,224 +308,6 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 	}
 }
 
-func TestTaskApplication_buildSpanFilters(t *testing.T) {
-	t.Parallel()
-
-	type fields struct {
-		builder traceSvc.TraceFilterProcessorBuilder
-	}
-
-	type args struct {
-		spanFilters *filterdto.SpanFilterFields
-		workspaceID int64
-	}
-
-	tests := []struct {
-		name          string
-		fieldsBuilder func(ctrl *gomock.Controller, t *testing.T, a args) fields
-		args          args
-		assertFunc    func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error)
-	}{
-		{
-			name: "non supported platform returns original",
-			fieldsBuilder: func(ctrl *gomock.Controller, t *testing.T, a args) fields {
-				return fields{}
-			},
-			args: args{
-				spanFilters: &filterdto.SpanFilterFields{
-					Filters: &filterdto.FilterFields{
-						FilterFields: []*filterdto.FilterField{
-							{
-								FieldName: gptr.Of("custom_field"),
-								FieldType: gptr.Of(filterdto.FieldTypeString),
-								Values:    []string{"value"},
-							},
-						},
-					},
-					PlatformType: gptr.Of(commondomain.PlatformTypeCozeloop),
-					SpanListType: gptr.Of(commondomain.SpanListTypeRootSpan),
-				},
-				workspaceID: 100,
-			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
-				assert.NoError(t, err)
-				if assert.NotNil(t, got) {
-					assert.Equal(t, commondomain.PlatformTypeCozeloop, got.PlatformType)
-					assert.Equal(t, commondomain.SpanListTypeRootSpan, got.SpanListType)
-					dtoFilters := original.GetFilters().GetFilterFields()
-					if assert.Len(t, got.Filters.FilterFields, len(dtoFilters)) && len(dtoFilters) > 0 {
-						firstDTO := dtoFilters[0]
-						firstDomain := got.Filters.FilterFields[0]
-						if assert.NotNil(t, firstDTO.FieldName) {
-							assert.Equal(t, *firstDTO.FieldName, firstDomain.FieldName)
-						}
-						if assert.NotNil(t, firstDTO.FieldType) {
-							assert.Equal(t, loop_span.FieldType(*firstDTO.FieldType), firstDomain.FieldType)
-						}
-						assert.Equal(t, firstDTO.Values, firstDomain.Values)
-						assert.False(t, firstDomain.Hidden)
-					}
-				}
-			},
-		},
-		{
-			name: "build platform filter error",
-			fieldsBuilder: func(ctrl *gomock.Controller, t *testing.T, a args) fields {
-				builder := traceSvcMock.NewMockTraceFilterProcessorBuilder(ctrl)
-				builder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(commondomain.PlatformTypeCozeBot)).Return(nil, errors.New("build platform error"))
-				return fields{builder: builder}
-			},
-			args: args{
-				spanFilters: &filterdto.SpanFilterFields{
-					Filters: &filterdto.FilterFields{
-						FilterFields: []*filterdto.FilterField{},
-					},
-					PlatformType: gptr.Of(commondomain.PlatformTypeCozeBot),
-					SpanListType: gptr.Of(commondomain.SpanListTypeRootSpan),
-				},
-				workspaceID: 200,
-			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
-				assert.Nil(t, got)
-				assert.EqualError(t, err, "build platform error")
-			},
-		},
-		{
-			name: "build basic span filter error",
-			fieldsBuilder: func(ctrl *gomock.Controller, t *testing.T, a args) fields {
-				builder := traceSvcMock.NewMockTraceFilterProcessorBuilder(ctrl)
-				platformFilter := filtermocks.NewMockFilter(ctrl)
-				builder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(commondomain.PlatformTypeWorkflow)).Return(platformFilter, nil)
-				platformFilter.EXPECT().
-					BuildBasicSpanFilter(gomock.Any(), gomock.AssignableToTypeOf(&span_filter.SpanEnv{})).
-					DoAndReturn(func(_ context.Context, env *span_filter.SpanEnv) ([]*loop_span.FilterField, bool, error) {
-						assert.Equal(t, a.workspaceID, env.WorkspaceID)
-						return nil, false, errors.New("build basic error")
-					})
-				return fields{builder: builder}
-			},
-			args: args{
-				spanFilters: &filterdto.SpanFilterFields{
-					Filters: &filterdto.FilterFields{
-						FilterFields: []*filterdto.FilterField{},
-					},
-					PlatformType: gptr.Of(commondomain.PlatformTypeWorkflow),
-					SpanListType: gptr.Of(commondomain.SpanListTypeRootSpan),
-				},
-				workspaceID: 300,
-			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
-				assert.Nil(t, got)
-				assert.EqualError(t, err, "build basic error")
-			},
-		},
-		{
-			name: "empty basic filter without force returns nil",
-			fieldsBuilder: func(ctrl *gomock.Controller, t *testing.T, a args) fields {
-				builder := traceSvcMock.NewMockTraceFilterProcessorBuilder(ctrl)
-				platformFilter := filtermocks.NewMockFilter(ctrl)
-				builder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(commondomain.PlatformTypeInnerCozeBot)).Return(platformFilter, nil)
-				platformFilter.EXPECT().
-					BuildBasicSpanFilter(gomock.Any(), gomock.AssignableToTypeOf(&span_filter.SpanEnv{})).
-					DoAndReturn(func(_ context.Context, env *span_filter.SpanEnv) ([]*loop_span.FilterField, bool, error) {
-						assert.Equal(t, a.workspaceID, env.WorkspaceID)
-						return []*loop_span.FilterField{}, false, nil
-					})
-				return fields{builder: builder}
-			},
-			args: args{
-				spanFilters: &filterdto.SpanFilterFields{
-					Filters: &filterdto.FilterFields{
-						FilterFields: []*filterdto.FilterField{},
-					},
-					PlatformType: gptr.Of(commondomain.PlatformTypeInnerCozeBot),
-					SpanListType: gptr.Of(commondomain.SpanListTypeRootSpan),
-				},
-				workspaceID: 400,
-			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
-				assert.NoError(t, err)
-				assert.Nil(t, got)
-			},
-		},
-		{
-			name: "merge platform filters success",
-			fieldsBuilder: func(ctrl *gomock.Controller, t *testing.T, a args) fields {
-				builder := traceSvcMock.NewMockTraceFilterProcessorBuilder(ctrl)
-				platformFilter := filtermocks.NewMockFilter(ctrl)
-				builder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(commondomain.PlatformTypeProject)).Return(platformFilter, nil)
-				platformFilter.EXPECT().
-					BuildBasicSpanFilter(gomock.Any(), gomock.AssignableToTypeOf(&span_filter.SpanEnv{})).
-					DoAndReturn(func(_ context.Context, env *span_filter.SpanEnv) ([]*loop_span.FilterField, bool, error) {
-						assert.Equal(t, a.workspaceID, env.WorkspaceID)
-						return []*loop_span.FilterField{
-							{
-								FieldName: loop_span.SpanFieldSpaceId,
-								FieldType: loop_span.FieldTypeString,
-								Values:    []string{"tenant"},
-							},
-						}, false, nil
-					})
-				return fields{builder: builder}
-			},
-			args: args{
-				spanFilters: &filterdto.SpanFilterFields{
-					Filters: &filterdto.FilterFields{
-						FilterFields: []*filterdto.FilterField{
-							{
-								FieldName: gptr.Of("custom_field"),
-								FieldType: gptr.Of(filterdto.FieldTypeString),
-								Values:    []string{"origin"},
-							},
-						},
-					},
-					PlatformType: gptr.Of(commondomain.PlatformTypeProject),
-					SpanListType: gptr.Of(commondomain.SpanListTypeRootSpan),
-				},
-				workspaceID: 500,
-			},
-			assertFunc: func(t *testing.T, original *filterdto.SpanFilterFields, got *entity.SpanFilterFields, err error) {
-				assert.NoError(t, err)
-				if assert.NotNil(t, got) {
-					assert.Equal(t, commondomain.PlatformTypeProject, got.PlatformType)
-					assert.Equal(t, commondomain.SpanListTypeRootSpan, got.SpanListType)
-					originalFilters := original.GetFilters().GetFilterFields()
-					if assert.Len(t, got.Filters.FilterFields, len(originalFilters)+1) && len(originalFilters) > 0 {
-						firstDomain := got.Filters.FilterFields[0]
-						firstDTO := originalFilters[0]
-						if assert.NotNil(t, firstDTO.FieldName) {
-							assert.Equal(t, *firstDTO.FieldName, firstDomain.FieldName)
-						}
-						assert.False(t, firstDomain.Hidden)
-						appended := got.Filters.FilterFields[len(originalFilters)]
-						assert.Equal(t, loop_span.SpanFieldSpaceId, appended.FieldName)
-						assert.True(t, appended.Hidden)
-						assert.Equal(t, []string{"tenant"}, appended.Values)
-					}
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		caseItem := tt
-		t.Run(caseItem.name, func(t *testing.T) {
-			t.Parallel()
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			fields := caseItem.fieldsBuilder(ctrl, t, caseItem.args)
-			app := &TaskApplication{
-				buildHelper: fields.builder,
-			}
-
-			got, err := app.buildSpanFilters(context.Background(), caseItem.args.spanFilters, caseItem.args.workspaceID)
-
-			caseItem.assertFunc(t, caseItem.args.spanFilters, got, err)
-		})
-	}
-}
-
 func TestTaskApplication_UpdateTask(t *testing.T) {
 	t.Parallel()
 
@@ -647,8 +427,8 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 	t.Parallel()
 
 	taskListResp := &svc.ListTasksResp{
-		Tasks: []*taskdto.Task{{Name: "task1"}},
-		Total: gptr.Of(int64(1)),
+		Tasks: []*entity.ObservabilityTask{{Name: "task1"}},
+		Total: int64(1),
 	}
 	tests := []struct {
 		name          string
@@ -708,10 +488,13 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 			},
 		},
 		{
-			name:       "success",
-			ctx:        context.Background(),
-			req:        &taskapi.ListTasksRequest{WorkspaceID: 789},
-			expectResp: &taskapi.ListTasksResponse{Tasks: taskListResp.Tasks, Total: taskListResp.Total},
+			name: "success",
+			ctx:  context.Background(),
+			req:  &taskapi.ListTasksRequest{WorkspaceID: 789},
+			expectResp: &taskapi.ListTasksResponse{
+				Tasks: tconv.TaskDOs2DTOs(context.Background(), taskListResp.Tasks, map[string]*common.UserInfo{}),
+				Total: lo.ToPtr(taskListResp.Total),
+			},
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(789, 10), false).Return(nil)
@@ -759,7 +542,7 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 func TestTaskApplication_GetTask(t *testing.T) {
 	t.Parallel()
 
-	taskResp := &svc.GetTaskResp{Task: &taskdto.Task{Name: "task"}}
+	taskResp := &svc.GetTaskResp{Task: &entity.ObservabilityTask{Name: "task"}}
 
 	tests := []struct {
 		name          string
@@ -820,7 +603,7 @@ func TestTaskApplication_GetTask(t *testing.T) {
 			name:       "success",
 			ctx:        context.Background(),
 			req:        &taskapi.GetTaskRequest{WorkspaceID: 202, TaskID: 3},
-			expectResp: &taskapi.GetTaskResponse{Task: taskResp.Task},
+			expectResp: &taskapi.GetTaskResponse{Task: tconv.TaskDO2DTO(context.Background(), taskResp.Task, map[string]*common.UserInfo{})},
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(202, 10), false).Return(nil)
@@ -917,23 +700,23 @@ func TestTaskApplication_CallBack(t *testing.T) {
 	event := &entity.AutoEvalEvent{}
 	tests := []struct {
 		name      string
-		mockSvc   func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService
+		mockSvc   func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService
 		expectErr bool
 	}{
 		{
 			name: "trace hub error",
-			mockSvc: func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService {
-				svc := tracehubmock.NewMockITraceHubService(ctrl)
-				svc.EXPECT().CallBack(gomock.Any(), event).Return(errors.New("hub error"))
+			mockSvc: func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService {
+				svc := svcmock.NewMockITaskCallbackService(ctrl)
+				svc.EXPECT().AutoEvalCallback(gomock.Any(), event).Return(errors.New("hub error"))
 				return svc
 			},
 			expectErr: true,
 		},
 		{
 			name: "success",
-			mockSvc: func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService {
-				svc := tracehubmock.NewMockITraceHubService(ctrl)
-				svc.EXPECT().CallBack(gomock.Any(), event).Return(nil)
+			mockSvc: func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService {
+				svc := svcmock.NewMockITaskCallbackService(ctrl)
+				svc.EXPECT().AutoEvalCallback(gomock.Any(), event).Return(nil)
 				return svc
 			},
 		},
@@ -947,8 +730,8 @@ func TestTaskApplication_CallBack(t *testing.T) {
 			defer ctrl.Finish()
 
 			traceSvc := caseItem.mockSvc(ctrl)
-			app := &TaskApplication{tracehubSvc: traceSvc}
-			err := app.CallBack(context.Background(), event)
+			app := &TaskApplication{taskCallbackSvc: traceSvc}
+			err := app.AutoEvalCallback(context.Background(), event)
 			if caseItem.expectErr {
 				assert.Error(t, err)
 			} else {
@@ -964,23 +747,23 @@ func TestTaskApplication_Correction(t *testing.T) {
 	event := &entity.CorrectionEvent{}
 	tests := []struct {
 		name      string
-		mockSvc   func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService
+		mockSvc   func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService
 		expectErr bool
 	}{
 		{
 			name: "trace hub error",
-			mockSvc: func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService {
-				svc := tracehubmock.NewMockITraceHubService(ctrl)
-				svc.EXPECT().Correction(gomock.Any(), event).Return(errors.New("hub error"))
+			mockSvc: func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService {
+				svc := svcmock.NewMockITaskCallbackService(ctrl)
+				svc.EXPECT().AutoEvalCorrection(gomock.Any(), event).Return(errors.New("hub error"))
 				return svc
 			},
 			expectErr: true,
 		},
 		{
 			name: "success",
-			mockSvc: func(ctrl *gomock.Controller) *tracehubmock.MockITraceHubService {
-				svc := tracehubmock.NewMockITraceHubService(ctrl)
-				svc.EXPECT().Correction(gomock.Any(), event).Return(nil)
+			mockSvc: func(ctrl *gomock.Controller) *svcmock.MockITaskCallbackService {
+				svc := svcmock.NewMockITaskCallbackService(ctrl)
+				svc.EXPECT().AutoEvalCorrection(gomock.Any(), event).Return(nil)
 				return svc
 			},
 		},
@@ -994,8 +777,8 @@ func TestTaskApplication_Correction(t *testing.T) {
 			defer ctrl.Finish()
 
 			traceSvc := caseItem.mockSvc(ctrl)
-			app := &TaskApplication{tracehubSvc: traceSvc}
-			err := app.Correction(context.Background(), event)
+			app := &TaskApplication{taskCallbackSvc: traceSvc}
+			err := app.AutoEvalCorrection(context.Background(), event)
 			if caseItem.expectErr {
 				assert.Error(t, err)
 			} else {
