@@ -28,6 +28,7 @@ const (
 	keySpanTypeCfgKey          = "key_span_type"
 	backfillMqProducerCfgKey   = "backfill_mq_producer_config"
 	metricDefCfgKey            = "metric_def_cfg"
+	metricPlatformTenantCfgKey = "metric_platform_tenants"
 )
 
 type TraceConfigCenter struct {
@@ -203,6 +204,14 @@ func (t *TraceConfigCenter) GetMetricDefinitions(ctx context.Context) (map[loop_
 		ret[platformType] = pCfg
 	}
 	return ret, nil
+}
+
+func (t *TraceConfigCenter) GetMetricPlatformTenants(ctx context.Context) (*config.PlatformTenantsCfg, error) {
+	cfg := new(config.PlatformTenantsCfg)
+	if err := t.UnmarshalKey(ctx, metricPlatformTenantCfgKey, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {

@@ -131,18 +131,33 @@ func (mr *MockITraceConfigMockRecorder) GetKeySpanTypes(ctx any) *gomock.Call {
 }
 
 // GetMetricDefinitions mocks base method.
-func (m *MockITraceConfig) GetMetricDefinitions(ctx context.Context, platformType loop_span.PlatformType) (*config.MetricPlatformConfig, error) {
+func (m *MockITraceConfig) GetMetricDefinitions(ctx context.Context) (map[loop_span.PlatformType]*config.MetricPlatformConfig, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMetricDefinitions", ctx, platformType)
-	ret0, _ := ret[0].(*config.MetricPlatformConfig)
+	ret := m.ctrl.Call(m, "GetMetricDefinitions", ctx)
+	ret0, _ := ret[0].(map[loop_span.PlatformType]*config.MetricPlatformConfig)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetMetricDefinitions indicates an expected call of GetMetricDefinitions.
-func (mr *MockITraceConfigMockRecorder) GetMetricDefinitions(ctx, platformType any) *gomock.Call {
+func (mr *MockITraceConfigMockRecorder) GetMetricDefinitions(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricDefinitions", reflect.TypeOf((*MockITraceConfig)(nil).GetMetricDefinitions), ctx, platformType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricDefinitions", reflect.TypeOf((*MockITraceConfig)(nil).GetMetricDefinitions), ctx)
+}
+
+// GetMetricPlatformTenants mocks base method.
+func (m *MockITraceConfig) GetMetricPlatformTenants(ctx context.Context) (*config.PlatformTenantsCfg, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetricPlatformTenants", ctx)
+	ret0, _ := ret[0].(*config.PlatformTenantsCfg)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMetricPlatformTenants indicates an expected call of GetMetricPlatformTenants.
+func (mr *MockITraceConfigMockRecorder) GetMetricPlatformTenants(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricPlatformTenants", reflect.TypeOf((*MockITraceConfig)(nil).GetMetricPlatformTenants), ctx)
 }
 
 // GetPlatformSpansTrans mocks base method.

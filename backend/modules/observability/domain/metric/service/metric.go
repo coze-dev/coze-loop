@@ -292,7 +292,7 @@ func (m *MetricsService) buildMetricQuery(ctx context.Context, req *QueryMetrics
 	if err != nil {
 		return nil, err
 	}
-	tenants, err := m.tenantProvider.GetTenantsByPlatformType(ctx, req.PlatformType)
+	tenants, err := m.tenantProvider.GetMetricTenantsByPlatformType(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
 	}
