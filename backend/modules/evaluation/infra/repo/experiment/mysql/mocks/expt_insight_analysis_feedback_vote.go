@@ -37,9 +37,13 @@ func (m *MockIExptInsightAnalysisFeedbackVoteDAO) EXPECT() *MockIExptInsightAnal
 }
 
 // Count mocks base method.
-func (m *MockIExptInsightAnalysisFeedbackVoteDAO) Count(arg0 context.Context, arg1, arg2, arg3 int64) (int64, int64, error) {
+func (m *MockIExptInsightAnalysisFeedbackVoteDAO) Count(arg0 context.Context, arg1, arg2, arg3 int64, arg4 ...db.Option) (int64, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Count", arg0, arg1, arg2, arg3)
+	varargs := []interface{}{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Count", varargs...)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -47,9 +51,10 @@ func (m *MockIExptInsightAnalysisFeedbackVoteDAO) Count(arg0 context.Context, ar
 }
 
 // Count indicates an expected call of Count.
-func (mr *MockIExptInsightAnalysisFeedbackVoteDAOMockRecorder) Count(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockIExptInsightAnalysisFeedbackVoteDAOMockRecorder) Count(arg0, arg1, arg2, arg3 interface{}, arg4 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackVoteDAO)(nil).Count), arg0, arg1, arg2, arg3)
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3}, arg4...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Count", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackVoteDAO)(nil).Count), varargs...)
 }
 
 // Create mocks base method.

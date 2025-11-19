@@ -1129,12 +1129,21 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
+
+	var startTime, endTime *int64
+	if got.StartAt != nil {
+		startTime = gptr.Of(got.StartAt.UnixMilli())
+	}
+	if got.EndAt != nil {
+		endTime = gptr.Of(got.EndAt.UnixMilli())
+	}
+
 	recordID, err := e.CreateAnalysisRecord(ctx, &entity.ExptInsightAnalysisRecord{
 		SpaceID:   req.GetWorkspaceID(),
 		ExptID:    req.GetExptID(),
 		CreatedBy: session.UserID,
 		Status:    entity.InsightAnalysisStatus_Running,
-	}, session)
+	}, session, gptr.Indirect(startTime), gptr.Indirect(endTime))
 	if err != nil {
 		return nil, err
 	}
@@ -1151,7 +1160,6 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
 		}
 	}
-
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,
@@ -1160,6 +1168,9 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
+
+	// First record contains the upvote/downvote count info for display purpose,
+	// Other records' feedback is not necessary for this list api
 	records, total, err := e.ListAnalysisRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())), session)
 	if err != nil {
 		return nil, err
