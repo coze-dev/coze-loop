@@ -468,6 +468,7 @@ func TestTraceApplication_ListSpans(t *testing.T) {
 						Type:            span.SpanTypeUnknown,
 						Status:          span.SpanStatusSuccess,
 						LogicDeleteDate: ptr.Of(int64(0)),
+						CallType:        ptr.Of(""),
 						CustomTags:      map[string]string{},
 						SystemTags:      map[string]string{},
 						Annotations: []*annodto.Annotation{
