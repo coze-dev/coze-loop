@@ -158,17 +158,7 @@ func BatchDebugEvaluator(ctx context.Context, c *app.RequestContext) {
 // ListTemplatesV2 .
 // @router /api/evaluation/v1/evaluators/list_template_v2 [POST]
 func ListTemplatesV2(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.ListTemplatesV2Request
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.ListTemplatesV2Response)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvaluatorSvc.ListTemplatesV2)
 }
 
 // DebugBuiltinEvaluator .
@@ -192,33 +182,13 @@ func UpdateEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
 // DeleteEvaluatorTemplate .
 // @router /api/evaluation/v1/evaluators/delete_template [POST]
 func DeleteEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.DeleteEvaluatorTemplateRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.DeleteEvaluatorTemplateResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvaluatorSvc.DeleteEvaluatorTemplate)
 }
 
 // ListEvaluatorTags .
 // @router /api/evaluation/v1/evaluators/list_tags [POST]
 func ListEvaluatorTags(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.ListEvaluatorTagsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.ListEvaluatorTagsResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvaluatorSvc.ListEvaluatorTags)
 }
 
 // UpdateBuiltinEvaluatorTags .
@@ -240,15 +210,5 @@ func UpdateBuiltinEvaluatorTags(ctx context.Context, c *app.RequestContext) {
 // GetTemplateV2 .
 // @router /api/evaluation/v1/evaluator_template/:evaluator_template_id [POST]
 func GetTemplateV2(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.GetTemplateV2Request
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.GetTemplateV2Response)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvaluatorSvc.GetTemplateV2)
 }

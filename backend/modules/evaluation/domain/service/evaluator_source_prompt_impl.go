@@ -75,14 +75,14 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 	startTime := time.Now()
 	var rootSpan *evaluatorSpan
 
-    if !disableTracing {
-        rootSpan, ctx = newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(exptSpaceID, 10), false)
+	if !disableTracing {
+		rootSpan, ctx = newEvaluatorSpan(ctx, evaluator.Name, "LoopEvaluation", strconv.FormatInt(exptSpaceID, 10), false)
 		traceID = rootSpan.GetTraceID()
 	} else {
 		traceID = ""
 	}
 
-    defer func() {
+	defer func() {
 		if output == nil {
 			output = &entity.EvaluatorOutputData{
 				EvaluatorRunError: &entity.EvaluatorRunError{},

@@ -627,7 +627,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 	if !ok {
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
-	if evaluatorSourceService.PreHandle(ctx, evaluatorDO) != nil {
+	if err = evaluatorSourceService.PreHandle(ctx, evaluatorDO); err != nil {
 		return nil, err
 	}
 	outputData, runStatus, traceID := evaluatorSourceService.Run(ctx, evaluatorDO, request.InputData, request.SpaceID, request.DisableTracing)
