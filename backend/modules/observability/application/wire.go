@@ -104,6 +104,7 @@ var (
 		workspace.NewWorkspaceProvider,
 		evaluator.NewEvaluatorRPCProvider,
 		NewDatasetServiceAdapter,
+		redis2.NewSpansRedisDaoImpl,
 		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
@@ -125,6 +126,7 @@ var (
 		NewTraceConfigLoader,
 		NewIngestionCollectorFactory,
 		mq2.NewSpanWithAnnotationProducerImpl,
+		redis2.NewSpansRedisDaoImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,
@@ -309,6 +311,7 @@ func InitTraceApplication(
 	db db.Provider,
 	ckDb ck.Provider,
 	redis redis.Cmdable,
+	persistentCmdable redis.PersistentCmdable,
 	meter metrics.Meter,
 	mqFactory mq.IFactory,
 	configFactory conf.IConfigLoaderFactory,
@@ -339,6 +342,7 @@ func InitOpenAPIApplication(
 	redis redis.Cmdable,
 	idgen idgen.IIDGenerator,
 	evalService evaluatorservice.Client,
+	persistentCmdable redis.PersistentCmdable,
 ) (IObservabilityOpenAPIApplication, error) {
 	wire.Build(openApiSet)
 	return nil, nil
@@ -359,6 +363,7 @@ func InitTraceIngestionApplication(
 	configFactory conf.IConfigLoaderFactory,
 	ckDb ck.Provider,
 	mqFactory mq.IFactory,
+	persistentCmdable redis.PersistentCmdable,
 ) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
 	return nil, nil
@@ -381,6 +386,7 @@ func InitTaskApplication(
 	fileClient fileservice.Client,
 	taskProcessor task_processor.TaskProcessor,
 	aid int32,
+	persistentCmdable redis.PersistentCmdable,
 ) (ITaskApplication, error) {
 	wire.Build(taskSet)
 	return nil, nil
