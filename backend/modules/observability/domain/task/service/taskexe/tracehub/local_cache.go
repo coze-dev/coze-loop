@@ -31,6 +31,7 @@ func NewLocalCache() *LocalCache {
 }
 
 func (l *LocalCache) StoneTaskCache(ctx context.Context, info TaskCacheInfo) {
+	logs.CtxInfo(ctx, "Store task list to cache, info=%v", info)
 	l.taskCache.Store(CacheKeyObjListWithTask, info)
 }
 

@@ -49,7 +49,7 @@ func (t *LocalCacheRefreshTask) RunOnce(ctx context.Context) error {
 		Tasks:        tasks,
 		UpdateTime:   time.Now(), // Set the current time as the update time
 	}); err != nil {
-		logs.CtxError(ctx, "Failed to update task cache", "err", err)
+		logs.CtxError(ctx, "Failed to update task cache, err:%v", err)
 		return err
 	}
 	return nil
