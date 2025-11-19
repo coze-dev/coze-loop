@@ -46,10 +46,12 @@ func (q *TaskRunDAOImpl) makeTaskRunFailCountKey(taskID, taskRunID int64) string
 // IncrTaskRunSuccessCount 增加成功计数
 func (p *TaskRunDAOImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) error {
 	key := p.makeTaskRunSuccessCountKey(taskID, taskRunID)
-	if err := p.cmdable.Incr(ctx, key).Err(); err != nil {
+	cmd := p.cmdable.Incr(ctx, key)
+	if err := cmd.Err(); err != nil {
 		logs.CtxError(ctx, "redis incr taskrun success count failed, key:%v, err:%v", key, err)
 		return errorx.Wrapf(err, "redis incr taskrun success count key: %v", key)
 	}
+	logs.CtxInfo(ctx, "redis incr taskrun success count success, key:%v, count:%v", key, cmd.Val())
 	if err := p.cmdable.Expire(ctx, key, ttl).Err(); err != nil {
 		logs.CtxError(ctx, "redis expire taskrun success count failed, key:%v, err:%v", key, err)
 		return errorx.Wrapf(err, "redis expire taskrun success count key: %v", key)
