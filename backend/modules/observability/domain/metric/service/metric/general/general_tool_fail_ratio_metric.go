@@ -7,9 +7,9 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	tool_metric "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 type GeneralToolFailRatioMetric struct {
@@ -29,30 +29,30 @@ func (m *GeneralToolFailRatioMetric) Source() entity.MetricSource {
 }
 
 func (m *GeneralToolFailRatioMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return &entity.Expression{
-		Expression: "countIf(1, %s != 0) / count()",
-		Fields: []*loop_span.FilterField{
-			{
-				FieldName: loop_span.SpanFieldStatusCode,
-				FieldType: loop_span.FieldTypeLong,
-			},
-		},
-	}
+	return &entity.Expression{}
 }
 
 func (m *GeneralToolFailRatioMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return []*loop_span.FilterField{
-		{
-			FieldName: loop_span.SpanFieldSpanType,
-			FieldType: loop_span.FieldTypeString,
-			Values:    []string{"tool"},
-			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-		},
-	}, nil
+	return nil, nil
 }
 
 func (m *GeneralToolFailRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *GeneralToolFailRatioMetric) GetMetrics() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{
+		tool_metric.NewToolTotalErrorCountMetric(),
+		tool_metric.NewToolTotalCountMetric(),
+	}
+}
+
+func (m *GeneralToolFailRatioMetric) Operator() entity.MetricOperator {
+	return entity.MetricOperatorDivide
+}
+
+func (m *GeneralToolFailRatioMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewGeneralToolFailRatioMetric() entity.IMetricDefinition {

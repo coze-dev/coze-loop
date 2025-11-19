@@ -64,6 +64,18 @@ func (mr *MockITraceMetricsMockRecorder) EmitListSpans(workspaceId, spanType, st
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitListSpans", reflect.TypeOf((*MockITraceMetrics)(nil).EmitListSpans), workspaceId, spanType, start, isError)
 }
 
+// EmitSendMetric mocks base method.
+func (m *MockITraceMetrics) EmitSendMetric(start time.Time, isError bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EmitSendMetric", start, isError)
+}
+
+// EmitSendMetric indicates an expected call of EmitSendMetric.
+func (mr *MockITraceMetricsMockRecorder) EmitSendMetric(start, isError any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmitSendMetric", reflect.TypeOf((*MockITraceMetrics)(nil).EmitSendMetric), start, isError)
+}
+
 // EmitTraceOapi mocks base method.
 func (m *MockITraceMetrics) EmitTraceOapi(method string, workspaceId int64, platformType, spanListType string, spanSize int64, errorCode int, start time.Time, isError bool) {
 	m.ctrl.T.Helper()

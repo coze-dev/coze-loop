@@ -744,3 +744,7 @@ func (s *stubTenantProvider) GetOAPIQueryTenants(ctx context.Context, platformTy
 func (s *stubTenantProvider) GetTenantsByPlatformType(ctx context.Context, platformType loop_span.PlatformType) ([]string, error) {
 	return []string{"test-tenant"}, nil
 }
+
+func (s *stubTenantProvider) GetMetricTenantsByPlatformType(ctx context.Context, platformType loop_span.PlatformType) ([]string, error) {
+	return []string{"test-tenant"}, nil
+}

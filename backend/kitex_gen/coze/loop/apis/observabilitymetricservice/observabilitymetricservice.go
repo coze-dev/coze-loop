@@ -28,6 +28,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"TraverseMetrics": kitex.NewMethodInfo(
+		traverseMetricsHandler,
+		newMetricServiceTraverseMetricsArgs,
+		newMetricServiceTraverseMetricsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -99,6 +106,25 @@ func newMetricServiceGetDrillDownValuesResult() interface{} {
 	return metric.NewMetricServiceGetDrillDownValuesResult()
 }
 
+func traverseMetricsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*metric.MetricServiceTraverseMetricsArgs)
+	realResult := result.(*metric.MetricServiceTraverseMetricsResult)
+	success, err := handler.(metric.MetricService).TraverseMetrics(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newMetricServiceTraverseMetricsArgs() interface{} {
+	return metric.NewMetricServiceTraverseMetricsArgs()
+}
+
+func newMetricServiceTraverseMetricsResult() interface{} {
+	return metric.NewMetricServiceTraverseMetricsResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -126,6 +152,16 @@ func (p *kClient) GetDrillDownValues(ctx context.Context, req *metric.GetDrillDo
 	_args.Req = req
 	var _result metric.MetricServiceGetDrillDownValuesResult
 	if err = p.c.Call(ctx, "GetDrillDownValues", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) TraverseMetrics(ctx context.Context, req *metric.TraverseMetricsRequest) (r *metric.TraverseMetricsResponse, err error) {
+	var _args metric.MetricServiceTraverseMetricsArgs
+	_args.Req = req
+	var _result metric.MetricServiceTraverseMetricsResult
+	if err = p.c.Call(ctx, "TraverseMetrics", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

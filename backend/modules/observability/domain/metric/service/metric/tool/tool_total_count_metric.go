@@ -53,6 +53,12 @@ func (m *ToolTotalCountMetric) Wrappers() []entity.IMetricWrapper {
 	}
 }
 
+func (m *ToolTotalCountMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewToolTotalCountMetric() entity.IMetricDefinition {
 	return &ToolTotalCountMetric{}
 }

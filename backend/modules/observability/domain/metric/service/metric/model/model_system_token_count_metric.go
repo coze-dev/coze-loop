@@ -46,6 +46,12 @@ func (m *ModelSystemTokenCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
+func (m *ModelSystemTokenCountMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewModelSystemTokenCountMetric() entity.IMetricDefinition {
 	return &ModelSystemTokenCountMetric{}
 }

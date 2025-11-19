@@ -7,9 +7,10 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	tool_metric "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 type GeneralToolLatencyMetric struct {
@@ -29,30 +30,30 @@ func (m *GeneralToolLatencyMetric) Source() entity.MetricSource {
 }
 
 func (m *GeneralToolLatencyMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return &entity.Expression{
-		Expression: "sum(%s) / (1000 * count())",
-		Fields: []*loop_span.FilterField{
-			{
-				FieldName: loop_span.SpanFieldDuration,
-				FieldType: loop_span.FieldTypeLong,
-			},
-		},
-	}
+	return &entity.Expression{}
 }
 
 func (m *GeneralToolLatencyMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return []*loop_span.FilterField{
-		{
-			FieldName: loop_span.SpanFieldSpanType,
-			FieldType: loop_span.FieldTypeString,
-			Values:    []string{"tool"},
-			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-		},
-	}, nil
+	return nil, nil
 }
 
 func (m *GeneralToolLatencyMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *GeneralToolLatencyMetric) GetMetrics() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{
+		wrapper.NewSumWrapper().Wrap(tool_metric.NewToolDurationMetric()),
+		tool_metric.NewToolTotalCountMetric(),
+	}
+}
+
+func (m *GeneralToolLatencyMetric) Operator() entity.MetricOperator {
+	return entity.MetricOperatorDivide
+}
+
+func (m *GeneralToolLatencyMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewGeneralToolLatencyMetric() entity.IMetricDefinition {
