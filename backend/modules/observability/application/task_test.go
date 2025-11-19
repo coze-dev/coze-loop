@@ -13,6 +13,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -434,7 +435,7 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 		name          string
 		ctx           context.Context
 		req           *taskapi.ListTasksRequest
-		fieldsBuilder func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider)
+		fieldsBuilder func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider, rpc.IUserProvider)
 		expectResp    *taskapi.ListTasksResponse
 		expectErr     error
 		expectErrCode int32
@@ -445,8 +446,8 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 			req:           nil,
 			expectResp:    taskapi.NewListTasksResponse(),
 			expectErrCode: obErrorx.CommercialCommonInvalidParamCodeCode,
-			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
-				return nil, nil
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider, rpc.IUserProvider) {
+				return nil, nil, nil
 			},
 		},
 		{
@@ -455,8 +456,8 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 			req:           &taskapi.ListTasksRequest{WorkspaceID: 0},
 			expectResp:    taskapi.NewListTasksResponse(),
 			expectErrCode: obErrorx.CommercialCommonInvalidParamCodeCode,
-			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
-				return nil, nil
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider, rpc.IUserProvider) {
+				return nil, nil, nil
 			},
 		},
 		{
@@ -465,10 +466,10 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 			req:        &taskapi.ListTasksRequest{WorkspaceID: 123},
 			expectResp: taskapi.NewListTasksResponse(),
 			expectErr:  errors.New("auth error"),
-			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider, rpc.IUserProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(123, 10), false).Return(errors.New("auth error"))
-				return nil, auth
+				return nil, auth, nil
 			},
 		},
 		{
@@ -477,14 +478,14 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 			req:        &taskapi.ListTasksRequest{WorkspaceID: 456},
 			expectResp: taskapi.NewListTasksResponse(),
 			expectErr:  errors.New("svc error"),
-			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider, rpc.IUserProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(456, 10), false).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().ListTasks(gomock.Any(), &svc.ListTasksReq{
 					WorkspaceID: 456,
 				}).Return(nil, errors.New("svc error"))
-				return s, auth
+				return s, auth, nil
 			},
 		},
 		{
@@ -495,14 +496,16 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 				Tasks: tconv.TaskDOs2DTOs(context.Background(), taskListResp.Tasks, map[string]*common.UserInfo{}),
 				Total: lo.ToPtr(taskListResp.Total),
 			},
-			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider, rpc.IUserProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskList, strconv.FormatInt(789, 10), false).Return(nil)
 				s := svcmock.NewMockITaskService(ctrl)
 				s.EXPECT().ListTasks(gomock.Any(), &svc.ListTasksReq{
 					WorkspaceID: 789,
 				}).Return(taskListResp, nil)
-				return s, auth
+				user := rpcmock.NewMockIUserProvider(ctrl)
+				user.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, nil, nil)
+				return s, auth, user
 			},
 		},
 	}
@@ -514,10 +517,11 @@ func TestTaskApplication_ListTasks(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			taskSvc, authSvc := caseItem.fieldsBuilder(ctrl)
+			taskSvc, authSvc, userSvc := caseItem.fieldsBuilder(ctrl)
 			app := &TaskApplication{
 				taskSvc: taskSvc,
 				authSvc: authSvc,
+				userSvc: userSvc,
 			}
 			resp, err := app.ListTasks(caseItem.ctx, caseItem.req)
 
@@ -684,7 +688,8 @@ func TestTaskApplication_SpanTrigger(t *testing.T) {
 
 			traceSvc := caseItem.mockSvc(ctrl)
 			app := &TaskApplication{tracehubSvc: traceSvc}
-			err := app.SpanTrigger(context.Background(), event)
+			span := &loop_span.Span{}
+			err := app.SpanTrigger(context.Background(), event, span)
 			if caseItem.expectErr {
 				assert.Error(t, err)
 			} else {

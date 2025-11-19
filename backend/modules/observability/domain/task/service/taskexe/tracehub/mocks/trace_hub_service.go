@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -68,4 +69,18 @@ func (m *MockITraceHubService) SpanTrigger(ctx context.Context, span *loop_span.
 func (mr *MockITraceHubServiceMockRecorder) SpanTrigger(ctx, span any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SpanTrigger", reflect.TypeOf((*MockITraceHubService)(nil).SpanTrigger), ctx, span)
+}
+
+// StoneTaskCache mocks base method.
+func (m *MockITraceHubService) StoneTaskCache(ctx context.Context, cacheInfo tracehub.TaskCacheInfo) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StoneTaskCache", ctx, cacheInfo)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StoneTaskCache indicates an expected call of StoneTaskCache.
+func (mr *MockITraceHubServiceMockRecorder) StoneTaskCache(ctx, span any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoneTaskCache", reflect.TypeOf((*MockITraceHubService)(nil).StoneTaskCache), ctx, span)
 }
