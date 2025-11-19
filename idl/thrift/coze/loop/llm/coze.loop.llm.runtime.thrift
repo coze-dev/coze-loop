@@ -5,13 +5,13 @@ include "./domain/runtime.thrift"
 
 struct ChatRequest {
     // 模型配置
-    1: optional runtime.ModelConfig model_config
+    1: optional runtime.ModelConfig model_config (vt.not_nil="true")
     // 消息
-    2: optional list<runtime.Message> messages
+    2: optional list<runtime.Message> messages (vt.min_size="1")
     // 工具
-    3: optional list<runtime.Tool> tools
+    3: optional list<runtime.Tool> tools (vt.min_size="1")
     // 业务参数
-    4: optional runtime.BizParam biz_param
+    4: optional runtime.BizParam biz_param (vt.not_nil="true")
 
     255: optional base.Base Base
 }

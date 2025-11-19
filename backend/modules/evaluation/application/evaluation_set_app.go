@@ -71,12 +71,11 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if req.Name == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("name is nil"))
+
+	if err = req.IsValid(); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
-	if req.EvaluationSetSchema == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("schema is nil"))
-	}
+
 	// 鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),

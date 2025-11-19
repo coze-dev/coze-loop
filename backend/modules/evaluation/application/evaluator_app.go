@@ -224,23 +224,12 @@ func (e *EvaluatorHandlerImpl) CreateEvaluator(ctx context.Context, request *eva
 
 func (e *EvaluatorHandlerImpl) checkCreateEvaluatorRequest(ctx context.Context, request *evaluatorservice.CreateEvaluatorRequest) (err error) {
 	if request == nil {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("request is nil"))
 	}
-	if request.Evaluator == nil {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_version is nil"))
+	if err = request.IsValid(); err != nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
-	if request.Evaluator.Name == nil {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("name is nil"))
-	}
-	if request.Evaluator.WorkspaceID == nil {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace id is nil"))
-	}
-	if request.Evaluator.EvaluatorType == nil {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_version type is nil"))
-	}
-	if request.Evaluator.CurrentVersion == nil {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current version is nil"))
-	}
+
 	if request.Evaluator.CurrentVersion.EvaluatorContent == nil {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_version content is nil"))
 	}
@@ -329,11 +318,10 @@ func validateUpdateEvaluatorRequest(ctx context.Context, request *evaluatorservi
 	if request == nil {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
-	if request.GetEvaluatorID() == 0 {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("id is 0"))
-	}
-	if request.WorkspaceID == 0 {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("space id is 0"))
+
+	err := request.IsValid()
+	if err != nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
 	if utf8.RuneCountInString(request.GetName()) > consts.MaxEvaluatorNameLength {
 		return errorx.NewByCode(errno.EvaluatorNameExceedMaxLengthCode)
@@ -571,20 +559,18 @@ func (e *EvaluatorHandlerImpl) SubmitEvaluatorVersion(ctx context.Context, reque
 }
 
 func (e *EvaluatorHandlerImpl) validateSubmitEvaluatorVersionRequest(ctx context.Context, request *evaluatorservice.SubmitEvaluatorVersionRequest) error {
-	if request.GetEvaluatorID() == 0 {
-		return errorx.NewByCode(errno.InvalidEvaluatorIDCode, errorx.WithExtraMsg("[validateSubmitEvaluatorVersionRequest] evaluator_version id is empty"))
+	if err := request.IsValid(); err != nil {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 	}
-	if len(request.GetVersion()) == 0 {
-		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("[validateSubmitEvaluatorVersionRequest] evaluator_version version is empty"))
-	}
+
 	if len(request.GetVersion()) > consts.MaxEvaluatorVersionLength {
 		return errorx.NewByCode(errno.EvaluatorVersionExceedMaxLengthCode)
 	}
-	_, err := semver.StrictNewVersion(request.GetVersion())
-	if err != nil {
+	if _, err := semver.StrictNewVersion(request.GetVersion()); err != nil {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("[validateSubmitEvaluatorVersionRequest] evaluator_version version does not follow SemVer specification"))
 	}
-	if len(request.GetDescription()) > consts.MaxEvaluatorVersionDescLength {
+
+	if utf8.RuneCountInString(request.GetDescription()) > consts.MaxEvaluatorVersionDescLength {
 		return errorx.NewByCode(errno.EvaluatorVersionDescriptionExceedMaxLengthCode)
 	}
 	// 机审

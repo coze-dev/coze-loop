@@ -85,10 +85,11 @@ func (p *GetEvaluatorResponse) IsValid() error {
 	return nil
 }
 func (p *CreateEvaluatorRequest) IsValid() error {
-	if p.Evaluator != nil {
-		if err := p.Evaluator.IsValid(); err != nil {
-			return fmt.Errorf("field Evaluator not valid, %w", err)
-		}
+	if p.Evaluator == nil {
+		return fmt.Errorf("field Evaluator not_nil rule failed")
+	}
+	if err := p.Evaluator.IsValid(); err != nil {
+		return fmt.Errorf("field Evaluator not valid, %w", err)
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
@@ -132,6 +133,24 @@ func (p *UpdateEvaluatorDraftResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateEvaluatorRequest) IsValid() error {
+	_src := []int64{int64(0)}
+	for _, src := range _src {
+		if p.EvaluatorID == int64(src) {
+			return fmt.Errorf("field EvaluatorID not_in rule failed, current value: %v", p.EvaluatorID)
+		}
+	}
+	_src1 := []int64{int64(0)}
+	for _, src := range _src1 {
+		if p.WorkspaceID == int64(src) {
+			return fmt.Errorf("field WorkspaceID not_in rule failed, current value: %v", p.WorkspaceID)
+		}
+	}
+	if p.Name == nil {
+		return fmt.Errorf("field Name not_nil rule failed")
+	}
+	if p.Description == nil {
+		return fmt.Errorf("field Description not_nil rule failed")
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -227,6 +246,24 @@ func (p *BatchGetEvaluatorVersionsResponse) IsValid() error {
 	return nil
 }
 func (p *SubmitEvaluatorVersionRequest) IsValid() error {
+	_src := []int64{int64(0)}
+	for _, src := range _src {
+		if p.WorkspaceID == int64(src) {
+			return fmt.Errorf("field WorkspaceID not_in rule failed, current value: %v", p.WorkspaceID)
+		}
+	}
+	_src1 := []int64{int64(0)}
+	for _, src := range _src1 {
+		if p.EvaluatorID == int64(src) {
+			return fmt.Errorf("field EvaluatorID not_in rule failed, current value: %v", p.EvaluatorID)
+		}
+	}
+	if len(p.Version) < int(1) {
+		return fmt.Errorf("field Version min_len rule failed, current value: %d", len(p.Version))
+	}
+	if p.Description == nil {
+		return fmt.Errorf("field Description not_nil rule failed")
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
