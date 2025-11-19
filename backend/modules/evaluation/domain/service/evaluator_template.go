@@ -28,4 +28,3 @@ type EvaluatorTemplateService interface {
 	// ListEvaluatorTemplate 查询评估器模板列表
 	ListEvaluatorTemplate(ctx context.Context, req *entity.ListEvaluatorTemplateRequest) (*entity.ListEvaluatorTemplateResponse, error)
 }
-

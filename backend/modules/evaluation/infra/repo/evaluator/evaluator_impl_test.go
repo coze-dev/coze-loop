@@ -18,12 +18,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	platestwritemocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
-	"github.com/coze-dev/coze-loop/backend/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
 	evaluatormocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/mocks"
+	"github.com/coze-dev/coze-loop/backend/pkg/contexts"
 )
 
 func TestEvaluatorRepoImpl_SubmitEvaluatorVersion(t *testing.T) {

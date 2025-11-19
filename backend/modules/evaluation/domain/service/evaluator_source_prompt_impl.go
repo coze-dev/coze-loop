@@ -147,7 +147,7 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 	}
 	// 执行评估逻辑
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-    llmResp, err := p.chat(ctx, evaluator.PromptEvaluatorVersion, exptSpaceID, userIDInContext, disableTracing)
+	llmResp, err := p.chat(ctx, evaluator.PromptEvaluatorVersion, exptSpaceID, userIDInContext, disableTracing)
 	if err != nil {
 		logs.CtxError(ctx, "[RunEvaluator] chat fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
