@@ -3036,8 +3036,8 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 					evalSvc:        evalMock,
 					after: func(t *testing.T, resp *ChangeEvaluatorScoreResp) {
 						assert.NotNil(t, resp)
-						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Annotations) {
-							updated := capturedUpsert.Annotations[0]
+						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Span.Annotations) {
+							updated := capturedUpsert.Span.Annotations[0]
 							assert.Len(t, updated.Corrections, 2)
 							assert.InDelta(t, req.Correction.GetScore(), updated.Value.FloatValue, 1e-9)
 							assert.Equal(t, defaultUserID, updated.UpdatedBy)
@@ -3097,8 +3097,8 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 					tenantProvider: tenantMock,
 					evalSvc:        evalMock,
 					after: func(t *testing.T, _ *ChangeEvaluatorScoreResp) {
-						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Annotations) {
-							assert.Len(t, capturedUpsert.Annotations[0].Corrections, 2)
+						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Span.Annotations) {
+							assert.Len(t, capturedUpsert.Span.Annotations[0].Corrections, 2)
 						}
 					},
 				}
