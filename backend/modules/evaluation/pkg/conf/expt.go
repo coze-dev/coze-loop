@@ -30,6 +30,10 @@ type configer struct {
 	loader conf.IConfigLoader
 }
 
+func (c *configer) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
+	return c.GetConsumerConf(ctx).GetSchedulerAbortCtrl()
+}
+
 func (c *configer) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
 	return c.GetConsumerConf(ctx).GetExptExecConf(spaceID)
 }
