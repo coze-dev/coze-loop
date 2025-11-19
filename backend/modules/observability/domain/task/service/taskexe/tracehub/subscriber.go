@@ -67,7 +67,6 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	}
 
 	filters := s.buildSpanFilters(ctx, task)
-	logs.CtxInfo(ctx, "spanSubscriber Match, taskID: %d, span: %v, filters: %v", s.taskID, span, filters)
 	if !filters.Satisfied(span) {
 		return false, nil
 	}

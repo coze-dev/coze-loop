@@ -10,10 +10,11 @@ export function getLatestGitCommitHash(): string {
   try {
     const gitCommitHash = execSync('git rev-parse HEAD', {
       encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'], // stdin: ignore, stdout: pipe, stderr: ignore
     }).trim();
     return gitCommitHash;
   } catch (error) {
-    console.error('Error get git HEAD hash:', error);
+    console.info('[getLatestGitCommitHash]', error);
     return '';
   }
 }
