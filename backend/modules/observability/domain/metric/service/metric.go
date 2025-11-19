@@ -202,7 +202,6 @@ func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetri
 				FieldName: loop_span.SpanFieldSpaceId,
 				FieldType: loop_span.FieldTypeString,
 			})
-			// todo 并发设计
 			resp, err := m.queryMetrics(ctx, qReq)
 			if err != nil {
 				logs.CtxWarn(ctx, "fail to query metric, %v", err)
@@ -279,10 +278,12 @@ func (m *MetricsService) queryMetrics(ctx context.Context, req *QueryMetricsReq)
 	} else if mBuilder == nil {
 		return &QueryMetricsResp{}, nil // 不再查询...
 	}
+	st := time.Now()
 	result, err := m.metricRepo.GetMetrics(ctx, mBuilder.mRepoReq)
 	if err != nil {
 		return nil, err
 	}
+	logs.CtxInfo(ctx, "get metrics for %v successfully, cost %v", req.MetricsNames, time.Since(st))
 	return &QueryMetricsResp{
 		Metrics: m.formatMetrics(result.Data, mBuilder),
 	}, nil

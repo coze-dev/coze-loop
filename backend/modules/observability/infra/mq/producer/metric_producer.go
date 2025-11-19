@@ -21,9 +21,6 @@ type NullMetricProducer struct {
 }
 
 func (m *NullMetricProducer) EmitMetrics(ctx context.Context, events []*entity.MetricEvent) error {
-	for _, event := range events {
-		logs.CtxInfo(ctx, "EmitMetrics event: %v", *event)
-	}
 	m.count.Add(int64(len(events)))
 	logs.CtxInfo(ctx, "event count: %d", m.count.Load())
 	return nil
