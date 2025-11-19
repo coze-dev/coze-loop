@@ -136,10 +136,10 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 			modelID = strconv.FormatInt(evaluator.PromptEvaluatorVersion.ModelConfig.ModelID, 10)
 		}
 
-        p.metric.EmitRun(exptSpaceID, err, startTime, modelID)
+		p.metric.EmitRun(exptSpaceID, err, startTime, modelID)
 	}()
 	// 渲染变量
-    err = renderTemplate(ctx, evaluator.PromptEvaluatorVersion, input, exptSpaceID, disableTracing)
+	err = renderTemplate(ctx, evaluator.PromptEvaluatorVersion, input, exptSpaceID, disableTracing)
 	if err != nil {
 		logs.CtxError(ctx, "[RunEvaluator] renderTemplate fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail

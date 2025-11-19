@@ -460,7 +460,7 @@ func (c *EvaluatorSourceCodeServiceImpl) createErrorOutputFromError(err error, s
 // Debug 调试Code评估器
 func (c *EvaluatorSourceCodeServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error) {
 	// 调试模式下直接调用Run方法
-    output, runStatus, _ := c.Run(ctx, evaluator, input, exptSpaceID, true)
+	output, runStatus, _ := c.Run(ctx, evaluator, input, exptSpaceID, true)
 	if runStatus == entity.EvaluatorRunStatusFail {
 		if output.EvaluatorRunError != nil {
 			return output, errorx.NewByCode(errno.CodeExecutionFailedCode, errorx.WithExtraMsg(output.EvaluatorRunError.Message))

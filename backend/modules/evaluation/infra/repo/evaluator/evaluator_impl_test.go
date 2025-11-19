@@ -3037,7 +3037,7 @@ func TestEvaluatorRepoImpl_ListEvaluatorTags(t *testing.T) {
 		{
 			name:    "成功 - 过滤空值",
 			tagType: entity.EvaluatorTagKeyType_Evaluator,
-			ctx:     context.WithValue(context.Background(), "locale", "zh-CN"),
+			ctx:     contexts.WithLocale(context.Background(), "zh-CN"),
 			mockSetup: func() {
 				mockTagDAO.EXPECT().
 					AggregateTagValuesByType(gomock.Any(), int32(entity.EvaluatorTagKeyType_Evaluator), "zh-CN", gomock.Any()).
@@ -3058,7 +3058,7 @@ func TestEvaluatorRepoImpl_ListEvaluatorTags(t *testing.T) {
 		{
 			name:    "失败 - DAO错误",
 			tagType: entity.EvaluatorTagKeyType_Evaluator,
-			ctx:     context.WithValue(context.Background(), "locale", "zh-CN"),
+			ctx:     contexts.WithLocale(context.Background(), "zh-CN"),
 			mockSetup: func() {
 				mockTagDAO.EXPECT().
 					AggregateTagValuesByType(gomock.Any(), int32(entity.EvaluatorTagKeyType_Evaluator), "zh-CN", gomock.Any()).
