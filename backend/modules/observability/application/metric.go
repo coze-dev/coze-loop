@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aws/smithy-go/ptr"
 	metric2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/metric"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
 	mconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/metric"
@@ -22,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -195,7 +195,7 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 			if val := mp["name"]; val != "" {
 				resp.DrillDownValues = append(resp.DrillDownValues, &metric.DrillDownValue{
 					Value:       val,
-					DisplayName: ptr.String(val),
+					DisplayName: ptr.Of(val),
 				})
 			}
 		}
@@ -208,4 +208,25 @@ func (m *MetricApplication) validateGetDrillDownValuesReq(ctx context.Context, r
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start_time cannot be greater than end_time"))
 	}
 	return nil
+}
+
+func (m *MetricApplication) TraverseMetrics(ctx context.Context, req *metric.TraverseMetricsRequest) (*metric.TraverseMetricsResponse, error) {
+	if req.StartDate == nil {
+		req.StartDate = ptr.Of(time.Now().Add(-24 * time.Hour).Format(time.DateOnly))
+	}
+	sReq := &service.TraverseMetricsReq{
+		MetricsNames: req.GetMetricNames(),
+		StartDate:    req.GetStartDate(),
+	}
+	for _, platformType := range req.GetPlatformTypes() {
+		sReq.PlatformTypes = append(sReq.PlatformTypes, loop_span.PlatformType(platformType))
+	}
+	if req.WorkspaceID != nil {
+		sReq.WorkspaceID = req.GetWorkspaceID()
+	}
+	err := m.metricService.TraverseMetrics(ctx, sReq)
+	if err != nil {
+		return nil, err
+	}
+	return &metric.TraverseMetricsResponse{}, nil
 }

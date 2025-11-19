@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	config "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	conf "github.com/coze-dev/coze-loop/backend/pkg/conf"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -127,6 +128,21 @@ func (m *MockITraceConfig) GetKeySpanTypes(ctx context.Context) map[string][]str
 func (mr *MockITraceConfigMockRecorder) GetKeySpanTypes(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeySpanTypes", reflect.TypeOf((*MockITraceConfig)(nil).GetKeySpanTypes), ctx)
+}
+
+// GetMetricDefinitions mocks base method.
+func (m *MockITraceConfig) GetMetricDefinitions(ctx context.Context, platformType loop_span.PlatformType) (*config.MetricPlatformConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetricDefinitions", ctx, platformType)
+	ret0, _ := ret[0].(*config.MetricPlatformConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMetricDefinitions indicates an expected call of GetMetricDefinitions.
+func (mr *MockITraceConfigMockRecorder) GetMetricDefinitions(ctx, platformType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricDefinitions", reflect.TypeOf((*MockITraceConfig)(nil).GetMetricDefinitions), ctx, platformType)
 }
 
 // GetPlatformSpansTrans mocks base method.

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -26,6 +27,7 @@ const (
 	queryTraceRateLimitCfgKey  = "query_trace_rate_limit_config"
 	keySpanTypeCfgKey          = "key_span_type"
 	backfillMqProducerCfgKey   = "backfill_mq_producer_config"
+	metricDefCfgKey            = "metric_def_cfg"
 )
 
 type TraceConfigCenter struct {
@@ -169,6 +171,38 @@ func (t *TraceConfigCenter) GetKeySpanTypes(ctx context.Context) map[string][]st
 		return keyColumns
 	}
 	return keyColumns
+}
+
+func (t *TraceConfigCenter) GetMetricDefinitions(ctx context.Context) (map[loop_span.PlatformType]*config.MetricPlatformConfig, error) {
+	cfg := new(config.MetricConfig)
+	if err := t.UnmarshalKey(ctx, metricDefCfgKey, &cfg); err != nil {
+		return nil, err
+	}
+	ret := make(map[loop_span.PlatformType]*config.MetricPlatformConfig)
+	for platformType, val := range cfg.PlatformConfig {
+		pCfg := &config.MetricPlatformConfig{
+			MetricDefinitions: make(map[string][]*config.MetricObjectKeyConfig),
+		}
+		for _, obj := range val.DrillDownObjects {
+			if cfg.ObjectKeys[obj] == nil {
+				return nil, fmt.Errorf("object key %s not exist", obj)
+			}
+			pCfg.DrillDownObjects = append(pCfg.DrillDownObjects, cfg.ObjectKeys[obj])
+		}
+		for _, mName := range val.MetricDefinitions {
+			if cfg.MetricDefinitions[mName] == nil {
+				return nil, fmt.Errorf("metric definition %s not exist", mName)
+			}
+			for _, obj := range cfg.MetricDefinitions[mName].DrillDownObjects {
+				if cfg.ObjectKeys[obj] == nil {
+					return nil, fmt.Errorf("object key %s not exist", obj)
+				}
+				pCfg.MetricDefinitions[mName] = append(pCfg.MetricDefinitions[mName], cfg.ObjectKeys[obj])
+			}
+		}
+		ret[platformType] = pCfg
+	}
+	return ret, nil
 }
 
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {

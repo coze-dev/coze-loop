@@ -11,7 +11,10 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
@@ -29,6 +32,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const defaultGroupKey = "all"
+
 type QueryMetricsReq struct {
 	PlatformType    loop_span.PlatformType
 	WorkspaceID     int64
@@ -38,15 +43,24 @@ type QueryMetricsReq struct {
 	DrillDownFields []*loop_span.FilterField
 	StartTime       int64
 	EndTime         int64
+	GroupBySpaceID  bool
 }
 
 type QueryMetricsResp struct {
 	Metrics map[string]*entity.Metric
 }
 
+type TraverseMetricsReq struct {
+	PlatformTypes []loop_span.PlatformType
+	MetricsNames  []string
+	WorkspaceID   int64
+	StartDate     string // e.g. 2025-11-17
+}
+
 //go:generate mockgen -destination=mocks/metrics.go -package=mocks . IMetricsService
 type IMetricsService interface {
 	QueryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error)
+	TraverseMetrics(ctx context.Context, req *TraverseMetricsReq) error
 }
 
 type MetricsService struct {
@@ -54,6 +68,8 @@ type MetricsService struct {
 	metricDefMap   map[string]entity.IMetricDefinition
 	buildHelper    trace_service.TraceFilterProcessorBuilder
 	tenantProvider tenant.ITenantProvider
+	traceConfig    config.ITraceConfig
+	metricProducer mq.IMetricProducer
 }
 
 func NewMetricsService(
@@ -61,6 +77,8 @@ func NewMetricsService(
 	metricDefs []entity.IMetricDefinition,
 	tenantProvider tenant.ITenantProvider,
 	buildHelper trace_service.TraceFilterProcessorBuilder,
+	traceConfig config.ITraceConfig,
+	metricProducer mq.IMetricProducer,
 ) (IMetricsService, error) {
 	metricDefMap := make(map[string]entity.IMetricDefinition)
 	for _, def := range metricDefs {
@@ -85,6 +103,8 @@ func NewMetricsService(
 		metricDefMap:   metricDefMap,
 		tenantProvider: tenantProvider,
 		buildHelper:    buildHelper,
+		traceConfig:    traceConfig,
+		metricProducer: metricProducer,
 	}, nil
 }
 
@@ -124,6 +144,80 @@ func (m *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 		}
 	}
 	return m.queryMetrics(ctx, req)
+}
+
+func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetricsReq) error {
+	cfg, err := m.traceConfig.GetMetricDefinitions(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "fail to get metric definitions, %v", err)
+		return err
+	}
+	startAt, err := time.ParseInLocation(time.DateOnly, req.StartDate, time.Local)
+	if err != nil {
+		logs.CtxError(ctx, "fail to parse time %s, %v", req.StartDate, err)
+		return err
+	}
+	endAt := time.Date(startAt.Year(), startAt.Month(), startAt.Day(), 23, 59, 59, 999999999, startAt.Location())
+	if len(req.PlatformTypes) == 0 {
+		req.PlatformTypes = lo.Keys(cfg)
+	}
+	for _, platformType := range req.PlatformTypes {
+		platformTypeCfg := cfg[platformType]
+		if platformTypeCfg == nil {
+			logs.CtxError(ctx, "platform type %s not found", platformType)
+			continue
+		}
+		metricsNames := req.MetricsNames
+		metricsDef := lo.Keys(platformTypeCfg.MetricDefinitions)
+		if len(metricsNames) == 0 {
+			metricsNames = lo.Keys(platformTypeCfg.MetricDefinitions)
+		} else {
+			metricsNames = lo.Intersect(metricsNames, metricsDef)
+		}
+		for _, metricName := range metricsNames {
+			if metricDef, ok := m.metricDefMap[metricName]; !ok {
+				logs.CtxWarn(ctx, "metric definition %s not found", metricName)
+				continue
+			} else if _, ok = metricDef.(entity.IMetricCompound); ok {
+				logs.CtxWarn(ctx, "metric definition %s is compound, ignore it", metricName)
+				continue
+			}
+			qReq := &QueryMetricsReq{
+				PlatformType:   platformType,
+				WorkspaceID:    req.WorkspaceID,
+				MetricsNames:   []string{metricName},
+				Granularity:    entity.MetricGranularity1Day,
+				StartTime:      startAt.UnixMilli(),
+				EndTime:        endAt.UnixMilli(),
+				GroupBySpaceID: true,
+			}
+			for _, obj := range platformTypeCfg.DrillDownObjects {
+				qReq.DrillDownFields = append(qReq.DrillDownFields, obj.Field)
+			}
+			for _, obj := range platformTypeCfg.MetricDefinitions[metricName] {
+				qReq.DrillDownFields = append(qReq.DrillDownFields, obj.Field)
+			}
+			qReq.DrillDownFields = append(qReq.DrillDownFields, &loop_span.FilterField{
+				FieldName: loop_span.SpanFieldSpaceId,
+				FieldType: loop_span.FieldTypeString,
+			})
+			// todo 并发设计
+			resp, err := m.queryMetrics(ctx, qReq)
+			if err != nil {
+				logs.CtxWarn(ctx, "fail to query metric, %v", err)
+				continue
+			}
+			metricName := qReq.MetricsNames[0]
+			mEvents := m.extractMetrics(metricName, resp.Metrics[metricName], platformTypeCfg)
+			for _, mEvent := range mEvents {
+				mEvent.PlatformType = string(qReq.PlatformType)
+				mEvent.StartDate = req.StartDate
+				mEvent.MetricName = metricName
+			}
+			_ = m.metricProducer.EmitMetrics(ctx, mEvents)
+		}
+	}
+	return nil
 }
 
 func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetricsReq, mDef entity.IMetricDefinition) (*QueryMetricsResp, error) {
@@ -239,6 +333,15 @@ func (m *MetricsService) buildMetricQuery(ctx context.Context, req *QueryMetrics
 		})
 	}
 	mBuilder.mRepoReq = param
+	// rewrite filter
+	if req.GroupBySpaceID {
+		_ = param.Filters.Traverse(func(f *loop_span.FilterField) error {
+			if f.FieldName == loop_span.SpanFieldSpaceId { // always true
+				f.QueryType = ptr.Of(loop_span.QueryTypeEnumAlwaysTrue)
+			}
+			return nil
+		})
+	}
 	return mBuilder, nil
 }
 
@@ -328,8 +431,8 @@ func (m *MetricsService) formatMetrics(data []map[string]any, mBuilder *metricQu
 	switch mInfo.mType {
 	case entity.MetricTypeTimeSeries:
 		return m.formatTimeSeriesData(data, mBuilder)
-	case entity.MetricTypeSummary: // 预期不会有聚合, 有就是参数问题
-		return m.formatSummaryData(data)
+	case entity.MetricTypeSummary:
+		return m.formatSummaryData(data, mInfo)
 	case entity.MetricTypePie:
 		return m.formatPieData(data, mInfo)
 	default:
@@ -353,7 +456,7 @@ func (m *MetricsService) formatTimeSeriesData(data []map[string]any, mBuilder *m
 				groupByVals[k] = conv.ToString(v)
 			}
 		}
-		val := "all"
+		val := defaultGroupKey
 		if len(groupByVals) > 0 {
 			if data, err := json.Marshal(groupByVals); err == nil {
 				val = string(data)
@@ -372,7 +475,7 @@ func (m *MetricsService) formatTimeSeriesData(data []map[string]any, mBuilder *m
 	t := entity.NewTimeIntervals(mBuilder.mRepoReq.StartAt, mBuilder.mRepoReq.EndAt, mBuilder.granularity)
 	for metricName := range metricNameMap {
 		if len(ret[metricName].TimeSeries) == 0 {
-			ret[metricName].TimeSeries["all"] = []*entity.MetricPoint{}
+			ret[metricName].TimeSeries[defaultGroupKey] = []*entity.MetricPoint{}
 		}
 		m.fillTimeSeriesData(t, metricName, ret[metricName])
 	}
@@ -403,16 +506,18 @@ func (m *MetricsService) fillTimeSeriesData(intervals []string, metricName strin
 	}
 }
 
-func (m *MetricsService) formatSummaryData(data []map[string]any) map[string]*entity.Metric {
+func (m *MetricsService) formatSummaryData(data []map[string]any, mInfo *metricInfo) map[string]*entity.Metric {
 	ret := make(map[string]*entity.Metric)
-	for _, dataItem := range data {
-		for k, v := range dataItem { // 预期不应该有下钻, 有就是参数问题
+	if len(data) == 1 {
+		for k, v := range data[0] {
 			ret[k] = &entity.Metric{
 				Summary: getMetricValue(v),
 			}
 		}
+		return ret
 	}
-	return ret
+	// 正常不应该有下钻, 有下钻就转换为Pie......
+	return m.formatPieData(data, mInfo)
 }
 
 func (m *MetricsService) formatPieData(data []map[string]any, mInfo *metricInfo) map[string]*entity.Metric {
@@ -431,7 +536,7 @@ func (m *MetricsService) formatPieData(data []map[string]any, mInfo *metricInfo)
 				groupByVals[k] = getMetricValue(v)
 			}
 		}
-		val := "all"
+		val := defaultGroupKey
 		if len(groupByVals) > 0 {
 			if data, err := json.Marshal(groupByVals); err == nil {
 				val = string(data)
@@ -549,4 +654,66 @@ func getMetricValue(v any) string {
 		return "null"
 	}
 	return ret
+}
+
+func (m *MetricsService) extractMetrics(metricName string, metric *entity.Metric, cfg *config.MetricPlatformConfig) []*entity.MetricEvent {
+	def := m.metricDefMap[metricName]
+	if def == nil {
+		return nil
+	}
+	objectList := append(cfg.DrillDownObjects, cfg.MetricDefinitions[metricName]...)
+	objectKeys := lo.Associate(objectList, func(item *config.MetricObjectKeyConfig) (string, *config.MetricObjectKeyConfig) {
+		return item.Field.FieldName, item
+	})
+	var events []*entity.MetricEvent
+	switch def.Type() {
+	case entity.MetricTypeTimeSeries:
+		for k, v := range metric.TimeSeries {
+			event := &entity.MetricEvent{
+				ObjectKeys:  make(map[string]string),
+				MetricValue: lo.Ternary(len(v) > 0, v[0].Value, ""),
+			}
+			if k != defaultGroupKey {
+				mp := make(map[string]string)
+				_ = json.Unmarshal([]byte(k), &mp)
+				for objName, objVal := range mp {
+					if val := objectKeys[objName]; val != nil {
+						event.ObjectKeys[val.StorageKey] = objVal
+					} else if objName == loop_span.SpanFieldSpaceId {
+						event.WorkspaceID = objVal
+					}
+				}
+			}
+			events = append(events, event)
+		}
+	case entity.MetricTypeSummary:
+		if metric.Summary != "" {
+			event := &entity.MetricEvent{
+				MetricValue: metric.Summary,
+			}
+			events = append(events, event)
+			break
+		}
+		fallthrough
+	case entity.MetricTypePie:
+		for k, v := range metric.Pie {
+			event := &entity.MetricEvent{
+				ObjectKeys:  make(map[string]string),
+				MetricValue: v,
+			}
+			if k != defaultGroupKey {
+				mp := make(map[string]string)
+				_ = json.Unmarshal([]byte(k), &mp)
+				for objName, objVal := range mp {
+					if val := objectKeys[objName]; val != nil {
+						event.ObjectKeys[val.StorageKey] = objVal
+					} else if objName == loop_span.SpanFieldSpaceId {
+						event.WorkspaceID = objVal
+					}
+				}
+			}
+			events = append(events, event)
+		}
+	}
+	return events
 }

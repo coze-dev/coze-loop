@@ -112,6 +112,31 @@ type ConsumerListening struct {
 	SpaceList  []int64  `json:"space_list"`
 }
 
+type MetricConfig struct {
+	ObjectKeys        map[string]*MetricObjectKeyConfig                    `mapstructure:"object_key_list" json:"object_key_list"`
+	MetricDefinitions map[string]*MeticDefinition                          `mapstructure:"metric_definitions" json:"metric_definitions"`
+	PlatformConfig    map[loop_span.PlatformType]*MetricPlatformDefinition `mapstructure:"platform_config" json:"platform_config"`
+}
+
+type MetricObjectKeyConfig struct {
+	Field      *loop_span.FilterField `mapstructure:"field" json:"field"`
+	StorageKey string                 `mapstructure:"storage_key" json:"storage_key"`
+}
+
+type MeticDefinition struct {
+	DrillDownObjects []string `mapstructure:"drill_down_values" json:"drill_down_values"`
+}
+
+type MetricPlatformDefinition struct {
+	MetricDefinitions []string `mapstructure:"metric_definitions" json:"metric_definitions"`
+	DrillDownObjects  []string `mapstructure:"drill_down_values" json:"drill_down_values"`
+}
+
+type MetricPlatformConfig struct {
+	DrillDownObjects  []*MetricObjectKeyConfig
+	MetricDefinitions map[string][]*MetricObjectKeyConfig
+}
+
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig
 type ITraceConfig interface {
 	GetSystemViews(ctx context.Context) ([]*SystemView, error)
@@ -128,6 +153,7 @@ type ITraceConfig interface {
 	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
 	GetKeySpanTypes(ctx context.Context) map[string][]string
 	GetBackfillMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
+	GetMetricDefinitions(ctx context.Context) (map[loop_span.PlatformType]*MetricPlatformConfig, error)
 
 	conf.IConfigLoader
 }

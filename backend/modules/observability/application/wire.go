@@ -29,9 +29,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
+	metric_agent "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/agent"
 	metric_general "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	metric_model "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
-	metric_agent "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/agent"
 	metric_service_def "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
 	metric_tool "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
 	trepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
@@ -149,6 +149,7 @@ var (
 		ckdao.NewSpansCkDaoImpl,
 		ckdao.NewAnnotationCkDaoImpl,
 		file.NewFileRPCProvider,
+		mq2.NewMetricProducer,
 	)
 )
 
