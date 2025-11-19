@@ -98,6 +98,19 @@ struct ModelConfig {
     6: optional double presence_penalty
     7: optional double frequency_penalty
     8: optional bool json_mode
+
+    100: optional list<ParamConfigValue> param_config_values
+}
+
+struct ParamConfigValue {
+    1: optional string name // 传给下游模型的key，与ParamSchema.name对齐
+    2: optional string label // 展示名称
+    3: optional ParamOption value // 传给下游模型的value，与ParamSchema.options对齐
+}
+
+struct ParamOption {
+    1: optional string value // 实际值
+    2: optional string label // 展示值
 }
 
 struct Message {
