@@ -743,11 +743,14 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 				param: &repo.InsertAnnotationParam{
 					Tenant: "test",
 					TTL:    loop_span.TTL3d,
-					Annotations: []*loop_span.Annotation{
-						{
-							ID: "anno1",
+					Span: &loop_span.Span{
+						Annotations: []*loop_span.Annotation{
+							{
+								ID: "anno1",
+							},
 						},
 					},
+					AnnotationType: ptr.Of(loop_span.AnnotationTypeOpenAPIFeedback),
 				},
 			},
 			wantErr: false,
@@ -766,11 +769,14 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 				param: &repo.InsertAnnotationParam{
 					Tenant: "test",
 					TTL:    loop_span.TTL3d,
-					Annotations: []*loop_span.Annotation{
-						{
-							ID: "anno1",
+					Span: &loop_span.Span{
+						Annotations: []*loop_span.Annotation{
+							{
+								ID: "anno1",
+							},
 						},
 					},
+					AnnotationType: ptr.Of(loop_span.AnnotationTypeOpenAPIFeedback),
 				},
 			},
 			wantErr: true,
