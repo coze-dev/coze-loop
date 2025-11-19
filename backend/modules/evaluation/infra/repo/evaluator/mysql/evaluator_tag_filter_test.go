@@ -273,7 +273,7 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to create sqlmock: %v", err)
 			}
-            defer func() { _ = sqlDB.Close() }()
+			defer func() { _ = sqlDB.Close() }()
 
 			// 创建真实的GORM数据库连接
 			gormDB, err := gorm.Open(mysql.New(mysql.Config{

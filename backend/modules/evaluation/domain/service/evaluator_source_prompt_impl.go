@@ -153,7 +153,7 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 		runStatus = entity.EvaluatorRunStatusFail
 		return nil, runStatus, traceID
 	}
-    output, err = parseOutput(ctx, evaluator.PromptEvaluatorVersion, llmResp, exptSpaceID, disableTracing)
+	output, err = parseOutput(ctx, evaluator.PromptEvaluatorVersion, llmResp, exptSpaceID, disableTracing)
 	if err != nil {
 		logs.CtxWarn(ctx, "[RunEvaluator] parseOutput fail, err: %v", err)
 		runStatus = entity.EvaluatorRunStatusFail
