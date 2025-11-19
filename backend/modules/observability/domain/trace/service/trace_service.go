@@ -734,10 +734,10 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	if err := r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
-		Span:        span,
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	}); err != nil {
 		return nil, err
 	}
@@ -791,10 +791,10 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
-		Span:        span,
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
 }
 
@@ -830,10 +830,10 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
-		Span:        span,
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
 }
 
@@ -895,10 +895,10 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
-		Span:        span,
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
 }
 
@@ -947,10 +947,10 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
-		Span:        span,
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
 }
 
@@ -989,10 +989,10 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	}
 	// retry if failed
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{event.Annotation},
-		Span:        span,
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(event.Annotation.AnnotationType),
 	})
 }
 
@@ -1182,10 +1182,10 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	}
 	// 再同步修改观测数据
 	param := &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
-		Span:        span,
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	}
 	if err = r.traceRepo.InsertAnnotations(ctx, param); err != nil {
 		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)

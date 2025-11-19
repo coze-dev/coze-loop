@@ -30,12 +30,13 @@ type SpanWithAnnotationProducerImpl struct {
 	mqProducer mq.IProducer
 }
 
-func (a *SpanWithAnnotationProducerImpl) SendSpanWithAnnotation(ctx context.Context, message *entity.SpanEvent) error {
+func (a *SpanWithAnnotationProducerImpl) SendSpanWithAnnotation(ctx context.Context, message *entity.SpanEvent, tag string) error {
 	bytes, err := json.Marshal(message)
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	msg := mq.NewDeferMessage(a.topic, 60*time.Second, bytes)
+	msg.WithTag(tag)
 	_, err = a.mqProducer.Send(ctx, msg)
 	if err != nil {
 		logs.CtxWarn(ctx, "send annotation msg err: %v", err)

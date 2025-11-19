@@ -57,8 +57,7 @@ func TestTaskCallbackServiceImpl_CallBackSuccess(t *testing.T) {
 	mockTaskRepo.EXPECT().IncrTaskRunSuccessCount(gomock.Any(), int64(101), int64(202), gomock.Any()).Return(nil)
 	mockTraceRepo.EXPECT().InsertAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.InsertAnnotationParam{})).DoAndReturn(
 		func(_ context.Context, param *repo.InsertAnnotationParam) error {
-			require.Len(t, param.Annotations, 1)
-			require.Equal(t, loop_span.AnnotationTypeAutoEvaluate, param.Annotations[0].AnnotationType)
+			require.Equal(t, loop_span.AnnotationTypeAutoEvaluate, param.AnnotationType)
 			return nil
 		},
 	)

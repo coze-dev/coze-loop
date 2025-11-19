@@ -411,6 +411,7 @@ func (s *Span) BuildFeedback(t AnnotationType, key string, value AnnotationValue
 	if err := a.GenID(); err != nil {
 		return nil, fmt.Errorf("fail to generate annotation id: %v", err)
 	}
+	s.AddAnnotation(a)
 	return a, nil
 }
 

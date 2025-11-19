@@ -281,8 +281,8 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 	if err != nil {
 		return err
 	}
-	pos := make([]*model.ObservabilityAnnotation, 0, len(param.Annotations))
-	for _, annotation := range param.Annotations {
+	pos := make([]*model.ObservabilityAnnotation, 0, len(param.Span.Annotations))
+	for _, annotation := range param.Span.Annotations {
 		annotationPO, err := convertor.AnnotationDO2PO(annotation)
 		if err != nil {
 			return err
@@ -297,10 +297,9 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 		return nil
 	}
 	span := param.Span
-	span.Annotations = append(span.Annotations, param.Annotations...)
 	return t.spanProducer.SendSpanWithAnnotation(ctx, &entity.SpanEvent{
 		Span: span,
-	})
+	}, string(*param.AnnotationType))
 }
 
 func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {

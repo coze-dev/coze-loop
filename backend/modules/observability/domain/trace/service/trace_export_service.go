@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
@@ -401,10 +402,10 @@ func (r *TraceExportServiceImpl) addSpanAnnotations(ctx context.Context, spans [
 			continue
 		}
 		err = r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-			Tenant:      span.GetTenant(),
-			TTL:         span.GetTTL(ctx),
-			Annotations: []*loop_span.Annotation{annotation},
-			Span:        span,
+			Tenant:         span.GetTenant(),
+			TTL:            span.GetTTL(ctx),
+			Span:           span,
+			AnnotationType: gptr.Of(annotation.AnnotationType),
 		})
 		if err != nil {
 			// 忽略add annotations的错误，防止用户重复导入数据集。

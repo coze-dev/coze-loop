@@ -11,5 +11,5 @@ import (
 
 //go:generate mockgen -destination=mocks/annotation_producer.go -package=mocks . IAnnotationProducer
 type ISpanProducer interface {
-	SendSpanWithAnnotation(ctx context.Context, message *entity.SpanEvent) error
+	SendSpanWithAnnotation(ctx context.Context, message *entity.SpanEvent, tag string) error
 }

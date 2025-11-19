@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
@@ -101,7 +102,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			// Continue processing without interrupting the flow
 		}
 
-		annotation, err := span.AddAutoEvalAnnotation(
+		_, err = span.AddAutoEvalAnnotation(
 			turn.GetTaskIDFromExt(),
 			turn.EvaluatorRecordID,
 			turn.EvaluatorVersionID,
@@ -114,10 +115,10 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 		}
 
 		err = t.traceRepo.InsertAnnotations(ctx, &tracerepo.InsertAnnotationParam{
-			Tenant:      span.GetTenant(),
-			TTL:         span.GetTTL(ctx),
-			Annotations: []*loop_span.Annotation{annotation},
-			Span:        span,
+			Tenant:         span.GetTenant(),
+			TTL:            span.GetTTL(ctx),
+			Span:           span,
+			AnnotationType: gptr.Of(loop_span.AnnotationTypeAutoEvaluate),
 		})
 		if err != nil {
 			return err
@@ -173,10 +174,10 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 
 	// Then synchronize the observability data
 	param := &tracerepo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
-		Span:        span,
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(loop_span.AnnotationTypeAutoEvaluate),
 	}
 	if err = t.traceRepo.InsertAnnotations(ctx, param); err != nil {
 		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)
