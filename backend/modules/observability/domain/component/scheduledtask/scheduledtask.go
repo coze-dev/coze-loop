@@ -40,9 +40,11 @@ func (b *BaseScheduledTask) Run() error {
 				ctx := context.Background()
 				startTime := time.Now()
 				if err := b.RunOnce(ctx); err != nil {
-					logs.CtxError(ctx, "ScheduledTask [%s] run error: %v, cost: %v", b.name, err, time.Since(startTime))
+					cost := time.Since(startTime)
+					logs.CtxError(ctx, "ScheduledTask [%s] run error: %v, cost: %v", b.name, err, cost)
 				} else {
-					logs.CtxInfo(ctx, "ScheduledTask [%s] run success, cost: %v", b.name, time.Since(startTime))
+					cost := time.Since(startTime)
+					logs.CtxInfo(ctx, "ScheduledTask [%s] run success, cost: %v", b.name, cost)
 				}
 			case <-b.stopChan:
 				return

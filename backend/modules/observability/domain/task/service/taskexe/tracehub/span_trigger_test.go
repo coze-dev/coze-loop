@@ -15,14 +15,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	taskconvertor "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	componentconfig "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	config_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	trace_service_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	span_filter_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
-	pkgconf "github.com/coze-dev/coze-loop/backend/pkg/conf"
-	confmocks "github.com/coze-dev/coze-loop/backend/pkg/conf/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +29,9 @@ import (
 func TestTraceHubServiceImpl_SpanTriggerSkipNoWorkspace(t *testing.T) {
 	t.Parallel()
 
-	impl := &TraceHubServiceImpl{}
+	impl := &TraceHubServiceImpl{
+		localCache: NewLocalCache(),
+	}
 	impl.localCache.taskCache.Store("ObjListWithTask", TaskCacheInfo{})
 
 	raw := &entity.RawSpan{
@@ -58,7 +59,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	mockBuilder := trace_service_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
 	mockFilter := span_filter_mocks.NewMockFilter(ctrl)
-	configLoader := confmocks.NewMockIConfigLoader(ctrl)
+	configLoader := config_mocks.NewMockITraceConfig(ctrl)
 
 	now := time.Now()
 	workspaceID := int64(1)
@@ -99,8 +100,9 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 
 	mockRepo.EXPECT().ListNonFinalTaskBySpaceID(gomock.Any(), gomock.Any()).Return([]int64{taskDO.ID}, nil).AnyTimes()
 
+	configLoader.EXPECT().GetConsumerListening(gomock.Any()).Return(&componentconfig.ConsumerListening{IsAllSpace: true}, nil).AnyTimes()
 	configLoader.EXPECT().UnmarshalKey(gomock.Any(), "consumer_listening", gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ string, value any, _ ...pkgconf.DecodeOptionFn) error {
+		func(_ context.Context, _ string, value any, _ ...interface{}) error {
 			cfg := value.(*componentconfig.ConsumerListening)
 			*cfg = componentconfig.ConsumerListening{IsAllSpace: true}
 			return nil
@@ -132,7 +134,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		taskRepo:      mockRepo,
 		buildHelper:   mockBuilder,
 		taskProcessor: taskProcessor,
-		//loader:        configLoader,
+		localCache:    NewLocalCache(),
+		config:        configLoader,
 	}
 	impl.localCache.taskCache.Store("ObjListWithTask", TaskCacheInfo{WorkspaceIDs: []string{"space-1"}, Tasks: []*entity.ObservabilityTask{taskDO}})
 
@@ -154,7 +157,8 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	}
 
 	err := impl.SpanTrigger(context.Background(), raw.RawSpanConvertToLoopSpan())
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invoke error")
 	require.True(t, proc.invokeCalled)
 }
 

@@ -31,14 +31,13 @@ func (s stubIDGenerator) GenMultiIDs(context.Context, int) ([]int64, error) {
 }
 
 type stubTaskDao struct {
-	createTaskFunc         func(ctx context.Context, po *mysqlmodel.ObservabilityTask) (int64, error)
-	updateTaskFunc         func(ctx context.Context, po *mysqlmodel.ObservabilityTask) error
-	updateTaskWithOCCFunc  func(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
-	deleteTaskFunc         func(ctx context.Context, id int64, workspaceID int64, userID string) error
-	getTaskFunc            func(ctx context.Context, id int64, workspaceID *int64, userID *string) (*mysqlmodel.ObservabilityTask, error)
-	listTasksFunc          func(ctx context.Context, param mysql.ListTaskParam) ([]*mysqlmodel.ObservabilityTask, int64, error)
-	getObjListWithTaskFunc func(ctx context.Context) ([]string, []string, []*mysqlmodel.ObservabilityTask, error)
-	listNonFinalTasksFunc  func(ctx context.Context) ([]*mysqlmodel.ObservabilityTask, error)
+	createTaskFunc        func(ctx context.Context, po *mysqlmodel.ObservabilityTask) (int64, error)
+	updateTaskFunc        func(ctx context.Context, po *mysqlmodel.ObservabilityTask) error
+	updateTaskWithOCCFunc func(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
+	deleteTaskFunc        func(ctx context.Context, id int64, workspaceID int64, userID string) error
+	getTaskFunc           func(ctx context.Context, id int64, workspaceID *int64, userID *string) (*mysqlmodel.ObservabilityTask, error)
+	listTasksFunc         func(ctx context.Context, param mysql.ListTaskParam) ([]*mysqlmodel.ObservabilityTask, int64, error)
+	listNonFinalTasksFunc func(ctx context.Context) ([]*mysqlmodel.ObservabilityTask, error)
 }
 
 func (s *stubTaskDao) CreateTask(ctx context.Context, po *mysqlmodel.ObservabilityTask) (int64, error) {
