@@ -111,7 +111,7 @@ func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSp
 	}
 
 	return &trace.ListPreSpanResponse{
-		Spans: tconv.SpanListDO2DTO(preSpan.Spans, nil, nil, nil),
+		Spans: tconv.SpanListDO2DTO(preSpan.Spans, nil, nil, nil, false),
 	}, nil
 }
 
