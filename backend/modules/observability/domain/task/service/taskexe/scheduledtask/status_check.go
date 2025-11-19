@@ -223,17 +223,33 @@ func (t *StatusCheckTask) checkTaskStatus(ctx context.Context, tasks []*entity.O
 		}
 		// If the task status is unstarted, create it once the task start time is reached
 		if taskDO.TaskStatus == entity.TaskStatusUnstarted && time.Now().After(startTime) {
-			runStartAt, runEndAt := taskDO.GetRunTimeRange()
-			err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
-				CurrentTask: taskDO,
-				RunType:     entity.TaskRunTypeNewData,
-				RunStartAt:  runStartAt,
-				RunEndAt:    runEndAt,
-			})
-			if err != nil {
-				logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
-				continue
+			if processor.ShouldTriggerNewData(ctx, taskDO) {
+				runStartAt, runEndAt := taskDO.GetRunTimeRange()
+				err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
+					CurrentTask: taskDO,
+					RunType:     entity.TaskRunTypeNewData,
+					RunStartAt:  runStartAt,
+					RunEndAt:    runEndAt,
+				})
+				if err != nil {
+					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+					continue
+				}
 			}
+			if processor.ShouldTriggerBackfill(taskDO) {
+				runStartAt, runEndAt := taskDO.BackfillEffectiveTime.StartAt, taskDO.BackfillEffectiveTime.EndAt
+				err = proc.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
+					CurrentTask: taskDO,
+					RunType:     entity.TaskRunTypeBackFill,
+					RunStartAt:  runStartAt,
+					RunEndAt:    runEndAt,
+				})
+				if err != nil {
+					logs.CtxError(ctx, "OnCreateTaskRunChange err:%v", err)
+					continue
+				}
+			}
+
 			err = proc.OnTaskUpdated(ctx, taskDO, entity.TaskStatusRunning)
 			if err != nil {
 				logs.CtxError(ctx, "OnUpdateTaskChange err:%v", err)
