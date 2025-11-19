@@ -266,4 +266,4 @@ require (
 	stathat.com/c/consistent v1.0.0 // indirect
 )
 
-replace github.com/coze-dev/coze-loop/backend/modules/observability/lib => ./modules/observability/lib
+replace github.com/coze-dev/coze-loop/backend/modules/observability/lib => github.com/coze-dev/coze-loop/backend/modules/observability/lib v0.0.0-20251118131611-99b3d466d529
