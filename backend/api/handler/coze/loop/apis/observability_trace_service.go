@@ -155,6 +155,12 @@ func ExtractSpanInfo(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.ExtractSpanInfo)
 }
 
+// ListPreSpan .
+// @router /api/observability/v1/spans/pre_list [POST]
+func ListPreSpan(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.ListPreSpan)
+}
+
 // UpsertTrajectoryConfig .
 // @router /api/observability/v1/trajectory_config [POST]
 func UpsertTrajectoryConfig(ctx context.Context, c *app.RequestContext) {

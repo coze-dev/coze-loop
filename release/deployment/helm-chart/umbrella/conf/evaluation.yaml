@@ -47,6 +47,10 @@ expt_export_csv_event_rmq:
   consumer_group: 'expt_export_csv_event_cg'
   producer_group: 'expt_export_csv_event_pg'
 
+# ClickHouse table configuration
+clickhouse_table_config:
+  expt_turn_result_filter_table_name: 'expt_turn_result_filter'
+
 rate_limiter_conf:
   - key_expr: biz_key + string(space_id)
     limit:
@@ -2237,3 +2241,6 @@ custom_code_evaluator_template_conf:
         code_template_name: "自定义code评估器"
 expt_export_white_list:
   allow_all: true
+
+clickhouse_config:
+  expt_turn_result_filter_db_name: "cozeloop-clickhouse"

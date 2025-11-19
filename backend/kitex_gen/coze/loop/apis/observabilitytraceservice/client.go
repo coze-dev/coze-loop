@@ -12,6 +12,7 @@ import (
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	ListSpans(ctx context.Context, req *trace.ListSpansRequest, callOptions ...callopt.Option) (r *trace.ListSpansResponse, err error)
+	ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest, callOptions ...callopt.Option) (r *trace.ListPreSpanResponse, err error)
 	GetTrace(ctx context.Context, req *trace.GetTraceRequest, callOptions ...callopt.Option) (r *trace.GetTraceResponse, err error)
 	SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest, callOptions ...callopt.Option) (r *trace.SearchTraceTreeResponse, err error)
 	BatchGetTracesAdvanceInfo(ctx context.Context, req *trace.BatchGetTracesAdvanceInfoRequest, callOptions ...callopt.Option) (r *trace.BatchGetTracesAdvanceInfoResponse, err error)
@@ -67,6 +68,11 @@ type kObservabilityTraceServiceClient struct {
 func (p *kObservabilityTraceServiceClient) ListSpans(ctx context.Context, req *trace.ListSpansRequest, callOptions ...callopt.Option) (r *trace.ListSpansResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListSpans(ctx, req)
+}
+
+func (p *kObservabilityTraceServiceClient) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest, callOptions ...callopt.Option) (r *trace.ListPreSpanResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListPreSpan(ctx, req)
 }
 
 func (p *kObservabilityTraceServiceClient) GetTrace(ctx context.Context, req *trace.GetTraceRequest, callOptions ...callopt.Option) (r *trace.GetTraceResponse, err error) {

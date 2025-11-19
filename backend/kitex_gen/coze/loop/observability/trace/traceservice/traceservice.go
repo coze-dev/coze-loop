@@ -20,6 +20,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListPreSpan": kitex.NewMethodInfo(
+		listPreSpanHandler,
+		newTraceServiceListPreSpanArgs,
+		newTraceServiceListPreSpanResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"GetTrace": kitex.NewMethodInfo(
 		getTraceHandler,
 		newTraceServiceGetTraceArgs,
@@ -217,6 +224,25 @@ func newTraceServiceListSpansArgs() interface{} {
 
 func newTraceServiceListSpansResult() interface{} {
 	return trace.NewTraceServiceListSpansResult()
+}
+
+func listPreSpanHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListPreSpanArgs)
+	realResult := result.(*trace.TraceServiceListPreSpanResult)
+	success, err := handler.(trace.TraceService).ListPreSpan(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceListPreSpanArgs() interface{} {
+	return trace.NewTraceServiceListPreSpanArgs()
+}
+
+func newTraceServiceListPreSpanResult() interface{} {
+	return trace.NewTraceServiceListPreSpanResult()
 }
 
 func getTraceHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -635,6 +661,16 @@ func (p *kClient) ListSpans(ctx context.Context, req *trace.ListSpansRequest) (r
 	_args.Req = req
 	var _result trace.TraceServiceListSpansResult
 	if err = p.c.Call(ctx, "ListSpans", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
+	var _args trace.TraceServiceListPreSpanArgs
+	_args.Req = req
+	var _result trace.TraceServiceListPreSpanResult
+	if err = p.c.Call(ctx, "ListPreSpan", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
