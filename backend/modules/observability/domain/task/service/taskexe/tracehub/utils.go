@@ -47,7 +47,7 @@ func (h *TraceHubServiceImpl) fillCtx(ctx context.Context) context.Context {
 	ctx = logs.SetLogID(ctx, logID)
 	ctx = metainfo.WithPersistentValue(ctx, AppIDKey, strconv.FormatInt(int64(h.aid), 10))
 	if env := os.Getenv(TceEnv); env != "" {
-    ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck
+		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck
 	}
 	return ctx
 }

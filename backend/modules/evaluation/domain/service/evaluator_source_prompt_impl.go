@@ -328,11 +328,11 @@ func (e *evaluatorSpan) reportOutputParserSpan(ctx context.Context, replyItem *e
 func parseOutput(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, err error) {
 	// 输出数据全空直接返回
 	var outputParserSpan *evaluatorSpan
-    if !disableTracing {
-        outputParserSpan, ctx = newEvaluatorSpan(ctx, "ParseOutput", "LoopEvaluation", strconv.FormatInt(exptSpaceID, 10), true)
-        defer func() {
-            outputParserSpan.reportOutputParserSpan(ctx, replyItem, output, strconv.FormatInt(exptSpaceID, 10), err)
-        }()
+	if !disableTracing {
+		outputParserSpan, ctx = newEvaluatorSpan(ctx, "ParseOutput", "LoopEvaluation", strconv.FormatInt(exptSpaceID, 10), true)
+		defer func() {
+			outputParserSpan.reportOutputParserSpan(ctx, replyItem, output, strconv.FormatInt(exptSpaceID, 10), err)
+		}()
 	}
 	output = &entity.EvaluatorOutputData{
 		EvaluatorResult: &entity.EvaluatorResult{},
@@ -636,8 +636,8 @@ func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluato
 	}
 
 	var renderTemplateSpan *evaluatorSpan
-    if !disableTracing {
-        renderTemplateSpan, ctx = newEvaluatorSpan(ctx, "RenderTemplate", "prompt", strconv.FormatInt(exptSpaceID, 10), true)
+	if !disableTracing {
+		renderTemplateSpan, ctx = newEvaluatorSpan(ctx, "RenderTemplate", "prompt", strconv.FormatInt(exptSpaceID, 10), true)
 		renderTemplateSpan.SetInput(ctx, tracer.Convert2TraceString(tracer.ConvertPrompt2Ob(evaluatorVersion.MessageList, variables)))
 	}
 	for _, message := range evaluatorVersion.MessageList {
@@ -666,7 +666,7 @@ func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluato
 
 func (p *EvaluatorSourcePromptServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error) {
 	// 实现调试评估的逻辑
-    output, _, _ = p.Run(ctx, evaluator, input, exptSpaceID, false)
+	output, _, _ = p.Run(ctx, evaluator, input, exptSpaceID, false)
 	if output != nil && output.EvaluatorRunError != nil {
 		return nil, errorx.NewByCode(output.EvaluatorRunError.Code, errorx.WithExtraMsg(output.EvaluatorRunError.Message))
 	}

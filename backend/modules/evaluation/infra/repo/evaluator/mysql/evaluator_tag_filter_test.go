@@ -632,7 +632,7 @@ func TestEvaluatorTagDAOImpl_AggregateTagValuesByType(t *testing.T) {
 			},
 			expectedTags: []*entity.AggregatedEvaluatorTag{},
 			expectedErr:  false,
-			description: "无结果时，应该返回空切片",
+			description:  "无结果时，应该返回空切片",
 		},
 		{
 			name:     "success - record not found",
@@ -645,7 +645,7 @@ func TestEvaluatorTagDAOImpl_AggregateTagValuesByType(t *testing.T) {
 			},
 			expectedTags: []*entity.AggregatedEvaluatorTag{},
 			expectedErr:  false,
-			description: "记录不存在时，应该返回空切片",
+			description:  "记录不存在时，应该返回空切片",
 		},
 		{
 			name:     "error - database error",
@@ -658,7 +658,7 @@ func TestEvaluatorTagDAOImpl_AggregateTagValuesByType(t *testing.T) {
 			},
 			expectedTags: nil,
 			expectedErr:  true,
-			description: "数据库错误时，应该返回错误",
+			description:  "数据库错误时，应该返回错误",
 		},
 		{
 			name:     "success - template tag type",

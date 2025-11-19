@@ -1427,7 +1427,6 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 
 // ListTemplatesV2 查询评估器模板列表
 func (e *EvaluatorHandlerImpl) ListTemplatesV2(ctx context.Context, request *evaluatorservice.ListTemplatesV2Request) (resp *evaluatorservice.ListTemplatesV2Response, err error) {
-
 	// 构建service层请求
 	serviceReq := &entity.ListEvaluatorTemplateRequest{
 		SpaceID:        0,   // 模板查询不需要空间ID

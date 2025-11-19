@@ -46,8 +46,16 @@ func TestConvertEvaluatorDTO2DO_And_Back(t *testing.T) {
 		BuiltinVisibleVersion: gptr.Of("1.0.0"),
 		BoxType:               gptr.Of("Black"),
 		BaseInfo:              &commondto.BaseInfo{},
-		CurrentVersion: &evaluatordto.EvaluatorVersion{ID: gptr.Of(int64(10)), Version: gptr.Of("1.0.0"),
-			EvaluatorContent: &evaluatordto.EvaluatorContent{CodeEvaluator: &evaluatordto.CodeEvaluator{LanguageType: gptr.Of(evaluatordto.LanguageTypePython), CodeTemplateKey: gptr.Of("tk"), CodeTemplateName: gptr.Of("tn"), CodeContent: gptr.Of("print(1)")}}},
+		CurrentVersion: &evaluatordto.EvaluatorVersion{
+			ID:      gptr.Of(int64(10)),
+			Version: gptr.Of("1.0.0"),
+			EvaluatorContent: &evaluatordto.EvaluatorContent{CodeEvaluator: &evaluatordto.CodeEvaluator{
+				LanguageType:     gptr.Of(evaluatordto.LanguageTypePython),
+				CodeTemplateKey:  gptr.Of("tk"),
+				CodeTemplateName: gptr.Of("tn"),
+				CodeContent:      gptr.Of("print(1)"),
+			}},
+		},
 		Tags: map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string{
 			evaluatordto.EvaluatorTagLangType("en"): {evaluatordto.EvaluatorTagKeyName: {"tag"}},
 		},
@@ -81,8 +89,17 @@ func TestConvertEvaluatorDTO2DO_And_Back(t *testing.T) {
 func TestConvertCodeEvaluatorVersionRoundTrip(t *testing.T) {
 	t.Parallel()
 	// DTO -> DO
-	dto := &evaluatordto.EvaluatorVersion{ID: gptr.Of(int64(11)), Version: gptr.Of("0.1.0"), Description: gptr.Of("desc"),
-		EvaluatorContent: &evaluatordto.EvaluatorContent{CodeEvaluator: &evaluatordto.CodeEvaluator{LanguageType: gptr.Of(evaluatordto.LanguageTypeJS), CodeTemplateKey: gptr.Of("k"), CodeTemplateName: gptr.Of("n"), CodeContent: gptr.Of("console.log(1)")}}}
+	dto := &evaluatordto.EvaluatorVersion{
+		ID:          gptr.Of(int64(11)),
+		Version:     gptr.Of("0.1.0"),
+		Description: gptr.Of("desc"),
+		EvaluatorContent: &evaluatordto.EvaluatorContent{CodeEvaluator: &evaluatordto.CodeEvaluator{
+			LanguageType:     gptr.Of(evaluatordto.LanguageTypeJS),
+			CodeTemplateKey:  gptr.Of("k"),
+			CodeTemplateName: gptr.Of("n"),
+			CodeContent:      gptr.Of("console.log(1)"),
+		}},
+	}
 	do := ConvertCodeEvaluatorVersionDTO2DO(1, 2, dto)
 	if assert.NotNil(t, do) {
 		assert.Equal(t, int64(11), do.ID)
@@ -295,6 +312,7 @@ func TestTagKeyConvert(t *testing.T) {
 	assert.Equal(t, evaluatordto.EvaluatorTagKeyBusinessScenario, ConvertEvaluatorTagKeyDO2DTO(evaluatordo.EvaluatorTagKey_BusinessScenario))
 	assert.Equal(t, evaluatordto.EvaluatorTagKeyName, ConvertEvaluatorTagKeyDO2DTO(evaluatordo.EvaluatorTagKey_Name))
 }
+
 func TestConvertEvaluatorDOList2DTO(t *testing.T) {
 	t.Parallel()
 
