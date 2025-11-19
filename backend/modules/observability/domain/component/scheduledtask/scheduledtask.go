@@ -38,21 +38,25 @@ func (b *BaseScheduledTask) Run() error {
 			select {
 			case <-ticker.C:
 				ctx := context.Background()
-				startTime := time.Now()
-				err := b.RunOnce(ctx)
-				cost := time.Since(startTime)
-
-				if err != nil {
-					logs.CtxError(ctx, "ScheduledTask [%s] run error: %v, cost: %v", b.name, err, cost)
-				} else {
-					logs.CtxInfo(ctx, "ScheduledTask [%s] run success, cost: %v", b.name, cost)
-				}
+				b.executeScheduledTask(ctx)
 			case <-b.stopChan:
 				return
 			}
 		}
 	})
 	return nil
+}
+
+func (b *BaseScheduledTask) executeScheduledTask(ctx context.Context) {
+	startTime := time.Now()
+	err := b.RunOnce(ctx)
+	duration := time.Since(startTime)
+	
+	if err != nil {
+		logs.CtxError(ctx, "ScheduledTask [%s] run error: %v, cost: %v", b.name, err, duration)
+	} else {
+		logs.CtxInfo(ctx, "ScheduledTask [%s] run success, cost: %v", b.name, duration)
+	}
 }
 
 func (b *BaseScheduledTask) RunOnce(ctx context.Context) error {
