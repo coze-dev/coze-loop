@@ -19,10 +19,20 @@ type IPromptService interface {
 	ExecuteStreaming(ctx context.Context, param ExecuteStreamingParam) (*entity.Reply, error)
 	Execute(ctx context.Context, param ExecuteParam) (*entity.Reply, error)
 	MCompleteMultiModalFileURL(ctx context.Context, messages []*entity.Message, variableVals []*entity.VariableVal) error
+	MConvertBase64DataURLToFileURI(ctx context.Context, messages []*entity.Message, workspaceID int64) error
+	MConvertBase64DataURLToFileURL(ctx context.Context, messages []*entity.Message, workspaceID int64) error
 	// MGetPromptIDs 根据prompt key获取prompt id
 	MGetPromptIDs(ctx context.Context, spaceID int64, promptKeys []string) (PromptKeyIDMap map[string]int64, err error)
 	// MParseCommitVersion 统一解析提交版本，支持version和label两种方式
 	MParseCommitVersion(ctx context.Context, spaceID int64, params []PromptQueryParam) (promptKeyCommitVersionMap map[PromptQueryParam]string, err error)
+
+	// Prompt管理相关方法
+	CreatePrompt(ctx context.Context, promptDO *entity.Prompt) (promptID int64, err error)
+	SaveDraft(ctx context.Context, promptDO *entity.Prompt) (*entity.DraftInfo, error)
+	GetPrompt(ctx context.Context, param GetPromptParam) (*entity.Prompt, error)
+
+	// Snippet扩展相关方法
+	ExpandSnippets(ctx context.Context, promptDO *entity.Prompt) error
 
 	// Label管理相关方法
 	CreateLabel(ctx context.Context, labelDO *entity.PromptLabel) error
@@ -65,6 +75,7 @@ type PromptLabelQuery struct {
 }
 
 type PromptServiceImpl struct {
+	formatter        IPromptFormatter
 	idgen            idgen.IIDGenerator
 	debugLogRepo     repo.IDebugLogRepo
 	debugContextRepo repo.IDebugContextRepo
@@ -73,9 +84,22 @@ type PromptServiceImpl struct {
 	configProvider   conf.IConfigProvider
 	llm              rpc.ILLMProvider
 	file             rpc.IFileProvider
+	snippetParser    SnippetParser
+}
+
+type GetPromptParam struct {
+	PromptID int64
+
+	WithCommit    bool
+	CommitVersion string
+
+	WithDraft     bool
+	UserID        string
+	ExpandSnippet bool
 }
 
 func NewPromptService(
+	formatter IPromptFormatter,
 	idgen idgen.IIDGenerator,
 	debugLogRepo repo.IDebugLogRepo,
 	debugContextRepo repo.IDebugContextRepo,
@@ -84,8 +108,10 @@ func NewPromptService(
 	configProvider conf.IConfigProvider,
 	llm rpc.ILLMProvider,
 	file rpc.IFileProvider,
+	snippetParser SnippetParser,
 ) IPromptService {
 	return &PromptServiceImpl{
+		formatter:        formatter,
 		idgen:            idgen,
 		debugLogRepo:     debugLogRepo,
 		debugContextRepo: debugContextRepo,
@@ -94,5 +120,6 @@ func NewPromptService(
 		configProvider:   configProvider,
 		llm:              llm,
 		file:             file,
+		snippetParser:    snippetParser,
 	}
 }
