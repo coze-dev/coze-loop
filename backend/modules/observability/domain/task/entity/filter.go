@@ -42,6 +42,7 @@ const (
 	TaskFieldNameTaskType   TaskFieldName = "task_type"
 	TaskFieldNameSampleRate TaskFieldName = "sample_rate"
 	TaskFieldNameCreatedBy  TaskFieldName = "created_by"
+	TaskFieldNameTaskSource TaskFieldName = "task_source"
 )
 
 // TaskFilterFields aggregates multiple TaskFilterField expressions.

@@ -6,9 +6,11 @@ package application
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
@@ -21,6 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	tracerepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	trace_Svc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -51,6 +54,7 @@ func NewTaskApplication(
 	taskCallbackService service.ITaskCallbackService,
 	scheduledTasks []scheduledtask.ScheduledTask,
 	traceRepo tracerepo.ITraceRepo,
+	buildHelper trace_Svc.TraceFilterProcessorBuilder,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
 		taskSvc:         taskService,
@@ -63,6 +67,7 @@ func NewTaskApplication(
 		taskCallbackSvc: taskCallbackService,
 		scheduledTasks:  scheduledTasks,
 		traceRepo:       traceRepo,
+		buildHelper:     buildHelper,
 	}, nil
 }
 
@@ -77,6 +82,7 @@ type TaskApplication struct {
 	taskCallbackSvc service.ITaskCallbackService
 	scheduledTasks  []scheduledtask.ScheduledTask
 	traceRepo       tracerepo.ITraceRepo
+	buildHelper     trace_Svc.TraceFilterProcessorBuilder
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
@@ -116,10 +122,9 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 		false); err != nil {
 		return resp, err
 	}
-
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	userID, err := GetUserID(ctx, req.GetSession())
+	if err != nil {
+		return nil, err
 	}
 
 	// 创建task
@@ -133,6 +138,19 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	}
 
 	return &task.CreateTaskResponse{TaskID: sResp.TaskID}, nil
+}
+func GetUserID(ctx context.Context, sessionReq *common.Session) (string, error) {
+	if userID := session.UserIDInCtxOrEmpty(ctx); userID != "" {
+		return userID, nil
+	}
+	if sessionReq == nil {
+		return "", errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+	userID := strings.TrimSpace(sessionReq.GetUserID())
+	if userID == "" {
+		return "", errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+	return userID, nil
 }
 
 func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.CreateTaskRequest) error {
@@ -174,17 +192,22 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 		strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
 		return nil, err
 	}
+	userID, err := GetUserID(ctx, req.GetSession())
+	if err != nil {
+		return nil, err
+	}
 	var taskStatus *entity.TaskStatus
 	if req.TaskStatus != nil {
 		taskStatus = lo.ToPtr(entity.TaskStatus(req.GetTaskStatus()))
 	}
-	err := t.taskSvc.UpdateTask(ctx, &service.UpdateTaskReq{
+	err = t.taskSvc.UpdateTask(ctx, &service.UpdateTaskReq{
 		TaskID:        req.GetTaskID(),
 		WorkspaceID:   req.GetWorkspaceID(),
 		TaskStatus:    taskStatus,
 		Description:   req.Description,
 		EffectiveTime: tconv.EffectiveTimeDTO2DO(req.EffectiveTime),
 		SampleRate:    req.SampleRate,
+		UserID:        userID,
 	})
 	if err != nil {
 		return resp, err

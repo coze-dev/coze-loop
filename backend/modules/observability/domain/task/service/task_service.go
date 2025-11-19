@@ -11,8 +11,9 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
-	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -39,6 +40,7 @@ type UpdateTaskReq struct {
 	Description   *string
 	EffectiveTime *entity.EffectiveTime
 	SampleRate    *float64
+	UserID        string
 }
 type ListTasksReq struct {
 	WorkspaceID int64
@@ -79,6 +81,7 @@ type ITaskService interface {
 
 func NewTaskServiceImpl(
 	tRepo repo.ITaskRepo,
+	userProvider rpc.IUserProvider,
 	idGenerator idgen.IIDGenerator,
 	backfillProducer mq.IBackfillProducer,
 	taskProcessor *processor.TaskProcessor,
@@ -86,6 +89,7 @@ func NewTaskServiceImpl(
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
 		TaskRepo:         tRepo,
+		userProvider:     userProvider,
 		idGenerator:      idGenerator,
 		backfillProducer: backfillProducer,
 		taskProcessor:    *taskProcessor,
@@ -95,6 +99,7 @@ func NewTaskServiceImpl(
 
 type TaskServiceImpl struct {
 	TaskRepo         repo.ITaskRepo
+	userProvider     rpc.IUserProvider
 	idGenerator      idgen.IIDGenerator
 	backfillProducer mq.IBackfillProducer
 	taskProcessor    processor.TaskProcessor
@@ -170,10 +175,6 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		logs.CtxError(ctx, "task [%d] not found", req.TaskID)
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("task not found"))
 	}
-	userID := session.UserIDInCtxOrEmpty(ctx)
-	if userID == "" {
-		return errorx.NewByCode(obErrorx.UserParseFailedCode)
-	}
 	// 校验更新参数是否合法
 	if req.Description != nil {
 		taskDO.Description = req.Description
@@ -217,7 +218,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 			}
 		}
 	}
-	taskDO.UpdatedBy = userID
+	taskDO.UpdatedBy = req.UserID
 	taskDO.UpdatedAt = time.Now()
 	if err = t.TaskRepo.UpdateTask(ctx, taskDO); err != nil {
 		return err
@@ -226,9 +227,19 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 }
 
 func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (resp *ListTasksResp, err error) {
+	var taskFilters *entity.TaskFilterFields
+	if req.TaskFilters != nil {
+		taskFilters = req.TaskFilters
+	}
+	taskFilters.FilterFields = append(taskFilters.FilterFields, &entity.TaskFilterField{
+		FieldName: gptr.Of(entity.TaskFieldNameTaskSource),
+		FieldType: gptr.Of(entity.FieldTypeString),
+		Values:    []string{task.TaskSourceUser},
+		QueryType: gptr.Of(entity.QueryTypeIn),
+	})
 	taskDOs, total, err := t.TaskRepo.ListTasks(ctx, repo.ListTaskParam{
 		WorkspaceIDs: []int64{req.WorkspaceID},
-		TaskFilters:  req.TaskFilters,
+		TaskFilters:  taskFilters,
 		ReqLimit:     req.Limit,
 		ReqOffset:    req.Offset,
 		OrderBy:      req.OrderBy,
