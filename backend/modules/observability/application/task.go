@@ -157,6 +157,9 @@ func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.C
 	if req.GetTask().GetRule().GetSampler().GetIsCycle() && req.GetTask().GetRule().GetSampler().GetCycleInterval() == 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid cycle_interval"))
 	}
+	if req.GetTask().GetRule().GetBackfillEffectiveTime().GetStartAt() >= req.GetTask().GetRule().GetBackfillEffectiveTime().GetEndAt() {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid back_fill_effective_time"))
+	}
 
 	return nil
 }
