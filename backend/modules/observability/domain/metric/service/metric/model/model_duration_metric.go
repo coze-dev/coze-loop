@@ -48,6 +48,7 @@ func (m *ModelDurationMetric) GroupBy() []*entity.Dimension {
 
 func (m *ModelDurationMetric) Wrappers() []entity.IMetricWrapper {
 	return []entity.IMetricWrapper{
+		wrapper.NewSumWrapper(),
 		wrapper.NewAvgWrapper(),
 		wrapper.NewMinWrapper(),
 		wrapper.NewMaxWrapper(),

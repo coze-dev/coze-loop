@@ -164,9 +164,9 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 	var metricName string
 	switch req.DrillDownValueType {
 	case metric2.DrillDownValueTypeModelName:
-		metricName = entity.MetricNameModelNamePie
+		metricName = entity.MetricNameModelTotalCountPie
 	case metric2.DrillDownValueTypeToolName:
-		metricName = entity.MetricNameToolNamePie
+		metricName = entity.MetricNameToolTotalCountPie
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid drill_down_value_type"))
 	}

@@ -153,7 +153,6 @@ type ITraceConfig interface {
 	GetQueryMaxQPS(ctx context.Context, key string) (int, error)
 	GetKeySpanTypes(ctx context.Context) map[string][]string
 	GetBackfillMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
-	GetMetricDefinitions(ctx context.Context) (map[loop_span.PlatformType]*MetricPlatformConfig, error)
 	GetMetricPlatformTenants(ctx context.Context) (*PlatformTenantsCfg, error)
 
 	conf.IConfigLoader

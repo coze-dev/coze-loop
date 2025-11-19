@@ -69,32 +69,53 @@ type MetricsService struct {
 	buildHelper    trace_service.TraceFilterProcessorBuilder
 	tenantProvider tenant.ITenantProvider
 	traceConfig    config.ITraceConfig
+	pMetrics       *entity.PlatformMetrics
 	metricProducer mq.IMetricProducer
 }
 
 func NewMetricsService(
 	metricRepo repo.IMetricRepo,
-	metricDefs []entity.IMetricDefinition,
 	tenantProvider tenant.ITenantProvider,
 	buildHelper trace_service.TraceFilterProcessorBuilder,
 	traceConfig config.ITraceConfig,
+	pMetrics *entity.PlatformMetrics,
 	metricProducer mq.IMetricProducer,
 ) (IMetricsService, error) {
 	metricDefMap := make(map[string]entity.IMetricDefinition)
-	for _, def := range metricDefs {
-		metrics := []entity.IMetricDefinition{}
-		if mAdapter, ok := def.(entity.IMetricAdapter); ok {
-			for _, wrapper := range mAdapter.Wrappers() {
-				metrics = append(metrics, wrapper.Wrap(def))
+	for _, metricGroup := range pMetrics.MetricGroups {
+		var groupMetrics []entity.IMetricDefinition
+		for _, def := range metricGroup.MetricDefinitions {
+			var metrics []entity.IMetricDefinition
+			if mAdapter, ok := def.(entity.IMetricAdapter); ok {
+				for _, wrapper := range mAdapter.Wrappers() {
+					metrics = append(metrics, wrapper.Wrap(def))
+				}
+			} else {
+				metrics = append(metrics, def)
 			}
-		} else {
-			metrics = append(metrics, def)
+			for _, def := range metrics {
+				if metricDefMap[def.Name()] != nil {
+					return nil, fmt.Errorf("duplicate metric name %s", def.Name())
+				}
+				metricDefMap[def.Name()] = def
+			}
+			groupMetrics = append(groupMetrics, metrics...)
 		}
-		for _, def := range metrics {
-			if metricDefMap[def.Name()] != nil {
-				return nil, fmt.Errorf("duplicate metric name %s", def.Name())
+		metricGroup.MetricDefinitions = groupMetrics // expand wrapper metrics
+	}
+	// check metric all valid
+	for _, def := range metricDefMap {
+		compoundMetric, ok := def.(entity.IMetricCompound)
+		if !ok {
+			continue
+		}
+		for _, metric := range compoundMetric.GetMetrics() {
+			if _, ok := metric.(entity.IMetricConst); ok {
+				continue
 			}
-			metricDefMap[def.Name()] = def
+			if metricDefMap[metric.Name()] == nil {
+				return nil, fmt.Errorf("metric name %s not registered", metric.Name())
+			}
 		}
 	}
 	logs.Info("%d metrics registered", len(metricDefMap))
@@ -105,6 +126,7 @@ func NewMetricsService(
 		buildHelper:    buildHelper,
 		traceConfig:    traceConfig,
 		metricProducer: metricProducer,
+		pMetrics:       pMetrics,
 	}, nil
 }
 
@@ -147,11 +169,6 @@ func (m *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 }
 
 func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetricsReq) error {
-	cfg, err := m.traceConfig.GetMetricDefinitions(ctx)
-	if err != nil {
-		logs.CtxError(ctx, "fail to get metric definitions, %v", err)
-		return err
-	}
 	startAt, err := time.ParseInLocation(time.DateOnly, req.StartDate, time.Local)
 	if err != nil {
 		logs.CtxError(ctx, "fail to parse time %s, %v", req.StartDate, err)
@@ -159,62 +176,65 @@ func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetri
 	}
 	endAt := time.Date(startAt.Year(), startAt.Month(), startAt.Day(), 23, 59, 59, 999999999, startAt.Location())
 	if len(req.PlatformTypes) == 0 {
-		req.PlatformTypes = lo.Keys(cfg)
+		req.PlatformTypes = lo.Keys(m.pMetrics.PlatformMetricDefs)
 	}
+	metricsMap := lo.Associate(req.MetricsNames, func(item string) (string, bool) {
+		return item, true
+	})
 	for _, platformType := range req.PlatformTypes {
-		platformTypeCfg := cfg[platformType]
+		platformTypeCfg := m.pMetrics.PlatformMetricDefs[platformType]
 		if platformTypeCfg == nil {
 			logs.CtxError(ctx, "platform type %s not found", platformType)
 			continue
 		}
-		metricsNames := req.MetricsNames
-		metricsDef := lo.Keys(platformTypeCfg.MetricDefinitions)
-		if len(metricsNames) == 0 {
-			metricsNames = lo.Keys(platformTypeCfg.MetricDefinitions)
-		} else {
-			metricsNames = lo.Intersect(metricsNames, metricsDef)
-		}
-		logs.CtxInfo(ctx, "Traverse metrics for %s: %v", platformType, metricsNames)
-		for _, metricName := range metricsNames {
-			if metricDef, ok := m.metricDefMap[metricName]; !ok {
-				logs.CtxWarn(ctx, "metric definition %s not found", metricName)
-				continue
-			} else if _, ok = metricDef.(entity.IMetricCompound); ok {
-				logs.CtxWarn(ctx, "metric definition %s is compound, ignore it", metricName)
+		for _, groupName := range platformTypeCfg.MetricGroups {
+			metricGroup := m.pMetrics.MetricGroups[groupName]
+			if metricGroup == nil {
 				continue
 			}
-			qReq := &QueryMetricsReq{
-				PlatformType:   platformType,
-				WorkspaceID:    req.WorkspaceID,
-				MetricsNames:   []string{metricName},
-				Granularity:    entity.MetricGranularity1Day,
-				StartTime:      startAt.UnixMilli(),
-				EndTime:        endAt.UnixMilli(),
-				GroupBySpaceID: true,
+			for _, metricDef := range metricGroup.MetricDefinitions {
+				metricName := metricDef.Name()
+				if len(metricsMap) != 0 && !metricsMap[metricName] {
+					continue
+				} else if metricDef, ok := m.metricDefMap[metricName]; !ok {
+					logs.CtxWarn(ctx, "metric definition %s not found", metricName)
+					continue
+				} else if _, ok = metricDef.(entity.IMetricCompound); ok {
+					logs.CtxWarn(ctx, "metric definition %s is compound, ignore it", metricName)
+					continue
+				}
+				qReq := &QueryMetricsReq{
+					PlatformType:   platformType,
+					WorkspaceID:    req.WorkspaceID,
+					MetricsNames:   []string{metricName},
+					Granularity:    entity.MetricGranularity1Day,
+					StartTime:      startAt.UnixMilli(),
+					EndTime:        endAt.UnixMilli(),
+					GroupBySpaceID: true,
+				}
+				for _, obj := range platformTypeCfg.DrillDownObjects {
+					qReq.DrillDownFields = append(qReq.DrillDownFields, m.pMetrics.DrillDownObjects[obj])
+				}
+				for _, obj := range metricGroup.DrillDownObjects {
+					qReq.DrillDownFields = append(qReq.DrillDownFields, m.pMetrics.DrillDownObjects[obj])
+				}
+				qReq.DrillDownFields = append(qReq.DrillDownFields, &loop_span.FilterField{
+					FieldName: loop_span.SpanFieldSpaceId,
+					FieldType: loop_span.FieldTypeString,
+				})
+				resp, err := m.queryMetrics(ctx, qReq)
+				if err != nil {
+					logs.CtxWarn(ctx, "fail to query metric, %v", err)
+					continue
+				}
+				mEvents := m.extractMetrics(metricName, resp.Metrics[metricName])
+				for _, mEvent := range mEvents {
+					mEvent.PlatformType = string(qReq.PlatformType)
+					mEvent.StartDate = req.StartDate
+					mEvent.MetricName = metricName
+				}
+				_ = m.metricProducer.EmitMetrics(ctx, mEvents)
 			}
-			for _, obj := range platformTypeCfg.DrillDownObjects {
-				qReq.DrillDownFields = append(qReq.DrillDownFields, obj.Field)
-			}
-			for _, obj := range platformTypeCfg.MetricDefinitions[metricName] {
-				qReq.DrillDownFields = append(qReq.DrillDownFields, obj.Field)
-			}
-			qReq.DrillDownFields = append(qReq.DrillDownFields, &loop_span.FilterField{
-				FieldName: loop_span.SpanFieldSpaceId,
-				FieldType: loop_span.FieldTypeString,
-			})
-			resp, err := m.queryMetrics(ctx, qReq)
-			if err != nil {
-				logs.CtxWarn(ctx, "fail to query metric, %v", err)
-				continue
-			}
-			metricName := qReq.MetricsNames[0]
-			mEvents := m.extractMetrics(metricName, resp.Metrics[metricName], platformTypeCfg)
-			for _, mEvent := range mEvents {
-				mEvent.PlatformType = string(qReq.PlatformType)
-				mEvent.StartDate = req.StartDate
-				mEvent.MetricName = metricName
-			}
-			_ = m.metricProducer.EmitMetrics(ctx, mEvents)
 		}
 	}
 	return nil
@@ -226,6 +246,7 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 	if len(metrics) == 0 {
 		return &QueryMetricsResp{}, nil
 	}
+	logs.CtxInfo(ctx, "query compound metric %s", mDef.Name(), lo.Map(metrics, func(m entity.IMetricDefinition, _ int) string { return m.Name() }))
 	var (
 		metricsResp = make([]*QueryMetricsResp, len(metrics))
 		eGroup      errgroup.Group
@@ -235,17 +256,32 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 		eGroup.Go(func(t int) func() error {
 			return func() error {
 				defer goroutine.Recovery(ctx)
-				sReq := &QueryMetricsReq{
-					PlatformType:    req.PlatformType,
-					WorkspaceID:     req.WorkspaceID,
-					MetricsNames:    []string{metric.Name()},
-					Granularity:     req.Granularity,
-					FilterFields:    req.FilterFields,
-					DrillDownFields: req.DrillDownFields,
-					StartTime:       req.StartTime,
-					EndTime:         req.EndTime,
+				var (
+					resp *QueryMetricsResp
+					err  error
+				)
+				// 常量指标
+				if _, ok := metric.(entity.IMetricConst); ok {
+					resp = &QueryMetricsResp{
+						Metrics: map[string]*entity.Metric{
+							metric.Name(): {
+								Summary: metric.Expression(req.Granularity).Expression,
+							},
+						},
+					}
+				} else {
+					sReq := &QueryMetricsReq{
+						PlatformType:    req.PlatformType,
+						WorkspaceID:     req.WorkspaceID,
+						MetricsNames:    []string{metric.Name()},
+						Granularity:     req.Granularity,
+						FilterFields:    req.FilterFields,
+						DrillDownFields: req.DrillDownFields,
+						StartTime:       req.StartTime,
+						EndTime:         req.EndTime,
+					}
+					resp, err = m.queryMetrics(ctx, sReq)
 				}
-				resp, err := m.queryMetrics(ctx, sReq)
 				lock.Lock()
 				defer lock.Unlock()
 				if err == nil {
@@ -261,7 +297,7 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 	// 复合指标计算...
 	switch mCompound.Operator() {
 	case entity.MetricOperatorDivide:
-		// time_series相除/summary相除
+		// time_series相除/summary相除/time_series除summary
 		return m.divideMetrics(ctx, metricsResp, mCompound.GetMetrics(), mDef)
 	case entity.MetricOperatorPie:
 		// summary指标组合构成饼图
@@ -339,7 +375,9 @@ func (m *MetricsService) buildMetricQuery(ctx context.Context, req *QueryMetrics
 	if req.GroupBySpaceID {
 		_ = param.Filters.Traverse(func(f *loop_span.FilterField) error {
 			if f.FieldName == loop_span.SpanFieldSpaceId { // always true
-				f.QueryType = ptr.Of(loop_span.QueryTypeEnumAlwaysTrue)
+				if len(f.Values) != 0 && f.Values[0] == "0" { // space id not passed
+					f.QueryType = ptr.Of(loop_span.QueryTypeEnumAlwaysTrue)
+				}
 			}
 			return nil
 		})
@@ -577,6 +615,10 @@ func (m *MetricsService) divideMetrics(ctx context.Context, resp []*QueryMetrics
 		ret.Metrics[newMetric.Name()] = &entity.Metric{
 			Summary: divideNumber(numerator.Summary, denominator.Summary),
 		}
+	} else if numerator.TimeSeries != nil && denominator.Summary != "" {
+		ret.Metrics[newMetric.Name()] = &entity.Metric{
+			TimeSeries: divideTimeSeriesBySummary(ctx, numerator.TimeSeries, denominator.Summary),
+		}
 	}
 	return ret, nil
 }
@@ -631,6 +673,24 @@ func divideTimeSeries(ctx context.Context, a, b entity.TimeSeries) entity.TimeSe
 	return ret
 }
 
+func divideTimeSeriesBySummary(ctx context.Context, a entity.TimeSeries, b string) entity.TimeSeries {
+	ret := make(entity.TimeSeries)
+	for k, val := range a {
+		ret[k] = make([]*entity.MetricPoint, 0)
+		for i := 0; i < len(val); i++ {
+			dividedVal := divideNumber(val[i].Value, b)
+			if dividedVal == "" {
+				dividedVal = "null" // 无法除, 那就是null
+			}
+			ret[k] = append(ret[k], &entity.MetricPoint{
+				Timestamp: val[i].Timestamp,
+				Value:     dividedVal,
+			})
+		}
+	}
+	return ret
+}
+
 // 预期就是多个Summary结果组合
 func (m *MetricsService) pieMetrics(ctx context.Context, resp []*QueryMetricsResp, newMetricName string) (*QueryMetricsResp, error) {
 	ret := &QueryMetricsResp{
@@ -658,15 +718,16 @@ func getMetricValue(v any) string {
 	return ret
 }
 
-func (m *MetricsService) extractMetrics(metricName string, metric *entity.Metric, cfg *config.MetricPlatformConfig) []*entity.MetricEvent {
+func (m *MetricsService) traverseMetricGroup() {
+
+}
+
+func (m *MetricsService) extractMetrics(metricName string, metric *entity.Metric) []*entity.MetricEvent {
 	def := m.metricDefMap[metricName]
 	if def == nil {
 		return nil
 	}
-	objectList := append(cfg.DrillDownObjects, cfg.MetricDefinitions[metricName]...)
-	objectKeys := lo.Associate(objectList, func(item *config.MetricObjectKeyConfig) (string, *config.MetricObjectKeyConfig) {
-		return item.Field.FieldName, item
-	})
+	objectKeys := m.pMetrics.DrillDownObjects
 	var events []*entity.MetricEvent
 	switch def.Type() {
 	case entity.MetricTypeTimeSeries:
@@ -680,7 +741,7 @@ func (m *MetricsService) extractMetrics(metricName string, metric *entity.Metric
 				_ = json.Unmarshal([]byte(k), &mp)
 				for objName, objVal := range mp {
 					if val := objectKeys[objName]; val != nil {
-						event.ObjectKeys[val.StorageKey] = objVal
+						event.ObjectKeys[val.FieldName] = objVal
 					} else if objName == loop_span.SpanFieldSpaceId {
 						event.WorkspaceID = objVal
 					}
@@ -708,7 +769,7 @@ func (m *MetricsService) extractMetrics(metricName string, metric *entity.Metric
 				_ = json.Unmarshal([]byte(k), &mp)
 				for objName, objVal := range mp {
 					if val := objectKeys[objName]; val != nil {
-						event.ObjectKeys[val.StorageKey] = objVal
+						event.ObjectKeys[val.FieldName] = objVal
 					} else if objName == loop_span.SpanFieldSpaceId {
 						event.WorkspaceID = objVal
 					}

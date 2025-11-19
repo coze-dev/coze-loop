@@ -64,18 +64,28 @@ const (
 	MetricNameModelDuration             = "model_duration"
 	MetricNameModelTTFT                 = "model_ttft"
 	MetricNameModelTPOT                 = "model_tpot"
-	MetricNameModelNamePie              = "model_name_pie"
 	MetricNameModelTotalCount           = "model_total_count"
+	MetricNameModelTotalCountPie        = "model_total_count_pie"
+	MetricNameModelTotalErrorCount      = "model_total_error_count"
+	MetricNameModelTotalSuccessCount    = "model_success_error_count"
+	MetricNameModelErrorCodePie         = "model_error_code_pie"
 
 	// Tool 工具统计指标
-	MetricNameToolTotalCount   = "tool_total_count"
-	MetricNameToolDuration     = "tool_duration"
-	MetricNameToolSuccessRatio = "tool_success_ratio"
-	MetricNameToolNamePie      = "tool_name_pie"
+	MetricNameToolTotalCount        = "tool_total_count"
+	MetricNameToolTotalCountPie     = "tool_total_count_pie"
+	MetricNameToolTotalErrorCount   = "tool_total_error_count"
+	MetricNameToolTotalSuccessCount = "tool_total_success_count"
+	MetricNameToolDuration          = "tool_duration"
+	MetricNameToolSuccessRatio      = "tool_success_ratio"
+	MetricNameToolErrorCodePie      = "tool_error_code_pie"
 
 	// Service 服务调用指标
 	MetricNameServiceTraceCount         = "service_trace_count"
+	MetricNameServiceTraceErrorCount    = "service_trace_error_count"
+	MetricNameServiceTraceSuccessCount  = "service_trace_success_count"
 	MetricNameServiceSpanCount          = "service_span_count"
+	MetricNameServiceSpanErrorCount     = "service_span_error_count"
+	MetricNameServiceSpanSuccessCount   = "service_span_success_count"
 	MetricNameServiceUserCount          = "service_user_count"
 	MetricNameServiceMessageCount       = "service_message_count"
 	MetricNameServiceQPSAll             = "service_qps_all"
@@ -124,6 +134,10 @@ type IMetricDefinition interface {
 
 type IMetricFill interface {
 	Interpolate() string
+}
+
+type IMetricConst interface { // 常量指标
+	constFunc()
 }
 
 type IMetricCompound interface {
@@ -193,4 +207,20 @@ func NewTimeIntervals(startTime, endTime int64, granularity MetricGranularity) [
 		truncatedTime += intervalMills
 	}
 	return ret
+}
+
+type PlatformMetrics struct {
+	MetricGroups       map[string]*MetricGroup
+	DrillDownObjects   map[string]*loop_span.FilterField
+	PlatformMetricDefs map[loop_span.PlatformType]*PlatformMetricDef
+}
+
+type PlatformMetricDef struct {
+	DrillDownObjects []string
+	MetricGroups     []string
+}
+
+type MetricGroup struct {
+	DrillDownObjects  []string
+	MetricDefinitions []IMetricDefinition
 }
