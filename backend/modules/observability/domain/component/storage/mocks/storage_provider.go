@@ -42,15 +42,15 @@ func (m *MockIStorageProvider) EXPECT() *MockIStorageProviderMockRecorder {
 }
 
 // GetTraceStorage mocks base method.
-func (m *MockIStorageProvider) GetTraceStorage(ctx context.Context, WorkSpaceID string) storage.Storage {
+func (m *MockIStorageProvider) GetTraceStorage(ctx context.Context, WorkSpaceID, platformType string) storage.Storage {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTraceStorage", ctx, WorkSpaceID)
+	ret := m.ctrl.Call(m, "GetTraceStorage", ctx, WorkSpaceID, platformType)
 	ret0, _ := ret[0].(storage.Storage)
 	return ret0
 }
 
 // GetTraceStorage indicates an expected call of GetTraceStorage.
-func (mr *MockIStorageProviderMockRecorder) GetTraceStorage(ctx, WorkSpaceID any) *gomock.Call {
+func (mr *MockIStorageProviderMockRecorder) GetTraceStorage(ctx, WorkSpaceID, platformType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceStorage", reflect.TypeOf((*MockIStorageProvider)(nil).GetTraceStorage), ctx, WorkSpaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceStorage", reflect.TypeOf((*MockIStorageProvider)(nil).GetTraceStorage), ctx, WorkSpaceID, platformType)
 }
