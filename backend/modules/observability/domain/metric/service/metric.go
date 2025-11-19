@@ -174,6 +174,7 @@ func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetri
 		} else {
 			metricsNames = lo.Intersect(metricsNames, metricsDef)
 		}
+		logs.CtxInfo(ctx, "Traverse metrics for %s: %v", platformType, metricsNames)
 		for _, metricName := range metricsNames {
 			if metricDef, ok := m.metricDefMap[metricName]; !ok {
 				logs.CtxWarn(ctx, "metric definition %s not found", metricName)

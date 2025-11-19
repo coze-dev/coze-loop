@@ -191,8 +191,9 @@ func (t *TraceConfigCenter) GetMetricDefinitions(ctx context.Context) (map[loop_
 			pCfg.DrillDownObjects = append(pCfg.DrillDownObjects, cfg.ObjectKeys[obj])
 		}
 		for _, mName := range val.MetricDefinitions {
+			pCfg.MetricDefinitions[mName] = []*config.MetricObjectKeyConfig{}
 			if cfg.MetricDefinitions[mName] == nil {
-				return nil, fmt.Errorf("metric definition %s not exist", mName)
+				continue
 			}
 			for _, obj := range cfg.MetricDefinitions[mName].DrillDownObjects {
 				if cfg.ObjectKeys[obj] == nil {
