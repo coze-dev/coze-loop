@@ -166,8 +166,8 @@ func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVe
 	var modelSpan *evaluatorSpan
 	modelCtx := ctx
 
-    if !disableTracing {
-        modelSpan, modelCtx = newEvaluatorSpan(ctx, evaluatorVersion.ModelConfig.ModelName, "model", strconv.FormatInt(exptSpaceID, 10), true)
+	if !disableTracing {
+		modelSpan, modelCtx = newEvaluatorSpan(ctx, evaluatorVersion.ModelConfig.ModelName, "model", strconv.FormatInt(exptSpaceID, 10), true)
 		defer func() {
 			modelSpan.reportModelSpan(modelCtx, evaluatorVersion, resp, err)
 		}()

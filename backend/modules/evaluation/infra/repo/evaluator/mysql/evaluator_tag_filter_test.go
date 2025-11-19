@@ -505,65 +505,65 @@ func TestConvertToInterfaceSlice(t *testing.T) {
 }
 
 func TestGetSourceIDsByFilterConditions_SelfJoinAndLike(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-    ctrl := gomock.NewController(t)
-    defer ctrl.Finish()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-    // sqlmock
-    sqlDB, mock, err := sqlmock.New()
-    if err != nil {
-        t.Fatalf("failed to create sqlmock: %v", err)
-    }
-    defer func() { _ = sqlDB.Close() }()
+	// sqlmock
+	sqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer func() { _ = sqlDB.Close() }()
 
-    gormDB, err := gorm.Open(mysql.New(mysql.Config{
-        Conn:                      sqlDB,
-        SkipInitializeWithVersion: true,
-    }), &gorm.Config{})
-    if err != nil {
-        t.Fatalf("failed to open gorm db: %v", err)
-    }
+	gormDB, err := gorm.Open(mysql.New(mysql.Config{
+		Conn:                      sqlDB,
+		SkipInitializeWithVersion: true,
+	}), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open gorm db: %v", err)
+	}
 
-    mockProvider := dbmock.NewMockProvider(ctrl)
-    mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
+	mockProvider := dbmock.NewMockProvider(ctrl)
+	mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
 
-    // 构造筛选：AND(Category=LLM, BusinessScenario=安全风控) + SearchKeyword("AI")
-    filters := entity.NewEvaluatorFilters().
-        WithLogicOp(entity.FilterLogicOp_And).
-        AddCondition(entity.NewEvaluatorFilterCondition(
-            entity.EvaluatorTagKey_Category,
-            entity.EvaluatorFilterOperatorType_In,
-            "LLM",
-        )).
-        AddCondition(entity.NewEvaluatorFilterCondition(
-            entity.EvaluatorTagKey_BusinessScenario,
-            entity.EvaluatorFilterOperatorType_In,
-            "安全风控",
-        ))
-    option := entity.NewEvaluatorFilterOption().WithSearchKeyword("AI").WithFilters(filters)
+	// 构造筛选：AND(Category=LLM, BusinessScenario=安全风控) + SearchKeyword("AI")
+	filters := entity.NewEvaluatorFilters().
+		WithLogicOp(entity.FilterLogicOp_And).
+		AddCondition(entity.NewEvaluatorFilterCondition(
+			entity.EvaluatorTagKey_Category,
+			entity.EvaluatorFilterOperatorType_In,
+			"LLM",
+		)).
+		AddCondition(entity.NewEvaluatorFilterCondition(
+			entity.EvaluatorTagKey_BusinessScenario,
+			entity.EvaluatorFilterOperatorType_In,
+			"安全风控",
+		))
+	option := entity.NewEvaluatorFilterOption().WithSearchKeyword("AI").WithFilters(filters)
 
-    // 断言 COUNT：包含 LEFT JOIN t_name、JOIN t_1 / t_2，且基表为 evaluator_tag
-    // COUNT 查询的 WHERE 子句也使用 t_name.tag_value LIKE
-    countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
-    mock.ExpectQuery(
-        "SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*t_name\\.tag_value.*LIKE.*",
-    ).WillReturnRows(countRows)
+	// 断言 COUNT：包含 LEFT JOIN t_name、JOIN t_1 / t_2，且基表为 evaluator_tag
+	// COUNT 查询的 WHERE 子句也使用 t_name.tag_value LIKE
+	countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
+	mock.ExpectQuery(
+		"SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*t_name\\.tag_value.*LIKE.*",
+	).WillReturnRows(countRows)
 
-    // 断言 SELECT：包含 DISTINCT、LEFT JOIN t_name、JOIN t_1 / t_2、LIKE 与 Name 标签限定
-    // SearchKeyword 现在使用 t_name 别名进行 LIKE 查询，避免与主表条件冲突
-    selectRows := sqlmock.NewRows([]string{"source_id"})
-    mock.ExpectQuery(
-        "SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*t_name\\.tag_value.*LIKE.*ORDER BY.*",
-    ).WillReturnRows(selectRows)
+	// 断言 SELECT：包含 DISTINCT、LEFT JOIN t_name、JOIN t_1 / t_2、LIKE 与 Name 标签限定
+	// SearchKeyword 现在使用 t_name 别名进行 LIKE 查询，避免与主表条件冲突
+	selectRows := sqlmock.NewRows([]string{"source_id"})
+	mock.ExpectQuery(
+		"SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*t_name\\.tag_value.*LIKE.*ORDER BY.*",
+	).WillReturnRows(selectRows)
 
-    dao := &EvaluatorTagDAOImpl{provider: mockProvider}
-    _, _, err = dao.GetSourceIDsByFilterConditions(context.Background(), 1, option, 12, 1, "zh-CN")
-    assert.NoError(t, err)
+	dao := &EvaluatorTagDAOImpl{provider: mockProvider}
+	_, _, err = dao.GetSourceIDsByFilterConditions(context.Background(), 1, option, 12, 1, "zh-CN")
+	assert.NoError(t, err)
 
-    if err := mock.ExpectationsWereMet(); err != nil {
-        t.Errorf("there were unfulfilled expectations: %s", err)
-    }
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
 }
 
 func TestEvaluatorTagDAOImpl_AggregateTagValuesByType(t *testing.T) {

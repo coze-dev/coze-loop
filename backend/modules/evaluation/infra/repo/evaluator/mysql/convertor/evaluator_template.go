@@ -21,7 +21,7 @@ func ConvertEvaluatorTemplateDO2PO(do *evaluatordo.EvaluatorTemplate) (*model.Ev
 		return nil, nil
 	}
 
-    po := &model.EvaluatorTemplate{
+	po := &model.EvaluatorTemplate{
 		ID:                 do.ID,
 		SpaceID:            ptr.Of(do.SpaceID),
 		Name:               ptr.Of(do.Name),
@@ -30,12 +30,12 @@ func ConvertEvaluatorTemplateDO2PO(do *evaluatordo.EvaluatorTemplate) (*model.Ev
 		ReceiveChatHistory: do.ReceiveChatHistory,
 		Popularity:         do.Popularity,
 	}
-    if do.EvaluatorInfo != nil {
-        b, err := json.Marshal(do.EvaluatorInfo)
-        if err == nil {
-            po.EvaluatorInfo = ptr.Of(b)
-        }
-    }
+	if do.EvaluatorInfo != nil {
+		b, err := json.Marshal(do.EvaluatorInfo)
+		if err == nil {
+			po.EvaluatorInfo = ptr.Of(b)
+		}
+	}
 
 	// 序列化InputSchema
 	if len(do.InputSchemas) > 0 {
