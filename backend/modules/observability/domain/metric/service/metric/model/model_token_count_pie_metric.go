@@ -69,6 +69,12 @@ func (m *ModelTokenCountPieMetric) GroupBy() []*entity.Dimension {
 	}
 }
 
+func (m *ModelTokenCountPieMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewModelTokenCountPieMetric() entity.IMetricDefinition {
 	return &ModelTokenCountPieMetric{}
 }

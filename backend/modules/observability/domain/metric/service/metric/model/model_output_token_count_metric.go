@@ -53,6 +53,12 @@ func (m *ModelOutputTokenCountMetric) Wrappers() []entity.IMetricWrapper {
 	}
 }
 
+func (m *ModelOutputTokenCountMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewModelOutputTokenCountMetric() entity.IMetricDefinition {
 	return &ModelOutputTokenCountMetric{}
 }

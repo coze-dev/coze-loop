@@ -5,9 +5,10 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	consts "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/const"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
@@ -27,8 +28,7 @@ func (m *ServiceQPSAllMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceQPSAllMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	expression := fmt.Sprintf("count()/%d", entity.GranularityToSecond(granularity))
-	return &entity.Expression{Expression: expression}
+	return &entity.Expression{}
 }
 
 func (m *ServiceQPSAllMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
@@ -37,6 +37,21 @@ func (m *ServiceQPSAllMetric) Where(ctx context.Context, filter span_filter.Filt
 
 func (m *ServiceQPSAllMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ServiceQPSAllMetric) GetMetrics() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{
+		wrapper.NewTimeSeriesWrapper().Wrap(NewServiceTraceCountMetric()),
+		consts.NewConstSecondMetric(),
+	}
+}
+
+func (m *ServiceQPSAllMetric) Operator() entity.MetricOperator {
+	return entity.MetricOperatorDivide
+}
+
+func (m *ServiceQPSAllMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewServiceQPSAllMetric() entity.IMetricDefinition {

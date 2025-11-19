@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	service_metric "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
@@ -15,6 +16,7 @@ type GeneralFailRatioMetric struct {
 	entity.MetricFillNull
 }
 
+// Span错误率
 func (m *GeneralFailRatioMetric) Name() string {
 	return entity.MetricNameGeneralFailRatio
 }
@@ -28,23 +30,30 @@ func (m *GeneralFailRatioMetric) Source() entity.MetricSource {
 }
 
 func (m *GeneralFailRatioMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return &entity.Expression{
-		Expression: "countIf(1, %s != 0) / count()",
-		Fields: []*loop_span.FilterField{
-			{
-				FieldName: loop_span.SpanFieldStatusCode,
-				FieldType: loop_span.FieldTypeLong,
-			},
-		},
-	}
+	return &entity.Expression{}
 }
 
 func (m *GeneralFailRatioMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return filter.BuildALLSpanFilter(ctx, env)
+	return nil, nil
 }
 
 func (m *GeneralFailRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *GeneralFailRatioMetric) GetMetrics() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{
+		service_metric.NewServiceSpanErrorCountMetric(),
+		service_metric.NewServiceSpanCountMetric(),
+	}
+}
+
+func (m *GeneralFailRatioMetric) Operator() entity.MetricOperator {
+	return entity.MetricOperatorDivide
+}
+
+func (m *GeneralFailRatioMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewGeneralFailRatioMetric() entity.IMetricDefinition {

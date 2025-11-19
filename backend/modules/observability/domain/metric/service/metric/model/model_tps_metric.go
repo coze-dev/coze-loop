@@ -65,6 +65,10 @@ func (m *ModelTPSMetric) Wrappers() []entity.IMetricWrapper {
 	}
 }
 
+func (m *ModelTPSMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
+}
+
 func NewModelTPSMetric() entity.IMetricDefinition {
 	return &ModelTPSMetric{}
 }

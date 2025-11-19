@@ -45,6 +45,12 @@ func (m *ServiceTraceCountMetric) Wrappers() []entity.IMetricWrapper {
 	}
 }
 
+func (m *ServiceTraceCountMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewServiceTraceCountMetric() entity.IMetricDefinition {
 	return &ServiceTraceCountMetric{}
 }

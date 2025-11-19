@@ -28,3 +28,7 @@ type GetMetricsResult struct {
 type IMetricRepo interface {
 	GetMetrics(ctx context.Context, param *GetMetricsParam) (*GetMetricsResult, error)
 }
+
+type IOfflineMetricRepo interface {
+	IMetricRepo
+}

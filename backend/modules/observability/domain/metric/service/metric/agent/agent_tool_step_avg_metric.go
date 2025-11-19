@@ -51,6 +51,10 @@ func (m *AgentToolExecutionStepAvgMetric) Operator() entity.MetricOperator {
 	return entity.MetricOperatorDivide
 }
 
+func (m *AgentToolExecutionStepAvgMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
+}
+
 func NewAgentToolExecutionStepAvgMetric() entity.IMetricDefinition {
 	return &AgentToolExecutionStepAvgMetric{}
 }

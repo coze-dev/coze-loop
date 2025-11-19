@@ -64,18 +64,28 @@ const (
 	MetricNameModelDuration             = "model_duration"
 	MetricNameModelTTFT                 = "model_ttft"
 	MetricNameModelTPOT                 = "model_tpot"
-	MetricNameModelNamePie              = "model_name_pie"
 	MetricNameModelTotalCount           = "model_total_count"
+	MetricNameModelTotalCountPie        = "model_total_count_pie"
+	MetricNameModelTotalErrorCount      = "model_total_error_count"
+	MetricNameModelTotalSuccessCount    = "model_success_error_count"
+	MetricNameModelErrorCodePie         = "model_error_code_pie"
 
 	// Tool 工具统计指标
-	MetricNameToolTotalCount   = "tool_total_count"
-	MetricNameToolDuration     = "tool_duration"
-	MetricNameToolSuccessRatio = "tool_success_ratio"
-	MetricNameToolNamePie      = "tool_name_pie"
+	MetricNameToolTotalCount        = "tool_total_count"
+	MetricNameToolTotalCountPie     = "tool_total_count_pie"
+	MetricNameToolTotalErrorCount   = "tool_total_error_count"
+	MetricNameToolTotalSuccessCount = "tool_total_success_count"
+	MetricNameToolDuration          = "tool_duration"
+	MetricNameToolSuccessRatio      = "tool_success_ratio"
+	MetricNameToolErrorCodePie      = "tool_error_code_pie"
 
 	// Service 服务调用指标
 	MetricNameServiceTraceCount         = "service_trace_count"
+	MetricNameServiceTraceErrorCount    = "service_trace_error_count"
+	MetricNameServiceTraceSuccessCount  = "service_trace_success_count"
 	MetricNameServiceSpanCount          = "service_span_count"
+	MetricNameServiceSpanErrorCount     = "service_span_error_count"
+	MetricNameServiceSpanSuccessCount   = "service_span_success_count"
 	MetricNameServiceUserCount          = "service_user_count"
 	MetricNameServiceMessageCount       = "service_message_count"
 	MetricNameServiceQPSAll             = "service_qps_all"
@@ -96,6 +106,12 @@ const (
 	// 复合指标计算
 	MetricOperatorDivide = "divide"
 	MetricOperatorPie    = "pie"
+
+	// 离线指标计算
+	MetricOfflineAggrTypeSum = "sum"
+	MetricOfflineAggrTypeAvg = "avg"
+	MetricOfflineAggrTypeMax = "max"
+	MetricOfflineAggrTypeMin = "min"
 )
 
 type Compare struct {
@@ -103,14 +119,20 @@ type Compare struct {
 	Shift int64 // shift seconds
 }
 type Dimension struct {
-	Expression *Expression            // 表达式
-	Field      *loop_span.FilterField // 字段名, 设计上用于聚合
-	Alias      string                 // 别名
+	Expression  *Expression            // 表达式
+	OExpression *OExpression           // 离线计算
+	Field       *loop_span.FilterField // 字段名, 设计上用于聚合
+	Alias       string                 // 别名
 }
 
 type Expression struct {
 	Expression string
 	Fields     []*loop_span.FilterField
+}
+
+type OExpression struct {
+	AggrType   string
+	MetricName string // 如果需要需要使用其他指标进行聚合
 }
 
 type IMetricDefinition interface {
@@ -120,15 +142,24 @@ type IMetricDefinition interface {
 	Expression(MetricGranularity) *Expression                                                          // 计算表达式
 	Where(context.Context, span_filter.Filter, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) // 筛选条件
 	GroupBy() []*Dimension                                                                             // 聚合维度
+	OExpression() *OExpression                                                                         // 离线指标
 }
 
 type IMetricFill interface {
 	Interpolate() string
 }
 
+type IMetricConst interface { // 常量指标
+	constFunc()
+}
+
 type IMetricCompound interface {
 	GetMetrics() []IMetricDefinition
 	Operator() MetricOperator
+}
+
+type IOfflineMetricAggr interface {
+	Aggr()
 }
 
 type MetricFillNull struct{}
@@ -193,4 +224,20 @@ func NewTimeIntervals(startTime, endTime int64, granularity MetricGranularity) [
 		truncatedTime += intervalMills
 	}
 	return ret
+}
+
+type PlatformMetrics struct {
+	MetricGroups       map[string]*MetricGroup
+	DrillDownObjects   map[string]*loop_span.FilterField
+	PlatformMetricDefs map[loop_span.PlatformType]*PlatformMetricDef
+}
+
+type PlatformMetricDef struct {
+	DrillDownObjects []string
+	MetricGroups     []string
+}
+
+type MetricGroup struct {
+	DrillDownObjects  []string
+	MetricDefinitions []IMetricDefinition
 }

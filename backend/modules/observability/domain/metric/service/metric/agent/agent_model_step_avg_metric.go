@@ -7,8 +7,8 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
-	service_metric "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
 	model_metric "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
+	service_metric "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
@@ -49,6 +49,10 @@ func (m *AgentModelExecutionStepAvgMetric) GetMetrics() []entity.IMetricDefiniti
 
 func (m *AgentModelExecutionStepAvgMetric) Operator() entity.MetricOperator {
 	return entity.MetricOperatorDivide
+}
+
+func (m *AgentModelExecutionStepAvgMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewAgentModelExecutionStepAvgMetric() entity.IMetricDefinition {
