@@ -49,6 +49,12 @@ func (m *GeneralModelTotalTokensMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
+func (m *GeneralModelTotalTokensMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewGeneralModelTotalTokensMetric() entity.IMetricDefinition {
 	return &GeneralModelTotalTokensMetric{}
 }

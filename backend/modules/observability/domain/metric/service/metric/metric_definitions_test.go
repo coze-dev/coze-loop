@@ -137,7 +137,6 @@ func collectBaseMetricDefinitions() []entity.IMetricDefinition {
 		generalmetrics.NewGeneralToolTotalCountMetric(),
 		modelmetrics.NewModelDurationMetric(),
 		modelmetrics.NewModelInputTokenCountMetric(),
-		modelmetrics.NewModelNamePieMetric(),
 		modelmetrics.NewModelQPMAllMetric(),
 		modelmetrics.NewModelQPMFailMetric(),
 		modelmetrics.NewModelQPMSuccessMetric(),
@@ -153,6 +152,7 @@ func collectBaseMetricDefinitions() []entity.IMetricDefinition {
 		modelmetrics.NewModelTPOTMetric(),
 		modelmetrics.NewModelTPSMetric(),
 		modelmetrics.NewModelTTFTMetric(),
+		modelmetrics.NewModelErrorCodePieMetric(),
 		servicemetrics.NewServiceDurationMetric(),
 		servicemetrics.NewServiceExecutionStepCountMetric(),
 		servicemetrics.NewServiceMessageCountMetric(),
@@ -167,9 +167,10 @@ func collectBaseMetricDefinitions() []entity.IMetricDefinition {
 		servicemetrics.NewServiceTraceCountMetric(),
 		servicemetrics.NewServiceUserCountMetric(),
 		toolmetrics.NewToolDurationMetric(),
-		toolmetrics.NewToolNamePieMetric(),
 		toolmetrics.NewToolSuccessRatioMetric(),
 		toolmetrics.NewToolTotalCountMetric(),
+		toolmetrics.
+			NewToolErrorCodePieMetric(),
 	}
 }
 
@@ -196,6 +197,10 @@ func renderExpressions(t *testing.T, defs []entity.IMetricDefinition, gran entit
 	t.Helper()
 	res := make(map[string]string)
 	for _, def := range defs {
+		// 跳过复合指标，它们没有直接的表达式
+		if _, ok := def.(entity.IMetricCompound); ok {
+			continue
+		}
 		_ = def.Type()
 		_ = def.GroupBy()
 		_ = def.Source()
@@ -240,6 +245,7 @@ var baseExpressionGenerators = map[string]func(entity.MetricGranularity) string{
 	entity.MetricNameServiceTraceCount:         countExpr,
 	entity.MetricNameServiceSpanCount:          countExpr,
 	entity.MetricNameToolTotalCount:            countExpr,
+	entity.MetricNameToolErrorCodePie:          countExpr,
 	entity.MetricNameServiceExecutionStepCount: countExpr,
 	entity.MetricNameGeneralFailRatio:          failRatioExpr,
 	entity.MetricNameGeneralModelFailRatio:     failRatioExpr,
@@ -249,6 +255,7 @@ var baseExpressionGenerators = map[string]func(entity.MetricGranularity) string{
 	entity.MetricNameGeneralModelTotalTokens:   sumInputOutputTokensExpr,
 	entity.MetricNameModelTokenCount:           sumInputOutputTokensExpr,
 	entity.MetricNameModelTokenCountPie:        sumInputOutputTokensExpr,
+	entity.MetricNameModelErrorCodePie:         countExpr,
 	entity.MetricNameModelDuration:             durationMillisExpr(loop_span.SpanFieldDuration),
 	entity.MetricNameServiceDuration:           durationMillisExpr(loop_span.SpanFieldDuration),
 	entity.MetricNameToolDuration:              durationMillisExpr(loop_span.SpanFieldDuration),
@@ -256,8 +263,6 @@ var baseExpressionGenerators = map[string]func(entity.MetricGranularity) string{
 	entity.MetricNameModelInputTokenCount:      sumFieldExpr(loop_span.SpanFieldInputTokens),
 	entity.MetricNameModelSystemTokenCount:     sumFieldExpr("model_system_tokens"),
 	entity.MetricNameModelToolChoiceTokenCount: sumFieldExpr("model_tool_choice_tokens"),
-	entity.MetricNameModelNamePie:              constantExpr("1"),
-	entity.MetricNameToolNamePie:               constantExpr("1"),
 	entity.MetricNameModelSuccessRatio:         successRatioExpr,
 	entity.MetricNameServiceSuccessRatio:       successRatioExpr,
 	entity.MetricNameToolSuccessRatio:          successRatioExpr,
@@ -316,10 +321,6 @@ func uniqFieldExpr(field string) func(entity.MetricGranularity) string {
 	return func(entity.MetricGranularity) string {
 		return fmt.Sprintf("uniq(%s)", field)
 	}
-}
-
-func constantExpr(value string) func(entity.MetricGranularity) string {
-	return func(entity.MetricGranularity) string { return value }
 }
 
 func tokenThroughputExpr(divisor int64) func(entity.MetricGranularity) string {

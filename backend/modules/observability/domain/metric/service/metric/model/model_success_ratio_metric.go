@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
@@ -28,23 +29,30 @@ func (m *ModelSuccessRatioMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelSuccessRatioMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return &entity.Expression{
-		Expression: "countIf(1, %s = 0) / count()",
-		Fields: []*loop_span.FilterField{
-			{
-				FieldName: loop_span.SpanFieldStatusCode,
-				FieldType: loop_span.FieldTypeLong,
-			},
-		},
-	}
+	return &entity.Expression{}
 }
 
 func (m *ModelSuccessRatioMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return filter.BuildLLMSpanFilter(ctx, env)
+	return nil, nil
+}
+
+func (m *ModelSuccessRatioMetric) GetMetrics() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{
+		wrapper.NewTimeSeriesWrapper().Wrap(NewModelTotalSuccessCountMetric()),
+		wrapper.NewTimeSeriesWrapper().Wrap(NewModelTotalCountMetric()),
+	}
+}
+
+func (m *ModelSuccessRatioMetric) Operator() entity.MetricOperator {
+	return entity.MetricOperatorDivide
 }
 
 func (m *ModelSuccessRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ModelSuccessRatioMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewModelSuccessRatioMetric() entity.IMetricDefinition {

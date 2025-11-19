@@ -48,6 +48,7 @@ func (m *ModelDurationMetric) GroupBy() []*entity.Dimension {
 
 func (m *ModelDurationMetric) Wrappers() []entity.IMetricWrapper {
 	return []entity.IMetricWrapper{
+		wrapper.NewSumWrapper(),
 		wrapper.NewAvgWrapper(),
 		wrapper.NewMinWrapper(),
 		wrapper.NewMaxWrapper(),
@@ -55,6 +56,10 @@ func (m *ModelDurationMetric) Wrappers() []entity.IMetricWrapper {
 		wrapper.NewPct90Wrapper(),
 		wrapper.NewPct99Wrapper(),
 	}
+}
+
+func (m *ModelDurationMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewModelDurationMetric() entity.IMetricDefinition {

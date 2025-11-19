@@ -50,6 +50,12 @@ func (p *Pct90Wrapper) GroupBy() []*entity.Dimension {
 	return p.originalMetric.GroupBy()
 }
 
+func (p *Pct90Wrapper) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeAvg,
+	}
+}
+
 func NewPct90Wrapper() entity.IMetricWrapper {
 	return &Pct90Wrapper{}
 }

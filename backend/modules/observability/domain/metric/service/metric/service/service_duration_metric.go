@@ -57,6 +57,10 @@ func (m *ServiceDurationMetric) Wrappers() []entity.IMetricWrapper {
 	}
 }
 
+func (m *ServiceDurationMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
+}
+
 func NewServiceDurationMetric() entity.IMetricDefinition {
 	return &ServiceDurationMetric{}
 }
