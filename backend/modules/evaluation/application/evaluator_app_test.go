@@ -3871,6 +3871,121 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 	}
 }
 
+// TestEvaluatorHandlerImpl_UpdateEvaluatorRecord 测试 UpdateEvaluatorRecord 方法
+func TestEvaluatorHandlerImpl_UpdateEvaluatorRecord(t *testing.T) {
+	t.Parallel()
+
+	const (
+		workspaceID        = int64(101)
+		evaluatorID        = int64(202)
+		evaluatorVersionID = int64(303)
+		recordID           = int64(404)
+	)
+
+	tests := []struct {
+		name         string
+		evaluator    *entity.Evaluator
+		setupAuth    func(t *testing.T, mockAuth *rpcmocks.MockIAuthProvider, mockConfiger *confmocks.MockIConfiger)
+		expectConfig bool
+	}{
+		{
+			name: "success - custom evaluator uses evaluator authorization",
+			evaluator: &entity.Evaluator{
+				ID:      evaluatorID,
+				SpaceID: workspaceID,
+				Builtin: false,
+			},
+			setupAuth: func(t *testing.T, mockAuth *rpcmocks.MockIAuthProvider, _ *confmocks.MockIConfiger) {
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+						assert.Equal(t, strconv.FormatInt(evaluatorID, 10), param.ObjectID)
+						assert.Equal(t, workspaceID, param.SpaceID)
+						if assert.Len(t, param.ActionObjects, 1) {
+							assert.Equal(t, consts.Edit, gptr.Indirect(param.ActionObjects[0].Action))
+							assert.Equal(t, rpc.AuthEntityType_Evaluator, gptr.Indirect(param.ActionObjects[0].EntityType))
+						}
+						return nil
+					})
+			},
+		},
+		{
+			name: "success - builtin evaluator uses builtin space validation",
+			evaluator: &entity.Evaluator{
+				ID:      evaluatorID,
+				SpaceID: workspaceID,
+				Builtin: true,
+			},
+			setupAuth: func(t *testing.T, mockAuth *rpcmocks.MockIAuthProvider, mockConfiger *confmocks.MockIConfiger) {
+				// authWrite 为 false 时，不会调用 Authorization，只检查空间配置
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{strconv.FormatInt(workspaceID, 10)})
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+			mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+			mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+			mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+			mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+			handler := &EvaluatorHandlerImpl{
+				auth:                   mockAuth,
+				evaluatorService:       mockEvaluatorService,
+				evaluatorRecordService: mockEvaluatorRecordService,
+				auditClient:            mockAuditClient,
+				configer:               mockConfiger,
+			}
+
+			tt.setupAuth(t, mockAuth, mockConfiger)
+
+			evaluatorRecord := &entity.EvaluatorRecord{
+				ID:                 recordID,
+				EvaluatorVersionID: evaluatorVersionID,
+			}
+			mockEvaluatorRecordService.EXPECT().
+				GetEvaluatorRecord(gomock.Any(), recordID, false).
+				Return(evaluatorRecord, nil)
+
+			mockEvaluatorService.EXPECT().
+				GetEvaluatorVersion(gomock.Any(), gomock.Nil(), evaluatorVersionID, false, false).
+				Return(tt.evaluator, nil)
+
+			mockAuditClient.EXPECT().
+				Audit(gomock.Any(), gomock.Any()).
+				Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+
+			mockEvaluatorRecordService.EXPECT().
+				CorrectEvaluatorRecord(gomock.Any(), evaluatorRecord, gomock.Any()).
+				Return(nil)
+
+			req := &evaluatorservice.UpdateEvaluatorRecordRequest{
+				WorkspaceID:       workspaceID,
+				EvaluatorRecordID: recordID,
+				Correction: &evaluatordto.Correction{
+					Explain:   gptr.Of("need update"),
+					UpdatedBy: gptr.Of("tester"),
+				},
+			}
+
+			resp, err := handler.UpdateEvaluatorRecord(context.Background(), req)
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+			assert.NotNil(t, resp.Record)
+		})
+	}
+}
+
 // TestEvaluatorHandlerImpl_UpdateBuiltinEvaluatorTags 测试 UpdateBuiltinEvaluatorTags 方法
 func TestEvaluatorHandlerImpl_UpdateBuiltinEvaluatorTags(t *testing.T) {
 	t.Parallel()

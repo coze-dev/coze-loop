@@ -6,6 +6,7 @@ package evaluator
 
 import (
 	"context"
+	"sort"
 	"strconv"
 
 	"github.com/bytedance/gg/gptr"
@@ -769,6 +770,10 @@ func (r *EvaluatorRepoImpl) setEvaluatorTags(evaluatorDO *entity.Evaluator, eval
 				tagMap[tagKey] = make([]string, 0)
 			}
 			tagMap[tagKey] = append(tagMap[tagKey], tag.TagValue)
+		}
+		for key, values := range tagMap {
+			sort.Strings(values)
+			tagMap[key] = values
 		}
 		if evaluatorDO.Tags == nil {
 			evaluatorDO.Tags = make(map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string)
