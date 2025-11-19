@@ -475,6 +475,10 @@ const (
 	SchemaKey_Float   SchemaKey = 3
 	SchemaKey_Bool    SchemaKey = 4
 	SchemaKey_Message SchemaKey = 5
+	// 单选
+	SchemaKey_SingleChoice SchemaKey = 6
+	// 轨迹
+	SchemaKey_Trajectory SchemaKey = 7
 )
 
 func (p SchemaKey) String() string {
@@ -489,6 +493,10 @@ func (p SchemaKey) String() string {
 		return "Bool"
 	case SchemaKey_Message:
 		return "Message"
+	case SchemaKey_SingleChoice:
+		return "SingleChoice"
+	case SchemaKey_Trajectory:
+		return "Trajectory"
 	}
 	return "<UNSET>"
 }
@@ -505,6 +513,10 @@ func SchemaKeyFromString(s string) (SchemaKey, error) {
 		return SchemaKey_Bool, nil
 	case "Message":
 		return SchemaKey_Message, nil
+	case "SingleChoice":
+		return SchemaKey_SingleChoice, nil
+	case "Trajectory":
+		return SchemaKey_Trajectory, nil
 	}
 	return SchemaKey(0), fmt.Errorf("not a valid SchemaKey string")
 }

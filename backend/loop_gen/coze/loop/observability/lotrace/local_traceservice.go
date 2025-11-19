@@ -421,6 +421,69 @@ func (l *LocalTraceService) ExtractSpanInfo(ctx context.Context, req *trace.Extr
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalTraceService) UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest, callOptions ...callopt.Option) (*trace.UpsertTrajectoryConfigResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceUpsertTrajectoryConfigArgs)
+		result := out.(*trace.TraceServiceUpsertTrajectoryConfigResult)
+		resp, err := l.impl.UpsertTrajectoryConfig(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceUpsertTrajectoryConfigArgs{Req: req}
+	result := &trace.TraceServiceUpsertTrajectoryConfigResult{}
+	ctx = l.injectRPCInfo(ctx, "UpsertTrajectoryConfig")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest, callOptions ...callopt.Option) (*trace.GetTrajectoryConfigResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceGetTrajectoryConfigArgs)
+		result := out.(*trace.TraceServiceGetTrajectoryConfigResult)
+		resp, err := l.impl.GetTrajectoryConfig(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceGetTrajectoryConfigArgs{Req: req}
+	result := &trace.TraceServiceGetTrajectoryConfigResult{}
+	ctx = l.injectRPCInfo(ctx, "GetTrajectoryConfig")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest, callOptions ...callopt.Option) (*trace.ListTrajectoryResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceListTrajectoryArgs)
+		result := out.(*trace.TraceServiceListTrajectoryResult)
+		resp, err := l.impl.ListTrajectory(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceListTrajectoryArgs{Req: req}
+	result := &trace.TraceServiceListTrajectoryResult{}
+	ctx = l.injectRPCInfo(ctx, "ListTrajectory")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalTraceService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

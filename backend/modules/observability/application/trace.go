@@ -1032,3 +1032,34 @@ func (t *TraceApplication) validateExtractSpanInfoReq(ctx context.Context, req *
 	}
 	return nil
 }
+
+func (t *TraceApplication) UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest) (r *trace.UpsertTrajectoryConfigResponse, err error) {
+	// 0. 权限校验
+	// 1. 调用repo层，更新或插入配置
+	// 2. 返回响应
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	if err := t.traceService.UpsertTrajectoryConfig(ctx, &service.UpsertTrajectoryConfigRequest{
+		WorkspaceID: req.WorkspaceID,
+		Filters:     tconv.FilterFieldsDTO2DO(req.Filters),
+	}); err != nil {
+		return nil, err
+	}
+
+	return &trace.UpsertTrajectoryConfigResponse{}, nil
+}
+
+func (t *TraceApplication) GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest) (r *trace.GetTrajectoryConfigResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest) (r *trace.ListTrajectoryResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
