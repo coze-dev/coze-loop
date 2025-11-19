@@ -152,3 +152,17 @@ func (mr *MockIConfigerMockRecorder) GetMaintainerUserIDs(ctx any) *gomock.Call 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaintainerUserIDs", reflect.TypeOf((*MockIConfiger)(nil).GetMaintainerUserIDs), ctx)
 }
+
+// GetSchedulerAbortCtrl mocks base method.
+func (m *MockIConfiger) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSchedulerAbortCtrl", ctx)
+	ret0, _ := ret[0].(*entity.SchedulerAbortCtrl)
+	return ret0
+}
+
+// GetSchedulerAbortCtrl indicates an expected call of GetSchedulerAbortCtrl.
+func (mr *MockIConfigerMockRecorder) GetSchedulerAbortCtrl(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulerAbortCtrl", reflect.TypeOf((*MockIConfiger)(nil).GetSchedulerAbortCtrl), ctx)
+}
