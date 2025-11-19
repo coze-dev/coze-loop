@@ -4160,36 +4160,38 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 					nil,
 				)
 				// Mock ListSpans for batchGetPreSpan
-				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
-					Spans: []*loop_span.Span{
-						{
-							SpanID:  "span1",
-							TraceID: "trace1",
-							SystemTagsString: map[string]string{
-								keyResponseID:         "resp1",
-								keyPreviousResponseID: "prev1",
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(
+					&repo.ListSpansResult{
+						Spans: []*loop_span.Span{
+							{
+								SpanID:  "span1",
+								TraceID: "trace1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp1",
+									keyPreviousResponseID: "prev1",
+								},
+								WorkspaceID: "1",
 							},
-							WorkspaceID: "1",
-						},
-						{
-							SpanID:  "span2",
-							TraceID: "trace1",
-							SystemTagsString: map[string]string{
-								keyResponseID:         "resp2",
-								keyPreviousResponseID: "prev2",
+							{
+								SpanID:  "span2",
+								TraceID: "trace1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp2",
+									keyPreviousResponseID: "prev2",
+								},
+								WorkspaceID: "1",
 							},
-							WorkspaceID: "1",
-						},
-						{
-							SpanID:  "current_span",
-							TraceID: "trace1",
-							SystemTagsString: map[string]string{
-								keyResponseID:         "resp3",
-								keyPreviousResponseID: "prev_resp_id",
+							{
+								SpanID:  "current_span",
+								TraceID: "trace1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp3",
+									keyPreviousResponseID: "prev_resp_id",
+								},
+								WorkspaceID: "1",
 							},
-							WorkspaceID: "1",
 						},
-					}}, nil)
+					}, nil)
 
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)

@@ -15,9 +15,6 @@ import (
 )
 
 const (
-	keySpanID             = "span_id"
-	keyPreviousResponseID = "previous_response_id"
-
 	redisKeyPreRelationPrefix = "ob:pre_relation:"
 )
 
