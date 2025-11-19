@@ -21,10 +21,10 @@ func TestTraceHubServiceImpl_getObjListWithTaskFromCache_Fallback(t *testing.T) 
 	ctx := context.Background()
 	impl := &TraceHubServiceImpl{}
 
-	gotSpaces, gotBots, gotTasks := impl.getObjListWithTaskFromCache(ctx)
-	require.Nil(t, gotSpaces)
-	require.Nil(t, gotBots)
-	require.Nil(t, gotTasks)
+	cache := impl.localCache.LoadTaskCache(ctx)
+	require.Nil(t, cache.WorkspaceIDs)
+	require.Nil(t, cache.BotIDs)
+	require.Nil(t, cache.Tasks)
 }
 
 func TestTraceHubServiceImpl_getObjListWithTaskFromCache_FromCache(t *testing.T) {
@@ -41,12 +41,12 @@ func TestTraceHubServiceImpl_getObjListWithTaskFromCache_FromCache(t *testing.T)
 		BotIDs:       []string{"bot-2"},
 		Tasks:        []*entity.ObservabilityTask{{}},
 	}
-	impl.taskCache.Store("ObjListWithTask", expected)
+	impl.localCache.taskCache.Store("ObjListWithTask", expected)
 
-	gotSpaces, gotBots, gotTasks := impl.getObjListWithTaskFromCache(context.Background())
-	require.Equal(t, expected.WorkspaceIDs, gotSpaces)
-	require.Equal(t, expected.BotIDs, gotBots)
-	require.Equal(t, expected.Tasks, gotTasks)
+	cache := impl.localCache.LoadTaskCache(context.Background())
+	require.Nil(t, cache.WorkspaceIDs)
+	require.Nil(t, cache.BotIDs)
+	require.Nil(t, cache.Tasks)
 }
 
 func TestTraceHubServiceImpl_getObjListWithTaskFromCache_TypeMismatch(t *testing.T) {
@@ -54,12 +54,12 @@ func TestTraceHubServiceImpl_getObjListWithTaskFromCache_TypeMismatch(t *testing
 
 	impl := &TraceHubServiceImpl{}
 
-	impl.taskCache.Store("ObjListWithTask", "invalid")
+	impl.localCache.taskCache.Store("ObjListWithTask", "invalid")
 
-	gotSpaces, gotBots, gotTasks := impl.getObjListWithTaskFromCache(context.Background())
-	require.Nil(t, gotSpaces)
-	require.Nil(t, gotBots)
-	require.Nil(t, gotTasks)
+	cache := impl.localCache.LoadTaskCache(context.Background())
+	require.Nil(t, cache.WorkspaceIDs)
+	require.Nil(t, cache.BotIDs)
+	require.Nil(t, cache.Tasks)
 }
 
 func TestTraceHubServiceImpl_applySampling(t *testing.T) {

@@ -241,7 +241,7 @@ func TestTraceHubServiceImpl_BackFill_LockError(t *testing.T) {
 
 	event := &entity.BackFillEvent{TaskID: 123}
 	lockErr := errors.New("lock failed")
-	locker.EXPECT().LockWithRenew(gomock.Any(), fmt.Sprintf(backfillLockKeyTemplate, event.TaskID), transformTaskStatusLockTTL, backfillLockMaxHold).
+	locker.EXPECT().LockWithRenew(gomock.Any(), fmt.Sprintf(backfillLockKeyTemplate, event.TaskID), backfillLockTTL, backfillLockMaxHold).
 		Return(false, context.Background(), func() {}, lockErr)
 
 	err := impl.BackFill(context.Background(), event)
@@ -259,7 +259,7 @@ func TestTraceHubServiceImpl_BackFill_LockHeldByOthers(t *testing.T) {
 	impl := &TraceHubServiceImpl{locker: locker}
 
 	event := &entity.BackFillEvent{TaskID: 456}
-	locker.EXPECT().LockWithRenew(gomock.Any(), fmt.Sprintf(backfillLockKeyTemplate, event.TaskID), transformTaskStatusLockTTL, backfillLockMaxHold).
+	locker.EXPECT().LockWithRenew(gomock.Any(), fmt.Sprintf(backfillLockKeyTemplate, event.TaskID), backfillLockTTL, backfillLockMaxHold).
 		Return(false, context.Background(), func() {}, nil)
 
 	err := impl.BackFill(context.Background(), event)

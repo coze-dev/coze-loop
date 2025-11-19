@@ -31,7 +31,7 @@ func TestTraceHubServiceImpl_SpanTriggerSkipNoWorkspace(t *testing.T) {
 	t.Parallel()
 
 	impl := &TraceHubServiceImpl{}
-	impl.taskCache.Store("ObjListWithTask", TaskCacheInfo{})
+	impl.localCache.taskCache.Store("ObjListWithTask", TaskCacheInfo{})
 
 	raw := &entity.RawSpan{
 		TraceID: "trace",
@@ -132,9 +132,9 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		taskRepo:      mockRepo,
 		buildHelper:   mockBuilder,
 		taskProcessor: taskProcessor,
-		loader:        configLoader,
+		//loader:        configLoader,
 	}
-	impl.taskCache.Store("ObjListWithTask", TaskCacheInfo{WorkspaceIDs: []string{"space-1"}, Tasks: []*entity.ObservabilityTask{taskDO}})
+	impl.localCache.taskCache.Store("ObjListWithTask", TaskCacheInfo{WorkspaceIDs: []string{"space-1"}, Tasks: []*entity.ObservabilityTask{taskDO}})
 
 	raw := &entity.RawSpan{
 		TraceID:       "trace",
@@ -218,13 +218,8 @@ func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) 
 	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(1), nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{
-		StartTime: now.UnixMilli(),
-		TraceID:   "trace",
-		SpanID:    "span",
-	}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(stubProc.createTaskRunReqs))
 	require.Equal(t, startAt, stubProc.createTaskRunReqs[0].RunStartAt)
@@ -283,13 +278,8 @@ func TestTraceHubServiceImpl_preDispatchHandlesMissingTaskRunConfig(t *testing.T
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{
-		StartTime: now.UnixMilli(),
-		TraceID:   "trace",
-		SpanID:    "span",
-	}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "task run config not found")
 	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
@@ -355,13 +345,8 @@ func TestTraceHubServiceImpl_preDispatchHandlesNonCycle(t *testing.T) {
 	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(0), nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{
-		StartTime: now.UnixMilli(),
-		TraceID:   "trace",
-		SpanID:    "span",
-	}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
 	require.Equal(t, endAt, stubProc.createTaskRunReqs[0].RunEndAt)
@@ -412,13 +397,8 @@ func TestTraceHubServiceImpl_preDispatchHandlesCycleDefaultUnit(t *testing.T) {
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{
-		StartTime: now.UnixMilli(),
-		TraceID:   "trace",
-		SpanID:    "span",
-	}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "create fail")
 	require.Equal(t, 2, len(stubProc.createTaskRunReqs))
@@ -486,9 +466,8 @@ func TestTraceHubServiceImpl_preDispatchTimeLimitFinishError(t *testing.T) {
 	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(0), nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "finish error")
 	require.Equal(t, 1, stubProc.finishChangeInvoked)
@@ -553,9 +532,8 @@ func TestTraceHubServiceImpl_preDispatchSampleLimitFinishError(t *testing.T) {
 	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(0), nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "sample limit error")
 	require.Equal(t, 1, stubProc.finishChangeInvoked)
@@ -620,9 +598,8 @@ func TestTraceHubServiceImpl_preDispatchCycleTimeLimitFinishError(t *testing.T) 
 	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(0), nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "cycle time error")
 	require.Equal(t, 1, stubProc.finishChangeInvoked)
@@ -687,9 +664,8 @@ func TestTraceHubServiceImpl_preDispatchCycleCountFinishError(t *testing.T) {
 	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(1), nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "cycle count error")
 	require.Equal(t, 1, stubProc.finishChangeInvoked)
@@ -736,9 +712,8 @@ func TestTraceHubServiceImpl_preDispatchCreativeError(t *testing.T) {
 	})
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "creative fail")
 	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
@@ -825,9 +800,8 @@ func TestTraceHubServiceImpl_preDispatchAggregatesErrors(t *testing.T) {
 	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), secondTaskID, secondRun.ID).Return(int64(0), nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{firstSub, secondSub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{firstSub, secondSub})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "first fail")
 	require.Contains(t, err.Error(), "second fail")
@@ -877,9 +851,8 @@ func TestTraceHubServiceImpl_preDispatchUpdateError(t *testing.T) {
 	})
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
 	require.Equal(t, 1, stubProc.updateCallCount)
@@ -925,9 +898,8 @@ func TestTraceHubServiceImpl_preDispatchListTaskRunError(t *testing.T) {
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, errors.New("repo fail"))
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.NoError(t, err)
 	require.Empty(t, stubProc.createTaskRunReqs)
 }
@@ -975,9 +947,8 @@ func TestTraceHubServiceImpl_preDispatchTaskRunConfigDay(t *testing.T) {
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(nil, nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "create fail")
 	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
@@ -1044,9 +1015,8 @@ func TestTraceHubServiceImpl_preDispatchCycleCreativeError(t *testing.T) {
 	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(0), nil)
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
-	span := &loop_span.Span{StartTime: now.UnixMilli(), TraceID: "trace", SpanID: "span"}
 
-	err := impl.preDispatch(context.Background(), span, []*spanSubscriber{sub})
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "cycle create fail")
 	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
