@@ -6,7 +6,6 @@ package scheduledtask
 import (
 	"context"
 	"testing"
-	"time"
 
 	"go.uber.org/mock/gomock"
 
@@ -102,26 +101,6 @@ func (p *trackingProcessor) OnTaskUpdated(ctx context.Context, obsTask *entity.O
 	p.updateStatuses = append(p.updateStatuses, status)
 	return p.stubProcessor.OnTaskUpdated(ctx, obsTask, status)
 }
-
-type stubBackfillProducer struct {
-	ch chan *entity.BackFillEvent
-}
-
-func (s *stubBackfillProducer) SendBackfillMessage(ctx context.Context, event *entity.BackFillEvent) error {
-	s.ch <- event
-	return nil
-}
-
-func (s *stubBackfillProducer) Close() error {
-	close(s.ch)
-	return nil
-}
-
-const (
-	transformTaskStatusLockKey = "observability:task:transform_task_status"
-	transformTaskStatusLockTTL = 3 * time.Minute
-	syncTaskRunCountsLockKey   = "observability:task:sync_task_run_counts"
-)
 
 func TestStatusCheckTask_checkTaskStatus(t *testing.T) {
 	t.Parallel()

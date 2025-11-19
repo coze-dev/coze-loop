@@ -287,8 +287,7 @@ func (h *TraceHubServiceImpl) combineFilters(filters ...*loop_span.FilterFields)
 }
 
 // fetchSpans paginates span data
-func (h *TraceHubServiceImpl) fetchSpans(ctx context.Context, listParam *repo.ListSpansParam,
-	sub *spanSubscriber) ([]*loop_span.Span, string, error) {
+func (h *TraceHubServiceImpl) fetchSpans(ctx context.Context, listParam *repo.ListSpansParam, sub *spanSubscriber) ([]*loop_span.Span, string, error) {
 	result, err := h.traceRepo.ListSpans(ctx, listParam)
 	if err != nil {
 		logs.CtxError(ctx, "List spans failed, parma=%v, err=%v", listParam, err)

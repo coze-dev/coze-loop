@@ -179,7 +179,7 @@ type AutoEvalEvent struct {
 }
 
 func (e *AutoEvalEvent) Validate() error {
-	if e.TurnEvalResults == nil || len(e.TurnEvalResults) == 0 {
+	if len(e.TurnEvalResults) == 0 {
 		return fmt.Errorf("turn_eval_results is required")
 	}
 	return nil

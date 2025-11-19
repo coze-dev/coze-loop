@@ -304,9 +304,9 @@ func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSp
 		if err != nil {
 			return err
 		}
-		loopSpan.StartTime = loopSpan.StartTime / 1000
-		loopSpan.Annotations = append(loopSpan.Annotations, annotations...)
 		if loopSpan != nil {
+			loopSpan.StartTime = loopSpan.StartTime / 1000
+			loopSpan.Annotations = append(loopSpan.Annotations, annotations...)
 			if err := t.tracehubSvc.SpanTrigger(ctx, loopSpan); err != nil {
 				logs.CtxError(ctx, "SpanTrigger err:%v", err)
 				// span trigger 失败，不处理
