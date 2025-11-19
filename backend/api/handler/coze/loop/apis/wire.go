@@ -213,6 +213,7 @@ func InitObservabilityHandler(
 	limiterFactory limiter.IRateLimiterFactory,
 	datasetClient datasetservice.Client,
 	redis redis.Cmdable,
+	persistentCmdable redis.PersistentCmdable,
 	experimentClient experimentservice.Client,
 	taskProcessor task_processor.TaskProcessor,
 	aid int32,
