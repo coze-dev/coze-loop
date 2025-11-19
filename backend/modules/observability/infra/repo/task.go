@@ -250,7 +250,7 @@ func (v *TaskRepoImpl) GetTaskCount(ctx context.Context, taskID int64) (int64, e
 }
 
 func (v *TaskRepoImpl) IncrTaskCount(ctx context.Context, taskID, ttl int64) error {
-	_, err := v.TaskRedisDao.IncrTaskCount(ctx, taskID, time.Duration(ttl)*time.Second)
+	_, err := v.TaskRedisDao.IncrTaskCount(ctx, taskID, time.Duration(ttl)*time.Millisecond)
 	if err != nil {
 		logs.CtxError(ctx, "failed to increment task count", "taskID", taskID, "err", err)
 		return err
@@ -259,7 +259,7 @@ func (v *TaskRepoImpl) IncrTaskCount(ctx context.Context, taskID, ttl int64) err
 }
 
 func (v *TaskRepoImpl) DecrTaskCount(ctx context.Context, taskID, ttl int64) error {
-	_, err := v.TaskRedisDao.DecrTaskCount(ctx, taskID, time.Duration(ttl)*time.Second)
+	_, err := v.TaskRedisDao.DecrTaskCount(ctx, taskID, time.Duration(ttl)*time.Millisecond)
 	if err != nil {
 		logs.CtxError(ctx, "failed to decrement task count", "taskID", taskID, "err", err)
 		return err
@@ -278,7 +278,7 @@ func (v *TaskRepoImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID in
 }
 
 func (v *TaskRepoImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
-	_, err := v.TaskRedisDao.IncrTaskRunCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
+	_, err := v.TaskRedisDao.IncrTaskRunCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Millisecond)
 	if err != nil {
 		logs.CtxError(ctx, "failed to increment task run count", "taskID", taskID, "taskRunID", taskRunID, "err", err)
 		return err
@@ -287,7 +287,7 @@ func (v *TaskRepoImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID i
 }
 
 func (v *TaskRepoImpl) DecrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
-	_, err := v.TaskRedisDao.DecrTaskRunCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
+	_, err := v.TaskRedisDao.DecrTaskRunCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Millisecond)
 	if err != nil {
 		logs.CtxError(ctx, "failed to decrement task run count", "taskID", taskID, "taskRunID", taskRunID, "err", err)
 		return err
@@ -300,7 +300,7 @@ func (v *TaskRepoImpl) GetTaskRunSuccessCount(ctx context.Context, taskID, taskR
 }
 
 func (v *TaskRepoImpl) IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
-	return v.TaskRunRedisDao.IncrTaskRunSuccessCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
+	return v.TaskRunRedisDao.IncrTaskRunSuccessCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Millisecond)
 }
 
 func (v *TaskRepoImpl) DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error {
@@ -312,7 +312,7 @@ func (v *TaskRepoImpl) GetTaskRunFailCount(ctx context.Context, taskID, taskRunI
 }
 
 func (v *TaskRepoImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error {
-	return v.TaskRunRedisDao.IncrTaskRunFailCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Second)
+	return v.TaskRunRedisDao.IncrTaskRunFailCount(ctx, taskID, taskRunID, time.Duration(ttl)*time.Millisecond)
 }
 
 func (v *TaskRepoImpl) ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) ([]int64, error) {
