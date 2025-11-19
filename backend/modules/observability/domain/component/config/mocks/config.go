@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	config "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	conf "github.com/coze-dev/coze-loop/backend/pkg/conf"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -130,18 +131,18 @@ func (mr *MockITraceConfigMockRecorder) GetKeySpanTypes(ctx any) *gomock.Call {
 }
 
 // GetPlatformSpansTrans mocks base method.
-func (m *MockITraceConfig) GetPlatformSpansTrans(ctx context.Context) (*config.SpanTransHandlerConfig, error) {
+func (m *MockITraceConfig) GetPlatformSpansTrans(ctx context.Context, platformType loop_span.PlatformType) (loop_span.SpanTransCfgList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPlatformSpansTrans", ctx)
-	ret0, _ := ret[0].(*config.SpanTransHandlerConfig)
+	ret := m.ctrl.Call(m, "GetPlatformSpansTrans", ctx, platformType)
+	ret0, _ := ret[0].(loop_span.SpanTransCfgList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetPlatformSpansTrans indicates an expected call of GetPlatformSpansTrans.
-func (mr *MockITraceConfigMockRecorder) GetPlatformSpansTrans(ctx any) *gomock.Call {
+func (mr *MockITraceConfigMockRecorder) GetPlatformSpansTrans(ctx, platformType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformSpansTrans", reflect.TypeOf((*MockITraceConfig)(nil).GetPlatformSpansTrans), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformSpansTrans", reflect.TypeOf((*MockITraceConfig)(nil).GetPlatformSpansTrans), ctx, platformType)
 }
 
 // GetPlatformTenants mocks base method.
