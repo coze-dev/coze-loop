@@ -181,8 +181,8 @@ func (p *EvaluatorSourcePromptServiceImpl) chat(ctx context.Context, evaluatorVe
 		}
 	}
 
-    llmCallParam := &entity.LLMCallParam{
-        SpaceID:     exptSpaceID,
+	llmCallParam := &entity.LLMCallParam{
+		SpaceID:     exptSpaceID,
 		EvaluatorID: strconv.FormatInt(evaluatorVersion.EvaluatorID, 10),
 		UserID:      gptr.Of(userIDInContext),
 		Scenario:    entity.ScenarioEvaluator,

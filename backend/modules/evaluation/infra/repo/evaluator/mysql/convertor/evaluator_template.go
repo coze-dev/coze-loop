@@ -105,7 +105,7 @@ func ConvertEvaluatorTemplatePO2DO(po *model.EvaluatorTemplate) (*evaluatordo.Ev
 		return nil, nil
 	}
 
-    do := &evaluatordo.EvaluatorTemplate{
+	do := &evaluatordo.EvaluatorTemplate{
 		ID:                 po.ID,
 		SpaceID:            gptr.Indirect(po.SpaceID),
 		Name:               gptr.Indirect(po.Name),
@@ -115,12 +115,12 @@ func ConvertEvaluatorTemplatePO2DO(po *model.EvaluatorTemplate) (*evaluatordo.Ev
 		Popularity:         po.Popularity,
 		Tags:               make(map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string),
 	}
-    if po.EvaluatorInfo != nil {
-        var info evaluatordo.EvaluatorInfo
-        if err := json.Unmarshal(*po.EvaluatorInfo, &info); err == nil {
-            do.EvaluatorInfo = &info
-        }
-    }
+	if po.EvaluatorInfo != nil {
+		var info evaluatordo.EvaluatorInfo
+		if err := json.Unmarshal(*po.EvaluatorInfo, &info); err == nil {
+			do.EvaluatorInfo = &info
+		}
+	}
 
 	// 反序列化InputSchema
 	if po.InputSchema != nil {
