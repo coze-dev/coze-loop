@@ -324,7 +324,7 @@ func TestFilterFieldsDTO2DO(t *testing.T) {
 func TestFilterFieldListDTO2DO(t *testing.T) {
 	list := FilterFieldListDTO2DO([]*filter.FilterField{
 		nil,
-		&filter.FilterField{
+		{
 			FieldName: ptr.Of("name"),
 		},
 	})
