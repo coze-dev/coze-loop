@@ -14,7 +14,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	componentmq "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
@@ -44,24 +43,24 @@ func (f *fakeProcessor) Invoke(context.Context, *taskexe.Trigger) error {
 	return nil
 }
 
-func (f *fakeProcessor) OnCreateTaskChange(context.Context, *entity.ObservabilityTask) error {
+func (f *fakeProcessor) OnTaskCreated(ctx context.Context, currentTask *entity.ObservabilityTask) error {
 	f.onCreateCalled = true
 	return f.onCreateErr
 }
 
-func (f *fakeProcessor) OnUpdateTaskChange(context.Context, *entity.ObservabilityTask, task.TaskStatus) error {
+func (f *fakeProcessor) OnTaskUpdated(ctx context.Context, currentTask *entity.ObservabilityTask, taskOp entity.TaskStatus) error {
 	return nil
 }
 
-func (f *fakeProcessor) OnFinishTaskChange(context.Context, taskexe.OnTaskFinishedReq) error {
+func (f *fakeProcessor) OnTaskFinished(ctx context.Context, param taskexe.OnTaskFinishedReq) error {
 	return nil
 }
 
-func (f *fakeProcessor) OnCreateTaskRunChange(context.Context, taskexe.OnTaskRunCreatedReq) error {
+func (f *fakeProcessor) OnTaskRunCreated(ctx context.Context, param taskexe.OnTaskRunCreatedReq) error {
 	return nil
 }
 
-func (f *fakeProcessor) OnFinishTaskRunChange(context.Context, taskexe.OnTaskRunFinishedReq) error {
+func (f *fakeProcessor) OnTaskRunFinished(ctx context.Context, param taskexe.OnTaskRunFinishedReq) error {
 	f.onFinishRunCalled = true
 	return f.onFinishRunErr
 }
@@ -608,28 +607,6 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 		if assert.NotNil(t, resp) {
 			assert.True(t, *resp.Pass)
 		}
-	})
-}
-
-func TestTaskServiceImpl_shouldTriggerBackfill(t *testing.T) {
-	service := &TaskServiceImpl{}
-
-	t.Run("task type mismatch", func(t *testing.T) {
-		taskDO := &entity.ObservabilityTask{TaskType: entity.TaskType("other")}
-		assert.False(t, service.shouldTriggerBackfill(taskDO))
-	})
-
-	t.Run("missing effective time", func(t *testing.T) {
-		taskDO := &entity.ObservabilityTask{TaskType: entity.TaskTypeAutoEval}
-		assert.False(t, service.shouldTriggerBackfill(taskDO))
-	})
-
-	t.Run("valid", func(t *testing.T) {
-		taskDO := &entity.ObservabilityTask{
-			TaskType:              entity.TaskTypeAutoDataReflow,
-			BackfillEffectiveTime: &entity.EffectiveTime{StartAt: 1, EndAt: 2},
-		}
-		assert.True(t, service.shouldTriggerBackfill(taskDO))
 	})
 }
 
