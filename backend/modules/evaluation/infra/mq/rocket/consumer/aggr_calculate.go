@@ -46,36 +46,29 @@ func (a *AggrCalculateConsumer) HandleMessage(ctx context.Context, ext *mq.Messa
 func (a *AggrCalculateConsumer) handleEvent(ctx context.Context, event *entity.AggrCalculateEvent) (err error) {
 	switch event.CalculateMode {
 	case entity.CreateAllFields:
-		err = a.exptAggrResultService.CreateExptAggrResult(ctx, event.SpaceID, event.ExperimentID)
-		return err
+		return a.exptAggrResultService.CreateExptAggrResult(ctx, event.SpaceID, event.ExperimentID)
 	case entity.UpdateSpecificField:
-		param := &entity.UpdateExptAggrResultParam{
+		return a.exptAggrResultService.UpdateExptAggrResult(ctx, &entity.UpdateExptAggrResultParam{
 			SpaceID:      event.SpaceID,
 			ExperimentID: event.ExperimentID,
 			FieldType:    event.GetFieldType(),
 			FieldKey:     event.GetFieldKey(),
-		}
-		err = a.exptAggrResultService.UpdateExptAggrResult(ctx, param)
-		return err
+		})
 	case entity.CreateAnnotationFields:
-		param := &entity.CreateSpecificFieldAggrResultParam{
+		return a.exptAggrResultService.CreateAnnotationAggrResult(ctx, &entity.CreateSpecificFieldAggrResultParam{
 			SpaceID:      event.SpaceID,
 			ExperimentID: event.ExperimentID,
 			FieldType:    event.GetFieldType(),
 			FieldKey:     event.GetFieldKey(),
-		}
-		err = a.exptAggrResultService.CreateAnnotationAggrResult(ctx, param)
-		return err
+		})
 	case entity.UpdateAnnotationFields:
-		param := &entity.UpdateExptAggrResultParam{
+		return a.exptAggrResultService.UpdateAnnotationAggrResult(ctx, &entity.UpdateExptAggrResultParam{
 			SpaceID:      event.SpaceID,
 			ExperimentID: event.ExperimentID,
 			FieldType:    event.GetFieldType(),
 			FieldKey:     event.GetFieldKey(),
-		}
-		err = a.exptAggrResultService.UpdateAnnotationAggrResult(ctx, param)
-		return err
+		})
+	default:
+		return nil
 	}
-
-	return nil
 }
