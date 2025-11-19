@@ -25,7 +25,7 @@ func ExptTurnResultFilterEntity2PO(filterEntity *entity.ExptTurnResultFilterEnti
 		}
 	}
 
-	return &model.ExptTurnResultFilter{
+	exptTurnResultFilter := &model.ExptTurnResultFilter{
 		SpaceID:          strconv.FormatInt(filterEntity.SpaceID, 10),
 		ExptID:           strconv.FormatInt(filterEntity.ExptID, 10),
 		ItemID:           strconv.FormatInt(filterEntity.ItemID, 10),
@@ -41,6 +41,11 @@ func ExptTurnResultFilterEntity2PO(filterEntity *entity.ExptTurnResultFilterEnti
 		EvalSetVersionID: strconv.FormatInt(filterEntity.EvalSetVersionID, 10),
 		UpdatedAt:        filterEntity.UpdatedAt,
 	}
+	if filterEntity.EvaluatorScoreCorrected {
+		exptTurnResultFilter.EvaluatorScoreCorrected = 1
+	}
+
+	return exptTurnResultFilter
 }
 
 // ExptTurnResultFilterPO2Entity 将 model.ExptTurnResultFilterAccelerator 转换为 ExptTurnResultFilterEntity
@@ -54,7 +59,7 @@ func ExptTurnResultFilterPO2Entity(filterPO *model.ExptTurnResultFilter) *entity
 		annotationBool[k] = v > 0
 	}
 
-	return &entity.ExptTurnResultFilterEntity{
+	exptTurnResultFilterEntity := &entity.ExptTurnResultFilterEntity{
 		SpaceID:          ParseStringToInt64(filterPO.SpaceID),
 		ExptID:           ParseStringToInt64(filterPO.ExptID),
 		ItemID:           ParseStringToInt64(filterPO.ItemID),
@@ -69,6 +74,10 @@ func ExptTurnResultFilterPO2Entity(filterPO *model.ExptTurnResultFilter) *entity
 		CreatedDate:      filterPO.CreatedDate,
 		EvalSetVersionID: ParseStringToInt64(filterPO.EvalSetVersionID),
 	}
+	if filterPO.EvaluatorScoreCorrected > 0 {
+		exptTurnResultFilterEntity.EvaluatorScoreCorrected = true
+	}
+	return exptTurnResultFilterEntity
 }
 
 // ParseStringToInt64 将 string 转换为 int64
