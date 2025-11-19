@@ -487,8 +487,10 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error, s
 
 		// Send MQ message asynchronously without blocking task creation flow
 		go func() {
-			if err := h.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
-				logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.GetID(), err)
+			if time.Now().UnixMilli()-(sub.tr.RunEndAt-sub.tr.RunStartAt) < sub.tr.RunEndAt {
+				if err := h.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
+					logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.GetID(), err)
+				}
 			}
 		}()
 		logs.CtxWarn(ctx, "backfill completed with %d errors, task_id=%d", len(allErrors), sub.t.GetID())

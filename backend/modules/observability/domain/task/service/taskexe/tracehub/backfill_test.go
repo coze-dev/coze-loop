@@ -576,11 +576,23 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 	t.Run("with errors triggers retry", func(t *testing.T) {
 		t.Parallel()
 		ch := make(chan *entity.BackFillEvent, 1)
+		now := time.Now()
 		impl := &TraceHubServiceImpl{
 			backfillProducer: &stubBackfillProducer{ch: ch},
 			flushErr:         []error{errors.New("flush err"), errors.New("other")},
 		}
-		sub := &spanSubscriber{t: &task.Task{ID: ptr.Of(int64(10)), WorkspaceID: ptr.Of(int64(20))}}
+		sub := &spanSubscriber{
+			t: &task.Task{ID: ptr.Of(int64(10)), WorkspaceID: ptr.Of(int64(20))},
+			tr: &task.TaskRun{
+				ID:          1,
+				WorkspaceID: 20,
+				TaskID:      10,
+				TaskType:    task.TaskRunTypeBackFill,
+				RunStatus:   task.RunStatusRunning,
+				RunStartAt:  now.Add(-time.Hour).UnixMilli(),
+				RunEndAt:    now.Add(time.Hour).UnixMilli(),
+			},
+		}
 
 		err := impl.onHandleDone(context.Background(), nil, sub)
 		require.Error(t, err)
@@ -598,8 +610,20 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 	t.Run("no errors", func(t *testing.T) {
 		t.Parallel()
 		ch := make(chan *entity.BackFillEvent, 1)
+		now := time.Now()
 		impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
-		sub := &spanSubscriber{t: &task.Task{ID: ptr.Of(int64(10)), WorkspaceID: ptr.Of(int64(20))}}
+		sub := &spanSubscriber{
+			t: &task.Task{ID: ptr.Of(int64(10)), WorkspaceID: ptr.Of(int64(20))},
+			tr: &task.TaskRun{
+				ID:          1,
+				WorkspaceID: 20,
+				TaskID:      10,
+				TaskType:    task.TaskRunTypeBackFill,
+				RunStatus:   task.RunStatusDone,
+				RunStartAt:  now.Add(-time.Hour).UnixMilli(),
+				RunEndAt:    now.UnixMilli(),
+			},
+		}
 
 		err := impl.onHandleDone(context.Background(), nil, sub)
 		require.NoError(t, err)

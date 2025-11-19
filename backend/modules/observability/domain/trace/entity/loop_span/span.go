@@ -550,8 +550,11 @@ func (s *Span) ClipSpan() {
 }
 
 func (s SpanList) Stat(ctx context.Context) (inputTokens, outputTokens int64, err error) {
-	modelSpans := s.FilterModelSpans()
-	for _, v := range modelSpans {
+	filter := GetModelSpansFilter()
+	for _, v := range s {
+		if !filter.Satisfied(v) {
+			continue
+		}
 		in, out, err := v.getTokens(ctx)
 		if err != nil {
 			return -1, -1, err
@@ -572,10 +575,7 @@ func (s SpanList) FilterSpans(f *FilterFields) SpanList {
 	return ret
 }
 
-func (s SpanList) FilterModelSpans() SpanList {
-	if len(s) == 0 {
-		return s
-	}
+func GetModelSpansFilter() *FilterFields {
 	modelFilter := &FilterFields{
 		QueryAndOr: ptr.Of(QueryAndOrEnumOr),
 		FilterFields: []*FilterField{
@@ -594,7 +594,7 @@ func (s SpanList) FilterModelSpans() SpanList {
 			},
 		},
 	}
-	return s.FilterSpans(modelFilter)
+	return modelFilter
 }
 
 func (s SpanList) SortByStartTime(desc bool) {
