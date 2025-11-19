@@ -39,12 +39,13 @@ func (b *BaseScheduledTask) Run() error {
 			case <-ticker.C:
 				ctx := context.Background()
 				startTime := time.Now()
-				if err := b.RunOnce(ctx); err != nil {
-					duration := time.Since(startTime)
-					logs.CtxError(ctx, "ScheduledTask [%s] run error: %v, cost: %v", b.name, err, duration)
+				err := b.RunOnce(ctx)
+				cost := time.Since(startTime)
+
+				if err != nil {
+					logs.CtxError(ctx, "ScheduledTask [%s] run error: %v, cost: %v", b.name, err, cost)
 				} else {
-					duration := time.Since(startTime)
-					logs.CtxInfo(ctx, "ScheduledTask [%s] run success, cost: %v", b.name, duration)
+					logs.CtxInfo(ctx, "ScheduledTask [%s] run success, cost: %v", b.name, cost)
 				}
 			case <-b.stopChan:
 				return
