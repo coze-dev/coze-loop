@@ -298,10 +298,9 @@ func NewScheduledTask(
 	taskService taskSvc.ITaskService,
 	taskProcessor task_processor.TaskProcessor,
 	taskRepo trepo.ITaskRepo,
-	aid int32,
 ) []scheduledtask.ScheduledTask {
 	return []scheduledtask.ScheduledTask{
-		taskst.NewStatusCheckTask(locker, config, traceHubService, taskService, taskProcessor, taskRepo, aid),
+		taskst.NewStatusCheckTask(locker, config, traceHubService, taskService, taskProcessor, taskRepo),
 		taskst.NewLocalCacheRefreshTask(traceHubService, taskRepo),
 	}
 }

@@ -33,7 +33,6 @@ const (
 // 定时任务+锁
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. Set the current task context
-	ctx = taskexe.FillCtx(ctx, int64(h.aid))
 	logs.CtxInfo(ctx, "BackFill msg %+v", event)
 
 	var (
