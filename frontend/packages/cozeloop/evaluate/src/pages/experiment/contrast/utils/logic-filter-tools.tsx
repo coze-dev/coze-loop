@@ -9,7 +9,7 @@ import {
 } from '@cozeloop/evaluate-components';
 import { FieldType, type Experiment } from '@cozeloop/api-schema/evaluation';
 
-import { ExperimentItemRunStatusSelect } from '@/components/experiment';
+import { ExprGroupItemRunStatusSelect } from '@/components/experiment';
 
 export function getExperimentContrastLogicFields(
   experiments: Experiment[],
@@ -27,11 +27,11 @@ export function getExperimentContrastLogicFields(
   return [
     {
       title: I18n.t('status'),
-      name: getLogicFieldName(FieldType.TurnRunState, 'turn_status'),
+      name: getLogicFieldName(FieldType.ItemRunState, ''),
       type: 'options',
       // 禁用等于和不等于操作符
       disabledOperations: ['equals', 'not-equals'],
-      setter: ExperimentItemRunStatusSelect,
+      setter: ExprGroupItemRunStatusSelect,
       setterProps: {
         className: 'w-full',
         prefix: '',

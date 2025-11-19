@@ -117,6 +117,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // 修改点：添加 ctrl 参数
+				f.configer.EXPECT().GetSchedulerAbortCtrl(gomock.Any()).Return(&entity.SchedulerAbortCtrl{}).AnyTimes()
 				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).Times(1)
 				f.manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session).Return(&entity.ExptRunLog{}, nil).Times(1)
 				f.mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
@@ -164,6 +165,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) { // 修改点：添加 ctrl 参数
+				f.configer.EXPECT().GetSchedulerAbortCtrl(gomock.Any()).Return(&entity.SchedulerAbortCtrl{}).AnyTimes()
 				f.manager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), args.event.Session).Return(mockExpt, nil).Times(1)
 				f.manager.EXPECT().GetRunLog(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session).Return(&entity.ExptRunLog{}, nil).Times(1)
 				f.mutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, args.ctx, func() {}, nil).Times(1)
@@ -848,7 +850,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1, 3},
-					map[string]any{"status": int32(entity.ItemRunState_Fail)},
+					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
 					int64(3),
 				).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
@@ -921,7 +923,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1},
-					map[string]any{"status": int32(entity.ItemRunState_Fail)},
+					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
 					int64(3),
 				).Return(errors.New("update item run log failed")).Times(1)
 			},
@@ -967,7 +969,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1},
-					map[string]any{"status": int32(entity.ItemRunState_Fail)},
+					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
 					int64(3),
 				).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(
@@ -1027,7 +1029,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1, 2},
-					map[string]any{"status": int32(entity.ItemRunState_Fail)},
+					map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)},
 					int64(3),
 				).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().CreateOrUpdateItemsTurnRunLogStatus(

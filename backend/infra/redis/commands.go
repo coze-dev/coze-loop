@@ -17,6 +17,11 @@ type Cmdable interface {
 	Pipeline() Pipeliner
 }
 
+//go:generate mockgen -destination=mocks/persist_redis.go -package=mocks . PersistentCmdable
+type PersistentCmdable interface {
+	Cmdable
+}
+
 type SimpleCmdable interface {
 	StringCmdable
 	HashCmdable
