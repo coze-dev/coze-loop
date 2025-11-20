@@ -35,6 +35,18 @@ type IDatasetRPCAdapter interface {
 	BatchGetDatasetItemsByVersion(ctx context.Context, param *BatchGetDatasetItemsParam) (items []*entity.EvaluationSetItem, err error)
 	ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error)
+	GetDatasetItemField(ctx context.Context, param *GetDatasetItemFieldParam) (fieldData *entity.FieldData, err error)
+}
+
+type GetDatasetItemFieldParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	// item 的主键ID，即 item.ID 这一字段
+	ItemPK int64
+	// 列名
+	FieldName string
+	// 当 item 为多轮时，必须提供
+	TurnID *int64
 }
 
 type CreateDatasetParam struct {

@@ -126,10 +126,10 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"GetEvaluationItemField": kitex.NewMethodInfo(
-		getEvaluationItemFieldHandler,
-		newEvaluationSetServiceGetEvaluationItemFieldArgs,
-		newEvaluationSetServiceGetEvaluationItemFieldResult,
+	"GetEvaluationSetItemField": kitex.NewMethodInfo(
+		getEvaluationSetItemFieldHandler,
+		newEvaluationSetServiceGetEvaluationSetItemFieldArgs,
+		newEvaluationSetServiceGetEvaluationSetItemFieldResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -470,10 +470,10 @@ func newEvaluationSetServiceClearEvaluationSetDraftItemResult() interface{} {
 	return eval_set.NewEvaluationSetServiceClearEvaluationSetDraftItemResult()
 }
 
-func getEvaluationItemFieldHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*eval_set.EvaluationSetServiceGetEvaluationItemFieldArgs)
-	realResult := result.(*eval_set.EvaluationSetServiceGetEvaluationItemFieldResult)
-	success, err := handler.(eval_set.EvaluationSetService).GetEvaluationItemField(ctx, realArg.Req)
+func getEvaluationSetItemFieldHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceGetEvaluationSetItemFieldArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult)
+	success, err := handler.(eval_set.EvaluationSetService).GetEvaluationSetItemField(ctx, realArg.Req)
 	if err != nil {
 		return err
 	}
@@ -481,12 +481,12 @@ func getEvaluationItemFieldHandler(ctx context.Context, handler interface{}, arg
 	return nil
 }
 
-func newEvaluationSetServiceGetEvaluationItemFieldArgs() interface{} {
-	return eval_set.NewEvaluationSetServiceGetEvaluationItemFieldArgs()
+func newEvaluationSetServiceGetEvaluationSetItemFieldArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemFieldArgs()
 }
 
-func newEvaluationSetServiceGetEvaluationItemFieldResult() interface{} {
-	return eval_set.NewEvaluationSetServiceGetEvaluationItemFieldResult()
+func newEvaluationSetServiceGetEvaluationSetItemFieldResult() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemFieldResult()
 }
 
 type kClient struct {
@@ -661,11 +661,11 @@ func (p *kClient) ClearEvaluationSetDraftItem(ctx context.Context, req *eval_set
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) GetEvaluationItemField(ctx context.Context, req *eval_set.GetEvaluationItemFieldRequest) (r *eval_set.GetEvaluationItemFieldResponse, err error) {
-	var _args eval_set.EvaluationSetServiceGetEvaluationItemFieldArgs
+func (p *kClient) GetEvaluationSetItemField(ctx context.Context, req *eval_set.GetEvaluationSetItemFieldRequest) (r *eval_set.GetEvaluationSetItemFieldResponse, err error) {
+	var _args eval_set.EvaluationSetServiceGetEvaluationSetItemFieldArgs
 	_args.Req = req
-	var _result eval_set.EvaluationSetServiceGetEvaluationItemFieldResult
-	if err = p.c.Call(ctx, "GetEvaluationItemField", &_args, &_result); err != nil {
+	var _result eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult
+	if err = p.c.Call(ctx, "GetEvaluationSetItemField", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

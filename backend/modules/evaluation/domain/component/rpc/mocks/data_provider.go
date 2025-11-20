@@ -222,6 +222,21 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) GetDataset(ctx, spaceID, evaluatio
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDataset", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).GetDataset), ctx, spaceID, evaluationSetID, deletedAt)
 }
 
+// GetDatasetItemField mocks base method.
+func (m *MockIDatasetRPCAdapter) GetDatasetItemField(ctx context.Context, param *rpc.GetDatasetItemFieldParam) (*entity.FieldData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDatasetItemField", ctx, param)
+	ret0, _ := ret[0].(*entity.FieldData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDatasetItemField indicates an expected call of GetDatasetItemField.
+func (mr *MockIDatasetRPCAdapterMockRecorder) GetDatasetItemField(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatasetItemField", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).GetDatasetItemField), ctx, param)
+}
+
 // GetDatasetVersion mocks base method.
 func (m *MockIDatasetRPCAdapter) GetDatasetVersion(ctx context.Context, spaceID, versionID int64, deletedAt *bool) (*entity.EvaluationSetVersion, *entity.EvaluationSet, error) {
 	m.ctrl.T.Helper()

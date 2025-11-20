@@ -443,3 +443,7 @@ func (a *DatasetRPCAdapter) ClearEvaluationSetDraftItem(ctx context.Context, spa
 func (a *DatasetRPCAdapter) QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error) {
 	return nil, "", nil
 }
+
+func (a *DatasetRPCAdapter) GetDatasetItemField(ctx context.Context, param *rpc.GetDatasetItemFieldParam) (fieldData *entity.FieldData, err error) {
+	return nil, nil
+}

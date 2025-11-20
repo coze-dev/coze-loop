@@ -27,7 +27,7 @@ type Client interface {
 	ListEvaluationSetItems(ctx context.Context, req *eval_set.ListEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetItemsResponse, err error)
 	BatchGetEvaluationSetItems(ctx context.Context, req *eval_set.BatchGetEvaluationSetItemsRequest, callOptions ...callopt.Option) (r *eval_set.BatchGetEvaluationSetItemsResponse, err error)
 	ClearEvaluationSetDraftItem(ctx context.Context, req *eval_set.ClearEvaluationSetDraftItemRequest, callOptions ...callopt.Option) (r *eval_set.ClearEvaluationSetDraftItemResponse, err error)
-	GetEvaluationItemField(ctx context.Context, req *eval_set.GetEvaluationItemFieldRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationItemFieldResponse, err error)
+	GetEvaluationSetItemField(ctx context.Context, req *eval_set.GetEvaluationSetItemFieldRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetItemFieldResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -139,7 +139,7 @@ func (p *kEvaluationSetServiceClient) ClearEvaluationSetDraftItem(ctx context.Co
 	return p.kClient.ClearEvaluationSetDraftItem(ctx, req)
 }
 
-func (p *kEvaluationSetServiceClient) GetEvaluationItemField(ctx context.Context, req *eval_set.GetEvaluationItemFieldRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationItemFieldResponse, err error) {
+func (p *kEvaluationSetServiceClient) GetEvaluationSetItemField(ctx context.Context, req *eval_set.GetEvaluationSetItemFieldRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetItemFieldResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.GetEvaluationItemField(ctx, req)
+	return p.kClient.GetEvaluationSetItemField(ctx, req)
 }

@@ -134,10 +134,12 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_items1.POST("/batch_delete", append(_batchdeleteevaluationsetitemsMw(handler), apis.BatchDeleteEvaluationSetItems)...)
 					_items1.POST("/batch_get", append(_batchgetevaluationsetitemsMw(handler), apis.BatchGetEvaluationSetItems)...)
 					_items1.POST("/clear", append(_clearevaluationsetdraftitemMw(handler), apis.ClearEvaluationSetDraftItem)...)
-					_items1.PUT("/:item_id", append(_item_idMw(handler), apis.UpdateEvaluationSetItem)...)
-					_item_id := _items1.Group("/:item_id", _item_idMw(handler)...)
-					_item_id.GET("/field", append(_getevaluationitemfieldMw(handler), apis.GetEvaluationItemField)...)
+					_items1.PUT("/:item_id", append(_updateevaluationsetitemMw(handler), apis.UpdateEvaluationSetItem)...)
 					_items1.POST("/list", append(_listevaluationsetitemsMw(handler), apis.ListEvaluationSetItems)...)
+					{
+						_item_pk := _items1.Group("/:item_pk", _item_pkMw(handler)...)
+						_item_pk.GET("/field", append(_getevaluationsetitemfieldMw(handler), apis.GetEvaluationSetItemField)...)
+					}
 				}
 				_evaluation_sets.GET("/:evaluation_set_id", append(_getevaluationsetMw(handler), apis.GetEvaluationSet)...)
 				_evaluation_sets.PATCH("/:evaluation_set_id", append(_updateevaluationsetMw(handler), apis.UpdateEvaluationSet)...)
@@ -397,8 +399,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_evaluation_set_id0.DELETE("/items", append(_items2Mw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
 					_items2 := _evaluation_set_id0.Group("/items", _items2Mw(handler)...)
 					{
-						_item_id0 := _items2.Group("/:item_id", _item_id0Mw(handler)...)
-						_item_id0.GET("/field", append(_getevaluationitemfieldoapiMw(handler), apis.GetEvaluationItemFieldOApi)...)
+						_item_id := _items2.Group("/:item_id", _item_idMw(handler)...)
+						_item_id.GET("/field", append(_getevaluationitemfieldoapiMw(handler), apis.GetEvaluationItemFieldOApi)...)
 					}
 					_evaluation_set_id0.GET("/items", append(_listevaluationsetversionitemsoapiMw(handler), apis.ListEvaluationSetVersionItemsOApi)...)
 					_evaluation_set_id0.POST("/items", append(_batchcreateevaluationsetitemsoapiMw(handler), apis.BatchCreateEvaluationSetItemsOApi)...)

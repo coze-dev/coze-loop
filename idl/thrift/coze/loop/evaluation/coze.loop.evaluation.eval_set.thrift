@@ -301,17 +301,17 @@ struct ClearEvaluationSetDraftItemResponse {
     255: base.BaseResp BaseResp
 }
 
-struct GetEvaluationItemFieldRequest {
+struct GetEvaluationSetItemFieldRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
-    3: required i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
+    3: required i64 item_pk (api.path='item_pk',api.js_conv='true', go.tag='json:"item_pk"'), // item 的主键ID，即 item.ID 这一字段
     4: required string fieldName // 列名
     5: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
 
     255: optional base.Base Base
 }
 
-struct GetEvaluationItemFieldResponse {
+struct GetEvaluationSetItemFieldResponse {
     1: optional eval_set.FieldData field_data
 
     255: optional base.BaseResp BaseResp
@@ -341,6 +341,6 @@ service EvaluationSetService {
     ListEvaluationSetItemsResponse ListEvaluationSetItems(1: ListEvaluationSetItemsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/list")
     BatchGetEvaluationSetItemsResponse BatchGetEvaluationSetItems(1: BatchGetEvaluationSetItemsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_get")
     ClearEvaluationSetDraftItemResponse ClearEvaluationSetDraftItem(1: ClearEvaluationSetDraftItemRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/clear")
-    GetEvaluationItemFieldResponse GetEvaluationItemField(1: GetEvaluationItemFieldRequest req) (api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/field")
+    GetEvaluationSetItemFieldResponse GetEvaluationSetItemField(1: GetEvaluationSetItemFieldRequest req) (api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_pk/field")
 }
 

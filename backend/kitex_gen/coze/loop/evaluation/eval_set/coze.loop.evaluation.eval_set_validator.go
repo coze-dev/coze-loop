@@ -436,7 +436,7 @@ func (p *ClearEvaluationSetDraftItemResponse) IsValid() error {
 	}
 	return nil
 }
-func (p *GetEvaluationItemFieldRequest) IsValid() error {
+func (p *GetEvaluationSetItemFieldRequest) IsValid() error {
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -444,7 +444,7 @@ func (p *GetEvaluationItemFieldRequest) IsValid() error {
 	}
 	return nil
 }
-func (p *GetEvaluationItemFieldResponse) IsValid() error {
+func (p *GetEvaluationSetItemFieldResponse) IsValid() error {
 	if p.FieldData != nil {
 		if err := p.FieldData.IsValid(); err != nil {
 			return fmt.Errorf("field FieldData not valid, %w", err)

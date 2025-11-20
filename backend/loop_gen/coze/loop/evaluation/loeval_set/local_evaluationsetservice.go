@@ -366,11 +366,11 @@ func (l *LocalEvaluationSetService) ClearEvaluationSetDraftItem(ctx context.Cont
 	return result.GetSuccess(), nil
 }
 
-func (l *LocalEvaluationSetService) GetEvaluationItemField(ctx context.Context, req *eval_set.GetEvaluationItemFieldRequest, callOptions ...callopt.Option) (*eval_set.GetEvaluationItemFieldResponse, error) {
+func (l *LocalEvaluationSetService) GetEvaluationSetItemField(ctx context.Context, req *eval_set.GetEvaluationSetItemFieldRequest, callOptions ...callopt.Option) (*eval_set.GetEvaluationSetItemFieldResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*eval_set.EvaluationSetServiceGetEvaluationItemFieldArgs)
-		result := out.(*eval_set.EvaluationSetServiceGetEvaluationItemFieldResult)
-		resp, err := l.impl.GetEvaluationItemField(ctx, arg.Req)
+		arg := in.(*eval_set.EvaluationSetServiceGetEvaluationSetItemFieldArgs)
+		result := out.(*eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult)
+		resp, err := l.impl.GetEvaluationSetItemField(ctx, arg.Req)
 		if err != nil {
 			return err
 		}
@@ -378,9 +378,9 @@ func (l *LocalEvaluationSetService) GetEvaluationItemField(ctx context.Context, 
 		return nil
 	})
 
-	arg := &eval_set.EvaluationSetServiceGetEvaluationItemFieldArgs{Req: req}
-	result := &eval_set.EvaluationSetServiceGetEvaluationItemFieldResult{}
-	ctx = l.injectRPCInfo(ctx, "GetEvaluationItemField")
+	arg := &eval_set.EvaluationSetServiceGetEvaluationSetItemFieldArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult{}
+	ctx = l.injectRPCInfo(ctx, "GetEvaluationSetItemField")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

@@ -697,7 +697,46 @@ func (e *EvaluationSetApplicationImpl) ClearEvaluationSetDraftItem(ctx context.C
 	return &eval_set.ClearEvaluationSetDraftItemResponse{}, nil
 }
 
-func (e *EvaluationSetApplicationImpl) GetEvaluationItemField(ctx context.Context, req *eval_set.GetEvaluationItemFieldRequest) (r *eval_set.GetEvaluationItemFieldResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemField(ctx context.Context, req *eval_set.GetEvaluationSetItemFieldRequest) (r *eval_set.GetEvaluationSetItemFieldResponse, err error) {
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	// 鉴权
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, &req.WorkspaceID, req.EvaluationSetID, gptr.Of(true))
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.WorkspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// domain调用
+	fieldData, err := e.evaluationSetItemService.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+		SpaceID:         req.WorkspaceID,
+		EvaluationSetID: req.EvaluationSetID,
+		ItemPK:          req.GetItemPk(),
+		FieldName:       req.GetFieldName(),
+		TurnID:          req.TurnID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// 返回结果构建、错误处理
+	return &eval_set.GetEvaluationSetItemFieldResponse{
+		FieldData: evaluation_set.FieldDataDO2DTO(fieldData),
+	}, nil
 }
