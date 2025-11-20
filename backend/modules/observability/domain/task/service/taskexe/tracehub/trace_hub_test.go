@@ -19,7 +19,9 @@ func TestTraceHubServiceImpl_getObjListWithTaskFromCache_Fallback(t *testing.T) 
 	t.Parallel()
 
 	ctx := context.Background()
-	impl := &TraceHubServiceImpl{}
+	impl := &TraceHubServiceImpl{
+		localCache: NewLocalCache(),
+	}
 
 	cache := impl.localCache.LoadTaskCache(ctx)
 	require.Nil(t, cache.WorkspaceIDs)
@@ -34,7 +36,10 @@ func TestTraceHubServiceImpl_getObjListWithTaskFromCache_FromCache(t *testing.T)
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
+	impl := &TraceHubServiceImpl{
+		taskRepo:   mockRepo,
+		localCache: NewLocalCache(),
+	}
 
 	expected := TaskCacheInfo{
 		WorkspaceIDs: []string{"space-2"},
@@ -44,15 +49,17 @@ func TestTraceHubServiceImpl_getObjListWithTaskFromCache_FromCache(t *testing.T)
 	impl.localCache.taskCache.Store("ObjListWithTask", expected)
 
 	cache := impl.localCache.LoadTaskCache(context.Background())
-	require.Nil(t, cache.WorkspaceIDs)
-	require.Nil(t, cache.BotIDs)
-	require.Nil(t, cache.Tasks)
+	require.Equal(t, expected.WorkspaceIDs, cache.WorkspaceIDs)
+	require.Equal(t, expected.BotIDs, cache.BotIDs)
+	require.Equal(t, len(expected.Tasks), len(cache.Tasks))
 }
 
 func TestTraceHubServiceImpl_getObjListWithTaskFromCache_TypeMismatch(t *testing.T) {
 	t.Parallel()
 
-	impl := &TraceHubServiceImpl{}
+	impl := &TraceHubServiceImpl{
+		localCache: NewLocalCache(),
+	}
 
 	impl.localCache.taskCache.Store("ObjListWithTask", "invalid")
 

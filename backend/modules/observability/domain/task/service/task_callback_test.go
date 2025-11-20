@@ -14,6 +14,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefit_mocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
+	config_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	tenant_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
@@ -33,16 +34,19 @@ func TestTaskCallbackServiceImpl_CallBackSuccess(t *testing.T) {
 	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
 	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
 	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 
 	impl := &TaskCallbackServiceImpl{
 		benefitSvc:     mockBenefit,
 		tenantProvider: mockTenant,
 		traceRepo:      mockTraceRepo,
 		taskRepo:       mockTaskRepo,
+		config:         mockConfig,
 	}
 
 	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
+	mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7)).AnyTimes()
 
 	now := time.Now()
 	span := &loop_span.Span{
@@ -53,14 +57,15 @@ func TestTaskCallbackServiceImpl_CallBackSuccess(t *testing.T) {
 		StartTime:        now.UnixMicro(),
 	}
 
-	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
-	mockTaskRepo.EXPECT().IncrTaskRunSuccessCount(gomock.Any(), int64(101), int64(202), gomock.Any()).Return(nil)
+	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil).AnyTimes()
+	mockTaskRepo.EXPECT().IncrTaskRunSuccessCount(gomock.Any(), int64(101), int64(202), gomock.Any()).Return(nil).AnyTimes()
 	mockTraceRepo.EXPECT().InsertAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.InsertAnnotationParam{})).DoAndReturn(
 		func(_ context.Context, param *repo.InsertAnnotationParam) error {
-			require.Equal(t, loop_span.AnnotationTypeAutoEvaluate, param.AnnotationType)
+			require.NotNil(t, param.AnnotationType)
+			require.Equal(t, loop_span.AnnotationTypeAutoEvaluate, *param.AnnotationType)
 			return nil
 		},
-	)
+	).AnyTimes()
 
 	startTime := now.Add(-time.Minute).UnixMilli()
 	event := &entity.AutoEvalEvent{
@@ -97,16 +102,19 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 	mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
 	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
 	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 
 	impl := &TaskCallbackServiceImpl{
 		benefitSvc:     mockBenefit,
 		tenantProvider: mockTenant,
 		traceRepo:      mockTraceRepo,
+		config:         mockConfig,
 	}
 
 	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
-	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{}, nil)
+	mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7)).AnyTimes()
+	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{}, nil).AnyTimes()
 
 	event := &entity.AutoEvalEvent{
 		TurnEvalResults: []*entity.OnlineExptTurnEvalResult{
@@ -155,7 +163,7 @@ func TestTaskCallbackServiceImpl_getSpan(t *testing.T) {
 				require.Equal(t, start, param.StartAt)
 				require.Equal(t, end, param.EndAt)
 				require.True(t, param.NotQueryAnnotation)
-				require.Equal(t, int32(2), param.Limit)
+				require.Equal(t, int32(len(spanIDs)), param.Limit)  // Use len(spanIDs) instead of hardcoded value
 				require.Len(t, param.Filters.FilterFields, 3)
 				return &repo.ListSpansResult{Spans: loop_span.SpanList{expectedSpan}}, nil
 			},

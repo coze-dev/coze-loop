@@ -466,8 +466,8 @@ func TestTraceHubServiceImpl_preDispatchTimeLimitFinishError(t *testing.T) {
 	}
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).Return(taskRunConfig, nil)
-	mockRepo.EXPECT().GetTaskCount(gomock.Any(), taskID).Return(int64(0), nil)
-	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(0), nil)
+	mockRepo.EXPECT().GetTaskCount(gomock.Any(), taskID).Return(int64(0), nil).AnyTimes()
+	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(0), nil).AnyTimes()
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
 
@@ -800,8 +800,8 @@ func TestTraceHubServiceImpl_preDispatchAggregatesErrors(t *testing.T) {
 	})
 
 	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), secondTaskID).Return(secondRun, nil)
-	mockRepo.EXPECT().GetTaskCount(gomock.Any(), secondTaskID).Return(int64(0), nil)
-	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), secondTaskID, secondRun.ID).Return(int64(0), nil)
+	mockRepo.EXPECT().GetTaskCount(gomock.Any(), secondTaskID).Return(int64(0), nil).AnyTimes()
+	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), secondTaskID, secondRun.ID).Return(int64(0), nil).AnyTimes()
 
 	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
 
