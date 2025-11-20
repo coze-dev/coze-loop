@@ -47,6 +47,9 @@ const (
 	AnnotationTypeCozeFeedback        AnnotationType = "coze_feedback"
 	AnnotationTypeManualDataset       AnnotationType = "manual_dataset"
 	AnnotationTypeOpenAPIFeedback     AnnotationType = "openapi_feedback"
+
+	AnnotationOpenAPIFeedbackFieldPrefix = "feedback_openapi_"
+	AnnotationManualFeedbackFieldPrefix  = "manual_feedback_"
 )
 
 type AnnotationValue struct {

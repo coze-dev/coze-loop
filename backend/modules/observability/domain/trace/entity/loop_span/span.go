@@ -302,7 +302,16 @@ func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 	}
 	annotationMap := make(map[string]AnnotationValue)
 	for _, annotation := range s.Annotations {
-		annotationMap[fmt.Sprintf("%s_%s", annotation.AnnotationType, annotation.Key)] = annotation.Value
+		var prefix string
+		switch annotation.AnnotationType {
+		case AnnotationTypeOpenAPIFeedback:
+			prefix = AnnotationOpenAPIFeedbackFieldPrefix
+		case AnnotationTypeManualFeedback:
+			prefix = AnnotationManualFeedbackFieldPrefix
+		default:
+			continue
+		}
+		annotationMap[fmt.Sprintf("%s%s", prefix, annotation.Key)] = annotation.Value
 	}
 	if val, ok := annotationMap[fieldName]; ok {
 		switch val.ValueType {
