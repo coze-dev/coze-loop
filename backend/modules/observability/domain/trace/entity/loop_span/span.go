@@ -318,7 +318,7 @@ func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 			return nil
 		}
 	}
-	return annotationMap
+	return nil
 }
 
 func (s *Span) IsValidSpan() error {
