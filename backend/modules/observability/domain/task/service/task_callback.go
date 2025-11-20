@@ -95,7 +95,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 		span := spans[0]
 
 		// Newly added: write Redis counters based on the Status
-		err = t.updateTaskRunDetailsCount(ctx, turn.GetTaskIDFromExt(), turn, storageDuration*24*60*60)
+		err = t.updateTaskRunDetailsCount(ctx, turn.GetTaskIDFromExt(), turn, storageDuration*24*60*60*60)
 		if err != nil {
 			logs.CtxWarn(ctx, "Update TaskRun count failed: taskID=%d, status=%d, err=%v",
 				turn.GetTaskIDFromExt(), turn.Status, err)
