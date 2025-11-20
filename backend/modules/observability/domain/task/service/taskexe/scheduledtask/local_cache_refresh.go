@@ -18,18 +18,20 @@ import (
 )
 
 type LocalCacheRefreshTask struct {
-	scheduledtask.ScheduledTask
+	*scheduledtask.BaseScheduledTask
 
 	traceHubService tracehub.ITraceHubService
 	taskRepo        repo.ITaskRepo
 }
 
 func NewLocalCacheRefreshTask(traceHubService tracehub.ITraceHubService, taskRepo repo.ITaskRepo) scheduledtask.ScheduledTask {
-	return &LocalCacheRefreshTask{
-		ScheduledTask:   scheduledtask.NewBaseScheduledTask("LocalCacheRefreshTask", 2*time.Minute),
-		traceHubService: traceHubService,
-		taskRepo:        taskRepo,
+	t := &LocalCacheRefreshTask{
+		BaseScheduledTask: scheduledtask.NewBaseScheduledTask("LocalCacheRefreshTask", 2*time.Minute),
+		traceHubService:   traceHubService,
+		taskRepo:          taskRepo,
 	}
+	t.BaseScheduledTask.ScheduledTask = t
+	return t
 }
 
 func (t *LocalCacheRefreshTask) RunOnce(ctx context.Context) error {

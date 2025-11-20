@@ -18,12 +18,13 @@ type ScheduledTask interface {
 }
 
 type BaseScheduledTask struct {
+	ScheduledTask
 	name         string
 	timeInterval time.Duration
 	stopChan     chan struct{}
 }
 
-func NewBaseScheduledTask(name string, timeInterval time.Duration) ScheduledTask {
+func NewBaseScheduledTask(name string, timeInterval time.Duration) *BaseScheduledTask {
 	return &BaseScheduledTask{
 		name:         name,
 		timeInterval: timeInterval,
@@ -33,7 +34,7 @@ func NewBaseScheduledTask(name string, timeInterval time.Duration) ScheduledTask
 
 func (b *BaseScheduledTask) Run() error {
 	ticker := time.NewTicker(b.timeInterval)
-	if err := b.RunOnce(context.Background()); err != nil {
+	if err := b.ScheduledTask.RunOnce(context.Background()); err != nil {
 		return err
 	}
 	goroutineutil.GoWithDefaultRecovery(context.Background(), func() {
@@ -43,7 +44,7 @@ func (b *BaseScheduledTask) Run() error {
 			case <-ticker.C:
 				ctx := context.Background()
 				startTime := time.Now()
-				if err := b.RunOnce(ctx); err != nil {
+				if err := b.ScheduledTask.RunOnce(ctx); err != nil {
 					logs.CtxError(ctx, "ScheduledTask [%s] run error: %v, cost: %v", b.name, err, time.Since(startTime))
 				} else {
 					logs.CtxInfo(ctx, "ScheduledTask [%s] run success, cost: %v", b.name, time.Since(startTime))
