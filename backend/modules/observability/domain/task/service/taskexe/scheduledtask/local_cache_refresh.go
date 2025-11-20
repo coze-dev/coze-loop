@@ -26,7 +26,7 @@ type LocalCacheRefreshTask struct {
 
 func NewLocalCacheRefreshTask(traceHubService tracehub.ITraceHubService, taskRepo repo.ITaskRepo) scheduledtask.ScheduledTask {
 	t := &LocalCacheRefreshTask{
-		BaseScheduledTask: scheduledtask.NewBaseScheduledTask("LocalCacheRefreshTask", 2*time.Minute),
+		BaseScheduledTask: scheduledtask.NewBaseScheduledTask("LocalCacheRefreshTask", 2*time.Minute, true),
 		traceHubService:   traceHubService,
 		taskRepo:          taskRepo,
 	}

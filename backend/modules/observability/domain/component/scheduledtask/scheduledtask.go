@@ -22,20 +22,24 @@ type BaseScheduledTask struct {
 	name         string
 	timeInterval time.Duration
 	stopChan     chan struct{}
+	runAtStartup bool
 }
 
-func NewBaseScheduledTask(name string, timeInterval time.Duration) *BaseScheduledTask {
+func NewBaseScheduledTask(name string, timeInterval time.Duration, runAtStartup bool) *BaseScheduledTask {
 	return &BaseScheduledTask{
 		name:         name,
 		timeInterval: timeInterval,
 		stopChan:     make(chan struct{}),
+		runAtStartup: runAtStartup,
 	}
 }
 
 func (b *BaseScheduledTask) Run() error {
 	ticker := time.NewTicker(b.timeInterval)
-	if err := b.ScheduledTask.RunOnce(context.Background()); err != nil {
-		return err
+	if b.runAtStartup {
+		if err := b.ScheduledTask.RunOnce(context.Background()); err != nil {
+			return err
+		}
 	}
 	goroutineutil.GoWithDefaultRecovery(context.Background(), func() {
 		defer ticker.Stop()

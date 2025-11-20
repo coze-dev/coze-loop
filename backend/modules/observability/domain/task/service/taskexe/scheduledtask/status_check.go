@@ -61,7 +61,7 @@ func NewStatusCheckTask(
 	taskRepo repo.ITaskRepo,
 ) scheduledtask.ScheduledTask {
 	t := &StatusCheckTask{
-		BaseScheduledTask: scheduledtask.NewBaseScheduledTask("StatusCheckTask", 5*time.Minute),
+		BaseScheduledTask: scheduledtask.NewBaseScheduledTask("StatusCheckTask", 5*time.Minute, false),
 		locker:            locker,
 		config:            config,
 		traceHubService:   traceHubService,
