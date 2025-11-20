@@ -111,7 +111,7 @@ func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSp
 	}
 
 	return &trace.ListPreSpanResponse{
-		Spans: tconv.SpanListDO2DTO(preSpan.Spans, nil, nil, nil),
+		Spans: tconv.SpanListDO2DTO(preSpan.Spans, nil, nil, nil, false),
 	}, nil
 }
 
@@ -1087,9 +1087,6 @@ func (t *TraceApplication) validateExtractSpanInfoReq(ctx context.Context, req *
 }
 
 func (t *TraceApplication) UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest) (r *trace.UpsertTrajectoryConfigResponse, err error) {
-	// 0. 权限校验
-	// 1. 调用repo层，更新或插入配置
-	// 2. 返回响应
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10),
@@ -1097,9 +1094,15 @@ func (t *TraceApplication) UpsertTrajectoryConfig(ctx context.Context, req *trac
 		return nil, err
 	}
 
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	if userID == "" {
+		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+
 	if err := t.traceService.UpsertTrajectoryConfig(ctx, &service.UpsertTrajectoryConfigRequest{
 		WorkspaceID: req.WorkspaceID,
 		Filters:     tconv.FilterFieldsDTO2DO(req.Filters),
+		UserID:      userID,
 	}); err != nil {
 		return nil, err
 	}
@@ -1108,11 +1111,49 @@ func (t *TraceApplication) UpsertTrajectoryConfig(ctx context.Context, req *trac
 }
 
 func (t *TraceApplication) GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest) (r *trace.GetTrajectoryConfigResponse, err error) {
-	//TODO implement me
-	panic("implement me")
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	confResp, err := t.traceService.GetTrajectoryConfig(ctx, &service.GetTrajectoryConfigRequest{
+		WorkspaceID: req.WorkspaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if confResp == nil {
+		return &trace.GetTrajectoryConfigResponse{}, nil
+	}
+
+	return &trace.GetTrajectoryConfigResponse{
+		Filters: tconv.FilterFieldsDO2DTO(confResp.Filters),
+	}, nil
 }
 
 func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest) (r *trace.ListTrajectoryResponse, err error) {
-	//TODO implement me
-	panic("implement me")
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+	resp, err := t.traceService.ListTrajectory(ctx, &service.ListTrajectoryRequest{
+		PlatformType: loop_span.PlatformType(req.PlatformType),
+		WorkspaceID:  req.WorkspaceID,
+		TraceIds:     req.TraceIds,
+		StartTime:    req.StartTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return &trace.ListTrajectoryResponse{}, nil
+	}
+
+	return &trace.ListTrajectoryResponse{
+		Trajectories: tconv.TrajectoriesDO2DTO(resp.Trajectories),
+	}, nil
 }

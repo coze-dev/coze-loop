@@ -260,6 +260,7 @@ type ExtractSpanInfoResp struct {
 type UpsertTrajectoryConfigRequest struct {
 	WorkspaceID int64
 	Filters     *loop_span.FilterFields
+	UserID      string
 }
 
 type GetTrajectoryConfigRequest struct {
@@ -536,18 +537,79 @@ func (r *TraceServiceImpl) orderPreSpans(preAndCurrentSpans []*loop_span.Span, r
 }
 
 func (r *TraceServiceImpl) ListTrajectory(ctx context.Context, req *ListTrajectoryRequest) (*ListTrajectoryResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+
+	trajectories := make([]*loop_span.Trajectory, 0)
+
+	startTimeAt := req.StartTime
+	if startTimeAt == nil {
+		startTimeAt = ptr.Of(time.Now().UnixMilli() - time_util.Day2MillSec(90))
+	}
+
+	// todo: 这里只是mock，应该要替换为一凡包装的TraceID换取轨迹span_list的方法
+	// todo： 实际应该先查询trajectory_filter，再过滤
+	for i := range req.TraceIds {
+		spanList, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
+			Tenants:            tenants,
+			TraceID:            req.TraceIds[i],
+			StartAt:            *startTimeAt,
+			Limit:              1000,
+			NotQueryAnnotation: true,
+			OmitColumns:        nil,
+			SelectColumns:      nil,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		trajectories = append(trajectories, r.spanList2Trajectory(spanList))
+	}
+
+	return &ListTrajectoryResponse{
+		Trajectories: trajectories,
+	}, nil
+}
+
+func (r *TraceServiceImpl) spanList2Trajectory(spanList loop_span.SpanList) *loop_span.Trajectory {
+	// todo: 待实现
+	return &loop_span.Trajectory{}
 }
 
 func (r *TraceServiceImpl) GetTrajectoryConfig(ctx context.Context, req *GetTrajectoryConfigRequest) (*GetTrajectoryConfigResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	trajectoryConfig, err := r.traceRepo.GetTrajectoryConfig(ctx, repo.GetTrajectoryConfigParam{WorkspaceId: req.WorkspaceID})
+	if err != nil {
+		return nil, err
+	}
+	if trajectoryConfig == nil || trajectoryConfig.Filter == nil || *trajectoryConfig.Filter == "" {
+		return &GetTrajectoryConfigResponse{}, nil
+	}
+	filters := &loop_span.FilterFields{}
+	if err := json.Unmarshal([]byte(*trajectoryConfig.Filter), &filters); err != nil {
+		return nil, err
+	}
+	return &GetTrajectoryConfigResponse{
+		Filters: filters,
+	}, nil
 }
 
 func (r *TraceServiceImpl) UpsertTrajectoryConfig(ctx context.Context, req *UpsertTrajectoryConfigRequest) error {
-	//TODO implement me
-	panic("implement me")
+	marshalFilters, err := json.MarshalString(req.Filters)
+	if err != nil {
+		return err
+	}
+
+	if err := r.traceRepo.UpsertTrajectoryConfig(ctx, &repo.UpsertTrajectoryConfigParam{
+		WorkspaceId: req.WorkspaceID,
+		Filters:     marshalFilters,
+		UserID:      req.UserID,
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {

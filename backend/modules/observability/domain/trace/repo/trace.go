@@ -6,6 +6,7 @@ package repo
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
@@ -74,6 +75,23 @@ type InsertAnnotationParam struct {
 	Annotations []*loop_span.Annotation
 }
 
+type UpsertTrajectoryConfigParam struct {
+	WorkspaceId int64
+	Filters     string
+	UserID      string
+}
+
+type GetTrajectoryConfigParam struct {
+	WorkspaceId int64
+}
+
+type ListTrajectoryParam struct {
+	Tenants     []string
+	WorkspaceId int64
+	TraceIDs    []string
+	StartAt     *int64 // ms
+}
+
 //go:generate mockgen -destination=mocks/trace.go -package=mocks . ITraceRepo
 type ITraceRepo interface {
 	InsertSpans(context.Context, *InsertTraceParam) error
@@ -83,4 +101,6 @@ type ITraceRepo interface {
 	ListAnnotations(context.Context, *ListAnnotationsParam) (loop_span.AnnotationList, error)
 	GetAnnotation(context.Context, *GetAnnotationParam) (*loop_span.Annotation, error)
 	InsertAnnotations(context.Context, *InsertAnnotationParam) error
+	UpsertTrajectoryConfig(context.Context, *UpsertTrajectoryConfigParam) error
+	GetTrajectoryConfig(context.Context, GetTrajectoryConfigParam) (*entity.TrajectoryConfig, error)
 }

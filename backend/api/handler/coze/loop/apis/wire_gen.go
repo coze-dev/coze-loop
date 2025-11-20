@@ -160,7 +160,7 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iTraceIngestionApplication, err := application6.InitTraceIngestionApplication(configFactory, ckDb, mqFactory, persistentCmdable)
+	iTraceIngestionApplication, err := application6.InitTraceIngestionApplication(configFactory, ckDb, db2, mqFactory, persistentCmdable)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iMetricApplication, err := application6.InitMetricApplication(ckDb, configFactory, fileClient, benefit2, authCli)
+	iMetricApplication, err := application6.InitMetricApplication(ckDb, configFactory, fileClient, benefit2, authCli, idgen2)
 	if err != nil {
 		return nil, err
 	}

@@ -574,7 +574,7 @@ func (p *ListTrajectoryRequest) IsValid() error {
 	if len(p.TraceIds) < int(1) {
 		return fmt.Errorf("field TraceIds MinLen rule failed, current value: %v", p.TraceIds)
 	}
-	if len(p.TraceIds) > int(500) {
+	if len(p.TraceIds) > int(10) {
 		return fmt.Errorf("field TraceIds MaxLen rule failed, current value: %v", p.TraceIds)
 	}
 	if p.Base != nil {

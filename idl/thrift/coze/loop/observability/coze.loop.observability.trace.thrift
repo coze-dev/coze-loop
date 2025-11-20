@@ -409,7 +409,7 @@ struct GetTrajectoryConfigResponse {
 struct ListTrajectoryRequest {
     1: required common.PlatformType platform_type (api.query='platform_type') // 需要准确填写，用于确定查询哪些租户的数据
     2: required i64 workspace_id (api.js_conv='true',api.query='workspace_id')
-    3: required list<string> trace_ids (api.body="trace_ids", vt.min_size="1", vt.max_size="500")
+    3: required list<string> trace_ids (api.body="trace_ids", vt.min_size="1", vt.max_size="10")
     4: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
 
     255: optional base.Base Base

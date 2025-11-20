@@ -8,6 +8,8 @@ const (
 
 type StepType = string
 
+type TrajectoryList []*Trajectory
+
 type Trajectory struct {
 	// trace_id
 	ID *int64
