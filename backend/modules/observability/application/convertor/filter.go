@@ -40,6 +40,9 @@ func FilterFieldsDTO2DO(f *filter.FilterFields) *loop_span.FilterFields {
 		if field.SubFilter != nil {
 			fField.SubFilter = FilterFieldsDTO2DO(field.SubFilter)
 		}
+		if field.ExtraInfo != nil {
+			fField.ExtraInfo = field.ExtraInfo
+		}
 		ret.FilterFields = append(ret.FilterFields, fField)
 	}
 	return ret
@@ -78,6 +81,9 @@ func FilterFieldsDO2DTO(f *loop_span.FilterFields) *filter.FilterFields {
 		}
 		if field.SubFilter != nil {
 			fField.SubFilter = FilterFieldsDO2DTO(field.SubFilter)
+		}
+		if field.ExtraInfo != nil {
+			fField.ExtraInfo = field.ExtraInfo
 		}
 		ret.FilterFields = append(ret.FilterFields, fField)
 	}
