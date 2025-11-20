@@ -246,7 +246,8 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
 	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo)
 	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
-	iTaskService, err := service3.NewTaskServiceImpl(iTaskRepo, iUserProvider, idgen2, iBackfillProducer, processorTaskProcessor, iStorageProvider)
+	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
+	iTaskService, err := service3.NewTaskServiceImpl(iTaskRepo, iUserProvider, idgen2, iBackfillProducer, processorTaskProcessor, iStorageProvider, iTenantProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +260,6 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	if err != nil {
 		return nil, err
 	}
-	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
 	iLocker := NewTaskLocker(redis2)
