@@ -27,6 +27,7 @@ type FieldSchema struct {
 	ContentType            ContentType                          `json:"content_type,omitempty"`
 	DefaultDisplayFormat   FieldDisplayFormat                   `json:"default_display_format,omitempty"`
 	Status                 FieldStatus                          `json:"status,omitempty"`
+	SchemaKey              *SchemaKey                           `json:"schema_key,omitempty"`
 	TextSchema             string                               `json:"text_schema,omitempty"`
 	MultiModelSpec         *MultiModalSpec                      `json:"multi_model_spec,omitempty"`
 	Hidden                 bool                                 `json:"hidden,omitempty"`
@@ -39,6 +40,60 @@ type MultiModalSpec struct {
 	MaxFileSize      int64    `json:"max_file_size,omitempty"`
 	SupportedFormats []string `json:"supported_formats,omitempty"`
 	MaxPartCount     int32    `json:"max_part_count,omitempty"`
+}
+
+type SchemaKey int64
+
+const (
+	SchemaKey_String  SchemaKey = 1
+	SchemaKey_Integer SchemaKey = 2
+	SchemaKey_Float   SchemaKey = 3
+	SchemaKey_Bool    SchemaKey = 4
+	SchemaKey_Message SchemaKey = 5
+	// 单选
+	SchemaKey_SingleChoice SchemaKey = 6
+	// 轨迹
+	SchemaKey_Trajectory SchemaKey = 7
+)
+
+func (p SchemaKey) String() string {
+	switch p {
+	case SchemaKey_String:
+		return "String"
+	case SchemaKey_Integer:
+		return "Integer"
+	case SchemaKey_Float:
+		return "Float"
+	case SchemaKey_Bool:
+		return "Bool"
+	case SchemaKey_Message:
+		return "Message"
+	case SchemaKey_SingleChoice:
+		return "SingleChoice"
+	case SchemaKey_Trajectory:
+		return "Trajectory"
+	}
+	return "<UNSET>"
+}
+
+func SchemaKeyFromString(s string) (SchemaKey, error) {
+	switch s {
+	case "String":
+		return SchemaKey_String, nil
+	case "Integer":
+		return SchemaKey_Integer, nil
+	case "Float":
+		return SchemaKey_Float, nil
+	case "Bool":
+		return SchemaKey_Bool, nil
+	case "Message":
+		return SchemaKey_Message, nil
+	case "SingleChoice":
+		return SchemaKey_SingleChoice, nil
+	case "Trajectory":
+		return SchemaKey_Trajectory, nil
+	}
+	return SchemaKey(0), fmt.Errorf("not a valid SchemaKey string")
 }
 
 type FieldDisplayFormat int64

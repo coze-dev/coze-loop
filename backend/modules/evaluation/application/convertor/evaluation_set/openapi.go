@@ -56,6 +56,31 @@ func convertDOContentTypeToOpenAPI(contentType entity.ContentType) *common.Conte
 	}
 }
 
+func convertDOSchemaKeyToOpenAPI(key *entity.SchemaKey) *openapi_eval_set.SchemaKey {
+	if key == nil {
+		return nil
+	}
+
+	switch gptr.Indirect(key) {
+	case entity.SchemaKey_Integer:
+		ct := openapi_eval_set.SchemaKeyInteger
+		return &ct
+	case entity.SchemaKey_Float:
+		ct := openapi_eval_set.SchemaKeyFloat
+		return &ct
+	case entity.SchemaKey_String:
+		ct := openapi_eval_set.SchemaKeyString
+		return &ct
+	case entity.SchemaKey_Bool:
+		ct := openapi_eval_set.SchemaKeyBool
+		return &ct
+	case entity.SchemaKey_Trajectory:
+		ct := openapi_eval_set.SchemaKeyTrajectory
+		return &ct
+	}
+	return nil
+}
+
 // convertOpenAPIDisplayFormatToDO 将OpenAPI的DefaultDisplayFormat转换为Domain Entity的DefaultDisplayFormat
 func convertOpenAPIDisplayFormatToDO(format *openapi_eval_set.FieldDisplayFormat) entity.FieldDisplayFormat {
 	if format == nil {
@@ -75,6 +100,27 @@ func convertOpenAPIDisplayFormatToDO(format *openapi_eval_set.FieldDisplayFormat
 		return entity.FieldDisplayFormat_Code
 	default:
 		return entity.FieldDisplayFormat_PlainText
+	}
+}
+
+func convertOpenAPISchemaKeyToDO(format *openapi_eval_set.SchemaKey) *entity.SchemaKey {
+	if format == nil {
+		return nil // 默认值
+	}
+
+	switch *format {
+	case openapi_eval_set.SchemaKeyInteger:
+		return gptr.Of(entity.SchemaKey_Integer)
+	case openapi_eval_set.SchemaKeyFloat:
+		return gptr.Of(entity.SchemaKey_Float)
+	case openapi_eval_set.SchemaKeyBool:
+		return gptr.Of(entity.SchemaKey_Bool)
+	case openapi_eval_set.SchemaKeyString:
+		return gptr.Of(entity.SchemaKey_String)
+	case openapi_eval_set.SchemaKeyTrajectory:
+		return gptr.Of(entity.SchemaKey_Trajectory)
+	default:
+		return gptr.Of(entity.SchemaKey_String)
 	}
 }
 
@@ -162,6 +208,7 @@ func OpenAPIFieldSchemaDTO2DO(dto *openapi_eval_set.FieldSchema) *entity.FieldSc
 		ContentType:          contentType,
 		DefaultDisplayFormat: displayFormat,
 		IsRequired:           gptr.Indirect(dto.IsRequired),
+		SchemaKey:            convertOpenAPISchemaKeyToDO(dto.SchemaKey),
 		TextSchema:           textSchema,
 		Key:                  gptr.Indirect(dto.Key),
 	}
@@ -280,6 +327,7 @@ func OpenAPIFieldSchemaDO2DTO(do *entity.FieldSchema) *openapi_eval_set.FieldSch
 		ContentType:          contentType,
 		DefaultDisplayFormat: displayFormat,
 		IsRequired:           gptr.Of(do.IsRequired),
+		SchemaKey:            convertDOSchemaKeyToOpenAPI(do.SchemaKey),
 		TextSchema:           gptr.Of(do.TextSchema),
 		Key:                  gptr.Of(do.Key),
 	}

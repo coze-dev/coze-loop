@@ -696,3 +696,8 @@ func (e *EvaluationSetApplicationImpl) ClearEvaluationSetDraftItem(ctx context.C
 	}
 	return &eval_set.ClearEvaluationSetDraftItemResponse{}, nil
 }
+
+func (e *EvaluationSetApplicationImpl) GetEvaluationItemField(ctx context.Context, req *eval_set.GetEvaluationItemFieldRequest) (r *eval_set.GetEvaluationItemFieldResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
