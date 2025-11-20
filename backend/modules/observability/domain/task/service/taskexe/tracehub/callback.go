@@ -5,6 +5,7 @@ package tracehub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -19,8 +20,15 @@ import (
 
 func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
 	for _, turn := range event.TurnEvalResults {
+		task, err := h.taskRepo.GetTaskByRedis(ctx, turn.GetTaskIDFromExt())
+		if err != nil {
+			return err
+		}
+		if task == nil || task.SpanFilter == nil {
+			return errors.New("invalid task")
+		}
 		workspaceIDStr, workspaceID := turn.GetWorkspaceIDFromExt()
-		tenants, err := h.getTenants(ctx, loop_span.PlatformType("callback_all"))
+		tenants, err := h.getTenants(ctx, loop_span.PlatformType(task.SpanFilter.PlatformType))
 		if err != nil {
 			return err
 		}
@@ -100,12 +108,21 @@ func (h *TraceHubServiceImpl) CallBack(ctx context.Context, event *entity.AutoEv
 	return nil
 }
 
+// todo need platformtype
+// 读task，获取platform
 func (h *TraceHubServiceImpl) Correction(ctx context.Context, event *entity.CorrectionEvent) error {
+	task, err := h.taskRepo.GetTaskByRedis(ctx, event.GetTaskIDFromExt())
+	if err != nil {
+		return err
+	}
+	if task == nil || task.SpanFilter == nil {
+		return errors.New("invalid task")
+	}
 	workspaceIDStr, workspaceID := event.GetWorkspaceIDFromExt()
 	if workspaceID == 0 {
 		return fmt.Errorf("workspace_id is empty")
 	}
-	tenants, err := h.getTenants(ctx, loop_span.PlatformType("callback_all"))
+	tenants, err := h.getTenants(ctx, loop_span.PlatformType(task.SpanFilter.PlatformType))
 	if err != nil {
 		return err
 	}

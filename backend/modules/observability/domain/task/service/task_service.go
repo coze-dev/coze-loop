@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"strconv"
 	"time"
 
@@ -85,6 +86,7 @@ func NewTaskServiceImpl(
 	idGenerator idgen.IIDGenerator,
 	backfillProducer mq.IBackfillProducer,
 	taskProcessor *processor.TaskProcessor,
+	storageProvider storage.IStorageProvider,
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
 		TaskRepo:         tRepo,
@@ -92,6 +94,7 @@ func NewTaskServiceImpl(
 		idGenerator:      idGenerator,
 		backfillProducer: backfillProducer,
 		taskProcessor:    *taskProcessor,
+		storageProvider:  storageProvider,
 	}, nil
 }
 
@@ -101,6 +104,7 @@ type TaskServiceImpl struct {
 	idGenerator      idgen.IIDGenerator
 	backfillProducer mq.IBackfillProducer
 	taskProcessor    processor.TaskProcessor
+	storageProvider  storage.IStorageProvider
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
@@ -125,6 +129,11 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	}
 	id, err := t.TaskRepo.CreateTask(ctx, req.Task)
 	if err != nil {
+		return nil, err
+	}
+	// storage准备
+	if err = t.storageProvider.PrepareStorageForTask(ctx, strconv.FormatInt(req.Task.WorkspaceID, 10), loop_span.PlatformType(req.Task.SpanFilter.PlatformType)); err != nil {
+		logs.CtxError(ctx, "PrepareStorageForTask err:%v", err)
 		return nil, err
 	}
 	// 创建任务的数据准备

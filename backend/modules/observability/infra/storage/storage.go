@@ -18,8 +18,12 @@ func NewTraceStorageProvider(traceConfig config.ITraceConfig) storage.IStoragePr
 	}
 }
 
-func (r *TraceStorageProviderImpl) GetTraceStorage(ctx context.Context, workspaceID, platformType string) storage.Storage {
+func (r *TraceStorageProviderImpl) GetTraceStorage(ctx context.Context, workspaceID string, tenants []string) storage.Storage {
 	return storage.Storage{
 		StorageName: "ck",
 	}
+}
+
+func (r *TraceStorageProviderImpl) PrepareStorageForTask(ctx context.Context, workspaceID string, tenants []string) error {
+	return nil
 }

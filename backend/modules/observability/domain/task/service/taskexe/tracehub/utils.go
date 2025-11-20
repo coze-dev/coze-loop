@@ -56,6 +56,7 @@ func (h *TraceHubServiceImpl) getTenants(ctx context.Context, platform loop_span
 	return h.tenantProvider.GetTenantsByPlatformType(ctx, platform)
 }
 
+// todo need platformtype
 func (h *TraceHubServiceImpl) getSpan(ctx context.Context, tenants []string, spanIds []string, traceId, workspaceId string, startAt, endAt int64) ([]*loop_span.Span, error) {
 	if len(spanIds) == 0 || workspaceId == "" {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
