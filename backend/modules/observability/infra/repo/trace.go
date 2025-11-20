@@ -306,9 +306,13 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 		return nil
 	}
 	span := param.Span
+	annotationType := ""
+	if param.AnnotationType != nil {
+		annotationType = string(*param.AnnotationType)
+	}
 	return t.spanProducer.SendSpanWithAnnotation(ctx, &entity.SpanEvent{
 		Span: span,
-	}, string(*param.AnnotationType))
+	}, annotationType)
 }
 
 func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
