@@ -205,6 +205,7 @@ func (app *PromptManageApplicationImpl) ClonePrompt(ctx context.Context, request
 		DisplayName: request.GetClonedPromptName(),
 		Description: request.GetClonedPromptDescription(),
 		CreatedBy:   userID,
+		PromptType:  promptDO.PromptBasic.PromptType,
 	}
 	clonedPromptDO.PromptDraft = &entity.PromptDraft{
 		DraftInfo: &entity.DraftInfo{
