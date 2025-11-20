@@ -663,7 +663,7 @@ func TestTaskApplication_SpanTrigger(t *testing.T) {
 			"call_type": "test",
 		},
 		SystemTags: map[string]any{
-			"fornax_space_id": "123",  // WorkspaceID应该放在SystemTags中
+			"fornax_space_id": "123",
 			"tenant":          "test-tenant",
 		},
 		ServerEnv: &entity.ServerInRawSpan{
@@ -673,9 +673,9 @@ func TestTaskApplication_SpanTrigger(t *testing.T) {
 	}
 
 	tests := []struct {
-		name      string
-		setupApp  func(ctrl *gomock.Controller) *TaskApplication
-		expectErr bool
+		name        string
+		setupApp    func(ctrl *gomock.Controller) *TaskApplication
+		expectErr   bool
 		useLoopSpan bool
 	}{
 		{
@@ -685,7 +685,7 @@ func TestTaskApplication_SpanTrigger(t *testing.T) {
 				traceSvc.EXPECT().SpanTrigger(gomock.Any(), gomock.Any()).Return(errors.New("hub error"))
 				return &TaskApplication{tracehubSvc: traceSvc}
 			},
-			expectErr: false, // SpanTrigger方法在出错时返回nil，不返回错误
+			expectErr:   false, // SpanTrigger方法在出错时返回nil，不返回错误
 			useLoopSpan: false,
 		},
 		{
@@ -695,7 +695,7 @@ func TestTaskApplication_SpanTrigger(t *testing.T) {
 				traceSvc.EXPECT().SpanTrigger(gomock.Any(), gomock.Any()).Return(nil)
 				return &TaskApplication{tracehubSvc: traceSvc}
 			},
-			expectErr: false,
+			expectErr:   false,
 			useLoopSpan: false,
 		},
 		{
@@ -707,7 +707,7 @@ func TestTaskApplication_SpanTrigger(t *testing.T) {
 				traceSvc.EXPECT().SpanTrigger(gomock.Any(), gomock.Any()).Return(nil)
 				return &TaskApplication{tracehubSvc: traceSvc, traceRepo: traceRepo}
 			},
-			expectErr: false,
+			expectErr:   false,
 			useLoopSpan: true,
 		},
 	}
@@ -720,7 +720,7 @@ func TestTaskApplication_SpanTrigger(t *testing.T) {
 			defer ctrl.Finish()
 
 			app := caseItem.setupApp(ctrl)
-			
+
 			var err error
 			if caseItem.useLoopSpan {
 				// 使用有效的loop span，包含必要的字段
@@ -732,10 +732,9 @@ func TestTaskApplication_SpanTrigger(t *testing.T) {
 				}
 				err = app.SpanTrigger(context.Background(), nil, span)
 			} else {
-				span := &loop_span.Span{}
-				err = app.SpanTrigger(context.Background(), event, span)
+				err = app.SpanTrigger(context.Background(), event, nil)
 			}
-			
+
 			if caseItem.expectErr {
 				assert.Error(t, err)
 			} else {

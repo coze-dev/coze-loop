@@ -1385,6 +1385,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 		return resp, err
 	}
 	// 再同步修改观测数据
+	span.Annotations = append(span.Annotations, annotation)
 	param := &repo.InsertAnnotationParam{
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),

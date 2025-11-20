@@ -163,7 +163,7 @@ func TestTaskCallbackServiceImpl_getSpan(t *testing.T) {
 				require.Equal(t, start, param.StartAt)
 				require.Equal(t, end, param.EndAt)
 				require.True(t, param.NotQueryAnnotation)
-				require.Equal(t, int32(len(spanIDs)), param.Limit)  // Use len(spanIDs) instead of hardcoded value
+				require.Equal(t, int32(len(spanIDs)), param.Limit) // Use len(spanIDs) instead of hardcoded value
 				require.Len(t, param.Filters.FilterFields, 3)
 				return &repo.ListSpansResult{Spans: loop_span.SpanList{expectedSpan}}, nil
 			},
