@@ -644,8 +644,66 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 }
 
 func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest) (r *openapi.GetEvaluationItemFieldOApiResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	// 鉴权
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
+		SpaceID:         req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvaluationSetID(),
+		VersionID:       req.VersionID,
+		ItemIDs:         []int64{req.GetItemID()},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 || items[0] == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("item not found"))
+	}
+	// 调用domain服务
+	fieldData, err := e.evaluationSetItemService.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+		SpaceID:         req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvaluationSetID(),
+		ItemPK:          items[0].ID,
+		FieldName:       req.GetFieldName(),
+		TurnID:          req.TurnID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 构建响应
+	return &openapi.GetEvaluationItemFieldOApiResponse{
+		FieldData: evaluation_set.OpenAPIFieldDataDO2DTO(fieldData),
+	}, nil
 }
 
 func (e *EvalOpenAPIApplication) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error) {

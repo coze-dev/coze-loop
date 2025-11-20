@@ -257,11 +257,12 @@ struct ListEvaluationSetVersionItemsOApiResponse {
 }
 
 struct GetEvaluationItemFieldOApiRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
-    2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
-    3: required i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
-    4: required string fieldName // 列名
-    5: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
+    1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
+    2: optional i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
+    3: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"'),
+    4: optional i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
+    5: optional string field_name // 列名
+    6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
 
     255: optional base.Base Base
 }

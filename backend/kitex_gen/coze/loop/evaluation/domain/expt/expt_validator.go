@@ -99,6 +99,12 @@ func (p *ExptColumnEvaluator) IsValid() error {
 func (p *ColumnEvaluator) IsValid() error {
 	return nil
 }
+func (p *ExptColumnEvalTarget) IsValid() error {
+	return nil
+}
+func (p *ColumnEvalTarget) IsValid() error {
+	return nil
+}
 func (p *ColumnEvalSetField) IsValid() error {
 	return nil
 }
