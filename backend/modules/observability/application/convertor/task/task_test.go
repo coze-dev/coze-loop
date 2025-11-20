@@ -198,7 +198,16 @@ func TestTaskDTO2DO(t *testing.T) {
 	t.Parallel()
 
 	now := time.Now()
-	spanFilter := &filter.SpanFilterFields{}
+	var filters *filter.FilterFields
+	filters = &filter.FilterFields{
+		QueryAndOr:   ptr.Of(filter.QueryRelationAnd),
+		FilterFields: []*filter.FilterField{},
+	}
+	spanFilter := &filter.SpanFilterFields{
+		PlatformType: gptr.Of(kitCommon.PlatformTypeCozeloop),
+		SpanListType: gptr.Of(kitCommon.SpanListTypeRootSpan),
+		Filters:      filters,
+	}
 	dto := &kitTask.Task{
 		ID:          gptr.Of(int64(11)),
 		Name:        "dto",
