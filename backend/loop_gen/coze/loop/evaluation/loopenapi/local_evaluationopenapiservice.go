@@ -276,6 +276,29 @@ func (l *LocalEvaluationOpenAPIService) ListEvaluationSetVersionItemsOApi(ctx co
 	return result.GetSuccess(), nil
 }
 
+// GetEvaluationItemFieldOApi
+// 查询评测集某个filed值，用于获取超长文本的内容
+func (l *LocalEvaluationOpenAPIService) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest, callOptions ...callopt.Option) (*openapi.GetEvaluationItemFieldOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceGetEvaluationItemFieldOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult)
+		resp, err := l.impl.GetEvaluationItemFieldOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceGetEvaluationItemFieldOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "GetEvaluationItemFieldOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // UpdateEvaluationSetSchemaOApi
 // 更新评测集字段信息
 func (l *LocalEvaluationOpenAPIService) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (*openapi.UpdateEvaluationSetSchemaOApiResponse, error) {
