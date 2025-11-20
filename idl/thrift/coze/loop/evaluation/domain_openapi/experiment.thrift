@@ -158,6 +158,12 @@ struct ColumnEvaluator {
     6: optional string description
 }
 
+struct ColumnEvalTarget {
+    1: optional string name
+    2: optional string description
+    3: optional string label
+}
+
 // 目标输出结果
 struct TargetOutput {
     1: optional string target_record_id

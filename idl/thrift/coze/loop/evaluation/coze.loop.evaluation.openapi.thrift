@@ -425,6 +425,7 @@ struct ListExperimentResultOpenAPIData {
     1: optional list<experiment.ColumnEvalSetField> column_eval_set_fields  // 评测集列
     2: optional list<experiment.ColumnEvaluator> column_evaluators  // 评估器列
     3: optional list<experiment.ItemResult> item_results    // 评测行级结果
+    4: optional list<experiment.ColumnEvalTarget> column_eval_targets
 
     100: optional i64 total
 }

@@ -60,11 +60,19 @@ struct Message {
     3: optional map<string, string> ext (go.tag='mapstructure:"ext"'),
 }
 
+enum ArgSchemaTextType {
+    Trajectory = 1
+}
+
+const string ArgSchemaKey_ActualOutput = "actual_output"
+const string ArgSchemaKey_Trajectory = "trajectory"
+
 struct ArgsSchema {
     1: optional string key (go.tag='mapstructure:"key"'),
     2: optional list<ContentType> support_content_types (go.tag='mapstructure:"support_content_types"'),
     // 	序列化后的jsonSchema字符串，例如："{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}, \"age\": {\"type\": \"integer\"}, \"isStudent\": {\"type\": \"boolean\"}}, \"required\": [\"name\", \"age\", \"isStudent\"]}"
     3: optional string json_schema (go.tag='mapstructure:"json_schema"'),
+    5: optional ArgSchemaTextType text_type (go.tag='mapstructure:"text_type"')
 }
 
 struct UserInfo {
