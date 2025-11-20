@@ -30,7 +30,7 @@ func NewLocalCacheRefreshTask(traceHubService tracehub.ITraceHubService, taskRep
 		traceHubService:   traceHubService,
 		taskRepo:          taskRepo,
 	}
-	t.BaseScheduledTask.ScheduledTask = t
+	t.ScheduledTask = t
 	return t
 }
 

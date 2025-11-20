@@ -69,7 +69,7 @@ func NewStatusCheckTask(
 		taskProcessor:     taskProcessor,
 		taskRepo:          taskRepo,
 	}
-	t.BaseScheduledTask.ScheduledTask = t
+	t.ScheduledTask = t
 	return t
 }
 
