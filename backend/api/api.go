@@ -11,6 +11,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/app/server/binding"
 	"github.com/cloudwego/hertz/pkg/app/server/render"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 
 	"github.com/coze-dev/coze-loop/backend/api/handler/coze/loop/apis"
@@ -57,6 +58,7 @@ func Init(
 	limiterFactory limiter.IRateLimiterFactory,
 	ckDB ck.Provider,
 	translater i18n.ITranslater,
+	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 ) (*apis.APIHandler, error) {
 	foundationHandler, err := apis.InitFoundationHandler(idgen, db, batchObjectStorage, configFactory)
 	if err != nil {
@@ -103,6 +105,7 @@ func Init(
 		lofile.NewLocalFileService(foundationHandler.FileService),
 		lotag.NewLocalTagService(dataHandler.TagService),
 		objectStorage,
+		plainLimiterFactory,
 	)
 	if err != nil {
 		return nil, err
@@ -125,6 +128,9 @@ func Init(
 		0,
 	)
 	if err != nil {
+		return nil, err
+	}
+	if err = observabilityHandler.RunTaskScheduleTask(ctx); err != nil {
 		return nil, err
 	}
 	observabilityHandler.RunAsync(ctx)

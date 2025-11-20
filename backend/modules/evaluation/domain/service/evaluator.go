@@ -13,24 +13,36 @@ import (
 type EvaluatorService interface {
 	// ListEvaluator 按查询条件查询 evaluator_version
 	ListEvaluator(ctx context.Context, request *entity.ListEvaluatorRequest) ([]*entity.Evaluator, int64, error)
+	// ListBuiltinEvaluator 查询内置评估器
+	ListBuiltinEvaluator(ctx context.Context, request *entity.ListBuiltinEvaluatorRequest) ([]*entity.Evaluator, int64, error)
 	// BatchGetEvaluator 按 id 批量查询 evaluator_version
 	BatchGetEvaluator(ctx context.Context, spaceID int64, evaluatorIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	// GetEvaluator 按 id 单个查询 evaluator_version
 	GetEvaluator(ctx context.Context, spaceID, evaluatorID int64, includeDeleted bool) (*entity.Evaluator, error)
 	// CreateEvaluator 创建 evaluator_version
 	CreateEvaluator(ctx context.Context, evaluator *entity.Evaluator, cid string) (int64, error)
-	// UpdateEvaluatorMeta 修改 evaluator_version
-	UpdateEvaluatorMeta(ctx context.Context, id, spaceID int64, name, description, userID string) error
+	// UpdateEvaluatorMeta 修改评估器元信息（支持 builtin/benchmark/vendor 可选更新）
+	UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error
+	// UpdateBuiltinEvaluatorTags 更新内置评估器的标签（按 evaluator_id 全量对齐）
+	UpdateBuiltinEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string) error
 	// UpdateEvaluatorDraft 修改 evaluator_version draft
 	UpdateEvaluatorDraft(ctx context.Context, versionDO *entity.Evaluator) error
 	// DeleteEvaluator 删除 evaluator_version
 	DeleteEvaluator(ctx context.Context, evaluatorIDs []int64, userID string) error
 	// RunEvaluator evaluator_version 运行
 	RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error)
-	// DebugEvaluator 调试 evaluator_version
-	DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, error)
+	// DebugEvaluator 调试 evaluator_version；新增 exptSpaceID 作为实验空间ID
+	DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, exptSpaceID int64) (*entity.EvaluatorOutputData, error)
+	// GetBuiltinEvaluator 根据 evaluatorID 查询元信息，若为预置评估器则按 builtin_visible_version 组装返回
+	// 非预置评估器则返回nil
+	GetBuiltinEvaluator(ctx context.Context, evaluatorID int64) (*entity.Evaluator, error)
+	// BatchGetBuiltinEvaluator 批量获取预置评估器（按 visible 版本）
+	BatchGetBuiltinEvaluator(ctx context.Context, evaluatorIDs []int64) ([]*entity.Evaluator, error)
+	// BatchGetEvaluatorByIDAndVersion 批量根据 (evaluator_id, version) 查询具体版本
+	BatchGetEvaluatorByIDAndVersion(ctx context.Context, pairs [][2]interface{}) ([]*entity.Evaluator, error)
 	// GetEvaluatorVersion 按 version id 单个查询 evaluator_version version
-	GetEvaluatorVersion(ctx context.Context, evaluatorVersionID int64, includeDeleted bool) (*entity.Evaluator, error)
+	// withTags=true 时查询并回填标签（用于内置评估器），需传入 spaceID；否则查询普通评估器
+	GetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted bool, withTags bool) (*entity.Evaluator, error)
 	// BatchGetEvaluatorVersion 按 version id 批量查询 evaluator_version version
 	BatchGetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	// ListEvaluatorVersion 按条件查询 evaluator_version version
@@ -39,6 +51,8 @@ type EvaluatorService interface {
 	SubmitEvaluatorVersion(ctx context.Context, evaluatorVersionDO *entity.Evaluator, version, description, cid string) (*entity.Evaluator, error)
 	// CheckNameExist
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error)
+	// ListEvaluatorTags 根据 tagType 聚合标签，并按字母序返回
+	ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error)
 }
 
 //go:generate mockgen -destination mocks/evaluator_record_service_mock.go -package mocks . EvaluatorRecordService

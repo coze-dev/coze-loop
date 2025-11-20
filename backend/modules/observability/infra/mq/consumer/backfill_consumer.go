@@ -22,7 +22,7 @@ type BackFillConsumer struct {
 	conf.IConfigLoader
 }
 
-func newBackFillConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewBackFillConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &BackFillConsumer{
 		handler:       handler,
 		IConfigLoader: loader,

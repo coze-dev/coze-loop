@@ -12,6 +12,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -22,7 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	convertor2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/convertor"
 	model2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -36,7 +37,8 @@ func NewTraceCKRepoImpl(
 	spanDao ck.ISpansDao,
 	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
-	spanRedisDao dao.ISpansRedisDao,
+	spanRedisDao redis.ISpansRedisDao,
+	spanProducer mq.ISpanProducer,
 	trajectoryConfDao mysql.ITrajectoryConfigDao,
 ) (repo.ITraceRepo, error) {
 	return &TraceCkRepoImpl{
@@ -44,6 +46,7 @@ func NewTraceCKRepoImpl(
 		annoDao:           annoDao,
 		traceConfig:       traceConfig,
 		spanRedisDao:      spanRedisDao,
+		spanProducer:      spanProducer,
 		trajectoryConfDao: trajectoryConfDao,
 	}, nil
 }
@@ -66,7 +69,8 @@ type TraceCkRepoImpl struct {
 	spansDao          ck.ISpansDao
 	annoDao           ck.IAnnotationDao
 	traceConfig       config.ITraceConfig
-	spanRedisDao      dao.ISpansRedisDao
+	spanRedisDao      redis.ISpansRedisDao
+	spanProducer      mq.ISpanProducer
 	trajectoryConfDao mysql.ITrajectoryConfigDao
 	idGenerator       idgen.IIDGenerator
 }
@@ -334,18 +338,29 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 	if err != nil {
 		return err
 	}
-	pos := make([]*model.ObservabilityAnnotation, 0, len(param.Annotations))
-	for _, annotation := range param.Annotations {
+	pos := make([]*model.ObservabilityAnnotation, 0, len(param.Span.Annotations))
+	for _, annotation := range param.Span.Annotations {
 		annotationPO, err := convertor.AnnotationDO2PO(annotation)
 		if err != nil {
 			return err
 		}
 		pos = append(pos, annotationPO)
 	}
-	return t.annoDao.Insert(ctx, &ck.InsertAnnotationParam{
+	err = t.annoDao.Insert(ctx, &ck.InsertAnnotationParam{
 		Table:       table,
 		Annotations: pos,
 	})
+	if err != nil {
+		return nil
+	}
+	span := param.Span
+	annotationType := ""
+	if param.AnnotationType != nil {
+		annotationType = string(*param.AnnotationType)
+	}
+	return t.spanProducer.SendSpanWithAnnotation(ctx, &entity.SpanEvent{
+		Span: span,
+	}, annotationType)
 }
 
 func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {

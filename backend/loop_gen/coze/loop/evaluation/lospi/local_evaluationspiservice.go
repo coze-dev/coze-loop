@@ -85,6 +85,29 @@ func (l *LocalEvaluationSPIService) AsyncInvokeEvalTarget(ctx context.Context, r
 	return result.GetSuccess(), nil
 }
 
+// InvokeEvaluator
+// invoke custom evaluator
+func (l *LocalEvaluationSPIService) InvokeEvaluator(ctx context.Context, req *spi.InvokeEvaluatorRequest, callOptions ...callopt.Option) (*spi.InvokeEvaluatorResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*spi.EvaluationSPIServiceInvokeEvaluatorArgs)
+		result := out.(*spi.EvaluationSPIServiceInvokeEvaluatorResult)
+		resp, err := l.impl.InvokeEvaluator(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &spi.EvaluationSPIServiceInvokeEvaluatorArgs{Req: req}
+	result := &spi.EvaluationSPIServiceInvokeEvaluatorResult{}
+	ctx = l.injectRPCInfo(ctx, "InvokeEvaluator")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationSPIService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

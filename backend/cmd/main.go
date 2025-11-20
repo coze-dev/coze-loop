@@ -52,7 +52,7 @@ func main() {
 		panic(err)
 	}
 
-	handler, err := api.Init(ctx, c.idgen, c.db, c.redis, c.redis, c.cfgFactory, c.mqFactory, c.objectStorage, c.batchObjectStorage, c.benefitSvc, c.auditClient, c.metric, c.limiterFactory, c.ckDb, c.translater)
+	handler, err := api.Init(ctx, c.idgen, c.db, c.redis, c.redis, c.cfgFactory, c.mqFactory, c.objectStorage, c.batchObjectStorage, c.benefitSvc, c.auditClient, c.metric, c.limiterFactory, c.ckDb, c.translater, c.plainLimiterFactory)
 	if err != nil {
 		panic(err)
 	}
@@ -118,19 +118,20 @@ func getComponentConfig(configFactory conf.IConfigLoaderFactory) (*ComponentConf
 }
 
 type component struct {
-	idgen              idgen.IIDGenerator
-	db                 db.Provider
-	redis              redis.Cmdable
-	cfgFactory         conf.IConfigLoaderFactory
-	mqFactory          mq.IFactory
-	objectStorage      fileserver.ObjectStorage
-	batchObjectStorage fileserver.BatchObjectStorage
-	benefitSvc         benefit.IBenefitService
-	auditClient        audit.IAuditService
-	metric             metrics.Meter
-	limiterFactory     limiter.IRateLimiterFactory
-	ckDb               ck.Provider
-	translater         i18n.ITranslater
+	idgen               idgen.IIDGenerator
+	db                  db.Provider
+	redis               redis.Cmdable
+	cfgFactory          conf.IConfigLoaderFactory
+	mqFactory           mq.IFactory
+	objectStorage       fileserver.ObjectStorage
+	batchObjectStorage  fileserver.BatchObjectStorage
+	benefitSvc          benefit.IBenefitService
+	auditClient         audit.IAuditService
+	metric              metrics.Meter
+	limiterFactory      limiter.IRateLimiterFactory
+	ckDb                ck.Provider
+	translater          i18n.ITranslater
+	plainLimiterFactory limiter.IPlainRateLimiterFactory
 }
 
 func initTracer(handler *apis.APIHandler) error {
@@ -250,19 +251,20 @@ func newComponent(ctx context.Context) (*component, error) {
 	}
 
 	return &component{
-		idgen:              idgenerator,
-		db:                 db,
-		redis:              cmdable,
-		cfgFactory:         cfgFactory,
-		mqFactory:          rocketmq.NewFactory(),
-		objectStorage:      objectStorage,
-		batchObjectStorage: objectStorage,
-		benefitSvc:         benefit.NewNoopBenefitService(),
-		auditClient:        audit.NewNoopAuditService(),
-		metric:             metrics.GetMeter(),
-		limiterFactory:     dist.NewRateLimiterFactory(cmdable),
-		ckDb:               ckDb,
-		translater:         translater,
+		idgen:               idgenerator,
+		db:                  db,
+		redis:               cmdable,
+		cfgFactory:          cfgFactory,
+		mqFactory:           rocketmq.NewFactory(),
+		objectStorage:       objectStorage,
+		batchObjectStorage:  objectStorage,
+		benefitSvc:          benefit.NewNoopBenefitService(),
+		auditClient:         audit.NewNoopAuditService(),
+		metric:              metrics.GetMeter(),
+		limiterFactory:      dist.NewRateLimiterFactory(cmdable),
+		ckDb:                ckDb,
+		translater:          translater,
+		plainLimiterFactory: dist.NewPlainLimiterFactory(cmdable),
 	}, nil
 }
 

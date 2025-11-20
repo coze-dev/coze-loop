@@ -24,18 +24,20 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	metric_general "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	metric_model "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
 	metric_service_def "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
 	metric_tool "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
+	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	trepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	taskSvc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	taskst "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/scheduledtask"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
@@ -55,7 +57,7 @@ import (
 	obrepo "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo"
 	ckdao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	mysqldao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
-	tredis "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
+	redis2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/auth"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluation"
@@ -77,10 +79,11 @@ var (
 		obrepo.NewTaskRepoImpl,
 		// obrepo.NewTaskRunRepoImpl,
 		mysqldao.NewTaskDaoImpl,
-		tredis.NewTaskDAO,
-		tredis.NewTaskRunDAO,
+		redis2.NewTaskDAO,
+		redis2.NewTaskRunDAO,
 		mysqldao.NewTaskRunDaoImpl,
 		mq2.NewBackfillProducerImpl,
+		NewScheduledTask,
 	)
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
@@ -92,6 +95,7 @@ var (
 		obcollector.NewEventCollectorProvider,
 		mq2.NewTraceProducerImpl,
 		mq2.NewAnnotationProducerImpl,
+		mq2.NewSpanWithAnnotationProducerImpl,
 		file.NewFileRPCProvider,
 		NewTraceConfigLoader,
 		NewTraceProcessorBuilder,
@@ -100,7 +104,7 @@ var (
 		workspace.NewWorkspaceProvider,
 		evaluator.NewEvaluatorRPCProvider,
 		NewDatasetServiceAdapter,
-		tredis.NewSpansRedisDaoImpl,
+		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
 		taskDomainSet,
 	)
@@ -122,7 +126,8 @@ var (
 		obconfig.NewTraceConfigCenter,
 		NewTraceConfigLoader,
 		NewIngestionCollectorFactory,
-		tredis.NewSpansRedisDaoImpl,
+		mq2.NewSpanWithAnnotationProducerImpl,
+		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
@@ -138,6 +143,7 @@ var (
 		evaluation.NewEvaluationRPCProvider,
 		NewTaskLocker,
 		traceDomainSet,
+		taskSvc.NewTaskCallbackServiceImpl,
 	)
 	metricsSet = wire.NewSet(
 		NewMetricApplication,
@@ -285,8 +291,22 @@ func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
 	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo,
 ) *task_processor.TaskProcessor {
 	taskProcessor := task_processor.NewTaskProcessor()
-	taskProcessor.Register(task.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
+	taskProcessor.Register(task_entity.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
 	return taskProcessor
+}
+
+func NewScheduledTask(
+	locker lock.ILocker,
+	config config.ITraceConfig,
+	traceHubService tracehub.ITraceHubService,
+	taskService taskSvc.ITaskService,
+	taskProcessor task_processor.TaskProcessor,
+	taskRepo trepo.ITaskRepo,
+) []scheduledtask.ScheduledTask {
+	return []scheduledtask.ScheduledTask{
+		taskst.NewStatusCheckTask(locker, config, traceHubService, taskService, taskProcessor, taskRepo),
+		taskst.NewLocalCacheRefreshTask(traceHubService, taskRepo),
+	}
 }
 
 func InitTraceApplication(

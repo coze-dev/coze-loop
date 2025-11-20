@@ -2446,7 +2446,8 @@ type ArgsSchema struct {
 	Key                 *string       `thrift:"key,1,optional" frugal:"1,optional,string" mapstructure:"key" form:"key" json:"key,omitempty" query:"key"`
 	SupportContentTypes []ContentType `thrift:"support_content_types,2,optional" frugal:"2,optional,list<string>" mapstructure:"support_content_types" form:"support_content_types" json:"support_content_types,omitempty" query:"support_content_types"`
 	// 	序列化后的jsonSchema字符串，例如："{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}, \"age\": {\"type\": \"integer\"}, \"isStudent\": {\"type\": \"boolean\"}}, \"required\": [\"name\", \"age\", \"isStudent\"]}"
-	JSONSchema *string `thrift:"json_schema,3,optional" frugal:"3,optional,string" mapstructure:"json_schema" form:"json_schema" json:"json_schema,omitempty" query:"json_schema"`
+	JSONSchema   *string  `thrift:"json_schema,3,optional" frugal:"3,optional,string" mapstructure:"json_schema" form:"json_schema" json:"json_schema,omitempty" query:"json_schema"`
+	DefaultValue *Content `thrift:"default_value,4,optional" frugal:"4,optional,Content" mapstructure:"default_value" form:"default_value" json:"default_value,omitempty" query:"default_value"`
 }
 
 func NewArgsSchema() *ArgsSchema {
@@ -2491,6 +2492,18 @@ func (p *ArgsSchema) GetJSONSchema() (v string) {
 	}
 	return *p.JSONSchema
 }
+
+var ArgsSchema_DefaultValue_DEFAULT *Content
+
+func (p *ArgsSchema) GetDefaultValue() (v *Content) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDefaultValue() {
+		return ArgsSchema_DefaultValue_DEFAULT
+	}
+	return p.DefaultValue
+}
 func (p *ArgsSchema) SetKey(val *string) {
 	p.Key = val
 }
@@ -2500,11 +2513,15 @@ func (p *ArgsSchema) SetSupportContentTypes(val []ContentType) {
 func (p *ArgsSchema) SetJSONSchema(val *string) {
 	p.JSONSchema = val
 }
+func (p *ArgsSchema) SetDefaultValue(val *Content) {
+	p.DefaultValue = val
+}
 
 var fieldIDToName_ArgsSchema = map[int16]string{
 	1: "key",
 	2: "support_content_types",
 	3: "json_schema",
+	4: "default_value",
 }
 
 func (p *ArgsSchema) IsSetKey() bool {
@@ -2517,6 +2534,10 @@ func (p *ArgsSchema) IsSetSupportContentTypes() bool {
 
 func (p *ArgsSchema) IsSetJSONSchema() bool {
 	return p.JSONSchema != nil
+}
+
+func (p *ArgsSchema) IsSetDefaultValue() bool {
+	return p.DefaultValue != nil
 }
 
 func (p *ArgsSchema) Read(iprot thrift.TProtocol) (err error) {
@@ -2556,6 +2577,14 @@ func (p *ArgsSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2635,6 +2664,14 @@ func (p *ArgsSchema) ReadField3(iprot thrift.TProtocol) error {
 	p.JSONSchema = _field
 	return nil
 }
+func (p *ArgsSchema) ReadField4(iprot thrift.TProtocol) error {
+	_field := NewContent()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.DefaultValue = _field
+	return nil
+}
 
 func (p *ArgsSchema) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2652,6 +2689,10 @@ func (p *ArgsSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -2734,6 +2775,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ArgsSchema) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDefaultValue() {
+		if err = oprot.WriteFieldBegin("default_value", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.DefaultValue.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *ArgsSchema) String() string {
 	if p == nil {
@@ -2756,6 +2815,9 @@ func (p *ArgsSchema) DeepEqual(ano *ArgsSchema) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.JSONSchema) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.DefaultValue) {
 		return false
 	}
 	return true
@@ -2794,6 +2856,13 @@ func (p *ArgsSchema) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.JSONSchema, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ArgsSchema) Field4DeepEqual(src *Content) bool {
+
+	if !p.DefaultValue.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -5080,6 +5149,341 @@ func (p *RuntimeParam) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.JSONDemo, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type RateLimit struct {
+	Rate   *int32  `thrift:"rate,1,optional" frugal:"1,optional,i32" form:"rate" json:"rate,omitempty" query:"rate"`
+	Burst  *int32  `thrift:"burst,2,optional" frugal:"2,optional,i32" form:"burst" json:"burst,omitempty" query:"burst"`
+	Period *string `thrift:"period,3,optional" frugal:"3,optional,string" form:"period" json:"period,omitempty" query:"period"`
+}
+
+func NewRateLimit() *RateLimit {
+	return &RateLimit{}
+}
+
+func (p *RateLimit) InitDefault() {
+}
+
+var RateLimit_Rate_DEFAULT int32
+
+func (p *RateLimit) GetRate() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRate() {
+		return RateLimit_Rate_DEFAULT
+	}
+	return *p.Rate
+}
+
+var RateLimit_Burst_DEFAULT int32
+
+func (p *RateLimit) GetBurst() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBurst() {
+		return RateLimit_Burst_DEFAULT
+	}
+	return *p.Burst
+}
+
+var RateLimit_Period_DEFAULT string
+
+func (p *RateLimit) GetPeriod() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPeriod() {
+		return RateLimit_Period_DEFAULT
+	}
+	return *p.Period
+}
+func (p *RateLimit) SetRate(val *int32) {
+	p.Rate = val
+}
+func (p *RateLimit) SetBurst(val *int32) {
+	p.Burst = val
+}
+func (p *RateLimit) SetPeriod(val *string) {
+	p.Period = val
+}
+
+var fieldIDToName_RateLimit = map[int16]string{
+	1: "rate",
+	2: "burst",
+	3: "period",
+}
+
+func (p *RateLimit) IsSetRate() bool {
+	return p.Rate != nil
+}
+
+func (p *RateLimit) IsSetBurst() bool {
+	return p.Burst != nil
+}
+
+func (p *RateLimit) IsSetPeriod() bool {
+	return p.Period != nil
+}
+
+func (p *RateLimit) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RateLimit[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *RateLimit) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Rate = _field
+	return nil
+}
+func (p *RateLimit) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Burst = _field
+	return nil
+}
+func (p *RateLimit) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Period = _field
+	return nil
+}
+
+func (p *RateLimit) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("RateLimit"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *RateLimit) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRate() {
+		if err = oprot.WriteFieldBegin("rate", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Rate); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *RateLimit) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBurst() {
+		if err = oprot.WriteFieldBegin("burst", thrift.I32, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Burst); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *RateLimit) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPeriod() {
+		if err = oprot.WriteFieldBegin("period", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Period); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *RateLimit) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RateLimit(%+v)", *p)
+
+}
+
+func (p *RateLimit) DeepEqual(ano *RateLimit) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Rate) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Burst) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Period) {
+		return false
+	}
+	return true
+}
+
+func (p *RateLimit) Field1DeepEqual(src *int32) bool {
+
+	if p.Rate == src {
+		return true
+	} else if p.Rate == nil || src == nil {
+		return false
+	}
+	if *p.Rate != *src {
+		return false
+	}
+	return true
+}
+func (p *RateLimit) Field2DeepEqual(src *int32) bool {
+
+	if p.Burst == src {
+		return true
+	} else if p.Burst == nil || src == nil {
+		return false
+	}
+	if *p.Burst != *src {
+		return false
+	}
+	return true
+}
+func (p *RateLimit) Field3DeepEqual(src *string) bool {
+
+	if p.Period == src {
+		return true
+	} else if p.Period == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Period, *src) != 0 {
 		return false
 	}
 	return true

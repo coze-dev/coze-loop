@@ -9,34 +9,35 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
-	domain_task "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
+	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
-	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	trace_Svc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	tracerepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/samber/lo"
 )
 
 type ITaskQueueConsumer interface {
-	SpanTrigger(ctx context.Context, event *entity.RawSpan) error
-	CallBack(ctx context.Context, event *entity.AutoEvalEvent) error
-	Correction(ctx context.Context, event *entity.CorrectionEvent) error
+	SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan, Span *loop_span.Span) error
+	AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error
+	AutoEvalCorrection(ctx context.Context, event *entity.CorrectionEvent) error
 	BackFill(ctx context.Context, event *entity.BackFillEvent) error
 }
+
 type ITaskApplication interface {
 	task.TaskService
 	ITaskQueueConsumer
+	RunTaskScheduleTask(ctx context.Context) error
 }
 
 func NewTaskApplication(
@@ -46,30 +47,36 @@ func NewTaskApplication(
 	evaluationService rpc.IEvaluationRPCAdapter,
 	userService rpc.IUserProvider,
 	tracehubSvc tracehub.ITraceHubService,
-	taskProcessor task_processor.TaskProcessor,
-	buildHelper trace_Svc.TraceFilterProcessorBuilder,
+	taskProcessor processor.TaskProcessor,
+	taskCallbackService service.ITaskCallbackService,
+	scheduledTasks []scheduledtask.ScheduledTask,
+	traceRepo tracerepo.ITraceRepo,
 ) (ITaskApplication, error) {
 	return &TaskApplication{
-		taskSvc:       taskService,
-		authSvc:       authService,
-		evalSvc:       evalService,
-		evaluationSvc: evaluationService,
-		userSvc:       userService,
-		tracehubSvc:   tracehubSvc,
-		taskProcessor: taskProcessor,
-		buildHelper:   buildHelper,
+		taskSvc:         taskService,
+		authSvc:         authService,
+		evalSvc:         evalService,
+		evaluationSvc:   evaluationService,
+		userSvc:         userService,
+		tracehubSvc:     tracehubSvc,
+		taskProcessor:   taskProcessor,
+		taskCallbackSvc: taskCallbackService,
+		scheduledTasks:  scheduledTasks,
+		traceRepo:       traceRepo,
 	}, nil
 }
 
 type TaskApplication struct {
-	taskSvc       service.ITaskService
-	authSvc       rpc.IAuthProvider
-	evalSvc       rpc.IEvaluatorRPCAdapter
-	evaluationSvc rpc.IEvaluationRPCAdapter
-	userSvc       rpc.IUserProvider
-	tracehubSvc   tracehub.ITraceHubService
-	taskProcessor task_processor.TaskProcessor
-	buildHelper   trace_Svc.TraceFilterProcessorBuilder
+	taskSvc         service.ITaskService
+	authSvc         rpc.IAuthProvider
+	evalSvc         rpc.IEvaluatorRPCAdapter
+	evaluationSvc   rpc.IEvaluationRPCAdapter
+	userSvc         rpc.IUserProvider
+	tracehubSvc     tracehub.ITraceHubService
+	taskProcessor   processor.TaskProcessor
+	taskCallbackSvc service.ITaskCallbackService
+	scheduledTasks  []scheduledtask.ScheduledTask
+	traceRepo       tracerepo.ITraceRepo
 }
 
 func (t *TaskApplication) CheckTaskName(ctx context.Context, req *task.CheckTaskNameRequest) (*task.CheckTaskNameResponse, error) {
@@ -114,62 +121,18 @@ func (t *TaskApplication) CreateTask(ctx context.Context, req *task.CreateTaskRe
 	if userID == "" {
 		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
 	}
+
 	// 创建task
-	req.Task.TaskStatus = ptr.Of(domain_task.TaskStatusUnstarted)
-	spanFilers, err := t.buildSpanFilters(ctx, req.Task.GetRule().GetSpanFilters(), req.GetTask().GetWorkspaceID())
-	if err != nil {
-		return nil, err
-	}
-	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: tconv.TaskDTO2DO(req.GetTask(), userID, spanFilers)})
+	taskDO := tconv.TaskDTO2DO(req.GetTask())
+	taskDO.TaskStatus = entity.TaskStatusUnstarted
+	taskDO.CreatedBy = userID
+	taskDO.UpdatedBy = userID
+	sResp, err := t.taskSvc.CreateTask(ctx, &service.CreateTaskReq{Task: taskDO})
 	if err != nil {
 		return resp, err
 	}
 
 	return &task.CreateTaskResponse{TaskID: sResp.TaskID}, nil
-}
-
-func (t *TaskApplication) buildSpanFilters(ctx context.Context, spanFilterFields *filter.SpanFilterFields, workspaceID int64) (*entity.SpanFilterFields, error) {
-	spanFilters := &entity.SpanFilterFields{
-		PlatformType: *spanFilterFields.PlatformType,
-		SpanListType: *spanFilterFields.SpanListType,
-	}
-	filters := convertor.FilterFieldsDTO2DO(spanFilterFields.GetFilters())
-	spanFilters.Filters = *filters
-	switch spanFilterFields.GetPlatformType() {
-	case common.PlatformTypeCozeBot, common.PlatformTypeProject, common.PlatformTypeWorkflow, common.PlatformTypeInnerCozeBot:
-		platformFilter, err := t.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(spanFilterFields.GetPlatformType()))
-		if err != nil {
-			return nil, err
-		}
-		env := &span_filter.SpanEnv{
-			WorkspaceID: workspaceID,
-		}
-		basicFilter, forceQuery, err := platformFilter.BuildBasicSpanFilter(ctx, env)
-		if err != nil {
-			return nil, err
-		} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
-			return nil, nil
-		}
-		for _, filter := range basicFilter {
-			filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
-				FieldName:  filter.FieldName,
-				FieldType:  filter.FieldType,
-				Values:     filter.Values,
-				QueryType:  filter.QueryType,
-				QueryAndOr: filter.QueryAndOr,
-				SubFilter:  filter.SubFilter,
-				Hidden:     true,
-			})
-		}
-
-		return &entity.SpanFilterFields{
-			Filters:      *filters,
-			PlatformType: *spanFilterFields.PlatformType,
-			SpanListType: *spanFilterFields.SpanListType,
-		}, nil
-	default:
-		return spanFilters, nil
-	}
 }
 
 func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.CreateTaskRequest) error {
@@ -194,6 +157,9 @@ func (t *TaskApplication) validateCreateTaskReq(ctx context.Context, req *task.C
 	if req.GetTask().GetRule().GetSampler().GetIsCycle() && req.GetTask().GetRule().GetSampler().GetCycleInterval() == 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid cycle_interval"))
 	}
+	if req.GetTask().GetRule().GetBackfillEffectiveTime().GetStartAt() != 0 && req.GetTask().GetRule().GetBackfillEffectiveTime().GetStartAt() >= req.GetTask().GetRule().GetBackfillEffectiveTime().GetEndAt() {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid back_fill_effective_time"))
+	}
 
 	return nil
 }
@@ -211,12 +177,16 @@ func (t *TaskApplication) UpdateTask(ctx context.Context, req *task.UpdateTaskRe
 		strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
 		return nil, err
 	}
+	var taskStatus *entity.TaskStatus
+	if req.TaskStatus != nil {
+		taskStatus = lo.ToPtr(entity.TaskStatus(req.GetTaskStatus()))
+	}
 	err := t.taskSvc.UpdateTask(ctx, &service.UpdateTaskReq{
 		TaskID:        req.GetTaskID(),
 		WorkspaceID:   req.GetWorkspaceID(),
-		TaskStatus:    req.TaskStatus,
+		TaskStatus:    taskStatus,
 		Description:   req.Description,
-		EffectiveTime: req.EffectiveTime,
+		EffectiveTime: tconv.EffectiveTimeDTO2DO(req.EffectiveTime),
 		SampleRate:    req.SampleRate,
 	})
 	if err != nil {
@@ -239,12 +209,13 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 		false); err != nil {
 		return resp, err
 	}
+
 	sResp, err := t.taskSvc.ListTasks(ctx, &service.ListTasksReq{
 		WorkspaceID: req.GetWorkspaceID(),
-		TaskFilters: req.GetTaskFilters(),
+		TaskFilters: tconv.TaskFiltersDTO2DO(req.GetTaskFilters()),
 		Limit:       req.GetLimit(),
 		Offset:      req.GetOffset(),
-		OrderBy:     req.GetOrderBy(),
+		OrderBy:     convertor.OrderByDTO2DO(req.GetOrderBy()),
 	})
 	if err != nil {
 		return resp, err
@@ -252,9 +223,21 @@ func (t *TaskApplication) ListTasks(ctx context.Context, req *task.ListTasksRequ
 	if sResp == nil {
 		return resp, nil
 	}
+
+	userMap := make(map[string]bool)
+	for _, tp := range sResp.Tasks {
+		userMap[tp.CreatedBy] = true
+		userMap[tp.UpdatedBy] = true
+	}
+	_, userInfoMap, err := t.userSvc.GetUserInfo(ctx, lo.Keys(userMap))
+	if err != nil {
+		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
+	}
+	tasks := tconv.TaskDOs2DTOs(ctx, sResp.Tasks, userInfoMap)
+
 	return &task.ListTasksResponse{
-		Tasks: sResp.Tasks,
-		Total: sResp.Total,
+		Tasks: tasks,
+		Total: &sResp.Total,
 	}, nil
 }
 
@@ -271,6 +254,7 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 		false); err != nil {
 		return resp, err
 	}
+
 	sResp, err := t.taskSvc.GetTask(ctx, &service.GetTaskReq{
 		TaskID:      req.GetTaskID(),
 		WorkspaceID: req.GetWorkspaceID(),
@@ -282,23 +266,94 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 		return resp, nil
 	}
 
+	taskDO := sResp.Task
+	_, userInfoMap, err := t.userSvc.GetUserInfo(ctx, []string{taskDO.CreatedBy, taskDO.UpdatedBy})
+	if err != nil {
+		logs.CtxError(ctx, "MGetUserInfo err:%v", err)
+	}
+
 	return &task.GetTaskResponse{
-		Task: sResp.Task,
+		Task: tconv.TaskDO2DTO(ctx, taskDO, userInfoMap),
 	}, nil
 }
 
-func (t *TaskApplication) SpanTrigger(ctx context.Context, event *entity.RawSpan) error {
-	return t.tracehubSvc.SpanTrigger(ctx, event)
+func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan, loopSpan *loop_span.Span) error {
+	if rawSpan != nil {
+		span := rawSpan.RawSpanConvertToLoopSpan()
+		if span != nil {
+			if err := t.tracehubSvc.SpanTrigger(ctx, span); err != nil {
+				logs.CtxError(ctx, "SpanTrigger err:%v", err)
+				// span trigger 失败，不处理
+				return nil
+			}
+		}
+	}
+	if loopSpan != nil {
+		workspaceID, err := strconv.ParseInt(loopSpan.WorkspaceID, 10, 64)
+		if err != nil {
+			return errno.InternalErr(err, "convert %s to int64", loopSpan.WorkspaceID)
+		}
+		annotations, err := t.traceRepo.ListAnnotations(ctx, &tracerepo.ListAnnotationsParam{
+			Tenants:     []string{loopSpan.GetTenant()},
+			SpanID:      loopSpan.SpanID,
+			TraceID:     loopSpan.TraceID,
+			WorkspaceId: workspaceID,
+			StartAt:     loopSpan.StartTime/1000 - 5*time.Second.Milliseconds(),
+			EndAt:       loopSpan.StartTime/1000 + 5*time.Second.Milliseconds(),
+		})
+		if err != nil {
+			return err
+		}
+		if loopSpan != nil {
+			loopSpan.StartTime = loopSpan.StartTime / 1000
+			loopSpan.Annotations = append(loopSpan.Annotations, annotations...)
+			if err := t.tracehubSvc.SpanTrigger(ctx, loopSpan); err != nil {
+				logs.CtxError(ctx, "SpanTrigger err:%v", err)
+				// span trigger 失败，不处理
+				return nil
+			}
+		}
+	}
+
+	return nil
 }
 
-func (t *TaskApplication) CallBack(ctx context.Context, event *entity.AutoEvalEvent) error {
-	return t.tracehubSvc.CallBack(ctx, event)
+func (t *TaskApplication) AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error {
+	if err := event.Validate(); err != nil {
+		logs.CtxError(ctx, "event is invalid, event: %#v, err: %v", event, err)
+		// 结构校验失败，不处理
+		return nil
+	}
+
+	return t.taskCallbackSvc.AutoEvalCallback(ctx, event)
 }
 
-func (t *TaskApplication) Correction(ctx context.Context, event *entity.CorrectionEvent) error {
-	return t.tracehubSvc.Correction(ctx, event)
+func (t *TaskApplication) AutoEvalCorrection(ctx context.Context, event *entity.CorrectionEvent) error {
+	if err := event.Validate(); err != nil {
+		logs.CtxError(ctx, "event is invalid, event: %#v, err: %v", event, err)
+		// 结构校验失败，不处理
+		return nil
+	}
+
+	return t.taskCallbackSvc.AutoEvalCorrection(ctx, event)
 }
 
 func (t *TaskApplication) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
+	if err := event.Validate(); err != nil {
+		logs.CtxError(ctx, "event is invalid, event: %#v, err: %v", event, err)
+		// 结构校验失败，不处理
+		return nil
+	}
+
 	return t.tracehubSvc.BackFill(ctx, event)
+}
+
+func (t *TaskApplication) RunTaskScheduleTask(ctx context.Context) error {
+	for _, scheduledTask := range t.scheduledTasks {
+		if err := scheduledTask.Run(); err != nil {
+			logs.CtxError(ctx, "RunTaskScheduleTask err:%v", err)
+			return err
+		}
+	}
+	return nil
 }

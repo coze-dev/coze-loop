@@ -63,7 +63,7 @@ func NewAutoEvaluteProcessor(
 func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) error {
 	cfg, ok := config.(*task_entity.ObservabilityTask)
 	if !ok {
-		return taskexe.ErrInvalidConfig
+		return errorx.NewByCode(obErrorx.CommonInvalidParamCode)
 	}
 	if cfg.EffectiveTime != nil {
 		startAt := cfg.EffectiveTime.StartAt
@@ -156,67 +156,67 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnCreateTaskChange(ctx context.Context, currentTask *task_entity.ObservabilityTask) error {
+func (p *AutoEvaluteProcessor) OnTaskCreated(ctx context.Context, currentTask *task_entity.ObservabilityTask) error {
 	taskRuns, err := p.taskRepo.GetBackfillTaskRun(ctx, nil, currentTask.ID)
 	if err != nil {
 		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.ID, err)
 		return err
 	}
 	if ShouldTriggerBackfill(currentTask) && taskRuns == nil {
-		err = p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+		err = p.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
 			CurrentTask: currentTask,
-			RunType:     task.TaskRunTypeBackFill,
+			RunType:     task_entity.TaskRunTypeBackFill,
 			RunStartAt:  time.Now().UnixMilli(),
 			RunEndAt:    time.Now().UnixMilli() + (currentTask.BackfillEffectiveTime.EndAt - currentTask.BackfillEffectiveTime.StartAt),
 		})
 		if err != nil {
-			logs.CtxError(ctx, "OnCreateTaskChange failed, taskID:%d, err:%v", currentTask.ID, err)
+			logs.CtxError(ctx, "OnTaskCreated failed, taskID:%d, err:%v", currentTask.ID, err)
 			return err
 		}
-		err = p.OnUpdateTaskChange(ctx, currentTask, task.TaskStatusRunning)
+		err = p.OnTaskUpdated(ctx, currentTask, task.TaskStatusRunning)
 		if err != nil {
-			logs.CtxError(ctx, "OnCreateTaskChange failed, taskID:%d, err:%v", currentTask.ID, err)
+			logs.CtxError(ctx, "OnTaskCreated failed, taskID:%d, err:%v", currentTask.ID, err)
 			return err
 		}
 	}
 	if ShouldTriggerNewData(ctx, currentTask) {
 		runStartAt, runEndAt := currentTask.GetRunTimeRange()
-		err = p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{
+		err = p.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{
 			CurrentTask: currentTask,
-			RunType:     task.TaskRunTypeNewData,
+			RunType:     task_entity.TaskRunTypeNewData,
 			RunStartAt:  runStartAt,
 			RunEndAt:    runEndAt,
 		})
 		if err != nil {
-			logs.CtxError(ctx, "OnCreateTaskChange failed, taskID:%d, err:%v", currentTask.ID, err)
+			logs.CtxError(ctx, "OnTaskCreated failed, taskID:%d, err:%v", currentTask.ID, err)
 			return err
 		}
-		err = p.OnUpdateTaskChange(ctx, currentTask, task.TaskStatusRunning)
+		err = p.OnTaskUpdated(ctx, currentTask, task.TaskStatusRunning)
 		if err != nil {
-			logs.CtxError(ctx, "OnCreateTaskChange failed, taskID:%d, err:%v", currentTask.ID, err)
+			logs.CtxError(ctx, "OnTaskCreated failed, taskID:%d, err:%v", currentTask.ID, err)
 			return err
 		}
 	}
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnUpdateTaskChange(ctx context.Context, currentTask *task_entity.ObservabilityTask, taskOp task.TaskStatus) error {
+func (p *AutoEvaluteProcessor) OnTaskUpdated(ctx context.Context, currentTask *task_entity.ObservabilityTask, taskOp task_entity.TaskStatus) error {
 	switch taskOp {
-	case task.TaskStatusSuccess:
-		if currentTask.TaskStatus != task.TaskStatusDisabled {
-			currentTask.TaskStatus = task.TaskStatusSuccess
+	case task_entity.TaskStatusSuccess:
+		if currentTask.TaskStatus != task_entity.TaskStatusDisabled {
+			currentTask.TaskStatus = task_entity.TaskStatusSuccess
 		}
-	case task.TaskStatusRunning:
-		if currentTask.TaskStatus != task.TaskStatusDisabled && currentTask.TaskStatus != task.TaskStatusSuccess {
-			currentTask.TaskStatus = task.TaskStatusRunning
+	case task_entity.TaskStatusRunning:
+		if currentTask.TaskStatus != task_entity.TaskStatusDisabled && currentTask.TaskStatus != task_entity.TaskStatusSuccess {
+			currentTask.TaskStatus = task_entity.TaskStatusRunning
 		}
-	case task.TaskStatusDisabled:
-		if currentTask.TaskStatus != task.TaskStatusDisabled {
-			currentTask.TaskStatus = task.TaskStatusDisabled
+	case task_entity.TaskStatusDisabled:
+		if currentTask.TaskStatus != task_entity.TaskStatusDisabled {
+			currentTask.TaskStatus = task_entity.TaskStatusDisabled
 		}
-	case task.TaskStatusPending:
-		if currentTask.TaskStatus == task.TaskStatusPending || currentTask.TaskStatus == task.TaskStatusUnstarted {
-			currentTask.TaskStatus = task.TaskStatusPending
+	case task_entity.TaskStatusPending:
+		if currentTask.TaskStatus == task_entity.TaskStatusPending || currentTask.TaskStatus == task_entity.TaskStatusUnstarted {
+			currentTask.TaskStatus = task_entity.TaskStatusPending
 		}
 	default:
 		return fmt.Errorf("OnUpdateChangeProcessor, valid taskOp:%s", taskOp)
@@ -230,18 +230,18 @@ func (p *AutoEvaluteProcessor) OnUpdateTaskChange(ctx context.Context, currentTa
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnFinishTaskChange(ctx context.Context, param taskexe.OnFinishTaskChangeReq) error {
-	err := p.OnFinishTaskRunChange(ctx, taskexe.OnFinishTaskRunChangeReq{
+func (p *AutoEvaluteProcessor) OnTaskFinished(ctx context.Context, param taskexe.OnTaskFinishedReq) error {
+	err := p.OnTaskRunFinished(ctx, taskexe.OnTaskRunFinishedReq{
 		Task:    param.Task,
 		TaskRun: param.TaskRun,
 	})
 	if err != nil {
-		logs.CtxError(ctx, "OnFinishTaskRunChange failed, taskRun:%+v, err:%v", param.TaskRun, err)
+		logs.CtxError(ctx, "OnTaskRunFinished failed, taskRun:%+v, err:%v", param.TaskRun, err)
 		return err
 	}
 	if param.IsFinish {
-		logs.CtxWarn(ctx, "OnFinishTaskChange, taskID:%d, taskRun:%+v, isFinish:%v", param.Task.ID, param.TaskRun, param.IsFinish)
-		if err := p.OnUpdateTaskChange(ctx, param.Task, task.TaskStatusSuccess); err != nil {
+		logs.CtxWarn(ctx, "OnTaskFinished, taskID:%d, taskRun:%+v, isFinish:%v", param.Task.ID, param.TaskRun, param.IsFinish)
+		if err := p.OnTaskUpdated(ctx, param.Task, task.TaskStatusSuccess); err != nil {
 			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", param.Task.ID, err)
 			return err
 		}
@@ -260,7 +260,7 @@ const (
 	BackFillI18N     = "BackFill"
 )
 
-func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param taskexe.OnCreateTaskRunChangeReq) error {
+func (p *AutoEvaluteProcessor) OnTaskRunCreated(ctx context.Context, param taskexe.OnTaskRunCreatedReq) error {
 	currentTask := param.CurrentTask
 	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.CreatedBy})
 	sessionInfo := p.getSession(ctx, currentTask)
@@ -302,11 +302,11 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 			FromEvalSet:        fromEvalSet,
 		})
 	}
-	category := getCategory(currentTask.TaskType)
+	category := getCategory(task.TaskType(currentTask.TaskType))
 	schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
 	logs.CtxInfo(ctx, "[auto_task] CreateDataset,category:%s", category)
 	var datasetName, exptName string
-	if param.RunType == task.TaskRunTypeBackFill {
+	if param.RunType == task_entity.TaskRunTypeBackFill {
 		datasetName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, BackFillCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 		exptName = fmt.Sprintf("%s_%s_%s_%d.%d.%d.%d", AutoEvaluateCN, BackFillCN, currentTask.Name, time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Unix())
 	} else {
@@ -383,7 +383,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 		TaskID:        currentTask.ID,
 		WorkspaceID:   currentTask.WorkspaceID,
 		TaskType:      param.RunType,
-		RunStatus:     task.RunStatusRunning,
+		RunStatus:     task_entity.TaskRunStatusRunning,
 		RunStartAt:    time.UnixMilli(param.RunStartAt),
 		RunEndAt:      time.UnixMilli(param.RunEndAt),
 		CreatedAt:     time.Now(),
@@ -398,7 +398,7 @@ func (p *AutoEvaluteProcessor) OnCreateTaskRunChange(ctx context.Context, param 
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnFinishTaskRunChange(ctx context.Context, param taskexe.OnFinishTaskRunChangeReq) error {
+func (p *AutoEvaluteProcessor) OnTaskRunFinished(ctx context.Context, param taskexe.OnTaskRunFinishedReq) error {
 	if param.TaskRun == nil || param.TaskRun.TaskRunConfig == nil || param.TaskRun.TaskRunConfig.AutoEvaluateRunConfig == nil {
 		return nil
 	}

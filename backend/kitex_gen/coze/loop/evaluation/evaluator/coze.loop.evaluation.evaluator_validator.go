@@ -22,6 +22,11 @@ var (
 )
 
 func (p *ListEvaluatorsRequest) IsValid() error {
+	if p.FilterOption != nil {
+		if err := p.FilterOption.IsValid(); err != nil {
+			return fmt.Errorf("field FilterOption not valid, %w", err)
+		}
+	}
 	if p.PageSize != nil {
 		if *p.PageSize <= int32(0) {
 			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
@@ -132,6 +137,11 @@ func (p *UpdateEvaluatorDraftResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateEvaluatorRequest) IsValid() error {
+	if p.EvaluatorInfo != nil {
+		if err := p.EvaluatorInfo.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorInfo not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -521,6 +531,189 @@ func (p *ValidateEvaluatorResponse) IsValid() error {
 			return fmt.Errorf("field EvaluatorOutputData not valid, %w", err)
 		}
 	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListTemplatesV2Request) IsValid() error {
+	if p.FilterOption != nil {
+		if err := p.FilterOption.IsValid(); err != nil {
+			return fmt.Errorf("field FilterOption not valid, %w", err)
+		}
+	}
+	if p.PageSize != nil {
+		if *p.PageSize <= int32(0) {
+			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.PageNumber != nil {
+		if *p.PageNumber <= int32(0) {
+			return fmt.Errorf("field PageNumber gt rule failed, current value: %v", *p.PageNumber)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListTemplatesV2Response) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetTemplateV2Request) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetTemplateV2Response) IsValid() error {
+	if p.EvaluatorTemplate != nil {
+		if err := p.EvaluatorTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorTemplate not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DebugBuiltinEvaluatorRequest) IsValid() error {
+	if p.InputData != nil {
+		if err := p.InputData.IsValid(); err != nil {
+			return fmt.Errorf("field InputData not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DebugBuiltinEvaluatorResponse) IsValid() error {
+	if p.OutputData != nil {
+		if err := p.OutputData.IsValid(); err != nil {
+			return fmt.Errorf("field OutputData not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateBuiltinEvaluatorTagsRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateBuiltinEvaluatorTagsResponse) IsValid() error {
+	if p.Evaluator != nil {
+		if err := p.Evaluator.IsValid(); err != nil {
+			return fmt.Errorf("field Evaluator not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateEvaluatorTemplateRequest) IsValid() error {
+	if p.EvaluatorTemplate != nil {
+		if err := p.EvaluatorTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorTemplate not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateEvaluatorTemplateResponse) IsValid() error {
+	if p.EvaluatorTemplate != nil {
+		if err := p.EvaluatorTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorTemplate not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateEvaluatorTemplateRequest) IsValid() error {
+	if p.EvaluatorTemplate != nil {
+		if err := p.EvaluatorTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorTemplate not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateEvaluatorTemplateResponse) IsValid() error {
+	if p.EvaluatorTemplate != nil {
+		if err := p.EvaluatorTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorTemplate not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteEvaluatorTemplateRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteEvaluatorTemplateResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluatorTagsRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluatorTagsResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)
