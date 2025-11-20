@@ -47,6 +47,9 @@ const (
 	AnnotationTypeCozeFeedback        AnnotationType = "coze_feedback"
 	AnnotationTypeManualDataset       AnnotationType = "manual_dataset"
 	AnnotationTypeOpenAPIFeedback     AnnotationType = "openapi_feedback"
+
+	AnnotationOpenAPIFeedbackFieldPrefix = "feedback_openapi_"
+	AnnotationManualFeedbackFieldPrefix  = "manual_feedback_"
 )
 
 type AnnotationValue struct {
@@ -310,6 +313,16 @@ func (a AnnotationList) Uniq() AnnotationList {
 	return lo.UniqBy(a, func(item *Annotation) string {
 		return item.ID
 	})
+}
+
+func (a AnnotationList) FindByEvaluatorRecordID(evaluatorRecordID int64) (*Annotation, bool) {
+	for _, annotation := range a {
+		meta := annotation.GetAutoEvaluateMetadata()
+		if meta != nil && meta.EvaluatorRecordID == evaluatorRecordID {
+			return annotation, true
+		}
+	}
+	return nil, false
 }
 
 func NewStringValue(v string) AnnotationValue {

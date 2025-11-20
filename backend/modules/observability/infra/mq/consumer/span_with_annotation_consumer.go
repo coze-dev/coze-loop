@@ -1,0 +1,63 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package consumer
+
+import (
+	"context"
+	"time"
+
+	"github.com/coze-dev/coze-loop/backend/infra/mq"
+	obapp "github.com/coze-dev/coze-loop/backend/modules/observability/application"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
+	"github.com/coze-dev/coze-loop/backend/pkg/conf"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+)
+
+type SpanWithAnnotationConsumer struct {
+	handler obapp.ITaskQueueConsumer
+	conf.IConfigLoader
+}
+
+func NewSpanWithAnnotationConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+	return &SpanWithAnnotationConsumer{
+		handler:       handler,
+		IConfigLoader: loader,
+	}
+}
+
+func (e *SpanWithAnnotationConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
+	const key = "span_with_annotation_mq_consumer_config"
+	cfg := &config.MqConsumerCfg{}
+	if err := e.UnmarshalKey(ctx, key, cfg); err != nil {
+		return nil, err
+	}
+	res := &mq.ConsumerConfig{
+		Addr:                 cfg.Addr,
+		Topic:                cfg.Topic,
+		ConsumerGroup:        cfg.ConsumerGroup,
+		ConsumeTimeout:       time.Duration(cfg.Timeout) * time.Millisecond,
+		ConsumeGoroutineNums: cfg.WorkerNum,
+		EnablePPE:            cfg.EnablePPE,
+		IsEnabled:            cfg.IsEnabled,
+	}
+	if cfg.TagExpression != nil {
+		res.TagExpression = *cfg.TagExpression
+	}
+	return res, nil
+}
+
+func (e *SpanWithAnnotationConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
+	logID := logs.NewLogID()
+	ctx = logs.SetLogID(ctx, logID)
+	event := new(entity.SpanEvent)
+	if err := json.Unmarshal(ext.Body, event); err != nil {
+		logs.CtxError(ctx, "Task msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
+		return nil
+	}
+	logs.CtxInfo(ctx, "Span with annotation msg,log_id=%s, trace_id=%s, span_id=%s,msgID=%s", event.Span.LogID, event.Span.TraceID, event.Span.SpanID, ext.MsgID)
+	return e.handler.SpanTrigger(ctx, nil, event.Span)
+}

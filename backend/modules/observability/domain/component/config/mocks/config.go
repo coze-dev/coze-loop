@@ -242,6 +242,21 @@ func (m *MockITraceConfig) GetTraceFieldMetaInfo(ctx context.Context) (*config.T
 	return ret0, ret1
 }
 
+// GetConsumerListening mocks base method.
+func (m *MockITraceConfig) GetConsumerListening(ctx context.Context) (*config.ConsumerListening, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConsumerListening", ctx)
+	ret0, _ := ret[0].(*config.ConsumerListening)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetConsumerListening indicates an expected call of GetConsumerListening.
+func (mr *MockITraceConfigMockRecorder) GetConsumerListening(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsumerListening", reflect.TypeOf((*MockITraceConfig)(nil).GetConsumerListening), ctx)
+}
+
 // GetTraceFieldMetaInfo indicates an expected call of GetTraceFieldMetaInfo.
 func (mr *MockITraceConfigMockRecorder) GetTraceFieldMetaInfo(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
@@ -261,6 +276,21 @@ func (m *MockITraceConfig) GetTraceIngestTenantProducerCfg(ctx context.Context) 
 func (mr *MockITraceConfigMockRecorder) GetTraceIngestTenantProducerCfg(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceIngestTenantProducerCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetTraceIngestTenantProducerCfg), ctx)
+}
+
+// GetSpanWithAnnotationMqProducerCfg mocks base method.
+func (m *MockITraceConfig) GetSpanWithAnnotationMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSpanWithAnnotationMqProducerCfg", ctx)
+	ret0, _ := ret[0].(*config.MqProducerCfg)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSpanWithAnnotationMqProducerCfg indicates an expected call of GetSpanWithAnnotationMqProducerCfg.
+func (mr *MockITraceConfigMockRecorder) GetSpanWithAnnotationMqProducerCfg(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSpanWithAnnotationMqProducerCfg", reflect.TypeOf((*MockITraceConfig)(nil).GetSpanWithAnnotationMqProducerCfg), ctx)
 }
 
 // Unmarshal mocks base method.

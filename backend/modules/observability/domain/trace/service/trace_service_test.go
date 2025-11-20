@@ -54,7 +54,7 @@ func newTaskRepoMock(ctrl *gomock.Controller) *taskRepoMock {
 }
 
 func (m *taskRepoMock) ListNonFinalTask(context.Context, string) ([]int64, error) {
-	panic("unexpected call to ListNonFinalTask in taskRepoMock")
+	panic("unexpected call to ListNonFinalTaskBySpaceID in taskRepoMock")
 }
 
 func (m *taskRepoMock) AddNonFinalTask(context.Context, string, int64) error {
@@ -65,8 +65,8 @@ func (m *taskRepoMock) RemoveNonFinalTask(context.Context, string, int64) error 
 	panic("unexpected call to RemoveNonFinalTask in taskRepoMock")
 }
 
-func (m *taskRepoMock) GetTaskByRedis(context.Context, int64) (*taskentity.ObservabilityTask, error) {
-	panic("unexpected call to GetTaskByRedis in taskRepoMock")
+func (m *taskRepoMock) GetTaskByCache(context.Context, int64) (*taskentity.ObservabilityTask, error) {
+	panic("unexpected call to GetTaskByCache in taskRepoMock")
 }
 
 func (m *taskRepoMock) SetTask(context.Context, *taskentity.ObservabilityTask) error {
@@ -3060,8 +3060,8 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 					evalSvc:        evalMock,
 					after: func(t *testing.T, resp *ChangeEvaluatorScoreResp) {
 						assert.NotNil(t, resp)
-						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Annotations) {
-							updated := capturedUpsert.Annotations[0]
+						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Span.Annotations) {
+							updated := capturedUpsert.Span.Annotations[0]
 							assert.Len(t, updated.Corrections, 2)
 							assert.InDelta(t, req.Correction.GetScore(), updated.Value.FloatValue, 1e-9)
 							assert.Equal(t, defaultUserID, updated.UpdatedBy)
@@ -3121,8 +3121,8 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 					tenantProvider: tenantMock,
 					evalSvc:        evalMock,
 					after: func(t *testing.T, _ *ChangeEvaluatorScoreResp) {
-						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Annotations) {
-							assert.Len(t, capturedUpsert.Annotations[0].Corrections, 2)
+						if assert.NotNil(t, capturedUpsert) && assert.NotEmpty(t, capturedUpsert.Span.Annotations) {
+							assert.Len(t, capturedUpsert.Span.Annotations[0].Corrections, 2)
 						}
 					},
 				}
