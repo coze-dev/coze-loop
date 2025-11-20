@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"strconv"
 	"time"
 
@@ -87,6 +88,7 @@ func NewTaskServiceImpl(
 	backfillProducer mq.IBackfillProducer,
 	taskProcessor *processor.TaskProcessor,
 	storageProvider storage.IStorageProvider,
+	tenantProvider tenant.ITenantProvider,
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
 		TaskRepo:         tRepo,
@@ -95,6 +97,7 @@ func NewTaskServiceImpl(
 		backfillProducer: backfillProducer,
 		taskProcessor:    *taskProcessor,
 		storageProvider:  storageProvider,
+		tenantProvider:   tenantProvider,
 	}, nil
 }
 
@@ -105,6 +108,7 @@ type TaskServiceImpl struct {
 	backfillProducer mq.IBackfillProducer
 	taskProcessor    processor.TaskProcessor
 	storageProvider  storage.IStorageProvider
+	tenantProvider   tenant.ITenantProvider
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
@@ -132,7 +136,11 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 		return nil, err
 	}
 	// storage准备
-	if err = t.storageProvider.PrepareStorageForTask(ctx, strconv.FormatInt(req.Task.WorkspaceID, 10), loop_span.PlatformType(req.Task.SpanFilter.PlatformType)); err != nil {
+	tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, loop_span.PlatformType(req.Task.SpanFilter.PlatformType))
+	if err != nil {
+		return nil, err
+	}
+	if err = t.storageProvider.PrepareStorageForTask(ctx, strconv.FormatInt(req.Task.WorkspaceID, 10), tenants); err != nil {
 		logs.CtxError(ctx, "PrepareStorageForTask err:%v", err)
 		return nil, err
 	}

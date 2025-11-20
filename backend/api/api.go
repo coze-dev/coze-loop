@@ -11,6 +11,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/app/server/binding"
 	"github.com/cloudwego/hertz/pkg/app/server/render"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 
 	"github.com/coze-dev/coze-loop/backend/api/handler/coze/loop/apis"
@@ -46,6 +47,7 @@ func Init(
 	idgen idgen.IIDGenerator,
 	db db.Provider,
 	cmdable redis.Cmdable,
+	persistentCmdable redis.PersistentCmdable,
 	configFactory conf.IConfigLoaderFactory,
 	mqFactory mq.IFactory,
 	objectStorage fileserver.ObjectStorage,
@@ -56,6 +58,7 @@ func Init(
 	limiterFactory limiter.IRateLimiterFactory,
 	ckDB ck.Provider,
 	translater i18n.ITranslater,
+	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 ) (*apis.APIHandler, error) {
 	foundationHandler, err := apis.InitFoundationHandler(idgen, db, batchObjectStorage, configFactory)
 	if err != nil {
@@ -102,6 +105,7 @@ func Init(
 		lofile.NewLocalFileService(foundationHandler.FileService),
 		lotag.NewLocalTagService(dataHandler.TagService),
 		objectStorage,
+		plainLimiterFactory,
 	)
 	if err != nil {
 		return nil, err
@@ -118,6 +122,7 @@ func Init(
 		limiterFactory,
 		lodataset.NewLocalDatasetService(dataHandler.IDatasetApplication),
 		cmdable,
+		persistentCmdable,
 		loexpt.NewLocalExperimentService(evaluationHandler.IExperimentApplication),
 		processor.TaskProcessor{},
 		0,

@@ -127,3 +127,67 @@ func (p *AsyncInvokeEvalTargetResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *InvokeCustomEvaluator) IsValid() error {
+	return nil
+}
+func (p *InvokeEvaluatorInputData) IsValid() error {
+	return nil
+}
+func (p *InvokeEvaluatorOutputData) IsValid() error {
+	if p.EvaluatorResult_ != nil {
+		if err := p.EvaluatorResult_.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorResult_ not valid, %w", err)
+		}
+	}
+	if p.EvaluatorUsage != nil {
+		if err := p.EvaluatorUsage.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorUsage not valid, %w", err)
+		}
+	}
+	if p.EvaluatorRunError != nil {
+		if err := p.EvaluatorRunError.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRunError not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *InvokeEvaluatorResult_) IsValid() error {
+	return nil
+}
+func (p *InvokeEvaluatorUsage) IsValid() error {
+	return nil
+}
+func (p *InvokeEvaluatorRunError) IsValid() error {
+	return nil
+}
+func (p *InvokeEvaluatorRequest) IsValid() error {
+	if p.Evaluator != nil {
+		if err := p.Evaluator.IsValid(); err != nil {
+			return fmt.Errorf("field Evaluator not valid, %w", err)
+		}
+	}
+	if p.InputData != nil {
+		if err := p.InputData.IsValid(); err != nil {
+			return fmt.Errorf("field InputData not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *InvokeEvaluatorResponse) IsValid() error {
+	if p.OutputData != nil {
+		if err := p.OutputData.IsValid(); err != nil {
+			return fmt.Errorf("field OutputData not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

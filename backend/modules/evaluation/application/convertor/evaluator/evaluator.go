@@ -16,7 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
-func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.Evaluator {
+func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) (*evaluatordo.Evaluator, error) {
 	// 从DTO转换为DO
 	evaluatorDO := &evaluatordo.Evaluator{
 		ID:                     evaluatorDTO.GetEvaluatorID(),
@@ -26,8 +26,20 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 		DraftSubmitted:         evaluatorDTO.GetDraftSubmitted(),
 		EvaluatorType:          evaluatordo.EvaluatorType(evaluatorDTO.GetEvaluatorType()),
 		LatestVersion:          evaluatorDTO.GetLatestVersion(),
+		Builtin:                evaluatorDTO.GetBuiltin(),
+		BuiltinVisibleVersion:  evaluatorDTO.GetBuiltinVisibleVersion(),
+		BoxType:                convertBoxTypeDTO2DO(evaluatorDTO.GetBoxType()),
 		PromptEvaluatorVersion: nil,
 		BaseInfo:               commonconvertor.ConvertBaseInfoDTO2DO(evaluatorDTO.GetBaseInfo()),
+		Tags:                   ConvertEvaluatorLangTagsDTO2DO(evaluatorDTO.GetTags()),
+	}
+	if evaluatorDTO.GetEvaluatorInfo() != nil {
+		evaluatorDO.EvaluatorInfo = &evaluatordo.EvaluatorInfo{
+			Benchmark:     evaluatorDTO.GetEvaluatorInfo().Benchmark,
+			Vendor:        evaluatorDTO.GetEvaluatorInfo().Vendor,
+			VendorURL:     evaluatorDTO.GetEvaluatorInfo().VendorURL,
+			UserManualURL: evaluatorDTO.GetEvaluatorInfo().UserManualURL,
+		}
 	}
 	if evaluatorDTO.CurrentVersion != nil {
 		switch evaluatorDTO.GetEvaluatorType() {
@@ -35,9 +47,15 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) *evaluatordo.E
 			evaluatorDO.PromptEvaluatorVersion = ConvertPromptEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
 		case evaluatordto.EvaluatorType_Code:
 			evaluatorDO.CodeEvaluatorVersion = ConvertCodeEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
+		case evaluatordto.EvaluatorType_CustomRPC:
+			customRPCEvaluatorVersion, err := ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
+			if err != nil {
+				return nil, err
+			}
+			evaluatorDO.CustomRPCEvaluatorVersion = customRPCEvaluatorVersion
 		}
 	}
-	return evaluatorDO
+	return evaluatorDO, nil
 }
 
 func ConvertEvaluatorDOList2DTO(doList []*evaluatordo.Evaluator) []*evaluatordto.Evaluator {
@@ -54,14 +72,30 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 		return nil
 	}
 	dto := &evaluatordto.Evaluator{
-		EvaluatorID:    gptr.Of(do.ID),
-		WorkspaceID:    gptr.Of(do.SpaceID),
-		Name:           gptr.Of(do.Name),
-		Description:    gptr.Of(do.Description),
-		DraftSubmitted: gptr.Of(do.DraftSubmitted),
-		EvaluatorType:  evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType(do.EvaluatorType)),
-		LatestVersion:  gptr.Of(do.LatestVersion),
-		BaseInfo:       commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		EvaluatorID:           gptr.Of(do.ID),
+		WorkspaceID:           gptr.Of(do.SpaceID),
+		Name:                  gptr.Of(do.Name),
+		Description:           gptr.Of(do.Description),
+		DraftSubmitted:        gptr.Of(do.DraftSubmitted),
+		EvaluatorType:         evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType(do.EvaluatorType)),
+		LatestVersion:         gptr.Of(do.LatestVersion),
+		BuiltinVisibleVersion: gptr.Of(do.BuiltinVisibleVersion),
+		Builtin:               gptr.Of(do.Builtin),
+		BaseInfo:              commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		Tags:                  ConvertEvaluatorLangTagsDO2DTO(do.Tags),
+	}
+	if do.EvaluatorInfo != nil {
+		dto.EvaluatorInfo = &evaluatordto.EvaluatorInfo{
+			Benchmark:     do.EvaluatorInfo.Benchmark,
+			Vendor:        do.EvaluatorInfo.Vendor,
+			VendorURL:     do.EvaluatorInfo.VendorURL,
+			UserManualURL: do.EvaluatorInfo.UserManualURL,
+		}
+	}
+	// 设置 BoxType
+	{
+		val := convertBoxTypeDO2DTO(do.BoxType)
+		dto.SetBoxType(&val)
 	}
 
 	switch do.EvaluatorType {
@@ -75,8 +109,38 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 			versionDTO := ConvertCodeEvaluatorVersionDO2DTO(do.CodeEvaluatorVersion)
 			dto.CurrentVersion = versionDTO
 		}
+	case evaluatordo.EvaluatorTypeCustomRPC:
+		if do.CustomRPCEvaluatorVersion != nil {
+			versionDTO := ConvertCustomRPCEvaluatorVersionDO2DTO(do.CustomRPCEvaluatorVersion)
+			dto.CurrentVersion = versionDTO
+		}
 	}
 	return dto
+}
+
+// convertBoxTypeDTO2DO 将 DTO 的 BoxType(字符串) 转换为 DO 的 BoxType(数值枚举)
+func convertBoxTypeDTO2DO(dtoType string) evaluatordo.EvaluatorBoxType {
+	switch dtoType {
+	case "White":
+		return evaluatordo.EvaluatorBoxTypeWhite
+	case "Black":
+		return evaluatordo.EvaluatorBoxTypeBlack
+	default:
+		// 默认回退白盒
+		return evaluatordo.EvaluatorBoxTypeWhite
+	}
+}
+
+// convertBoxTypeDO2DTO 将 DO 的 BoxType(数值枚举) 转换为 DTO 的 BoxType(字符串)
+func convertBoxTypeDO2DTO(doType evaluatordo.EvaluatorBoxType) string {
+	switch doType {
+	case evaluatordo.EvaluatorBoxTypeWhite:
+		return "White"
+	case evaluatordo.EvaluatorBoxTypeBlack:
+		return "Black"
+	default:
+		return "White"
+	}
 }
 
 // normalizeLanguageType 标准化语言类型（转换为标准格式）
@@ -207,7 +271,7 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 			return nil, errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("code evaluator content is nil"))
 		}
 
-		// 标准化语言类型
+		// 保持原逻辑：基于旧字段
 		languageType := evaluatordo.LanguageType(content.CodeEvaluator.GetLanguageType())
 		normalizedLangType := normalizeLanguageType(languageType)
 
@@ -220,6 +284,44 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 		}
 
 		evaluator.CodeEvaluatorVersion = codeVersion
+
+	case evaluatordto.EvaluatorType_CustomRPC:
+		if content.CustomRPCEvaluator == nil {
+			return nil, errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("custom rpc evaluator content is nil"))
+		}
+
+		customRPCVersion := &evaluatordo.CustomRPCEvaluatorVersion{
+			ProviderEvaluatorCode: content.CustomRPCEvaluator.ProviderEvaluatorCode,
+			AccessProtocol:        content.CustomRPCEvaluator.AccessProtocol,
+			ServiceName:           content.CustomRPCEvaluator.ServiceName,
+			Cluster:               content.CustomRPCEvaluator.Cluster,
+			Timeout:               content.CustomRPCEvaluator.Timeout,
+		}
+		if content.CustomRPCEvaluator.RateLimit != nil {
+			rateLimit, err := commonconvertor.ConvertRateLimitDTO2DO(content.CustomRPCEvaluator.RateLimit)
+			if err != nil {
+				return nil, err
+			}
+			customRPCVersion.RateLimit = rateLimit
+		}
+
+		// 转换输入模式
+		if len(content.InputSchemas) > 0 {
+			customRPCVersion.InputSchemas = make([]*evaluatordo.ArgsSchema, 0, len(content.InputSchemas))
+			for _, schema := range content.InputSchemas {
+				customRPCVersion.InputSchemas = append(customRPCVersion.InputSchemas, commonconvertor.ConvertArgsSchemaDTO2DO(schema))
+			}
+		}
+
+		// 转换输出模式
+		if len(content.OutputSchemas) > 0 {
+			customRPCVersion.OutputSchemas = make([]*evaluatordo.ArgsSchema, 0, len(content.OutputSchemas))
+			for _, schema := range content.OutputSchemas {
+				customRPCVersion.OutputSchemas = append(customRPCVersion.OutputSchemas, commonconvertor.ConvertArgsSchemaDTO2DO(schema))
+			}
+		}
+
+		evaluator.CustomRPCEvaluatorVersion = customRPCVersion
 
 	default:
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("unsupported evaluator type"))
@@ -305,5 +407,123 @@ func ConvertPromptEvaluatorVersionDO2DTO(do *evaluatordo.PromptEvaluatorVersion)
 		}
 	}
 
+	return dto
+}
+
+// ConvertEvaluatorLangTagsDTO2DO 将DTO的多语言Tags转换为DO的多语言Tags
+func ConvertEvaluatorLangTagsDTO2DO(dto map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string) map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string {
+	if dto == nil {
+		return nil
+	}
+	result := make(map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string, len(dto))
+	for lang, tagMap := range dto {
+		doLang := evaluatordo.EvaluatorTagLangType(lang)
+		if tagMap == nil {
+			continue
+		}
+		inner := make(map[evaluatordo.EvaluatorTagKey][]string, len(tagMap))
+		for k, vals := range tagMap {
+			inner[ConvertEvaluatorTagKeyDTO2DO(k)] = vals
+		}
+		result[doLang] = inner
+	}
+	return result
+}
+
+// ConvertEvaluatorLangTagsDO2DTO 将DO的多语言Tags转换为DTO的多语言Tags
+func ConvertEvaluatorLangTagsDO2DTO(do map[evaluatordo.EvaluatorTagLangType]map[evaluatordo.EvaluatorTagKey][]string) map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string {
+	if do == nil {
+		return nil
+	}
+	result := make(map[evaluatordto.EvaluatorTagLangType]map[evaluatordto.EvaluatorTagKey][]string, len(do))
+	for lang, tagMap := range do {
+		dtoLang := evaluatordto.EvaluatorTagLangType(lang)
+		if tagMap == nil {
+			continue
+		}
+		inner := make(map[evaluatordto.EvaluatorTagKey][]string, len(tagMap))
+		for k, vals := range tagMap {
+			inner[ConvertEvaluatorTagKeyDO2DTO(k)] = vals
+		}
+		result[dtoLang] = inner
+	}
+	return result
+}
+
+// ConvertEvaluatorTagKeyDO2DTO 将DO的EvaluatorTagKey转换为DTO的EvaluatorTagKey
+func ConvertEvaluatorTagKeyDO2DTO(doKey evaluatordo.EvaluatorTagKey) evaluatordto.EvaluatorTagKey {
+	switch doKey {
+	case evaluatordo.EvaluatorTagKey_Category:
+		return evaluatordto.EvaluatorTagKeyCategory
+	case evaluatordo.EvaluatorTagKey_TargetType:
+		return evaluatordto.EvaluatorTagKeyTargetType
+	case evaluatordo.EvaluatorTagKey_Objective:
+		return evaluatordto.EvaluatorTagKeyObjective
+	case evaluatordo.EvaluatorTagKey_BusinessScenario:
+		return evaluatordto.EvaluatorTagKeyBusinessScenario
+	case evaluatordo.EvaluatorTagKey_Name:
+		return evaluatordto.EvaluatorTagKeyName
+	default:
+		return evaluatordto.EvaluatorTagKey(doKey)
+	}
+}
+
+func ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *evaluatordto.EvaluatorVersion) (*evaluatordo.CustomRPCEvaluatorVersion, error) {
+	if dto == nil {
+		return nil, nil
+	}
+	customRPCEvaluatorVersion := &evaluatordo.CustomRPCEvaluatorVersion{
+		ID:            dto.GetID(),
+		SpaceID:       spaceID,
+		EvaluatorType: evaluatordo.EvaluatorTypeCustomRPC,
+		EvaluatorID:   evaluatorID,
+		Description:   dto.GetDescription(),
+		Version:       dto.GetVersion(),
+		BaseInfo:      commonconvertor.ConvertBaseInfoDTO2DO(dto.GetBaseInfo()),
+	}
+	if dto.EvaluatorContent != nil {
+		customRPCEvaluatorVersion.InputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.InputSchemas)
+		customRPCEvaluatorVersion.OutputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.OutputSchemas)
+		if dto.EvaluatorContent.CustomRPCEvaluator != nil {
+			customRPCEvaluatorVersion.ProviderEvaluatorCode = dto.EvaluatorContent.CustomRPCEvaluator.ProviderEvaluatorCode
+			customRPCEvaluatorVersion.AccessProtocol = dto.EvaluatorContent.CustomRPCEvaluator.AccessProtocol
+			customRPCEvaluatorVersion.ServiceName = dto.EvaluatorContent.CustomRPCEvaluator.ServiceName
+			customRPCEvaluatorVersion.Cluster = dto.EvaluatorContent.CustomRPCEvaluator.Cluster
+			customRPCEvaluatorVersion.Timeout = dto.EvaluatorContent.CustomRPCEvaluator.Timeout
+			if dto.EvaluatorContent.CustomRPCEvaluator.RateLimit != nil {
+				rateLimit, err := commonconvertor.ConvertRateLimitDTO2DO(dto.EvaluatorContent.CustomRPCEvaluator.RateLimit)
+				if err != nil {
+					return nil, err
+				}
+				customRPCEvaluatorVersion.RateLimit = rateLimit
+			}
+		}
+	}
+	return customRPCEvaluatorVersion, nil
+}
+
+func ConvertCustomRPCEvaluatorVersionDO2DTO(do *evaluatordo.CustomRPCEvaluatorVersion) *evaluatordto.EvaluatorVersion {
+	if do == nil {
+		return nil
+	}
+	dto := &evaluatordto.EvaluatorVersion{
+		ID:          gptr.Of(do.ID),
+		Version:     gptr.Of(do.Version),
+		Description: gptr.Of(do.Description),
+		BaseInfo:    commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		EvaluatorContent: &evaluatordto.EvaluatorContent{
+			ReceiveChatHistory: nil,
+			InputSchemas:       commonconvertor.ConvertArgsSchemaListDO2DTO(do.InputSchemas),
+			OutputSchemas:      commonconvertor.ConvertArgsSchemaListDO2DTO(do.OutputSchemas),
+			CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+				ProviderEvaluatorCode: do.ProviderEvaluatorCode,
+				AccessProtocol:        do.AccessProtocol,
+				ServiceName:           do.ServiceName,
+				Cluster:               do.Cluster,
+				Timeout:               do.Timeout,
+				RateLimit:             commonconvertor.ConvertRateLimitDO2DTO(do.RateLimit),
+			},
+		},
+	}
 	return dto
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao/converter"
+	redis_dao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis/dao"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -64,9 +65,10 @@ func WithTraceStorageAnnotationDao(storageType string, annoDao dao.IAnnotationDa
 func NewTraceRepoImpl(
 	traceConfig config.ITraceConfig,
 	storageProvider storage.IStorageProvider,
+	spanRedisDao redis_dao.ISpansRedisDao,
 	opts ...TraceRepoOption,
 ) (repo.ITraceRepo, error) {
-	impl, err := newTraceRepoImpl(traceConfig, storageProvider, opts...)
+	impl, err := newTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -78,12 +80,13 @@ func NewTraceMetricCKRepoImpl(
 	storageProvider storage.IStorageProvider,
 	opts ...TraceRepoOption,
 ) (metric_repo.IMetricRepo, error) {
-	return newTraceRepoImpl(traceConfig, storageProvider, opts...)
+	return newTraceRepoImpl(traceConfig, storageProvider, nil, opts...)
 }
 
 func newTraceRepoImpl(
 	traceConfig config.ITraceConfig,
 	storageProvider storage.IStorageProvider,
+	spanRedisDao redis_dao.ISpansRedisDao,
 	opts ...TraceRepoOption,
 ) (*TraceRepoImpl, error) {
 	impl := &TraceRepoImpl{
@@ -91,6 +94,7 @@ func newTraceRepoImpl(
 		storageProvider: storageProvider,
 		spanDaos:        make(map[string]dao.ISpansDao),
 		annoDaos:        make(map[string]dao.IAnnotationDao),
+		spanRedisDao:    spanRedisDao,
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -105,6 +109,11 @@ type TraceRepoImpl struct {
 	storageProvider storage.IStorageProvider
 	spanDaos        map[string]dao.ISpansDao
 	annoDaos        map[string]dao.IAnnotationDao
+	spanRedisDao    redis_dao.ISpansRedisDao
+}
+
+func (t *TraceRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error) {
+	return t.spanRedisDao.GetPreSpans(ctx, param.PreRespID)
 }
 
 type PageToken struct {
@@ -166,6 +175,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		OrderByStartTime: req.DescByStartTime,
 		OmitColumns:      req.OmitColumns,
 		Extra:            spanStorage.StorageConfig,
+		SelectColumns:    req.SelectColumns,
 	})
 	if err != nil {
 		return nil, err

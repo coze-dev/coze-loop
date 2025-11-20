@@ -127,6 +127,10 @@ func SchedulerChain(mws ...SchedulerMiddleware) SchedulerMiddleware {
 
 func (e *ExptSchedulerImpl) SysOps(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
+		if e.Configer.GetSchedulerAbortCtrl(ctx).Abort(event.SpaceID, event.ExptID, event.Session.UserID, event.ExptType) {
+			logs.CtxWarn(ctx, "[ExptEval] expt schedule aborted, event: %v", json.Jsonify(event))
+			return nil
+		}
 		return next(ctx, event)
 	}
 }
