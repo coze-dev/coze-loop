@@ -34,6 +34,7 @@ func NewBaseScheduledTask(name string, timeInterval time.Duration) BaseScheduled
 func (b *BaseScheduledTask) Run() error {
 	ticker := time.NewTicker(b.timeInterval)
 	goroutineutil.GoWithDefaultRecovery(context.Background(), func() {
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
