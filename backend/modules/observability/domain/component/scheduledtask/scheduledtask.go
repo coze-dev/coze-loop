@@ -23,8 +23,8 @@ type BaseScheduledTask struct {
 	stopChan     chan struct{}
 }
 
-func NewBaseScheduledTask(name string, timeInterval time.Duration) BaseScheduledTask {
-	return BaseScheduledTask{
+func NewBaseScheduledTask(name string, timeInterval time.Duration) ScheduledTask {
+	return &BaseScheduledTask{
 		name:         name,
 		timeInterval: timeInterval,
 		stopChan:     make(chan struct{}),
@@ -33,6 +33,9 @@ func NewBaseScheduledTask(name string, timeInterval time.Duration) BaseScheduled
 
 func (b *BaseScheduledTask) Run() error {
 	ticker := time.NewTicker(b.timeInterval)
+	if err := b.RunOnce(context.Background()); err != nil {
+		return err
+	}
 	goroutineutil.GoWithDefaultRecovery(context.Background(), func() {
 		defer ticker.Stop()
 		for {

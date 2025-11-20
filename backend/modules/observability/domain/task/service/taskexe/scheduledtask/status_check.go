@@ -42,7 +42,7 @@ const (
 )
 
 type StatusCheckTask struct {
-	scheduledtask.BaseScheduledTask
+	scheduledtask.ScheduledTask
 
 	config          config.ITraceConfig
 	locker          lock.ILocker
@@ -61,13 +61,13 @@ func NewStatusCheckTask(
 	taskRepo repo.ITaskRepo,
 ) scheduledtask.ScheduledTask {
 	return &StatusCheckTask{
-		BaseScheduledTask: scheduledtask.NewBaseScheduledTask("StatusCheckTask", 5*time.Minute),
-		locker:            locker,
-		config:            config,
-		traceHubService:   traceHubService,
-		taskService:       taskService,
-		taskProcessor:     taskProcessor,
-		taskRepo:          taskRepo,
+		ScheduledTask:   scheduledtask.NewBaseScheduledTask("StatusCheckTask", 5*time.Minute),
+		locker:          locker,
+		config:          config,
+		traceHubService: traceHubService,
+		taskService:     taskService,
+		taskProcessor:   taskProcessor,
+		taskRepo:        taskRepo,
 	}
 }
 
