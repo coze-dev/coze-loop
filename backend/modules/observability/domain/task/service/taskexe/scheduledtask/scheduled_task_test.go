@@ -10,7 +10,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
-	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/stretchr/testify/require"
@@ -105,25 +104,99 @@ func (p *trackingProcessor) OnTaskUpdated(ctx context.Context, obsTask *entity.O
 func TestStatusCheckTask_checkTaskStatus(t *testing.T) {
 	t.Parallel()
 
-	// Test basic functionality
 	t.Run("basic test", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		t.Cleanup(ctrl.Finish)
 
-		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
 		proc := newTrackingProcessor()
 		tp := processor.NewTaskProcessor()
 		tp.Register(entity.TaskTypeAutoEval, proc)
 
 		task := &StatusCheckTask{
-			taskRepo:      mockRepo,
 			taskProcessor: *tp,
 		}
 
-		// Simple test to verify the task can be created
 		require.NotNil(t, task)
 		require.NotNil(t, task.taskProcessor)
+	})
+
+	t.Run("task with success status should be skipped", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		proc := newTrackingProcessor()
+		tp := processor.NewTaskProcessor()
+		tp.Register(entity.TaskTypeAutoEval, proc)
+
+		task := &StatusCheckTask{
+			taskProcessor: *tp,
+		}
+
+		tasks := []*entity.ObservabilityTask{
+			{
+				ID:         1,
+				TaskStatus: entity.TaskStatusSuccess,
+				TaskType:   entity.TaskTypeAutoEval,
+			},
+		}
+
+		err := task.checkTaskStatus(context.Background(), tasks)
+		require.NoError(t, err)
+		require.Empty(t, proc.finishReqs)
+	})
+
+	t.Run("task with failed status should be skipped", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		proc := newTrackingProcessor()
+		tp := processor.NewTaskProcessor()
+		tp.Register(entity.TaskTypeAutoEval, proc)
+
+		task := &StatusCheckTask{
+			taskProcessor: *tp,
+		}
+
+		tasks := []*entity.ObservabilityTask{
+			{
+				ID:         1,
+				TaskStatus: entity.TaskStatusFailed,
+				TaskType:   entity.TaskTypeAutoEval,
+			},
+		}
+
+		err := task.checkTaskStatus(context.Background(), tasks)
+		require.NoError(t, err)
+		require.Empty(t, proc.finishReqs)
+	})
+
+	t.Run("task with disabled status should be skipped", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		proc := newTrackingProcessor()
+		tp := processor.NewTaskProcessor()
+		tp.Register(entity.TaskTypeAutoEval, proc)
+
+		task := &StatusCheckTask{
+			taskProcessor: *tp,
+		}
+
+		tasks := []*entity.ObservabilityTask{
+			{
+				ID:         1,
+				TaskStatus: entity.TaskStatusDisabled,
+				TaskType:   entity.TaskTypeAutoEval,
+			},
+		}
+
+		err := task.checkTaskStatus(context.Background(), tasks)
+		require.NoError(t, err)
+		require.Empty(t, proc.finishReqs)
 	})
 }
 
@@ -135,13 +208,26 @@ func TestStatusCheckTask_syncTaskRunCount(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		t.Cleanup(ctrl.Finish)
 
-		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-		task := &StatusCheckTask{
-			taskRepo: mockRepo,
+		task := &StatusCheckTask{}
+		require.NotNil(t, task)
+	})
+
+	t.Run("sync with no task runs", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		task := &StatusCheckTask{}
+
+		tasks := []*entity.ObservabilityTask{
+			{
+				ID:       1,
+				TaskRuns: []*entity.TaskRun{},
+			},
 		}
 
-		// Simple test to verify the task can be created
-		require.NotNil(t, task)
+		err := task.syncTaskRunCount(context.Background(), tasks)
+		require.NoError(t, err)
 	})
 }
 
@@ -153,12 +239,7 @@ func TestStatusCheckTask_listNonFinalTasks(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		t.Cleanup(ctrl.Finish)
 
-		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-		task := &StatusCheckTask{
-			taskRepo: mockRepo,
-		}
-
-		// Simple test to verify the task can be created
+		task := &StatusCheckTask{}
 		require.NotNil(t, task)
 	})
 }
@@ -171,12 +252,7 @@ func TestStatusCheckTask_updateTaskRunDetail(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		t.Cleanup(ctrl.Finish)
 
-		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-		task := &StatusCheckTask{
-			taskRepo: mockRepo,
-		}
-
-		// Simple test to verify the task can be created
+		task := &StatusCheckTask{}
 		require.NotNil(t, task)
 	})
 }
@@ -189,12 +265,7 @@ func TestStatusCheckTask_listRecentTasks(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		t.Cleanup(ctrl.Finish)
 
-		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-		task := &StatusCheckTask{
-			taskRepo: mockRepo,
-		}
-
-		// Simple test to verify the task can be created
+		task := &StatusCheckTask{}
 		require.NotNil(t, task)
 	})
 }
@@ -207,12 +278,7 @@ func TestStatusCheckTask_processBatch(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		t.Cleanup(ctrl.Finish)
 
-		mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-		task := &StatusCheckTask{
-			taskRepo: mockRepo,
-		}
-
-		// Simple test to verify the task can be created
+		task := &StatusCheckTask{}
 		require.NotNil(t, task)
 	})
 }
