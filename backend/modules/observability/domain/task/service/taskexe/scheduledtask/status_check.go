@@ -116,6 +116,8 @@ func (t *StatusCheckTask) RunOnce(ctx context.Context) error {
 func (t *StatusCheckTask) checkTaskStatus(ctx context.Context, tasks []*entity.ObservabilityTask) error {
 	startTime := time.Now()
 	logs.CtxInfo(ctx, "Check task status started...")
+	logID := logs.NewLogID()
+	ctx = logs.SetLogID(ctx, logID)
 	for _, taskDO := range tasks {
 		if taskDO.TaskStatus == entity.TaskStatusSuccess ||
 			taskDO.TaskStatus == entity.TaskStatusFailed ||
