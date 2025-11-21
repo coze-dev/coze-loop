@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
-	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	genquery "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -28,11 +27,14 @@ const (
 	DefaultLimit  = 20
 	MaxLimit      = 501
 	DefaultOffset = 0
+
+	MaxRetries = 3
+	RetryDelay = 100 * time.Millisecond
 )
 
 type ListTaskParam struct {
 	WorkspaceIDs []int64
-	TaskFilters  *filter.TaskFilterFields
+	TaskFilters  *entity.TaskFilterFields
 	ReqLimit     int32
 	ReqOffset    int32
 	OrderBy      *common.OrderBy
@@ -46,7 +48,7 @@ type ITaskDao interface {
 	DeleteTask(ctx context.Context, id int64, workspaceID int64, userID string) error
 	ListTasks(ctx context.Context, param ListTaskParam) ([]*model.ObservabilityTask, int64, error)
 	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
-	GetObjListWithTask(ctx context.Context) ([]string, []string, []*model.ObservabilityTask, error)
+	ListNonFinalTasks(ctx context.Context) ([]*model.ObservabilityTask, error)
 }
 
 func NewTaskDaoImpl(db db.Provider) ITaskDao {
@@ -133,7 +135,13 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 		return nil, 0, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	}
 	// order by
-	qd = qd.Order(v.order(q, param.OrderBy.GetField(), param.OrderBy.GetIsAsc()))
+	orderField := ""
+	orderAsc := false
+	if param.OrderBy != nil {
+		orderField = param.OrderBy.Field
+		orderAsc = param.OrderBy.IsAsc
+	}
+	qd = qd.Order(v.order(q, orderField, orderAsc))
 	// 计算分页参数
 	limit, offset := calculatePagination(param.ReqLimit, param.ReqOffset)
 	results, err := qd.Limit(limit).Offset(offset).Find()
@@ -144,7 +152,7 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 }
 
 // 处理任务过滤条件
-func (v *TaskDaoImpl) applyTaskFilters(q *genquery.Query, taskFilters *filter.TaskFilterFields) (field.Expr, error) {
+func (v *TaskDaoImpl) applyTaskFilters(q *genquery.Query, taskFilters *entity.TaskFilterFields) (field.Expr, error) {
 	if taskFilters == nil || len(taskFilters.FilterFields) == 0 {
 		return nil, nil
 	}
@@ -171,21 +179,21 @@ func (v *TaskDaoImpl) applyTaskFilters(q *genquery.Query, taskFilters *filter.Ta
 }
 
 // 构建单个过滤条件
-func (v *TaskDaoImpl) buildSingleFilterExpr(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildSingleFilterExpr(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
 	if f.FieldName == nil || f.QueryType == nil {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("field name or query type is nil"))
 	}
 
 	switch *f.FieldName {
-	case filter.TaskFieldNameTaskName:
+	case entity.TaskFieldNameTaskName:
 		return v.buildTaskNameFilter(q, f)
-	case filter.TaskFieldNameTaskType:
+	case entity.TaskFieldNameTaskType:
 		return v.buildTaskTypeFilter(q, f)
-	case filter.TaskFieldNameTaskStatus:
+	case entity.TaskFieldNameTaskStatus:
 		return v.buildTaskStatusFilter(q, f)
-	case filter.TaskFieldNameCreatedBy:
+	case entity.TaskFieldNameCreatedBy:
 		return v.buildCreatedByFilter(q, f)
-	case filter.TaskFieldNameSampleRate:
+	case entity.TaskFieldNameSampleRate:
 		return v.buildSampleRateFilter(q, f)
 	case "task_id":
 		return v.buildTaskIDFilter(q, f)
@@ -194,7 +202,7 @@ func (v *TaskDaoImpl) buildSingleFilterExpr(q *genquery.Query, f *filter.TaskFil
 	case "task_source":
 		return v.buildTaskSourceFilter(q, f)
 	default:
-		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid filter field name: %s", *f.FieldName))
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid filter field name: %s", string(*f.FieldName)))
 	}
 }
 
@@ -204,7 +212,7 @@ func (v *TaskDaoImpl) combineExpressions(expressions []field.Expr, relation stri
 		return expressions[0]
 	}
 
-	if relation == filter.QueryRelationOr {
+	if relation == string(entity.QueryRelationOr) {
 		return field.Or(expressions...)
 	}
 	// 默认使用 AND 关系
@@ -212,15 +220,15 @@ func (v *TaskDaoImpl) combineExpressions(expressions []field.Expr, relation stri
 }
 
 // 构建任务名称过滤条件
-func (v *TaskDaoImpl) buildTaskNameFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildTaskNameFilter(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task name query"))
 	}
 
 	switch *f.QueryType {
-	case filter.QueryTypeEq:
+	case entity.QueryTypeEq:
 		return q.ObservabilityTask.Name.Eq(f.Values[0]), nil
-	case filter.QueryTypeMatch:
+	case entity.QueryTypeMatch:
 		return q.ObservabilityTask.Name.Like(fmt.Sprintf("%%%s%%", f.Values[0])), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task name"))
@@ -228,15 +236,15 @@ func (v *TaskDaoImpl) buildTaskNameFilter(q *genquery.Query, f *filter.TaskFilte
 }
 
 // 构建任务类型过滤条件
-func (v *TaskDaoImpl) buildTaskTypeFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildTaskTypeFilter(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for task type query"))
 	}
 
 	switch *f.QueryType {
-	case filter.QueryTypeIn:
+	case entity.QueryTypeIn:
 		return q.ObservabilityTask.TaskType.In(f.Values...), nil
-	case filter.QueryTypeNotIn:
+	case entity.QueryTypeNotIn:
 		return q.ObservabilityTask.TaskType.NotIn(f.Values...), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task type"))
@@ -244,15 +252,15 @@ func (v *TaskDaoImpl) buildTaskTypeFilter(q *genquery.Query, f *filter.TaskFilte
 }
 
 // 构建任务状态过滤条件
-func (v *TaskDaoImpl) buildTaskStatusFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildTaskStatusFilter(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for task status query"))
 	}
 
 	switch *f.QueryType {
-	case filter.QueryTypeIn:
+	case entity.QueryTypeIn:
 		return q.ObservabilityTask.TaskStatus.In(f.Values...), nil
-	case filter.QueryTypeNotIn:
+	case entity.QueryTypeNotIn:
 		return q.ObservabilityTask.TaskStatus.NotIn(f.Values...), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for task status"))
@@ -260,15 +268,15 @@ func (v *TaskDaoImpl) buildTaskStatusFilter(q *genquery.Query, f *filter.TaskFil
 }
 
 // 构建创建者过滤条件
-func (v *TaskDaoImpl) buildCreatedByFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildCreatedByFilter(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for created_by query"))
 	}
 
 	switch *f.QueryType {
-	case filter.QueryTypeIn:
+	case entity.QueryTypeIn:
 		return q.ObservabilityTask.CreatedBy.In(f.Values...), nil
-	case filter.QueryTypeNotIn:
+	case entity.QueryTypeNotIn:
 		return q.ObservabilityTask.CreatedBy.NotIn(f.Values...), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for created_by"))
@@ -276,7 +284,7 @@ func (v *TaskDaoImpl) buildCreatedByFilter(q *genquery.Query, f *filter.TaskFilt
 }
 
 // 构建采样率过滤条件
-func (v *TaskDaoImpl) buildSampleRateFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildSampleRateFilter(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for sample rate"))
 	}
@@ -289,13 +297,13 @@ func (v *TaskDaoImpl) buildSampleRateFilter(q *genquery.Query, f *filter.TaskFil
 
 	// 构建 JSON_EXTRACT 表达式
 	switch *f.QueryType {
-	case filter.QueryTypeGte:
+	case entity.QueryTypeGte:
 		return field.NewUnsafeFieldRaw("CAST(JSON_EXTRACT(?, '$.sample_rate') AS DECIMAL(10,4)) >= ?", q.ObservabilityTask.Sampler, sampleRate), nil
-	case filter.QueryTypeLte:
+	case entity.QueryTypeLte:
 		return field.NewUnsafeFieldRaw("CAST(JSON_EXTRACT(?, '$.sample_rate') AS DECIMAL(10,4)) <= ?", q.ObservabilityTask.Sampler, sampleRate), nil
-	case filter.QueryTypeEq:
+	case entity.QueryTypeEq:
 		return field.NewUnsafeFieldRaw("CAST(JSON_EXTRACT(?, '$.sample_rate') AS DECIMAL(10,4)) = ?", q.ObservabilityTask.Sampler, sampleRate), nil
-	case filter.QueryTypeNotEq:
+	case entity.QueryTypeNotEq:
 		return field.NewUnsafeFieldRaw("CAST(JSON_EXTRACT(?, '$.sample_rate') AS DECIMAL(10,4)) != ?", q.ObservabilityTask.Sampler, sampleRate), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for sample rate"))
@@ -303,7 +311,7 @@ func (v *TaskDaoImpl) buildSampleRateFilter(q *genquery.Query, f *filter.TaskFil
 }
 
 // 构建任务ID过滤条件
-func (v *TaskDaoImpl) buildTaskIDFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildTaskIDFilter(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task id"))
 	}
@@ -320,7 +328,7 @@ func (v *TaskDaoImpl) buildTaskIDFilter(q *genquery.Query, f *filter.TaskFilterF
 	return q.ObservabilityTask.ID.In(taskIDs...), nil
 }
 
-func (v *TaskDaoImpl) buildUpdateAtFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildUpdateAtFilter(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for update at"))
 	}
@@ -330,16 +338,16 @@ func (v *TaskDaoImpl) buildUpdateAtFilter(q *genquery.Query, f *filter.TaskFilte
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid update at: %v", err.Error()))
 	}
 	switch *f.QueryType {
-	case filter.QueryTypeGt:
+	case entity.QueryTypeGt:
 		return q.ObservabilityTask.UpdatedAt.Gt(time.UnixMilli(updateAtLatest)), nil
-	case filter.QueryTypeLt:
+	case entity.QueryTypeLt:
 		return q.ObservabilityTask.UpdatedAt.Lt(time.UnixMilli(updateAtLatest)), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for update at"))
 	}
 }
 
-func (v *TaskDaoImpl) buildTaskSourceFilter(q *genquery.Query, f *filter.TaskFilterField) (field.Expr, error) {
+func (v *TaskDaoImpl) buildTaskSourceFilter(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
 	if len(f.Values) == 0 {
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no value provided for task source"))
 	}
@@ -377,7 +385,6 @@ func (d *TaskDaoImpl) order(q *genquery.Query, orderBy string, asc bool) field.E
 }
 
 func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {
-	// todo[xun]: 乐观锁
 	logs.CtxInfo(ctx, "UpdateTaskWithOCC, id:%d, workspaceID:%d, updateMap:%+v", id, workspaceID, updateMap)
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTask
 	qd := q.WithContext(ctx)
@@ -402,46 +409,16 @@ func (v *TaskDaoImpl) UpdateTaskWithOCC(ctx context.Context, id int64, workspace
 	return errorx.NewByCode(obErrorx.CommonMySqlErrorCode, errorx.WithExtraMsg("TaskRun update failed with OCC"))
 }
 
-func (v *TaskDaoImpl) GetObjListWithTask(ctx context.Context) ([]string, []string, []*model.ObservabilityTask, error) {
+func (v *TaskDaoImpl) ListNonFinalTasks(ctx context.Context) ([]*model.ObservabilityTask, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx))
 	qd := q.WithContext(ctx).ObservabilityTask
 
-	// 查询非终态任务的workspace_id，使用DISTINCT去重
-	qd = qd.Where(q.ObservabilityTask.TaskStatus.NotIn("success", "disabled"))
-	// qd = qd.Select(q.ObservabilityTask.WorkspaceID).Distinct()
+	// 查询非终态任务
+	qd = qd.Where(q.ObservabilityTask.TaskStatus.NotIn(string(entity.TaskStatusSuccess), string(entity.TaskStatusDisabled)))
 
 	results, err := qd.Find()
 	if err != nil {
-		return nil, nil, nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	}
-
-	// 转换为字符串数组
-	var spaceList []string
-	var botList []string
-	for _, task := range results {
-		spaceList = append(spaceList, strconv.FormatInt(task.WorkspaceID, 10))
-		spanFilter := tconv.SpanFilterPO2DO(ctx, task.SpanFilter)
-		if spanFilter != nil && spanFilter.Filters.FilterFields != nil {
-			extractBotIDFromFilters(spanFilter.Filters.FilterFields, &botList)
-		}
-	}
-
-	return spaceList, botList, nil, nil
-}
-
-// extractBotIDFromFilters 递归提取过滤器中的 bot_id 值，包括 SubFilter
-func extractBotIDFromFilters(filterFields []*filter.FilterField, botList *[]string) {
-	for _, filterField := range filterFields {
-		if filterField == nil {
-			continue
-		}
-		// 检查当前 FilterField 的 FieldName
-		if filterField.FieldName != nil && *filterField.FieldName == "bot_id" {
-			*botList = append(*botList, filterField.Values...)
-		}
-		// 递归处理 SubFilter
-		if filterField.SubFilter != nil && filterField.SubFilter.FilterFields != nil {
-			extractBotIDFromFilters(filterField.SubFilter.FilterFields, botList)
-		}
-	}
+	return results, nil
 }

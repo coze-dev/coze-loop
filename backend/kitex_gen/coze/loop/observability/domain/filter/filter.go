@@ -342,13 +342,14 @@ func (p *FilterFields) Field2DeepEqual(src []*FilterField) bool {
 }
 
 type FilterField struct {
-	FieldName  *string        `thrift:"field_name,1,optional" frugal:"1,optional,string" form:"field_name" json:"field_name,omitempty" query:"field_name"`
-	FieldType  *FieldType     `thrift:"field_type,2,optional" frugal:"2,optional,string" form:"field_type" json:"field_type,omitempty" query:"field_type"`
-	Values     []string       `thrift:"values,3,optional" frugal:"3,optional,list<string>" form:"values" json:"values,omitempty" query:"values"`
-	QueryType  *QueryType     `thrift:"query_type,4,optional" frugal:"4,optional,string" form:"query_type" json:"query_type,omitempty" query:"query_type"`
-	QueryAndOr *QueryRelation `thrift:"query_and_or,5,optional" frugal:"5,optional,string" form:"query_and_or" json:"query_and_or,omitempty" query:"query_and_or"`
-	SubFilter  *FilterFields  `thrift:"sub_filter,6,optional" frugal:"6,optional,FilterFields" form:"sub_filter" json:"sub_filter,omitempty" query:"sub_filter"`
-	IsCustom   *bool          `thrift:"is_custom,7,optional" frugal:"7,optional,bool" form:"is_custom" json:"is_custom,omitempty" query:"is_custom"`
+	FieldName  *string           `thrift:"field_name,1,optional" frugal:"1,optional,string" form:"field_name" json:"field_name,omitempty" query:"field_name"`
+	FieldType  *FieldType        `thrift:"field_type,2,optional" frugal:"2,optional,string" form:"field_type" json:"field_type,omitempty" query:"field_type"`
+	Values     []string          `thrift:"values,3,optional" frugal:"3,optional,list<string>" form:"values" json:"values,omitempty" query:"values"`
+	QueryType  *QueryType        `thrift:"query_type,4,optional" frugal:"4,optional,string" form:"query_type" json:"query_type,omitempty" query:"query_type"`
+	QueryAndOr *QueryRelation    `thrift:"query_and_or,5,optional" frugal:"5,optional,string" form:"query_and_or" json:"query_and_or,omitempty" query:"query_and_or"`
+	SubFilter  *FilterFields     `thrift:"sub_filter,6,optional" frugal:"6,optional,FilterFields" form:"sub_filter" json:"sub_filter,omitempty" query:"sub_filter"`
+	IsCustom   *bool             `thrift:"is_custom,7,optional" frugal:"7,optional,bool" form:"is_custom" json:"is_custom,omitempty" query:"is_custom"`
+	ExtraInfo  map[string]string `thrift:"extra_info,8,optional" frugal:"8,optional,map<string:string>" form:"extra_info" json:"extra_info,omitempty" query:"extra_info"`
 }
 
 func NewFilterField() *FilterField {
@@ -441,6 +442,18 @@ func (p *FilterField) GetIsCustom() (v bool) {
 	}
 	return *p.IsCustom
 }
+
+var FilterField_ExtraInfo_DEFAULT map[string]string
+
+func (p *FilterField) GetExtraInfo() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtraInfo() {
+		return FilterField_ExtraInfo_DEFAULT
+	}
+	return p.ExtraInfo
+}
 func (p *FilterField) SetFieldName(val *string) {
 	p.FieldName = val
 }
@@ -462,6 +475,9 @@ func (p *FilterField) SetSubFilter(val *FilterFields) {
 func (p *FilterField) SetIsCustom(val *bool) {
 	p.IsCustom = val
 }
+func (p *FilterField) SetExtraInfo(val map[string]string) {
+	p.ExtraInfo = val
+}
 
 var fieldIDToName_FilterField = map[int16]string{
 	1: "field_name",
@@ -471,6 +487,7 @@ var fieldIDToName_FilterField = map[int16]string{
 	5: "query_and_or",
 	6: "sub_filter",
 	7: "is_custom",
+	8: "extra_info",
 }
 
 func (p *FilterField) IsSetFieldName() bool {
@@ -499,6 +516,10 @@ func (p *FilterField) IsSetSubFilter() bool {
 
 func (p *FilterField) IsSetIsCustom() bool {
 	return p.IsCustom != nil
+}
+
+func (p *FilterField) IsSetExtraInfo() bool {
+	return p.ExtraInfo != nil
 }
 
 func (p *FilterField) Read(iprot thrift.TProtocol) (err error) {
@@ -570,6 +591,14 @@ func (p *FilterField) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -690,6 +719,35 @@ func (p *FilterField) ReadField7(iprot thrift.TProtocol) error {
 	p.IsCustom = _field
 	return nil
 }
+func (p *FilterField) ReadField8(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.ExtraInfo = _field
+	return nil
+}
 
 func (p *FilterField) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -723,6 +781,10 @@ func (p *FilterField) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -877,6 +939,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *FilterField) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtraInfo() {
+		if err = oprot.WriteFieldBegin("extra_info", thrift.MAP, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.ExtraInfo)); err != nil {
+			return err
+		}
+		for k, v := range p.ExtraInfo {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 
 func (p *FilterField) String() string {
 	if p == nil {
@@ -911,6 +1002,9 @@ func (p *FilterField) DeepEqual(ano *FilterField) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.IsCustom) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.ExtraInfo) {
 		return false
 	}
 	return true
@@ -993,6 +1087,19 @@ func (p *FilterField) Field7DeepEqual(src *bool) bool {
 	}
 	if *p.IsCustom != *src {
 		return false
+	}
+	return true
+}
+func (p *FilterField) Field8DeepEqual(src map[string]string) bool {
+
+	if len(p.ExtraInfo) != len(src) {
+		return false
+	}
+	for k, v := range p.ExtraInfo {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

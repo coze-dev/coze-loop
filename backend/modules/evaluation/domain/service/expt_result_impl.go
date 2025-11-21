@@ -532,7 +532,10 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 
 	columnEvaluators := make([]*entity.ColumnEvaluator, 0)
 	for _, e := range evaluatorVersions {
-		if (e.EvaluatorType == entity.EvaluatorTypePrompt && e.PromptEvaluatorVersion == nil) || (e.EvaluatorType == entity.EvaluatorTypeCode && e.CodeEvaluatorVersion == nil) || !gslice.Contains(evaluatorVersionIDs, e.GetEvaluatorVersionID()) {
+		if (e.EvaluatorType == entity.EvaluatorTypePrompt && e.PromptEvaluatorVersion == nil) ||
+			(e.EvaluatorType == entity.EvaluatorTypeCode && e.CodeEvaluatorVersion == nil) ||
+			(e.EvaluatorType == entity.EvaluatorTypeCustomRPC && e.CustomRPCEvaluatorVersion == nil) ||
+			!gslice.Contains(evaluatorVersionIDs, e.GetEvaluatorVersionID()) {
 			continue
 		}
 
@@ -543,6 +546,7 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 			Name:               gptr.Of(e.Name),
 			Version:            gptr.Of(e.GetVersion()),
 			Description:        gptr.Of(e.Description),
+			Builtin:            gptr.Of(e.Builtin),
 		}
 		columnEvaluators = append(columnEvaluators, columnEvaluator)
 	}

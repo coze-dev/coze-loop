@@ -21,6 +21,7 @@ import (
 type MockIRateLimiter struct {
 	ctrl     *gomock.Controller
 	recorder *MockIRateLimiterMockRecorder
+	isgomock struct{}
 }
 
 // MockIRateLimiterMockRecorder is the mock recorder for MockIRateLimiter.
@@ -41,10 +42,10 @@ func (m *MockIRateLimiter) EXPECT() *MockIRateLimiterMockRecorder {
 }
 
 // AllowN mocks base method.
-func (m *MockIRateLimiter) AllowN(arg0 context.Context, arg1 string, arg2 int, arg3 ...limiter.LimitOptionFn) (*limiter.Result, error) {
+func (m *MockIRateLimiter) AllowN(ctx context.Context, key string, n int, opts ...limiter.LimitOptionFn) (*limiter.Result, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []any{ctx, key, n}
+	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "AllowN", varargs...)
@@ -54,8 +55,8 @@ func (m *MockIRateLimiter) AllowN(arg0 context.Context, arg1 string, arg2 int, a
 }
 
 // AllowN indicates an expected call of AllowN.
-func (mr *MockIRateLimiterMockRecorder) AllowN(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockIRateLimiterMockRecorder) AllowN(ctx, key, n any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
+	varargs := append([]any{ctx, key, n}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowN", reflect.TypeOf((*MockIRateLimiter)(nil).AllowN), varargs...)
 }

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package dao
+package redis
 
 import (
 	"context"
@@ -61,6 +61,7 @@ func (q *TaskDAOImpl) makeTaskCacheKey(taskID int64) string {
 	return fmt.Sprintf(taskDetailCacheKeyPattern, taskID)
 }
 
+// 为了兼容旧版，redis key必须保持一致，无法增加前缀
 func (q *TaskDAOImpl) makeTaskCountCacheKey(taskID int64) string {
 	return fmt.Sprintf("count_%d", taskID)
 }

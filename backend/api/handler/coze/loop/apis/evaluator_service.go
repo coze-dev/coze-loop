@@ -9,8 +9,10 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/evaluatorservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 )
 
 var localEvaluatorSvc evaluatorservice.Client
@@ -151,4 +153,62 @@ func ValidateEvaluator(ctx context.Context, c *app.RequestContext) {
 // @router /api/evaluation/v1/evaluators/batch_debug [POST]
 func BatchDebugEvaluator(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvaluatorSvc.BatchDebugEvaluator)
+}
+
+// ListTemplatesV2 .
+// @router /api/evaluation/v1/evaluators/list_template_v2 [POST]
+func ListTemplatesV2(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvaluatorSvc.ListTemplatesV2)
+}
+
+// DebugBuiltinEvaluator .
+// @router /api/evaluation/v1/evaluators/debug_builtin [POST]
+func DebugBuiltinEvaluator(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvaluatorSvc.DebugBuiltinEvaluator)
+}
+
+// CreateEvaluatorTemplate .
+// @router /api/evaluation/v1/evaluators/create_template [POST]
+func CreateEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvaluatorSvc.CreateEvaluatorTemplate)
+}
+
+// UpdateEvaluatorTemplate .
+// @router /api/evaluation/v1/evaluators/update_template [POST]
+func UpdateEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvaluatorSvc.UpdateEvaluatorTemplate)
+}
+
+// DeleteEvaluatorTemplate .
+// @router /api/evaluation/v1/evaluators/delete_template [POST]
+func DeleteEvaluatorTemplate(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvaluatorSvc.DeleteEvaluatorTemplate)
+}
+
+// ListEvaluatorTags .
+// @router /api/evaluation/v1/evaluators/list_tags [POST]
+func ListEvaluatorTags(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvaluatorSvc.ListEvaluatorTags)
+}
+
+// UpdateBuiltinEvaluatorTags .
+// @router /api/evaluation/v1/evaluators/update_builtin [POST]
+func UpdateBuiltinEvaluatorTags(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.UpdateBuiltinEvaluatorTagsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.UpdateBuiltinEvaluatorTagsResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetTemplateV2 .
+// @router /api/evaluation/v1/evaluator_template/:evaluator_template_id [POST]
+func GetTemplateV2(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvaluatorSvc.GetTemplateV2)
 }

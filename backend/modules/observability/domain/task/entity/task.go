@@ -4,13 +4,61 @@
 package entity
 
 import (
+	"context"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	taskdto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
+
+type TimeUnit string
+
+const (
+	TimeUnitDay  = "day"
+	TimeUnitWeek = "week"
+	TimeUnitNull = "null"
+)
+
+type TaskStatus string
+
+const (
+	TaskStatusUnstarted TaskStatus = "unstarted"
+	TaskStatusRunning   TaskStatus = "running"
+	TaskStatusFailed    TaskStatus = "failed"
+	TaskStatusSuccess   TaskStatus = "success"
+	TaskStatusPending   TaskStatus = "pending"
+	TaskStatusDisabled  TaskStatus = "disabled"
+)
+
+type TaskType string
+
+const (
+	TaskTypeAutoEval       TaskType = "auto_evaluate"
+	TaskTypeAutoDataReflow TaskType = "auto_data_reflow"
+)
+
+type TaskRunType string
+
+const (
+	TaskRunTypeBackFill TaskRunType = "back_fill"
+	TaskRunTypeNewData  TaskRunType = "new_data"
+)
+
+type TaskRunStatus string
+
+const (
+	TaskRunStatusRunning TaskRunStatus = "running"
+	TaskRunStatusDone    TaskRunStatus = "done"
+)
+
+type StatusChangeEvent struct {
+	Before TaskStatus
+	After  TaskStatus
+}
 
 // do
 type ObservabilityTask struct {
@@ -18,8 +66,8 @@ type ObservabilityTask struct {
 	WorkspaceID           int64             // 空间ID
 	Name                  string            // 任务名称
 	Description           *string           // 任务描述
-	TaskType              string            // 任务类型
-	TaskStatus            string            // 任务状态
+	TaskType              TaskType          // 任务类型
+	TaskStatus            TaskStatus        // 任务状态
 	TaskDetail            *RunDetail        // 任务运行详情
 	SpanFilter            *SpanFilterFields // span 过滤条件
 	EffectiveTime         *EffectiveTime    // 生效时间
@@ -42,8 +90,8 @@ type RunDetail struct {
 }
 type SpanFilterFields struct {
 	Filters      loop_span.FilterFields `json:"filters"`
-	PlatformType common.PlatformType    `json:"platform_type"`
-	SpanListType common.SpanListType    `json:"span_list_type"`
+	PlatformType loop_span.PlatformType `json:"platform_type"`
+	SpanListType loop_span.SpanListType `json:"span_list_type"`
 }
 type EffectiveTime struct {
 	// ms timestamp
@@ -52,12 +100,12 @@ type EffectiveTime struct {
 	EndAt int64 `json:"end_at"`
 }
 type Sampler struct {
-	SampleRate    float64 `json:"sample_rate"`
-	SampleSize    int64   `json:"sample_size"`
-	IsCycle       bool    `json:"is_cycle"`
-	CycleCount    int64   `json:"cycle_count"`
-	CycleInterval int64   `json:"cycle_interval"`
-	CycleTimeUnit string  `json:"cycle_time_unit"`
+	SampleRate    float64  `json:"sample_rate"`
+	SampleSize    int64    `json:"sample_size"`
+	IsCycle       bool     `json:"is_cycle"`
+	CycleCount    int64    `json:"cycle_count"`
+	CycleInterval int64    `json:"cycle_interval"`
+	CycleTimeUnit TimeUnit `json:"cycle_time_unit"`
 }
 type TaskConfig struct {
 	AutoEvaluateConfigs []*AutoEvaluateConfig `json:"auto_evaluate_configs"`
@@ -86,8 +134,8 @@ type TaskRun struct {
 	ID             int64           // Task Run ID
 	TaskID         int64           // Task ID
 	WorkspaceID    int64           // 空间ID
-	TaskType       string          // 任务类型
-	RunStatus      string          // Task Run状态
+	TaskType       TaskRunType     // 任务类型
+	RunStatus      TaskRunStatus   // Task Run状态
 	RunDetail      *RunDetail      // Task Run运行详情
 	BackfillDetail *BackfillDetail // 历史回溯运行详情
 	RunStartAt     time.Time       // run 开始时间
@@ -127,7 +175,7 @@ type DataReflowRunConfig struct {
 	Status       string `json:"status"`
 }
 
-func (t ObservabilityTask) GetRunTimeRange() (startAt, endAt int64) {
+func (t *ObservabilityTask) GetRunTimeRange() (startAt, endAt int64) {
 	if t.EffectiveTime == nil {
 		return 0, 0
 	}
@@ -136,9 +184,9 @@ func (t ObservabilityTask) GetRunTimeRange() (startAt, endAt int64) {
 		endAt = t.EffectiveTime.EndAt
 	} else {
 		switch t.Sampler.CycleTimeUnit {
-		case task.TimeUnitDay:
+		case TimeUnitDay:
 			endAt = startAt + (t.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
-		case task.TimeUnitWeek:
+		case TimeUnitWeek:
 			endAt = startAt + (t.Sampler.CycleInterval)*7*24*time.Hour.Milliseconds()
 		default:
 			endAt = startAt + (t.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
@@ -147,28 +195,28 @@ func (t ObservabilityTask) GetRunTimeRange() (startAt, endAt int64) {
 	return startAt, endAt
 }
 
-func (t ObservabilityTask) IsFinished() bool {
+func (t *ObservabilityTask) IsFinished() bool {
 	switch t.TaskStatus {
-	case task.TaskStatusSuccess, task.TaskStatusDisabled, task.TaskStatusPending:
+	case TaskStatusSuccess, TaskStatusDisabled, TaskStatusPending:
 		return true
 	default:
 		return false
 	}
 }
 
-func (t ObservabilityTask) GetBackfillTaskRun() *TaskRun {
-	for _, taskRunPO := range t.TaskRuns {
-		if taskRunPO.TaskType == task.TaskRunTypeBackFill {
-			return taskRunPO
+func (t *ObservabilityTask) GetBackfillTaskRun() *TaskRun {
+	for _, taskRun := range t.TaskRuns {
+		if taskRun.TaskType == TaskRunTypeBackFill {
+			return taskRun
 		}
 	}
 	return nil
 }
 
-func (t ObservabilityTask) GetCurrentTaskRun() *TaskRun {
-	for _, taskRunPO := range t.TaskRuns {
-		if taskRunPO.TaskType == task.TaskRunTypeNewData && taskRunPO.RunStatus == task.TaskStatusRunning {
-			return taskRunPO
+func (t *ObservabilityTask) GetCurrentTaskRun() *TaskRun {
+	for _, taskRun := range t.TaskRuns {
+		if taskRun.TaskType == TaskRunTypeNewData && taskRun.RunStatus == TaskRunStatusRunning {
+			return taskRun
 		}
 	}
 	return nil
@@ -180,4 +228,94 @@ func (t ObservabilityTask) GetTaskttl() int64 {
 		ttl += t.EffectiveTime.EndAt - time.Now().UnixMilli()
 	}
 	return ttl
+}
+
+func (t *ObservabilityTask) SetEffectiveTime(ctx context.Context, effectiveTime EffectiveTime) error {
+	if t.EffectiveTime == nil {
+		logs.CtxError(ctx, "EffectiveTime is null.")
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("effective time is nil"))
+	}
+	// 开始时间不能大于结束时间
+	if effectiveTime.StartAt >= effectiveTime.EndAt {
+		logs.CtxError(ctx, "Start time must be less than end time")
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start time must be less than end time"))
+	}
+	// 开始、结束时间不能小于当前时间
+	if t.EffectiveTime.StartAt != effectiveTime.StartAt && effectiveTime.StartAt < time.Now().UnixMilli() {
+		logs.CtxError(ctx, "update time must be greater than current time")
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start time must be greater than current time"))
+	}
+	if t.EffectiveTime.EndAt != effectiveTime.EndAt && effectiveTime.EndAt < time.Now().UnixMilli() {
+		logs.CtxError(ctx, "update time must be greater than current time")
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start time must be greater than current time"))
+	}
+	switch t.TaskStatus {
+	case TaskStatusUnstarted:
+		if effectiveTime.StartAt != 0 {
+			t.EffectiveTime.StartAt = effectiveTime.StartAt
+		}
+		if effectiveTime.EndAt != 0 {
+			t.EffectiveTime.EndAt = effectiveTime.EndAt
+		}
+	case TaskStatusRunning, TaskStatusPending:
+		if effectiveTime.EndAt != 0 {
+			t.EffectiveTime.EndAt = effectiveTime.EndAt
+		}
+	default:
+		logs.CtxError(ctx, "Invalid task status:%s", t.TaskStatus)
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid task status"))
+	}
+	return nil
+}
+
+func (t *ObservabilityTask) SetTaskStatus(ctx context.Context, taskStatus TaskStatus) (*StatusChangeEvent, error) {
+	currentTaskStatus := t.TaskStatus
+	if currentTaskStatus == taskStatus {
+		return nil, nil
+	}
+
+	switch taskStatus {
+	case taskdto.TaskStatusUnstarted:
+		break
+	case taskdto.TaskStatusRunning:
+		if currentTaskStatus == taskdto.TaskStatusUnstarted || currentTaskStatus == taskdto.TaskStatusPending {
+			t.TaskStatus = taskStatus
+			return &StatusChangeEvent{
+				Before: currentTaskStatus,
+				After:  taskStatus,
+			}, nil
+		}
+	case taskdto.TaskStatusPending:
+		if currentTaskStatus == taskdto.TaskStatusRunning {
+			t.TaskStatus = taskStatus
+			return &StatusChangeEvent{
+				Before: currentTaskStatus,
+				After:  taskStatus,
+			}, nil
+		}
+	case taskdto.TaskStatusDisabled:
+		if currentTaskStatus == taskdto.TaskStatusUnstarted || currentTaskStatus == taskdto.TaskStatusPending {
+			t.TaskStatus = taskStatus
+			return &StatusChangeEvent{
+				Before: currentTaskStatus,
+				After:  taskStatus,
+			}, nil
+		}
+	case taskdto.TaskStatusSuccess:
+		break
+	}
+
+	logs.CtxError(ctx, "Invalid task status. Before:[%s], after:[%s]", currentTaskStatus, taskStatus)
+	return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid task status"))
+}
+
+func (t *ObservabilityTask) ShouldTriggerBackfill() bool {
+	// 检查回填时间配置
+	if t.BackfillEffectiveTime == nil {
+		return false
+	}
+
+	return t.BackfillEffectiveTime.StartAt > 0 &&
+		t.BackfillEffectiveTime.EndAt > 0 &&
+		t.BackfillEffectiveTime.StartAt < t.BackfillEffectiveTime.EndAt
 }

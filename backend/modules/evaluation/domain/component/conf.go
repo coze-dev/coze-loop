@@ -19,4 +19,5 @@ type IConfiger interface {
 	GetCKDBName(ctx context.Context) *entity.CKDBConfig
 	GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList
 	GetMaintainerUserIDs(ctx context.Context) map[string]bool
+	GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl
 }

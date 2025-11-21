@@ -22,7 +22,7 @@ type TaskConsumer struct {
 	conf.IConfigLoader
 }
 
-func newTaskConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewTaskConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &TaskConsumer{
 		handler:       handler,
 		IConfigLoader: loader,
@@ -60,5 +60,5 @@ func (e *TaskConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) er
 		return nil
 	}
 	logs.CtxInfo(ctx, "Span msg,log_id=%s, trace_id=%s, span_id=%s,msgID=%s", event.LogID, event.TraceID, event.SpanID, ext.MsgID)
-	return e.handler.SpanTrigger(ctx, event)
+	return e.handler.SpanTrigger(ctx, event, nil)
 }

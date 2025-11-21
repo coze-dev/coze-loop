@@ -14,3 +14,7 @@ type AnnotationEvent struct {
 	Caller     string                `json:"caller"`
 	RetryTimes int64                 `json:"retry_times"`
 }
+
+type SpanEvent struct {
+	Span *loop_span.Span `json:"span"`
+}
