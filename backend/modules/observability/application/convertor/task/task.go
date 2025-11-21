@@ -73,6 +73,11 @@ func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 			UpdatedBy: UserInfoPO2DO(userMap[v.UpdatedBy], v.UpdatedBy),
 		},
 	}
+
+	if v.TaskSource != nil {
+		taskInfo.TaskSource = gptr.Of(*v.TaskSource)
+	}
+
 	return taskInfo
 }
 
@@ -319,7 +324,7 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 
 	spanFilterDO := SpanFilterDTO2DO(taskDTO.GetRule().GetSpanFilters())
 
-	return &entity.ObservabilityTask{
+	entityTask := &entity.ObservabilityTask{
 		ID:                    taskDTO.GetID(),
 		WorkspaceID:           taskDTO.GetWorkspaceID(),
 		Name:                  taskDTO.GetName(),
@@ -337,6 +342,12 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 		UpdatedBy:             updatedBy,
 		BackfillEffectiveTime: EffectiveTimeDTO2DO(taskDTO.GetRule().GetBackfillEffectiveTime()),
 	}
+
+	if taskDTO.TaskSource != nil {
+		entityTask.TaskSource = ptr.Of(*taskDTO.TaskSource)
+	}
+
+	return entityTask
 }
 
 func SpanFilterDTO2DO(spanFilterFields *filter.SpanFilterFields) *entity.SpanFilterFields {

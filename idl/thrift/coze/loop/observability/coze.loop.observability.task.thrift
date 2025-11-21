@@ -7,6 +7,7 @@ include "./domain/common.thrift"
 
 struct CreateTaskRequest {
     1: required task.Task task (api.body = "task"),
+    2: optional common.Session session (api.body="session"),
 
     255: optional base.Base base,
 }
@@ -24,6 +25,7 @@ struct UpdateTaskRequest {
     4: optional string description  (api.body = "description"),
     5: optional task.EffectiveTime effective_time (api.body = "effective_time"),
     6: optional double sample_rate (api.body = "sample_rate"),
+    7: optional common.Session session (api.body="session"),
 
     255: optional base.Base base,
 }

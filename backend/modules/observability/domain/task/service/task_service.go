@@ -39,6 +39,7 @@ type UpdateTaskReq struct {
 	Description   *string
 	EffectiveTime *entity.EffectiveTime
 	SampleRate    *float64
+	UserID        string
 }
 type ListTasksReq struct {
 	WorkspaceID int64
@@ -217,7 +218,7 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 			}
 		}
 	}
-	taskDO.UpdatedBy = userID
+	taskDO.UpdatedBy = req.UserID
 	taskDO.UpdatedAt = time.Now()
 	if err = t.TaskRepo.UpdateTask(ctx, taskDO); err != nil {
 		return err
@@ -226,9 +227,19 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 }
 
 func (t *TaskServiceImpl) ListTasks(ctx context.Context, req *ListTasksReq) (resp *ListTasksResp, err error) {
+	taskFilters := &entity.TaskFilterFields{}
+	if req.TaskFilters != nil {
+		taskFilters = req.TaskFilters
+	}
+	taskFilters.FilterFields = append(taskFilters.FilterFields, &entity.TaskFilterField{
+		FieldName: gptr.Of(entity.TaskFieldNameTaskSource),
+		FieldType: gptr.Of(entity.FieldTypeString),
+		Values:    []string{string(entity.TaskSourceUser)},
+		QueryType: gptr.Of(entity.QueryTypeIn),
+	})
 	taskDOs, total, err := t.TaskRepo.ListTasks(ctx, repo.ListTaskParam{
 		WorkspaceIDs: []int64{req.WorkspaceID},
-		TaskFilters:  req.TaskFilters,
+		TaskFilters:  taskFilters,
 		ReqLimit:     req.Limit,
 		ReqOffset:    req.Offset,
 		OrderBy:      req.OrderBy,

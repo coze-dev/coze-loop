@@ -357,7 +357,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 		{
 			name:       "service error",
 			ctx:        context.Background(),
-			req:        &taskapi.UpdateTaskRequest{TaskID: 33, WorkspaceID: 44},
+			req:        &taskapi.UpdateTaskRequest{TaskID: 33, WorkspaceID: 44, Session: &commondomain.Session{UserID: gptr.Of("1")}},
 			expectResp: taskapi.NewUpdateTaskResponse(),
 			expectErr:  errors.New("svc error"),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
@@ -369,6 +369,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 					WorkspaceID: 44,
 					TaskStatus:  nil,
 					Description: nil,
+					UserID:      "1",
 				}).Return(errors.New("svc error"))
 				return s, auth
 			},
@@ -376,7 +377,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 		{
 			name:       "success",
 			ctx:        context.Background(),
-			req:        &taskapi.UpdateTaskRequest{TaskID: 55, WorkspaceID: 66},
+			req:        &taskapi.UpdateTaskRequest{TaskID: 55, WorkspaceID: 66, Session: &commondomain.Session{UserID: gptr.Of("1")}},
 			expectResp: taskapi.NewUpdateTaskResponse(),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
@@ -387,6 +388,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 					WorkspaceID: 66,
 					TaskStatus:  nil,
 					Description: nil,
+					UserID:      "1",
 				}).Return(nil)
 				return s, auth
 			},

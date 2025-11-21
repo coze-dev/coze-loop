@@ -78,6 +78,7 @@ type ObservabilityTask struct {
 	UpdatedAt             time.Time         // 更新时间
 	CreatedBy             string            // 创建人
 	UpdatedBy             string            // 更新人
+	TaskSource            *string           // 创建来源
 
 	TaskRuns []*TaskRun
 }
