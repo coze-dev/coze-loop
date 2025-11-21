@@ -39,7 +39,7 @@ func (p *Trajectory) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
@@ -101,8 +101,8 @@ SkipFieldError:
 func (p *Trajectory) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -178,8 +178,8 @@ func (p *Trajectory) BLength() int {
 func (p *Trajectory) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.ID)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ID)
 	}
 	return offset
 }
@@ -213,7 +213,7 @@ func (p *Trajectory) field1Length() int {
 	l := 0
 	if p.IsSetID() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.StringLengthNocopy(*p.ID)
 	}
 	return l
 }
@@ -247,7 +247,10 @@ func (p *Trajectory) DeepCopy(s interface{}) error {
 	}
 
 	if src.ID != nil {
-		tmp := *src.ID
+		var tmp string
+		if *src.ID != "" {
+			tmp = kutils.StringDeepCopy(*src.ID)
+		}
 		p.ID = &tmp
 	}
 

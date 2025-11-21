@@ -20,7 +20,7 @@ type StepType = string
 
 type Trajectory struct {
 	// trace_id
-	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	ID *string `thrift:"id,1,optional" frugal:"1,optional,string" form:"id" json:"id,omitempty" query:"id"`
 	// 根节点，记录整个轨迹的信息
 	RootStep *RootStep `thrift:"root_step,2,optional" frugal:"2,optional,RootStep" form:"root_step" json:"root_step,omitempty" query:"root_step"`
 	// agent step列表，记录轨迹中agent执行信息
@@ -34,9 +34,9 @@ func NewTrajectory() *Trajectory {
 func (p *Trajectory) InitDefault() {
 }
 
-var Trajectory_ID_DEFAULT int64
+var Trajectory_ID_DEFAULT string
 
-func (p *Trajectory) GetID() (v int64) {
+func (p *Trajectory) GetID() (v string) {
 	if p == nil {
 		return
 	}
@@ -69,7 +69,7 @@ func (p *Trajectory) GetAgentSteps() (v []*AgentStep) {
 	}
 	return p.AgentSteps
 }
-func (p *Trajectory) SetID(val *int64) {
+func (p *Trajectory) SetID(val *string) {
 	p.ID = val
 }
 func (p *Trajectory) SetRootStep(val *RootStep) {
@@ -116,7 +116,7 @@ func (p *Trajectory) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -170,8 +170,8 @@ ReadStructEndError:
 
 func (p *Trajectory) ReadField1(iprot thrift.TProtocol) error {
 
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
 		_field = &v
@@ -249,10 +249,10 @@ WriteStructEndError:
 
 func (p *Trajectory) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetID() {
-		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
+		if err = oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.ID); err != nil {
+		if err := oprot.WriteString(*p.ID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -336,14 +336,14 @@ func (p *Trajectory) DeepEqual(ano *Trajectory) bool {
 	return true
 }
 
-func (p *Trajectory) Field1DeepEqual(src *int64) bool {
+func (p *Trajectory) Field1DeepEqual(src *string) bool {
 
 	if p.ID == src {
 		return true
 	} else if p.ID == nil || src == nil {
 		return false
 	}
-	if *p.ID != *src {
+	if strings.Compare(*p.ID, *src) != 0 {
 		return false
 	}
 	return true

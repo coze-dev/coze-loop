@@ -2,7 +2,7 @@ namespace go common
 
 struct Trajectory {
     // trace_id
-    1: optional i64 id (api.js_conv="true", go.tag = 'json:"id"')
+    1: optional string id
     // 根节点，记录整个轨迹的信息
     2: optional RootStep root_step
     // agent step列表，记录轨迹中agent执行信息
