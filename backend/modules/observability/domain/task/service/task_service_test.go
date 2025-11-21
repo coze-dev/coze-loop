@@ -283,7 +283,6 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		taskDO := &entity.ObservabilityTask{TaskType: entity.TaskTypeAutoEval, TaskStatus: entity.TaskStatusUnstarted, EffectiveTime: &entity.EffectiveTime{}, Sampler: &entity.Sampler{}}
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
-		repoMock.EXPECT().UpdateTask(gomock.Any(), taskDO).Return(nil)
 
 		proc := &fakeProcessor{}
 		svc := &TaskServiceImpl{TaskRepo: repoMock}
@@ -333,6 +332,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			EffectiveTime: &entity.EffectiveTime{StartAt: newStart, EndAt: newEnd},
 			SampleRate:    &sampleRate,
 			TaskStatus:    gptr.Of(entity.TaskStatusDisabled),
+			UserID:        "user1",
 		})
 		assert.NoError(t, err)
 		assert.True(t, proc.onFinishRunCalled)
