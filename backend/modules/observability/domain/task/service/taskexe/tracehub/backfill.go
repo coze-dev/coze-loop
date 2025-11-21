@@ -206,7 +206,6 @@ type ListSpansReq struct {
 func (h *TraceHubServiceImpl) buildSpanFilters(ctx context.Context, taskConfig *entity.ObservabilityTask) *loop_span.FilterFields {
 	// More complex filters can be built based on the task configuration
 	// Simplified here: return nil to indicate no additional filters
-
 	platformFilter, err := h.buildHelper.BuildPlatformRelatedFilter(ctx, taskConfig.SpanFilter.PlatformType)
 	if err != nil {
 		logs.CtxError(ctx, "build platform filter failed, task_id=%d, err=%v", taskConfig.ID, err)
@@ -220,6 +219,10 @@ func (h *TraceHubServiceImpl) buildSpanFilters(ctx context.Context, taskConfig *
 	if err != nil {
 		logs.CtxError(ctx, "build builtin filter failed, task_id=%d, err=%v", taskConfig.ID, err)
 		// 不需要重试
+		return nil
+	}
+	if err = taskConfig.SpanFilter.Filters.Traverse(processSpecificFilter); err != nil {
+		logs.CtxError(ctx, "traverse filter fields failed, task_id=%d, err=%v", taskConfig.ID, err)
 		return nil
 	}
 	filters := h.combineFilters(builtinFilter, &taskConfig.SpanFilter.Filters)
