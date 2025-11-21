@@ -72,7 +72,7 @@ func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 			CreatedBy: UserInfoPO2DO(userMap[v.CreatedBy], v.CreatedBy),
 			UpdatedBy: UserInfoPO2DO(userMap[v.UpdatedBy], v.UpdatedBy),
 		},
-		TaskSource: gptr.Of(task.TaskSource(*v.TaskSource)),
+		TaskSource: gptr.Of(*v.TaskSource),
 	}
 	return taskInfo
 }
