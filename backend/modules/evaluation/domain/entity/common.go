@@ -3,7 +3,9 @@
 
 package entity
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // ContentType 定义内容类型
 type ContentType string
@@ -28,12 +30,15 @@ type Image struct {
 
 // Content 内容结构体
 type Content struct {
-	ContentType *ContentType        `json:"content_type,omitempty"`
-	Format      *FieldDisplayFormat `json:"format,omitempty"` // 假设 datasetv2.FieldDisplayFormat 为 interface{}
-	Text        *string             `json:"text,omitempty"`
-	Image       *Image              `json:"image,omitempty"`
-	MultiPart   []*Content          `json:"multi_part,omitempty"`
-	Audio       *Audio              `json:"audio,omitempty"`
+	ContentType      *ContentType        `json:"content_type,omitempty"`
+	Format           *FieldDisplayFormat `json:"format,omitempty"` // 假设 datasetv2.FieldDisplayFormat 为 interface{}
+	Text             *string             `json:"text,omitempty"`
+	Image            *Image              `json:"image,omitempty"`
+	MultiPart        []*Content          `json:"multi_part,omitempty"`
+	Audio            *Audio              `json:"audio,omitempty"`
+	ContentOmitted   *bool               `json:"content_omitted,omitempty"`
+	FullContent      *ObjectStorage      `json:"full_content,omitempty"`       // 被省略数据的完整信息，批量返回时会签发相应的 url，用户可以点击下载. 同时支持通过该字段传入已经上传好的超长数据(dataOmitted 为 true 时生效)
+	FullContentBytes *int32              `json:"full_content_bytes,omitempty"` // 超长数据完整内容的大小，单位 byte
 }
 
 // GetText 获取内容文本
@@ -358,4 +363,12 @@ func StorageProviderPtr(v StorageProvider) *StorageProvider { return &v }
 
 type SystemMaintainerConf struct {
 	UserIDs []string `json:"user_ids" mapstructure:"user_ids"`
+}
+
+type ObjectStorage struct {
+	Provider *StorageProvider `json:"provider,omitempty"`
+	Name     *string          `json:"name,omitempty"`
+	URI      *string          `json:"uri,omitempty"`
+	URL      *string          `json:"url,omitempty"`
+	ThumbURL *string          `json:"thumb_url,omitempty"`
 }

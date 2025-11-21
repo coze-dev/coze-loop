@@ -126,12 +126,28 @@ func ConvertContentDO2DTO(content *commonentity.Content) *commondto.Content {
 		}
 	}
 	return &commondto.Content{
-		ContentType: contentTypeStr,
-		Format:      (*dataset.FieldDisplayFormat)(content.Format),
-		Text:        content.Text,
-		Image:       ConvertImageDO2DTO(content.Image),
-		MultiPart:   multiPart,
-		Audio:       ConvertAudioDO2DTO(content.Audio),
+		ContentType:      contentTypeStr,
+		Format:           (*dataset.FieldDisplayFormat)(content.Format),
+		Text:             content.Text,
+		Image:            ConvertImageDO2DTO(content.Image),
+		MultiPart:        multiPart,
+		Audio:            ConvertAudioDO2DTO(content.Audio),
+		ContentOmitted:   content.ContentOmitted,
+		FullContent:      ConvertObjectStorageDO2DTO(content.FullContent),
+		FullContentBytes: content.FullContentBytes,
+	}
+}
+
+func ConvertObjectStorageDO2DTO(os *commonentity.ObjectStorage) *dataset.ObjectStorage {
+	if os == nil {
+		return nil
+	}
+	return &dataset.ObjectStorage{
+		Provider: gptr.Of(dataset.StorageProvider(gptr.Indirect(os.Provider))),
+		Name:     os.Name,
+		URI:      os.URI,
+		URL:      os.URL,
+		ThumbURL: os.ThumbURL,
 	}
 }
 
