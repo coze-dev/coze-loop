@@ -1948,6 +1948,62 @@ func (p *ModelInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1994,6 +2050,62 @@ func (p *ModelInfo) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ModelInfo) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.LatencyFirstResp = _field
+	return offset, nil
+}
+
+func (p *ModelInfo) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ReasoningTokens = _field
+	return offset, nil
+}
+
+func (p *ModelInfo) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.InputReadCachedTokens = _field
+	return offset, nil
+}
+
+func (p *ModelInfo) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.InputCreationCachedTokens = _field
+	return offset, nil
+}
+
 func (p *ModelInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2003,6 +2115,10 @@ func (p *ModelInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2013,6 +2129,10 @@ func (p *ModelInfo) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2036,6 +2156,42 @@ func (p *ModelInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *ModelInfo) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLatencyFirstResp() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.LatencyFirstResp)
+	}
+	return offset
+}
+
+func (p *ModelInfo) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetReasoningTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ReasoningTokens)
+	}
+	return offset
+}
+
+func (p *ModelInfo) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetInputReadCachedTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.InputReadCachedTokens)
+	}
+	return offset
+}
+
+func (p *ModelInfo) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetInputCreationCachedTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 6)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.InputCreationCachedTokens)
+	}
+	return offset
+}
+
 func (p *ModelInfo) field1Length() int {
 	l := 0
 	if p.IsSetInputTokens() {
@@ -2048,6 +2204,42 @@ func (p *ModelInfo) field1Length() int {
 func (p *ModelInfo) field2Length() int {
 	l := 0
 	if p.IsSetOutputTokens() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ModelInfo) field3Length() int {
+	l := 0
+	if p.IsSetLatencyFirstResp() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ModelInfo) field4Length() int {
+	l := 0
+	if p.IsSetReasoningTokens() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ModelInfo) field5Length() int {
+	l := 0
+	if p.IsSetInputReadCachedTokens() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ModelInfo) field6Length() int {
+	l := 0
+	if p.IsSetInputCreationCachedTokens() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -2068,6 +2260,26 @@ func (p *ModelInfo) DeepCopy(s interface{}) error {
 	if src.OutputTokens != nil {
 		tmp := *src.OutputTokens
 		p.OutputTokens = &tmp
+	}
+
+	if src.LatencyFirstResp != nil {
+		tmp := *src.LatencyFirstResp
+		p.LatencyFirstResp = &tmp
+	}
+
+	if src.ReasoningTokens != nil {
+		tmp := *src.ReasoningTokens
+		p.ReasoningTokens = &tmp
+	}
+
+	if src.InputReadCachedTokens != nil {
+		tmp := *src.InputReadCachedTokens
+		p.InputReadCachedTokens = &tmp
+	}
+
+	if src.InputCreationCachedTokens != nil {
+		tmp := *src.InputCreationCachedTokens
+		p.InputCreationCachedTokens = &tmp
 	}
 
 	return nil

@@ -72,11 +72,27 @@ func StepDO2DTO(step *loop_span.Step) *common.Step {
 	return &common.Step{
 		ID:        step.ID,
 		ParentID:  step.ParentID,
+		Type:      step.Type,
 		Name:      step.Name,
 		Input:     step.Input,
 		Output:    step.Output,
+		ModelInfo: ModelInfoDO2DTO(step.ModelInfo),
 		Metadata:  step.Metadata,
 		BasicInfo: BasicInfoDO2DTO(step.BasicInfo),
+	}
+}
+
+func ModelInfoDO2DTO(info *loop_span.ModelInfo) *common.ModelInfo {
+	if info == nil {
+		return nil
+	}
+	return &common.ModelInfo{
+		InputTokens:               info.InputTokens,
+		OutputTokens:              info.OutputTokens,
+		LatencyFirstResp:          info.LatencyFirstResp,
+		ReasoningTokens:           info.ReasoningTokens,
+		InputReadCachedTokens:     info.InputReadCachedTokens,
+		InputCreationCachedTokens: info.InputCreationCachedTokens,
 	}
 }
 

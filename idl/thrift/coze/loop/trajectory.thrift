@@ -60,6 +60,10 @@ const StepType StepType_Tool = "tool"
 struct ModelInfo {
     1: optional i64 input_tokens (api.js_conv="true", go.tag = 'json:"input_tokens"')
     2: optional i64 output_tokens (api.js_conv="true", go.tag = 'json:"output_tokens"')
+    3: optional i64 latency_first_resp (api.js_conv="true", go.tag = 'json:"latency_first_resp"') // 首包耗时，单位微秒
+    4: optional i64 reasoning_tokens (api.js_conv="true", go.tag = 'json:"reasoning_tokens"')
+    5: optional i64 input_read_cached_tokens (api.js_conv="true", go.tag = 'json:"input_read_cached_tokens"')
+    6: optional i64 input_creation_cached_tokens (api.js_conv="true", go.tag = 'json:"input_creation_cached_tokens"')
 }
 
 struct BasicInfo {

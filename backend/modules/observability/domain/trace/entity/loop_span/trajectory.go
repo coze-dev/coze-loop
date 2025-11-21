@@ -72,8 +72,12 @@ type Step struct {
 }
 
 type ModelInfo struct {
-	InputTokens  *int64
-	OutputTokens *int64
+	InputTokens               *int64
+	OutputTokens              *int64
+	LatencyFirstResp          *int64
+	ReasoningTokens           *int64
+	InputReadCachedTokens     *int64
+	InputCreationCachedTokens *int64
 }
 
 type BasicInfo struct {
