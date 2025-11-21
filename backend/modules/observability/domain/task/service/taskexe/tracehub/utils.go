@@ -50,6 +50,7 @@ func processSpecificFilter(f *loop_span.FilterField) error {
 	}
 	return nil
 }
+
 func processStatusFilter(f *loop_span.FilterField) error {
 	if f.QueryType == nil || *f.QueryType != loop_span.QueryTypeEnumIn {
 		return fmt.Errorf("status filter should use in operator")
