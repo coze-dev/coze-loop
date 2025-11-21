@@ -72,7 +72,7 @@ func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 			CreatedBy: UserInfoPO2DO(userMap[v.CreatedBy], v.CreatedBy),
 			UpdatedBy: UserInfoPO2DO(userMap[v.UpdatedBy], v.UpdatedBy),
 		},
-		TaskSource: v.TaskSource,
+		TaskSource: gptr.Of(task.TaskSource(*v.TaskSource)),
 	}
 	return taskInfo
 }
@@ -337,7 +337,7 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 		CreatedBy:             createdBy,
 		UpdatedBy:             updatedBy,
 		BackfillEffectiveTime: EffectiveTimeDTO2DO(taskDTO.GetRule().GetBackfillEffectiveTime()),
-		TaskSource:            taskDTO.TaskSource,
+		TaskSource:            ptr.Of(*taskDTO.TaskSource),
 	}
 }
 
