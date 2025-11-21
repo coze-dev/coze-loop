@@ -101,6 +101,7 @@ func (t *TraceCkRepoImpl) UpsertTrajectoryConfig(ctx context.Context, param *rep
 	trajectoryConfig.Filter = &param.Filters
 	trajectoryConfig.UpdatedAt = time.Now()
 	trajectoryConfig.UpdatedBy = param.UserID
+	trajectoryConfig.IsDeleted = false
 	return t.trajectoryConfDao.UpdateTrajectoryConfig(ctx, trajectoryConfig)
 }
 

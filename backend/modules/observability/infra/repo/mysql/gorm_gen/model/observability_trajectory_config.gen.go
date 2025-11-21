@@ -6,19 +6,24 @@ package model
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 const TableNameObservabilityTrajectoryConfig = "observability_trajectory_config"
 
-// ObservabilityTrajectoryConfig 观测trace展示规则
+// ObservabilityTrajectoryConfig 观测轨迹配置
 type ObservabilityTrajectoryConfig struct {
-	ID          int64     `gorm:"column:id;type:bigint(20) unsigned;primaryKey;autoIncrement:true;comment:主键ID" json:"id"`                               // 主键ID
-	WorkspaceID int64     `gorm:"column:workspace_id;type:bigint(20) unsigned;not null;index:idx_space_id,priority:1;comment:空间 ID" json:"workspace_id"` // 空间 ID
-	Filter      *string   `gorm:"column:filter;type:json;comment:trace展示的过滤配置" json:"filter"`                                                            // trace展示的过滤配置
-	CreatedAt   time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                     // 创建时间
-	CreatedBy   string    `gorm:"column:created_by;type:varchar(128);not null;comment:创建人" json:"created_by"`                                            // 创建人
-	UpdatedAt   time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:修改时间" json:"updated_at"`                     // 修改时间
-	UpdatedBy   string    `gorm:"column:updated_by;type:varchar(128);not null;comment:修改人" json:"updated_by"`                                            // 修改人
+	ID          int64          `gorm:"column:id;type:bigint(20) unsigned;primaryKey;autoIncrement:true;comment:主键ID" json:"id"`                               // 主键ID
+	WorkspaceID int64          `gorm:"column:workspace_id;type:bigint(20) unsigned;not null;index:idx_space_id,priority:1;comment:空间 ID" json:"workspace_id"` // 空间 ID
+	Filter      *string        `gorm:"column:filter;type:json;comment:trace展示的过滤配置" json:"filter"`                                                            // trace展示的过滤配置
+	CreatedAt   time.Time      `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                     // 创建时间
+	CreatedBy   string         `gorm:"column:created_by;type:varchar(128);not null;comment:创建人" json:"created_by"`                                            // 创建人
+	UpdatedAt   time.Time      `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:修改时间" json:"updated_at"`                     // 修改时间
+	UpdatedBy   string         `gorm:"column:updated_by;type:varchar(128);not null;comment:修改人" json:"updated_by"`                                            // 修改人
+	IsDeleted   bool           `gorm:"column:is_deleted;type:tinyint(1);not null;comment:是否删除, 0 表示未删除, 1 表示已删除" json:"is_deleted"`                           // 是否删除, 0 表示未删除, 1 表示已删除
+	DeletedAt   gorm.DeletedAt `gorm:"column:deleted_at;type:datetime;comment:删除时间" json:"deleted_at"`                                                        // 删除时间
+	DeletedBy   string         `gorm:"column:deleted_by;type:varchar(128);not null;comment:删除人" json:"deleted_by"`                                            // 删除人
 }
 
 // TableName ObservabilityTrajectoryConfig's table name

@@ -12,7 +12,7 @@ type TrajectoryList []*Trajectory
 
 type Trajectory struct {
 	// trace_id
-	ID *int64
+	ID *string
 	// 根节点，记录整个轨迹的信息
 	RootStep *RootStep
 	// agent step列表，记录轨迹中agent执行信息
@@ -72,8 +72,12 @@ type Step struct {
 }
 
 type ModelInfo struct {
-	InputTokens  *int64
-	OutputTokens *int64
+	InputTokens               *int64
+	OutputTokens              *int64
+	LatencyFirstResp          *int64
+	ReasoningTokens           *int64
+	InputReadCachedTokens     *int64
+	InputCreationCachedTokens *int64
 }
 
 type BasicInfo struct {

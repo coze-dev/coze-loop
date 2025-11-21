@@ -548,7 +548,7 @@ func (r *TraceServiceImpl) ListTrajectory(ctx context.Context, req *ListTrajecto
 		startTimeAt = ptr.Of(time.Now().UnixMilli() - timeutil.Day2MillSec(90))
 	}
 
-	// todo: 这里只是mock，应该要替换为一凡包装的TraceID换取轨迹span_list的方法
+	// todo: 这里没走filter过滤，应该要替换为一凡包装的TraceID换取轨迹span_list的方法
 	// todo： 实际应该先查询trajectory_filter，再过滤
 	for i := range req.TraceIds {
 		spanList, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
@@ -573,8 +573,223 @@ func (r *TraceServiceImpl) ListTrajectory(ctx context.Context, req *ListTrajecto
 }
 
 func (r *TraceServiceImpl) spanList2Trajectory(spanList loop_span.SpanList) *loop_span.Trajectory {
-	// todo: 待实现
-	return &loop_span.Trajectory{}
+	if len(spanList) == 0 {
+		return nil
+	}
+
+	// 构建span映射，便于查找
+	spanMap := make(map[string]*loop_span.Span)
+	for _, span := range spanList {
+		spanMap[span.SpanID] = span
+	}
+
+	// 找到root节点
+	var rootSpan *loop_span.Span
+	for _, span := range spanList {
+		if span.ParentID == "" || span.ParentID == "0" {
+			rootSpan = span
+			break
+		}
+	}
+
+	if rootSpan == nil {
+		return nil
+	}
+
+	// 构建根节点步骤
+	rootStep := &loop_span.RootStep{
+		ID:        &rootSpan.SpanID,
+		Name:      &rootSpan.SpanName,
+		Input:     &rootSpan.Input,
+		Output:    &rootSpan.Output,
+		BasicInfo: r.buildBasicInfo(rootSpan),
+	}
+
+	// 收集所有agent节点（包括root节点）
+	agentSpans := []*loop_span.Span{rootSpan}
+	for _, span := range spanList {
+		if span.SpanType == "agent" && span.SpanID != rootSpan.SpanID {
+			agentSpans = append(agentSpans, span)
+		}
+	}
+
+	// 构建agent步骤
+	agentSteps := make([]*loop_span.AgentStep, 0, len(agentSpans))
+	for _, agentSpan := range agentSpans {
+		agentStep := &loop_span.AgentStep{
+			ID:        &agentSpan.SpanID,
+			ParentID:  &agentSpan.ParentID,
+			Name:      &agentSpan.SpanName,
+			Input:     &agentSpan.Input,
+			Output:    &agentSpan.Output,
+			BasicInfo: r.buildBasicInfo(agentSpan),
+			Steps:     r.buildAgentSteps(agentSpan, spanMap),
+		}
+		agentSteps = append(agentSteps, agentStep)
+	}
+
+	trajectory := &loop_span.Trajectory{
+		ID:         &rootSpan.TraceID,
+		RootStep:   rootStep,
+		AgentSteps: agentSteps,
+	}
+
+	return trajectory
+}
+
+// buildBasicInfo 构建基础信息
+func (r *TraceServiceImpl) buildBasicInfo(span *loop_span.Span) *loop_span.BasicInfo {
+	startedAt := span.StartTime
+	duration := span.DurationMicros
+
+	// 构建错误信息
+	var errorInfo *loop_span.Error
+	if span.StatusCode != 0 {
+		errorMsg := ""
+		if errMsg, ok := span.TagsString["error"]; ok {
+			errorMsg = errMsg
+		}
+		errorInfo = &loop_span.Error{
+			Code: &span.StatusCode,
+			Msg:  &errorMsg,
+		}
+	}
+
+	return &loop_span.BasicInfo{
+		StartedAt: &startedAt,
+		Duration:  &duration,
+		Error:     errorInfo,
+	}
+}
+
+// buildAgentSteps 构建agent的子步骤
+func (r *TraceServiceImpl) buildAgentSteps(agentSpan *loop_span.Span, spanMap map[string]*loop_span.Span) []*loop_span.Step {
+	steps := make([]*loop_span.Step, 0)
+
+	// 获取agent的直接子节点
+	childSpans := r.getDirectChildren(agentSpan, spanMap) // todo: 直接节点，如果不是other节点的，这里需要收录为子step
+
+	for _, childSpan := range childSpans {
+		// 低一层的普通节点，直接收为子节点
+		if childSpan.SpanType != loop_span.StepTypeAgent && childSpan.SpanType != loop_span.StepTypeModel && childSpan.SpanType != loop_span.StepTypeTool {
+			steps = append(steps, r.buildStep(childSpan))
+		}
+		// 对每个直接子节点，向下深度遍历找到第一个agent/model/tool节点
+		step := r.findFirstAgentModelToolNode(childSpan, spanMap)
+		if step != nil {
+			steps = append(steps, step)
+		}
+	}
+
+	return steps
+}
+
+// getDirectChildren 获取直接子节点
+func (r *TraceServiceImpl) getDirectChildren(parentSpan *loop_span.Span, spanMap map[string]*loop_span.Span) []*loop_span.Span {
+	children := make([]*loop_span.Span, 0)
+
+	for _, span := range spanMap {
+		if span.ParentID == parentSpan.SpanID {
+			children = append(children, span)
+		}
+	}
+
+	// 按开始时间排序
+	for i := 0; i < len(children); i++ {
+		for j := i + 1; j < len(children); j++ {
+			if children[i].StartTime > children[j].StartTime {
+				children[i], children[j] = children[j], children[i]
+			}
+		}
+	}
+
+	return children
+}
+
+// buildStep 构建步骤
+func (r *TraceServiceImpl) buildStep(span *loop_span.Span) *loop_span.Step {
+	stepType := r.getStepType(span)
+
+	step := &loop_span.Step{
+		ID:        &span.SpanID,
+		ParentID:  &span.ParentID,
+		Type:      &stepType,
+		Name:      &span.SpanName,
+		Input:     &span.Input,
+		Output:    &span.Output,
+		BasicInfo: r.buildBasicInfo(span),
+	}
+
+	// 如果是model类型，添加model信息
+	if stepType == loop_span.StepTypeModel {
+		step.ModelInfo = r.buildModelInfo(span)
+	}
+
+	return step
+}
+
+// findFirstAgentModelToolNode 向下深度遍历，找到第一个agent/model/tool节点
+func (r *TraceServiceImpl) findFirstAgentModelToolNode(startSpan *loop_span.Span, spanMap map[string]*loop_span.Span) *loop_span.Step {
+	stepType := r.getStepType(startSpan)
+
+	// 如果当前节点就是agent/model/tool，直接返回
+	if stepType == loop_span.StepTypeAgent || stepType == loop_span.StepTypeModel || stepType == loop_span.StepTypeTool {
+		return r.buildStep(startSpan)
+	}
+
+	// 如果是other节点，继续向下遍历
+	children := r.getDirectChildren(startSpan, spanMap)
+	for _, child := range children {
+		if result := r.findFirstAgentModelToolNode(child, spanMap); result != nil {
+			return result
+		}
+	}
+
+	return nil
+}
+
+// getStepType 获取步骤类型
+func (r *TraceServiceImpl) getStepType(span *loop_span.Span) loop_span.StepType {
+	switch span.SpanType {
+	case "agent":
+		return loop_span.StepTypeAgent
+	case "model":
+		return loop_span.StepTypeModel
+	case "tool":
+		return loop_span.StepTypeTool
+	default:
+		if span.ParentID == "" || span.ParentID == "0" {
+			return loop_span.StepTypeTool
+		}
+		return span.SpanType // 默认返回SpanType，既不是root，也不是agent/model/tool
+	}
+}
+
+// buildModelInfo 构建模型信息
+func (r *TraceServiceImpl) buildModelInfo(span *loop_span.Span) *loop_span.ModelInfo {
+	modelInfo := &loop_span.ModelInfo{}
+
+	// 从tags中提取模型相关信息
+	if inputTokens, ok := span.TagsLong["input_tokens"]; ok {
+		modelInfo.InputTokens = &inputTokens
+	}
+	if outputTokens, ok := span.TagsLong["output_tokens"]; ok {
+		modelInfo.OutputTokens = &outputTokens
+	}
+	if latencyFirstResp, ok := span.TagsLong["latency_first_resp"]; ok {
+		modelInfo.LatencyFirstResp = &latencyFirstResp
+	}
+	if reasoningTokens, ok := span.TagsLong["reasoning_tokens"]; ok {
+		modelInfo.ReasoningTokens = &reasoningTokens
+	}
+	if inputReadCachedTokens, ok := span.TagsLong["input_cached_tokens"]; ok {
+		modelInfo.InputReadCachedTokens = &inputReadCachedTokens
+	}
+	if inputCreationCachedTokens, ok := span.TagsLong["input_creation_cached_tokens"]; ok {
+		modelInfo.InputCreationCachedTokens = &inputCreationCachedTokens
+	}
+
+	return modelInfo
 }
 
 func (r *TraceServiceImpl) GetTrajectoryConfig(ctx context.Context, req *GetTrajectoryConfigRequest) (*GetTrajectoryConfigResponse, error) {

@@ -30,18 +30,30 @@ type TrajectoryConfigDaoImpl struct {
 }
 
 func (t TrajectoryConfigDaoImpl) UpdateTrajectoryConfig(ctx context.Context, po *model.ObservabilityTrajectoryConfig) error {
-	//TODO implement me
-	panic("implement me")
+	q := genquery.Use(t.dbMgr.NewSession(ctx)).ObservabilityTrajectoryConfig
+	if err := q.WithContext(ctx).Save(po); err != nil {
+		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+	}
+
+	return nil
 }
 
 func (t TrajectoryConfigDaoImpl) CreateTrajectoryConfig(ctx context.Context, po *model.ObservabilityTrajectoryConfig) error {
-	//TODO implement me
-	panic("implement me")
+	q := genquery.Use(t.dbMgr.NewSession(ctx, db.WithMaster())).ObservabilityTrajectoryConfig
+	if err := q.WithContext(ctx).Create(po); err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("trajectory config duplicate key"))
+		} else {
+			return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+		}
+	}
+
+	return nil
 }
 
 func (t TrajectoryConfigDaoImpl) GetTrajectoryConfig(ctx context.Context, workspaceID int64) (*model.ObservabilityTrajectoryConfig, error) {
 	q := genquery.Use(t.dbMgr.NewSession(ctx, db.WithMaster())).ObservabilityTrajectoryConfig
-	qd := q.WithContext(ctx).Where(q.WorkspaceID.Eq(workspaceID))
+	qd := q.WithContext(ctx).Where(q.WorkspaceID.Eq(workspaceID)).Where(q.IsDeleted.Is(false))
 	trajectoryConfigPo, err := qd.First()
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

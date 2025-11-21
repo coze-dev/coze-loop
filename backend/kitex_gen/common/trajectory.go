@@ -20,7 +20,7 @@ type StepType = string
 
 type Trajectory struct {
 	// trace_id
-	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	ID *string `thrift:"id,1,optional" frugal:"1,optional,string" form:"id" json:"id,omitempty" query:"id"`
 	// 根节点，记录整个轨迹的信息
 	RootStep *RootStep `thrift:"root_step,2,optional" frugal:"2,optional,RootStep" form:"root_step" json:"root_step,omitempty" query:"root_step"`
 	// agent step列表，记录轨迹中agent执行信息
@@ -34,9 +34,9 @@ func NewTrajectory() *Trajectory {
 func (p *Trajectory) InitDefault() {
 }
 
-var Trajectory_ID_DEFAULT int64
+var Trajectory_ID_DEFAULT string
 
-func (p *Trajectory) GetID() (v int64) {
+func (p *Trajectory) GetID() (v string) {
 	if p == nil {
 		return
 	}
@@ -69,7 +69,7 @@ func (p *Trajectory) GetAgentSteps() (v []*AgentStep) {
 	}
 	return p.AgentSteps
 }
-func (p *Trajectory) SetID(val *int64) {
+func (p *Trajectory) SetID(val *string) {
 	p.ID = val
 }
 func (p *Trajectory) SetRootStep(val *RootStep) {
@@ -116,7 +116,7 @@ func (p *Trajectory) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -170,8 +170,8 @@ ReadStructEndError:
 
 func (p *Trajectory) ReadField1(iprot thrift.TProtocol) error {
 
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
 		_field = &v
@@ -249,10 +249,10 @@ WriteStructEndError:
 
 func (p *Trajectory) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetID() {
-		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
+		if err = oprot.WriteFieldBegin("id", thrift.STRING, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.ID); err != nil {
+		if err := oprot.WriteString(*p.ID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -336,14 +336,14 @@ func (p *Trajectory) DeepEqual(ano *Trajectory) bool {
 	return true
 }
 
-func (p *Trajectory) Field1DeepEqual(src *int64) bool {
+func (p *Trajectory) Field1DeepEqual(src *string) bool {
 
 	if p.ID == src {
 		return true
 	} else if p.ID == nil || src == nil {
 		return false
 	}
-	if *p.ID != *src {
+	if strings.Compare(*p.ID, *src) != 0 {
 		return false
 	}
 	return true
@@ -2554,6 +2554,11 @@ func (p *Step) Field101DeepEqual(src *BasicInfo) bool {
 type ModelInfo struct {
 	InputTokens  *int64 `thrift:"input_tokens,1,optional" frugal:"1,optional,i64" json:"input_tokens" form:"input_tokens" query:"input_tokens"`
 	OutputTokens *int64 `thrift:"output_tokens,2,optional" frugal:"2,optional,i64" json:"output_tokens" form:"output_tokens" query:"output_tokens"`
+	// 首包耗时，单位微秒
+	LatencyFirstResp          *int64 `thrift:"latency_first_resp,3,optional" frugal:"3,optional,i64" json:"latency_first_resp" form:"latency_first_resp" query:"latency_first_resp"`
+	ReasoningTokens           *int64 `thrift:"reasoning_tokens,4,optional" frugal:"4,optional,i64" json:"reasoning_tokens" form:"reasoning_tokens" query:"reasoning_tokens"`
+	InputReadCachedTokens     *int64 `thrift:"input_read_cached_tokens,5,optional" frugal:"5,optional,i64" json:"input_read_cached_tokens" form:"input_read_cached_tokens" query:"input_read_cached_tokens"`
+	InputCreationCachedTokens *int64 `thrift:"input_creation_cached_tokens,6,optional" frugal:"6,optional,i64" json:"input_creation_cached_tokens" form:"input_creation_cached_tokens" query:"input_creation_cached_tokens"`
 }
 
 func NewModelInfo() *ModelInfo {
@@ -2586,16 +2591,80 @@ func (p *ModelInfo) GetOutputTokens() (v int64) {
 	}
 	return *p.OutputTokens
 }
+
+var ModelInfo_LatencyFirstResp_DEFAULT int64
+
+func (p *ModelInfo) GetLatencyFirstResp() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLatencyFirstResp() {
+		return ModelInfo_LatencyFirstResp_DEFAULT
+	}
+	return *p.LatencyFirstResp
+}
+
+var ModelInfo_ReasoningTokens_DEFAULT int64
+
+func (p *ModelInfo) GetReasoningTokens() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReasoningTokens() {
+		return ModelInfo_ReasoningTokens_DEFAULT
+	}
+	return *p.ReasoningTokens
+}
+
+var ModelInfo_InputReadCachedTokens_DEFAULT int64
+
+func (p *ModelInfo) GetInputReadCachedTokens() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInputReadCachedTokens() {
+		return ModelInfo_InputReadCachedTokens_DEFAULT
+	}
+	return *p.InputReadCachedTokens
+}
+
+var ModelInfo_InputCreationCachedTokens_DEFAULT int64
+
+func (p *ModelInfo) GetInputCreationCachedTokens() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInputCreationCachedTokens() {
+		return ModelInfo_InputCreationCachedTokens_DEFAULT
+	}
+	return *p.InputCreationCachedTokens
+}
 func (p *ModelInfo) SetInputTokens(val *int64) {
 	p.InputTokens = val
 }
 func (p *ModelInfo) SetOutputTokens(val *int64) {
 	p.OutputTokens = val
 }
+func (p *ModelInfo) SetLatencyFirstResp(val *int64) {
+	p.LatencyFirstResp = val
+}
+func (p *ModelInfo) SetReasoningTokens(val *int64) {
+	p.ReasoningTokens = val
+}
+func (p *ModelInfo) SetInputReadCachedTokens(val *int64) {
+	p.InputReadCachedTokens = val
+}
+func (p *ModelInfo) SetInputCreationCachedTokens(val *int64) {
+	p.InputCreationCachedTokens = val
+}
 
 var fieldIDToName_ModelInfo = map[int16]string{
 	1: "input_tokens",
 	2: "output_tokens",
+	3: "latency_first_resp",
+	4: "reasoning_tokens",
+	5: "input_read_cached_tokens",
+	6: "input_creation_cached_tokens",
 }
 
 func (p *ModelInfo) IsSetInputTokens() bool {
@@ -2604,6 +2673,22 @@ func (p *ModelInfo) IsSetInputTokens() bool {
 
 func (p *ModelInfo) IsSetOutputTokens() bool {
 	return p.OutputTokens != nil
+}
+
+func (p *ModelInfo) IsSetLatencyFirstResp() bool {
+	return p.LatencyFirstResp != nil
+}
+
+func (p *ModelInfo) IsSetReasoningTokens() bool {
+	return p.ReasoningTokens != nil
+}
+
+func (p *ModelInfo) IsSetInputReadCachedTokens() bool {
+	return p.InputReadCachedTokens != nil
+}
+
+func (p *ModelInfo) IsSetInputCreationCachedTokens() bool {
+	return p.InputCreationCachedTokens != nil
 }
 
 func (p *ModelInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -2635,6 +2720,38 @@ func (p *ModelInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2691,6 +2808,50 @@ func (p *ModelInfo) ReadField2(iprot thrift.TProtocol) error {
 	p.OutputTokens = _field
 	return nil
 }
+func (p *ModelInfo) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LatencyFirstResp = _field
+	return nil
+}
+func (p *ModelInfo) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ReasoningTokens = _field
+	return nil
+}
+func (p *ModelInfo) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InputReadCachedTokens = _field
+	return nil
+}
+func (p *ModelInfo) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InputCreationCachedTokens = _field
+	return nil
+}
 
 func (p *ModelInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2704,6 +2865,22 @@ func (p *ModelInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -2760,6 +2937,78 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *ModelInfo) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLatencyFirstResp() {
+		if err = oprot.WriteFieldBegin("latency_first_resp", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LatencyFirstResp); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ModelInfo) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReasoningTokens() {
+		if err = oprot.WriteFieldBegin("reasoning_tokens", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ReasoningTokens); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ModelInfo) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInputReadCachedTokens() {
+		if err = oprot.WriteFieldBegin("input_read_cached_tokens", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InputReadCachedTokens); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ModelInfo) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInputCreationCachedTokens() {
+		if err = oprot.WriteFieldBegin("input_creation_cached_tokens", thrift.I64, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.InputCreationCachedTokens); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *ModelInfo) String() string {
 	if p == nil {
@@ -2779,6 +3028,18 @@ func (p *ModelInfo) DeepEqual(ano *ModelInfo) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.OutputTokens) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.LatencyFirstResp) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ReasoningTokens) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.InputReadCachedTokens) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.InputCreationCachedTokens) {
 		return false
 	}
 	return true
@@ -2804,6 +3065,54 @@ func (p *ModelInfo) Field2DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.OutputTokens != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelInfo) Field3DeepEqual(src *int64) bool {
+
+	if p.LatencyFirstResp == src {
+		return true
+	} else if p.LatencyFirstResp == nil || src == nil {
+		return false
+	}
+	if *p.LatencyFirstResp != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelInfo) Field4DeepEqual(src *int64) bool {
+
+	if p.ReasoningTokens == src {
+		return true
+	} else if p.ReasoningTokens == nil || src == nil {
+		return false
+	}
+	if *p.ReasoningTokens != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelInfo) Field5DeepEqual(src *int64) bool {
+
+	if p.InputReadCachedTokens == src {
+		return true
+	} else if p.InputReadCachedTokens == nil || src == nil {
+		return false
+	}
+	if *p.InputReadCachedTokens != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelInfo) Field6DeepEqual(src *int64) bool {
+
+	if p.InputCreationCachedTokens == src {
+		return true
+	} else if p.InputCreationCachedTokens == nil || src == nil {
+		return false
+	}
+	if *p.InputCreationCachedTokens != *src {
 		return false
 	}
 	return true
