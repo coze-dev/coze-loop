@@ -239,7 +239,7 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 			name: "成功 - 有效的基础信息",
 			evaluator: &CustomRPCEvaluatorVersion{
 				ProviderEvaluatorCode: gptr.Of("PROVIDER_001"),
-				AccessProtocol:        AccessProtocol("HTTP"),
+				AccessProtocol:        EvaluatorAccessProtocol("rpc"),
 				ServiceName:           gptr.Of("test_service"),
 			},
 			wantErr:     false,
@@ -256,7 +256,7 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 			name: "失败 - 空的ProviderEvaluatorCode",
 			evaluator: &CustomRPCEvaluatorVersion{
 				ProviderEvaluatorCode: gptr.Of(""),
-				AccessProtocol:        AccessProtocol("HTTP"),
+				AccessProtocol:        EvaluatorAccessProtocol("rpc"),
 				ServiceName:           gptr.Of("test_service"),
 			},
 			wantErr:     true,
@@ -267,7 +267,7 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 			name: "失败 - nil ProviderEvaluatorCode",
 			evaluator: &CustomRPCEvaluatorVersion{
 				ProviderEvaluatorCode: nil,
-				AccessProtocol:        AccessProtocol("HTTP"),
+				AccessProtocol:        EvaluatorAccessProtocol("rpc"),
 				ServiceName:           gptr.Of("test_service"),
 			},
 			wantErr:     true,
@@ -278,7 +278,7 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 			name: "失败 - 空的AccessProtocol",
 			evaluator: &CustomRPCEvaluatorVersion{
 				ProviderEvaluatorCode: gptr.Of("PROVIDER_001"),
-				AccessProtocol:        AccessProtocol(""),
+				AccessProtocol:        EvaluatorAccessProtocol(""),
 				ServiceName:           gptr.Of("test_service"),
 			},
 			wantErr:     true,
@@ -289,7 +289,7 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 			name: "失败 - 空的ServiceName",
 			evaluator: &CustomRPCEvaluatorVersion{
 				ProviderEvaluatorCode: gptr.Of("PROVIDER_001"),
-				AccessProtocol:        AccessProtocol("HTTP"),
+				AccessProtocol:        EvaluatorAccessProtocol("rpc"),
 				ServiceName:           gptr.Of(""),
 			},
 			wantErr:     true,
@@ -300,7 +300,7 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 			name: "失败 - nil ServiceName",
 			evaluator: &CustomRPCEvaluatorVersion{
 				ProviderEvaluatorCode: gptr.Of("PROVIDER_001"),
-				AccessProtocol:        AccessProtocol("HTTP"),
+				AccessProtocol:        EvaluatorAccessProtocol("rpc"),
 				ServiceName:           nil,
 			},
 			wantErr:     true,
@@ -311,7 +311,7 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 			name: "成功 - 所有可选字段都有值",
 			evaluator: &CustomRPCEvaluatorVersion{
 				ProviderEvaluatorCode: gptr.Of("PROVIDER_001"),
-				AccessProtocol:        AccessProtocol("HTTP"),
+				AccessProtocol:        EvaluatorAccessProtocol("rpc"),
 				ServiceName:           gptr.Of("test_service"),
 				Cluster:               gptr.Of("test_cluster"),
 				Timeout:               gptr.Of(int64(5000)),

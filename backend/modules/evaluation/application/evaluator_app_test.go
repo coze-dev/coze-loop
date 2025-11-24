@@ -3104,7 +3104,7 @@ func TestEvaluatorHandlerImpl_CreateEvaluator_CustomRPC(t *testing.T) {
 							EvaluatorContent: &evaluatordto.EvaluatorContent{
 								CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
 									ServiceName:    gptr.Of("test.psm.service"),
-									AccessProtocol: evaluatordto.AccessProtocol("RPC"),
+									AccessProtocol: evaluatordto.EvaluatorAccessProtocolRPC,
 								},
 							},
 						},
@@ -3248,7 +3248,7 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorDraft_CustomRPC(t *testing.T) {
 				EvaluatorContent: &evaluatordto.EvaluatorContent{
 					CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
 						ServiceName:    gptr.Of("test.psm.service"),
-						AccessProtocol: evaluatordto.AccessProtocol("RPC"),
+						AccessProtocol: evaluatordto.EvaluatorAccessProtocolRPC,
 					},
 				},
 			}
