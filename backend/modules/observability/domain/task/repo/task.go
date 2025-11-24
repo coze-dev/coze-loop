@@ -7,8 +7,16 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 )
+
+type ListTaskParam struct {
+	WorkspaceIDs []int64
+	TaskFilters  *entity.TaskFilterFields
+	ReqLimit     int32
+	ReqOffset    int32
+	OrderBy      *common.OrderBy
+}
 
 //go:generate mockgen -destination=mocks/Task.go -package=mocks . ITaskRepo
 type ITaskRepo interface {
@@ -17,8 +25,10 @@ type ITaskRepo interface {
 	UpdateTask(ctx context.Context, do *entity.ObservabilityTask) error
 	UpdateTaskWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error
 	GetTask(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.ObservabilityTask, error)
-	ListTasks(ctx context.Context, param mysql.ListTaskParam) ([]*entity.ObservabilityTask, int64, error)
+	ListTasks(ctx context.Context, param ListTaskParam) ([]*entity.ObservabilityTask, int64, error)
 	DeleteTask(ctx context.Context, do *entity.ObservabilityTask) error
+	// ListNonFinalTasks Only return Task without TaskRun
+	ListNonFinalTasks(ctx context.Context) ([]*entity.ObservabilityTask, error)
 
 	// task run
 	CreateTaskRun(ctx context.Context, do *entity.TaskRun) (int64, error)
@@ -41,16 +51,13 @@ type ITaskRepo interface {
 	GetTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	IncrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error
 	DecrTaskRunSuccessCount(ctx context.Context, taskID, taskRunID int64) error
-	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error
 	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
-
-	GetObjListWithTask(ctx context.Context) ([]string, []string, []*entity.ObservabilityTask)
+	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error
 
 	// 非终态task列表by spaceID
-	ListNonFinalTask(ctx context.Context, spaceID string) ([]int64, error)
+	ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) ([]int64, error)
 	AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error
 	RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error
 
-	GetTaskByRedis(ctx context.Context, taskID int64) (*entity.ObservabilityTask, error)
-	SetTask(ctx context.Context, task *entity.ObservabilityTask) error
+	GetTaskByCache(ctx context.Context, taskID int64) (*entity.ObservabilityTask, error)
 }

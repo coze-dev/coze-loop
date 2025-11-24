@@ -12,6 +12,7 @@ import (
 	"github.com/vincent-petithory/dataurl"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/manage"
 	runtimedto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/runtime"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
@@ -54,15 +55,16 @@ func ModelConfigDO2DTO(modelConfig *entity.ModelConfig, toolCallConfig *entity.T
 		}
 	}
 	return &runtimedto.ModelConfig{
-		ModelID:          modelConfig.ModelID,
-		Temperature:      modelConfig.Temperature,
-		MaxTokens:        maxTokens,
-		TopP:             modelConfig.TopP,
-		ToolChoice:       toolChoice,
-		ResponseFormat:   responseFormat,
-		TopK:             modelConfig.TopK,
-		PresencePenalty:  modelConfig.PresencePenalty,
-		FrequencyPenalty: modelConfig.FrequencyPenalty,
+		ModelID:           modelConfig.ModelID,
+		Temperature:       modelConfig.Temperature,
+		MaxTokens:         maxTokens,
+		TopP:              modelConfig.TopP,
+		ToolChoice:        toolChoice,
+		ResponseFormat:    responseFormat,
+		TopK:              modelConfig.TopK,
+		PresencePenalty:   modelConfig.PresencePenalty,
+		FrequencyPenalty:  modelConfig.FrequencyPenalty,
+		ParamConfigValues: BatchParamConfigValueDO2DTO(modelConfig.ParamConfigValues),
 	}
 }
 
@@ -475,5 +477,40 @@ func TokenUsageDTO2DO(dto *runtimedto.TokenUsage) *entity.TokenUsage {
 	return &entity.TokenUsage{
 		InputTokens:  ptr.From(dto.PromptTokens),
 		OutputTokens: ptr.From(dto.CompletionTokens),
+	}
+}
+
+func BatchParamConfigValueDO2DTO(dos []*entity.ParamConfigValue) []*runtimedto.ParamConfigValue {
+	if dos == nil {
+		return nil
+	}
+	result := make([]*runtimedto.ParamConfigValue, 0, len(dos))
+	for _, do := range dos {
+		if do == nil {
+			continue
+		}
+		result = append(result, ParamConfigValueDO2DTO(do))
+	}
+	return result
+}
+
+func ParamConfigValueDO2DTO(do *entity.ParamConfigValue) *runtimedto.ParamConfigValue {
+	if do == nil {
+		return nil
+	}
+	return &runtimedto.ParamConfigValue{
+		Name:  ptr.Of(do.Name),
+		Label: ptr.Of(do.Label),
+		Value: ParamOptionDO2DTO(do.Value),
+	}
+}
+
+func ParamOptionDO2DTO(do *entity.ParamOption) *manage.ParamOption {
+	if do == nil {
+		return nil
+	}
+	return &manage.ParamOption{
+		Value: ptr.Of(do.Value),
+		Label: ptr.Of(do.Label),
 	}
 }

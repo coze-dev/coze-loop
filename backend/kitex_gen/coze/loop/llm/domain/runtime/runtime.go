@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/manage"
 	"strings"
 )
 
@@ -79,6 +80,8 @@ type ModelConfig struct {
 	TopK             *int32          `thrift:"top_k,8,optional" frugal:"8,optional,i32" form:"top_k" json:"top_k,omitempty" query:"top_k"`
 	PresencePenalty  *float64        `thrift:"presence_penalty,9,optional" frugal:"9,optional,double" form:"presence_penalty" json:"presence_penalty,omitempty" query:"presence_penalty"`
 	FrequencyPenalty *float64        `thrift:"frequency_penalty,10,optional" frugal:"10,optional,double" form:"frequency_penalty" json:"frequency_penalty,omitempty" query:"frequency_penalty"`
+	// 与ParamSchema对应
+	ParamConfigValues []*ParamConfigValue `thrift:"param_config_values,100,optional" frugal:"100,optional,list<ParamConfigValue>" form:"param_config_values" json:"param_config_values,omitempty" query:"param_config_values"`
 }
 
 func NewModelConfig() *ModelConfig {
@@ -202,6 +205,18 @@ func (p *ModelConfig) GetFrequencyPenalty() (v float64) {
 	}
 	return *p.FrequencyPenalty
 }
+
+var ModelConfig_ParamConfigValues_DEFAULT []*ParamConfigValue
+
+func (p *ModelConfig) GetParamConfigValues() (v []*ParamConfigValue) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetParamConfigValues() {
+		return ModelConfig_ParamConfigValues_DEFAULT
+	}
+	return p.ParamConfigValues
+}
 func (p *ModelConfig) SetModelID(val int64) {
 	p.ModelID = val
 }
@@ -232,18 +247,22 @@ func (p *ModelConfig) SetPresencePenalty(val *float64) {
 func (p *ModelConfig) SetFrequencyPenalty(val *float64) {
 	p.FrequencyPenalty = val
 }
+func (p *ModelConfig) SetParamConfigValues(val []*ParamConfigValue) {
+	p.ParamConfigValues = val
+}
 
 var fieldIDToName_ModelConfig = map[int16]string{
-	1:  "model_id",
-	2:  "temperature",
-	3:  "max_tokens",
-	4:  "top_p",
-	5:  "stop",
-	6:  "tool_choice",
-	7:  "response_format",
-	8:  "top_k",
-	9:  "presence_penalty",
-	10: "frequency_penalty",
+	1:   "model_id",
+	2:   "temperature",
+	3:   "max_tokens",
+	4:   "top_p",
+	5:   "stop",
+	6:   "tool_choice",
+	7:   "response_format",
+	8:   "top_k",
+	9:   "presence_penalty",
+	10:  "frequency_penalty",
+	100: "param_config_values",
 }
 
 func (p *ModelConfig) IsSetTemperature() bool {
@@ -280,6 +299,10 @@ func (p *ModelConfig) IsSetPresencePenalty() bool {
 
 func (p *ModelConfig) IsSetFrequencyPenalty() bool {
 	return p.FrequencyPenalty != nil
+}
+
+func (p *ModelConfig) IsSetParamConfigValues() bool {
+	return p.ParamConfigValues != nil
 }
 
 func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -377,6 +400,14 @@ func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.DOUBLE {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -536,6 +567,29 @@ func (p *ModelConfig) ReadField10(iprot thrift.TProtocol) error {
 	p.FrequencyPenalty = _field
 	return nil
 }
+func (p *ModelConfig) ReadField100(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ParamConfigValue, 0, size)
+	values := make([]ParamConfigValue, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ParamConfigValues = _field
+	return nil
+}
 
 func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -581,6 +635,10 @@ func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
 			goto WriteFieldError
 		}
 	}
@@ -787,6 +845,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *ModelConfig) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetParamConfigValues() {
+		if err = oprot.WriteFieldBegin("param_config_values", thrift.LIST, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ParamConfigValues)); err != nil {
+			return err
+		}
+		for _, v := range p.ParamConfigValues {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
 
 func (p *ModelConfig) String() string {
 	if p == nil {
@@ -830,6 +914,9 @@ func (p *ModelConfig) DeepEqual(ano *ModelConfig) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.FrequencyPenalty) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.ParamConfigValues) {
 		return false
 	}
 	return true
@@ -942,6 +1029,349 @@ func (p *ModelConfig) Field10DeepEqual(src *float64) bool {
 		return false
 	}
 	if *p.FrequencyPenalty != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelConfig) Field100DeepEqual(src []*ParamConfigValue) bool {
+
+	if len(p.ParamConfigValues) != len(src) {
+		return false
+	}
+	for i, v := range p.ParamConfigValues {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
+type ParamConfigValue struct {
+	// 传给下游模型的key，与ParamSchema.name对齐
+	Name *string `thrift:"name,1,optional" frugal:"1,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// 展示名称
+	Label *string `thrift:"label,2,optional" frugal:"2,optional,string" form:"label" json:"label,omitempty" query:"label"`
+	// 传给下游模型的value，与ParamSchema.options对齐
+	Value *manage.ParamOption `thrift:"value,3,optional" frugal:"3,optional,manage.ParamOption" form:"value" json:"value,omitempty" query:"value"`
+}
+
+func NewParamConfigValue() *ParamConfigValue {
+	return &ParamConfigValue{}
+}
+
+func (p *ParamConfigValue) InitDefault() {
+}
+
+var ParamConfigValue_Name_DEFAULT string
+
+func (p *ParamConfigValue) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return ParamConfigValue_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var ParamConfigValue_Label_DEFAULT string
+
+func (p *ParamConfigValue) GetLabel() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLabel() {
+		return ParamConfigValue_Label_DEFAULT
+	}
+	return *p.Label
+}
+
+var ParamConfigValue_Value_DEFAULT *manage.ParamOption
+
+func (p *ParamConfigValue) GetValue() (v *manage.ParamOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetValue() {
+		return ParamConfigValue_Value_DEFAULT
+	}
+	return p.Value
+}
+func (p *ParamConfigValue) SetName(val *string) {
+	p.Name = val
+}
+func (p *ParamConfigValue) SetLabel(val *string) {
+	p.Label = val
+}
+func (p *ParamConfigValue) SetValue(val *manage.ParamOption) {
+	p.Value = val
+}
+
+var fieldIDToName_ParamConfigValue = map[int16]string{
+	1: "name",
+	2: "label",
+	3: "value",
+}
+
+func (p *ParamConfigValue) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *ParamConfigValue) IsSetLabel() bool {
+	return p.Label != nil
+}
+
+func (p *ParamConfigValue) IsSetValue() bool {
+	return p.Value != nil
+}
+
+func (p *ParamConfigValue) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ParamConfigValue[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ParamConfigValue) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *ParamConfigValue) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Label = _field
+	return nil
+}
+func (p *ParamConfigValue) ReadField3(iprot thrift.TProtocol) error {
+	_field := manage.NewParamOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Value = _field
+	return nil
+}
+
+func (p *ParamConfigValue) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ParamConfigValue"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ParamConfigValue) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ParamConfigValue) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLabel() {
+		if err = oprot.WriteFieldBegin("label", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Label); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ParamConfigValue) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetValue() {
+		if err = oprot.WriteFieldBegin("value", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Value.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *ParamConfigValue) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ParamConfigValue(%+v)", *p)
+
+}
+
+func (p *ParamConfigValue) DeepEqual(ano *ParamConfigValue) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Label) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Value) {
+		return false
+	}
+	return true
+}
+
+func (p *ParamConfigValue) Field1DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ParamConfigValue) Field2DeepEqual(src *string) bool {
+
+	if p.Label == src {
+		return true
+	} else if p.Label == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Label, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ParamConfigValue) Field3DeepEqual(src *manage.ParamOption) bool {
+
+	if !p.Value.DeepEqual(src) {
 		return false
 	}
 	return true

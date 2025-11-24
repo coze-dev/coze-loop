@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -112,4 +113,18 @@ func (m *MockITaskService) UpdateTask(arg0 context.Context, arg1 *service.Update
 func (mr *MockITaskServiceMockRecorder) UpdateTask(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTask", reflect.TypeOf((*MockITaskService)(nil).UpdateTask), arg0, arg1)
+}
+
+// SendBackfillMessage mocks base method.
+func (m *MockITaskService) SendBackfillMessage(arg0 context.Context, arg1 *entity.BackFillEvent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendBackfillMessage", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendBackfillMessage indicates an expected call of UpdateTask.
+func (mr *MockITaskServiceMockRecorder) SendBackfillMessage(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendBackfillMessage", reflect.TypeOf((*MockITaskService)(nil).SendBackfillMessage), arg0, arg1)
 }

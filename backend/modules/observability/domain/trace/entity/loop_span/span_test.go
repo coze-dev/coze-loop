@@ -744,8 +744,14 @@ func TestSpanList_FilterModelSpans(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.spans.FilterModelSpans()
-			assert.Equal(t, tt.want, len(got))
+			f := GetModelSpansFilter()
+			got := 0
+			for _, span := range tt.spans {
+				if f.Satisfied(span) {
+					got++
+				}
+			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

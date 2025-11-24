@@ -13,6 +13,8 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	mqmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq/mocks"
 	metric_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -705,8 +707,9 @@ func TestTraceCkRepoImpl_GetMetrics(t *testing.T) {
 
 func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 	type fields struct {
-		annoDao     ck.IAnnotationDao
-		traceConfig config.ITraceConfig
+		annoDao      ck.IAnnotationDao
+		traceConfig  config.ITraceConfig
+		spanProducer mq.ISpanProducer
 	}
 	type args struct {
 		ctx   context.Context
@@ -733,9 +736,12 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
+				spanProducerMock := mqmock.NewMockISpanProducer(ctrl)
+				spanProducerMock.EXPECT().SendSpanWithAnnotation(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				return fields{
-					annoDao:     annoDaoMock,
-					traceConfig: traceConfigMock,
+					annoDao:      annoDaoMock,
+					traceConfig:  traceConfigMock,
+					spanProducer: spanProducerMock,
 				}
 			},
 			args: args{
@@ -743,11 +749,14 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 				param: &repo.InsertAnnotationParam{
 					Tenant: "test",
 					TTL:    loop_span.TTL3d,
-					Annotations: []*loop_span.Annotation{
-						{
-							ID: "anno1",
+					Span: &loop_span.Span{
+						Annotations: []*loop_span.Annotation{
+							{
+								ID: "anno1",
+							},
 						},
 					},
+					AnnotationType: ptr.Of(loop_span.AnnotationTypeOpenAPIFeedback),
 				},
 			},
 			wantErr: false,
@@ -757,8 +766,10 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
 				traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(nil, assert.AnError)
+				spanProducerMock := mqmock.NewMockISpanProducer(ctrl)
 				return fields{
-					traceConfig: traceConfigMock,
+					traceConfig:  traceConfigMock,
+					spanProducer: spanProducerMock,
 				}
 			},
 			args: args{
@@ -766,11 +777,14 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 				param: &repo.InsertAnnotationParam{
 					Tenant: "test",
 					TTL:    loop_span.TTL3d,
-					Annotations: []*loop_span.Annotation{
-						{
-							ID: "anno1",
+					Span: &loop_span.Span{
+						Annotations: []*loop_span.Annotation{
+							{
+								ID: "anno1",
+							},
 						},
 					},
+					AnnotationType: ptr.Of(loop_span.AnnotationTypeOpenAPIFeedback),
 				},
 			},
 			wantErr: true,
@@ -782,8 +796,9 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
 			r := &TraceCkRepoImpl{
-				annoDao:     fields.annoDao,
-				traceConfig: fields.traceConfig,
+				annoDao:      fields.annoDao,
+				traceConfig:  fields.traceConfig,
+				spanProducer: fields.spanProducer,
 			}
 			err := r.InsertAnnotations(tt.args.ctx, tt.args.param)
 			assert.Equal(t, tt.wantErr, err != nil)

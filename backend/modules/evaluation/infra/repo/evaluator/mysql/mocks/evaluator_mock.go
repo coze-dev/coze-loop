@@ -141,6 +141,26 @@ func (mr *MockEvaluatorDAOMockRecorder) GetEvaluatorByID(ctx, id, includeDeleted
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorByID", reflect.TypeOf((*MockEvaluatorDAO)(nil).GetEvaluatorByID), varargs...)
 }
 
+// ListBuiltinEvaluator mocks base method.
+func (m *MockEvaluatorDAO) ListBuiltinEvaluator(ctx context.Context, req *mysql.ListBuiltinEvaluatorRequest, opts ...db.Option) (*mysql.ListEvaluatorResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListBuiltinEvaluator", varargs...)
+	ret0, _ := ret[0].(*mysql.ListEvaluatorResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBuiltinEvaluator indicates an expected call of ListBuiltinEvaluator.
+func (mr *MockEvaluatorDAOMockRecorder) ListBuiltinEvaluator(ctx, req any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBuiltinEvaluator", reflect.TypeOf((*MockEvaluatorDAO)(nil).ListBuiltinEvaluator), varargs...)
+}
+
 // ListEvaluator mocks base method.
 func (m *MockEvaluatorDAO) ListEvaluator(ctx context.Context, req *mysql.ListEvaluatorRequest, opts ...db.Option) (*mysql.ListEvaluatorResponse, error) {
 	m.ctrl.T.Helper()

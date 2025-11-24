@@ -6,9 +6,8 @@ package entity
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWithResponseFormat(t *testing.T) {
@@ -143,6 +142,31 @@ func TestWrapAndGetSpecificOptFn(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := GetImplSpecificOptions(&specific{}, WrapImplSpecificOptFn(tt.args.f))
 			assert.Equal(t, tt.want, opts.name)
+		})
+	}
+}
+
+func TestWithParameters(t *testing.T) {
+	type args struct {
+		r map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]string
+	}{
+		{
+			name: "normal",
+			args: args{
+				r: map[string]string{"123": "123"},
+			},
+			want: map[string]string{"123": "123"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := ApplyOptions(nil, WithParameters(tt.args.r))
+			assert.Equal(t, tt.want, opts.Parameters)
 		})
 	}
 }

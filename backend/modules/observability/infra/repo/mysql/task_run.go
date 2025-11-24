@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	tracecommon "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	genquery "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/query"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -30,10 +30,10 @@ const (
 type ListTaskRunParam struct {
 	WorkspaceID   *int64
 	TaskID        *int64
-	TaskRunStatus *task.RunStatus
+	TaskRunStatus *entity.TaskRunStatus
 	ReqLimit      int32
 	ReqOffset     int32
-	OrderBy       *common.OrderBy
+	OrderBy       *tracecommon.OrderBy
 }
 
 //go:generate mockgen -destination=mocks/task_run.go -package=mocks . ITaskRunDao
@@ -57,20 +57,6 @@ type TaskRunDaoImpl struct {
 	dbMgr db.Provider
 }
 
-// TaskRun非终态状态定义
-var NonFinalTaskRunStatuses = []string{
-	"pending",  // 等待执行
-	"running",  // 执行中
-	"paused",   // 暂停
-	"retrying", // 重试中
-}
-
-// 活跃状态定义（非终态状态的子集）
-var ActiveTaskRunStatuses = []string{
-	"running",  // 执行中
-	"retrying", // 重试中
-}
-
 // 计算分页参数
 func calculateTaskRunPagination(reqLimit, reqOffset int32) (int, int) {
 	limit := DefaultTaskRunLimit
@@ -88,7 +74,7 @@ func calculateTaskRunPagination(reqLimit, reqOffset int32) (int, int) {
 
 func (v *TaskRunDaoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	qd := q.WithContext(ctx).Where(q.TaskType.Eq(task.TaskRunTypeBackFill)).Where(q.TaskID.Eq(taskID))
+	qd := q.WithContext(ctx).Where(q.TaskType.Eq(string(entity.TaskRunTypeBackFill))).Where(q.TaskID.Eq(taskID))
 
 	if workspaceID != nil {
 		qd = qd.Where(q.WorkspaceID.Eq(*workspaceID))
@@ -106,7 +92,7 @@ func (v *TaskRunDaoImpl) GetBackfillTaskRun(ctx context.Context, workspaceID *in
 
 func (v *TaskRunDaoImpl) GetLatestNewDataTaskRun(ctx context.Context, workspaceID *int64, taskID int64) (*model.ObservabilityTaskRun, error) {
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	qd := q.WithContext(ctx).Where(q.TaskType.Eq(task.TaskRunTypeNewData)).Where(q.TaskID.Eq(taskID))
+	qd := q.WithContext(ctx).Where(q.TaskType.Eq(string(entity.TaskRunTypeNewData))).Where(q.TaskID.Eq(taskID))
 
 	if workspaceID != nil {
 		qd = qd.Where(q.WorkspaceID.Eq(*workspaceID))
@@ -150,12 +136,15 @@ func (v *TaskRunDaoImpl) ListTaskRuns(ctx context.Context, param ListTaskRunPara
 	var total int64
 
 	// TaskID过滤
-	if param.TaskID != nil {
-		qd = qd.Where(q.ObservabilityTaskRun.TaskID.Eq(*param.TaskID))
+	if param.TaskID == nil {
+		logs.CtxError(ctx, "TaskID is nil")
+		return nil, 0, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("TaskID is nil"))
 	}
+	qd = qd.Where(q.ObservabilityTaskRun.TaskID.Eq(*param.TaskID))
+
 	// TaskRunStatus过滤
 	if param.TaskRunStatus != nil {
-		qd = qd.Where(q.ObservabilityTaskRun.RunStatus.Eq(*param.TaskRunStatus))
+		qd = qd.Where(q.ObservabilityTaskRun.RunStatus.Eq(string(*param.TaskRunStatus)))
 	}
 	// workspaceID过滤
 	if param.WorkspaceID != nil {
@@ -163,7 +152,13 @@ func (v *TaskRunDaoImpl) ListTaskRuns(ctx context.Context, param ListTaskRunPara
 	}
 
 	// 排序
-	qd = qd.Order(v.order(q, param.OrderBy.GetField(), param.OrderBy.GetIsAsc()))
+	orderField := ""
+	orderAsc := false
+	if param.OrderBy != nil {
+		orderField = param.OrderBy.Field
+		orderAsc = param.OrderBy.IsAsc
+	}
+	qd = qd.Order(v.order(q, orderField, orderAsc))
 
 	// 计算总数
 	total, err := qd.Count()
@@ -199,11 +194,6 @@ func (d *TaskRunDaoImpl) order(q *genquery.Query, orderBy string, asc bool) fiel
 	}
 	return orderExpr.Desc()
 }
-
-const (
-	MaxRetries = 3
-	RetryDelay = 100 * time.Millisecond
-)
 
 // UpdateTaskRunWithOCC 乐观并发控制更新
 func (v *TaskRunDaoImpl) UpdateTaskRunWithOCC(ctx context.Context, id int64, workspaceID int64, updateMap map[string]interface{}) error {

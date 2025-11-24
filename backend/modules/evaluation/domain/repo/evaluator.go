@@ -19,10 +19,12 @@ type IEvaluatorRepo interface {
 	BatchDeleteEvaluator(ctx context.Context, ids []int64, userID string) error
 
 	UpdateEvaluatorDraft(ctx context.Context, version *entity.Evaluator) error
-	UpdateEvaluatorMeta(ctx context.Context, id int64, name, description, userID string) error
+	UpdateEvaluatorMeta(ctx context.Context, req *entity.UpdateEvaluatorMetaRequest) error
+	// UpdateEvaluatorTags 根据评估器ID全量更新标签（多语言）：不存在的新增，不在传入列表中的删除
+	UpdateEvaluatorTags(ctx context.Context, evaluatorID int64, tags map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string) error
 
 	BatchGetEvaluatorMetaByID(ctx context.Context, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
-	BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
+	BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool, withTags bool) ([]*entity.Evaluator, error)
 	BatchGetEvaluatorDraftByEvaluatorID(ctx context.Context, spaceID int64, ids []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	BatchGetEvaluatorVersionsByEvaluatorIDs(ctx context.Context, evaluatorIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	ListEvaluator(ctx context.Context, req *ListEvaluatorRequest) (*ListEvaluatorResponse, error)
@@ -30,6 +32,15 @@ type IEvaluatorRepo interface {
 
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error)
 	CheckVersionExist(ctx context.Context, evaluatorID int64, version string) (bool, error)
+
+	// BatchGetEvaluatorVersionsByEvaluatorIDAndVersions 批量根据 (evaluator_id, version) 获取版本
+	BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx context.Context, pairs [][2]interface{}) ([]*entity.Evaluator, error)
+
+	// ListBuiltinEvaluator 根据筛选条件查询内置评估器列表，支持tag筛选和分页
+	ListBuiltinEvaluator(ctx context.Context, req *ListBuiltinEvaluatorRequest) (*ListBuiltinEvaluatorResponse, error)
+
+	// ListEvaluatorTags 根据 tagType 聚合标签
+	ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error)
 }
 
 type ListEvaluatorRequest struct {
@@ -37,6 +48,7 @@ type ListEvaluatorRequest struct {
 	SearchName    string
 	CreatorIDs    []int64
 	EvaluatorType []entity.EvaluatorType
+	FilterOption  *entity.EvaluatorFilterOption `json:"filter_option,omitempty"` // 标签筛选条件
 	PageSize      int32
 	PageNum       int32
 	OrderBy       []*entity.OrderBy
@@ -58,4 +70,18 @@ type ListEvaluatorVersionRequest struct {
 type ListEvaluatorVersionResponse struct {
 	TotalCount int64
 	Versions   []*entity.Evaluator
+}
+
+// ListBuiltinEvaluatorRequest 查询内置评估器的请求参数
+type ListBuiltinEvaluatorRequest struct {
+	FilterOption   *entity.EvaluatorFilterOption `json:"filter_option,omitempty"`   // 标签筛选条件
+	PageSize       int32                         `json:"page_size"`                 // 分页大小
+	PageNum        int32                         `json:"page_num"`                  // 页码
+	IncludeDeleted bool                          `json:"include_deleted,omitempty"` // 是否包含已删除记录
+}
+
+// ListBuiltinEvaluatorResponse 查询内置评估器的响应
+type ListBuiltinEvaluatorResponse struct {
+	TotalCount int64               `json:"total_count"` // 总数量
+	Evaluators []*entity.Evaluator `json:"evaluators"`  // 评估器列表
 }
