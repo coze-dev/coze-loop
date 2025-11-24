@@ -27,7 +27,7 @@ const (
 
 	PlatformTypeVeADK = "veadk"
 
-	LatformTypeVeAgentkit = "ve_agentkit"
+	PlatformTypeVeAgentkit = "ve_agentkit"
 
 	PlatformTypeLoopAll = "loop_all"
 
