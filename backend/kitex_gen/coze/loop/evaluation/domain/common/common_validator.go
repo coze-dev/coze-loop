@@ -65,6 +65,11 @@ func (p *Message) IsValid() error {
 	return nil
 }
 func (p *ArgsSchema) IsValid() error {
+	if p.DefaultValue != nil {
+		if err := p.DefaultValue.IsValid(); err != nil {
+			return fmt.Errorf("field DefaultValue not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *UserInfo) IsValid() error {
@@ -90,5 +95,8 @@ func (p *Session) IsValid() error {
 	return nil
 }
 func (p *RuntimeParam) IsValid() error {
+	return nil
+}
+func (p *RateLimit) IsValid() error {
 	return nil
 }

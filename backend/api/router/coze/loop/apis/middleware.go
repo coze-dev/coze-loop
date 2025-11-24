@@ -1611,6 +1611,11 @@ func _getdrilldownvaluesMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _listprespanMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _listevaluationsetversionsoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
@@ -1647,31 +1652,90 @@ func _updateevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _item_idMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
+func _debugbuiltinevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
 func _getevaluationitemfieldMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
+func _getlatestevaluatorversionMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
 func _item_id0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
+func _gettemplateinfov2Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
 func _getevaluationitemfieldoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
+func _listtemplatesv2Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
 func _item_pkMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
+func _publishbuiltinevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
 func _getevaluationsetitemfieldMw(handler *apis.APIHandler) []app.HandlerFunc {
+	return nil
+}
+
+func _createevaluatortemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _deleteevaluatortemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updateevaluatortemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listevaluatortagsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updatebuiltinevaluatortagsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _evaluator_templateMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _evaluator_template0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _gettemplatev2Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

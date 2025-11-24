@@ -30,6 +30,10 @@ type configer struct {
 	loader conf.IConfigLoader
 }
 
+func (c *configer) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
+	return c.GetConsumerConf(ctx).GetSchedulerAbortCtrl()
+}
+
 func (c *configer) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
 	return c.GetConsumerConf(ctx).GetExptExecConf(spaceID)
 }
@@ -56,7 +60,9 @@ func (c *configer) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *e
 }
 
 func (c *configer) GetCKDBName(ctx context.Context) *entity.CKDBConfig {
-	return nil
+	const key = "clickhouse_config"
+	ckdb := &entity.CKDBConfig{}
+	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, ckdb) == nil, ckdb, &entity.CKDBConfig{})
 }
 
 func (c *configer) GetExptExportWhiteList(ctx context.Context) (eec *entity.ExptExportWhiteList) {

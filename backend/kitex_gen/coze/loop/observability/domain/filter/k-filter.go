@@ -348,6 +348,20 @@ func (p *FilterField) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -472,6 +486,38 @@ func (p *FilterField) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *FilterField) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		var _val string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	p.ExtraInfo = _field
+	return offset, nil
+}
+
 func (p *FilterField) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -486,6 +532,7 @@ func (p *FilterField) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -501,6 +548,7 @@ func (p *FilterField) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -576,6 +624,23 @@ func (p *FilterField) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *FilterField) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExtraInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 8)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.ExtraInfo {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
+	}
+	return offset
+}
+
 func (p *FilterField) field1Length() int {
 	l := 0
 	if p.IsSetFieldName() {
@@ -643,6 +708,21 @@ func (p *FilterField) field7Length() int {
 	return l
 }
 
+func (p *FilterField) field8Length() int {
+	l := 0
+	if p.IsSetExtraInfo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.ExtraInfo {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
 func (p *FilterField) DeepCopy(s interface{}) error {
 	src, ok := s.(*FilterField)
 	if !ok {
@@ -695,6 +775,23 @@ func (p *FilterField) DeepCopy(s interface{}) error {
 	if src.IsCustom != nil {
 		tmp := *src.IsCustom
 		p.IsCustom = &tmp
+	}
+
+	if src.ExtraInfo != nil {
+		p.ExtraInfo = make(map[string]string, len(src.ExtraInfo))
+		for key, val := range src.ExtraInfo {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val string
+			if val != "" {
+				_val = kutils.StringDeepCopy(val)
+			}
+
+			p.ExtraInfo[_key] = _val
+		}
 	}
 
 	return nil

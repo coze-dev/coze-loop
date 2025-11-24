@@ -6,6 +6,7 @@ package common
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -32,12 +33,16 @@ func ConvertImageDTO2DO(img *commondto.Image) *commonentity.Image {
 	if img == nil {
 		return nil
 	}
+	var storageProvider *commonentity.StorageProvider = nil
+	if img.StorageProvider != nil {
+		storageProvider = gptr.Of(commonentity.StorageProvider(*img.StorageProvider))
+	}
 	return &commonentity.Image{
 		Name:            img.Name,
 		URL:             img.URL,
 		URI:             img.URI,
 		ThumbURL:        img.ThumbURL,
-		StorageProvider: gptr.Of(commonentity.StorageProvider(gptr.Indirect(img.StorageProvider))),
+		StorageProvider: storageProvider,
 	}
 }
 
@@ -46,12 +51,16 @@ func ConvertImageDO2DTO(img *commonentity.Image) *commondto.Image {
 	if img == nil {
 		return nil
 	}
+	var storageProvider *dataset.StorageProvider = nil
+	if img.StorageProvider != nil {
+		storageProvider = gptr.Of(dataset.StorageProvider(*img.StorageProvider))
+	}
 	return &commondto.Image{
 		Name:            img.Name,
 		URL:             img.URL,
 		URI:             img.URI,
 		ThumbURL:        img.ThumbURL,
-		StorageProvider: gptr.Of(dataset.StorageProvider(gptr.Indirect(img.StorageProvider))),
+		StorageProvider: storageProvider,
 	}
 }
 
@@ -241,7 +250,19 @@ func ConvertArgsSchemaDTO2DO(schema *commondto.ArgsSchema) *commonentity.ArgsSch
 		Key:                 schema.Key,
 		SupportContentTypes: contentTypes,
 		JsonSchema:          schema.JSONSchema,
+		DefaultValue:        ConvertContentDTO2DO(schema.DefaultValue),
 	}
+}
+
+func ConvertArgsSchemaListDTO2DO(schemas []*commondto.ArgsSchema) []*commonentity.ArgsSchema {
+	if len(schemas) == 0 {
+		return nil
+	}
+	res := make([]*commonentity.ArgsSchema, 0, len(schemas))
+	for _, schema := range schemas {
+		res = append(res, ConvertArgsSchemaDTO2DO(schema))
+	}
+	return res
 }
 
 // ConvertArgsSchemaDO2DTO 将 ArgsSchema 结构体转换为 DTO
@@ -257,7 +278,19 @@ func ConvertArgsSchemaDO2DTO(schema *commonentity.ArgsSchema) *commondto.ArgsSch
 		Key:                 schema.Key,
 		SupportContentTypes: contentTypes,
 		JSONSchema:          schema.JsonSchema,
+		DefaultValue:        ConvertContentDO2DTO(schema.DefaultValue),
 	}
+}
+
+func ConvertArgsSchemaListDO2DTO(schemas []*commonentity.ArgsSchema) []*commondto.ArgsSchema {
+	if len(schemas) == 0 {
+		return nil
+	}
+	res := make([]*commondto.ArgsSchema, 0, len(schemas))
+	for _, schema := range schemas {
+		res = append(res, ConvertArgsSchemaDO2DTO(schema))
+	}
+	return res
 }
 
 // ConvertUserInfoDTO2DO 将 DTO 转换为 UserInfo 结构体
@@ -370,4 +403,38 @@ func ConvertFieldDisplayFormatDTO2DO(fdf int64) commonentity.FieldDisplayFormat 
 // ConvertFieldDisplayFormatDO2DTO 将 FieldDisplayFormat 枚举转换为 DTO 类型
 func ConvertFieldDisplayFormatDO2DTO(fdf commonentity.FieldDisplayFormat) int64 {
 	return int64(fdf)
+}
+
+func ConvertRateLimitDO2DTO(rateLimit *commonentity.RateLimit) *commondto.RateLimit {
+	if rateLimit == nil {
+		return nil
+	}
+	var period *string = nil
+	if rateLimit.Period != nil {
+		period = gptr.Of(rateLimit.Period.String())
+	}
+	return &commondto.RateLimit{
+		Rate:   rateLimit.Rate,
+		Burst:  rateLimit.Burst,
+		Period: period,
+	}
+}
+
+func ConvertRateLimitDTO2DO(limit *commondto.RateLimit) (*commonentity.RateLimit, error) {
+	if limit == nil {
+		return nil, nil
+	}
+	var period *time.Duration = nil
+	if limit.Period != nil {
+		p, err := time.ParseDuration(*limit.Period)
+		if err != nil {
+			return nil, err
+		}
+		period = gptr.Of(p)
+	}
+	return &commonentity.RateLimit{
+		Rate:   limit.Rate,
+		Burst:  limit.Burst,
+		Period: period,
+	}, nil
 }

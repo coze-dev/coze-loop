@@ -6,6 +6,7 @@ include "./domain/eval_set.thrift"
 include "coze.loop.evaluation.eval_target.thrift"
 include "./domain/common.thrift"
 include "./domain/expt.thrift"
+include "./domain/evaluator.thrift"
 
 struct CreateExperimentRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
@@ -61,6 +62,8 @@ struct SubmitExperimentRequest {
     31: optional i64 max_alive_time (api.body = 'max_alive_time')
     32: optional expt.SourceType source_type (api.body = 'source_type')
     33: optional string source_id (api.body = 'source_id')
+
+    40: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list (api.body = 'evaluator_id_version_list') // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
 
     100: optional map<string, string> ext (api.body = 'ext')
 

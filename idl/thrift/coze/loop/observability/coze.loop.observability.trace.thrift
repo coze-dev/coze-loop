@@ -32,6 +32,23 @@ struct ListSpansResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct ListPreSpanRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"',api.body="workspace_id")
+    2: required string trace_id (api.body="trace_id")
+    3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
+    4: optional string span_id (api.body="span_id")
+    5: optional string previous_response_id (api.body="previous_response_id")
+    6: optional common.PlatformType platform_type (api.body="platform_type")
+
+    255: optional base.Base Base
+}
+
+struct ListPreSpanResponse {
+    1: required list<span.OutputSpan> spans
+
+    255: optional base.BaseResp BaseResp
+}
+
 struct TokenCost {
     1: required i64 input (api.js_conv='true', go.tag='json:"input"')
     2: required i64 output (api.js_conv='true', go.tag='json:"output"')
@@ -331,7 +348,7 @@ struct ChangeEvaluatorScoreResponse {
 
 struct ListAnnotationEvaluatorsRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.query="workspace_id", vt.gt="0")
-    2: optional string name (api.body = "name")
+    2: optional string name (api.query = "name")
 
     255: optional base.Base Base (api.none="true")
 }
@@ -367,6 +384,7 @@ struct ExtractSpanInfoResponse {
 
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
+    ListPreSpanResponse ListPreSpan(1: ListPreSpanRequest req) (api.post = '/api/observability/v1/spans/pre_list')
     GetTraceResponse GetTrace(1: GetTraceRequest req) (api.get = '/api/observability/v1/traces/:trace_id')
     SearchTraceTreeResponse SearchTraceTree(1: SearchTraceTreeRequest req) (api.post = '/api/observability/v1/traces/search_tree')
     BatchGetTracesAdvanceInfoResponse BatchGetTracesAdvanceInfo(1: BatchGetTracesAdvanceInfoRequest req) (api.post = '/api/observability/v1/traces/batch_get_advance_info')

@@ -5,6 +5,7 @@ package entity
 
 import (
 	"fmt"
+	"time"
 )
 
 // ContentType 定义内容类型
@@ -122,6 +123,7 @@ type ArgsSchema struct {
 	Key                 *string       `json:"key,omitempty"`
 	SupportContentTypes []ContentType `json:"support_content_types,omitempty"`
 	JsonSchema          *string       `json:"json_schema,omitempty"`
+	DefaultValue        *Content      `json:"default_value,omitempty"`
 }
 
 // UserInfo 用户信息结构体
@@ -371,4 +373,10 @@ type ObjectStorage struct {
 	URI      *string          `json:"uri,omitempty"`
 	URL      *string          `json:"url,omitempty"`
 	ThumbURL *string          `json:"thumb_url,omitempty"`
+}
+
+type RateLimit struct {
+	Rate   *int32         `json:"rate,omitempty"`
+	Burst  *int32         `json:"burst,omitempty"`
+	Period *time.Duration `json:"period,omitempty"`
 }

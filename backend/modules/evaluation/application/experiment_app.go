@@ -65,6 +65,9 @@ type experimentApplication struct {
 	evalTargetService        service.IEvalTargetService
 	evaluationSetItemService service.EvaluationSetItemService
 	annotateService          service.IExptAnnotateService
+
+	// 新增：EvaluatorService 用于查询内置评估器版本
+	evaluatorService service.EvaluatorService
 }
 
 func NewExperimentApplication(
@@ -83,6 +86,7 @@ func NewExperimentApplication(
 	tagRPCAdapter rpc.ITagRPCAdapter,
 	exptResultExportService service.IExptResultExportService,
 	exptInsightAnalysisService service.IExptInsightAnalysisService,
+	evaluatorService service.EvaluatorService,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc: resultSvc,
@@ -101,6 +105,7 @@ func NewExperimentApplication(
 		tagRPCAdapter:               tagRPCAdapter,
 		IExptResultExportService:    exptResultExportService,
 		IExptInsightAnalysisService: exptInsightAnalysisService,
+		evaluatorService:            evaluatorService,
 	}
 }
 
@@ -134,11 +139,31 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
 	}
 
+	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
+	evalVersionIDs, err := e.resolveEvaluatorVersionIDs(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 去重
+	if len(evalVersionIDs) > 1 {
+		seen := map[int64]struct{}{}
+		uniq := make([]int64, 0, len(evalVersionIDs))
+		for _, id := range evalVersionIDs {
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			uniq = append(uniq, id)
+		}
+		evalVersionIDs = uniq
+	}
+
 	cresp, err := e.CreateExperiment(ctx, &expt.CreateExperimentRequest{
 		WorkspaceID:           req.GetWorkspaceID(),
 		EvalSetVersionID:      req.EvalSetVersionID,
 		EvalSetID:             req.EvalSetID,
-		EvaluatorVersionIds:   req.EvaluatorVersionIds,
+		EvaluatorVersionIds:   evalVersionIDs,
 		Name:                  req.Name,
 		Desc:                  req.Desc,
 		TargetFieldMapping:    req.TargetFieldMapping,
@@ -173,6 +198,118 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		RunID:      gptr.Of(rresp.GetRunID()),
 		BaseResp:   base.NewBaseResp(),
 	}, nil
+}
+
+// resolveEvaluatorVersionIDs 汇总 evaluator_version_ids：
+// 1) 先取请求中的 EvaluatorVersionIds
+// 2) 从有序 EvaluatorIDVersionList 中批量解析并按输入顺序回填版本ID
+func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, req *expt.SubmitExperimentRequest) ([]int64, error) {
+	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
+	evalVersionIDs = append(evalVersionIDs, req.EvaluatorVersionIds...)
+
+	// 解析有序列表并批量查询：将 BuiltinVisible 与普通版本分离，分别批量查，最后按输入顺序回填版本ID
+	items := req.GetEvaluatorIDVersionList()
+	builtinIDs := make([]int64, 0)
+	normalPairs := make([][2]interface{}, 0)
+	for _, it := range items {
+		if it == nil {
+			continue
+		}
+		eid := it.GetEvaluatorID()
+		ver := it.GetVersion()
+		if eid == 0 || ver == "" {
+			continue
+		}
+		if ver == "BuiltinVisible" {
+			builtinIDs = append(builtinIDs, eid)
+		} else {
+			normalPairs = append(normalPairs, [2]interface{}{eid, ver})
+		}
+	}
+
+	// 批量获取内置与普通版本
+	id2Builtin := make(map[int64]*entity.Evaluator, len(builtinIDs))
+	if len(builtinIDs) > 0 {
+		evs, err := e.evaluatorService.BatchGetBuiltinEvaluator(ctx, builtinIDs)
+		if err != nil {
+			return nil, err
+		}
+		for _, ev := range evs {
+			if ev != nil {
+				id2Builtin[ev.ID] = ev
+			}
+		}
+	}
+
+	pair2Eval := make(map[string]*entity.Evaluator, len(normalPairs))
+	if len(normalPairs) > 0 {
+		evs, err := e.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, normalPairs)
+		if err != nil {
+			return nil, err
+		}
+		for _, ev := range evs {
+			if ev == nil {
+				continue
+			}
+			key := fmt.Sprintf("%d#%s", ev.ID, ev.GetVersion())
+			pair2Eval[key] = ev
+		}
+	}
+
+	// 按输入顺序回填版本ID
+	for _, it := range items {
+		if it == nil {
+			continue
+		}
+		eid := it.GetEvaluatorID()
+		ver := it.GetVersion()
+		if eid == 0 || ver == "" {
+			continue
+		}
+		var ev *entity.Evaluator
+		if ver == "BuiltinVisible" {
+			ev = id2Builtin[eid]
+		} else {
+			key := fmt.Sprintf("%d#%s", eid, ver)
+			ev = pair2Eval[key]
+		}
+		if ev == nil {
+			continue
+		}
+		if verID := ev.GetEvaluatorVersionID(); verID != 0 {
+			evalVersionIDs = append(evalVersionIDs, verID)
+		}
+	}
+
+	// 回填 EvaluatorFieldMapping 中缺失的 evaluator_version_id
+	if fm := req.GetEvaluatorFieldMapping(); len(fm) > 0 {
+		for _, m := range fm {
+			if m == nil || m.GetEvaluatorVersionID() != 0 {
+				continue
+			}
+			if item := m.GetEvaluatorIDVersionItem(); item != nil {
+				eid := item.GetEvaluatorID()
+				ver := item.GetVersion()
+				if eid == 0 || ver == "" {
+					continue
+				}
+				var ev *entity.Evaluator
+				if ver == "BuiltinVisible" {
+					ev = id2Builtin[eid]
+				} else {
+					key := fmt.Sprintf("%d#%s", eid, ver)
+					ev = pair2Eval[key]
+				}
+				if ev != nil {
+					if vid := ev.GetEvaluatorVersionID(); vid != 0 {
+						m.SetEvaluatorVersionID(vid)
+					}
+				}
+			}
+		}
+	}
+
+	return evalVersionIDs, nil
 }
 
 func (e *experimentApplication) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest) (r *expt.CheckExperimentNameResponse, err error) {
@@ -300,9 +437,6 @@ func (e *experimentApplication) ListExperimentStats(ctx context.Context, req *ex
 
 func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.UpdateExperimentRequest) (r *expt.UpdateExperimentResponse, err error) {
 	session := entity.NewSession(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
