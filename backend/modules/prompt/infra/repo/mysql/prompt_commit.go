@@ -65,7 +65,7 @@ func (d *PromptCommitDAOImpl) Create(ctx context.Context, promptCommitPO *model.
 	err = q.PromptCommit.Create(promptCommitPO)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return errorx.WrapByCode(err, prompterr.CommonResourceDuplicatedCode)
+			return errorx.WrapByCode(err, prompterr.PromptSubmitVersionExistCode)
 		}
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}

@@ -82,7 +82,7 @@ func (d *PromptBasicDAOImpl) Create(ctx context.Context, basicPO *model.PromptBa
 	err = q.PromptBasic.Create(basicPO)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return errorx.WrapByCode(err, prompterr.CommonResourceDuplicatedCode)
+			return errorx.WrapByCode(err, prompterr.PromptKeyExistCode)
 		}
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
