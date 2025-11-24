@@ -2136,7 +2136,7 @@ type GetPromptRequest struct {
 	CommitVersion     *string `thrift:"commit_version,12,optional" frugal:"12,optional,string" json:"commit_version,omitempty" query:"commit_version"`
 	WithDraft         *bool   `thrift:"with_draft,21,optional" frugal:"21,optional,bool" json:"with_draft,omitempty" query:"with_draft"`
 	WithDefaultConfig *bool   `thrift:"with_default_config,31,optional" frugal:"31,optional,bool" json:"with_default_config,omitempty" query:"with_default_config"`
-	// 是否展开子片段
+	// 是否展开子片段，true:展开
 	ExpandSnippet *bool      `thrift:"expand_snippet,32,optional" frugal:"32,optional,bool" json:"expand_snippet,omitempty" query:"expand_snippet"`
 	Base          *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
