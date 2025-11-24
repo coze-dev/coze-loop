@@ -1,4 +1,4 @@
-namespace go common
+namespace go coze.loop.trajectory
 
 struct Trajectory {
     // trace_id

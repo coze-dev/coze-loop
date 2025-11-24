@@ -10,7 +10,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 )
+
+type Trajectory = trajectory.Trajectory
+
+func NewTrajectory() *Trajectory {
+	return (*Trajectory)(trajectory.NewTrajectory())
+}
 
 type EvaluationSetService interface {
 	eval_set.EvaluationSetService

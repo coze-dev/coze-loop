@@ -341,6 +341,10 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	}
 	setSpanInputOutput(ctx, spanParam, inputData, outputData)
 
+	if evalTargetDO.EvalTargetType.SupptTrajectory() {
+
+	}
+
 	return record, nil
 }
 
