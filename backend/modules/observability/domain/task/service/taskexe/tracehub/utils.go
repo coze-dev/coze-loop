@@ -34,6 +34,9 @@ func (h *TraceHubServiceImpl) getTenants(ctx context.Context, platform loop_span
 
 // todo tyf TraceService里有相同实现，待合并
 func processSpecificFilter(f *loop_span.FilterField) error {
+	if f == nil {
+		return nil
+	}
 	switch f.FieldName {
 	case loop_span.SpanFieldStatus:
 		if err := processStatusFilter(f); err != nil {
