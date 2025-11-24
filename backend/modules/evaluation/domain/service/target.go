@@ -21,7 +21,6 @@ type IEvalTargetService interface {
 	BatchGetEvalTargetVersion(ctx context.Context, spaceID int64, versionIDs []int64, needSourceInfo bool) (dos []*entity.EvalTarget, err error)
 
 	ExecuteTarget(ctx context.Context, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (*entity.EvalTargetRecord, error)
-	//ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error)
 	AsyncExecuteTarget(ctx context.Context, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) (record *entity.EvalTargetRecord, callee string, err error)
 	DebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, err error)
 	AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, callee string, err error)
@@ -31,4 +30,5 @@ type IEvalTargetService interface {
 	ReportInvokeRecords(ctx context.Context, recordID2Params *entity.ReportTargetRecordParam) error
 	ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error
 	GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error)
+	ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error)
 }

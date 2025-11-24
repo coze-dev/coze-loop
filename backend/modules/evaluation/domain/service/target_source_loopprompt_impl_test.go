@@ -298,7 +298,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[0].JsonSchema)
 					assert.Equal(t, "var2", *evalTarget.EvalTargetVersion.InputSchema[1].Key)
 					// Check user query schema is the last one
-					assert.Equal(t, consts.InputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[10].Key)
+					assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[10].Key)
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart}, evalTarget.EvalTargetVersion.InputSchema[10].SupportContentTypes)
 				}
 
@@ -359,7 +359,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText}, evalTarget.EvalTargetVersion.InputSchema[0].SupportContentTypes)
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[0].JsonSchema)
 
-					assert.Equal(t, consts.InputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[1].Key)
+					assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[1].Key)
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart}, evalTarget.EvalTargetVersion.InputSchema[1].SupportContentTypes)
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[1].JsonSchema)
 				}
@@ -398,7 +398,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 				// Even when VariableDefs is empty, user query schema should still be added
 				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 1)
 				if len(evalTarget.EvalTargetVersion.InputSchema) == 1 {
-					assert.Equal(t, consts.InputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[0].Key)
+					assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart}, evalTarget.EvalTargetVersion.InputSchema[0].SupportContentTypes)
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.InputSchema[0].JsonSchema)
 				}
@@ -1558,7 +1558,7 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceVersionInfo(t *testing.T) {
 				// Should add user query schema for compatibility
 				assert.Len(t, dos[0].EvalTargetVersion.InputSchema, 2)
 				assert.Equal(t, "var1", *dos[0].EvalTargetVersion.InputSchema[0].Key)
-				assert.Equal(t, consts.InputFieldKeyPromptUserQuery, *dos[0].EvalTargetVersion.InputSchema[1].Key)
+				assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *dos[0].EvalTargetVersion.InputSchema[1].Key)
 				assert.Equal(t, []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart}, dos[0].EvalTargetVersion.InputSchema[1].SupportContentTypes)
 			},
 			wantErr: false,
@@ -1579,7 +1579,7 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceVersionInfo(t *testing.T) {
 								JsonSchema:          gptr.Of(consts.StringJsonSchema),
 							},
 							{
-								Key:                 gptr.Of(consts.InputFieldKeyPromptUserQuery),
+								Key:                 gptr.Of(consts.EvalTargetInputFieldKeyPromptUserQuery),
 								SupportContentTypes: []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart},
 								JsonSchema:          gptr.Of(consts.StringJsonSchema),
 							},
@@ -1616,7 +1616,7 @@ func TestPromptSourceEvalTargetServiceImpl_PackSourceVersionInfo(t *testing.T) {
 				// Should not add duplicate user query schema
 				assert.Len(t, dos[0].EvalTargetVersion.InputSchema, 2)
 				assert.Equal(t, "var1", *dos[0].EvalTargetVersion.InputSchema[0].Key)
-				assert.Equal(t, consts.InputFieldKeyPromptUserQuery, *dos[0].EvalTargetVersion.InputSchema[1].Key)
+				assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *dos[0].EvalTargetVersion.InputSchema[1].Key)
 			},
 			wantErr: false,
 		},
@@ -1854,7 +1854,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithUserQuery(t *testing.T) {
 				SourceTargetVersion: "v1",
 				Input: &entity.EvalTargetInputData{
 					InputFields: map[string]*entity.Content{
-						consts.InputFieldKeyPromptUserQuery: {
+						consts.EvalTargetInputFieldKeyPromptUserQuery: {
 							ContentType: gptr.Of(entity.ContentTypeText),
 							Text:        gptr.Of("test user query"),
 						},
@@ -1902,7 +1902,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithUserQuery(t *testing.T) {
 				SourceTargetVersion: "v1",
 				Input: &entity.EvalTargetInputData{
 					InputFields: map[string]*entity.Content{
-						consts.InputFieldKeyPromptUserQuery: {
+						consts.EvalTargetInputFieldKeyPromptUserQuery: {
 							ContentType: gptr.Of(entity.ContentTypeMultipart),
 							MultiPart: []*entity.Content{
 								{
@@ -1961,7 +1961,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithUserQuery(t *testing.T) {
 				SourceTargetVersion: "v1",
 				Input: &entity.EvalTargetInputData{
 					InputFields: map[string]*entity.Content{
-						consts.InputFieldKeyPromptUserQuery: {
+						consts.EvalTargetInputFieldKeyPromptUserQuery: {
 							ContentType: gptr.Of(entity.ContentTypeText),
 							Text:        gptr.Of("user query only"),
 						},
@@ -2005,7 +2005,7 @@ func TestPromptSourceEvalTargetServiceImpl_Execute_WithUserQuery(t *testing.T) {
 				SourceTargetVersion: "v1",
 				Input: &entity.EvalTargetInputData{
 					InputFields: map[string]*entity.Content{
-						consts.InputFieldKeyPromptUserQuery: {
+						consts.EvalTargetInputFieldKeyPromptUserQuery: {
 							ContentType: gptr.Of(entity.ContentTypeText),
 							Text:        gptr.Of("test user query"),
 						},

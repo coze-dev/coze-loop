@@ -154,6 +154,27 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UpsertTrajectoryConfig": kitex.NewMethodInfo(
+		upsertTrajectoryConfigHandler,
+		newTraceServiceUpsertTrajectoryConfigArgs,
+		newTraceServiceUpsertTrajectoryConfigResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetTrajectoryConfig": kitex.NewMethodInfo(
+		getTrajectoryConfigHandler,
+		newTraceServiceGetTrajectoryConfigArgs,
+		newTraceServiceGetTrajectoryConfigResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListTrajectory": kitex.NewMethodInfo(
+		listTrajectoryHandler,
+		newTraceServiceListTrajectoryArgs,
+		newTraceServiceListTrajectoryResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -567,6 +588,63 @@ func newTraceServiceExtractSpanInfoResult() interface{} {
 	return trace.NewTraceServiceExtractSpanInfoResult()
 }
 
+func upsertTrajectoryConfigHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceUpsertTrajectoryConfigArgs)
+	realResult := result.(*trace.TraceServiceUpsertTrajectoryConfigResult)
+	success, err := handler.(trace.TraceService).UpsertTrajectoryConfig(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceUpsertTrajectoryConfigArgs() interface{} {
+	return trace.NewTraceServiceUpsertTrajectoryConfigArgs()
+}
+
+func newTraceServiceUpsertTrajectoryConfigResult() interface{} {
+	return trace.NewTraceServiceUpsertTrajectoryConfigResult()
+}
+
+func getTrajectoryConfigHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceGetTrajectoryConfigArgs)
+	realResult := result.(*trace.TraceServiceGetTrajectoryConfigResult)
+	success, err := handler.(trace.TraceService).GetTrajectoryConfig(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceGetTrajectoryConfigArgs() interface{} {
+	return trace.NewTraceServiceGetTrajectoryConfigArgs()
+}
+
+func newTraceServiceGetTrajectoryConfigResult() interface{} {
+	return trace.NewTraceServiceGetTrajectoryConfigResult()
+}
+
+func listTrajectoryHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListTrajectoryArgs)
+	realResult := result.(*trace.TraceServiceListTrajectoryResult)
+	success, err := handler.(trace.TraceService).ListTrajectory(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceListTrajectoryArgs() interface{} {
+	return trace.NewTraceServiceListTrajectoryArgs()
+}
+
+func newTraceServiceListTrajectoryResult() interface{} {
+	return trace.NewTraceServiceListTrajectoryResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -774,6 +852,36 @@ func (p *kClient) ExtractSpanInfo(ctx context.Context, req *trace.ExtractSpanInf
 	_args.Req = req
 	var _result trace.TraceServiceExtractSpanInfoResult
 	if err = p.c.Call(ctx, "ExtractSpanInfo", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest) (r *trace.UpsertTrajectoryConfigResponse, err error) {
+	var _args trace.TraceServiceUpsertTrajectoryConfigArgs
+	_args.Req = req
+	var _result trace.TraceServiceUpsertTrajectoryConfigResult
+	if err = p.c.Call(ctx, "UpsertTrajectoryConfig", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest) (r *trace.GetTrajectoryConfigResponse, err error) {
+	var _args trace.TraceServiceGetTrajectoryConfigArgs
+	_args.Req = req
+	var _result trace.TraceServiceGetTrajectoryConfigResult
+	if err = p.c.Call(ctx, "GetTrajectoryConfig", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest) (r *trace.ListTrajectoryResponse, err error) {
+	var _args trace.TraceServiceListTrajectoryArgs
+	_args.Req = req
+	var _result trace.TraceServiceListTrajectoryResult
+	if err = p.c.Call(ctx, "ListTrajectory", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

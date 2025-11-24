@@ -1401,7 +1401,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 			defer ctrl.Finish()
 
 			svc := tt.setup(ctrl)
-			got, _, _, _, _, _, err := svc.MGetExperimentResult(context.Background(), tt.param)
+			got, err := svc.MGetExperimentResult(context.Background(), tt.param) // todo: fix
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MGetExperimentResult() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -91,6 +91,21 @@ type TraceApplication struct {
 	tagSvc             rpc.ITagRPCAdapter
 }
 
+func (t *TraceApplication) UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest) (r *trace.UpsertTrajectoryConfigResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *TraceApplication) GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest) (r *trace.GetTrajectoryConfigResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest) (r *trace.ListTrajectoryResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
 	if err := t.validateListPreSpanReq(ctx, req); err != nil {
 		return nil, err

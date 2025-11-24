@@ -9,6 +9,7 @@ include "./domain/view.thrift"
 include "./domain/annotation.thrift"
 include "./domain/export_dataset.thrift"
 include "./domain/task.thrift"
+include "../trajectory.thrift"
 
 struct ListSpansRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
@@ -382,6 +383,44 @@ struct ExtractSpanInfoResponse {
 }
 
 
+struct UpsertTrajectoryConfigRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"',api.body="workspace_id")
+    2: optional filter.FilterFields filters (api.body="filters")
+
+    255: optional base.Base Base
+}
+
+struct UpsertTrajectoryConfigResponse {
+    255: optional base.BaseResp BaseResp
+}
+
+struct GetTrajectoryConfigRequest {
+    1: required i64 workspace_id (api.js_conv='true',api.query='workspace_id')
+
+    255: optional base.Base Base
+}
+
+struct GetTrajectoryConfigResponse {
+    1: optional filter.FilterFields filters
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct ListTrajectoryRequest {
+    1: required common.PlatformType platform_type (api.query='platform_type') // 需要准确填写，用于确定查询哪些租户的数据
+    2: required i64 workspace_id (api.js_conv='true',api.query='workspace_id')
+    3: required list<string> trace_ids (api.body="trace_ids", vt.min_size="1", vt.max_size="10")
+    4: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
+
+    255: optional base.Base Base
+}
+
+struct ListTrajectoryResponse {
+    1: optional list<trajectory.Trajectory> trajectories
+
+    255: optional base.BaseResp BaseResp
+}
+
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
     ListPreSpanResponse ListPreSpan(1: ListPreSpanRequest req) (api.post = '/api/observability/v1/spans/pre_list')
@@ -403,4 +442,7 @@ service TraceService {
     ChangeEvaluatorScoreResponse ChangeEvaluatorScore(1: ChangeEvaluatorScoreRequest req) (api.post = '/api/observability/v1/traces/change_eval_score')
     ListAnnotationEvaluatorsResponse ListAnnotationEvaluators(1: ListAnnotationEvaluatorsRequest req) (api.get = '/api/observability/v1/annotation/list_evaluators')
     ExtractSpanInfoResponse ExtractSpanInfo(1: ExtractSpanInfoRequest req) (api.post = '/api/observability/v1/trace/extract_span_info')
+    UpsertTrajectoryConfigResponse UpsertTrajectoryConfig(1: UpsertTrajectoryConfigRequest req) (api.post = '/api/observability/v1/traces/trajectory_config')
+    GetTrajectoryConfigResponse GetTrajectoryConfig(1: GetTrajectoryConfigRequest req) (api.get = '/api/observability/v1/traces/trajectory_config')
+    ListTrajectoryResponse ListTrajectory(1: ListTrajectoryRequest req) (api.post = '/api/observability/v1/traces/trajectory')
 }

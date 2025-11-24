@@ -20,4 +20,5 @@ type IConfiger interface {
 	GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList
 	GetMaintainerUserIDs(ctx context.Context) map[string]bool
 	GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl
+	GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf
 }

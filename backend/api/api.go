@@ -12,6 +12,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server/binding"
 	"github.com/cloudwego/hertz/pkg/app/server/render"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
+	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lotrace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 
 	"github.com/coze-dev/coze-loop/backend/api/handler/coze/loop/apis"
@@ -90,7 +92,12 @@ func Init(
 		return nil, err
 	}
 
-	evaluationHandler, err := apis.InitEvaluationHandler(
+	var (
+		observabilityHandler *apis.ObservabilityHandler
+		evaluationHandler    *apis.EvaluationHandler
+	)
+
+	evaluationHandler, err = apis.InitEvaluationHandler(
 		ctx, idgen, db, ckDB, cmdable, configFactory, mqFactory,
 		lodataset.NewLocalDatasetService(dataHandler.IDatasetApplication, validator.KiteXValidatorMW),
 		lomanage.NewLocalPromptManageService(promptHandler.PromptManageService),
@@ -106,12 +113,15 @@ func Init(
 		lotag.NewLocalTagService(dataHandler.TagService),
 		objectStorage,
 		plainLimiterFactory,
+		func() observabilitytraceservice.Client {
+			return lotrace.NewLocalTraceService(observabilityHandler.ITraceApplication)
+		},
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	observabilityHandler, err := apis.InitObservabilityHandler(ctx, db, ckDB, meter, mqFactory, configFactory, idgen,
+	observabilityHandler, err = apis.InitObservabilityHandler(ctx, db, ckDB, meter, mqFactory, configFactory, idgen,
 		benefitSvc,
 		lofile.NewLocalFileService(foundationHandler.FileService),
 		loauth.NewLocalAuthService(foundationHandler.AuthService),

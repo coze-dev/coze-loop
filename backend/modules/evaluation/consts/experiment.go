@@ -33,3 +33,10 @@ const (
 const (
 	InsightAnalysisNotifyCardID = "AAq9DvIYd2qHu"
 )
+
+const (
+	ReportColumnNameEvalTargetActualOutput  = "actual_output"
+	ReportColumnLabelEvalTargetActualOutput = "实际输出"
+	ReportColumnNameEvalTargetTrajectory    = "trajectory"
+	ReportColumnLabelEvalTargetTrajectory   = "轨迹"
+)

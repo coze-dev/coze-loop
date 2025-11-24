@@ -81,7 +81,7 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 	}
 	vals := make([]*entity.VariableVal, 0)
 	for key, content := range param.Input.InputFields {
-		if key == consts.InputFieldKeyPromptUserQuery {
+		if key == consts.EvalTargetInputFieldKeyPromptUserQuery {
 			exePromptParam.UserQuery = &entity.Message{
 				Role:    entity.RoleUser,
 				Content: content,
@@ -221,7 +221,7 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 			})
 		}
 		inputSchema = append(inputSchema, &entity.ArgsSchema{
-			Key:                 gptr.Of(consts.InputFieldKeyPromptUserQuery),
+			Key:                 gptr.Of(consts.EvalTargetInputFieldKeyPromptUserQuery),
 			SupportContentTypes: []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart},
 			JsonSchema:          gptr.Of(consts.StringJsonSchema),
 		})
@@ -426,14 +426,14 @@ func (t *PromptSourceEvalTargetServiceImpl) PackSourceVersionInfo(ctx context.Co
 		})
 		existUserQueryKey := false
 		for _, schema := range do.EvalTargetVersion.InputSchema {
-			if gptr.Indirect(schema.Key) == consts.InputFieldKeyPromptUserQuery {
+			if gptr.Indirect(schema.Key) == consts.EvalTargetInputFieldKeyPromptUserQuery {
 				existUserQueryKey = true
 				break
 			}
 		}
 		if !existUserQueryKey { // compatibility with historical data
 			do.EvalTargetVersion.InputSchema = append(do.EvalTargetVersion.InputSchema, &entity.ArgsSchema{
-				Key:                 gptr.Of(consts.InputFieldKeyPromptUserQuery),
+				Key:                 gptr.Of(consts.EvalTargetInputFieldKeyPromptUserQuery),
 				SupportContentTypes: []entity.ContentType{entity.ContentTypeText, entity.ContentTypeImage, entity.ContentTypeMultipart},
 				JsonSchema:          gptr.Of(consts.StringJsonSchema),
 			})
