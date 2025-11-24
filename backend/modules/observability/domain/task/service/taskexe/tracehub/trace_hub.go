@@ -62,7 +62,7 @@ func NewTraceHubImpl(
 	}
 
 	// Start the scheduled tasks immediately
-	impl.startScheduledTask()
+	//impl.startScheduledTask()
 
 	// default+lane?+新集群？——定时任务和任务处理分开——内场
 	return impl, nil
