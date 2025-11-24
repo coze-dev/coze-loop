@@ -105,6 +105,7 @@ var (
 		evaluator.NewEvaluatorRPCProvider,
 		NewDatasetServiceAdapter,
 		redis2.NewSpansRedisDaoImpl,
+		mysqldao.NewTrajectoryConfigDaoImpl,
 		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
@@ -127,6 +128,7 @@ var (
 		NewIngestionCollectorFactory,
 		mq2.NewSpanWithAnnotationProducerImpl,
 		redis2.NewSpansRedisDaoImpl,
+		mysqldao.NewTrajectoryConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,
@@ -354,6 +356,7 @@ func InitMetricApplication(
 	fileClient fileservice.Client,
 	benefit benefit.IBenefitService,
 	authClient authservice.Client,
+	idGenerator idgen.IIDGenerator,
 ) (IMetricApplication, error) {
 	wire.Build(metricsSet)
 	return nil, nil
@@ -362,6 +365,7 @@ func InitMetricApplication(
 func InitTraceIngestionApplication(
 	configFactory conf.IConfigLoaderFactory,
 	ckDb ck.Provider,
+	db db.Provider,
 	mqFactory mq.IFactory,
 	persistentCmdable redis.PersistentCmdable,
 ) (ITraceIngestionApplication, error) {

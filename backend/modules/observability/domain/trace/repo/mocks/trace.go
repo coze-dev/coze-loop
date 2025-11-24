@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	gomock "go.uber.org/mock/gomock"
@@ -88,6 +89,21 @@ func (mr *MockITraceRepoMockRecorder) GetTrace(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrace", reflect.TypeOf((*MockITraceRepo)(nil).GetTrace), arg0, arg1)
 }
 
+// GetTrajectoryConfig mocks base method.
+func (m *MockITraceRepo) GetTrajectoryConfig(arg0 context.Context, arg1 repo.GetTrajectoryConfigParam) (*entity.TrajectoryConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTrajectoryConfig", arg0, arg1)
+	ret0, _ := ret[0].(*entity.TrajectoryConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTrajectoryConfig indicates an expected call of GetTrajectoryConfig.
+func (mr *MockITraceRepoMockRecorder) GetTrajectoryConfig(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectoryConfig", reflect.TypeOf((*MockITraceRepo)(nil).GetTrajectoryConfig), arg0, arg1)
+}
+
 // InsertAnnotations mocks base method.
 func (m *MockITraceRepo) InsertAnnotations(arg0 context.Context, arg1 *repo.InsertAnnotationParam) error {
 	m.ctrl.T.Helper()
@@ -144,4 +160,18 @@ func (m *MockITraceRepo) ListSpans(arg0 context.Context, arg1 *repo.ListSpansPar
 func (mr *MockITraceRepoMockRecorder) ListSpans(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpans", reflect.TypeOf((*MockITraceRepo)(nil).ListSpans), arg0, arg1)
+}
+
+// UpsertTrajectoryConfig mocks base method.
+func (m *MockITraceRepo) UpsertTrajectoryConfig(arg0 context.Context, arg1 *repo.UpsertTrajectoryConfigParam) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertTrajectoryConfig", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpsertTrajectoryConfig indicates an expected call of UpsertTrajectoryConfig.
+func (mr *MockITraceRepoMockRecorder) UpsertTrajectoryConfig(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertTrajectoryConfig", reflect.TypeOf((*MockITraceRepo)(nil).UpsertTrajectoryConfig), arg0, arg1)
 }

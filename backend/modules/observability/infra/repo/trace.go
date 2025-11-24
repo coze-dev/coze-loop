@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
@@ -19,6 +20,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	convertor2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/convertor"
+	model2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -35,13 +39,15 @@ func NewTraceCKRepoImpl(
 	traceConfig config.ITraceConfig,
 	spanRedisDao redis.ISpansRedisDao,
 	spanProducer mq.ISpanProducer,
+	trajectoryConfDao mysql.ITrajectoryConfigDao,
 ) (repo.ITraceRepo, error) {
 	return &TraceCkRepoImpl{
-		spansDao:     spanDao,
-		annoDao:      annoDao,
-		traceConfig:  traceConfig,
-		spanRedisDao: spanRedisDao,
-		spanProducer: spanProducer,
+		spansDao:          spanDao,
+		annoDao:           annoDao,
+		traceConfig:       traceConfig,
+		spanRedisDao:      spanRedisDao,
+		spanProducer:      spanProducer,
+		trajectoryConfDao: trajectoryConfDao,
 	}, nil
 }
 
@@ -49,20 +55,62 @@ func NewTraceMetricCKRepoImpl(
 	spanDao ck.ISpansDao,
 	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
+	idGenerator idgen.IIDGenerator,
 ) (metric_repo.IMetricRepo, error) {
 	return &TraceCkRepoImpl{
 		spansDao:    spanDao,
 		annoDao:     annoDao,
 		traceConfig: traceConfig,
+		idGenerator: idGenerator,
 	}, nil
 }
 
 type TraceCkRepoImpl struct {
-	spansDao     ck.ISpansDao
-	annoDao      ck.IAnnotationDao
-	traceConfig  config.ITraceConfig
-	spanRedisDao redis.ISpansRedisDao
-	spanProducer mq.ISpanProducer
+	spansDao          ck.ISpansDao
+	annoDao           ck.IAnnotationDao
+	traceConfig       config.ITraceConfig
+	spanRedisDao      redis.ISpansRedisDao
+	spanProducer      mq.ISpanProducer
+	trajectoryConfDao mysql.ITrajectoryConfigDao
+	idGenerator       idgen.IIDGenerator
+}
+
+func (t *TraceCkRepoImpl) UpsertTrajectoryConfig(ctx context.Context, param *repo.UpsertTrajectoryConfigParam) error {
+	trajectoryConfig, err := t.trajectoryConfDao.GetTrajectoryConfig(ctx, param.WorkspaceId)
+	if err != nil {
+		return err
+	}
+
+	if trajectoryConfig == nil {
+		id, err := t.idGenerator.GenID(ctx)
+		if err != nil {
+			return err
+		}
+		traConfPo := &model2.ObservabilityTrajectoryConfig{
+			ID:          id,
+			WorkspaceID: param.WorkspaceId,
+			Filter:      &param.Filters,
+			CreatedAt:   time.Now(),
+			CreatedBy:   param.UserID,
+			UpdatedAt:   time.Now(),
+			UpdatedBy:   param.UserID,
+		}
+		return t.trajectoryConfDao.CreateTrajectoryConfig(ctx, traConfPo)
+	}
+
+	trajectoryConfig.Filter = &param.Filters
+	trajectoryConfig.UpdatedAt = time.Now()
+	trajectoryConfig.UpdatedBy = param.UserID
+	return t.trajectoryConfDao.UpdateTrajectoryConfig(ctx, trajectoryConfig)
+}
+
+func (t *TraceCkRepoImpl) GetTrajectoryConfig(ctx context.Context, param repo.GetTrajectoryConfigParam) (*entity.TrajectoryConfig, error) {
+	trajectoryConfig, err := t.trajectoryConfDao.GetTrajectoryConfig(ctx, param.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertor2.TrajectoryConfigPO2DO(trajectoryConfig), nil
 }
 
 func (t *TraceCkRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error) {
