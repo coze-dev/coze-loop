@@ -32,6 +32,7 @@ func (h *TraceHubServiceImpl) getTenants(ctx context.Context, platform loop_span
 	return h.tenantProvider.GetTenantsByPlatformType(ctx, platform)
 }
 
+// todo tyf TraceService里有相同实现，待合并
 func processSpecificFilter(f *loop_span.FilterField) error {
 	switch f.FieldName {
 	case loop_span.SpanFieldStatus:
