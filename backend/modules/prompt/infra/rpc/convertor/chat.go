@@ -45,9 +45,10 @@ func ModelConfigDO2DTO(modelConfig *entity.ModelConfig, toolCallConfig *entity.T
 		maxTokens = ptr.Of(int64(ptr.From(modelConfig.MaxTokens)))
 	}
 	var toolChoice *runtimedto.ToolChoice
-	if toolCallConfig != nil {
-		toolChoice = ptr.Of(ToolChoiceTypeDO2DTO(toolCallConfig.ToolChoice))
-	}
+	// llm暂时不支持toolCallConfig
+	//if toolCallConfig != nil {
+	//	toolChoice = ptr.Of(ToolChoiceTypeDO2DTO(toolCallConfig.ToolChoice))
+	//}
 	var responseFormat *runtimedto.ResponseFormat
 	if modelConfig.JSONMode != nil && ptr.From(modelConfig.JSONMode) {
 		responseFormat = &runtimedto.ResponseFormat{
