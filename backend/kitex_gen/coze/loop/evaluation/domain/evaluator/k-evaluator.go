@@ -1395,7 +1395,7 @@ func (p *CustomRPCEvaluator) FastReadField1(buf []byte) (int, error) {
 func (p *CustomRPCEvaluator) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field AccessProtocol
+	var _field EvaluatorAccessProtocol
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {

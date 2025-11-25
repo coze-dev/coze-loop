@@ -665,21 +665,42 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorVersion(ctx context.Context, request 
 }
 
 func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersions(ctx context.Context, request *evaluatorservice.BatchGetEvaluatorVersionsRequest) (resp *evaluatorservice.BatchGetEvaluatorVersionsResponse, err error) {
-	evaluatorDOList, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, ptr.Of(request.WorkspaceID), request.GetEvaluatorVersionIds(), request.GetIncludeDeleted())
+	// 查询时不传 space_id，允许查询所有空间的 evaluator
+	evaluatorDOList, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, nil, request.GetEvaluatorVersionIds(), request.GetIncludeDeleted())
 	if err != nil {
 		return nil, err
 	}
 	if len(evaluatorDOList) == 0 {
 		return &evaluatorservice.BatchGetEvaluatorVersionsResponse{}, nil
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorDOList[0].SpaceID, 10),
-		SpaceID:       evaluatorDOList[0].SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return nil, err
+	// 按 SpaceID 分组进行权限校验
+	requestWorkspaceID := request.WorkspaceID
+	checkedSpaceIDs := make(map[int64]bool)
+	for _, evaluatorDO := range evaluatorDOList {
+		spaceID := evaluatorDO.SpaceID
+		// 如果已经校验过该空间，跳过
+		if checkedSpaceIDs[spaceID] {
+			continue
+		}
+		checkedSpaceIDs[spaceID] = true
+
+		// 如果是请求的空间下的，使用原来的权限校验逻辑
+		if spaceID == requestWorkspaceID {
+			err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+				ObjectID:      strconv.FormatInt(spaceID, 10),
+				SpaceID:       spaceID,
+				ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+			})
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			// 如果不是，使用预置空间校验的 authBuiltinManagement 函数进行校验
+			err = e.authBuiltinManagement(ctx, spaceID, spaceTypeBuiltin, false)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	dtoList := make([]*evaluatordto.Evaluator, 0, len(evaluatorDOList))
 	for _, evaluatorDO := range evaluatorDOList {
