@@ -97,7 +97,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, iTrajectoryConfigDao)
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, idgen2, iTrajectoryConfigDao)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, iTrajectoryConfigDao)
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, idgen2, iTrajectoryConfigDao)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func InitMetricApplication(ckDb ck.Provider, configFactory conf.IConfigLoaderFac
 	return iMetricApplication, nil
 }
 
-func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, db2 db.Provider, mqFactory mq.IFactory, persistentCmdable redis.PersistentCmdable) (ITraceIngestionApplication, error) {
+func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, db2 db.Provider, mqFactory mq.IFactory, persistentCmdable redis.PersistentCmdable, idGenerator idgen.IIDGenerator) (ITraceIngestionApplication, error) {
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
 	if err != nil {
 		return nil, err
@@ -256,7 +256,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, iTrajectoryConfigDao)
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, idGenerator, iTrajectoryConfigDao)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +313,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, iTrajectoryConfigDao)
+	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, idgen2, iTrajectoryConfigDao)
 	if err != nil {
 		return nil, err
 	}

@@ -536,30 +536,37 @@ func (r *TraceServiceImpl) orderPreSpans(preAndCurrentSpans []*loop_span.Span, r
 }
 
 func (r *TraceServiceImpl) ListTrajectory(ctx context.Context, req *ListTrajectoryRequest) (*ListTrajectoryResponse, error) {
-	tenants, err := r.getTenants(ctx, req.PlatformType)
-	if err != nil {
-		return nil, err
-	}
-
 	trajectories := make([]*loop_span.Trajectory, 0)
-
 	startTimeAt := req.StartTime
 	if startTimeAt == nil {
 		startTimeAt = ptr.Of(time.Now().UnixMilli() - timeutil.Day2MillSec(90))
 	}
 
-	// todo: 这里没走filter过滤，应该要替换为一凡包装的TraceID换取轨迹span_list的方法
-	// todo： 实际应该先查询trajectory_filter，再过滤
+	trajectoryConfResp, err := r.GetTrajectoryConfig(ctx, &GetTrajectoryConfigRequest{
+		WorkspaceID: req.WorkspaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	SpanTransCfgList := loop_span.SpanTransCfgList{
+		{
+			SpanFilter: trajectoryConfResp.Filters,
+		},
+	}
+
 	for i := range req.TraceIds {
-		spanList, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
-			Tenants:            tenants,
-			TraceID:            req.TraceIds[i],
-			StartAt:            *startTimeAt,
-			Limit:              1000,
-			NotQueryAnnotation: true,
-			OmitColumns:        nil,
-			SelectColumns:      nil,
+		getTraceResp, err := r.GetTrace(ctx, &GetTraceReq{
+			WorkspaceID:  req.WorkspaceID,
+			TraceID:      req.TraceIds[i],
+			StartTime:    *startTimeAt,
+			EndTime:      time.Now().UnixMilli(),
+			PlatformType: req.PlatformType,
+			WithDetail:   true,
 		})
+		if err != nil {
+			return nil, err
+		}
+		spanList, err := SpanTransCfgList.Transform(ctx, getTraceResp.Spans)
 		if err != nil {
 			return nil, err
 		}
@@ -616,6 +623,9 @@ func (r *TraceServiceImpl) spanList2Trajectory(spanList loop_span.SpanList) *loo
 	// 构建agent步骤
 	agentSteps := make([]*loop_span.AgentStep, 0, len(agentSpans))
 	for _, agentSpan := range agentSpans {
+		if agentSpan == nil {
+			continue
+		}
 		agentStep := &loop_span.AgentStep{
 			ID:        &agentSpan.SpanID,
 			ParentID:  &agentSpan.ParentID,
@@ -639,6 +649,9 @@ func (r *TraceServiceImpl) spanList2Trajectory(spanList loop_span.SpanList) *loo
 
 // buildBasicInfo 构建基础信息
 func (r *TraceServiceImpl) buildBasicInfo(span *loop_span.Span) *loop_span.BasicInfo {
+	if span == nil {
+		return nil
+	}
 	startedAt := span.StartTime
 	duration := span.DurationMicros
 
@@ -664,6 +677,9 @@ func (r *TraceServiceImpl) buildBasicInfo(span *loop_span.Span) *loop_span.Basic
 
 // buildAgentSteps 构建agent的子步骤
 func (r *TraceServiceImpl) buildAgentSteps(agentSpan *loop_span.Span, spanMap map[string]*loop_span.Span) []*loop_span.Step {
+	if agentSpan == nil {
+		return nil
+	}
 	steps := make([]*loop_span.Step, 0)
 
 	// 获取agent的直接子节点
@@ -686,6 +702,9 @@ func (r *TraceServiceImpl) buildAgentSteps(agentSpan *loop_span.Span, spanMap ma
 
 // getDirectChildren 获取直接子节点
 func (r *TraceServiceImpl) getDirectChildren(parentSpan *loop_span.Span, spanMap map[string]*loop_span.Span) []*loop_span.Span {
+	if parentSpan == nil {
+		return nil
+	}
 	children := make([]*loop_span.Span, 0)
 
 	for _, span := range spanMap {
@@ -708,6 +727,9 @@ func (r *TraceServiceImpl) getDirectChildren(parentSpan *loop_span.Span, spanMap
 
 // buildStep 构建步骤
 func (r *TraceServiceImpl) buildStep(span *loop_span.Span) *loop_span.Step {
+	if span == nil {
+		return nil
+	}
 	stepType := r.getStepType(span)
 
 	step := &loop_span.Step{
@@ -730,6 +752,9 @@ func (r *TraceServiceImpl) buildStep(span *loop_span.Span) *loop_span.Step {
 
 // findFirstAgentModelToolNode 向下深度遍历，找到第一个agent/model/tool节点
 func (r *TraceServiceImpl) findFirstAgentModelToolNode(startSpan *loop_span.Span, spanMap map[string]*loop_span.Span) *loop_span.Step {
+	if startSpan == nil {
+		return nil
+	}
 	stepType := r.getStepType(startSpan)
 
 	// 如果当前节点就是agent/model/tool，直接返回
@@ -750,6 +775,9 @@ func (r *TraceServiceImpl) findFirstAgentModelToolNode(startSpan *loop_span.Span
 
 // getStepType 获取步骤类型
 func (r *TraceServiceImpl) getStepType(span *loop_span.Span) loop_span.StepType {
+	if span == nil {
+		return ""
+	}
 	switch span.SpanType {
 	case "agent":
 		return loop_span.StepTypeAgent
@@ -767,6 +795,9 @@ func (r *TraceServiceImpl) getStepType(span *loop_span.Span) loop_span.StepType 
 
 // buildModelInfo 构建模型信息
 func (r *TraceServiceImpl) buildModelInfo(span *loop_span.Span) *loop_span.ModelInfo {
+	if span == nil {
+		return nil
+	}
 	modelInfo := &loop_span.ModelInfo{}
 
 	// 从tags中提取模型相关信息

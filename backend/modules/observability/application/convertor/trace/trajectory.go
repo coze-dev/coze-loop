@@ -122,6 +122,9 @@ func BasicInfoDO2DTO(info *loop_span.BasicInfo) *common.BasicInfo {
 }
 
 func ErrorDO2DTO(e *loop_span.Error) *common.Error {
+	if e == nil {
+		return nil
+	}
 	return &common.Error{
 		Code: e.Code,
 		Msg:  e.Msg,

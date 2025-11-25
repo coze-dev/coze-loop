@@ -39,6 +39,7 @@ func NewTraceCKRepoImpl(
 	traceConfig config.ITraceConfig,
 	spanRedisDao redis.ISpansRedisDao,
 	spanProducer mq.ISpanProducer,
+	idGenerator idgen.IIDGenerator,
 	trajectoryConfDao mysql.ITrajectoryConfigDao,
 ) (repo.ITraceRepo, error) {
 	return &TraceCkRepoImpl{
@@ -47,6 +48,7 @@ func NewTraceCKRepoImpl(
 		traceConfig:       traceConfig,
 		spanRedisDao:      spanRedisDao,
 		spanProducer:      spanProducer,
+		idGenerator:       idGenerator,
 		trajectoryConfDao: trajectoryConfDao,
 	}, nil
 }

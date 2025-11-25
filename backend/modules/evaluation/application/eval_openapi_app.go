@@ -55,6 +55,11 @@ type EvalOpenAPIApplication struct {
 	evaluatorService service.EvaluatorService
 }
 
+func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest) (r *openapi.GetEvaluationItemFieldOApiResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
 	targetSvc service.IEvalTargetService,
 	auth rpc.IAuthProvider,

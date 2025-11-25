@@ -63,6 +63,11 @@ type EvaluationSetApplicationImpl struct {
 	userInfoService             userinfo.UserInfoService
 }
 
+func (e *EvaluationSetApplicationImpl) GetEvaluationItemField(ctx context.Context, req *eval_set.GetEvaluationItemFieldRequest) (r *eval_set.GetEvaluationItemFieldResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, req *eval_set.CreateEvaluationSetRequest) (resp *eval_set.CreateEvaluationSetResponse, err error) {
 	defer func() {
 		e.metric.EmitCreate(req.GetWorkspaceID(), err)

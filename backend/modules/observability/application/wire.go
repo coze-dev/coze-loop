@@ -368,6 +368,7 @@ func InitTraceIngestionApplication(
 	db db.Provider,
 	mqFactory mq.IFactory,
 	persistentCmdable redis.PersistentCmdable,
+	idGenerator idgen.IIDGenerator,
 ) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
 	return nil, nil
