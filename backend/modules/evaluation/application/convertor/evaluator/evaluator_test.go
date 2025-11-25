@@ -200,7 +200,7 @@ func TestConvertEvaluatorContent2DO(t *testing.T) {
 	e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
 		CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
 			ProviderEvaluatorCode: gptr.Of("CN:480"),
-			AccessProtocol:        evaluatordto.AccessProtocolRPC,
+			AccessProtocol:        evaluatordto.EvaluatorAccessProtocolRPC,
 			ServiceName:           gptr.Of("test-service"),
 			Cluster:               gptr.Of("test-cluster"),
 			Timeout:               gptr.Of(int64(5000)),
@@ -209,7 +209,7 @@ func TestConvertEvaluatorContent2DO(t *testing.T) {
 	assert.NoError(t, err)
 	if assert.NotNil(t, e) && assert.NotNil(t, e.CustomRPCEvaluatorVersion) {
 		assert.Equal(t, "CN:480", gptr.Indirect(e.CustomRPCEvaluatorVersion.ProviderEvaluatorCode))
-		assert.Equal(t, evaluatordto.AccessProtocolRPC, e.CustomRPCEvaluatorVersion.AccessProtocol)
+		assert.Equal(t, evaluatordto.EvaluatorAccessProtocolRPC, e.CustomRPCEvaluatorVersion.AccessProtocol)
 		assert.Equal(t, "test-service", gptr.Indirect(e.CustomRPCEvaluatorVersion.ServiceName))
 		assert.Equal(t, "test-cluster", gptr.Indirect(e.CustomRPCEvaluatorVersion.Cluster))
 		assert.Equal(t, int64(5000), gptr.Indirect(e.CustomRPCEvaluatorVersion.Timeout))
@@ -219,7 +219,7 @@ func TestConvertEvaluatorContent2DO(t *testing.T) {
 	e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
 		CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
 			ProviderEvaluatorCode: gptr.Of("CN:480"),
-			AccessProtocol:        evaluatordto.AccessProtocolRPC,
+			AccessProtocol:        evaluatordto.EvaluatorAccessProtocolRPC,
 			ServiceName:           gptr.Of("test-service"),
 		},
 		InputSchemas: []*commondto.ArgsSchema{
@@ -241,7 +241,7 @@ func TestConvertEvaluatorContent2DO(t *testing.T) {
 	e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
 		CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
 			ProviderEvaluatorCode: gptr.Of("CN:480"),
-			AccessProtocol:        evaluatordto.AccessProtocolRPC,
+			AccessProtocol:        evaluatordto.EvaluatorAccessProtocolRPC,
 			ServiceName:           gptr.Of("test-service"),
 		},
 		OutputSchemas: []*commondto.ArgsSchema{
@@ -259,7 +259,7 @@ func TestConvertEvaluatorContent2DO(t *testing.T) {
 	e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
 		CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
 			ProviderEvaluatorCode: gptr.Of("CN:480"),
-			AccessProtocol:        evaluatordto.AccessProtocolRPC,
+			AccessProtocol:        evaluatordto.EvaluatorAccessProtocolRPC,
 			ServiceName:           gptr.Of("test-service"),
 			Cluster:               gptr.Of("prod-cluster"),
 			Timeout:               gptr.Of(int64(10000)),
@@ -275,7 +275,7 @@ func TestConvertEvaluatorContent2DO(t *testing.T) {
 	assert.NoError(t, err)
 	if assert.NotNil(t, e) && assert.NotNil(t, e.CustomRPCEvaluatorVersion) {
 		assert.Equal(t, "CN:480", gptr.Indirect(e.CustomRPCEvaluatorVersion.ProviderEvaluatorCode))
-		assert.Equal(t, evaluatordto.AccessProtocolRPC, e.CustomRPCEvaluatorVersion.AccessProtocol)
+		assert.Equal(t, evaluatordto.EvaluatorAccessProtocolRPC, e.CustomRPCEvaluatorVersion.AccessProtocol)
 		assert.Equal(t, "test-service", gptr.Indirect(e.CustomRPCEvaluatorVersion.ServiceName))
 		assert.Equal(t, "prod-cluster", gptr.Indirect(e.CustomRPCEvaluatorVersion.Cluster))
 		assert.Equal(t, int64(10000), gptr.Indirect(e.CustomRPCEvaluatorVersion.Timeout))
@@ -292,7 +292,7 @@ func TestConvertEvaluatorContent2DO(t *testing.T) {
 	e, err = ConvertEvaluatorContent2DO(&evaluatordto.EvaluatorContent{
 		CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
 			ProviderEvaluatorCode: gptr.Of("CN:480"),
-			AccessProtocol:        evaluatordto.AccessProtocolRPC,
+			AccessProtocol:        evaluatordto.EvaluatorAccessProtocolRPC,
 		},
 		InputSchemas:  []*commondto.ArgsSchema{},
 		OutputSchemas: []*commondto.ArgsSchema{},
@@ -498,7 +498,7 @@ func TestConvertEvaluatorDTO2DO_WithCurrentVersion(t *testing.T) {
 						ReceiveChatHistory: gptr.Of(true),
 						CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
 							ProviderEvaluatorCode: gptr.Of("mock provider evaluator code"),
-							AccessProtocol:        evaluatordto.AccessProtocolRPC,
+							AccessProtocol:        evaluatordto.EvaluatorAccessProtocolRPC,
 							ServiceName:           gptr.Of("mock service name"),
 							Cluster:               gptr.Of("mock cluster"),
 							Timeout:               gptr.Of(int64(time.Second)),
@@ -1231,7 +1231,7 @@ func TestConvertCustomRPCEvaluatorVersionDTO2DO(t *testing.T) {
 				EvaluatorContent: &evaluatordto.EvaluatorContent{
 					CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
 						ProviderEvaluatorCode: gptr.Of("PROVIDER_001"),
-						AccessProtocol:        evaluatordto.AccessProtocol("HTTP"),
+						AccessProtocol:        evaluatordto.EvaluatorAccessProtocol("rpc"),
 						ServiceName:           gptr.Of("test_service"),
 						Cluster:               gptr.Of("test_cluster"),
 						Timeout:               gptr.Of(int64(5000)),
@@ -1263,7 +1263,7 @@ func TestConvertCustomRPCEvaluatorVersionDTO2DO(t *testing.T) {
 				assert.Equal(t, evaluatordo.EvaluatorTypeCustomRPC, result.EvaluatorType)
 				assert.NotNil(t, result.ProviderEvaluatorCode)
 				assert.Equal(t, "PROVIDER_001", *result.ProviderEvaluatorCode)
-				assert.Equal(t, evaluatordo.AccessProtocol("HTTP"), result.AccessProtocol)
+				assert.Equal(t, evaluatordo.EvaluatorAccessProtocol("rpc"), result.AccessProtocol)
 				assert.NotNil(t, result.ServiceName)
 				assert.Equal(t, "test_service", *result.ServiceName)
 				assert.NotNil(t, result.Cluster)
@@ -1339,7 +1339,7 @@ func TestConvertCustomRPCEvaluatorVersionDO2DTO(t *testing.T) {
 				Description:           "Test CustomRPC version",
 				EvaluatorType:         evaluatordo.EvaluatorTypeCustomRPC,
 				ProviderEvaluatorCode: gptr.Of("PROVIDER_001"),
-				AccessProtocol:        evaluatordo.AccessProtocol("HTTP"),
+				AccessProtocol:        evaluatordo.EvaluatorAccessProtocol("rpc"),
 				ServiceName:           gptr.Of("test_service"),
 				Cluster:               gptr.Of("test_cluster"),
 				Timeout:               gptr.Of(int64(5000)),
@@ -1366,7 +1366,7 @@ func TestConvertCustomRPCEvaluatorVersionDO2DTO(t *testing.T) {
 				assert.NotNil(t, result.EvaluatorContent)
 				assert.NotNil(t, result.EvaluatorContent.CustomRPCEvaluator)
 				assert.Equal(t, "PROVIDER_001", *result.EvaluatorContent.CustomRPCEvaluator.ProviderEvaluatorCode)
-				assert.Equal(t, evaluatordto.AccessProtocol("HTTP"), result.EvaluatorContent.CustomRPCEvaluator.AccessProtocol)
+				assert.Equal(t, evaluatordto.EvaluatorAccessProtocol("rpc"), result.EvaluatorContent.CustomRPCEvaluator.AccessProtocol)
 				assert.Equal(t, "test_service", *result.EvaluatorContent.CustomRPCEvaluator.ServiceName)
 				assert.Equal(t, "test_cluster", *result.EvaluatorContent.CustomRPCEvaluator.Cluster)
 				assert.Equal(t, int64(5000), *result.EvaluatorContent.CustomRPCEvaluator.Timeout)
