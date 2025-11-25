@@ -53,7 +53,7 @@ func (e *ExptExportConsumer) HandleMessage(ctx context.Context, ext *mq.MessageE
 func (e *ExptExportConsumer) handleEvent(ctx context.Context, event *entity.ExportCSVEvent) (err error) {
 	switch event.ExportScene {
 	case entity.ExportSceneInsightAnalysis:
-		err = e.exptInsightAnalysisService.GenAnalysisReport(ctx, event.SpaceID, event.ExperimentID, event.ExportID, event.CreatedAt, event.ExptStartTime, event.ExptEndTime)
+		err = e.exptInsightAnalysisService.GenAnalysisReport(ctx, event.SpaceID, event.ExperimentID, event.ExportID, event.CreatedAt)
 		if err != nil {
 			logs.CtxError(ctx, "ExptExportConsumer GenAnalysisReport fail, expt_id:%v, err: %v", event.ExperimentID, err)
 			return nil

@@ -26,6 +26,7 @@ type ExptInsightAnalysisRecord struct {
 	ExptResultFilePath    *string
 	AnalysisReportID      *int64
 	AnalysisReportContent string
+	AnalysisReportIndex   []*InsightAnalysisReportIndex
 	CreatedBy             string
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
@@ -104,3 +105,8 @@ const (
 	// 生成失败
 	ReportStatus_Failed ReportStatus = 3
 )
+
+type InsightAnalysisReportIndex struct {
+	ID    string
+	Title string
+}

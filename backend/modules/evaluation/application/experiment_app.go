@@ -1266,20 +1266,12 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 		return nil, err
 	}
 
-	var startTime, endTime *int64
-	if got.StartAt != nil {
-		startTime = gptr.Of(got.StartAt.UnixMilli())
-	}
-	if got.EndAt != nil {
-		endTime = gptr.Of(got.EndAt.UnixMilli())
-	}
-
 	recordID, err := e.CreateAnalysisRecord(ctx, &entity.ExptInsightAnalysisRecord{
 		SpaceID:   req.GetWorkspaceID(),
 		ExptID:    req.GetExptID(),
 		CreatedBy: session.UserID,
 		Status:    entity.InsightAnalysisStatus_Running,
-	}, session, gptr.Indirect(startTime), gptr.Indirect(endTime))
+	}, session)
 	if err != nil {
 		return nil, err
 	}

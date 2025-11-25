@@ -11,6 +11,19 @@ import (
 
 //go:generate mockgen -destination=mocks/trace_agent.go -package=mocks . IAgentAdapter
 type IAgentAdapter interface {
-	CallTraceAgent(ctx context.Context, spaceID int64, url string, exptId int64, startTime, endTime int64) (int64, error)
-	GetReport(ctx context.Context, spaceID, reportID int64) (report string, status entity.ReportStatus, err error)
+	CallTraceAgent(ctx context.Context, param *CallTraceAgentParam) (int64, error)
+	GetReport(ctx context.Context, spaceID, reportID int64) (report string, list []*entity.InsightAnalysisReportIndex, status entity.ReportStatus, err error)
+}
+
+type CallTraceAgentParam struct {
+	SpaceID int64
+	ExptID  int64
+	Url     string
+
+	StartTime int64 // in ms
+	EndTime   int64 // in ms
+
+	EvalTargetType      entity.EvalTargetType // now support prompt only
+	EvalTargetID        int64
+	EvalTargetVersionID int64
 }

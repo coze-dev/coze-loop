@@ -134,7 +134,7 @@ func TestExptInsightAnalysisServiceImpl_CreateAnalysisRecord(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			result, err := service.CreateAnalysisRecord(ctx, tt.record, tt.session, 0, 0)
+			result, err := service.CreateAnalysisRecord(ctx, tt.record, tt.session)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -325,7 +325,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := service.GenAnalysisReport(ctx, tt.spaceID, tt.exptID, tt.recordID, tt.createAt, 0, 0)
+			err := service.GenAnalysisReport(ctx, tt.spaceID, tt.exptID, tt.recordID, tt.createAt)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
