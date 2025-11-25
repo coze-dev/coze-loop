@@ -55,20 +55,18 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 	}
 }
 
-func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, session *entity.Session, startTime, endTime int64) (int64, error) {
+func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context, record *entity.ExptInsightAnalysisRecord, session *entity.Session) (int64, error) {
 	recordID, err := e.repo.CreateAnalysisRecord(ctx, record)
 	if err != nil {
 		return 0, err
 	}
 
 	exportEvent := &entity.ExportCSVEvent{
-		ExportID:      recordID,
-		ExperimentID:  record.ExptID,
-		SpaceID:       record.SpaceID,
-		ExportScene:   entity.ExportSceneInsightAnalysis,
-		CreatedAt:     time.Now().Unix(),
-		ExptStartTime: startTime,
-		ExptEndTime:   endTime,
+		ExportID:     recordID,
+		ExperimentID: record.ExptID,
+		SpaceID:      record.SpaceID,
+		ExportScene:  entity.ExportSceneInsightAnalysis,
+		CreatedAt:    time.Now().Unix(),
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Second*3))
 	if err != nil {
@@ -78,7 +76,7 @@ func (e ExptInsightAnalysisServiceImpl) CreateAnalysisRecord(ctx context.Context
 	return recordID, nil
 }
 
-func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID, CreateAt, startTime, endTime int64) (err error) {
+func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, spaceID, exptID, recordID, CreateAt int64) (err error) {
 	analysisRecord, err := e.repo.GetAnalysisRecordByID(ctx, spaceID, exptID, recordID)
 	if err != nil {
 		return err
@@ -127,7 +125,29 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		return err
 	}
 
-	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url, exptID, startTime, endTime)
+	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
+	if err != nil {
+		return err
+	}
+
+	param := &rpc.CallTraceAgentParam{
+		SpaceID:        spaceID,
+		ExptID:         exptID,
+		Url:            url,
+		StartTime:      expt.StartAt.UnixMilli(),
+		EndTime:        expt.EndAt.UnixMilli(),
+		EvalTargetType: expt.TargetType,
+	}
+
+	// only allow prompt eval target
+	if param.EvalTargetType == entity.EvalTargetTypeLoopPrompt {
+		param.EvalTargetID = expt.Target.ID
+		param.EvalTargetVersionID = expt.TargetVersionID
+	} else {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("[InsightAgent] Illegal evaltarget type %d for expt %d", param.EvalTargetType, exptID)))
+	}
+
+	reportID, err := e.agentAdapter.CallTraceAgent(ctx, param)
 	if err != nil {
 		return err
 	}
@@ -137,13 +157,11 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 
 	// 发送时间检查分析报告生成状态
 	exportEvent := &entity.ExportCSVEvent{
-		ExportID:      recordID,
-		ExperimentID:  exptID,
-		SpaceID:       spaceID,
-		ExportScene:   entity.ExportSceneInsightAnalysis,
-		CreatedAt:     CreateAt,
-		ExptStartTime: startTime,
-		ExptEndTime:   endTime,
+		ExportID:     recordID,
+		ExperimentID: exptID,
+		SpaceID:      spaceID,
+		ExportScene:  entity.ExportSceneInsightAnalysis,
+		CreatedAt:    CreateAt,
 	}
 	err = e.exptPublisher.PublishExptExportCSVEvent(ctx, exportEvent, gptr.Of(time.Minute*3))
 	if err != nil {
@@ -154,7 +172,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 }
 
 func (e ExptInsightAnalysisServiceImpl) checkAnalysisReportGenStatus(ctx context.Context, record *entity.ExptInsightAnalysisRecord, CreateAt int64) (err error) {
-	_, status, err := e.agentAdapter.GetReport(ctx, record.SpaceID, ptr.From(record.AnalysisReportID))
+	_, _, status, err := e.agentAdapter.GetReport(ctx, record.SpaceID, ptr.From(record.AnalysisReportID))
 	if err != nil {
 		return err
 	}
@@ -214,12 +232,13 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 		return analysisRecord, nil
 	}
 
-	report, _, err := e.agentAdapter.GetReport(ctx, spaceID, ptr.From(analysisRecord.AnalysisReportID))
+	report, reportIdx, _, err := e.agentAdapter.GetReport(ctx, spaceID, ptr.From(analysisRecord.AnalysisReportID))
 	if err != nil {
 		return nil, err
 	}
 
 	analysisRecord.AnalysisReportContent = report
+	analysisRecord.AnalysisReportIndex = reportIdx
 
 	upvoteCount, downvoteCount, err := e.repo.CountFeedbackVote(ctx, spaceID, exptID, recordID)
 	if err != nil {
