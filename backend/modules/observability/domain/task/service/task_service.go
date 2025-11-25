@@ -153,7 +153,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 			TaskID:  id,
 		}
 
-		if err := t.SendBackfillMessage(context.Background(), backfillEvent); err != nil {
+		if err := t.SendBackfillMessage(ctx, backfillEvent); err != nil {
 			// 失败了会有定时任务进行补偿
 			logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", id, err)
 		}
