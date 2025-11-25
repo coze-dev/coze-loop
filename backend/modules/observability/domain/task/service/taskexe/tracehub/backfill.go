@@ -455,7 +455,7 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, err error, sub *
 	}
 
 	if time.Now().UnixMilli()-(sub.tr.RunEndAt.UnixMilli()-sub.tr.RunStartAt.UnixMilli()) < sub.tr.RunEndAt.UnixMilli() {
-		if sendErr := h.sendBackfillMessage(context.Background(), backfillEvent); sendErr != nil {
+		if sendErr := h.sendBackfillMessage(ctx, backfillEvent); sendErr != nil {
 			logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.ID, sendErr)
 			return sendErr
 		}
