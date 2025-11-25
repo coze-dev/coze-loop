@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
@@ -286,8 +287,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 }
 
 func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, execEvaluatorVersionIDs []int64, etec *entity.ExptTurnEvalCtx,
-	targetResult *entity.EvalTargetRecord, history []*entity.Message,
-) (map[int64]*entity.EvaluatorRecord, error) {
+	targetResult *entity.EvalTargetRecord, history []*entity.Message) (map[int64]*entity.EvaluatorRecord, error) {
 	var (
 		recordMap      sync.Map
 		item           = etec.EvalSetItem
@@ -303,14 +303,9 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 
 	execEvalVerIDMap := gslice.ToMap(execEvaluatorVersionIDs, func(t int64) (int64, bool) { return t, true })
 
-	var turnFields map[string]*entity.Content
-	if turn != nil && turn.FieldDataList != nil {
-		turnFields = gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) {
-			return t.Name, t.Content
-		})
-	} else {
-		turnFields = make(map[string]*entity.Content)
-	}
+	turnFields := gcond.IfLazyL(turn != nil && len(turn.FieldDataList) > 0, func() map[string]*entity.Content {
+		return gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content })
+	}, nil)
 	targetFields := targetResult.EvalTargetOutputData.OutputFields
 
 	pool, err := goroutine.NewPool(evaluatorsConf.GetEvaluatorConcurNum())
@@ -331,7 +326,6 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		// 根据评估器类型创建对应的输入数据
 		inputData, err := e.buildEvaluatorInputData(ev.EvaluatorType, ec, turnFields, targetFields)
 		if err != nil {
 			return nil, err
@@ -372,58 +366,30 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	return records, err
 }
 
-// buildEvaluatorInputData 根据评估器类型构建输入数据，提取公共字段映射逻辑
-func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(
-	evaluatorType entity.EvaluatorType,
-	ec *entity.EvaluatorConf,
-	turnFields map[string]*entity.Content,
-	targetFields map[string]*entity.Content,
-) (*entity.EvaluatorInputData, error) {
-	if evaluatorType == entity.EvaluatorTypeCode {
-		// Code评估器：分离字段数据源
-		evaluateDatasetFields, err := e.buildFieldsFromSource(ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
-		if err != nil {
-			return nil, err
-		}
-
-		evaluateTargetOutputFields, err := e.buildFieldsFromSource(ec.IngressConf.TargetAdapter.FieldConfs, targetFields)
-		if err != nil {
-			return nil, err
-		}
-
-		return &entity.EvaluatorInputData{
-			HistoryMessages:            nil,
-			InputFields:                make(map[string]*entity.Content),
-			EvaluateDatasetFields:      evaluateDatasetFields,
-			EvaluateTargetOutputFields: evaluateTargetOutputFields,
-		}, nil
-	} else {
-		// Prompt评估器：保持现有逻辑，合并所有字段到InputFields
-		inputFields := make(map[string]*entity.Content)
-
-		// 处理来自评测对象的字段
-		targetFieldsData, err := e.buildFieldsFromSource(ec.IngressConf.TargetAdapter.FieldConfs, targetFields)
-		if err != nil {
-			return nil, err
-		}
-		for key, content := range targetFieldsData {
-			inputFields[key] = content
-		}
-
-		// 处理来自评测集的字段
-		evalSetFieldsData, err := e.buildFieldsFromSource(ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
-		if err != nil {
-			return nil, err
-		}
-		for key, content := range evalSetFieldsData {
-			inputFields[key] = content
-		}
-
-		return &entity.EvaluatorInputData{
-			HistoryMessages: nil,
-			InputFields:     inputFields,
-		}, nil
+func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(evaluatorType entity.EvaluatorType, ec *entity.EvaluatorConf,
+	turnFields map[string]*entity.Content, targetFields map[string]*entity.Content) (*entity.EvaluatorInputData, error) {
+	fromEvalSet, err := e.buildFieldsFromSource(ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
+	if err != nil {
+		return nil, err
 	}
+	fromTarget, err := e.buildFieldsFromSource(ec.IngressConf.TargetAdapter.FieldConfs, targetFields)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &entity.EvaluatorInputData{InputFields: make(map[string]*entity.Content)}
+	switch evaluatorType {
+	case entity.EvaluatorTypeCode:
+		res.EvaluateDatasetFields = fromEvalSet
+		res.EvaluateTargetOutputFields = fromTarget
+	default:
+		for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
+			for key, content := range fieldCnt {
+				res.InputFields[key] = content
+			}
+		}
+	}
+	return res, nil
 }
 
 // buildFieldsFromSource 从指定数据源构建字段映射，提取重复的字段处理逻辑

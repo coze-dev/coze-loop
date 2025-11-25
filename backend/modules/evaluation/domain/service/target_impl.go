@@ -14,11 +14,15 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
+	"github.com/mohae/deepcopy"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -34,18 +38,24 @@ type EvalTargetServiceImpl struct {
 	metric         metrics.EvalTargetMetrics
 	evalTargetRepo repo.IEvalTargetRepo
 	typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService
+	trajectorySvc  rpc.ITrajectoryAdapter
+	configer       component.IConfiger
 }
 
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
 	metric metrics.EvalTargetMetrics,
 	typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService,
+	trajectorySvc rpc.ITrajectoryAdapter,
+	configer component.IConfiger,
 ) IEvalTargetService {
 	singletonEvalTargetService := &EvalTargetServiceImpl{
 		evalTargetRepo: evalTargetRepo,
 		idgen:          idgen,
 		metric:         metric,
 		typedOperators: typedOperators,
+		trajectorySvc:  trajectorySvc,
+		configer:       configer,
 	}
 	return singletonEvalTargetService
 }
@@ -341,7 +351,31 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	}
 	setSpanInputOutput(ctx, spanParam, inputData, outputData)
 
+	if evalTargetDO.EvalTargetType.SupptTrajectory() {
+		time.Sleep(time.Second * 12)
+		trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
+		if err != nil {
+			return nil, err
+		}
+		outputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
+	}
+
 	return record, nil
+}
+
+func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error) {
+	trajectories, err := e.trajectorySvc.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
+	if err != nil {
+		return nil, err
+	}
+	if len(trajectories) != 1 {
+		return nil, errorx.New("no trajectory found, space_id: %v, trace_id: %v", spaceID, traceID)
+	}
+	trajectory := trajectories[0]
+	if !trajectory.IsValid() {
+		return nil, errorx.New("invalid trajectory, raw: %v", json.Jsonify(trajectory))
+	}
+	return trajectory, nil
 }
 
 func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID int64, targetID int64, targetVersionID int64,
@@ -551,6 +585,29 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		logs.CtxError(ctx, "emitTargetTrace fail, target_id: %v, target_version_id: %v, record_id: %v, err: %v",
 			record.TargetID, record.TargetVersionID, record.ID, err)
 	}
+
+	recordTrajectory := func() error {
+		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, nil)
+		if err != nil {
+			return errorx.Wrapf(err, "ExtractTrajectory fail, space_id: %v, trace_id: %v", param.SpaceID, record.TraceID)
+		}
+		od, ok := deepcopy.Copy(param.OutputData).(*entity.EvalTargetOutputData)
+		if !ok {
+			return errorx.New("ExtractTrajectory fail, outputData fail")
+		}
+		od.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
+		return e.evalTargetRepo.UpdateEvalTargetRecord(ctx, &entity.EvalTargetRecord{
+			ID:                   record.ID,
+			EvalTargetOutputData: od,
+		})
+	}
+
+	goroutine.Go(ctx, func() {
+		time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval())
+		if err := recordTrajectory(); err != nil {
+			logs.CtxError(ctx, "extract and record trajectory fail, record_id: %v, err: %v", record.ID, err)
+		}
+	})
 
 	return nil
 }

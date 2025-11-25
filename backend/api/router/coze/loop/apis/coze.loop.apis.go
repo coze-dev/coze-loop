@@ -344,6 +344,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
 					_traces.POST("/search_tree", append(_searchtracetreeMw(handler), apis.SearchTraceTree)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
+					_traces.POST("/trajectory", append(_listtrajectoryMw(handler), apis.ListTrajectory)...)
+					_traces.GET("/trajectory_config", append(_gettrajectoryconfigMw(handler), apis.GetTrajectoryConfig)...)
+					_traces.POST("/trajectory_config", append(_upserttrajectoryconfigMw(handler), apis.UpsertTrajectoryConfig)...)
 				}
 			}
 		}

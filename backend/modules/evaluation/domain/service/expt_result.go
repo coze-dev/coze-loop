@@ -11,7 +11,7 @@ import (
 
 //go:generate  mockgen -destination  ./mocks/expt_result.go  --package mocks . ExptResultService,ExptAggrResultService
 type ExptResultService interface {
-	MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) ([]*entity.ColumnEvaluator, []*entity.ExptColumnEvaluator, []*entity.ColumnEvalSetField, []*entity.ExptColumnAnnotation, []*entity.ItemResult, int64, error)
+	MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error)
 	// RecordItemRunLogs 将 run_log 表结果同步到 result 表
 	RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error)
 	GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error)

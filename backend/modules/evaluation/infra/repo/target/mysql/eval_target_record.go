@@ -15,12 +15,14 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
 //go:generate mockgen -destination=mocks/eval_target_record.go -package=mocks . EvalTargetRecordDAO
 type EvalTargetRecordDAO interface {
 	Create(ctx context.Context, record *model.TargetRecord) (id int64, err error)
 	Save(ctx context.Context, record *model.TargetRecord) error
+	Update(ctx context.Context, record *model.TargetRecord) error
 	GetByIDAndSpaceID(ctx context.Context, recordID int64, spaceID int64) (*model.TargetRecord, error)
 	ListByIDsAndSpaceID(ctx context.Context, recordIDs []int64, spaceID int64) ([]*model.TargetRecord, error)
 }
@@ -28,6 +30,13 @@ type EvalTargetRecordDAO interface {
 type EvalTargetRecordDAOImpl struct {
 	db    db.Provider
 	query *query.Query
+}
+
+func (e *EvalTargetRecordDAOImpl) Update(ctx context.Context, record *model.TargetRecord) error {
+	if err := e.db.NewSession(ctx).Model(&model.TargetRecord{}).Where("id = ?", record.ID).Updates(record).Error; err != nil {
+		return errorx.Wrapf(err, "TargetRecord update fail, id: %v, updated: %v", record.ID, json.Jsonify(record))
+	}
+	return nil
 }
 
 func NewEvalTargetRecordDAO(db db.Provider) EvalTargetRecordDAO {

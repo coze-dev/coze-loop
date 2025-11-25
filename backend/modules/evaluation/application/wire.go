@@ -12,8 +12,6 @@ import (
 	"github.com/google/wire"
 	"github.com/sirupsen/logrus"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
-
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
@@ -35,6 +33,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
@@ -64,8 +63,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -118,7 +119,6 @@ var (
 		exptredis.NewQuotaDAO,
 		iredis.NewIdemDAO,
 		exptck.NewExptTurnResultFilterDAO,
-		evalconf.NewExptConfiger,
 		rmqproducer.NewExptEventPublisher,
 		exptmtr.NewExperimentMetric,
 		evaltargetmtr.NewEvalTargetMetrics,
@@ -127,6 +127,7 @@ var (
 		tag.NewTagRPCProvider,
 		agent.NewAgentAdapter,
 		notify.NewNotifyRPCAdapter,
+		trajectory.NewAdapter,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
 		evalSetDomainService,
@@ -223,6 +224,7 @@ var (
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
 		experimentSet,
+		evalconf.NewConfiger,
 		evalmtr.NewEvaluationOApiMetrics,
 		domainservice.NewEvaluationSetSchemaServiceImpl,
 	)
@@ -262,9 +264,11 @@ func InitExperimentApplication(
 	tagClient tagservice.Client,
 	objectStorage fileserver.ObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
+	tracerFactory func() observabilitytraceservice.Client,
 ) (IExperimentApplication, error) {
 	wire.Build(
 		experimentSet,
+		evalconf.NewConfiger,
 	)
 	return nil, nil
 }
@@ -311,11 +315,15 @@ func InitEvalTargetApplication(ctx context.Context,
 	authClient authservice.Client,
 	cmdable redis.Cmdable,
 	meter metrics.Meter,
-) evaluation.EvalTargetService {
+	tracerFactory func() observabilitytraceservice.Client,
+	configFactory conf.IConfigLoaderFactory,
+) (evaluation.EvalTargetService, error) {
 	wire.Build(
 		evalTargetSet,
+		evalconf.NewConfiger,
+		trajectory.NewAdapter,
 	)
-	return nil
+	return nil, nil
 }
 
 // NewSandboxConfig 创建默认沙箱配置
@@ -383,6 +391,7 @@ func InitEvalOpenAPIApplication(
 	benefitService benefit.IBenefitService,
 	ckProvider ck.Provider,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
+	tracerFactory func() observabilitytraceservice.Client,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(
 		evalOpenAPISet,

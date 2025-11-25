@@ -47,8 +47,7 @@ type IExperimentApplication interface {
 }
 
 type experimentApplication struct {
-	idgen idgen.IIDGenerator
-	// tupleSvc  service.IExptTupleService
+	idgen         idgen.IIDGenerator
 	manager       service.IExptManager
 	resultSvc     service.ExptResultService
 	configer      component.IConfiger
@@ -89,9 +88,8 @@ func NewExperimentApplication(
 	evaluatorService service.EvaluatorService,
 ) IExperimentApplication {
 	return &experimentApplication{
-		resultSvc: resultSvc,
-		manager:   manager,
-		// tupleSvc:                 tupleSvc,
+		resultSvc:                   resultSvc,
+		manager:                     manager,
 		idgen:                       idgen,
 		configer:                    configer,
 		ExptAggrResultService:       aggResultSvc,
@@ -733,18 +731,19 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 	if err = buildExptTurnResultFilter(req, param); err != nil {
 		return nil, err
 	}
-	columnEvaluators, exptColumnEvaluators, columnEvalSetFields, exptColumnAnnotations, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
+
+	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err
 	}
 
 	resp := &expt.BatchGetExperimentResultResponse{
-		ColumnEvalSetFields:   experiment.ColumnEvalSetFieldsDO2DTOs(columnEvalSetFields),
-		ColumnEvaluators:      experiment.ColumnEvaluatorsDO2DTOs(columnEvaluators),
-		ExptColumnEvaluators:  experiment.ExptColumnEvaluatorsDO2DTOs(exptColumnEvaluators),
-		ExptColumnAnnotations: experiment.ExptColumnAnnotationDO2DTOs(exptColumnAnnotations),
-		Total:                 gptr.Of(total),
-		ItemResults:           experiment.ItemResultsDO2DTOs(itemResults),
+		ColumnEvalSetFields:   experiment.ColumnEvalSetFieldsDO2DTOs(result.ColumnEvalSetFields),
+		ColumnEvaluators:      experiment.ColumnEvaluatorsDO2DTOs(result.ColumnEvaluators),
+		ExptColumnEvaluators:  experiment.ExptColumnEvaluatorsDO2DTOs(result.ExptColumnEvaluators),
+		ExptColumnAnnotations: experiment.ExptColumnAnnotationDO2DTOs(result.ExptColumnAnnotations),
+		Total:                 gptr.Of(result.Total),
+		ItemResults:           experiment.ItemResultsDO2DTOs(result.ItemResults),
 		BaseResp:              base.NewBaseResp(),
 	}
 

@@ -5,6 +5,7 @@ package entity
 
 import (
 	"errors"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
@@ -117,4 +118,15 @@ type ExecuteTargetCtx struct {
 	ItemID int64
 	// 评测集数据项轮次ID
 	TurnID int64
+}
+
+type TargetTrajectoryConf struct {
+	ExtractIntervalSecond int64 `json:"extract_interval_second" mapstructure:"extract_interval_second"`
+}
+
+func (t *TargetTrajectoryConf) GetExtractInterval() time.Duration {
+	if t != nil && t.ExtractIntervalSecond > 0 {
+		return time.Duration(t.ExtractIntervalSecond) * time.Second
+	}
+	return time.Second * 12
 }

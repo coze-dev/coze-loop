@@ -12,9 +12,6 @@ import (
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/google/wire"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
-	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
-
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
@@ -30,10 +27,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/tag/tagservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluatorservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/auth/authservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	dataapp "github.com/coze-dev/coze-loop/backend/modules/data/application"
@@ -45,6 +44,7 @@ import (
 	foundationapp "github.com/coze-dev/coze-loop/backend/modules/foundation/application"
 	llmapp "github.com/coze-dev/coze-loop/backend/modules/llm/application"
 	obapp "github.com/coze-dev/coze-loop/backend/modules/observability/application"
+	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	promptapp "github.com/coze-dev/coze-loop/backend/modules/prompt/application"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -171,6 +171,7 @@ func InitEvaluationHandler(
 	tagClient tagservice.Client,
 	objectStorage fileserver.ObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
+	tracerFactory func() observabilitytraceservice.Client,
 ) (*EvaluationHandler, error) {
 	wire.Build(
 		evaluationSet,

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
@@ -24,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
 
 	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
@@ -53,6 +55,7 @@ type EvalOpenAPIApplication struct {
 	resultSvc                   service.ExptResultService
 	service.ExptAggrResultService
 	evaluatorService service.EvaluatorService
+	configer         component.IConfiger
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -69,6 +72,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	resultSvc service.ExptResultService,
 	aggResultSvc service.ExptAggrResultService,
 	evaluatorService service.EvaluatorService,
+	configer component.IConfiger,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -86,6 +90,7 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		resultSvc:                   resultSvc,
 		ExptAggrResultService:       aggResultSvc,
 		evaluatorService:            evaluatorService,
+		configer:                    configer,
 	}
 }
 
@@ -767,7 +772,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3)); err != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval()+time.Second*3)); err != nil {
 			return nil, err
 		}
 	}
@@ -930,16 +935,18 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 		Page:           entity.NewPage(int(req.GetPageNum()), int(req.GetPageSize())),
 		UseAccelerator: true,
 	}
-	columnEvaluators, _, columnEvalSetFields, _, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
+
+	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err
 	}
+
 	return &openapi.ListExperimentResultOApiResponse{
 		Data: &openapi.ListExperimentResultOpenAPIData{
-			ColumnEvalSetFields: experiment_convertor.OpenAPIColumnEvalSetFieldsDO2DTOs(columnEvalSetFields),
-			ColumnEvaluators:    experiment_convertor.OpenAPIColumnEvaluatorsDO2DTOs(columnEvaluators),
-			Total:               gptr.Of(total),
-			ItemResults:         experiment_convertor.OpenAPIItemResultsDO2DTOs(itemResults),
+			ColumnEvalSetFields: experiment_convertor.OpenAPIColumnEvalSetFieldsDO2DTOs(result.ColumnEvalSetFields),
+			ColumnEvaluators:    experiment_convertor.OpenAPIColumnEvaluatorsDO2DTOs(result.ColumnEvaluators),
+			Total:               gptr.Of(result.Total),
+			ItemResults:         experiment_convertor.OpenAPIItemResultsDO2DTOs(result.ItemResults),
 		},
 	}, nil
 }

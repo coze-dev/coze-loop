@@ -279,21 +279,21 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 			BaseExptID: ptr.Of(exptID),
 			Page:       page,
 		}
-		columnEvaluators, _, columnEvalSetFields, exptColumnAnnotation, itemResults, total, err := e.exptResultService.MGetExperimentResult(ctx, param)
+		result, err := e.exptResultService.MGetExperimentResult(ctx, param)
 		if err != nil {
 			return err
 		}
 
-		colEvaluators = columnEvaluators
-		colEvalSetFields = columnEvalSetFields
-		for _, columnAnnotation := range exptColumnAnnotation {
+		colEvaluators = result.ColumnEvaluators
+		colEvalSetFields = result.ColumnEvalSetFields
+		for _, columnAnnotation := range result.ExptColumnAnnotations {
 			if columnAnnotation.ExptID == exptID {
 				colAnnotation = columnAnnotation.ColumnAnnotations
 			}
 		}
-		allItemResults = append(allItemResults, itemResults...)
+		allItemResults = append(allItemResults, result.ItemResults...)
 
-		if pageNum*pageSize >= int(total) {
+		if pageNum*pageSize >= int(result.Total) {
 			break
 		}
 
