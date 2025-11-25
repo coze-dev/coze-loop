@@ -10,7 +10,6 @@ import (
 	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
@@ -45,8 +44,9 @@ func (a *adapterImpl) GetTracer() observabilitytraceservice.Client {
 }
 
 func (a *adapterImpl) ListTrajectory(ctx context.Context, spaceID int64, traceIDs []string, startTimeMS *int64) ([]*entity.Trajectory, error) {
+	const PlatformType = "default"
 	resp, err := a.GetTracer().ListTrajectory(ctx, &trace.ListTrajectoryRequest{
-		PlatformType: common.PlatformTypeEvaluationTarget,
+		PlatformType: PlatformType,
 		WorkspaceID:  spaceID,
 		TraceIds:     traceIDs,
 		StartTime:    startTimeMS,
