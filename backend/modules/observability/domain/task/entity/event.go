@@ -272,10 +272,10 @@ func (s *OnlineExptTurnEvalResult) GetRunID() (int64, error) {
 }
 
 func (s *OnlineExptTurnEvalResult) GetUserID() string {
-	if s.BaseInfo == nil || s.BaseInfo.UpdatedBy == nil {
+	if s.BaseInfo == nil || s.BaseInfo.CreatedBy == nil {
 		return ""
 	}
-	return s.BaseInfo.UpdatedBy.UserID
+	return s.BaseInfo.CreatedBy.UserID
 }
 
 type EvaluatorRunError struct {
