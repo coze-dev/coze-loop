@@ -154,7 +154,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 }
 
 func (e ExptInsightAnalysisServiceImpl) checkAnalysisReportGenStatus(ctx context.Context, record *entity.ExptInsightAnalysisRecord, CreateAt int64) (err error) {
-	_, status, err := e.agentAdapter.GetReport(ctx, record.SpaceID, ptr.From(record.AnalysisReportID))
+	_, _, status, err := e.agentAdapter.GetReport(ctx, record.SpaceID, ptr.From(record.AnalysisReportID))
 	if err != nil {
 		return err
 	}
@@ -214,12 +214,13 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 		return analysisRecord, nil
 	}
 
-	report, _, err := e.agentAdapter.GetReport(ctx, spaceID, ptr.From(analysisRecord.AnalysisReportID))
+	report, reportIdx, _, err := e.agentAdapter.GetReport(ctx, spaceID, ptr.From(analysisRecord.AnalysisReportID))
 	if err != nil {
 		return nil, err
 	}
 
 	analysisRecord.AnalysisReportContent = report
+	analysisRecord.AnalysisReportIndex = reportIdx
 
 	upvoteCount, downvoteCount, err := e.repo.CountFeedbackVote(ctx, spaceID, exptID, recordID)
 	if err != nil {
