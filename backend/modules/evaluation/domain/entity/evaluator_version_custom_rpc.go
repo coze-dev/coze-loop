@@ -15,6 +15,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
+// EvaluatorAccessProtocol 评估器接入协议类型
+type EvaluatorAccessProtocol = string
+
+const (
+	EvaluatorAccessProtocolRPC = "rpc"
+)
+
 type CustomRPCEvaluatorVersion struct {
 	// standard EvaluatorVersion layer attributes
 	ID            int64         `json:"id"`
@@ -30,12 +37,12 @@ type CustomRPCEvaluatorVersion struct {
 	OutputSchemas []*ArgsSchema `json:"output_schemas"`
 
 	// specific CustomRPCEvaluator layer attributes, refer to CustomRPCEvaluator DTO
-	ProviderEvaluatorCode *string        `json:"provider_evaluator_code"` // provider's evaluator identity code, e.g. provider A may name an evaluator as A001
-	AccessProtocol        AccessProtocol `json:"access_protocol"`         // custom protocol
-	ServiceName           *string        `json:"service_name"`
-	Cluster               *string        `json:"cluster"`
-	Timeout               *int64         `json:"timeout"` // timeout duration in milliseconds(ms)
-	RateLimit             *RateLimit     `json:"rate_limit,omitempty"`
+	ProviderEvaluatorCode *string                 `json:"provider_evaluator_code"` // provider's evaluator identity code, e.g. provider A may name an evaluator as A001
+	AccessProtocol        EvaluatorAccessProtocol `json:"access_protocol"`         // custom protocol
+	ServiceName           *string                 `json:"service_name"`
+	Cluster               *string                 `json:"cluster"`
+	Timeout               *int64                  `json:"timeout"` // timeout duration in milliseconds(ms)
+	RateLimit             *RateLimit              `json:"rate_limit,omitempty"`
 }
 
 func (do *CustomRPCEvaluatorVersion) SetID(id int64) {
