@@ -99,11 +99,13 @@ func (d *PromptRelationDAOImpl) DeleteByMainPrompt(ctx context.Context, mainProm
 
 	q := query.Use(d.db.NewSession(ctx, opts...))
 	tx := q.WithContext(ctx).PromptRelation
-	tx = tx.Where(
-		q.PromptRelation.MainPromptID.Eq(mainPromptID),
-		q.PromptRelation.MainPromptVersion.Eq(mainPromptVersion),
-		q.PromptRelation.MainDraftUserID.Eq(mainDraftUserID),
-	)
+	tx = tx.Where(q.PromptRelation.MainPromptID.Eq(mainPromptID))
+	if mainDraftUserID != "" {
+		tx = tx.Where(q.PromptRelation.MainDraftUserID.Eq(mainDraftUserID))
+	}
+	if mainPromptVersion != "" {
+		tx = tx.Where(q.PromptRelation.MainPromptVersion.Eq(mainPromptVersion))
+	}
 	_, err := tx.Delete()
 	if err != nil {
 		return err

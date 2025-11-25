@@ -5,7 +5,6 @@ package repo
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -167,6 +166,10 @@ func (d *ManageRepoImpl) DeletePrompt(ctx context.Context, promptID int64) (err 
 		return errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("prompt is not found, prompt id = %d", promptID)))
 	}
 	err = d.promptBasicDAO.Delete(ctx, promptID)
+	if err != nil {
+		return err
+	}
+	err = d.promptRelationDAO.DeleteByMainPrompt(ctx, promptBasicPO.ID, "", "")
 	if err != nil {
 		return err
 	}
@@ -1041,7 +1044,7 @@ func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListPa
 
 	// Query all main prompt basic info
 	mainPromptBasics, err := d.MGetPrompt(ctx, getMainPromptPram)
-	if err != nil && !errors.Is(err, errorx.NewByCode(prompterr.ResourceNotFoundCode)) {
+	if err != nil {
 		return nil, err
 	}
 
