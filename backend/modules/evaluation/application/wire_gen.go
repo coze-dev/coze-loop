@@ -30,11 +30,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
-	metrics5 "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	metrics3 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/eval_target"
 	metrics4 "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluation_set"
@@ -64,7 +60,6 @@ import (
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
-	"github.com/sirupsen/logrus"
 )
 
 // Injectors from wire.go:
@@ -93,12 +88,12 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	idempotentService := idem.NewIdempotentService(iIdemDAO)
 	illmProvider := llm.NewLLMRPCProvider(llmcli)
 	evaluatorExecMetrics := evaluator2.NewEvaluatorMetrics(meter)
-	logger := NewLogger()
-	sandboxConfig := NewSandboxConfig()
-	iRuntimeFactory := NewRuntimeFactory(logger, sandboxConfig)
-	iRuntimeManager := NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
+	logger := runtime.NewLogger()
+	sandboxConfig := runtime.NewSandboxConfig()
+	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
+	iRuntimeManager := runtime.NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
-	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
+	v := service.NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
 	iPlainRateLimiter := evaluator.NewPlainRateLimiterImpl(plainLimiterFactory)
 	serviceEvaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v, iPlainRateLimiter)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
@@ -135,7 +130,7 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iEvalTargetRepo := target.NewEvalTargetRepo(idgen2, db2, evalTargetDAO, evalTargetVersionDAO, evalTargetRecordDAO, iLatestWriteTracker)
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(pms, pes)
-	v2 := NewSourceTargetOperators(iPromptRPCAdapter)
+	v2 := service.NewSourceTargetOperators(iPromptRPCAdapter)
 	iTrajectoryAdapter := trajectory.NewAdapter(tracerFactory)
 	iEvalTargetService := service.NewEvalTargetServiceImpl(iEvalTargetRepo, idgen2, evalTargetMetrics, v2, iTrajectoryAdapter, componentIConfiger)
 	iDatasetRPCAdapter := data.NewDatasetRPCAdapter(sds)
@@ -186,12 +181,12 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	idempotentService := idem.NewIdempotentService(iIdemDAO)
 	illmProvider := llm.NewLLMRPCProvider(llmClient)
 	evaluatorExecMetrics := evaluator2.NewEvaluatorMetrics(meter)
-	logger := NewLogger()
-	sandboxConfig := NewSandboxConfig()
-	iRuntimeFactory := NewRuntimeFactory(logger, sandboxConfig)
-	iRuntimeManager := NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
+	logger := runtime.NewLogger()
+	sandboxConfig := runtime.NewSandboxConfig()
+	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
+	iRuntimeManager := runtime.NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
-	v := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
+	v := service.NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, iConfiger, iRuntimeManager, codeBuilderFactory)
 	iPlainRateLimiter := evaluator.NewPlainRateLimiterImpl(plainLimiterFactory)
 	evaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, iConfiger, v, iPlainRateLimiter)
 	exptEventPublisher, err := producer.NewExptEventPublisher(ctx, configFactory, rmqFactory)
@@ -238,7 +233,7 @@ func InitEvalTargetApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iEvalTargetRepo := target.NewEvalTargetRepo(idgen2, db2, evalTargetDAO, evalTargetVersionDAO, evalTargetRecordDAO, iLatestWriteTracker)
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(client, executeClient)
-	v := NewSourceTargetOperators(iPromptRPCAdapter)
+	v := service.NewSourceTargetOperators(iPromptRPCAdapter)
 	iTrajectoryAdapter := trajectory.NewAdapter(tracerFactory)
 	iConfiger, err := conf2.NewConfiger(configFactory)
 	if err != nil {
@@ -265,7 +260,7 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iEvalTargetRepo := target.NewEvalTargetRepo(idgen2, db2, evalTargetDAO, evalTargetVersionDAO, evalTargetRecordDAO, iLatestWriteTracker)
 	evalTargetMetrics := metrics3.NewEvalTargetMetrics(meter)
 	iPromptRPCAdapter := prompt.NewPromptRPCAdapter(client, executeClient)
-	v := NewSourceTargetOperators(iPromptRPCAdapter)
+	v := service.NewSourceTargetOperators(iPromptRPCAdapter)
 	iTrajectoryAdapter := trajectory.NewAdapter(tracerFactory)
 	iConfiger, err := conf2.NewConfiger(configFactory)
 	if err != nil {
@@ -303,12 +298,12 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	idempotentService := idem.NewIdempotentService(iIdemDAO)
 	illmProvider := llm.NewLLMRPCProvider(llmClient)
 	evaluatorExecMetrics := evaluator2.NewEvaluatorMetrics(meter)
-	logger := NewLogger()
-	sandboxConfig := NewSandboxConfig()
-	iRuntimeFactory := NewRuntimeFactory(logger, sandboxConfig)
-	iRuntimeManager := NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
+	logger := runtime.NewLogger()
+	sandboxConfig := runtime.NewSandboxConfig()
+	iRuntimeFactory := runtime.NewRuntimeFactory(logger, sandboxConfig)
+	iRuntimeManager := runtime.NewRuntimeManagerFromFactory(iRuntimeFactory, logger)
 	codeBuilderFactory := service.NewCodeBuilderFactory()
-	v2 := NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, confIConfiger, iRuntimeManager, codeBuilderFactory)
+	v2 := service.NewEvaluatorSourceServices(illmProvider, evaluatorExecMetrics, confIConfiger, iRuntimeManager, codeBuilderFactory)
 	iPlainRateLimiter := evaluator.NewPlainRateLimiterImpl(plainLimiterFactory)
 	evaluatorService := service.NewEvaluatorServiceImpl(idgen2, rateLimiter, rmqFactory, iEvaluatorRepo, iEvaluatorRecordRepo, idempotentService, confIConfiger, v2, iPlainRateLimiter)
 	evaluatorEventPublisher, err := producer.NewEvaluatorEventPublisher(ctx, configFactory, rmqFactory)
@@ -361,93 +356,28 @@ var (
 	flagSet = wire.NewSet(platestwrite.NewLatestWriteTracker)
 
 	experimentSet = wire.NewSet(
-		NewExperimentApplication, service.NewExptManager, service.NewExptResultService, service.NewExptAggrResultService, service.NewExptSchedulerSvc, service.NewExptRecordEvalService, service.NewExptAnnotateService, service.NewExptResultExportService, service.NewInsightAnalysisService, service.NewSchedulerModeFactory, experiment.NewExptRepo, experiment.NewExptStatsRepo, experiment.NewExptAggrResultRepo, experiment.NewExptItemResultRepo, experiment.NewExptTurnResultRepo, experiment.NewExptRunLogRepo, experiment.NewExptTurnResultFilterRepo, experiment.NewExptAnnotateRepo, experiment.NewExptResultExportRecordRepo, experiment.NewExptInsightAnalysisRecordRepo, experiment.NewQuotaService, idem.NewIdempotentService, mysql.NewExptDAO, mysql.NewExptEvaluatorRefDAO, mysql.NewExptRunLogDAO, mysql.NewExptStatsDAO, mysql.NewExptTurnResultDAO, mysql.NewExptItemResultDAO, mysql.NewExptTurnEvaluatorResultRefDAO, mysql.NewExptTurnResultFilterKeyMappingDAO, mysql.NewExptAggrResultDAO, mysql.NewExptTurnAnnotateRecordRefDAO, mysql.NewAnnotateRecordDAO, mysql.NewExptTurnResultTagRefDAO, mysql.NewExptResultExportRecordDAO, mysql.NewExptInsightAnalysisRecordDAO, mysql.NewExptInsightAnalysisFeedbackVoteDAO, mysql.NewExptInsightAnalysisFeedbackCommentDAO, dao.NewQuotaDAO, redis2.NewIdemDAO, ck2.NewExptTurnResultFilterDAO, producer.NewExptEventPublisher, metrics2.NewExperimentMetric, metrics3.NewEvalTargetMetrics, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, tag.NewTagRPCProvider, agent.NewAgentAdapter, notify.NewNotifyRPCAdapter, trajectory.NewAdapter, userinfo.NewUserInfoServiceImpl, NewLock,
-		evalSetDomainService,
-		targetDomainService,
-		evaluatorDomainService,
+		NewExperimentApplication, service.ExperimentDomainServiceSet, service.EvaluationSetDomainServiceSet, service.TargetDomainServiceSet, service.EvaluatorDomainServiceSet, metrics2.ExperimentMetricsSet, metrics3.EvalTargetMetricsSet, foundation.FoundationRPCSet, tag.TagRPCSet, agent.AgentRPCSet, notify.NotifyRPCSet, trajectory.TrajectoryRPCSet, userinfo.NewUserInfoServiceImpl, NewLock,
 		flagSet,
-		evalAsyncRepoSet,
-	)
-
-	evaluatorDomainService = wire.NewSet(service.NewEvaluatorServiceImpl, service.NewEvaluatorRecordServiceImpl, service.NewEvaluatorTemplateService, NewEvaluatorSourceServices, llm.NewLLMRPCProvider, NewRuntimeFactory,
-		NewRuntimeManagerFromFactory,
-		NewSandboxConfig,
-		NewLogger, service.NewCodeBuilderFactory, evaluator.NewEvaluatorRepo, evaluator.NewEvaluatorRecordRepo, evaluator.NewEvaluatorTemplateRepo, mysql2.NewEvaluatorDAO, mysql2.NewEvaluatorVersionDAO, mysql2.NewEvaluatorRecordDAO, mysql2.NewEvaluatorTemplateDAO, mysql2.NewEvaluatorTagDAO, evaluator.NewRateLimiterImpl, conf2.NewEvaluatorConfiger, evaluator2.NewEvaluatorMetrics, producer.NewEvaluatorEventPublisher, evaluator.NewPlainRateLimiterImpl,
 	)
 
 	evaluatorSet = wire.NewSet(
-		NewEvaluatorHandlerImpl, foundation.NewAuthRPCProvider, foundation.NewFileRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl, idem.NewIdempotentService, redis2.NewIdemDAO, producer.NewExptEventPublisher, evaluatorDomainService,
-		flagSet, experiment.NewExptRepo, mysql.NewExptDAO, mysql.NewExptEvaluatorRefDAO,
+		NewEvaluatorHandlerImpl, service.EvaluatorDomainServiceSet, foundation.FoundationRPCSet, userinfo.NewUserInfoServiceImpl, experiment.ExperimentRepoSet, flagSet,
 	)
-
-	evalSetDomainService = wire.NewSet(service.NewEvaluationSetVersionServiceImpl, service.NewEvaluationSetItemServiceImpl, data.NewDatasetRPCAdapter, service.NewEvaluationSetServiceImpl)
 
 	evaluationSetSet = wire.NewSet(
-		NewEvaluationSetApplicationImpl,
-		evalSetDomainService, metrics4.NewEvaluationSetMetrics, service.NewEvaluationSetSchemaServiceImpl, foundation.NewAuthRPCProvider, foundation.NewUserRPCProvider, userinfo.NewUserInfoServiceImpl,
+		NewEvaluationSetApplicationImpl, service.EvaluationSetDomainServiceSet, metrics4.EvaluationSetMetricsSet, foundation.FoundationRPCSet, userinfo.NewUserInfoServiceImpl,
 	)
-
-	targetDomainService = wire.NewSet(service.NewEvalTargetServiceImpl, NewSourceTargetOperators, prompt.NewPromptRPCAdapter, target.NewEvalTargetRepo, mysql3.NewEvalTargetDAO, mysql3.NewEvalTargetRecordDAO, mysql3.NewEvalTargetVersionDAO)
 
 	evalTargetSet = wire.NewSet(
-		NewEvalTargetHandlerImpl, metrics3.NewEvalTargetMetrics, foundation.NewAuthRPCProvider, targetDomainService,
-		flagSet,
-		evalAsyncRepoSet,
+		NewEvalTargetHandlerImpl, service.TargetDomainServiceSet, metrics3.EvalTargetMetricsSet, foundation.FoundationRPCSet, experiment.ExperimentRepoSet, flagSet,
 	)
-
-	evalAsyncRepoSet = wire.NewSet(experiment.NewEvalAsyncRepo, dao.NewEvalAsyncDAO)
 
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
-		experimentSet, conf2.NewConfiger, openapi.NewEvaluationOApiMetrics, service.NewEvaluationSetSchemaServiceImpl,
+		experimentSet, conf2.NewConfiger, openapi.OpenAPIMetricsSet,
 	)
 )
 
-func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter) map[entity.EvalTargetType]service.ISourceEvalTargetOperateService {
-	return map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{entity.EvalTargetTypeLoopPrompt: service.NewPromptSourceEvalTargetServiceImpl(adapter)}
-}
-
 func NewLock(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "evaluation")
-}
-
-// NewSandboxConfig 创建默认沙箱配置
-func NewSandboxConfig() *entity.SandboxConfig {
-	return entity.DefaultSandboxConfig()
-}
-
-// NewLogger 创建默认日志记录器
-func NewLogger() *logrus.Logger {
-	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
-	return logger
-}
-
-// NewRuntimeFactory 创建运行时工厂
-func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
-	return runtime.NewRuntimeFactory(logger, sandboxConfig)
-}
-
-// NewRuntimeManagerFromFactory 从工厂创建运行时管理器
-func NewRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
-	return runtime.NewRuntimeManager(factory, logger)
-}
-
-func NewEvaluatorSourceServices(
-	llmProvider rpc.ILLMProvider,
-	metric metrics5.EvaluatorExecMetrics,
-	config conf2.IConfiger,
-	runtimeManager component.IRuntimeManager,
-	codeBuilderFactory service.CodeBuilderFactory,
-) map[entity.EvaluatorType]service.EvaluatorSourceService {
-
-	codeBuilderFactory.SetRuntimeManager(runtimeManager)
-
-	services := []service.EvaluatorSourceService{service.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config), service.NewEvaluatorSourceCodeServiceImpl(runtimeManager, codeBuilderFactory, metric)}
-
-	serviceMap := make(map[entity.EvaluatorType]service.EvaluatorSourceService)
-	for _, svc := range services {
-		serviceMap[svc.EvaluatorType()] = svc
-	}
-	return serviceMap
 }

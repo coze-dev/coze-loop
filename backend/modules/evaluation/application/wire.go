@@ -10,7 +10,6 @@ import (
 	"context"
 
 	"github.com/google/wire"
-	"github.com/sirupsen/logrus"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -35,39 +34,18 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
-	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
-	componentrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	domainservice "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
-	evaltargetmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/eval_target"
-	evalsetmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluation_set"
-	evaluatormtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
-	exptmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
-	evalmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
-	rmqproducer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
-	evaluatorrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
-	evaluatormysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
-	exptck "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck"
-	exptmysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql"
-	exptredis "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/redis/dao"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/idem"
-	iredis "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/idem/redis"
-	targetrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
+	evaltargetmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/eval_target"
+	evaluationsetmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluation_set"
+	experimentmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
+	openapimetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
+	experimentrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment"
+	agentrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/agent"
+	foundationrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
+	notifyrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
+	tagrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
+	trajectoryrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -79,162 +57,63 @@ var (
 
 	experimentSet = wire.NewSet(
 		NewExperimentApplication,
-		domainservice.NewExptManager,
-		domainservice.NewExptResultService,
-		domainservice.NewExptAggrResultService,
-		domainservice.NewExptSchedulerSvc,
-		domainservice.NewExptRecordEvalService,
-		domainservice.NewExptAnnotateService,
-		domainservice.NewExptResultExportService,
-		domainservice.NewInsightAnalysisService,
-		domainservice.NewSchedulerModeFactory,
-		experiment.NewExptRepo,
-		experiment.NewExptStatsRepo,
-		experiment.NewExptAggrResultRepo,
-		experiment.NewExptItemResultRepo,
-		experiment.NewExptTurnResultRepo,
-		experiment.NewExptRunLogRepo,
-		experiment.NewExptTurnResultFilterRepo,
-		experiment.NewExptAnnotateRepo,
-		experiment.NewExptResultExportRecordRepo,
-		experiment.NewExptInsightAnalysisRecordRepo,
-		experiment.NewQuotaService,
-		idem.NewIdempotentService,
-		exptmysql.NewExptDAO,
-		exptmysql.NewExptEvaluatorRefDAO,
-		exptmysql.NewExptRunLogDAO,
-		exptmysql.NewExptStatsDAO,
-		exptmysql.NewExptTurnResultDAO,
-		exptmysql.NewExptItemResultDAO,
-		exptmysql.NewExptTurnEvaluatorResultRefDAO,
-		exptmysql.NewExptTurnResultFilterKeyMappingDAO,
-		exptmysql.NewExptAggrResultDAO,
-		exptmysql.NewExptTurnAnnotateRecordRefDAO,
-		exptmysql.NewAnnotateRecordDAO,
-		exptmysql.NewExptTurnResultTagRefDAO,
-		exptmysql.NewExptResultExportRecordDAO,
-		exptmysql.NewExptInsightAnalysisRecordDAO,
-		exptmysql.NewExptInsightAnalysisFeedbackVoteDAO,
-		exptmysql.NewExptInsightAnalysisFeedbackCommentDAO,
-		exptredis.NewQuotaDAO,
-		iredis.NewIdemDAO,
-		exptck.NewExptTurnResultFilterDAO,
-		rmqproducer.NewExptEventPublisher,
-		exptmtr.NewExperimentMetric,
-		evaltargetmtr.NewEvalTargetMetrics,
-		foundation.NewAuthRPCProvider,
-		foundation.NewUserRPCProvider,
-		tag.NewTagRPCProvider,
-		agent.NewAgentAdapter,
-		notify.NewNotifyRPCAdapter,
-		trajectory.NewAdapter,
+		// Domain Service Sets
+		domainservice.ExperimentDomainServiceSet,
+		domainservice.EvaluationSetDomainServiceSet,
+		domainservice.TargetDomainServiceSet,
+		domainservice.EvaluatorDomainServiceSet,
+		// Infrastructure Sets
+		experimentmetrics.ExperimentMetricsSet,
+		evaltargetmetrics.EvalTargetMetricsSet,
+		foundationrpc.FoundationRPCSet,
+		tagrpc.TagRPCSet,
+		agentrpc.AgentRPCSet,
+		notifyrpc.NotifyRPCSet,
+		trajectoryrpc.TrajectoryRPCSet,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
-		evalSetDomainService,
-		targetDomainService,
-		evaluatorDomainService,
 		flagSet,
-		evalAsyncRepoSet,
-	)
-
-	evaluatorDomainService = wire.NewSet(
-		domainservice.NewEvaluatorServiceImpl,
-		domainservice.NewEvaluatorRecordServiceImpl,
-		domainservice.NewEvaluatorTemplateService,
-		NewEvaluatorSourceServices,
-		llm.NewLLMRPCProvider,
-		NewRuntimeFactory,
-		NewRuntimeManagerFromFactory,
-		NewSandboxConfig,
-		NewLogger,
-
-		service.NewCodeBuilderFactory,
-		evaluatorrepo.NewEvaluatorRepo,
-		evaluatorrepo.NewEvaluatorRecordRepo,
-		evaluatorrepo.NewEvaluatorTemplateRepo,
-		evaluatormysql.NewEvaluatorDAO,
-		evaluatormysql.NewEvaluatorVersionDAO,
-		evaluatormysql.NewEvaluatorRecordDAO,
-		evaluatormysql.NewEvaluatorTemplateDAO,
-		evaluatormysql.NewEvaluatorTagDAO,
-		evaluatorrepo.NewRateLimiterImpl,
-		evalconf.NewEvaluatorConfiger,
-		evaluatormtr.NewEvaluatorMetrics,
-		rmqproducer.NewEvaluatorEventPublisher,
-		evaluatorrepo.NewPlainRateLimiterImpl,
 	)
 
 	evaluatorSet = wire.NewSet(
 		NewEvaluatorHandlerImpl,
-		foundation.NewAuthRPCProvider,
-		foundation.NewFileRPCProvider,
-		foundation.NewUserRPCProvider,
+		// Domain Service Sets
+		domainservice.EvaluatorDomainServiceSet,
+		// Infrastructure Sets
+		foundationrpc.FoundationRPCSet,
 		userinfo.NewUserInfoServiceImpl,
-		idem.NewIdempotentService,
-		iredis.NewIdemDAO,
-		rmqproducer.NewExptEventPublisher,
-		evaluatorDomainService,
+		experimentrepo.ExperimentRepoSet,
 		flagSet,
-		experiment.NewExptRepo,
-		exptmysql.NewExptDAO,
-		exptmysql.NewExptEvaluatorRefDAO,
-	)
-
-	evalSetDomainService = wire.NewSet(
-		domainservice.NewEvaluationSetVersionServiceImpl,
-		domainservice.NewEvaluationSetItemServiceImpl,
-		data.NewDatasetRPCAdapter,
-		domainservice.NewEvaluationSetServiceImpl,
 	)
 
 	evaluationSetSet = wire.NewSet(
 		NewEvaluationSetApplicationImpl,
-		evalSetDomainService,
-		evalsetmtr.NewEvaluationSetMetrics,
-		domainservice.NewEvaluationSetSchemaServiceImpl,
-		foundation.NewAuthRPCProvider,
-		foundation.NewUserRPCProvider,
+		// Domain Service Sets
+		domainservice.EvaluationSetDomainServiceSet,
+		// Infrastructure Sets
+		evaluationsetmetrics.EvaluationSetMetricsSet,
+		foundationrpc.FoundationRPCSet,
 		userinfo.NewUserInfoServiceImpl,
-	)
-
-	targetDomainService = wire.NewSet(
-		domainservice.NewEvalTargetServiceImpl,
-		NewSourceTargetOperators,
-		prompt.NewPromptRPCAdapter,
-		targetrepo.NewEvalTargetRepo,
-		mysql.NewEvalTargetDAO,
-		mysql.NewEvalTargetRecordDAO,
-		mysql.NewEvalTargetVersionDAO,
 	)
 
 	evalTargetSet = wire.NewSet(
 		NewEvalTargetHandlerImpl,
-		evaltargetmtr.NewEvalTargetMetrics,
-		foundation.NewAuthRPCProvider,
-		targetDomainService,
+		// Domain Service Sets
+		domainservice.TargetDomainServiceSet,
+		// Infrastructure Sets
+		evaltargetmetrics.EvalTargetMetricsSet,
+		foundationrpc.FoundationRPCSet,
+		experimentrepo.ExperimentRepoSet,
 		flagSet,
-		evalAsyncRepoSet,
-	)
-
-	evalAsyncRepoSet = wire.NewSet(
-		experiment.NewEvalAsyncRepo,
-		exptredis.NewEvalAsyncDAO,
 	)
 
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
 		experimentSet,
 		evalconf.NewConfiger,
-		evalmtr.NewEvaluationOApiMetrics,
-		domainservice.NewEvaluationSetSchemaServiceImpl,
+		openapimetrics.OpenAPIMetricsSet,
 	)
 )
-
-func NewSourceTargetOperators(adapter rpc.IPromptRPCAdapter) map[entity.EvalTargetType]service.ISourceEvalTargetOperateService {
-	return map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
-		entity.EvalTargetTypeLoopPrompt: service.NewPromptSourceEvalTargetServiceImpl(adapter),
-	}
-}
 
 func NewLock(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "evaluation")
@@ -321,53 +200,9 @@ func InitEvalTargetApplication(ctx context.Context,
 	wire.Build(
 		evalTargetSet,
 		evalconf.NewConfiger,
-		trajectory.NewAdapter,
+		trajectoryrpc.TrajectoryRPCSet,
 	)
 	return nil, nil
-}
-
-// NewSandboxConfig 创建默认沙箱配置
-func NewSandboxConfig() *entity.SandboxConfig {
-	return entity.DefaultSandboxConfig()
-}
-
-// NewLogger 创建默认日志记录器
-func NewLogger() *logrus.Logger {
-	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
-	return logger
-}
-
-// NewRuntimeFactory 创建运行时工厂
-func NewRuntimeFactory(logger *logrus.Logger, sandboxConfig *entity.SandboxConfig) component.IRuntimeFactory {
-	return runtime.NewRuntimeFactory(logger, sandboxConfig)
-}
-
-// NewRuntimeManagerFromFactory 从工厂创建运行时管理器
-func NewRuntimeManagerFromFactory(factory component.IRuntimeFactory, logger *logrus.Logger) component.IRuntimeManager {
-	return runtime.NewRuntimeManager(factory, logger)
-}
-
-func NewEvaluatorSourceServices(
-	llmProvider componentrpc.ILLMProvider,
-	metric mtr.EvaluatorExecMetrics,
-	config evalconf.IConfiger,
-	runtimeManager component.IRuntimeManager,
-	codeBuilderFactory service.CodeBuilderFactory,
-) map[entity.EvaluatorType]domainservice.EvaluatorSourceService {
-	// 设置codeBuilderFactory的runtimeManager依赖
-	codeBuilderFactory.SetRuntimeManager(runtimeManager)
-
-	services := []domainservice.EvaluatorSourceService{
-		domainservice.NewEvaluatorSourcePromptServiceImpl(llmProvider, metric, config),
-		domainservice.NewEvaluatorSourceCodeServiceImpl(runtimeManager, codeBuilderFactory, metric),
-	}
-
-	serviceMap := make(map[entity.EvaluatorType]domainservice.EvaluatorSourceService)
-	for _, svc := range services {
-		serviceMap[svc.EvaluatorType()] = svc
-	}
-	return serviceMap
 }
 
 func InitEvalOpenAPIApplication(
