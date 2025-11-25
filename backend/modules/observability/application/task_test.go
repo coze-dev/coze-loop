@@ -198,6 +198,7 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 					EndAt:   gptr.Of(time.Now().Add(2 * time.Hour).UnixMilli()),
 				},
 			},
+			TaskStatus: gptr.Of(taskdto.TaskStatusPending),
 		}
 	}
 
@@ -263,9 +264,35 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 			},
 		},
 		{
+			name:          "error with invalid user id",
+			ctx:           context.Background(),
+			req:           &taskapi.CreateTaskRequest{Task: taskForSuccess},
+			expectResp:    nil,
+			expectErrCode: obErrorx.UserParseFailedCode,
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
+				auth := rpcmock.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, strconv.FormatInt(123, 10), false).Return(nil)
+				svcMock := svcmock.NewMockITaskService(ctrl)
+				return svcMock, auth
+			},
+		},
+		{
 			name:       "success with trace app",
 			ctx:        ctxWithAppID(717152),
 			req:        &taskapi.CreateTaskRequest{Task: taskForSuccess},
+			expectResp: &taskapi.CreateTaskResponse{TaskID: gptr.Of(int64(1000))},
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
+				auth := rpcmock.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, strconv.FormatInt(123, 10), false).Return(nil)
+				svcMock := svcmock.NewMockITaskService(ctrl)
+				svcMock.EXPECT().CreateTask(gomock.Any(), gomock.AssignableToTypeOf(&svc.CreateTaskReq{})).Return(&svc.CreateTaskResp{TaskID: gptr.Of(int64(1000))}, nil)
+				return svcMock, auth
+			},
+		},
+		{
+			name:       "success with user id",
+			ctx:        context.Background(),
+			req:        &taskapi.CreateTaskRequest{Task: taskForSuccess, Session: &commondomain.Session{UserID: gptr.Of("1")}},
 			expectResp: &taskapi.CreateTaskResponse{TaskID: gptr.Of(int64(1000))},
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
