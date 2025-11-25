@@ -439,7 +439,9 @@ func (app *PromptManageApplicationImpl) ListPrompt(ctx context.Context, request 
 			continue
 		}
 		userIDSet[promptDTO.PromptBasic.GetCreatedBy()] = struct{}{}
-		userIDSet[promptDTO.PromptBasic.GetUpdatedBy()] = struct{}{}
+		if lo.IsNotEmpty(promptDTO.PromptBasic.GetUpdatedBy()) {
+			userIDSet[promptDTO.PromptBasic.GetUpdatedBy()] = struct{}{}
+		}
 	}
 	userDOs, err := app.userRPCProvider.MGetUserInfo(ctx, maps.Keys(userIDSet))
 	if err != nil {

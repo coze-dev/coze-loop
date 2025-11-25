@@ -5,6 +5,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -1040,7 +1041,7 @@ func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListPa
 
 	// Query all main prompt basic info
 	mainPromptBasics, err := d.MGetPrompt(ctx, getMainPromptPram)
-	if err != nil {
+	if err != nil && !errors.Is(err, errorx.NewByCode(prompterr.ResourceNotFoundCode)) {
 		return nil, err
 	}
 
