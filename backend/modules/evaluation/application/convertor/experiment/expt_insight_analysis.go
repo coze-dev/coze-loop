@@ -20,6 +20,7 @@ func ExptInsightAnalysisRecordDO2DTO(do *entity.ExptInsightAnalysisRecord) *doma
 		AnalysisStatus:              InsightAnalysisStatus2DTO(do.Status),
 		AnalysisReportID:            do.AnalysisReportID,
 		AnalysisReportContent:       ptr.Of(do.AnalysisReportContent),
+		AnalysisReportIndex:         AnalysisReportIndex2DTO(do.AnalysisReportIndex),
 		ExptInsightAnalysisFeedback: ExptInsightAnalysisFeedbackDO2DTO(do.ExptInsightAnalysisFeedback),
 		BaseInfo: &domain_common.BaseInfo{
 			CreatedBy: &domain_common.UserInfo{
@@ -28,6 +29,20 @@ func ExptInsightAnalysisRecordDO2DTO(do *entity.ExptInsightAnalysisRecord) *doma
 			CreatedAt: ptr.Of(do.CreatedAt.Unix()),
 			UpdatedAt: ptr.Of(do.UpdatedAt.Unix()),
 		},
+	}
+	return dto
+}
+
+func AnalysisReportIndex2DTO(index []*entity.InsightAnalysisReportIndex) []*domain_expt.ExptInsightAnalysisIndex {
+	if len(index) == 0 {
+		return nil
+	}
+	dto := make([]*domain_expt.ExptInsightAnalysisIndex, 0, len(index))
+	for _, item := range index {
+		dto = append(dto, &domain_expt.ExptInsightAnalysisIndex{
+			ID:    ptr.Of(item.ID),
+			Title: ptr.Of(item.Title),
+		})
 	}
 	return dto
 }
