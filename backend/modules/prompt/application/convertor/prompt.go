@@ -474,7 +474,7 @@ func ModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
 		PresencePenalty:   dto.PresencePenalty,
 		FrequencyPenalty:  dto.FrequencyPenalty,
 		JSONMode:          dto.JSONMode,
-		Extra:            dto.Extra,
+		Extra:             dto.Extra,
 		ParamConfigValues: BatchParamConfigValueDTO2DO(dto.ParamConfigValues),
 	}
 }
