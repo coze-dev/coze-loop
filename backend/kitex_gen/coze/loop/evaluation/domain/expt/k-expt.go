@@ -12093,7 +12093,7 @@ func (p *ExptInsightAnalysisRecord) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 7:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField7(buf[offset:])
 				offset += l
 				if err != nil {
@@ -12120,9 +12120,9 @@ func (p *ExptInsightAnalysisRecord) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 9:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField9(buf[offset:])
+		case 21:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField21(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -12259,6 +12259,30 @@ func (p *ExptInsightAnalysisRecord) FastReadField6(buf []byte) (int, error) {
 
 func (p *ExptInsightAnalysisRecord) FastReadField7(buf []byte) (int, error) {
 	offset := 0
+	_field := NewExptInsightAnalysisFeedback()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ExptInsightAnalysisFeedback = _field
+	return offset, nil
+}
+
+func (p *ExptInsightAnalysisRecord) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewBaseInfo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.BaseInfo = _field
+	return offset, nil
+}
+
+func (p *ExptInsightAnalysisRecord) FastReadField21(buf []byte) (int, error) {
+	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
 	offset += l
@@ -12282,30 +12306,6 @@ func (p *ExptInsightAnalysisRecord) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExptInsightAnalysisRecord) FastReadField8(buf []byte) (int, error) {
-	offset := 0
-	_field := NewExptInsightAnalysisFeedback()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.ExptInsightAnalysisFeedback = _field
-	return offset, nil
-}
-
-func (p *ExptInsightAnalysisRecord) FastReadField9(buf []byte) (int, error) {
-	offset := 0
-	_field := common.NewBaseInfo()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.BaseInfo = _field
-	return offset, nil
-}
-
 func (p *ExptInsightAnalysisRecord) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -12321,7 +12321,7 @@ func (p *ExptInsightAnalysisRecord) FastWriteNocopy(buf []byte, w thrift.NocopyW
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
-		offset += p.fastWriteField9(buf[offset:], w)
+		offset += p.fastWriteField21(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -12338,7 +12338,7 @@ func (p *ExptInsightAnalysisRecord) BLength() int {
 		l += p.field6Length()
 		l += p.field7Length()
 		l += p.field8Length()
-		l += p.field9Length()
+		l += p.field21Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -12392,8 +12392,26 @@ func (p *ExptInsightAnalysisRecord) fastWriteField6(buf []byte, w thrift.NocopyW
 
 func (p *ExptInsightAnalysisRecord) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
+	if p.IsSetExptInsightAnalysisFeedback() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 7)
+		offset += p.ExptInsightAnalysisFeedback.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ExptInsightAnalysisRecord) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBaseInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 8)
+		offset += p.BaseInfo.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ExptInsightAnalysisRecord) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
 	if p.IsSetAnalysisReportIndex() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 7)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 21)
 		listBeginOffset := offset
 		offset += thrift.Binary.ListBeginLength()
 		var length int
@@ -12402,24 +12420,6 @@ func (p *ExptInsightAnalysisRecord) fastWriteField7(buf []byte, w thrift.NocopyW
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
-	}
-	return offset
-}
-
-func (p *ExptInsightAnalysisRecord) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetExptInsightAnalysisFeedback() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 8)
-		offset += p.ExptInsightAnalysisFeedback.FastWriteNocopy(buf[offset:], w)
-	}
-	return offset
-}
-
-func (p *ExptInsightAnalysisRecord) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetBaseInfo() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 9)
-		offset += p.BaseInfo.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -12472,19 +12472,6 @@ func (p *ExptInsightAnalysisRecord) field6Length() int {
 
 func (p *ExptInsightAnalysisRecord) field7Length() int {
 	l := 0
-	if p.IsSetAnalysisReportIndex() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.AnalysisReportIndex {
-			_ = v
-			l += v.BLength()
-		}
-	}
-	return l
-}
-
-func (p *ExptInsightAnalysisRecord) field8Length() int {
-	l := 0
 	if p.IsSetExptInsightAnalysisFeedback() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.ExptInsightAnalysisFeedback.BLength()
@@ -12492,11 +12479,24 @@ func (p *ExptInsightAnalysisRecord) field8Length() int {
 	return l
 }
 
-func (p *ExptInsightAnalysisRecord) field9Length() int {
+func (p *ExptInsightAnalysisRecord) field8Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.BaseInfo.BLength()
+	}
+	return l
+}
+
+func (p *ExptInsightAnalysisRecord) field21Length() int {
+	l := 0
+	if p.IsSetAnalysisReportIndex() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.AnalysisReportIndex {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -12528,21 +12528,6 @@ func (p *ExptInsightAnalysisRecord) DeepCopy(s interface{}) error {
 		p.AnalysisReportContent = &tmp
 	}
 
-	if src.AnalysisReportIndex != nil {
-		p.AnalysisReportIndex = make([]*ExptInsightAnalysisIndex, 0, len(src.AnalysisReportIndex))
-		for _, elem := range src.AnalysisReportIndex {
-			var _elem *ExptInsightAnalysisIndex
-			if elem != nil {
-				_elem = &ExptInsightAnalysisIndex{}
-				if err := _elem.DeepCopy(elem); err != nil {
-					return err
-				}
-			}
-
-			p.AnalysisReportIndex = append(p.AnalysisReportIndex, _elem)
-		}
-	}
-
 	var _exptInsightAnalysisFeedback *ExptInsightAnalysisFeedback
 	if src.ExptInsightAnalysisFeedback != nil {
 		_exptInsightAnalysisFeedback = &ExptInsightAnalysisFeedback{}
@@ -12560,6 +12545,21 @@ func (p *ExptInsightAnalysisRecord) DeepCopy(s interface{}) error {
 		}
 	}
 	p.BaseInfo = _baseInfo
+
+	if src.AnalysisReportIndex != nil {
+		p.AnalysisReportIndex = make([]*ExptInsightAnalysisIndex, 0, len(src.AnalysisReportIndex))
+		for _, elem := range src.AnalysisReportIndex {
+			var _elem *ExptInsightAnalysisIndex
+			if elem != nil {
+				_elem = &ExptInsightAnalysisIndex{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.AnalysisReportIndex = append(p.AnalysisReportIndex, _elem)
+		}
+	}
 
 	return nil
 }

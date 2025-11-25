@@ -17392,9 +17392,9 @@ type ExptInsightAnalysisRecord struct {
 	AnalysisStatus              InsightAnalysisStatus        `thrift:"analysis_status,4,required" frugal:"4,required,string" form:"analysis_status,required" json:"analysis_status,required" query:"analysis_status,required"`
 	AnalysisReportID            *int64                       `thrift:"analysis_report_id,5,optional" frugal:"5,optional,i64" json:"analysis_report_id" form:"analysis_report_id" query:"analysis_report_id"`
 	AnalysisReportContent       *string                      `thrift:"analysis_report_content,6,optional" frugal:"6,optional,string" form:"analysis_report_content" json:"analysis_report_content,omitempty" query:"analysis_report_content"`
-	AnalysisReportIndex         []*ExptInsightAnalysisIndex  `thrift:"analysis_report_index,7,optional" frugal:"7,optional,list<ExptInsightAnalysisIndex>" form:"analysis_report_index" json:"analysis_report_index,omitempty" query:"analysis_report_index"`
-	ExptInsightAnalysisFeedback *ExptInsightAnalysisFeedback `thrift:"expt_insight_analysis_feedback,8,optional" frugal:"8,optional,ExptInsightAnalysisFeedback" form:"expt_insight_analysis_feedback" json:"expt_insight_analysis_feedback,omitempty" query:"expt_insight_analysis_feedback"`
-	BaseInfo                    *common.BaseInfo             `thrift:"base_info,9,optional" frugal:"9,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	ExptInsightAnalysisFeedback *ExptInsightAnalysisFeedback `thrift:"expt_insight_analysis_feedback,7,optional" frugal:"7,optional,ExptInsightAnalysisFeedback" form:"expt_insight_analysis_feedback" json:"expt_insight_analysis_feedback,omitempty" query:"expt_insight_analysis_feedback"`
+	BaseInfo                    *common.BaseInfo             `thrift:"base_info,8,optional" frugal:"8,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	AnalysisReportIndex         []*ExptInsightAnalysisIndex  `thrift:"analysis_report_index,21,optional" frugal:"21,optional,list<ExptInsightAnalysisIndex>" form:"analysis_report_index" json:"analysis_report_index,omitempty" query:"analysis_report_index"`
 }
 
 func NewExptInsightAnalysisRecord() *ExptInsightAnalysisRecord {
@@ -17456,18 +17456,6 @@ func (p *ExptInsightAnalysisRecord) GetAnalysisReportContent() (v string) {
 	return *p.AnalysisReportContent
 }
 
-var ExptInsightAnalysisRecord_AnalysisReportIndex_DEFAULT []*ExptInsightAnalysisIndex
-
-func (p *ExptInsightAnalysisRecord) GetAnalysisReportIndex() (v []*ExptInsightAnalysisIndex) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetAnalysisReportIndex() {
-		return ExptInsightAnalysisRecord_AnalysisReportIndex_DEFAULT
-	}
-	return p.AnalysisReportIndex
-}
-
 var ExptInsightAnalysisRecord_ExptInsightAnalysisFeedback_DEFAULT *ExptInsightAnalysisFeedback
 
 func (p *ExptInsightAnalysisRecord) GetExptInsightAnalysisFeedback() (v *ExptInsightAnalysisFeedback) {
@@ -17491,6 +17479,18 @@ func (p *ExptInsightAnalysisRecord) GetBaseInfo() (v *common.BaseInfo) {
 	}
 	return p.BaseInfo
 }
+
+var ExptInsightAnalysisRecord_AnalysisReportIndex_DEFAULT []*ExptInsightAnalysisIndex
+
+func (p *ExptInsightAnalysisRecord) GetAnalysisReportIndex() (v []*ExptInsightAnalysisIndex) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAnalysisReportIndex() {
+		return ExptInsightAnalysisRecord_AnalysisReportIndex_DEFAULT
+	}
+	return p.AnalysisReportIndex
+}
 func (p *ExptInsightAnalysisRecord) SetRecordID(val int64) {
 	p.RecordID = val
 }
@@ -17509,26 +17509,26 @@ func (p *ExptInsightAnalysisRecord) SetAnalysisReportID(val *int64) {
 func (p *ExptInsightAnalysisRecord) SetAnalysisReportContent(val *string) {
 	p.AnalysisReportContent = val
 }
-func (p *ExptInsightAnalysisRecord) SetAnalysisReportIndex(val []*ExptInsightAnalysisIndex) {
-	p.AnalysisReportIndex = val
-}
 func (p *ExptInsightAnalysisRecord) SetExptInsightAnalysisFeedback(val *ExptInsightAnalysisFeedback) {
 	p.ExptInsightAnalysisFeedback = val
 }
 func (p *ExptInsightAnalysisRecord) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
+func (p *ExptInsightAnalysisRecord) SetAnalysisReportIndex(val []*ExptInsightAnalysisIndex) {
+	p.AnalysisReportIndex = val
+}
 
 var fieldIDToName_ExptInsightAnalysisRecord = map[int16]string{
-	1: "record_id",
-	2: "workspace_id",
-	3: "expt_id",
-	4: "analysis_status",
-	5: "analysis_report_id",
-	6: "analysis_report_content",
-	7: "analysis_report_index",
-	8: "expt_insight_analysis_feedback",
-	9: "base_info",
+	1:  "record_id",
+	2:  "workspace_id",
+	3:  "expt_id",
+	4:  "analysis_status",
+	5:  "analysis_report_id",
+	6:  "analysis_report_content",
+	7:  "expt_insight_analysis_feedback",
+	8:  "base_info",
+	21: "analysis_report_index",
 }
 
 func (p *ExptInsightAnalysisRecord) IsSetAnalysisReportID() bool {
@@ -17539,16 +17539,16 @@ func (p *ExptInsightAnalysisRecord) IsSetAnalysisReportContent() bool {
 	return p.AnalysisReportContent != nil
 }
 
-func (p *ExptInsightAnalysisRecord) IsSetAnalysisReportIndex() bool {
-	return p.AnalysisReportIndex != nil
-}
-
 func (p *ExptInsightAnalysisRecord) IsSetExptInsightAnalysisFeedback() bool {
 	return p.ExptInsightAnalysisFeedback != nil
 }
 
 func (p *ExptInsightAnalysisRecord) IsSetBaseInfo() bool {
 	return p.BaseInfo != nil
+}
+
+func (p *ExptInsightAnalysisRecord) IsSetAnalysisReportIndex() bool {
+	return p.AnalysisReportIndex != nil
 }
 
 func (p *ExptInsightAnalysisRecord) Read(iprot thrift.TProtocol) (err error) {
@@ -17626,7 +17626,7 @@ func (p *ExptInsightAnalysisRecord) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 7:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -17641,9 +17641,9 @@ func (p *ExptInsightAnalysisRecord) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 9:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField9(iprot); err != nil {
+		case 21:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField21(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17766,6 +17766,22 @@ func (p *ExptInsightAnalysisRecord) ReadField6(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *ExptInsightAnalysisRecord) ReadField7(iprot thrift.TProtocol) error {
+	_field := NewExptInsightAnalysisFeedback()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptInsightAnalysisFeedback = _field
+	return nil
+}
+func (p *ExptInsightAnalysisRecord) ReadField8(iprot thrift.TProtocol) error {
+	_field := common.NewBaseInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseInfo = _field
+	return nil
+}
+func (p *ExptInsightAnalysisRecord) ReadField21(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -17786,22 +17802,6 @@ func (p *ExptInsightAnalysisRecord) ReadField7(iprot thrift.TProtocol) error {
 		return err
 	}
 	p.AnalysisReportIndex = _field
-	return nil
-}
-func (p *ExptInsightAnalysisRecord) ReadField8(iprot thrift.TProtocol) error {
-	_field := NewExptInsightAnalysisFeedback()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.ExptInsightAnalysisFeedback = _field
-	return nil
-}
-func (p *ExptInsightAnalysisRecord) ReadField9(iprot thrift.TProtocol) error {
-	_field := common.NewBaseInfo()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.BaseInfo = _field
 	return nil
 }
 
@@ -17843,8 +17843,8 @@ func (p *ExptInsightAnalysisRecord) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 8
 			goto WriteFieldError
 		}
-		if err = p.writeField9(oprot); err != nil {
-			fieldId = 9
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
 			goto WriteFieldError
 		}
 	}
@@ -17966,8 +17966,44 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *ExptInsightAnalysisRecord) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptInsightAnalysisFeedback() {
+		if err = oprot.WriteFieldBegin("expt_insight_analysis_feedback", thrift.STRUCT, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptInsightAnalysisFeedback.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *ExptInsightAnalysisRecord) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseInfo() {
+		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *ExptInsightAnalysisRecord) writeField21(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAnalysisReportIndex() {
-		if err = oprot.WriteFieldBegin("analysis_report_index", thrift.LIST, 7); err != nil {
+		if err = oprot.WriteFieldBegin("analysis_report_index", thrift.LIST, 21); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.AnalysisReportIndex)); err != nil {
@@ -17987,45 +18023,9 @@ func (p *ExptInsightAnalysisRecord) writeField7(oprot thrift.TProtocol) (err err
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
-}
-func (p *ExptInsightAnalysisRecord) writeField8(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExptInsightAnalysisFeedback() {
-		if err = oprot.WriteFieldBegin("expt_insight_analysis_feedback", thrift.STRUCT, 8); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.ExptInsightAnalysisFeedback.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
-}
-func (p *ExptInsightAnalysisRecord) writeField9(oprot thrift.TProtocol) (err error) {
-	if p.IsSetBaseInfo() {
-		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 9); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.BaseInfo.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
 
 func (p *ExptInsightAnalysisRecord) String() string {
@@ -18060,13 +18060,13 @@ func (p *ExptInsightAnalysisRecord) DeepEqual(ano *ExptInsightAnalysisRecord) bo
 	if !p.Field6DeepEqual(ano.AnalysisReportContent) {
 		return false
 	}
-	if !p.Field7DeepEqual(ano.AnalysisReportIndex) {
+	if !p.Field7DeepEqual(ano.ExptInsightAnalysisFeedback) {
 		return false
 	}
-	if !p.Field8DeepEqual(ano.ExptInsightAnalysisFeedback) {
+	if !p.Field8DeepEqual(ano.BaseInfo) {
 		return false
 	}
-	if !p.Field9DeepEqual(ano.BaseInfo) {
+	if !p.Field21DeepEqual(ano.AnalysisReportIndex) {
 		return false
 	}
 	return true
@@ -18124,7 +18124,21 @@ func (p *ExptInsightAnalysisRecord) Field6DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ExptInsightAnalysisRecord) Field7DeepEqual(src []*ExptInsightAnalysisIndex) bool {
+func (p *ExptInsightAnalysisRecord) Field7DeepEqual(src *ExptInsightAnalysisFeedback) bool {
+
+	if !p.ExptInsightAnalysisFeedback.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptInsightAnalysisRecord) Field8DeepEqual(src *common.BaseInfo) bool {
+
+	if !p.BaseInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptInsightAnalysisRecord) Field21DeepEqual(src []*ExptInsightAnalysisIndex) bool {
 
 	if len(p.AnalysisReportIndex) != len(src) {
 		return false
@@ -18134,20 +18148,6 @@ func (p *ExptInsightAnalysisRecord) Field7DeepEqual(src []*ExptInsightAnalysisIn
 		if !v.DeepEqual(_src) {
 			return false
 		}
-	}
-	return true
-}
-func (p *ExptInsightAnalysisRecord) Field8DeepEqual(src *ExptInsightAnalysisFeedback) bool {
-
-	if !p.ExptInsightAnalysisFeedback.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *ExptInsightAnalysisRecord) Field9DeepEqual(src *common.BaseInfo) bool {
-
-	if !p.BaseInfo.DeepEqual(src) {
-		return false
 	}
 	return true
 }
