@@ -30,9 +30,9 @@ require (
 	github.com/cloudwego/eino-ext/components/model/qianfan v0.0.0-20250520101807-b2008771903a
 	github.com/cloudwego/eino-ext/components/model/qwen v0.0.0-20250520101807-b2008771903a
 	github.com/cloudwego/eino-ext/libs/acl/openai v0.0.0-20250519084852-38fafa73d9ea
-	github.com/cloudwego/gopkg v0.1.4
+	github.com/cloudwego/gopkg v0.1.6
 	github.com/cloudwego/hertz v0.10.1
-	github.com/cloudwego/kitex v0.13.1
+	github.com/cloudwego/kitex v0.15.2
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
 	github.com/coze-dev/cozeloop-go v0.1.10-0.20250901062520-61d3699b1e83
@@ -97,9 +97,46 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+require (
+	code.byted.org/aiops/apm_vendor_byted v0.0.26 // indirect
+	code.byted.org/aiops/metrics_codec v0.0.21 // indirect
+	code.byted.org/aiops/monitoring-common-go v0.0.4 // indirect
+	code.byted.org/bytedtrace/bytedtrace-conf-provider-client-go v0.0.26 // indirect
+	code.byted.org/gopkg/apm_vendor_interface v0.0.3 // indirect
+	code.byted.org/gopkg/asynccache v0.0.0-20201112072351-d630cb60c767 // indirect
+	code.byted.org/gopkg/consul v1.2.6 // indirect
+	code.byted.org/gopkg/ctxvalues v0.4.0 // indirect
+	code.byted.org/gopkg/env v1.6.18 // indirect
+	code.byted.org/gopkg/etcd_util v0.0.0-20181016075009-149305e55690 // indirect
+	code.byted.org/gopkg/etcdproxy v0.1.1 // indirect
+	code.byted.org/gopkg/logs v1.2.26 // indirect
+	code.byted.org/gopkg/metainfo v0.1.1 // indirect
+	code.byted.org/gopkg/metrics v1.4.25 // indirect
+	code.byted.org/gopkg/metrics/v4 v4.1.3 // indirect
+	code.byted.org/gopkg/metrics_core v0.0.38 // indirect
+	code.byted.org/gopkg/net2 v1.5.0 // indirect
+	code.byted.org/gopkg/stats v1.2.12 // indirect
+	code.byted.org/gopkg/tccclient v1.6.0 // indirect
+	code.byted.org/log_market/gosdk v0.0.0-20220328031951-809cbf0ba485 // indirect
+	code.byted.org/middleware/fic_client v0.2.8 // indirect
+	code.byted.org/security/go-spiffe-v2 v1.0.3 // indirect
+	code.byted.org/security/memfd v0.0.1 // indirect
+	code.byted.org/security/sensitive_finder_engine v0.3.17 // indirect
+	code.byted.org/security/zti-jwt-helper-golang v1.0.15 // indirect
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/caarlos0/env/v6 v6.2.2 // indirect
+	github.com/go-kit/log v0.2.1 // indirect
+	github.com/go-logfmt/logfmt v0.5.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+	github.com/hbollon/go-edlib v1.6.0 // indirect
+	github.com/zeebo/errs v1.4.0 // indirect
+	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
+)
 
 require (
+	code.byted.org/kite/kitex v1.21.1
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/coze-dev/coze-loop/backend/modules/observability/lib v0.0.0-00010101000000-000000000000
 )
@@ -138,14 +175,13 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/cloudwego/configmanager v0.2.3 // indirect
-	github.com/cloudwego/dynamicgo v0.6.2 // indirect
+	github.com/cloudwego/dynamicgo v0.7.0 // indirect
 	github.com/cloudwego/fastpb v0.0.5 // indirect
-	github.com/cloudwego/frugal v0.2.5 // indirect
-	github.com/cloudwego/iasm v0.2.0 // indirect
+	github.com/cloudwego/frugal v0.3.0 // indirect
 	github.com/cloudwego/localsession v0.1.2 // indirect
-	github.com/cloudwego/netpoll v0.7.0 // indirect
+	github.com/cloudwego/netpoll v0.7.2 // indirect
 	github.com/cloudwego/runtimex v0.1.1 // indirect
-	github.com/cloudwego/thriftgo v0.4.1 // indirect
+	github.com/cloudwego/thriftgo v0.4.3 // indirect
 	github.com/cohesion-org/deepseek-go v1.2.8 // indirect
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
