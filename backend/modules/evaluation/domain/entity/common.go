@@ -4,8 +4,19 @@
 package entity
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"time"
+
+	"github.com/bytedance/gg/gptr"
+	"github.com/cloudwego/hertz/pkg/app/client"
+	"github.com/cloudwego/hertz/pkg/protocol"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
+
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 )
 
 // ContentType 定义内容类型
@@ -69,6 +80,36 @@ func (c *Content) GetContentType() ContentType {
 func (c *Content) SetContentType(contentType ContentType) {
 	if c != nil {
 		c.ContentType = &contentType
+	}
+}
+
+func (c *Content) PaddingContent(ctx context.Context) error {
+	if c == nil || !gptr.Indirect(c.ContentOmitted) {
+		return nil
+	}
+	if c.FullContent == nil || len(gptr.Indirect(c.FullContent.URL)) == 0 {
+		return errorx.New("invalid ObjectStorage Content: %v", json.Jsonify(c.FullContent))
+	}
+
+	req, resp := protocol.AcquireRequest(), protocol.AcquireResponse()
+	defer protocol.ReleaseRequest(req)
+	defer protocol.ReleaseResponse(resp)
+
+	req.SetMethod(consts.MethodGet)
+	req.SetRequestURI(gptr.Indirect(c.FullContent.URL))
+	if err := client.DoTimeout(ctx, req, resp, time.Second*3); err != nil {
+		return errorx.Wrapf(err, "get content object storage bytes fail, url: %v", c.FullContent.URL)
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return errorx.New("content object storage http req return code %v, url: %v, body: %s", resp.StatusCode(), c.FullContent.URL, conv.UnsafeBytesToString(resp.Body()))
+	}
+
+	switch gptr.Indirect(c.ContentType) {
+	case ContentTypeText:
+		c.Text = gptr.Of(string(resp.Body()))
+		return nil
+	default:
+		return errorx.New("unsupported padding content type: %v", c.ContentType)
 	}
 }
 
