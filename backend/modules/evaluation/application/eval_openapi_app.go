@@ -157,20 +157,20 @@ func (e *EvalOpenAPIApplication) GetEvaluationSetOApi(ctx context.Context, req *
 	if set == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
 	}
-	// var ownerID *string
-	// if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
-	// 	ownerID = set.BaseInfo.CreatedBy.UserID
-	// }
-	// err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-	// 	ObjectID:        strconv.FormatInt(set.ID, 10),
-	// 	SpaceID:         req.GetWorkspaceID(),
-	// 	ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
-	// 	OwnerID:         ownerID,
-	// 	ResourceSpaceID: set.SpaceID,
-	// })
-	// if err != nil {
-	// 	return nil, err
-	// }
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	// 数据转换
 	dto := evaluation_set.OpenAPIEvaluationSetDO2DTO(set)
