@@ -477,8 +477,14 @@ struct ExptInsightAnalysisRecord {
     4: required InsightAnalysisStatus analysis_status
     5: optional i64 analysis_report_id (api.js_conv = 'true', go.tag = 'json:"analysis_report_id"')
     6: optional string analysis_report_content
-    7: optional ExptInsightAnalysisFeedback expt_insight_analysis_feedback
-    8: optional common.BaseInfo base_info
+    7: optional list<ExptInsightAnalysisIndex> analysis_report_index
+    8: optional ExptInsightAnalysisFeedback expt_insight_analysis_feedback
+    9: optional common.BaseInfo base_info
+}
+
+struct ExptInsightAnalysisIndex {
+    1: optional string id
+    2: optional string title
 }
 
 // 洞察分析反馈统计
