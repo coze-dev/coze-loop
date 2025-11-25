@@ -57,9 +57,9 @@ func TestShouldTriggerBackfill(t *testing.T) {
 		task     *taskentity.ObservabilityTask
 		expected bool
 	}{
-		{"nil_time", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval}, false},
-		{"invalid_type", &taskentity.ObservabilityTask{TaskType: "manual"}, false},
-		{"invalid_range", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval, BackfillEffectiveTime: &taskentity.EffectiveTime{StartAt: 10, EndAt: 5}}, false},
+		{"nil_time", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval}, false},
+		{"invalid_type", &taskentity.ObservabilityTask{TaskType: taskentity.TaskType("manual")}, false},
+		{"invalid_range", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval, BackfillEffectiveTime: &taskentity.EffectiveTime{StartAt: 10, EndAt: 5}}, false},
 		{"valid", baseTask, true},
 	}
 
@@ -90,10 +90,10 @@ func TestShouldTriggerNewData(t *testing.T) {
 		task     *taskentity.ObservabilityTask
 		expected bool
 	}{
-		{"invalid_type", &taskentity.ObservabilityTask{TaskType: "manual"}, false},
-		{"nil_time", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval}, false},
-		{"invalid_range", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval, EffectiveTime: &taskentity.EffectiveTime{StartAt: 20, EndAt: 10}}, false},
-		{"start_in_future", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval, EffectiveTime: &taskentity.EffectiveTime{StartAt: now.Add(time.Hour).UnixMilli(), EndAt: now.Add(2 * time.Hour).UnixMilli()}}, false},
+		{"invalid_type", &taskentity.ObservabilityTask{TaskType: taskentity.TaskType("manual")}, false},
+		{"nil_time", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval}, false},
+		{"invalid_range", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval, EffectiveTime: &taskentity.EffectiveTime{StartAt: 20, EndAt: 10}}, false},
+		{"start_in_future", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval, EffectiveTime: &taskentity.EffectiveTime{StartAt: now.Add(time.Hour).UnixMilli(), EndAt: now.Add(2 * time.Hour).UnixMilli()}}, false},
 		{"valid", baseTask, true},
 	}
 

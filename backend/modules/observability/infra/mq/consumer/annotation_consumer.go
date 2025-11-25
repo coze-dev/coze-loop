@@ -22,7 +22,7 @@ type AnnotationConsumer struct {
 	conf.IConfigLoader
 }
 
-func newAnnotationConsumer(handler obapp.IAnnotationQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewAnnotationConsumer(handler obapp.IAnnotationQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &AnnotationConsumer{
 		handler:       handler,
 		IConfigLoader: loader,

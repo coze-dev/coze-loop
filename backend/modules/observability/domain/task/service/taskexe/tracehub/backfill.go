@@ -12,8 +12,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
-	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -36,99 +34,92 @@ const (
 // 定时任务+锁
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. Set the current task context
-	ctx = h.fillCtx(ctx)
 	logs.CtxInfo(ctx, "BackFill msg %+v", event)
 
 	var (
 		lockKey    string
 		lockCancel func()
 	)
-	if h.locker != nil && event != nil {
-		lockKey = fmt.Sprintf(backfillLockKeyTemplate, event.TaskID)
-		locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, backfillLockTTL, backfillLockMaxHold)
-		if lockErr != nil {
-			logs.CtxError(ctx, "backfill acquire lock failed", "task_id", event.TaskID, "err", lockErr)
-			return lockErr
+
+	if h.locker != nil {
+		var err error
+		ctx, lockCancel, lockKey, err = h.acquireBackfillLock(ctx, event.TaskID)
+		if err != nil {
+			return err
 		}
-		if !locked {
-			logs.CtxInfo(ctx, "backfill lock held by others, skip execution", "task_id", event.TaskID)
+
+		// 如果lockKey不为空，说明成功获取了锁，需要在函数退出时释放
+		if lockKey != "" {
+			defer func(cancel func(), key string) {
+				if cancel != nil {
+					cancel()
+				} else if key != "" {
+					if _, err := h.locker.Unlock(key); err != nil {
+						logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
+					}
+				}
+			}(lockCancel, lockKey)
+		} else if lockCancel == nil {
+			// 如果lockKey为空且lockCancel为nil，说明锁被其他实例持有，直接返回
 			return nil
 		}
-		lockCancel = cancel
-		ctx = lockCtx
-		defer func(cancel func()) {
-			if cancel != nil {
-				cancel()
-			} else if lockKey != "" {
-				if _, err := h.locker.Unlock(lockKey); err != nil {
-					logs.CtxWarn(ctx, "backfill release lock failed", "task_id", event.TaskID, "err", err)
-				}
-			}
-		}(lockCancel)
 	}
 
-	sub, err := h.setBackfillTask(ctx, event)
+	sub, err := h.buildSubscriber(ctx, event)
 	if err != nil {
 		return err
 	}
+	if sub == nil || sub.t == nil {
+		return errors.New("subscriber or task config not found")
+	}
 
-	if sub != nil && sub.t != nil && sub.t.GetBaseInfo() != nil && sub.t.GetBaseInfo().GetCreatedBy() != nil {
-		ctx = session.WithCtxUser(ctx, &session.User{ID: sub.t.GetBaseInfo().GetCreatedBy().GetUserID()})
+	// todo tyf 是否需要
+	if sub.t != nil && sub.t.CreatedBy != "" {
+		ctx = session.WithCtxUser(ctx, &session.User{ID: sub.t.CreatedBy})
 	}
 
 	// 2. Determine whether the backfill task is completed to avoid repeated execution
 	isDone, err := h.isBackfillDone(ctx, sub)
 	if err != nil {
-		logs.CtxError(ctx, "check backfill task done failed, task_id=%d, err=%v", sub.t.GetID(), err)
+		logs.CtxError(ctx, "check backfill task done failed, task_id=%d, err=%v", sub.t.ID, err)
 		return err
 	}
 	if isDone {
-		logs.CtxInfo(ctx, "backfill already completed, task_id=%d", sub.t.GetID())
+		logs.CtxInfo(ctx, "backfill already completed, task_id=%d", sub.t.ID)
 		return nil
 	}
 
-	// 顺序执行时重置 flush 错误收集器
-	h.flushErrLock.Lock()
-	h.flushErr = nil
-	h.flushErrLock.Unlock()
-
 	// 5. Retrieve span data from the observability service
-	listErr := h.listAndSendSpans(ctx, sub)
-	if listErr != nil {
-		logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", sub.t.GetID(), listErr)
-	}
+	err = h.listAndSendSpans(ctx, sub)
 
-	// 6. Synchronously wait for completion to ensure all data is processed
-	return h.onHandleDone(ctx, listErr, sub)
+	return h.onHandleDone(ctx, err, sub)
 }
 
-// setBackfillTask sets the context for the current backfill task
-func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity.BackFillEvent) (*spanSubscriber, error) {
-	taskConfig, err := h.taskRepo.GetTask(ctx, event.TaskID, nil, nil)
+// buildSubscriber sets the context for the current backfill task
+func (h *TraceHubServiceImpl) buildSubscriber(ctx context.Context, event *entity.BackFillEvent) (*spanSubscriber, error) {
+	taskDO, err := h.taskRepo.GetTask(ctx, event.TaskID, nil, nil)
 	if err != nil {
 		logs.CtxError(ctx, "get task config failed, task_id=%d, err=%v", event.TaskID, err)
 		return nil, err
 	}
-	if taskConfig == nil {
+	if taskDO == nil {
 		return nil, errors.New("task config not found")
 	}
-	taskConfigDO := tconv.TaskDO2DTO(ctx, taskConfig, nil)
-	taskRun, err := h.taskRepo.GetBackfillTaskRun(ctx, ptr.Of(taskConfigDO.GetWorkspaceID()), taskConfigDO.GetID())
-	if err != nil {
-		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", taskConfigDO.GetID(), err)
-		return nil, err
+
+	taskRun := taskDO.GetBackfillTaskRun()
+	if taskRun == nil {
+		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", taskDO.ID)
+		return nil, errors.New("get backfill task run not found")
 	}
-	taskRunDTO := tconv.TaskRunDO2DTO(ctx, taskRun, nil)
-	proc := h.taskProcessor.GetTaskProcessor(taskConfig.TaskType)
+
+	proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
 	sub := &spanSubscriber{
-		taskID:           taskConfigDO.GetID(),
-		t:                taskConfigDO,
-		tr:               taskRunDTO,
-		processor:        proc,
-		bufCap:           0,
-		maxFlushInterval: time.Second * 5,
-		taskRepo:         h.taskRepo,
-		runType:          task.TaskRunTypeBackFill,
+		taskID:    taskDO.ID,
+		t:         taskDO,
+		tr:        taskRun,
+		processor: proc,
+		taskRepo:  h.taskRepo,
+		runType:   entity.TaskRunTypeBackFill,
 	}
 
 	return sub, nil
@@ -137,7 +128,7 @@ func (h *TraceHubServiceImpl) setBackfillTask(ctx context.Context, event *entity
 // isBackfillDone checks whether the backfill task has been completed
 func (h *TraceHubServiceImpl) isBackfillDone(ctx context.Context, sub *spanSubscriber) (bool, error) {
 	if sub.tr == nil {
-		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.GetID(), nil)
+		logs.CtxError(ctx, "get backfill task run failed, task_id=%d, err=%v", sub.t.ID, nil)
 		return true, nil
 	}
 
@@ -145,30 +136,59 @@ func (h *TraceHubServiceImpl) isBackfillDone(ctx context.Context, sub *spanSubsc
 }
 
 func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSubscriber) error {
-	backfillTime := sub.t.GetRule().GetBackfillEffectiveTime()
-	tenants, err := h.getTenants(ctx, loop_span.PlatformType(sub.t.GetRule().GetSpanFilters().GetPlatformType()))
+	backfillTime := sub.t.BackfillEffectiveTime
+	tenants, err := h.getTenants(ctx, sub.t.SpanFilter.PlatformType)
 	if err != nil {
-		logs.CtxError(ctx, "get tenants failed, task_id=%d, err=%v", sub.t.GetID(), err)
+		logs.CtxError(ctx, "get tenants failed, task_id=%d, err=%v", sub.t.ID, err)
 		return err
 	}
 
 	// Build query parameters
 	listParam := &repo.ListSpansParam{
-		WorkSpaceID:        strconv.FormatInt(sub.t.GetWorkspaceID(), 10),
+		WorkSpaceID:        strconv.FormatInt(sub.t.WorkspaceID, 10),
 		Tenants:            tenants,
 		Filters:            h.buildSpanFilters(ctx, sub.t),
-		StartAt:            backfillTime.GetStartAt(),
-		EndAt:              backfillTime.GetEndAt(),
+		StartAt:            backfillTime.StartAt,
+		EndAt:              backfillTime.EndAt,
 		Limit:              pageSize, // Page size
 		DescByStartTime:    true,
 		NotQueryAnnotation: true, // No annotation query required during backfill
 	}
 
-	if sub.tr.BackfillRunDetail != nil && sub.tr.BackfillRunDetail.LastSpanPageToken != nil {
-		listParam.PageToken = *sub.tr.BackfillRunDetail.LastSpanPageToken
+	if sub.tr.BackfillDetail != nil && sub.tr.BackfillDetail.LastSpanPageToken != nil {
+		listParam.PageToken = *sub.tr.BackfillDetail.LastSpanPageToken
 	}
-	// Paginate query and send data
-	return h.fetchAndSendSpans(ctx, listParam, sub)
+
+	totalCount := int64(0)
+	for {
+		logs.CtxInfo(ctx, "TaskID: %d, ListSpansParam:%v", sub.t.ID, listParam)
+		spans, pageToken, err := h.fetchSpans(ctx, listParam, sub)
+		if err != nil {
+			logs.CtxError(ctx, "list spans failed, task_id=%d, err=%v", sub.t.ID, err)
+			return err
+		}
+
+		err, shouldFinish := h.flushSpans(ctx, spans, sub)
+		if err != nil {
+			return err
+		}
+
+		totalCount += int64(len(spans))
+		logs.CtxInfo(ctx, "Processed %d spans completed, total=%d, task_id=%d", len(spans), totalCount, sub.t.ID)
+
+		if pageToken == "" || shouldFinish {
+			logs.CtxInfo(ctx, "no more spans to process, task_id=%d", sub.t.ID)
+			if err = sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
+				Task:     sub.t,
+				TaskRun:  sub.tr,
+				IsFinish: false,
+			}); err != nil {
+				return err
+			}
+			return nil
+		}
+		listParam.PageToken = pageToken
+	}
 }
 
 type ListSpansReq struct {
@@ -185,22 +205,29 @@ type ListSpansReq struct {
 }
 
 // buildSpanFilters constructs span filter conditions
-func (h *TraceHubServiceImpl) buildSpanFilters(ctx context.Context, taskConfig *task.Task) *loop_span.FilterFields {
+func (h *TraceHubServiceImpl) buildSpanFilters(ctx context.Context, taskConfig *entity.ObservabilityTask) *loop_span.FilterFields {
 	// More complex filters can be built based on the task configuration
 	// Simplified here: return nil to indicate no additional filters
-
-	platformFilter, err := h.buildHelper.BuildPlatformRelatedFilter(ctx, loop_span.PlatformType(taskConfig.GetRule().GetSpanFilters().GetPlatformType()))
+	platformFilter, err := h.buildHelper.BuildPlatformRelatedFilter(ctx, taskConfig.SpanFilter.PlatformType)
 	if err != nil {
+		logs.CtxError(ctx, "build platform filter failed, task_id=%d, err=%v", taskConfig.ID, err)
+		// 不需要重试
 		return nil
 	}
 	builtinFilter, err := h.buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
-		WorkspaceID:  taskConfig.GetWorkspaceID(),
-		SpanListType: loop_span.SpanListType(taskConfig.GetRule().GetSpanFilters().GetSpanListType()),
+		WorkspaceID:  taskConfig.WorkspaceID,
+		SpanListType: taskConfig.SpanFilter.SpanListType,
 	})
 	if err != nil {
+		logs.CtxError(ctx, "build builtin filter failed, task_id=%d, err=%v", taskConfig.ID, err)
+		// 不需要重试
 		return nil
 	}
-	filters := h.combineFilters(builtinFilter, convertor.FilterFieldsDTO2DO(taskConfig.GetRule().GetSpanFilters().GetFilters()))
+	if err = taskConfig.SpanFilter.Filters.Traverse(processSpecificFilter); err != nil {
+		logs.CtxError(ctx, "traverse filter fields failed, task_id=%d, err=%v", taskConfig.ID, err)
+		return nil
+	}
+	filters := h.combineFilters(builtinFilter, &taskConfig.SpanFilter.Filters)
 
 	return filters
 }
@@ -264,138 +291,85 @@ func (h *TraceHubServiceImpl) combineFilters(filters ...*loop_span.FilterFields)
 	return filterAggr
 }
 
-// fetchAndSendSpans paginates and sends span data
-func (h *TraceHubServiceImpl) fetchAndSendSpans(ctx context.Context, listParam *repo.ListSpansParam, sub *spanSubscriber) error {
-	totalCount := int64(0)
-	pageToken := listParam.PageToken
-	for {
-		logs.CtxInfo(ctx, "ListSpansParam:%v", listParam)
-		result, err := h.traceRepo.ListSpans(ctx, listParam)
-		if err != nil {
-			logs.CtxError(ctx, "list spans failed, task_id=%d, page_token=%s, err=%v", sub.t.GetID(), pageToken, err)
-			return err
-		}
-		spans := result.Spans
-		processors, err := h.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
-			WorkspaceId:    sub.t.GetWorkspaceID(),
-			PlatformType:   loop_span.PlatformType(sub.t.GetRule().GetSpanFilters().GetPlatformType()),
-			QueryStartTime: listParam.StartAt,
-			QueryEndTime:   listParam.EndAt,
-		})
-		if err != nil {
-			return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
-		}
-		for _, p := range processors {
-			spans, err = p.Transform(ctx, spans)
-			if err != nil {
-				return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
-			}
-		}
-
-		if len(spans) > 0 {
-			flush := &flushReq{
-				retrievedSpanCount: int64(len(spans)),
-				pageToken:          result.PageToken,
-				spans:              spans,
-				noMore:             !result.HasMore,
-			}
-
-			if err = h.flushSpans(ctx, flush, sub); err != nil {
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					return err
-				}
-			}
-
-			totalCount += int64(len(spans))
-			logs.CtxInfo(ctx, "processed %d spans, total=%d, task_id=%d", len(spans), totalCount, sub.t.GetID())
-		}
-
-		if !result.HasMore {
-			logs.CtxInfo(ctx, "completed listing spans, total_count=%d, task_id=%d", totalCount, sub.t.GetID())
-			break
-		}
-		listParam.PageToken = result.PageToken
-		pageToken = result.PageToken
-	}
-
-	return nil
-}
-
-func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, fr *flushReq, sub *spanSubscriber) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
-	_, _, err := h.doFlush(ctx, fr, sub)
+// fetchSpans paginates span data
+func (h *TraceHubServiceImpl) fetchSpans(ctx context.Context, listParam *repo.ListSpansParam, sub *spanSubscriber) ([]*loop_span.Span, string, error) {
+	result, err := h.traceRepo.ListSpans(ctx, listParam)
 	if err != nil {
-		logs.CtxError(ctx, "flush spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
-		h.flushErrLock.Lock()
-		h.flushErr = append(h.flushErr, err)
-		h.flushErrLock.Unlock()
+		logs.CtxError(ctx, "List spans failed, parma=%v, err=%v", listParam, err)
+		return nil, "", err
+	}
+	logs.CtxInfo(ctx, "Fetch %d spans", len(result.Spans))
+	spans := result.Spans
+	if len(spans) == 0 {
+		return nil, "", nil
 	}
 
-	return nil
+	processors, err := h.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
+		WorkspaceId:    sub.t.WorkspaceID,
+		PlatformType:   sub.t.SpanFilter.PlatformType,
+		QueryStartTime: listParam.StartAt,
+		QueryEndTime:   listParam.EndAt,
+	})
+	if err != nil {
+		return nil, "", errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	for _, p := range processors {
+		spans, err = p.Transform(ctx, spans)
+		if err != nil {
+			return nil, "", errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+		}
+	}
+
+	if !result.HasMore {
+		logs.CtxInfo(ctx, "Completed listing spans, task_id=%d", sub.t.ID)
+		return spans, "", nil
+	}
+
+	return spans, result.PageToken, nil
 }
 
-func (h *TraceHubServiceImpl) doFlush(ctx context.Context, fr *flushReq, sub *spanSubscriber) (flushed, sampled int, _ error) {
-	if fr == nil || len(fr.spans) == 0 {
-		return 0, 0, nil
+func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
+	logs.CtxInfo(ctx, "Start processing %d spans for backfill, task_id=%d", len(spans), sub.t.ID)
+	if len(spans) == 0 {
+		return nil, false
 	}
-
-	logs.CtxInfo(ctx, "processing %d spans for backfill, task_id=%d", len(fr.spans), sub.t.GetID())
 
 	// Apply sampling logic
-	sampledSpans := h.applySampling(fr.spans, sub)
+	sampledSpans := h.applySampling(spans, sub)
 	if len(sampledSpans) == 0 {
-		logs.CtxInfo(ctx, "no spans after sampling, task_id=%d", sub.t.GetID())
-		return len(fr.spans), 0, nil
+		logs.CtxInfo(ctx, "no spans after sampling, task_id=%d", sub.t.ID)
+		return nil, false
 	}
 
 	// Execute specific business logic
-	err := h.processSpansForBackfill(ctx, sampledSpans, sub)
+	err, shouldFinish = h.processSpansForBackfill(ctx, sampledSpans, sub)
 	if err != nil {
-		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", sub.t.GetID(), err)
-		return len(fr.spans), len(sampledSpans), err
+		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", sub.t.ID, err)
+		return
 	}
 
-	sub.tr.BackfillRunDetail = &task.BackfillDetail{
-		LastSpanPageToken: ptr.Of(fr.pageToken),
-	}
+	// todo 不应该这里直接写po字段
 	err = h.taskRepo.UpdateTaskRunWithOCC(ctx, sub.tr.ID, sub.tr.WorkspaceID, map[string]interface{}{
-		"backfill_detail": ToJSONString(ctx, sub.tr.BackfillRunDetail),
+		"backfill_detail": ToJSONString(ctx, sub.tr.BackfillDetail),
 	})
 	if err != nil {
-		logs.CtxError(ctx, "update task run failed, task_id=%d, err=%v", sub.t.GetID(), err)
-		return len(fr.spans), len(sampledSpans), err
-	}
-	if fr.noMore {
-		logs.CtxInfo(ctx, "no more spans to process, task_id=%d", sub.t.GetID())
-		if err = sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-			Task:     tconv.TaskDTO2DO(sub.t, "", nil),
-			TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
-			IsFinish: false,
-		}); err != nil {
-			return len(fr.spans), len(sampledSpans), err
-		}
+		logs.CtxError(ctx, "update task run failed, task_id=%d, err=%v", sub.t.ID, err)
+		return
 	}
 
 	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d",
-		len(sampledSpans), len(fr.spans), sub.t.GetID())
-	return len(fr.spans), len(sampledSpans), nil
+		len(sampledSpans), len(spans), sub.t.ID)
+	return
 }
 
 // applySampling applies sampling logic
 func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSubscriber) []*loop_span.Span {
-	if sub.t == nil || sub.t.Rule == nil {
-		return spans
-	}
-
-	sampler := sub.t.GetRule().GetSampler()
+	sampler := sub.t.Sampler
 	if sampler == nil {
 		return spans
 	}
 
-	sampleRate := sampler.GetSampleRate()
+	sampleRate := sampler.SampleRate
 	if sampleRate >= 1.0 {
 		return spans // 100% sampling
 	}
@@ -418,7 +392,7 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSu
 }
 
 // processSpansForBackfill handles spans for backfill
-func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
+func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
 	// Batch processing spans for efficiency
 	const batchSize = 50
 
@@ -429,79 +403,63 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 		}
 
 		batch := spans[i:end]
-		if err := h.processBatchSpans(ctx, batch, sub); err != nil {
+		err, shouldFinish = h.processBatchSpans(ctx, batch, sub)
+		if err != nil {
 			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v",
-				sub.t.GetID(), i, err)
-			// Continue with the next batch without stopping due to a single failure
-			continue
+				sub.t.ID, i, err)
+			return
+		}
+		if shouldFinish {
+			return
 		}
 		// ml_flow rate-limited: 50/5s
 		time.Sleep(5 * time.Second)
 	}
 
-	return nil
+	return err, shouldFinish
 }
 
 // processBatchSpans processes a batch of span data
-func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) error {
+func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
 	for _, span := range spans {
 		// Execute processing logic according to the task type
 		logs.CtxInfo(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
-			span.SpanID, span.TraceID, sub.t.GetID())
+			span.SpanID, span.TraceID, sub.t.ID)
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
-		taskRunCount, _ := h.taskRepo.GetTaskRunCount(ctx, sub.taskID, sub.tr.GetID())
-		sampler := sub.t.GetRule().GetSampler()
-		if taskCount+1 > sampler.GetSampleSize() {
-			logs.CtxWarn(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d,SampleSize=%d", sub.taskID, sampler.GetSampleSize())
-			if err := sub.processor.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{
-				Task:     tconv.TaskDTO2DO(sub.t, "", nil),
-				TaskRun:  tconv.TaskRunDTO2DO(sub.tr),
-				IsFinish: true,
-			}); err != nil {
-				return err
-			}
-			break
+		sampler := sub.t.Sampler
+		if taskCount+1 > sampler.SampleSize {
+			logs.CtxInfo(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d,SampleSize=%d", sub.taskID, sampler.SampleSize)
+			return nil, true
 		}
-		logs.CtxInfo(ctx, "preDispatch, task_id=%d, taskCount=%d, taskRunCount=%d", sub.taskID, taskCount, taskRunCount)
-		if err := h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
-			return err
+		if err = h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
+			return err, false
 		}
 	}
 
-	return nil
+	return nil, false
 }
 
 // onHandleDone handles completion callback
-func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, listErr error, sub *spanSubscriber) error {
-	// Collect all errors
-	h.flushErrLock.Lock()
-	allErrors := append([]error{}, h.flushErr...)
-	if listErr != nil {
-		allErrors = append(allErrors, listErr)
+func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, err error, sub *spanSubscriber) error {
+	if err == nil {
+		logs.CtxInfo(ctx, "backfill completed successfully, task_id=%d", sub.t.ID)
+		return nil
 	}
-	h.flushErrLock.Unlock()
 
-	if len(allErrors) > 0 {
-		backfillEvent := &entity.BackFillEvent{
-			SpaceID: sub.t.GetWorkspaceID(),
-			TaskID:  sub.t.GetID(),
+	// failed, need retry
+	logs.CtxWarn(ctx, "backfill completed with error: %v, task_id=%d", err, sub.t.ID)
+	backfillEvent := &entity.BackFillEvent{
+		SpaceID: sub.t.WorkspaceID,
+		TaskID:  sub.t.ID,
+	}
+
+	if time.Now().UnixMilli()-(sub.tr.RunEndAt.UnixMilli()-sub.tr.RunStartAt.UnixMilli()) < sub.tr.RunEndAt.UnixMilli() {
+		if sendErr := h.sendBackfillMessage(context.Background(), backfillEvent); sendErr != nil {
+			logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.ID, sendErr)
+			return sendErr
 		}
-
-		// Send MQ message asynchronously without blocking task creation flow
-		go func() {
-			if time.Now().UnixMilli()-(sub.tr.RunEndAt-sub.tr.RunStartAt) < sub.tr.RunEndAt {
-				if err := h.sendBackfillMessage(context.Background(), backfillEvent); err != nil {
-					logs.CtxWarn(ctx, "send backfill message failed, task_id=%d, err=%v", sub.t.GetID(), err)
-				}
-			}
-		}()
-		logs.CtxWarn(ctx, "backfill completed with %d errors, task_id=%d", len(allErrors), sub.t.GetID())
-		// Return the first error as a representative
-		return allErrors[0]
-
 	}
-
-	logs.CtxInfo(ctx, "backfill completed successfully, task_id=%d", sub.t.GetID())
+	// 依靠MQ进行重试
 	return nil
 }
 
@@ -512,4 +470,22 @@ func (h *TraceHubServiceImpl) sendBackfillMessage(ctx context.Context, event *en
 	}
 
 	return h.backfillProducer.SendBackfill(ctx, event)
+}
+
+// acquireBackfillLock 尝试获取回填任务的分布式锁
+// 返回值: 新的上下文, 取消函数, 锁键, 错误
+func (h *TraceHubServiceImpl) acquireBackfillLock(ctx context.Context, taskID int64) (context.Context, func(), string, error) {
+	lockKey := fmt.Sprintf(backfillLockKeyTemplate, taskID)
+	locked, lockCtx, cancel, lockErr := h.locker.LockWithRenew(ctx, lockKey, backfillLockTTL, backfillLockMaxHold)
+	if lockErr != nil {
+		logs.CtxError(ctx, "backfill acquire lock failed", "task_id", taskID, "err", lockErr)
+		return ctx, nil, "", lockErr
+	}
+
+	if !locked {
+		logs.CtxInfo(ctx, "backfill lock held by others, skip execution", "task_id", taskID)
+		return ctx, nil, "", nil
+	}
+
+	return lockCtx, cancel, lockKey, nil
 }
