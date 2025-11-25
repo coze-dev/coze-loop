@@ -867,6 +867,195 @@ func TestEvaluatorHandlerImpl_GetEvaluatorVersion(t *testing.T) {
 	}
 }
 
+// TestEvaluatorHandlerImpl_BatchGetEvaluatorVersions 测试 BatchGetEvaluatorVersions 方法
+func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersions(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		userInfoService:  mockUserInfoService,
+		configer:         mockConfiger,
+	}
+
+	workspaceID := int64(100)
+	builtinSpaceID := int64(200)
+	versionIDs := []int64{11, 22}
+
+	workspaceEvaluator := &entity.Evaluator{
+		ID:            1,
+		SpaceID:       workspaceID,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:          versionIDs[0],
+			EvaluatorID: 1,
+			Version:     "v1",
+		},
+	}
+	builtinEvaluator := &entity.Evaluator{
+		ID:            2,
+		SpaceID:       builtinSpaceID,
+		Builtin:       true,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:          versionIDs[1],
+			EvaluatorID: 2,
+			Version:     "v2",
+		},
+	}
+
+	tests := []struct {
+		name               string
+		req                *evaluatorservice.BatchGetEvaluatorVersionsRequest
+		mockSetup          func()
+		wantErr            bool
+		wantErrCode        int32
+		wantEvaluatorCount int
+	}{
+		{
+			name: "success - workspace evaluators only",
+			req: &evaluatorservice.BatchGetEvaluatorVersionsRequest{
+				WorkspaceID:         workspaceID,
+				EvaluatorVersionIds: []int64{versionIDs[0]},
+				IncludeDeleted:      gptr.Of(false),
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), (*int64)(nil), []int64{versionIDs[0]}, false).
+					Return([]*entity.Evaluator{workspaceEvaluator}, nil)
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(workspaceID, 10),
+						SpaceID:       workspaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+					}).
+					Return(nil)
+
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return().Times(2)
+			},
+			wantEvaluatorCount: 1,
+		},
+		{
+			name: "success - workspace and builtin evaluators",
+			req: &evaluatorservice.BatchGetEvaluatorVersionsRequest{
+				WorkspaceID:         workspaceID,
+				EvaluatorVersionIds: versionIDs,
+				IncludeDeleted:      gptr.Of(false),
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), (*int64)(nil), versionIDs, false).
+					Return([]*entity.Evaluator{workspaceEvaluator, builtinEvaluator}, nil)
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(workspaceID, 10),
+						SpaceID:       workspaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+					}).
+					Return(nil)
+
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{strconv.FormatInt(builtinSpaceID, 10)})
+
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return().Times(2)
+			},
+			wantEvaluatorCount: 2,
+		},
+		{
+			name: "error - service failed",
+			req: &evaluatorservice.BatchGetEvaluatorVersionsRequest{
+				WorkspaceID:         workspaceID,
+				EvaluatorVersionIds: []int64{versionIDs[0]},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), (*int64)(nil), []int64{versionIDs[0]}, false).
+					Return(nil, errors.New("db error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "error - workspace auth failed",
+			req: &evaluatorservice.BatchGetEvaluatorVersionsRequest{
+				WorkspaceID:         workspaceID,
+				EvaluatorVersionIds: []int64{versionIDs[0]},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), (*int64)(nil), []int64{versionIDs[0]}, false).
+					Return([]*entity.Evaluator{workspaceEvaluator}, nil)
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(workspaceID, 10),
+						SpaceID:       workspaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+					}).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - builtin auth failed",
+			req: &evaluatorservice.BatchGetEvaluatorVersionsRequest{
+				WorkspaceID:         workspaceID,
+				EvaluatorVersionIds: versionIDs,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), (*int64)(nil), versionIDs, false).
+					Return([]*entity.Evaluator{workspaceEvaluator, builtinEvaluator}, nil)
+
+				mockAuth.EXPECT().
+					Authorization(gomock.Any(), &rpc.AuthorizationParam{
+						ObjectID:      strconv.FormatInt(workspaceID, 10),
+						SpaceID:       workspaceID,
+						ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+					}).
+					Return(nil)
+
+				mockConfiger.EXPECT().
+					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{})
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.BatchGetEvaluatorVersions(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+			assert.Len(t, resp.Evaluators, tt.wantEvaluatorCount)
+		})
+	}
+}
+
 // 新增的复杂业务逻辑测试
 
 // TestEvaluatorHandlerImpl_ComplexBusinessScenarios 测试复杂业务场景
