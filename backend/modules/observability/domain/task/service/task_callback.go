@@ -123,6 +123,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 		}
 
 		err = t.traceRepo.InsertAnnotations(ctx, &tracerepo.InsertAnnotationParam{
+			WorkSpaceID:    workspaceIDStr,
 			Tenant:         span.GetTenant(),
 			TTL:            span.GetTTL(ctx),
 			Span:           span,
@@ -190,6 +191,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 
 	// Then synchronize the observability data
 	param := &tracerepo.InsertAnnotationParam{
+		WorkSpaceID:    workspaceIDStr,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
 		Span:           span,
