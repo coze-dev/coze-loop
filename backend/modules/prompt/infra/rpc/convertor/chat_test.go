@@ -115,7 +115,8 @@ func TestLLMCallParamConvert(t *testing.T) {
 					MaxTokens:   ptr.Of(int64(1000)),
 					TopP:        ptr.Of(0.1),
 					Stop:        nil,
-					ToolChoice:  ptr.Of(runtimedto.ToolChoiceAuto),
+					// llm暂时不支持toolCallConfig，所以ToolChoice为nil
+					//ToolChoice:  ptr.Of(runtimedto.ToolChoiceAuto),
 					ParamConfigValues: []*runtimedto.ParamConfigValue{
 						{
 							Name:  ptr.Of("temperature"),
