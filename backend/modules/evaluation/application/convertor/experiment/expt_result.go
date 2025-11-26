@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	domain_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
@@ -37,6 +38,7 @@ func ColumnEvalSetFieldsDO2DTO(from *entity.ColumnEvalSetField) *domain_expt.Col
 		Description: from.Description,
 		ContentType: &contentType,
 		TextSchema:  from.TextSchema,
+		SchemaKey:   gptr.Of(dataset.SchemaKey(gptr.Indirect(from.SchemaKey))),
 	}
 }
 

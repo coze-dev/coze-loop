@@ -616,6 +616,7 @@ type ColumnEvalSetField struct {
 	Description *string
 	ContentType ContentType
 	TextSchema  *string
+	SchemaKey   *SchemaKey
 }
 
 type ColumnEvaluator struct {

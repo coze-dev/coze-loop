@@ -663,6 +663,7 @@ func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, space
 			Description: gptr.Of(field.Description),
 			ContentType: field.ContentType,
 			TextSchema:  gptr.Of(field.TextSchema),
+			SchemaKey:   field.SchemaKey,
 		})
 	}
 

@@ -7,6 +7,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
@@ -7343,7 +7344,8 @@ type ColumnEvalSetField struct {
 	Description *string             `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	ContentType *common.ContentType `thrift:"content_type,4,optional" frugal:"4,optional,string" form:"content_type" json:"content_type,omitempty" query:"content_type"`
 	//    5: optional datasetv3.FieldDisplayFormat DefaultDisplayFormat
-	TextSchema *string `thrift:"text_schema,6,optional" frugal:"6,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
+	TextSchema *string            `thrift:"text_schema,6,optional" frugal:"6,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
+	SchemaKey  *dataset.SchemaKey `thrift:"schema_key,7,optional" frugal:"7,optional,SchemaKey" form:"schema_key" json:"schema_key,omitempty" query:"schema_key"`
 }
 
 func NewColumnEvalSetField() *ColumnEvalSetField {
@@ -7412,6 +7414,18 @@ func (p *ColumnEvalSetField) GetTextSchema() (v string) {
 	}
 	return *p.TextSchema
 }
+
+var ColumnEvalSetField_SchemaKey_DEFAULT dataset.SchemaKey
+
+func (p *ColumnEvalSetField) GetSchemaKey() (v dataset.SchemaKey) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchemaKey() {
+		return ColumnEvalSetField_SchemaKey_DEFAULT
+	}
+	return *p.SchemaKey
+}
 func (p *ColumnEvalSetField) SetKey(val *string) {
 	p.Key = val
 }
@@ -7427,6 +7441,9 @@ func (p *ColumnEvalSetField) SetContentType(val *common.ContentType) {
 func (p *ColumnEvalSetField) SetTextSchema(val *string) {
 	p.TextSchema = val
 }
+func (p *ColumnEvalSetField) SetSchemaKey(val *dataset.SchemaKey) {
+	p.SchemaKey = val
+}
 
 var fieldIDToName_ColumnEvalSetField = map[int16]string{
 	1: "key",
@@ -7434,6 +7451,7 @@ var fieldIDToName_ColumnEvalSetField = map[int16]string{
 	3: "description",
 	4: "content_type",
 	6: "text_schema",
+	7: "schema_key",
 }
 
 func (p *ColumnEvalSetField) IsSetKey() bool {
@@ -7454,6 +7472,10 @@ func (p *ColumnEvalSetField) IsSetContentType() bool {
 
 func (p *ColumnEvalSetField) IsSetTextSchema() bool {
 	return p.TextSchema != nil
+}
+
+func (p *ColumnEvalSetField) IsSetSchemaKey() bool {
+	return p.SchemaKey != nil
 }
 
 func (p *ColumnEvalSetField) Read(iprot thrift.TProtocol) (err error) {
@@ -7509,6 +7531,14 @@ func (p *ColumnEvalSetField) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7598,6 +7628,18 @@ func (p *ColumnEvalSetField) ReadField6(iprot thrift.TProtocol) error {
 	p.TextSchema = _field
 	return nil
 }
+func (p *ColumnEvalSetField) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *dataset.SchemaKey
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset.SchemaKey(v)
+		_field = &tmp
+	}
+	p.SchemaKey = _field
+	return nil
+}
 
 func (p *ColumnEvalSetField) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -7623,6 +7665,10 @@ func (p *ColumnEvalSetField) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -7733,6 +7779,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *ColumnEvalSetField) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchemaKey() {
+		if err = oprot.WriteFieldBegin("schema_key", thrift.I32, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SchemaKey)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 
 func (p *ColumnEvalSetField) String() string {
 	if p == nil {
@@ -7761,6 +7825,9 @@ func (p *ColumnEvalSetField) DeepEqual(ano *ColumnEvalSetField) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.TextSchema) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.SchemaKey) {
 		return false
 	}
 	return true
@@ -7822,6 +7889,18 @@ func (p *ColumnEvalSetField) Field6DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.TextSchema, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ColumnEvalSetField) Field7DeepEqual(src *dataset.SchemaKey) bool {
+
+	if p.SchemaKey == src {
+		return true
+	} else if p.SchemaKey == nil || src == nil {
+		return false
+	}
+	if *p.SchemaKey != *src {
 		return false
 	}
 	return true

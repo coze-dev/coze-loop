@@ -11,6 +11,7 @@ import (
 	"github.com/cloudwego/gopkg/protocol/thrift"
 	kutils "github.com/cloudwego/kitex/pkg/utils"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
@@ -19,6 +20,7 @@ import (
 )
 
 var (
+	_ = dataset.KitexUnusedProtection
 	_ = tag.KitexUnusedProtection
 	_ = common.KitexUnusedProtection
 	_ = eval_set.KitexUnusedProtection
@@ -4761,6 +4763,20 @@ func (p *ColumnEvalSetField) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4849,6 +4865,22 @@ func (p *ColumnEvalSetField) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ColumnEvalSetField) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *dataset.SchemaKey
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := dataset.SchemaKey(v)
+		_field = &tmp
+	}
+	p.SchemaKey = _field
+	return offset, nil
+}
+
 func (p *ColumnEvalSetField) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -4861,6 +4893,7 @@ func (p *ColumnEvalSetField) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -4874,6 +4907,7 @@ func (p *ColumnEvalSetField) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -4924,6 +4958,15 @@ func (p *ColumnEvalSetField) fastWriteField6(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
+func (p *ColumnEvalSetField) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSchemaKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 7)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.SchemaKey))
+	}
+	return offset
+}
+
 func (p *ColumnEvalSetField) field1Length() int {
 	l := 0
 	if p.IsSetKey() {
@@ -4969,6 +5012,15 @@ func (p *ColumnEvalSetField) field6Length() int {
 	return l
 }
 
+func (p *ColumnEvalSetField) field7Length() int {
+	l := 0
+	if p.IsSetSchemaKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *ColumnEvalSetField) DeepCopy(s interface{}) error {
 	src, ok := s.(*ColumnEvalSetField)
 	if !ok {
@@ -5010,6 +5062,11 @@ func (p *ColumnEvalSetField) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.TextSchema)
 		}
 		p.TextSchema = &tmp
+	}
+
+	if src.SchemaKey != nil {
+		tmp := *src.SchemaKey
+		p.SchemaKey = &tmp
 	}
 
 	return nil
