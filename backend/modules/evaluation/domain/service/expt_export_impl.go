@@ -472,18 +472,25 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 				payload.EvalSet.Turn.FieldDataList == nil {
 				return nil, fmt.Errorf("FieldDataList is nil")
 			}
-			datasetFields := getDatasetFields(e.colEvalSetFields, payload.EvalSet.Turn.FieldDataList)
+			datasetFields, err := getDatasetFields(ctx, e.colEvalSetFields, payload.EvalSet.Turn.FieldDataList)
+			if err != nil {
+				return nil, err
+			}
 			rowData = append(rowData, datasetFields...)
 
 			for _, col := range e.columnsEvalTarget {
-				var val string
 				if payload.TargetOutput != nil &&
 					payload.TargetOutput.EvalTargetRecord != nil &&
 					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil &&
 					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields != nil {
-					val = geDatasetCellOrActualOutputData(payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[col.Name])
+					val, err := geDatasetCellOrActualOutputData(ctx, payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[col.Name])
+					if err != nil {
+						return nil, err
+					}
+					rowData = append(rowData, val)
+				} else {
+					rowData = append(rowData, "")
 				}
-				rowData = append(rowData, val)
 			}
 
 			// 评估器结果，按ColumnEvaluators的顺序排序
@@ -559,7 +566,7 @@ func itemRunStateToString(itemRunState entity.ItemRunState) string {
 }
 
 // getDatasetFields 按顺序获取数据集字段
-func getDatasetFields(colEvalSetFields []*entity.ColumnEvalSetField, fieldDataList []*entity.FieldData) []string {
+func getDatasetFields(ctx context.Context, colEvalSetFields []*entity.ColumnEvalSetField, fieldDataList []*entity.FieldData) ([]string, error) {
 	fieldDataMap := slices.ToMap(fieldDataList, func(t *entity.FieldData) (string, *entity.FieldData) {
 		return t.Key, t
 	})
@@ -575,26 +582,35 @@ func getDatasetFields(colEvalSetFields []*entity.ColumnEvalSetField, fieldDataLi
 			continue
 		}
 
-		fields = append(fields, geDatasetCellOrActualOutputData(fieldData.Content))
+		data, err := geDatasetCellOrActualOutputData(ctx, fieldData.Content)
+		if err != nil {
+			return nil, err
+		}
+
+		fields = append(fields, data)
 	}
 
-	return fields
+	return fields, nil
 }
 
-func geDatasetCellOrActualOutputData(data *entity.Content) string {
+func geDatasetCellOrActualOutputData(ctx context.Context, data *entity.Content) (string, error) {
 	if data == nil {
-		return ""
+		return "", nil
+	}
+
+	if err := data.PaddingContent(ctx); err != nil {
+		return "", err
 	}
 
 	switch data.GetContentType() {
 	case entity.ContentTypeText:
-		return data.GetText()
+		return data.GetText(), nil
 	case entity.ContentTypeImage, entity.ContentTypeAudio:
-		return ""
+		return "", nil
 	case entity.ContentTypeMultipart:
-		return formatMultiPartData(data)
+		return formatMultiPartData(data), nil
 	default:
-		return ""
+		return "", nil
 	}
 }
 

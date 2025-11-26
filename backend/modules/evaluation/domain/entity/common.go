@@ -68,6 +68,13 @@ func (c *Content) SetText(text string) {
 	}
 }
 
+func (c *Content) TextBytes() int {
+	if c == nil || c.Text == nil {
+		return 0
+	}
+	return len(*c.Text)
+}
+
 // GetContentType 获取内容类型
 func (c *Content) GetContentType() ContentType {
 	if c == nil || c.ContentType == nil {
@@ -90,6 +97,12 @@ func (c *Content) PaddingContent(ctx context.Context) error {
 	if c.FullContent == nil || len(gptr.Indirect(c.FullContent.URL)) == 0 {
 		return errorx.New("invalid ObjectStorage Content: %v", json.Jsonify(c.FullContent))
 	}
+	if gptr.Indirect(c.ContentType) != ContentTypeText {
+		return errorx.New("unsupported padding content type: %v", c.ContentType)
+	}
+	if bytes := gptr.Indirect(c.FullContentBytes); bytes > 0 && c.TextBytes() == int(bytes) {
+		return nil
+	}
 
 	req, resp := protocol.AcquireRequest(), protocol.AcquireResponse()
 	defer protocol.ReleaseRequest(req)
@@ -103,14 +116,8 @@ func (c *Content) PaddingContent(ctx context.Context) error {
 	if resp.StatusCode() != http.StatusOK {
 		return errorx.New("content object storage http req return code %v, url: %v, body: %s", resp.StatusCode(), c.FullContent.URL, conv.UnsafeBytesToString(resp.Body()))
 	}
-
-	switch gptr.Indirect(c.ContentType) {
-	case ContentTypeText:
-		c.Text = gptr.Of(string(resp.Body()))
-		return nil
-	default:
-		return errorx.New("unsupported padding content type: %v", c.ContentType)
-	}
+	c.Text = gptr.Of(string(resp.Body()))
+	return nil
 }
 
 type Audio struct {
