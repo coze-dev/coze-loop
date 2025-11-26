@@ -199,6 +199,7 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 				},
 			},
 			TaskStatus: gptr.Of(taskdto.TaskStatusPending),
+			TaskSource: gptr.Of(taskdto.TaskSourceUser),
 		}
 	}
 
@@ -266,6 +267,19 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 		{
 			name:          "error with invalid user id",
 			ctx:           context.Background(),
+			req:           &taskapi.CreateTaskRequest{Task: taskForSuccess},
+			expectResp:    nil,
+			expectErrCode: obErrorx.UserParseFailedCode,
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
+				auth := rpcmock.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, strconv.FormatInt(123, 10), false).Return(nil)
+				svcMock := svcmock.NewMockITaskService(ctrl)
+				return svcMock, auth
+			},
+		},
+		{
+			name:          "error with empty user id",
+			ctx:           session.WithCtxUser(context.Background(), &session.User{ID: "", AppID: 1}),
 			req:           &taskapi.CreateTaskRequest{Task: taskForSuccess},
 			expectResp:    nil,
 			expectErrCode: obErrorx.UserParseFailedCode,
