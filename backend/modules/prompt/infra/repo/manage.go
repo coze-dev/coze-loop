@@ -165,7 +165,7 @@ func (d *ManageRepoImpl) DeletePrompt(ctx context.Context, promptID int64) (err 
 	if promptBasicPO == nil {
 		return errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("prompt is not found, prompt id = %d", promptID)))
 	}
-	err = d.promptBasicDAO.Delete(ctx, promptID)
+	err = d.promptBasicDAO.Delete(ctx, promptID, promptBasicPO.SpaceID)
 	if err != nil {
 		return err
 	}

@@ -28,7 +28,7 @@ import (
 type IPromptBasicDAO interface {
 	Create(ctx context.Context, basicPO *model.PromptBasic, opts ...db.Option) (err error)
 
-	Delete(ctx context.Context, promptID int64, opts ...db.Option) (err error)
+	Delete(ctx context.Context, promptID int64, spaceID int64, opts ...db.Option) (err error)
 
 	Get(ctx context.Context, promptID int64, opts ...db.Option) (basicPO *model.PromptBasic, err error)
 	MGet(ctx context.Context, promptIDs []int64, opts ...db.Option) (idPromptPOMap map[int64]*model.PromptBasic, err error)
@@ -90,7 +90,7 @@ func (d *PromptBasicDAOImpl) Create(ctx context.Context, basicPO *model.PromptBa
 	return nil
 }
 
-func (d *PromptBasicDAOImpl) Delete(ctx context.Context, promptID int64, opts ...db.Option) (err error) {
+func (d *PromptBasicDAOImpl) Delete(ctx context.Context, promptID int64, spaceID int64, opts ...db.Option) (err error) {
 	if promptID <= 0 {
 		return errorx.New("promptID is invalid, promptID = %d", promptID)
 	}
@@ -102,7 +102,7 @@ func (d *PromptBasicDAOImpl) Delete(ctx context.Context, promptID int64, opts ..
 	if err != nil {
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
-	d.writeTracker.SetWriteFlag(ctx, platestwrite.ResourceTypePromptBasic, promptID)
+	d.writeTracker.SetWriteFlag(ctx, platestwrite.ResourceTypePromptBasic, promptID, platestwrite.SetWithSearchParam(strconv.FormatInt(spaceID, 10)))
 	return nil
 }
 
