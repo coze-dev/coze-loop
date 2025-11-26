@@ -77,6 +77,7 @@ var (
 				openInferenceAttributeInput,
 				springAIAttributeToolInput,
 				otelAttributeInput,
+				apmInput,
 			},
 			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelInputMessages,
@@ -103,6 +104,7 @@ var (
 				openInferenceAttributeOutput,
 				springAIAttributeToolOutput,
 				otelAttributeOutput,
+				apmOutput,
 			},
 			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelOutputMessages,

@@ -22,6 +22,9 @@ const (
 	otelAttributeOutput      = "cozeloop.output"
 	otelAttributeLogID       = "cozeloop.logid"
 
+	apmInput  = "gen_ai.input"
+	apmOutput = "gen_ai.output "
+
 	// model
 	otelTraceLoopAttributeModelSpanType = "gen_ai.request.type" // traceloop span type
 	otelAttributeModelTimeToFirstToken  = "cozeloop.time_to_first_token"
