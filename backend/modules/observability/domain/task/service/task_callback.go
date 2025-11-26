@@ -236,7 +236,8 @@ func (t *TaskCallbackServiceImpl) getSpan(ctx context.Context, tenants []string,
 	// todo 目前可能有不同tenant在不同存储中，需要上层多次查询。后续逻辑需要下沉到repo中。
 	for _, tenant := range tenants {
 		res, err := t.traceRepo.ListSpans(ctx, &tracerepo.ListSpansParam{
-			Tenants: []string{tenant},
+			WorkSpaceID: workspaceId,
+			Tenants:     []string{tenant},
 			Filters: &loop_span.FilterFields{
 				FilterFields: filterFields,
 			},
