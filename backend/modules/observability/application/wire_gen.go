@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	mq2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
 	storage2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
@@ -88,7 +89,11 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 	if err != nil {
 		return nil, err
 	}
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb)
+	iSpanProducer, err := producer.NewSpanWithAnnotationProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +147,11 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	if err != nil {
 		return nil, err
 	}
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb)
+	iSpanProducer, err := producer.NewSpanWithAnnotationProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +223,11 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, stor
 	if err != nil {
 		return nil, err
 	}
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, storageProvider, iSpansRedisDao, ckDb)
+	iSpanProducer, err := producer.NewSpanWithAnnotationProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, storageProvider, iSpansRedisDao, ckDb, iSpanProducer)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +273,11 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	if err != nil {
 		return nil, err
 	}
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb)
+	iSpanProducer, err := producer.NewSpanWithAnnotationProducerImpl(iTraceConfig, mqFactory)
+	if err != nil {
+		return nil, err
+	}
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer)
 	if err != nil {
 		return nil, err
 	}
@@ -311,12 +328,13 @@ func provideTraceRepo(
 	storageProvider storage2.IStorageProvider,
 	spanRedisDao redis2.ISpansRedisDao,
 	ckProvider ck.Provider,
+	spanProducer mq2.ISpanProducer,
 ) (repo2.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return repo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, options...)
+	return repo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, options...)
 }
 
 func provideTraceMetricRepo(

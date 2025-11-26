@@ -8,7 +8,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	"strconv"
 	"time"
@@ -66,9 +68,10 @@ func NewTraceRepoImpl(
 	traceConfig config.ITraceConfig,
 	storageProvider storage.IStorageProvider,
 	spanRedisDao redis_dao.ISpansRedisDao,
+	spanProducer mq.ISpanProducer,
 	opts ...TraceRepoOption,
 ) (repo.ITraceRepo, error) {
-	impl, err := newTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, opts...)
+	impl, err := newTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -80,13 +83,14 @@ func NewTraceMetricCKRepoImpl(
 	storageProvider storage.IStorageProvider,
 	opts ...TraceRepoOption,
 ) (metric_repo.IMetricRepo, error) {
-	return newTraceRepoImpl(traceConfig, storageProvider, nil, opts...)
+	return newTraceRepoImpl(traceConfig, storageProvider, nil, nil, opts...)
 }
 
 func newTraceRepoImpl(
 	traceConfig config.ITraceConfig,
 	storageProvider storage.IStorageProvider,
 	spanRedisDao redis_dao.ISpansRedisDao,
+	spanProducer mq.ISpanProducer,
 	opts ...TraceRepoOption,
 ) (*TraceRepoImpl, error) {
 	impl := &TraceRepoImpl{
@@ -95,6 +99,7 @@ func newTraceRepoImpl(
 		spanDaos:        make(map[string]dao.ISpansDao),
 		annoDaos:        make(map[string]dao.IAnnotationDao),
 		spanRedisDao:    spanRedisDao,
+		spanProducer:    spanProducer,
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -110,6 +115,7 @@ type TraceRepoImpl struct {
 	spanDaos        map[string]dao.ISpansDao
 	annoDaos        map[string]dao.IAnnotationDao
 	spanRedisDao    redis_dao.ISpansRedisDao
+	spanProducer    mq.ISpanProducer
 }
 
 func (t *TraceRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error) {
@@ -385,19 +391,30 @@ func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Inser
 	if err != nil {
 		return err
 	}
-	pos := make([]*dao.Annotation, 0, len(param.Annotations))
-	for _, annotation := range param.Annotations {
+	pos := make([]*dao.Annotation, 0, len(param.Span.Annotations))
+	for _, annotation := range param.Span.Annotations {
 		annotationPO, err := converter.AnnotationDO2PO(annotation)
 		if err != nil {
 			return err
 		}
 		pos = append(pos, annotationPO)
 	}
-	return annoDao.Insert(ctx, &dao.InsertAnnotationParam{
+	err = annoDao.Insert(ctx, &dao.InsertAnnotationParam{
 		Table:       table,
 		Annotations: pos,
 		Extra:       spanStorage.StorageConfig,
 	})
+	if err != nil {
+		return nil
+	}
+	span := param.Span
+	annotationType := ""
+	if param.AnnotationType != nil {
+		annotationType = string(*param.AnnotationType)
+	}
+	return t.spanProducer.SendSpanWithAnnotation(ctx, &entity.SpanEvent{
+		Span: span,
+	}, annotationType)
 }
 
 func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
@@ -498,9 +515,9 @@ func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, t
 	}
 	tableCfg, ok := tenantTableCfg.TenantTables[tenant][ttl]
 	if !ok {
-		return "", nil
+		return "", fmt.Errorf("no annotation table config found for tenant %s with ttl %s", tenant, ttl)
 	} else if tableCfg.AnnoTable == "" {
-		return "", nil
+		return "", fmt.Errorf("no annotation table config found for tenant %s with ttl %s", tenant, ttl)
 	}
 	return tableCfg.AnnoTable, nil
 }

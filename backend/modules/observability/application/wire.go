@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	mq3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
@@ -162,12 +163,13 @@ func provideTraceRepo(
 	storageProvider storage.IStorageProvider,
 	spanRedisDao redis2.ISpansRedisDao,
 	ckProvider ck.Provider,
+	spanProducer mq3.ISpanProducer,
 ) (repo.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, options...)
+	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, options...)
 }
 
 func provideTraceMetricRepo(
