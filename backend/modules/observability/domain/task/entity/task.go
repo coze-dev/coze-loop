@@ -78,6 +78,7 @@ type ObservabilityTask struct {
 	UpdatedAt             time.Time         // 更新时间
 	CreatedBy             string            // 创建人
 	UpdatedBy             string            // 更新人
+	TaskSource            *string           // 创建来源
 
 	TaskRuns []*TaskRun
 }
@@ -150,6 +151,7 @@ type BackfillDetail struct {
 	BackfillStatus    *string `json:"backfill_status"`
 	LastSpanPageToken *string `json:"last_span_page_token"`
 }
+
 type TaskRunConfig struct {
 	AutoEvaluateRunConfig *AutoEvaluateRunConfig `json:"auto_evaluate_run_config"`
 	DataReflowRunConfig   *DataReflowRunConfig   `json:"data_reflow_run_config"`

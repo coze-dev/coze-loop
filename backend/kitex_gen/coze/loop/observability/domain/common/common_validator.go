@@ -40,3 +40,6 @@ func (p *BaseInfo) IsValid() error {
 	}
 	return nil
 }
+func (p *Session) IsValid() error {
+	return nil
+}

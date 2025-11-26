@@ -28,6 +28,7 @@ type ObservabilityTask struct {
 	UpdatedAt             time.Time `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                             // 更新时间
 	CreatedBy             string    `gorm:"column:created_by;type:varchar(128);not null;comment:创建人" json:"created_by"`                                                                                     // 创建人
 	UpdatedBy             string    `gorm:"column:updated_by;type:varchar(128);not null;comment:更新人" json:"updated_by"`                                                                                     // 更新人
+	TaskSource            *string   `gorm:"column:task_source;type:varchar(50);default:user;comment:任务来源" json:"task_source"`                                                                               // 任务来源
 }
 
 // TableName ObservabilityTask's table name
