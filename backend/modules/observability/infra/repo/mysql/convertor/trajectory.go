@@ -6,6 +6,9 @@ import (
 )
 
 func TrajectoryConfigPO2DO(po *model.ObservabilityTrajectoryConfig) *entity.TrajectoryConfig {
+	if po == nil {
+		return nil
+	}
 	return &entity.TrajectoryConfig{
 		ID:          po.ID,
 		WorkspaceID: po.WorkspaceID,
