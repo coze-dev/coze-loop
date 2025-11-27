@@ -933,6 +933,7 @@ func Test_itemRunStateToString(t *testing.T) {
 }
 
 func Test_geDatasetCellOrActualOutputData(t *testing.T) {
+	ctx := context.Background()
 	// 测试用例：覆盖所有内容类型和边界情况,sss
 	tests := []struct {
 		name     string
@@ -1020,7 +1021,7 @@ func Test_geDatasetCellOrActualOutputData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := geDatasetCellOrActualOutputData(tt.input)
+			result, _ := geDatasetCellOrActualOutputData(ctx, tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

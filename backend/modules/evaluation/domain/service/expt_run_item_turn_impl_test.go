@@ -1230,6 +1230,7 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
 func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
 	service := &DefaultExptTurnEvaluationImpl{}
 
 	mockContent1 := &entity.Content{Text: gptr.Of("value1")}
@@ -1359,7 +1360,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := service.buildEvaluatorInputData(tt.evaluatorType, tt.ec, tt.turnFields, tt.targetFields)
+			got, err := service.buildEvaluatorInputData(ctx, tt.evaluatorType, tt.ec, tt.turnFields, tt.targetFields)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -1377,6 +1378,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 
 func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 	t.Parallel()
+	ctx := context.Background()
 
 	service := &DefaultExptTurnEvaluationImpl{}
 
@@ -1465,7 +1467,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := service.buildFieldsFromSource(tt.fieldConfs, tt.sourceFields)
+			got, err := service.buildFieldsFromSource(ctx, tt.fieldConfs, tt.sourceFields)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2181,6 +2183,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
 	service := &DefaultExptTurnEvaluationImpl{}
 
 	mockContent := &entity.Content{Text: gptr.Of("value1")}
@@ -2271,7 +2274,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := service.buildEvaluatorInputData(tt.evaluatorType, tt.ec, tt.turnFields, tt.targetFields)
+			got, err := service.buildEvaluatorInputData(ctx, tt.evaluatorType, tt.ec, tt.turnFields, tt.targetFields)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)

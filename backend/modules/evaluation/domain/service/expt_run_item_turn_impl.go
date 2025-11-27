@@ -326,7 +326,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		inputData, err := e.buildEvaluatorInputData(ev.EvaluatorType, ec, turnFields, targetFields)
+		inputData, err := e.buildEvaluatorInputData(ctx, ev.EvaluatorType, ec, turnFields, targetFields)
 		if err != nil {
 			return nil, err
 		}
@@ -366,13 +366,13 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	return records, err
 }
 
-func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(evaluatorType entity.EvaluatorType, ec *entity.EvaluatorConf,
+func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, evaluatorType entity.EvaluatorType, ec *entity.EvaluatorConf,
 	turnFields map[string]*entity.Content, targetFields map[string]*entity.Content) (*entity.EvaluatorInputData, error) {
-	fromEvalSet, err := e.buildFieldsFromSource(ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
+	fromEvalSet, err := e.buildFieldsFromSource(ctx, ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
 	if err != nil {
 		return nil, err
 	}
-	fromTarget, err := e.buildFieldsFromSource(ec.IngressConf.TargetAdapter.FieldConfs, targetFields)
+	fromTarget, err := e.buildFieldsFromSource(ctx, ec.IngressConf.TargetAdapter.FieldConfs, targetFields)
 	if err != nil {
 		return nil, err
 	}
@@ -393,15 +393,16 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(evaluatorType en
 }
 
 // buildFieldsFromSource 从指定数据源构建字段映射，提取重复的字段处理逻辑
-func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(
-	fieldConfs []*entity.FieldConf,
-	sourceFields map[string]*entity.Content,
-) (map[string]*entity.Content, error) {
+func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Context, fieldConfs []*entity.FieldConf,
+	sourceFields map[string]*entity.Content) (map[string]*entity.Content, error) {
 	result := make(map[string]*entity.Content)
 
 	for _, fc := range fieldConfs {
 		content, err := e.getFieldContent(fc, sourceFields)
 		if err != nil {
+			return nil, err
+		}
+		if err := content.PaddingContent(ctx); err != nil {
 			return nil, err
 		}
 		result[fc.FieldName] = content

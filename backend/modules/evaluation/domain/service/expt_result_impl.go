@@ -546,7 +546,7 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, exp
 	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
 	for _, expt := range expts {
 		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
-		if expt.TargetType.SupptTrajectory() {
+		if expt.ContainsEvalTarget() && expt.TargetType.SupptTrajectory() {
 			columns = append(columns, columnEvalTargetTrajectory)
 		}
 		res = append(res, &entity.ExptColumnEvalTarget{
@@ -663,6 +663,7 @@ func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, space
 			Description: gptr.Of(field.Description),
 			ContentType: field.ContentType,
 			TextSchema:  gptr.Of(field.TextSchema),
+			SchemaKey:   field.SchemaKey,
 		})
 	}
 

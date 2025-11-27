@@ -5,6 +5,7 @@ include "eval_target.thrift"
 include "evaluator.thrift"
 include "eval_set.thrift"
 include "../../data/domain/tag.thrift"
+include "../../data/domain/dataset.thrift"
 
 enum ExptStatus {
     Unknown = 0
@@ -171,6 +172,7 @@ struct ColumnEvalSetField {
     4: optional common.ContentType content_type
 //    5: optional datasetv3.FieldDisplayFormat DefaultDisplayFormat
     6: optional string text_schema
+    7: optional dataset.SchemaKey schema_key
 }
 
 struct ItemResult {

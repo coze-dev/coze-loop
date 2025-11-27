@@ -941,14 +941,18 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 		return nil, err
 	}
 
-	return &openapi.ListExperimentResultOApiResponse{
+	res := &openapi.ListExperimentResultOApiResponse{
 		Data: &openapi.ListExperimentResultOpenAPIData{
 			ColumnEvalSetFields: experiment_convertor.OpenAPIColumnEvalSetFieldsDO2DTOs(result.ColumnEvalSetFields),
 			ColumnEvaluators:    experiment_convertor.OpenAPIColumnEvaluatorsDO2DTOs(result.ColumnEvaluators),
 			Total:               gptr.Of(result.Total),
 			ItemResults:         experiment_convertor.OpenAPIItemResultsDO2DTOs(result.ItemResults),
 		},
-	}, nil
+	}
+	if len(result.ExptColumnsEvalTarget) > 0 {
+		res.Data.ColumnEvalTargets = experiment_convertor.OpenAPIColumnEvalTargetDO2DTOs(result.ExptColumnsEvalTarget[0].Columns)
+	}
+	return res, nil
 }
 
 func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {
