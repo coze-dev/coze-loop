@@ -1,6 +1,8 @@
 package trace
 
 import (
+	"strconv"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
@@ -87,13 +89,29 @@ func ModelInfoDO2DTO(info *loop_span.ModelInfo) *common.ModelInfo {
 		return nil
 	}
 	return &common.ModelInfo{
-		InputTokens:               info.InputTokens,
-		OutputTokens:              info.OutputTokens,
-		LatencyFirstResp:          info.LatencyFirstResp,
-		ReasoningTokens:           info.ReasoningTokens,
-		InputReadCachedTokens:     info.InputReadCachedTokens,
-		InputCreationCachedTokens: info.InputCreationCachedTokens,
+		InputTokens:               int64Ptr2int32Ptr(info.InputTokens),
+		OutputTokens:              int64Ptr2int32Ptr(info.OutputTokens),
+		LatencyFirstResp:          int64Ptr2StrPtr(info.LatencyFirstResp),
+		ReasoningTokens:           int64Ptr2int32Ptr(info.ReasoningTokens),
+		InputReadCachedTokens:     int64Ptr2int32Ptr(info.InputReadCachedTokens),
+		InputCreationCachedTokens: int64Ptr2int32Ptr(info.InputCreationCachedTokens),
 	}
+}
+
+func int64Ptr2int32Ptr(src *int64) *int32 {
+	if src == nil {
+		return nil
+	}
+	result := int32(*src)
+	return &result
+}
+
+func int64Ptr2StrPtr(src *int64) *string {
+	if src == nil {
+		return nil
+	}
+	result := strconv.FormatInt(*src, 10)
+	return &result
 }
 
 func RootStepDO2DTO(step *loop_span.RootStep) *common.RootStep {
@@ -115,8 +133,8 @@ func BasicInfoDO2DTO(info *loop_span.BasicInfo) *common.BasicInfo {
 		return nil
 	}
 	return &common.BasicInfo{
-		StartedAt: info.StartedAt,
-		Duration:  info.Duration,
+		StartedAt: int64Ptr2StrPtr(info.StartedAt),
+		Duration:  int64Ptr2StrPtr(info.Duration),
 		Error:     ErrorDO2DTO(info.Error),
 	}
 }
