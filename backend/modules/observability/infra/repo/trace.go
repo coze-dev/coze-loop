@@ -210,6 +210,33 @@ func (t *TraceCkRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansPara
 	return result, nil
 }
 
+func (t *TraceCkRepoImpl) ListSpansRepeat(ctx context.Context, req *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+	if req == nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("nil request"))
+	}
+
+	clonedReq := *req
+	totalSpans := loop_span.SpanList{}
+
+	for {
+		resp, err := t.ListSpans(ctx, &clonedReq)
+		if err != nil {
+			return nil, err
+		}
+		totalSpans = append(totalSpans, resp.Spans...)
+		if !resp.HasMore || resp.PageToken == "" || len(resp.Spans) == 0 {
+			break
+		}
+		clonedReq.PageToken = resp.PageToken
+	}
+
+	return &repo.ListSpansResult{
+		Spans:     totalSpans.Uniq(),
+		PageToken: "",
+		HasMore:   false,
+	}, nil
+}
+
 func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (loop_span.SpanList, error) {
 	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
 	if err != nil {
