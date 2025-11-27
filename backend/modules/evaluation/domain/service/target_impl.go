@@ -368,14 +368,10 @@ func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID i
 	if err != nil {
 		return nil, err
 	}
-	if len(trajectories) != 1 {
-		return nil, errorx.New("no trajectory found, space_id: %v, trace_id: %v", spaceID, traceID)
+	if len(trajectories) == 0 {
+		return nil, nil
 	}
-	trajectory := trajectories[0]
-	if !trajectory.IsValid() {
-		return nil, errorx.New("invalid trajectory, raw: %v", json.Jsonify(trajectory))
-	}
-	return trajectory, nil
+	return trajectories[0], nil
 }
 
 func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID int64, targetID int64, targetVersionID int64,
@@ -593,7 +589,7 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		}
 		od, ok := deepcopy.Copy(param.OutputData).(*entity.EvalTargetOutputData)
 		if !ok {
-			return errorx.New("ExtractTrajectory fail, outputData fail")
+			return errorx.New("EvalTargetOutputData deepcopy fail")
 		}
 		od.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
 		return e.evalTargetRepo.UpdateEvalTargetRecord(ctx, &entity.EvalTargetRecord{
