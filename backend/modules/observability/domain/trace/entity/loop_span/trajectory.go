@@ -201,17 +201,17 @@ func buildAgentSteps(agentSpan *Span, spanMap map[string]*Span) []*Step {
 	steps := make([]*Step, 0)
 
 	// 获取agent的直接子节点
-	childSpans := getDirectChildren(agentSpan, spanMap) // todo: 直接节点，如果不是other节点的，这里需要收录为子step
+	childSpans := getDirectChildren(agentSpan, spanMap)
 
 	for _, childSpan := range childSpans {
-		// 低一层的普通节点，直接收为子节点
-		if childSpan.SpanType != StepTypeAgent && childSpan.SpanType != StepTypeModel && childSpan.SpanType != StepTypeTool {
-			steps = append(steps, buildStep(childSpan))
-		}
-		// 对每个直接子节点，向下深度遍历找到第一个agent/model/tool节点
-		step := findFirstAgentModelToolNode(childSpan, spanMap)
-		if step != nil {
-			steps = append(steps, step)
+		// 深度遍历每个分支收集所有普通子节点，每个分支直到遇到agent节点为止
+		branchSteps := collectOtherSteps(childSpan, spanMap)
+		steps = append(steps, branchSteps...)
+
+		// 对每个直接子节点，向下深度遍历找到每个分支的第一个agent/model/tool节点
+		agentModelToolSteps := findAgentModelToolNode(childSpan, spanMap)
+		if len(agentModelToolSteps) > 0 {
+			steps = append(steps, agentModelToolSteps...)
 		}
 	}
 
@@ -268,27 +268,61 @@ func buildStep(span *Span) *Step {
 	return step
 }
 
-// findFirstAgentModelToolNode 向下深度遍历，找到第一个agent/model/tool节点
-func findFirstAgentModelToolNode(startSpan *Span, spanMap map[string]*Span) *Step {
+// findAgentModelToolNode 向下深度遍历，找到每个分支的第一个agent/model/tool节点
+func findAgentModelToolNode(startSpan *Span, spanMap map[string]*Span) []*Step {
 	if startSpan == nil {
 		return nil
 	}
+
+	steps := make([]*Step, 0)
 	stepType := getStepType(startSpan)
 
 	// 如果当前节点就是agent/model/tool，直接返回
 	if stepType == StepTypeAgent || stepType == StepTypeModel || stepType == StepTypeTool {
-		return buildStep(startSpan)
+		steps = append(steps, buildStep(startSpan))
+		return steps
 	}
 
 	// 如果是other节点，继续向下遍历
 	children := getDirectChildren(startSpan, spanMap)
 	for _, child := range children {
-		if result := findFirstAgentModelToolNode(child, spanMap); result != nil {
-			return result
+		if result := findAgentModelToolNode(child, spanMap); len(result) > 0 {
+			steps = append(steps, result...)
 		}
 	}
 
-	return nil
+	return steps
+}
+
+// collectOtherSteps 深度遍历分支，收集任意层级的普通子节点，直到遇到agent节点为止
+func collectOtherSteps(startSpan *Span, spanMap map[string]*Span) []*Step {
+	if startSpan == nil {
+		return nil
+	}
+
+	steps := make([]*Step, 0)
+	stepType := getStepType(startSpan)
+
+	// 如果当前节点是agent节点，停止遍历
+	if stepType == StepTypeAgent {
+		return steps
+	}
+
+	// 如果是普通节点，添加到结果中，然后继续向下遍历
+	if stepType != StepTypeModel && stepType != StepTypeTool {
+		steps = append(steps, buildStep(startSpan))
+	}
+
+	// 获取当前节点的子节点，继续深度遍历
+	children := getDirectChildren(startSpan, spanMap)
+	for _, child := range children {
+		childSteps := collectOtherSteps(child, spanMap)
+		if len(childSteps) > 0 {
+			steps = append(steps, childSteps...)
+		}
+	}
+
+	return steps
 }
 
 // getStepType 获取步骤类型
