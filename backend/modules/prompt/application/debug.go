@@ -425,7 +425,7 @@ func (p *PromptDebugApplicationImpl) SaveDebugContext(ctx context.Context, req *
 
 func (p *PromptDebugApplicationImpl) GetDebugContext(ctx context.Context, req *debug.GetDebugContextRequest) (r *debug.GetDebugContextResponse, err error) {
 	r = debug.NewGetDebugContextResponse()
-	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptDebug)
+	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptRead)
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +525,7 @@ func (p *PromptDebugApplicationImpl) mCompleteDebugContextMultiModalFileURL(ctx 
 
 func (p *PromptDebugApplicationImpl) ListDebugHistory(ctx context.Context, req *debug.ListDebugHistoryRequest) (r *debug.ListDebugHistoryResponse, err error) {
 	r = debug.NewListDebugHistoryResponse()
-	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptDebug)
+	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptRead)
 	if err != nil {
 		return nil, err
 	}
