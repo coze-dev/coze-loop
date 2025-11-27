@@ -1687,7 +1687,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 
 	if trajectoryConfig.Filter != nil {
 		filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
-			SubFilter: trajectoryConfig.Filter,
+			SubFilter: trajectoryConfig.GetFilter(),
 		})
 	}
 
@@ -1736,11 +1736,11 @@ func (r *TraceServiceImpl) buildTrajectories(ctx context.Context, allSpans *loop
 	// traceID-spanID-span
 	selectedSpanMap := make(map[string]map[string]*loop_span.Span)
 	for _, span := range *selectedSpans {
-		spanMap, ok := selectedSpanMap[span.TraceID]
+		_, ok := selectedSpanMap[span.TraceID]
 		if !ok {
 			selectedSpanMap[span.TraceID] = make(map[string]*loop_span.Span)
 		}
-		spanMap[span.SpanID] = span
+		selectedSpanMap[span.TraceID][span.SpanID] = span
 	}
 
 	// traceID-span
