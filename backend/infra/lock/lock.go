@@ -174,6 +174,7 @@ func (r *redisLocker) renewLock(ctx context.Context, key string, ttl time.Durati
 				if err != nil {
 					return err
 				}
+				logs.CtxInfo(ctx, "renew lock success, key=%v", key)
 				renewed = ok
 				return nil
 			}, bf); err != nil {
