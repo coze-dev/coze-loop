@@ -182,7 +182,7 @@ func (r *redisLocker) renewLock(ctx context.Context, key string, ttl time.Durati
 				return
 			}
 			if !renewed {
-				logs.CtxInfo(ctx, "renew lock fail, mutex has already been locked, key=%s", key)
+				logs.CtxInfo(ctx, "renew lock fail, mutex has been released, key=%s", key)
 				return
 			}
 		}
