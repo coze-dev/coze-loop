@@ -61,6 +61,8 @@ struct Experiment {
     41: optional i64 max_alive_time
     42: optional SourceType source_type
     43: optional string source_id
+
+    51: optional map<i64, evaluator.EvaluatorRunConfig> evaluator_version_run_configs (api.js_conv='true')     // 评估器版本ID对应的评估器运行配置信息
 }
 
 struct TokenUsage {

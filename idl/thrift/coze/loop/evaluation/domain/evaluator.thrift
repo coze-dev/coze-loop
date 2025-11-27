@@ -57,6 +57,9 @@ const EvaluatorBoxType EvaluatorBoxType_Black = "Black" // 黑盒
 
 typedef string EvaluatorAccessProtocol(ts.enum="true")
 const EvaluatorAccessProtocol EvaluatorAccessProtocol_RPC = "rpc"
+const EvaluatorAccessProtocol AccessProtocol_RPCOld = "rpc_old"
+const EvaluatorAccessProtocol AccessProtocol_FaasHTTP = "faas_http"
+const EvaluatorAccessProtocol AccessProtocol_FaasHTTPOld = "faas_http_old"
 
 typedef string EvaluatorVersionType(ts.enum="true")
 const EvaluatorVersionType EvaluatorVersionType_Latest = "Latest" // 最新版本
@@ -95,6 +98,7 @@ struct CustomRPCEvaluator {
     2: required EvaluatorAccessProtocol access_protocol    // 本期是RPC，后续还可拓展HTTP
     3: optional string service_name
     4: optional string cluster
+    5: optional EvaluatorHTTPInfo invoke_http_info // 执行http信息
 
     10: optional i64 timeout    // ms
     11: optional common.RateLimit rate_limit     // 自定义评估器的限流配置
@@ -257,4 +261,18 @@ struct EvaluatorInputData {
     4: optional map<string, common.Content> evaluate_target_output_fields
 
     100: optional map<string, string> ext
+}
+
+struct EvaluatorHTTPInfo {
+    1: optional EvaluatorHTTPMethod method
+    2: optional string path
+}
+
+typedef string EvaluatorHTTPMethod (ts.enum="true")
+const EvaluatorHTTPMethod HTTPMethod_Get = "get"
+const EvaluatorHTTPMethod HTTPMethod_Post = "post"
+
+struct EvaluatorRunConfig {
+    1: optional string env
+    2: optional common.RuntimeParam evaluator_runtime_param
 }

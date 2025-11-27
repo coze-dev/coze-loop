@@ -44,6 +44,11 @@ func (p *CodeEvaluator) IsValid() error {
 	return nil
 }
 func (p *CustomRPCEvaluator) IsValid() error {
+	if p.InvokeHTTPInfo != nil {
+		if err := p.InvokeHTTPInfo.IsValid(); err != nil {
+			return fmt.Errorf("field InvokeHTTPInfo not valid, %w", err)
+		}
+	}
 	if p.RateLimit != nil {
 		if err := p.RateLimit.IsValid(); err != nil {
 			return fmt.Errorf("field RateLimit not valid, %w", err)
@@ -192,5 +197,16 @@ func (p *EvaluatorRunError) IsValid() error {
 	return nil
 }
 func (p *EvaluatorInputData) IsValid() error {
+	return nil
+}
+func (p *EvaluatorHTTPInfo) IsValid() error {
+	return nil
+}
+func (p *EvaluatorRunConfig) IsValid() error {
+	if p.EvaluatorRuntimeParam != nil {
+		if err := p.EvaluatorRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRuntimeParam not valid, %w", err)
+		}
+	}
 	return nil
 }
