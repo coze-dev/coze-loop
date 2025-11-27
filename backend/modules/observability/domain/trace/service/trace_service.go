@@ -548,9 +548,24 @@ func (r *TraceServiceImpl) ListTrajectory(ctx context.Context, req *ListTrajecto
 	if err != nil {
 		return nil, err
 	}
+	filters := trajectoryConfResp.Filters
+	if filters != nil {
+		filterField := loop_span.FilterField{
+			FieldName:  "parent_id",
+			FieldType:  loop_span.FieldTypeString,
+			Values:     []string{"", "0"},
+			QueryType:  lo.ToPtr(loop_span.QueryTypeEnumIn),
+			QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumOr),
+		}
+		if filters.FilterFields == nil {
+			filters.FilterFields = []*loop_span.FilterField{&filterField}
+		} else {
+			filters.FilterFields = append(filters.FilterFields, &filterField)
+		}
+	}
 	SpanTransCfgList := loop_span.SpanTransCfgList{
 		{
-			SpanFilter: trajectoryConfResp.Filters,
+			SpanFilter: filters,
 		},
 	}
 
