@@ -742,6 +742,7 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 		ColumnEvaluators:      experiment.ColumnEvaluatorsDO2DTOs(result.ColumnEvaluators),
 		ExptColumnEvaluators:  experiment.ExptColumnEvaluatorsDO2DTOs(result.ExptColumnEvaluators),
 		ExptColumnAnnotations: experiment.ExptColumnAnnotationDO2DTOs(result.ExptColumnAnnotations),
+		ExptColumnEvalTarget:  experiment.ExptColumnEvalTargetDO2DTOs(result.ExptColumnsEvalTarget),
 		Total:                 gptr.Of(result.Total),
 		ItemResults:           experiment.ItemResultsDO2DTOs(result.ItemResults),
 		BaseResp:              base.NewBaseResp(),
