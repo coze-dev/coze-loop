@@ -239,6 +239,8 @@ type FieldSchema struct {
 	ContentType *common.ContentType `thrift:"content_type,4,optional" frugal:"4,optional,string" form:"content_type" json:"content_type,omitempty" query:"content_type"`
 	// 默认渲染格式，如 code, json, etc.
 	DefaultFormat *dataset.FieldDisplayFormat `thrift:"default_format,5,optional" frugal:"5,optional,FieldDisplayFormat" form:"default_format" json:"default_format,omitempty" query:"default_format"`
+	// 对应的内置 schema
+	SchemaKey *dataset.SchemaKey `thrift:"schema_key,8,optional" frugal:"8,optional,SchemaKey" form:"schema_key" json:"schema_key,omitempty" query:"schema_key"`
 	/* [20,50) 内容格式限制相关 */
 	TextSchema *string `thrift:"text_schema,20,optional" frugal:"20,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
 }
@@ -310,6 +312,18 @@ func (p *FieldSchema) GetDefaultFormat() (v dataset.FieldDisplayFormat) {
 	return *p.DefaultFormat
 }
 
+var FieldSchema_SchemaKey_DEFAULT dataset.SchemaKey
+
+func (p *FieldSchema) GetSchemaKey() (v dataset.SchemaKey) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchemaKey() {
+		return FieldSchema_SchemaKey_DEFAULT
+	}
+	return *p.SchemaKey
+}
+
 var FieldSchema_TextSchema_DEFAULT string
 
 func (p *FieldSchema) GetTextSchema() (v string) {
@@ -336,6 +350,9 @@ func (p *FieldSchema) SetContentType(val *common.ContentType) {
 func (p *FieldSchema) SetDefaultFormat(val *dataset.FieldDisplayFormat) {
 	p.DefaultFormat = val
 }
+func (p *FieldSchema) SetSchemaKey(val *dataset.SchemaKey) {
+	p.SchemaKey = val
+}
 func (p *FieldSchema) SetTextSchema(val *string) {
 	p.TextSchema = val
 }
@@ -346,6 +363,7 @@ var fieldIDToName_FieldSchema = map[int16]string{
 	3:  "description",
 	4:  "content_type",
 	5:  "default_format",
+	8:  "schema_key",
 	20: "text_schema",
 }
 
@@ -367,6 +385,10 @@ func (p *FieldSchema) IsSetContentType() bool {
 
 func (p *FieldSchema) IsSetDefaultFormat() bool {
 	return p.DefaultFormat != nil
+}
+
+func (p *FieldSchema) IsSetSchemaKey() bool {
+	return p.SchemaKey != nil
 }
 
 func (p *FieldSchema) IsSetTextSchema() bool {
@@ -426,6 +448,14 @@ func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -524,6 +554,18 @@ func (p *FieldSchema) ReadField5(iprot thrift.TProtocol) error {
 	p.DefaultFormat = _field
 	return nil
 }
+func (p *FieldSchema) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *dataset.SchemaKey
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset.SchemaKey(v)
+		_field = &tmp
+	}
+	p.SchemaKey = _field
+	return nil
+}
 func (p *FieldSchema) ReadField20(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -560,6 +602,10 @@ func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -674,6 +720,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *FieldSchema) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchemaKey() {
+		if err = oprot.WriteFieldBegin("schema_key", thrift.I32, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SchemaKey)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 func (p *FieldSchema) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTextSchema() {
 		if err = oprot.WriteFieldBegin("text_schema", thrift.STRING, 20); err != nil {
@@ -720,6 +784,9 @@ func (p *FieldSchema) DeepEqual(ano *FieldSchema) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.DefaultFormat) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.SchemaKey) {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.TextSchema) {
@@ -784,6 +851,18 @@ func (p *FieldSchema) Field5DeepEqual(src *dataset.FieldDisplayFormat) bool {
 		return false
 	}
 	if *p.DefaultFormat != *src {
+		return false
+	}
+	return true
+}
+func (p *FieldSchema) Field8DeepEqual(src *dataset.SchemaKey) bool {
+
+	if p.SchemaKey == src {
+		return true
+	} else if p.SchemaKey == nil || src == nil {
+		return false
+	}
+	if *p.SchemaKey != *src {
 		return false
 	}
 	return true

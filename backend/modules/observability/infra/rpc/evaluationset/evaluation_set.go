@@ -315,6 +315,7 @@ func fieldSchemaDO2DTO(fs entity.FieldSchema) *eval_set_domain.FieldSchema {
 		Name:                 &fs.Name,
 		Description:          &fs.Description,
 		ContentType:          &contentType,
+		SchemaKey:            lo.ToPtr(dataset_domain.SchemaKey(fs.SchemaKey)),
 		TextSchema:           &fs.TextSchema,
 		DefaultDisplayFormat: defaultDisplayFormat,
 	}

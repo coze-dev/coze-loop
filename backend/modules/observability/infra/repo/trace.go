@@ -224,7 +224,7 @@ func (t *TraceCkRepoImpl) ListSpansRepeat(ctx context.Context, req *repo.ListSpa
 			return nil, err
 		}
 		totalSpans = append(totalSpans, resp.Spans...)
-		if !resp.HasMore || resp.PageToken == "" || len(resp.Spans) == 0 {
+		if !resp.HasMore || resp.PageToken == "" {
 			break
 		}
 		clonedReq.PageToken = resp.PageToken

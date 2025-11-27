@@ -97,6 +97,7 @@ type ListTrajectoryParam struct {
 type ITraceRepo interface {
 	InsertSpans(context.Context, *InsertTraceParam) error
 	ListSpans(context.Context, *ListSpansParam) (*ListSpansResult, error)
+	ListSpansRepeat(context.Context, *ListSpansParam) (*ListSpansResult, error)
 	GetPreSpanIDs(context.Context, *GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error)
 	GetTrace(context.Context, *GetTraceParam) (loop_span.SpanList, error)
 	ListAnnotations(context.Context, *ListAnnotationsParam) (loop_span.AnnotationList, error)

@@ -265,6 +265,20 @@ func (p *FieldSchema) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 20:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField20(buf[offset:])
@@ -369,6 +383,22 @@ func (p *FieldSchema) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *FieldSchema) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *dataset.SchemaKey
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := dataset.SchemaKey(v)
+		_field = &tmp
+	}
+	p.SchemaKey = _field
+	return offset, nil
+}
+
 func (p *FieldSchema) FastReadField20(buf []byte) (int, error) {
 	offset := 0
 
@@ -395,6 +425,7 @@ func (p *FieldSchema) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -409,6 +440,7 @@ func (p *FieldSchema) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field8Length()
 		l += p.field20Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -456,6 +488,15 @@ func (p *FieldSchema) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetDefaultFormat() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 5)
 		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.DefaultFormat))
+	}
+	return offset
+}
+
+func (p *FieldSchema) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSchemaKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 8)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.SchemaKey))
 	}
 	return offset
 }
@@ -514,6 +555,15 @@ func (p *FieldSchema) field5Length() int {
 	return l
 }
 
+func (p *FieldSchema) field8Length() int {
+	l := 0
+	if p.IsSetSchemaKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *FieldSchema) field20Length() int {
 	l := 0
 	if p.IsSetTextSchema() {
@@ -561,6 +611,11 @@ func (p *FieldSchema) DeepCopy(s interface{}) error {
 	if src.DefaultFormat != nil {
 		tmp := *src.DefaultFormat
 		p.DefaultFormat = &tmp
+	}
+
+	if src.SchemaKey != nil {
+		tmp := *src.SchemaKey
+		p.SchemaKey = &tmp
 	}
 
 	if src.TextSchema != nil {

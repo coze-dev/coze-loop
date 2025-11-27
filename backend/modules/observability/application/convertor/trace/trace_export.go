@@ -200,6 +200,7 @@ func ConvertFieldMappingsDTO2DO(mappings []*dataset0.FieldMapping) []entity.Fiel
 				Name:        mapping.GetFieldSchema().GetName(),
 				Description: mapping.GetFieldSchema().GetDescription(),
 				ContentType: convertContentTypeDTO2DO(mapping.GetFieldSchema().GetContentType()),
+				SchemaKey:   entity.SchemaKey(mapping.GetFieldSchema().GetSchemaKey()),
 				TextSchema:  mapping.GetFieldSchema().GetTextSchema(),
 			},
 			TraceFieldKey:      mapping.GetTraceFieldKey(),

@@ -124,7 +124,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 		return nil, err
 	}
 	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
-	iTraceExportService, err := service.NewTraceExportServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, iTenantProvider, datasetServiceAdaptor, traceFilterProcessorBuilder)
+	iTraceExportService, err := service.NewTraceExportServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, iTenantProvider, datasetServiceAdaptor, traceFilterProcessorBuilder, iTraceService)
 	if err != nil {
 		return nil, err
 	}
