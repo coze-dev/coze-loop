@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
-	common0 "github.com/coze-dev/coze-loop/backend/kitex_gen/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
@@ -15,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/view"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 	"strings"
 )
 
@@ -20142,8 +20142,8 @@ func (p *GetTrajectoryConfigResponse) Field255DeepEqual(src *base.BaseResp) bool
 
 type ListTrajectoryRequest struct {
 	// 需要准确填写，用于确定查询哪些租户的数据
-	PlatformType common.PlatformType `thrift:"platform_type,1,required" frugal:"1,required,string" json:"platform_type,required" query:"platform_type,required"`
-	WorkspaceID  int64               `thrift:"workspace_id,2,required" frugal:"2,required,i64" json:"workspace_id,string,required" query:"workspace_id,required"`
+	PlatformType common.PlatformType `thrift:"platform_type,1,required" frugal:"1,required,string" form:"platform_type,required" json:"platform_type,required"`
+	WorkspaceID  int64               `thrift:"workspace_id,2,required" frugal:"2,required,i64" form:"workspace_id,required" json:"workspace_id,string,required"`
 	TraceIds     []string            `thrift:"trace_ids,3,required" frugal:"3,required,list<string>" form:"trace_ids,required" json:"trace_ids,required"`
 	// ms
 	StartTime *int64     `thrift:"start_time,4,optional" frugal:"4,optional,i64" json:"start_time" form:"start_time" `
@@ -20624,8 +20624,8 @@ func (p *ListTrajectoryRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type ListTrajectoryResponse struct {
-	Trajectories []*common0.Trajectory `thrift:"trajectories,1,optional" frugal:"1,optional,list<common.Trajectory>" form:"trajectories" json:"trajectories,omitempty" query:"trajectories"`
-	BaseResp     *base.BaseResp        `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	Trajectories []*trajectory.Trajectory `thrift:"trajectories,1,optional" frugal:"1,optional,list<trajectory.Trajectory>" form:"trajectories" json:"trajectories,omitempty" query:"trajectories"`
+	BaseResp     *base.BaseResp           `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewListTrajectoryResponse() *ListTrajectoryResponse {
@@ -20635,9 +20635,9 @@ func NewListTrajectoryResponse() *ListTrajectoryResponse {
 func (p *ListTrajectoryResponse) InitDefault() {
 }
 
-var ListTrajectoryResponse_Trajectories_DEFAULT []*common0.Trajectory
+var ListTrajectoryResponse_Trajectories_DEFAULT []*trajectory.Trajectory
 
-func (p *ListTrajectoryResponse) GetTrajectories() (v []*common0.Trajectory) {
+func (p *ListTrajectoryResponse) GetTrajectories() (v []*trajectory.Trajectory) {
 	if p == nil {
 		return
 	}
@@ -20658,7 +20658,7 @@ func (p *ListTrajectoryResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *ListTrajectoryResponse) SetTrajectories(val []*common0.Trajectory) {
+func (p *ListTrajectoryResponse) SetTrajectories(val []*trajectory.Trajectory) {
 	p.Trajectories = val
 }
 func (p *ListTrajectoryResponse) SetBaseResp(val *base.BaseResp) {
@@ -20746,8 +20746,8 @@ func (p *ListTrajectoryResponse) ReadField1(iprot thrift.TProtocol) error {
 	if err != nil {
 		return err
 	}
-	_field := make([]*common0.Trajectory, 0, size)
-	values := make([]common0.Trajectory, size)
+	_field := make([]*trajectory.Trajectory, 0, size)
+	values := make([]trajectory.Trajectory, size)
 	for i := 0; i < size; i++ {
 		_elem := &values[i]
 		_elem.InitDefault()
@@ -20873,7 +20873,7 @@ func (p *ListTrajectoryResponse) DeepEqual(ano *ListTrajectoryResponse) bool {
 	return true
 }
 
-func (p *ListTrajectoryResponse) Field1DeepEqual(src []*common0.Trajectory) bool {
+func (p *ListTrajectoryResponse) Field1DeepEqual(src []*trajectory.Trajectory) bool {
 
 	if len(p.Trajectories) != len(src) {
 		return false
