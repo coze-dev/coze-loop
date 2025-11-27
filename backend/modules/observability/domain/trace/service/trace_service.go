@@ -1671,9 +1671,17 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		return nil, err
 	}
 
+	filter := trajectoryConfig.GetFilter()
+	filter.QueryAndOr = ptr.Of(loop_span.QueryAndOrEnumAnd)
+	filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
+		FieldName: loop_span.SpanFieldTraceId,
+		FieldType: loop_span.FieldTypeString,
+		Values:    traceIDs,
+		QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+	})
 	selectedSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
 		Tenants:            tenant,
-		Filters:            trajectoryConfig.GetFilter(),
+		Filters:            filter,
 		StartAt:            startTime,
 		EndAt:              endTime,
 		Limit:              100,
