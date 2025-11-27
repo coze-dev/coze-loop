@@ -108,6 +108,8 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 		spanMap[span.SpanID] = span
 	}
 
+	var trajectoryID string
+
 	// 找到root节点
 	var rootSpan *Span
 	for _, span := range spanList {
@@ -117,23 +119,27 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 		}
 	}
 
-	if rootSpan == nil {
-		return nil
-	}
-
 	// 构建根节点步骤
-	rootStep := &RootStep{
-		ID:        &rootSpan.SpanID,
-		Name:      &rootSpan.SpanName,
-		Input:     &rootSpan.Input,
-		Output:    &rootSpan.Output,
-		BasicInfo: buildBasicInfo(rootSpan),
+	var rootStep *RootStep
+	var rootSpanID string
+	if rootSpan != nil {
+		rootStep = &RootStep{
+			ID:        &rootSpan.SpanID,
+			Name:      &rootSpan.SpanName,
+			Input:     &rootSpan.Input,
+			Output:    &rootSpan.Output,
+			BasicInfo: buildBasicInfo(rootSpan),
+		}
+		rootSpanID = rootSpan.SpanID
 	}
 
 	// 收集所有agent节点（包括root节点）
-	agentSpans := []*Span{rootSpan}
+	agentSpans := make([]*Span, 0)
+	if rootSpan != nil {
+		agentSpans = append(agentSpans, rootSpan)
+	}
 	for _, span := range spanList {
-		if span.SpanType == "agent" && span.SpanID != rootSpan.SpanID {
+		if span.SpanType == "agent" && span.SpanID != rootSpanID {
 			agentSpans = append(agentSpans, span)
 		}
 	}
@@ -144,6 +150,7 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 		if agentSpan == nil {
 			continue
 		}
+		trajectoryID = agentSpan.SpanID
 		agentStep := &AgentStep{
 			ID:        &agentSpan.SpanID,
 			ParentID:  &agentSpan.ParentID,
@@ -157,7 +164,7 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 	}
 
 	trajectory := &Trajectory{
-		ID:         &rootSpan.TraceID,
+		ID:         &trajectoryID,
 		RootStep:   rootStep,
 		AgentSteps: agentSteps,
 	}
