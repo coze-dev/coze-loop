@@ -21,6 +21,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UploadFileForServer": kitex.NewMethodInfo(
+		uploadFileForServerHandler,
+		newFileServiceUploadFileForServerArgs,
+		newFileServiceUploadFileForServerResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"SignUploadFile": kitex.NewMethodInfo(
 		signUploadFileHandler,
 		newFileServiceSignUploadFileArgs,
@@ -87,6 +94,25 @@ func newFileServiceUploadLoopFileInnerResult() interface{} {
 	return file.NewFileServiceUploadLoopFileInnerResult()
 }
 
+func uploadFileForServerHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*file.FileServiceUploadFileForServerArgs)
+	realResult := result.(*file.FileServiceUploadFileForServerResult)
+	success, err := handler.(file.FileService).UploadFileForServer(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newFileServiceUploadFileForServerArgs() interface{} {
+	return file.NewFileServiceUploadFileForServerArgs()
+}
+
+func newFileServiceUploadFileForServerResult() interface{} {
+	return file.NewFileServiceUploadFileForServerResult()
+}
+
 func signUploadFileHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*file.FileServiceSignUploadFileArgs)
 	realResult := result.(*file.FileServiceSignUploadFileResult)
@@ -142,6 +168,16 @@ func (p *kClient) UploadLoopFileInner(ctx context.Context, req *file.UploadLoopF
 	_args.Req = req
 	var _result file.FileServiceUploadLoopFileInnerResult
 	if err = p.c.Call(ctx, "UploadLoopFileInner", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UploadFileForServer(ctx context.Context, req *file.UploadFileForServerRequest) (r *file.UploadFileForServerResponse, err error) {
+	var _args file.FileServiceUploadFileForServerArgs
+	_args.Req = req
+	var _result file.FileServiceUploadFileForServerResult
+	if err = p.c.Call(ctx, "UploadFileForServer", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -86,6 +86,21 @@ func (mr *MockIPromptServiceMockRecorder) CreateLabel(ctx, labelDO any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLabel", reflect.TypeOf((*MockIPromptService)(nil).CreateLabel), ctx, labelDO)
 }
 
+// CreatePrompt mocks base method.
+func (m *MockIPromptService) CreatePrompt(ctx context.Context, promptDO *entity.Prompt) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreatePrompt", ctx, promptDO)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreatePrompt indicates an expected call of CreatePrompt.
+func (mr *MockIPromptServiceMockRecorder) CreatePrompt(ctx, promptDO any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePrompt", reflect.TypeOf((*MockIPromptService)(nil).CreatePrompt), ctx, promptDO)
+}
+
 // Execute mocks base method.
 func (m *MockIPromptService) Execute(ctx context.Context, param service.ExecuteParam) (*entity.Reply, error) {
 	m.ctrl.T.Helper()
@@ -116,6 +131,20 @@ func (mr *MockIPromptServiceMockRecorder) ExecuteStreaming(ctx, param any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteStreaming", reflect.TypeOf((*MockIPromptService)(nil).ExecuteStreaming), ctx, param)
 }
 
+// ExpandSnippets mocks base method.
+func (m *MockIPromptService) ExpandSnippets(ctx context.Context, promptDO *entity.Prompt) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExpandSnippets", ctx, promptDO)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExpandSnippets indicates an expected call of ExpandSnippets.
+func (mr *MockIPromptServiceMockRecorder) ExpandSnippets(ctx, promptDO any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExpandSnippets", reflect.TypeOf((*MockIPromptService)(nil).ExpandSnippets), ctx, promptDO)
+}
+
 // FormatPrompt mocks base method.
 func (m *MockIPromptService) FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) ([]*entity.Message, error) {
 	m.ctrl.T.Helper()
@@ -129,6 +158,21 @@ func (m *MockIPromptService) FormatPrompt(ctx context.Context, prompt *entity.Pr
 func (mr *MockIPromptServiceMockRecorder) FormatPrompt(ctx, prompt, messages, variableVals any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FormatPrompt", reflect.TypeOf((*MockIPromptService)(nil).FormatPrompt), ctx, prompt, messages, variableVals)
+}
+
+// GetPrompt mocks base method.
+func (m *MockIPromptService) GetPrompt(ctx context.Context, param service.GetPromptParam) (*entity.Prompt, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPrompt", ctx, param)
+	ret0, _ := ret[0].(*entity.Prompt)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPrompt indicates an expected call of GetPrompt.
+func (mr *MockIPromptServiceMockRecorder) GetPrompt(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPrompt", reflect.TypeOf((*MockIPromptService)(nil).GetPrompt), ctx, param)
 }
 
 // ListLabel mocks base method.
@@ -161,6 +205,34 @@ func (mr *MockIPromptServiceMockRecorder) MCompleteMultiModalFileURL(ctx, messag
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MCompleteMultiModalFileURL", reflect.TypeOf((*MockIPromptService)(nil).MCompleteMultiModalFileURL), ctx, messages, variableVals)
 }
 
+// MConvertBase64DataURLToFileURI mocks base method.
+func (m *MockIPromptService) MConvertBase64DataURLToFileURI(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MConvertBase64DataURLToFileURI", ctx, messages, workspaceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MConvertBase64DataURLToFileURI indicates an expected call of MConvertBase64DataURLToFileURI.
+func (mr *MockIPromptServiceMockRecorder) MConvertBase64DataURLToFileURI(ctx, messages, workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MConvertBase64DataURLToFileURI", reflect.TypeOf((*MockIPromptService)(nil).MConvertBase64DataURLToFileURI), ctx, messages, workspaceID)
+}
+
+// MConvertBase64DataURLToFileURL mocks base method.
+func (m *MockIPromptService) MConvertBase64DataURLToFileURL(ctx context.Context, messages []*entity.Message, workspaceID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MConvertBase64DataURLToFileURL", ctx, messages, workspaceID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MConvertBase64DataURLToFileURL indicates an expected call of MConvertBase64DataURLToFileURL.
+func (mr *MockIPromptServiceMockRecorder) MConvertBase64DataURLToFileURL(ctx, messages, workspaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MConvertBase64DataURLToFileURL", reflect.TypeOf((*MockIPromptService)(nil).MConvertBase64DataURLToFileURL), ctx, messages, workspaceID)
+}
+
 // MGetPromptIDs mocks base method.
 func (m *MockIPromptService) MGetPromptIDs(ctx context.Context, spaceID int64, promptKeys []string) (map[string]int64, error) {
 	m.ctrl.T.Helper()
@@ -189,6 +261,21 @@ func (m *MockIPromptService) MParseCommitVersion(ctx context.Context, spaceID in
 func (mr *MockIPromptServiceMockRecorder) MParseCommitVersion(ctx, spaceID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MParseCommitVersion", reflect.TypeOf((*MockIPromptService)(nil).MParseCommitVersion), ctx, spaceID, params)
+}
+
+// SaveDraft mocks base method.
+func (m *MockIPromptService) SaveDraft(ctx context.Context, promptDO *entity.Prompt) (*entity.DraftInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveDraft", ctx, promptDO)
+	ret0, _ := ret[0].(*entity.DraftInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SaveDraft indicates an expected call of SaveDraft.
+func (mr *MockIPromptServiceMockRecorder) SaveDraft(ctx, promptDO any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveDraft", reflect.TypeOf((*MockIPromptService)(nil).SaveDraft), ctx, promptDO)
 }
 
 // UpdateCommitLabels mocks base method.

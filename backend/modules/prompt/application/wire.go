@@ -36,6 +36,7 @@ import (
 
 var (
 	promptDomainSet = wire.NewSet(
+		service.NewPromptFormatter,
 		service.NewPromptService,
 		repo.NewManageRepo,
 		repo.NewLabelRepo,
@@ -44,6 +45,7 @@ var (
 		mysql.NewPromptBasicDAO,
 		mysql.NewPromptCommitDAO,
 		mysql.NewPromptUserDraftDAO,
+		mysql.NewPromptRelationDAO,
 		mysql.NewLabelDAO,
 		mysql.NewCommitLabelMappingDAO,
 		mysql.NewDebugLogDAO,
@@ -58,6 +60,7 @@ var (
 		rpc.NewUserRPCProvider,
 		rpc.NewAuditRPCProvider,
 		collector.NewEventCollectorProvider,
+		service.NewCozeLoopSnippetParser,
 	)
 	manageSet = wire.NewSet(
 		NewPromptManageApplication,

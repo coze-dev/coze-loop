@@ -254,6 +254,8 @@ github.com/coreos/go-semver v0.3.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3Ee
 github.com/coreos/go-systemd/v22 v22.3.2/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/coze-dev/cozeloop-go v0.1.10-0.20250901062520-61d3699b1e83 h1:7Jh4flr9XqvissJtafWhTcs1vcErUcsjNkkniH/szxY=
 github.com/coze-dev/cozeloop-go v0.1.10-0.20250901062520-61d3699b1e83/go.mod h1:RMH0F6ZMwZm4ZL92IHLjTf4lmr8QHxYJVPCdz60ZbbI=
+github.com/coze-dev/cozeloop-go v0.1.14 h1:Pu6P+G72czlGn9e86aSXpXuRqJvu388fWXN8J/heVOc=
+github.com/coze-dev/cozeloop-go v0.1.14/go.mod h1:lM7cmUEZlnAlQYdwfk4Li0SC3RdZ++QMHX75nvKceSc=
 github.com/coze-dev/cozeloop-go/spec v0.1.4-0.20250829072213-3812ddbfb735 h1:qxAwjHy0SLQazDO3oGJ8D24vOeM2Oz2+n27bNPegBls=
 github.com/coze-dev/cozeloop-go/spec v0.1.4-0.20250829072213-3812ddbfb735/go.mod h1:/f3BrWehffwXIpd4b5rYIqktLd/v5dlLBw0h9F/LQIU=
 github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
@@ -473,6 +475,7 @@ github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5/go.mod h1:vavhavw2zAx
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/google/s2a-go v0.1.8 h1:zZDs9gcbt9ZPLV0ndSyQk6Kacx2g/X+SKYovpnz3SMM=
 github.com/google/s2a-go v0.1.8/go.mod h1:6iNWHTpQ+nfNRN5E00MSdfDwVesa8hhS32PhPO8deJA=
+github.com/google/subcommands v1.2.0 h1:vWQspBTo2nEqTUFita5/KeEWlUL8kQObDFbub/EN9oE=
 github.com/google/subcommands v1.2.0/go.mod h1:ZjhPrFU+Olkh9WazFPsl27BQ4UPiG37m3yTrtFlrHVk=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=

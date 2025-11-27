@@ -29,7 +29,7 @@ func (p *PromptServiceImpl) CreateLabel(ctx context.Context, labelDO *entity.Pro
 	}
 	for _, preset := range presetLabels {
 		if preset == labelDO.LabelKey {
-			return errorx.NewByCode(prompterr.CommonResourceDuplicatedCode,
+			return errorx.NewByCode(prompterr.PromptLabelExistCode,
 				errorx.WithExtraMsg(fmt.Sprintf("label key conflicts with preset label: %s", labelDO.LabelKey)))
 		}
 	}

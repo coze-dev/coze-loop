@@ -20,8 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service/mocks"
 
-	// prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
-	// "github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/unittest"
 )
@@ -109,7 +108,9 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
 					promptService: mockPromptService,
@@ -138,6 +139,35 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 				},
 			},
 			wantErr: nil,
+		},
+		{
+			name: "base64 convert error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
+				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
+
+				return fields{
+					promptService: mockPromptService,
+					manageRepo:    mockManageRepo,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &execute.ExecuteInternalRequest{
+					PromptID:     ptr.Of(int64(123)),
+					WorkspaceID:  ptr.Of(int64(123456)),
+					Version:      ptr.Of("1.0.0"),
+					Messages:     []*prompt.Message{},
+					VariableVals: []*prompt.VariableVal{},
+				},
+			},
+			wantR:   execute.NewExecuteInternalResponse(),
+			wantErr: errors.New("convert error"),
 		},
 		// 注释掉这个测试用例，因为getPromptByID方法在处理错误时会有空指针问题
 		// {
@@ -169,6 +199,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("execution error"))
 
@@ -189,13 +220,40 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 			wantErr: errors.New("execution error"),
 		},
 		{
+			name: "expand snippets error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(errorx.New("expand error"))
+
+				return fields{
+					promptService: mockPromptService,
+					manageRepo:    mockManageRepo,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &execute.ExecuteInternalRequest{
+					PromptID:    ptr.Of(int64(123)),
+					WorkspaceID: ptr.Of(int64(123456)),
+					Version:     ptr.Of("1.0.0"),
+				},
+			},
+			wantR:   execute.NewExecuteInternalResponse(),
+			wantErr: errorx.New("expand error"),
+		},
+		{
 			name: "success with override params",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
 					promptService: mockPromptService,
@@ -238,7 +296,9 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
+				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
 					promptService: mockPromptService,
@@ -488,6 +548,7 @@ func TestOverridePromptParams(t *testing.T) {
 				ModelConfig: &entity.ModelConfig{
 					ModelID:     456,
 					Temperature: ptr.Of(0.7),
+					Extra:       ptr.Of(`{"source":"base"}`),
 				},
 			},
 		},
@@ -555,6 +616,7 @@ func TestOverridePromptParams(t *testing.T) {
 						ModelID:     ptr.Of(int64(789)),
 						Temperature: ptr.Of(0.9),
 						MaxTokens:   ptr.Of(int32(2000)),
+						Extra:       ptr.Of(`{"source":"override"}`),
 					},
 				},
 			},
@@ -567,6 +629,7 @@ func TestOverridePromptParams(t *testing.T) {
 							ModelID:     789,
 							Temperature: ptr.Of(0.9),
 							MaxTokens:   ptr.Of(int32(2000)),
+							Extra:       ptr.Of(`{"source":"override"}`),
 						},
 					},
 				}
@@ -620,10 +683,17 @@ func TestOverridePromptParams(t *testing.T) {
 					if tt.args.promptDO.PromptCommit.PromptDetail != nil {
 						promptCopy.PromptCommit.PromptDetail = &entity.PromptDetail{}
 						if tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig != nil {
+							orig := tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig
 							promptCopy.PromptCommit.PromptDetail.ModelConfig = &entity.ModelConfig{
-								ModelID:     tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig.ModelID,
-								Temperature: tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig.Temperature,
-								MaxTokens:   tt.args.promptDO.PromptCommit.PromptDetail.ModelConfig.MaxTokens,
+								ModelID:          orig.ModelID,
+								MaxTokens:        orig.MaxTokens,
+								Temperature:      orig.Temperature,
+								TopK:             orig.TopK,
+								TopP:             orig.TopP,
+								PresencePenalty:  orig.PresencePenalty,
+								FrequencyPenalty: orig.FrequencyPenalty,
+								JSONMode:         orig.JSONMode,
+								Extra:            orig.Extra,
 							}
 						}
 					}
