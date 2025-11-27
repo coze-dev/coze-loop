@@ -111,6 +111,16 @@ type TaskServiceImpl struct {
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
+	// storage准备
+	tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, loop_span.PlatformType(req.Task.SpanFilter.PlatformType))
+	if err != nil {
+		return nil, err
+	}
+	if err = t.storageProvider.PrepareStorageForTask(ctx, strconv.FormatInt(req.Task.WorkspaceID, 10), tenants); err != nil {
+		logs.CtxError(ctx, "PrepareStorageForTask err:%v", err)
+		return nil, err
+	}
+
 	taskDO := req.Task
 	// 校验task name是否存在
 	checkResp, err := t.CheckTaskName(ctx, &CheckTaskNameReq{
@@ -141,15 +151,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if err != nil {
 		return nil, err
 	}
-	// storage准备
-	tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, loop_span.PlatformType(req.Task.SpanFilter.PlatformType))
-	if err != nil {
-		return nil, err
-	}
-	if err = t.storageProvider.PrepareStorageForTask(ctx, strconv.FormatInt(req.Task.WorkspaceID, 10), tenants); err != nil {
-		logs.CtxError(ctx, "PrepareStorageForTask err:%v", err)
-		return nil, err
-	}
+
 	// 创建任务的数据准备
 	// 数据回流任务——创建/更新输出数据集
 	// 自动评测历史回溯——创建空壳子
