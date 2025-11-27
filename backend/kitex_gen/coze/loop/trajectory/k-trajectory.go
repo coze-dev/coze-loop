@@ -1924,7 +1924,7 @@ func (p *ModelInfo) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1938,7 +1938,7 @@ func (p *ModelInfo) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1952,7 +1952,7 @@ func (p *ModelInfo) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 3:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField3(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1966,7 +1966,7 @@ func (p *ModelInfo) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 4:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField4(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1980,7 +1980,7 @@ func (p *ModelInfo) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 5:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField5(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1994,7 +1994,7 @@ func (p *ModelInfo) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 6:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField6(buf[offset:])
 				offset += l
 				if err != nil {
@@ -2028,8 +2028,8 @@ SkipFieldError:
 func (p *ModelInfo) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -2042,8 +2042,8 @@ func (p *ModelInfo) FastReadField1(buf []byte) (int, error) {
 func (p *ModelInfo) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -2056,8 +2056,8 @@ func (p *ModelInfo) FastReadField2(buf []byte) (int, error) {
 func (p *ModelInfo) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -2070,8 +2070,8 @@ func (p *ModelInfo) FastReadField3(buf []byte) (int, error) {
 func (p *ModelInfo) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -2084,8 +2084,8 @@ func (p *ModelInfo) FastReadField4(buf []byte) (int, error) {
 func (p *ModelInfo) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -2098,8 +2098,8 @@ func (p *ModelInfo) FastReadField5(buf []byte) (int, error) {
 func (p *ModelInfo) FastReadField6(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -2118,10 +2118,10 @@ func (p *ModelInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
-		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2144,8 +2144,8 @@ func (p *ModelInfo) BLength() int {
 func (p *ModelInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetInputTokens() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.InputTokens)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 1)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.InputTokens)
 	}
 	return offset
 }
@@ -2153,8 +2153,8 @@ func (p *ModelInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 func (p *ModelInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetOutputTokens() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.OutputTokens)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 2)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.OutputTokens)
 	}
 	return offset
 }
@@ -2162,8 +2162,8 @@ func (p *ModelInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 func (p *ModelInfo) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetLatencyFirstResp() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.LatencyFirstResp)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.LatencyFirstResp)
 	}
 	return offset
 }
@@ -2171,8 +2171,8 @@ func (p *ModelInfo) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 func (p *ModelInfo) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetReasoningTokens() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.ReasoningTokens)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 4)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.ReasoningTokens)
 	}
 	return offset
 }
@@ -2180,8 +2180,8 @@ func (p *ModelInfo) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 func (p *ModelInfo) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetInputReadCachedTokens() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.InputReadCachedTokens)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 5)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.InputReadCachedTokens)
 	}
 	return offset
 }
@@ -2189,8 +2189,8 @@ func (p *ModelInfo) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 func (p *ModelInfo) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetInputCreationCachedTokens() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 6)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.InputCreationCachedTokens)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 6)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.InputCreationCachedTokens)
 	}
 	return offset
 }
@@ -2199,7 +2199,7 @@ func (p *ModelInfo) field1Length() int {
 	l := 0
 	if p.IsSetInputTokens() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -2208,7 +2208,7 @@ func (p *ModelInfo) field2Length() int {
 	l := 0
 	if p.IsSetOutputTokens() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -2217,7 +2217,7 @@ func (p *ModelInfo) field3Length() int {
 	l := 0
 	if p.IsSetLatencyFirstResp() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.StringLengthNocopy(*p.LatencyFirstResp)
 	}
 	return l
 }
@@ -2226,7 +2226,7 @@ func (p *ModelInfo) field4Length() int {
 	l := 0
 	if p.IsSetReasoningTokens() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -2235,7 +2235,7 @@ func (p *ModelInfo) field5Length() int {
 	l := 0
 	if p.IsSetInputReadCachedTokens() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -2244,7 +2244,7 @@ func (p *ModelInfo) field6Length() int {
 	l := 0
 	if p.IsSetInputCreationCachedTokens() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -2266,7 +2266,10 @@ func (p *ModelInfo) DeepCopy(s interface{}) error {
 	}
 
 	if src.LatencyFirstResp != nil {
-		tmp := *src.LatencyFirstResp
+		var tmp string
+		if *src.LatencyFirstResp != "" {
+			tmp = kutils.StringDeepCopy(*src.LatencyFirstResp)
+		}
 		p.LatencyFirstResp = &tmp
 	}
 
@@ -2306,7 +2309,7 @@ func (p *BasicInfo) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
@@ -2320,7 +2323,7 @@ func (p *BasicInfo) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
@@ -2368,8 +2371,8 @@ SkipFieldError:
 func (p *BasicInfo) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -2382,8 +2385,8 @@ func (p *BasicInfo) FastReadField1(buf []byte) (int, error) {
 func (p *BasicInfo) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -2434,8 +2437,8 @@ func (p *BasicInfo) BLength() int {
 func (p *BasicInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetStartedAt() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.StartedAt)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.StartedAt)
 	}
 	return offset
 }
@@ -2443,8 +2446,8 @@ func (p *BasicInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 func (p *BasicInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetDuration() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.Duration)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Duration)
 	}
 	return offset
 }
@@ -2462,7 +2465,7 @@ func (p *BasicInfo) field1Length() int {
 	l := 0
 	if p.IsSetStartedAt() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.StringLengthNocopy(*p.StartedAt)
 	}
 	return l
 }
@@ -2471,7 +2474,7 @@ func (p *BasicInfo) field2Length() int {
 	l := 0
 	if p.IsSetDuration() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.StringLengthNocopy(*p.Duration)
 	}
 	return l
 }
@@ -2492,12 +2495,18 @@ func (p *BasicInfo) DeepCopy(s interface{}) error {
 	}
 
 	if src.StartedAt != nil {
-		tmp := *src.StartedAt
+		var tmp string
+		if *src.StartedAt != "" {
+			tmp = kutils.StringDeepCopy(*src.StartedAt)
+		}
 		p.StartedAt = &tmp
 	}
 
 	if src.Duration != nil {
-		tmp := *src.Duration
+		var tmp string
+		if *src.Duration != "" {
+			tmp = kutils.StringDeepCopy(*src.Duration)
+		}
 		p.Duration = &tmp
 	}
 
