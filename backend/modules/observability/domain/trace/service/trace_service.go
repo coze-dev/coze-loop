@@ -828,15 +828,11 @@ func (r *TraceServiceImpl) GetTrajectoryConfig(ctx context.Context, req *GetTraj
 	if err != nil {
 		return nil, err
 	}
-	if trajectoryConfig == nil || trajectoryConfig.Filter == nil || *trajectoryConfig.Filter == "" {
+	if trajectoryConfig == nil || trajectoryConfig.Filter == nil {
 		return &GetTrajectoryConfigResponse{}, nil
 	}
-	filters := &loop_span.FilterFields{}
-	if err := json.Unmarshal([]byte(*trajectoryConfig.Filter), &filters); err != nil {
-		return nil, err
-	}
 	return &GetTrajectoryConfigResponse{
-		Filters: filters,
+		Filters: trajectoryConfig.Filter,
 	}, nil
 }
 

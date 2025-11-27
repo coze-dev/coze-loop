@@ -20142,8 +20142,8 @@ func (p *GetTrajectoryConfigResponse) Field255DeepEqual(src *base.BaseResp) bool
 
 type ListTrajectoryRequest struct {
 	// 需要准确填写，用于确定查询哪些租户的数据
-	PlatformType common.PlatformType `thrift:"platform_type,1,required" frugal:"1,required,string" json:"platform_type,required" query:"platform_type,required"`
-	WorkspaceID  int64               `thrift:"workspace_id,2,required" frugal:"2,required,i64" json:"workspace_id,string,required" query:"workspace_id,required"`
+	PlatformType common.PlatformType `thrift:"platform_type,1,required" frugal:"1,required,string" form:"platform_type,required" json:"platform_type,required"`
+	WorkspaceID  int64               `thrift:"workspace_id,2,required" frugal:"2,required,i64" form:"workspace_id,required" json:"workspace_id,string,required"`
 	TraceIds     []string            `thrift:"trace_ids,3,required" frugal:"3,required,list<string>" form:"trace_ids,required" json:"trace_ids,required"`
 	// ms
 	StartTime *int64     `thrift:"start_time,4,optional" frugal:"4,optional,i64" json:"start_time" form:"start_time" `
