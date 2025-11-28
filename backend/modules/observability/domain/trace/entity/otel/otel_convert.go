@@ -69,6 +69,11 @@ var (
 			isTag:     true,
 			dataType:  dataTypeString,
 		},
+		"psm": {
+			attributeKey: []string{"service.name"},
+			isTag:        false,
+			dataType:     dataTypeString,
+		},
 
 		// model
 		tracespec.ModelProvider: {
@@ -299,6 +304,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 	spanType := ""
 	input := ""
 	output := ""
+	psm := ""
 	statusCode := int32(0)
 	tagsString := make(map[string]string)
 	tagsLong := make(map[string]int64)
@@ -330,6 +336,8 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 					input = value
 				case "output":
 					output = value
+				case "psm":
+					psm = value
 				default:
 				}
 			}
@@ -390,7 +398,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 		LogID:            "",
 		TraceID:          span.TraceId,
 		DurationMicros:   (endTimeUnixNanoInt64 - startTimeUnixNanoInt64) / 1000,
-		PSM:              "",
+		PSM:              psm,
 		CallType:         "Custom",
 		WorkspaceID:      spaceID,
 		SpanName:         span.Name,
