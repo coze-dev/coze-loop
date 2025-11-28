@@ -298,6 +298,9 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 }
 
 func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan, loopSpan *loop_span.Span) error {
+	// todo test
+	logs.CtxInfo(ctx, "SpanTrigger:%v", rawSpan)
+
 	if rawSpan != nil {
 		span := rawSpan.RawSpanConvertToLoopSpan()
 		if span != nil {
