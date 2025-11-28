@@ -15,6 +15,8 @@ type FieldType string
 // TaskFieldName defines the supported task field names for filtering.
 type TaskFieldName string
 
+type TaskSourceValue string
+
 const (
 	QueryTypeMatch    QueryType = "match"
 	QueryTypeEq       QueryType = "eq"
@@ -42,6 +44,9 @@ const (
 	TaskFieldNameTaskType   TaskFieldName = "task_type"
 	TaskFieldNameSampleRate TaskFieldName = "sample_rate"
 	TaskFieldNameCreatedBy  TaskFieldName = "created_by"
+	TaskFieldNameTaskSource TaskFieldName = "task_source"
+
+	TaskSourceUser TaskSourceValue = "user"
 )
 
 // TaskFilterFields aggregates multiple TaskFilterField expressions.
