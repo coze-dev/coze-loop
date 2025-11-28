@@ -193,7 +193,7 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 			if err = sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 				Task:     sub.t,
 				TaskRun:  sub.tr,
-				IsFinish: false,
+				IsFinish: false, // 任务可能同时有历史回溯和新任务，不能直接关闭
 			}); err != nil {
 				return err
 			}
