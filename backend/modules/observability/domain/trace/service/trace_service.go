@@ -270,6 +270,30 @@ type GetTrajectoryConfigResponse struct {
 	Filters *loop_span.FilterFields
 }
 
+func (t *GetTrajectoryConfigResponse) GetFiltersWithDefaultFilter() *loop_span.FilterFields {
+	filters := &loop_span.FilterFields{
+		QueryAndOr:   lo.ToPtr(loop_span.QueryAndOrEnumOr),
+		FilterFields: make([]*loop_span.FilterField, 0),
+	}
+	filters.FilterFields = append(filters.FilterFields,
+		&loop_span.FilterField{
+			FieldName:  "parent_id",
+			FieldType:  loop_span.FieldTypeString,
+			Values:     []string{"", "0"},
+			QueryType:  lo.ToPtr(loop_span.QueryTypeEnumIn),
+			QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumOr),
+		},
+	)
+
+	if t.Filters != nil {
+		filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
+			SubFilter: t.Filters,
+		})
+	}
+
+	return filters
+}
+
 type ListTrajectoryRequest struct {
 	PlatformType loop_span.PlatformType
 	WorkspaceID  int64
@@ -1641,7 +1665,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		return nil, err
 	}
 
-	trajectoryConfig, err := r.traceRepo.GetTrajectoryConfig(ctx, repo.GetTrajectoryConfigParam{WorkspaceId: workspaceID})
+	trajectoryConfig, err := r.GetTrajectoryConfig(ctx, &GetTrajectoryConfigRequest{WorkspaceID: workspaceID})
 	if err != nil {
 		logs.CtxError(ctx, "Failed to get trajectory config, workspace_id:%d, err:%+v", workspaceID, err)
 		return nil, err
@@ -1671,12 +1695,11 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		return nil, err
 	}
 
-	filters := &loop_span.FilterFields{
+	selectSpanFilters := &loop_span.FilterFields{
 		QueryAndOr:   lo.ToPtr(loop_span.QueryAndOrEnumAnd),
 		FilterFields: make([]*loop_span.FilterField, 0),
 	}
-
-	filters.FilterFields = append(filters.FilterFields,
+	selectSpanFilters.FilterFields = append(selectSpanFilters.FilterFields,
 		&loop_span.FilterField{
 			FieldName: loop_span.SpanFieldTraceId,
 			FieldType: loop_span.FieldTypeString,
@@ -1685,15 +1708,15 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		},
 	)
 
-	if trajectoryConfig.Filter != nil {
-		filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
-			SubFilter: trajectoryConfig.GetFilter(),
+	if trajectoryConfig.Filters != nil {
+		selectSpanFilters.FilterFields = append(selectSpanFilters.FilterFields, &loop_span.FilterField{
+			SubFilter: trajectoryConfig.GetFiltersWithDefaultFilter(),
 		})
 	}
 
 	selectedSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
 		Tenants:            tenant,
-		Filters:            filters,
+		Filters:            selectSpanFilters,
 		StartAt:            startTime,
 		EndAt:              endTime,
 		Limit:              100,
@@ -1721,7 +1744,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		}
 	}
 
-	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, &selectedSpans.Spans, trajectoryConfig.GetFilter())
+	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, &selectedSpans.Spans, trajectoryConfig.GetFiltersWithDefaultFilter())
 	if err != nil {
 		return nil, err
 	}
