@@ -70,7 +70,7 @@ func (p *EvaluatorSourcePromptServiceImpl) EvaluatorType() entity.EvaluatorType 
 	return entity.EvaluatorTypePrompt
 }
 
-func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
+func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
 	var err error
 	startTime := time.Now()
 	var rootSpan *evaluatorSpan
@@ -664,9 +664,9 @@ func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluato
 	return nil
 }
 
-func (p *EvaluatorSourcePromptServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error) {
+func (p *EvaluatorSourcePromptServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error) {
 	// 实现调试评估的逻辑
-	output, _, _ = p.Run(ctx, evaluator, input, exptSpaceID, false)
+	output, _, _ = p.Run(ctx, evaluator, input, evaluatorRunConf, exptSpaceID, false)
 	if output != nil && output.EvaluatorRunError != nil {
 		return nil, errorx.NewByCode(output.EvaluatorRunError.Code, errorx.WithExtraMsg(output.EvaluatorRunError.Message))
 	}

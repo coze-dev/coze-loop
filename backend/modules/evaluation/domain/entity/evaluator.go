@@ -447,3 +447,8 @@ func (e *Evaluator) GetRateLimit() *RateLimit {
 	}
 	return nil
 }
+
+type EvaluatorRunConfig struct {
+	Env                   *string       `json:"env,omitempty"`
+	EvaluatorRuntimeParam *RuntimeParam `json:"evaluator_runtime_param,omitempty"`
+}

@@ -19,8 +19,23 @@ import (
 type EvaluatorAccessProtocol = string
 
 const (
-	EvaluatorAccessProtocolRPC = "rpc"
+	EvaluatorAccessProtocolRPC         EvaluatorAccessProtocol = "rpc"
+	EvaluatorAccessProtocolRPCOld      EvaluatorAccessProtocol = "rpc_old"
+	EvaluatorAccessProtocolFaasHTTP    EvaluatorAccessProtocol = "faas_http"
+	EvaluatorAccessProtocolFaasHTTPOld EvaluatorAccessProtocol = "faas_http_old"
 )
+
+type EvaluatorHTTPMethod = string
+
+const (
+	EvaluatorHTTPMethodGet  EvaluatorHTTPMethod = "get"
+	EvaluatorHTTPMethodPost EvaluatorHTTPMethod = "post"
+)
+
+type EvaluatorHTTPInfo struct {
+	Method *EvaluatorHTTPMethod `json:"method,omitempty"`
+	Path   *string              `json:"path,omitempty"`
+}
 
 type CustomRPCEvaluatorVersion struct {
 	// standard EvaluatorVersion layer attributes
@@ -41,7 +56,8 @@ type CustomRPCEvaluatorVersion struct {
 	AccessProtocol        EvaluatorAccessProtocol `json:"access_protocol"`         // custom protocol
 	ServiceName           *string                 `json:"service_name"`
 	Cluster               *string                 `json:"cluster"`
-	Timeout               *int64                  `json:"timeout"` // timeout duration in milliseconds(ms)
+	InvokeHTTPInfo        *EvaluatorHTTPInfo      `json:"invoke_http_info,omitempty"` // invoke http info
+	Timeout               *int64                  `json:"timeout"`                    // timeout duration in milliseconds(ms)
 	RateLimit             *RateLimit              `json:"rate_limit,omitempty"`
 }
 

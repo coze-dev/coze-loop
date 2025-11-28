@@ -489,6 +489,7 @@ func ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *eva
 			customRPCEvaluatorVersion.AccessProtocol = dto.EvaluatorContent.CustomRPCEvaluator.AccessProtocol
 			customRPCEvaluatorVersion.ServiceName = dto.EvaluatorContent.CustomRPCEvaluator.ServiceName
 			customRPCEvaluatorVersion.Cluster = dto.EvaluatorContent.CustomRPCEvaluator.Cluster
+			customRPCEvaluatorVersion.InvokeHTTPInfo = ConvertEvaluatorHTTPInfoDTO2DO(dto.EvaluatorContent.CustomRPCEvaluator.InvokeHTTPInfo)
 			customRPCEvaluatorVersion.Timeout = dto.EvaluatorContent.CustomRPCEvaluator.Timeout
 			if dto.EvaluatorContent.CustomRPCEvaluator.RateLimit != nil {
 				rateLimit, err := commonconvertor.ConvertRateLimitDTO2DO(dto.EvaluatorContent.CustomRPCEvaluator.RateLimit)
@@ -521,9 +522,50 @@ func ConvertCustomRPCEvaluatorVersionDO2DTO(do *evaluatordo.CustomRPCEvaluatorVe
 				ServiceName:           do.ServiceName,
 				Cluster:               do.Cluster,
 				Timeout:               do.Timeout,
+				InvokeHTTPInfo:        ConvertEvaluatorHTTPInfoDO2DTO(do.InvokeHTTPInfo),
 				RateLimit:             commonconvertor.ConvertRateLimitDO2DTO(do.RateLimit),
 			},
 		},
 	}
 	return dto
+}
+
+func ConvertEvaluatorHTTPInfoDTO2DO(dto *evaluatordto.EvaluatorHTTPInfo) *evaluatordo.EvaluatorHTTPInfo {
+	if dto == nil {
+		return nil
+	}
+	return &evaluatordo.EvaluatorHTTPInfo{
+		Method: dto.Method,
+		Path:   dto.Path,
+	}
+}
+
+func ConvertEvaluatorHTTPInfoDO2DTO(do *evaluatordo.EvaluatorHTTPInfo) *evaluatordto.EvaluatorHTTPInfo {
+	if do == nil {
+		return nil
+	}
+	return &evaluatordto.EvaluatorHTTPInfo{
+		Method: do.Method,
+		Path:   do.Path,
+	}
+}
+
+func ConvertEvaluatorRunConfDTO2DO(dto *evaluatordto.EvaluatorRunConfig) *evaluatordo.EvaluatorRunConfig {
+	if dto == nil {
+		return nil
+	}
+	return &evaluatordo.EvaluatorRunConfig{
+		Env:                   dto.Env,
+		EvaluatorRuntimeParam: commonconvertor.ConvertRuntimeParamDTO2DO(dto.EvaluatorRuntimeParam),
+	}
+}
+
+func ConvertEvaluatorRunConfDO2DTO(do *evaluatordo.EvaluatorRunConfig) *evaluatordto.EvaluatorRunConfig {
+	if do == nil {
+		return nil
+	}
+	return &evaluatordto.EvaluatorRunConfig{
+		Env:                   do.Env,
+		EvaluatorRuntimeParam: commonconvertor.ConvertRuntimeParamDO2DTO(do.EvaluatorRuntimeParam),
+	}
 }
