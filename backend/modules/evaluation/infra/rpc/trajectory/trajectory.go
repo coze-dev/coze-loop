@@ -15,7 +15,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	gslice "github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func NewAdapter(tracer func() observabilitytraceservice.Client) rpc.ITrajectoryAdapter {
@@ -45,15 +47,19 @@ func (a *adapterImpl) GetTracer() observabilitytraceservice.Client {
 
 func (a *adapterImpl) ListTrajectory(ctx context.Context, spaceID int64, traceIDs []string, startTimeMS *int64) ([]*entity.Trajectory, error) {
 	const PlatformType = "default"
-	resp, err := a.GetTracer().ListTrajectory(ctx, &trace.ListTrajectoryRequest{
+	req := &trace.ListTrajectoryRequest{
 		PlatformType: PlatformType,
 		WorkspaceID:  spaceID,
 		TraceIds:     traceIDs,
 		StartTime:    startTimeMS,
-	})
+	}
+	resp, err := a.GetTracer().ListTrajectory(ctx, req)
 	if err != nil {
 		return nil, err
 	}
+
+	logs.CtxInfo(ctx, "ListTrajectory req: %v, resp: %v", json.Jsonify(req), json.Jsonify(resp))
+
 	return gslice.Transform(resp.GetTrajectories(), func(e *trajectory.Trajectory, _ int) *entity.Trajectory {
 		return gcond.IfLazyR(e == nil, nil, func() *entity.Trajectory { return gptr.Of(entity.Trajectory(*e)) })
 	}), nil
