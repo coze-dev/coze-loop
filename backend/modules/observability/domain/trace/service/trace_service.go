@@ -1641,7 +1641,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		return nil, err
 	}
 
-	trajectoryConfig, err := r.GetTrajectoryConfig(ctx, &GetTrajectoryConfigRequest{WorkspaceID: workspaceID})
+	trajectoryConfig, err := r.traceRepo.GetTrajectoryConfig(ctx, repo.GetTrajectoryConfigParam{WorkspaceId: workspaceID})
 	if err != nil {
 		logs.CtxError(ctx, "Failed to get trajectory config, workspace_id:%d, err:%+v", workspaceID, err)
 		return nil, err
@@ -1685,9 +1685,9 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		},
 	)
 
-	if trajectoryConfig.Filters != nil {
+	if trajectoryConfig.Filter != nil {
 		filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
-			SubFilter: trajectoryConfig.Filters,
+			SubFilter: trajectoryConfig.GetFilter(),
 		})
 	}
 
@@ -1721,7 +1721,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		}
 	}
 
-	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, &selectedSpans.Spans, trajectoryConfig.Filters)
+	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, &selectedSpans.Spans, trajectoryConfig.GetFilter())
 	if err != nil {
 		return nil, err
 	}
