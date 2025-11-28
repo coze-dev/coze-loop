@@ -174,6 +174,11 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		totalCount += int64(len(spans))
 		logs.CtxInfo(ctx, "Processed %d spans completed, total=%d, task_id=%d", len(spans), totalCount, sub.t.ID)
 
+		listParam.PageToken = pageToken
+		if sub.tr.BackfillDetail == nil {
+			sub.tr.BackfillDetail = &entity.BackfillDetail{}
+		}
+		sub.tr.BackfillDetail.LastSpanPageToken = &pageToken
 		// todo 不应该这里直接写po字段
 		err = h.taskRepo.UpdateTaskRunWithOCC(ctx, sub.tr.ID, sub.tr.WorkspaceID, map[string]interface{}{
 			"backfill_detail": ToJSONString(ctx, sub.tr.BackfillDetail),
@@ -194,8 +199,6 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 			}
 			return nil
 		}
-		listParam.PageToken = pageToken
-		sub.tr.BackfillDetail.LastSpanPageToken = &pageToken
 	}
 }
 
