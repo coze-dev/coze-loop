@@ -38,7 +38,7 @@ const (
 
 	EvaluatorBoxTypeBlack = "Black"
 
-	AccessProtocolRPC = "rpc"
+	EvaluatorAccessProtocolRPC = "rpc"
 
 	EvaluatorVersionTypeLatest = "Latest"
 
@@ -305,7 +305,7 @@ type EvaluatorTagKey = string
 
 type EvaluatorBoxType = string
 
-type AccessProtocol = string
+type EvaluatorAccessProtocol = string
 
 type EvaluatorVersionType = string
 
@@ -1983,9 +1983,9 @@ type CustomRPCEvaluator struct {
 	// 自定义评估器编码，例如：EvalBot的给“代码生成-代码正确”赋予CN:480的评估器ID
 	ProviderEvaluatorCode *string `thrift:"provider_evaluator_code,1,optional" frugal:"1,optional,string" form:"provider_evaluator_code" json:"provider_evaluator_code,omitempty" query:"provider_evaluator_code"`
 	// 本期是RPC，后续还可拓展HTTP
-	AccessProtocol AccessProtocol `thrift:"access_protocol,2,required" frugal:"2,required,string" form:"access_protocol,required" json:"access_protocol,required" query:"access_protocol,required"`
-	ServiceName    *string        `thrift:"service_name,3,optional" frugal:"3,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
-	Cluster        *string        `thrift:"cluster,4,optional" frugal:"4,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
+	AccessProtocol EvaluatorAccessProtocol `thrift:"access_protocol,2,required" frugal:"2,required,string" form:"access_protocol,required" json:"access_protocol,required" query:"access_protocol,required"`
+	ServiceName    *string                 `thrift:"service_name,3,optional" frugal:"3,optional,string" form:"service_name" json:"service_name,omitempty" query:"service_name"`
+	Cluster        *string                 `thrift:"cluster,4,optional" frugal:"4,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
 	// ms
 	Timeout *int64 `thrift:"timeout,10,optional" frugal:"10,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
 	// 自定义评估器的限流配置
@@ -2011,7 +2011,7 @@ func (p *CustomRPCEvaluator) GetProviderEvaluatorCode() (v string) {
 	return *p.ProviderEvaluatorCode
 }
 
-func (p *CustomRPCEvaluator) GetAccessProtocol() (v AccessProtocol) {
+func (p *CustomRPCEvaluator) GetAccessProtocol() (v EvaluatorAccessProtocol) {
 	if p != nil {
 		return p.AccessProtocol
 	}
@@ -2068,7 +2068,7 @@ func (p *CustomRPCEvaluator) GetRateLimit() (v *common.RateLimit) {
 func (p *CustomRPCEvaluator) SetProviderEvaluatorCode(val *string) {
 	p.ProviderEvaluatorCode = val
 }
-func (p *CustomRPCEvaluator) SetAccessProtocol(val AccessProtocol) {
+func (p *CustomRPCEvaluator) SetAccessProtocol(val EvaluatorAccessProtocol) {
 	p.AccessProtocol = val
 }
 func (p *CustomRPCEvaluator) SetServiceName(val *string) {
@@ -2229,7 +2229,7 @@ func (p *CustomRPCEvaluator) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *CustomRPCEvaluator) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field AccessProtocol
+	var _field EvaluatorAccessProtocol
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
@@ -2482,7 +2482,7 @@ func (p *CustomRPCEvaluator) Field1DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CustomRPCEvaluator) Field2DeepEqual(src AccessProtocol) bool {
+func (p *CustomRPCEvaluator) Field2DeepEqual(src EvaluatorAccessProtocol) bool {
 
 	if strings.Compare(p.AccessProtocol, src) != 0 {
 		return false
