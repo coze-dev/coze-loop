@@ -153,8 +153,8 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		NotQueryAnnotation: true, // No annotation query required during backfill
 	}
 
-	if sub.tr.BackfillDetail != nil && sub.tr.BackfillDetail.LastSpanPageToken != nil {
-		listParam.PageToken = *sub.tr.BackfillDetail.LastSpanPageToken
+	if sub.tr.BackfillDetail != nil && sub.tr.BackfillDetail.LastSpanPageToken != "" {
+		listParam.PageToken = sub.tr.BackfillDetail.LastSpanPageToken
 	}
 
 	totalCount := int64(0)
@@ -178,7 +178,7 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		if sub.tr.BackfillDetail == nil {
 			sub.tr.BackfillDetail = &entity.BackfillDetail{}
 		}
-		sub.tr.BackfillDetail.LastSpanPageToken = &pageToken
+		sub.tr.BackfillDetail.LastSpanPageToken = pageToken
 		// todo 不应该这里直接写po字段
 		err = h.taskRepo.UpdateTaskRunWithOCC(ctx, sub.tr.ID, sub.tr.WorkspaceID, map[string]interface{}{
 			"backfill_detail": ToJSONString(ctx, sub.tr.BackfillDetail),

@@ -243,11 +243,11 @@ func BackfillRunDetailDO2DTO(backfillDetail *entity.BackfillDetail) *task.Backfi
 		return nil
 	}
 	return &task.BackfillDetail{
-		SuccessCount:      backfillDetail.SuccessCount,
-		FailedCount:       backfillDetail.FailedCount,
-		TotalCount:        backfillDetail.TotalCount,
-		BackfillStatus:    backfillDetail.BackfillStatus,
-		LastSpanPageToken: backfillDetail.LastSpanPageToken,
+		SuccessCount:      &backfillDetail.SuccessCount,
+		FailedCount:       &backfillDetail.FailedCount,
+		TotalCount:        &backfillDetail.TotalCount,
+		BackfillStatus:    &backfillDetail.BackfillStatus,
+		LastSpanPageToken: &backfillDetail.LastSpanPageToken,
 	}
 }
 
@@ -520,11 +520,11 @@ func BackfillRunDetailDTO2DO(v *task.BackfillDetail) *entity.BackfillDetail {
 		return nil
 	}
 	return &entity.BackfillDetail{
-		SuccessCount:      v.SuccessCount,
-		FailedCount:       v.FailedCount,
-		TotalCount:        v.TotalCount,
-		BackfillStatus:    v.BackfillStatus,
-		LastSpanPageToken: v.LastSpanPageToken,
+		SuccessCount:      v.GetSuccessCount(),
+		FailedCount:       v.GetFailedCount(),
+		TotalCount:        v.GetTotalCount(),
+		BackfillStatus:    v.GetBackfillStatus(),
+		LastSpanPageToken: v.GetLastSpanPageToken(),
 	}
 }
 

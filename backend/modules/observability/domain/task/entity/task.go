@@ -145,11 +145,11 @@ type TaskRun struct {
 	UpdatedAt      time.Time       // 更新时间
 }
 type BackfillDetail struct {
-	SuccessCount      *int64  `json:"success_count"`
-	FailedCount       *int64  `json:"failed_count"`
-	TotalCount        *int64  `json:"total_count"`
-	BackfillStatus    *string `json:"backfill_status"`
-	LastSpanPageToken *string `json:"last_span_page_token"`
+	SuccessCount      int64  `json:"success_count,omitempty"`
+	FailedCount       int64  `json:"failed_count,omitempty"`
+	TotalCount        int64  `json:"total_count,omitempty"`
+	BackfillStatus    string `json:"backfill_status,omitempty"`
+	LastSpanPageToken string `json:"last_span_page_token,omitempty"`
 }
 
 type TaskRunConfig struct {

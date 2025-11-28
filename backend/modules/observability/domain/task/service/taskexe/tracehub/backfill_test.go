@@ -320,7 +320,7 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 
 	now := time.Now()
 	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
-	sub.tr.BackfillDetail = &entity.BackfillDetail{LastSpanPageToken: ptr.Of("prev")}
+	sub.tr.BackfillDetail = &entity.BackfillDetail{LastSpanPageToken: "prev"}
 	domainRun := newDomainBackfillTaskRun(now)
 	span := newTestSpan(now)
 
@@ -350,7 +350,7 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	require.True(t, proc.invokeCalled)
 	require.NotNil(t, sub.tr.BackfillDetail)
 	require.NotNil(t, sub.tr.BackfillDetail.LastSpanPageToken)
-	require.Equal(t, "prev", ptr.From(sub.tr.BackfillDetail.LastSpanPageToken))
+	require.Equal(t, "prev", sub.tr.BackfillDetail.LastSpanPageToken)
 }
 
 func TestTraceHubServiceImpl_ListAndSendSpans_ListError(t *testing.T) {
