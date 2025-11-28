@@ -253,7 +253,6 @@ func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span
 		if sub.t.TaskStatus != entity.TaskStatusRunning {
 			continue
 		}
-		logs.CtxInfo(ctx, " sub.AddSpan: %v", sub)
 		if err := sub.AddSpan(ctx, span); err != nil {
 			merr = multierror.Append(merr, errors.WithMessagef(err, "add span to subscriber, log_id=%s, trace_id=%s, span_id=%s, task_id=%d",
 				span.LogID, span.TraceID, span.SpanID, sub.taskID))

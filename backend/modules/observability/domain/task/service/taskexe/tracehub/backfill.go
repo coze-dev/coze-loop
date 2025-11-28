@@ -156,6 +156,9 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 	if sub.tr.BackfillDetail != nil && sub.tr.BackfillDetail.LastSpanPageToken != "" {
 		listParam.PageToken = sub.tr.BackfillDetail.LastSpanPageToken
 	}
+	if sub.tr.BackfillDetail == nil {
+		sub.tr.BackfillDetail = &entity.BackfillDetail{}
+	}
 
 	totalCount := int64(0)
 	for {
@@ -174,15 +177,15 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		totalCount += int64(len(spans))
 		logs.CtxInfo(ctx, "Processed %d spans completed, total=%d, task_id=%d", len(spans), totalCount, sub.t.ID)
 
-		listParam.PageToken = pageToken
-		if sub.tr.BackfillDetail == nil {
-			sub.tr.BackfillDetail = &entity.BackfillDetail{}
+		if pageToken != "" {
+			listParam.PageToken = pageToken
+			sub.tr.BackfillDetail.LastSpanPageToken = pageToken
 		}
-		sub.tr.BackfillDetail.LastSpanPageToken = pageToken
 		// todo 不应该这里直接写po字段
 		err = h.taskRepo.UpdateTaskRunWithOCC(ctx, sub.tr.ID, sub.tr.WorkspaceID, map[string]interface{}{
 			"backfill_detail": ToJSONString(ctx, sub.tr.BackfillDetail),
 		})
+
 		if err != nil {
 			logs.CtxError(ctx, "update task run failed, task_id=%d, err=%v", sub.t.ID, err)
 			return err
@@ -427,8 +430,6 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
 	for _, span := range spans {
 		// Execute processing logic according to the task type
-		logs.CtxInfo(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
-			span.SpanID, span.TraceID, sub.t.ID)
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		sampler := sub.t.Sampler
 		if taskCount+1 > sampler.SampleSize {
