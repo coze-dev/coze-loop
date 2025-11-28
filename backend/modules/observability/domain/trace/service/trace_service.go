@@ -1708,9 +1708,10 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		return nil, err
 	}
 
+	selectFilters := r.getSelectFilters(traceIDs, trajectoryConfig, allSpans)
 	selectedSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
 		Tenants:            tenant,
-		Filters:            r.getSelectFilters(traceIDs, trajectoryConfig, allSpans),
+		Filters:            selectFilters,
 		StartAt:            startTime,
 		EndAt:              endTime,
 		Limit:              100,
@@ -1738,7 +1739,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		}
 	}
 
-	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, &selectedSpans.Spans, trajectoryConfig.GetFiltersWithDefaultFilter())
+	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, &selectedSpans.Spans, selectFilters)
 	if err != nil {
 		return nil, err
 	}
