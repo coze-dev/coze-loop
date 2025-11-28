@@ -1793,10 +1793,23 @@ func (r *TraceServiceImpl) getSelectFilters(traceIDs []string, trajectoryConfig 
 	lowSpanIDs := r.getEvalTargetNextLevelSpanID(allSpans)
 	if len(lowSpanIDs) > 0 {
 		result.FilterFields = append(result.FilterFields, &loop_span.FilterField{
-			FieldName: loop_span.SpanFieldSpanId,
-			FieldType: loop_span.FieldTypeString,
-			Values:    lowSpanIDs,
-			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			SubFilter: &loop_span.FilterFields{
+				QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: loop_span.SpanFieldTraceId,
+						FieldType: loop_span.FieldTypeString,
+						Values:    traceIDs,
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+					{
+						FieldName: loop_span.SpanFieldSpanId,
+						FieldType: loop_span.FieldTypeString,
+						Values:    lowSpanIDs,
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+				},
+			},
 		})
 	}
 
