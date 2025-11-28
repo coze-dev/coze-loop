@@ -405,28 +405,6 @@ func TestTraceHubServiceImpl_FlushSpans_ContextCanceled(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestTraceHubServiceImpl_DoFlush_UpdateTaskRunError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-
-	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	impl := &TraceHubServiceImpl{taskRepo: mockTaskRepo}
-
-	now := time.Now()
-	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
-	span := newTestSpan(now)
-	domainRun := newDomainBackfillTaskRun(now)
-
-	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
-	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(errors.New("update fail"))
-
-	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "update fail")
-	require.True(t, proc.invokeCalled)
-}
-
 func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
@@ -442,7 +420,6 @@ func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
 	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
-	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil)
 
 	// 调用flushSpans，然后手动调用OnTaskFinished来触发finish错误
 	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)

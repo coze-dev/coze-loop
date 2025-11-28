@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS `task` (
                         `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
                         `created_by` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '创建人',
                         `updated_by` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '更新人',
+                        `task_source` VARCHAR(50) DEFAULT 'user' COMMENT '任务来源',
                         PRIMARY KEY (`id`),
                         KEY `idx_space_id_status` (`workspace_id`,`task_status`),
                         KEY `idx_space_id_type` (`workspace_id`,`task_type`)
