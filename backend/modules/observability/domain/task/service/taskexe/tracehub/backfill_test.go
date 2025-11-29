@@ -301,6 +301,64 @@ func TestTraceHubServiceImpl_ListAndSendSpans_GetTenantsError(t *testing.T) {
 	require.ErrorIs(t, err, tenantErr)
 }
 
+func TestTraceHubServiceImpl_ListAndSendSpans_WithoutLastSpanPageToken(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockTraceRepo := trepo_mocks.NewMockITraceRepo(ctrl)
+	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+	mockBuilder := builder_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
+	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+
+	impl := &TraceHubServiceImpl{
+		taskRepo:       mockTaskRepo,
+		traceRepo:      mockTraceRepo,
+		tenantProvider: mockTenant,
+		buildHelper:    mockBuilder,
+	}
+
+	now := time.Now()
+	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
+	domainRun := newDomainBackfillTaskRun(now)
+	span := newTestSpan(now)
+
+	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).
+		Return(filterMock, nil)
+	filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, true, nil)
+	filterMock.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil)
+	mockBuilder.EXPECT().BuildGetTraceProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).Times(2)
+	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).Return([]string{"tenant"}, nil)
+
+	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+		if param.PageToken == "" {
+			return &repo.ListSpansResult{
+				Spans:     loop_span.SpanList{span},
+				PageToken: "next",
+				HasMore:   true,
+			}, nil
+		} else if param.PageToken == "next" {
+			return &repo.ListSpansResult{
+				Spans:     loop_span.SpanList{span},
+				PageToken: "",
+				HasMore:   false,
+			}, nil
+		}
+		return nil, errors.New("invalid token")
+	}).Times(2)
+
+	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil).Times(2)
+	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil).Times(2)
+	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil).Times(2)
+
+	err := impl.listAndSendSpans(context.Background(), sub)
+	require.NoError(t, err)
+	require.True(t, proc.invokeCalled)
+	require.NotNil(t, sub.tr.BackfillDetail)
+	require.NotNil(t, sub.tr.BackfillDetail.LastSpanPageToken)
+	require.Equal(t, "next", sub.tr.BackfillDetail.LastSpanPageToken)
+}
+
 func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
