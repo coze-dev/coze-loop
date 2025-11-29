@@ -181,6 +181,7 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 			listParam.PageToken = pageToken
 			sub.tr.BackfillDetail.LastSpanPageToken = pageToken
 		}
+
 		// todo 不应该这里直接写po字段
 		err = h.taskRepo.UpdateTaskRunWithOCC(ctx, sub.tr.ID, sub.tr.WorkspaceID, map[string]interface{}{
 			"backfill_detail": ToJSONString(ctx, sub.tr.BackfillDetail),
