@@ -480,6 +480,7 @@ func TaskRunDTO2DO(taskRun *task.TaskRun) *entity.TaskRun {
 		UpdatedAt:      time.UnixMilli(taskRun.GetBaseInfo().GetUpdatedAt()),
 	}
 }
+*/
 
 func TaskRunConfigDTO2DO(v *task.TaskRunConfig) *entity.TaskRunConfig {
 	if v == nil {
@@ -516,6 +517,7 @@ func TaskRunConfigDTO2DO(v *task.TaskRunConfig) *entity.TaskRunConfig {
 	}
 }
 
+/*
 func BackfillRunDetailDTO2DO(v *task.BackfillDetail) *entity.BackfillDetail {
 	if v == nil {
 		return nil
