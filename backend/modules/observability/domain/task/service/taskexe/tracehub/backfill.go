@@ -186,7 +186,6 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		err = h.taskRepo.UpdateTaskRunWithOCC(ctx, sub.tr.ID, sub.tr.WorkspaceID, map[string]interface{}{
 			"backfill_detail": ToJSONString(ctx, sub.tr.BackfillDetail),
 		})
-
 		if err != nil {
 			logs.CtxError(ctx, "update task run failed, task_id=%d, err=%v", sub.t.ID, err)
 			return err
