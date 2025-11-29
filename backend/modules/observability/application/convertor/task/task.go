@@ -460,6 +460,7 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 	}
 }
 
+/*
 func TaskRunDTO2DO(taskRun *task.TaskRun) *entity.TaskRun {
 	if taskRun == nil {
 		return nil
@@ -527,6 +528,7 @@ func BackfillRunDetailDTO2DO(v *task.BackfillDetail) *entity.BackfillDetail {
 		LastSpanPageToken: v.GetLastSpanPageToken(),
 	}
 }
+*/
 
 func getLastPartAfterDot(s string) string {
 	s = strings.TrimRight(s, ".")
