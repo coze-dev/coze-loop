@@ -331,20 +331,22 @@ func TestTraceHubServiceImpl_ListAndSendSpans_WithoutLastSpanPageToken(t *testin
 	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).Return([]string{"tenant"}, nil)
 
 	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
-		if param.PageToken == "" {
+		switch param.PageToken {
+		case "":
 			return &repo.ListSpansResult{
 				Spans:     loop_span.SpanList{span},
 				PageToken: "next",
 				HasMore:   true,
 			}, nil
-		} else if param.PageToken == "next" {
+		case "next":
 			return &repo.ListSpansResult{
 				Spans:     loop_span.SpanList{span},
 				PageToken: "",
 				HasMore:   false,
 			}, nil
+		default:
+			return nil, errors.New("invalid token")
 		}
-		return nil, errors.New("invalid token")
 	}).Times(2)
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil).Times(2)
