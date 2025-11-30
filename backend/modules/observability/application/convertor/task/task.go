@@ -243,11 +243,11 @@ func BackfillRunDetailDO2DTO(backfillDetail *entity.BackfillDetail) *task.Backfi
 		return nil
 	}
 	return &task.BackfillDetail{
-		SuccessCount:      backfillDetail.SuccessCount,
-		FailedCount:       backfillDetail.FailedCount,
-		TotalCount:        backfillDetail.TotalCount,
-		BackfillStatus:    backfillDetail.BackfillStatus,
-		LastSpanPageToken: backfillDetail.LastSpanPageToken,
+		SuccessCount:      &backfillDetail.SuccessCount,
+		FailedCount:       &backfillDetail.FailedCount,
+		TotalCount:        &backfillDetail.TotalCount,
+		BackfillStatus:    &backfillDetail.BackfillStatus,
+		LastSpanPageToken: &backfillDetail.LastSpanPageToken,
 	}
 }
 
@@ -460,6 +460,7 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 	}
 }
 
+/*
 func TaskRunDTO2DO(taskRun *task.TaskRun) *entity.TaskRun {
 	if taskRun == nil {
 		return nil
@@ -479,6 +480,7 @@ func TaskRunDTO2DO(taskRun *task.TaskRun) *entity.TaskRun {
 		UpdatedAt:      time.UnixMilli(taskRun.GetBaseInfo().GetUpdatedAt()),
 	}
 }
+*/
 
 func TaskRunConfigDTO2DO(v *task.TaskRunConfig) *entity.TaskRunConfig {
 	if v == nil {
@@ -515,18 +517,20 @@ func TaskRunConfigDTO2DO(v *task.TaskRunConfig) *entity.TaskRunConfig {
 	}
 }
 
+/*
 func BackfillRunDetailDTO2DO(v *task.BackfillDetail) *entity.BackfillDetail {
 	if v == nil {
 		return nil
 	}
 	return &entity.BackfillDetail{
-		SuccessCount:      v.SuccessCount,
-		FailedCount:       v.FailedCount,
-		TotalCount:        v.TotalCount,
-		BackfillStatus:    v.BackfillStatus,
-		LastSpanPageToken: v.LastSpanPageToken,
+		SuccessCount:      v.GetSuccessCount(),
+		FailedCount:       v.GetFailedCount(),
+		TotalCount:        v.GetTotalCount(),
+		BackfillStatus:    v.GetBackfillStatus(),
+		LastSpanPageToken: v.GetLastSpanPageToken(),
 	}
 }
+*/
 
 func getLastPartAfterDot(s string) string {
 	s = strings.TrimRight(s, ".")
