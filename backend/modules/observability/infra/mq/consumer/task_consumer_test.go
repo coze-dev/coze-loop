@@ -232,7 +232,7 @@ func TestTaskConsumer_HandleMessage(t *testing.T) {
 				Message: mq.Message{
 					Body: func() []byte {
 						data, _ := json.Marshal(&entity.RawSpan{
-							LogID:  "test_log_id",
+							LogID:   "test_log_id",
 							TraceID: "test_trace_id",
 							SpanID:  "test_span_id",
 						})
