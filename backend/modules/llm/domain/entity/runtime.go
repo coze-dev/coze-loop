@@ -72,6 +72,25 @@ func (m *Message) GetImageCountAndMaxSize() (hasUrl, hasBinary bool, cnt int64, 
 	return
 }
 
+func (m *Message) GetVideoAndMaxSize() (hasUrl, hasBinary bool, maxSizeInByte int64) {
+	if !m.HasMultiModalContent() {
+		return
+	}
+	for _, p := range m.MultiModalContent {
+		if p.IsVideoURL() {
+			hasUrl = true
+			continue
+		}
+		if p.IsVideoBinary() {
+			hasBinary = true
+			if maxSizeInByte < int64(len(p.VideoURL.URL)*3/4) {
+				maxSizeInByte = int64(len(p.VideoURL.URL) * 3 / 4)
+			}
+		}
+	}
+	return
+}
+
 type Role string
 
 const (
@@ -89,6 +108,7 @@ type ChatMessagePart struct {
 	Type     ChatMessagePartType  `json:"type"`
 	Text     string               `json:"text"`
 	ImageURL *ChatMessageImageURL `json:"image_url"`
+	VideoURL *ChatMessageVideoURL `json:"video_url"`
 }
 
 func (p *ChatMessagePart) IsMultiModal() bool {
@@ -136,6 +156,18 @@ const (
 	// ImageURLDetailAuto means the auto quality image url.
 	ImageURLDetailAuto ImageURLDetail = "auto"
 )
+
+// ChatMessageVideoURL is used to represent an video part in a chat message.
+// Choose either URL or URI.
+// If your model implementation supports it, URL could be used to embed inline video data as defined in RFC-2397.
+type ChatMessageVideoURL struct {
+	// URL can either be a traditional URL or a special URL conforming to RFC-2397 (https://www.rfc-editor.org/rfc/rfc2397).
+	// double check with model implementations for detailed instructions on how to use this.
+	URL string `json:"url,omitempty"`
+
+	// MIMEType is the mime type of the video, eg. "video/mp4".
+	MIMEType string `json:"mime_type,omitempty"`
+}
 
 type ToolCall struct {
 	// Index is used when there are multiple tool calls in a message.
@@ -223,6 +255,22 @@ func (p *ChatMessagePart) IsURL() bool {
 
 func (p *ChatMessagePart) IsBinary() bool {
 	if p == nil || p.Type != ChatMessagePartTypeImageURL || p.ImageURL == nil ||
+		p.ImageURL.MIMEType == "" {
+		return false
+	}
+	return true
+}
+
+func (p *ChatMessagePart) IsVideoURL() bool {
+	if p == nil || p.Type != ChatMessagePartTypeVideoURL || p.VideoURL == nil ||
+		p.ImageURL.MIMEType != "" {
+		return false
+	}
+	return true
+}
+
+func (p *ChatMessagePart) IsVideoBinary() bool {
+	if p == nil || p.Type != ChatMessagePartTypeVideoURL || p.VideoURL == nil ||
 		p.ImageURL.MIMEType == "" {
 		return false
 	}

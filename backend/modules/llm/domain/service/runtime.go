@@ -98,6 +98,19 @@ func (r *RuntimeImpl) HandleMsgsPreCallModel(ctx context.Context, model *entity.
 				part.ImageURL.URL = base64Str
 				part.ImageURL.MIMEType = mimeType
 			}
+			if part.IsVideoURL() && model.SupportMultiModalInput() && r.runtimeCfg.NeedCvtURLToBase64() {
+				url := part.VideoURL.URL
+				// 如果不是完整url，就认为这个url是系统内部minio签发的，需要拼接为完整url
+				if !httputil.IsFullUrl(url) {
+					url = fmt.Sprintf("http://%s%s", localos.GetLocalOSHost(), url)
+				}
+				base64Str, mimeType, err := httputil.ImageURLToBase64(url)
+				if err != nil {
+					return msgs, err
+				}
+				part.VideoURL.URL = base64Str
+				part.VideoURL.MIMEType = mimeType
+			}
 		}
 	}
 	return msgs, nil
@@ -105,8 +118,8 @@ func (r *RuntimeImpl) HandleMsgsPreCallModel(ctx context.Context, model *entity.
 
 func (r *RuntimeImpl) ValidModelAndRequest(ctx context.Context, model *entity.Model, input []*entity.Message, opts ...entity.Option) error {
 	// 如果msg中有多模态输入，看模型是否支持多模态
-	var hasMultiModal, hasImageURL, hasImageBinary bool
-	var maxImageCnt, maxImageSizeInByte int64
+	var hasMultiModal, hasImageURL, hasImageBinary, hasVideoURL, hasVideoBinary bool
+	var maxImageCnt, maxImageSizeInByte, maxVideoSizeInByte int64
 	for _, msg := range input {
 		if msg.HasMultiModalContent() {
 			hasMultiModal = true
@@ -122,6 +135,16 @@ func (r *RuntimeImpl) ValidModelAndRequest(ctx context.Context, model *entity.Mo
 			}
 			if maxImageSizeInByte < tmpMaxImageSizeInByte {
 				maxImageSizeInByte = tmpMaxImageSizeInByte
+			}
+			tmpHasVideoURL, tmpHasVideoBinary, tmpMaxVideoSizeInByte := msg.GetVideoAndMaxSize()
+			if tmpHasVideoURL {
+				hasVideoURL = true
+			}
+			if tmpHasVideoBinary {
+				hasVideoBinary = true
+			}
+			if maxVideoSizeInByte < tmpMaxVideoSizeInByte {
+				maxVideoSizeInByte = tmpMaxVideoSizeInByte
 			}
 		}
 	}
@@ -147,6 +170,15 @@ func (r *RuntimeImpl) ValidModelAndRequest(ctx context.Context, model *entity.Mo
 		}
 		if size > 0 && size*1024*1024 < maxImageSizeInByte {
 			return errorx.NewByCode(llm_errorx.RequestNotCompatibleWithModelAbilityCode, errorx.WithExtraMsg("one message of messages has too big images for this model"))
+		}
+	}
+	if hasVideoURL || hasVideoBinary {
+		s, size := model.SupportVideo()
+		if !s {
+			return errorx.NewByCode(llm_errorx.RequestNotCompatibleWithModelAbilityCode, errorx.WithExtraMsg("messages have video, but this model does not support video"))
+		}
+		if size > 0 && size*1024*1024 < maxVideoSizeInByte {
+			return errorx.NewByCode(llm_errorx.RequestNotCompatibleWithModelAbilityCode, errorx.WithExtraMsg("one message of messages has too big videos for this model"))
 		}
 	}
 	// 如果option中有tool call，看模型是否支持function call

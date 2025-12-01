@@ -102,6 +102,16 @@ func (m *Model) SupportImageBinary() (bool, int64, int64) {
 		m.Ability.AbilityMultiModal.AbilityImage.MaxImageCount, m.Ability.AbilityMultiModal.AbilityImage.MaxImageSize
 }
 
+func (m *Model) SupportVideo() (bool, int64) {
+	if m == nil || m.Ability == nil || m.Ability.AbilityMultiModal == nil || !m.Ability.AbilityMultiModal.Video {
+		return false, 0
+	}
+	if m.Ability.AbilityMultiModal.AbilityVideo == nil {
+		return true, 0
+	}
+	return true, m.Ability.AbilityMultiModal.AbilityVideo.MaxVideoSize
+}
+
 func (m *Model) SupportFunctionCall() bool {
 	if m == nil || m.Ability == nil {
 		return false
@@ -148,6 +158,8 @@ type Ability struct {
 type AbilityMultiModal struct {
 	Image        bool          `json:"image" yaml:"image" mapstructure:"image"`
 	AbilityImage *AbilityImage `json:"ability_image" yaml:"ability_image" mapstructure:"ability_image"`
+	Video        bool          `json:"video" yaml:"video" mapstructure:"video"`
+	AbilityVideo *AbilityVideo `json:"ability_video" yaml:"ability_video" mapstructure:"ability_video"`
 }
 
 type AbilityImage struct {
@@ -157,6 +169,10 @@ type AbilityImage struct {
 	MaxImageCount int64 `json:"max_image_count" yaml:"max_image_count" mapstructure:"max_image_count"`
 }
 
+type AbilityVideo struct {
+	MaxVideoSize          int64    `json:"max_video_size" yaml:"max_video_size" mapstructure:"max_video_size"`
+	SupportedVideoFormats []string `json:"supported_video_formats,omitempty" yaml:"supported_video_formats,omitempty"`
+}
 type ProtocolConfig struct {
 	BaseURL                string                  `json:"base_url" yaml:"base_url" mapstructure:"base_url"`
 	APIKey                 string                  `json:"api_key" yaml:"api_key" mapstructure:"api_key"`

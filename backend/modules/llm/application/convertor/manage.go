@@ -60,6 +60,8 @@ func AbilityMultiModalDO2DTO(a *entity.AbilityMultiModal) *manage.AbilityMultiMo
 	return &manage.AbilityMultiModal{
 		Image:        ptr.Of(a.Image),
 		AbilityImage: AbilityImageDO2DTO(a.AbilityImage),
+		Video:        ptr.Of(a.Video),
+		AbilityVideo: AbilityVideoDO2DTO(a.AbilityVideo),
 	}
 }
 
@@ -72,6 +74,16 @@ func AbilityImageDO2DTO(a *entity.AbilityImage) *manage.AbilityImage {
 		BinaryEnabled: ptr.Of(a.BinaryEnabled),
 		MaxImageSize:  ptr.Of(a.MaxImageSize),
 		MaxImageCount: ptr.Of(a.MaxImageCount),
+	}
+}
+
+func AbilityVideoDO2DTO(a *entity.AbilityVideo) *manage.AbilityVideo {
+	if a == nil {
+		return nil
+	}
+	return &manage.AbilityVideo{
+		MaxVideoSizeInMb:      ptr.Of(int32(a.MaxVideoSize)),
+		SupportedVideoFormats: a.SupportedVideoFormats,
 	}
 }
 

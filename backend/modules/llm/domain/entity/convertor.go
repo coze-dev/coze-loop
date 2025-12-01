@@ -177,6 +177,11 @@ func PartToTraceMessagePart(p *ChatMessagePart) *tracespec.ModelMessagePart {
 				Detail: string(p.ImageURL.Detail),
 			},
 		}
+	case ChatMessagePartTypeVideoURL:
+		//// todo @yanghoule
+		//return &tracespec.ModelMessagePart{
+		//	Type: tracespec.ModelMessagePartType(p.Type),
+		//}
 	}
 	return nil
 }
