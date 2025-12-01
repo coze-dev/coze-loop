@@ -55,8 +55,8 @@ typedef string EvaluatorBoxType(ts.enum="true")
 const EvaluatorBoxType EvaluatorBoxType_White = "White" // 白盒
 const EvaluatorBoxType EvaluatorBoxType_Black = "Black" // 黑盒
 
-typedef string AccessProtocol
-const AccessProtocol AccessProtocol_RPC = "rpc"
+typedef string EvaluatorAccessProtocol(ts.enum="true")
+const EvaluatorAccessProtocol EvaluatorAccessProtocol_RPC = "rpc"
 
 typedef string EvaluatorVersionType(ts.enum="true")
 const EvaluatorVersionType EvaluatorVersionType_Latest = "Latest" // 最新版本
@@ -92,7 +92,7 @@ struct CodeEvaluator {
 
 struct CustomRPCEvaluator {
     1: optional string provider_evaluator_code     // 自定义评估器编码，例如：EvalBot的给“代码生成-代码正确”赋予CN:480的评估器ID
-    2: required AccessProtocol access_protocol    // 本期是RPC，后续还可拓展HTTP
+    2: required EvaluatorAccessProtocol access_protocol    // 本期是RPC，后续还可拓展HTTP
     3: optional string service_name
     4: optional string cluster
 

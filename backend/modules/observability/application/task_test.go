@@ -198,6 +198,8 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 					EndAt:   gptr.Of(time.Now().Add(2 * time.Hour).UnixMilli()),
 				},
 			},
+			TaskStatus: gptr.Of(taskdto.TaskStatusPending),
+			TaskSource: gptr.Of(taskdto.TaskSourceUser),
 		}
 	}
 
@@ -263,9 +265,48 @@ func TestTaskApplication_CreateTask(t *testing.T) {
 			},
 		},
 		{
+			name:          "error with invalid user id",
+			ctx:           context.Background(),
+			req:           &taskapi.CreateTaskRequest{Task: taskForSuccess},
+			expectResp:    nil,
+			expectErrCode: obErrorx.UserParseFailedCode,
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
+				auth := rpcmock.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, strconv.FormatInt(123, 10), false).Return(nil)
+				svcMock := svcmock.NewMockITaskService(ctrl)
+				return svcMock, auth
+			},
+		},
+		{
+			name:          "error with empty user id",
+			ctx:           session.WithCtxUser(context.Background(), &session.User{ID: "", AppID: 1}),
+			req:           &taskapi.CreateTaskRequest{Task: taskForSuccess},
+			expectResp:    nil,
+			expectErrCode: obErrorx.UserParseFailedCode,
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
+				auth := rpcmock.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, strconv.FormatInt(123, 10), false).Return(nil)
+				svcMock := svcmock.NewMockITaskService(ctrl)
+				return svcMock, auth
+			},
+		},
+		{
 			name:       "success with trace app",
 			ctx:        ctxWithAppID(717152),
 			req:        &taskapi.CreateTaskRequest{Task: taskForSuccess},
+			expectResp: &taskapi.CreateTaskResponse{TaskID: gptr.Of(int64(1000))},
+			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
+				auth := rpcmock.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceTaskCreate, strconv.FormatInt(123, 10), false).Return(nil)
+				svcMock := svcmock.NewMockITaskService(ctrl)
+				svcMock.EXPECT().CreateTask(gomock.Any(), gomock.AssignableToTypeOf(&svc.CreateTaskReq{})).Return(&svc.CreateTaskResp{TaskID: gptr.Of(int64(1000))}, nil)
+				return svcMock, auth
+			},
+		},
+		{
+			name:       "success with user id",
+			ctx:        context.Background(),
+			req:        &taskapi.CreateTaskRequest{Task: taskForSuccess, Session: &commondomain.Session{UserID: gptr.Of("1")}},
 			expectResp: &taskapi.CreateTaskResponse{TaskID: gptr.Of(int64(1000))},
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
@@ -357,7 +398,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 		{
 			name:       "service error",
 			ctx:        context.Background(),
-			req:        &taskapi.UpdateTaskRequest{TaskID: 33, WorkspaceID: 44},
+			req:        &taskapi.UpdateTaskRequest{TaskID: 33, WorkspaceID: 44, Session: &commondomain.Session{UserID: gptr.Of("1")}},
 			expectResp: taskapi.NewUpdateTaskResponse(),
 			expectErr:  errors.New("svc error"),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
@@ -369,6 +410,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 					WorkspaceID: 44,
 					TaskStatus:  nil,
 					Description: nil,
+					UserID:      "1",
 				}).Return(errors.New("svc error"))
 				return s, auth
 			},
@@ -376,7 +418,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 		{
 			name:       "success",
 			ctx:        context.Background(),
-			req:        &taskapi.UpdateTaskRequest{TaskID: 55, WorkspaceID: 66},
+			req:        &taskapi.UpdateTaskRequest{TaskID: 55, WorkspaceID: 66, Session: &commondomain.Session{UserID: gptr.Of("1")}},
 			expectResp: taskapi.NewUpdateTaskResponse(),
 			fieldsBuilder: func(ctrl *gomock.Controller) (svc.ITaskService, rpc.IAuthProvider) {
 				auth := rpcmock.NewMockIAuthProvider(ctrl)
@@ -387,6 +429,7 @@ func TestTaskApplication_UpdateTask(t *testing.T) {
 					WorkspaceID: 66,
 					TaskStatus:  nil,
 					Description: nil,
+					UserID:      "1",
 				}).Return(nil)
 				return s, auth
 			},

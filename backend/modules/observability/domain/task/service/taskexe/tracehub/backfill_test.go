@@ -301,6 +301,66 @@ func TestTraceHubServiceImpl_ListAndSendSpans_GetTenantsError(t *testing.T) {
 	require.ErrorIs(t, err, tenantErr)
 }
 
+func TestTraceHubServiceImpl_ListAndSendSpans_WithoutLastSpanPageToken(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockTraceRepo := trepo_mocks.NewMockITraceRepo(ctrl)
+	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+	mockBuilder := builder_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
+	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+
+	impl := &TraceHubServiceImpl{
+		taskRepo:       mockTaskRepo,
+		traceRepo:      mockTraceRepo,
+		tenantProvider: mockTenant,
+		buildHelper:    mockBuilder,
+	}
+
+	now := time.Now()
+	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
+	domainRun := newDomainBackfillTaskRun(now)
+	span := newTestSpan(now)
+
+	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).
+		Return(filterMock, nil)
+	filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, true, nil)
+	filterMock.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil)
+	mockBuilder.EXPECT().BuildGetTraceProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).Times(2)
+	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).Return([]string{"tenant"}, nil)
+
+	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+		switch param.PageToken {
+		case "":
+			return &repo.ListSpansResult{
+				Spans:     loop_span.SpanList{span},
+				PageToken: "next",
+				HasMore:   true,
+			}, nil
+		case "next":
+			return &repo.ListSpansResult{
+				Spans:     loop_span.SpanList{span},
+				PageToken: "",
+				HasMore:   false,
+			}, nil
+		default:
+			return nil, errors.New("invalid token")
+		}
+	}).Times(2)
+
+	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil).Times(2)
+	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil).Times(2)
+	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil).Times(2)
+
+	err := impl.listAndSendSpans(context.Background(), sub)
+	require.NoError(t, err)
+	require.True(t, proc.invokeCalled)
+	require.NotNil(t, sub.tr.BackfillDetail)
+	require.NotNil(t, sub.tr.BackfillDetail.LastSpanPageToken)
+	require.Equal(t, "next", sub.tr.BackfillDetail.LastSpanPageToken)
+}
+
 func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
@@ -320,7 +380,7 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 
 	now := time.Now()
 	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
-	sub.tr.BackfillDetail = &entity.BackfillDetail{LastSpanPageToken: ptr.Of("prev")}
+	sub.tr.BackfillDetail = &entity.BackfillDetail{LastSpanPageToken: "prev"}
 	domainRun := newDomainBackfillTaskRun(now)
 	span := newTestSpan(now)
 
@@ -350,7 +410,7 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	require.True(t, proc.invokeCalled)
 	require.NotNil(t, sub.tr.BackfillDetail)
 	require.NotNil(t, sub.tr.BackfillDetail.LastSpanPageToken)
-	require.Equal(t, "prev", ptr.From(sub.tr.BackfillDetail.LastSpanPageToken))
+	require.Equal(t, "prev", sub.tr.BackfillDetail.LastSpanPageToken)
 }
 
 func TestTraceHubServiceImpl_ListAndSendSpans_ListError(t *testing.T) {
@@ -405,28 +465,6 @@ func TestTraceHubServiceImpl_FlushSpans_ContextCanceled(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestTraceHubServiceImpl_DoFlush_UpdateTaskRunError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-
-	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	impl := &TraceHubServiceImpl{taskRepo: mockTaskRepo}
-
-	now := time.Now()
-	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
-	span := newTestSpan(now)
-	domainRun := newDomainBackfillTaskRun(now)
-
-	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
-	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(errors.New("update fail"))
-
-	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "update fail")
-	require.True(t, proc.invokeCalled)
-}
-
 func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
@@ -442,7 +480,6 @@ func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
 	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
-	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil)
 
 	// 调用flushSpans，然后手动调用OnTaskFinished来触发finish错误
 	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
