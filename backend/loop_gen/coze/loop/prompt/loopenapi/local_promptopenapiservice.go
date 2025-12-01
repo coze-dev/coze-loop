@@ -90,6 +90,27 @@ func (l *LocalPromptOpenAPIService) ExecuteStreaming(ctx context.Context, req *o
 	return ls, nil
 }
 
+func (l *LocalPromptOpenAPIService) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest, callOptions ...callopt.Option) (*openapi.ListPromptBasicResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServiceListPromptBasicArgs)
+		result := out.(*openapi.PromptOpenAPIServiceListPromptBasicResult)
+		resp, err := l.impl.ListPromptBasic(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServiceListPromptBasicArgs{Req: req}
+	result := &openapi.PromptOpenAPIServiceListPromptBasicResult{}
+	ctx = l.injectRPCInfo(ctx, "ListPromptBasic")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalPromptOpenAPIService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

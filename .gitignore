@@ -51,6 +51,11 @@ release/deployment/helm-chart/umbrella/Chart.lock
 
 **/kitex_remote_config.json
 .coda/
+.claude/
+.coco/
+CLAUDE.md
+AGENTS.md
 backend/script/errorx/.env
 .cursor/
-AGENTS.md
+.specify/
+specs/
