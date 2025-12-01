@@ -35,11 +35,11 @@ type AnalysisRecord struct {
 }
 
 type TrajectoryMetaInfo struct {
-	ExptID         int64            `json:"expt_id,omitempty"`
-	ItemID         int64            `json:"item_id,omitempty"`
-	TurnID         int64            `json:"turn_id,omitempty"`
-	Trajectory     *Trajectory      `json:"trajectory,omitempty"`
-	EvaluatorInfos []*EvaluatorInfo `json:"evaluator_infos,omitempty"`
+	ExptID                 int64                    `json:"expt_id,omitempty"`
+	ItemID                 int64                    `json:"item_id,omitempty"`
+	TurnID                 int64                    `json:"turn_id,omitempty"`
+	Trajectory             *Trajectory              `json:"trajectory,omitempty"`
+	EvaluatorAnalysisInfos []*EvaluatorAnalysisInfo `json:"evaluator_analysis_infos,omitempty"`
 }
 
 type EvaluatorAnalysisInfo struct {
