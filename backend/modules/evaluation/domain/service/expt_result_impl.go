@@ -874,6 +874,7 @@ type ExptResultBuilder struct {
 	itemIDTurnID2Turn                      map[int64]map[int64]*entity.TurnEvalSet
 	turnResultID2ScoreCorrected            map[int64]bool
 	turnResultID2TagKeyID2AnnotateRecord   map[int64]map[int64]*entity.AnnotateRecord // turn_result_id -> tag_key_id -> annotate_record
+	itemIDTurnID2TrajectoryAnalysis        map[int64]map[int64]*entity.AnalysisRecord
 
 	// 错误信息
 	Err error
@@ -885,6 +886,7 @@ type ExptResultBuilder struct {
 	evaluationSetItemService EvaluationSetItemService
 	evalTargetService        IEvalTargetService
 	evaluatorRecordService   EvaluatorRecordService
+	analysisService          IEvaluationAnalysisService
 }
 
 // 1.确定当前分页下数据范围
@@ -1135,7 +1137,7 @@ func (b *PayloadBuilder) fillItemResults(ctx context.Context) error {
 				exptResult.Payload.TargetOutput = exptResultBuilder.getTurnTargetOutput(ctx, itemID, turnID)
 				exptResult.Payload.SystemInfo = exptResultBuilder.getTurnSystemInfo(ctx, itemID, turnID)
 				exptResult.Payload.AnnotateResult = exptResultBuilder.getTurnAnnotateRecord(ctx, itemID, turnID)
-
+				exptResult.Payload.AnalysisRecord = exptResultBuilder.getAnalysisRecord(ctx, itemID, turnID)
 				itemResult.TurnResults[j].ExperimentResults = append(itemResult.TurnResults[j].ExperimentResults, exptResult)
 			}
 		}
@@ -1200,6 +1202,10 @@ func (e *ExptResultBuilder) build(ctx context.Context) error {
 		return err
 	}
 	err = e.buildAnnotateRecords(ctx)
+	if err != nil {
+		return err
+	}
+	err = e.buildAnalysis(ctx)
 	if err != nil {
 		return err
 	}
@@ -1346,6 +1352,44 @@ func (e *ExptResultBuilder) getTurnAnnotateRecord(ctx context.Context, itemID, t
 	}
 }
 
+func (e *ExptResultBuilder) buildAnalysis(ctx context.Context) error {
+	if e.ExptID != e.BaselineExptID {
+		return nil
+	}
+	// 构建唯一键
+	var uniqueKeys []string
+	for _, d := range e.turnResultDO {
+		uniqueKeys = append(uniqueKeys, fmt.Sprintf("%v_%v_%v_%v", d.SpaceID, d.ExptID, d.ItemID, d.TurnID))
+	}
+	recordMap, err := e.analysisService.BatchGetAnalysisRecordByUniqueKeys(ctx, uniqueKeys)
+	if err != nil {
+		return err
+	}
+	itemIDTurnID2AnalysisRecord := make(map[int64]map[int64]*entity.AnalysisRecord)
+	for k, v := range recordMap {
+		split := strings.Split(k, "_")
+		if len(split) != 4 {
+			return errorx.New("uniqueKey error")
+		}
+		itemID, err := strconv.ParseInt(split[2], 10, 64)
+		if err != nil {
+			return err
+		}
+		turnID, err := strconv.ParseInt(split[3], 10, 64)
+		if err != nil {
+			return err
+		}
+		itemIDTurnID2AnalysisRecord[itemID] = map[int64]*entity.AnalysisRecord{
+			turnID: {
+				ID:     v.ID,
+				Status: v.Status,
+			},
+		}
+	}
+	return nil
+
+}
+
 func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 	if e.exptDO == nil {
 		return fmt.Errorf("exptPO is nil")
@@ -1396,6 +1440,19 @@ func (e *ExptResultBuilder) getTurnEvalSet(ctx context.Context, itemID, turnID i
 	}
 
 	return turn
+}
+
+func (e *ExptResultBuilder) getAnalysisRecord(ctx context.Context, itemID, turnID int64) *entity.AnalysisRecord {
+	turnID2Analysis, ok := e.itemIDTurnID2TrajectoryAnalysis[itemID]
+	if !ok {
+		return &entity.AnalysisRecord{}
+	}
+	analysis, ok := turnID2Analysis[turnID]
+	if !ok {
+		return &entity.AnalysisRecord{}
+	}
+
+	return analysis
 }
 
 func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
@@ -1801,10 +1858,10 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		// todo 草稿版数据集不支持模糊搜索，本期暂不实现
 		return nil
 	}
-	//evaluationSetVersion, _, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, baseExpt.SpaceID, baseExptEvalSetVersionID, ptr.Of(true))
-	//if err != nil {
+	// evaluationSetVersion, _, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, baseExpt.SpaceID, baseExptEvalSetVersionID, ptr.Of(true))
+	// if err != nil {
 	//	return err
-	//}
+	// }
 	itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, baseExpt.SpaceID, baseExpt.EvalSetID, ptr.Of(baseExpt.EvalSetVersionID))
 	if err != nil {
 		return err

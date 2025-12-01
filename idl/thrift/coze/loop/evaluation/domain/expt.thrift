@@ -248,6 +248,13 @@ struct ExperimentTurnPayload {
     5: optional TurnSystemInfo system_info
     // 人工标注结果结果
     6: optional TurnAnnotateResult annotate_result
+    // 轨迹分析结果
+    7: optional TrajectoryAnalysisResult trajectory_ayalysis_result
+}
+
+struct TrajectoryAnalysisResult {
+    1: optional i64 record_id (api.js_conv = 'true', go.tag = 'json:"record_id"')
+    2: optional InsightAnalysisStatus Status
 }
 
 struct KeywordSearch {

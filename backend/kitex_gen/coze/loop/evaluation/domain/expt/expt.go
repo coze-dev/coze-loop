@@ -11043,6 +11043,8 @@ type ExperimentTurnPayload struct {
 	SystemInfo *TurnSystemInfo `thrift:"system_info,5,optional" frugal:"5,optional,TurnSystemInfo" form:"system_info" json:"system_info,omitempty" query:"system_info"`
 	// 人工标注结果结果
 	AnnotateResult_ *TurnAnnotateResult_ `thrift:"annotate_result,6,optional" frugal:"6,optional,TurnAnnotateResult_" form:"annotate_result" json:"annotate_result,omitempty" query:"annotate_result"`
+	// 轨迹分析结果
+	TrajectoryAyalysisResult_ *TrajectoryAnalysisResult_ `thrift:"trajectory_ayalysis_result,7,optional" frugal:"7,optional,TrajectoryAnalysisResult_" form:"trajectory_ayalysis_result" json:"trajectory_ayalysis_result,omitempty" query:"trajectory_ayalysis_result"`
 }
 
 func NewExperimentTurnPayload() *ExperimentTurnPayload {
@@ -11118,6 +11120,18 @@ func (p *ExperimentTurnPayload) GetAnnotateResult_() (v *TurnAnnotateResult_) {
 	}
 	return p.AnnotateResult_
 }
+
+var ExperimentTurnPayload_TrajectoryAyalysisResult__DEFAULT *TrajectoryAnalysisResult_
+
+func (p *ExperimentTurnPayload) GetTrajectoryAyalysisResult_() (v *TrajectoryAnalysisResult_) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTrajectoryAyalysisResult_() {
+		return ExperimentTurnPayload_TrajectoryAyalysisResult__DEFAULT
+	}
+	return p.TrajectoryAyalysisResult_
+}
 func (p *ExperimentTurnPayload) SetTurnID(val int64) {
 	p.TurnID = val
 }
@@ -11136,6 +11150,9 @@ func (p *ExperimentTurnPayload) SetSystemInfo(val *TurnSystemInfo) {
 func (p *ExperimentTurnPayload) SetAnnotateResult_(val *TurnAnnotateResult_) {
 	p.AnnotateResult_ = val
 }
+func (p *ExperimentTurnPayload) SetTrajectoryAyalysisResult_(val *TrajectoryAnalysisResult_) {
+	p.TrajectoryAyalysisResult_ = val
+}
 
 var fieldIDToName_ExperimentTurnPayload = map[int16]string{
 	1: "turn_id",
@@ -11144,6 +11161,7 @@ var fieldIDToName_ExperimentTurnPayload = map[int16]string{
 	4: "evaluator_output",
 	5: "system_info",
 	6: "annotate_result",
+	7: "trajectory_ayalysis_result",
 }
 
 func (p *ExperimentTurnPayload) IsSetEvalSet() bool {
@@ -11164,6 +11182,10 @@ func (p *ExperimentTurnPayload) IsSetSystemInfo() bool {
 
 func (p *ExperimentTurnPayload) IsSetAnnotateResult_() bool {
 	return p.AnnotateResult_ != nil
+}
+
+func (p *ExperimentTurnPayload) IsSetTrajectoryAyalysisResult_() bool {
+	return p.TrajectoryAyalysisResult_ != nil
 }
 
 func (p *ExperimentTurnPayload) Read(iprot thrift.TProtocol) (err error) {
@@ -11227,6 +11249,14 @@ func (p *ExperimentTurnPayload) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11312,6 +11342,14 @@ func (p *ExperimentTurnPayload) ReadField6(iprot thrift.TProtocol) error {
 	p.AnnotateResult_ = _field
 	return nil
 }
+func (p *ExperimentTurnPayload) ReadField7(iprot thrift.TProtocol) error {
+	_field := NewTrajectoryAnalysisResult_()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TrajectoryAyalysisResult_ = _field
+	return nil
+}
 
 func (p *ExperimentTurnPayload) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -11341,6 +11379,10 @@ func (p *ExperimentTurnPayload) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -11467,6 +11509,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *ExperimentTurnPayload) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTrajectoryAyalysisResult_() {
+		if err = oprot.WriteFieldBegin("trajectory_ayalysis_result", thrift.STRUCT, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TrajectoryAyalysisResult_.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 
 func (p *ExperimentTurnPayload) String() string {
 	if p == nil {
@@ -11498,6 +11558,9 @@ func (p *ExperimentTurnPayload) DeepEqual(ano *ExperimentTurnPayload) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.AnnotateResult_) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.TrajectoryAyalysisResult_) {
 		return false
 	}
 	return true
@@ -11541,6 +11604,271 @@ func (p *ExperimentTurnPayload) Field5DeepEqual(src *TurnSystemInfo) bool {
 func (p *ExperimentTurnPayload) Field6DeepEqual(src *TurnAnnotateResult_) bool {
 
 	if !p.AnnotateResult_.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExperimentTurnPayload) Field7DeepEqual(src *TrajectoryAnalysisResult_) bool {
+
+	if !p.TrajectoryAyalysisResult_.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TrajectoryAnalysisResult_ struct {
+	RecordID *int64                 `thrift:"record_id,1,optional" frugal:"1,optional,i64" json:"record_id" form:"record_id" query:"record_id"`
+	Status   *InsightAnalysisStatus `thrift:"Status,2,optional" frugal:"2,optional,string" form:"Status" json:"Status,omitempty" query:"Status"`
+}
+
+func NewTrajectoryAnalysisResult_() *TrajectoryAnalysisResult_ {
+	return &TrajectoryAnalysisResult_{}
+}
+
+func (p *TrajectoryAnalysisResult_) InitDefault() {
+}
+
+var TrajectoryAnalysisResult__RecordID_DEFAULT int64
+
+func (p *TrajectoryAnalysisResult_) GetRecordID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRecordID() {
+		return TrajectoryAnalysisResult__RecordID_DEFAULT
+	}
+	return *p.RecordID
+}
+
+var TrajectoryAnalysisResult__Status_DEFAULT InsightAnalysisStatus
+
+func (p *TrajectoryAnalysisResult_) GetStatus() (v InsightAnalysisStatus) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatus() {
+		return TrajectoryAnalysisResult__Status_DEFAULT
+	}
+	return *p.Status
+}
+func (p *TrajectoryAnalysisResult_) SetRecordID(val *int64) {
+	p.RecordID = val
+}
+func (p *TrajectoryAnalysisResult_) SetStatus(val *InsightAnalysisStatus) {
+	p.Status = val
+}
+
+var fieldIDToName_TrajectoryAnalysisResult_ = map[int16]string{
+	1: "record_id",
+	2: "Status",
+}
+
+func (p *TrajectoryAnalysisResult_) IsSetRecordID() bool {
+	return p.RecordID != nil
+}
+
+func (p *TrajectoryAnalysisResult_) IsSetStatus() bool {
+	return p.Status != nil
+}
+
+func (p *TrajectoryAnalysisResult_) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TrajectoryAnalysisResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TrajectoryAnalysisResult_) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RecordID = _field
+	return nil
+}
+func (p *TrajectoryAnalysisResult_) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *InsightAnalysisStatus
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Status = _field
+	return nil
+}
+
+func (p *TrajectoryAnalysisResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TrajectoryAnalysisResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TrajectoryAnalysisResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRecordID() {
+		if err = oprot.WriteFieldBegin("record_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.RecordID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TrajectoryAnalysisResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatus() {
+		if err = oprot.WriteFieldBegin("Status", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Status); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TrajectoryAnalysisResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TrajectoryAnalysisResult_(%+v)", *p)
+
+}
+
+func (p *TrajectoryAnalysisResult_) DeepEqual(ano *TrajectoryAnalysisResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.RecordID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Status) {
+		return false
+	}
+	return true
+}
+
+func (p *TrajectoryAnalysisResult_) Field1DeepEqual(src *int64) bool {
+
+	if p.RecordID == src {
+		return true
+	} else if p.RecordID == nil || src == nil {
+		return false
+	}
+	if *p.RecordID != *src {
+		return false
+	}
+	return true
+}
+func (p *TrajectoryAnalysisResult_) Field2DeepEqual(src *InsightAnalysisStatus) bool {
+
+	if p.Status == src {
+		return true
+	} else if p.Status == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Status, *src) != 0 {
 		return false
 	}
 	return true

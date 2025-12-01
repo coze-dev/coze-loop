@@ -207,12 +207,13 @@ func ExperimentResultsDO2DTO(from *entity.ExperimentResult) *domain_expt.Experim
 
 func ExperimentTurnPayloadDO2DTO(from *entity.ExperimentTurnPayload) *domain_expt.ExperimentTurnPayload {
 	return &domain_expt.ExperimentTurnPayload{
-		TurnID:          from.TurnID,
-		EvalSet:         TurnEvalSetDO2DTO(from.EvalSet),
-		TargetOutput:    TurnTargetOutputDO2DTO(from.TargetOutput),
-		EvaluatorOutput: TurnEvaluatorOutputDO2DTO(from.EvaluatorOutput),
-		SystemInfo:      TurnSystemInfoDO2DTO(from.SystemInfo),
-		AnnotateResult_: TurnAnnotationDO2DTO(from.AnnotateResult),
+		TurnID:                    from.TurnID,
+		EvalSet:                   TurnEvalSetDO2DTO(from.EvalSet),
+		TargetOutput:              TurnTargetOutputDO2DTO(from.TargetOutput),
+		EvaluatorOutput:           TurnEvaluatorOutputDO2DTO(from.EvaluatorOutput),
+		SystemInfo:                TurnSystemInfoDO2DTO(from.SystemInfo),
+		AnnotateResult_:           TurnAnnotationDO2DTO(from.AnnotateResult),
+		TrajectoryAyalysisResult_: TurnTrajectoryAnalysisResultDO2DTO(from.AnalysisRecord),
 	}
 }
 
@@ -276,6 +277,16 @@ func TurnEvalSetDO2DTO(from *entity.TurnEvalSet) *domain_expt.TurnEvalSet {
 	}
 	return &domain_expt.TurnEvalSet{
 		Turn: evalsetconv.TurnDO2DTO(from.Turn),
+	}
+}
+
+func TurnTrajectoryAnalysisResultDO2DTO(from *entity.AnalysisRecord) *domain_expt.TrajectoryAnalysisResult_ {
+	if from == nil {
+		return &domain_expt.TrajectoryAnalysisResult_{}
+	}
+	return &domain_expt.TrajectoryAnalysisResult_{
+		RecordID: ptr.Of(from.ID),
+		Status:   ptr.Of(InsightAnalysisStatus2DTO(from.Status)),
 	}
 }
 

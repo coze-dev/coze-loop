@@ -194,6 +194,14 @@ func (p *ExperimentTurnPayload) IsValid() error {
 			return fmt.Errorf("field AnnotateResult_ not valid, %w", err)
 		}
 	}
+	if p.TrajectoryAyalysisResult_ != nil {
+		if err := p.TrajectoryAyalysisResult_.IsValid(); err != nil {
+			return fmt.Errorf("field TrajectoryAyalysisResult_ not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *TrajectoryAnalysisResult_) IsValid() error {
 	return nil
 }
 func (p *KeywordSearch) IsValid() error {

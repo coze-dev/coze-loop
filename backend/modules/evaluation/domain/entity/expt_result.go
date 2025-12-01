@@ -596,6 +596,8 @@ type ExperimentTurnPayload struct {
 	SystemInfo *TurnSystemInfo
 	// 标注结果
 	AnnotateResult *TurnAnnotateResult
+	// 分析结果
+	AnalysisRecord *AnalysisRecord
 }
 
 type ExperimentResult struct {
