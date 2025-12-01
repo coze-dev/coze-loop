@@ -128,5 +128,5 @@ func (t *TargetTrajectoryConf) GetExtractInterval() time.Duration {
 	if t != nil && t.ExtractIntervalSecond > 0 {
 		return time.Duration(t.ExtractIntervalSecond) * time.Second
 	}
-	return time.Second * 12
+	return time.Second * 15
 }

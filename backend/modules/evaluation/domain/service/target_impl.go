@@ -352,7 +352,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	setSpanInputOutput(ctx, spanParam, inputData, outputData)
 
 	if evalTargetDO.EvalTargetType.SupptTrajectory() {
-		time.Sleep(time.Second * 12)
+		time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval())
 		trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
 		if err != nil {
 			return nil, err
