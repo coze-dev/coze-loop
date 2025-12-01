@@ -134,21 +134,18 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 	}
 
 	param := &rpc.CallTraceAgentParam{
-		SpaceID:        spaceID,
-		ExptID:         exptID,
-		Url:            url,
-		StartTime:      expt.StartAt.UnixMilli(),
-		EndTime:        expt.EndAt.UnixMilli(),
-		EvalTargetType: expt.TargetType,
+		SpaceID:             spaceID,
+		ExptID:              exptID,
+		Url:                 url,
+		StartTime:           expt.StartAt.UnixMilli(),
+		EndTime:             expt.EndAt.UnixMilli(),
+		EvalTargetType:      expt.TargetType,
+		EvalTargetID:        expt.TargetID,
+		EvalTargetVersionID: expt.TargetVersionID,
 	}
 
 	// only allow prompt eval target, but not return error here. The task will fail in the CallTraceAgent.
-	if param.EvalTargetType == entity.EvalTargetTypeLoopPrompt && expt.Target != nil {
-		param.EvalTargetID = expt.Target.ID
-		param.EvalTargetVersionID = expt.TargetVersionID
-	} else if expt.Target == nil {
-		logs.CtxWarn(ctx, "Experiment %d has no target", exptID)
-	} else {
+	if param.EvalTargetType != entity.EvalTargetTypeLoopPrompt {
 		logs.CtxWarn(ctx, "Illegal evaltarget type %d for expt %d", param.EvalTargetType, exptID)
 	}
 
