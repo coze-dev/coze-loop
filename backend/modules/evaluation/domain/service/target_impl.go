@@ -213,6 +213,14 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	var outputData *entity.EvalTargetOutputData
 	runStatus := entity.EvalTargetRunStatusUnknown
 
+	evalTargetDO, err := e.GetEvalTargetVersion(ctx, spaceID, targetVersionID, false)
+	if err != nil {
+		return nil, err
+	}
+	if evalTargetDO == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("[ExecuteTarget]evalTargetDO is nil"))
+	}
+
 	defer func() {
 		if e := recover(); e != nil {
 			const size = 64 << 10
@@ -276,6 +284,17 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		}
 		logID := logs.GetLogID(ctx)
 
+		if evalTargetDO.EvalTargetType.SupptTrajectory() {
+			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval())
+			trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
+			if err != nil {
+				logs.CtxError(ctx, "ExtractTrajectory fail, space_id: %v, target_id: %v, target_version_id: %v, trace_id: %v, err: %v",
+					spaceID, targetID, targetVersionID, span.GetTraceID(), err)
+			} else {
+				outputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
+			}
+		}
+
 		record = &entity.EvalTargetRecord{
 			ID:                   recordID,
 			SpaceID:              spaceID,
@@ -307,14 +326,6 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		}
 		err = nil
 	}()
-
-	evalTargetDO, err := e.GetEvalTargetVersion(ctx, spaceID, targetVersionID, false)
-	if err != nil {
-		return nil, err
-	}
-	if evalTargetDO == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("[ExecuteTarget]evalTargetDO is nil"))
-	}
 
 	ctx, span = looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
 	span.SetCallType("EvalTarget")
@@ -350,15 +361,6 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		span.SetError(ctx, errors.New(outputData.EvalTargetRunError.Message))
 	}
 	setSpanInputOutput(ctx, spanParam, inputData, outputData)
-
-	if evalTargetDO.EvalTargetType.SupptTrajectory() {
-		time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval())
-		trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
-		if err != nil {
-			return nil, err
-		}
-		outputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
-	}
 
 	return record, nil
 }
