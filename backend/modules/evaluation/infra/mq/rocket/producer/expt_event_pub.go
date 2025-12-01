@@ -171,9 +171,9 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 	}
 	resp, err := p.p.SendBatch(ctx, msgs)
 	if err != nil {
-		return errorx.Wrapf(err, "send batch message fail, msgs: %v", json.Jsonify(msgs))
+		return errorx.Wrapf(err, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
 	}
 
-	logs.CtxInfo(ctx, "expt event batch send success, message_id: %v, offset: %v", resp.MessageID, resp.Offset)
+	logs.CtxInfo(ctx, "expt event batch send success, producer_key: %v, message_id: %v, offset: %v", pk, resp.MessageID, resp.Offset)
 	return nil
 }
