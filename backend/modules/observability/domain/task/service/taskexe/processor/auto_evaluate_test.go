@@ -16,7 +16,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
@@ -108,7 +107,7 @@ func (m *taskRepoMockAdapter) RemoveNonFinalTask(context.Context, string, int64)
 	return nil
 }
 
-func (m *taskRepoMockAdapter) GetTaskByRedis(context.Context, int64) (*taskentity.ObservabilityTask, error) {
+func (m *taskRepoMockAdapter) GetTaskByCache(context.Context, int64) (*taskentity.ObservabilityTask, error) {
 	return nil, nil
 }
 
@@ -126,8 +125,8 @@ func buildTestTask(t *testing.T) *taskentity.ObservabilityTask {
 		WorkspaceID: 202,
 		Name:        "auto-eval",
 		CreatedBy:   "1001",
-		TaskType:    task.TaskTypeAutoEval,
-		TaskStatus:  task.TaskStatusUnstarted,
+		TaskType:    taskentity.TaskTypeAutoEval,
+		TaskStatus:  taskentity.TaskStatusUnstarted,
 		EffectiveTime: &taskentity.EffectiveTime{
 			StartAt: start,
 			EndAt:   end,
@@ -142,7 +141,7 @@ func buildTestTask(t *testing.T) *taskentity.ObservabilityTask {
 			IsCycle:       false,
 			CycleCount:    0,
 			CycleInterval: 1,
-			CycleTimeUnit: task.TimeUnitDay,
+			CycleTimeUnit: taskentity.TimeUnitDay,
 		},
 		TaskConfig: &taskentity.TaskConfig{
 			AutoEvaluateConfigs: []*taskentity.AutoEvaluateConfig{
@@ -192,11 +191,12 @@ func buildSpan(input string) *loop_span.Span {
 
 func makeSchemaJSON(t *testing.T, fieldName string, contentType common.ContentType) string {
 	t.Helper()
-	fieldSchemas := []*eval_set.FieldSchema{
+	fieldSchemas := []traceentity.FieldSchema{
 		{
 			Key:         gptr.Of(fieldName),
-			Name:        gptr.Of(fieldName),
-			ContentType: gptr.Of(contentType),
+			Name:        fieldName,
+			ContentType: traceentity.ContentType(contentType),
+			TextSchema:  "{}",
 		},
 	}
 	bytes, err := json.Marshal(fieldSchemas)
@@ -224,7 +224,8 @@ func TestAutoEvaluteProcessor_ValidateConfig(t *testing.T) {
 			name:   "invalid type",
 			config: "bad",
 			expectErr: func(err error) bool {
-				return errors.Is(err, taskexe.ErrInvalidConfig)
+				status, ok := errorx.FromStatusError(err)
+				return ok && status.Code() == obErrorx.CommonInvalidParamCode
 			},
 		},
 		{
@@ -313,8 +314,8 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 			ID:            1001,
 			TaskID:        taskObj.ID,
 			WorkspaceID:   taskObj.WorkspaceID,
-			TaskType:      task.TaskRunTypeNewData,
-			RunStatus:     task.RunStatusRunning,
+			TaskType:      taskentity.TaskRunTypeNewData,
+			RunStatus:     taskentity.TaskRunStatusRunning,
 			TaskRunConfig: buildTaskRunConfig(schemaStr),
 		}
 		span := buildSpan("{\"parts\":[]}")
@@ -431,14 +432,14 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		initial string
-		op      task.TaskStatus
-		expect  string
+		initial taskentity.TaskStatus
+		op      taskentity.TaskStatus
+		expect  taskentity.TaskStatus
 	}{
-		{"success", task.TaskStatusRunning, task.TaskStatusSuccess, task.TaskStatusSuccess},
-		{"running", task.TaskStatusPending, task.TaskStatusRunning, task.TaskStatusRunning},
-		{"disable", task.TaskStatusRunning, task.TaskStatusDisabled, task.TaskStatusDisabled},
-		{"pending", task.TaskStatusUnstarted, task.TaskStatusPending, task.TaskStatusPending},
+		{"success", taskentity.TaskStatusRunning, taskentity.TaskStatusSuccess, taskentity.TaskStatusSuccess},
+		{"running", taskentity.TaskStatusPending, taskentity.TaskStatusRunning, taskentity.TaskStatusRunning},
+		{"disable", taskentity.TaskStatusRunning, taskentity.TaskStatusDisabled, taskentity.TaskStatusDisabled},
+		{"pending", taskentity.TaskStatusUnstarted, taskentity.TaskStatusPending, taskentity.TaskStatusPending},
 	}
 
 	for _, tt := range cases {
@@ -457,14 +458,14 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 
 			proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
 			taskObj := &taskentity.ObservabilityTask{TaskStatus: caseItem.initial}
-			err := proc.OnUpdateTaskChange(ctx, taskObj, caseItem.op)
+			err := proc.OnTaskUpdated(ctx, taskObj, caseItem.op)
 			assert.NoError(t, err)
 		})
 	}
 
 	t.Run("invalid op", func(t *testing.T) {
 		proc := &AutoEvaluteProcessor{}
-		err := proc.OnUpdateTaskChange(ctx, &taskentity.ObservabilityTask{}, "unknown")
+		err := proc.OnTaskUpdated(ctx, &taskentity.ObservabilityTask{}, "unknown")
 		assert.Error(t, err)
 	})
 }
@@ -479,9 +480,9 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 
 	taskObj := buildTestTask(t)
-	param := taskexe.OnCreateTaskRunChangeReq{
+	param := taskexe.OnTaskRunCreatedReq{
 		CurrentTask: taskObj,
-		RunType:     task.TaskRunTypeNewData,
+		RunType:     taskentity.TaskRunTypeNewData,
 		RunStartAt:  time.Now().Add(-time.Minute).UnixMilli(),
 		RunEndAt:    time.Now().Add(time.Hour).UnixMilli(),
 	}
@@ -506,7 +507,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 	}
 
 	ctx := session.WithCtxUser(context.Background(), &session.User{ID: taskObj.CreatedBy})
-	err := proc.OnCreateTaskRunChange(ctx, param)
+	err := proc.OnTaskRunCreated(ctx, param)
 	assert.NoError(t, err)
 	assert.NotNil(t, evalAdapter.submitReq)
 	assert.Equal(t, int64(9001), *evalAdapter.submitReq.EvalSetID)
@@ -537,13 +538,13 @@ func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
 		evaluationSvc: evalAdapter,
 	}
 
-	err := proc.OnFinishTaskRunChange(context.Background(), taskexe.OnFinishTaskRunChangeReq{
+	err := proc.OnTaskRunFinished(context.Background(), taskexe.OnTaskRunFinishedReq{
 		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234},
 		TaskRun: taskRun,
 	})
 	assert.NoError(t, err)
 	assert.NotNil(t, evalAdapter.finishReq)
-	assert.Equal(t, task.RunStatusDone, taskRun.RunStatus)
+	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
 }
 
 func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
@@ -555,7 +556,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 	evalAdapter := &fakeEvaluationAdapter{}
 
-	taskObj := &taskentity.ObservabilityTask{TaskStatus: task.TaskStatusRunning, WorkspaceID: 123}
+	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning, WorkspaceID: 123}
 	taskRun := &taskentity.TaskRun{TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{ExptID: 1, ExptRunID: 2}}}
 
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(nil)
@@ -566,13 +567,13 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 		taskRepo:      repoAdapter,
 	}
 
-	err := proc.OnFinishTaskChange(context.Background(), taskexe.OnFinishTaskChangeReq{
+	err := proc.OnTaskFinished(context.Background(), taskexe.OnTaskFinishedReq{
 		Task:     taskObj,
 		TaskRun:  taskRun,
 		IsFinish: true,
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, task.TaskStatusSuccess, taskObj.TaskStatus)
+	assert.Equal(t, taskentity.TaskStatusSuccess, taskObj.TaskStatus)
 }
 
 func TestAutoEvaluteProcessor_OnFinishTaskChange_Error(t *testing.T) {
@@ -590,7 +591,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange_Error(t *testing.T) {
 		taskRepo:      repoAdapter,
 	}
 
-	err := proc.OnFinishTaskChange(context.Background(), taskexe.OnFinishTaskChangeReq{
+	err := proc.OnTaskFinished(context.Background(), taskexe.OnTaskFinishedReq{
 		Task:    &taskentity.ObservabilityTask{WorkspaceID: 123},
 		TaskRun: &taskentity.TaskRun{TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{ExptID: 1, ExptRunID: 2}}},
 	})
@@ -621,10 +622,10 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 	}
 
 	taskObj := buildTestTask(t)
-	taskObj.TaskStatus = task.TaskStatusPending
+	taskObj.TaskStatus = taskentity.TaskStatusPending
 
-	var runTypes []task.TaskRunType
-	var statuses []task.TaskStatus
+	var runTypes []taskentity.TaskRunType
+	var statuses []taskentity.TaskStatus
 
 	getBackfill := repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), taskObj.ID).Return(nil, nil)
 	createDatasetBackfill := datasetProvider.EXPECT().CreateDataset(gomock.Any(), gomock.AssignableToTypeOf(&traceentity.Dataset{})).Return(int64(9101), nil)
@@ -666,11 +667,11 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 		updateTaskNewData,
 	)
 
-	err := proc.OnCreateTaskChange(context.Background(), taskObj)
+	err := proc.OnTaskCreated(context.Background(), taskObj)
 	assert.NoError(t, err)
-	assert.Equal(t, []task.TaskRunType{task.TaskRunTypeBackFill, task.TaskRunTypeNewData}, runTypes)
-	assert.Equal(t, []task.TaskStatus{task.TaskStatusRunning, task.TaskStatusRunning}, statuses)
-	assert.Equal(t, task.TaskStatusRunning, taskObj.TaskStatus)
+	assert.Equal(t, []taskentity.TaskRunType{taskentity.TaskRunTypeBackFill, taskentity.TaskRunTypeNewData}, runTypes)
+	assert.Equal(t, []taskentity.TaskStatus{taskentity.TaskStatusRunning, taskentity.TaskStatusRunning}, statuses)
+	assert.Equal(t, taskentity.TaskStatusRunning, taskObj.TaskStatus)
 }
 
 func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) {
@@ -685,7 +686,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) 
 
 	proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
 
-	err := proc.OnCreateTaskChange(context.Background(), buildTestTask(t))
+	err := proc.OnTaskCreated(context.Background(), buildTestTask(t))
 	assert.EqualError(t, err, "db error")
 }
 
@@ -710,7 +711,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T
 	repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), gomock.Any()).Return(nil, nil)
 	datasetProvider.EXPECT().CreateDataset(gomock.Any(), gomock.AssignableToTypeOf(&traceentity.Dataset{})).Return(int64(0), errors.New("create fail"))
 
-	err := proc.OnCreateTaskChange(context.Background(), buildTestTask(t))
+	err := proc.OnTaskCreated(context.Background(), buildTestTask(t))
 	assert.EqualError(t, err, "create fail")
 }
 

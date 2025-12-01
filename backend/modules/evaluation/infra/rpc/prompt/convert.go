@@ -84,14 +84,17 @@ func ConvertMessages2Prompt(fromMsg []*entity.Message) (toMsg []*prompt.Message)
 		if m == nil || m.Content == nil {
 			continue
 		}
-		toMsg = append(toMsg, &prompt.Message{
-			Role:    gptr.Of(Role2PromptRole(m.Role)),
-			Content: m.Content.Text,
-			Parts:   ConvertContent(m.Content),
-			// Parts:      nil,
-			// ToolCallID: nil,
-			// ToolCalls:  nil,
-		})
+		if m.Content.GetContentType() == entity.ContentTypeText {
+			toMsg = append(toMsg, &prompt.Message{
+				Role:    gptr.Of(Role2PromptRole(m.Role)),
+				Content: m.Content.Text,
+			})
+		} else {
+			toMsg = append(toMsg, &prompt.Message{
+				Role:  gptr.Of(Role2PromptRole(m.Role)),
+				Parts: ConvertContent(m.Content),
+			})
+		}
 	}
 	return
 }
@@ -162,4 +165,34 @@ func ConvertContent(content *entity.Content) []*prompt.ContentPart {
 	default:
 		return []*prompt.ContentPart{}
 	}
+}
+
+func ConvertFromContent(parts []*prompt.ContentPart) *entity.Content {
+	if len(parts) == 0 {
+		return nil
+	}
+
+	content := &entity.Content{ContentType: gptr.Of(entity.ContentTypeMultipart)}
+	for _, part := range parts {
+		if part == nil {
+			continue
+		}
+		switch part.GetType() {
+		case prompt.ContentTypeText:
+			content.MultiPart = append(content.MultiPart, &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        part.Text,
+			})
+		case prompt.ContentTypeImageURL:
+			content.MultiPart = append(content.MultiPart, &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeImage),
+				Image: &entity.Image{
+					URL: part.ImageURL.URL,
+					URI: part.ImageURL.URI,
+				},
+			})
+		default:
+		}
+	}
+	return content
 }

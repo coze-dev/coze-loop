@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	PromptUserQueryFieldKey = "builtin_prompt_user_query"
+
 	ExptResultExportTypeCSV = "CSV"
 
 	CSVExportStatusUnknown = "Unknown"
@@ -71,6 +73,8 @@ const (
 	ExptStatus_Terminated ExptStatus = 13
 	// System terminated
 	ExptStatus_SystemTerminated ExptStatus = 14
+	// Terminating
+	ExptStatus_Terminating ExptStatus = 15
 	// online expt draining
 	ExptStatus_Draining ExptStatus = 21
 )
@@ -91,6 +95,8 @@ func (p ExptStatus) String() string {
 		return "Terminated"
 	case ExptStatus_SystemTerminated:
 		return "SystemTerminated"
+	case ExptStatus_Terminating:
+		return "Terminating"
 	case ExptStatus_Draining:
 		return "Draining"
 	}
@@ -113,6 +119,8 @@ func ExptStatusFromString(s string) (ExptStatus, error) {
 		return ExptStatus_Terminated, nil
 	case "SystemTerminated":
 		return ExptStatus_SystemTerminated, nil
+	case "Terminating":
+		return ExptStatus_Terminating, nil
 	case "Draining":
 		return ExptStatus_Draining, nil
 	}
@@ -4477,9 +4485,10 @@ func (p *TargetFieldMapping) Field1DeepEqual(src []*FieldMapping) bool {
 }
 
 type EvaluatorFieldMapping struct {
-	EvaluatorVersionID int64           `thrift:"evaluator_version_id,1,required" frugal:"1,required,i64" json:"evaluator_version_id" form:"evaluator_version_id,required" query:"evaluator_version_id,required"`
-	FromEvalSet        []*FieldMapping `thrift:"from_eval_set,2,optional" frugal:"2,optional,list<FieldMapping>" form:"from_eval_set" json:"from_eval_set,omitempty" query:"from_eval_set"`
-	FromTarget         []*FieldMapping `thrift:"from_target,3,optional" frugal:"3,optional,list<FieldMapping>" form:"from_target" json:"from_target,omitempty" query:"from_target"`
+	EvaluatorVersionID     int64                             `thrift:"evaluator_version_id,1,required" frugal:"1,required,i64" json:"evaluator_version_id" form:"evaluator_version_id,required" query:"evaluator_version_id,required"`
+	FromEvalSet            []*FieldMapping                   `thrift:"from_eval_set,2,optional" frugal:"2,optional,list<FieldMapping>" form:"from_eval_set" json:"from_eval_set,omitempty" query:"from_eval_set"`
+	FromTarget             []*FieldMapping                   `thrift:"from_target,3,optional" frugal:"3,optional,list<FieldMapping>" form:"from_target" json:"from_target,omitempty" query:"from_target"`
+	EvaluatorIDVersionItem *evaluator.EvaluatorIDVersionItem `thrift:"evaluator_id_version_item,4,optional" frugal:"4,optional,evaluator.EvaluatorIDVersionItem" form:"evaluator_id_version_item" json:"evaluator_id_version_item,omitempty" query:"evaluator_id_version_item"`
 }
 
 func NewEvaluatorFieldMapping() *EvaluatorFieldMapping {
@@ -4519,6 +4528,18 @@ func (p *EvaluatorFieldMapping) GetFromTarget() (v []*FieldMapping) {
 	}
 	return p.FromTarget
 }
+
+var EvaluatorFieldMapping_EvaluatorIDVersionItem_DEFAULT *evaluator.EvaluatorIDVersionItem
+
+func (p *EvaluatorFieldMapping) GetEvaluatorIDVersionItem() (v *evaluator.EvaluatorIDVersionItem) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorIDVersionItem() {
+		return EvaluatorFieldMapping_EvaluatorIDVersionItem_DEFAULT
+	}
+	return p.EvaluatorIDVersionItem
+}
 func (p *EvaluatorFieldMapping) SetEvaluatorVersionID(val int64) {
 	p.EvaluatorVersionID = val
 }
@@ -4528,11 +4549,15 @@ func (p *EvaluatorFieldMapping) SetFromEvalSet(val []*FieldMapping) {
 func (p *EvaluatorFieldMapping) SetFromTarget(val []*FieldMapping) {
 	p.FromTarget = val
 }
+func (p *EvaluatorFieldMapping) SetEvaluatorIDVersionItem(val *evaluator.EvaluatorIDVersionItem) {
+	p.EvaluatorIDVersionItem = val
+}
 
 var fieldIDToName_EvaluatorFieldMapping = map[int16]string{
 	1: "evaluator_version_id",
 	2: "from_eval_set",
 	3: "from_target",
+	4: "evaluator_id_version_item",
 }
 
 func (p *EvaluatorFieldMapping) IsSetFromEvalSet() bool {
@@ -4541,6 +4566,10 @@ func (p *EvaluatorFieldMapping) IsSetFromEvalSet() bool {
 
 func (p *EvaluatorFieldMapping) IsSetFromTarget() bool {
 	return p.FromTarget != nil
+}
+
+func (p *EvaluatorFieldMapping) IsSetEvaluatorIDVersionItem() bool {
+	return p.EvaluatorIDVersionItem != nil
 }
 
 func (p *EvaluatorFieldMapping) Read(iprot thrift.TProtocol) (err error) {
@@ -4582,6 +4611,14 @@ func (p *EvaluatorFieldMapping) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4679,6 +4716,14 @@ func (p *EvaluatorFieldMapping) ReadField3(iprot thrift.TProtocol) error {
 	p.FromTarget = _field
 	return nil
 }
+func (p *EvaluatorFieldMapping) ReadField4(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorIDVersionItem()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvaluatorIDVersionItem = _field
+	return nil
+}
 
 func (p *EvaluatorFieldMapping) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4696,6 +4741,10 @@ func (p *EvaluatorFieldMapping) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -4784,6 +4833,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *EvaluatorFieldMapping) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorIDVersionItem() {
+		if err = oprot.WriteFieldBegin("evaluator_id_version_item", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvaluatorIDVersionItem.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *EvaluatorFieldMapping) String() string {
 	if p == nil {
@@ -4806,6 +4873,9 @@ func (p *EvaluatorFieldMapping) DeepEqual(ano *EvaluatorFieldMapping) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.FromTarget) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EvaluatorIDVersionItem) {
 		return false
 	}
 	return true
@@ -4841,6 +4911,13 @@ func (p *EvaluatorFieldMapping) Field3DeepEqual(src []*FieldMapping) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *EvaluatorFieldMapping) Field4DeepEqual(src *evaluator.EvaluatorIDVersionItem) bool {
+
+	if !p.EvaluatorIDVersionItem.DeepEqual(src) {
+		return false
 	}
 	return true
 }
@@ -6036,6 +6113,7 @@ type ColumnEvaluator struct {
 	Name               *string                 `thrift:"name,4,optional" frugal:"4,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Version            *string                 `thrift:"version,5,optional" frugal:"5,optional,string" form:"version" json:"version,omitempty" query:"version"`
 	Description        *string                 `thrift:"description,6,optional" frugal:"6,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	Builtin            *bool                   `thrift:"builtin,7,optional" frugal:"7,optional,bool" form:"builtin" json:"builtin,omitempty" query:"builtin"`
 }
 
 func NewColumnEvaluator() *ColumnEvaluator {
@@ -6101,6 +6179,18 @@ func (p *ColumnEvaluator) GetDescription() (v string) {
 	}
 	return *p.Description
 }
+
+var ColumnEvaluator_Builtin_DEFAULT bool
+
+func (p *ColumnEvaluator) GetBuiltin() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBuiltin() {
+		return ColumnEvaluator_Builtin_DEFAULT
+	}
+	return *p.Builtin
+}
 func (p *ColumnEvaluator) SetEvaluatorVersionID(val int64) {
 	p.EvaluatorVersionID = val
 }
@@ -6119,6 +6209,9 @@ func (p *ColumnEvaluator) SetVersion(val *string) {
 func (p *ColumnEvaluator) SetDescription(val *string) {
 	p.Description = val
 }
+func (p *ColumnEvaluator) SetBuiltin(val *bool) {
+	p.Builtin = val
+}
 
 var fieldIDToName_ColumnEvaluator = map[int16]string{
 	1: "evaluator_version_id",
@@ -6127,6 +6220,7 @@ var fieldIDToName_ColumnEvaluator = map[int16]string{
 	4: "name",
 	5: "version",
 	6: "description",
+	7: "builtin",
 }
 
 func (p *ColumnEvaluator) IsSetName() bool {
@@ -6139,6 +6233,10 @@ func (p *ColumnEvaluator) IsSetVersion() bool {
 
 func (p *ColumnEvaluator) IsSetDescription() bool {
 	return p.Description != nil
+}
+
+func (p *ColumnEvaluator) IsSetBuiltin() bool {
+	return p.Builtin != nil
 }
 
 func (p *ColumnEvaluator) Read(iprot thrift.TProtocol) (err error) {
@@ -6208,6 +6306,14 @@ func (p *ColumnEvaluator) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6324,6 +6430,17 @@ func (p *ColumnEvaluator) ReadField6(iprot thrift.TProtocol) error {
 	p.Description = _field
 	return nil
 }
+func (p *ColumnEvaluator) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Builtin = _field
+	return nil
+}
 
 func (p *ColumnEvaluator) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6353,6 +6470,10 @@ func (p *ColumnEvaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -6475,6 +6596,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *ColumnEvaluator) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBuiltin() {
+		if err = oprot.WriteFieldBegin("builtin", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Builtin); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 
 func (p *ColumnEvaluator) String() string {
 	if p == nil {
@@ -6506,6 +6645,9 @@ func (p *ColumnEvaluator) DeepEqual(ano *ColumnEvaluator) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.Builtin) {
 		return false
 	}
 	return true
@@ -6564,6 +6706,18 @@ func (p *ColumnEvaluator) Field6DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ColumnEvaluator) Field7DeepEqual(src *bool) bool {
+
+	if p.Builtin == src {
+		return true
+	} else if p.Builtin == nil || src == nil {
+		return false
+	}
+	if *p.Builtin != *src {
 		return false
 	}
 	return true

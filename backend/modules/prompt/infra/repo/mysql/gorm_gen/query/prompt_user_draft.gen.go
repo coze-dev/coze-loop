@@ -44,6 +44,7 @@ func newPromptUserDraft(db *gorm.DB, opts ...gen.DOOption) promptUserDraft {
 	_promptUserDraft.CreatedAt = field.NewTime(tableName, "created_at")
 	_promptUserDraft.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_promptUserDraft.DeletedAt = field.NewField(tableName, "deleted_at")
+	_promptUserDraft.HasSnippets = field.NewBool(tableName, "has_snippets")
 
 	_promptUserDraft.fillFieldMap()
 
@@ -72,6 +73,7 @@ type promptUserDraft struct {
 	CreatedAt      field.Time   // 创建时间
 	UpdatedAt      field.Time   // 更新时间
 	DeletedAt      field.Field  // 删除时间
+	HasSnippets    field.Bool   // 是否包含prompt片段
 
 	fieldMap map[string]field.Expr
 }
@@ -105,6 +107,7 @@ func (p *promptUserDraft) updateTableName(table string) *promptUserDraft {
 	p.CreatedAt = field.NewTime(table, "created_at")
 	p.UpdatedAt = field.NewTime(table, "updated_at")
 	p.DeletedAt = field.NewField(table, "deleted_at")
+	p.HasSnippets = field.NewBool(table, "has_snippets")
 
 	p.fillFieldMap()
 
@@ -133,7 +136,7 @@ func (p *promptUserDraft) GetFieldByName(fieldName string) (field.OrderExpr, boo
 }
 
 func (p *promptUserDraft) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 17)
+	p.fieldMap = make(map[string]field.Expr, 18)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["space_id"] = p.SpaceID
 	p.fieldMap["prompt_id"] = p.PromptID
@@ -151,6 +154,7 @@ func (p *promptUserDraft) fillFieldMap() {
 	p.fieldMap["created_at"] = p.CreatedAt
 	p.fieldMap["updated_at"] = p.UpdatedAt
 	p.fieldMap["deleted_at"] = p.DeletedAt
+	p.fieldMap["has_snippets"] = p.HasSnippets
 }
 
 func (p promptUserDraft) clone(db *gorm.DB) promptUserDraft {

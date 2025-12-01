@@ -122,3 +122,23 @@ func (mr *MockIPromptCommitDAOMockRecorder) MGet(ctx, pairs any, opts ...any) *g
 	varargs := append([]any{ctx, pairs}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGet", reflect.TypeOf((*MockIPromptCommitDAO)(nil).MGet), varargs...)
 }
+
+// MGetVersionsByPromptID mocks base method.
+func (m *MockIPromptCommitDAO) MGetVersionsByPromptID(ctx context.Context, promptID int64, opts ...db.Option) ([]string, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, promptID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "MGetVersionsByPromptID", varargs...)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MGetVersionsByPromptID indicates an expected call of MGetVersionsByPromptID.
+func (mr *MockIPromptCommitDAOMockRecorder) MGetVersionsByPromptID(ctx, promptID any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, promptID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetVersionsByPromptID", reflect.TypeOf((*MockIPromptCommitDAO)(nil).MGetVersionsByPromptID), varargs...)
+}

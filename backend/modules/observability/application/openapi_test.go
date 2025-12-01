@@ -659,7 +659,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 			name: "delete annotation successfully",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationDelete, "1", true).Return(nil)
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				traceServiceMock.EXPECT().DeleteAnnotation(gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
@@ -711,7 +711,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 			name: "delete annotation with permission denied",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationDelete, "1", true).
 					Return(assert.AnError)
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
@@ -746,7 +746,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 			name: "delete annotation with benefit check failed",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationDelete, "1", true).Return(nil)
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
 				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).
@@ -782,7 +782,7 @@ func TestOpenAPIApplication_DeleteAnnotation(t *testing.T) {
 			name: "delete annotation with trace service failed",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				authMock := rpcmocks.NewMockIAuthProvider(ctrl)
-				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationCreate, "1", true).Return(nil)
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionAnnotationDelete, "1", true).Return(nil)
 				traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 				traceServiceMock.EXPECT().DeleteAnnotation(gomock.Any(), gomock.Any()).Return(assert.AnError)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)

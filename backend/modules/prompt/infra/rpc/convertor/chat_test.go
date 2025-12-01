@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/manage"
 	runtimedto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/runtime"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
@@ -87,6 +88,24 @@ func TestLLMCallParamConvert(t *testing.T) {
 					PresencePenalty:  nil,
 					FrequencyPenalty: nil,
 					JSONMode:         nil,
+					ParamConfigValues: []*entity.ParamConfigValue{
+						{
+							Name:  "temperature",
+							Label: "Temperature",
+							Value: &entity.ParamOption{
+								Value: "0.5",
+								Label: "0.5",
+							},
+						},
+						{
+							Name:  "top_p",
+							Label: "Top P",
+							Value: &entity.ParamOption{
+								Value: "0.1",
+								Label: "0.1",
+							},
+						},
+					},
 				},
 			},
 			want: &runtime.ChatRequest{
@@ -96,7 +115,26 @@ func TestLLMCallParamConvert(t *testing.T) {
 					MaxTokens:   ptr.Of(int64(1000)),
 					TopP:        ptr.Of(0.1),
 					Stop:        nil,
-					ToolChoice:  ptr.Of(runtimedto.ToolChoiceAuto),
+					// llm暂时不支持toolCallConfig，所以ToolChoice为nil
+					// ToolChoice:  ptr.Of(runtimedto.ToolChoiceAuto),
+					ParamConfigValues: []*runtimedto.ParamConfigValue{
+						{
+							Name:  ptr.Of("temperature"),
+							Label: ptr.Of("Temperature"),
+							Value: &manage.ParamOption{
+								Value: ptr.Of("0.5"),
+								Label: ptr.Of("0.5"),
+							},
+						},
+						{
+							Name:  ptr.Of("top_p"),
+							Label: ptr.Of("Top P"),
+							Value: &manage.ParamOption{
+								Value: ptr.Of("0.1"),
+								Label: ptr.Of("0.1"),
+							},
+						},
+					},
 				},
 				Messages: []*runtimedto.Message{
 					{

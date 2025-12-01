@@ -226,6 +226,11 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 	prompt := convertor.PromptDTO2DO(req.Prompt)
 	// prompt hub span report
 	p.reportDebugPromptHubSpan(ctx, prompt)
+	// expand snippets
+	err = p.promptService.ExpandSnippets(ctx, prompt)
+	if err != nil {
+		return nil, err
+	}
 	// execute
 	resultStream := make(chan *entity.Reply)
 	errChan := make(chan error)
@@ -420,7 +425,7 @@ func (p *PromptDebugApplicationImpl) SaveDebugContext(ctx context.Context, req *
 
 func (p *PromptDebugApplicationImpl) GetDebugContext(ctx context.Context, req *debug.GetDebugContextRequest) (r *debug.GetDebugContextResponse, err error) {
 	r = debug.NewGetDebugContextResponse()
-	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptDebug)
+	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptRead)
 	if err != nil {
 		return nil, err
 	}
@@ -520,7 +525,7 @@ func (p *PromptDebugApplicationImpl) mCompleteDebugContextMultiModalFileURL(ctx 
 
 func (p *PromptDebugApplicationImpl) ListDebugHistory(ctx context.Context, req *debug.ListDebugHistoryRequest) (r *debug.ListDebugHistoryResponse, err error) {
 	r = debug.NewListDebugHistoryResponse()
-	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptDebug)
+	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptRead)
 	if err != nil {
 		return nil, err
 	}

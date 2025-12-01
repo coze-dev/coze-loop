@@ -532,7 +532,10 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 
 	columnEvaluators := make([]*entity.ColumnEvaluator, 0)
 	for _, e := range evaluatorVersions {
-		if (e.EvaluatorType == entity.EvaluatorTypePrompt && e.PromptEvaluatorVersion == nil) || (e.EvaluatorType == entity.EvaluatorTypeCode && e.CodeEvaluatorVersion == nil) || !gslice.Contains(evaluatorVersionIDs, e.GetEvaluatorVersionID()) {
+		if (e.EvaluatorType == entity.EvaluatorTypePrompt && e.PromptEvaluatorVersion == nil) ||
+			(e.EvaluatorType == entity.EvaluatorTypeCode && e.CodeEvaluatorVersion == nil) ||
+			(e.EvaluatorType == entity.EvaluatorTypeCustomRPC && e.CustomRPCEvaluatorVersion == nil) ||
+			!gslice.Contains(evaluatorVersionIDs, e.GetEvaluatorVersionID()) {
 			continue
 		}
 
@@ -543,6 +546,7 @@ func (e ExptResultServiceImpl) getColumnEvaluators(ctx context.Context, spaceID 
 			Name:               gptr.Of(e.Name),
 			Version:            gptr.Of(e.GetVersion()),
 			Description:        gptr.Of(e.Description),
+			Builtin:            gptr.Of(e.Builtin),
 		}
 		columnEvaluators = append(columnEvaluators, columnEvaluator)
 	}
@@ -873,13 +877,15 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 	wg.Wait()
 	close(resultCh)
 
-	var exptResultBuildersWithResult []*ExptResultBuilder // 任务结果
-	var errors []error
+	var (
+		errors                []error
+		exptIDToResultBuilder = make(map[int64]*ExptResultBuilder)
+	)
 	for exptResultBuilder := range resultCh {
 		if exptResultBuilder.Err != nil {
 			errors = append(errors, fmt.Errorf("ExptID %d: %v", exptResultBuilder.ExptID, exptResultBuilder.Err))
 		} else {
-			exptResultBuildersWithResult = append(exptResultBuildersWithResult, exptResultBuilder)
+			exptIDToResultBuilder[exptResultBuilder.ExptID] = exptResultBuilder
 		}
 	}
 	if len(errors) > 0 {
@@ -887,7 +893,13 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 		return nil, fmt.Errorf("build expt result fail, errors:%v", errors)
 	}
 
-	b.ExptResultBuilders = exptResultBuildersWithResult
+	resultedBuilders := make([]*ExptResultBuilder, 0, len(exptIDToResultBuilder))
+	for _, exptID := range b.ExptIDs {
+		if got := exptIDToResultBuilder[exptID]; got != nil {
+			resultedBuilders = append(resultedBuilders, exptIDToResultBuilder[exptID])
+		}
+	}
+	b.ExptResultBuilders = resultedBuilders
 
 	// 填充数据
 	err := b.fillItemResults(ctx)
@@ -1488,7 +1500,7 @@ func (e ExptResultServiceImpl) CalculateStats(ctx context.Context, exptID, space
 		if icnt >= int(iTotal) || len(itemResultList) == 0 {
 			break
 		}
-		time.Sleep(time.Millisecond * 30)
+		time.Sleep(time.Millisecond * 20)
 	}
 
 	for i := 0; i < maxLoop; i++ {
@@ -1524,7 +1536,7 @@ func (e ExptResultServiceImpl) CalculateStats(ctx context.Context, exptID, space
 			break
 		}
 
-		time.Sleep(time.Millisecond * 30)
+		time.Sleep(time.Millisecond * 20)
 	}
 
 	stats := &entity.ExptCalculateStats{
@@ -1533,12 +1545,62 @@ func (e ExptResultServiceImpl) CalculateStats(ctx context.Context, exptID, space
 		SuccessItemCnt:    successCnt,
 		ProcessingItemCnt: processingCnt,
 		TerminatedItemCnt: terminatedCnt,
-		IncompleteTurnIDs: incompleteTurns,
 	}
 
 	logs.CtxInfo(ctx, "ExptStatsImpl.CalculateStats scan turn result done, expt_id: %v, total_cnt: %v, incomplete_cnt: %v, total: %v, stats: %v", exptID, cnt, len(incompleteTurns), total, json.Jsonify(stats))
 
 	return stats, nil
+}
+
+func (e ExptResultServiceImpl) GetIncompleteTurns(ctx context.Context, exptID, spaceID int64, session *entity.Session) ([]*entity.ItemTurnID, error) {
+	var (
+		maxLoop         = 10000
+		limit           = 100
+		offset          = 1
+		total           = 0
+		cnt             = 0
+		incompleteTurns []*entity.ItemTurnID
+	)
+
+	for i := 0; i < maxLoop; i++ {
+		logs.CtxInfo(ctx, "ExptStatsImpl.CalculateStats scan turn result, expt_id: %v, page: %v, limit: %v, cur_cnt: %v, total: %v",
+			exptID, offset, limit, cnt, total)
+
+		results, t, err := e.ExptTurnResultRepo.ListTurnResult(ctx, spaceID, exptID, nil, entity.NewPage(offset, limit), false)
+		if err != nil {
+			return nil, err
+		}
+
+		total = int(t)
+		cnt += len(results)
+		offset++
+
+		for _, tr := range results {
+			switch entity.TurnRunState(tr.Status) {
+			case entity.TurnRunState_Queueing:
+				incompleteTurns = append(incompleteTurns, &entity.ItemTurnID{
+					TurnID: tr.TurnID,
+					ItemID: tr.ItemID,
+				})
+			case entity.TurnRunState_Processing:
+				incompleteTurns = append(incompleteTurns, &entity.ItemTurnID{
+					TurnID: tr.TurnID,
+					ItemID: tr.ItemID,
+				})
+			default:
+			}
+		}
+
+		if cnt >= total || len(results) == 0 {
+			break
+		}
+
+		time.Sleep(time.Millisecond * 20)
+	}
+
+	logs.CtxInfo(ctx, "expt %v GetIncompleteTurns result: %v", exptID, json.Jsonify(incompleteTurns))
+
+	return incompleteTurns, nil
 }
 
 // ManualUpsertExptTurnResultFilter 手动更新实验结果过滤条件

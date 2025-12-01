@@ -25,6 +25,22 @@ annotation_mq_consumer_config:
   consumer_group: "trace_annotation_event_cg"
   worker_num: 4
 
+span_with_annotation_mq_producer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 200
+  retry_times: 3
+  topic: "observability_span_queue"
+  producer_group: "observability_span_queue_pg"
+
+span_with_annotation_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "observability_span_queue"
+  consumer_group: "observability_span_queue_cg"
+  worker_num: 4
+
 trace_system_view_cfg:
   - id: -1
     view_name: "Exceptions"
@@ -46,6 +62,7 @@ trace_platform_tenants:
       - "cozeloop"
 
 trace_max_duration_day:
+  default: 180
   cozeloop: 180
   prompt: 180
   evaluator: 180

@@ -5,6 +5,7 @@ package common
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -118,8 +119,7 @@ func TestConvertImageDTO2DO(t *testing.T) {
 				Name: gptr.Of("minimal.jpg"),
 			},
 			expected: &commonentity.Image{
-				Name:            gptr.Of("minimal.jpg"),
-				StorageProvider: gptr.Of(commonentity.StorageProvider(0)),
+				Name: gptr.Of("minimal.jpg"),
 			},
 		},
 	}
@@ -169,8 +169,7 @@ func TestConvertImageDO2DTO(t *testing.T) {
 				Name: gptr.Of("minimal.jpg"),
 			},
 			expected: &commondto.Image{
-				Name:            gptr.Of("minimal.jpg"),
-				StorageProvider: gptr.Of(dataset.StorageProvider(0)),
+				Name: gptr.Of("minimal.jpg"),
 			},
 		},
 	}
@@ -308,9 +307,8 @@ func TestConvertContentDTO2DO(t *testing.T) {
 			expected: &commonentity.Content{
 				ContentType: gptr.Of(commonentity.ContentType("image")),
 				Image: &commonentity.Image{
-					Name:            gptr.Of("test.jpg"),
-					URL:             gptr.Of("https://example.com/test.jpg"),
-					StorageProvider: gptr.Of(commonentity.StorageProvider(0)),
+					Name: gptr.Of("test.jpg"),
+					URL:  gptr.Of("https://example.com/test.jpg"),
 				},
 			},
 		},
@@ -407,9 +405,8 @@ func TestConvertContentDO2DTO(t *testing.T) {
 			expected: &commondto.Content{
 				ContentType: gptr.Of("image"),
 				Image: &commondto.Image{
-					Name:            gptr.Of("test.jpg"),
-					URL:             gptr.Of("https://example.com/test.jpg"),
-					StorageProvider: gptr.Of(dataset.StorageProvider(0)),
+					Name: gptr.Of("test.jpg"),
+					URL:  gptr.Of("https://example.com/test.jpg"),
 				},
 			},
 		},
@@ -1307,6 +1304,249 @@ func TestConvertFieldDisplayFormatDO2DTO(t *testing.T) {
 			t.Parallel()
 			result := ConvertFieldDisplayFormatDO2DTO(tt.input)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestOpenAPIUserInfoDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *commonentity.UserInfo
+		expected *commondto.UserInfo
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "complete user info",
+			input: &commonentity.UserInfo{
+				Name:      gptr.Of("Alice"),
+				AvatarURL: gptr.Of("https://example.com/alice.png"),
+				UserID:    gptr.Of("user_1"),
+				Email:     gptr.Of("alice@example.com"),
+			},
+			expected: &commondto.UserInfo{
+				Name:      gptr.Of("Alice"),
+				AvatarURL: gptr.Of("https://example.com/alice.png"),
+				UserID:    gptr.Of("user_1"),
+				Email:     gptr.Of("alice@example.com"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := OpenAPIUserInfoDO2DTO(tt.input)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+				return
+			}
+			if assert.NotNil(t, result) {
+				assert.Equal(t, gptr.Indirect(tt.expected.Name), gptr.Indirect(result.Name))
+				assert.Equal(t, gptr.Indirect(tt.expected.AvatarURL), gptr.Indirect(result.AvatarURL))
+				assert.Equal(t, gptr.Indirect(tt.expected.UserID), gptr.Indirect(result.UserID))
+				assert.Equal(t, gptr.Indirect(tt.expected.Email), gptr.Indirect(result.Email))
+			}
+		})
+	}
+}
+
+func TestOpenAPIBaseInfoDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	createdAt := int64(1700000000)
+	updatedAt := int64(1700000100)
+
+	t.Run("nil input", func(t *testing.T) {
+		t.Parallel()
+		assert.Nil(t, OpenAPIBaseInfoDO2DTO(nil))
+	})
+
+	t.Run("complete base info", func(t *testing.T) {
+		t.Parallel()
+		input := &commonentity.BaseInfo{
+			CreatedBy: &commonentity.UserInfo{UserID: gptr.Of("creator"), Name: gptr.Of("Creator")},
+			UpdatedBy: &commonentity.UserInfo{UserID: gptr.Of("updater"), Name: gptr.Of("Updater")},
+			CreatedAt: &createdAt,
+			UpdatedAt: &updatedAt,
+		}
+
+		result := OpenAPIBaseInfoDO2DTO(input)
+		if assert.NotNil(t, result) {
+			assert.Equal(t, gptr.Indirect(input.CreatedAt), gptr.Indirect(result.CreatedAt))
+			assert.Equal(t, gptr.Indirect(input.UpdatedAt), gptr.Indirect(result.UpdatedAt))
+			if assert.NotNil(t, result.CreatedBy) {
+				assert.Equal(t, gptr.Indirect(input.CreatedBy.UserID), gptr.Indirect(result.CreatedBy.UserID))
+				assert.Equal(t, gptr.Indirect(input.CreatedBy.Name), gptr.Indirect(result.CreatedBy.Name))
+			}
+			if assert.NotNil(t, result.UpdatedBy) {
+				assert.Equal(t, gptr.Indirect(input.UpdatedBy.UserID), gptr.Indirect(result.UpdatedBy.UserID))
+				assert.Equal(t, gptr.Indirect(input.UpdatedBy.Name), gptr.Indirect(result.UpdatedBy.Name))
+			}
+		}
+	})
+}
+
+func TestConvertRateLimitDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *commonentity.RateLimit
+		expected *commondto.RateLimit
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "complete rate limit with period",
+			input: &commonentity.RateLimit{
+				Rate:   gptr.Of(int32(100)),
+				Burst:  gptr.Of(int32(200)),
+				Period: gptr.Of(time.Minute * 5),
+			},
+			expected: &commondto.RateLimit{
+				Rate:   gptr.Of(int32(100)),
+				Burst:  gptr.Of(int32(200)),
+				Period: gptr.Of("5m0s"),
+			},
+		},
+		{
+			name: "rate limit without period",
+			input: &commonentity.RateLimit{
+				Rate:  gptr.Of(int32(50)),
+				Burst: gptr.Of(int32(100)),
+			},
+			expected: &commondto.RateLimit{
+				Rate:   gptr.Of(int32(50)),
+				Burst:  gptr.Of(int32(100)),
+				Period: nil,
+			},
+		},
+		{
+			name: "rate limit with second period",
+			input: &commonentity.RateLimit{
+				Rate:   gptr.Of(int32(10)),
+				Burst:  gptr.Of(int32(20)),
+				Period: gptr.Of(time.Second * 30),
+			},
+			expected: &commondto.RateLimit{
+				Rate:   gptr.Of(int32(10)),
+				Burst:  gptr.Of(int32(20)),
+				Period: gptr.Of("30s"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := ConvertRateLimitDO2DTO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestConvertRateLimitDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		input   *commondto.RateLimit
+		want    *commonentity.RateLimit
+		wantErr bool
+	}{
+		{
+			name:    "nil input",
+			input:   nil,
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name: "valid rate limit with period",
+			input: &commondto.RateLimit{
+				Rate:   gptr.Of(int32(100)),
+				Burst:  gptr.Of(int32(200)),
+				Period: gptr.Of("5m"),
+			},
+			want: &commonentity.RateLimit{
+				Rate:   gptr.Of(int32(100)),
+				Burst:  gptr.Of(int32(200)),
+				Period: gptr.Of(time.Minute * 5),
+			},
+			wantErr: false,
+		},
+		{
+			name: "rate limit without period",
+			input: &commondto.RateLimit{
+				Rate:  gptr.Of(int32(50)),
+				Burst: gptr.Of(int32(100)),
+			},
+			want: &commonentity.RateLimit{
+				Rate:   gptr.Of(int32(50)),
+				Burst:  gptr.Of(int32(100)),
+				Period: nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "rate limit with second period",
+			input: &commondto.RateLimit{
+				Rate:   gptr.Of(int32(10)),
+				Burst:  gptr.Of(int32(20)),
+				Period: gptr.Of("30s"),
+			},
+			want: &commonentity.RateLimit{
+				Rate:   gptr.Of(int32(10)),
+				Burst:  gptr.Of(int32(20)),
+				Period: gptr.Of(time.Second * 30),
+			},
+			wantErr: false,
+		},
+		{
+			name: "rate limit with hour period",
+			input: &commondto.RateLimit{
+				Rate:   gptr.Of(int32(1000)),
+				Burst:  gptr.Of(int32(2000)),
+				Period: gptr.Of("1h"),
+			},
+			want: &commonentity.RateLimit{
+				Rate:   gptr.Of(int32(1000)),
+				Burst:  gptr.Of(int32(2000)),
+				Period: gptr.Of(time.Hour),
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid period format",
+			input: &commondto.RateLimit{
+				Rate:   gptr.Of(int32(100)),
+				Burst:  gptr.Of(int32(200)),
+				Period: gptr.Of("invalid"),
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ConvertRateLimitDTO2DO(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
 		})
 	}
 }

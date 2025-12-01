@@ -21,6 +21,7 @@ import (
 type MockIUserProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockIUserProviderMockRecorder
+	isgomock struct{}
 }
 
 // MockIUserProviderMockRecorder is the mock recorder for MockIUserProvider.
@@ -41,16 +42,16 @@ func (m *MockIUserProvider) EXPECT() *MockIUserProviderMockRecorder {
 }
 
 // MGetUserInfo mocks base method.
-func (m *MockIUserProvider) MGetUserInfo(arg0 context.Context, arg1 []string) ([]*entity.UserInfo, error) {
+func (m *MockIUserProvider) MGetUserInfo(ctx context.Context, userIDs []string) ([]*entity.UserInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MGetUserInfo", arg0, arg1)
+	ret := m.ctrl.Call(m, "MGetUserInfo", ctx, userIDs)
 	ret0, _ := ret[0].([]*entity.UserInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MGetUserInfo indicates an expected call of MGetUserInfo.
-func (mr *MockIUserProviderMockRecorder) MGetUserInfo(arg0, arg1 any) *gomock.Call {
+func (mr *MockIUserProviderMockRecorder) MGetUserInfo(ctx, userIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetUserInfo", reflect.TypeOf((*MockIUserProvider)(nil).MGetUserInfo), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetUserInfo", reflect.TypeOf((*MockIUserProvider)(nil).MGetUserInfo), ctx, userIDs)
 }

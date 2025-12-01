@@ -34,10 +34,13 @@ type PromptDetail struct {
 }
 
 type PromptTemplate struct {
-	TemplateType TemplateType      `json:"template_type"`
-	Messages     []*Message        `json:"messages,omitempty"`
-	VariableDefs []*VariableDef    `json:"variable_defs,omitempty"`
-	Metadata     map[string]string `json:"metadata,omitempty"`
+	TemplateType TemplateType   `json:"template_type"`
+	Messages     []*Message     `json:"messages,omitempty"`
+	VariableDefs []*VariableDef `json:"variable_defs,omitempty"`
+
+	HasSnippets bool              `json:"has_snippets"`
+	Snippets    []*Prompt         `json:"snippets,omitempty"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 
 type TemplateType string
@@ -142,7 +145,8 @@ type Tool struct {
 type ToolType string
 
 const (
-	ToolTypeFunction ToolType = "function"
+	ToolTypeFunction     ToolType = "function"
+	ToolTypeGoogleSearch ToolType = "google_search"
 )
 
 type Function struct {
@@ -152,15 +156,22 @@ type Function struct {
 }
 
 type ToolCallConfig struct {
-	ToolChoice ToolChoiceType `json:"tool_choice"`
+	ToolChoice              ToolChoiceType           `json:"tool_choice"`
+	ToolChoiceSpecification *ToolChoiceSpecification `json:"tool_choice_specification,omitempty"`
 }
 
 type ToolChoiceType string
 
 const (
-	ToolChoiceTypeNone ToolChoiceType = "none"
-	ToolChoiceTypeAuto ToolChoiceType = "auto"
+	ToolChoiceTypeNone     ToolChoiceType = "none"
+	ToolChoiceTypeAuto     ToolChoiceType = "auto"
+	ToolChoiceTypeSpecific ToolChoiceType = "specific"
 )
+
+type ToolChoiceSpecification struct {
+	Type ToolType `json:"type"`
+	Name string   `json:"name"`
+}
 
 type ToolCall struct {
 	Index        int64         `json:"index"`
@@ -175,15 +186,27 @@ type FunctionCall struct {
 }
 
 type ModelConfig struct {
-	ModelID          int64    `json:"model_id"`
-	MaxTokens        *int32   `json:"max_tokens,omitempty"`
-	Temperature      *float64 `json:"temperature,omitempty"`
-	TopK             *int32   `json:"top_k,omitempty"`
-	TopP             *float64 `json:"top_p,omitempty"`
-	PresencePenalty  *float64 `json:"presence_penalty,omitempty"`
-	FrequencyPenalty *float64 `json:"frequency_penalty,omitempty"`
-	JSONMode         *bool    `json:"json_mode,omitempty"`
-	Extra            *string  `json:"extra,omitempty"`
+	ModelID           int64               `json:"model_id"`
+	MaxTokens         *int32              `json:"max_tokens,omitempty"`
+	Temperature       *float64            `json:"temperature,omitempty"`
+	TopK              *int32              `json:"top_k,omitempty"`
+	TopP              *float64            `json:"top_p,omitempty"`
+	PresencePenalty   *float64            `json:"presence_penalty,omitempty"`
+	FrequencyPenalty  *float64            `json:"frequency_penalty,omitempty"`
+	JSONMode          *bool               `json:"json_mode,omitempty"`
+	Extra             *string             `json:"extra,omitempty"`
+	ParamConfigValues []*ParamConfigValue `json:"param_config_values,omitempty"`
+}
+
+type ParamConfigValue struct {
+	Name  string       `json:"name"`
+	Label string       `json:"label"`
+	Value *ParamOption `json:"value,omitempty"`
+}
+
+type ParamOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
 }
 
 func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*VariableVal) ([]*Message, error) {

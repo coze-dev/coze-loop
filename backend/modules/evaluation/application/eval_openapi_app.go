@@ -5,24 +5,27 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
+
+	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
+	experiment_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/kitexutil"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
-
 	"github.com/bytedance/gg/gptr"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
@@ -45,6 +48,11 @@ type EvalOpenAPIApplication struct {
 	evaluationSetSchemaService  service.EvaluationSetSchemaService
 	metric                      metrics.OpenAPIEvaluationMetrics
 	userInfoService             userinfo.UserInfoService
+	experimentApp               IExperimentApplication
+	manager                     service.IExptManager
+	resultSvc                   service.ExptResultService
+	service.ExptAggrResultService
+	evaluatorService service.EvaluatorService
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
@@ -56,6 +64,11 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 	evaluationSetSchemaService service.EvaluationSetSchemaService,
 	metric metrics.OpenAPIEvaluationMetrics,
 	userInfoService userinfo.UserInfoService,
+	experimentApp IExperimentApplication,
+	manager service.IExptManager,
+	resultSvc service.ExptResultService,
+	aggResultSvc service.ExptAggrResultService,
+	evaluatorService service.EvaluatorService,
 ) IEvalOpenAPIApplication {
 	return &EvalOpenAPIApplication{
 		asyncRepo:                   asyncRepo,
@@ -68,6 +81,11 @@ func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.E
 		evaluationSetSchemaService:  evaluationSetSchemaService,
 		metric:                      metric,
 		userInfoService:             userInfoService,
+		experimentApp:               experimentApp,
+		manager:                     manager,
+		resultSvc:                   resultSvc,
+		ExptAggrResultService:       aggResultSvc,
+		evaluatorService:            evaluatorService,
 	}
 }
 
@@ -156,6 +174,98 @@ func (e *EvalOpenAPIApplication) GetEvaluationSetOApi(ctx context.Context, req *
 		Data: &openapi.GetEvaluationSetOpenAPIData{
 			EvaluationSet: dto,
 		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) UpdateEvaluationSetOApi(ctx context.Context, req *openapi.UpdateEvaluationSetOApiRequest) (r *openapi.UpdateEvaluationSetOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	// 调用domain服务
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// domain调用
+	err = e.evaluationSetService.UpdateEvaluationSet(ctx, &entity.UpdateEvaluationSetParam{
+		SpaceID:         req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvaluationSetID(),
+		Name:            req.Name,
+		Description:     req.Description,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// 构建响应
+	return &openapi.UpdateEvaluationSetOApiResponse{
+		Data: &openapi.UpdateEvaluationSetOpenAPIData{},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) DeleteEvaluationSetOApi(ctx context.Context, req *openapi.DeleteEvaluationSetOApiRequest) (r *openapi.DeleteEvaluationSetOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	// 调用domain服务
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// domain调用
+	err = e.evaluationSetService.DeleteEvaluationSet(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID())
+	if err != nil {
+		return nil, err
+	}
+	// 构建响应
+	return &openapi.DeleteEvaluationSetOApiResponse{
+		Data: &openapi.DeleteEvaluationSetOpenAPIData{},
 	}, nil
 }
 
@@ -600,4 +710,211 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	return &openapi.ReportEvalTargetInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
+func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	if req.EvalSetParam == nil || !req.EvalSetParam.IsSetVersion() || req.EvalSetParam.GetVersion() == "" {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("eval_set_param.version is required"))
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	session := entity.NewSession(ctx)
+	// 检查是否重名
+	pass, err := e.manager.CheckName(ctx, req.GetName(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+	if !pass {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
+	}
+	versions, _, _, err := e.evaluationSetVersionService.ListEvaluationSetVersions(ctx, &entity.ListEvaluationSetVersionsParam{
+		SpaceID:         req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvalSetParam().GetEvalSetID(),
+		PageSize:        gptr.Of(int32(1)),
+		Versions:        []string{req.GetEvalSetParam().GetVersion()},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(versions) == 0 {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval set not found"))
+	}
+	evaluatorVersionIDs := make([]int64, 0)
+	evaluatorMap := make(map[string]int64)
+	for _, evaluator := range req.GetEvaluatorParams() {
+		version, _, err := e.evaluatorService.ListEvaluatorVersion(ctx, &entity.ListEvaluatorVersionRequest{
+			SpaceID:       req.GetWorkspaceID(),
+			EvaluatorID:   evaluator.GetEvaluatorID(),
+			QueryVersions: []string{evaluator.GetVersion()},
+			PageSize:      int32(1),
+			PageNum:       int32(1),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(version) == 0 {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
+		}
+		var versionID int64
+		switch version[0].EvaluatorType {
+		case entity.EvaluatorTypePrompt:
+			if version[0].PromptEvaluatorVersion != nil {
+				versionID = version[0].PromptEvaluatorVersion.ID
+			}
+		case entity.EvaluatorTypeCode:
+			if version[0].CodeEvaluatorVersion != nil {
+				versionID = version[0].CodeEvaluatorVersion.ID
+			}
+		}
+		evaluatorVersionIDs = append(evaluatorVersionIDs, versionID)
+		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
+	}
+
+	createReq := &exptpb.SubmitExperimentRequest{
+		WorkspaceID:           req.GetWorkspaceID(),
+		EvalSetVersionID:      gptr.Of(versions[0].ID),
+		EvalSetID:             req.GetEvalSetParam().EvalSetID,
+		EvaluatorVersionIds:   evaluatorVersionIDs,
+		Name:                  req.Name,
+		Desc:                  req.Description,
+		TargetFieldMapping:    experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
+		EvaluatorFieldMapping: experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
+		ItemConcurNum:         req.ItemConcurNum,
+		TargetRuntimeParam:    experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
+		CreateEvalTargetParam: experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
+	}
+
+	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
+	if err != nil {
+		return nil, err
+	}
+	if cresp == nil || cresp.GetExperiment() == nil || cresp.GetExperiment().ID == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment create failed"))
+	}
+
+	return &openapi.SubmitExperimentOApiResponse{
+		Data: &openapi.SubmitExperimentOpenAPIData{
+			Experiment: experiment_convertor.DomainExperimentDTO2OpenAPI(cresp.GetExperiment()),
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest) (r *openapi.GetExperimentsOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	session := entity.NewSession(ctx)
+	do, err := e.manager.GetDetail(ctx, req.GetExperimentID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+	// 鉴权
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(do.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &openapi.GetExperimentsOApiResponse{
+		Data: &openapi.GetExperimentsOpenAPIDataData{
+			Experiment: experiment_convertor.OpenAPIExptDO2DTO(do),
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest) (r *openapi.ListExperimentResultOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	param := &entity.MGetExperimentResultParam{
+		SpaceID:        req.GetWorkspaceID(),
+		BaseExptID:     req.ExperimentID,
+		ExptIDs:        []int64{req.GetExperimentID()},
+		Page:           entity.NewPage(int(req.GetPageNum()), int(req.GetPageSize())),
+		UseAccelerator: true,
+	}
+	columnEvaluators, _, columnEvalSetFields, _, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+	return &openapi.ListExperimentResultOApiResponse{
+		Data: &openapi.ListExperimentResultOpenAPIData{
+			ColumnEvalSetFields: experiment_convertor.OpenAPIColumnEvalSetFieldsDO2DTOs(columnEvalSetFields),
+			ColumnEvaluators:    experiment_convertor.OpenAPIColumnEvaluatorsDO2DTOs(columnEvaluators),
+			Total:               gptr.Of(total),
+			ItemResults:         experiment_convertor.OpenAPIItemResultsDO2DTOs(itemResults),
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	aggrResults, err := e.BatchGetExptAggrResultByExperimentIDs(ctx, req.GetWorkspaceID(), []int64{req.GetExperimentID()})
+	if err != nil {
+		return nil, err
+	}
+	if len(aggrResults) == 0 {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("experiment aggr result not found"))
+	}
+	aggrResult := aggrResults[0]
+	res := make([]*experiment.EvaluatorAggregateResult_, 0)
+	for _, v := range aggrResult.EvaluatorResults {
+		res = append(res, &experiment.EvaluatorAggregateResult_{
+			EvaluatorID:        &v.EvaluatorID,
+			EvaluatorVersionID: &v.EvaluatorVersionID,
+			Name:               v.Name,
+			Version:            v.Version,
+			AggregatorResults:  experiment_convertor.OpenAPIAggregatorResultsDO2DTOs(v.AggregatorResults),
+		})
+	}
+	return &openapi.GetExperimentAggrResultOApiResponse{
+		Data: &openapi.GetExperimentAggrResultOpenAPIData{
+			EvaluatorResults: res,
+		},
+	}, nil
 }

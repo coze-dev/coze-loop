@@ -10,6 +10,145 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func makePromptEvaluatorVersion() *PromptEvaluatorVersion {
+	return &PromptEvaluatorVersion{
+		ID:                 11,
+		SpaceID:            22,
+		EvaluatorID:        33,
+		Version:            "v1",
+		Description:        "pd",
+		PromptTemplateKey:  "ptk",
+		BaseInfo:           &BaseInfo{},
+		ModelConfig:        &ModelConfig{},
+		ReceiveChatHistory: gptr.Of(true),
+	}
+}
+
+func makeCodeEvaluatorVersion() *CodeEvaluatorVersion {
+	return &CodeEvaluatorVersion{
+		ID:           44,
+		SpaceID:      55,
+		EvaluatorID:  66,
+		Version:      "v2",
+		Description:  "cd",
+		LanguageType: LanguageTypePython,
+	}
+}
+
+func makeCustomRPCEvaluatorVersion() *CustomRPCEvaluatorVersion {
+	return &CustomRPCEvaluatorVersion{
+		ID:          77,
+		SpaceID:     88,
+		EvaluatorID: 99,
+		Version:     "v3",
+		Description: "rd",
+	}
+}
+
+func TestEvaluator_Getters_Setters_Prompt(t *testing.T) {
+	t.Parallel()
+	e := &Evaluator{EvaluatorType: EvaluatorTypePrompt, PromptEvaluatorVersion: makePromptEvaluatorVersion(), Description: "desc"}
+	assert.Equal(t, int64(11), e.GetEvaluatorVersionID())
+	assert.Equal(t, "v1", e.GetVersion())
+	assert.Equal(t, int64(33), e.GetEvaluatorID())
+	assert.Equal(t, int64(22), e.GetSpaceID())
+	assert.Equal(t, "desc", e.GetEvaluatorDescription())
+	assert.Equal(t, "pd", e.GetEvaluatorVersionDescription())
+	assert.NotNil(t, e.GetBaseInfo())
+	assert.Equal(t, "ptk", e.GetPromptTemplateKey())
+	assert.NotNil(t, e.GetModelConfig())
+
+	e.SetEvaluatorVersionID(101)
+	e.SetVersion("v101")
+	e.SetEvaluatorDescription("d2")
+	e.SetEvaluatorVersionDescription("pd2")
+	e.SetBaseInfo(&BaseInfo{})
+	e.SetTools([]*Tool{})
+	e.SetPromptSuffix("suf")
+	e.SetParseType(ParseTypeContent)
+	e.SetEvaluatorID(202)
+	e.SetSpaceID(303)
+
+	assert.Equal(t, int64(101), e.GetEvaluatorVersionID())
+	assert.Equal(t, "v101", e.GetVersion())
+	assert.Equal(t, "d2", e.GetEvaluatorDescription())
+	assert.Equal(t, "pd2", e.GetEvaluatorVersionDescription())
+	assert.Equal(t, int64(202), e.GetEvaluatorID())
+	assert.Equal(t, int64(303), e.GetSpaceID())
+}
+
+func TestEvaluator_Getters_Setters_Code(t *testing.T) {
+	t.Parallel()
+	e := &Evaluator{EvaluatorType: EvaluatorTypeCode, CodeEvaluatorVersion: makeCodeEvaluatorVersion(), Description: "desc"}
+	assert.Equal(t, int64(44), e.GetEvaluatorVersionID())
+	assert.Equal(t, "v2", e.GetVersion())
+	assert.Equal(t, int64(66), e.GetEvaluatorID())
+	assert.Equal(t, int64(55), e.GetSpaceID())
+	assert.Equal(t, "desc", e.GetEvaluatorDescription())
+	assert.Equal(t, "cd", e.GetEvaluatorVersionDescription())
+	assert.Nil(t, e.GetModelConfig())
+
+	e.SetEvaluatorVersionID(404)
+	e.SetVersion("v404")
+	e.SetEvaluatorVersionDescription("cd2")
+	e.SetBaseInfo(&BaseInfo{})
+	e.SetEvaluatorID(505)
+	e.SetSpaceID(606)
+	assert.Equal(t, int64(404), e.GetEvaluatorVersionID())
+	assert.Equal(t, "v404", e.GetVersion())
+	assert.Equal(t, "cd2", e.GetEvaluatorVersionDescription())
+	assert.Equal(t, int64(505), e.GetEvaluatorID())
+	assert.Equal(t, int64(606), e.GetSpaceID())
+}
+
+func TestEvaluator_Getters_Setters_CustomRPC(t *testing.T) {
+	t.Parallel()
+	e := &Evaluator{EvaluatorType: EvaluatorTypeCustomRPC, CustomRPCEvaluatorVersion: makeCustomRPCEvaluatorVersion(), Description: "desc"}
+	assert.Equal(t, int64(77), e.GetEvaluatorVersionID())
+	assert.Equal(t, "v3", e.GetVersion())
+	assert.Equal(t, int64(99), e.GetEvaluatorID())
+	assert.Equal(t, int64(88), e.GetSpaceID())
+	assert.Equal(t, "desc", e.GetEvaluatorDescription())
+	assert.Equal(t, "rd", e.GetEvaluatorVersionDescription())
+
+	e.SetEvaluatorVersionID(707)
+	e.SetVersion("v707")
+	e.SetEvaluatorVersionDescription("rd2")
+	e.SetBaseInfo(&BaseInfo{})
+	e.SetEvaluatorID(808)
+	e.SetSpaceID(909)
+	assert.Equal(t, int64(707), e.GetEvaluatorVersionID())
+	assert.Equal(t, "v707", e.GetVersion())
+	assert.Equal(t, "rd2", e.GetEvaluatorVersionDescription())
+	assert.Equal(t, int64(808), e.GetEvaluatorID())
+	assert.Equal(t, int64(909), e.GetSpaceID())
+}
+
+func TestEvaluator_DefaultBranches(t *testing.T) {
+	t.Parallel()
+	// 无版本对象
+	e := &Evaluator{EvaluatorType: EvaluatorTypePrompt}
+	assert.Equal(t, int64(0), e.GetEvaluatorVersionID())
+	assert.Equal(t, "", e.GetVersion())
+	assert.Equal(t, int64(0), e.GetEvaluatorID())
+	assert.Equal(t, int64(0), e.GetSpaceID())
+	assert.Equal(t, "", e.GetEvaluatorVersionDescription())
+	assert.Nil(t, e.GetBaseInfo())
+	assert.Equal(t, "", e.GetPromptTemplateKey())
+	assert.Nil(t, e.GetModelConfig())
+
+	// 未知类型
+	e = &Evaluator{EvaluatorType: 999}
+	assert.Equal(t, int64(0), e.GetEvaluatorVersionID())
+	assert.Equal(t, "", e.GetVersion())
+	assert.Equal(t, int64(0), e.GetEvaluatorID())
+	assert.Equal(t, int64(0), e.GetSpaceID())
+	assert.Equal(t, "", e.GetEvaluatorVersionDescription())
+	assert.Nil(t, e.GetBaseInfo())
+}
+
+// 下面追加的测试沿用同一文件与包，不重复声明
+
 func TestEvaluator_GetSetEvaluatorVersion(t *testing.T) {
 	// Prompt类型
 	promptVer := &PromptEvaluatorVersion{Version: "v1", ID: 123}

@@ -63,6 +63,7 @@ func mockPromptCases() []promptTestCase {
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				PromptBasic: &prompt.PromptBasic{
+					PromptType:    ptr.Of(prompt.PromptTypeNormal),
 					DisplayName:   ptr.Of("Test Prompt"),
 					Description:   ptr.Of("Test PromptDescription"),
 					LatestVersion: ptr.Of("1.0.0"),
@@ -82,6 +83,7 @@ func mockPromptCases() []promptTestCase {
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
 							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(false),
 							Messages: []*prompt.Message{
 								{
 									Role:    ptr.Of(prompt.RoleSystem),
@@ -116,6 +118,24 @@ func mockPromptCases() []promptTestCase {
 							ModelID:     ptr.Of(int64(789)),
 							Temperature: ptr.Of(0.7),
 							MaxTokens:   ptr.Of(int32(1000)),
+							ParamConfigValues: []*prompt.ParamConfigValue{
+								{
+									Name:  ptr.Of("temperature"),
+									Label: ptr.Of("Temperature"),
+									Value: &prompt.ParamOption{
+										Value: ptr.Of("0.7"),
+										Label: ptr.Of("0.7"),
+									},
+								},
+								{
+									Name:  ptr.Of("top_p"),
+									Label: ptr.Of("Top P"),
+									Value: &prompt.ParamOption{
+										Value: ptr.Of("0.9"),
+										Label: ptr.Of("0.9"),
+									},
+								},
+							},
 						},
 						Tools: []*prompt.Tool{
 							{
@@ -143,6 +163,7 @@ func mockPromptCases() []promptTestCase {
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
 							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(false),
 							Messages: []*prompt.Message{
 								{
 									Role:    ptr.Of(prompt.RoleSystem),
@@ -158,6 +179,7 @@ func mockPromptCases() []promptTestCase {
 				SpaceID:   456,
 				PromptKey: "test_prompt",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "Test Prompt",
 					Description:   "Test PromptDescription",
 					LatestVersion: "1.0.0",
@@ -211,6 +233,24 @@ func mockPromptCases() []promptTestCase {
 							ModelID:     789,
 							Temperature: ptr.Of(0.7),
 							MaxTokens:   ptr.Of(int32(1000)),
+							ParamConfigValues: []*entity.ParamConfigValue{
+								{
+									Name:  "temperature",
+									Label: "Temperature",
+									Value: &entity.ParamOption{
+										Value: "0.7",
+										Label: "0.7",
+									},
+								},
+								{
+									Name:  "top_p",
+									Label: "Top P",
+									Value: &entity.ParamOption{
+										Value: "0.9",
+										Label: "0.9",
+									},
+								},
+							},
 						},
 						Tools: []*entity.Tool{
 							{
@@ -256,6 +296,7 @@ func mockPromptCases() []promptTestCase {
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				PromptBasic: &prompt.PromptBasic{
+					PromptType:    ptr.Of(prompt.PromptTypeNormal),
 					DisplayName:   ptr.Of("Test Prompt"),
 					Description:   ptr.Of("Test PromptDescription"),
 					LatestVersion: ptr.Of("1.0.0"),
@@ -270,6 +311,7 @@ func mockPromptCases() []promptTestCase {
 				SpaceID:   456,
 				PromptKey: "test_prompt",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "Test Prompt",
 					Description:   "Test PromptDescription",
 					LatestVersion: "1.0.0",
@@ -352,6 +394,7 @@ func mockPromptCases() []promptTestCase {
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
 							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(false),
 							Metadata:     map[string]string{"commit-meta": "value"},
 						},
 					},
@@ -360,6 +403,7 @@ func mockPromptCases() []promptTestCase {
 					Detail: &prompt.PromptDetail{
 						PromptTemplate: &prompt.PromptTemplate{
 							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(false),
 							Metadata:     map[string]string{"draft-meta": "value"},
 						},
 					},
@@ -370,6 +414,7 @@ func mockPromptCases() []promptTestCase {
 					PromptDetail: &entity.PromptDetail{
 						PromptTemplate: &entity.PromptTemplate{
 							TemplateType: entity.TemplateTypeNormal,
+							HasSnippets:  false,
 							Metadata:     map[string]string{"commit-meta": "value"},
 						},
 					},
@@ -378,7 +423,125 @@ func mockPromptCases() []promptTestCase {
 					PromptDetail: &entity.PromptDetail{
 						PromptTemplate: &entity.PromptTemplate{
 							TemplateType: entity.TemplateTypeNormal,
+							HasSnippets:  false,
 							Metadata:     map[string]string{"draft-meta": "value"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "snippet prompt with snippets",
+			dto: &prompt.Prompt{
+				ID:          ptr.Of(int64(789)),
+				WorkspaceID: ptr.Of(int64(321)),
+				PromptKey:   ptr.Of("snippet_prompt"),
+				PromptBasic: &prompt.PromptBasic{
+					PromptType:    ptr.Of(prompt.PromptTypeSnippet),
+					DisplayName:   ptr.Of("Snippet Prompt"),
+					Description:   ptr.Of("Snippet description"),
+					LatestVersion: ptr.Of("2.0.0"),
+					CreatedBy:     ptr.Of("snippet_creator"),
+					UpdatedBy:     ptr.Of("snippet_updater"),
+					CreatedAt:     ptr.Of(nowMilli),
+					UpdatedAt:     ptr.Of(nowMilli),
+				},
+				PromptCommit: &prompt.PromptCommit{
+					CommitInfo: &prompt.CommitInfo{
+						Version:     ptr.Of("2.0.0"),
+						BaseVersion: ptr.Of("1.0.0"),
+						Description: ptr.Of("Snippet version"),
+						CommittedBy: ptr.Of("snippet_creator"),
+						CommittedAt: ptr.Of(nowMilli),
+					},
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(true),
+							Messages: []*prompt.Message{
+								{
+									Role:    ptr.Of(prompt.RoleSystem),
+									Content: ptr.Of("Snippet content"),
+								},
+							},
+						},
+					},
+				},
+				PromptDraft: &prompt.PromptDraft{
+					DraftInfo: &prompt.DraftInfo{
+						UserID:      ptr.Of("snippet_creator"),
+						BaseVersion: ptr.Of("2.0.0"),
+						IsModified:  ptr.Of(false),
+						CreatedAt:   ptr.Of(nowMilli),
+						UpdatedAt:   ptr.Of(nowMilli),
+					},
+					Detail: &prompt.PromptDetail{
+						PromptTemplate: &prompt.PromptTemplate{
+							TemplateType: ptr.Of(prompt.TemplateTypeNormal),
+							HasSnippet:   ptr.Of(true),
+							Messages: []*prompt.Message{
+								{
+									Role:    ptr.Of(prompt.RoleUser),
+									Content: ptr.Of("Draft snippet content"),
+								},
+							},
+						},
+					},
+				},
+			},
+			do: &entity.Prompt{
+				ID:        789,
+				SpaceID:   321,
+				PromptKey: "snippet_prompt",
+				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeSnippet,
+					DisplayName:   "Snippet Prompt",
+					Description:   "Snippet description",
+					LatestVersion: "2.0.0",
+					CreatedBy:     "snippet_creator",
+					UpdatedBy:     "snippet_updater",
+					CreatedAt:     time.UnixMilli(nowMilli),
+					UpdatedAt:     time.UnixMilli(nowMilli),
+				},
+				PromptCommit: &entity.PromptCommit{
+					CommitInfo: &entity.CommitInfo{
+						Version:     "2.0.0",
+						BaseVersion: "1.0.0",
+						Description: "Snippet version",
+						CommittedBy: "snippet_creator",
+						CommittedAt: time.UnixMilli(nowMilli),
+					},
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							HasSnippets:  true,
+							Messages: []*entity.Message{
+								{
+									Role:    entity.RoleSystem,
+									Content: ptr.Of("Snippet content"),
+								},
+							},
+						},
+					},
+				},
+				PromptDraft: &entity.PromptDraft{
+					DraftInfo: &entity.DraftInfo{
+						UserID:      "snippet_creator",
+						BaseVersion: "2.0.0",
+						IsModified:  false,
+						CreatedAt:   time.UnixMilli(nowMilli),
+						UpdatedAt:   time.UnixMilli(nowMilli),
+					},
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							HasSnippets:  true,
+							Messages: []*entity.Message{
+								{
+									Role:    entity.RoleUser,
+									Content: ptr.Of("Draft snippet content"),
+								},
+							},
 						},
 					},
 				},
@@ -807,6 +970,734 @@ func TestPromptTemplateWithDifferentTypes(t *testing.T) {
 			t.Parallel()
 			got := PromptTemplateDTO2DO(tt.dto)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestToolTypeDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   entity.ToolType
+		want prompt.ToolType
+	}{
+		{
+			name: "function type",
+			do:   entity.ToolTypeFunction,
+			want: prompt.ToolTypeFunction,
+		},
+		{
+			name: "google_search type",
+			do:   entity.ToolTypeGoogleSearch,
+			want: prompt.ToolTypeGoogleSearch,
+		},
+		{
+			name: "unknown type defaults to function",
+			do:   entity.ToolType("unknown"),
+			want: prompt.ToolTypeFunction,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolTypeDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestToolTypeDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  prompt.ToolType
+		want entity.ToolType
+	}{
+		{
+			name: "function type",
+			dto:  prompt.ToolTypeFunction,
+			want: entity.ToolTypeFunction,
+		},
+		{
+			name: "google_search type",
+			dto:  prompt.ToolTypeGoogleSearch,
+			want: entity.ToolTypeGoogleSearch,
+		},
+		{
+			name: "unknown type defaults to function",
+			dto:  prompt.ToolType("unknown"),
+			want: entity.ToolTypeFunction,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolTypeDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestToolChoiceSpecificationDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   *entity.ToolChoiceSpecification
+		want *prompt.ToolChoiceSpecification
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "specification with function type",
+			do: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeFunction,
+				Name: "get_weather",
+			},
+			want: &prompt.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeFunction),
+				Name: ptr.Of("get_weather"),
+			},
+		},
+		{
+			name: "specification with google_search type",
+			do: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeGoogleSearch,
+				Name: "search",
+			},
+			want: &prompt.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+				Name: ptr.Of("search"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolChoiceSpecificationDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestToolChoiceSpecificationDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *prompt.ToolChoiceSpecification
+		want *entity.ToolChoiceSpecification
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "specification with function type",
+			dto: &prompt.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeFunction),
+				Name: ptr.Of("get_weather"),
+			},
+			want: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeFunction,
+				Name: "get_weather",
+			},
+		},
+		{
+			name: "specification with google_search type",
+			dto: &prompt.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+				Name: ptr.Of("search"),
+			},
+			want: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeGoogleSearch,
+				Name: "search",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolChoiceSpecificationDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
+	tests := []struct {
+		name string
+		do   *entity.ToolCallConfig
+		want *prompt.ToolCallConfig
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "auto without specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeAuto,
+			},
+			want: &prompt.ToolCallConfig{
+				ToolChoice:              ptr.Of(prompt.ToolChoiceTypeAuto),
+				ToolChoiceSpecification: nil,
+			},
+		},
+		{
+			name: "specific with specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeFunction,
+					Name: "get_weather",
+				},
+			},
+			want: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &prompt.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeFunction),
+					Name: ptr.Of("get_weather"),
+				},
+			},
+		},
+		{
+			name: "specific with google_search specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeGoogleSearch,
+					Name: "search",
+				},
+			},
+			want: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &prompt.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+					Name: ptr.Of("search"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolCallConfigDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestToolCallConfigDTO2DO_WithSpecification(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *prompt.ToolCallConfig
+		want *entity.ToolCallConfig
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "auto without specification",
+			dto: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeAuto),
+			},
+			want: &entity.ToolCallConfig{
+				ToolChoice:              entity.ToolChoiceTypeAuto,
+				ToolChoiceSpecification: nil,
+			},
+		},
+		{
+			name: "specific with specification",
+			dto: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &prompt.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeFunction),
+					Name: ptr.Of("get_weather"),
+				},
+			},
+			want: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeFunction,
+					Name: "get_weather",
+				},
+			},
+		},
+		{
+			name: "specific with google_search specification",
+			dto: &prompt.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &prompt.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+					Name: ptr.Of("search"),
+				},
+			},
+			want: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeGoogleSearch,
+					Name: "search",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolCallConfigDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestToolChoiceTypeDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  prompt.ToolChoiceType
+		want entity.ToolChoiceType
+	}{
+		{
+			name: "none type",
+			dto:  prompt.ToolChoiceTypeNone,
+			want: entity.ToolChoiceTypeNone,
+		},
+		{
+			name: "auto type",
+			dto:  prompt.ToolChoiceTypeAuto,
+			want: entity.ToolChoiceTypeAuto,
+		},
+		{
+			name: "specific type",
+			dto:  prompt.ToolChoiceTypeSpecific,
+			want: entity.ToolChoiceTypeSpecific,
+		},
+		{
+			name: "unknown type defaults to auto",
+			dto:  prompt.ToolChoiceType("unknown"),
+			want: entity.ToolChoiceTypeAuto,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, ToolChoiceTypeDTO2DO(tt.dto))
+		})
+	}
+}
+
+type paramOptionTestCase struct {
+	name string
+	dto  *prompt.ParamOption
+	do   *entity.ParamOption
+}
+
+func mockParamOptionCases() []paramOptionTestCase {
+	return []paramOptionTestCase{
+		{
+			name: "nil input",
+			dto:  nil,
+			do:   nil,
+		},
+		{
+			name: "empty param option",
+			dto: &prompt.ParamOption{
+				Value: ptr.Of(""),
+				Label: ptr.Of(""),
+			},
+			do: &entity.ParamOption{
+				Value: "",
+				Label: "",
+			},
+		},
+		{
+			name: "basic param option",
+			dto: &prompt.ParamOption{
+				Value: ptr.Of("value1"),
+				Label: ptr.Of("Label 1"),
+			},
+			do: &entity.ParamOption{
+				Value: "value1",
+				Label: "Label 1",
+			},
+		},
+		{
+			name: "param option with special characters",
+			dto: &prompt.ParamOption{
+				Value: ptr.Of("option_value_123"),
+				Label: ptr.Of("Option Label (Special: 测试)"),
+			},
+			do: &entity.ParamOption{
+				Value: "option_value_123",
+				Label: "Option Label (Special: 测试)",
+			},
+		},
+	}
+}
+
+func TestParamOptionDTO2DO(t *testing.T) {
+	for _, tt := range mockParamOptionCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.do, ParamOptionDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestParamOptionDO2DTO(t *testing.T) {
+	for _, tt := range mockParamOptionCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.dto, ParamOptionDO2DTO(tt.do))
+		})
+	}
+}
+
+type paramConfigValueTestCase struct {
+	name string
+	dto  *prompt.ParamConfigValue
+	do   *entity.ParamConfigValue
+}
+
+func mockParamConfigValueCases() []paramConfigValueTestCase {
+	return []paramConfigValueTestCase{
+		{
+			name: "nil input",
+			dto:  nil,
+			do:   nil,
+		},
+		{
+			name: "empty param config value",
+			dto: &prompt.ParamConfigValue{
+				Name:  ptr.Of(""),
+				Label: ptr.Of(""),
+				Value: nil,
+			},
+			do: &entity.ParamConfigValue{
+				Name:  "",
+				Label: "",
+				Value: nil,
+			},
+		},
+		{
+			name: "basic param config value",
+			dto: &prompt.ParamConfigValue{
+				Name:  ptr.Of("temperature"),
+				Label: ptr.Of("Temperature"),
+				Value: &prompt.ParamOption{
+					Value: ptr.Of("0.7"),
+					Label: ptr.Of("0.7"),
+				},
+			},
+			do: &entity.ParamConfigValue{
+				Name:  "temperature",
+				Label: "Temperature",
+				Value: &entity.ParamOption{
+					Value: "0.7",
+					Label: "0.7",
+				},
+			},
+		},
+		{
+			name: "param config value with complex option",
+			dto: &prompt.ParamConfigValue{
+				Name:  ptr.Of("top_p"),
+				Label: ptr.Of("Top P"),
+				Value: &prompt.ParamOption{
+					Value: ptr.Of("0.9"),
+					Label: ptr.Of("Top P: 0.9 (Recommended)"),
+				},
+			},
+			do: &entity.ParamConfigValue{
+				Name:  "top_p",
+				Label: "Top P",
+				Value: &entity.ParamOption{
+					Value: "0.9",
+					Label: "Top P: 0.9 (Recommended)",
+				},
+			},
+		},
+		{
+			name: "param config value without value",
+			dto: &prompt.ParamConfigValue{
+				Name:  ptr.Of("max_tokens"),
+				Label: ptr.Of("Max Tokens"),
+				Value: nil,
+			},
+			do: &entity.ParamConfigValue{
+				Name:  "max_tokens",
+				Label: "Max Tokens",
+				Value: nil,
+			},
+		},
+	}
+}
+
+func TestParamConfigValueDTO2DO(t *testing.T) {
+	for _, tt := range mockParamConfigValueCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.do, ParamConfigValueDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestParamConfigValueDO2DTO(t *testing.T) {
+	for _, tt := range mockParamConfigValueCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.dto, ParamConfigValueDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestBatchParamConfigValueDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dtos []*prompt.ParamConfigValue
+		dos  []*entity.ParamConfigValue
+	}{
+		{
+			name: "nil input",
+			dtos: nil,
+			dos:  nil,
+		},
+		{
+			name: "empty slice",
+			dtos: []*prompt.ParamConfigValue{},
+			dos:  []*entity.ParamConfigValue{},
+		},
+		{
+			name: "single param config value",
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+			},
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+			},
+		},
+		{
+			name: "multiple param config values",
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+				{
+					Name:  ptr.Of("top_p"),
+					Label: ptr.Of("Top P"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.9"),
+						Label: ptr.Of("0.9"),
+					},
+				},
+			},
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+				{
+					Name:  "top_p",
+					Label: "Top P",
+					Value: &entity.ParamOption{
+						Value: "0.9",
+						Label: "0.9",
+					},
+				},
+			},
+		},
+		{
+			name: "with nil elements (should be skipped)",
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+				nil,
+				{
+					Name:  ptr.Of("top_p"),
+					Label: ptr.Of("Top P"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.9"),
+						Label: ptr.Of("0.9"),
+					},
+				},
+			},
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+				{
+					Name:  "top_p",
+					Label: "Top P",
+					Value: &entity.ParamOption{
+						Value: "0.9",
+						Label: "0.9",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.dos, BatchParamConfigValueDTO2DO(tt.dtos))
+		})
+	}
+}
+
+func TestBatchParamConfigValueDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		dos  []*entity.ParamConfigValue
+		dtos []*prompt.ParamConfigValue
+	}{
+		{
+			name: "nil input",
+			dos:  nil,
+			dtos: nil,
+		},
+		{
+			name: "empty slice",
+			dos:  []*entity.ParamConfigValue{},
+			dtos: []*prompt.ParamConfigValue{},
+		},
+		{
+			name: "single param config value",
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+			},
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+			},
+		},
+		{
+			name: "multiple param config values",
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+				{
+					Name:  "top_p",
+					Label: "Top P",
+					Value: &entity.ParamOption{
+						Value: "0.9",
+						Label: "0.9",
+					},
+				},
+			},
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+				{
+					Name:  ptr.Of("top_p"),
+					Label: ptr.Of("Top P"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.9"),
+						Label: ptr.Of("0.9"),
+					},
+				},
+			},
+		},
+		{
+			name: "with nil elements (should be skipped)",
+			dos: []*entity.ParamConfigValue{
+				{
+					Name:  "temperature",
+					Label: "Temperature",
+					Value: &entity.ParamOption{
+						Value: "0.7",
+						Label: "0.7",
+					},
+				},
+				nil,
+				{
+					Name:  "top_p",
+					Label: "Top P",
+					Value: &entity.ParamOption{
+						Value: "0.9",
+						Label: "0.9",
+					},
+				},
+			},
+			dtos: []*prompt.ParamConfigValue{
+				{
+					Name:  ptr.Of("temperature"),
+					Label: ptr.Of("Temperature"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.7"),
+						Label: ptr.Of("0.7"),
+					},
+				},
+				{
+					Name:  ptr.Of("top_p"),
+					Label: ptr.Of("Top P"),
+					Value: &prompt.ParamOption{
+						Value: ptr.Of("0.9"),
+						Label: ptr.Of("0.9"),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.dtos, BatchParamConfigValueDO2DTO(tt.dos))
 		})
 	}
 }

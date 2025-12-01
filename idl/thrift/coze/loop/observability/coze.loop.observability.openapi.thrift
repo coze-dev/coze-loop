@@ -75,6 +75,7 @@ struct SearchTraceOApiRequest {
     6: required i32 limit (api.body="limit")
     8: optional common.PlatformType platform_type (api.body="platform_type")
     9: optional list<string> span_ids (api.body="span_ids")
+    100: optional bool need_original_tags (api.body='need_original_tags')
 
     255: optional base.Base Base
 }
@@ -128,6 +129,8 @@ struct ListSpansOApiRequest {
     8: optional common.PlatformType platform_type (api.body="platform_type")
     9: optional common.SpanListType span_list_type (api.body="span_list_type")
 
+    100: optional bool need_original_tags (api.body='need_original_tags')
+
     255: optional base.Base Base
 }
 
@@ -174,6 +177,6 @@ service OpenAPIService {
     SearchTraceTreeOApiResponse SearchTraceTreeOApi(1: SearchTraceTreeOApiRequest req) (api.post = '/v1/loop/traces/search_tree')
     ListSpansOApiResponse ListSpansOApi(1: ListSpansOApiRequest req) (api.post = '/v1/loop/spans/search', api.tag="openapi")
     ListTracesOApiResponse ListTracesOApi(1: ListTracesOApiRequest req) (api.post = '/v1/loop/traces/list')
-    CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req) (api.post = '/v1/loop/annotations')
-    DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req) (api.delete = '/v1/loop/annotations')
+    CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req) (api.post = '/v1/loop/annotations', api.tag="openapi")
+    DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req) (api.delete = '/v1/loop/annotations', api.tag="openapi")
 }

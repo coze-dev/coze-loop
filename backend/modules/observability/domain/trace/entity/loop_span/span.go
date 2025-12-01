@@ -77,6 +77,8 @@ const (
 	MaxKeySize         = 100
 	MaxTextSize        = 1024 * 1024
 	MaxCommonValueSize = 1024
+
+	CallTypeEvaluator = "Evaluator"
 )
 
 type TTL string
@@ -298,6 +300,33 @@ func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 	} else if val, ok := s.TagsByte[fieldName]; ok {
 		return val
 	}
+	annotationMap := make(map[string]AnnotationValue)
+	for _, annotation := range s.Annotations {
+		var prefix string
+		switch annotation.AnnotationType {
+		case AnnotationTypeOpenAPIFeedback:
+			prefix = AnnotationOpenAPIFeedbackFieldPrefix
+		case AnnotationTypeManualFeedback:
+			prefix = AnnotationManualFeedbackFieldPrefix
+		default:
+			continue
+		}
+		annotationMap[fmt.Sprintf("%s%s", prefix, annotation.Key)] = annotation.Value
+	}
+	if val, ok := annotationMap[fieldName]; ok {
+		switch val.ValueType {
+		case AnnotationValueTypeLong:
+			return val.LongValue
+		case AnnotationValueTypeDouble, AnnotationValueTypeNumber:
+			return val.FloatValue
+		case AnnotationValueTypeBool:
+			return val.BoolValue
+		case AnnotationValueTypeString:
+			return val.StringValue
+		default:
+			return nil
+		}
+	}
 	return nil
 }
 
@@ -391,6 +420,7 @@ func (s *Span) BuildFeedback(t AnnotationType, key string, value AnnotationValue
 	if err := a.GenID(); err != nil {
 		return nil, fmt.Errorf("fail to generate annotation id: %v", err)
 	}
+	s.AddAnnotation(a)
 	return a, nil
 }
 
@@ -411,6 +441,35 @@ func (s *Span) AddManualDatasetAnnotation(datasetID int64, userID string, annota
 	a.Key = strconv.FormatInt(datasetID, 10)
 	a.Value = NewBoolValue(true)
 	a.Metadata = &ManualDatasetMetadata{}
+	a.Status = AnnotationStatusNormal
+	a.CreatedAt = time.Now()
+	a.CreatedBy = userID
+	a.UpdatedAt = time.Now()
+	a.UpdatedBy = userID
+
+	if err := a.GenID(); err != nil {
+		return nil, err
+	}
+
+	s.AddAnnotation(a)
+	return a, nil
+}
+
+func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersionID int64, score float64, reasoning, userID string) (*Annotation, error) {
+	a := &Annotation{}
+	a.SpanID = s.SpanID
+	a.TraceID = s.TraceID
+	a.StartTime = time.UnixMicro(s.StartTime)
+	a.WorkspaceID = s.WorkspaceID
+	a.AnnotationType = AnnotationTypeAutoEvaluate
+	a.Key = fmt.Sprintf("%d:%d", taskID, evaluatorVersionID)
+	a.Value = NewDoubleValue(score)
+	a.Reasoning = reasoning
+	a.Metadata = &AutoEvaluateMetadata{
+		TaskID:             taskID,
+		EvaluatorRecordID:  evaluatorRecordID,
+		EvaluatorVersionID: evaluatorVersionID,
+	}
 	a.Status = AnnotationStatusNormal
 	a.CreatedAt = time.Now()
 	a.CreatedBy = userID
@@ -550,8 +609,11 @@ func (s *Span) ClipSpan() {
 }
 
 func (s SpanList) Stat(ctx context.Context) (inputTokens, outputTokens int64, err error) {
-	modelSpans := s.FilterModelSpans()
-	for _, v := range modelSpans {
+	filter := GetModelSpansFilter()
+	for _, v := range s {
+		if !filter.Satisfied(v) {
+			continue
+		}
 		in, out, err := v.getTokens(ctx)
 		if err != nil {
 			return -1, -1, err
@@ -572,10 +634,7 @@ func (s SpanList) FilterSpans(f *FilterFields) SpanList {
 	return ret
 }
 
-func (s SpanList) FilterModelSpans() SpanList {
-	if len(s) == 0 {
-		return s
-	}
+func GetModelSpansFilter() *FilterFields {
 	modelFilter := &FilterFields{
 		QueryAndOr: ptr.Of(QueryAndOrEnumOr),
 		FilterFields: []*FilterField{
@@ -594,7 +653,7 @@ func (s SpanList) FilterModelSpans() SpanList {
 			},
 		},
 	}
-	return s.FilterSpans(modelFilter)
+	return modelFilter
 }
 
 func (s SpanList) SortByStartTime(desc bool) {

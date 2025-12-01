@@ -3,7 +3,10 @@
 
 package entity
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // ContentType 定义内容类型
 type ContentType string
@@ -117,6 +120,7 @@ type ArgsSchema struct {
 	Key                 *string       `json:"key,omitempty"`
 	SupportContentTypes []ContentType `json:"support_content_types,omitempty"`
 	JsonSchema          *string       `json:"json_schema,omitempty"`
+	DefaultValue        *Content      `json:"default_value,omitempty"`
 }
 
 // UserInfo 用户信息结构体
@@ -355,3 +359,13 @@ func StorageProviderFromString(s string) (StorageProvider, error) {
 }
 
 func StorageProviderPtr(v StorageProvider) *StorageProvider { return &v }
+
+type SystemMaintainerConf struct {
+	UserIDs []string `json:"user_ids" mapstructure:"user_ids"`
+}
+
+type RateLimit struct {
+	Rate   *int32         `json:"rate,omitempty"`
+	Burst  *int32         `json:"burst,omitempty"`
+	Period *time.Duration `json:"period,omitempty"`
+}

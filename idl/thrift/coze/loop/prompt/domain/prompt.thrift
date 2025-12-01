@@ -18,8 +18,13 @@ struct PromptBasic {
     6: optional i64 created_at (api.js_conv="true", go.tag='json:"created_at"')
     7: optional i64 updated_at (api.js_conv="true", go.tag='json:"updated_at"')
     8: optional i64 latest_committed_at (api.js_conv="true", go.tag='json:"latest_committed_at"')
+    9: optional PromptType prompt_type
 
 }
+
+typedef string PromptType (ts.enum="true")
+const PromptType PromptType_Normal = "normal"
+const PromptType PromptType_Snippet = "snippet"
 
 struct PromptCommit {
     1: optional PromptDetail detail
@@ -61,6 +66,8 @@ struct PromptTemplate {
     1: optional TemplateType template_type
     2: optional list<Message> messages
     3: optional list<VariableDef> variable_defs
+    4: optional bool has_snippet
+    5: optional list<Prompt> snippets
 
     100: optional map<string, string> metadata
 }
@@ -78,6 +85,7 @@ struct Tool {
 
 typedef string ToolType (ts.enum="true")
 const ToolType ToolType_Function = "function"
+const ToolType ToolType_GoogleSearch = "google_search"
 
 struct Function {
     1: optional string name
@@ -87,11 +95,18 @@ struct Function {
 
 struct ToolCallConfig {
     1: optional ToolChoiceType tool_choice
+    2: optional ToolChoiceSpecification tool_choice_specification
+}
+
+struct ToolChoiceSpecification {
+    1: optional ToolType type
+    2: optional string name
 }
 
 typedef string ToolChoiceType (ts.enum="true")
 const ToolChoiceType ToolChoiceType_None = "none"
 const ToolChoiceType ToolChoiceType_Auto = "auto"
+const ToolChoiceType ToolChoiceType_Specific = "specific"
 
 struct ModelConfig {
     1: optional i64 model_id (api.js_conv="true", go.tag='json:"model_id"')
@@ -103,6 +118,19 @@ struct ModelConfig {
     7: optional double frequency_penalty
     8: optional bool json_mode
     9: optional string extra
+
+    100: optional list<ParamConfigValue> param_config_values
+}
+
+struct ParamConfigValue {
+    1: optional string name // 传给下游模型的key，与ParamSchema.name对齐
+    2: optional string label // 展示名称
+    3: optional ParamOption value // 传给下游模型的value，与ParamSchema.options对齐
+}
+
+struct ParamOption {
+    1: optional string value // 实际值
+    2: optional string label // 展示值
 }
 
 struct Message {
@@ -274,4 +302,12 @@ const Scenario Scenario_EvalTarget = "eval_target"
 
 struct OverridePromptParams {
     1: optional ModelConfig model_config
+}
+
+struct PromptCommitVersions {
+    1: optional i64 id (api.js_conv="true", go.tag='json:"id"')
+    2: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    3: optional string prompt_key
+    4: optional PromptBasic prompt_basic
+    5: optional list<string> commit_versions
 }

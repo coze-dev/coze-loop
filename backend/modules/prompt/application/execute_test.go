@@ -20,8 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service/mocks"
 
-	// prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
-	// "github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/unittest"
 )
@@ -109,6 +108,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
 				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
@@ -147,6 +147,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
 				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("convert error"))
 
@@ -198,6 +199,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("execution error"))
 
@@ -218,12 +220,38 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 			wantErr: errors.New("execution error"),
 		},
 		{
+			name: "expand snippets error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
+				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
+
+				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(errorx.New("expand error"))
+
+				return fields{
+					promptService: mockPromptService,
+					manageRepo:    mockManageRepo,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &execute.ExecuteInternalRequest{
+					PromptID:    ptr.Of(int64(123)),
+					WorkspaceID: ptr.Of(int64(123456)),
+					Version:     ptr.Of("1.0.0"),
+				},
+			},
+			wantR:   execute.NewExecuteInternalResponse(),
+			wantErr: errorx.New("expand error"),
+		},
+		{
 			name: "success with override params",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockManageRepo := repomocks.NewMockIManageRepo(ctrl)
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
 				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
@@ -268,6 +296,7 @@ func TestPromptExecuteApplicationImpl_ExecuteInternal(t *testing.T) {
 				mockManageRepo.EXPECT().GetPrompt(gomock.Any(), gomock.Any()).Return(createMockPrompt(), nil)
 
 				mockPromptService := servicemocks.NewMockIPromptService(ctrl)
+				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(mockReply, nil)
 				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 

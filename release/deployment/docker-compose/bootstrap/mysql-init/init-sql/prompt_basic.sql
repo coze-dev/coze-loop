@@ -13,9 +13,11 @@ CREATE TABLE IF NOT EXISTS `prompt_basic`
     `created_at`         datetime                          NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`         datetime                          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`         bigint                            NOT NULL DEFAULT '0' COMMENT '删除时间',
+    `prompt_type` varchar(64) NOT NULL DEFAULT 'normal' COMMENT 'Prompt类型',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uniq_space_id_prompt_key_deleted_at` (`space_id`, `prompt_key`, `deleted_at`),
-    KEY `idx_created_at` (`created_at`) USING BTREE
+    KEY `idx_created_at` (`created_at`) USING BTREE,
+    KEY `idx_pid_ptype_delat` (`space_id`, `prompt_type`, `deleted_at`) USING BTREE
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='Prompt基础表';

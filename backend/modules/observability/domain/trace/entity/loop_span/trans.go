@@ -6,6 +6,7 @@ package loop_span
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
@@ -38,6 +39,7 @@ type SpanTransConfig struct {
 	TagFilter    *TagFilter    `mapstructure:"tag_filter" json:"tag_filter"`
 	InputFilter  *InputFilter  `mapstructure:"input_filter" json:"input_filter"`
 	OutputFilter *OutputFilter `mapstructure:"output_filter" json:"output_filter"`
+	initOnce     sync.Once
 }
 
 type TagFilter struct {
@@ -128,15 +130,17 @@ func (c *OutputFilter) transform(ctx context.Context, span *Span) {
 }
 
 func (c *SpanTransConfig) init() {
-	if c.TagFilter != nil {
-		c.TagFilter.keyBlackListMap = slices.ToMap(c.TagFilter.KeyBlackList, func(e string) (string, bool) { return e, true })
-	}
-	if c.InputFilter != nil {
-		c.InputFilter.keyWhiteListMap = slices.ToMap(c.InputFilter.KeyWhiteList, func(e string) (string, bool) { return e, true })
-	}
-	if c.OutputFilter != nil {
-		c.OutputFilter.keyWhiteListMap = slices.ToMap(c.OutputFilter.KeyWhiteList, func(e string) (string, bool) { return e, true })
-	}
+	c.initOnce.Do(func() {
+		if c.TagFilter != nil {
+			c.TagFilter.keyBlackListMap = slices.ToMap(c.TagFilter.KeyBlackList, func(e string) (string, bool) { return e, true })
+		}
+		if c.InputFilter != nil {
+			c.InputFilter.keyWhiteListMap = slices.ToMap(c.InputFilter.KeyWhiteList, func(e string) (string, bool) { return e, true })
+		}
+		if c.OutputFilter != nil {
+			c.OutputFilter.keyWhiteListMap = slices.ToMap(c.OutputFilter.KeyWhiteList, func(e string) (string, bool) { return e, true })
+		}
+	})
 }
 
 func (c *SpanTransConfig) satisfyFilter(span *Span) bool {

@@ -605,6 +605,177 @@ func TestExptResultServiceImpl_CalculateStats(t *testing.T) {
 	}
 }
 
+func TestExptResultServiceImpl_GetIncompleteTurns(t *testing.T) {
+	tests := []struct {
+		name    string
+		exptID  int64
+		spaceID int64
+		session *entity.Session
+		setup   func(mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo)
+		want    []*entity.ItemTurnID
+		wantErr bool
+	}{
+		{
+			name:    "successful_get_incomplete_turns",
+			exptID:  1,
+			spaceID: 100,
+			session: &entity.Session{
+				UserID: "test",
+			},
+			setup: func(mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo) {
+				// First page with queueing and processing turns
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResult(gomock.Any(), int64(100), int64(1), nil, gomock.Any(), false).
+					Return([]*entity.ExptTurnResult{
+						{
+							TurnID: 1,
+							ItemID: 10,
+							Status: int32(entity.TurnRunState_Queueing),
+						},
+						{
+							TurnID: 2,
+							ItemID: 20,
+							Status: int32(entity.TurnRunState_Processing),
+						},
+						{
+							TurnID: 3,
+							ItemID: 30,
+							Status: int32(entity.TurnRunState_Success),
+						},
+					}, int64(3), nil).
+					Times(1)
+			},
+			want: []*entity.ItemTurnID{
+				{TurnID: 1, ItemID: 10},
+				{TurnID: 2, ItemID: 20},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "no_incomplete_turns",
+			exptID:  1,
+			spaceID: 100,
+			session: &entity.Session{
+				UserID: "test",
+			},
+			setup: func(mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo) {
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResult(gomock.Any(), int64(100), int64(1), nil, gomock.Any(), false).
+					Return([]*entity.ExptTurnResult{
+						{
+							TurnID: 1,
+							ItemID: 10,
+							Status: int32(entity.TurnRunState_Success),
+						},
+						{
+							TurnID: 2,
+							ItemID: 20,
+							Status: int32(entity.TurnRunState_Fail),
+						},
+					}, int64(2), nil).
+					Times(1)
+			},
+			want:    []*entity.ItemTurnID{},
+			wantErr: false,
+		},
+		{
+			name:    "multiple_pages_with_incomplete_turns",
+			exptID:  1,
+			spaceID: 100,
+			session: &entity.Session{
+				UserID: "test",
+			},
+			setup: func(mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo) {
+				// First page
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResult(gomock.Any(), int64(100), int64(1), nil, gomock.Any(), false).
+					Return([]*entity.ExptTurnResult{
+						{
+							TurnID: 1,
+							ItemID: 10,
+							Status: int32(entity.TurnRunState_Queueing),
+						},
+					}, int64(3), nil).
+					Times(1)
+
+				// Second page
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResult(gomock.Any(), int64(100), int64(1), nil, gomock.Any(), false).
+					Return([]*entity.ExptTurnResult{
+						{
+							TurnID: 2,
+							ItemID: 20,
+							Status: int32(entity.TurnRunState_Processing),
+						},
+					}, int64(3), nil).
+					Times(1)
+
+				// Third page - empty result to break loop
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResult(gomock.Any(), int64(100), int64(1), nil, gomock.Any(), false).
+					Return([]*entity.ExptTurnResult{}, int64(3), nil).
+					Times(1)
+			},
+			want: []*entity.ItemTurnID{
+				{TurnID: 1, ItemID: 10},
+				{TurnID: 2, ItemID: 20},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "database_error",
+			exptID:  1,
+			spaceID: 100,
+			session: &entity.Session{
+				UserID: "test",
+			},
+			setup: func(mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo) {
+				mockExptTurnResultRepo.EXPECT().
+					ListTurnResult(gomock.Any(), int64(100), int64(1), nil, gomock.Any(), false).
+					Return(nil, int64(0), fmt.Errorf("database connection failed")).
+					Times(1)
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+			svc := ExptResultServiceImpl{
+				ExptTurnResultRepo: mockExptTurnResultRepo,
+			}
+
+			tt.setup(mockExptTurnResultRepo)
+
+			got, err := svc.GetIncompleteTurns(context.Background(), tt.exptID, tt.spaceID, tt.session)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetIncompleteTurns() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && len(got) != len(tt.want) {
+				t.Errorf("GetIncompleteTurns() got %v incomplete turns, want %v", len(got), len(tt.want))
+			}
+			if !tt.wantErr {
+				for i, wantTurn := range tt.want {
+					if i >= len(got) {
+						t.Errorf("GetIncompleteTurns() missing turn at index %d", i)
+						continue
+					}
+					if got[i].TurnID != wantTurn.TurnID || got[i].ItemID != wantTurn.ItemID {
+						t.Errorf("GetIncompleteTurns() got[%d] = {TurnID: %v, ItemID: %v}, want {TurnID: %v, ItemID: %v}",
+							i, got[i].TurnID, got[i].ItemID, wantTurn.TurnID, wantTurn.ItemID)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -847,6 +1018,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					Name:               gptr.Of("test_evaluator"),
 					Version:            gptr.Of("v1"),
 					Description:        gptr.Of("test description"),
+					Builtin:            gptr.Of(false),
 				},
 			},
 			wantErr: false,
@@ -1216,6 +1388,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					Name:               gptr.Of("test_evaluator"),
 					Version:            gptr.Of("v1"),
 					Description:        gptr.Of("test description"),
+					Builtin:            gptr.Of(false),
 				},
 			},
 			wantErr: false,

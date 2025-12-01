@@ -91,6 +91,59 @@ type TraceApplication struct {
 	tagSvc             rpc.ITagRPCAdapter
 }
 
+func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
+	if err := t.validateListPreSpanReq(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	sReq, err := t.buildListPreSpanSvcReq(req)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("list spans req is invalid"))
+	}
+	preSpan, err := t.traceService.ListPreSpan(ctx, sReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.ListPreSpanResponse{
+		Spans: tconv.SpanListDO2DTO(preSpan.Spans, nil, nil, nil, false),
+	}, nil
+}
+
+func (t *TraceApplication) validateListPreSpanReq(ctx context.Context, req *trace.ListPreSpanRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if req.GetTraceID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+	} else if req.GetPreviousResponseID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid previous_response_id"))
+	} else if req.GetSpanID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid span_id"))
+	}
+
+	return nil
+}
+
+func (t *TraceApplication) buildListPreSpanSvcReq(req *trace.ListPreSpanRequest) (*service.ListPreSpanReq, error) {
+	ret := &service.ListPreSpanReq{
+		WorkspaceID:        req.GetWorkspaceID(),
+		StartTime:          req.GetStartTime(),
+		TraceID:            req.GetTraceID(),
+		SpanID:             req.GetSpanID(),
+		PreviousResponseID: req.GetPreviousResponseID(),
+		PlatformType:       loop_span.PlatformType(req.GetPlatformType()),
+	}
+
+	return ret, nil
+}
+
 func (t *TraceApplication) ListSpans(ctx context.Context, req *trace.ListSpansRequest) (*trace.ListSpansResponse, error) {
 	if err := t.validateListSpansReq(ctx, req); err != nil {
 		return nil, err
@@ -115,7 +168,7 @@ func (t *TraceApplication) ListSpans(ctx context.Context, req *trace.ListSpansRe
 		sResp.Spans.GetEvaluatorVersionIDs(),
 		sResp.Spans.GetAnnotationTagIDs())
 	return &trace.ListSpansResponse{
-		Spans:         tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap),
+		Spans:         tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap, false),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}, nil
@@ -209,7 +262,7 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 		sResp.Spans.GetEvaluatorVersionIDs(),
 		sResp.Spans.GetAnnotationTagIDs())
 	return &trace.GetTraceResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap, false),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{
@@ -287,7 +340,7 @@ func (t *TraceApplication) SearchTraceTree(ctx context.Context, req *trace.Searc
 		sResp.Spans.GetEvaluatorVersionIDs(),
 		sResp.Spans.GetAnnotationTagIDs())
 	return &trace.SearchTraceTreeResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap, false),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{

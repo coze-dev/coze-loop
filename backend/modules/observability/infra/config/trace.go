@@ -13,19 +13,21 @@ import (
 )
 
 const (
-	systemViewsCfgKey          = "trace_system_view_cfg"
-	platformTenantCfgKey       = "trace_platform_tenants"
-	platformSpanHandlerCfgKey  = "trace_platform_span_handler_config"
-	traceIngestTenantCfgKey    = "trace_ingest_tenant_config"
-	annotationMqProducerCfgKey = "annotation_mq_producer_config"
-	tenantTablesCfgKey         = "trace_tenant_cfg"
-	traceCkCfgKey              = "trace_ck_cfg"
-	traceFieldMetaInfoCfgKey   = "trace_field_meta_info"
-	traceMaxDurationDay        = "trace_max_duration_day"
-	annotationSourceCfgKey     = "annotation_source_cfg"
-	queryTraceRateLimitCfgKey  = "query_trace_rate_limit_config"
-	keySpanTypeCfgKey          = "key_span_type"
-	backfillMqProducerCfgKey   = "backfill_mq_producer_config"
+	systemViewsCfgKey                  = "trace_system_view_cfg"
+	platformTenantCfgKey               = "trace_platform_tenants"
+	platformSpanHandlerCfgKey          = "trace_platform_span_handler_config"
+	traceIngestTenantCfgKey            = "trace_ingest_tenant_config"
+	annotationMqProducerCfgKey         = "annotation_mq_producer_config"
+	spanWithAnnotationMqProducerCfgKey = "span_with_annotation_mq_producer_config"
+	tenantTablesCfgKey                 = "trace_tenant_cfg"
+	traceCkCfgKey                      = "trace_ck_cfg"
+	traceFieldMetaInfoCfgKey           = "trace_field_meta_info"
+	traceMaxDurationDay                = "trace_max_duration_day"
+	annotationSourceCfgKey             = "annotation_source_cfg"
+	queryTraceRateLimitCfgKey          = "query_trace_rate_limit_config"
+	keySpanTypeCfgKey                  = "key_span_type"
+	backfillMqProducerCfgKey           = "backfill_mq_producer_config"
+	consumerListeningCfgKey            = "consumer_listening"
 )
 
 type TraceConfigCenter struct {
@@ -74,6 +76,14 @@ func (t *TraceConfigCenter) GetAnnotationMqProducerCfg(ctx context.Context) (*co
 	return cfg, nil
 }
 
+func (t *TraceConfigCenter) GetSpanWithAnnotationMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
+	cfg := new(config.MqProducerCfg)
+	if err := t.UnmarshalKey(context.Background(), spanWithAnnotationMqProducerCfgKey, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
 func (t *TraceConfigCenter) GetBackfillMqProducerCfg(ctx context.Context) (*config.MqProducerCfg, error) {
 	cfg := new(config.MqProducerCfg)
 	if err := t.UnmarshalKey(context.Background(), backfillMqProducerCfgKey, cfg); err != nil {
@@ -108,10 +118,12 @@ func (t *TraceConfigCenter) GetTraceFieldMetaInfo(ctx context.Context) (*config.
 
 func (t *TraceConfigCenter) GetTraceDataMaxDurationDay(ctx context.Context, platformPtr *string) int64 {
 	defaultDuration := int64(7)
+	var platformType string
 	if platformPtr == nil {
-		return defaultDuration
+		platformType = "default"
+	} else {
+		platformType = *platformPtr
 	}
-	platformType := *platformPtr
 	mp := make(map[string]int64)
 	err := t.UnmarshalKey(ctx, traceMaxDurationDay, &mp)
 	if err != nil {
@@ -167,6 +179,14 @@ func (t *TraceConfigCenter) GetKeySpanTypes(ctx context.Context) map[string][]st
 		return keyColumns
 	}
 	return keyColumns
+}
+
+func (t *TraceConfigCenter) GetConsumerListening(ctx context.Context) (*config.ConsumerListening, error) {
+	consumerListening := new(config.ConsumerListening)
+	if err := t.UnmarshalKey(ctx, consumerListeningCfgKey, &consumerListening); err != nil {
+		return nil, err
+	}
+	return consumerListening, nil
 }
 
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {

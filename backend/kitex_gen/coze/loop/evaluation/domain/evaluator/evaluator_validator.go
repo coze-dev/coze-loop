@@ -43,6 +43,14 @@ func (p *PromptEvaluator) IsValid() error {
 func (p *CodeEvaluator) IsValid() error {
 	return nil
 }
+func (p *CustomRPCEvaluator) IsValid() error {
+	if p.RateLimit != nil {
+		if err := p.RateLimit.IsValid(); err != nil {
+			return fmt.Errorf("field RateLimit not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *EvaluatorVersion) IsValid() error {
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
@@ -67,6 +75,17 @@ func (p *EvaluatorContent) IsValid() error {
 			return fmt.Errorf("field CodeEvaluator not valid, %w", err)
 		}
 	}
+	if p.CustomRPCEvaluator != nil {
+		if err := p.CustomRPCEvaluator.IsValid(); err != nil {
+			return fmt.Errorf("field CustomRPCEvaluator not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluatorIDVersionItem) IsValid() error {
+	return nil
+}
+func (p *EvaluatorInfo) IsValid() error {
 	return nil
 }
 func (p *Evaluator) IsValid() error {
@@ -80,6 +99,43 @@ func (p *Evaluator) IsValid() error {
 			return fmt.Errorf("field CurrentVersion not valid, %w", err)
 		}
 	}
+	if p.EvaluatorInfo != nil {
+		if err := p.EvaluatorInfo.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluatorTemplate) IsValid() error {
+	if p.EvaluatorInfo != nil {
+		if err := p.EvaluatorInfo.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorInfo not valid, %w", err)
+		}
+	}
+	if p.EvaluatorContent != nil {
+		if err := p.EvaluatorContent.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorContent not valid, %w", err)
+		}
+	}
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluatorFilterOption) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvaluatorFilters) IsValid() error {
+	return nil
+}
+func (p *EvaluatorFilterCondition) IsValid() error {
 	return nil
 }
 func (p *Correction) IsValid() error {

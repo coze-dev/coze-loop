@@ -98,3 +98,9 @@ func UpdateCommitLabels(ctx context.Context, c *app.RequestContext) {
 func BatchGetLabel(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, promptManageSvc.BatchGetLabel)
 }
+
+// ListParentPrompt .
+// @router /api/prompt/v1/prompts/list_parent [POST]
+func ListParentPrompt(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptManageSvc.ListParentPrompt)
+}

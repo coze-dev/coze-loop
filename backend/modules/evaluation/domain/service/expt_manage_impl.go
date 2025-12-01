@@ -36,7 +36,6 @@ import (
 )
 
 func NewExptManager(
-	// tupleSvc IExptTupleService,
 	exptResultService ExptResultService,
 	exptRepo repo.IExperimentRepo,
 	exptRunLogRepo repo.IExptRunLogRepo,
@@ -561,10 +560,12 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		EvalSet:    tuple.EvalSet,
 	}
 
-	if req.CreateEvalTargetParam != nil {
+	if !req.CreateEvalTargetParam.IsNull() {
 		do.TargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
-		do.TargetID = versionedTargetID.TargetID
-		do.TargetVersionID = versionedTargetID.VersionID
+		if versionedTargetID != nil {
+			do.TargetID = versionedTargetID.TargetID
+			do.TargetVersionID = versionedTargetID.VersionID
+		}
 		if do.EvalConf != nil && do.EvalConf.ConnectorConf.TargetConf != nil {
 			do.EvalConf.ConnectorConf.TargetConf.TargetVersionID = do.TargetVersionID
 		}
