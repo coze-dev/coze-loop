@@ -34,28 +34,28 @@ import (
 )
 
 type EvalTargetServiceImpl struct {
-	idgen          idgen.IIDGenerator
-	metric         metrics.EvalTargetMetrics
-	evalTargetRepo repo.IEvalTargetRepo
-	typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService
-	trajectorySvc  rpc.ITrajectoryAdapter
-	configer       component.IConfiger
+	idgen             idgen.IIDGenerator
+	metric            metrics.EvalTargetMetrics
+	evalTargetRepo    repo.IEvalTargetRepo
+	typedOperators    map[entity.EvalTargetType]ISourceEvalTargetOperateService
+	trajectoryAdapter rpc.ITrajectoryAdapter
+	configer          component.IConfiger
 }
 
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
 	metric metrics.EvalTargetMetrics,
 	typedOperators map[entity.EvalTargetType]ISourceEvalTargetOperateService,
-	trajectorySvc rpc.ITrajectoryAdapter,
+	trajectoryAdapter rpc.ITrajectoryAdapter,
 	configer component.IConfiger,
 ) IEvalTargetService {
 	singletonEvalTargetService := &EvalTargetServiceImpl{
-		evalTargetRepo: evalTargetRepo,
-		idgen:          idgen,
-		metric:         metric,
-		typedOperators: typedOperators,
-		trajectorySvc:  trajectorySvc,
-		configer:       configer,
+		evalTargetRepo:    evalTargetRepo,
+		idgen:             idgen,
+		metric:            metric,
+		typedOperators:    typedOperators,
+		trajectoryAdapter: trajectoryAdapter,
+		configer:          configer,
 	}
 	return singletonEvalTargetService
 }
@@ -364,7 +364,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 }
 
 func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error) {
-	trajectories, err := e.trajectorySvc.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
+	trajectories, err := e.trajectoryAdapter.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
 	if err != nil {
 		return nil, err
 	}

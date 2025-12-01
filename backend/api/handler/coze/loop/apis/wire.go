@@ -41,6 +41,7 @@ import (
 	evaluationapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
 	foundationapp "github.com/coze-dev/coze-loop/backend/modules/foundation/application"
 	llmapp "github.com/coze-dev/coze-loop/backend/modules/llm/application"
 	obapp "github.com/coze-dev/coze-loop/backend/modules/observability/application"
@@ -78,6 +79,7 @@ var (
 		NewEvaluationHandler,
 		data.NewDatasetRPCAdapter,
 		prompt.NewPromptRPCAdapter,
+		trajectory.TrajectoryRPCSet,
 		evaluationapp.InitExperimentApplication,
 		evaluationapp.InitEvaluatorApplication,
 		evaluationapp.InitEvaluationSetApplication,

@@ -32,8 +32,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	domainservice "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	evaltargetmetrics "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/eval_target"
@@ -45,7 +45,6 @@ import (
 	foundationrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
 	notifyrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	tagrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
-	trajectoryrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -69,7 +68,6 @@ var (
 		tagrpc.TagRPCSet,
 		agentrpc.AgentRPCSet,
 		notifyrpc.NotifyRPCSet,
-		trajectoryrpc.TrajectoryRPCSet,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
 		flagSet,
@@ -143,7 +141,7 @@ func InitExperimentApplication(
 	tagClient tagservice.Client,
 	objectStorage fileserver.ObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
-	tracerFactory func() observabilitytraceservice.Client,
+	trajectoryAdapter rpc.ITrajectoryAdapter,
 ) (IExperimentApplication, error) {
 	wire.Build(
 		experimentSet,
@@ -194,13 +192,12 @@ func InitEvalTargetApplication(ctx context.Context,
 	authClient authservice.Client,
 	cmdable redis.Cmdable,
 	meter metrics.Meter,
-	tracerFactory func() observabilitytraceservice.Client,
+	trajectoryAdapter rpc.ITrajectoryAdapter,
 	configFactory conf.IConfigLoaderFactory,
 ) (evaluation.EvalTargetService, error) {
 	wire.Build(
 		evalTargetSet,
 		evalconf.NewConfiger,
-		trajectoryrpc.TrajectoryRPCSet,
 	)
 	return nil, nil
 }
@@ -226,7 +223,7 @@ func InitEvalOpenAPIApplication(
 	benefitService benefit.IBenefitService,
 	ckProvider ck.Provider,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
-	tracerFactory func() observabilitytraceservice.Client,
+	trajectoryAdapter rpc.ITrajectoryAdapter,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(
 		evalOpenAPISet,
