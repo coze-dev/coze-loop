@@ -4,7 +4,10 @@
 package trace
 
 import (
+	"strings"
+
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
+	"github.com/vincent-petithory/dataurl"
 
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -110,25 +113,94 @@ func ContentPartToSpanPart(part *entity.ContentPart) *tracespec.ModelMessagePart
 		return nil
 	}
 	var imageURL *tracespec.ModelImageURL
+	var videoURL *tracespec.ModelFileURL
+	partType := part.Type
+
 	if part.ImageURL != nil {
 		imageURL = &tracespec.ModelImageURL{
 			URL: part.ImageURL.URL,
 		}
 	}
-	// 二进制数据暂不上报
+	if part.VideoURL != nil {
+		videoURL = &tracespec.ModelFileURL{
+			URL: part.VideoURL.URL,
+		}
+	}
+
+	// Handle base64 data
+	if part.Type == entity.ContentTypeBase64Data {
+		isImage, isVideo := parseBase64DataTypeSafe(part.Base64Data)
+		if isVideo {
+			partType = entity.ContentTypeVideoURL
+			if part.Base64Data != nil {
+				videoURL = &tracespec.ModelFileURL{
+					URL: ptr.From(part.Base64Data),
+				}
+			}
+		} else if isImage {
+			partType = entity.ContentTypeImageURL
+			if part.Base64Data != nil {
+				imageURL = &tracespec.ModelImageURL{
+					URL: ptr.From(part.Base64Data),
+				}
+			}
+		}
+	}
+
 	return &tracespec.ModelMessagePart{
-		Type:     ContentTypeToSpanPartType(part.Type),
+		Type:     ContentTypeToSpanPartType(partType),
 		Text:     ptr.From(part.Text),
 		ImageURL: imageURL,
+		FileURL:  videoURL,
 	}
+}
+
+// parseBase64DataTypeSafe parses base64 data and returns (isImage, isVideo)
+// It recovers from panics and defaults to image type on any error
+func parseBase64DataTypeSafe(base64Data *string) (isImage bool, isVideo bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			// On panic, default to image type
+			isImage = true
+			isVideo = false
+		}
+	}()
+
+	if base64Data == nil || ptr.From(base64Data) == "" {
+		// Default to image for empty data
+		return true, false
+	}
+
+	dataURL, err := dataurl.DecodeString(ptr.From(base64Data))
+	if err != nil || dataURL == nil {
+		// Default to image if decode fails
+		return true, false
+	}
+
+	mimeType := dataURL.ContentType()
+	const (
+		mimePrefixImage = "image/"
+		mimePrefixVideo = "video/"
+	)
+
+	if strings.HasPrefix(mimeType, mimePrefixImage) {
+		return true, false
+	}
+	if strings.HasPrefix(mimeType, mimePrefixVideo) {
+		return false, true
+	}
+	// Default to image for unknown types
+	return true, false
 }
 
 func ContentTypeToSpanPartType(partType entity.ContentType) tracespec.ModelMessagePartType {
 	switch partType {
 	case entity.ContentTypeText:
 		return tracespec.ModelMessagePartTypeText
-	case entity.ContentTypeImageURL, entity.ContentTypeBase64Data:
+	case entity.ContentTypeImageURL:
 		return tracespec.ModelMessagePartTypeImage
+	case entity.ContentTypeVideoURL:
+		return tracespec.ModelMessagePartTypeFile
 	case entity.ContentTypeMultiPartVariable:
 		return "multi_part_variable"
 	default:
