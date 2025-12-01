@@ -148,14 +148,14 @@ func (e ExptResultExportService) GetExptExportRecord(ctx context.Context, spaceI
 		if err != nil {
 			return nil, err
 		}
-
+		logs.CtxInfo(ctx, "get export record sign url origin: %v", signURL)
 		unescaped, err := url.QueryUnescape(conv.UnescapeUnicode(signURL))
 		if err != nil {
 			logs.CtxWarn(ctx, "QueryUnescape fail, raw: %v", signURL)
 		} else {
 			signURL = unescaped
 		}
-
+		logs.CtxInfo(ctx, "get export record sign url unescaped: %v", signURL)
 		parsedURL, err := url.Parse(signURL)
 		if err == nil {
 			if parsedURL.Host == localos.GetLocalOSHost() {
@@ -164,6 +164,7 @@ func (e ExptResultExportService) GetExptExportRecord(ctx context.Context, spaceI
 		}
 
 		exportRecord.URL = ptr.Of(signURL)
+		logs.CtxInfo(ctx, "get export record sign url final: %v", signURL)
 	}
 
 	exportRecord.Expired = isExportRecordExpired(exportRecord.StartAt)
