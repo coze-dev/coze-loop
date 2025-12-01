@@ -16,85 +16,85 @@ type TrajectoryList []*Trajectory
 
 type Trajectory struct {
 	// trace_id
-	ID *string
+	ID *string `json:"id"`
 	// 根节点，记录整个轨迹的信息
-	RootStep *RootStep
+	RootStep *RootStep `json:"root_step"`
 	// agent step列表，记录轨迹中agent执行信息
-	AgentSteps []*AgentStep
+	AgentSteps []*AgentStep `json:"agent_steps"`
 }
 
 type RootStep struct {
 	// 唯一ID，trace导入时取span_id
-	ID *string
+	ID *string `json:"id"`
 	// name，trace导入时取span_name
-	Name *string
+	Name *string `json:"name"`
 	// 输入
-	Input *string
+	Input *string `json:"input"`
 	// 输出
-	Output *string
+	Output *string `json:"output"`
 	// 系统属性
-	Metadata  map[string]string
-	BasicInfo *BasicInfo
+	Metadata  map[string]string `json:"metadata"`
+	BasicInfo *BasicInfo `json:"basic_info"`
 }
 
 type AgentStep struct {
 	// 基础属性
-	ID *string
+	ID *string `json:"id"`
 	// 父ID， trace导入时取parent_span_id
-	ParentID *string
+	ParentID *string `json:"parent_id"`
 	// name，trace导入时取span_name
-	Name *string
+	Name *string `json:"name"`
 	// 输入
-	Input *string
+	Input *string `json:"input"`
 	// 输出
-	Output *string
+	Output *string `json:"output"`
 	// 子节点，agent执行内部经历了哪些步骤
-	Steps []*Step
+	Steps []*Step `json:"steps"`
 	// 系统属性
-	Metadata  map[string]string
-	BasicInfo *BasicInfo
+	Metadata  map[string]string `json:"metadata"`
+	BasicInfo *BasicInfo `json:"basic_info"`
 }
 
 type Step struct {
 	// 基础属性
-	ID *string
+	ID *string `json:"id"`
 	// 父ID， trace导入时取parent_span_id
-	ParentID *string
+	ParentID *string `json:"parent_id"`
 	// 类型
-	Type *StepType
+	Type *StepType `json:"type"`
 	// name，trace导入时取span_name
-	Name *string
+	Name *string `json:"name"`
 	// 输入
-	Input *string
+	Input *string `json:"input"`
 	// 输出
-	Output *string
+	Output *string `json:"output"`
 	// 各种类型补充信息
-	ModelInfo *ModelInfo
+	ModelInfo *ModelInfo `json:"model_info"`
 	// 系统属性
-	Metadata  map[string]string
-	BasicInfo *BasicInfo
+	Metadata  map[string]string `json:"metadata"`
+	BasicInfo *BasicInfo `json:"basic_info"`
 }
 
 type ModelInfo struct {
-	InputTokens               *int64
-	OutputTokens              *int64
-	LatencyFirstResp          *int64
-	ReasoningTokens           *int64
-	InputReadCachedTokens     *int64
-	InputCreationCachedTokens *int64
+	InputTokens               *int64 `json:"input_tokens"`
+	OutputTokens              *int64 `json:"output_tokens"`
+	LatencyFirstResp          *int64 `json:"latency_first_resp"`
+	ReasoningTokens           *int64 `json:"reasoning_tokens"`
+	InputReadCachedTokens     *int64 `json:"input_read_cached_tokens"`
+	InputCreationCachedTokens *int64 `json:"input_creation_cached_tokens"`
 }
 
 type BasicInfo struct {
 	// 单位微秒
-	StartedAt *int64
+	StartedAt *int64 `json:"started_at"`
 	// 单位微秒
-	Duration *int64
-	Error    *Error
+	Duration *int64 `json:"duration"`
+	Error    *Error `json:"error"`
 }
 
 type Error struct {
-	Code *int32
-	Msg  *string
+	Code *int32  `json:"code"`
+	Msg  *string `json:"msg"`
 }
 
 func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
