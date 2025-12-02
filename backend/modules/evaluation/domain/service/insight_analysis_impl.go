@@ -32,6 +32,7 @@ type ExptInsightAnalysisServiceImpl struct {
 	notifyRPCAdapter        rpc.INotifyRPCAdapter
 	userProvider            rpc.IUserProvider
 	exptRepo                repo.IExperimentRepo
+	targetRepo              repo.IEvalTargetRepo
 }
 
 func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
@@ -42,6 +43,7 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
 	exptRepo repo.IExperimentRepo,
+	targetRepo repo.IEvalTargetRepo,
 ) IExptInsightAnalysisService {
 	return &ExptInsightAnalysisServiceImpl{
 		repo:                    repo,
@@ -52,6 +54,7 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 		notifyRPCAdapter:        notifyRPCAdapter,
 		userProvider:            userProvider,
 		exptRepo:                exptRepo,
+		targetRepo:              targetRepo,
 	}
 }
 
@@ -134,15 +137,36 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 	}
 
 	param := &rpc.CallTraceAgentParam{
-		SpaceID:             spaceID,
-		ExptID:              exptID,
-		Url:                 url,
-		StartTime:           expt.StartAt.UnixMilli(),
-		EndTime:             expt.EndAt.UnixMilli(),
-		EvalTargetType:      expt.TargetType,
-		EvalTargetID:        expt.TargetID,
-		EvalTargetVersionID: expt.TargetVersionID,
+		SpaceID:        spaceID,
+		ExptID:         exptID,
+		Url:            url,
+		StartTime:      expt.StartAt.UnixMilli(),
+		EndTime:        expt.EndAt.UnixMilli(),
+		EvalTargetType: expt.TargetType,
 	}
+
+	target, err := e.targetRepo.GetEvalTargetVersion(ctx, spaceID, expt.TargetVersionID)
+	if err != nil {
+		return err
+	}
+	if target == nil || target.SourceTargetID == "" {
+		logs.CtxWarn(ctx, "Experiment %d has no source target %d", exptID, expt.TargetID)
+		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg(fmt.Sprintf("Experiment %d has no source target %d", exptID, expt.TargetID)))
+	}
+	param.EvalTargetID, err = strconv.ParseInt(target.SourceTargetID, 10, 64)
+	if err != nil {
+		return err
+	}
+	param.EvalTargetVersionID = target.EvalTargetVersion.SourceTargetVersion
+	if err != nil {
+		return err
+	}
+
+	evaluators, err := e.exptRepo.GetEvaluatorRefByExptIDs(ctx, []int64{exptID}, spaceID)
+	if err != nil {
+		return err
+	}
+	param.Evaluators = evaluators
 
 	// only allow prompt eval target, but not return error here. The task will fail in the CallTraceAgent.
 	if param.EvalTargetType != entity.EvalTargetTypeLoopPrompt {
