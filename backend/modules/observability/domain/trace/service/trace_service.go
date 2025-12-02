@@ -415,7 +415,7 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 	}
 
 	// span processors
-	processors, err := r.buildHelper.BuildListSpansProcessors(ctx, span_processor.Settings{
+	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
 		WorkspaceId:    req.WorkspaceID,
 		PlatformType:   req.PlatformType,
 		QueryStartTime: req.StartTime - timeutil.Day2MillSec(30), // past 30 days
