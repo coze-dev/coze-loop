@@ -15,6 +15,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	componentmq "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
@@ -23,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -125,13 +127,20 @@ func (s *stubBackfillProducer) SendBackfill(ctx context.Context, message *entity
 	return s.err
 }
 
-func newTaskServiceWithProcessor(t *testing.T, repo taskrepo.ITaskRepo, backfill componentmq.IBackfillProducer, proc taskexe.Processor, taskType entity.TaskType) *TaskServiceImpl {
+func newTaskServiceWithProcessor(t *testing.T, repo taskrepo.ITaskRepo, backfill componentmq.IBackfillProducer, proc taskexe.Processor, taskType entity.TaskType) ITaskService {
 	t.Helper()
 	tp := processor.NewTaskProcessor()
 	tp.Register(taskType, proc)
-	service, err := NewTaskServiceImpl(repo, nil, backfill, tp, &stubTraceFilterBuilder{})
+	
+	// 创建mock依赖
+	idGenerator := &stubIDGenerator{}
+	storageProvider := &stubStorageProvider{}
+	tenantProvider := &stubTenantProvider{}
+	buildHelper := &stubTraceFilterBuilder{}
+	
+	service, err := NewTaskServiceImpl(repo, idGenerator, backfill, tp, storageProvider, tenantProvider, buildHelper)
 	assert.NoError(t, err)
-	return service.(*TaskServiceImpl)
+	return service
 }
 
 func TestTaskServiceImpl_CreateTask(t *testing.T) {
@@ -574,7 +583,17 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("repo fail"))
 
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
+		// 使用构造函数创建服务
+		svc, err := NewTaskServiceImpl(
+			repoMock,
+			&stubIDGenerator{},
+			nil,
+			processor.NewTaskProcessor(),
+			&stubStorageProvider{},
+			&stubTenantProvider{},
+			&stubTraceFilterBuilder{},
+		)
+		assert.NoError(t, err)
 		resp, err := svc.CheckTaskName(context.Background(), &CheckTaskNameReq{WorkspaceID: 1, Name: "task"})
 		assert.Nil(t, resp)
 		assert.EqualError(t, err, "repo fail")
@@ -588,7 +607,17 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{{}}, int64(1), nil)
 
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
+		// 使用构造函数创建服务
+		svc, err := NewTaskServiceImpl(
+			repoMock,
+			&stubIDGenerator{},
+			nil,
+			processor.NewTaskProcessor(),
+			&stubStorageProvider{},
+			&stubTenantProvider{},
+			&stubTraceFilterBuilder{},
+		)
+		assert.NoError(t, err)
 		resp, err := svc.CheckTaskName(context.Background(), &CheckTaskNameReq{WorkspaceID: 1, Name: "task"})
 		assert.NoError(t, err)
 		if assert.NotNil(t, resp) {
@@ -604,7 +633,17 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
+		// 使用构造函数创建服务
+		svc, err := NewTaskServiceImpl(
+			repoMock,
+			&stubIDGenerator{},
+			nil,
+			processor.NewTaskProcessor(),
+			&stubStorageProvider{},
+			&stubTenantProvider{},
+			&stubTraceFilterBuilder{},
+		)
+		assert.NoError(t, err)
 		resp, err := svc.CheckTaskName(context.Background(), &CheckTaskNameReq{WorkspaceID: 1, Name: "task"})
 		assert.NoError(t, err)
 		if assert.NotNil(t, resp) {
@@ -615,8 +654,18 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 
 func TestTaskServiceImpl_sendBackfillMessage(t *testing.T) {
 	t.Run("producer nil", func(t *testing.T) {
-		svc := &TaskServiceImpl{}
-		err := svc.SendBackfillMessage(context.Background(), &entity.BackFillEvent{})
+		// 创建一个没有backfillProducer的服务
+		service, err := NewTaskServiceImpl(
+			repomocks.NewMockITaskRepo(gomock.NewController(t)),
+			&stubIDGenerator{},
+			nil, // backfillProducer为nil
+			processor.NewTaskProcessor(),
+			&stubStorageProvider{},
+			&stubTenantProvider{},
+			&stubTraceFilterBuilder{},
+		)
+		assert.NoError(t, err)
+		err = service.SendBackfillMessage(context.Background(), &entity.BackFillEvent{})
 		statusErr, ok := errorx.FromStatusError(err)
 		if assert.True(t, ok) {
 			assert.EqualValues(t, obErrorx.CommonInternalErrorCode, statusErr.Code())
@@ -625,8 +674,18 @@ func TestTaskServiceImpl_sendBackfillMessage(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		ch := make(chan *entity.BackFillEvent, 1)
-		svc := &TaskServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
-		err := svc.SendBackfillMessage(context.Background(), &entity.BackFillEvent{TaskID: 1})
+		backfillProducer := &stubBackfillProducer{ch: ch}
+		service, err := NewTaskServiceImpl(
+			repomocks.NewMockITaskRepo(gomock.NewController(t)),
+			&stubIDGenerator{},
+			backfillProducer,
+			processor.NewTaskProcessor(),
+			&stubStorageProvider{},
+			&stubTenantProvider{},
+			&stubTraceFilterBuilder{},
+		)
+		assert.NoError(t, err)
+		err = service.SendBackfillMessage(context.Background(), &entity.BackFillEvent{TaskID: 1})
 		assert.NoError(t, err)
 		select {
 		case event := <-ch:
@@ -635,4 +694,54 @@ func TestTaskServiceImpl_sendBackfillMessage(t *testing.T) {
 			t.Fatal("expected send backfill message")
 		}
 	})
+}
+
+// 添加缺失的stub实现
+type stubIDGenerator struct{}
+
+func (s *stubIDGenerator) GenID(ctx context.Context) (int64, error) {
+	return 1001, nil
+}
+
+func (s *stubIDGenerator) GenMultiIDs(ctx context.Context, counts int) ([]int64, error) {
+	ids := make([]int64, counts)
+	for i := 0; i < counts; i++ {
+		ids[i] = int64(1001 + i)
+	}
+	return ids, nil
+}
+
+type stubStorageProvider struct{}
+
+func (s *stubStorageProvider) GetTraceStorage(ctx context.Context, workSpaceID string, tenants []string) storage.Storage {
+	return storage.Storage{
+		StorageName: "ck",
+		StorageConfig: map[string]string{},
+	}
+}
+
+func (s *stubStorageProvider) PrepareStorageForTask(ctx context.Context, workspaceID string, tenants []string) error {
+	return nil
+}
+
+func (s *stubStorageProvider) GetSpanDao(tenant string) dao.ISpansDao {
+	return nil
+}
+
+func (s *stubStorageProvider) GetAnnotationDao(tenant string) dao.IAnnotationDao {
+	return nil
+}
+
+type stubTenantProvider struct{}
+
+func (s *stubTenantProvider) GetIngestTenant(ctx context.Context, spans []*loop_span.Span) string {
+	return "test-tenant"
+}
+
+func (s *stubTenantProvider) GetOAPIQueryTenants(ctx context.Context, platformType loop_span.PlatformType) []string {
+	return []string{"test-tenant"}
+}
+
+func (s *stubTenantProvider) GetTenantsByPlatformType(ctx context.Context, platformType loop_span.PlatformType) ([]string, error) {
+	return []string{"test-tenant"}, nil
 }

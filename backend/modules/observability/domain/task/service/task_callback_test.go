@@ -47,6 +47,12 @@ func TestTaskCallbackServiceImpl_CallBackSuccess(t *testing.T) {
 	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
 	mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7)).AnyTimes()
+	mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+		ID: 101,
+		SpanFilter: &entity.SpanFilterFields{
+			PlatformType: loop_span.PlatformType("callback_all"),
+		},
+	}, nil).AnyTimes()
 
 	now := time.Now()
 	span := &loop_span.Span{
@@ -102,12 +108,14 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 	mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
 	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
 	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 
 	impl := &TaskCallbackServiceImpl{
 		benefitSvc:     mockBenefit,
 		tenantProvider: mockTenant,
 		traceRepo:      mockTraceRepo,
+		taskRepo:       mockTaskRepo,
 		config:         mockConfig,
 	}
 
@@ -115,6 +123,13 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
 	mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7)).AnyTimes()
 	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{}, nil).AnyTimes()
+	// 添加缺失的GetTask期望
+	mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+		ID: 101,
+		SpanFilter: &entity.SpanFilterFields{
+			PlatformType: loop_span.PlatformType("callback_all"),
+		},
+	}, nil).AnyTimes()
 
 	event := &entity.AutoEvalEvent{
 		TurnEvalResults: []*entity.OnlineExptTurnEvalResult{
