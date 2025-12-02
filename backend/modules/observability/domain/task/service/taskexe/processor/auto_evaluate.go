@@ -439,38 +439,36 @@ func (p *AutoEvaluteProcessor) buildEvalTargetParam(task *task_entity.Observabil
 	var targetID string
 	var targetType eval_target_d.EvalTargetType
 
-	findFieldFunc := func(fieldName string) (string, bool) {
+	findFieldFunc := func(fieldName string) string {
 		for _, filter := range task.SpanFilter.Filters.FilterFields {
 			if filter.FieldName == fieldName && *filter.QueryType == loop_span.QueryTypeEnumIn && len(filter.Values) == 1 {
-				return filter.Values[0], true
+				return filter.Values[0]
 			}
 		}
-		return "", false
+		return ""
 	}
 
 	switch task.SpanFilter.PlatformType {
-	case loop_span.PlatformPrompt:
-		targetType = eval_target_d.EvalTargetType_CozeLoopPrompt
-		if id, ok := findFieldFunc("prompt_key"); ok {
-			targetID = id
-		}
-	case loop_span.PlatformCozeWorkflow:
-		targetType = eval_target_d.EvalTargetType_CozeWorkflow
-		if id, ok := findFieldFunc("workflow_id"); ok {
-			targetID = id
-		}
-	case loop_span.PlatformCozeBot:
-		targetType = eval_target_d.EvalTargetType_CozeBot
-		if id, ok := findFieldFunc("bot_id"); ok {
-			targetID = id
-		}
-	case loop_span.PlatformAgentKit:
+	/*
+		case loop_span.PlatformPrompt:
+			targetType = eval_target_d.EvalTargetType_CozeLoopPrompt
+			targetID = findFieldFunc("prompt_key")
+		case loop_span.PlatformCozeWorkflow:
+			targetType = eval_target_d.EvalTargetType_CozeWorkflow
+			targetID = findFieldFunc("workflow_id")
+		case loop_span.PlatformCozeBot:
+			targetType = eval_target_d.EvalTargetType_CozeBot
+			targetID = findFieldFunc("bot_id")
+	*/
+	case loop_span.PlatformVeAgentKit:
 		targetType = eval_target_d.EvalTargetType_VolcengineAgent
-		if id, ok := findFieldFunc("run_id"); ok {
-			targetID = id
-		}
+		targetID = findFieldFunc("run_id")
+	case loop_span.PlatformVeADK:
+		targetType = eval_target_d.EvalTargetType_VolcengineAgent
+		targetID = findFieldFunc("app_name")
 	default:
 		targetType = eval_target_d.EvalTargetType_Trace
+		targetID = cast.ToString(task.ID)
 	}
 	return &eval_target.CreateEvalTargetParam{
 		SourceTargetID: &targetID,

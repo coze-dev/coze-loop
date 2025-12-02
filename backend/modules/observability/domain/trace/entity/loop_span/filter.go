@@ -55,7 +55,8 @@ const (
 	PlatformOpenAPI      PlatformType = "open_api"
 	PlatformCozeWorkflow PlatformType = "coze_workflow"
 	PlatformCozeBot      PlatformType = "coze_bot"
-	PlatformAgentKit     PlatformType = "agent_kit"
+	PlatformVeAgentKit   PlatformType = "ve_agentkit"
+	PlatformVeADK        PlatformType = "veadk"
 
 	SpanListTypeRootSpan SpanListType = "root_span"
 	SpanListTypeAllSpan  SpanListType = "all_span"
