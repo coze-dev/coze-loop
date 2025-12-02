@@ -376,8 +376,8 @@ github.com/coreos/go-semver v0.3.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3Ee
 github.com/coreos/go-systemd/v22 v22.3.2/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/coze-dev/coze-loop/backend/modules/observability/lib v0.0.0-20251118131611-99b3d466d529 h1:jFs6HE0WNlOis6wOn5Lht0Jp0XX/5rjNNtSEjbjHCYc=
 github.com/coze-dev/coze-loop/backend/modules/observability/lib v0.0.0-20251118131611-99b3d466d529/go.mod h1:shS2ZraVjQVO7xf/fNmEFXaf40c/V9aLo6YvvCHKdRw=
-github.com/coze-dev/cozeloop-go v0.1.10-0.20250901062520-61d3699b1e83 h1:7Jh4flr9XqvissJtafWhTcs1vcErUcsjNkkniH/szxY=
-github.com/coze-dev/cozeloop-go v0.1.10-0.20250901062520-61d3699b1e83/go.mod h1:RMH0F6ZMwZm4ZL92IHLjTf4lmr8QHxYJVPCdz60ZbbI=
+github.com/coze-dev/cozeloop-go v0.1.16 h1:SUuhrP5TH+t+loRHbKnZtIRRhDQ4UB4P6xJSdQHmAHU=
+github.com/coze-dev/cozeloop-go v0.1.16/go.mod h1:lM7cmUEZlnAlQYdwfk4Li0SC3RdZ++QMHX75nvKceSc=
 github.com/coze-dev/cozeloop-go/spec v0.1.6 h1:lStq3CfvTwBn0y281X4KnhW7mtf9g/XIcccGEDSWTD0=
 github.com/coze-dev/cozeloop-go/spec v0.1.6/go.mod h1:/f3BrWehffwXIpd4b5rYIqktLd/v5dlLBw0h9F/LQIU=
 github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=

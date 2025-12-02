@@ -180,7 +180,7 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 		return nil
 	}
 	trigger := &taskexe.Trigger{Task: s.t, Span: span, TaskRun: taskRunConfig}
-	logs.CtxInfo(ctx, "invoke processor, trigger: %v", trigger)
+	logs.CtxDebug(ctx, "invoke processor, trigger: %v", trigger)
 	err = s.processor.Invoke(ctx, trigger)
 	if err != nil {
 		logs.CtxWarn(ctx, "invoke processor failed, trace_id=%s, span_id=%s, err: %v", span.TraceID, span.SpanID, err)

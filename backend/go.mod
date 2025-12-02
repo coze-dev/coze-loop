@@ -35,7 +35,6 @@ require (
 	github.com/cloudwego/kitex v0.15.2
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
-	github.com/coze-dev/cozeloop-go v0.1.10-0.20250901062520-61d3699b1e83
 	github.com/coze-dev/cozeloop-go/spec v0.1.6
 	github.com/deatil/go-encoding v1.0.3003
 	github.com/dimchansky/utfbom v1.1.1
@@ -139,6 +138,7 @@ require (
 	code.byted.org/kite/kitex v1.21.1
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/coze-dev/coze-loop/backend/modules/observability/lib v0.0.0-00010101000000-000000000000
+	github.com/coze-dev/cozeloop-go v0.1.16
 )
 
 require (
