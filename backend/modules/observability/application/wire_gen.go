@@ -84,7 +84,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
+	iStorageProvider := storage.NewTraceStorageProvider()
 	iSpansRedisDao, err := redis2.NewSpansRedisDaoImpl(persistentCmdable)
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
+	iStorageProvider := storage.NewTraceStorageProvider()
 	iSpansRedisDao, err := redis2.NewSpansRedisDaoImpl(persistentCmdable)
 	if err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
 	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo)
-	iStorageProvider := storage.NewTraceStorageProvider(iTraceConfig)
+	iStorageProvider := storage.NewTraceStorageProvider()
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)

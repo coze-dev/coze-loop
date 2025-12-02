@@ -7,6 +7,7 @@ package api
 
 import (
 	"context"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/app/server/binding"
@@ -123,6 +124,7 @@ func Init(
 		lodataset.NewLocalDatasetService(dataHandler.IDatasetApplication),
 		cmdable,
 		persistentCmdable,
+		storage.NewTraceStorageProvider(),
 		loexpt.NewLocalExperimentService(evaluationHandler.IExperimentApplication),
 		processor.TaskProcessor{},
 		0,
