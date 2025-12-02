@@ -2,6 +2,8 @@ package loop_span
 
 import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 )
 
 const (
@@ -180,8 +182,8 @@ func buildBasicInfo(span *Span) *BasicInfo {
 	if span == nil {
 		return nil
 	}
-	startedAt := span.StartTime
-	duration := span.DurationMicros
+	startedAt := time_util.MicroSec2MillSec(span.StartTime)     // ms
+	duration := time_util.MicroSec2MillSec(span.DurationMicros) // ms
 
 	// 构建错误信息
 	var errorInfo *Error
@@ -370,7 +372,7 @@ func buildModelInfo(span *Span) *ModelInfo {
 		modelInfo.OutputTokens = &outputTokens
 	}
 	if latencyFirstResp, ok := span.TagsLong["latency_first_resp"]; ok {
-		modelInfo.LatencyFirstResp = &latencyFirstResp
+		modelInfo.LatencyFirstResp = ptr.Of(time_util.MicroSec2MillSec(latencyFirstResp))
 	}
 	if reasoningTokens, ok := span.TagsLong["reasoning_tokens"]; ok {
 		modelInfo.ReasoningTokens = &reasoningTokens

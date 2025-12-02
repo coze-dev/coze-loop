@@ -60,15 +60,15 @@ const StepType StepType_Tool = "tool"
 struct ModelInfo {
     1: optional i32 input_tokens
     2: optional i32 output_tokens
-    3: optional string latency_first_resp // 首包耗时，单位微秒
+    3: optional string latency_first_resp // 首包耗时，单位毫秒
     4: optional i32 reasoning_tokens
     5: optional i32 input_read_cached_tokens
     6: optional i32 input_creation_cached_tokens
 }
 
 struct BasicInfo {
-    1: optional string started_at // 单位微秒
-    2: optional string duration  // 单位微秒
+    1: optional string started_at // 单位毫秒
+    2: optional string duration  // 单位毫秒
     3: optional Error error
 }
 

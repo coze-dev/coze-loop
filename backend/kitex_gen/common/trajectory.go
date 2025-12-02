@@ -3119,9 +3119,9 @@ func (p *ModelInfo) Field6DeepEqual(src *int32) bool {
 }
 
 type BasicInfo struct {
-	// 单位微秒
+	// 单位毫秒
 	StartedAt *string `thrift:"started_at,1,optional" frugal:"1,optional,string" form:"started_at" json:"started_at,omitempty" query:"started_at"`
-	// 单位微秒
+	// 单位毫秒
 	Duration *string `thrift:"duration,2,optional" frugal:"2,optional,string" form:"duration" json:"duration,omitempty" query:"duration"`
 	Error    *Error  `thrift:"error,3,optional" frugal:"3,optional,Error" form:"error" json:"error,omitempty" query:"error"`
 }
