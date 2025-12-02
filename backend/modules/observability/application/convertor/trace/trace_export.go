@@ -294,6 +294,10 @@ func convertDatasetItemsDO2DTO(items []*entity.DatasetItem) []*dataset0.Item {
 	for i, item := range items {
 		result[i] = &dataset0.Item{
 			Status: dataset0.ItemStatusSuccess,
+			SpanInfo: &dataset0.SpanInfo{
+				TraceID: &item.TraceID,
+				SpanID:  &item.SpanID,
+			},
 		}
 
 		// 转换字段数据为 map

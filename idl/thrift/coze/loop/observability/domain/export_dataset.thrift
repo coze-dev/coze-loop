@@ -33,6 +33,7 @@ struct Item {
     1: required ItemStatus status
     2: optional list<FieldData>  field_list // todo 多模态需要修改
     3: optional list<ItemError> errors     // 错误信息
+    4: optional SpanInfo span_info
 }
 
 struct FieldData {
@@ -55,6 +56,11 @@ struct Image {
 struct ItemError {
     1: optional dataset.ItemErrorType type
     2: optional list<string> field_names       // 有错误的字段名，非必填
+}
+
+struct SpanInfo {
+    1: optional string trace_id
+    2: optional string span_id
 }
 
 struct FieldMapping {
