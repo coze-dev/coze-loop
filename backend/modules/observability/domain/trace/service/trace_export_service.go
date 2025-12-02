@@ -477,9 +477,6 @@ func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.
 					logs.CtxError(ctx, "Failed to marshal trajectory, spanID:%v, err:%+v", span.SpanID, err)
 					item.AddError("trajectory marshal error", entity.DatasetErrorType_InternalError, nil)
 				}
-			} else {
-				logs.CtxError(ctx, "Trajectory is empty, spanID:%v, err:%+v", span.SpanID, err)
-				item.AddError("trajectory is empty", entity.DatasetErrorType_InternalError, nil)
 			}
 		} else {
 			value, err = span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
