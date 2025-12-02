@@ -692,14 +692,28 @@ func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *
 	return evaluatorSourceService.Debug(ctx, evaluatorDO, inputData, exptSpaceID)
 }
 
-// UpdateEvaluatorTags 为所有未删除评估器补充 Category / CodeType 等标签
-func (e *EvaluatorServiceImpl) UpdateEvaluatorTags(ctx context.Context) error {
+// UpdateEvaluatorTags 为评估器补充 Category / CodeType 等标签
+// - 若 evaluatorIDs 非空，仅更新这些评估器；
+// - 否则若 workspaceID 非空，仅更新该空间下未删除评估器；
+// - 若二者都未指定，更新所有未删除评估器。
+func (e *EvaluatorServiceImpl) UpdateEvaluatorTags(ctx context.Context, workspaceID *int64, evaluatorIDs []int64) error {
+	// 1) 优先按 evaluatorIDs 精确更新
+	if len(evaluatorIDs) > 0 {
+		return e.updateEvaluatorTagsByIDs(ctx, evaluatorIDs)
+	}
+
+	// 2) 否则按 workspaceID / 全量空间分页扫描
 	const pageSize int32 = 200
 	pageNum := int32(1)
 
+	var spaceID int64
+	if workspaceID != nil && *workspaceID > 0 {
+		spaceID = *workspaceID
+	}
+
 	for {
 		listReq := &entity.ListEvaluatorRequest{
-			SpaceID:     0, // 0 表示不过滤空间，遍历全部
+			SpaceID:     spaceID, // 0 表示不过滤空间，遍历全部
 			PageSize:    pageSize,
 			PageNum:     pageNum,
 			WithVersion: true, // 需要 CodeEvaluatorVersion.LanguageType
@@ -732,6 +746,62 @@ func (e *EvaluatorServiceImpl) UpdateEvaluatorTags(ctx context.Context) error {
 		pageNum++
 	}
 
+	return nil
+}
+
+// updateEvaluatorTagsByIDs 仅按指定评估器 ID 刷标签
+func (e *EvaluatorServiceImpl) updateEvaluatorTagsByIDs(ctx context.Context, evaluatorIDs []int64) error {
+	if len(evaluatorIDs) == 0 {
+		return nil
+	}
+
+	// 先获取评估器元信息（过滤已删除）
+	metas, err := e.evaluatorRepo.BatchGetEvaluatorMetaByID(ctx, evaluatorIDs, false)
+	if err != nil {
+		return err
+	}
+	if len(metas) == 0 {
+		return nil
+	}
+
+	// 获取各评估器的版本信息，用于提取 CodeEvaluatorVersion.LanguageType
+	versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDs(ctx, evaluatorIDs, false)
+	if err != nil {
+		return err
+	}
+	codeLang := make(map[int64]entity.LanguageType)
+	for _, v := range versions {
+		if v == nil || v.CodeEvaluatorVersion == nil {
+			continue
+		}
+		id := v.GetEvaluatorID()
+		if id == 0 {
+			continue
+		}
+		codeLang[id] = v.CodeEvaluatorVersion.LanguageType
+	}
+
+	for _, meta := range metas {
+		if meta == nil {
+			continue
+		}
+		ev := &entity.Evaluator{
+			ID:            meta.ID,
+			EvaluatorType: meta.EvaluatorType,
+		}
+		if lang, ok := codeLang[meta.ID]; ok {
+			ev.CodeEvaluatorVersion = &entity.CodeEvaluatorVersion{
+				LanguageType: lang,
+			}
+		}
+		tags := buildTagsForEvaluator(ev)
+		if len(tags) == 0 {
+			continue
+		}
+		if err := e.evaluatorRepo.UpdateEvaluatorTags(ctx, ev.ID, tags); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

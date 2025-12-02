@@ -54,8 +54,11 @@ type EvaluatorService interface {
 	// ListEvaluatorTags 根据 tagType 聚合标签，并按字母序返回
 	ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error)
 
-	// UpdateEvaluatorTags 为所有未删除评估器补充 Category / CodeType 等标签
-	UpdateEvaluatorTags(ctx context.Context) error
+	// UpdateEvaluatorTags 为评估器补充 Category / CodeType 等标签：
+	// - 若传入 evaluatorIDs 非空，仅更新这些评估器；
+	// - 否则若 workspaceID 非空，仅更新该空间下未删除评估器；
+	// - 若二者都未指定，更新所有未删除评估器。
+	UpdateEvaluatorTags(ctx context.Context, workspaceID *int64, evaluatorIDs []int64) error
 }
 
 //go:generate mockgen -destination mocks/evaluator_record_service_mock.go -package mocks . EvaluatorRecordService

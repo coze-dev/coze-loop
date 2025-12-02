@@ -16323,6 +16323,34 @@ func (p *UpdateEvaluatorTagsRequest) FastRead(buf []byte) (int, error) {
 			break
 		}
 		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -16355,6 +16383,44 @@ SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
+func (p *UpdateEvaluatorTagsRequest) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.EvaluatorIds = _field
+	return offset, nil
+}
+
+func (p *UpdateEvaluatorTagsRequest) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return offset, nil
+}
+
 func (p *UpdateEvaluatorTagsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -16374,6 +16440,8 @@ func (p *UpdateEvaluatorTagsRequest) FastWrite(buf []byte) int {
 func (p *UpdateEvaluatorTagsRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -16383,10 +16451,37 @@ func (p *UpdateEvaluatorTagsRequest) FastWriteNocopy(buf []byte, w thrift.Nocopy
 func (p *UpdateEvaluatorTagsRequest) BLength() int {
 	l := 0
 	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
+}
+
+func (p *UpdateEvaluatorTagsRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvaluatorIds() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.EvaluatorIds {
+			length++
+			offset += thrift.Binary.WriteI64(buf[offset:], v)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
+	}
+	return offset
+}
+
+func (p *UpdateEvaluatorTagsRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWorkspaceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkspaceID)
+	}
+	return offset
 }
 
 func (p *UpdateEvaluatorTagsRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
@@ -16396,6 +16491,26 @@ func (p *UpdateEvaluatorTagsRequest) fastWriteField255(buf []byte, w thrift.Noco
 		offset += p.Base.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
+}
+
+func (p *UpdateEvaluatorTagsRequest) field1Length() int {
+	l := 0
+	if p.IsSetEvaluatorIds() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		l +=
+			thrift.Binary.I64Length() * len(p.EvaluatorIds)
+	}
+	return l
+}
+
+func (p *UpdateEvaluatorTagsRequest) field2Length() int {
+	l := 0
+	if p.IsSetWorkspaceID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
 }
 
 func (p *UpdateEvaluatorTagsRequest) field255Length() int {
@@ -16411,6 +16526,20 @@ func (p *UpdateEvaluatorTagsRequest) DeepCopy(s interface{}) error {
 	src, ok := s.(*UpdateEvaluatorTagsRequest)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.EvaluatorIds != nil {
+		p.EvaluatorIds = make([]int64, 0, len(src.EvaluatorIds))
+		for _, elem := range src.EvaluatorIds {
+			var _elem int64
+			_elem = elem
+			p.EvaluatorIds = append(p.EvaluatorIds, _elem)
+		}
+	}
+
+	if src.WorkspaceID != nil {
+		tmp := *src.WorkspaceID
+		p.WorkspaceID = &tmp
 	}
 
 	var _base *base.Base

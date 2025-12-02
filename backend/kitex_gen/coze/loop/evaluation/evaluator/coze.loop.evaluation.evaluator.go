@@ -22394,7 +22394,11 @@ func (p *ListEvaluatorTagsResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type UpdateEvaluatorTagsRequest struct {
-	Base *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 如果指定评估器id，则仅更新该评估器；否则更新所有未删除评估器
+	EvaluatorIds []int64 `thrift:"evaluator_ids,1,optional" frugal:"1,optional,list<i64>" json:"evaluator_ids" form:"evaluator_id" `
+	// 如果指定空间id，则仅更新该空间下评估器；否则更新所有未删除评估器
+	WorkspaceID *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateEvaluatorTagsRequest() *UpdateEvaluatorTagsRequest {
@@ -22402,6 +22406,30 @@ func NewUpdateEvaluatorTagsRequest() *UpdateEvaluatorTagsRequest {
 }
 
 func (p *UpdateEvaluatorTagsRequest) InitDefault() {
+}
+
+var UpdateEvaluatorTagsRequest_EvaluatorIds_DEFAULT []int64
+
+func (p *UpdateEvaluatorTagsRequest) GetEvaluatorIds() (v []int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorIds() {
+		return UpdateEvaluatorTagsRequest_EvaluatorIds_DEFAULT
+	}
+	return p.EvaluatorIds
+}
+
+var UpdateEvaluatorTagsRequest_WorkspaceID_DEFAULT int64
+
+func (p *UpdateEvaluatorTagsRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return UpdateEvaluatorTagsRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
 }
 
 var UpdateEvaluatorTagsRequest_Base_DEFAULT *base.Base
@@ -22415,12 +22443,28 @@ func (p *UpdateEvaluatorTagsRequest) GetBase() (v *base.Base) {
 	}
 	return p.Base
 }
+func (p *UpdateEvaluatorTagsRequest) SetEvaluatorIds(val []int64) {
+	p.EvaluatorIds = val
+}
+func (p *UpdateEvaluatorTagsRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
 func (p *UpdateEvaluatorTagsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
 var fieldIDToName_UpdateEvaluatorTagsRequest = map[int16]string{
+	1:   "evaluator_ids",
+	2:   "workspace_id",
 	255: "Base",
+}
+
+func (p *UpdateEvaluatorTagsRequest) IsSetEvaluatorIds() bool {
+	return p.EvaluatorIds != nil
+}
+
+func (p *UpdateEvaluatorTagsRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
 }
 
 func (p *UpdateEvaluatorTagsRequest) IsSetBase() bool {
@@ -22445,6 +22489,22 @@ func (p *UpdateEvaluatorTagsRequest) Read(iprot thrift.TProtocol) (err error) {
 		}
 
 		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField255(iprot); err != nil {
@@ -22482,6 +22542,40 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
+func (p *UpdateEvaluatorTagsRequest) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvaluatorIds = _field
+	return nil
+}
+func (p *UpdateEvaluatorTagsRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
 func (p *UpdateEvaluatorTagsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -22497,6 +22591,14 @@ func (p *UpdateEvaluatorTagsRequest) Write(oprot thrift.TProtocol) (err error) {
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
 		if err = p.writeField255(oprot); err != nil {
 			fieldId = 255
 			goto WriteFieldError
@@ -22519,6 +22621,50 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *UpdateEvaluatorTagsRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorIds() {
+		if err = oprot.WriteFieldBegin("evaluator_ids", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.EvaluatorIds)); err != nil {
+			return err
+		}
+		for _, v := range p.EvaluatorIds {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *UpdateEvaluatorTagsRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 func (p *UpdateEvaluatorTagsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -22552,12 +22698,43 @@ func (p *UpdateEvaluatorTagsRequest) DeepEqual(ano *UpdateEvaluatorTagsRequest) 
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field1DeepEqual(ano.EvaluatorIds) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
 	return true
 }
 
+func (p *UpdateEvaluatorTagsRequest) Field1DeepEqual(src []int64) bool {
+
+	if len(p.EvaluatorIds) != len(src) {
+		return false
+	}
+	for i, v := range p.EvaluatorIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *UpdateEvaluatorTagsRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
 func (p *UpdateEvaluatorTagsRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {

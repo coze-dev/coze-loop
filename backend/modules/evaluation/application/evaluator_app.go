@@ -618,7 +618,7 @@ func buildListEvaluatorVersionRequest(request *evaluatorservice.ListEvaluatorVer
 // UpdateEvaluatorTags 刷数：为所有未删除评估器补充 Category / CodeType 标签
 func (e *EvaluatorHandlerImpl) UpdateEvaluatorTags(ctx context.Context, req *evaluatorservice.UpdateEvaluatorTagsRequest) (*evaluatorservice.UpdateEvaluatorTagsResponse, error) {
 	// 这里可以按需增加内部鉴权，例如限制为内部运维账号；当前默认允许调用方控制
-	if err := e.evaluatorService.UpdateEvaluatorTags(ctx); err != nil {
+	if err := e.evaluatorService.UpdateEvaluatorTags(ctx, req.WorkspaceID, req.EvaluatorIds); err != nil {
 		return nil, err
 	}
 	return &evaluatorservice.UpdateEvaluatorTagsResponse{}, nil
