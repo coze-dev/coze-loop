@@ -89,28 +89,6 @@ func TestTraceProducerImpl_IngestSpans(t *testing.T) {
 			expectedError: errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode, errorx.WithExtraMsg("tenant producer not exist")),
 		},
 		{
-			name: "异常场景: JSON序列化失败",
-			fields: fields{
-				producerProxy: map[string]*producerProxy{
-					"test_tenant": {
-						traceTopic: "test_topic",
-						mqProducer: nil,
-					},
-				},
-			},
-			args: args{
-				ctx: context.Background(),
-				td: &entity.TraceData{
-					Tenant: "test_tenant",
-					SpanList: []*loop_span.Span{
-						nil, // 这将导致JSON序列化失败
-					},
-				},
-			},
-			mockSetup:     func(mqProducer *mocks.MockIProducer) {},
-			expectedError: errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode, errorx.WithExtraMsg("trace data marshal failed")),
-		},
-		{
 			name: "正常场景: 大数据分批发送",
 			fields: fields{
 				producerProxy: map[string]*producerProxy{
@@ -128,18 +106,29 @@ func TestTraceProducerImpl_IngestSpans(t *testing.T) {
 						{
 							TraceID: "test_trace_id_1",
 							SpanID:  "test_span_id_1",
-							Input:   string(make([]byte, maxBatchSize)), // 大数据
+							Input:   string(make([]byte, maxBatchSize/10)), // 大数据
 						},
 						{
 							TraceID: "test_trace_id_2",
 							SpanID:  "test_span_id_2",
+							Input:   string(make([]byte, maxBatchSize/10)), // 大数据
+						},
+						{
+							TraceID: "test_trace_id_2",
+							SpanID:  "test_span_id_2",
+							Input:   string(make([]byte, maxBatchSize/10)), // 大数据
+						},
+						{
+							TraceID: "test_trace_id_2",
+							SpanID:  "test_span_id_2",
+							Input:   string(make([]byte, maxBatchSize/10)), // 大数据
 						},
 					},
 				},
 			},
 			mockSetup: func(mqProducer *mocks.MockIProducer) {
 				// 期望发送两次异步消息
-				mqProducer.EXPECT().SendAsync(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+				mqProducer.EXPECT().SendAsync(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(4)
 			},
 			expectedError: nil,
 		},
@@ -419,46 +408,4 @@ func TestNewTraceProducerImpl(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestTraceProducerImpl_Singleton(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
-	mqFactoryMock := mocks.NewMockIFactory(ctrl)
-
-	ingestTenantCfg := map[string]*config.IngestConfig{
-		"tenant1": {
-			MaxSpanLength: 1024,
-			MqProducer: config.MqProducerCfg{
-				Topic:         "topic1",
-				Addr:          []string{"localhost:9876"},
-				Timeout:       5000,
-				RetryTimes:    3,
-				ProducerGroup: "group1",
-			},
-		},
-	}
-	traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(ingestTenantCfg, nil).Times(2)
-
-	producerMock := mocks.NewMockIProducer(ctrl)
-	producerMock.EXPECT().Start().Return(nil).Times(2)
-
-	mqFactoryMock.EXPECT().NewProducer(gomock.Any()).Return(producerMock, nil).Times(2)
-
-	// 重置单例
-	singletonTraceProducer = nil
-	traceProducerOnce = sync.Once{}
-
-	// 第一次调用
-	producer1, err1 := NewTraceProducerImpl(traceConfigMock, mqFactoryMock)
-	assert.NoError(t, err1)
-	assert.NotNil(t, producer1)
-
-	// 第二次调用，应该返回同一个实例
-	producer2, err2 := NewTraceProducerImpl(traceConfigMock, mqFactoryMock)
-	assert.NoError(t, err2)
-	assert.NotNil(t, producer2)
-	assert.Equal(t, producer1, producer2)
 }

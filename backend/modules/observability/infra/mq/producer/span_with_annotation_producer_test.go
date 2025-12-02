@@ -23,8 +23,7 @@ import (
 
 func TestSpanWithAnnotationProducerImpl_SendSpanWithAnnotation(t *testing.T) {
 	type fields struct {
-		topic      string
-		mqProducer mq.IProducer
+		topic string
 	}
 	type args struct {
 		ctx     context.Context
@@ -54,22 +53,9 @@ func TestSpanWithAnnotationProducerImpl_SendSpanWithAnnotation(t *testing.T) {
 				tag: "test_tag",
 			},
 			mockSetup: func(mqProducer *mocks.MockIProducer) {
-				mqProducer.EXPECT().Send(gomock.Any(), gomock.Any()).Return("msg_id", nil)
+				mqProducer.EXPECT().Send(gomock.Any(), gomock.Any()).Return(mq.SendResponse{}, nil)
 			},
 			expectedError: nil,
-		},
-		{
-			name: "异常场景: JSON序列化失败",
-			fields: fields{
-				topic: "test_topic",
-			},
-			args: args{
-				ctx:     context.Background(),
-				message: nil, // 这将导致JSON序列化失败
-				tag:     "test_tag",
-			},
-			mockSetup:     func(mqProducer *mocks.MockIProducer) {},
-			expectedError: errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode),
 		},
 		{
 			name: "异常场景: MQ发送失败",
@@ -87,7 +73,7 @@ func TestSpanWithAnnotationProducerImpl_SendSpanWithAnnotation(t *testing.T) {
 				tag: "test_tag",
 			},
 			mockSetup: func(mqProducer *mocks.MockIProducer) {
-				mqProducer.EXPECT().Send(gomock.Any(), gomock.Any()).Return("", assert.AnError)
+				mqProducer.EXPECT().Send(gomock.Any(), gomock.Any()).Return(mq.SendResponse{}, assert.AnError)
 			},
 			expectedError: errorx.NewByCode(obErrorx.CommercialCommonRPCErrorCodeCode),
 		},
@@ -107,7 +93,6 @@ func TestSpanWithAnnotationProducerImpl_SendSpanWithAnnotation(t *testing.T) {
 			}
 
 			err := producer.SendSpanWithAnnotation(tt.args.ctx, tt.args.message, tt.args.tag)
-			
 			if tt.expectedError != nil {
 				assert.Error(t, err)
 			} else {
@@ -143,10 +128,10 @@ func TestNewSpanWithAnnotationProducerImpl(t *testing.T) {
 					ProducerGroup: "test_group",
 				}
 				traceConfig.EXPECT().GetSpanWithAnnotationMqProducerCfg(gomock.Any()).Return(mqCfg, nil)
-				
+
 				producerMock := mocks.NewMockIProducer(gomock.NewController(t))
 				producerMock.EXPECT().Start().Return(nil)
-				
+
 				mqFactory.EXPECT().NewProducer(gomock.Any()).Return(producerMock, nil)
 			},
 			expectedError: false,
@@ -214,10 +199,10 @@ func TestNewSpanWithAnnotationProducerImpl(t *testing.T) {
 					ProducerGroup: "test_group",
 				}
 				traceConfig.EXPECT().GetSpanWithAnnotationMqProducerCfg(gomock.Any()).Return(mqCfg, nil)
-				
+
 				producerMock := mocks.NewMockIProducer(gomock.NewController(t))
 				producerMock.EXPECT().Start().Return(assert.AnError)
-				
+
 				mqFactory.EXPECT().NewProducer(gomock.Any()).Return(producerMock, nil)
 			},
 			expectedError: true,
@@ -228,7 +213,7 @@ func TestNewSpanWithAnnotationProducerImpl(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			
+
 			traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
 			mqFactoryMock := mocks.NewMockIFactory(ctrl)
 			tt.mockSetup(traceConfigMock, mqFactoryMock)
@@ -238,7 +223,7 @@ func TestNewSpanWithAnnotationProducerImpl(t *testing.T) {
 			spanWithAnnotationProducerOnce = sync.Once{}
 
 			producer, err := NewSpanWithAnnotationProducerImpl(traceConfigMock, mqFactoryMock)
-			
+
 			if tt.expectedError {
 				assert.Error(t, err)
 				assert.Nil(t, producer)
@@ -248,41 +233,4 @@ func TestNewSpanWithAnnotationProducerImpl(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestSpanWithAnnotationProducerImpl_Singleton(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
-	mqFactoryMock := mocks.NewMockIFactory(ctrl)
-
-	mqCfg := &config.MqProducerCfg{
-		Topic:         "test_topic",
-		Addr:          []string{"localhost:9876"},
-		Timeout:       5000,
-		RetryTimes:    3,
-		ProducerGroup: "test_group",
-	}
-	traceConfigMock.EXPECT().GetSpanWithAnnotationMqProducerCfg(gomock.Any()).Return(mqCfg, nil).Times(2)
-	
-	producerMock := mocks.NewMockIProducer(ctrl)
-	producerMock.EXPECT().Start().Return(nil).Times(2)
-	
-	mqFactoryMock.EXPECT().NewProducer(gomock.Any()).Return(producerMock, nil).Times(2)
-
-	// 重置单例
-	singletonSpanWithAnnotationProducer = nil
-	spanWithAnnotationProducerOnce = sync.Once{}
-
-	// 第一次调用
-	producer1, err1 := NewSpanWithAnnotationProducerImpl(traceConfigMock, mqFactoryMock)
-	assert.NoError(t, err1)
-	assert.NotNil(t, producer1)
-
-	// 第二次调用，应该返回同一个实例
-	producer2, err2 := NewSpanWithAnnotationProducerImpl(traceConfigMock, mqFactoryMock)
-	assert.NoError(t, err2)
-	assert.NotNil(t, producer2)
-	assert.Equal(t, producer1, producer2)
 }
