@@ -462,7 +462,7 @@ func (p *AutoEvaluteProcessor) buildEvalTargetParam(task *task_entity.Observabil
 	*/
 	case loop_span.PlatformVeAgentKit:
 		targetType = eval_target_d.EvalTargetType_VolcengineAgent
-		targetID = findFieldFunc("run_id")
+		targetID = findFieldFunc("cozeloop_agent_runtime_id")
 	case loop_span.PlatformVeADK:
 		targetType = eval_target_d.EvalTargetType_VolcengineAgent
 		targetID = findFieldFunc("app_name")
