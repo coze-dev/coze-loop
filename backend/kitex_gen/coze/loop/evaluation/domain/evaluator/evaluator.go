@@ -34,6 +34,8 @@ const (
 
 	EvaluatorTagKeyName = "Name"
 
+	EvaluatorTagKeyCodeType = "CodeType"
+
 	EvaluatorBoxTypeWhite = "White"
 
 	EvaluatorBoxTypeBlack = "Black"

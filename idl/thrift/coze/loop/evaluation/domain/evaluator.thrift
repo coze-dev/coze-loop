@@ -50,6 +50,7 @@ const EvaluatorTagKey EvaluatorTagKey_TargetType = "TargetType"         // 评�
 const EvaluatorTagKey EvaluatorTagKey_Objective = "Objective"      // 评估目标 (任务完成/内容质量等)
 const EvaluatorTagKey EvaluatorTagKey_BusinessScenario = "BusinessScenario"   // 业务场景 (安全风控/AI Coding等)
 const EvaluatorTagKey EvaluatorTagKey_Name = "Name"               // 评估器名称
+const EvaluatorTagKey EvaluatorTagKey_CodeType = "CodeType"     // Code评估器语言类型
 
 typedef string EvaluatorBoxType(ts.enum="true")
 const EvaluatorBoxType EvaluatorBoxType_White = "White" // 白盒
