@@ -22395,7 +22395,7 @@ func (p *ListEvaluatorTagsResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 type UpdateEvaluatorTagsRequest struct {
 	// 如果指定评估器id，则仅更新该评估器；否则更新所有未删除评估器
-	EvaluatorIds []int64 `thrift:"evaluator_ids,1,optional" frugal:"1,optional,list<i64>" json:"evaluator_ids" form:"evaluator_id" `
+	EvaluatorIds []int64 `thrift:"evaluator_ids,1,optional" frugal:"1,optional,list<i64>" json:"evaluator_ids" form:"evaluator_ids" `
 	// 如果指定空间id，则仅更新该空间下评估器；否则更新所有未删除评估器
 	WorkspaceID *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`

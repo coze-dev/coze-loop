@@ -466,7 +466,7 @@ struct ListEvaluatorTagsResponse {
 }
 
 struct UpdateEvaluatorTagsRequest {
-    1: optional list<i64> evaluator_ids (api.body='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_ids"') // 如果指定评估器id，则仅更新该评估器；否则更新所有未删除评估器
+    1: optional list<i64> evaluator_ids (api.body='evaluator_ids', api.js_conv='true', go.tag='json:"evaluator_ids"') // 如果指定评估器id，则仅更新该评估器；否则更新所有未删除评估器
     2: optional i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"') // 如果指定空间id，则仅更新该空间下评估器；否则更新所有未删除评估器
     255: optional base.Base Base
 }
