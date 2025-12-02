@@ -21,7 +21,7 @@ type CorrectionConsumer struct {
 	conf.IConfigLoader
 }
 
-func newCorrectionConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewCorrectionConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &CorrectionConsumer{
 		handler:       handler,
 		IConfigLoader: loader,
@@ -50,9 +50,9 @@ func (e *CorrectionConsumer) HandleMessage(ctx context.Context, ext *mq.MessageE
 	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.CorrectionEvent)
 	if err := json.Unmarshal(ext.Body, event); err != nil {
-		logs.CtxError(ctx, "Correction msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
+		logs.CtxError(ctx, "AutoEvalCorrection msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
 		return nil
 	}
-	logs.CtxInfo(ctx, "Correction msg, event: %v,msgID=%s", event, ext.MsgID)
-	return e.handler.Correction(ctx, event)
+	logs.CtxInfo(ctx, "AutoEvalCorrection msg, event: %v,msgID=%s", event, ext.MsgID)
+	return e.handler.AutoEvalCorrection(ctx, event)
 }

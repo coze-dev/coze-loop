@@ -25,6 +25,22 @@ annotation_mq_consumer_config:
   consumer_group: "trace_annotation_event_cg"
   worker_num: 4
 
+span_with_annotation_mq_producer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 200
+  retry_times: 3
+  topic: "observability_span_queue"
+  producer_group: "observability_span_queue_pg"
+
+span_with_annotation_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "observability_span_queue"
+  consumer_group: "observability_span_queue_cg"
+  worker_num: 4
+
 trace_system_view_cfg:
   - id: -1
     view_name: "Exceptions"
@@ -46,6 +62,7 @@ trace_platform_tenants:
       - "cozeloop"
 
 trace_max_duration_day:
+  default: 180
   cozeloop: 180
   prompt: 180
   evaluator: 180
@@ -177,6 +194,46 @@ trace_field_meta_info:
         - "not_exist"
       support_custom: true
   field_metas:
+    default:
+      root_span:
+        - "input"
+        - "output"
+        - "status"
+        - "duration"
+        - "latency_first_resp"
+        - "span_name"
+        - "trace_id"
+        - "span_type"
+        - "message_id"
+        - "user_id"
+      all_span:
+        - "input"
+        - "output"
+        - "status"
+        - "duration"
+        - "latency_first_resp"
+        - "span_name"
+        - "trace_id"
+        - "span_type"
+        - "message_id"
+        - "user_id"
+        - "input_tokens"
+        - "output_tokens"
+        - "prompt_key"
+        - "tokens"
+      llm_span:
+        - "input"
+        - "output"
+        - "status"
+        - "duration"
+        - "latency_first_resp"
+        - "span_name"
+        - "trace_id"
+        - "message_id"
+        - "user_id"
+        - "input_tokens"
+        - "output_tokens"
+        - "tokens"
     cozeloop:
       root_span:
         - "input"
@@ -288,6 +345,18 @@ query_trace_rate_limit_config:
   default_max_qps: 10
   space_max_qps:
     123456: 100
+
+key_span_type:
+  default:
+    - "model"
+    - "tool"
+    - "root"
+    - "UserInput"
+    - "UserInputV2"
+    - "LLMCall"
+    - "WorkflowLLMCall"
+    - "WorkflowPluginTool"
+    - "PluginTool"
 
 correction_mq_consumer_config:
   addr:

@@ -262,8 +262,10 @@ func recursiveUnmarshal(v any) any {
 		return val
 	case string:
 		parsed, err := oj.ParseString(val)
-		if err == nil {
-			return recursiveUnmarshal(parsed)
+		if err == nil && parsed != nil {
+			if _, ok := parsed.(map[string]interface{}); ok {
+				return recursiveUnmarshal(parsed)
+			}
 		}
 		return val
 	default:

@@ -22,7 +22,7 @@ type BackFillConsumer struct {
 	conf.IConfigLoader
 }
 
-func newBackFillConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewBackFillConsumer(handler obapp.ITaskQueueConsumer, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &BackFillConsumer{
 		handler:       handler,
 		IConfigLoader: loader,
@@ -42,6 +42,9 @@ func (e *BackFillConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig,
 		ConsumeTimeout:       time.Duration(cfg.Timeout) * time.Millisecond,
 		ConsumeGoroutineNums: cfg.WorkerNum,
 		EnablePPE:            cfg.EnablePPE,
+	}
+	if cfg.TagExpression != nil {
+		res.TagExpression = *cfg.TagExpression
 	}
 	return res, nil
 }

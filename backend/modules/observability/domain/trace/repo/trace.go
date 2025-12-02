@@ -19,6 +19,8 @@ type GetTraceParam struct {
 	NotQueryAnnotation bool
 	SpanIDs            []string
 	OmitColumns        []string // omit specific columns
+	SelectColumns      []string // select specific columns, default select all columns
+	Filters            *loop_span.FilterFields
 }
 
 type ListSpansParam struct {
@@ -31,12 +33,17 @@ type ListSpansParam struct {
 	PageToken          string
 	NotQueryAnnotation bool
 	OmitColumns        []string // omit specific columns
+	SelectColumns      []string // select specific columns, default select all columns
 }
 
 type ListSpansResult struct {
 	Spans     loop_span.SpanList
 	PageToken string
 	HasMore   bool
+}
+
+type GetPreSpanIDsParam struct {
+	PreRespID string
 }
 type InsertTraceParam struct {
 	Spans  loop_span.SpanList
@@ -62,25 +69,19 @@ type ListAnnotationsParam struct {
 }
 
 type InsertAnnotationParam struct {
-	Tenant      string
-	TTL         loop_span.TTL
-	Annotations []*loop_span.Annotation
-}
-
-type UpsertAnnotationParam struct {
-	Tenant      string
-	TTL         loop_span.TTL
-	Annotations []*loop_span.Annotation
-	IsSync      bool
+	Tenant         string
+	TTL            loop_span.TTL
+	Span           *loop_span.Span
+	AnnotationType *loop_span.AnnotationType
 }
 
 //go:generate mockgen -destination=mocks/trace.go -package=mocks . ITraceRepo
 type ITraceRepo interface {
 	InsertSpans(context.Context, *InsertTraceParam) error
 	ListSpans(context.Context, *ListSpansParam) (*ListSpansResult, error)
+	GetPreSpanIDs(context.Context, *GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error)
 	GetTrace(context.Context, *GetTraceParam) (loop_span.SpanList, error)
 	ListAnnotations(context.Context, *ListAnnotationsParam) (loop_span.AnnotationList, error)
 	GetAnnotation(context.Context, *GetAnnotationParam) (*loop_span.Annotation, error)
 	InsertAnnotations(context.Context, *InsertAnnotationParam) error
-	UpsertAnnotation(ctx context.Context, param *UpsertAnnotationParam) error
 }

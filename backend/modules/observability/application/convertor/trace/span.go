@@ -22,6 +22,7 @@ func SpanDO2DTO(
 	userMap map[string]*common.UserInfo,
 	evalMap map[int64]*rpc.Evaluator,
 	tagMap map[int64]*rpc.TagInfo,
+	needOriginalTags bool,
 ) *span.OutputSpan {
 	outSpan := &span.OutputSpan{
 		TraceID:         s.TraceID,
@@ -29,12 +30,23 @@ func SpanDO2DTO(
 		ParentID:        s.ParentID,
 		SpanName:        s.SpanName,
 		SpanType:        s.SpanType,
+		CallType:        &s.CallType,
 		StartedAt:       time_util.MicroSec2MillSec(s.StartTime),      // to ms
 		Duration:        time_util.MicroSec2MillSec(s.DurationMicros), // to ms
 		StatusCode:      s.StatusCode,
 		Input:           s.Input,
 		Output:          s.Output,
 		LogicDeleteDate: ptr.Of(time_util.MicroSec2MillSec(s.LogicDeleteTime)), // to ms
+	}
+	if needOriginalTags {
+		outSpan.SystemTagsString = s.SystemTagsString
+		outSpan.SystemTagsLong = s.SystemTagsLong
+		outSpan.SystemTagsDouble = s.SystemTagsDouble
+		outSpan.TagsString = s.TagsString
+		outSpan.TagsLong = s.TagsLong
+		outSpan.TagsDouble = s.TagsDouble
+		outSpan.TagsBool = s.TagsBool
+		outSpan.TagsBytes = s.TagsByte
 	}
 	if s.PSM != "" {
 		outSpan.ServiceName = ptr.Of(s.PSM)
@@ -157,10 +169,11 @@ func SpanListDO2DTO(
 	userMap map[string]*common.UserInfo,
 	evalMap map[int64]*rpc.Evaluator,
 	tagMap map[int64]*rpc.TagInfo,
+	needOriginalTags bool,
 ) []*span.OutputSpan {
 	ret := make([]*span.OutputSpan, len(spans))
 	for i, s := range spans {
-		ret[i] = SpanDO2DTO(s, userMap, evalMap, tagMap)
+		ret[i] = SpanDO2DTO(s, userMap, evalMap, tagMap, needOriginalTags)
 	}
 	return ret
 }
@@ -181,30 +194,45 @@ func FilterFieldsDTO2DO(f *filter.FilterFields) *loop_span.FilterFields {
 	if f.QueryAndOr != nil {
 		ret.QueryAndOr = ptr.Of(loop_span.QueryAndOrEnum(*f.QueryAndOr))
 	}
-	ret.FilterFields = make([]*loop_span.FilterField, 0)
-	for _, field := range f.GetFilterFields() {
+	ret.FilterFields = FilterFieldListDTO2DO(f.FilterFields)
+	return ret
+}
+
+func FilterFieldDTO2DO(field *filter.FilterField) *loop_span.FilterField {
+	if field == nil {
+		return nil
+	}
+	fieldName := ""
+	if field.FieldName != nil {
+		fieldName = *field.FieldName
+	}
+	fField := &loop_span.FilterField{
+		FieldName: fieldName,
+		Values:    field.Values,
+		FieldType: fieldTypeDTO2DO(field.FieldType),
+	}
+	if field.QueryAndOr != nil {
+		fField.QueryAndOr = ptr.Of(loop_span.QueryAndOrEnum(*field.QueryAndOr))
+	}
+	if field.QueryType != nil {
+		fField.QueryType = ptr.Of(loop_span.QueryTypeEnum(*field.QueryType))
+	}
+	if field.SubFilter != nil {
+		fField.SubFilter = FilterFieldsDTO2DO(field.SubFilter)
+	}
+	if field.IsCustom != nil {
+		fField.IsCustom = *field.IsCustom
+	}
+	return fField
+}
+
+func FilterFieldListDTO2DO(fields []*filter.FilterField) []*loop_span.FilterField {
+	ret := make([]*loop_span.FilterField, 0)
+	for _, field := range fields {
 		if field == nil {
 			continue
 		}
-		fieldName := ""
-		if field.FieldName != nil {
-			fieldName = *field.FieldName
-		}
-		fField := &loop_span.FilterField{
-			FieldName: fieldName,
-			Values:    field.Values,
-			FieldType: fieldTypeDTO2DO(field.FieldType),
-		}
-		if field.QueryAndOr != nil {
-			fField.QueryAndOr = ptr.Of(loop_span.QueryAndOrEnum(*field.QueryAndOr))
-		}
-		if field.QueryType != nil {
-			fField.QueryType = ptr.Of(loop_span.QueryTypeEnum(*field.QueryType))
-		}
-		if field.SubFilter != nil {
-			fField.SubFilter = FilterFieldsDTO2DO(field.SubFilter)
-		}
-		ret.FilterFields = append(ret.FilterFields, fField)
+		ret = append(ret, FilterFieldDTO2DO(field))
 	}
 	return ret
 }

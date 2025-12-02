@@ -25,12 +25,12 @@ func ExptTurnResultFilterEntity2PO(filterEntity *entity.ExptTurnResultFilterEnti
 		}
 	}
 
-	return &model.ExptTurnResultFilter{
-		SpaceID:          stringifyInt64(filterEntity.SpaceID),
-		ExptID:           stringifyInt64(filterEntity.ExptID),
-		ItemID:           stringifyInt64(filterEntity.ItemID),
+	exptTurnResultFilter := &model.ExptTurnResultFilter{
+		SpaceID:          strconv.FormatInt(filterEntity.SpaceID, 10),
+		ExptID:           strconv.FormatInt(filterEntity.ExptID, 10),
+		ItemID:           strconv.FormatInt(filterEntity.ItemID, 10),
 		ItemIdx:          filterEntity.ItemIdx,
-		TurnID:           stringifyInt64(filterEntity.TurnID),
+		TurnID:           strconv.FormatInt(filterEntity.TurnID, 10),
 		Status:           int32(filterEntity.Status),
 		EvalTargetData:   filterEntity.EvalTargetData,
 		EvaluatorScore:   filterEntity.EvaluatorScore,
@@ -39,7 +39,13 @@ func ExptTurnResultFilterEntity2PO(filterEntity *entity.ExptTurnResultFilterEnti
 		AnnotationString: filterEntity.AnnotationString,
 		CreatedDate:      filterEntity.CreatedDate,
 		EvalSetVersionID: strconv.FormatInt(filterEntity.EvalSetVersionID, 10),
+		UpdatedAt:        filterEntity.UpdatedAt,
 	}
+	if filterEntity.EvaluatorScoreCorrected {
+		exptTurnResultFilter.EvaluatorScoreCorrected = 1
+	}
+
+	return exptTurnResultFilter
 }
 
 // ExptTurnResultFilterPO2Entity 将 model.ExptTurnResultFilterAccelerator 转换为 ExptTurnResultFilterEntity
@@ -53,7 +59,7 @@ func ExptTurnResultFilterPO2Entity(filterPO *model.ExptTurnResultFilter) *entity
 		annotationBool[k] = v > 0
 	}
 
-	return &entity.ExptTurnResultFilterEntity{
+	exptTurnResultFilterEntity := &entity.ExptTurnResultFilterEntity{
 		SpaceID:          ParseStringToInt64(filterPO.SpaceID),
 		ExptID:           ParseStringToInt64(filterPO.ExptID),
 		ItemID:           ParseStringToInt64(filterPO.ItemID),
@@ -68,11 +74,10 @@ func ExptTurnResultFilterPO2Entity(filterPO *model.ExptTurnResultFilter) *entity
 		CreatedDate:      filterPO.CreatedDate,
 		EvalSetVersionID: ParseStringToInt64(filterPO.EvalSetVersionID),
 	}
-}
-
-// stringifyInt64 将 int64 转换为 string
-func stringifyInt64(i int64) string {
-	return string(rune(i))
+	if filterPO.EvaluatorScoreCorrected > 0 {
+		exptTurnResultFilterEntity.EvaluatorScoreCorrected = true
+	}
+	return exptTurnResultFilterEntity
 }
 
 // ParseStringToInt64 将 string 转换为 int64

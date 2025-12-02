@@ -1,6 +1,7 @@
 namespace go coze.loop.llm.domain.runtime
 
 include "common.thrift"
+include "manage.thrift"
 
 struct ModelConfig {
     1: required i64 model_id  (api.js_conv='true', go.tag='json:"model_id"')// 模型id
@@ -13,6 +14,15 @@ struct ModelConfig {
     8: optional i32 top_k
     9: optional double presence_penalty
     10: optional double frequency_penalty
+
+    // 与ParamSchema对应
+    100: optional list<ParamConfigValue> param_config_values
+}
+
+struct ParamConfigValue {
+    1: optional string name // 传给下游模型的key，与ParamSchema.name对齐
+    2: optional string label // 展示名称
+    3: optional manage.ParamOption value // 传给下游模型的value，与ParamSchema.options对齐
 }
 
 struct Message {
@@ -31,8 +41,17 @@ struct ChatMessagePart {
     2: optional string text
     3: optional ChatMessageImageURL image_url
 //    4: optional ChatMessageAudioURL audio_url 占位,暂不支持
-//    5: optional ChatMessageVideoURL video_url 占位,暂不支持
+    5: optional ChatMessageVideoURL video_url
 //    6: optional ChatMessageFileURL file_url 占位,暂不支持
+}
+
+struct ChatMessageVideoURL {
+    1: optional string url
+    2: optional VideoURLDetail detail
+    3: optional string mime_type
+}
+struct VideoURLDetail {
+    1: optional double fps (vt.ge="0.2", vt.le="5")
 }
 
 struct ChatMessageImageURL {
@@ -111,10 +130,14 @@ typedef string ChatMessagePartType (ts.enum="true")
 const ChatMessagePartType chat_message_part_type_text = "text"
 const ChatMessagePartType chat_message_part_type_image_url = "image_url"
 // const ChatMessagePartType chat_message_part_type_audio_url = "audio_url"
-// const ChatMessagePartType chat_message_part_type_video_url = "video_url"
+ const ChatMessagePartType chat_message_part_type_video_url = "video_url"
 // const ChatMessagePartType chat_message_part_type_file_url = "file_url"
 
 typedef string ImageURLDetail (ts.enum="true")
 const ImageURLDetail image_url_detail_auto = "auto"
 const ImageURLDetail image_url_detail_low = "low"
 const ImageURLDetail image_url_detail_high = "high"
+
+typedef string MimeTypePrefix (ts.enum="true")
+const MimeTypePrefix mime_prefix_image = "image/"
+const MimeTypePrefix mime_prefix_video = "video/"

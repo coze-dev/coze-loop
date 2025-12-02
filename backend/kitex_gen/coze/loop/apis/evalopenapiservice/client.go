@@ -11,7 +11,23 @@ import (
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
+	CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateEvaluationSetOApiResponse, err error)
+	GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvaluationSetOApiResponse, err error)
+	UpdateEvaluationSetOApi(ctx context.Context, req *openapi.UpdateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetOApiResponse, err error)
+	DeleteEvaluationSetOApi(ctx context.Context, req *openapi.DeleteEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.DeleteEvaluationSetOApiResponse, err error)
+	ListEvaluationSetsOApi(ctx context.Context, req *openapi.ListEvaluationSetsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetsOApiResponse, err error)
+	CreateEvaluationSetVersionOApi(ctx context.Context, req *openapi.CreateEvaluationSetVersionOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateEvaluationSetVersionOApiResponse, err error)
+	ListEvaluationSetVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetVersionsOApiResponse, err error)
+	BatchCreateEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchCreateEvaluationSetItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchCreateEvaluationSetItemsOApiResponse, err error)
+	BatchUpdateEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchUpdateEvaluationSetItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchUpdateEvaluationSetItemsOApiResponse, err error)
+	BatchDeleteEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchDeleteEvaluationSetItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchDeleteEvaluationSetItemsOApiResponse, err error)
+	ListEvaluationSetVersionItemsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetVersionItemsOApiResponse, err error)
+	UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error)
 	ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetInvokeResultResponse, err error)
+	SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.SubmitExperimentOApiResponse, err error)
+	GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentsOApiResponse, err error)
+	ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentResultOApiResponse, err error)
+	GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentAggrResultOApiResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -43,7 +59,87 @@ type kEvalOpenAPIServiceClient struct {
 	*kClient
 }
 
+func (p *kEvalOpenAPIServiceClient) CreateEvaluationSetOApi(ctx context.Context, req *openapi.CreateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateEvaluationSetOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateEvaluationSetOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvaluationSetOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetEvaluationSetOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) UpdateEvaluationSetOApi(ctx context.Context, req *openapi.UpdateEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateEvaluationSetOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) DeleteEvaluationSetOApi(ctx context.Context, req *openapi.DeleteEvaluationSetOApiRequest, callOptions ...callopt.Option) (r *openapi.DeleteEvaluationSetOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteEvaluationSetOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) ListEvaluationSetsOApi(ctx context.Context, req *openapi.ListEvaluationSetsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetsOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListEvaluationSetsOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) CreateEvaluationSetVersionOApi(ctx context.Context, req *openapi.CreateEvaluationSetVersionOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateEvaluationSetVersionOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateEvaluationSetVersionOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) ListEvaluationSetVersionsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetVersionsOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListEvaluationSetVersionsOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) BatchCreateEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchCreateEvaluationSetItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchCreateEvaluationSetItemsOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchCreateEvaluationSetItemsOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) BatchUpdateEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchUpdateEvaluationSetItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchUpdateEvaluationSetItemsOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchUpdateEvaluationSetItemsOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) BatchDeleteEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchDeleteEvaluationSetItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchDeleteEvaluationSetItemsOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchDeleteEvaluationSetItemsOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) ListEvaluationSetVersionItemsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetVersionItemsOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListEvaluationSetVersionItemsOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateEvaluationSetSchemaOApi(ctx, req)
+}
+
 func (p *kEvalOpenAPIServiceClient) ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetInvokeResultResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ReportEvalTargetInvokeResult_(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.SubmitExperimentOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SubmitExperimentOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentsOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetExperimentsOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentResultOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListExperimentResultOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetExperimentAggrResultOApi(ctx, req)
 }

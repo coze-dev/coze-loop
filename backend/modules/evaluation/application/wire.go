@@ -9,9 +9,10 @@ package application
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	"github.com/google/wire"
 	"github.com/sirupsen/logrus"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -47,6 +48,7 @@ import (
 	evalsetmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluation_set"
 	evaluatormtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
 	exptmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/experiment"
+	evalmtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/openapi"
 	rmqproducer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
 	evaluatorrepo "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator"
 	evaluatormysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
@@ -137,6 +139,7 @@ var (
 	evaluatorDomainService = wire.NewSet(
 		domainservice.NewEvaluatorServiceImpl,
 		domainservice.NewEvaluatorRecordServiceImpl,
+		domainservice.NewEvaluatorTemplateService,
 		NewEvaluatorSourceServices,
 		llm.NewLLMRPCProvider,
 		NewRuntimeFactory,
@@ -147,13 +150,17 @@ var (
 		service.NewCodeBuilderFactory,
 		evaluatorrepo.NewEvaluatorRepo,
 		evaluatorrepo.NewEvaluatorRecordRepo,
+		evaluatorrepo.NewEvaluatorTemplateRepo,
 		evaluatormysql.NewEvaluatorDAO,
 		evaluatormysql.NewEvaluatorVersionDAO,
 		evaluatormysql.NewEvaluatorRecordDAO,
+		evaluatormysql.NewEvaluatorTemplateDAO,
+		evaluatormysql.NewEvaluatorTagDAO,
 		evaluatorrepo.NewRateLimiterImpl,
 		evalconf.NewEvaluatorConfiger,
 		evaluatormtr.NewEvaluatorMetrics,
 		rmqproducer.NewEvaluatorEventPublisher,
+		evaluatorrepo.NewPlainRateLimiterImpl,
 	)
 
 	evaluatorSet = wire.NewSet(
@@ -215,11 +222,9 @@ var (
 
 	evalOpenAPISet = wire.NewSet(
 		NewEvalOpenAPIApplication,
-		targetDomainService,
-		evaltargetmtr.NewEvalTargetMetrics,
-		flagSet,
-		rmqproducer.NewExptEventPublisher,
-		evalAsyncRepoSet,
+		experimentSet,
+		evalmtr.NewEvaluationOApiMetrics,
+		domainservice.NewEvaluationSetSchemaServiceImpl,
 	)
 )
 
@@ -256,6 +261,7 @@ func InitExperimentApplication(
 	ckDb ck.Provider,
 	tagClient tagservice.Client,
 	objectStorage fileserver.ObjectStorage,
+	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 ) (IExperimentApplication, error) {
 	wire.Build(
 		experimentSet,
@@ -278,6 +284,7 @@ func InitEvaluatorApplication(
 	benefitSvc benefit.IBenefitService,
 	limiterFactory limiter.IRateLimiterFactory,
 	fileClient fileservice.Client,
+	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 ) (evaluation.EvaluatorService, error) {
 	wire.Build(
 		evaluatorSet,
@@ -366,6 +373,16 @@ func InitEvalOpenAPIApplication(
 	executeClient promptexecuteservice.Client,
 	authClient authservice.Client,
 	meter metrics.Meter,
+	dataClient datasetservice.Client,
+	userClient userservice.Client,
+	llmClient llmruntimeservice.Client,
+	tagClient tagservice.Client,
+	limiterFactory limiter.IRateLimiterFactory,
+	objectStorage fileserver.ObjectStorage,
+	auditClient audit.IAuditService,
+	benefitService benefit.IBenefitService,
+	ckProvider ck.Provider,
+	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(
 		evalOpenAPISet,

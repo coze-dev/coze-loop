@@ -17,6 +17,7 @@ type Client interface {
 	BatchGetPromptByPromptKey(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest, callOptions ...callopt.Option) (r *openapi.BatchGetPromptByPromptKeyResponse, err error)
 	Execute(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...callopt.Option) (r *openapi.ExecuteResponse, err error)
 	ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...streamcall.Option) (stream PromptOpenAPIService_ExecuteStreamingClient, err error)
+	ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest, callOptions ...callopt.Option) (r *openapi.ListPromptBasicResponse, err error)
 }
 
 type PromptOpenAPIService_ExecuteStreamingClient streaming.ServerStreamingClient[openapi.ExecuteStreamingResponse]
@@ -65,4 +66,9 @@ func (p *kPromptOpenAPIServiceClient) Execute(ctx context.Context, req *openapi.
 func (p *kPromptOpenAPIServiceClient) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...streamcall.Option) (stream PromptOpenAPIService_ExecuteStreamingClient, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, streamcall.GetCallOptions(callOptions))
 	return p.kClient.ExecuteStreaming(ctx, req)
+}
+
+func (p *kPromptOpenAPIServiceClient) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest, callOptions ...callopt.Option) (r *openapi.ListPromptBasicResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListPromptBasic(ctx, req)
 }

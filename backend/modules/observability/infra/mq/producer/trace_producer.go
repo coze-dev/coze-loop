@@ -107,6 +107,7 @@ func newTraceProducerImpl(traceConfig config.ITraceConfig, mqFactory mq.IFactory
 			ProduceTimeout: time.Duration(mqCfg.Timeout) * time.Millisecond,
 			RetryTimes:     mqCfg.RetryTimes,
 			ProducerGroup:  ptr.Of(mqCfg.ProducerGroup),
+			Compression:    mq.CompressionZSTD,
 		})
 		if e != nil {
 			return nil, e

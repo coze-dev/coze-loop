@@ -9,7 +9,7 @@ neverBuiltDependencies:
   - canvas
 
 overrides:
-  '@coze-arch/coze-design': 0.0.6-alpha.101d0c
+  '@coze-arch/coze-design': 0.0.7-alpha.985c0d
   sass@1.74.1>immutable: 3.8.2
   web-streams-polyfill: 3.3.2
   vitest@1.4.0>vite: 5.1.6
@@ -26,6 +26,7 @@ overrides:
   '@types/react-dom': 18.2.15
   typescript: 5.8.2
   mdast-util-gfm>mdast-util-gfm-autolink-literal: 2.0.0
+  minimist: 1.2.8
 
 patchedDependencies:
   '@douyinfe/semi-rspack-plugin@2.61.0':
@@ -51,8 +52,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/arch/bot-md-box-adapter
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@coze-arch/logger':
         specifier: workspace:*
         version: link:../../packages/arch/logger
@@ -104,15 +105,9 @@ importers:
       classnames:
         specifier: ^2.3.2
         version: 2.5.1
-      copy-to-clipboard:
-        specifier: ^3.3.3
-        version: 3.3.3
       immer:
         specifier: ^10.0.3
         version: 10.1.1
-      query-string:
-        specifier: ^8.1.0
-        version: 8.2.0
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -165,6 +160,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
+      cross-env:
+        specifier: ~10.1.0
+        version: 10.1.0
       tailwindcss:
         specifier: ~3.3.3
         version: 3.3.7
@@ -173,7 +171,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/config/eslint-config:
     dependencies:
@@ -439,14 +437,14 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       sucrase:
         specifier: ^3.32.0
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/eslint-plugin:
     dependencies:
@@ -528,7 +526,7 @@ importers:
         version: 10.9.2(@types/node@18.18.9)(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/idl/idl-parser:
     dependencies:
@@ -562,7 +560,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/idl/idl2ts-cli:
     dependencies:
@@ -839,7 +837,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/plugins/postcss-plugin:
     dependencies:
@@ -873,7 +871,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/utils/monorepo-kits:
     dependencies:
@@ -901,7 +899,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/infra/utils/rush-logger:
     dependencies:
@@ -923,7 +921,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-env:
     dependencies:
@@ -954,7 +952,7 @@ importers:
         version: 20.0.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-env-adapter:
     devDependencies:
@@ -981,7 +979,7 @@ importers:
         version: 20.0.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-flags:
     dependencies:
@@ -1030,7 +1028,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-md-box-adapter:
     dependencies:
@@ -1112,7 +1110,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/bot-typings:
     devDependencies:
@@ -1188,7 +1186,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/logger:
     dependencies:
@@ -1198,9 +1196,6 @@ importers:
       '@coze-arch/bot-typings':
         specifier: workspace:*
         version: link:../bot-typings
-      '@coze-studio/slardar-interface':
-        specifier: workspace:*
-        version: link:../slardar-interface
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -1234,31 +1229,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
-
-  ../../../frontend/packages/arch/slardar-interface:
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      sucrase:
-        specifier: ^3.32.0
-        version: 3.35.0
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/arch/subspace-resolve-plugin:
     dependencies:
@@ -1292,7 +1263,7 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/account:
     dependencies:
@@ -1332,7 +1303,7 @@ importers:
         version: 18.2.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/adapter-interfaces:
     devDependencies:
@@ -1365,7 +1336,7 @@ importers:
         version: 18.2.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/api-schema:
     dependencies:
@@ -1402,13 +1373,13 @@ importers:
         version: 3.35.0
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/auth-pages:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/account':
         specifier: workspace:*
         version: link:../account
@@ -1460,7 +1431,7 @@ importers:
         version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/base-hooks:
     dependencies:
@@ -1497,13 +1468,13 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/biz-components:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
@@ -1561,7 +1532,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/biz-config:
     devDependencies:
@@ -1585,7 +1556,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/biz-hooks:
     dependencies:
@@ -1637,13 +1608,13 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/components:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
@@ -1715,8 +1686,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
@@ -1734,7 +1705,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/env:
     devDependencies:
@@ -1755,13 +1726,13 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/evaluate:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
@@ -1885,13 +1856,13 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/evaluate-adapter:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/adapter-interfaces':
         specifier: workspace:*
         version: link:../adapter-interfaces
@@ -1958,7 +1929,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/evaluate-components:
     dependencies:
@@ -1966,8 +1937,8 @@ importers:
         specifier: workspace:*
         version: link:../../arch/bot-md-box-adapter
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
@@ -2171,8 +2142,8 @@ importers:
   ../../../frontend/packages/cozeloop/evaluate-pages:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/evaluate':
         specifier: workspace:*
         version: link:../evaluate
@@ -2239,7 +2210,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/guard:
     dependencies:
@@ -2294,7 +2265,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/i18n:
     dependencies:
@@ -2453,13 +2424,13 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/observation/trace-detail:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../../api-schema
@@ -2561,8 +2532,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
@@ -2577,13 +2548,13 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/observation/trace-detail-open:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../../api-schema
@@ -2686,13 +2657,13 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/observation/trace-list:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@coze-arch/logger':
         specifier: workspace:*
         version: link:../../../arch/logger
@@ -2810,13 +2781,13 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/observation/trace-struct-data:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@coze-arch/logger':
         specifier: workspace:*
         version: link:../../../arch/logger
@@ -2940,7 +2911,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/prompt-components:
     dependencies:
@@ -2966,8 +2937,8 @@ importers:
         specifier: workspace:*
         version: link:../../arch/bot-md-box-adapter
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@coze-arch/fetch-stream':
         specifier: workspace:*
         version: link:../../arch/fetch-stream
@@ -3081,8 +3052,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
@@ -3100,7 +3071,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/prompt-pages:
     dependencies:
@@ -3108,8 +3079,8 @@ importers:
         specifier: workspace:*
         version: link:../../arch/bot-md-box-adapter
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@coze-arch/fetch-stream':
         specifier: workspace:*
         version: link:../../arch/fetch-stream
@@ -3205,8 +3176,8 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -3230,7 +3201,7 @@ importers:
         version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/resources/loop-lng:
     devDependencies:
@@ -3251,7 +3222,7 @@ importers:
         version: 3.0.9(vitest@3.0.9)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/route:
     dependencies:
@@ -3288,7 +3259,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/rsbuild-config:
     dependencies:
@@ -3364,7 +3335,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
       webpack:
         specifier: ~5.91.0
         version: 5.91.0
@@ -3404,13 +3375,13 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/tag-components:
     dependencies:
       '@coze-arch/coze-design':
-        specifier: 0.0.6-alpha.101d0c
-        version: 0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@coze-arch/logger':
         specifier: workspace:*
         version: link:../../arch/logger
@@ -3519,7 +3490,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/tag-pages:
     dependencies:
@@ -3583,7 +3554,7 @@ importers:
         version: 15.11.0(typescript@5.8.2)
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/tailwind-config:
     dependencies:
@@ -3668,14 +3639,14 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
       happy-dom:
-        specifier: ^15.10.2
-        version: 15.11.7
+        specifier: ^20.0.10
+        version: 20.0.10
       typescript:
         specifier: 5.8.2
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/toolkit:
     dependencies:
@@ -3706,7 +3677,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(happy-dom@15.11.7)
+        version: 3.0.9(happy-dom@20.0.10)
 
 packages:
 
@@ -5924,27 +5895,31 @@ packages:
     dev: true
     optional: true
 
-  /@coze-arch/arco-icon@0.0.6-alpha.101d0c:
-    resolution: {integrity: sha512-KYy7qlt5tDqPETkZNWev/yihg7/45CUpY5dKGhd/bYPkEx8Ma2gi7FSOtgEgo+oSBcw24X2tS8AU2DyPkfQmOg==}
+  /@coze-arch/arco-icon@0.0.6-alpha.985c0d(react@18.2.0):
+    resolution: {integrity: sha512-DtHARfICp7dkdbUBqf6dyhVuoSvAQxm59a0MimCyJ8QnyJap97mqGDgFZ/yvOkeCfnF32rKqaFsYgG0YIx1NbA==}
+    peerDependencies:
+      react: 18.2.0
     dependencies:
       react: 18.2.0
     dev: false
 
-  /@coze-arch/arco-illustration@0.0.12-alpha.101d0c:
-    resolution: {integrity: sha512-GglmQH0jo9D5y4V/Sc7rutxo0rswL5gJTP5oMNnNVux2IEbG+VF6DzzODXz5MUUnateiZMm1/1mcSu9GOaYZ7A==}
+  /@coze-arch/arco-illustration@0.0.12-alpha.985c0d(react@18.2.0):
+    resolution: {integrity: sha512-Z1GsMK8kJhLzlssHBbmHFqF16PDLtva+wTNsDe1nBguYgxJP+fFD2M5W862A+tPR1B4W7OZWaq1HnCKY2NuuXw==}
+    peerDependencies:
+      react: 18.2.0
     dependencies:
       react: 18.2.0
     dev: false
 
-  /@coze-arch/coze-design@0.0.6-alpha.101d0c(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0):
-    resolution: {integrity: sha512-2MBGiRaFQ9ZSNpnNmJSWhZGYDO67aLindJgdzC+vdI8iQZmm8SDa4R8cHsywYZiyM2aM9V6GUAxFVD8DhNT1tg==}
+  /@coze-arch/coze-design@0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-PyFKDHlNx0aNuzXu+XGtscJu5kTTVsdRVLcP1KvYNBDAfxz/tDpw6xisVsaR28kHY/D/OIinJ0vMvuinaHnExQ==}
     peerDependencies:
       react: 18.2.0
       react-dom: 18.2.0
     dependencies:
-      '@coze-arch/arco-icon': 0.0.6-alpha.101d0c
-      '@coze-arch/arco-illustration': 0.0.12-alpha.101d0c
-      '@coze-arch/semi-theme-hand01': 0.0.6-alpha.101d0c
+      '@coze-arch/arco-icon': 0.0.6-alpha.985c0d(react@18.2.0)
+      '@coze-arch/arco-illustration': 0.0.12-alpha.985c0d(react@18.2.0)
+      '@coze-arch/semi-theme-hand01': 0.0.6-alpha.985c0d
       '@douyinfe/semi-ui': 2.72.3(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       ahooks: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
       class-variance-authority: 0.7.1
@@ -5969,13 +5944,13 @@ packages:
       micromatch: 4.0.8
     dev: false
 
-  /@coze-arch/semi-theme-hand01@0.0.6-alpha.101d0c:
-    resolution: {integrity: sha512-2eBOCTKQ8IvCqGlvV0H3A34h7nzB/LCKsh7MZuKVAWxB5vjyxtclOmTdUuuDe9yN6r6G7sQR2ibml0gsfvTG/A==}
-    dev: false
-
   /@coze-arch/semi-theme-hand01@0.0.6-alpha.346d77:
     resolution: {integrity: sha512-64YfAtHYVpssHXA4YOVu40CVUpZ+1JqESGA+esVI0lvFoNfdxF8WY5GkuIz5Xlj/73IKfgwIrxUHxM4EosAfMA==}
     dev: true
+
+  /@coze-arch/semi-theme-hand01@0.0.6-alpha.985c0d:
+    resolution: {integrity: sha512-69y9cz4PFQO7kkVIVAylk2cCyCSH3GKSLft6Y7h6QT483/6+CYeWCR8aLCuDZz/DjXOLR3uLqByXC8IqyuVu1g==}
+    dev: false
 
   /@coze-editor/code-language-json@0.1.0-alpha.dac011(@codemirror/language@6.11.1)(@codemirror/state@6.5.2)(@codemirror/view@6.37.2)(@coze-editor/code-language-shared@0.1.0-alpha.dac011):
     resolution: {integrity: sha512-mr4SDvE13CaN4+O6c2vVA12hPPUu+lbvziYnJQHCMN0GMNtRhwRiMnTDe1MiEPdTBEwjivvDDwNAjD6BQ3nwkg==}
@@ -7105,6 +7080,10 @@ packages:
 
   /@emotion/weak-memoize@0.4.0:
     resolution: {integrity: sha512-snKqtPW01tN0ui7yu9rGv69aJXr/a/Ywvl11sUjNtEcRc+ng/mQriFL0wLXMef74iHa/EkftbDzU9F8iFbH+zg==}
+
+  /@epic-web/invariant@1.0.0:
+    resolution: {integrity: sha512-lrTPqgvfFQtR/eY/qkIzp98OGdNJu0m5ji3q/nJI8v3SXkRKEnWiOxMmbvcSoAIzv/cGiuvRy57k4suKQSAdwA==}
+    dev: true
 
   /@esbuild/aix-ppc64@0.25.5:
     resolution: {integrity: sha512-9o3TMmpmftaCMepOdA5k/yDw8SfInyzWWTjYTFCX3kPSDJMROQTb8jg+h9Cnwnmm1vOzvxN7gIfB5V2ewpjtGA==}
@@ -12127,6 +12106,10 @@ packages:
       '@types/vfile-message': 2.0.0
     dev: true
 
+  /@types/whatwg-mimetype@3.0.2:
+    resolution: {integrity: sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA==}
+    dev: true
+
   /@types/yaml@1.9.7:
     resolution: {integrity: sha512-8WMXRDD1D+wCohjfslHDgICd2JtMATZU8CkhH8LVJqcJs6dyYj5TGptzP8wApbmEullGBSsCEzzap73DQ1HJaA==}
     deprecated: This is a stub types definition. yaml provides its own type definitions, so you do not need this installed.
@@ -13088,7 +13071,7 @@ packages:
       std-env: 3.9.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.0.9(@types/node@18.18.9)(happy-dom@15.11.7)
+      vitest: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -15118,6 +15101,15 @@ packages:
   /crelt@1.0.6:
     resolution: {integrity: sha512-VQ2MBenTq1fWZUH9DJNGti7kKv6EeAuYr3cLwxUWhIu1baTaXh4Ib5W2CqHVqib4/MqbYGJqiL3Zb8GJZr3l4g==}
     dev: false
+
+  /cross-env@10.1.0:
+    resolution: {integrity: sha512-GsYosgnACZTADcmEyJctkJIoqAhHjttw7RsFrVoJNXbsWWqaq6Ym+7kZjq6mS45O0jij6vtiReppKQEtqWy6Dw==}
+    engines: {node: '>=20'}
+    hasBin: true
+    dependencies:
+      '@epic-web/invariant': 1.0.0
+      cross-spawn: 7.0.6
+    dev: true
 
   /cross-fetch@3.2.0:
     resolution: {integrity: sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==}
@@ -17754,7 +17746,7 @@ packages:
     hasBin: true
     dependencies:
       get-stdin: 6.0.0
-      minimist: 1.2.0
+      minimist: 1.2.8
     dev: false
 
   /geojson-linestring-dissolve@0.0.1:
@@ -18132,12 +18124,12 @@ packages:
       uglify-js: 3.19.3
     dev: true
 
-  /happy-dom@15.11.7:
-    resolution: {integrity: sha512-KyrFvnl+J9US63TEzwoiJOQzZBJY7KgBushJA8X61DMbNsH+2ONkDuLDnCnwUiPTF42tLoEmrPyoqbenVA5zrg==}
-    engines: {node: '>=18.0.0'}
+  /happy-dom@20.0.10:
+    resolution: {integrity: sha512-6umCCHcjQrhP5oXhrHQQvLB0bwb1UzHAHdsXy+FjtKoYjUhmNZsQL8NivwM1vDvNEChJabVrUYxUnp/ZdYmy2g==}
+    engines: {node: '>=20.0.0'}
     dependencies:
-      entities: 4.5.0
-      webidl-conversions: 7.0.0
+      '@types/node': 18.18.9
+      '@types/whatwg-mimetype': 3.0.2
       whatwg-mimetype: 3.0.0
     dev: true
 
@@ -21320,14 +21312,6 @@ packages:
       is-plain-obj: 1.1.0
       kind-of: 6.0.3
 
-  /minimist@1.2.0:
-    resolution: {integrity: sha512-7Wl+Jz+IGWuSdgsQEJ4JunV0si/iMhg42MnQQG6h1R6TNeVenp4U9x5CC5v/gYqz/fENLQITAWXidNtVL0NNbw==}
-    dev: false
-
-  /minimist@1.2.6:
-    resolution: {integrity: sha512-Jsjnk4bw3YJqYzbdyBiNsPWHPfO++UGG749Cxs6peCu5Xg4nrena6OVxOYxrQTqww0Jmwt+Ref8rggumkTLz9Q==}
-    dev: false
-
   /minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
@@ -24498,7 +24482,7 @@ packages:
     hasBin: true
     dependencies:
       concat-stream: 1.4.11
-      minimist: 1.2.6
+      minimist: 1.2.8
       simplify-geometry: 0.0.2
     dev: false
 
@@ -26866,7 +26850,7 @@ packages:
       fsevents: 2.3.3
     dev: true
 
-  /vitest@3.0.9(@types/node@18.18.9)(happy-dom@15.11.7):
+  /vitest@3.0.9(@types/node@18.18.9)(happy-dom@20.0.10):
     resolution: {integrity: sha512-BbcFDqNyBlfSpATmTtXOAOj71RNKDDvjBM/uPfnxxVGrG+FSH2RQIwgeEngTaTkuU/h0ScFvf+tRcKfYXzBybQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
@@ -26905,7 +26889,7 @@ packages:
       chai: 5.2.0
       debug: 4.3.3
       expect-type: 1.2.1
-      happy-dom: 15.11.7
+      happy-dom: 20.0.10
       magic-string: 0.30.17
       pathe: 2.0.3
       std-env: 3.9.0
@@ -27059,7 +27043,7 @@ packages:
       - yaml
     dev: true
 
-  /vitest@3.0.9(happy-dom@15.11.7):
+  /vitest@3.0.9(happy-dom@20.0.10):
     resolution: {integrity: sha512-BbcFDqNyBlfSpATmTtXOAOj71RNKDDvjBM/uPfnxxVGrG+FSH2RQIwgeEngTaTkuU/h0ScFvf+tRcKfYXzBybQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
@@ -27097,7 +27081,7 @@ packages:
       chai: 5.2.0
       debug: 4.3.3
       expect-type: 1.2.1
-      happy-dom: 15.11.7
+      happy-dom: 20.0.10
       magic-string: 0.30.17
       pathe: 2.0.3
       std-env: 3.9.0
@@ -27225,6 +27209,7 @@ packages:
   /webidl-conversions@7.0.0:
     resolution: {integrity: sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g==}
     engines: {node: '>=12'}
+    dev: false
 
   /webpack-sources@3.2.3:
     resolution: {integrity: sha512-/DyMEOrDgLKKIG0fmvtz+4dUX/3Ghozwgm6iPp8KRhvn+eQf9+Q7GWxVNMk3+uCPWfdXYC4ExGBckIXdFEfH1w==}

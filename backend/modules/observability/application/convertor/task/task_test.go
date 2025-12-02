@@ -19,8 +19,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	entityCommon "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -47,6 +45,13 @@ func TestTaskDOs2DTOs(t *testing.T) {
 				SuccessCount: 3,
 				FailedCount:  1,
 				TotalCount:   4,
+			},
+			BackfillDetail: &entity.BackfillDetail{
+				SuccessCount:      3,
+				FailedCount:       1,
+				TotalCount:        4,
+				BackfillStatus:    kitTask.RunStatusRunning,
+				LastSpanPageToken: "abc",
 			},
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -102,7 +107,7 @@ func TestTaskDOs2DTOs(t *testing.T) {
 				IsCycle:       true,
 				CycleCount:    2,
 				CycleInterval: 3,
-				CycleTimeUnit: kitTask.TimeUnitDay,
+				CycleTimeUnit: entity.TimeUnitDay,
 			},
 			TaskConfig: &entity.TaskConfig{},
 			CreatedAt:  now,
@@ -200,7 +205,14 @@ func TestTaskDTO2DO(t *testing.T) {
 	t.Parallel()
 
 	now := time.Now()
-	spanFilter := &filter.SpanFilterFields{}
+	spanFilter := &filter.SpanFilterFields{
+		PlatformType: gptr.Of(kitCommon.PlatformTypeCozeloop),
+		SpanListType: gptr.Of(kitCommon.SpanListTypeRootSpan),
+		Filters: &filter.FilterFields{
+			QueryAndOr:   ptr.Of(filter.QueryRelationAnd),
+			FilterFields: []*filter.FilterField{},
+		},
+	}
 	dto := &kitTask.Task{
 		ID:          gptr.Of(int64(11)),
 		Name:        "dto",
@@ -239,20 +251,9 @@ func TestTaskDTO2DO(t *testing.T) {
 		},
 	}
 
-	overrideSpan := &entity.SpanFilterFields{
-		PlatformType: kitCommon.PlatformTypeCozeloop,
-		SpanListType: kitCommon.SpanListTypeRootSpan,
-		Filters: loop_span.FilterFields{
-			QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
-			FilterFields: []*loop_span.FilterField{},
-		},
-	}
-
-	entityTask := TaskDTO2DO(dto, "override", overrideSpan)
+	entityTask := TaskDTO2DO(dto)
 	if assert.NotNil(t, entityTask) {
 		assert.Equal(t, int64(11), entityTask.ID)
-		assert.Equal(t, "override", entityTask.CreatedBy)
-		assert.Equal(t, overrideSpan, entityTask.SpanFilter)
 		assert.NotZero(t, entityTask.CreatedAt.Unix())
 		assert.Equal(t, int64(1), entityTask.TaskDetail.SuccessCount)
 		assert.Equal(t, float64(0.3), entityTask.Sampler.SampleRate)
@@ -275,149 +276,6 @@ func TestSpanFilterPO2DO(t *testing.T) {
 
 	invalid := "{" // invalid json
 	assert.Nil(t, SpanFilterPO2DO(ctx, &invalid))
-}
-
-func TestCheckEffectiveTime(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	now := time.Now()
-
-	getCode := func(err error) int32 {
-		statusErr, ok := errorx.FromStatusError(err)
-		if !ok {
-			return 0
-		}
-		return statusErr.Code()
-	}
-
-	futureStart := now.Add(2 * time.Hour).UnixMilli()
-	futureEnd := now.Add(3 * time.Hour).UnixMilli()
-
-	cases := []struct {
-		name        string
-		effective   *kitTask.EffectiveTime
-		status      kitTask.TaskStatus
-		current     *entity.EffectiveTime
-		wantStart   int64
-		wantEnd     int64
-		wantErrCode int32
-	}{
-		{
-			name:        "nil current",
-			effective:   &kitTask.EffectiveTime{StartAt: gptr.Of(futureStart), EndAt: gptr.Of(futureEnd)},
-			status:      kitTask.TaskStatusUnstarted,
-			current:     nil,
-			wantErrCode: obErrorx.CommercialCommonInvalidParamCodeCode,
-		},
-		{
-			name:        "start after end",
-			effective:   &kitTask.EffectiveTime{StartAt: gptr.Of(futureEnd), EndAt: gptr.Of(futureStart)},
-			status:      kitTask.TaskStatusUnstarted,
-			current:     &entity.EffectiveTime{StartAt: futureStart, EndAt: futureEnd},
-			wantErrCode: obErrorx.CommercialCommonInvalidParamCodeCode,
-		},
-		{
-			name:        "update start in past",
-			effective:   &kitTask.EffectiveTime{StartAt: gptr.Of(now.Add(-time.Hour).UnixMilli()), EndAt: gptr.Of(futureEnd)},
-			status:      kitTask.TaskStatusRunning,
-			current:     &entity.EffectiveTime{StartAt: futureStart, EndAt: futureEnd},
-			wantErrCode: obErrorx.CommercialCommonInvalidParamCodeCode,
-		},
-		{
-			name:        "update end in past",
-			effective:   &kitTask.EffectiveTime{StartAt: gptr.Of(futureStart), EndAt: gptr.Of(now.Add(-time.Hour).UnixMilli())},
-			status:      kitTask.TaskStatusRunning,
-			current:     &entity.EffectiveTime{StartAt: futureStart, EndAt: futureEnd},
-			wantErrCode: obErrorx.CommercialCommonInvalidParamCodeCode,
-		},
-		{
-			name:      "unstarted updates both",
-			effective: &kitTask.EffectiveTime{StartAt: gptr.Of(futureStart), EndAt: gptr.Of(futureEnd)},
-			status:    kitTask.TaskStatusUnstarted,
-			current:   &entity.EffectiveTime{StartAt: 100, EndAt: 200},
-			wantStart: futureStart,
-			wantEnd:   futureEnd,
-		},
-		{
-			name:      "running keeps start",
-			effective: &kitTask.EffectiveTime{StartAt: gptr.Of(futureEnd), EndAt: gptr.Of(futureEnd + 1000)},
-			status:    kitTask.TaskStatusRunning,
-			current:   &entity.EffectiveTime{StartAt: 111, EndAt: 222},
-			wantStart: 111,
-			wantEnd:   futureEnd + 1000,
-		},
-		{
-			name:        "invalid status",
-			effective:   &kitTask.EffectiveTime{StartAt: gptr.Of(futureStart), EndAt: gptr.Of(futureEnd)},
-			status:      kitTask.TaskStatus("unknown"),
-			current:     &entity.EffectiveTime{StartAt: futureStart, EndAt: futureEnd},
-			wantErrCode: obErrorx.CommercialCommonInvalidParamCodeCode,
-		},
-	}
-
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got, err := CheckEffectiveTime(ctx, tc.effective, tc.status, tc.current)
-			if tc.wantErrCode != 0 {
-				assert.NotNil(t, err)
-				assert.Equal(t, tc.wantErrCode, getCode(err))
-				assert.Nil(t, got)
-				return
-			}
-			assert.NoError(t, err)
-			if assert.NotNil(t, got) {
-				assert.Equal(t, tc.wantStart, got.StartAt)
-				assert.Equal(t, tc.wantEnd, got.EndAt)
-			}
-		})
-	}
-}
-
-func TestCheckTaskStatus(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	getCode := func(err error) int32 {
-		statusErr, ok := errorx.FromStatusError(err)
-		if !ok {
-			return 0
-		}
-		return statusErr.Code()
-	}
-
-	cases := []struct {
-		name        string
-		status      kitTask.TaskStatus
-		current     kitTask.TaskStatus
-		want        kitTask.TaskStatus
-		wantErrCode int32
-	}{
-		{"unstarted ok", kitTask.TaskStatusUnstarted, kitTask.TaskStatusUnstarted, kitTask.TaskStatusUnstarted, 0},
-		{"unstarted invalid", kitTask.TaskStatusUnstarted, kitTask.TaskStatusRunning, "", obErrorx.CommercialCommonInvalidParamCodeCode},
-		{"running ok", kitTask.TaskStatusRunning, kitTask.TaskStatusPending, kitTask.TaskStatusRunning, 0},
-		{"running invalid", kitTask.TaskStatusRunning, kitTask.TaskStatusSuccess, "", obErrorx.CommercialCommonInvalidParamCodeCode},
-		{"pending ok", kitTask.TaskStatusPending, kitTask.TaskStatusRunning, kitTask.TaskStatusPending, 0},
-		{"disabled ok", kitTask.TaskStatusDisabled, kitTask.TaskStatusPending, kitTask.TaskStatusDisabled, 0},
-		{"success ok", kitTask.TaskStatusSuccess, kitTask.TaskStatusRunning, kitTask.TaskStatusSuccess, 0},
-		{"pending no transition", kitTask.TaskStatusPending, kitTask.TaskStatusDisabled, "", 0},
-	}
-
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got, err := CheckTaskStatus(ctx, tc.status, tc.current)
-			if tc.wantErrCode != 0 {
-				assert.Equal(t, tc.wantErrCode, getCode(err))
-				return
-			}
-			assert.NoError(t, err)
-			assert.Equal(t, tc.want, got)
-		})
-	}
 }
 
 func TestGetLastPartAfterDot(t *testing.T) {

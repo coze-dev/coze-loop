@@ -12,7 +12,9 @@ import (
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	ListSpans(ctx context.Context, req *trace.ListSpansRequest, callOptions ...callopt.Option) (r *trace.ListSpansResponse, err error)
+	ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest, callOptions ...callopt.Option) (r *trace.ListPreSpanResponse, err error)
 	GetTrace(ctx context.Context, req *trace.GetTraceRequest, callOptions ...callopt.Option) (r *trace.GetTraceResponse, err error)
+	SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest, callOptions ...callopt.Option) (r *trace.SearchTraceTreeResponse, err error)
 	BatchGetTracesAdvanceInfo(ctx context.Context, req *trace.BatchGetTracesAdvanceInfoRequest, callOptions ...callopt.Option) (r *trace.BatchGetTracesAdvanceInfoResponse, err error)
 	IngestTracesInner(ctx context.Context, req *trace.IngestTracesRequest, callOptions ...callopt.Option) (r *trace.IngestTracesResponse, err error)
 	GetTracesMetaInfo(ctx context.Context, req *trace.GetTracesMetaInfoRequest, callOptions ...callopt.Option) (r *trace.GetTracesMetaInfoResponse, err error)
@@ -65,9 +67,19 @@ func (p *kTraceServiceClient) ListSpans(ctx context.Context, req *trace.ListSpan
 	return p.kClient.ListSpans(ctx, req)
 }
 
+func (p *kTraceServiceClient) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest, callOptions ...callopt.Option) (r *trace.ListPreSpanResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListPreSpan(ctx, req)
+}
+
 func (p *kTraceServiceClient) GetTrace(ctx context.Context, req *trace.GetTraceRequest, callOptions ...callopt.Option) (r *trace.GetTraceResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetTrace(ctx, req)
+}
+
+func (p *kTraceServiceClient) SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest, callOptions ...callopt.Option) (r *trace.SearchTraceTreeResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SearchTraceTree(ctx, req)
 }
 
 func (p *kTraceServiceClient) BatchGetTracesAdvanceInfo(ctx context.Context, req *trace.BatchGetTracesAdvanceInfoRequest, callOptions ...callopt.Option) (r *trace.BatchGetTracesAdvanceInfoResponse, err error) {

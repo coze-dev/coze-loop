@@ -53,9 +53,17 @@ func (p *AbilityMultiModal) IsValid() error {
 			return fmt.Errorf("field AbilityImage not valid, %w", err)
 		}
 	}
+	if p.AbilityVideo != nil {
+		if err := p.AbilityVideo.IsValid(); err != nil {
+			return fmt.Errorf("field AbilityVideo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *AbilityImage) IsValid() error {
+	return nil
+}
+func (p *AbilityVideo) IsValid() error {
 	return nil
 }
 func (p *ProtocolConfig) IsValid() error {

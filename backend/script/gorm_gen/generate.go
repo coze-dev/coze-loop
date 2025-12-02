@@ -68,7 +68,7 @@ func generateForPrompt(db *gorm.DB) {
 			})))
 	}
 
-	for _, table := range []string{"prompt_commit"} {
+	for _, table := range []string{"prompt_commit", "prompt_relation"} {
 		models = append(models, g.GenerateModel(table,
 			gen.FieldGORMTag("*", func(tag field.GormTag) field.GormTag {
 				return tag.Set("charset=utf8mb4")
@@ -236,10 +236,10 @@ func generateForEvaluationEvaluator(db *gorm.DB) {
 	g.UseDB(db)
 
 	evaluatorModel := g.GenerateModelAs("evaluator", "Evaluator")
-	evaluatorVersionModel := g.GenerateModelAs("evaluator_version", "EvaluatorVersion")
-	evaluatorRecordModel := g.GenerateModelAs("evaluator_record", "EvaluatorRecord")
+	evaluatorTagModel := g.GenerateModelAs("evaluator_tag", "EvaluatorTag")
+	evaluatorRecordModel := g.GenerateModelAs("evaluator_template", "EvaluatorTemplate")
 
-	g.ApplyBasic(evaluatorModel, evaluatorVersionModel, evaluatorRecordModel)
+	g.ApplyBasic(evaluatorModel, evaluatorTagModel, evaluatorRecordModel)
 	g.Execute()
 }
 

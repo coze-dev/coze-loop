@@ -5,6 +5,7 @@ package ck
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -167,10 +168,9 @@ func TestExptTurnResultFilterDAOImpl_buildQueryConditions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotSelectClause, gotWhereClause, gotOrderClause, gotArgs := d.buildQueryConditions(ctx, tt.cond)
-			assert.NotNil(t, gotSelectClause)
-			assert.NotNil(t, gotWhereClause)
-			assert.NotNil(t, gotOrderClause)
+			whereSQL, keywordCond, gotArgs := d.buildQueryConditions(ctx, tt.cond)
+			assert.NotNil(t, whereSQL)
+			assert.NotNil(t, keywordCond)
 			assert.NotNil(t, gotArgs)
 		})
 	}
@@ -186,22 +186,18 @@ func TestExptTurnResultFilterDAOImpl_buildBaseSQL(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name              string
-		joinSQL           string
-		whereSQL          string
-		keywordCond       string
-		evalSetSyncCkDate string
-		args              *[]interface{}
-		want              string
+		name        string
+		whereSQL    string
+		keywordCond string
+		args        *[]interface{}
+		want        string
 	}{
 		{
-			name:              "empty_conditions",
-			joinSQL:           "1",
-			whereSQL:          "2",
-			keywordCond:       "3",
-			evalSetSyncCkDate: "4",
-			args:              &[]interface{}{},
-			want:              "生成的基础 SQL 预期值，需根据实际实现修改",
+			name:        "empty_conditions",
+			whereSQL:    "2",
+			keywordCond: "3",
+			args:        &[]interface{}{},
+			want:        "SELECT  etrf.item_id, etrf.status FROM `cozeloop-clickhouse`.expt_turn_result_filter etrf FINAL WHERE 1=123",
 		},
 	}
 
@@ -210,8 +206,8 @@ func TestExptTurnResultFilterDAOImpl_buildBaseSQL(t *testing.T) {
 			mockConfig.EXPECT().GetCKDBName(gomock.Any()).Return(&entity.CKDBConfig{
 				ExptTurnResultFilterDBName: "ck",
 			}).AnyTimes()
-			got := d.buildBaseSQL(ctx, tt.joinSQL, tt.whereSQL, tt.keywordCond, tt.evalSetSyncCkDate, tt.args)
-			assert.NotNil(t, got)
+			got := d.buildBaseSQL(ctx, tt.whereSQL, tt.keywordCond, tt.args)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -238,15 +234,13 @@ func TestExptTurnResultFilterDAOImpl_appendPaginationArgs(t *testing.T) {
 				},
 			},
 			args: []interface{}{},
-			want: "生成的基础 SQL 预期值，需根据实际实现修改",
+			want: "LIMIT 10 OFFSET 0",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			args := d.appendPaginationArgs(tt.args, tt.cond)
-			if len(args) != 2 {
-				t.Errorf("appendPaginationArgs failed, args len not equal 2, args: %v", args)
-			}
+			assert.Equal(t, tt.want, fmt.Sprintf("LIMIT %d OFFSET %d", args[len(args)-2], args[len(args)-1]))
 		})
 	}
 }
@@ -278,11 +272,11 @@ func TestExptTurnResultFilterDAOImpl_buildGetByExptIDItemIDsSQL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockConfig.EXPECT().GetCKDBName(gomock.Any()).Return(&entity.CKDBConfig{
 				ExptTurnResultFilterDBName: "ck",
-			})
+			}).AnyTimes()
 			got, args := d.buildGetByExptIDItemIDsSQL(ctx, tt.spaceID, tt.exptID, tt.createdDate, tt.itemIDs)
 			assert.NotNil(t, got)
 			if len(args) != 4 {
-				t.Errorf("buildGetByExptIDItemIDsSQL failed, args len not equal 3, args: %v", args)
+				t.Errorf("buildGetByExptIDItemIDsSQL failed, args len not equal 4, args: %v", args)
 			}
 		})
 	}

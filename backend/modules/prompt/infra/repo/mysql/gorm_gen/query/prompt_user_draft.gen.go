@@ -37,12 +37,14 @@ func newPromptUserDraft(db *gorm.DB, opts ...gen.DOOption) promptUserDraft {
 	_promptUserDraft.VariableDefs = field.NewString(tableName, "variable_defs")
 	_promptUserDraft.Tools = field.NewString(tableName, "tools")
 	_promptUserDraft.ToolCallConfig = field.NewString(tableName, "tool_call_config")
+	_promptUserDraft.Metadata = field.NewString(tableName, "metadata")
 	_promptUserDraft.BaseVersion = field.NewString(tableName, "base_version")
 	_promptUserDraft.IsDraftEdited = field.NewInt32(tableName, "is_draft_edited")
 	_promptUserDraft.ExtInfo = field.NewString(tableName, "ext_info")
 	_promptUserDraft.CreatedAt = field.NewTime(tableName, "created_at")
 	_promptUserDraft.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_promptUserDraft.DeletedAt = field.NewField(tableName, "deleted_at")
+	_promptUserDraft.HasSnippets = field.NewBool(tableName, "has_snippets")
 
 	_promptUserDraft.fillFieldMap()
 
@@ -64,12 +66,14 @@ type promptUserDraft struct {
 	VariableDefs   field.String // 变量定义
 	Tools          field.String // tools
 	ToolCallConfig field.String // tool调用配置
+	Metadata       field.String // 模板元信息
 	BaseVersion    field.String // 草稿关联版本
 	IsDraftEdited  field.Int32  // 草稿内容是否基于BaseVersion有变更
 	ExtInfo        field.String // 扩展字段
 	CreatedAt      field.Time   // 创建时间
 	UpdatedAt      field.Time   // 更新时间
 	DeletedAt      field.Field  // 删除时间
+	HasSnippets    field.Bool   // 是否包含prompt片段
 
 	fieldMap map[string]field.Expr
 }
@@ -96,12 +100,14 @@ func (p *promptUserDraft) updateTableName(table string) *promptUserDraft {
 	p.VariableDefs = field.NewString(table, "variable_defs")
 	p.Tools = field.NewString(table, "tools")
 	p.ToolCallConfig = field.NewString(table, "tool_call_config")
+	p.Metadata = field.NewString(table, "metadata")
 	p.BaseVersion = field.NewString(table, "base_version")
 	p.IsDraftEdited = field.NewInt32(table, "is_draft_edited")
 	p.ExtInfo = field.NewString(table, "ext_info")
 	p.CreatedAt = field.NewTime(table, "created_at")
 	p.UpdatedAt = field.NewTime(table, "updated_at")
 	p.DeletedAt = field.NewField(table, "deleted_at")
+	p.HasSnippets = field.NewBool(table, "has_snippets")
 
 	p.fillFieldMap()
 
@@ -130,7 +136,7 @@ func (p *promptUserDraft) GetFieldByName(fieldName string) (field.OrderExpr, boo
 }
 
 func (p *promptUserDraft) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 16)
+	p.fieldMap = make(map[string]field.Expr, 18)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["space_id"] = p.SpaceID
 	p.fieldMap["prompt_id"] = p.PromptID
@@ -141,12 +147,14 @@ func (p *promptUserDraft) fillFieldMap() {
 	p.fieldMap["variable_defs"] = p.VariableDefs
 	p.fieldMap["tools"] = p.Tools
 	p.fieldMap["tool_call_config"] = p.ToolCallConfig
+	p.fieldMap["metadata"] = p.Metadata
 	p.fieldMap["base_version"] = p.BaseVersion
 	p.fieldMap["is_draft_edited"] = p.IsDraftEdited
 	p.fieldMap["ext_info"] = p.ExtInfo
 	p.fieldMap["created_at"] = p.CreatedAt
 	p.fieldMap["updated_at"] = p.UpdatedAt
 	p.fieldMap["deleted_at"] = p.DeletedAt
+	p.fieldMap["has_snippets"] = p.HasSnippets
 }
 
 func (p promptUserDraft) clone(db *gorm.DB) promptUserDraft {

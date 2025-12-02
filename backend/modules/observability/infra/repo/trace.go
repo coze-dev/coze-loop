@@ -11,11 +11,15 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -29,7 +33,23 @@ func NewTraceCKRepoImpl(
 	spanDao ck.ISpansDao,
 	annoDao ck.IAnnotationDao,
 	traceConfig config.ITraceConfig,
+	spanRedisDao redis.ISpansRedisDao,
+	spanProducer mq.ISpanProducer,
 ) (repo.ITraceRepo, error) {
+	return &TraceCkRepoImpl{
+		spansDao:     spanDao,
+		annoDao:      annoDao,
+		traceConfig:  traceConfig,
+		spanRedisDao: spanRedisDao,
+		spanProducer: spanProducer,
+	}, nil
+}
+
+func NewTraceMetricCKRepoImpl(
+	spanDao ck.ISpansDao,
+	annoDao ck.IAnnotationDao,
+	traceConfig config.ITraceConfig,
+) (metric_repo.IMetricRepo, error) {
 	return &TraceCkRepoImpl{
 		spansDao:    spanDao,
 		annoDao:     annoDao,
@@ -38,9 +58,15 @@ func NewTraceCKRepoImpl(
 }
 
 type TraceCkRepoImpl struct {
-	spansDao    ck.ISpansDao
-	annoDao     ck.IAnnotationDao
-	traceConfig config.ITraceConfig
+	spansDao     ck.ISpansDao
+	annoDao      ck.IAnnotationDao
+	traceConfig  config.ITraceConfig
+	spanRedisDao redis.ISpansRedisDao
+	spanProducer mq.ISpanProducer
+}
+
+func (t *TraceCkRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error) {
+	return t.spanRedisDao.GetPreSpans(ctx, param.PreRespID)
 }
 
 type PageToken struct {
@@ -87,6 +113,7 @@ func (t *TraceCkRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansPara
 		Limit:            req.Limit + 1,
 		OrderByStartTime: req.DescByStartTime,
 		OmitColumns:      req.OmitColumns,
+		SelectColumns:    req.SelectColumns,
 	})
 	if err != nil {
 		return nil, err
@@ -163,16 +190,20 @@ func (t *TraceCkRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam)
 			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		})
 	}
+	filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
+		SubFilter: req.Filters,
+	})
 	st := time.Now()
 	spans, err := t.spansDao.Get(ctx, &ck.QueryParam{
-		QueryType:    ck.QueryTypeGetTrace,
-		Tables:       tableCfg.SpanTables,
-		AnnoTableMap: tableCfg.AnnoTableMap,
-		StartTime:    time_util.MillSec2MicroSec(req.StartAt),
-		EndTime:      time_util.MillSec2MicroSec(req.EndAt),
-		Filters:      filter,
-		Limit:        req.Limit,
-		OmitColumns:  req.OmitColumns,
+		QueryType:     ck.QueryTypeGetTrace,
+		Tables:        tableCfg.SpanTables,
+		AnnoTableMap:  tableCfg.AnnoTableMap,
+		StartTime:     time_util.MillSec2MicroSec(req.StartAt),
+		EndTime:       time_util.MillSec2MicroSec(req.EndAt),
+		Filters:       filter,
+		Limit:         req.Limit,
+		OmitColumns:   req.OmitColumns,
+		SelectColumns: req.SelectColumns,
 	})
 	if err != nil {
 		return nil, err
@@ -259,22 +290,53 @@ func (t *TraceCkRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Ins
 	if err != nil {
 		return err
 	}
-	pos := make([]*model.ObservabilityAnnotation, 0, len(param.Annotations))
-	for _, annotation := range param.Annotations {
+	pos := make([]*model.ObservabilityAnnotation, 0, len(param.Span.Annotations))
+	for _, annotation := range param.Span.Annotations {
 		annotationPO, err := convertor.AnnotationDO2PO(annotation)
 		if err != nil {
 			return err
 		}
 		pos = append(pos, annotationPO)
 	}
-	return t.annoDao.Insert(ctx, &ck.InsertAnnotationParam{
+	err = t.annoDao.Insert(ctx, &ck.InsertAnnotationParam{
 		Table:       table,
 		Annotations: pos,
 	})
+	if err != nil {
+		return nil
+	}
+	span := param.Span
+	annotationType := ""
+	if param.AnnotationType != nil {
+		annotationType = string(*param.AnnotationType)
+	}
+	return t.spanProducer.SendSpanWithAnnotation(ctx, &entity.SpanEvent{
+		Span: span,
+	}, annotationType)
 }
 
-func (t *TraceCkRepoImpl) UpsertAnnotation(ctx context.Context, param *repo.UpsertAnnotationParam) error {
-	return nil
+func (t *TraceCkRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMetricsParam) (*metric_repo.GetMetricsResult, error) {
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
+	if err != nil {
+		return nil, err
+	}
+	st := time.Now()
+	metrics, err := t.spansDao.GetMetrics(ctx, &ck.GetMetricsParam{
+		Tables:       tableCfg.SpanTables,
+		Aggregations: param.Aggregations,
+		GroupBys:     param.GroupBys,
+		Filters:      param.Filters,
+		StartAt:      time_util.MillSec2MicroSec(param.StartAt),
+		EndAt:        time_util.MillSec2MicroSec(param.EndAt),
+		Granularity:  param.Granularity,
+	})
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "get metrics successfully, cost %v", time.Since(st))
+	return &metric_repo.GetMetricsResult{
+		Data: metrics,
+	}, nil
 }
 
 type queryTableCfg struct {

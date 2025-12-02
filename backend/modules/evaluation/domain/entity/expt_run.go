@@ -64,6 +64,10 @@ func IsTurnRunFinished(state TurnRunState) bool {
 	return state == TurnRunState_Success || state == TurnRunState_Fail || state == TurnRunState_Terminal
 }
 
+func IsExptFinishing(status ExptStatus) bool {
+	return status == ExptStatus_Terminating || status == ExptStatus_Draining
+}
+
 func IsExptFinished(status ExptStatus) bool {
 	return status == ExptStatus_Success || status == ExptStatus_Failed || status == ExptStatus_Terminated || status == ExptStatus_SystemTerminated
 }
@@ -103,6 +107,8 @@ type ExptConsumerConf struct {
 
 	ExptExecConf      *ExptExecConf           `json:"expt_exec_conf" mapstructure:"expt_exec_conf"`
 	SpaceExptExecConf map[int64]*ExptExecConf `json:"space_expt_exec_conf" mapstructure:"space_expt_exec_conf"`
+
+	SchedulerAbortCtrl *SchedulerAbortCtrl `json:"scheduler_abort_ctrl" mapstructure:"scheduler_abort_ctrl"`
 }
 
 func (e *ExptConsumerConf) GetExptExecConf(spaceID int64) *ExptExecConf {
@@ -113,6 +119,53 @@ func (e *ExptConsumerConf) GetExptExecConf(spaceID int64) *ExptExecConf {
 		return e.SpaceExptExecConf[spaceID]
 	}
 	return e.ExptExecConf
+}
+
+func (e *ExptConsumerConf) GetSchedulerAbortCtrl() *SchedulerAbortCtrl {
+	if e != nil && e.SchedulerAbortCtrl != nil {
+		return e.SchedulerAbortCtrl
+	}
+	return nil
+}
+
+type SchedulerAbortCtrl struct {
+	UserExptTypeCtrl  map[string][]ExptType `json:"user_expt_type_ctrl" mapstructure:"user_expt_type_ctrl"`
+	SpaceExptTypeCtrl map[int64][]ExptType  `json:"space_expt_type_ctrl" mapstructure:"space_expt_type_ctrl"`
+	ExptIDCtrl        map[int64]bool        `json:"expt_id_ctrl" mapstructure:"expt_id_ctrl"`
+}
+
+func (s *SchedulerAbortCtrl) Abort(spaceID, exptID int64, userID string, exptType ExptType) bool {
+	if s == nil {
+		return false
+	}
+
+	if s.ExptIDCtrl != nil {
+		if abort, exists := s.ExptIDCtrl[exptID]; exists && abort {
+			return true
+		}
+	}
+
+	if s.SpaceExptTypeCtrl != nil {
+		if exptTypes, exists := s.SpaceExptTypeCtrl[spaceID]; exists {
+			for _, et := range exptTypes {
+				if et == exptType {
+					return true
+				}
+			}
+		}
+	}
+
+	if s.UserExptTypeCtrl != nil {
+		if exptTypes, exists := s.UserExptTypeCtrl[userID]; exists {
+			for _, et := range exptTypes {
+				if et == exptType {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 type ExptExecConf struct {

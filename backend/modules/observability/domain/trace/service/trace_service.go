@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
-	taskRepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bytedance/gg/gptr"
@@ -37,7 +37,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
-	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
+	timeutil "github.com/coze-dev/coze-loop/backend/pkg/time"
 	"github.com/samber/lo"
 )
 
@@ -60,6 +60,19 @@ type ListSpansResp struct {
 	HasMore       bool
 }
 
+type ListPreSpanReq struct {
+	WorkspaceID        int64
+	StartTime          int64 // ms
+	TraceID            string
+	SpanID             string
+	PreviousResponseID string
+	PlatformType       loop_span.PlatformType
+}
+
+type ListPreSpanResp struct {
+	Spans loop_span.SpanList
+}
+
 type GetTraceReq struct {
 	WorkspaceID  int64
 	LogID        string
@@ -68,6 +81,8 @@ type GetTraceReq struct {
 	EndTime      int64 // ms
 	PlatformType loop_span.PlatformType
 	SpanIDs      []string
+	WithDetail   bool
+	Filters      *loop_span.FilterFields
 }
 
 type GetTraceResp struct {
@@ -84,7 +99,10 @@ type SearchTraceOApiReq struct {
 	StartTime             int64 // ms
 	EndTime               int64 // ms
 	Limit                 int32
+	SpanIDs               []string
 	PlatformType          loop_span.PlatformType
+	WithDetail            bool
+	Filters               *loop_span.FilterFields
 }
 
 type SearchTraceOApiResp struct {
@@ -146,7 +164,8 @@ type GetTracesMetaInfoReq struct {
 }
 
 type GetTracesMetaInfoResp struct {
-	FilesMetas map[string]*config.FieldMeta
+	FilesMetas      map[string]*config.FieldMeta
+	KeySpanTypeList []string
 }
 
 type CreateAnnotationReq struct {
@@ -244,6 +263,7 @@ type IAnnotationEvent interface {
 //go:generate mockgen -destination=mocks/trace_service.go -package=mocks . ITraceService
 type ITraceService interface {
 	ListSpans(ctx context.Context, req *ListSpansReq) (*ListSpansResp, error)
+	ListPreSpan(ctx context.Context, req *ListPreSpanReq) (r *ListPreSpanResp, err error)
 	GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error)
 	SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error)
 	ListSpansOApi(ctx context.Context, req *ListSpansOApiReq) (*ListSpansOApiResp, error)
@@ -271,7 +291,8 @@ func NewTraceServiceImpl(
 	buildHelper TraceFilterProcessorBuilder,
 	tenantProvider tenant.ITenantProvider,
 	evalSvc rpc.IEvaluatorRPCAdapter,
-	taskRepo taskRepo.ITaskRepo,
+	taskRepo taskrepo.ITaskRepo,
+	persistentRedis redis.PersistentCmdable,
 ) (ITraceService, error) {
 	return &TraceServiceImpl{
 		traceRepo:          tRepo,
@@ -283,6 +304,7 @@ func NewTraceServiceImpl(
 		metrics:            metrics,
 		evalSvc:            evalSvc,
 		taskRepo:           taskRepo,
+		persistentRedis:    persistentRedis,
 	}, nil
 }
 
@@ -295,33 +317,240 @@ type TraceServiceImpl struct {
 	buildHelper        TraceFilterProcessorBuilder
 	tenantProvider     tenant.ITenantProvider
 	evalSvc            rpc.IEvaluatorRPCAdapter
-	taskRepo           taskRepo.ITaskRepo
+	taskRepo           taskrepo.ITaskRepo
+	persistentRedis    redis.PersistentCmdable
 }
 
-func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
+const (
+	keyPreviousResponseID = "previous_response_id"
+	keyResponseID         = "response_id"
+)
+
+func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq) (resp *ListPreSpanResp, err error) {
 	tenants, err := r.getTenants(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
 	}
+
+	// get pre span ids from redis
+	preAndCurrentSpanIDs, respIDByOrder, err := r.traceRepo.GetPreSpanIDs(ctx, &repo.GetPreSpanIDsParam{
+		PreRespID: req.PreviousResponseID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	preAndCurrentSpanIDs = append(preAndCurrentSpanIDs, req.SpanID) // for select current span together
+
+	// batch select from ck
+	preAndCurrentSpans, err := r.batchGetPreSpan(ctx, preAndCurrentSpanIDs, tenants, req.StartTime)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+
+	// span processors
+	processors, err := r.buildHelper.BuildListSpansProcessors(ctx, span_processor.Settings{
+		WorkspaceId:    req.WorkspaceID,
+		PlatformType:   req.PlatformType,
+		QueryStartTime: req.StartTime - timeutil.Day2MillSec(30), // past 30 days
+		QueryEndTime:   req.StartTime,
+		QueryTenants:   tenants,
+	})
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	for _, p := range processors {
+		preAndCurrentSpans, err = p.Transform(ctx, preAndCurrentSpans)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// auth check
+	if err := r.checkGetPreSpanAuth(ctx, req, tenants, preAndCurrentSpans); err != nil {
+		return nil, err
+	}
+
+	// order SpanList: remove duplicate span_id, and remove current span
+	orderSpans := r.orderPreSpans(preAndCurrentSpans, respIDByOrder)
+
+	return &ListPreSpanResp{Spans: orderSpans}, nil
+}
+
+func (r *TraceServiceImpl) batchGetPreSpan(ctx context.Context, spanIDs []string, tenants []string, startTime int64) ([]*loop_span.Span, error) {
+	batchNum := 100
+	batchPreSpan := make([][]string, 0)
+	oneBatchPreSpan := make([]string, 0)
+	preAndCurrentSpans := make([]*loop_span.Span, 0)
+	for _, spanID := range spanIDs {
+		oneBatchPreSpan = append(oneBatchPreSpan, spanID)
+		if len(oneBatchPreSpan) == batchNum {
+			batchPreSpan = append(batchPreSpan, oneBatchPreSpan)
+			oneBatchPreSpan = make([]string, 0)
+		}
+	}
+	if len(oneBatchPreSpan) > 0 {
+		batchPreSpan = append(batchPreSpan, oneBatchPreSpan)
+	}
+	for _, oneBatchSpan := range batchPreSpan {
+		dbSpans, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+			Tenants: tenants,
+			Filters: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: loop_span.SpanFieldSpanId,
+						FieldType: loop_span.FieldTypeString,
+						Values:    oneBatchSpan,
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+				},
+			},
+			StartAt: startTime - timeutil.Day2MillSec(30), // past 30 days
+			EndAt:   startTime + 1,
+			Limit:   200,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if dbSpans != nil && len(dbSpans.Spans) > 0 {
+			preAndCurrentSpans = append(preAndCurrentSpans, dbSpans.Spans...)
+		}
+	}
+
+	return preAndCurrentSpans, nil
+}
+
+func (r *TraceServiceImpl) checkGetPreSpanAuth(ctx context.Context, req *ListPreSpanReq, tenants []string, preAndCurrentSpans []*loop_span.Span) error {
+	// 1. check current span: check previous_response_id is correct, and if it is in this workspace, pass
+	// 2. check pre span: if one span of preSpan in this workspace, pass
+	// 3. check span of current trace: if one span of trace in this workspace, pass
+
+	isAuthPass := false
+	var currentSpan *loop_span.Span
+	for _, span := range preAndCurrentSpans {
+		if span.SpanID == req.SpanID && span.TraceID == req.TraceID {
+			currentSpan = span
+			break
+		}
+	}
+	if currentSpan == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("current span not found"))
+	}
+	if preRespID, ok := currentSpan.SystemTagsString[keyPreviousResponseID]; !ok || preRespID != req.PreviousResponseID {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg(fmt.Sprintf("req previous_response_id is not current span's[%s]", preRespID)))
+	}
+	if currentSpan.WorkspaceID == strconv.FormatInt(req.WorkspaceID, 10) {
+		isAuthPass = true
+	}
+
+	if !isAuthPass {
+		for _, span := range preAndCurrentSpans {
+			if span.WorkspaceID == strconv.FormatInt(req.WorkspaceID, 10) {
+				isAuthPass = true
+				break
+			}
+		}
+	}
+
+	if !isAuthPass {
+		dbSpans, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+			Tenants: tenants,
+			Filters: &loop_span.FilterFields{
+				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: loop_span.SpanFieldTraceId,
+						FieldType: loop_span.FieldTypeString,
+						Values:    []string{req.TraceID},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+					},
+					{
+						FieldName: loop_span.SpanFieldSpaceId,
+						FieldType: loop_span.FieldTypeString,
+						Values:    []string{strconv.FormatInt(req.WorkspaceID, 10)},
+						QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+					},
+				},
+			},
+			StartAt:       req.StartTime - timeutil.Day2MillSec(30), // past 30 days
+			EndAt:         req.StartTime,
+			SelectColumns: []string{loop_span.SpanFieldSpanId},
+			Limit:         1,
+		})
+		if err != nil {
+			return err
+		}
+		if dbSpans != nil && len(dbSpans.Spans) > 0 {
+			isAuthPass = true
+		}
+	}
+	if !isAuthPass {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no span in this workspace"))
+	}
+
+	return nil
+}
+
+func (r *TraceServiceImpl) orderPreSpans(preAndCurrentSpans []*loop_span.Span, respIDByOrder []string) loop_span.SpanList {
+	respIDSpanMap := make(map[string]*loop_span.Span)
+	for _, span := range preAndCurrentSpans {
+		if respID, ok := span.SystemTagsString[keyResponseID]; ok {
+			respIDSpanMap[respID] = span
+		}
+	}
+	orderSpans := make(loop_span.SpanList, 0, len(respIDByOrder))
+	for i := range respIDByOrder {
+		if s, ok := respIDSpanMap[respIDByOrder[i]]; ok {
+			orderSpans = append(orderSpans, s)
+		}
+	}
+
+	return orderSpans
+}
+
+func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
+	if req != nil && req.Filters != nil {
+		if err := req.Filters.Traverse(processSpecificFilter); err != nil {
+			return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+		}
+	}
+
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+	omitColumns := make([]string, 0)
+	if !req.WithDetail {
+		omitColumns = []string{"input", "output"}
+	}
 	st := time.Now()
+	limit := int32(1000)
+	if !req.WithDetail {
+		limit = 10000
+	}
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
-		Tenants: tenants,
-		LogID:   req.LogID,
-		TraceID: req.TraceID,
-		StartAt: req.StartTime,
-		EndAt:   req.EndTime,
-		Limit:   1000,
-		SpanIDs: req.SpanIDs,
+		Tenants:     tenants,
+		LogID:       req.LogID,
+		TraceID:     req.TraceID,
+		StartAt:     req.StartTime,
+		EndAt:       req.EndTime,
+		Limit:       limit,
+		SpanIDs:     req.SpanIDs,
+		Filters:     req.Filters,
+		OmitColumns: omitColumns,
 	})
 	r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 	if err != nil {
 		return nil, err
 	}
 	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
-		WorkspaceId:    req.WorkspaceID,
-		PlatformType:   req.PlatformType,
-		QueryStartTime: req.StartTime,
-		QueryEndTime:   req.EndTime,
+		WorkspaceId:     req.WorkspaceID,
+		PlatformType:    req.PlatformType,
+		QueryStartTime:  req.StartTime,
+		QueryEndTime:    req.EndTime,
+		SpanDoubleCheck: len(req.SpanIDs) > 0 || (req.Filters != nil && len(req.Filters.FilterFields) > 0),
+		QueryTenants:    tenants,
+		QueryLogID:      req.LogID,
+		QueryTraceID:    req.TraceID,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -378,6 +607,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		PlatformType:   req.PlatformType,
 		QueryStartTime: req.StartTime,
 		QueryEndTime:   req.EndTime,
+		QueryTenants:   tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -396,14 +626,28 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 }
 
 func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error) {
+	if req != nil && req.Filters != nil {
+		if err := req.Filters.Traverse(processSpecificFilter); err != nil {
+			return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+		}
+	}
+
+	omitColumns := make([]string, 0)
+	if !req.WithDetail {
+		omitColumns = []string{"input", "output"}
+	}
+
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
 		Tenants:            req.Tenants,
 		TraceID:            req.TraceID,
 		LogID:              req.LogID,
+		SpanIDs:            req.SpanIDs,
 		StartAt:            req.StartTime,
 		EndAt:              req.EndTime,
 		Limit:              req.Limit,
 		NotQueryAnnotation: false,
+		Filters:            req.Filters,
+		OmitColumns:        omitColumns,
 	})
 	if err != nil {
 		return nil, err
@@ -414,6 +658,10 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		QueryStartTime:        req.StartTime,
 		QueryEndTime:          req.EndTime,
 		PlatformType:          req.PlatformType,
+		SpanDoubleCheck:       req.Filters != nil && len(req.Filters.FilterFields) > 0,
+		QueryTenants:          req.Tenants,
+		QueryTraceID:          req.TraceID,
+		QueryLogID:            req.LogID,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -467,6 +715,7 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 		WorkspaceId:    req.WorkspaceID,
 		QueryStartTime: req.StartTime,
 		QueryEndTime:   req.EndTime,
+		QueryTenants:   req.Tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -485,9 +734,7 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 }
 
 func (r *TraceServiceImpl) IngestTraces(ctx context.Context, req *IngestTracesReq) error {
-	processors, err := r.buildHelper.BuildIngestTraceProcessors(ctx, span_processor.Settings{
-		Tenant: req.Tenant,
-	})
+	processors, err := r.buildHelper.BuildIngestTraceProcessors(ctx, span_processor.Settings{})
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
@@ -529,15 +776,6 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 	resp := &GetTracesAdvanceInfoResp{
 		Infos: []*loop_span.TraceAdvanceInfo{},
 	}
-	// use one processor...
-	processors, err := r.buildHelper.BuildAdvanceInfoProcessors(ctx, span_processor.Settings{
-		WorkspaceId:  req.WorkspaceID,
-		PlatformType: req.PlatformType,
-	})
-	if err != nil {
-		logs.CtxError(ctx, "Fail to build advance info processor, %v", err)
-		return nil, err
-	}
 	for _, v := range req.Traces {
 		g.Go(func() error {
 			defer goroutine.Recovery(ctx)
@@ -552,12 +790,26 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 					loop_span.SpanFieldInput,
 					loop_span.SpanFieldOutput,
 				},
+				Filters: loop_span.GetModelSpansFilter(),
 			}
 			st := time.Now()
 			spans, err := r.traceRepo.GetTrace(ctx, qReq)
 			r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 			if err != nil {
 				logs.CtxError(ctx, "Fail to get trace %v, %v", *qReq, err)
+				return err
+			}
+			processors, err := r.buildHelper.BuildAdvanceInfoProcessors(ctx, span_processor.Settings{
+				WorkspaceId:     req.WorkspaceID,
+				PlatformType:    req.PlatformType,
+				QueryStartTime:  v.StartTime,
+				QueryEndTime:    v.EndTime + defaultTimeRange,
+				SpanDoubleCheck: true,
+				QueryTenants:    tenants,
+				QueryTraceID:    v.TraceID,
+			})
+			if err != nil {
+				logs.CtxError(ctx, "Fail to build advance info processor, %v", err)
 				return err
 			}
 			for _, p := range processors {
@@ -594,20 +846,41 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
+	baseFields, ok := cfg.FieldMetas[loop_span.PlatformDefault][req.SpanListType]
+	if !ok {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("base meta info not found"))
+	}
+
 	fields, ok := cfg.FieldMetas[req.PlatformType][req.SpanListType]
 	if !ok {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("meta info not found"))
+		logs.CtxWarn(ctx, "FieldMetas not found: %v-%v", req.PlatformType, req.SpanListType)
 	}
 	fieldMetas := make(map[string]*config.FieldMeta)
-	for _, field := range fields {
+	for _, field := range baseFields {
 		fieldMta, ok := cfg.AvailableFields[field]
 		if !ok || fieldMta == nil {
+			logs.CtxError(ctx, "GetTracesMetaInfo invalid field: %v", field)
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
 		}
 		fieldMetas[field] = fieldMta
 	}
+	for _, field := range fields {
+		fieldMta, ok := cfg.AvailableFields[field]
+		if !ok || fieldMta == nil {
+			logs.CtxError(ctx, "GetTracesMetaInfo invalid field: %v", field)
+			return nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode)
+		}
+		fieldMetas[field] = fieldMta
+	}
+
+	spanTypeCfg := r.traceConfig.GetKeySpanTypes(ctx)
+	keySpanTypes, ok := spanTypeCfg[string(req.PlatformType)]
+	if !ok {
+		keySpanTypes = spanTypeCfg[string(loop_span.PlatformDefault)]
+	}
 	return &GetTracesMetaInfoResp{
-		FilesMetas: fieldMetas,
+		FilesMetas:      fieldMetas,
+		KeySpanTypeList: keySpanTypes,
 	}, nil
 }
 
@@ -665,9 +938,10 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	if err := r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	}); err != nil {
 		return nil, err
 	}
@@ -704,7 +978,6 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		session.UserIDInCtxOrEmpty(ctx),
 		false,
 	)
-	fmt.Println(annotation.ID, req.AnnotationID)
 	if err != nil || annotation.ID != req.AnnotationID {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
@@ -722,9 +995,10 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
 }
 
@@ -760,9 +1034,10 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
 }
 
@@ -824,9 +1099,10 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
 }
 
@@ -875,9 +1151,10 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
 }
 
@@ -916,9 +1193,10 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	}
 	// retry if failed
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{event.Annotation},
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(event.Annotation.AnnotationType),
 	})
 }
 
@@ -1107,13 +1385,14 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 		return resp, err
 	}
 	// 再同步修改观测数据
-	param := &repo.UpsertAnnotationParam{
-		Tenant:      span.GetTenant(),
-		TTL:         span.GetTTL(ctx),
-		Annotations: []*loop_span.Annotation{annotation},
-		IsSync:      true,
+	span.Annotations = append(span.Annotations, annotation)
+	param := &repo.InsertAnnotationParam{
+		Tenant:         span.GetTenant(),
+		TTL:            span.GetTTL(ctx),
+		Span:           span,
+		AnnotationType: gptr.Of(annotation.AnnotationType),
 	}
-	if err = r.traceRepo.UpsertAnnotation(ctx, param); err != nil {
+	if err = r.traceRepo.InsertAnnotations(ctx, param); err != nil {
 		recordID := lo.Ternary(annotation.GetAutoEvaluateMetadata() != nil, annotation.GetAutoEvaluateMetadata().EvaluatorRecordID, 0)
 		// 如果同步修改失败，异步补偿
 		// todo 异步有问题，会重复
@@ -1167,7 +1446,7 @@ func (r *TraceServiceImpl) ListAnnotationEvaluators(ctx context.Context, req *Li
 		evaluators = append(evaluators, evaluatorList...)
 	} else {
 		// 没有name先查task
-		taskDOs, _, err := r.taskRepo.ListTasks(ctx, mysql.ListTaskParam{
+		taskDOs, _, err := r.taskRepo.ListTasks(ctx, taskrepo.ListTaskParam{
 			WorkspaceIDs: []int64{req.WorkspaceID},
 			ReqLimit:     int32(500),
 			ReqOffset:    int32(0),
@@ -1369,7 +1648,7 @@ func processLatencyFilter(f *loop_span.FilterField) error {
 		if err != nil {
 			return fmt.Errorf("fail to parse long value %s, %v", val, err)
 		}
-		integer = time_util.MillSec2MicroSec(integer)
+		integer = timeutil.MillSec2MicroSec(integer)
 		micros = append(micros, strconv.FormatInt(integer, 10))
 	}
 	f.Values = micros

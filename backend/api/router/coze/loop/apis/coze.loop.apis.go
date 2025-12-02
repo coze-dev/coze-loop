@@ -140,15 +140,21 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets.GET("/:evaluation_set_id", append(_getevaluationsetMw(handler), apis.GetEvaluationSet)...)
 				_evaluation_sets.PATCH("/:evaluation_set_id", append(_updateevaluationsetMw(handler), apis.UpdateEvaluationSet)...)
 				_evaluation_sets.POST("/list", append(_listevaluationsetsMw(handler), apis.ListEvaluationSets)...)
+				_v11.POST("/evaluator_template", append(_evaluator_templateMw(handler), apis.CreateEvaluatorTemplate)...)
+				_evaluator_template := _v11.Group("/evaluator_template", _evaluator_templateMw(handler)...)
+				_evaluator_template.DELETE("/:evaluator_template_id", append(_deleteevaluatortemplateMw(handler), apis.DeleteEvaluatorTemplate)...)
+				_evaluator_template.PATCH("/:evaluator_template_id", append(_updateevaluatortemplateMw(handler), apis.UpdateEvaluatorTemplate)...)
 				_v11.POST("/evaluators", append(_evaluatorsMw(handler), apis.CreateEvaluator)...)
 				_evaluators := _v11.Group("/evaluators", _evaluatorsMw(handler)...)
 				_evaluators.POST("/batch_debug", append(_batchdebugevaluatorMw(handler), apis.BatchDebugEvaluator)...)
 				_evaluators.POST("/check_name", append(_checkevaluatornameMw(handler), apis.CheckEvaluatorName)...)
 				_evaluators.POST("/debug", append(_debugevaluatorMw(handler), apis.DebugEvaluator)...)
+				_evaluators.POST("/debug_builtin", append(_debugbuiltinevaluatorMw(handler), apis.DebugBuiltinEvaluator)...)
 				_evaluators.POST("/default_prompt_evaluator_tools", append(_getdefaultpromptevaluatortoolsMw(handler), apis.GetDefaultPromptEvaluatorTools)...)
 				_evaluators.DELETE("/:evaluator_id", append(_evaluator_idMw(handler), apis.DeleteEvaluator)...)
 				_evaluator_id := _evaluators.Group("/:evaluator_id", _evaluator_idMw(handler)...)
 				_evaluator_id.POST("/submit_version", append(_submitevaluatorversionMw(handler), apis.SubmitEvaluatorVersion)...)
+				_evaluator_id.PATCH("/update_builtin_tags", append(_updatebuiltinevaluatortagsMw(handler), apis.UpdateBuiltinEvaluatorTags)...)
 				{
 					_versions2 := _evaluator_id.Group("/versions", _versions2Mw(handler)...)
 					_versions2.POST("/list", append(_listevaluatorversionsMw(handler), apis.ListEvaluatorVersions)...)
@@ -157,6 +163,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluator_id0 := _evaluators.Group("/:evaluator_id", _evaluator_id0Mw(handler)...)
 				_evaluator_id0.PATCH("/update_draft", append(_updateevaluatordraftMw(handler), apis.UpdateEvaluatorDraft)...)
 				_evaluators.POST("/get_template_info", append(_gettemplateinfoMw(handler), apis.GetTemplateInfo)...)
+				_evaluators.POST("/list_tags", append(_listevaluatortagsMw(handler), apis.ListEvaluatorTags)...)
 				_evaluators.POST("/list_template", append(_listtemplatesMw(handler), apis.ListTemplates)...)
 				_evaluators.POST("/validate", append(_validateevaluatorMw(handler), apis.ValidateEvaluator)...)
 				{
@@ -176,6 +183,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_evaluator_records := _v11.Group("/evaluator_records", _evaluator_recordsMw(handler)...)
 					_evaluator_records.PATCH("/:evaluator_record_id", append(_updateevaluatorrecordMw(handler), apis.UpdateEvaluatorRecord)...)
+				}
+				{
+					_evaluator_template0 := _v11.Group("/evaluator_template", _evaluator_template0Mw(handler)...)
+					_evaluator_template0.GET("/:evaluator_template_id", append(_gettemplatev2Mw(handler), apis.GetTemplateV2)...)
+					_evaluator_template0.POST("/list", append(_listtemplatesv2Mw(handler), apis.ListTemplatesV2)...)
 				}
 				{
 					_evaluators0 := _v11.Group("/evaluators", _evaluators0Mw(handler)...)
@@ -302,8 +314,14 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_annotation.GET("/list_evaluators", append(_listannotationevaluatorsMw(handler), apis.ListAnnotationEvaluators)...)
 				}
 				{
+					_metrics := _v14.Group("/metrics", _metricsMw(handler)...)
+					_metrics.POST("/drill_down_values", append(_getdrilldownvaluesMw(handler), apis.GetDrillDownValues)...)
+					_metrics.POST("/list", append(_getmetricsMw(handler), apis.GetMetrics)...)
+				}
+				{
 					_spans := _v14.Group("/spans", _spansMw(handler)...)
 					_spans.POST("/list", append(_listspansMw(handler), apis.ListSpans)...)
+					_spans.POST("/pre_list", append(_listprespanMw(handler), apis.ListPreSpan)...)
 				}
 				{
 					_tasks0 := _v14.Group("/tasks", _tasks0Mw(handler)...)
@@ -320,6 +338,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
+					_traces.POST("/search_tree", append(_searchtracetreeMw(handler), apis.SearchTraceTree)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
 				}
 			}
@@ -335,6 +354,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_v15.POST("/prompts", append(_promptsMw(handler), apis.CreatePrompt)...)
 				_prompts := _v15.Group("/prompts", _promptsMw(handler)...)
 				_prompts.POST("/list", append(_listpromptMw(handler), apis.ListPrompt)...)
+				_prompts.POST("/list_parent", append(_listparentpromptMw(handler), apis.ListParentPrompt)...)
 				_prompts.DELETE("/:prompt_id", append(_prompt_idMw(handler), apis.DeletePrompt)...)
 				_prompt_id := _prompts.Group("/:prompt_id", _prompt_idMw(handler)...)
 				_prompt_id.POST("/debug_streaming", append(_debugstreamingMw(handler), apis.DebugStreaming)...)
@@ -381,6 +401,32 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
 			}
 			{
+				_evaluation0 := _loop.Group("/evaluation", _evaluation0Mw(handler)...)
+				_evaluation0.GET("/evaluation_sets", append(_evaluation_sets0Mw(handler), apis.ListEvaluationSetsOApi)...)
+				_evaluation_sets0 := _evaluation0.Group("/evaluation_sets", _evaluation_sets0Mw(handler)...)
+				{
+					_evaluation_set_id0 := _evaluation_sets0.Group("/:evaluation_set_id", _evaluation_set_id0Mw(handler)...)
+					_evaluation_set_id0.DELETE("/items", append(_batchdeleteevaluationsetitemsoapiMw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
+					_evaluation_set_id0.GET("/items", append(_listevaluationsetversionitemsoapiMw(handler), apis.ListEvaluationSetVersionItemsOApi)...)
+					_evaluation_set_id0.POST("/items", append(_batchcreateevaluationsetitemsoapiMw(handler), apis.BatchCreateEvaluationSetItemsOApi)...)
+					_evaluation_set_id0.PUT("/items", append(_batchupdateevaluationsetitemsoapiMw(handler), apis.BatchUpdateEvaluationSetItemsOApi)...)
+					_evaluation_set_id0.PUT("/schema", append(_updateevaluationsetschemaoapiMw(handler), apis.UpdateEvaluationSetSchemaOApi)...)
+					_evaluation_set_id0.GET("/versions", append(_listevaluationsetversionsoapiMw(handler), apis.ListEvaluationSetVersionsOApi)...)
+					_evaluation_set_id0.POST("/versions", append(_createevaluationsetversionoapiMw(handler), apis.CreateEvaluationSetVersionOApi)...)
+				}
+				_evaluation0.POST("/evaluation_sets", append(_evaluation_sets1Mw(handler), apis.CreateEvaluationSetOApi)...)
+				_evaluation_sets1 := _evaluation0.Group("/evaluation_sets", _evaluation_sets1Mw(handler)...)
+				_evaluation_sets1.DELETE("/:evaluation_set_id", append(_deleteevaluationsetoapiMw(handler), apis.DeleteEvaluationSetOApi)...)
+				_evaluation_sets1.GET("/:evaluation_set_id", append(_getevaluationsetoapiMw(handler), apis.GetEvaluationSetOApi)...)
+				_evaluation_sets1.PUT("/:evaluation_set_id", append(_updateevaluationsetoapiMw(handler), apis.UpdateEvaluationSetOApi)...)
+				_evaluation0.POST("/experiments", append(_experiments0Mw(handler), apis.SubmitExperimentOApi)...)
+				_experiments0 := _evaluation0.Group("/experiments", _experiments0Mw(handler)...)
+				_experiments0.GET("/:experiment_id", append(_experiment_idMw(handler), apis.GetExperimentsOApi)...)
+				_experiment_id := _experiments0.Group("/:experiment_id", _experiment_idMw(handler)...)
+				_experiment_id.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
+				_experiment_id.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
+			}
+			{
 				_files := _loop.Group("/files", _filesMw(handler)...)
 				_files.POST("/upload", append(_uploadloopfileMw(handler), apis.UploadLoopFile)...)
 			}
@@ -395,6 +441,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_prompts0 := _loop.Group("/prompts", _prompts0Mw(handler)...)
 				_prompts0.POST("/execute", append(_executeMw(handler), apis.Execute)...)
 				_prompts0.POST("/execute_streaming", append(_executestreamingMw(handler), apis.ExecuteStreaming)...)
+				_prompts0.POST("/list", append(_listpromptbasicMw(handler), apis.ListPromptBasic)...)
 				_prompts0.POST("/mget", append(_batchgetpromptbypromptkeyMw(handler), apis.BatchGetPromptByPromptKey)...)
 			}
 			{
@@ -406,6 +453,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_traces0.POST("/ingest", append(_ingesttracesMw(handler), apis.IngestTraces)...)
 				_traces0.POST("/list", append(_listtracesoapiMw(handler), apis.ListTracesOApi)...)
 				_traces0.POST("/search", append(_searchtraceoapiMw(handler), apis.SearchTraceOApi)...)
+				_traces0.POST("/search_tree", append(_searchtracetreeoapiMw(handler), apis.SearchTraceTreeOApi)...)
 			}
 		}
 	}

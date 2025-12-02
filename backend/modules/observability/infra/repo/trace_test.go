@@ -13,12 +13,17 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	mqmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq/mocks"
+	metric_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
 	ckmock "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 )
 
 func TestTraceCkRepoImpl_InsertSpans(t *testing.T) {
@@ -575,10 +580,136 @@ func TestTraceCkRepoImpl_GetTrace(t *testing.T) {
 	}
 }
 
+func TestTraceCkRepoImpl_GetMetrics(t *testing.T) {
+	t.Run("get metrics successfully", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		spansDaoMock := ckmock.NewMockISpansDao(ctrl)
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+
+		aggregations := []*metric_entity.Dimension{
+			{
+				Expression: &metric_entity.Expression{
+					Expression: "count(*)",
+				},
+				Alias: "count",
+			},
+		}
+		groupBys := []*metric_entity.Dimension{
+			{
+				Field: &loop_span.FilterField{
+					FieldName: loop_span.SpanFieldPSM,
+					FieldType: loop_span.FieldTypeString,
+				},
+				Alias: "psm",
+			},
+		}
+		filters := &loop_span.FilterFields{
+			FilterFields: []*loop_span.FilterField{
+				{
+					FieldName: loop_span.SpanFieldStatusCode,
+					FieldType: loop_span.FieldTypeLong,
+					Values:    []string{"200"},
+					QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+				},
+			},
+		}
+		expectedParam := &ck.GetMetricsParam{
+			Tables:       []string{"spans"},
+			Aggregations: aggregations,
+			GroupBys:     groupBys,
+			Filters:      filters,
+			StartAt:      time_util.MillSec2MicroSec(1000),
+			EndAt:        time_util.MillSec2MicroSec(2000),
+			Granularity:  metric_entity.MetricGranularity1Min,
+		}
+		metricsData := []map[string]any{
+			{
+				"count": 1,
+			},
+		}
+		spansDaoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Eq(expectedParam)).Return(metricsData, nil)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"tenant": {
+					loop_span.TTL3d: {
+						SpanTable: "spans",
+					},
+				},
+			},
+		}, nil)
+
+		repoImpl := &TraceCkRepoImpl{
+			spansDao:    spansDaoMock,
+			traceConfig: traceConfigMock,
+		}
+		result, err := repoImpl.GetMetrics(context.Background(), &metric_repo.GetMetricsParam{
+			Tenants:      []string{"tenant"},
+			Aggregations: aggregations,
+			GroupBys:     groupBys,
+			Filters:      filters,
+			StartAt:      1000,
+			EndAt:        2000,
+			Granularity:  metric_entity.MetricGranularity1Min,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &metric_repo.GetMetricsResult{Data: metricsData}, result)
+	})
+
+	t.Run("get metrics failed due to config error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(nil, assert.AnError)
+
+		repoImpl := &TraceCkRepoImpl{
+			traceConfig: traceConfigMock,
+			spansDao:    ckmock.NewMockISpansDao(ctrl),
+		}
+		result, err := repoImpl.GetMetrics(context.Background(), &metric_repo.GetMetricsParam{
+			Tenants: []string{"tenant"},
+		})
+		assert.Error(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("get metrics failed due to dao error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		spansDaoMock := ckmock.NewMockISpansDao(ctrl)
+		traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+
+		traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+			TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+				"tenant": {
+					loop_span.TTL3d: {
+						SpanTable: "spans",
+					},
+				},
+			},
+		}, nil)
+		spansDaoMock.EXPECT().GetMetrics(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+
+		repoImpl := &TraceCkRepoImpl{
+			spansDao:    spansDaoMock,
+			traceConfig: traceConfigMock,
+		}
+		result, err := repoImpl.GetMetrics(context.Background(), &metric_repo.GetMetricsParam{
+			Tenants: []string{"tenant"},
+		})
+		assert.Error(t, err)
+		assert.Nil(t, result)
+	})
+}
+
 func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 	type fields struct {
-		annoDao     ck.IAnnotationDao
-		traceConfig config.ITraceConfig
+		annoDao      ck.IAnnotationDao
+		traceConfig  config.ITraceConfig
+		spanProducer mq.ISpanProducer
 	}
 	type args struct {
 		ctx   context.Context
@@ -605,9 +736,12 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 						},
 					},
 				}, nil)
+				spanProducerMock := mqmock.NewMockISpanProducer(ctrl)
+				spanProducerMock.EXPECT().SendSpanWithAnnotation(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				return fields{
-					annoDao:     annoDaoMock,
-					traceConfig: traceConfigMock,
+					annoDao:      annoDaoMock,
+					traceConfig:  traceConfigMock,
+					spanProducer: spanProducerMock,
 				}
 			},
 			args: args{
@@ -615,11 +749,14 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 				param: &repo.InsertAnnotationParam{
 					Tenant: "test",
 					TTL:    loop_span.TTL3d,
-					Annotations: []*loop_span.Annotation{
-						{
-							ID: "anno1",
+					Span: &loop_span.Span{
+						Annotations: []*loop_span.Annotation{
+							{
+								ID: "anno1",
+							},
 						},
 					},
+					AnnotationType: ptr.Of(loop_span.AnnotationTypeOpenAPIFeedback),
 				},
 			},
 			wantErr: false,
@@ -629,8 +766,10 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
 				traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(nil, assert.AnError)
+				spanProducerMock := mqmock.NewMockISpanProducer(ctrl)
 				return fields{
-					traceConfig: traceConfigMock,
+					traceConfig:  traceConfigMock,
+					spanProducer: spanProducerMock,
 				}
 			},
 			args: args{
@@ -638,11 +777,14 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 				param: &repo.InsertAnnotationParam{
 					Tenant: "test",
 					TTL:    loop_span.TTL3d,
-					Annotations: []*loop_span.Annotation{
-						{
-							ID: "anno1",
+					Span: &loop_span.Span{
+						Annotations: []*loop_span.Annotation{
+							{
+								ID: "anno1",
+							},
 						},
 					},
+					AnnotationType: ptr.Of(loop_span.AnnotationTypeOpenAPIFeedback),
 				},
 			},
 			wantErr: true,
@@ -654,8 +796,9 @@ func TestTraceCkRepoImpl_InsertAnnotation(t *testing.T) {
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
 			r := &TraceCkRepoImpl{
-				annoDao:     fields.annoDao,
-				traceConfig: fields.traceConfig,
+				annoDao:      fields.annoDao,
+				traceConfig:  fields.traceConfig,
+				spanProducer: fields.spanProducer,
 			}
 			err := r.InsertAnnotations(tt.args.ctx, tt.args.param)
 			assert.Equal(t, tt.wantErr, err != nil)

@@ -13,10 +13,16 @@ const (
 )
 
 const (
-	Read  = "read"
-	Edit  = "edit"
-	Run   = "run"
-	Debug = "debug"
+	Read          = "read"
+	Edit          = "edit"
+	Run           = "run"
+	Debug         = "debug"
+	UpdateItem    = "updateItem"
+	AddItem       = "addItem"
+	DeleteItem    = "deleteItem"
+	ReadItem      = "readItem"
+	CreateVersion = "createVersion"
+	EditSchema    = "editSchema"
 )
 
 const (
@@ -56,4 +62,10 @@ const (
 	MaxEvaluatorDescLength        = 200
 	MaxEvaluatorVersionLength     = 50
 	MaxEvaluatorVersionDescLength = 200
+)
+
+const (
+	// EvaluatorTagType 评估器标签类型
+	EvaluatorTagTypeEvaluator         int32 = 1 // 评估器标签
+	EvaluatorTagTypeEvaluatorTemplate int32 = 2 // 评估器模板标签
 )

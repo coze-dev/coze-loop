@@ -107,9 +107,28 @@ func (p *Function) IsValid() error {
 	return nil
 }
 func (p *ToolCallConfig) IsValid() error {
+	if p.ToolChoiceSpecification != nil {
+		if err := p.ToolChoiceSpecification.IsValid(); err != nil {
+			return fmt.Errorf("field ToolChoiceSpecification not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ToolChoiceSpecification) IsValid() error {
 	return nil
 }
 func (p *ModelConfig) IsValid() error {
+	return nil
+}
+func (p *ParamConfigValue) IsValid() error {
+	if p.Value != nil {
+		if err := p.Value.IsValid(); err != nil {
+			return fmt.Errorf("field Value not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ParamOption) IsValid() error {
 	return nil
 }
 func (p *Message) IsValid() error {
@@ -121,9 +140,33 @@ func (p *ContentPart) IsValid() error {
 			return fmt.Errorf("field ImageURL not valid, %w", err)
 		}
 	}
+	if p.VideoURL != nil {
+		if err := p.VideoURL.IsValid(); err != nil {
+			return fmt.Errorf("field VideoURL not valid, %w", err)
+		}
+	}
+	if p.MediaConfig != nil {
+		if err := p.MediaConfig.IsValid(); err != nil {
+			return fmt.Errorf("field MediaConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ImageURL) IsValid() error {
+	return nil
+}
+func (p *VideoURL) IsValid() error {
+	return nil
+}
+func (p *MediaConfig) IsValid() error {
+	if p.Fps != nil {
+		if *p.Fps < float64(0.2) {
+			return fmt.Errorf("field Fps ge rule failed, current value: %v", *p.Fps)
+		}
+		if *p.Fps > float64(5) {
+			return fmt.Errorf("field Fps le rule failed, current value: %v", *p.Fps)
+		}
+	}
 	return nil
 }
 func (p *ToolCall) IsValid() error {
@@ -210,6 +253,14 @@ func (p *OverridePromptParams) IsValid() error {
 	if p.ModelConfig != nil {
 		if err := p.ModelConfig.IsValid(); err != nil {
 			return fmt.Errorf("field ModelConfig not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *PromptCommitVersions) IsValid() error {
+	if p.PromptBasic != nil {
+		if err := p.PromptBasic.IsValid(); err != nil {
+			return fmt.Errorf("field PromptBasic not valid, %w", err)
 		}
 	}
 	return nil

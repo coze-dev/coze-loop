@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 )
 
@@ -18,13 +19,13 @@ func TestTaskProcessor_RegisterAndGet(t *testing.T) {
 
 	taskProcessor := NewTaskProcessor()
 
-	defaultProcessor := taskProcessor.GetTaskProcessor("unknown")
+	defaultProcessor := taskProcessor.GetTaskProcessor(entity.TaskType("unknown"))
 	_, ok := defaultProcessor.(*NoopTaskProcessor)
 	assert.True(t, ok)
 
 	registered := NewNoopTaskProcessor()
-	taskProcessor.Register(task.TaskTypeAutoEval, registered)
-	assert.Equal(t, registered, taskProcessor.GetTaskProcessor(task.TaskTypeAutoEval))
+	taskProcessor.Register(entity.TaskTypeAutoEval, registered)
+	assert.Equal(t, registered, taskProcessor.GetTaskProcessor(entity.TaskTypeAutoEval))
 }
 
 func TestNoopTaskProcessor_Methods(t *testing.T) {
@@ -34,9 +35,9 @@ func TestNoopTaskProcessor_Methods(t *testing.T) {
 
 	assert.NoError(t, p.ValidateConfig(ctx, nil))
 	assert.NoError(t, p.Invoke(ctx, nil))
-	assert.NoError(t, p.OnCreateTaskChange(ctx, nil))
-	assert.NoError(t, p.OnUpdateTaskChange(ctx, nil, task.TaskStatusRunning))
-	assert.NoError(t, p.OnFinishTaskChange(ctx, taskexe.OnFinishTaskChangeReq{}))
-	assert.NoError(t, p.OnCreateTaskRunChange(ctx, taskexe.OnCreateTaskRunChangeReq{}))
-	assert.NoError(t, p.OnFinishTaskRunChange(ctx, taskexe.OnFinishTaskRunChangeReq{}))
+	assert.NoError(t, p.OnTaskCreated(ctx, nil))
+	assert.NoError(t, p.OnTaskUpdated(ctx, nil, task.TaskStatusRunning))
+	assert.NoError(t, p.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{}))
+	assert.NoError(t, p.OnTaskRunCreated(ctx, taskexe.OnTaskRunCreatedReq{}))
+	assert.NoError(t, p.OnTaskRunFinished(ctx, taskexe.OnTaskRunFinishedReq{}))
 }

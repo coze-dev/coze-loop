@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck/gorm_gen/model"
 	ckmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck/mocks"
 	diffmodel "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck/model"
@@ -43,11 +42,17 @@ func TestExptTurnResultFilterRepoImpl_Save(t *testing.T) {
 		{
 			name: "success",
 			mockSetup: func() {
-				models := make([]*model.ExptTurnResultFilter, 0, len(filterEntities))
-				for _, filterEntity := range filterEntities {
-					models = append(models, convertor.ExptTurnResultFilterEntity2PO(filterEntity))
-				}
-				mockExptTurnResultFilterDAO.EXPECT().Save(gomock.Any(), models).Return(nil)
+				// 使用 Do 方法来验证参数，忽略 UpdatedAt 字段的差异
+				mockExptTurnResultFilterDAO.EXPECT().Save(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, models []*model.ExptTurnResultFilter) error {
+						assert.Equal(t, 2, len(models))
+						assert.Equal(t, "1", models[0].SpaceID)
+						assert.Equal(t, "100", models[0].ExptID)
+						assert.Equal(t, "2", models[1].SpaceID)
+						assert.Equal(t, "200", models[1].ExptID)
+						return nil
+					},
+				)
 			},
 			input:   filterEntities,
 			wantErr: false,
@@ -55,11 +60,7 @@ func TestExptTurnResultFilterRepoImpl_Save(t *testing.T) {
 		{
 			name: "fail_dao_save",
 			mockSetup: func() {
-				models := make([]*model.ExptTurnResultFilter, 0, len(filterEntities))
-				for _, filterEntity := range filterEntities {
-					models = append(models, convertor.ExptTurnResultFilterEntity2PO(filterEntity))
-				}
-				mockExptTurnResultFilterDAO.EXPECT().Save(gomock.Any(), models).Return(assert.AnError)
+				mockExptTurnResultFilterDAO.EXPECT().Save(gomock.Any(), gomock.Any()).Return(assert.AnError)
 			},
 			input:   filterEntities,
 			wantErr: true,

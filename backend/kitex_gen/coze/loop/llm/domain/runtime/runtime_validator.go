@@ -29,6 +29,14 @@ func (p *ModelConfig) IsValid() error {
 	}
 	return nil
 }
+func (p *ParamConfigValue) IsValid() error {
+	if p.Value != nil {
+		if err := p.Value.IsValid(); err != nil {
+			return fmt.Errorf("field Value not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *Message) IsValid() error {
 	if p.ResponseMeta != nil {
 		if err := p.ResponseMeta.IsValid(); err != nil {
@@ -41,6 +49,30 @@ func (p *ChatMessagePart) IsValid() error {
 	if p.ImageURL != nil {
 		if err := p.ImageURL.IsValid(); err != nil {
 			return fmt.Errorf("field ImageURL not valid, %w", err)
+		}
+	}
+	if p.VideoURL != nil {
+		if err := p.VideoURL.IsValid(); err != nil {
+			return fmt.Errorf("field VideoURL not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ChatMessageVideoURL) IsValid() error {
+	if p.Detail != nil {
+		if err := p.Detail.IsValid(); err != nil {
+			return fmt.Errorf("field Detail not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *VideoURLDetail) IsValid() error {
+	if p.Fps != nil {
+		if *p.Fps < float64(0.2) {
+			return fmt.Errorf("field Fps ge rule failed, current value: %v", *p.Fps)
+		}
+		if *p.Fps > float64(5) {
+			return fmt.Errorf("field Fps le rule failed, current value: %v", *p.Fps)
 		}
 	}
 	return nil

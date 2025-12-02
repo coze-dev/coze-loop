@@ -42,6 +42,22 @@ func (p *ListSpansResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ListPreSpanRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListPreSpanResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *TokenCost) IsValid() error {
 	return nil
 }
@@ -62,6 +78,32 @@ func (p *GetTraceRequest) IsValid() error {
 	return nil
 }
 func (p *GetTraceResponse) IsValid() error {
+	if p.TracesAdvanceInfo != nil {
+		if err := p.TracesAdvanceInfo.IsValid(); err != nil {
+			return fmt.Errorf("field TracesAdvanceInfo not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SearchTraceTreeRequest) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SearchTraceTreeResponse) IsValid() error {
 	if p.TracesAdvanceInfo != nil {
 		if err := p.TracesAdvanceInfo.IsValid(); err != nil {
 			return fmt.Errorf("field TracesAdvanceInfo not valid, %w", err)

@@ -22,6 +22,7 @@ import (
 type MockITraceRepo struct {
 	ctrl     *gomock.Controller
 	recorder *MockITraceRepoMockRecorder
+	isgomock struct{}
 }
 
 // MockITraceRepoMockRecorder is the mock recorder for MockITraceRepo.
@@ -54,6 +55,22 @@ func (m *MockITraceRepo) GetAnnotation(arg0 context.Context, arg1 *repo.GetAnnot
 func (mr *MockITraceRepoMockRecorder) GetAnnotation(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnnotation", reflect.TypeOf((*MockITraceRepo)(nil).GetAnnotation), arg0, arg1)
+}
+
+// GetPreSpanIDs mocks base method.
+func (m *MockITraceRepo) GetPreSpanIDs(arg0 context.Context, arg1 *repo.GetPreSpanIDsParam) ([]string, []string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPreSpanIDs", arg0, arg1)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].([]string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetPreSpanIDs indicates an expected call of GetPreSpanIDs.
+func (mr *MockITraceRepoMockRecorder) GetPreSpanIDs(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPreSpanIDs", reflect.TypeOf((*MockITraceRepo)(nil).GetPreSpanIDs), arg0, arg1)
 }
 
 // GetTrace mocks base method.
@@ -127,18 +144,4 @@ func (m *MockITraceRepo) ListSpans(arg0 context.Context, arg1 *repo.ListSpansPar
 func (mr *MockITraceRepoMockRecorder) ListSpans(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpans", reflect.TypeOf((*MockITraceRepo)(nil).ListSpans), arg0, arg1)
-}
-
-// UpsertAnnotation mocks base method.
-func (m *MockITraceRepo) UpsertAnnotation(arg0 context.Context, arg1 *repo.UpsertAnnotationParam) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpsertAnnotation", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpsertAnnotation indicates an expected call of UpsertAnnotation.
-func (mr *MockITraceRepoMockRecorder) UpsertAnnotation(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertAnnotation", reflect.TypeOf((*MockITraceRepo)(nil).UpsertAnnotation), arg0, arg1)
 }

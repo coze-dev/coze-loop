@@ -21,10 +21,24 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListPreSpan": kitex.NewMethodInfo(
+		listPreSpanHandler,
+		newTraceServiceListPreSpanArgs,
+		newTraceServiceListPreSpanResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"GetTrace": kitex.NewMethodInfo(
 		getTraceHandler,
 		newTraceServiceGetTraceArgs,
 		newTraceServiceGetTraceResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SearchTraceTree": kitex.NewMethodInfo(
+		searchTraceTreeHandler,
+		newTraceServiceSearchTraceTreeArgs,
+		newTraceServiceSearchTraceTreeResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -192,6 +206,25 @@ func newTraceServiceListSpansResult() interface{} {
 	return trace.NewTraceServiceListSpansResult()
 }
 
+func listPreSpanHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListPreSpanArgs)
+	realResult := result.(*trace.TraceServiceListPreSpanResult)
+	success, err := handler.(trace.TraceService).ListPreSpan(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceListPreSpanArgs() interface{} {
+	return trace.NewTraceServiceListPreSpanArgs()
+}
+
+func newTraceServiceListPreSpanResult() interface{} {
+	return trace.NewTraceServiceListPreSpanResult()
+}
+
 func getTraceHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*trace.TraceServiceGetTraceArgs)
 	realResult := result.(*trace.TraceServiceGetTraceResult)
@@ -209,6 +242,25 @@ func newTraceServiceGetTraceArgs() interface{} {
 
 func newTraceServiceGetTraceResult() interface{} {
 	return trace.NewTraceServiceGetTraceResult()
+}
+
+func searchTraceTreeHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceSearchTraceTreeArgs)
+	realResult := result.(*trace.TraceServiceSearchTraceTreeResult)
+	success, err := handler.(trace.TraceService).SearchTraceTree(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceSearchTraceTreeArgs() interface{} {
+	return trace.NewTraceServiceSearchTraceTreeArgs()
+}
+
+func newTraceServiceSearchTraceTreeResult() interface{} {
+	return trace.NewTraceServiceSearchTraceTreeResult()
 }
 
 func batchGetTracesAdvanceInfoHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -537,11 +589,31 @@ func (p *kClient) ListSpans(ctx context.Context, req *trace.ListSpansRequest) (r
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
+	var _args trace.TraceServiceListPreSpanArgs
+	_args.Req = req
+	var _result trace.TraceServiceListPreSpanResult
+	if err = p.c.Call(ctx, "ListPreSpan", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) GetTrace(ctx context.Context, req *trace.GetTraceRequest) (r *trace.GetTraceResponse, err error) {
 	var _args trace.TraceServiceGetTraceArgs
 	_args.Req = req
 	var _result trace.TraceServiceGetTraceResult
 	if err = p.c.Call(ctx, "GetTrace", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SearchTraceTree(ctx context.Context, req *trace.SearchTraceTreeRequest) (r *trace.SearchTraceTreeResponse, err error) {
+	var _args trace.TraceServiceSearchTraceTreeArgs
+	_args.Req = req
+	var _result trace.TraceServiceSearchTraceTreeResult
+	if err = p.c.Call(ctx, "SearchTraceTree", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

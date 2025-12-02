@@ -17,8 +17,8 @@ func TaskDO2PO(task *entity.ObservabilityTask) *model.ObservabilityTask {
 		WorkspaceID:           task.WorkspaceID,
 		Name:                  task.Name,
 		Description:           task.Description,
-		TaskType:              task.TaskType,
-		TaskStatus:            task.TaskStatus,
+		TaskType:              string(task.TaskType),
+		TaskStatus:            string(task.TaskStatus),
 		TaskDetail:            ptr.Of(ToJSONString(task.TaskDetail)),
 		SpanFilter:            ptr.Of(ToJSONString(task.SpanFilter)),
 		EffectiveTime:         ptr.Of(ToJSONString(task.EffectiveTime)),
@@ -29,6 +29,7 @@ func TaskDO2PO(task *entity.ObservabilityTask) *model.ObservabilityTask {
 		UpdatedAt:             task.UpdatedAt,
 		CreatedBy:             task.CreatedBy,
 		UpdatedBy:             task.UpdatedBy,
+		TaskSource:            task.TaskSource,
 	}
 }
 
@@ -38,8 +39,8 @@ func TaskPO2DO(task *model.ObservabilityTask) *entity.ObservabilityTask {
 		WorkspaceID:           task.WorkspaceID,
 		Name:                  task.Name,
 		Description:           task.Description,
-		TaskType:              task.TaskType,
-		TaskStatus:            task.TaskStatus,
+		TaskType:              entity.TaskType(task.TaskType),
+		TaskStatus:            entity.TaskStatus(task.TaskStatus),
 		TaskDetail:            TaskDetailJSON2DO(task.TaskDetail),
 		SpanFilter:            SpanFilterJSON2DO(task.SpanFilter),
 		EffectiveTime:         EffectiveTimeJSON2DO(task.EffectiveTime),
@@ -50,6 +51,7 @@ func TaskPO2DO(task *model.ObservabilityTask) *entity.ObservabilityTask {
 		UpdatedAt:             task.UpdatedAt,
 		CreatedBy:             task.CreatedBy,
 		UpdatedBy:             task.UpdatedBy,
+		TaskSource:            task.TaskSource,
 	}
 }
 
@@ -118,8 +120,8 @@ func TaskRunDO2PO(taskRun *entity.TaskRun) *model.ObservabilityTaskRun {
 		ID:             taskRun.ID,
 		TaskID:         taskRun.TaskID,
 		WorkspaceID:    taskRun.WorkspaceID,
-		TaskType:       taskRun.TaskType,
-		RunStatus:      taskRun.RunStatus,
+		TaskType:       string(taskRun.TaskType),
+		RunStatus:      string(taskRun.RunStatus),
 		RunDetail:      ptr.Of(ToJSONString(taskRun.RunDetail)),
 		BackfillDetail: ptr.Of(ToJSONString(taskRun.BackfillDetail)),
 		RunStartAt:     taskRun.RunStartAt,
@@ -135,8 +137,8 @@ func TaskRunPO2DO(taskRun *model.ObservabilityTaskRun) *entity.TaskRun {
 		ID:             taskRun.ID,
 		TaskID:         taskRun.TaskID,
 		WorkspaceID:    taskRun.WorkspaceID,
-		TaskType:       taskRun.TaskType,
-		RunStatus:      taskRun.RunStatus,
+		TaskType:       entity.TaskRunType(taskRun.TaskType),
+		RunStatus:      entity.TaskRunStatus(taskRun.RunStatus),
 		RunDetail:      RunDetailJSON2DO(taskRun.RunDetail),
 		BackfillDetail: BackfillRunDetailJSON2DO(taskRun.BackfillDetail),
 		RunStartAt:     taskRun.RunStartAt,

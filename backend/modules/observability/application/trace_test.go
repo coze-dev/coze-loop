@@ -15,6 +15,7 @@ import (
 	annodto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/view"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
@@ -467,6 +468,7 @@ func TestTraceApplication_ListSpans(t *testing.T) {
 						Type:            span.SpanTypeUnknown,
 						Status:          span.SpanStatusSuccess,
 						LogicDeleteDate: ptr.Of(int64(0)),
+						CallType:        ptr.Of(""),
 						CustomTags:      map[string]string{},
 						SystemTags:      map[string]string{},
 						Annotations: []*annodto.Annotation{
@@ -829,6 +831,360 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 			got, err := tr.GetTrace(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTraceApplication_SearchTraceTree(t *testing.T) {
+	start := time.Now().Add(-time.Hour).UnixMilli()
+	end := time.Now().UnixMilli()
+	type fields struct {
+		traceSvc service.ITraceService
+		auth     rpc.IAuthProvider
+		traceCfg config.ITraceConfig
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.SearchTraceTreeRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.SearchTraceTreeResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{
+					TraceId: "trace-1",
+					Spans:   loop_span.SpanList{},
+				}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.SearchTraceTreeRequest{
+					WorkspaceID: 12,
+					TraceID:     "trace-1",
+					StartTime:   start,
+					EndTime:     end,
+				},
+			},
+			want: &trace.SearchTraceTreeResponse{
+				Spans: []*span.OutputSpan{},
+				TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+					TraceID: "trace-1",
+					Tokens:  &trace.TokenCost{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "trace service error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.SearchTraceTreeRequest{
+					WorkspaceID: 12,
+					TraceID:     "trace-1",
+					StartTime:   start,
+					EndTime:     end,
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "permission error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("permission denied"))
+				return fields{
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.SearchTraceTreeRequest{
+					WorkspaceID: 12,
+					TraceID:     "trace-1",
+					StartTime:   start,
+					EndTime:     end,
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "invalid request",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.SearchTraceTreeRequest{
+					WorkspaceID: 0,
+					TraceID:     "trace-1",
+					StartTime:   start,
+					EndTime:     end,
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			app := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+				traceConfig:  fields.traceCfg,
+			}
+			got, err := app.SearchTraceTree(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTraceApplication_validateSearchTraceTreeReq(t *testing.T) {
+	validStart := time.Now().Add(-time.Hour).UnixMilli()
+	validEnd := time.Now().UnixMilli()
+	type fields struct {
+		traceCfg config.ITraceConfig
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.SearchTraceTreeRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      bool
+		wantStart    *int64
+		wantEnd      *int64
+	}{
+		{
+			name: "nil request",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid workspace",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.SearchTraceTreeRequest{
+					WorkspaceID: 0,
+					TraceID:     "trace-1",
+					StartTime:   validStart,
+					EndTime:     validEnd,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid trace id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.SearchTraceTreeRequest{
+					WorkspaceID: 1,
+					TraceID:     "",
+					StartTime:   validStart,
+					EndTime:     validEnd,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid time range",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				return fields{
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.SearchTraceTreeRequest{
+					WorkspaceID: 1,
+					TraceID:     "trace-1",
+					StartTime:   int64(0),
+					EndTime:     int64(0),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "success",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				return fields{
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.SearchTraceTreeRequest{
+					WorkspaceID: 1,
+					TraceID:     "trace-1",
+					StartTime:   validStart,
+					EndTime:     validEnd,
+				},
+			},
+			wantErr:   false,
+			wantStart: ptr.Of(validStart),
+			wantEnd:   ptr.Of(validEnd),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			app := &TraceApplication{
+				traceConfig: fields.traceCfg,
+			}
+			err := app.validateSearchTraceTreeReq(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr && tt.args.req != nil {
+				if tt.wantStart != nil {
+					assert.Equal(t, *tt.wantStart, tt.args.req.GetStartTime())
+				}
+				if tt.wantEnd != nil {
+					assert.Equal(t, *tt.wantEnd, tt.args.req.GetEndTime())
+				}
+			}
+		})
+	}
+}
+
+func TestTraceApplication_buildSearchTraceTreeSvcReq(t *testing.T) {
+	start := time.Now().Add(-time.Hour).UnixMilli()
+	end := time.Now().UnixMilli()
+	app := &TraceApplication{}
+	tests := []struct {
+		name    string
+		req     *trace.SearchTraceTreeRequest
+		wantErr bool
+		check   func(t *testing.T, got *service.GetTraceReq)
+	}{
+		{
+			name: "default platform",
+			req: &trace.SearchTraceTreeRequest{
+				WorkspaceID: 1,
+				TraceID:     "trace-1",
+				StartTime:   start,
+				EndTime:     end,
+			},
+			check: func(t *testing.T, got *service.GetTraceReq) {
+				assert.Equal(t, int64(1), got.WorkspaceID)
+				assert.Equal(t, "trace-1", got.TraceID)
+				assert.Equal(t, start, got.StartTime)
+				assert.Equal(t, end, got.EndTime)
+				assert.False(t, got.WithDetail)
+				assert.Equal(t, loop_span.PlatformCozeLoop, got.PlatformType)
+				assert.Nil(t, got.Filters)
+			},
+		},
+		{
+			name: "custom platform with filters",
+			req: func() *trace.SearchTraceTreeRequest {
+				platformType := commondto.PlatformTypePrompt
+				return &trace.SearchTraceTreeRequest{
+					WorkspaceID:  2,
+					TraceID:      "trace-2",
+					StartTime:    start,
+					EndTime:      end,
+					PlatformType: &platformType,
+					Filters: &filter.FilterFields{
+						FilterFields: []*filter.FilterField{{}},
+					},
+				}
+			}(),
+			check: func(t *testing.T, got *service.GetTraceReq) {
+				assert.Equal(t, int64(2), got.WorkspaceID)
+				assert.Equal(t, "trace-2", got.TraceID)
+				assert.Equal(t, start, got.StartTime)
+				assert.Equal(t, end, got.EndTime)
+				assert.Equal(t, loop_span.PlatformType(commondto.PlatformTypePrompt), got.PlatformType)
+				if assert.NotNil(t, got.Filters) {
+					assert.Len(t, got.Filters.FilterFields, 1)
+				}
+			},
+		},
+		{
+			name: "invalid filters",
+			req: func() *trace.SearchTraceTreeRequest {
+				invalid := filter.QueryRelation("invalid")
+				return &trace.SearchTraceTreeRequest{
+					WorkspaceID: 3,
+					TraceID:     "trace-3",
+					StartTime:   start,
+					EndTime:     end,
+					Filters: &filter.FilterFields{
+						QueryAndOr: &invalid,
+					},
+				}
+			}(),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := app.buildSearchTraceTreeSvcReq(tt.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if tt.wantErr {
+				assert.Nil(t, got)
+				return
+			}
+			if tt.check != nil {
+				checkFn := tt.check
+				checkFn(t, got)
+			}
 		})
 	}
 }
@@ -2315,6 +2671,437 @@ func TestTraceApplication_ListAnnotations(t *testing.T) {
 					assert.Equal(t, 0.8, *auto.AutoEvaluate.EvaluatorResult_.Score)
 				}
 			}
+		})
+	}
+}
+
+func TestTraceApplication_ListPreSpan(t *testing.T) {
+	type fields struct {
+		traceSvc service.ITraceService
+		auth     rpc.IAuthProvider
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.ListPreSpanRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.ListPreSpanResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().ListPreSpan(gomock.Any(), gomock.Any()).Return(&service.ListPreSpanResp{
+					Spans: loop_span.SpanList{
+						{
+							TraceID:   "trace-1",
+							SpanID:    "span-1",
+							StartTime: time.Now().UnixMicro(),
+						},
+					},
+				}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of("resp-1"),
+					PlatformType:       ptr.Of(commondto.PlatformTypeCozeloop),
+				},
+			},
+			want: &trace.ListPreSpanResponse{
+				Spans: []*span.OutputSpan{
+					{
+						TraceID: "trace-1",
+						SpanID:  "span-1",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "validation error - nil request",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: nil,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "validation error - invalid workspace_id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        0,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "validation error - empty trace_id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "validation error - empty previous_response_id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of(""),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "validation error - empty span_id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of(""),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "permission check error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("permission denied"))
+				return fields{
+					auth: mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().ListPreSpan(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+			}
+			got, err := tr.ListPreSpan(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			if !tt.wantErr && tt.want != nil {
+				assert.NotNil(t, got)
+				assert.NotNil(t, got.Spans)
+				assert.Equal(t, len(tt.want.Spans), len(got.Spans))
+				for i, span := range got.Spans {
+					assert.Equal(t, tt.want.Spans[i].TraceID, span.TraceID)
+					assert.Equal(t, tt.want.Spans[i].SpanID, span.SpanID)
+				}
+			}
+		})
+	}
+}
+
+func TestTraceApplication_validateListPreSpanReq(t *testing.T) {
+	type args struct {
+		ctx context.Context
+		req *trace.ListPreSpanRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "valid request",
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "nil request",
+			args: args{
+				ctx: context.Background(),
+				req: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid workspace_id - zero",
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        0,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid workspace_id - negative",
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        -1,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty trace_id",
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty previous_response_id",
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: ptr.Of(""),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil previous_response_id",
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of("span-1"),
+					PreviousResponseID: nil,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty span_id",
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             ptr.Of(""),
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "nil span_id",
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListPreSpanRequest{
+					WorkspaceID:        123,
+					TraceID:            "trace-1",
+					StartTime:          time.Now().UnixMilli(),
+					SpanID:             nil,
+					PreviousResponseID: ptr.Of("resp-1"),
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &TraceApplication{}
+			err := app.validateListPreSpanReq(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+		})
+	}
+}
+
+func TestTraceApplication_buildListPreSpanSvcReq(t *testing.T) {
+	app := &TraceApplication{}
+	tests := []struct {
+		name    string
+		req     *trace.ListPreSpanRequest
+		want    *service.ListPreSpanReq
+		wantErr bool
+	}{
+		{
+			name: "normal case with all fields",
+			req: &trace.ListPreSpanRequest{
+				WorkspaceID:        123,
+				TraceID:            "trace-1",
+				StartTime:          1234567890,
+				SpanID:             ptr.Of("span-1"),
+				PreviousResponseID: ptr.Of("resp-1"),
+				PlatformType:       ptr.Of(commondto.PlatformTypeCozeloop),
+			},
+			want: &service.ListPreSpanReq{
+				WorkspaceID:        123,
+				TraceID:            "trace-1",
+				StartTime:          1234567890,
+				SpanID:             "span-1",
+				PreviousResponseID: "resp-1",
+				PlatformType:       loop_span.PlatformCozeLoop,
+			},
+			wantErr: false,
+		},
+		{
+			name: "with different platform type",
+			req: &trace.ListPreSpanRequest{
+				WorkspaceID:        456,
+				TraceID:            "trace-2",
+				StartTime:          9876543210,
+				SpanID:             ptr.Of("span-2"),
+				PreviousResponseID: ptr.Of("resp-2"),
+				PlatformType:       ptr.Of(commondto.PlatformTypePrompt),
+			},
+			want: &service.ListPreSpanReq{
+				WorkspaceID:        456,
+				TraceID:            "trace-2",
+				StartTime:          9876543210,
+				SpanID:             "span-2",
+				PreviousResponseID: "resp-2",
+				PlatformType:       loop_span.PlatformType(commondto.PlatformTypePrompt),
+			},
+			wantErr: false,
+		},
+		{
+			name: "nil platform type",
+			req: &trace.ListPreSpanRequest{
+				WorkspaceID:        789,
+				TraceID:            "trace-3",
+				StartTime:          1111111111,
+				SpanID:             ptr.Of("span-3"),
+				PreviousResponseID: ptr.Of("resp-3"),
+				PlatformType:       nil,
+			},
+			want: &service.ListPreSpanReq{
+				WorkspaceID:        789,
+				TraceID:            "trace-3",
+				StartTime:          1111111111,
+				SpanID:             "span-3",
+				PreviousResponseID: "resp-3",
+				PlatformType:       "", // 默认值
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := app.buildListPreSpanSvcReq(tt.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

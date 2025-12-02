@@ -56,7 +56,11 @@ const sampleJSON = `{
         "integer": 42,
         "float": 3.14,
         "array": [1, 2, 3]
-    }
+    },
+	"object": {
+		"string": "12345"
+	},
+	"recursive": "{\"string\":\"12345\"}"
 }`
 
 func TestGetByJSONPath(t *testing.T) {
@@ -222,11 +226,99 @@ func TestGetStringByJSONPath(t *testing.T) {
 			expectedValue: "",
 			expectedError: true,
 		},
+		{
+			name:          "场景：object",
+			jsonpath:      "$.object",
+			expectedValue: `{"string":"12345"}`,
+			expectedError: false,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := GetStringByJSONPath(sampleJSON, tc.jsonpath)
+			if tc.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedValue, result)
+			}
+		})
+	}
+}
+
+func TestGetStringByJSONPathRecursively(t *testing.T) {
+	testCases := []struct {
+		name          string
+		jsonpath      string
+		expectedValue string
+		expectedError bool
+	}{
+		{
+			name:          "场景：字符串字段",
+			jsonpath:      "$.store.bicycle.color",
+			expectedValue: "red",
+			expectedError: false,
+		},
+		{
+			name:          "场景：数字字段 - 整数",
+			jsonpath:      "$.numbers.integer",
+			expectedValue: "42",
+			expectedError: false,
+		},
+		{
+			name:          "场景：数字字段 - 浮点数",
+			jsonpath:      "$.numbers.float",
+			expectedValue: "3.14",
+			expectedError: false,
+		},
+		{
+			name:          "场景：布尔字段",
+			jsonpath:      "$.store.book[0].available",
+			expectedValue: "true",
+			expectedError: false,
+		},
+		{
+			name:          "场景：数组字段",
+			jsonpath:      "$.numbers.array",
+			expectedValue: "[1,2,3]",
+			expectedError: false,
+		},
+		{
+			name:          "场景：对象字段",
+			jsonpath:      "$.store.bicycle.specifications",
+			expectedValue: `{"height":26,"width":40}`,
+			expectedError: false,
+		},
+		{
+			name:          "场景：不存在的路径",
+			jsonpath:      "$.nonexistent",
+			expectedValue: "",
+			expectedError: false,
+		},
+		{
+			name:          "场景：无效的JSONPath",
+			jsonpath:      "$.[invalid",
+			expectedValue: "",
+			expectedError: true,
+		},
+		{
+			name:          "场景：object",
+			jsonpath:      "$.object",
+			expectedValue: `{"string":"12345"}`,
+			expectedError: false,
+		},
+		{
+			name:          "场景：递归",
+			jsonpath:      "$.recursive.string",
+			expectedValue: "12345",
+			expectedError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := GetStringByJSONPathRecursively(sampleJSON, tc.jsonpath)
 			if tc.expectedError {
 				assert.Error(t, err)
 			} else {

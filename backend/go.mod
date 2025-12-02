@@ -37,7 +37,7 @@ require (
 	github.com/cloudwego/kitex v0.13.1
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
-	github.com/coze-dev/cozeloop-go v0.1.10-0.20250901062520-61d3699b1e83
+	github.com/coze-dev/cozeloop-go v0.1.14
 	github.com/coze-dev/cozeloop-go/spec v0.1.4-0.20250829072213-3812ddbfb735
 	github.com/deatil/go-encoding v1.0.3003
 	github.com/dimchansky/utfbom v1.1.1
@@ -128,7 +128,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.24.11 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.9 // indirect
-	github.com/aws/smithy-go v1.22.1 // indirect
+	github.com/aws/smithy-go v1.22.1
 	github.com/baidubce/bce-sdk-go v0.9.164 // indirect
 	github.com/bluele/gcache v0.0.2 // indirect
 	github.com/bufbuild/protocompile v0.8.0 // indirect

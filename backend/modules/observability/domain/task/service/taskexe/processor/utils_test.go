@@ -57,9 +57,9 @@ func TestShouldTriggerBackfill(t *testing.T) {
 		task     *taskentity.ObservabilityTask
 		expected bool
 	}{
-		{"nil_time", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval}, false},
-		{"invalid_type", &taskentity.ObservabilityTask{TaskType: "manual"}, false},
-		{"invalid_range", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval, BackfillEffectiveTime: &taskentity.EffectiveTime{StartAt: 10, EndAt: 5}}, false},
+		{"nil_time", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval}, false},
+		{"invalid_type", &taskentity.ObservabilityTask{TaskType: taskentity.TaskType("manual")}, false},
+		{"invalid_range", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval, BackfillEffectiveTime: &taskentity.EffectiveTime{StartAt: 10, EndAt: 5}}, false},
 		{"valid", baseTask, true},
 	}
 
@@ -90,10 +90,10 @@ func TestShouldTriggerNewData(t *testing.T) {
 		task     *taskentity.ObservabilityTask
 		expected bool
 	}{
-		{"invalid_type", &taskentity.ObservabilityTask{TaskType: "manual"}, false},
-		{"nil_time", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval}, false},
-		{"invalid_range", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval, EffectiveTime: &taskentity.EffectiveTime{StartAt: 20, EndAt: 10}}, false},
-		{"start_in_future", &taskentity.ObservabilityTask{TaskType: task.TaskTypeAutoEval, EffectiveTime: &taskentity.EffectiveTime{StartAt: now.Add(time.Hour).UnixMilli(), EndAt: now.Add(2 * time.Hour).UnixMilli()}}, false},
+		{"invalid_type", &taskentity.ObservabilityTask{TaskType: taskentity.TaskType("manual")}, false},
+		{"nil_time", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval}, false},
+		{"invalid_range", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval, EffectiveTime: &taskentity.EffectiveTime{StartAt: 20, EndAt: 10}}, false},
+		{"start_in_future", &taskentity.ObservabilityTask{TaskType: taskentity.TaskTypeAutoEval, EffectiveTime: &taskentity.EffectiveTime{StartAt: now.Add(time.Hour).UnixMilli(), EndAt: now.Add(2 * time.Hour).UnixMilli()}}, false},
 		{"valid", baseTask, true},
 	}
 
@@ -213,11 +213,11 @@ func TestBuildItem(t *testing.T) {
 		TraceFieldJsonpath: "",
 		EvalSetName:        gptr.Of("field_1"),
 	}
-	evalSchema := []*eval_set.FieldSchema{
+	evalSchema := []*entity.FieldSchema{
 		{
 			Key:         gptr.Of("field_1"),
-			Name:        gptr.Of("field_1"),
-			ContentType: gptr.Of(common.ContentTypeText),
+			Name:        "field_1",
+			ContentType: common.ContentTypeText,
 		},
 	}
 	evalSchemaBytes, err := json.Marshal(evalSchema)
@@ -235,11 +235,11 @@ func TestBuildItem(t *testing.T) {
 	// content error path should return nil
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
 	badSpan := &loop_span.Span{TraceID: span.TraceID, SpanID: span.SpanID, Input: "invalid json"}
-	badSchema := []*eval_set.FieldSchema{
+	badSchema := []*entity.FieldSchema{
 		{
 			Key:         gptr.Of("field_1"),
-			Name:        gptr.Of("field_1"),
-			ContentType: gptr.Of(common.ContentTypeMultiPart),
+			Name:        "field_1",
+			ContentType: common.ContentTypeMultiPart,
 		},
 	}
 	badBytes, err := json.Marshal(badSchema)
@@ -279,11 +279,11 @@ func TestBuildItems(t *testing.T) {
 	goodSpan := &loop_span.Span{TraceID: "1234567890abcdef1234567890abcdef", SpanID: "deadc0debeefcafe", Input: "hello"}
 	badSpan := &loop_span.Span{TraceID: goodSpan.TraceID, SpanID: "badbadbadbadbad", Input: "invalid"}
 	mapping.FieldSchema.ContentType = gptr.Of(common.ContentTypeMultiPart)
-	multipartSchema := []*eval_set.FieldSchema{
+	multipartSchema := []*entity.FieldSchema{
 		{
 			Key:         gptr.Of("field_1"),
-			Name:        gptr.Of("field_1"),
-			ContentType: gptr.Of(common.ContentTypeMultiPart),
+			Name:        "field_1",
+			ContentType: common.ContentTypeMultiPart,
 		},
 	}
 	multipartBytes, err := json.Marshal(multipartSchema)
