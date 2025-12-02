@@ -34,7 +34,7 @@ type RootStep struct {
 	Output *string `json:"output"`
 	// 系统属性
 	Metadata  map[string]string `json:"metadata"`
-	BasicInfo *BasicInfo `json:"basic_info"`
+	BasicInfo *BasicInfo        `json:"basic_info"`
 }
 
 type AgentStep struct {
@@ -52,7 +52,7 @@ type AgentStep struct {
 	Steps []*Step `json:"steps"`
 	// 系统属性
 	Metadata  map[string]string `json:"metadata"`
-	BasicInfo *BasicInfo `json:"basic_info"`
+	BasicInfo *BasicInfo        `json:"basic_info"`
 }
 
 type Step struct {
@@ -72,7 +72,7 @@ type Step struct {
 	ModelInfo *ModelInfo `json:"model_info"`
 	// 系统属性
 	Metadata  map[string]string `json:"metadata"`
-	BasicInfo *BasicInfo `json:"basic_info"`
+	BasicInfo *BasicInfo        `json:"basic_info"`
 }
 
 type ModelInfo struct {
@@ -108,13 +108,14 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 		spanMap[span.SpanID] = span
 	}
 
-	var trajectoryID string
+	var trajectoryID *string
 
 	// 找到root节点
 	var rootSpan *Span
 	for _, span := range spanList {
 		if span.ParentID == "" || span.ParentID == "0" {
 			rootSpan = span
+			trajectoryID = &span.SpanID
 			break
 		}
 	}
@@ -150,7 +151,9 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 		if agentSpan == nil {
 			continue
 		}
-		trajectoryID = agentSpan.SpanID
+		if trajectoryID == nil {
+			trajectoryID = &agentSpan.SpanID
+		}
 		agentStep := &AgentStep{
 			ID:        &agentSpan.SpanID,
 			ParentID:  &agentSpan.ParentID,
@@ -164,7 +167,7 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 	}
 
 	trajectory := &Trajectory{
-		ID:         &trajectoryID,
+		ID:         trajectoryID,
 		RootStep:   rootStep,
 		AgentSteps: agentSteps,
 	}
