@@ -13,8 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	ck "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
-	model "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
+	dao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,10 +42,10 @@ func (m *MockIAnnotationDao) EXPECT() *MockIAnnotationDaoMockRecorder {
 }
 
 // Get mocks base method.
-func (m *MockIAnnotationDao) Get(arg0 context.Context, arg1 *ck.GetAnnotationParam) (*model.ObservabilityAnnotation, error) {
+func (m *MockIAnnotationDao) Get(arg0 context.Context, arg1 *dao.GetAnnotationParam) (*dao.Annotation, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1)
-	ret0, _ := ret[0].(*model.ObservabilityAnnotation)
+	ret0, _ := ret[0].(*dao.Annotation)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -58,7 +57,7 @@ func (mr *MockIAnnotationDaoMockRecorder) Get(arg0, arg1 any) *gomock.Call {
 }
 
 // Insert mocks base method.
-func (m *MockIAnnotationDao) Insert(arg0 context.Context, arg1 *ck.InsertAnnotationParam) error {
+func (m *MockIAnnotationDao) Insert(arg0 context.Context, arg1 *dao.InsertAnnotationParam) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Insert", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -72,10 +71,10 @@ func (mr *MockIAnnotationDaoMockRecorder) Insert(arg0, arg1 any) *gomock.Call {
 }
 
 // List mocks base method.
-func (m *MockIAnnotationDao) List(arg0 context.Context, arg1 *ck.ListAnnotationsParam) ([]*model.ObservabilityAnnotation, error) {
+func (m *MockIAnnotationDao) List(arg0 context.Context, arg1 *dao.ListAnnotationsParam) ([]*dao.Annotation, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1)
-	ret0, _ := ret[0].([]*model.ObservabilityAnnotation)
+	ret0, _ := ret[0].([]*dao.Annotation)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

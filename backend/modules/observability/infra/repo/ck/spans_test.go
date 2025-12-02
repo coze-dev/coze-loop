@@ -10,6 +10,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/clickhouse"
@@ -382,7 +383,7 @@ func TestBuildSql(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		qDb, err := new(SpansCkDaoImpl).buildSingleSql(context.Background(), db, "observability_spans", &QueryParam{
+		qDb, err := new(SpansCkDaoImpl).buildSingleSql(context.Background(), db, "observability_spans", &dao.QueryParam{
 			StartTime: 1,
 			EndTime:   2,
 			Filters:   tc.filter,
@@ -566,7 +567,7 @@ func TestQueryTypeEnumNotMatchSqlExceptionCases(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			qDb, err := new(SpansCkDaoImpl).buildSingleSql(context.Background(), db, "observability_spans", &QueryParam{
+			qDb, err := new(SpansCkDaoImpl).buildSingleSql(context.Background(), db, "observability_spans", &dao.QueryParam{
 				StartTime: 1,
 				EndTime:   2,
 				Filters:   tc.filter,
@@ -713,7 +714,7 @@ func TestQueryTypeEnumNotMatchComplexScenarios(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			qDb, err := new(SpansCkDaoImpl).buildSingleSql(context.Background(), db, "observability_spans", &QueryParam{
+			qDb, err := new(SpansCkDaoImpl).buildSingleSql(context.Background(), db, "observability_spans", &dao.QueryParam{
 				StartTime: 1,
 				EndTime:   2,
 				Filters:   tc.filter,
