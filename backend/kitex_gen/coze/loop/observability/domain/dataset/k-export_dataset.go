@@ -794,7 +794,7 @@ func (p *Item) FastReadField3(buf []byte) (int, error) {
 
 func (p *Item) FastReadField4(buf []byte) (int, error) {
 	offset := 0
-	_field := NewSpanInfo()
+	_field := NewExportSpanInfo()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -960,9 +960,9 @@ func (p *Item) DeepCopy(s interface{}) error {
 		}
 	}
 
-	var _spanInfo *SpanInfo
+	var _spanInfo *ExportSpanInfo
 	if src.SpanInfo != nil {
-		_spanInfo = &SpanInfo{}
+		_spanInfo = &ExportSpanInfo{}
 		if err := _spanInfo.DeepCopy(src.SpanInfo); err != nil {
 			return err
 		}
@@ -1891,7 +1891,7 @@ func (p *ItemError) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *SpanInfo) FastRead(buf []byte) (int, error) {
+func (p *ExportSpanInfo) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -1949,12 +1949,12 @@ func (p *SpanInfo) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SpanInfo[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExportSpanInfo[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *SpanInfo) FastReadField1(buf []byte) (int, error) {
+func (p *ExportSpanInfo) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1968,7 +1968,7 @@ func (p *SpanInfo) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *SpanInfo) FastReadField2(buf []byte) (int, error) {
+func (p *ExportSpanInfo) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1982,11 +1982,11 @@ func (p *SpanInfo) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *SpanInfo) FastWrite(buf []byte) int {
+func (p *ExportSpanInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *SpanInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExportSpanInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -1996,7 +1996,7 @@ func (p *SpanInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *SpanInfo) BLength() int {
+func (p *ExportSpanInfo) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -2006,7 +2006,7 @@ func (p *SpanInfo) BLength() int {
 	return l
 }
 
-func (p *SpanInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExportSpanInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTraceID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
@@ -2015,7 +2015,7 @@ func (p *SpanInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *SpanInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExportSpanInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSpanID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
@@ -2024,7 +2024,7 @@ func (p *SpanInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *SpanInfo) field1Length() int {
+func (p *ExportSpanInfo) field1Length() int {
 	l := 0
 	if p.IsSetTraceID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2033,7 +2033,7 @@ func (p *SpanInfo) field1Length() int {
 	return l
 }
 
-func (p *SpanInfo) field2Length() int {
+func (p *ExportSpanInfo) field2Length() int {
 	l := 0
 	if p.IsSetSpanID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2042,8 +2042,8 @@ func (p *SpanInfo) field2Length() int {
 	return l
 }
 
-func (p *SpanInfo) DeepCopy(s interface{}) error {
-	src, ok := s.(*SpanInfo)
+func (p *ExportSpanInfo) DeepCopy(s interface{}) error {
+	src, ok := s.(*ExportSpanInfo)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}

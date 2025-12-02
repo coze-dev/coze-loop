@@ -885,8 +885,8 @@ type Item struct {
 	// todo 多模态需要修改
 	FieldList []*FieldData `thrift:"field_list,2,optional" frugal:"2,optional,list<FieldData>" form:"field_list" json:"field_list,omitempty" query:"field_list"`
 	// 错误信息
-	Errors   []*ItemError `thrift:"errors,3,optional" frugal:"3,optional,list<ItemError>" form:"errors" json:"errors,omitempty" query:"errors"`
-	SpanInfo *SpanInfo    `thrift:"span_info,4,optional" frugal:"4,optional,SpanInfo" form:"span_info" json:"span_info,omitempty" query:"span_info"`
+	Errors   []*ItemError    `thrift:"errors,3,optional" frugal:"3,optional,list<ItemError>" form:"errors" json:"errors,omitempty" query:"errors"`
+	SpanInfo *ExportSpanInfo `thrift:"span_info,4,optional" frugal:"4,optional,ExportSpanInfo" form:"span_info" json:"span_info,omitempty" query:"span_info"`
 }
 
 func NewItem() *Item {
@@ -927,9 +927,9 @@ func (p *Item) GetErrors() (v []*ItemError) {
 	return p.Errors
 }
 
-var Item_SpanInfo_DEFAULT *SpanInfo
+var Item_SpanInfo_DEFAULT *ExportSpanInfo
 
-func (p *Item) GetSpanInfo() (v *SpanInfo) {
+func (p *Item) GetSpanInfo() (v *ExportSpanInfo) {
 	if p == nil {
 		return
 	}
@@ -947,7 +947,7 @@ func (p *Item) SetFieldList(val []*FieldData) {
 func (p *Item) SetErrors(val []*ItemError) {
 	p.Errors = val
 }
-func (p *Item) SetSpanInfo(val *SpanInfo) {
+func (p *Item) SetSpanInfo(val *ExportSpanInfo) {
 	p.SpanInfo = val
 }
 
@@ -1115,7 +1115,7 @@ func (p *Item) ReadField3(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *Item) ReadField4(iprot thrift.TProtocol) error {
-	_field := NewSpanInfo()
+	_field := NewExportSpanInfo()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -1312,7 +1312,7 @@ func (p *Item) Field3DeepEqual(src []*ItemError) bool {
 	}
 	return true
 }
-func (p *Item) Field4DeepEqual(src *SpanInfo) bool {
+func (p *Item) Field4DeepEqual(src *ExportSpanInfo) bool {
 
 	if !p.SpanInfo.DeepEqual(src) {
 		return false
@@ -2613,62 +2613,62 @@ func (p *ItemError) Field2DeepEqual(src []string) bool {
 	return true
 }
 
-type SpanInfo struct {
+type ExportSpanInfo struct {
 	TraceID *string `thrift:"trace_id,1,optional" frugal:"1,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
 	SpanID  *string `thrift:"span_id,2,optional" frugal:"2,optional,string" form:"span_id" json:"span_id,omitempty" query:"span_id"`
 }
 
-func NewSpanInfo() *SpanInfo {
-	return &SpanInfo{}
+func NewExportSpanInfo() *ExportSpanInfo {
+	return &ExportSpanInfo{}
 }
 
-func (p *SpanInfo) InitDefault() {
+func (p *ExportSpanInfo) InitDefault() {
 }
 
-var SpanInfo_TraceID_DEFAULT string
+var ExportSpanInfo_TraceID_DEFAULT string
 
-func (p *SpanInfo) GetTraceID() (v string) {
+func (p *ExportSpanInfo) GetTraceID() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetTraceID() {
-		return SpanInfo_TraceID_DEFAULT
+		return ExportSpanInfo_TraceID_DEFAULT
 	}
 	return *p.TraceID
 }
 
-var SpanInfo_SpanID_DEFAULT string
+var ExportSpanInfo_SpanID_DEFAULT string
 
-func (p *SpanInfo) GetSpanID() (v string) {
+func (p *ExportSpanInfo) GetSpanID() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSpanID() {
-		return SpanInfo_SpanID_DEFAULT
+		return ExportSpanInfo_SpanID_DEFAULT
 	}
 	return *p.SpanID
 }
-func (p *SpanInfo) SetTraceID(val *string) {
+func (p *ExportSpanInfo) SetTraceID(val *string) {
 	p.TraceID = val
 }
-func (p *SpanInfo) SetSpanID(val *string) {
+func (p *ExportSpanInfo) SetSpanID(val *string) {
 	p.SpanID = val
 }
 
-var fieldIDToName_SpanInfo = map[int16]string{
+var fieldIDToName_ExportSpanInfo = map[int16]string{
 	1: "trace_id",
 	2: "span_id",
 }
 
-func (p *SpanInfo) IsSetTraceID() bool {
+func (p *ExportSpanInfo) IsSetTraceID() bool {
 	return p.TraceID != nil
 }
 
-func (p *SpanInfo) IsSetSpanID() bool {
+func (p *ExportSpanInfo) IsSetSpanID() bool {
 	return p.SpanID != nil
 }
 
-func (p *SpanInfo) Read(iprot thrift.TProtocol) (err error) {
+func (p *ExportSpanInfo) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -2721,7 +2721,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SpanInfo[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExportSpanInfo[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -2731,7 +2731,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *SpanInfo) ReadField1(iprot thrift.TProtocol) error {
+func (p *ExportSpanInfo) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2742,7 +2742,7 @@ func (p *SpanInfo) ReadField1(iprot thrift.TProtocol) error {
 	p.TraceID = _field
 	return nil
 }
-func (p *SpanInfo) ReadField2(iprot thrift.TProtocol) error {
+func (p *ExportSpanInfo) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2754,9 +2754,9 @@ func (p *SpanInfo) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *SpanInfo) Write(oprot thrift.TProtocol) (err error) {
+func (p *ExportSpanInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("SpanInfo"); err != nil {
+	if err = oprot.WriteStructBegin("ExportSpanInfo"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -2786,7 +2786,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *SpanInfo) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ExportSpanInfo) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTraceID() {
 		if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 1); err != nil {
 			goto WriteFieldBeginError
@@ -2804,7 +2804,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *SpanInfo) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ExportSpanInfo) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSpanID() {
 		if err = oprot.WriteFieldBegin("span_id", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -2823,15 +2823,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
-func (p *SpanInfo) String() string {
+func (p *ExportSpanInfo) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("SpanInfo(%+v)", *p)
+	return fmt.Sprintf("ExportSpanInfo(%+v)", *p)
 
 }
 
-func (p *SpanInfo) DeepEqual(ano *SpanInfo) bool {
+func (p *ExportSpanInfo) DeepEqual(ano *ExportSpanInfo) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -2846,7 +2846,7 @@ func (p *SpanInfo) DeepEqual(ano *SpanInfo) bool {
 	return true
 }
 
-func (p *SpanInfo) Field1DeepEqual(src *string) bool {
+func (p *ExportSpanInfo) Field1DeepEqual(src *string) bool {
 
 	if p.TraceID == src {
 		return true
@@ -2858,7 +2858,7 @@ func (p *SpanInfo) Field1DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *SpanInfo) Field2DeepEqual(src *string) bool {
+func (p *ExportSpanInfo) Field2DeepEqual(src *string) bool {
 
 	if p.SpanID == src {
 		return true

@@ -78,7 +78,7 @@ func (p *Image) IsValid() error {
 func (p *ItemError) IsValid() error {
 	return nil
 }
-func (p *SpanInfo) IsValid() error {
+func (p *ExportSpanInfo) IsValid() error {
 	return nil
 }
 func (p *FieldMapping) IsValid() error {
