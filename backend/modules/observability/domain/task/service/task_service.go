@@ -4,7 +4,6 @@
 package service
 
 import (
-	"code.byted.org/kite/kitex/byted/kitexutil"
 	"context"
 	"fmt"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
@@ -385,7 +384,7 @@ func (t *TaskServiceImpl) SendBackfillMessage(ctx context.Context, event *entity
 		return errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg("backfill producer not initialized"))
 	}
 	// todo ppe test
-	ctx = kitexutil.NewCtxWithEnv(ctx, "ppe_6788399583")
+	ctx = context.WithValue(ctx, "K_ENV", "ppe_6788399583")
 
 	return t.backfillProducer.SendBackfill(ctx, event)
 }
