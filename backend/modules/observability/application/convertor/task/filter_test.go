@@ -75,16 +75,15 @@ func TestTaskFiltersDTO2DO(t *testing.T) {
 		fieldType := filter.FieldTypeString
 		queryType := filter.QueryTypeEq
 		relation := filter.QueryRelationOr
-		
 		filters := &filter.TaskFilterFields{
 			QueryAndOr: &relation,
 			FilterFields: []*filter.TaskFilterField{
 				{
-					FieldName: ptr.Of("task_name"),
-					FieldType: &fieldType,
-					QueryType: &queryType,
+					FieldName:  ptr.Of("task_name"),
+					FieldType:  &fieldType,
+					QueryType:  &queryType,
 					QueryAndOr: &relation,
-					Values:    []string{"test_task", "another_task"},
+					Values:     []string{"test_task", "another_task"},
 					SubFilter: &filter.TaskFilterField{
 						FieldName: ptr.Of("sub_field"),
 						Values:    []string{"sub_value"},
@@ -96,7 +95,7 @@ func TestTaskFiltersDTO2DO(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, entity.QueryRelationOr, *result.QueryAndOr)
 		assert.Len(t, result.FilterFields, 1)
-		
+
 		field := result.FilterFields[0]
 		assert.Equal(t, entity.TaskFieldName("task_name"), *field.FieldName)
 		assert.Equal(t, entity.FieldTypeString, *field.FieldType)
@@ -171,16 +170,16 @@ func TestTaskFiltersDO2DTO(t *testing.T) {
 		fieldType := entity.FieldTypeLong
 		queryType := entity.QueryTypeGte
 		relation := entity.QueryRelationAnd
-		
+
 		filters := &entity.TaskFilterFields{
 			QueryAndOr: &relation,
 			FilterFields: []*entity.TaskFilterField{
 				{
-					FieldName: func() *entity.TaskFieldName { n := entity.TaskFieldName("task_id"); return &n }(),
-					FieldType: &fieldType,
-					QueryType: &queryType,
+					FieldName:  func() *entity.TaskFieldName { n := entity.TaskFieldName("task_id"); return &n }(),
+					FieldType:  &fieldType,
+					QueryType:  &queryType,
 					QueryAndOr: &relation,
-					Values:    []string{"123", "456"},
+					Values:     []string{"123", "456"},
 					SubFilter: &entity.TaskFilterField{
 						FieldName: func() *entity.TaskFieldName { n := entity.TaskFieldName("sub_field"); return &n }(),
 						Values:    []string{"sub_value"},
@@ -192,7 +191,7 @@ func TestTaskFiltersDO2DTO(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, filter.QueryRelationAnd, *result.QueryAndOr)
 		assert.Len(t, result.FilterFields, 1)
-		
+
 		field := result.FilterFields[0]
 		assert.Equal(t, "task_id", *field.FieldName)
 		assert.Equal(t, filter.FieldTypeLong, *field.FieldType)
@@ -212,7 +211,7 @@ func TestTaskFiltersConversionRoundTrip(t *testing.T) {
 		relation := filter.QueryRelationAnd
 		fieldType := filter.FieldTypeString
 		queryType := filter.QueryTypeIn
-		
+
 		original := &filter.TaskFilterFields{
 			QueryAndOr: &relation,
 			FilterFields: []*filter.TaskFilterField{
@@ -224,11 +223,11 @@ func TestTaskFiltersConversionRoundTrip(t *testing.T) {
 				},
 			},
 		}
-		
+
 		// DTO -> DO -> DTO
 		do := TaskFiltersDTO2DO(original)
 		assert.NotNil(t, do)
-		
+
 		result := TaskFiltersDO2DTO(do)
 		assert.NotNil(t, result)
 		assert.Equal(t, *original.QueryAndOr, *result.QueryAndOr)
@@ -244,7 +243,7 @@ func TestTaskFiltersConversionRoundTrip(t *testing.T) {
 		relation := entity.QueryRelationOr
 		fieldType := entity.FieldTypeDouble
 		queryType := entity.QueryTypeLt
-		
+
 		original := &entity.TaskFilterFields{
 			QueryAndOr: &relation,
 			FilterFields: []*entity.TaskFilterField{
@@ -256,11 +255,11 @@ func TestTaskFiltersConversionRoundTrip(t *testing.T) {
 				},
 			},
 		}
-		
+
 		// DO -> DTO -> DO
 		dto := TaskFiltersDO2DTO(original)
 		assert.NotNil(t, dto)
-		
+
 		result := TaskFiltersDTO2DO(dto)
 		assert.NotNil(t, result)
 		assert.Equal(t, *original.QueryAndOr, *result.QueryAndOr)

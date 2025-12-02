@@ -112,7 +112,7 @@ type TaskServiceImpl struct {
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
 	// storage准备
-	tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, loop_span.PlatformType(req.Task.SpanFilter.PlatformType))
+	tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, req.Task.SpanFilter.PlatformType)
 	if err != nil {
 		return nil, err
 	}

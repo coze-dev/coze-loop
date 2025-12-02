@@ -93,11 +93,10 @@ func TestOrderByConversionRoundTrip(t *testing.T) {
 			Field: ptr.Of("test_field"),
 			IsAsc: ptr.Of(true),
 		}
-		
 		// DTO -> DO -> DTO
 		do := OrderByDTO2DO(original)
 		assert.NotNil(t, do)
-		
+
 		result := OrderByDO2DTO(do)
 		assert.NotNil(t, result)
 		assert.Equal(t, *original.Field, *result.Field)
@@ -110,11 +109,11 @@ func TestOrderByConversionRoundTrip(t *testing.T) {
 			Field: "entity_field",
 			IsAsc: false,
 		}
-		
+
 		// DO -> DTO -> DO
 		dto := OrderByDO2DTO(original)
 		assert.NotNil(t, dto)
-		
+
 		result := OrderByDTO2DO(dto)
 		assert.NotNil(t, result)
 		assert.Equal(t, original.Field, result.Field)

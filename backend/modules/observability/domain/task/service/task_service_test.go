@@ -131,13 +131,12 @@ func newTaskServiceWithProcessor(t *testing.T, repo taskrepo.ITaskRepo, backfill
 	t.Helper()
 	tp := processor.NewTaskProcessor()
 	tp.Register(taskType, proc)
-	
 	// 创建mock依赖
 	idGenerator := &stubIDGenerator{}
 	storageProvider := &stubStorageProvider{}
 	tenantProvider := &stubTenantProvider{}
 	buildHelper := &stubTraceFilterBuilder{}
-	
+
 	service, err := NewTaskServiceImpl(repo, idGenerator, backfill, tp, storageProvider, tenantProvider, buildHelper)
 	assert.NoError(t, err)
 	return service
@@ -715,7 +714,7 @@ type stubStorageProvider struct{}
 
 func (s *stubStorageProvider) GetTraceStorage(ctx context.Context, workSpaceID string, tenants []string) storage.Storage {
 	return storage.Storage{
-		StorageName: "ck",
+		StorageName:   "ck",
 		StorageConfig: map[string]string{},
 	}
 }
