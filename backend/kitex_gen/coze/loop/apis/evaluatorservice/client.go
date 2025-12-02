@@ -41,6 +41,7 @@ type Client interface {
 	DebugBuiltinEvaluator(ctx context.Context, req *evaluator.DebugBuiltinEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.DebugBuiltinEvaluatorResponse, err error)
 	UpdateBuiltinEvaluatorTags(ctx context.Context, req *evaluator.UpdateBuiltinEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.UpdateBuiltinEvaluatorTagsResponse, err error)
 	ListEvaluatorTags(ctx context.Context, req *evaluator.ListEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.ListEvaluatorTagsResponse, err error)
+	UpdateEvaluatorTags(ctx context.Context, req *evaluator.UpdateEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorTagsResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -220,4 +221,9 @@ func (p *kEvaluatorServiceClient) UpdateBuiltinEvaluatorTags(ctx context.Context
 func (p *kEvaluatorServiceClient) ListEvaluatorTags(ctx context.Context, req *evaluator.ListEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.ListEvaluatorTagsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListEvaluatorTags(ctx, req)
+}
+
+func (p *kEvaluatorServiceClient) UpdateEvaluatorTags(ctx context.Context, req *evaluator.UpdateEvaluatorTagsRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorTagsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateEvaluatorTags(ctx, req)
 }

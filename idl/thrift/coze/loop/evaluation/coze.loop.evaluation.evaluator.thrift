@@ -465,6 +465,15 @@ struct ListEvaluatorTagsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct UpdateEvaluatorTagsRequest {
+
+    255: optional base.Base Base
+}
+
+struct UpdateEvaluatorTagsResponse {
+    255: base.BaseResp BaseResp
+}
+
 
 service EvaluatorService {
     // 评估器
@@ -519,5 +528,7 @@ service EvaluatorService {
     UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req) (api.patch="/api/evaluation/v1/evaluators/:evaluator_id/update_builtin_tags")// 更新预置评估器
     // 查询Tag
     ListEvaluatorTagsResponse ListEvaluatorTags(1: ListEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/list_tags")
+
+    UpdateEvaluatorTagsResponse UpdateEvaluatorTags(1: UpdateEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/update_tags")// 更新评估器tag
 
 } (api.js_conv="true" )

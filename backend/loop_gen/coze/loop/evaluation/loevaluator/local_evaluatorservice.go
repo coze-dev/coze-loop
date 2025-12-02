@@ -678,6 +678,27 @@ func (l *LocalEvaluatorService) ListEvaluatorTags(ctx context.Context, req *eval
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluatorService) UpdateEvaluatorTags(ctx context.Context, req *evaluator.UpdateEvaluatorTagsRequest, callOptions ...callopt.Option) (*evaluator.UpdateEvaluatorTagsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*evaluator.EvaluatorServiceUpdateEvaluatorTagsArgs)
+		result := out.(*evaluator.EvaluatorServiceUpdateEvaluatorTagsResult)
+		resp, err := l.impl.UpdateEvaluatorTags(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &evaluator.EvaluatorServiceUpdateEvaluatorTagsArgs{Req: req}
+	result := &evaluator.EvaluatorServiceUpdateEvaluatorTagsResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateEvaluatorTags")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluatorService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

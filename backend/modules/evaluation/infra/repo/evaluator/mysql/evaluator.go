@@ -231,7 +231,10 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 	// 通过opts获取当前的db session实例
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
-	query := dbsession.WithContext(ctx).Model(&model.Evaluator{}).Where("space_id = ?", req.SpaceID)
+	query := dbsession.WithContext(ctx).Model(&model.Evaluator{})
+	if req.SpaceID > 0 {
+		query = query.Where("space_id = ?", req.SpaceID)
+	}
 
 	// 如果传入了 ID 条件（可以是切片也可以是子查询），则优先按 ID 过滤（用于标签子查询结果）
 	if req.IDs != nil {

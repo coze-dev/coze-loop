@@ -224,6 +224,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UpdateEvaluatorTags": kitex.NewMethodInfo(
+		updateEvaluatorTagsHandler,
+		newEvaluatorServiceUpdateEvaluatorTagsArgs,
+		newEvaluatorServiceUpdateEvaluatorTagsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -827,6 +834,25 @@ func newEvaluatorServiceListEvaluatorTagsResult() interface{} {
 	return evaluator.NewEvaluatorServiceListEvaluatorTagsResult()
 }
 
+func updateEvaluatorTagsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceUpdateEvaluatorTagsArgs)
+	realResult := result.(*evaluator.EvaluatorServiceUpdateEvaluatorTagsResult)
+	success, err := handler.(evaluator.EvaluatorService).UpdateEvaluatorTags(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceUpdateEvaluatorTagsArgs() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateEvaluatorTagsArgs()
+}
+
+func newEvaluatorServiceUpdateEvaluatorTagsResult() interface{} {
+	return evaluator.NewEvaluatorServiceUpdateEvaluatorTagsResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -1134,6 +1160,16 @@ func (p *kClient) ListEvaluatorTags(ctx context.Context, req *evaluator.ListEval
 	_args.Req = req
 	var _result evaluator.EvaluatorServiceListEvaluatorTagsResult
 	if err = p.c.Call(ctx, "ListEvaluatorTags", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateEvaluatorTags(ctx context.Context, req *evaluator.UpdateEvaluatorTagsRequest) (r *evaluator.UpdateEvaluatorTagsResponse, err error) {
+	var _args evaluator.EvaluatorServiceUpdateEvaluatorTagsArgs
+	_args.Req = req
+	var _result evaluator.EvaluatorServiceUpdateEvaluatorTagsResult
+	if err = p.c.Call(ctx, "UpdateEvaluatorTags", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

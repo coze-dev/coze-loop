@@ -1725,3 +1725,8 @@ func _listparentpromptMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _updateevaluatortagsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

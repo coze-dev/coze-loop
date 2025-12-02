@@ -692,6 +692,83 @@ func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *
 	return evaluatorSourceService.Debug(ctx, evaluatorDO, inputData, exptSpaceID)
 }
 
+// UpdateEvaluatorTags 为所有未删除评估器补充 Category / CodeType 等标签
+func (e *EvaluatorServiceImpl) UpdateEvaluatorTags(ctx context.Context) error {
+	const pageSize int32 = 200
+	pageNum := int32(1)
+
+	for {
+		listReq := &entity.ListEvaluatorRequest{
+			SpaceID:     0, // 0 表示不过滤空间，遍历全部
+			PageSize:    pageSize,
+			PageNum:     pageNum,
+			WithVersion: true, // 需要 CodeEvaluatorVersion.LanguageType
+		}
+
+		evaluators, total, err := e.ListEvaluator(ctx, listReq)
+		if err != nil {
+			return err
+		}
+		if len(evaluators) == 0 {
+			break
+		}
+
+		for _, ev := range evaluators {
+			if ev == nil {
+				continue
+			}
+			tags := buildTagsForEvaluator(ev)
+			if len(tags) == 0 {
+				continue
+			}
+			if err := e.evaluatorRepo.UpdateEvaluatorTags(ctx, ev.ID, tags); err != nil {
+				return err
+			}
+		}
+
+		if int64(pageNum)*int64(pageSize) >= total {
+			break
+		}
+		pageNum++
+	}
+
+	return nil
+}
+
+// buildTagsForEvaluator 按评估器类型构建 Category / CodeType 标签（默认 zh-CN）
+func buildTagsForEvaluator(ev *entity.Evaluator) map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string {
+	if ev == nil {
+		return nil
+	}
+
+	tagMap := make(map[entity.EvaluatorTagKey][]string)
+
+	// Category: LLM / Code
+	switch ev.EvaluatorType {
+	case entity.EvaluatorTypeCode:
+		tagMap[entity.EvaluatorTagKey_Category] = []string{"Code"}
+	case entity.EvaluatorTypePrompt, entity.EvaluatorTypeCustomRPC:
+		tagMap[entity.EvaluatorTagKey_Category] = []string{"LLM"}
+	}
+
+	// CodeType: 仅 Code 评估器，语言来自 CodeEvaluatorVersion.LanguageType
+	if ev.EvaluatorType == entity.EvaluatorTypeCode && ev.CodeEvaluatorVersion != nil {
+		lt := string(ev.CodeEvaluatorVersion.LanguageType)
+		if lt != "" {
+			tagMap[entity.EvaluatorTagKey_CodeType] = []string{lt}
+		}
+	}
+
+	if len(tagMap) == 0 {
+		return nil
+	}
+
+	return map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+		entity.EvaluatorTagLangType_Zh: tagMap,
+		entity.EvaluatorTagLangType_En: tagMap,
+	}
+}
+
 func (e *EvaluatorServiceImpl) CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error) {
 	return e.evaluatorRepo.CheckNameExist(ctx, spaceID, evaluatorID, name)
 }

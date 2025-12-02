@@ -212,3 +212,19 @@ func UpdateBuiltinEvaluatorTags(ctx context.Context, c *app.RequestContext) {
 func GetTemplateV2(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvaluatorSvc.GetTemplateV2)
 }
+
+// UpdateEvaluatorTags .
+// @router /api/evaluation/v1/evaluators/update_tags [POST]
+func UpdateEvaluatorTags(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.UpdateEvaluatorTagsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	// 暂不通过 HTTP 直接触发刷数逻辑，实际刷数通过内部 RPC 调用 EvaluatorService.UpdateEvaluatorTags
+	resp := new(evaluator.UpdateEvaluatorTagsResponse)
+	c.JSON(consts.StatusOK, resp)
+}
