@@ -37,6 +37,12 @@ type EvaluatorHTTPInfo struct {
 	Path   *string              `json:"path,omitempty"`
 }
 
+type OldCustomEvaluatorCompatibilityInfo struct {
+	EvaluatorType  *int64  `json:"evaluator_type,omitempty"`
+	RuleConfigID   *int64  `json:"rule_config_id,omitempty"`
+	RuleConfigData *string `json:"rule_config_data,omitempty"`
+}
+
 type CustomRPCEvaluatorVersion struct {
 	// standard EvaluatorVersion layer attributes
 	ID            int64         `json:"id"`
@@ -59,6 +65,9 @@ type CustomRPCEvaluatorVersion struct {
 	InvokeHTTPInfo        *EvaluatorHTTPInfo      `json:"invoke_http_info,omitempty"` // invoke http info
 	Timeout               *int64                  `json:"timeout"`                    // timeout duration in milliseconds(ms)
 	RateLimit             *RateLimit              `json:"rate_limit,omitempty"`
+
+	// preserve some fields for backward compatibility
+	OldCustomEvaluatorCompatibilityInfo *OldCustomEvaluatorCompatibilityInfo `json:"old_custom_evaluator_compatibility_info,omitempty"`
 }
 
 func (do *CustomRPCEvaluatorVersion) SetID(id int64) {
