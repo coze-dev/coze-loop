@@ -930,6 +930,7 @@ func TestNewInsightAnalysisService(t *testing.T) {
 		mockNotifyRPCAdapter,
 		mockUserProvider,
 		mockExptRepo,
+		repoMocks.NewMockIEvalTargetRepo(ctrl),
 	)
 
 	assert.NotNil(t, service)
