@@ -341,15 +341,12 @@ func (p *AutoEvaluteProcessor) OnTaskRunCreated(ctx context.Context, param taske
 		TargetFieldMapping: &expt.TargetFieldMapping{
 			FromEvalSet: []*expt.FieldMapping{},
 		},
-		CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
-			SourceTargetID: gptr.Of(cast.ToString(currentTask.ID)),
-			EvalTargetType: gptr.Of(eval_target_d.EvalTargetType_Trace),
-		},
-		ExptType:     gptr.Of(expt.ExptType_Online),
-		MaxAliveTime: gptr.Of(maxAliveTime),
-		SourceType:   gptr.Of(expt.SourceType_AutoTask),
-		SourceID:     gptr.Of(cast.ToString(currentTask.ID)),
-		Session:      sessionInfo,
+		CreateEvalTargetParam: p.buildEvalTargetParam(currentTask),
+		ExptType:              gptr.Of(expt.ExptType_Online),
+		MaxAliveTime:          gptr.Of(maxAliveTime),
+		SourceType:            gptr.Of(expt.SourceType_AutoTask),
+		SourceID:              gptr.Of(cast.ToString(currentTask.ID)),
+		Session:               sessionInfo,
 	}
 	logs.CtxInfo(ctx, "[auto_task] SubmitExperiment:%+v", submitExperimentReq)
 	exptID, exptRunID, err := p.evaluationSvc.SubmitExperiment(ctx, &submitExperimentReq)
@@ -435,5 +432,48 @@ func (p *AutoEvaluteProcessor) getSession(ctx context.Context, task *task_entity
 	return &common.Session{
 		UserID: gptr.Of(userID),
 		AppID:  gptr.Of(p.aid),
+	}
+}
+
+func (p *AutoEvaluteProcessor) buildEvalTargetParam(task *task_entity.ObservabilityTask) *eval_target.CreateEvalTargetParam {
+	var targetID string
+	var targetType eval_target_d.EvalTargetType
+
+	findFieldFunc := func(fieldName string) (string, bool) {
+		for _, filter := range task.SpanFilter.Filters.FilterFields {
+			if filter.FieldName == fieldName && *filter.QueryType == loop_span.QueryTypeEnumIn && len(filter.Values) == 1 {
+				return filter.Values[0], true
+			}
+		}
+		return "", false
+	}
+
+	switch task.SpanFilter.PlatformType {
+	case loop_span.PlatformPrompt:
+		targetType = eval_target_d.EvalTargetType_CozeLoopPrompt
+		if id, ok := findFieldFunc("prompt_key"); ok {
+			targetID = id
+		}
+	case loop_span.PlatformCozeWorkflow:
+		targetType = eval_target_d.EvalTargetType_CozeWorkflow
+		if id, ok := findFieldFunc("workflow_id"); ok {
+			targetID = id
+		}
+	case loop_span.PlatformCozeBot:
+		targetType = eval_target_d.EvalTargetType_CozeBot
+		if id, ok := findFieldFunc("bot_id"); ok {
+			targetID = id
+		}
+	case loop_span.PlatformAgentKit:
+		targetType = eval_target_d.EvalTargetType_VolcengineAgent
+		if id, ok := findFieldFunc("run_id"); ok {
+			targetID = id
+		}
+	default:
+		targetType = eval_target_d.EvalTargetType_Trace
+	}
+	return &eval_target.CreateEvalTargetParam{
+		SourceTargetID: &targetID,
+		EvalTargetType: &targetType,
 	}
 }
