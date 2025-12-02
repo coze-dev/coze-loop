@@ -26,8 +26,9 @@ const (
 type EvaluatorTagKeyType int32
 
 const (
-	EvaluatorTagKeyType_Evaluator EvaluatorTagKeyType = 1 // 评估器标签
-	EvaluatorTagKeyType_Template  EvaluatorTagKeyType = 2 // 评估器模板标签
+	EvaluatorTagKeyType_Evaluator      EvaluatorTagKeyType = 1 // 评估器标签（预置评估器 / 公共筛选）
+	EvaluatorTagKeyType_Template       EvaluatorTagKeyType = 2 // 评估器模板标签
+	EvaluatorTagKeyType_NonBuiltinEval EvaluatorTagKeyType = 3 // 非预置评估器标签（业务自定义打标）
 )
 
 // AggregatedEvaluatorTag 聚合后的标签键值

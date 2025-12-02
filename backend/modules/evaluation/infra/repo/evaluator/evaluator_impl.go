@@ -604,8 +604,8 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorTags(ctx context.Context, evaluatorID
 		// 针对每种语言分别做全量对齐
 		userID := session.UserIDInCtxOrEmpty(ctx)
 		for lang, tagMap := range tags {
-			// 查询该语言下已有标签
-			existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{evaluatorID}, int32(entity.EvaluatorTagKeyType_Evaluator), string(lang), opt)
+			// 查询该语言下已有标签（非预置评估器使用专用 tag_type）
+			existingTags, err := r.tagDAO.BatchGetTagsBySourceIDsAndType(ctx, []int64{evaluatorID}, int32(entity.EvaluatorTagKeyType_NonBuiltinEval), string(lang), opt)
 			if err != nil {
 				return err
 			}
@@ -636,7 +636,7 @@ func (r *EvaluatorRepoImpl) UpdateEvaluatorTags(ctx context.Context, evaluatorID
 				}
 			}
 			if len(del) > 0 {
-				if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, evaluatorID, int32(entity.EvaluatorTagKeyType_Evaluator), string(lang), del, opt); err != nil {
+				if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, evaluatorID, int32(entity.EvaluatorTagKeyType_NonBuiltinEval), string(lang), del, opt); err != nil {
 					return err
 				}
 			}

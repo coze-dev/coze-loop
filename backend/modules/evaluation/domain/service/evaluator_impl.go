@@ -731,6 +731,10 @@ func (e *EvaluatorServiceImpl) UpdateEvaluatorTags(ctx context.Context, workspac
 			if ev == nil {
 				continue
 			}
+			// 只处理非预置评估器
+			if ev.Builtin {
+				continue
+			}
 			tags := buildTagsForEvaluator(ev)
 			if len(tags) == 0 {
 				continue
@@ -782,7 +786,8 @@ func (e *EvaluatorServiceImpl) updateEvaluatorTagsByIDs(ctx context.Context, eva
 	}
 
 	for _, meta := range metas {
-		if meta == nil {
+		if meta == nil || meta.Builtin {
+			// 跳过预置评估器
 			continue
 		}
 		ev := &entity.Evaluator{
