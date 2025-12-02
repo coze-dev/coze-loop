@@ -88,6 +88,72 @@ func NewEvaluatorRepo(idgen idgen.IIDGenerator, provider db.Provider, evaluatorD
 	return singletonEvaluatorRepo
 }
 
+// ListEvaluator 按查询条件查询 evaluator 元信息（非 builtin 场景），支持 FilterOption 标签筛选
+func (r *EvaluatorRepoImpl) ListEvaluator(ctx context.Context, req *repo.ListEvaluatorRequest) (*repo.ListEvaluatorResponse, error) {
+	// 根据 spaceID 判断是否强制走主库
+	var opts []db.Option
+	if r.lwt.CheckWriteFlagBySearchParam(ctx, platestwrite.ResourceTypeEvaluator, strconv.FormatInt(req.SpaceID, 10)) {
+		opts = append(opts, db.WithMaster())
+	}
+
+	// 构造 DAO 层请求的通用部分
+	daoOrderBy := make([]*mysql.OrderBy, 0, len(req.OrderBy))
+	for _, ob := range req.OrderBy {
+		if ob == nil || ob.Field == nil {
+			continue
+		}
+		daoOrderBy = append(daoOrderBy, &mysql.OrderBy{
+			Field:  *ob.Field,
+			ByDesc: ob.IsAsc != nil && !*ob.IsAsc,
+		})
+	}
+	daoReq := &mysql.ListEvaluatorRequest{
+		SpaceID:       req.SpaceID,
+		SearchName:    req.SearchName,
+		CreatorIDs:    req.CreatorIDs,
+		EvaluatorType: make([]int32, 0, len(req.EvaluatorType)),
+		PageSize:      req.PageSize,
+		PageNum:       req.PageNum,
+		OrderBy:       daoOrderBy,
+	}
+	for _, t := range req.EvaluatorType {
+		daoReq.EvaluatorType = append(daoReq.EvaluatorType, int32(t))
+	}
+
+	// 若存在 FilterOption，则使用子查询方式基于 evaluator_tag 过滤
+	if req.FilterOption != nil {
+		lang := contexts.CtxLocale(ctx)
+		subQuery := r.tagDAO.BuildSourceIDSubQuery(
+			ctx,
+			int32(entity.EvaluatorTagKeyType_Evaluator),
+			req.FilterOption,
+			lang,
+			opts...,
+		)
+		// 将子查询注入 IDs 条件，由 DAO 层生成单条 SQL：id IN (subQuery)
+		daoReq.IDs = subQuery
+	}
+
+	daoResp, err := r.evaluatorDao.ListEvaluator(ctx, daoReq, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// PO -> DO
+	evaluators := make([]*entity.Evaluator, 0, len(daoResp.Evaluators))
+	for _, po := range daoResp.Evaluators {
+		if po == nil {
+			continue
+		}
+		evaluators = append(evaluators, convertor.ConvertEvaluatorPO2DO(po))
+	}
+
+	return &repo.ListEvaluatorResponse{
+		TotalCount: daoResp.TotalCount,
+		Evaluators: evaluators,
+	}, nil
+}
+
 func (r *EvaluatorRepoImpl) SubmitEvaluatorVersion(ctx context.Context, evaluator *entity.Evaluator) error {
 	err := r.dbProvider.Transaction(ctx, func(tx *gorm.DB) error {
 		opt := db.WithTransaction(tx)
@@ -648,65 +714,25 @@ func (r *EvaluatorRepoImpl) CheckNameExist(ctx context.Context, spaceID, evaluat
 	return r.evaluatorDao.CheckNameExist(ctx, spaceID, evaluatorID, name)
 }
 
-func (r *EvaluatorRepoImpl) ListEvaluator(ctx context.Context, req *repo.ListEvaluatorRequest) (*repo.ListEvaluatorResponse, error) {
-	evaluatorTypes := make([]int32, 0, len(req.EvaluatorType))
-	for _, evaluatorType := range req.EvaluatorType {
-		evaluatorTypes = append(evaluatorTypes, int32(evaluatorType))
-	}
-	orderBys := make([]*mysql.OrderBy, 0, len(req.OrderBy))
-	for _, orderBy := range req.OrderBy {
-		orderBys = append(orderBys, &mysql.OrderBy{
-			Field:  gptr.Indirect(orderBy.Field), // ignore_security_alert
-			ByDesc: !gptr.Indirect(orderBy.IsAsc),
-		})
-	}
-	daoReq := &mysql.ListEvaluatorRequest{
-		SpaceID:       req.SpaceID,
-		SearchName:    req.SearchName,
-		CreatorIDs:    req.CreatorIDs,
-		EvaluatorType: evaluatorTypes,
-		PageSize:      req.PageSize,
-		PageNum:       req.PageNum,
-		OrderBy:       orderBys,
-	}
-	evaluatorPOS, err := r.evaluatorDao.ListEvaluator(ctx, daoReq)
-	if err != nil {
-		return nil, err
-	}
-	resp := &repo.ListEvaluatorResponse{
-		TotalCount: evaluatorPOS.TotalCount,
-		Evaluators: make([]*entity.Evaluator, 0, len(evaluatorPOS.Evaluators)),
-	}
-	for _, evaluatorPO := range evaluatorPOS.Evaluators {
-		evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
-		resp.Evaluators = append(resp.Evaluators, evaluatorDO)
-	}
-	return resp, nil
-}
-
 // ListBuiltinEvaluator 根据筛选条件查询内置评估器列表，支持tag筛选和分页
 func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.ListBuiltinEvaluatorRequest) (*repo.ListBuiltinEvaluatorResponse, error) {
-	// 统一通过 tagDAO 获取分页与总数（即使无筛选条件也走该逻辑）
-	evaluatorIDs, total, err := r.tagDAO.GetSourceIDsByFilterConditions(
-		ctx,
-		int32(entity.EvaluatorTagKeyType_Evaluator),
-		req.FilterOption,
-		req.PageSize,
-		req.PageNum,
-		contexts.CtxLocale(ctx),
-	)
-	if err != nil {
-		return nil, err
-	}
-	if len(evaluatorIDs) == 0 {
-		return &repo.ListBuiltinEvaluatorResponse{TotalCount: total, Evaluators: []*entity.Evaluator{}}, nil
+	// 统一通过 tagDAO 子查询 + evaluator 表完成分页与总数
+	var ids interface{}
+	if req.FilterOption != nil {
+		sub := r.tagDAO.BuildSourceIDSubQuery(
+			ctx,
+			int32(entity.EvaluatorTagKeyType_Evaluator),
+			req.FilterOption,
+			contexts.CtxLocale(ctx),
+		)
+		// gorm 支持子查询作为 IN(?) 参数，这里直接将 subQuery 透传给 DAO 层
+		ids = sub
 	}
 
-	// 基于获得的 ID 集查询内置评估器实体；此处不再做分页，避免与 tagDAO 的分页重复
 	daoReq := &mysql.ListBuiltinEvaluatorRequest{
-		IDs:      evaluatorIDs,
-		PageSize: 0,
-		PageNum:  0,
+		IDs:      ids,
+		PageSize: req.PageSize,
+		PageNum:  req.PageNum,
 		OrderBy:  []*mysql.OrderBy{{Field: "name", ByDesc: false}},
 	}
 
@@ -738,7 +764,7 @@ func (r *EvaluatorRepoImpl) ListBuiltinEvaluator(ctx context.Context, req *repo.
 		r.setEvaluatorTags(evaluatorDO, evaluatorPO.ID, tagsBySourceID)
 		evaluators = append(evaluators, evaluatorDO)
 	}
-	return &repo.ListBuiltinEvaluatorResponse{TotalCount: total, Evaluators: evaluators}, nil
+	return &repo.ListBuiltinEvaluatorResponse{TotalCount: daoResp.TotalCount, Evaluators: evaluators}, nil
 }
 
 // ListEvaluatorTags 根据 tagType 聚合唯一标签

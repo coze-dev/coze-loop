@@ -463,6 +463,8 @@ func ConvertEvaluatorTagKeyDO2DTO(doKey evaluatordo.EvaluatorTagKey) evaluatordt
 		return evaluatordto.EvaluatorTagKeyBusinessScenario
 	case evaluatordo.EvaluatorTagKey_Name:
 		return evaluatordto.EvaluatorTagKeyName
+	case evaluatordo.EvaluatorTagKey_CodeType:
+		return evaluatordto.EvaluatorTagKeyCodeType
 	default:
 		return evaluatordto.EvaluatorTagKey(doKey)
 	}

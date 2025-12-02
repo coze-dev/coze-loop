@@ -207,6 +207,7 @@ type ListEvaluatorRequest struct {
 	SearchName    string
 	CreatorIDs    []int64
 	EvaluatorType []int32
+	IDs           interface{}
 	PageSize      int32
 	PageNum       int32
 	OrderBy       []*OrderBy
@@ -215,7 +216,7 @@ type ListEvaluatorRequest struct {
 // ListBuiltinEvaluatorRequest 专用于内置评估器查询
 type ListBuiltinEvaluatorRequest struct {
 	SpaceID  int64
-	IDs      []int64
+	IDs      interface{}
 	PageSize int32
 	PageNum  int32
 	OrderBy  []*OrderBy
@@ -231,6 +232,11 @@ func (dao *EvaluatorDAOImpl) ListEvaluator(ctx context.Context, req *ListEvaluat
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
 	query := dbsession.WithContext(ctx).Model(&model.Evaluator{}).Where("space_id = ?", req.SpaceID)
+
+	// 如果传入了 ID 条件（可以是切片也可以是子查询），则优先按 ID 过滤（用于标签子查询结果）
+	if req.IDs != nil {
+		query = query.Where("id IN (?)", req.IDs)
+	}
 
 	// 添加名称模糊搜索
 	if len(req.SearchName) > 0 {
@@ -292,7 +298,7 @@ func (dao *EvaluatorDAOImpl) ListBuiltinEvaluator(ctx context.Context, req *List
 		Where("builtin_visible_version != ?", "").
 		Where("deleted_at IS NULL")
 
-	if len(req.IDs) > 0 {
+	if req.IDs != nil {
 		query = query.Where("id IN (?)", req.IDs)
 	}
 

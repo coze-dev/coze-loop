@@ -20,6 +20,7 @@ const (
 	EvaluatorTagKey_BusinessScenario EvaluatorTagKey = "BusinessScenario" // 业务场景 (安全风控/AI Coding等)
 	EvaluatorTagKey_BoxType          EvaluatorTagKey = "BoxType"          // 黑白盒类型
 	EvaluatorTagKey_Name             EvaluatorTagKey = "Name"             // 评估器名称
+	EvaluatorTagKey_CodeType         EvaluatorTagKey = "CodeType"         // Code评估器语言类型
 )
 
 type EvaluatorTagKeyType int32

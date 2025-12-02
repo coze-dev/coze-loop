@@ -35,55 +35,23 @@ func NewEvaluatorTemplateRepo(tagDAO mysql.EvaluatorTagDAO, templateDAO mysql.Ev
 
 // ListEvaluatorTemplate 根据筛选条件查询evaluator_template列表，支持tag筛选和分页
 func (r *EvaluatorTemplateRepoImpl) ListEvaluatorTemplate(ctx context.Context, req *repo.ListEvaluatorTemplateRequest) (*repo.ListEvaluatorTemplateResponse, error) {
-	templateIDs := []int64{}
-	var err error
-
-	// 处理筛选条件
-	if req.FilterOption != nil {
-		// 检查是否有有效的筛选条件
-		hasValidFilters := false
-
-		// 检查SearchKeyword是否有效
-		if req.FilterOption.SearchKeyword != nil && *req.FilterOption.SearchKeyword != "" {
-			hasValidFilters = true
-		}
-
-		// 检查FilterConditions或SubFilters是否有效
-		if req.FilterOption.Filters != nil {
-			if len(req.FilterOption.Filters.FilterConditions) > 0 {
-				hasValidFilters = true
-			}
-			if len(req.FilterOption.Filters.SubFilters) > 0 {
-				hasValidFilters = true
-			}
-		}
-
-		// 如果有有效的筛选条件，进行标签查询
-		if hasValidFilters {
-			// 使用EvaluatorTagDAO查询符合条件的template IDs（不分页）
-			filteredIDs, _, err := r.tagDAO.GetSourceIDsByFilterConditions(ctx, int32(entity.EvaluatorTagKeyType_Template), req.FilterOption, 0, 0, contexts.CtxLocale(ctx))
-			if err != nil {
-				return nil, err
-			}
-
-			if len(filteredIDs) == 0 {
-				return &repo.ListEvaluatorTemplateResponse{
-					TotalCount: 0,
-					Templates:  []*entity.EvaluatorTemplate{},
-				}, nil
-			}
-
-			// 使用筛选后的IDs
-			templateIDs = filteredIDs
-		}
-	}
-
 	// 构建DAO层查询请求
 	daoReq := &mysql.ListEvaluatorTemplateRequest{
-		IDs:            templateIDs,
+		IDs:            nil, // 若有 FilterOption，则在 DAO 层通过子查询过滤
 		PageSize:       req.PageSize,
 		PageNum:        req.PageNum,
 		IncludeDeleted: req.IncludeDeleted,
+	}
+
+	// 若存在 FilterOption，则通过 tag 子查询方式在模板表中进行过滤
+	if req.FilterOption != nil {
+		sub := r.tagDAO.BuildSourceIDSubQuery(
+			ctx,
+			int32(entity.EvaluatorTagKeyType_Template),
+			req.FilterOption,
+			contexts.CtxLocale(ctx),
+		)
+		daoReq.IDs = sub
 	}
 
 	// 调用DAO层查询

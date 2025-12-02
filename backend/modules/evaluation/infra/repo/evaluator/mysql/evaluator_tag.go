@@ -24,8 +24,8 @@ import (
 type EvaluatorTagDAO interface {
 	// BatchGetTagsBySourceIDsAndType 批量根据source_ids和tag_type筛选tag_key和tag_value
 	BatchGetTagsBySourceIDsAndType(ctx context.Context, sourceIDs []int64, tagType int32, langType string, opts ...db.Option) ([]*model.EvaluatorTag, error)
-	// GetSourceIDsByFilterConditions 根据筛选条件查询source_id列表，支持复杂的AND/OR逻辑和分页
-	GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, langType string, opts ...db.Option) ([]int64, int64, error)
+	// BuildSourceIDSubQuery 根据筛选条件构建 DISTINCT source_id 子查询（不执行）
+	BuildSourceIDSubQuery(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, langType string, opts ...db.Option) *gorm.DB
 	// AggregateTagValuesByType 根据 tag_type 聚合唯一的 tag_key、tag_value 组合
 	AggregateTagValuesByType(ctx context.Context, tagType int32, langType string, opts ...db.Option) ([]*entity.AggregatedEvaluatorTag, error)
 	// BatchCreateEvaluatorTags 批量创建评估器标签
@@ -150,8 +150,8 @@ func (dao *EvaluatorTagDAOImpl) DeleteEvaluatorTagsByConditions(ctx context.Cont
 	return query.Delete(&model.EvaluatorTag{}).Error
 }
 
-// GetSourceIDsByFilterConditions 根据筛选条件查询source_id列表，支持复杂的AND/OR逻辑和分页
-func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, langType string, opts ...db.Option) ([]int64, int64, error) {
+// buildSourceIDBaseQuery 构建基于 evaluator_tag 的基础查询（不执行）
+func (dao *EvaluatorTagDAOImpl) buildSourceIDBaseQuery(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, langType string, opts ...db.Option) *gorm.DB {
 	if filterOption == nil {
 		// 视为无筛选条件：统计并分页全部该 tagType 的 source_id（按 Name 排序）
 		filterOption = &entity.EvaluatorFilterOption{}
@@ -161,7 +161,6 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 
 	// 基础查询条件
 	query := dbsession.WithContext(ctx).Table("evaluator_tag").
-		Select("evaluator_tag.source_id").
 		Where("evaluator_tag.tag_type = ?", tagType).
 		Where("evaluator_tag.deleted_at IS NULL")
 	if langType != "" {
@@ -189,7 +188,9 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 	if filterOption.Filters != nil {
 		joinSQLs, joinArgs, whereSQL, whereArgs, err := dao.buildSelfJoinAndWhere(filterOption.Filters, tagType, langType)
 		if err != nil {
-			return nil, 0, err
+			// 记录错误并返回当前 query，由调用方决定是否继续执行
+			logs.CtxError(ctx, "[buildSourceIDBaseQuery] buildSelfJoinAndWhere failed: %v", err)
+			return query
 		}
 		for i, js := range joinSQLs {
 			query = query.Joins(js, joinArgs[i]...)
@@ -199,45 +200,15 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 		}
 	}
 
-	// 先查询总数
-	var total int64
-	countQuery := query.Session(&gorm.Session{})
-	// 打印 COUNT SQL（完整）
-	countSQL := countQuery.ToSQL(func(tx *gorm.DB) *gorm.DB {
-		var tmp int64
-		return tx.Distinct("evaluator_tag.source_id").Count(&tmp)
-	})
-	logs.CtxInfo(ctx, "[GetSourceIDsByFilterConditions] COUNT SQL: %s", countSQL)
-	if err := countQuery.Distinct("evaluator_tag.source_id").Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
+	return query
+}
 
-	// 分页处理
-	if pageSize > 0 && pageNum > 0 {
-		offset := (pageNum - 1) * pageSize
-		query = query.Limit(int(pageSize)).Offset(int(offset))
-	}
-
-	// 执行查询（按 Name 标签值排序；无 Name 的排在后面）
-	var sourceIDs []int64
-	// 打印 SELECT SQL（完整）
-	selectSQL := query.ToSQL(func(tx *gorm.DB) *gorm.DB {
-		var tmp []int64
-		return tx.Distinct("evaluator_tag.source_id").Order("t_name.tag_value IS NULL, t_name.tag_value ASC").Pluck("evaluator_tag.source_id", &tmp)
-	})
-	logs.CtxInfo(ctx, "[GetSourceIDsByFilterConditions] SELECT SQL: %s", selectSQL)
-	err := query.
-		Distinct("evaluator_tag.source_id").
-		Order("t_name.tag_value IS NULL, t_name.tag_value ASC").
-		Pluck("evaluator_tag.source_id", &sourceIDs).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return []int64{}, total, nil
-		}
-		return nil, 0, err
-	}
-
-	return sourceIDs, total, nil
+// BuildSourceIDSubQuery 根据筛选条件构建 DISTINCT source_id 子查询（不执行）
+func (dao *EvaluatorTagDAOImpl) BuildSourceIDSubQuery(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, langType string, opts ...db.Option) *gorm.DB {
+	base := dao.buildSourceIDBaseQuery(ctx, tagType, filterOption, langType, opts...)
+	return base.
+		Select("DISTINCT evaluator_tag.source_id").
+		Order("t_name.tag_value IS NULL, t_name.tag_value ASC")
 }
 
 // buildFilterConditions 构建筛选条件的SQL和参数

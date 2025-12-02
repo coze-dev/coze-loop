@@ -59,7 +59,7 @@ func NewEvaluatorTemplateDAO(p db.Provider) EvaluatorTemplateDAO {
 }
 
 type ListEvaluatorTemplateRequest struct {
-	IDs            []int64
+	IDs            interface{}
 	PageSize       int32
 	PageNum        int32
 	IncludeDeleted bool
@@ -79,8 +79,8 @@ func (dao *EvaluatorTemplateDAOImpl) ListEvaluatorTemplate(ctx context.Context, 
 
 	query := dbsession.WithContext(ctx).Model(&model.EvaluatorTemplate{})
 
-	// 添加ID过滤（支持按ID查询）
-	if len(req.IDs) > 0 {
+	// 添加ID过滤（支持按ID切片或子查询）
+	if req.IDs != nil {
 		query = query.Where("id IN (?)", req.IDs)
 	}
 
