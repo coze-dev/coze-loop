@@ -210,6 +210,7 @@ func FilterFieldDTO2DO(field *filter.FilterField) *loop_span.FilterField {
 		FieldName: fieldName,
 		Values:    field.Values,
 		FieldType: fieldTypeDTO2DO(field.FieldType),
+		ExtraInfo: field.ExtraInfo,
 	}
 	if field.QueryAndOr != nil {
 		fField.QueryAndOr = ptr.Of(loop_span.QueryAndOrEnum(*field.QueryAndOr))
@@ -279,6 +280,7 @@ func FilterFieldDO2DTO(field *loop_span.FilterField) *filter.FilterField {
 		FieldName: ptr.Of(fieldName),
 		Values:    field.Values,
 		FieldType: fieldTypeDO2DTO(field.FieldType),
+		ExtraInfo: field.ExtraInfo,
 	}
 	if field.QueryAndOr != nil {
 		fField.QueryAndOr = ptr.Of(filter.QueryRelation(*field.QueryAndOr))
