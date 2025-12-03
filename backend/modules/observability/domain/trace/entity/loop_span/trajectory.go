@@ -19,63 +19,63 @@ type TrajectoryList []*Trajectory
 
 type Trajectory struct {
 	// trace_id
-	ID *string `json:"id"`
+	ID *string `json:"id,omitempty"`
 	// 根节点，记录整个轨迹的信息
-	RootStep *RootStep `json:"root_step"`
+	RootStep *RootStep `json:"root_step,omitempty"`
 	// agent step列表，记录轨迹中agent执行信息
 	AgentSteps []*AgentStep `json:"agent_steps"`
 }
 
 type RootStep struct {
 	// 唯一ID，trace导入时取span_id
-	ID *string `json:"id"`
+	ID *string `json:"id,omitempty"`
 	// name，trace导入时取span_name
-	Name *string `json:"name"`
+	Name *string `json:"name,omitempty"`
 	// 输入
-	Input *string `json:"input"`
+	Input *string `json:"input,omitempty"`
 	// 输出
-	Output *string `json:"output"`
+	Output *string `json:"output,omitempty"`
 	// 系统属性
 	Metadata  map[string]string `json:"metadata"`
-	BasicInfo *BasicInfo        `json:"basic_info"`
+	BasicInfo *BasicInfo        `json:"basic_info,omitempty"`
 }
 
 type AgentStep struct {
 	// 基础属性
-	ID *string `json:"id"`
+	ID *string `json:"id,omitempty"`
 	// 父ID， trace导入时取parent_span_id
-	ParentID *string `json:"parent_id"`
+	ParentID *string `json:"parent_id,omitempty"`
 	// name，trace导入时取span_name
-	Name *string `json:"name"`
+	Name *string `json:"name,omitempty"`
 	// 输入
-	Input *string `json:"input"`
+	Input *string `json:"input,omitempty"`
 	// 输出
-	Output *string `json:"output"`
+	Output *string `json:"output,omitempty"`
 	// 子节点，agent执行内部经历了哪些步骤
 	Steps []*Step `json:"steps"`
 	// 系统属性
 	Metadata  map[string]string `json:"metadata"`
-	BasicInfo *BasicInfo        `json:"basic_info"`
+	BasicInfo *BasicInfo        `json:"basic_info,omitempty"`
 }
 
 type Step struct {
 	// 基础属性
-	ID *string `json:"id"`
+	ID *string `json:"id,omitempty"`
 	// 父ID， trace导入时取parent_span_id
-	ParentID *string `json:"parent_id"`
+	ParentID *string `json:"parent_id,omitempty"`
 	// 类型
-	Type *StepType `json:"type"`
+	Type *StepType `json:"type,omitempty"`
 	// name，trace导入时取span_name
-	Name *string `json:"name"`
+	Name *string `json:"name,omitempty"`
 	// 输入
-	Input *string `json:"input"`
+	Input *string `json:"input,omitempty"`
 	// 输出
-	Output *string `json:"output"`
+	Output *string `json:"output,omitempty"`
 	// 各种类型补充信息
-	ModelInfo *ModelInfo `json:"model_info"`
+	ModelInfo *ModelInfo `json:"model_info,omitempty"`
 	// 系统属性
 	Metadata  map[string]string `json:"metadata"`
-	BasicInfo *BasicInfo        `json:"basic_info"`
+	BasicInfo *BasicInfo        `json:"basic_info,omitempty"`
 }
 
 type ModelInfo struct {
@@ -92,7 +92,7 @@ type BasicInfo struct {
 	StartedAt string `json:"started_at"`
 	// 单位毫秒
 	Duration string `json:"duration"`
-	Error    *Error `json:"error"`
+	Error    *Error `json:"error,omitempty"`
 }
 
 type Error struct {
