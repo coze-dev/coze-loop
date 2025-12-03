@@ -16,7 +16,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
-	eval_target_d "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
@@ -219,7 +218,7 @@ func makeSchemaJSON(t *testing.T, fieldName string, contentType common.ContentTy
 	return string(bytes)
 }
 
-func TestAutoEvaluteProcessor_ValidateConfig(t *testing.T) {
+func TestAutoEvaluateProcessor_ValidateConfig(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -316,7 +315,7 @@ func TestAutoEvaluteProcessor_ValidateConfig(t *testing.T) {
 	}
 }
 
-func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
+func TestAutoEvaluateProcessor_Invoke(t *testing.T) {
 	t.Parallel()
 
 	textSchema := makeSchemaJSON(t, "field_1", common.ContentTypeText)
@@ -439,7 +438,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 	})
 }
 
-func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnUpdateTaskChange(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -483,7 +482,7 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 	})
 }
 
-func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnCreateTaskRunChange(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -526,7 +525,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 	assert.Equal(t, int64(9001), *evalAdapter.submitReq.EvalSetID)
 }
 
-func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnFinishTaskRunChange(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -560,7 +559,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
 	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
 }
 
-func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnFinishTaskChange(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -589,7 +588,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 	assert.Equal(t, taskentity.TaskStatusSuccess, taskObj.TaskStatus)
 }
 
-func TestAutoEvaluteProcessor_OnFinishTaskChange_Error(t *testing.T) {
+func TestAutoEvaluateProcessor_OnFinishTaskChange_Error(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -611,7 +610,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange_Error(t *testing.T) {
 	assert.EqualError(t, err, "finish fail")
 }
 
-func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnCreateTaskChange(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -687,7 +686,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 	assert.Equal(t, taskentity.TaskStatusRunning, taskObj.TaskStatus)
 }
 
-func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) {
+func TestAutoEvaluateProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -703,7 +702,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) 
 	assert.EqualError(t, err, "db error")
 }
 
-func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T) {
+func TestAutoEvaluateProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -728,7 +727,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T
 	assert.EqualError(t, err, "create fail")
 }
 
-func TestAutoEvaluteProcessor_getSession(t *testing.T) {
+func TestAutoEvaluateProcessor_getSession(t *testing.T) {
 	t.Parallel()
 	proc := &AutoEvaluateProcessor{aid: 567}
 
@@ -743,92 +742,7 @@ func TestAutoEvaluteProcessor_getSession(t *testing.T) {
 	assert.EqualValues(t, 42, *s.UserID)
 }
 
-func TestAutoEvaluteProcessor_buildEvalTargetParam(t *testing.T) {
-	t.Parallel()
-	proc := &AutoEvaluateProcessor{aid: 123}
-
-	t.Run("VeAgentKit platform", func(t *testing.T) {
-		taskObj := &taskentity.ObservabilityTask{
-			ID: 456,
-			SpanFilter: &taskentity.SpanFilterFields{
-				PlatformType: loop_span.PlatformVeAgentKit,
-				Filters: loop_span.FilterFields{
-					FilterFields: []*loop_span.FilterField{
-						{
-							FieldName: "cozeloop_agent_runtime_id",
-							QueryType: gptr.Of(loop_span.QueryTypeEnumIn),
-							Values:    []string{"test-agent-123"},
-						},
-					},
-				},
-			},
-		}
-		result := proc.buildEvalTargetParam(taskObj)
-		assert.NotNil(t, result)
-		assert.Equal(t, "test-agent-123", *result.SourceTargetID)
-		assert.Equal(t, eval_target_d.EvalTargetType_VolcengineAgent, *result.EvalTargetType)
-	})
-
-	t.Run("VeADK platform", func(t *testing.T) {
-		taskObj := &taskentity.ObservabilityTask{
-			ID: 789,
-			SpanFilter: &taskentity.SpanFilterFields{
-				PlatformType: loop_span.PlatformVeADK,
-				Filters: loop_span.FilterFields{
-					FilterFields: []*loop_span.FilterField{
-						{
-							FieldName: "app_name",
-							QueryType: gptr.Of(loop_span.QueryTypeEnumIn),
-							Values:    []string{"test-app-456"},
-						},
-					},
-				},
-			},
-		}
-		result := proc.buildEvalTargetParam(taskObj)
-		assert.NotNil(t, result)
-		assert.Equal(t, "test-app-456", *result.SourceTargetID)
-		assert.Equal(t, eval_target_d.EvalTargetType_VolcengineAgent, *result.EvalTargetType)
-	})
-
-	t.Run("default platform", func(t *testing.T) {
-		taskObj := &taskentity.ObservabilityTask{
-			ID: 999,
-			SpanFilter: &taskentity.SpanFilterFields{
-				PlatformType: loop_span.PlatformDefault,
-				Filters:      loop_span.FilterFields{},
-			},
-		}
-		result := proc.buildEvalTargetParam(taskObj)
-		assert.NotNil(t, result)
-		assert.Equal(t, "999", *result.SourceTargetID)
-		assert.Equal(t, eval_target_d.EvalTargetType_Trace, *result.EvalTargetType)
-	})
-
-	t.Run("no matching field", func(t *testing.T) {
-		taskObj := &taskentity.ObservabilityTask{
-			ID: 111,
-			SpanFilter: &taskentity.SpanFilterFields{
-				PlatformType: loop_span.PlatformVeAgentKit,
-				Filters: loop_span.FilterFields{
-					FilterFields: []*loop_span.FilterField{
-						{
-							FieldName: "other_field",
-							QueryType: gptr.Of(loop_span.QueryTypeEnumIn),
-							Values:    []string{"value"},
-						},
-					},
-				},
-			},
-		}
-		result := proc.buildEvalTargetParam(taskObj)
-		assert.NotNil(t, result)
-		assert.Equal(t, "", *result.SourceTargetID)
-		assert.Equal(t, eval_target_d.EvalTargetType_VolcengineAgent, *result.EvalTargetType)
-	})
-}
-
-func TestAutoEvaluteProcessor_OnTaskUpdated_InvalidStatus(t *testing.T) {
+func TestAutoEvaluateProcessor_OnTaskUpdated_InvalidStatus(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -840,7 +754,7 @@ func TestAutoEvaluteProcessor_OnTaskUpdated_InvalidStatus(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestAutoEvaluteProcessor_OnTaskFinished_NoAutoEvalConfig(t *testing.T) {
+func TestAutoEvaluateProcessor_OnTaskFinished_NoAutoEvalConfig(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -869,7 +783,7 @@ func TestAutoEvaluteProcessor_OnTaskFinished_NoAutoEvalConfig(t *testing.T) {
 	assert.Equal(t, taskentity.TaskStatusSuccess, taskObj.TaskStatus)
 }
 
-func TestAutoEvaluteProcessor_NewAutoEvaluteProcessor(t *testing.T) {
+func TestAutoEvaluateProcessor_NewAutoEvaluateProcessor(t *testing.T) {
 	t.Parallel()
 
 	// Create mock dependencies
@@ -882,7 +796,7 @@ func TestAutoEvaluteProcessor_NewAutoEvaluteProcessor(t *testing.T) {
 	taskRepo := repomocks.NewMockITaskRepo(ctrl)
 
 	// Test constructor
-	proc := NewAutoEvaluateProcessor(123, datasetServiceAdaptor, evalService, evaluationService, taskRepo)
+	proc := NewAutoEvaluateProcessor(123, datasetServiceAdaptor, evalService, evaluationService, taskRepo, &EvalTargetBuilderImpl{})
 
 	assert.NotNil(t, proc)
 	assert.Equal(t, int32(123), proc.aid)
