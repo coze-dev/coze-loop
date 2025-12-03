@@ -946,7 +946,6 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 	if err := r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
 		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
-		Annotations:    []*loop_span.Annotation{annotation},
 		TTL:            span.GetTTL(ctx),
 		Span:           span,
 		AnnotationType: gptr.Of(annotation.AnnotationType),
@@ -1007,7 +1006,6 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
-		Annotations:    []*loop_span.Annotation{annotation},
 		Span:           span,
 		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
@@ -1048,7 +1046,6 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
-		Annotations:    []*loop_span.Annotation{annotation},
 		Span:           span,
 		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
@@ -1116,7 +1113,6 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
-		Annotations:    []*loop_span.Annotation{annotation},
 		Span:           span,
 		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
@@ -1170,7 +1166,6 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
-		Annotations:    []*loop_span.Annotation{annotation},
 		Span:           span,
 		AnnotationType: gptr.Of(annotation.AnnotationType),
 	})
@@ -1214,7 +1209,6 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
-		Annotations:    []*loop_span.Annotation{event.Annotation},
 		Span:           span,
 		AnnotationType: gptr.Of(event.Annotation.AnnotationType),
 	})
@@ -1412,7 +1406,6 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
-		Annotations:    []*loop_span.Annotation{annotation},
 		Span:           span,
 		AnnotationType: gptr.Of(annotation.AnnotationType),
 	}

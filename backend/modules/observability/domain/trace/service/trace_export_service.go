@@ -409,7 +409,6 @@ func (r *TraceExportServiceImpl) addSpanAnnotations(ctx context.Context, spans [
 			WorkSpaceID:    span.WorkspaceID,
 			Tenant:         span.GetTenant(),
 			TTL:            span.GetTTL(ctx),
-			Annotations:    []*loop_span.Annotation{annotation},
 			Span:           span,
 			AnnotationType: gptr.Of(annotation.AnnotationType),
 		})

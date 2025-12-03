@@ -77,7 +77,6 @@ type InsertAnnotationParam struct {
 	WorkSpaceID    string
 	Tenant         string
 	TTL            loop_span.TTL
-	Annotations    []*loop_span.Annotation
 	Span           *loop_span.Span
 	AnnotationType *loop_span.AnnotationType
 }
