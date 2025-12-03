@@ -12,4 +12,3 @@ type IURLProcessor interface {
 	// ProcessSignURL 处理签名 URL，包括 URL 解码和本地主机处理
 	ProcessSignURL(ctx context.Context, signURL string) string
 }
-
