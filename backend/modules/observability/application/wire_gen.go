@@ -411,7 +411,8 @@ func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
 	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo4.ITaskRepo,
 ) *processor.TaskProcessor {
 	taskProcessor := processor.NewTaskProcessor()
-	taskProcessor.Register(entity3.TaskTypeAutoEval, processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
+	taskProcessor.Register(entity3.TaskTypeAutoEval, processor.NewAutoEvaluateProcessor(
+		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &processor.EvalTargetBuilderImpl{}))
 	return taskProcessor
 }
 

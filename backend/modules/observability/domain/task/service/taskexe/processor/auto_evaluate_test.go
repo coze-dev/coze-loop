@@ -306,7 +306,7 @@ func TestAutoEvaluteProcessor_ValidateConfig(t *testing.T) {
 	for _, tt := range cases {
 		caseItem := tt
 		t.Run(caseItem.name, func(t *testing.T) {
-			proc := &AutoEvaluteProcessor{evalSvc: caseItem.adapter}
+			proc := &AutoEvaluateProcessor{evalSvc: caseItem.adapter}
 			if caseItem.adapter == nil {
 				proc.evalSvc = &fakeEvaluatorAdapter{}
 			}
@@ -348,7 +348,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
-		proc := &AutoEvaluteProcessor{
+		proc := &AutoEvaluateProcessor{
 			evaluationSvc: &fakeEvaluationAdapter{},
 			taskRepo:      repoAdapter,
 		}
@@ -374,7 +374,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		repoMock.EXPECT().DecrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil)
 		repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.Any()).Return(nil)
 
-		proc := &AutoEvaluteProcessor{
+		proc := &AutoEvaluateProcessor{
 			evaluationSvc: &fakeEvaluationAdapter{},
 			taskRepo:      repoAdapter,
 		}
@@ -402,7 +402,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		eval := &fakeEvaluationAdapter{}
 		eval.invokeResp.err = errors.New("invoke fail")
 
-		proc := &AutoEvaluteProcessor{
+		proc := &AutoEvaluateProcessor{
 			evaluationSvc: eval,
 			taskRepo:      repoAdapter,
 		}
@@ -429,7 +429,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		repoMock.EXPECT().DecrTaskCount(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 		repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
-		proc := &AutoEvaluteProcessor{
+		proc := &AutoEvaluateProcessor{
 			evaluationSvc: eval,
 			taskRepo:      repoAdapter,
 		}
@@ -469,7 +469,7 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 					return nil
 				})
 
-			proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
+			proc := &AutoEvaluateProcessor{taskRepo: repoAdapter}
 			taskObj := &taskentity.ObservabilityTask{TaskStatus: caseItem.initial}
 			err := proc.OnTaskUpdated(ctx, taskObj, caseItem.op)
 			assert.NoError(t, err)
@@ -477,7 +477,7 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 	}
 
 	t.Run("invalid op", func(t *testing.T) {
-		proc := &AutoEvaluteProcessor{}
+		proc := &AutoEvaluateProcessor{}
 		err := proc.OnTaskUpdated(ctx, &taskentity.ObservabilityTask{}, "unknown")
 		assert.Error(t, err)
 	})
@@ -512,7 +512,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 	evalAdapter.submitResp.exptID = 1111
 	evalAdapter.submitResp.exptRunID = 2222
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		datasetServiceAdaptor: adaptor,
 		evaluationSvc:         evalAdapter,
 		taskRepo:              repoAdapter,
@@ -546,7 +546,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
 	}
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), taskRun).Return(nil)
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		taskRepo:      repoAdapter,
 		evaluationSvc: evalAdapter,
 	}
@@ -575,7 +575,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(nil)
 	repoMock.EXPECT().UpdateTask(gomock.Any(), taskObj).Return(nil)
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		evaluationSvc: evalAdapter,
 		taskRepo:      repoAdapter,
 	}
@@ -599,7 +599,7 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange_Error(t *testing.T) {
 	evalAdapter := &fakeEvaluationAdapter{}
 	evalAdapter.finishErr = errors.New("finish fail")
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		evaluationSvc: evalAdapter,
 		taskRepo:      repoAdapter,
 	}
@@ -627,7 +627,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 	evalAdapter.submitResp.exptID = 111
 	evalAdapter.submitResp.exptRunID = 222
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		datasetServiceAdaptor: adaptor,
 		evaluationSvc:         evalAdapter,
 		taskRepo:              repoAdapter,
@@ -697,7 +697,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) 
 
 	repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), gomock.Any()).Return(nil, errors.New("db error"))
 
-	proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
+	proc := &AutoEvaluateProcessor{taskRepo: repoAdapter}
 
 	err := proc.OnTaskCreated(context.Background(), buildTestTask(t))
 	assert.EqualError(t, err, "db error")
@@ -715,7 +715,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T
 	adaptor := service.NewDatasetServiceAdaptor()
 	adaptor.Register(traceentity.DatasetCategory_Evaluation, datasetProvider)
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		datasetServiceAdaptor: adaptor,
 		taskRepo:              repoAdapter,
 		evaluationSvc:         &fakeEvaluationAdapter{},
@@ -730,7 +730,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T
 
 func TestAutoEvaluteProcessor_getSession(t *testing.T) {
 	t.Parallel()
-	proc := &AutoEvaluteProcessor{aid: 567}
+	proc := &AutoEvaluateProcessor{aid: 567}
 
 	taskObj := &taskentity.ObservabilityTask{CreatedBy: "42"}
 
@@ -745,7 +745,7 @@ func TestAutoEvaluteProcessor_getSession(t *testing.T) {
 
 func TestAutoEvaluteProcessor_buildEvalTargetParam(t *testing.T) {
 	t.Parallel()
-	proc := &AutoEvaluteProcessor{aid: 123}
+	proc := &AutoEvaluateProcessor{aid: 123}
 
 	t.Run("VeAgentKit platform", func(t *testing.T) {
 		taskObj := &taskentity.ObservabilityTask{
@@ -832,7 +832,7 @@ func TestAutoEvaluteProcessor_OnTaskUpdated_InvalidStatus(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	proc := &AutoEvaluteProcessor{}
+	proc := &AutoEvaluateProcessor{}
 
 	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning}
 
@@ -849,7 +849,7 @@ func TestAutoEvaluteProcessor_OnTaskFinished_NoAutoEvalConfig(t *testing.T) {
 	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 	evalAdapter := &fakeEvaluationAdapter{}
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		evaluationSvc: evalAdapter,
 		taskRepo:      repoAdapter,
 	}
@@ -882,7 +882,7 @@ func TestAutoEvaluteProcessor_NewAutoEvaluteProcessor(t *testing.T) {
 	taskRepo := repomocks.NewMockITaskRepo(ctrl)
 
 	// Test constructor
-	proc := NewAutoEvaluteProcessor(123, datasetServiceAdaptor, evalService, evaluationService, taskRepo)
+	proc := NewAutoEvaluateProcessor(123, datasetServiceAdaptor, evalService, evaluationService, taskRepo)
 
 	assert.NotNil(t, proc)
 	assert.Equal(t, int32(123), proc.aid)
