@@ -15,14 +15,14 @@ import (
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	mqmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	metric_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	daomock "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao/mocks"
 	redis_dao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -30,7 +30,7 @@ type mockStorageProvider struct{}
 
 func (m *mockStorageProvider) GetTraceStorage(ctx context.Context, workSpaceID string, tenants []string) storage.Storage {
 	return storage.Storage{
-		StorageName: "ck",
+		StorageName:   "ck",
 		StorageConfig: map[string]string{},
 	}
 }

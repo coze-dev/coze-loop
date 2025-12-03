@@ -828,15 +828,14 @@ func TestAutoEvaluteProcessor_buildEvalTargetParam(t *testing.T) {
 	})
 }
 
-
 func TestAutoEvaluteProcessor_OnTaskUpdated_InvalidStatus(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	
+
 	proc := &AutoEvaluteProcessor{}
-	
+
 	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning}
-	
+
 	err := proc.OnTaskUpdated(ctx, taskObj, "invalid_status")
 	assert.Error(t, err)
 }
@@ -872,19 +871,19 @@ func TestAutoEvaluteProcessor_OnTaskFinished_NoAutoEvalConfig(t *testing.T) {
 
 func TestAutoEvaluteProcessor_NewAutoEvaluteProcessor(t *testing.T) {
 	t.Parallel()
-	
+
 	// Create mock dependencies
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	
+
 	datasetServiceAdaptor := service.NewDatasetServiceAdaptor()
 	evalService := &fakeEvaluatorAdapter{}
 	evaluationService := &fakeEvaluationAdapter{}
 	taskRepo := repomocks.NewMockITaskRepo(ctrl)
-	
+
 	// Test constructor
 	proc := NewAutoEvaluteProcessor(123, datasetServiceAdaptor, evalService, evaluationService, taskRepo)
-	
+
 	assert.NotNil(t, proc)
 	assert.Equal(t, int32(123), proc.aid)
 	assert.Equal(t, datasetServiceAdaptor, proc.datasetServiceAdaptor)
