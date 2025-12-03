@@ -42,7 +42,7 @@ func (a *SpanWithAnnotationProducerImpl) SendSpanWithAnnotation(ctx context.Cont
 		logs.CtxWarn(ctx, "send annotation msg err: %v", err)
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
 	}
-	logs.CtxInfo(ctx, "send annotation msg %s successfully", string(bytes))
+	logs.CtxDebug(ctx, "send annotation msg %s successfully", string(bytes))
 	return nil
 }
 

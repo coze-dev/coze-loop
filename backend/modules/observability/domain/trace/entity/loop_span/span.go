@@ -393,7 +393,7 @@ func (s *Span) GetTTL(ctx context.Context) TTL {
 	duration := tEnd.Sub(tStart)
 	days := int64(duration.Hours() / 24)
 	ttl := TTLFromInteger(days)
-	logs.CtxInfo(ctx, "get ttl for span_id %s is %s", s.SpanID, ttl)
+	logs.CtxDebug(ctx, "get ttl for span_id %s is %s", s.SpanID, ttl)
 	return ttl
 }
 
