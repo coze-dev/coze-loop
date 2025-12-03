@@ -23,9 +23,9 @@ type CallTraceAgentParam struct {
 	StartTime int64 // in ms
 	EndTime   int64 // in ms
 
-	EvalTargetType      entity.EvalTargetType // now support prompt only
-	EvalTargetID        int64
-	EvalTargetVersionID string
+	EvalTargetType    entity.EvalTargetType // now support prompt only
+	EvalTargetID      int64
+	EvalTargetVersion string // like 1.2.3
 
 	Evaluators []*entity.ExptEvaluatorRef
 }
