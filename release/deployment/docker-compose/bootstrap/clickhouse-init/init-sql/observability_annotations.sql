@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS `observability_annotations` (
+    `id` String,
+    `span_id` String,
+    `trace_id` String,
+    `start_time` Int64,
+    `space_id` String,
+    `annotation_type` String,
+    `annotation_index` Array(String),
+    `key` String,
+    `value_type` String,
+    `value_string` String,
+    `value_long` Int64,
+    `value_float` Float64,
+    `value_bool` Bool,
+    `reasoning` String,
+    `correction` String,
+    `metadata` String,
+    `status` String,
+    `created_by` String,
+    `created_at` UInt64,
+    `updated_by` String,
+    `updated_at` UInt64,
+    `deleted_at` UInt64,
+    `start_date` Date,
+    INDEX idx_id id TYPE bloom_filter() GRANULARITY 1,
+    INDEX idx_span_id span_id TYPE bloom_filter() GRANULARITY 1,
+    INDEX idx_trace_id trace_id TYPE bloom_filter() GRANULARITY 1,
+    INDEX idx_space_id space_id TYPE bloom_filter() GRANULARITY 1,
+    INDEX idx_annotation_type annotation_type TYPE bloom_filter() GRANULARITY 1
+) ENGINE = ReplacingMergeTree(updated_at) PARTITION BY toDate(start_time / 1000000)
+PRIMARY KEY (start_time)
+ORDER BY (start_time, id);
