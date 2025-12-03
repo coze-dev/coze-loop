@@ -215,6 +215,8 @@ func (d *EvaluationSetProvider) AddDatasetItems(ctx context.Context, datasetID i
 			logs.CtxError(ctx, "BatchCreateEvaluationSetItems failed, workspace_id=%d, dataset_id=%d, batch=%d-%d, err=%v", workspaceID, datasetID, i, end-1, err)
 			return successItems, errorGroups, rpcerror.UnwrapRPCError(err)
 		}
+		logs.CtxInfo(ctx, "BatchCreateEvaluationSetItems success, batch %d-%d. resp=%#v.",
+			i, end-1, resp)
 
 		// 处理成功的items
 		for batchSpecificIndex, itemID := range resp.GetAddedItems() {

@@ -179,6 +179,7 @@ func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSc
 				Description: description,
 				ContentType: convertContentTypeDTO2DO(fs.GetContentType()),
 				TextSchema:  textSchema,
+				SchemaKey:   entity.SchemaKey(fs.GetSchemaKey()),
 			}
 		}
 	}

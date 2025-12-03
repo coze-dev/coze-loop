@@ -329,8 +329,9 @@ type ItemErrorDetail struct {
 	// 单条错误数据在输入数据中的索引。从 0 开始，下同
 	Index *int32
 	// [startIndex, endIndex] 表示区间错误范围, 如 ExceedDatasetCapacity 错误时
-	StartIndex *int32
-	EndIndex   *int32
+	StartIndex      *int32
+	EndIndex        *int32
+	MessagesByField map[string]string
 }
 
 const (
