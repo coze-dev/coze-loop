@@ -4,6 +4,7 @@
 package processor
 
 import (
+	"context"
 	"strconv"
 
 	eval_target_d "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -13,14 +14,14 @@ import (
 )
 
 type EvalTargetBuilder interface {
-	Build(task *task_entity.ObservabilityTask) *eval_target.CreateEvalTargetParam
+	Build(ctx context.Context, task *task_entity.ObservabilityTask) *eval_target.CreateEvalTargetParam
 }
 
 type EvalTargetBuilderImpl struct {
 	EvalTargetBuilder
 }
 
-func (b *EvalTargetBuilderImpl) Build(task *task_entity.ObservabilityTask) *eval_target.CreateEvalTargetParam {
+func (b *EvalTargetBuilderImpl) Build(ctx context.Context, task *task_entity.ObservabilityTask) *eval_target.CreateEvalTargetParam {
 	return &eval_target.CreateEvalTargetParam{
 		EvalTargetType: lo.ToPtr(eval_target_d.EvalTargetType_Trace),
 		SourceTargetID: lo.ToPtr(strconv.FormatInt(task.ID, 10)),

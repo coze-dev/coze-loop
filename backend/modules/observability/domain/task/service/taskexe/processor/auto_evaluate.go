@@ -13,9 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
-	eval_target_d "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
@@ -344,7 +342,7 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 		TargetFieldMapping: &expt.TargetFieldMapping{
 			FromEvalSet: []*expt.FieldMapping{},
 		},
-		CreateEvalTargetParam: p.evalTargetBuilder.Build(currentTask),
+		CreateEvalTargetParam: p.evalTargetBuilder.Build(ctx, currentTask),
 		ExptType:              gptr.Of(expt.ExptType_Online),
 		MaxAliveTime:          gptr.Of(maxAliveTime),
 		SourceType:            gptr.Of(expt.SourceType_AutoTask),
@@ -435,46 +433,5 @@ func (p *AutoEvaluateProcessor) getSession(ctx context.Context, task *task_entit
 	return &common.Session{
 		UserID: gptr.Of(userID),
 		AppID:  gptr.Of(p.aid),
-	}
-}
-
-func (p *AutoEvaluateProcessor) buildEvalTargetParam(task *task_entity.ObservabilityTask) *eval_target.CreateEvalTargetParam {
-	var targetID string
-	var targetType eval_target_d.EvalTargetType
-
-	findFieldFunc := func(fieldName string) string {
-		for _, filter := range task.SpanFilter.Filters.FilterFields {
-			if filter.FieldName == fieldName && *filter.QueryType == loop_span.QueryTypeEnumIn && len(filter.Values) == 1 {
-				return filter.Values[0]
-			}
-		}
-		return ""
-	}
-
-	switch task.SpanFilter.PlatformType {
-	/*
-		case loop_span.PlatformPrompt:
-			targetType = eval_target_d.EvalTargetType_CozeLoopPrompt
-			targetID = findFieldFunc("prompt_key")
-		case loop_span.PlatformCozeWorkflow:
-			targetType = eval_target_d.EvalTargetType_CozeWorkflow
-			targetID = findFieldFunc("workflow_id")
-		case loop_span.PlatformCozeBot:
-			targetType = eval_target_d.EvalTargetType_CozeBot
-			targetID = findFieldFunc("bot_id")
-		case loop_span.PlatformVeADK:
-			targetType = eval_target_d.EvalTargetType_VolcengineAgent
-			targetID = findFieldFunc("app_name")
-	*/
-	case loop_span.PlatformVeAgentKit:
-		targetType = eval_target_d.EvalTargetType_VolcengineAgent
-		targetID = findFieldFunc("cozeloop_agent_runtime_id")
-	default:
-		targetType = eval_target_d.EvalTargetType_Trace
-		targetID = cast.ToString(task.ID)
-	}
-	return &eval_target.CreateEvalTargetParam{
-		SourceTargetID: &targetID,
-		EvalTargetType: &targetType,
 	}
 }
