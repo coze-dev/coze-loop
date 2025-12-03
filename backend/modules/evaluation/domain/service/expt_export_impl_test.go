@@ -38,6 +38,7 @@ func newTestExptResultExportService(ctrl *gomock.Controller) *ExptResultExportSe
 		fileClient:         fileserverMocks.NewMockObjectStorage(ctrl),
 		configer:           componentMocks.NewMockIConfiger(ctrl),
 		benefitService:     benefitMocks.NewMockIBenefitService(ctrl),
+		urlProcessor:       NewDefaultURLProcessor(),
 	}
 }
 
@@ -833,6 +834,7 @@ func TestNewExptResultExportService(t *testing.T) {
 	mockFileClient := fileserverMocks.NewMockObjectStorage(ctrl)
 	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
 	mockBenefit := benefitMocks.NewMockIBenefitService(ctrl)
+	urlProcessor := NewDefaultURLProcessor()
 	svc := NewExptResultExportService(
 		mockTxDB,
 		mockRepo,
@@ -843,6 +845,7 @@ func TestNewExptResultExportService(t *testing.T) {
 		mockFileClient,
 		mockConfiger,
 		mockBenefit,
+		urlProcessor,
 	)
 
 	impl, ok := svc.(*ExptResultExportService)

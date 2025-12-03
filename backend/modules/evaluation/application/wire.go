@@ -85,6 +85,7 @@ var (
 		domainservice.NewExptRecordEvalService,
 		domainservice.NewExptAnnotateService,
 		domainservice.NewExptResultExportService,
+		domainservice.NewDefaultURLProcessor,
 		domainservice.NewInsightAnalysisService,
 		domainservice.NewSchedulerModeFactory,
 		experiment.NewExptRepo,

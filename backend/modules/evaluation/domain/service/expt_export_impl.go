@@ -9,7 +9,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -28,10 +27,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
-	"github.com/coze-dev/coze-loop/backend/pkg/localos"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -45,6 +42,7 @@ type ExptResultExportService struct {
 	fileClient         fileserver.ObjectStorage
 	configer           component.IConfiger
 	benefitService     benefit.IBenefitService
+	urlProcessor       component.IURLProcessor
 }
 
 func NewExptResultExportService(
@@ -57,6 +55,7 @@ func NewExptResultExportService(
 	fileClient fileserver.ObjectStorage,
 	configer component.IConfiger,
 	benefitService benefit.IBenefitService,
+	urlProcessor component.IURLProcessor,
 ) IExptResultExportService {
 	return &ExptResultExportService{
 		repo:               repo,
@@ -68,6 +67,7 @@ func NewExptResultExportService(
 		fileClient:         fileClient,
 		configer:           configer,
 		benefitService:     benefitService,
+		urlProcessor:       urlProcessor,
 	}
 }
 
@@ -148,21 +148,7 @@ func (e ExptResultExportService) GetExptExportRecord(ctx context.Context, spaceI
 		if err != nil {
 			return nil, err
 		}
-		logs.CtxInfo(ctx, "get export record sign url origin: %v", signURL)
-		unescaped, err := url.QueryUnescape(conv.UnescapeUnicode(signURL))
-		if err != nil {
-			logs.CtxWarn(ctx, "QueryUnescape fail, raw: %v", signURL)
-		} else {
-			signURL = unescaped
-		}
-		logs.CtxInfo(ctx, "get export record sign url unescaped: %v", signURL)
-		parsedURL, err := url.Parse(signURL)
-		if err == nil {
-			if parsedURL.Host == localos.GetLocalOSHost() {
-				signURL = fmt.Sprintf("%s?%s", parsedURL.Path, parsedURL.RawQuery)
-			}
-		}
-
+		signURL = e.urlProcessor.ProcessSignURL(ctx, signURL)
 		exportRecord.URL = ptr.Of(signURL)
 		logs.CtxInfo(ctx, "get export record sign url final: %v", signURL)
 	}
