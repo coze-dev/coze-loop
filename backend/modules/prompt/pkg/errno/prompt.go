@@ -76,6 +76,18 @@ const (
 	promptLabelUnAssociatedMessage           = "prompt label unassociated with commit version"
 	promptLabelUnAssociatedNoAffectStability = true
 
+	PromptKeyExistCode              = 600501008
+	promptKeyExistMessage           = "prompt key already exist"
+	promptKeyExistNoAffectStability = true
+
+	PromptSubmitVersionExistCode              = 600501009
+	promptSubmitVersionExistMessage           = "prompt submit version already exist"
+	promptSubmitVersionExistNoAffectStability = true
+
+	PromptLabelExistCode              = 600501010
+	promptLabelExistMessage           = "prompt label already exist"
+	promptLabelExistNoAffectStability = true
+
 	PromptHubQPSLimitCode              = 600502001
 	promptHubQPSLimitMessage           = "request is limited, cause prompt hub qps of current space reached the upper limit"
 	promptHubQPSLimitNoAffectStability = true
@@ -191,6 +203,24 @@ func init() {
 		PromptLabelUnAssociatedCode,
 		promptLabelUnAssociatedMessage,
 		code.WithAffectStability(!promptLabelUnAssociatedNoAffectStability),
+	)
+
+	code.Register(
+		PromptKeyExistCode,
+		promptKeyExistMessage,
+		code.WithAffectStability(!promptKeyExistNoAffectStability),
+	)
+
+	code.Register(
+		PromptSubmitVersionExistCode,
+		promptSubmitVersionExistMessage,
+		code.WithAffectStability(!promptSubmitVersionExistNoAffectStability),
+	)
+
+	code.Register(
+		PromptLabelExistCode,
+		promptLabelExistMessage,
+		code.WithAffectStability(!promptLabelExistNoAffectStability),
 	)
 
 	code.Register(

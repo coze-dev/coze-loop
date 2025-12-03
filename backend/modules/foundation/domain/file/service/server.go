@@ -4,16 +4,19 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"time"
 
+	"github.com/google/uuid"
 	errors2 "github.com/pkg/errors"
 
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
@@ -27,6 +30,7 @@ import (
 //go:generate mockgen -destination=mocks/file_service.go -package=mocks . FileService
 type FileService interface {
 	UploadLoopFile(ctx context.Context, fileHeader *multipart.FileHeader, spaceID string) (key string, err error)
+	UploadFileForServer(ctx context.Context, mimeType string, body []byte, spaceID string, customMimeTypeExtMap map[string]string, fileName string) (key string, err error)
 	SignUploadFile(ctx context.Context, req *file.SignUploadFileRequest) (uris []string, heads []*file.SignHead, err error)
 	SignDownLoadFile(ctx context.Context, req *file.SignDownloadFileRequest) (uris []string, err error)
 }
@@ -84,6 +88,67 @@ func (fs fileService) UploadLoopFile(ctx context.Context, fileHeader *multipart.
 	}
 
 	return fileName, nil
+}
+
+func (fs fileService) UploadFileForServer(ctx context.Context, mimeType string, body []byte, spaceID string, customMimeTypeExtMap map[string]string, fileName string) (key string, err error) {
+	if len(body) == 0 {
+		return "", errorx.NewByCode(errno.CommonInvalidParamCode)
+	}
+
+	// If user provided file name, use it directly (may already have extension)
+	if fileName == "" {
+		// Add custom mime type extension mappings if provided
+		if len(customMimeTypeExtMap) > 0 {
+			for mType, ext := range customMimeTypeExtMap {
+				if mType != "" && ext != "" {
+					// Ensure extension starts with a dot
+					if ext[0] != '.' {
+						ext = "." + ext
+					}
+					if err := mime.AddExtensionType(ext, mType); err != nil {
+						logs.CtxError(ctx, "add extension type failed, mimeType: %s, ext: %s, err: %v", mType, ext, err)
+					}
+				}
+			}
+		}
+
+		// Get file extension from mime type
+		ext := ""
+		if mimeType != "" {
+			exts, err := mime.ExtensionsByType(mimeType)
+			if err == nil && len(exts) > 0 {
+				ext = exts[0]
+			}
+		}
+
+		// Generate random file name
+		fileName = uuid.New().String()
+
+		// Append extension if we have one
+		if ext != "" {
+			fileName = fileName + ext
+		}
+	}
+
+	// Build full path with workspace ID
+	fullPath := filepath.Join(spaceID, "/", fileName)
+
+	// Detect content type from file data
+	fileContentType := http.DetectContentType(body)
+	if mimeType != "" {
+		// Use provided mime type if available
+		fileContentType = mimeType
+	}
+
+	// Upload file
+	reader := bytes.NewReader(body)
+	logs.CtxDebug(ctx, "start upload for server, fileName: %s, mimeType: %s", fullPath, fileContentType)
+	if err = fs.client.Upload(ctx, fullPath, reader, fileserver.UploadWithContentType(fileContentType)); err != nil {
+		logs.CtxError(ctx, "upload file for server failed, err: %v", err)
+		return "", err
+	}
+
+	return fullPath, nil
 }
 
 func (fs fileService) SignUploadFile(ctx context.Context, req *file.SignUploadFileRequest) (uris []string, heads []*file.SignHead, err error) {

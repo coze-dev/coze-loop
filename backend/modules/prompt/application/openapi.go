@@ -67,6 +67,65 @@ type PromptOpenAPIApplicationImpl struct {
 	collector        collector.ICollectorProvider
 }
 
+func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest) (r *openapi.ListPromptBasicResponse, err error) {
+	r = openapi.NewListPromptBasicResponse()
+	if req.GetWorkspaceID() == 0 {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
+	}
+	defer func() {
+		if err != nil {
+			logs.CtxError(ctx, "openapi list prompt basic failed, err=%v", err)
+		}
+	}()
+
+	// 限流检查
+	if !p.promptHubAllowBySpace(ctx, req.GetWorkspaceID()) {
+		return r, errorx.NewByCode(prompterr.PromptHubQPSLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+	}
+
+	// 构建查询参数
+	param := repo.ListPromptParam{
+		SpaceID:       req.GetWorkspaceID(),
+		KeyWord:       req.GetKeyWord(),
+		CommittedOnly: true, // 只查询已提交的prompts
+		PageNum:       int(req.GetPageNumber()),
+		PageSize:      int(req.GetPageSize()),
+	}
+	if req.GetCreator() != "" {
+		param.CreatedBys = []string{req.GetCreator()}
+	}
+
+	// 查询prompts
+	result, err := p.promptManageRepo.ListPrompt(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+
+	// 执行权限检查
+	var promptIDs []int64
+	for _, prompt := range result.PromptDOs {
+		promptIDs = append(promptIDs, prompt.ID)
+	}
+	if len(promptIDs) > 0 {
+		if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), promptIDs, consts.ActionLoopPromptRead); err != nil {
+			return nil, err
+		}
+	}
+
+	// 构建响应
+	r.Data = openapi.NewListPromptBasicData()
+	r.Data.Total = ptr.Of(int32(result.Total))
+	r.Data.Prompts = make([]*openapi.PromptBasic, 0, len(result.PromptDOs))
+	for _, promptDO := range result.PromptDOs {
+		promptBasic := convertor.OpenAPIPromptBasicDO2DTO(promptDO)
+		if promptBasic != nil {
+			r.Data.Prompts = append(r.Data.Prompts, promptBasic)
+		}
+	}
+
+	return r, nil
+}
+
 func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest) (r *openapi.BatchGetPromptByPromptKeyResponse, err error) {
 	r = openapi.NewBatchGetPromptByPromptKeyResponse()
 	if req.GetWorkspaceID() == 0 {
@@ -173,9 +232,13 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 		return nil, err
 	}
 
-	// 构建版本映射
+	// 展开片段内容（若有），构建版本映射
 	promptMap := make(map[service.PromptKeyVersionPair]*entity.Prompt)
 	for _, prompt := range maps.Values(prompts) {
+		err = p.promptService.ExpandSnippets(ctx, prompt)
+		if err != nil {
+			return nil, err
+		}
 		promptMap[service.PromptKeyVersionPair{
 			PromptKey: prompt.PromptKey,
 			Version:   prompt.GetVersion(),
@@ -328,6 +391,11 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 	if err != nil {
 		return promptDO, nil, err
 	}
+	// expand snippets
+	err = p.promptService.ExpandSnippets(ctx, promptDO)
+	if err != nil {
+		return promptDO, nil, err
+	}
 
 	// 执行权限检查
 	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
@@ -345,6 +413,14 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 	if err != nil {
 		return promptDO, nil, err
 	}
+
+	// Convert base64 files to download URLs
+	if reply != nil && reply.Item != nil && reply.Item.Message != nil {
+		if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
+			return promptDO, nil, err
+		}
+	}
+
 	return promptDO, reply, nil
 }
 
@@ -416,6 +492,11 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 	if err != nil {
 		return promptDO, nil, err
 	}
+	// expand snippets
+	err = p.promptService.ExpandSnippets(ctx, promptDO)
+	if err != nil {
+		return promptDO, nil, err
+	}
 
 	// 执行权限检查
 	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
@@ -464,6 +545,13 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 	for reply := range resultStream {
 		if reply == nil || reply.Item == nil {
 			continue
+		}
+		// Convert base64 files to download URLs
+		if reply.Item.Message != nil {
+			if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
+				logs.CtxError(ctx, "failed to convert base64 to file URLs: %v", err)
+				return promptDO, nil, err
+			}
 		}
 		chunk := &openapi.ExecuteStreamingResponse{
 			Data: &openapi.ExecuteStreamingData{

@@ -17,10 +17,12 @@ type IManageRepo interface {
 	MGetPrompt(ctx context.Context, queries []GetPromptParam, opts ...GetPromptOptionFunc) (promptDOMap map[GetPromptParam]*entity.Prompt, err error)
 	MGetPromptBasicByPromptKey(ctx context.Context, spaceID int64, promptKeys []string, opts ...GetPromptBasicOptionFunc) (promptDOs []*entity.Prompt, err error)
 	ListPrompt(ctx context.Context, param ListPromptParam) (result *ListPromptResult, err error)
+	ListParentPrompt(ctx context.Context, param ListParentPromptParam) (result map[string][]*PromptCommitVersions, err error)
 	UpdatePrompt(ctx context.Context, param UpdatePromptParam) (err error)
 	SaveDraft(ctx context.Context, promptDO *entity.Prompt) (draftInfo *entity.DraftInfo, err error)
 	CommitDraft(ctx context.Context, param CommitDraftParam) (err error)
 	ListCommitInfo(ctx context.Context, param ListCommitInfoParam) (result *ListCommitResult, err error)
+	MGetVersionsByPromptID(ctx context.Context, promptID int64) (versions []string, err error)
 }
 
 type GetPromptParam struct {
@@ -36,10 +38,12 @@ type GetPromptParam struct {
 type ListPromptParam struct {
 	SpaceID int64
 
-	KeyWord       string
-	CreatedBys    []string
-	UserID        string
-	CommittedOnly bool
+	KeyWord           string
+	CreatedBys        []string
+	UserID            string
+	CommittedOnly     bool
+	FilterPromptTypes []entity.PromptType
+	PromptIDs         []int64
 
 	PageNum  int
 	PageSize int
@@ -80,7 +84,27 @@ type ListCommitInfoParam struct {
 
 type ListCommitResult struct {
 	CommitInfoDOs []*entity.CommitInfo
+	CommitDOs     []*entity.PromptCommit
 	NextPageToken int64
+}
+
+type ListParentPromptParam struct {
+	SubPromptID       int64
+	SubPromptVersions []string
+}
+
+type ListSubPromptParam struct {
+	PromptID          int64
+	PromptVersions    []string
+	PromptDraftUserID string
+}
+
+type PromptCommitVersions struct {
+	PromptID       int64
+	SpaceID        int64
+	PromptKey      string
+	PromptBasic    *entity.PromptBasic
+	CommitVersions []string
 }
 
 type CacheOption struct {
