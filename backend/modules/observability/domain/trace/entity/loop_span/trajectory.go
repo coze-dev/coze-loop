@@ -1,8 +1,9 @@
 package loop_span
 
 import (
+	"strconv"
+
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 )
 
@@ -78,25 +79,25 @@ type Step struct {
 }
 
 type ModelInfo struct {
-	InputTokens               *int64 `json:"input_tokens"`
-	OutputTokens              *int64 `json:"output_tokens"`
-	LatencyFirstResp          *int64 `json:"latency_first_resp"`
-	ReasoningTokens           *int64 `json:"reasoning_tokens"`
-	InputReadCachedTokens     *int64 `json:"input_read_cached_tokens"`
-	InputCreationCachedTokens *int64 `json:"input_creation_cached_tokens"`
+	InputTokens               int64  `json:"input_tokens"`
+	OutputTokens              int64  `json:"output_tokens"`
+	LatencyFirstResp          string `json:"latency_first_resp"` // 单位毫秒
+	ReasoningTokens           int64  `json:"reasoning_tokens"`
+	InputReadCachedTokens     int64  `json:"input_read_cached_tokens"`
+	InputCreationCachedTokens int64  `json:"input_creation_cached_tokens"`
 }
 
 type BasicInfo struct {
-	// 单位微秒
-	StartedAt *int64 `json:"started_at"`
-	// 单位微秒
-	Duration *int64 `json:"duration"`
+	// 单位毫秒
+	StartedAt string `json:"started_at"`
+	// 单位毫秒
+	Duration string `json:"duration"`
 	Error    *Error `json:"error"`
 }
 
 type Error struct {
-	Code *int32  `json:"code"`
-	Msg  *string `json:"msg"`
+	Code int32  `json:"code"`
+	Msg  string `json:"msg"`
 }
 
 func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
@@ -193,14 +194,14 @@ func buildBasicInfo(span *Span) *BasicInfo {
 			errorMsg = errMsg
 		}
 		errorInfo = &Error{
-			Code: &span.StatusCode,
-			Msg:  &errorMsg,
+			Code: span.StatusCode,
+			Msg:  errorMsg,
 		}
 	}
 
 	return &BasicInfo{
-		StartedAt: &startedAt,
-		Duration:  &duration,
+		StartedAt: strconv.FormatInt(startedAt, 10),
+		Duration:  strconv.FormatInt(duration, 10),
 		Error:     errorInfo,
 	}
 }
@@ -366,22 +367,22 @@ func buildModelInfo(span *Span) *ModelInfo {
 
 	// 从tags中提取模型相关信息
 	if inputTokens, ok := span.TagsLong["input_tokens"]; ok {
-		modelInfo.InputTokens = &inputTokens
+		modelInfo.InputTokens = inputTokens
 	}
 	if outputTokens, ok := span.TagsLong["output_tokens"]; ok {
-		modelInfo.OutputTokens = &outputTokens
+		modelInfo.OutputTokens = outputTokens
 	}
 	if latencyFirstResp, ok := span.TagsLong["latency_first_resp"]; ok {
-		modelInfo.LatencyFirstResp = ptr.Of(time_util.MicroSec2MillSec(latencyFirstResp))
+		modelInfo.LatencyFirstResp = strconv.FormatInt(time_util.MicroSec2MillSec(latencyFirstResp), 10)
 	}
 	if reasoningTokens, ok := span.TagsLong["reasoning_tokens"]; ok {
-		modelInfo.ReasoningTokens = &reasoningTokens
+		modelInfo.ReasoningTokens = reasoningTokens
 	}
 	if inputReadCachedTokens, ok := span.TagsLong["input_cached_tokens"]; ok {
-		modelInfo.InputReadCachedTokens = &inputReadCachedTokens
+		modelInfo.InputReadCachedTokens = inputReadCachedTokens
 	}
 	if inputCreationCachedTokens, ok := span.TagsLong["input_creation_cached_tokens"]; ok {
-		modelInfo.InputCreationCachedTokens = &inputCreationCachedTokens
+		modelInfo.InputCreationCachedTokens = inputCreationCachedTokens
 	}
 
 	return modelInfo

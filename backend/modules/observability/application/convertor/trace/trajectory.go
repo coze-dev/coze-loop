@@ -89,12 +89,12 @@ func ModelInfoDO2DTO(info *loop_span.ModelInfo) *common.ModelInfo {
 		return nil
 	}
 	return &common.ModelInfo{
-		InputTokens:               int64Ptr2int32Ptr(info.InputTokens),
-		OutputTokens:              int64Ptr2int32Ptr(info.OutputTokens),
-		LatencyFirstResp:          int64Ptr2StrPtr(info.LatencyFirstResp),
-		ReasoningTokens:           int64Ptr2int32Ptr(info.ReasoningTokens),
-		InputReadCachedTokens:     int64Ptr2int32Ptr(info.InputReadCachedTokens),
-		InputCreationCachedTokens: int64Ptr2int32Ptr(info.InputCreationCachedTokens),
+		InputTokens:               int64Ptr2int32Ptr(&info.InputTokens),
+		OutputTokens:              int64Ptr2int32Ptr(&info.OutputTokens),
+		LatencyFirstResp:          &info.LatencyFirstResp,
+		ReasoningTokens:           int64Ptr2int32Ptr(&info.ReasoningTokens),
+		InputReadCachedTokens:     int64Ptr2int32Ptr(&info.InputReadCachedTokens),
+		InputCreationCachedTokens: int64Ptr2int32Ptr(&info.InputCreationCachedTokens),
 	}
 }
 
@@ -133,8 +133,8 @@ func BasicInfoDO2DTO(info *loop_span.BasicInfo) *common.BasicInfo {
 		return nil
 	}
 	return &common.BasicInfo{
-		StartedAt: int64Ptr2StrPtr(info.StartedAt),
-		Duration:  int64Ptr2StrPtr(info.Duration),
+		StartedAt: &info.StartedAt,
+		Duration:  &info.Duration,
 		Error:     ErrorDO2DTO(info.Error),
 	}
 }
@@ -144,7 +144,7 @@ func ErrorDO2DTO(e *loop_span.Error) *common.Error {
 		return nil
 	}
 	return &common.Error{
-		Code: e.Code,
-		Msg:  e.Msg,
+		Code: &e.Code,
+		Msg:  &e.Msg,
 	}
 }
