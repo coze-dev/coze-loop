@@ -36,7 +36,7 @@ type RootStep struct {
 	// 输出
 	Output *string `json:"output,omitempty"`
 	// 系统属性
-	Metadata  map[string]string `json:"metadata"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
 	BasicInfo *BasicInfo        `json:"basic_info,omitempty"`
 }
 
@@ -54,7 +54,7 @@ type AgentStep struct {
 	// 子节点，agent执行内部经历了哪些步骤
 	Steps []*Step `json:"steps"`
 	// 系统属性
-	Metadata  map[string]string `json:"metadata"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
 	BasicInfo *BasicInfo        `json:"basic_info,omitempty"`
 }
 
@@ -74,7 +74,7 @@ type Step struct {
 	// 各种类型补充信息
 	ModelInfo *ModelInfo `json:"model_info,omitempty"`
 	// 系统属性
-	Metadata  map[string]string `json:"metadata"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
 	BasicInfo *BasicInfo        `json:"basic_info,omitempty"`
 }
 
