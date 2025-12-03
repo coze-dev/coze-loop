@@ -52,6 +52,7 @@ func NewExptResultService(
 	evaluationSetItemService EvaluationSetItemService,
 	publisher events.ExptEventPublisher,
 	tagRPCAdapter rpc.ITagRPCAdapter,
+	analysisService IEvaluationAnalysisService,
 ) ExptResultService {
 	return ExptResultServiceImpl{
 		ExptItemResultRepo:          exptItemResultRepo,
@@ -71,6 +72,7 @@ func NewExptResultService(
 		evaluationSetItemService:    evaluationSetItemService,
 		publisher:                   publisher,
 		tagRPCAdapter:               tagRPCAdapter,
+		analysisService:             analysisService,
 	}
 }
 
@@ -93,7 +95,8 @@ type ExptResultServiceImpl struct {
 	evaluatorRecordService      EvaluatorRecordService
 	evaluationSetItemService    EvaluationSetItemService
 
-	publisher events.ExptEventPublisher
+	publisher       events.ExptEventPublisher
+	analysisService IEvaluationAnalysisService
 }
 
 func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error) {
@@ -342,7 +345,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, nil, nil, itemID2ItemRunState)
+	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, itemID2ItemRunState)
 
 	itemResults, err := payloadBuilder.BuildItemResults(ctx)
 	if err != nil {
@@ -744,6 +747,7 @@ type PayloadBuilder struct {
 	EvaluationSetItemService                    EvaluationSetItemService
 	EvalTargetService                           IEvalTargetService
 	EvaluatorRecordService                      EvaluatorRecordService
+	AnalysisService                             IEvaluationAnalysisService
 	ExptTurnResultFilterKeyMappingEvaluatorMap  map[string]*entity.ExptTurnResultFilterKeyMapping
 	ExptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping
 }
@@ -755,6 +759,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 	evalTargetService IEvalTargetService,
 	evaluatorRecordService EvaluatorRecordService,
 	evaluationSetItemService EvaluationSetItemService,
+	analysisService IEvaluationAnalysisService,
 	exptTurnResultFilterKeyMappingEvaluatorMap map[string]*entity.ExptTurnResultFilterKeyMapping,
 	exptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping,
 	itemID2ItemRunState map[int64]entity.ItemRunState,
@@ -770,6 +775,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		EvaluationSetItemService: evaluationSetItemService,
 		EvalTargetService:        evalTargetService,
 		EvaluatorRecordService:   evaluatorRecordService,
+		AnalysisService:          analysisService,
 		ExptTurnResultFilterKeyMappingEvaluatorMap:  exptTurnResultFilterKeyMappingEvaluatorMap,
 		ExptTurnResultFilterKeyMappingAnnotationMap: exptTurnResultFilterKeyMappingAnnotationMap,
 		ExptAnnotateRepo: exptAnnotateRepo,
@@ -908,6 +914,7 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 			evaluatorRecordService:   b.EvaluatorRecordService,
 			evaluationSetItemService: b.EvaluationSetItemService,
 			ExptAnnotateRepo:         b.ExptAnnotateRepo,
+			analysisService:          b.AnalysisService,
 		}
 
 		if exptID == b.BaselineExptID {
@@ -1205,10 +1212,10 @@ func (e *ExptResultBuilder) build(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	//err = e.buildAnalysis(ctx)
-	//if err != nil {
-	//	return err
-	//}
+	err = e.buildAnalysis(ctx)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -1835,7 +1842,7 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 		ExptIDs: []int64{exptID},
 	}
 	payloadBuilder := NewPayloadBuilder(ctx, param, exptID, allTurnResults, itemResults, e.ExperimentRepo,
-		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState))
+		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState))
 
 	exptTurnResultFilters, err := payloadBuilder.BuildTurnResultFilter(ctx)
 	if err != nil {
@@ -2085,7 +2092,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 			ExptIDs: []int64{exptID},
 		}
 		payloadBuilder := NewPayloadBuilder(ctx, param, exptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo,
-			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, nil, nil, make(map[int64]entity.ItemRunState))
+			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState))
 		itemResults, err := payloadBuilder.BuildItemResults(ctx)
 		if err != nil {
 			return err

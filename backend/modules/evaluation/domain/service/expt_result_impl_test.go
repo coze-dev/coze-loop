@@ -1908,6 +1908,7 @@ func TestNewExptResultService(t *testing.T) {
 		mockEvaluationSetItemService,
 		mockPublisher,
 		mockTagAdapter,
+		nil,
 	)
 
 	impl, ok := svc.(ExptResultServiceImpl)
