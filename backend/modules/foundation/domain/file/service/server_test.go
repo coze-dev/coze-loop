@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -178,6 +179,156 @@ func TestFileServiceImpl_UploadLoopFile(t *testing.T) {
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			if tt.wantErr == nil {
 				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestFileServiceImpl_UploadFileForServer(t *testing.T) {
+	type args struct {
+		ctx                  context.Context
+		mimeType             string
+		body                 []byte
+		spaceID              string
+		customMimeTypeExtMap map[string]string
+		fileName             string
+	}
+
+	tests := []struct {
+		name                string
+		args                args
+		expectedErr         error
+		expectedKey         string
+		expectedKeyPrefix   string
+		expectedKeySuffix   string
+		expectedContentType string
+		expectUpload        bool
+		uploadErr           error
+	}{
+		{
+			name: "empty body returns invalid param error",
+			args: args{
+				ctx:      context.Background(),
+				mimeType: "text/plain",
+				body:     []byte{},
+				spaceID:  "42",
+			},
+			expectedErr: errorx.NewByCode(errno.CommonInvalidParamCode),
+		},
+		{
+			name: "success with provided file name",
+			args: args{
+				ctx:      context.Background(),
+				mimeType: "text/plain",
+				body:     []byte("hello world"),
+				spaceID:  "workspace",
+				fileName: "custom.txt",
+			},
+			expectUpload:        true,
+			expectedErr:         nil,
+			expectedKey:         "workspace/custom.txt",
+			expectedContentType: "text/plain",
+		},
+		{
+			name: "generate name when file name empty uses mime extension",
+			args: args{
+				ctx:      context.Background(),
+				mimeType: "image/png",
+				body:     []byte{0x89, 0x50, 0x4e, 0x47, 0x00, 0x00},
+				spaceID:  "space",
+			},
+			expectUpload:        true,
+			expectedErr:         nil,
+			expectedKeyPrefix:   "space/",
+			expectedKeySuffix:   ".png",
+			expectedContentType: "image/png",
+		},
+		{
+			name: "custom mime mapping applies extension",
+			args: args{
+				ctx:                  context.Background(),
+				mimeType:             "application/x-coze",
+				body:                 []byte("coze-data"),
+				spaceID:              "space",
+				customMimeTypeExtMap: map[string]string{"application/x-coze": "coze"},
+			},
+			expectUpload:      true,
+			expectedErr:       nil,
+			expectedKeyPrefix: "space/",
+			expectedKeySuffix: ".coze",
+			// Files without explicit mimeType should fall back to detection; since we pass mimeType, expect to reuse it.
+			expectedContentType: "application/x-coze",
+		},
+		{
+			name: "upload failure bubbles up error",
+			args: args{
+				ctx:      context.Background(),
+				mimeType: "text/plain",
+				body:     []byte("fail case"),
+				spaceID:  "space",
+			},
+			expectUpload:      true,
+			uploadErr:         errors.New("upload failed"),
+			expectedErr:       errors.New("upload failed"),
+			expectedKeyPrefix: "space/",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			objectStorage := fsmocks.NewMockBatchObjectStorage(ctrl)
+			var uploadedKey string
+			var uploadedBody []byte
+			var uploadedContentTypes []string
+
+			if tt.expectUpload {
+				objectStorage.EXPECT().
+					Upload(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, key string, reader io.Reader, opts ...fileserver.UploadOpt) error {
+						uploadedKey = key
+						body, err := io.ReadAll(reader)
+						if err != nil {
+							return err
+						}
+						uploadedBody = body
+						option := fileserver.NewUploadOption(opts...)
+						uploadedContentTypes = option.ContentTypes
+						return tt.uploadErr
+					})
+			}
+
+			f := &fileService{
+				client: objectStorage,
+			}
+
+			got, err := f.UploadFileForServer(tt.args.ctx, tt.args.mimeType, tt.args.body, tt.args.spaceID, tt.args.customMimeTypeExtMap, tt.args.fileName)
+
+			unittest.AssertErrorEqual(t, tt.expectedErr, err)
+
+			if !tt.expectUpload {
+				assert.Equal(t, "", got)
+				return
+			}
+
+			assert.Equal(t, tt.args.body, uploadedBody)
+			if tt.expectedContentType != "" {
+				assert.Equal(t, []string{tt.expectedContentType}, uploadedContentTypes)
+			}
+			if tt.expectedKey != "" {
+				assert.Equal(t, tt.expectedKey, uploadedKey)
+			} else {
+				assert.True(t, strings.HasPrefix(uploadedKey, tt.expectedKeyPrefix))
+				assert.True(t, strings.HasSuffix(uploadedKey, tt.expectedKeySuffix))
+			}
+
+			if tt.expectedErr == nil {
+				assert.Equal(t, uploadedKey, got)
+			} else {
+				assert.Equal(t, "", got)
 			}
 		})
 	}

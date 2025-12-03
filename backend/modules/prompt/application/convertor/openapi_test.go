@@ -5,6 +5,7 @@ package convertor
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -349,6 +350,32 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 				Version:     ptr.Of("1.0.0"),
 			},
 		},
+		{
+			name: "prompt template metadata",
+			do: &entity.Prompt{
+				ID:        123,
+				SpaceID:   456,
+				PromptKey: "test_prompt",
+				PromptCommit: &entity.PromptCommit{
+					CommitInfo: &entity.CommitInfo{Version: "1.0.0"},
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							Metadata: map[string]string{"commit": "meta"},
+						},
+					},
+				},
+			},
+			dto: &openapi.Prompt{
+				WorkspaceID: ptr.Of(int64(456)),
+				PromptKey:   ptr.Of("test_prompt"),
+				Version:     ptr.Of("1.0.0"),
+				PromptTemplate: &openapi.PromptTemplate{
+					TemplateType: ptr.Of(""),
+					VariableDefs: []*openapi.VariableDef{},
+					Metadata:     map[string]string{"commit": "meta"},
+				},
+			},
+		},
 	}
 }
 
@@ -407,6 +434,18 @@ func TestOpenAPIPromptTemplateDO2DTO(t *testing.T) {
 						Type: ptr.Of(prompt.VariableTypeString),
 					},
 				},
+			},
+		},
+		{
+			name: "template with metadata",
+			do: &entity.PromptTemplate{
+				Metadata: map[string]string{"k": "v"},
+			},
+			want: &openapi.PromptTemplate{
+				TemplateType: ptr.Of(""),
+				Messages:     nil,
+				VariableDefs: []*openapi.VariableDef{},
+				Metadata:     map[string]string{"k": "v"},
 			},
 		},
 	}
@@ -511,6 +550,11 @@ func TestOpenAPIContentTypeDO2DTO(t *testing.T) {
 			want: openapi.ContentTypeImageURL,
 		},
 		{
+			name: "video url content type",
+			do:   entity.ContentTypeVideoURL,
+			want: openapi.ContentTypeVideoURL,
+		},
+		{
 			name: "unknown content type - should default to text",
 			do:   entity.ContentType("unknown"),
 			want: openapi.ContentTypeText,
@@ -593,6 +637,38 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 			want: &openapi.ContentPart{
 				Type: ptr.Of(openapi.ContentTypeText),
 				Text: ptr.Of(""),
+			},
+		},
+		{
+			name: "video url content part with fps",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "https://example.com/video.mp4",
+				},
+				MediaConfig: &entity.MediaConfig{
+					Fps: ptr.Of(2.0),
+				},
+			},
+			want: &openapi.ContentPart{
+				Type:     ptr.Of(openapi.ContentTypeVideoURL),
+				VideoURL: ptr.Of("https://example.com/video.mp4"),
+				Config: &openapi.MediaConfig{
+					Fps: ptr.Of(2.0),
+				},
+			},
+		},
+		{
+			name: "video url content part without fps",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "https://example.com/video.mp4",
+				},
+			},
+			want: &openapi.ContentPart{
+				Type:     ptr.Of(openapi.ContentTypeVideoURL),
+				VideoURL: ptr.Of("https://example.com/video.mp4"),
 			},
 		},
 	}
@@ -704,6 +780,50 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 				nil,
 			},
 			want: []*openapi.ContentPart{},
+		},
+		{
+			name: "array with video url part",
+			do: []*entity.ContentPart{
+				{
+					Type: entity.ContentTypeVideoURL,
+					VideoURL: &entity.VideoURL{
+						URL: "https://example.com/video.mp4",
+					},
+					MediaConfig: &entity.MediaConfig{
+						Fps: ptr.Of(1.5),
+					},
+				},
+			},
+			want: []*openapi.ContentPart{
+				{
+					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of("https://example.com/video.mp4"),
+					Config: &openapi.MediaConfig{
+						Fps: ptr.Of(1.5),
+					},
+				},
+			},
+		},
+		{
+			name: "base64 content part carries fps",
+			do: []*entity.ContentPart{
+				{
+					Type:       entity.ContentTypeBase64Data,
+					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+					MediaConfig: &entity.MediaConfig{
+						Fps: ptr.Of(2.4),
+					},
+				},
+			},
+			want: []*openapi.ContentPart{
+				{
+					Type:       ptr.Of(openapi.ContentTypeBase64Data),
+					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+					Config: &openapi.MediaConfig{
+						Fps: ptr.Of(2.4),
+					},
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -823,6 +943,17 @@ func TestOpenAPIMessageDO2DTO_NewFields(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "message with metadata",
+			do: &entity.Message{
+				Role:     entity.RoleAssistant,
+				Metadata: map[string]string{"meta": "value"},
+			},
+			want: &openapi.Message{
+				Role:     ptr.Of(prompt.RoleAssistant),
+				Metadata: map[string]string{"meta": "value"},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -929,6 +1060,11 @@ func TestOpenAPIContentTypeDO2DTO_NewTypes(t *testing.T) {
 			name: "image url content type",
 			do:   entity.ContentTypeImageURL,
 			want: openapi.ContentTypeImageURL,
+		},
+		{
+			name: "video url content type",
+			do:   entity.ContentTypeVideoURL,
+			want: openapi.ContentTypeVideoURL,
 		},
 		{
 			name: "base64 data content type",
@@ -1104,6 +1240,21 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "messages with metadata",
+			dtos: []*openapi.Message{
+				{
+					Role:     ptr.Of(prompt.RoleAssistant),
+					Metadata: map[string]string{"meta": "value"},
+				},
+			},
+			want: []*entity.Message{
+				{
+					Role:     entity.RoleAssistant,
+					Metadata: map[string]string{"meta": "value"},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1226,6 +1377,50 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 				{
 					Type:     entity.ContentTypeImageURL,
 					ImageURL: nil,
+				},
+			},
+		},
+		{
+			name: "video url handling with fps config",
+			dtos: []*openapi.ContentPart{
+				{
+					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of("https://example.com/video.mp4"),
+					Config: &openapi.MediaConfig{
+						Fps: ptr.Of(1.8),
+					},
+				},
+			},
+			want: []*entity.ContentPart{
+				{
+					Type: entity.ContentTypeVideoURL,
+					VideoURL: &entity.VideoURL{
+						URL: "https://example.com/video.mp4",
+					},
+					MediaConfig: &entity.MediaConfig{
+						Fps: ptr.Of(1.8),
+					},
+				},
+			},
+		},
+		{
+			name: "base64 video carries fps without video url",
+			dtos: []*openapi.ContentPart{
+				{
+					Type:       ptr.Of(openapi.ContentTypeBase64Data),
+					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+					Config: &openapi.MediaConfig{
+						Fps: ptr.Of(2.2),
+					},
+				},
+			},
+			want: []*entity.ContentPart{
+				{
+					Type:       entity.ContentTypeBase64Data,
+					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+					MediaConfig: &entity.MediaConfig{
+						Fps: ptr.Of(2.2),
+					},
 				},
 			},
 		},
@@ -1709,6 +1904,350 @@ func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.want, OpenAPIBatchToolCallDTO2DO(tt.dtos))
+		})
+	}
+}
+
+func TestOpenAPIPromptBasicDO2DTO(t *testing.T) {
+	createdAt := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	updatedAt := time.Date(2024, 1, 2, 12, 0, 0, 0, time.UTC)
+	latestCommittedAt := time.Date(2024, 1, 3, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name string
+		do   *entity.Prompt
+		want *openapi.PromptBasic
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "nil prompt basic",
+			do: &entity.Prompt{
+				ID:          123,
+				SpaceID:     456,
+				PromptKey:   "test_prompt",
+				PromptBasic: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "empty prompt basic",
+			do: &entity.Prompt{
+				ID:          123,
+				SpaceID:     456,
+				PromptKey:   "test_prompt",
+				PromptBasic: &entity.PromptBasic{},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(123)),
+				WorkspaceID:       ptr.Of(int64(456)),
+				PromptKey:         ptr.Of("test_prompt"),
+				DisplayName:       ptr.Of(""),
+				Description:       ptr.Of(""),
+				LatestVersion:     ptr.Of(""),
+				CreatedBy:         ptr.Of(""),
+				UpdatedBy:         ptr.Of(""),
+				CreatedAt:         ptr.Of(time.Time{}.UnixMilli()), // zero value time
+				UpdatedAt:         ptr.Of(time.Time{}.UnixMilli()), // zero value time
+				LatestCommittedAt: nil,
+			},
+		},
+		{
+			name: "complete prompt basic without latest committed at",
+			do: &entity.Prompt{
+				ID:        123,
+				SpaceID:   456,
+				PromptKey: "test_prompt",
+				PromptBasic: &entity.PromptBasic{
+					DisplayName:       "Test Prompt",
+					Description:       "A test prompt for testing",
+					LatestVersion:     "1.0.0",
+					CreatedBy:         "user123",
+					UpdatedBy:         "user456",
+					CreatedAt:         createdAt,
+					UpdatedAt:         updatedAt,
+					LatestCommittedAt: nil,
+				},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(123)),
+				WorkspaceID:       ptr.Of(int64(456)),
+				PromptKey:         ptr.Of("test_prompt"),
+				DisplayName:       ptr.Of("Test Prompt"),
+				Description:       ptr.Of("A test prompt for testing"),
+				LatestVersion:     ptr.Of("1.0.0"),
+				CreatedBy:         ptr.Of("user123"),
+				UpdatedBy:         ptr.Of("user456"),
+				CreatedAt:         ptr.Of(createdAt.UnixMilli()),
+				UpdatedAt:         ptr.Of(updatedAt.UnixMilli()),
+				LatestCommittedAt: nil,
+			},
+		},
+		{
+			name: "complete prompt basic with latest committed at",
+			do: &entity.Prompt{
+				ID:        123,
+				SpaceID:   456,
+				PromptKey: "test_prompt",
+				PromptBasic: &entity.PromptBasic{
+					DisplayName:       "Test Prompt",
+					Description:       "A test prompt for testing",
+					LatestVersion:     "1.0.0",
+					CreatedBy:         "user123",
+					UpdatedBy:         "user456",
+					CreatedAt:         createdAt,
+					UpdatedAt:         updatedAt,
+					LatestCommittedAt: &latestCommittedAt,
+				},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(123)),
+				WorkspaceID:       ptr.Of(int64(456)),
+				PromptKey:         ptr.Of("test_prompt"),
+				DisplayName:       ptr.Of("Test Prompt"),
+				Description:       ptr.Of("A test prompt for testing"),
+				LatestVersion:     ptr.Of("1.0.0"),
+				CreatedBy:         ptr.Of("user123"),
+				UpdatedBy:         ptr.Of("user456"),
+				CreatedAt:         ptr.Of(createdAt.UnixMilli()),
+				UpdatedAt:         ptr.Of(updatedAt.UnixMilli()),
+				LatestCommittedAt: ptr.Of(latestCommittedAt.UnixMilli()),
+			},
+		},
+		{
+			name: "prompt basic with zero IDs",
+			do: &entity.Prompt{
+				ID:        0,
+				SpaceID:   0,
+				PromptKey: "",
+				PromptBasic: &entity.PromptBasic{
+					DisplayName:   "New Prompt",
+					Description:   "A newly created prompt",
+					LatestVersion: "",
+					CreatedBy:     "user789",
+					UpdatedBy:     "user789",
+					CreatedAt:     createdAt,
+					UpdatedAt:     createdAt,
+				},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(0)),
+				WorkspaceID:       ptr.Of(int64(0)),
+				PromptKey:         ptr.Of(""),
+				DisplayName:       ptr.Of("New Prompt"),
+				Description:       ptr.Of("A newly created prompt"),
+				LatestVersion:     ptr.Of(""),
+				CreatedBy:         ptr.Of("user789"),
+				UpdatedBy:         ptr.Of("user789"),
+				CreatedAt:         ptr.Of(createdAt.UnixMilli()),
+				UpdatedAt:         ptr.Of(createdAt.UnixMilli()),
+				LatestCommittedAt: nil,
+			},
+		},
+		{
+			name: "prompt basic with special characters in text fields",
+			do: &entity.Prompt{
+				ID:        999,
+				SpaceID:   888,
+				PromptKey: "prompt_with_special_chars_@#$",
+				PromptBasic: &entity.PromptBasic{
+					DisplayName:   "Prompt with 中文 and émojis 🎉",
+					Description:   "Description with\nnewlines\tand\ttabs",
+					LatestVersion: "2.3.1-beta",
+					CreatedBy:     "user@example.com",
+					UpdatedBy:     "another.user@example.com",
+					CreatedAt:     createdAt,
+					UpdatedAt:     updatedAt,
+				},
+			},
+			want: &openapi.PromptBasic{
+				ID:                ptr.Of(int64(999)),
+				WorkspaceID:       ptr.Of(int64(888)),
+				PromptKey:         ptr.Of("prompt_with_special_chars_@#$"),
+				DisplayName:       ptr.Of("Prompt with 中文 and émojis 🎉"),
+				Description:       ptr.Of("Description with\nnewlines\tand\ttabs"),
+				LatestVersion:     ptr.Of("2.3.1-beta"),
+				CreatedBy:         ptr.Of("user@example.com"),
+				UpdatedBy:         ptr.Of("another.user@example.com"),
+				CreatedAt:         ptr.Of(createdAt.UnixMilli()),
+				UpdatedAt:         ptr.Of(updatedAt.UnixMilli()),
+				LatestCommittedAt: nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIPromptBasicDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestOpenAPIToolTypeDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   entity.ToolType
+		want openapi.ToolType
+	}{
+		{
+			name: "function type",
+			do:   entity.ToolTypeFunction,
+			want: openapi.ToolTypeFunction,
+		},
+		{
+			name: "google_search type",
+			do:   entity.ToolTypeGoogleSearch,
+			want: openapi.ToolTypeGoogleSearch,
+		},
+		{
+			name: "unknown type defaults to function",
+			do:   entity.ToolType("unknown"),
+			want: openapi.ToolTypeFunction,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolTypeDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestOpenAPIToolTypeDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  openapi.ToolType
+		want entity.ToolType
+	}{
+		{
+			name: "function type",
+			dto:  openapi.ToolTypeFunction,
+			want: entity.ToolTypeFunction,
+		},
+		{
+			name: "google_search type",
+			dto:  openapi.ToolTypeGoogleSearch,
+			want: entity.ToolTypeGoogleSearch,
+		},
+		{
+			name: "unknown type defaults to function",
+			dto:  openapi.ToolType("unknown"),
+			want: entity.ToolTypeFunction,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolTypeDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestOpenAPIToolChoiceSpecificationDO2DTO(t *testing.T) {
+	tests := []struct {
+		name string
+		do   *entity.ToolChoiceSpecification
+		want *openapi.ToolChoiceSpecification
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "specification with function type",
+			do: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeFunction,
+				Name: "get_weather",
+			},
+			want: &openapi.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeFunction),
+				Name: ptr.Of("get_weather"),
+			},
+		},
+		{
+			name: "specification with google_search type",
+			do: &entity.ToolChoiceSpecification{
+				Type: entity.ToolTypeGoogleSearch,
+				Name: "search",
+			},
+			want: &openapi.ToolChoiceSpecification{
+				Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+				Name: ptr.Of("search"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolChoiceSpecificationDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
+	tests := []struct {
+		name string
+		do   *entity.ToolCallConfig
+		want *openapi.ToolCallConfig
+	}{
+		{
+			name: "nil input",
+			do:   nil,
+			want: nil,
+		},
+		{
+			name: "auto without specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeAuto,
+			},
+			want: &openapi.ToolCallConfig{
+				ToolChoice:              ptr.Of(prompt.ToolChoiceTypeAuto),
+				ToolChoiceSpecification: nil,
+			},
+		},
+		{
+			name: "specific with specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeFunction,
+					Name: "get_weather",
+				},
+			},
+			want: &openapi.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeFunction),
+					Name: ptr.Of("get_weather"),
+				},
+			},
+		},
+		{
+			name: "specific with google_search specification",
+			do: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeGoogleSearch,
+					Name: "search",
+				},
+			},
+			want: &openapi.ToolCallConfig{
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
+					Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+					Name: ptr.Of("search"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolCallConfigDO2DTO(tt.do))
 		})
 	}
 }

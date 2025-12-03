@@ -226,6 +226,11 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 	prompt := convertor.PromptDTO2DO(req.Prompt)
 	// prompt hub span report
 	p.reportDebugPromptHubSpan(ctx, prompt)
+	// expand snippets
+	err = p.promptService.ExpandSnippets(ctx, prompt)
+	if err != nil {
+		return nil, err
+	}
 	// execute
 	resultStream := make(chan *entity.Reply)
 	errChan := make(chan error)
@@ -284,6 +289,13 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 	for reply := range resultStream {
 		if reply == nil || reply.Item == nil {
 			continue
+		}
+		// Convert base64 files to download URLs
+		if reply.Item.Message != nil {
+			if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.Prompt.GetWorkspaceID()); err != nil {
+				logs.CtxError(ctx, "failed to convert base64 to file URLs: %v", err)
+				return nil, err
+			}
 		}
 		chunk := &debug.DebugStreamingResponse{
 			Delta:         convertor.MessageDO2DTO(reply.Item.Message),
@@ -413,7 +425,7 @@ func (p *PromptDebugApplicationImpl) SaveDebugContext(ctx context.Context, req *
 
 func (p *PromptDebugApplicationImpl) GetDebugContext(ctx context.Context, req *debug.GetDebugContextRequest) (r *debug.GetDebugContextResponse, err error) {
 	r = debug.NewGetDebugContextResponse()
-	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptDebug)
+	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptRead)
 	if err != nil {
 		return nil, err
 	}
@@ -513,7 +525,7 @@ func (p *PromptDebugApplicationImpl) mCompleteDebugContextMultiModalFileURL(ctx 
 
 func (p *PromptDebugApplicationImpl) ListDebugHistory(ctx context.Context, req *debug.ListDebugHistoryRequest) (r *debug.ListDebugHistoryResponse, err error) {
 	r = debug.NewListDebugHistoryResponse()
-	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptDebug)
+	err = p.auth.MCheckPromptPermission(ctx, req.GetWorkspaceID(), []int64{req.GetPromptID()}, consts.ActionLoopPromptRead)
 	if err != nil {
 		return nil, err
 	}

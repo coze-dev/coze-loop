@@ -1750,3 +1750,13 @@ func _gettemplatev2Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _listpromptbasicMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listparentpromptMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

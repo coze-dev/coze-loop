@@ -87,8 +87,31 @@ struct SignDownloadFileResponse {
     255: base.BaseResp BaseResp
 }
 
+struct UploadFileOption {
+    1: optional string              file_name                      // file name
+    2: optional map<string, string> mime_type_ext_mapping          // custom mimetype -> ext mapping
+}
+
+struct UploadFileForServerRequest {
+    1: required string              mime_type                      // file mime type
+    2: required binary              body                           // file binary data
+    3: required i64                 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')  // workspace id
+    4: optional UploadFileOption    option                         // upload options
+
+    255: optional base.Base Base
+}
+
+struct UploadFileForServerResponse {
+    1: optional i32                 code
+    2: optional string              msg
+    3: optional FileData            data
+
+    255: base.BaseResp BaseResp
+}
+
 service FileService {
     UploadLoopFileInnerResponse UploadLoopFileInner(1: UploadLoopFileInnerRequest req) // for inner service, etc prompt or eval
+    UploadFileForServerResponse UploadFileForServer(1: UploadFileForServerRequest req) // for internal server upload
     SignUploadFileResponse SignUploadFile(1: SignUploadFileRequest req) (api.post='/api/foundation/v1/sign_upload_files')
     SignDownloadFileResponse SignDownloadFile(1: SignDownloadFileRequest req) // for inner service, etc prompt or eval
 }

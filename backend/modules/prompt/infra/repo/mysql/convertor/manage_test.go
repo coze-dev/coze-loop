@@ -41,6 +41,7 @@ func TestPromptDO2BasicPO(t *testing.T) {
 				SpaceID:   100,
 				PromptKey: "test_key",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "test_name",
 					Description:   "test_description",
 					CreatedBy:     "test_creator",
@@ -61,6 +62,7 @@ func TestPromptDO2BasicPO(t *testing.T) {
 				LatestVersion: "1.0.0",
 				CreatedAt:     time.Unix(1000, 0),
 				UpdatedAt:     time.Unix(2000, 0),
+				PromptType:    "normal",
 			},
 		},
 	}
@@ -214,6 +216,7 @@ func TestBatchBasicPO2PromptDO(t *testing.T) {
 					SpaceID:   100,
 					PromptKey: "test_key",
 					PromptBasic: &entity.PromptBasic{
+						PromptType:    entity.PromptTypeNormal,
 						DisplayName:   "test_name",
 						Description:   "test_description",
 						CreatedBy:     "test_creator",
@@ -280,6 +283,7 @@ func TestPromptPO2DO(t *testing.T) {
 				SpaceID:   100,
 				PromptKey: "test_key",
 				PromptBasic: &entity.PromptBasic{
+					PromptType:    entity.PromptTypeNormal,
 					DisplayName:   "test_name",
 					Description:   "test_description",
 					CreatedBy:     "test_creator",
@@ -344,6 +348,7 @@ func TestBasicPO2DO(t *testing.T) {
 				UpdatedAt:     time.Unix(2000, 0),
 			},
 			expected: &entity.PromptBasic{
+				PromptType:    entity.PromptTypeNormal,
 				DisplayName:   "test_name",
 				Description:   "test_description",
 				CreatedBy:     "test_creator",
@@ -710,5 +715,54 @@ func TestPromptDO2DraftPO(t *testing.T) {
 			got := PromptDO2DraftPO(tt.do)
 			assert.Equal(t, tt.expected, got)
 		})
+	}
+}
+
+func TestPromptTemplateMetadataRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	commitMetadata := map[string]string{"commit": "meta"}
+	draftMetadata := map[string]string{"draft": "meta"}
+	prompt := &entity.Prompt{
+		ID:        1,
+		SpaceID:   2,
+		PromptKey: "test_key",
+		PromptCommit: &entity.PromptCommit{
+			PromptDetail: &entity.PromptDetail{
+				PromptTemplate: &entity.PromptTemplate{
+					Metadata: commitMetadata,
+				},
+			},
+		},
+		PromptDraft: &entity.PromptDraft{
+			DraftInfo: &entity.DraftInfo{UserID: "user"},
+			PromptDetail: &entity.PromptDetail{
+				PromptTemplate: &entity.PromptTemplate{
+					Metadata: draftMetadata,
+				},
+			},
+		},
+	}
+
+	commitPO := PromptDO2CommitPO(prompt)
+	if assert.NotNil(t, commitPO.Metadata) {
+		commitDO := CommitPO2DO(&model.PromptCommit{Metadata: commitPO.Metadata})
+		assert.NotNil(t, commitDO)
+		assert.NotNil(t, commitDO.PromptDetail)
+		assert.NotNil(t, commitDO.PromptDetail.PromptTemplate)
+		assert.Equal(t, commitMetadata, commitDO.PromptDetail.PromptTemplate.Metadata)
+	}
+
+	draftPO := PromptDO2DraftPO(prompt)
+	if assert.NotNil(t, draftPO.Metadata) {
+		draftModel := &model.PromptUserDraft{
+			UserID:   "user",
+			Metadata: draftPO.Metadata,
+		}
+		draftDO := DraftPO2DO(draftModel)
+		assert.NotNil(t, draftDO)
+		assert.NotNil(t, draftDO.PromptDetail)
+		assert.NotNil(t, draftDO.PromptDetail.PromptTemplate)
+		assert.Equal(t, draftMetadata, draftDO.PromptDetail.PromptTemplate.Metadata)
 	}
 }
