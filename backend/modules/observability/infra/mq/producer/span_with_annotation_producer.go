@@ -71,6 +71,7 @@ func newSpanWithAnnotationProducerImpl(traceConfig config.ITraceConfig, mqFactor
 		ProduceTimeout: time.Duration(mqCfg.Timeout) * time.Millisecond,
 		RetryTimes:     mqCfg.RetryTimes,
 		ProducerGroup:  ptr.Of(mqCfg.ProducerGroup),
+		Compression:    mq.CompressionZSTD,
 	})
 	if err != nil {
 		return nil, err

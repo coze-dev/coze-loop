@@ -12,6 +12,7 @@ import (
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	UploadLoopFileInner(ctx context.Context, req *file.UploadLoopFileInnerRequest, callOptions ...callopt.Option) (r *file.UploadLoopFileInnerResponse, err error)
+	UploadFileForServer(ctx context.Context, req *file.UploadFileForServerRequest, callOptions ...callopt.Option) (r *file.UploadFileForServerResponse, err error)
 	SignUploadFile(ctx context.Context, req *file.SignUploadFileRequest, callOptions ...callopt.Option) (r *file.SignUploadFileResponse, err error)
 	SignDownloadFile(ctx context.Context, req *file.SignDownloadFileRequest, callOptions ...callopt.Option) (r *file.SignDownloadFileResponse, err error)
 }
@@ -48,6 +49,11 @@ type kFileServiceClient struct {
 func (p *kFileServiceClient) UploadLoopFileInner(ctx context.Context, req *file.UploadLoopFileInnerRequest, callOptions ...callopt.Option) (r *file.UploadLoopFileInnerResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.UploadLoopFileInner(ctx, req)
+}
+
+func (p *kFileServiceClient) UploadFileForServer(ctx context.Context, req *file.UploadFileForServerRequest, callOptions ...callopt.Option) (r *file.UploadFileForServerResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UploadFileForServer(ctx, req)
 }
 
 func (p *kFileServiceClient) SignUploadFile(ctx context.Context, req *file.SignUploadFileRequest, callOptions ...callopt.Option) (r *file.SignUploadFileResponse, err error) {
