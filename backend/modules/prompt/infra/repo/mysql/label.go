@@ -84,7 +84,7 @@ func (d *LabelDAOImpl) Create(ctx context.Context, labelPO *model.PromptLabel, o
 	err := q.PromptLabel.Create(labelPO)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return errorx.WrapByCode(err, prompterr.CommonResourceDuplicatedCode)
+			return errorx.WrapByCode(err, prompterr.PromptLabelExistCode)
 		}
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
@@ -161,7 +161,7 @@ func (d *CommitLabelMappingDAOImpl) BatchCreate(ctx context.Context, mappings []
 	err := q.PromptCommitLabelMapping.CreateInBatches(mappings, 100)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return errorx.WrapByCode(err, prompterr.CommonResourceDuplicatedCode)
+			return errorx.WrapByCode(err, prompterr.PromptLabelExistCode)
 		}
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}

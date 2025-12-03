@@ -310,7 +310,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			Sampler:       &entity.Sampler{SampleRate: 0.1},
 			TaskRuns:      []*entity.TaskRun{{RunStatus: entity.TaskRunStatusRunning}},
 			UpdatedAt:     now,
-			UpdatedBy:     "",
+			UpdatedBy:     "user1",
 		}
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
@@ -332,6 +332,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			EffectiveTime: &entity.EffectiveTime{StartAt: newStart, EndAt: newEnd},
 			SampleRate:    &sampleRate,
 			TaskStatus:    gptr.Of(entity.TaskStatusDisabled),
+			UserID:        "user1",
 		})
 		assert.NoError(t, err)
 		assert.True(t, proc.onFinishRunCalled)
@@ -373,6 +374,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			WorkspaceID: 2,
 			SampleRate:  &sampleRate,
 			TaskStatus:  gptr.Of(entity.TaskStatusDisabled),
+			UserID:      "user",
 		})
 		assert.NoError(t, err)
 		assert.True(t, proc.onFinishRunCalled)
@@ -409,6 +411,7 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			EffectiveTime: &entity.EffectiveTime{StartAt: newStart, EndAt: newEnd},
 			SampleRate:    &sampleRate,
 			TaskStatus:    gptr.Of(entity.TaskStatusDisabled),
+			UserID:        "user",
 		})
 		assert.EqualError(t, err, "finish fail")
 	})

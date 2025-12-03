@@ -41,6 +41,10 @@ const (
 	RunStatusRunning = "running"
 
 	RunStatusDone = "done"
+
+	TaskSourceUser = "user"
+
+	TaskSourceWorkflow = "workflow"
 )
 
 type TimeUnit = string
@@ -52,6 +56,8 @@ type TaskRunType = string
 type TaskStatus = string
 
 type RunStatus = string
+
+type TaskSource = string
 
 // Task
 type Task struct {
@@ -75,6 +81,8 @@ type Task struct {
 	TaskDetail *RunDetail `thrift:"task_detail,9,optional" frugal:"9,optional,RunDetail" form:"task_detail" json:"task_detail,omitempty" query:"task_detail"`
 	// 任务历史数据执行详情
 	BackfillTaskDetail *RunDetail `thrift:"backfill_task_detail,10,optional" frugal:"10,optional,RunDetail" form:"backfill_task_detail" json:"backfill_task_detail,omitempty" query:"backfill_task_detail"`
+	// 创建来源
+	TaskSource *TaskSource `thrift:"task_source,11,optional" frugal:"11,optional,string" form:"task_source" json:"task_source,omitempty" query:"task_source"`
 	// 基础信息
 	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
@@ -196,6 +204,18 @@ func (p *Task) GetBackfillTaskDetail() (v *RunDetail) {
 	return p.BackfillTaskDetail
 }
 
+var Task_TaskSource_DEFAULT TaskSource
+
+func (p *Task) GetTaskSource() (v TaskSource) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTaskSource() {
+		return Task_TaskSource_DEFAULT
+	}
+	return *p.TaskSource
+}
+
 var Task_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *Task) GetBaseInfo() (v *common.BaseInfo) {
@@ -237,6 +257,9 @@ func (p *Task) SetTaskDetail(val *RunDetail) {
 func (p *Task) SetBackfillTaskDetail(val *RunDetail) {
 	p.BackfillTaskDetail = val
 }
+func (p *Task) SetTaskSource(val *TaskSource) {
+	p.TaskSource = val
+}
 func (p *Task) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -252,6 +275,7 @@ var fieldIDToName_Task = map[int16]string{
 	8:   "task_config",
 	9:   "task_detail",
 	10:  "backfill_task_detail",
+	11:  "task_source",
 	100: "base_info",
 }
 
@@ -285,6 +309,10 @@ func (p *Task) IsSetTaskDetail() bool {
 
 func (p *Task) IsSetBackfillTaskDetail() bool {
 	return p.BackfillTaskDetail != nil
+}
+
+func (p *Task) IsSetTaskSource() bool {
+	return p.TaskSource != nil
 }
 
 func (p *Task) IsSetBaseInfo() bool {
@@ -388,6 +416,14 @@ func (p *Task) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -539,6 +575,17 @@ func (p *Task) ReadField10(iprot thrift.TProtocol) error {
 	p.BackfillTaskDetail = _field
 	return nil
 }
+func (p *Task) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *TaskSource
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TaskSource = _field
+	return nil
+}
 func (p *Task) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -592,6 +639,10 @@ func (p *Task) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -792,6 +843,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *Task) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTaskSource() {
+		if err = oprot.WriteFieldBegin("task_source", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TaskSource); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *Task) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -853,6 +922,9 @@ func (p *Task) DeepEqual(ano *Task) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.BackfillTaskDetail) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.TaskSource) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -947,6 +1019,18 @@ func (p *Task) Field9DeepEqual(src *RunDetail) bool {
 func (p *Task) Field10DeepEqual(src *RunDetail) bool {
 
 	if !p.BackfillTaskDetail.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *Task) Field11DeepEqual(src *TaskSource) bool {
+
+	if p.TaskSource == src {
+		return true
+	} else if p.TaskSource == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TaskSource, *src) != 0 {
 		return false
 	}
 	return true

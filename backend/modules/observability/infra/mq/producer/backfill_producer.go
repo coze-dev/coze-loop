@@ -42,7 +42,7 @@ func (b *BackfillProducerImpl) SendBackfill(ctx context.Context, message *entity
 		logs.CtxWarn(ctx, "send annotation msg err: %v", err)
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
 	}
-	logs.CtxInfo(ctx, "send annotation msg %s successfully, msgId: %s", string(bytes), sendMsg.MessageID)
+	logs.CtxInfo(ctx, "send backfill msg %s successfully, msgId: %s", string(bytes), sendMsg.MessageID)
 	return nil
 }
 

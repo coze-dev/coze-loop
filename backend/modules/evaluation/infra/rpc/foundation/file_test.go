@@ -188,6 +188,10 @@ type mockFileServiceClient struct {
 	lastRequest  *file.SignDownloadFileRequest
 }
 
+func (m *mockFileServiceClient) UploadFileForServer(ctx context.Context, req *file.UploadFileForServerRequest, callOptions ...callopt.Option) (r *file.UploadFileForServerResponse, err error) {
+	return nil, errors.New("not implemented")
+}
+
 func (m *mockFileServiceClient) UploadLoopFileInner(ctx context.Context, req *file.UploadLoopFileInnerRequest, callOptions ...callopt.Option) (r *file.UploadLoopFileInnerResponse, err error) {
 	return nil, errors.New("not implemented")
 }

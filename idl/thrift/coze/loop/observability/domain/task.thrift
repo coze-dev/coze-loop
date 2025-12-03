@@ -29,6 +29,10 @@ typedef string RunStatus (ts.enum="true")
 const RunStatus RunStatus_Running = "running"       // 正在运行
 const RunStatus RunStatus_Done = "done"           // 完成运行
 
+typedef string TaskSource (ts.enum="true")
+const TaskSource TaskSource_User = "user"       // 用户创建
+const TaskSource TaskSource_Workflow = "workflow"   // 工作流创建
+
 // Task
 struct Task {
     1: optional i64 id  (api.js_conv="true", go.tag='json:"id"')                            // 任务 id
@@ -41,6 +45,7 @@ struct Task {
     8: optional TaskConfig task_config                                                      // 配置
     9: optional RunDetail task_detail                                                       // 任务状态详情
     10: optional RunDetail backfill_task_detail                                             // 任务历史数据执行详情
+    11: optional TaskSource task_source                                                     // 创建来源
 
     100: optional common.BaseInfo base_info                                                 // 基础信息
 }

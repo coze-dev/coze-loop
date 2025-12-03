@@ -28,7 +28,7 @@ import (
 type IPromptBasicDAO interface {
 	Create(ctx context.Context, basicPO *model.PromptBasic, opts ...db.Option) (err error)
 
-	Delete(ctx context.Context, promptID int64, opts ...db.Option) (err error)
+	Delete(ctx context.Context, promptID int64, spaceID int64, opts ...db.Option) (err error)
 
 	Get(ctx context.Context, promptID int64, opts ...db.Option) (basicPO *model.PromptBasic, err error)
 	MGet(ctx context.Context, promptIDs []int64, opts ...db.Option) (idPromptPOMap map[int64]*model.PromptBasic, err error)
@@ -44,6 +44,8 @@ type ListPromptBasicParam struct {
 	KeyWord       string
 	CreatedBys    []string
 	CommittedOnly bool
+	PromptTypes   []string // Add prompt type filtering
+	PromptIDs     []int64
 
 	Offset  int
 	Limit   int
@@ -80,7 +82,7 @@ func (d *PromptBasicDAOImpl) Create(ctx context.Context, basicPO *model.PromptBa
 	err = q.PromptBasic.Create(basicPO)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return errorx.WrapByCode(err, prompterr.CommonResourceDuplicatedCode)
+			return errorx.WrapByCode(err, prompterr.PromptKeyExistCode)
 		}
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
@@ -88,7 +90,7 @@ func (d *PromptBasicDAOImpl) Create(ctx context.Context, basicPO *model.PromptBa
 	return nil
 }
 
-func (d *PromptBasicDAOImpl) Delete(ctx context.Context, promptID int64, opts ...db.Option) (err error) {
+func (d *PromptBasicDAOImpl) Delete(ctx context.Context, promptID int64, spaceID int64, opts ...db.Option) (err error) {
 	if promptID <= 0 {
 		return errorx.New("promptID is invalid, promptID = %d", promptID)
 	}
@@ -100,7 +102,7 @@ func (d *PromptBasicDAOImpl) Delete(ctx context.Context, promptID int64, opts ..
 	if err != nil {
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
-	d.writeTracker.SetWriteFlag(ctx, platestwrite.ResourceTypePromptBasic, promptID)
+	d.writeTracker.SetWriteFlag(ctx, platestwrite.ResourceTypePromptBasic, promptID, platestwrite.SetWithSearchParam(strconv.FormatInt(spaceID, 10)))
 	return nil
 }
 
@@ -175,6 +177,9 @@ func (d *PromptBasicDAOImpl) List(ctx context.Context, param ListPromptBasicPara
 	if len(param.CreatedBys) > 0 {
 		tx = tx.Where(q.PromptBasic.CreatedBy.In(param.CreatedBys...))
 	}
+	if len(param.PromptIDs) > 0 {
+		tx = tx.Where(q.PromptBasic.ID.In(param.PromptIDs...))
+	}
 	if !lo.IsEmpty(param.KeyWord) {
 		likeExpr := field.Or(
 			q.PromptBasic.PromptKey.Like(fmt.Sprintf("%%%s%%", param.KeyWord)),
@@ -184,6 +189,9 @@ func (d *PromptBasicDAOImpl) List(ctx context.Context, param ListPromptBasicPara
 	}
 	if param.CommittedOnly {
 		tx = tx.Where(q.PromptBasic.LatestVersion.Neq(""))
+	}
+	if len(param.PromptTypes) > 0 {
+		tx = tx.Where(q.PromptBasic.PromptType.In(param.PromptTypes...))
 	}
 	total, err = tx.Count()
 	if err != nil {

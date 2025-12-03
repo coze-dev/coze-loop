@@ -30,6 +30,37 @@ func NewFileApplication(objectStorage fileserver.BatchObjectStorage, auth rpc.IA
 	}
 }
 
+func (p *FileApplicationImpl) UploadFileForServer(ctx context.Context, req *file.UploadFileForServerRequest) (r *file.UploadFileForServerResponse, err error) {
+	if req == nil || req.MimeType == "" || len(req.Body) == 0 || req.WorkspaceID == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
+	}
+
+	spaceID := strconv.FormatInt(req.WorkspaceID, 10)
+
+	// Extract custom mime type mappings and file name from option
+	var customMimeTypeExtMap map[string]string
+	var fileName string
+	if req.Option != nil {
+		customMimeTypeExtMap = req.Option.MimeTypeExtMapping
+		if req.Option.FileName != nil {
+			fileName = *req.Option.FileName
+		}
+	}
+
+	key, err := p.fileService.UploadFileForServer(ctx, req.MimeType, req.Body, spaceID, customMimeTypeExtMap, fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &file.UploadFileForServerResponse{
+		Data: &file.FileData{
+			Bytes:    lo.ToPtr(int64(len(req.Body))),
+			FileName: lo.ToPtr(key),
+		},
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
 func (p *FileApplicationImpl) UploadLoopFileInner(ctx context.Context, req *file.UploadLoopFileInnerRequest) (r *file.UploadLoopFileInnerResponse, err error) {
 	if req == nil || req.ContentType == "" || len(req.Body) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)

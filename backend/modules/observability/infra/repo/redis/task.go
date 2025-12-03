@@ -252,7 +252,6 @@ func (p *TaskDAOImpl) GetTaskRunCount(ctx context.Context, taskID, taskRunID int
 func (p *TaskDAOImpl) IncrTaskCount(ctx context.Context, taskID int64, ttl time.Duration) (int64, error) {
 	key := p.makeTaskCountCacheKey(taskID)
 	result, err := p.cmdable.Incr(ctx, key).Result()
-	logs.CtxInfo(ctx, "redis incr task count success, taskID: %v, key: %v, result: %v", taskID, key, result)
 	if err != nil {
 		logs.CtxError(ctx, "redis incr task count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis incr task count key: %v", key)
@@ -291,7 +290,6 @@ func (p *TaskDAOImpl) DecrTaskCount(ctx context.Context, taskID int64, ttl time.
 		logs.CtxError(ctx, "redis decr task count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis decr task count key: %v", key)
 	}
-	logs.CtxInfo(ctx, "redis decr task count success, taskID: %v, key: %v, result: %v", taskID, key, result)
 	// 如果减少后变为负数，重置为0
 	if result < 0 {
 		if err := p.cmdable.Set(ctx, key, 0, ttl).Err(); err != nil {
@@ -312,7 +310,6 @@ func (p *TaskDAOImpl) DecrTaskCount(ctx context.Context, taskID int64, ttl time.
 func (p *TaskDAOImpl) IncrTaskRunCount(ctx context.Context, taskID, taskRunID int64, ttl time.Duration) (int64, error) {
 	key := p.makeTaskRunCountCacheKey(taskID, taskRunID)
 	result, err := p.cmdable.Incr(ctx, key).Result()
-	logs.CtxInfo(ctx, "redis incr task run count success, taskID: %v,taskRunID: %v, key: %v, result: %v", taskID, taskRunID, key, result)
 	if err != nil {
 		logs.CtxError(ctx, "redis incr task run count failed", "key", key, "err", err)
 		return 0, errorx.Wrapf(err, "redis incr task run count key: %v", key)

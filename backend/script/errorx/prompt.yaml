@@ -28,6 +28,18 @@ error_code:
     code: 1007
     message: prompt label unassociated with commit version
     no_affect_stability: true
+  - name: PromptKeyExist
+    code: 1008
+    message: prompt key already exist
+    no_affect_stability: true
+  - name: PromptSubmitVersionExist
+    code: 1009
+    message: prompt submit version already exist
+    no_affect_stability: true
+  - name: PromptLabelExist
+    code: 1010
+    message: prompt label already exist
+    no_affect_stability: true
   # 2xxx
   - name: PromptHubQPSLimit
     code: 2001

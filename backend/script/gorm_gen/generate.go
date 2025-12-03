@@ -68,7 +68,7 @@ func generateForPrompt(db *gorm.DB) {
 			})))
 	}
 
-	for _, table := range []string{"prompt_commit"} {
+	for _, table := range []string{"prompt_commit", "prompt_relation"} {
 		models = append(models, g.GenerateModel(table,
 			gen.FieldGORMTag("*", func(tag field.GormTag) field.GormTag {
 				return tag.Set("charset=utf8mb4")

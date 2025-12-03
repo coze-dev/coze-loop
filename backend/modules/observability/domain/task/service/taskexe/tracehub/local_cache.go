@@ -50,6 +50,6 @@ func (l *LocalCache) LoadTaskCache(ctx context.Context) TaskCacheInfo {
 		return TaskCacheInfo{}
 	}
 
-	logs.CtxInfo(ctx, "Retrieve task list from cache, taskCount=%d, spaceCount=%d, botCount=%d", len(cacheInfo.Tasks), len(cacheInfo.WorkspaceIDs), len(cacheInfo.BotIDs))
+	logs.CtxDebug(ctx, "Retrieve task list from cache, taskCount=%d, spaceCount=%d, botCount=%d", len(cacheInfo.Tasks), len(cacheInfo.WorkspaceIDs), len(cacheInfo.BotIDs))
 	return cacheInfo
 }

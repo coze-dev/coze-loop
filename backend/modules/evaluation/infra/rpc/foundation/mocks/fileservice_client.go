@@ -82,6 +82,26 @@ func (mr *MockClientMockRecorder) SignUploadFile(ctx, req any, callOptions ...an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignUploadFile", reflect.TypeOf((*MockClient)(nil).SignUploadFile), varargs...)
 }
 
+// UploadFileForServer mocks base method.
+func (m *MockClient) UploadFileForServer(ctx context.Context, req *file.UploadFileForServerRequest, callOptions ...callopt.Option) (*file.UploadFileForServerResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range callOptions {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UploadFileForServer", varargs...)
+	ret0, _ := ret[0].(*file.UploadFileForServerResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadFileForServer indicates an expected call of UploadFileForServer.
+func (mr *MockClientMockRecorder) UploadFileForServer(ctx, req any, callOptions ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, callOptions...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFileForServer", reflect.TypeOf((*MockClient)(nil).UploadFileForServer), varargs...)
+}
+
 // UploadLoopFileInner mocks base method.
 func (m *MockClient) UploadLoopFileInner(ctx context.Context, req *file.UploadLoopFileInnerRequest, callOptions ...callopt.Option) (*file.UploadLoopFileInnerResponse, error) {
 	m.ctrl.T.Helper()

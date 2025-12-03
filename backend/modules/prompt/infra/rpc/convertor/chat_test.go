@@ -115,7 +115,8 @@ func TestLLMCallParamConvert(t *testing.T) {
 					MaxTokens:   ptr.Of(int64(1000)),
 					TopP:        ptr.Of(0.1),
 					Stop:        nil,
-					ToolChoice:  ptr.Of(runtimedto.ToolChoiceAuto),
+					// llm暂时不支持toolCallConfig，所以ToolChoice为nil
+					// ToolChoice:  ptr.Of(runtimedto.ToolChoiceAuto),
 					ParamConfigValues: []*runtimedto.ParamConfigValue{
 						{
 							Name:  ptr.Of("temperature"),
@@ -244,6 +245,67 @@ func TestMessageDO2DTO(t *testing.T) {
 						Type: ptr.Of(runtimedto.ChatMessagePartTypeImageURL),
 						ImageURL: &runtimedto.ChatMessageImageURL{
 							URL: ptr.Of("https://example.com/image.jpg"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "user video message with detail",
+			do: &entity.Message{
+				Role: "user",
+				Parts: []*entity.ContentPart{
+					{
+						Type: entity.ContentTypeVideoURL,
+						VideoURL: &entity.VideoURL{
+							URL: "https://example.com/video.mp4",
+						},
+						MediaConfig: &entity.MediaConfig{
+							Fps: ptr.Of(1.25),
+						},
+					},
+				},
+			},
+			want: &runtimedto.Message{
+				Role: runtimedto.RoleUser,
+				MultimodalContents: []*runtimedto.ChatMessagePart{
+					{
+						Type: ptr.Of(runtimedto.ChatMessagePartTypeVideoURL),
+						VideoURL: &runtimedto.ChatMessageVideoURL{
+							URL: ptr.Of("https://example.com/video.mp4"),
+							Detail: &runtimedto.VideoURLDetail{
+								Fps: ptr.Of(1.25),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "user base64 video message",
+			do: &entity.Message{
+				Role: "user",
+				Parts: []*entity.ContentPart{
+					{
+						Type:       entity.ContentTypeBase64Data,
+						Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
+						MediaConfig: &entity.MediaConfig{
+							Fps: ptr.Of(3.5),
+						},
+					},
+				},
+			},
+			want: &runtimedto.Message{
+				Role: runtimedto.RoleUser,
+				MultimodalContents: []*runtimedto.ChatMessagePart{
+					{
+						Type: ptr.Of(runtimedto.ChatMessagePartTypeVideoURL),
+						VideoURL: &runtimedto.ChatMessageVideoURL{
+							URL:      ptr.Of("data:video/mp4;base64,QUJDRA=="),
+							MimeType: ptr.Of("video/mp4"),
+							Detail: &runtimedto.VideoURLDetail{
+								Fps: ptr.Of(3.5),
+							},
 						},
 					},
 				},
@@ -473,6 +535,37 @@ func TestMessageDTO2DO(t *testing.T) {
 						Type: entity.ContentTypeImageURL,
 						ImageURL: &entity.ImageURL{
 							URL: "https://example.com/image.jpg",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "video content part with detail",
+			dto: &runtimedto.Message{
+				Role: runtimedto.RoleAssistant,
+				MultimodalContents: []*runtimedto.ChatMessagePart{
+					{
+						Type: ptr.Of(runtimedto.ChatMessagePartTypeVideoURL),
+						VideoURL: &runtimedto.ChatMessageVideoURL{
+							URL: ptr.Of("https://example.com/video.mp4"),
+							Detail: &runtimedto.VideoURLDetail{
+								Fps: ptr.Of(2.5),
+							},
+						},
+					},
+				},
+			},
+			want: &entity.Message{
+				Role: entity.RoleAssistant,
+				Parts: []*entity.ContentPart{
+					{
+						Type: entity.ContentTypeVideoURL,
+						VideoURL: &entity.VideoURL{
+							URL: "https://example.com/video.mp4",
+						},
+						MediaConfig: &entity.MediaConfig{
+							Fps: ptr.Of(2.5),
 						},
 					},
 				},

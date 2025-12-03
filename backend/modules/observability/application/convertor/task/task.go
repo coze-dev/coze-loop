@@ -73,6 +73,11 @@ func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 			UpdatedBy: UserInfoPO2DO(userMap[v.UpdatedBy], v.UpdatedBy),
 		},
 	}
+
+	if v.TaskSource != nil {
+		taskInfo.TaskSource = gptr.Of(*v.TaskSource)
+	}
+
 	return taskInfo
 }
 
@@ -238,11 +243,11 @@ func BackfillRunDetailDO2DTO(backfillDetail *entity.BackfillDetail) *task.Backfi
 		return nil
 	}
 	return &task.BackfillDetail{
-		SuccessCount:      backfillDetail.SuccessCount,
-		FailedCount:       backfillDetail.FailedCount,
-		TotalCount:        backfillDetail.TotalCount,
-		BackfillStatus:    backfillDetail.BackfillStatus,
-		LastSpanPageToken: backfillDetail.LastSpanPageToken,
+		SuccessCount:      &backfillDetail.SuccessCount,
+		FailedCount:       &backfillDetail.FailedCount,
+		TotalCount:        &backfillDetail.TotalCount,
+		BackfillStatus:    &backfillDetail.BackfillStatus,
+		LastSpanPageToken: &backfillDetail.LastSpanPageToken,
 	}
 }
 
@@ -319,7 +324,7 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 
 	spanFilterDO := SpanFilterDTO2DO(taskDTO.GetRule().GetSpanFilters())
 
-	return &entity.ObservabilityTask{
+	entityTask := &entity.ObservabilityTask{
 		ID:                    taskDTO.GetID(),
 		WorkspaceID:           taskDTO.GetWorkspaceID(),
 		Name:                  taskDTO.GetName(),
@@ -337,6 +342,12 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 		UpdatedBy:             updatedBy,
 		BackfillEffectiveTime: EffectiveTimeDTO2DO(taskDTO.GetRule().GetBackfillEffectiveTime()),
 	}
+
+	if taskDTO.TaskSource != nil {
+		entityTask.TaskSource = ptr.Of(*taskDTO.TaskSource)
+	}
+
+	return entityTask
 }
 
 func SpanFilterDTO2DO(spanFilterFields *filter.SpanFilterFields) *entity.SpanFilterFields {
@@ -449,6 +460,7 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 	}
 }
 
+/*
 func TaskRunDTO2DO(taskRun *task.TaskRun) *entity.TaskRun {
 	if taskRun == nil {
 		return nil
@@ -468,6 +480,7 @@ func TaskRunDTO2DO(taskRun *task.TaskRun) *entity.TaskRun {
 		UpdatedAt:      time.UnixMilli(taskRun.GetBaseInfo().GetUpdatedAt()),
 	}
 }
+*/
 
 func TaskRunConfigDTO2DO(v *task.TaskRunConfig) *entity.TaskRunConfig {
 	if v == nil {
@@ -504,18 +517,20 @@ func TaskRunConfigDTO2DO(v *task.TaskRunConfig) *entity.TaskRunConfig {
 	}
 }
 
+/*
 func BackfillRunDetailDTO2DO(v *task.BackfillDetail) *entity.BackfillDetail {
 	if v == nil {
 		return nil
 	}
 	return &entity.BackfillDetail{
-		SuccessCount:      v.SuccessCount,
-		FailedCount:       v.FailedCount,
-		TotalCount:        v.TotalCount,
-		BackfillStatus:    v.BackfillStatus,
-		LastSpanPageToken: v.LastSpanPageToken,
+		SuccessCount:      v.GetSuccessCount(),
+		FailedCount:       v.GetFailedCount(),
+		TotalCount:        v.GetTotalCount(),
+		BackfillStatus:    v.GetBackfillStatus(),
+		LastSpanPageToken: v.GetLastSpanPageToken(),
 	}
 }
+*/
 
 func getLastPartAfterDot(s string) string {
 	s = strings.TrimRight(s, ".")
