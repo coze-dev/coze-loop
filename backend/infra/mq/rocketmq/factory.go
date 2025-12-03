@@ -37,9 +37,6 @@ func (f *Factory) NewProducer(config mq.ProducerConfig) (mq.IProducer, error) {
 	if config.RetryTimes > 0 {
 		opts = append(opts, producer.WithRetry(config.RetryTimes))
 	}
-	if config.Compression != mq.CompressionNone {
-		return nil, errors.New("compression not supported")
-	}
 	if config.ProducerGroup != nil {
 		opts = append(opts, producer.WithGroupName(*config.ProducerGroup))
 	}
