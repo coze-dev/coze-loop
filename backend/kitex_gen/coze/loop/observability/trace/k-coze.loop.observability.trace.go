@@ -12,7 +12,6 @@ import (
 	kutils "github.com/cloudwego/kitex/pkg/utils"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
-	common0 "github.com/coze-dev/coze-loop/backend/kitex_gen/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
@@ -21,11 +20,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/view"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 )
 
 var (
 	_ = base.KitexUnusedProtection
-	_ = common0.KitexUnusedProtection
 	_ = dataset.KitexUnusedProtection
 	_ = annotation.KitexUnusedProtection
 	_ = common.KitexUnusedProtection
@@ -34,6 +33,7 @@ var (
 	_ = span.KitexUnusedProtection
 	_ = task.KitexUnusedProtection
 	_ = view.KitexUnusedProtection
+	_ = trajectory.KitexUnusedProtection
 )
 
 // unused protection
@@ -15426,8 +15426,8 @@ func (p *ListTrajectoryResponse) FastReadField1(buf []byte) (int, error) {
 	if err != nil {
 		return offset, err
 	}
-	_field := make([]*common0.Trajectory, 0, size)
-	values := make([]common0.Trajectory, size)
+	_field := make([]*trajectory.Trajectory, 0, size)
+	values := make([]trajectory.Trajectory, size)
 	for i := 0; i < size; i++ {
 		_elem := &values[i]
 		_elem.InitDefault()
@@ -15533,11 +15533,11 @@ func (p *ListTrajectoryResponse) DeepCopy(s interface{}) error {
 	}
 
 	if src.Trajectories != nil {
-		p.Trajectories = make([]*common0.Trajectory, 0, len(src.Trajectories))
+		p.Trajectories = make([]*trajectory.Trajectory, 0, len(src.Trajectories))
 		for _, elem := range src.Trajectories {
-			var _elem *common0.Trajectory
+			var _elem *trajectory.Trajectory
 			if elem != nil {
-				_elem = &common0.Trajectory{}
+				_elem = &trajectory.Trajectory{}
 				if err := _elem.DeepCopy(elem); err != nil {
 					return err
 				}

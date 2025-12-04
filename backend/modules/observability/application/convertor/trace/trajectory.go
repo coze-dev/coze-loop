@@ -3,48 +3,48 @@ package trace
 import (
 	"strconv"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/common"
+	dtotrajectory "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
-func TrajectoriesDO2DTO(trajectories []*loop_span.Trajectory) []*common.Trajectory {
+func TrajectoriesDO2DTO(trajectories []*loop_span.Trajectory) []*dtotrajectory.Trajectory {
 	if len(trajectories) == 0 {
 		return nil
 	}
-	result := make([]*common.Trajectory, len(trajectories))
+	result := make([]*dtotrajectory.Trajectory, len(trajectories))
 	for i, trajectory := range trajectories {
 		result[i] = TrajectoryDO2DTO(trajectory)
 	}
 	return result
 }
 
-func TrajectoryDO2DTO(trajectory *loop_span.Trajectory) *common.Trajectory {
+func TrajectoryDO2DTO(trajectory *loop_span.Trajectory) *dtotrajectory.Trajectory {
 	if trajectory == nil {
 		return nil
 	}
-	return &common.Trajectory{
+	return &dtotrajectory.Trajectory{
 		ID:         trajectory.ID,
 		RootStep:   RootStepDO2DTO(trajectory.RootStep),
 		AgentSteps: AgentStepsDO2DTO(trajectory.AgentSteps),
 	}
 }
 
-func AgentStepsDO2DTO(steps []*loop_span.AgentStep) []*common.AgentStep {
+func AgentStepsDO2DTO(steps []*loop_span.AgentStep) []*dtotrajectory.AgentStep {
 	if len(steps) == 0 {
 		return nil
 	}
-	result := make([]*common.AgentStep, len(steps))
+	result := make([]*dtotrajectory.AgentStep, len(steps))
 	for i, step := range steps {
 		result[i] = AgentStepDO2DTO(step)
 	}
 	return result
 }
 
-func AgentStepDO2DTO(step *loop_span.AgentStep) *common.AgentStep {
+func AgentStepDO2DTO(step *loop_span.AgentStep) *dtotrajectory.AgentStep {
 	if step == nil {
 		return nil
 	}
-	return &common.AgentStep{
+	return &dtotrajectory.AgentStep{
 		ID:          step.ID,
 		ParentID:    step.ParentID,
 		Name:        step.Name,
@@ -57,22 +57,22 @@ func AgentStepDO2DTO(step *loop_span.AgentStep) *common.AgentStep {
 	}
 }
 
-func StepsDO2DTO(steps []*loop_span.Step) []*common.Step {
+func StepsDO2DTO(steps []*loop_span.Step) []*dtotrajectory.Step {
 	if len(steps) == 0 {
 		return nil
 	}
-	result := make([]*common.Step, len(steps))
+	result := make([]*dtotrajectory.Step, len(steps))
 	for i, step := range steps {
 		result[i] = StepDO2DTO(step)
 	}
 	return result
 }
 
-func StepDO2DTO(step *loop_span.Step) *common.Step {
+func StepDO2DTO(step *loop_span.Step) *dtotrajectory.Step {
 	if step == nil {
 		return nil
 	}
-	return &common.Step{
+	return &dtotrajectory.Step{
 		ID:        step.ID,
 		ParentID:  step.ParentID,
 		Type:      step.Type,
@@ -85,11 +85,11 @@ func StepDO2DTO(step *loop_span.Step) *common.Step {
 	}
 }
 
-func ModelInfoDO2DTO(info *loop_span.ModelInfo) *common.ModelInfo {
+func ModelInfoDO2DTO(info *loop_span.ModelInfo) *dtotrajectory.ModelInfo {
 	if info == nil {
 		return nil
 	}
-	return &common.ModelInfo{
+	return &dtotrajectory.ModelInfo{
 		InputTokens:               int64Ptr2int32Ptr(&info.InputTokens),
 		OutputTokens:              int64Ptr2int32Ptr(&info.OutputTokens),
 		LatencyFirstResp:          &info.LatencyFirstResp,
@@ -115,11 +115,11 @@ func int64Ptr2StrPtr(src *int64) *string {
 	return &result
 }
 
-func RootStepDO2DTO(step *loop_span.RootStep) *common.RootStep {
+func RootStepDO2DTO(step *loop_span.RootStep) *dtotrajectory.RootStep {
 	if step == nil {
 		return nil
 	}
-	return &common.RootStep{
+	return &dtotrajectory.RootStep{
 		ID:          step.ID,
 		Name:        step.Name,
 		Input:       step.Input,
@@ -130,11 +130,11 @@ func RootStepDO2DTO(step *loop_span.RootStep) *common.RootStep {
 	}
 }
 
-func MetricsInfoDO2DTO(info *loop_span.MetricsInfo) *common.MetricsInfo {
+func MetricsInfoDO2DTO(info *loop_span.MetricsInfo) *dtotrajectory.MetricsInfo {
 	if info == nil {
 		return nil
 	}
-	return &common.MetricsInfo{
+	return &dtotrajectory.MetricsInfo{
 		LlmDuration:        info.LlmDuration,
 		ToolDuration:       info.ToolDuration,
 		ToolErrors:         info.ToolErrors,
@@ -145,22 +145,22 @@ func MetricsInfoDO2DTO(info *loop_span.MetricsInfo) *common.MetricsInfo {
 	}
 }
 
-func BasicInfoDO2DTO(info *loop_span.BasicInfo) *common.BasicInfo {
+func BasicInfoDO2DTO(info *loop_span.BasicInfo) *dtotrajectory.BasicInfo {
 	if info == nil {
 		return nil
 	}
-	return &common.BasicInfo{
+	return &dtotrajectory.BasicInfo{
 		StartedAt: &info.StartedAt,
 		Duration:  &info.Duration,
 		Error:     ErrorDO2DTO(info.Error),
 	}
 }
 
-func ErrorDO2DTO(e *loop_span.Error) *common.Error {
+func ErrorDO2DTO(e *loop_span.Error) *dtotrajectory.Error {
 	if e == nil {
 		return nil
 	}
-	return &common.Error{
+	return &dtotrajectory.Error{
 		Code: &e.Code,
 		Msg:  &e.Msg,
 	}
