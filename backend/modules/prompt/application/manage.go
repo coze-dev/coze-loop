@@ -788,7 +788,7 @@ func (app *PromptManageApplicationImpl) RevertDraftFromCommit(ctx context.Contex
 
 func (app *PromptManageApplicationImpl) listPromptOrderBy(dtoEnum *manage.ListPromptOrderBy) int {
 	if dtoEnum == nil {
-		return mysql.ListPromptBasicOrderByID
+		return mysql.ListPromptBasicOrderByCreatedAt
 	}
 	switch *dtoEnum {
 	case manage.ListPromptOrderByCreatedAt:
