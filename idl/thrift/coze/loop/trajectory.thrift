@@ -18,6 +18,7 @@ struct RootStep {
     // 系统属性
     100: optional map<string, string> metadata   // 保留字段，可以承载业务自定义的属性
     101: optional BasicInfo basic_info
+    102: optional MetricsInfo metrics_info
 }
 
 struct AgentStep {
@@ -33,6 +34,7 @@ struct AgentStep {
     // 系统属性
     100: optional map<string, string> metadata   // 保留字段，可以承载业务自定义的属性
     101: optional BasicInfo basic_info
+    102: optional MetricsInfo metrics_info
 }
 
 struct Step {
@@ -60,19 +62,29 @@ const StepType StepType_Tool = "tool"
 struct ModelInfo {
     1: optional i32 input_tokens
     2: optional i32 output_tokens
-    3: optional string latency_first_resp // 首包耗时，单位微秒
+    3: optional string latency_first_resp // 首包耗时，单位毫秒
     4: optional i32 reasoning_tokens
     5: optional i32 input_read_cached_tokens
     6: optional i32 input_creation_cached_tokens
 }
 
 struct BasicInfo {
-    1: optional string started_at // 单位微秒
-    2: optional string duration  // 单位微秒
+    1: optional string started_at // 单位毫秒
+    2: optional string duration  // 单位毫秒
     3: optional Error error
 }
 
 struct Error {
     1: optional i32 code
     2: optional string msg
+}
+
+struct MetricsInfo {
+    1: optional string llm_duration // 单位毫秒
+    2: optional string tool_duration // 单位毫秒
+    3: optional map<i32, list<string>> tool_errors // Tool错误分布，格式为：错误码-->list<ToolStepID>
+    4: optional double tool_error_rate // Tool错误率
+    5: optional map<i32, list<string>> model_errors // Model错误分布，格式为：错误码-->list<ModelStepID>
+    6: optional double model_error_rate // Model错误率
+    7: optional double tool_step_proportion // Tool Step占比(分母是总子Step)
 }
