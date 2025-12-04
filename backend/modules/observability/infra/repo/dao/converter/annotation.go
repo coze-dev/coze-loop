@@ -4,12 +4,13 @@ package converter
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
-	"time"
 )
 
 func AnnotationPO2DO(annotation *dao.Annotation) *loop_span.Annotation {
