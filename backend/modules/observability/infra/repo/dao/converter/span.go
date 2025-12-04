@@ -3,10 +3,11 @@
 package converter
 
 import (
+	"time"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	"time"
 )
 
 func SpanListDO2PO(spans loop_span.SpanList, TTL loop_span.TTL) []*dao.Span {

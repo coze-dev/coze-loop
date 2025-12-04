@@ -383,8 +383,6 @@ func (t *TaskServiceImpl) SendBackfillMessage(ctx context.Context, event *entity
 	if t.backfillProducer == nil {
 		return errorx.NewByCode(obErrorx.CommonInternalErrorCode, errorx.WithExtraMsg("backfill producer not initialized"))
 	}
-	// todo ppe test
-	ctx = context.WithValue(ctx, "K_ENV", "ppe_6788399583")
 
 	return t.backfillProducer.SendBackfill(ctx, event)
 }
