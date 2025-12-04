@@ -119,12 +119,28 @@ func RootStepDO2DTO(step *loop_span.RootStep) *common.RootStep {
 		return nil
 	}
 	return &common.RootStep{
-		ID:        step.ID,
-		Name:      step.Name,
-		Input:     step.Input,
-		Output:    step.Output,
-		Metadata:  step.Metadata,
-		BasicInfo: BasicInfoDO2DTO(step.BasicInfo),
+		ID:          step.ID,
+		Name:        step.Name,
+		Input:       step.Input,
+		Output:      step.Output,
+		Metadata:    step.Metadata,
+		BasicInfo:   BasicInfoDO2DTO(step.BasicInfo),
+		MetricsInfo: MetricsInfoDO2DTO(step.MetricsInfo),
+	}
+}
+
+func MetricsInfoDO2DTO(info *loop_span.MetricsInfo) *common.MetricsInfo {
+	if info == nil {
+		return nil
+	}
+	return &common.MetricsInfo{
+		LlmDuration:        info.LlmDuration,
+		ToolDuration:       info.ToolDuration,
+		ToolErrors:         info.ToolErrors,
+		ToolErrorRate:      info.ToolErrorRate,
+		ModelErrors:        info.ModelErrors,
+		ModelErrorRate:     info.ModelErrorRate,
+		ToolStepProportion: info.ToolStepProportion,
 	}
 }
 

@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	StepTypeAgent = "agent"
-	StepTypeModel = "model"
-	StepTypeTool  = "tool"
+	StepTypeAgent StepType = "agent"
+	StepTypeModel StepType = "model"
+	StepTypeTool  StepType = "tool"
 )
 
 type StepType = string
@@ -36,8 +36,9 @@ type RootStep struct {
 	// 输出
 	Output *string `json:"output,omitempty"`
 	// 系统属性
-	Metadata  map[string]string `json:"metadata,omitempty"`
-	BasicInfo *BasicInfo        `json:"basic_info,omitempty"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
+	BasicInfo   *BasicInfo        `json:"basic_info,omitempty"`
+	MetricsInfo *MetricsInfo      `json:"metrics_info,omitempty"`
 }
 
 type AgentStep struct {
@@ -54,8 +55,9 @@ type AgentStep struct {
 	// 子节点，agent执行内部经历了哪些步骤
 	Steps []*Step `json:"steps"`
 	// 系统属性
-	Metadata  map[string]string `json:"metadata,omitempty"`
-	BasicInfo *BasicInfo        `json:"basic_info,omitempty"`
+	Metadata    map[string]string `json:"metadata,omitempty"`
+	BasicInfo   *BasicInfo        `json:"basic_info,omitempty"`
+	MetricsInfo *MetricsInfo      `json:"metrics_info,omitempty"`
 }
 
 type Step struct {
@@ -98,6 +100,23 @@ type BasicInfo struct {
 type Error struct {
 	Code int32  `json:"code"`
 	Msg  string `json:"msg"`
+}
+
+type MetricsInfo struct {
+	// 单位毫秒
+	LlmDuration *string `json:"llm_duration,omitempty"`
+	// 单位毫秒
+	ToolDuration *string `json:"tool_duration,omitempty"`
+	// Tool错误分布，格式为：错误码-->list<ToolStepID>
+	ToolErrors map[int32][]string `json:"tool_errors,omitempty"`
+	// Tool错误率
+	ToolErrorRate *float64 `json:"tool_error_rate,omitempty"`
+	// Model错误分布，格式为：错误码-->list<ModelStepID>
+	ModelErrors map[int32][]string `json:"model_errors,omitempty"`
+	// Model错误率
+	ModelErrorRate *float64 `json:"model_error_rate,omitempty"`
+	// Tool Step占比(分母是总子Step)
+	ToolStepProportion *float64 `json:"tool_step_proportion,omitempty"`
 }
 
 func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
@@ -173,6 +192,16 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 		ID:         trajectoryID,
 		RootStep:   rootStep,
 		AgentSteps: agentSteps,
+	}
+
+	// 补充MetricsInfo字段
+	if rootStep != nil {
+		rootStep.MetricsInfo = buildRootMetricsInfo(agentSteps)
+	}
+	for _, agentStep := range agentSteps {
+		if agentStep != nil {
+			agentStep.MetricsInfo = buildAgentMetricsInfo(agentStep)
+		}
 	}
 
 	return trajectory
@@ -386,6 +415,158 @@ func buildModelInfo(span *Span) *ModelInfo {
 	}
 
 	return modelInfo
+}
+
+// buildRootMetricsInfo 构建RootStep的MetricsInfo，聚合所有AgentSteps的所有Step（按ID去重）
+func buildRootMetricsInfo(agentSteps []*AgentStep) *MetricsInfo {
+	if len(agentSteps) == 0 {
+		return nil
+	}
+
+	// 收集所有需要去重的Step ID
+	processedStepIDs := make(map[string]bool)
+	var allModelSteps []*Step
+	var allToolSteps []*Step
+
+	// 遍历所有AgentStep，收集它们的Steps
+	for _, agentStep := range agentSteps {
+		if agentStep == nil || agentStep.Steps == nil {
+			continue
+		}
+		for _, step := range agentStep.Steps {
+			if step == nil || step.ID == nil || processedStepIDs[*step.ID] {
+				continue
+			}
+			processedStepIDs[*step.ID] = true
+
+			if step.Type != nil {
+				switch *step.Type {
+				case StepTypeModel:
+					allModelSteps = append(allModelSteps, step)
+				case StepTypeTool:
+					allToolSteps = append(allToolSteps, step)
+				}
+			}
+		}
+	}
+
+	return calculateMetricsInfo(allModelSteps, allToolSteps)
+}
+
+// buildAgentMetricsInfo 构建AgentStep的MetricsInfo，只包含该AgentStep直接相关的子Step
+func buildAgentMetricsInfo(agentStep *AgentStep) *MetricsInfo {
+	if agentStep == nil || agentStep.Steps == nil {
+		return nil
+	}
+
+	var modelSteps []*Step
+	var toolSteps []*Step
+
+	// 遍历该AgentStep的Steps
+	for _, step := range agentStep.Steps {
+		if step == nil || step.Type == nil {
+			continue
+		}
+
+		switch *step.Type {
+		case StepTypeModel:
+			modelSteps = append(modelSteps, step)
+		case StepTypeTool:
+			toolSteps = append(toolSteps, step)
+		}
+	}
+
+	return calculateMetricsInfo(modelSteps, toolSteps)
+}
+
+// calculateMetricsInfo 计算MetricsInfo的通用逻辑
+func calculateMetricsInfo(modelSteps, toolSteps []*Step) *MetricsInfo {
+	if len(modelSteps) == 0 && len(toolSteps) == 0 {
+		return nil
+	}
+
+	metricsInfo := &MetricsInfo{
+		ToolErrors:  make(map[int32][]string),
+		ModelErrors: make(map[int32][]string),
+	}
+
+	// 计算Model相关指标
+	var totalModelDuration int64
+	var modelErrorCount int64
+	for _, modelStep := range modelSteps {
+		if modelStep.BasicInfo != nil && modelStep.BasicInfo.Duration != "" {
+			if duration, err := strconv.ParseInt(modelStep.BasicInfo.Duration, 10, 64); err == nil {
+				totalModelDuration += duration
+			}
+		}
+
+		// 统计Model错误
+		if modelStep.BasicInfo != nil && modelStep.BasicInfo.Error != nil {
+			modelErrorCount++
+			errorCode := modelStep.BasicInfo.Error.Code
+			if metricsInfo.ModelErrors[errorCode] == nil {
+				metricsInfo.ModelErrors[errorCode] = make([]string, 0)
+			}
+			if modelStep.ID != nil {
+				metricsInfo.ModelErrors[errorCode] = append(metricsInfo.ModelErrors[errorCode], *modelStep.ID)
+			}
+		}
+	}
+
+	// 计算Tool相关指标
+	var totalToolDuration int64
+	var toolErrorCount int64
+	for _, toolStep := range toolSteps {
+		if toolStep.BasicInfo != nil && toolStep.BasicInfo.Duration != "" {
+			if duration, err := strconv.ParseInt(toolStep.BasicInfo.Duration, 10, 64); err == nil {
+				totalToolDuration += duration
+			}
+		}
+
+		// 统计Tool错误
+		if toolStep.BasicInfo != nil && toolStep.BasicInfo.Error != nil {
+			toolErrorCount++
+			errorCode := toolStep.BasicInfo.Error.Code
+			if metricsInfo.ToolErrors[errorCode] == nil {
+				metricsInfo.ToolErrors[errorCode] = make([]string, 0)
+			}
+			if toolStep.ID != nil {
+				metricsInfo.ToolErrors[errorCode] = append(metricsInfo.ToolErrors[errorCode], *toolStep.ID)
+			}
+		}
+	}
+
+	// 设置持续时间
+	if totalModelDuration > 0 {
+		modelDurationStr := strconv.FormatInt(totalModelDuration, 10)
+		metricsInfo.LlmDuration = &modelDurationStr
+	}
+	if totalToolDuration > 0 {
+		toolDurationStr := strconv.FormatInt(totalToolDuration, 10)
+		metricsInfo.ToolDuration = &toolDurationStr
+	}
+
+	// 计算错误率
+	totalModelSteps := int64(len(modelSteps))
+	if totalModelSteps > 0 {
+		modelErrorRate := float64(modelErrorCount) / float64(totalModelSteps)
+		metricsInfo.ModelErrorRate = &modelErrorRate
+	}
+
+	totalToolSteps := int64(len(toolSteps))
+	if totalToolSteps > 0 {
+		toolErrorRate := float64(toolErrorCount) / float64(totalToolSteps)
+		metricsInfo.ToolErrorRate = &toolErrorRate
+	}
+
+	// 计算Tool Step占比
+	totalSteps := totalModelSteps + totalToolSteps
+	if totalSteps > 0 {
+		toolStepProportion := float64(totalToolSteps) / float64(totalSteps)
+		metricsInfo.ToolStepProportion = &toolStepProportion
+	}
+
+	return metricsInfo
 }
 
 func (t *Trajectory) MarshalString() (string, error) {
