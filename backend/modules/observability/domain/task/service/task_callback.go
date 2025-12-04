@@ -60,7 +60,15 @@ func NewTaskCallbackServiceImpl(
 func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error {
 	for _, turn := range event.TurnEvalResults {
 		workspaceIDStr, workspaceID := turn.GetWorkspaceIDFromExt()
-		tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, loop_span.PlatformType("callback_all"))
+		task, err := t.taskRepo.GetTask(ctx, turn.GetTaskIDFromExt(), nil, nil)
+		if err != nil {
+			return err
+		}
+		platformType := loop_span.PlatformType("callback_all")
+		if task != nil && task.SpanFilter != nil {
+			platformType = task.SpanFilter.PlatformType
+		}
+		tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, platformType)
 		if err != nil {
 			return err
 		}
@@ -115,6 +123,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 		}
 
 		err = t.traceRepo.InsertAnnotations(ctx, &tracerepo.InsertAnnotationParam{
+			WorkSpaceID:    workspaceIDStr,
 			Tenant:         span.GetTenant(),
 			TTL:            span.GetTTL(ctx),
 			Span:           span,
@@ -132,7 +141,15 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 	if workspaceID == 0 {
 		return fmt.Errorf("workspace_id is empty")
 	}
-	tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, loop_span.PlatformType("callback_all"))
+	task, err := t.taskRepo.GetTask(ctx, event.GetTaskIDFromExt(), nil, nil)
+	if err != nil {
+		return err
+	}
+	platformType := loop_span.PlatformType("callback_all")
+	if task != nil && task.SpanFilter != nil {
+		platformType = task.SpanFilter.PlatformType
+	}
+	tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, platformType)
 	if err != nil {
 		return err
 	}
@@ -174,6 +191,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 
 	// Then synchronize the observability data
 	param := &tracerepo.InsertAnnotationParam{
+		WorkSpaceID:    workspaceIDStr,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
 		Span:           span,
@@ -220,7 +238,8 @@ func (t *TaskCallbackServiceImpl) getSpan(ctx context.Context, tenants []string,
 	// todo 目前可能有不同tenant在不同存储中，需要上层多次查询。后续逻辑需要下沉到repo中。
 	for _, tenant := range tenants {
 		res, err := t.traceRepo.ListSpans(ctx, &tracerepo.ListSpansParam{
-			Tenants: []string{tenant},
+			WorkSpaceID: workspaceId,
+			Tenants:     []string{tenant},
 			Filters: &loop_span.FilterFields{
 				FilterFields: filterFields,
 			},

@@ -14,7 +14,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -24,47 +26,10 @@ import (
 )
 
 const (
-	QueryTypeGetTrace  = "get_trace"
-	QueryTypeListSpans = "list_spans"
+	TraceStorageTypeCK = "ck"
 )
 
-type QueryParam struct {
-	QueryType        string // for sql optimization
-	Tables           []string
-	AnnoTableMap     map[string]string
-	StartTime        int64 // us
-	EndTime          int64 // us
-	Filters          *loop_span.FilterFields
-	Limit            int32
-	OrderByStartTime bool
-	SelectColumns    []string
-	OmitColumns      []string // omit specific columns
-}
-
-type InsertParam struct {
-	Table string
-	Spans []*model.ObservabilitySpan
-}
-
-//go:generate mockgen -destination=mocks/spans_dao.go -package=mocks . ISpansDao
-type ISpansDao interface {
-	Insert(context.Context, *InsertParam) error
-	Get(context.Context, *QueryParam) ([]*model.ObservabilitySpan, error)
-	GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error)
-}
-
-// GetMetricsParam 指标查询参数
-type GetMetricsParam struct {
-	Tables       []string
-	Aggregations []*metrics_entity.Dimension
-	GroupBys     []*metrics_entity.Dimension
-	Filters      *loop_span.FilterFields
-	StartAt      int64
-	EndAt        int64
-	Granularity  metrics_entity.MetricGranularity
-}
-
-func NewSpansCkDaoImpl(db ck.Provider) (ISpansDao, error) {
+func NewSpansCkDaoImpl(db ck.Provider) (dao.ISpansDao, error) {
 	return &SpansCkDaoImpl{
 		db: db,
 	}, nil
@@ -78,16 +43,17 @@ func (s *SpansCkDaoImpl) newSession(ctx context.Context) *gorm.DB {
 	return s.db.NewSession(ctx)
 }
 
-func (s *SpansCkDaoImpl) Insert(ctx context.Context, param *InsertParam) error {
+func (s *SpansCkDaoImpl) Insert(ctx context.Context, param *dao.InsertParam) error {
 	db := s.newSession(ctx)
 	retryTimes := 3
 	var lastErr error
 	// 满足条件的批写入会保证幂等性；
 	// 如果是网络问题导致错误, 重试可能会导致重复写入;
 	// https://clickhouse.com/docs/guides/developer/transactional。
+	spans := convertor.SpanListPO2CKModels(param.Spans)
 	for i := 0; i < retryTimes; i++ {
-		if err := db.Table(param.Table).Create(param.Spans).Error; err != nil {
-			logs.CtxError(ctx, "fail to insert spans, count %d, %v", len(param.Spans), err)
+		if err := db.Table(param.Table).Create(spans).Error; err != nil {
+			logs.CtxError(ctx, "fail to insert spans, count %d, %v", len(spans), err)
 			lastErr = err
 		} else {
 			return nil
@@ -96,7 +62,7 @@ func (s *SpansCkDaoImpl) Insert(ctx context.Context, param *InsertParam) error {
 	return lastErr
 }
 
-func (s *SpansCkDaoImpl) Get(ctx context.Context, param *QueryParam) ([]*model.ObservabilitySpan, error) {
+func (s *SpansCkDaoImpl) Get(ctx context.Context, param *dao.QueryParam) ([]*dao.Span, error) {
 	sql, err := s.buildSql(ctx, param)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid get trace request"))
@@ -108,13 +74,13 @@ func (s *SpansCkDaoImpl) Get(ctx context.Context, param *QueryParam) ([]*model.O
 	if err := sql.Find(&spans).Error; err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
 	}
-	return spans, nil
+	return convertor.SpanListCKModels2PO(spans), nil
 }
 
 // select/inner_query/group_by/order_by/with_fill
 var metricsSqlTemplate = `SELECT %s FROM (%s) %s %s`
 
-func (s *SpansCkDaoImpl) GetMetrics(ctx context.Context, param *GetMetricsParam) ([]map[string]any, error) {
+func (s *SpansCkDaoImpl) GetMetrics(ctx context.Context, param *dao.GetMetricsParam) ([]map[string]any, error) {
 	sql, err := s.buildMetricsSql(ctx, param)
 	if err != nil {
 		return nil, err
@@ -128,9 +94,9 @@ func (s *SpansCkDaoImpl) GetMetrics(ctx context.Context, param *GetMetricsParam)
 	return result, nil
 }
 
-func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *GetMetricsParam) (string, error) {
+func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *dao.GetMetricsParam) (string, error) {
 	// 直接复用现有的SQL获取所有数据, 然后再计算指标
-	sql, err := s.buildSql(ctx, &QueryParam{
+	sql, err := s.buildSql(ctx, &dao.QueryParam{
 		Tables:           param.Tables,
 		StartTime:        param.StartAt,
 		EndTime:          param.EndAt,
@@ -204,7 +170,7 @@ func (s *SpansCkDaoImpl) formatAggregationExpression(ctx context.Context, dimens
 	return fmt.Sprintf(dimension.Expression.Expression, replacements...), nil
 }
 
-func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm.DB, error) {
+func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *dao.QueryParam) (*gorm.DB, error) {
 	db := s.newSession(ctx)
 	var tableQueries []*gorm.DB
 	for _, table := range param.Tables {
@@ -237,7 +203,7 @@ func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *QueryParam) (*gorm
 	}
 }
 
-func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, db *gorm.DB, tableName string, param *QueryParam) (*gorm.DB, error) {
+func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, db *gorm.DB, tableName string, param *dao.QueryParam) (*gorm.DB, error) {
 	sqlQuery, err := s.buildSqlForFilterFields(ctx, db, param.Filters)
 	if err != nil {
 		return nil, err

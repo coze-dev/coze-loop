@@ -10,6 +10,7 @@ import (
 )
 
 type GetTraceParam struct {
+	WorkSpaceID        string
 	Tenants            []string
 	TraceID            string
 	LogID              string
@@ -24,6 +25,7 @@ type GetTraceParam struct {
 }
 
 type ListSpansParam struct {
+	WorkSpaceID        string
 	Tenants            []string
 	Filters            *loop_span.FilterFields
 	StartAt            int64 // ms
@@ -46,19 +48,22 @@ type GetPreSpanIDsParam struct {
 	PreRespID string
 }
 type InsertTraceParam struct {
-	Spans  loop_span.SpanList
-	Tenant string
-	TTL    loop_span.TTL
+	WorkSpaceID string
+	Spans       loop_span.SpanList
+	Tenant      string
+	TTL         loop_span.TTL
 }
 
 type GetAnnotationParam struct {
-	Tenants []string
-	ID      string
-	StartAt int64 // ms
-	EndAt   int64 // ms
+	WorkSpaceID string
+	Tenants     []string
+	ID          string
+	StartAt     int64 // ms
+	EndAt       int64 // ms
 }
 
 type ListAnnotationsParam struct {
+	WorkSpaceID     string
 	Tenants         []string
 	SpanID          string
 	TraceID         string
@@ -69,6 +74,7 @@ type ListAnnotationsParam struct {
 }
 
 type InsertAnnotationParam struct {
+	WorkSpaceID    string
 	Tenant         string
 	TTL            loop_span.TTL
 	Span           *loop_span.Span

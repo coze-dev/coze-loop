@@ -203,9 +203,10 @@ func (m *MetricsService) buildMetricQuery(ctx context.Context, req *QueryMetrics
 		return nil, err
 	}
 	param := &repo.GetMetricsParam{
-		Tenants: tenants,
-		StartAt: req.StartTime,
-		EndAt:   req.EndTime,
+		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:     tenants,
+		StartAt:     req.StartTime,
+		EndAt:       req.EndTime,
 	}
 	mBuilder := &metricQueryBuilder{
 		metricNames:   req.MetricsNames,

@@ -22,6 +22,9 @@ const (
 	otelAttributeOutput      = "cozeloop.output"
 	otelAttributeLogID       = "cozeloop.logid"
 
+	apmInput  = "gen_ai.input"
+	apmOutput = "gen_ai.output"
+
 	// model
 	otelTraceLoopAttributeModelSpanType = "gen_ai.request.type" // traceloop span type
 	otelAttributeModelTimeToFirstToken  = "cozeloop.time_to_first_token"
@@ -101,6 +104,7 @@ const (
 	tagKeyUserID             = "user_id"
 	tagKeyMessageID          = "message_id"
 	tagKeyStartTimeFirstResp = "start_time_first_resp"
+	tagKeyCallOptions        = "call_options"
 )
 
 var otelModelSpanTypeMap = map[string]string{
@@ -129,3 +133,27 @@ const (
 	dataTypeBool        = "bool"
 	dataTypeArrayString = "array_string"
 )
+
+var LoopStringTags = []string{
+	tagKeyThreadID,
+	tagKeyUserID,
+	tagKeyMessageID,
+	tracespec.Error,
+	tracespec.PromptProvider,
+	tracespec.ModelName,
+	tagKeyCallOptions,
+	tracespec.PromptKey,
+	tracespec.PromptVersion,
+	tracespec.PromptProvider,
+}
+
+var LoopLongTags = []string{
+	tracespec.LatencyFirstResp,
+	tracespec.InputTokens,
+	tracespec.OutputTokens,
+	tracespec.Tokens,
+}
+
+var LoopBoolTags = []string{
+	tracespec.Stream,
+}
