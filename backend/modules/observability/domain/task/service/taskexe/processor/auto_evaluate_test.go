@@ -516,6 +516,7 @@ func TestAutoEvaluateProcessor_OnCreateTaskRunChange(t *testing.T) {
 		evaluationSvc:         evalAdapter,
 		taskRepo:              repoAdapter,
 		aid:                   321,
+		evalTargetBuilder:     &EvalTargetBuilderImpl{},
 	}
 
 	ctx := session.WithCtxUser(context.Background(), &session.User{ID: taskObj.CreatedBy})
@@ -551,7 +552,7 @@ func TestAutoEvaluateProcessor_OnFinishTaskRunChange(t *testing.T) {
 	}
 
 	err := proc.OnTaskRunFinished(context.Background(), taskexe.OnTaskRunFinishedReq{
-		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234},
+		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234, CreatedBy: "1001"},
 		TaskRun: taskRun,
 	})
 	assert.NoError(t, err)
@@ -568,7 +569,7 @@ func TestAutoEvaluateProcessor_OnFinishTaskChange(t *testing.T) {
 	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 	evalAdapter := &fakeEvaluationAdapter{}
 
-	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning, WorkspaceID: 123}
+	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning, WorkspaceID: 123, CreatedBy: "1001"}
 	taskRun := &taskentity.TaskRun{TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{ExptID: 1, ExptRunID: 2}}}
 
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(nil)
@@ -604,7 +605,7 @@ func TestAutoEvaluateProcessor_OnFinishTaskChange_Error(t *testing.T) {
 	}
 
 	err := proc.OnTaskFinished(context.Background(), taskexe.OnTaskFinishedReq{
-		Task:    &taskentity.ObservabilityTask{WorkspaceID: 123},
+		Task:    &taskentity.ObservabilityTask{WorkspaceID: 123, CreatedBy: "1001"},
 		TaskRun: &taskentity.TaskRun{TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{ExptID: 1, ExptRunID: 2}}},
 	})
 	assert.EqualError(t, err, "finish fail")
@@ -631,6 +632,7 @@ func TestAutoEvaluateProcessor_OnCreateTaskChange(t *testing.T) {
 		evaluationSvc:         evalAdapter,
 		taskRepo:              repoAdapter,
 		aid:                   321,
+		evalTargetBuilder:     &EvalTargetBuilderImpl{},
 	}
 
 	taskObj := buildTestTask(t)
@@ -718,6 +720,7 @@ func TestAutoEvaluateProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.
 		datasetServiceAdaptor: adaptor,
 		taskRepo:              repoAdapter,
 		evaluationSvc:         &fakeEvaluationAdapter{},
+		evalTargetBuilder:     &EvalTargetBuilderImpl{},
 	}
 
 	repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), gomock.Any()).Return(nil, nil)
