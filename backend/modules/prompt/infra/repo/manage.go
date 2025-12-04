@@ -979,7 +979,7 @@ func (d *ManageRepoImpl) ListCommitInfo(ctx context.Context, param repo.ListComm
 		result.CommitDOs = commitDOs
 		return result, nil
 	}
-	result.NextPageToken = commitPOs[param.PageSize].CreatedAt.Unix()
+	result.NextPageToken = commitPOs[param.PageSize].ID
 	result.CommitInfoDOs = commitInfoDOs[:len(commitPOs)-1]
 	result.CommitDOs = commitDOs[:len(commitPOs)-1]
 	return result, nil
