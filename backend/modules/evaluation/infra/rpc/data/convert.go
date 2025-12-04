@@ -226,8 +226,33 @@ func convert2EvaluationSetFieldSchema(ctx context.Context, schema *dataset.Field
 		MultiModelSpec:       convert2EvaluationSetMultiModalSpec(ctx, schema.MultiModelSpec),
 		TextSchema:           gptr.Indirect(schema.TextSchema),
 		Hidden:               gptr.Indirect(schema.Hidden),
+		SchemaKey:            toSchemaKey(schema.SchemaKey),
 	}
 	return fieldSchema
+}
+
+func toSchemaKey(key *dataset.SchemaKey) *entity.SchemaKey {
+	if key == nil {
+		return nil
+	}
+	switch *key {
+	case dataset.SchemaKey_String:
+		return gptr.Of(entity.SchemaKey_String)
+	case dataset.SchemaKey_Integer:
+		return gptr.Of(entity.SchemaKey_Integer)
+	case dataset.SchemaKey_Float:
+		return gptr.Of(entity.SchemaKey_Float)
+	case dataset.SchemaKey_Bool:
+		return gptr.Of(entity.SchemaKey_Bool)
+	case dataset.SchemaKey_Message:
+		return gptr.Of(entity.SchemaKey_Message)
+	case dataset.SchemaKey_SingleChoice:
+		return gptr.Of(entity.SchemaKey_SingleChoice)
+	case dataset.SchemaKey_Trajectory:
+		return gptr.Of(entity.SchemaKey_Trajectory)
+	default:
+		return nil
+	}
 }
 
 func convert2EvaluationSetSchema(ctx context.Context, schema *dataset.DatasetSchema) (datasetSchema *entity.EvaluationSetSchema) {
