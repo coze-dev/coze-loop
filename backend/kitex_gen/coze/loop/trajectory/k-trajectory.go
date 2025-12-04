@@ -382,6 +382,20 @@ func (p *RootStep) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 102:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField102(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -500,6 +514,18 @@ func (p *RootStep) FastReadField101(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RootStep) FastReadField102(buf []byte) (int, error) {
+	offset := 0
+	_field := NewMetricsInfo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.MetricsInfo = _field
+	return offset, nil
+}
+
 func (p *RootStep) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -513,6 +539,7 @@ func (p *RootStep) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
+		offset += p.fastWriteField102(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -527,6 +554,7 @@ func (p *RootStep) BLength() int {
 		l += p.field4Length()
 		l += p.field100Length()
 		l += p.field101Length()
+		l += p.field102Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -594,6 +622,15 @@ func (p *RootStep) fastWriteField101(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *RootStep) fastWriteField102(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMetricsInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 102)
+		offset += p.MetricsInfo.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *RootStep) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -650,6 +687,15 @@ func (p *RootStep) field101Length() int {
 	if p.IsSetBasicInfo() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.BasicInfo.BLength()
+	}
+	return l
+}
+
+func (p *RootStep) field102Length() int {
+	l := 0
+	if p.IsSetMetricsInfo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.MetricsInfo.BLength()
 	}
 	return l
 }
@@ -717,6 +763,15 @@ func (p *RootStep) DeepCopy(s interface{}) error {
 		}
 	}
 	p.BasicInfo = _basicInfo
+
+	var _metricsInfo *MetricsInfo
+	if src.MetricsInfo != nil {
+		_metricsInfo = &MetricsInfo{}
+		if err := _metricsInfo.DeepCopy(src.MetricsInfo); err != nil {
+			return err
+		}
+	}
+	p.MetricsInfo = _metricsInfo
 
 	return nil
 }
@@ -839,6 +894,20 @@ func (p *AgentStep) FastRead(buf []byte) (int, error) {
 		case 101:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField101(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 102:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField102(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -1007,6 +1076,18 @@ func (p *AgentStep) FastReadField101(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *AgentStep) FastReadField102(buf []byte) (int, error) {
+	offset := 0
+	_field := NewMetricsInfo()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.MetricsInfo = _field
+	return offset, nil
+}
+
 func (p *AgentStep) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1022,6 +1103,7 @@ func (p *AgentStep) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
+		offset += p.fastWriteField102(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1038,6 +1120,7 @@ func (p *AgentStep) BLength() int {
 		l += p.field20Length()
 		l += p.field100Length()
 		l += p.field101Length()
+		l += p.field102Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1130,6 +1213,15 @@ func (p *AgentStep) fastWriteField101(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *AgentStep) fastWriteField102(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMetricsInfo() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 102)
+		offset += p.MetricsInfo.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *AgentStep) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -1208,6 +1300,15 @@ func (p *AgentStep) field101Length() int {
 	if p.IsSetBasicInfo() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.BasicInfo.BLength()
+	}
+	return l
+}
+
+func (p *AgentStep) field102Length() int {
+	l := 0
+	if p.IsSetMetricsInfo() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.MetricsInfo.BLength()
 	}
 	return l
 }
@@ -1298,6 +1399,15 @@ func (p *AgentStep) DeepCopy(s interface{}) error {
 		}
 	}
 	p.BasicInfo = _basicInfo
+
+	var _metricsInfo *MetricsInfo
+	if src.MetricsInfo != nil {
+		_metricsInfo = &MetricsInfo{}
+		if err := _metricsInfo.DeepCopy(src.MetricsInfo); err != nil {
+			return err
+		}
+	}
+	p.MetricsInfo = _metricsInfo
 
 	return nil
 }
@@ -2690,6 +2800,587 @@ func (p *Error) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Msg)
 		}
 		p.Msg = &tmp
+	}
+
+	return nil
+}
+
+func (p *MetricsInfo) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.DOUBLE {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.DOUBLE {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.DOUBLE {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MetricsInfo[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *MetricsInfo) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.LlmDuration = _field
+	return offset, nil
+}
+
+func (p *MetricsInfo) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ToolDuration = _field
+	return offset, nil
+}
+
+func (p *MetricsInfo) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[int32][]string, size)
+	for i := 0; i < size; i++ {
+		var _key int32
+		if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			return offset, err
+		}
+		_val := make([]string, 0, size)
+		for i := 0; i < size; i++ {
+			var _elem string
+			if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+				return offset, err
+			} else {
+				offset += l
+				_elem = v
+			}
+
+			_val = append(_val, _elem)
+		}
+
+		_field[_key] = _val
+	}
+	p.ToolErrors = _field
+	return offset, nil
+}
+
+func (p *MetricsInfo) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *float64
+	if v, l, err := thrift.Binary.ReadDouble(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ToolErrorRate = _field
+	return offset, nil
+}
+
+func (p *MetricsInfo) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[int32][]string, size)
+	for i := 0; i < size; i++ {
+		var _key int32
+		if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			return offset, err
+		}
+		_val := make([]string, 0, size)
+		for i := 0; i < size; i++ {
+			var _elem string
+			if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+				return offset, err
+			} else {
+				offset += l
+				_elem = v
+			}
+
+			_val = append(_val, _elem)
+		}
+
+		_field[_key] = _val
+	}
+	p.ModelErrors = _field
+	return offset, nil
+}
+
+func (p *MetricsInfo) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *float64
+	if v, l, err := thrift.Binary.ReadDouble(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ModelErrorRate = _field
+	return offset, nil
+}
+
+func (p *MetricsInfo) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *float64
+	if v, l, err := thrift.Binary.ReadDouble(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ToolStepProportion = _field
+	return offset, nil
+}
+
+func (p *MetricsInfo) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *MetricsInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *MetricsInfo) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *MetricsInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLlmDuration() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.LlmDuration)
+	}
+	return offset
+}
+
+func (p *MetricsInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetToolDuration() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ToolDuration)
+	}
+	return offset
+}
+
+func (p *MetricsInfo) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetToolErrors() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 3)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.ToolErrors {
+			length++
+			offset += thrift.Binary.WriteI32(buf[offset:], k)
+			listBeginOffset := offset
+			offset += thrift.Binary.ListBeginLength()
+			var length int
+			for _, v := range v {
+				length++
+				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			}
+			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I32, thrift.LIST, length)
+	}
+	return offset
+}
+
+func (p *MetricsInfo) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetToolErrorRate() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.DOUBLE, 4)
+		offset += thrift.Binary.WriteDouble(buf[offset:], *p.ToolErrorRate)
+	}
+	return offset
+}
+
+func (p *MetricsInfo) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetModelErrors() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 5)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.ModelErrors {
+			length++
+			offset += thrift.Binary.WriteI32(buf[offset:], k)
+			listBeginOffset := offset
+			offset += thrift.Binary.ListBeginLength()
+			var length int
+			for _, v := range v {
+				length++
+				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			}
+			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I32, thrift.LIST, length)
+	}
+	return offset
+}
+
+func (p *MetricsInfo) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetModelErrorRate() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.DOUBLE, 6)
+		offset += thrift.Binary.WriteDouble(buf[offset:], *p.ModelErrorRate)
+	}
+	return offset
+}
+
+func (p *MetricsInfo) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetToolStepProportion() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.DOUBLE, 7)
+		offset += thrift.Binary.WriteDouble(buf[offset:], *p.ToolStepProportion)
+	}
+	return offset
+}
+
+func (p *MetricsInfo) field1Length() int {
+	l := 0
+	if p.IsSetLlmDuration() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.LlmDuration)
+	}
+	return l
+}
+
+func (p *MetricsInfo) field2Length() int {
+	l := 0
+	if p.IsSetToolDuration() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ToolDuration)
+	}
+	return l
+}
+
+func (p *MetricsInfo) field3Length() int {
+	l := 0
+	if p.IsSetToolErrors() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.ToolErrors {
+			_, _ = k, v
+
+			l += thrift.Binary.I32Length()
+			l += thrift.Binary.ListBeginLength()
+			for _, v := range v {
+				_ = v
+				l += thrift.Binary.StringLengthNocopy(v)
+			}
+		}
+	}
+	return l
+}
+
+func (p *MetricsInfo) field4Length() int {
+	l := 0
+	if p.IsSetToolErrorRate() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.DoubleLength()
+	}
+	return l
+}
+
+func (p *MetricsInfo) field5Length() int {
+	l := 0
+	if p.IsSetModelErrors() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.ModelErrors {
+			_, _ = k, v
+
+			l += thrift.Binary.I32Length()
+			l += thrift.Binary.ListBeginLength()
+			for _, v := range v {
+				_ = v
+				l += thrift.Binary.StringLengthNocopy(v)
+			}
+		}
+	}
+	return l
+}
+
+func (p *MetricsInfo) field6Length() int {
+	l := 0
+	if p.IsSetModelErrorRate() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.DoubleLength()
+	}
+	return l
+}
+
+func (p *MetricsInfo) field7Length() int {
+	l := 0
+	if p.IsSetToolStepProportion() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.DoubleLength()
+	}
+	return l
+}
+
+func (p *MetricsInfo) DeepCopy(s interface{}) error {
+	src, ok := s.(*MetricsInfo)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.LlmDuration != nil {
+		var tmp string
+		if *src.LlmDuration != "" {
+			tmp = kutils.StringDeepCopy(*src.LlmDuration)
+		}
+		p.LlmDuration = &tmp
+	}
+
+	if src.ToolDuration != nil {
+		var tmp string
+		if *src.ToolDuration != "" {
+			tmp = kutils.StringDeepCopy(*src.ToolDuration)
+		}
+		p.ToolDuration = &tmp
+	}
+
+	if src.ToolErrors != nil {
+		p.ToolErrors = make(map[int32][]string, len(src.ToolErrors))
+		for key, val := range src.ToolErrors {
+			var _key int32
+			_key = key
+
+			var _val []string
+			if val != nil {
+				_val = make([]string, 0, len(val))
+				for _, elem := range val {
+					var _elem string
+					if elem != "" {
+						_elem = kutils.StringDeepCopy(elem)
+					}
+					_val = append(_val, _elem)
+				}
+			}
+
+			p.ToolErrors[_key] = _val
+		}
+	}
+
+	if src.ToolErrorRate != nil {
+		tmp := *src.ToolErrorRate
+		p.ToolErrorRate = &tmp
+	}
+
+	if src.ModelErrors != nil {
+		p.ModelErrors = make(map[int32][]string, len(src.ModelErrors))
+		for key, val := range src.ModelErrors {
+			var _key int32
+			_key = key
+
+			var _val []string
+			if val != nil {
+				_val = make([]string, 0, len(val))
+				for _, elem := range val {
+					var _elem string
+					if elem != "" {
+						_elem = kutils.StringDeepCopy(elem)
+					}
+					_val = append(_val, _elem)
+				}
+			}
+
+			p.ModelErrors[_key] = _val
+		}
+	}
+
+	if src.ModelErrorRate != nil {
+		tmp := *src.ModelErrorRate
+		p.ModelErrorRate = &tmp
+	}
+
+	if src.ToolStepProportion != nil {
+		tmp := *src.ToolStepProportion
+		p.ToolStepProportion = &tmp
 	}
 
 	return nil

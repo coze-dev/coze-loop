@@ -35,12 +35,22 @@ func (p *RootStep) IsValid() error {
 			return fmt.Errorf("field BasicInfo not valid, %w", err)
 		}
 	}
+	if p.MetricsInfo != nil {
+		if err := p.MetricsInfo.IsValid(); err != nil {
+			return fmt.Errorf("field MetricsInfo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *AgentStep) IsValid() error {
 	if p.BasicInfo != nil {
 		if err := p.BasicInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BasicInfo not valid, %w", err)
+		}
+	}
+	if p.MetricsInfo != nil {
+		if err := p.MetricsInfo.IsValid(); err != nil {
+			return fmt.Errorf("field MetricsInfo not valid, %w", err)
 		}
 	}
 	return nil
@@ -70,5 +80,8 @@ func (p *BasicInfo) IsValid() error {
 	return nil
 }
 func (p *Error) IsValid() error {
+	return nil
+}
+func (p *MetricsInfo) IsValid() error {
 	return nil
 }
