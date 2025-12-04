@@ -807,5 +807,4 @@ func TestAutoEvaluateProcessor_NewAutoEvaluateProcessor(t *testing.T) {
 	assert.Equal(t, evalService, proc.evalSvc)
 	assert.Equal(t, evaluationService, proc.evaluationSvc)
 	assert.Equal(t, taskRepo, proc.taskRepo)
-
 }

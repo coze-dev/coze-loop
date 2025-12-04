@@ -8,8 +8,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 )
 
-type TraceStorageProviderImpl struct {
-}
+type TraceStorageProviderImpl struct{}
 
 func NewTraceStorageProvider() storage.IStorageProvider {
 	return &TraceStorageProviderImpl{}

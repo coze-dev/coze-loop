@@ -5,7 +5,6 @@ package service
 
 import (
 	"context"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"strconv"
 
 	"github.com/bytedance/gg/gptr"
@@ -14,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
