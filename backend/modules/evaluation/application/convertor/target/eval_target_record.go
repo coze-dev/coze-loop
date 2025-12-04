@@ -341,7 +341,7 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 		}
 
 		var evalTargetUsage *entity.EvalTargetUsage
-		if usage.InputTokens != nil || usage.OutputTokens != nil {
+		if usage != nil && (usage.InputTokens != nil || usage.OutputTokens != nil) {
 			evalTargetUsage = &entity.EvalTargetUsage{
 				InputTokens:  getInt64Value(usage.InputTokens),
 				OutputTokens: getInt64Value(usage.OutputTokens),
