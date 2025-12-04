@@ -350,7 +350,8 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 				ExperimentRunID:    etec.Event.ExptRunID,
 				ItemID:             item.ItemID,
 				TurnID:             turn.ID,
-				Ext:                etec.Ext,
+				Ext:                e.buildRunEvaluatorExt(etec.Ext, ec.RunConf),
+				EvaluatorRunConf:   ec.RunConf,
 			})
 			if err != nil {
 				return err
@@ -486,4 +487,16 @@ func (e *DefaultExptTurnEvaluationImpl) getContentByJsonPath(content *entity.Con
 		ContentType: ptr.Of(entity.ContentTypeText),
 		Text:        ptr.Of(text),
 	}, nil
+}
+
+func (e *DefaultExptTurnEvaluationImpl) buildRunEvaluatorExt(ext map[string]string, runConf *entity.EvaluatorRunConfig) map[string]string {
+	builtExt := gmap.Clone(ext)
+	if builtExt == nil {
+		builtExt = make(map[string]string)
+	}
+	if runConf != nil && runConf.EvaluatorRuntimeParam != nil && runConf.EvaluatorRuntimeParam.JSONValue != nil && len(*runConf.EvaluatorRuntimeParam.JSONValue) > 0 {
+		builtExt[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = *runConf.EvaluatorRuntimeParam.JSONValue
+	}
+
+	return builtExt
 }

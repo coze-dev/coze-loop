@@ -38,7 +38,7 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest) (*e
 	if cer.GetEvaluatorFieldMapping() != nil {
 		ec.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
 			EvaluatorConcurNum: ptr.ConvIntPtr[int32, int](cer.EvaluatorsConcurNum),
-			EvaluatorConf:      toEvaluatorFieldMappingDo(cer.GetEvaluatorFieldMapping()),
+			EvaluatorConf:      toEvaluatorConfDO(cer.GetEvaluatorFieldMapping(), cer.EvaluatorVersionRunConfigs),
 		}
 	}
 	return ec, nil
@@ -70,7 +70,7 @@ func toTargetFieldMappingDO(mapping *domain_expt.TargetFieldMapping, rtp *common
 	return tic
 }
 
-func toEvaluatorFieldMappingDo(mapping []*domain_expt.EvaluatorFieldMapping) []*entity.EvaluatorConf {
+func toEvaluatorConfDO(mapping []*domain_expt.EvaluatorFieldMapping, runConfigMap map[int64]*evaluatordto.EvaluatorRunConfig) []*entity.EvaluatorConf {
 	if mapping == nil {
 		return nil
 	}
@@ -92,23 +92,29 @@ func toEvaluatorFieldMappingDo(mapping []*domain_expt.EvaluatorFieldMapping) []*
 				Value:     ft.GetConstValue(),
 			})
 		}
+		var runConf *evaluatordto.EvaluatorRunConfig = nil
+		if len(runConfigMap) > 0 {
+			runConf = runConfigMap[fm.GetEvaluatorVersionID()]
+		}
 		ec = append(ec, &entity.EvaluatorConf{
 			EvaluatorVersionID: fm.GetEvaluatorVersionID(),
 			IngressConf: &entity.EvaluatorIngressConf{
 				EvalSetAdapter: &entity.FieldAdapter{FieldConfs: esf},
 				TargetAdapter:  &entity.FieldAdapter{FieldConfs: tf},
 			},
+			RunConf: evaluator.ConvertEvaluatorRunConfDTO2DO(runConf),
 		})
 	}
 	return ec
 }
 
-func (e *EvalConfConvert) ConvertEntityToDTO(ec *entity.EvaluationConfiguration) (*domain_expt.TargetFieldMapping, []*domain_expt.EvaluatorFieldMapping, *common.RuntimeParam) {
+func (e *EvalConfConvert) ConvertEntityToDTO(ec *entity.EvaluationConfiguration) (*domain_expt.TargetFieldMapping, []*domain_expt.EvaluatorFieldMapping, *common.RuntimeParam, map[int64]*evaluatordto.EvaluatorRunConfig) {
 	if ec == nil {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	var evaluatorMappings []*domain_expt.EvaluatorFieldMapping
+	evaluatorVersionRunConfMap := make(map[int64]*evaluatordto.EvaluatorRunConfig)
 	if evaluatorsConf := ec.ConnectorConf.EvaluatorsConf; evaluatorsConf != nil {
 		for _, evaluatorConf := range evaluatorsConf.EvaluatorConf {
 			if evaluatorConf.IngressConf == nil {
@@ -136,6 +142,10 @@ func (e *EvalConfConvert) ConvertEntityToDTO(ec *entity.EvaluationConfiguration)
 				}
 			}
 			evaluatorMappings = append(evaluatorMappings, m)
+
+			if evaluatorConf.RunConf != nil {
+				evaluatorVersionRunConfMap[evaluatorConf.EvaluatorVersionID] = evaluator.ConvertEvaluatorRunConfDO2DTO(evaluatorConf.RunConf)
+			}
 		}
 	}
 
@@ -160,7 +170,7 @@ func (e *EvalConfConvert) ConvertEntityToDTO(ec *entity.EvaluationConfiguration)
 		}
 	}
 
-	return targetMapping, evaluatorMappings, trtp
+	return targetMapping, evaluatorMappings, trtp, evaluatorVersionRunConfMap
 }
 
 func ToExptStatsInfoDTO(experiment *entity.Experiment, stats *entity.ExptStats) *domain_expt.ExptStatsInfo {
@@ -189,28 +199,29 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
 	}
 
-	tm, ems, trtp := NewEvalConfConvert().ConvertEntityToDTO(experiment.EvalConf)
+	tm, ems, trtp, evrcs := NewEvalConfConvert().ConvertEntityToDTO(experiment.EvalConf)
 
 	res := &domain_expt.Experiment{
-		ID:                    gptr.Of(experiment.ID),
-		Name:                  gptr.Of(experiment.Name),
-		Desc:                  gptr.Of(experiment.Description),
-		CreatorBy:             gptr.Of(experiment.CreatedBy),
-		EvalSetVersionID:      gptr.Of(experiment.EvalSetVersionID),
-		TargetVersionID:       gptr.Of(experiment.TargetVersionID),
-		EvalSetID:             gptr.Of(experiment.EvalSetID),
-		TargetID:              gptr.Of(experiment.TargetID),
-		EvaluatorVersionIds:   evaluatorVersionIDs,
-		Status:                gptr.Of(domain_expt.ExptStatus(experiment.Status)),
-		StatusMessage:         gptr.Of(experiment.StatusMessage),
-		ExptStats:             ToExptStatsDTO(experiment.Stats, experiment.AggregateResult),
-		TargetFieldMapping:    tm,
-		EvaluatorFieldMapping: ems,
-		SourceType:            gptr.Of(domain_expt.SourceType(experiment.SourceType)),
-		SourceID:              gptr.Of(experiment.SourceID),
-		ExptType:              gptr.Of(domain_expt.ExptType(experiment.ExptType)),
-		MaxAliveTime:          gptr.Of(experiment.MaxAliveTime),
-		TargetRuntimeParam:    trtp,
+		ID:                         gptr.Of(experiment.ID),
+		Name:                       gptr.Of(experiment.Name),
+		Desc:                       gptr.Of(experiment.Description),
+		CreatorBy:                  gptr.Of(experiment.CreatedBy),
+		EvalSetVersionID:           gptr.Of(experiment.EvalSetVersionID),
+		TargetVersionID:            gptr.Of(experiment.TargetVersionID),
+		EvalSetID:                  gptr.Of(experiment.EvalSetID),
+		TargetID:                   gptr.Of(experiment.TargetID),
+		EvaluatorVersionIds:        evaluatorVersionIDs,
+		Status:                     gptr.Of(domain_expt.ExptStatus(experiment.Status)),
+		StatusMessage:              gptr.Of(experiment.StatusMessage),
+		ExptStats:                  ToExptStatsDTO(experiment.Stats, experiment.AggregateResult),
+		TargetFieldMapping:         tm,
+		EvaluatorFieldMapping:      ems,
+		SourceType:                 gptr.Of(domain_expt.SourceType(experiment.SourceType)),
+		SourceID:                   gptr.Of(experiment.SourceID),
+		ExptType:                   gptr.Of(domain_expt.ExptType(experiment.ExptType)),
+		MaxAliveTime:               gptr.Of(experiment.MaxAliveTime),
+		TargetRuntimeParam:         trtp,
+		EvaluatorVersionRunConfigs: evrcs,
 	}
 
 	if experiment.StartAt != nil {
