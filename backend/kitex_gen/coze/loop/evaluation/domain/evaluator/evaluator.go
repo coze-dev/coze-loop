@@ -3784,8 +3784,9 @@ func (p *EvaluatorContent) Field103DeepEqual(src *CustomRPCEvaluator) bool {
 
 // 明确有顺序的 evaluator 与版本映射元素
 type EvaluatorIDVersionItem struct {
-	EvaluatorID *int64  `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
-	Version     *string `thrift:"version,2,optional" frugal:"2,optional,string" json:"version" form:"version" query:"version"`
+	EvaluatorID *int64              `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
+	Version     *string             `thrift:"version,2,optional" frugal:"2,optional,string" json:"version" form:"version" query:"version"`
+	RunConfig   *EvaluatorRunConfig `thrift:"run_config,3,optional" frugal:"3,optional,EvaluatorRunConfig" json:"run_config" form:"run_config" query:"run_config"`
 }
 
 func NewEvaluatorIDVersionItem() *EvaluatorIDVersionItem {
@@ -3818,16 +3819,32 @@ func (p *EvaluatorIDVersionItem) GetVersion() (v string) {
 	}
 	return *p.Version
 }
+
+var EvaluatorIDVersionItem_RunConfig_DEFAULT *EvaluatorRunConfig
+
+func (p *EvaluatorIDVersionItem) GetRunConfig() (v *EvaluatorRunConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunConfig() {
+		return EvaluatorIDVersionItem_RunConfig_DEFAULT
+	}
+	return p.RunConfig
+}
 func (p *EvaluatorIDVersionItem) SetEvaluatorID(val *int64) {
 	p.EvaluatorID = val
 }
 func (p *EvaluatorIDVersionItem) SetVersion(val *string) {
 	p.Version = val
 }
+func (p *EvaluatorIDVersionItem) SetRunConfig(val *EvaluatorRunConfig) {
+	p.RunConfig = val
+}
 
 var fieldIDToName_EvaluatorIDVersionItem = map[int16]string{
 	1: "evaluator_id",
 	2: "version",
+	3: "run_config",
 }
 
 func (p *EvaluatorIDVersionItem) IsSetEvaluatorID() bool {
@@ -3836,6 +3853,10 @@ func (p *EvaluatorIDVersionItem) IsSetEvaluatorID() bool {
 
 func (p *EvaluatorIDVersionItem) IsSetVersion() bool {
 	return p.Version != nil
+}
+
+func (p *EvaluatorIDVersionItem) IsSetRunConfig() bool {
+	return p.RunConfig != nil
 }
 
 func (p *EvaluatorIDVersionItem) Read(iprot thrift.TProtocol) (err error) {
@@ -3867,6 +3888,14 @@ func (p *EvaluatorIDVersionItem) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3923,6 +3952,14 @@ func (p *EvaluatorIDVersionItem) ReadField2(iprot thrift.TProtocol) error {
 	p.Version = _field
 	return nil
 }
+func (p *EvaluatorIDVersionItem) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewEvaluatorRunConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RunConfig = _field
+	return nil
+}
 
 func (p *EvaluatorIDVersionItem) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3936,6 +3973,10 @@ func (p *EvaluatorIDVersionItem) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -3992,6 +4033,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *EvaluatorIDVersionItem) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunConfig() {
+		if err = oprot.WriteFieldBegin("run_config", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RunConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *EvaluatorIDVersionItem) String() string {
 	if p == nil {
@@ -4011,6 +4070,9 @@ func (p *EvaluatorIDVersionItem) DeepEqual(ano *EvaluatorIDVersionItem) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.RunConfig) {
 		return false
 	}
 	return true
@@ -4036,6 +4098,13 @@ func (p *EvaluatorIDVersionItem) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorIDVersionItem) Field3DeepEqual(src *EvaluatorRunConfig) bool {
+
+	if !p.RunConfig.DeepEqual(src) {
 		return false
 	}
 	return true

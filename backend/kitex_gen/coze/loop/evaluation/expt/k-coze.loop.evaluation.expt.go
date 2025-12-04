@@ -1796,20 +1796,6 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 41:
-			if fieldTypeId == thrift.MAP {
-				l, err = p.FastReadField41(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -2172,39 +2158,6 @@ func (p *SubmitExperimentRequest) FastReadField40(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *SubmitExperimentRequest) FastReadField41(buf []byte) (int, error) {
-	offset := 0
-
-	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
-	offset += l
-	if err != nil {
-		return offset, err
-	}
-	_field := make(map[int64]*evaluator.EvaluatorRunConfig, size)
-	values := make([]evaluator.EvaluatorRunConfig, size)
-	for i := 0; i < size; i++ {
-		var _key int64
-		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_key = v
-		}
-
-		_val := &values[i]
-		_val.InitDefault()
-		if l, err := _val.FastRead(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-		}
-
-		_field[_key] = _val
-	}
-	p.EvaluatorVersionRunConfigs = _field
-	return offset, nil
-}
-
 func (p *SubmitExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -2287,7 +2240,6 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField32(buf[offset:], w)
 		offset += p.fastWriteField33(buf[offset:], w)
 		offset += p.fastWriteField40(buf[offset:], w)
-		offset += p.fastWriteField41(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -2318,7 +2270,6 @@ func (p *SubmitExperimentRequest) BLength() int {
 		l += p.field32Length()
 		l += p.field33Length()
 		l += p.field40Length()
-		l += p.field41Length()
 		l += p.field100Length()
 		l += p.field200Length()
 		l += p.field255Length()
@@ -2513,23 +2464,6 @@ func (p *SubmitExperimentRequest) fastWriteField40(buf []byte, w thrift.NocopyWr
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
-	}
-	return offset
-}
-
-func (p *SubmitExperimentRequest) fastWriteField41(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetEvaluatorVersionRunConfigs() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 41)
-		mapBeginOffset := offset
-		offset += thrift.Binary.MapBeginLength()
-		var length int
-		for k, v := range p.EvaluatorVersionRunConfigs {
-			length++
-			offset += thrift.Binary.WriteI64(buf[offset:], k)
-			offset += v.FastWriteNocopy(buf[offset:], w)
-		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I64, thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -2748,21 +2682,6 @@ func (p *SubmitExperimentRequest) field40Length() int {
 	return l
 }
 
-func (p *SubmitExperimentRequest) field41Length() int {
-	l := 0
-	if p.IsSetEvaluatorVersionRunConfigs() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.MapBeginLength()
-		for k, v := range p.EvaluatorVersionRunConfigs {
-			_, _ = k, v
-
-			l += thrift.Binary.I64Length()
-			l += v.BLength()
-		}
-	}
-	return l
-}
-
 func (p *SubmitExperimentRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -2936,24 +2855,6 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 			}
 
 			p.EvaluatorIDVersionList = append(p.EvaluatorIDVersionList, _elem)
-		}
-	}
-
-	if src.EvaluatorVersionRunConfigs != nil {
-		p.EvaluatorVersionRunConfigs = make(map[int64]*evaluator.EvaluatorRunConfig, len(src.EvaluatorVersionRunConfigs))
-		for key, val := range src.EvaluatorVersionRunConfigs {
-			var _key int64
-			_key = key
-
-			var _val *evaluator.EvaluatorRunConfig
-			if val != nil {
-				_val = &evaluator.EvaluatorRunConfig{}
-				if err := _val.DeepCopy(val); err != nil {
-					return err
-				}
-			}
-
-			p.EvaluatorVersionRunConfigs[_key] = _val
 		}
 	}
 

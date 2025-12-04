@@ -2633,6 +2633,20 @@ func (p *EvaluatorIDVersionItem) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2679,6 +2693,18 @@ func (p *EvaluatorIDVersionItem) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluatorIDVersionItem) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+	_field := NewEvaluatorRunConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RunConfig = _field
+	return offset, nil
+}
+
 func (p *EvaluatorIDVersionItem) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2688,6 +2714,7 @@ func (p *EvaluatorIDVersionItem) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2698,6 +2725,7 @@ func (p *EvaluatorIDVersionItem) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2721,6 +2749,15 @@ func (p *EvaluatorIDVersionItem) fastWriteField2(buf []byte, w thrift.NocopyWrit
 	return offset
 }
 
+func (p *EvaluatorIDVersionItem) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
+		offset += p.RunConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *EvaluatorIDVersionItem) field1Length() int {
 	l := 0
 	if p.IsSetEvaluatorID() {
@@ -2735,6 +2772,15 @@ func (p *EvaluatorIDVersionItem) field2Length() int {
 	if p.IsSetVersion() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.Version)
+	}
+	return l
+}
+
+func (p *EvaluatorIDVersionItem) field3Length() int {
+	l := 0
+	if p.IsSetRunConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RunConfig.BLength()
 	}
 	return l
 }
@@ -2757,6 +2803,15 @@ func (p *EvaluatorIDVersionItem) DeepCopy(s interface{}) error {
 		}
 		p.Version = &tmp
 	}
+
+	var _runConfig *EvaluatorRunConfig
+	if src.RunConfig != nil {
+		_runConfig = &EvaluatorRunConfig{}
+		if err := _runConfig.DeepCopy(src.RunConfig); err != nil {
+			return err
+		}
+	}
+	p.RunConfig = _runConfig
 
 	return nil
 }
