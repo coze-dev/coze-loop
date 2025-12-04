@@ -518,7 +518,7 @@ func TestCopyMap(t *testing.T) {
 			got := CopyMap(tt.in)
 			assert.Equal(t, tt.want, got)
 			// Ensure it's a deep copy
-			if tt.in != nil && len(tt.in) > 0 {
+			if len(tt.in) > 0 {
 				for k := range tt.in {
 					got[k] = "modified"
 					assert.NotEqual(t, tt.in[k], got[k])

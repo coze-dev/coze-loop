@@ -6,8 +6,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"strconv"
 	"time"
 
@@ -15,6 +13,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
