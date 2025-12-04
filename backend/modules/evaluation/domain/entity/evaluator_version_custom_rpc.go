@@ -141,9 +141,6 @@ func (do *CustomRPCEvaluatorVersion) ValidateBaseInfo() error {
 	if do == nil {
 		return errorx.NewByCode(errno.EvaluatorNotExistCode, errorx.WithExtraMsg("evaluator_version is nil"))
 	}
-	if do.ProviderEvaluatorCode == nil || lo.IsEmpty(*do.ProviderEvaluatorCode) {
-		return errorx.NewByCode(errno.InvalidProviderEvaluatorCodeCode, errorx.WithExtraMsg("provider_evaluator_code is empty"))
-	}
 	if lo.IsEmpty(do.AccessProtocol) {
 		return errorx.NewByCode(errno.InvalidAccessProtocolCode, errorx.WithExtraMsg("access_protocol is empty"))
 	}

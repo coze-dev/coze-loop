@@ -448,6 +448,22 @@ func (e *Evaluator) GetRateLimit() *RateLimit {
 	return nil
 }
 
+func (e *Evaluator) GetInputSchemas() []*ArgsSchema {
+	switch e.EvaluatorType {
+	case EvaluatorTypePrompt:
+		if e.PromptEvaluatorVersion != nil {
+			return e.PromptEvaluatorVersion.InputSchemas
+		}
+	case EvaluatorTypeCode:
+		return nil
+	case EvaluatorTypeCustomRPC:
+		if e.CustomRPCEvaluatorVersion != nil {
+			return e.CustomRPCEvaluatorVersion.InputSchemas
+		}
+	}
+	return nil
+}
+
 type EvaluatorRunConfig struct {
 	Env                   *string       `json:"env,omitempty"`
 	EvaluatorRuntimeParam *RuntimeParam `json:"evaluator_runtime_param,omitempty"`
