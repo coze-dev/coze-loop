@@ -45,14 +45,15 @@ func AgentStepDO2DTO(step *loop_span.AgentStep) *common.AgentStep {
 		return nil
 	}
 	return &common.AgentStep{
-		ID:        step.ID,
-		ParentID:  step.ParentID,
-		Name:      step.Name,
-		Input:     step.Input,
-		Output:    step.Output,
-		Steps:     StepsDO2DTO(step.Steps),
-		Metadata:  step.Metadata,
-		BasicInfo: BasicInfoDO2DTO(step.BasicInfo),
+		ID:          step.ID,
+		ParentID:    step.ParentID,
+		Name:        step.Name,
+		Input:       step.Input,
+		Output:      step.Output,
+		Steps:       StepsDO2DTO(step.Steps),
+		Metadata:    step.Metadata,
+		BasicInfo:   BasicInfoDO2DTO(step.BasicInfo),
+		MetricsInfo: MetricsInfoDO2DTO(step.MetricsInfo),
 	}
 }
 
