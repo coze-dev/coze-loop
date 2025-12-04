@@ -498,6 +498,7 @@ func ConvertCustomRPCEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *eva
 				}
 				customRPCEvaluatorVersion.RateLimit = rateLimit
 			}
+			customRPCEvaluatorVersion.Ext = dto.EvaluatorContent.CustomRPCEvaluator.Ext
 		}
 	}
 	return customRPCEvaluatorVersion, nil
@@ -524,6 +525,7 @@ func ConvertCustomRPCEvaluatorVersionDO2DTO(do *evaluatordo.CustomRPCEvaluatorVe
 				Timeout:               do.Timeout,
 				InvokeHTTPInfo:        ConvertEvaluatorHTTPInfoDO2DTO(do.InvokeHTTPInfo),
 				RateLimit:             commonconvertor.ConvertRateLimitDO2DTO(do.RateLimit),
+				Ext:                   do.Ext,
 			},
 		},
 	}

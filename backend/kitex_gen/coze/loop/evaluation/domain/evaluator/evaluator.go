@@ -2004,6 +2004,8 @@ type CustomRPCEvaluator struct {
 	Timeout *int64 `thrift:"timeout,10,optional" frugal:"10,optional,i64" form:"timeout" json:"timeout,omitempty" query:"timeout"`
 	// 自定义评估器的限流配置
 	RateLimit *common.RateLimit `thrift:"rate_limit,11,optional" frugal:"11,optional,common.RateLimit" form:"rate_limit" json:"rate_limit,omitempty" query:"rate_limit"`
+	// extra fields
+	Ext map[string]string `thrift:"ext,12,optional" frugal:"12,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 }
 
 func NewCustomRPCEvaluator() *CustomRPCEvaluator {
@@ -2091,6 +2093,18 @@ func (p *CustomRPCEvaluator) GetRateLimit() (v *common.RateLimit) {
 	}
 	return p.RateLimit
 }
+
+var CustomRPCEvaluator_Ext_DEFAULT map[string]string
+
+func (p *CustomRPCEvaluator) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return CustomRPCEvaluator_Ext_DEFAULT
+	}
+	return p.Ext
+}
 func (p *CustomRPCEvaluator) SetProviderEvaluatorCode(val *string) {
 	p.ProviderEvaluatorCode = val
 }
@@ -2112,6 +2126,9 @@ func (p *CustomRPCEvaluator) SetTimeout(val *int64) {
 func (p *CustomRPCEvaluator) SetRateLimit(val *common.RateLimit) {
 	p.RateLimit = val
 }
+func (p *CustomRPCEvaluator) SetExt(val map[string]string) {
+	p.Ext = val
+}
 
 var fieldIDToName_CustomRPCEvaluator = map[int16]string{
 	1:  "provider_evaluator_code",
@@ -2121,6 +2138,7 @@ var fieldIDToName_CustomRPCEvaluator = map[int16]string{
 	5:  "invoke_http_info",
 	10: "timeout",
 	11: "rate_limit",
+	12: "ext",
 }
 
 func (p *CustomRPCEvaluator) IsSetProviderEvaluatorCode() bool {
@@ -2145,6 +2163,10 @@ func (p *CustomRPCEvaluator) IsSetTimeout() bool {
 
 func (p *CustomRPCEvaluator) IsSetRateLimit() bool {
 	return p.RateLimit != nil
+}
+
+func (p *CustomRPCEvaluator) IsSetExt() bool {
+	return p.Ext != nil
 }
 
 func (p *CustomRPCEvaluator) Read(iprot thrift.TProtocol) (err error) {
@@ -2218,6 +2240,14 @@ func (p *CustomRPCEvaluator) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2329,6 +2359,35 @@ func (p *CustomRPCEvaluator) ReadField11(iprot thrift.TProtocol) error {
 	p.RateLimit = _field
 	return nil
 }
+func (p *CustomRPCEvaluator) ReadField12(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
 
 func (p *CustomRPCEvaluator) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2362,6 +2421,10 @@ func (p *CustomRPCEvaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 	}
@@ -2506,6 +2569,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *CustomRPCEvaluator) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 
 func (p *CustomRPCEvaluator) String() string {
 	if p == nil {
@@ -2540,6 +2632,9 @@ func (p *CustomRPCEvaluator) DeepEqual(ano *CustomRPCEvaluator) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.RateLimit) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.Ext) {
 		return false
 	}
 	return true
@@ -2611,6 +2706,19 @@ func (p *CustomRPCEvaluator) Field11DeepEqual(src *common.RateLimit) bool {
 
 	if !p.RateLimit.DeepEqual(src) {
 		return false
+	}
+	return true
+}
+func (p *CustomRPCEvaluator) Field12DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }
