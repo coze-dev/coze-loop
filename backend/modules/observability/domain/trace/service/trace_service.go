@@ -528,6 +528,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		limit = 10000
 	}
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
+		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:     tenants,
 		LogID:       req.LogID,
 		TraceID:     req.TraceID,
@@ -589,6 +590,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	}
 	st := time.Now()
 	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:         tenants,
 		Filters:         filters,
 		StartAt:         req.StartTime,
@@ -638,6 +640,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 	}
 
 	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
+		WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:            req.Tenants,
 		TraceID:            req.TraceID,
 		LogID:              req.LogID,
@@ -658,7 +661,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		QueryStartTime:        req.StartTime,
 		QueryEndTime:          req.EndTime,
 		PlatformType:          req.PlatformType,
-		SpanDoubleCheck:       req.Filters != nil && len(req.Filters.FilterFields) > 0,
+		SpanDoubleCheck:       len(req.SpanIDs) > 0 || (req.Filters != nil && len(req.Filters.FilterFields) > 0),
 		QueryTenants:          req.Tenants,
 		QueryTraceID:          req.TraceID,
 		QueryLogID:            req.LogID,
@@ -698,6 +701,7 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 	}
 	filters := r.combineFilters(builtinFilter, req.Filters)
 	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:         req.Tenants,
 		Filters:         filters,
 		StartAt:         req.StartTime,
@@ -780,6 +784,7 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 		g.Go(func() error {
 			defer goroutine.Recovery(ctx)
 			qReq := &repo.GetTraceParam{
+				WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
 				Tenants:            tenants,
 				TraceID:            v.TraceID,
 				StartAt:            v.StartTime,
@@ -890,6 +895,7 @@ func (r *TraceServiceImpl) ListAnnotations(ctx context.Context, req *ListAnnotat
 		return nil, err
 	}
 	annotations, err := r.traceRepo.ListAnnotations(ctx, &repo.ListAnnotationsParam{
+		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:         tenants,
 		SpanID:          req.SpanID,
 		TraceID:         req.TraceID,
@@ -938,6 +944,7 @@ func (r *TraceServiceImpl) CreateManualAnnotation(ctx context.Context, req *Crea
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	if err := r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
 		Span:           span,
@@ -982,10 +989,11 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
 	existedAnno, err := r.traceRepo.GetAnnotation(ctx, &repo.GetAnnotationParam{
-		Tenants: tenants,
-		ID:      req.AnnotationID,
-		StartAt: time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
-		EndAt:   time.UnixMicro(span.StartTime).Add(time.Second).UnixMilli(),
+		WorkSpaceID: req.Annotation.WorkspaceID,
+		Tenants:     tenants,
+		ID:          req.AnnotationID,
+		StartAt:     time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
+		EndAt:       time.UnixMicro(span.StartTime).Add(time.Second).UnixMilli(),
 	})
 	if err != nil {
 		logs.CtxError(ctx, "get annotation %s err %v", req.AnnotationID, err)
@@ -995,6 +1003,7 @@ func (r *TraceServiceImpl) UpdateManualAnnotation(ctx context.Context, req *Upda
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
 		Span:           span,
@@ -1034,6 +1043,7 @@ func (r *TraceServiceImpl) DeleteManualAnnotation(ctx context.Context, req *Dele
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
 		Span:           span,
@@ -1087,10 +1097,11 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	existedAnno, err := r.traceRepo.GetAnnotation(ctx, &repo.GetAnnotationParam{
-		Tenants: cfg.Tenants,
-		ID:      annotation.ID,
-		StartAt: time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
-		EndAt:   time.UnixMicro(span.StartTime).Add(time.Second).UnixMilli(),
+		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:     cfg.Tenants,
+		ID:          annotation.ID,
+		StartAt:     time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
+		EndAt:       time.UnixMicro(span.StartTime).Add(time.Second).UnixMilli(),
 	})
 	if err != nil {
 		return err
@@ -1099,6 +1110,7 @@ func (r *TraceServiceImpl) CreateAnnotation(ctx context.Context, req *CreateAnno
 		annotation.CreatedAt = existedAnno.CreatedAt
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
 		Span:           span,
@@ -1151,6 +1163,7 @@ func (r *TraceServiceImpl) DeleteAnnotation(ctx context.Context, req *DeleteAnno
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid annotation"))
 	}
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
 		Span:           span,
@@ -1193,6 +1206,7 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	}
 	// retry if failed
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
 		Span:           span,
@@ -1245,7 +1259,8 @@ func (r *TraceServiceImpl) getSpan(ctx context.Context, tenants []string, spanId
 		})
 	}
 	res, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
-		Tenants: tenants,
+		WorkSpaceID: workspaceId,
+		Tenants:     tenants,
 		Filters: &loop_span.FilterFields{
 			FilterFields: filterFields,
 		},
@@ -1363,10 +1378,11 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	}
 	span := spans[0]
 	annotation, err := r.traceRepo.GetAnnotation(ctx, &repo.GetAnnotationParam{
-		Tenants: tenants,
-		ID:      req.AnnotationID,
-		StartAt: time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
-		EndAt:   time.UnixMicro(span.StartTime).Add(time.Second).UnixMilli(),
+		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:     tenants,
+		ID:          req.AnnotationID,
+		StartAt:     time.UnixMicro(span.StartTime).Add(-time.Second).UnixMilli(),
+		EndAt:       time.UnixMicro(span.StartTime).Add(time.Second).UnixMilli(),
 	})
 	if err != nil {
 		logs.CtxError(ctx, "get annotation %s err %v", req.AnnotationID, err)
@@ -1387,6 +1403,7 @@ func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *Change
 	// 再同步修改观测数据
 	span.Annotations = append(span.Annotations, annotation)
 	param := &repo.InsertAnnotationParam{
+		WorkSpaceID:    span.WorkspaceID,
 		Tenant:         span.GetTenant(),
 		TTL:            span.GetTTL(ctx),
 		Span:           span,

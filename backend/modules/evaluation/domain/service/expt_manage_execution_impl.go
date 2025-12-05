@@ -120,8 +120,7 @@ func (e *ExptMangerImpl) CheckConnector(ctx context.Context, expt *entity.Experi
 }
 
 func (e *ExptMangerImpl) checkTargetConnector(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
-	if expt.Target == nil ||
-		expt.Target.EvalTargetType == entity.EvalTargetTypeLoopTrace {
+	if expt.Target == nil || expt.ExptType == entity.ExptType_Online {
 		return nil
 	}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
@@ -242,4 +243,41 @@ func fieldTypeDTO2DO(fieldType *filter.FieldType) loop_span.FieldType {
 		return loop_span.FieldTypeString
 	}
 	return loop_span.FieldType(*fieldType)
+}
+
+func OtelSpans2LoopSpans(spans []*otel.LoopSpan) []*loop_span.Span {
+	result := make([]*loop_span.Span, 0)
+	for i := range spans {
+		result = append(result, OtelSpan2LoopSpan(spans[i]))
+	}
+	return result
+}
+
+func OtelSpan2LoopSpan(span *otel.LoopSpan) *loop_span.Span {
+	return &loop_span.Span{
+		StartTime:        span.StartTime,
+		SpanID:           span.SpanID,
+		ParentID:         span.ParentID,
+		TraceID:          span.TraceID,
+		DurationMicros:   span.DurationMicros,
+		CallType:         span.CallType,
+		PSM:              span.PSM,
+		LogID:            span.LogID,
+		WorkspaceID:      span.WorkspaceID,
+		SpanName:         span.SpanName,
+		SpanType:         span.SpanType,
+		Method:           span.Method,
+		StatusCode:       span.StatusCode,
+		Input:            span.Input,
+		Output:           span.Output,
+		ObjectStorage:    span.ObjectStorage,
+		SystemTagsString: span.SystemTagsString,
+		SystemTagsLong:   span.SystemTagsLong,
+		SystemTagsDouble: span.SystemTagsDouble,
+		TagsString:       span.TagsString,
+		TagsLong:         span.TagsLong,
+		TagsDouble:       span.TagsDouble,
+		TagsBool:         span.TagsBool,
+		TagsByte:         span.TagsByte,
+	}
 }
