@@ -46,6 +46,12 @@ func (m *ModelToolChoiceTokenCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
+func (m *ModelToolChoiceTokenCountMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewModelToolChoiceTokenCountMetric() entity.IMetricDefinition {
 	return &ModelToolChoiceTokenCountMetric{}
 }

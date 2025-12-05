@@ -50,3 +50,16 @@ func (t *TenantProviderImpl) GetTenantsByPlatformType(ctx context.Context, platf
 		return []string{defaultTenant}, nil
 	}
 }
+
+func (t *TenantProviderImpl) GetMetricTenantsByPlatformType(ctx context.Context, platform loop_span.PlatformType) ([]string, error) {
+	cfg, err := t.traceConfig.GetMetricPlatformTenants(ctx)
+	if err != nil {
+		logs.CtxError(ctx, "fail to get platform tenants, %v", err)
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	tenants, ok := cfg.Config[string(platform)]
+	if !ok {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	return tenants, nil
+}

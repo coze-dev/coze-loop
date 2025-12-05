@@ -62,6 +62,7 @@ func (m *ToolDurationMetric) GroupBy() []*entity.Dimension {
 
 func (m *ToolDurationMetric) Wrappers() []entity.IMetricWrapper {
 	return []entity.IMetricWrapper{
+		wrapper.NewSumWrapper(),
 		wrapper.NewAvgWrapper(),
 		wrapper.NewMinWrapper(),
 		wrapper.NewMaxWrapper(),
@@ -69,6 +70,10 @@ func (m *ToolDurationMetric) Wrappers() []entity.IMetricWrapper {
 		wrapper.NewPct90Wrapper(),
 		wrapper.NewPct99Wrapper(),
 	}
+}
+
+func (m *ToolDurationMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewToolDurationMetric() entity.IMetricDefinition {

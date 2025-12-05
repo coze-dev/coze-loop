@@ -50,6 +50,12 @@ func (m *MaxWrapper) GroupBy() []*entity.Dimension {
 	return m.originalMetric.GroupBy()
 }
 
+func (m *MaxWrapper) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeMax,
+	}
+}
+
 func NewMaxWrapper() entity.IMetricWrapper {
 	return &MaxWrapper{}
 }

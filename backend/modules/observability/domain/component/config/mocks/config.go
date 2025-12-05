@@ -129,6 +129,35 @@ func (mr *MockITraceConfigMockRecorder) GetKeySpanTypes(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeySpanTypes", reflect.TypeOf((*MockITraceConfig)(nil).GetKeySpanTypes), ctx)
 }
 
+// GetMetricPlatformTenants mocks base method.
+func (m *MockITraceConfig) GetMetricPlatformTenants(ctx context.Context) (*config.PlatformTenantsCfg, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetricPlatformTenants", ctx)
+	ret0, _ := ret[0].(*config.PlatformTenantsCfg)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMetricPlatformTenants indicates an expected call of GetMetricPlatformTenants.
+func (mr *MockITraceConfigMockRecorder) GetMetricPlatformTenants(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricPlatformTenants", reflect.TypeOf((*MockITraceConfig)(nil).GetMetricPlatformTenants), ctx)
+}
+
+// GetMetricQueryConfig mocks base method.
+func (m *MockITraceConfig) GetMetricQueryConfig(ctx context.Context) *config.MetricQueryConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetricQueryConfig", ctx)
+	ret0, _ := ret[0].(*config.MetricQueryConfig)
+	return ret0
+}
+
+// GetMetricQueryConfig indicates an expected call of GetMetricQueryConfig.
+func (mr *MockITraceConfigMockRecorder) GetMetricQueryConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricQueryConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetMetricQueryConfig), ctx)
+}
+
 // GetPlatformSpansTrans mocks base method.
 func (m *MockITraceConfig) GetPlatformSpansTrans(ctx context.Context) (*config.SpanTransHandlerConfig, error) {
 	m.ctrl.T.Helper()
