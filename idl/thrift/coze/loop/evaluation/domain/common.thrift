@@ -17,6 +17,11 @@ struct Content {
     11: optional Image image (go.tag='mapstructure:"image"'),
     12: optional list<Content> multi_part (go.tag='mapstructure:"multi_part"'),
     13: optional Audio audio (go.tag='mapstructure:"audio"'),
+
+    // 超大文本相关字段
+    30: optional bool content_omitted       // 当前列的数据是否省略, 如果此处返回 true, 需要通过 GetDatasetItemField 获取当前列的具体内容, 或者是通过 omittedDataStorage.url 下载
+    31: optional dataset.ObjectStorage full_content // 被省略数据的完整信息，批量返回时会签发相应的 url，用户可以点击下载. 同时支持通过该字段传入已经上传好的超长数据(dataOmitted 为 true 时生效)
+    32: optional i32 full_content_bytes      // 超长数据完整内容的大小，单位 byte
 }
 
 struct AudioContent {

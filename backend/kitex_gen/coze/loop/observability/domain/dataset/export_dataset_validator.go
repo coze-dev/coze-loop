@@ -49,6 +49,11 @@ func (p *FieldSchema) IsValid() error {
 	return nil
 }
 func (p *Item) IsValid() error {
+	if p.SpanInfo != nil {
+		if err := p.SpanInfo.IsValid(); err != nil {
+			return fmt.Errorf("field SpanInfo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *FieldData) IsValid() error {
@@ -71,6 +76,9 @@ func (p *Image) IsValid() error {
 	return nil
 }
 func (p *ItemError) IsValid() error {
+	return nil
+}
+func (p *ExportSpanInfo) IsValid() error {
 	return nil
 }
 func (p *FieldMapping) IsValid() error {

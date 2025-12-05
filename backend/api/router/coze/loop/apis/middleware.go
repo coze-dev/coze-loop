@@ -1651,6 +1651,41 @@ func _updateevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _item_idMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getevaluationitemfieldMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _gettrajectoryconfigMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _upserttrajectoryconfigMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listtrajectoryMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _item_id0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getevaluationitemfieldoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _debugbuiltinevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil

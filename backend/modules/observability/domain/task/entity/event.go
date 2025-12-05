@@ -145,12 +145,12 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	spanType := tagsString["span_type"]
 
 	result := &loop_span.Span{
-		StartTime:        s.StartTimeInUs / 1000,
+		StartTime:        s.StartTimeInUs,
 		SpanID:           s.SpanID,
 		ParentID:         s.ParentID,
 		LogID:            s.LogID,
 		TraceID:          s.TraceID,
-		DurationMicros:   s.DurationInUs / 1000,
+		DurationMicros:   s.DurationInUs,
 		CallType:         callType,
 		WorkspaceID:      spaceID,
 		SpanName:         s.SpanName,

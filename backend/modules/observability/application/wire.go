@@ -108,6 +108,7 @@ var (
 		evaluator.NewEvaluatorRPCProvider,
 		NewDatasetServiceAdapter,
 		redis2.NewSpansRedisDaoImpl,
+		mysqldao.NewTrajectoryConfigDaoImpl,
 		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
@@ -128,6 +129,7 @@ var (
 		NewIngestionCollectorFactory,
 		mq2.NewSpanWithAnnotationProducerImpl,
 		redis2.NewSpansRedisDaoImpl,
+		mysqldao.NewTrajectoryConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,
@@ -164,16 +166,19 @@ func provideTraceRepo(
 	spanRedisDao redis2.ISpansRedisDao,
 	ckProvider ck.Provider,
 	spanProducer mq3.ISpanProducer,
+	trajectoryConfDao mysqldao.ITrajectoryConfigDao,
+	idGenerator idgen.IIDGenerator,
 ) (repo.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, options...)
+	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, options...)
 }
 
 func provideTraceMetricRepo(
 	traceConfig config.ITraceConfig,
+	idGenerator idgen.IIDGenerator,
 	storageProvider storage.IStorageProvider,
 	ckProvider ck.Provider,
 ) (metric_repo.IMetricRepo, error) {
@@ -181,7 +186,7 @@ func provideTraceMetricRepo(
 	if err != nil {
 		return nil, err
 	}
-	return obrepo.NewTraceMetricCKRepoImpl(traceConfig, storageProvider, options...)
+	return obrepo.NewTraceMetricCKRepoImpl(traceConfig, idGenerator, storageProvider, options...)
 }
 
 func buildTraceRepoOptions(ckProvider ck.Provider) ([]obrepo.TraceRepoOption, error) {
@@ -395,6 +400,7 @@ func InitMetricApplication(
 	fileClient fileservice.Client,
 	benefit benefit.IBenefitService,
 	authClient authservice.Client,
+	idGenerator idgen.IIDGenerator,
 ) (IMetricApplication, error) {
 	wire.Build(metricsSet)
 	return nil, nil
@@ -404,8 +410,10 @@ func InitTraceIngestionApplication(
 	configFactory conf.IConfigLoaderFactory,
 	storageProvider storage.IStorageProvider,
 	ckDb ck.Provider,
+	db db.Provider,
 	mqFactory mq.IFactory,
 	persistentCmdable redis.PersistentCmdable,
+	idGenerator idgen.IIDGenerator,
 ) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
 	return nil, nil

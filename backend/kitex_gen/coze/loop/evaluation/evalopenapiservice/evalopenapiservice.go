@@ -91,6 +91,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetEvaluationItemFieldOApi": kitex.NewMethodInfo(
+		getEvaluationItemFieldOApiHandler,
+		newEvaluationOpenAPIServiceGetEvaluationItemFieldOApiArgs,
+		newEvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"UpdateEvaluationSetSchemaOApi": kitex.NewMethodInfo(
 		updateEvaluationSetSchemaOApiHandler,
 		newEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs,
@@ -375,6 +382,25 @@ func newEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult() interf
 	return openapi.NewEvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult()
 }
 
+func getEvaluationItemFieldOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetEvaluationItemFieldOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetEvaluationItemFieldOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceGetEvaluationItemFieldOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetEvaluationItemFieldOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult()
+}
+
 func updateEvaluationSetSchemaOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs)
 	realResult := result.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult)
@@ -606,6 +632,16 @@ func (p *kClient) ListEvaluationSetVersionItemsOApi(ctx context.Context, req *op
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceListEvaluationSetVersionItemsOApiResult
 	if err = p.c.Call(ctx, "ListEvaluationSetVersionItemsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest) (r *openapi.GetEvaluationItemFieldOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetEvaluationItemFieldOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult
+	if err = p.c.Call(ctx, "GetEvaluationItemFieldOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
