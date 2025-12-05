@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 )
 
@@ -120,6 +121,10 @@ type MetricsInfo struct {
 	ModelErrorRate *float64 `json:"model_error_rate,omitempty"`
 	// Tool Step占比(分母是总子Step)
 	ToolStepProportion *float64 `json:"tool_step_proportion,omitempty"`
+	// 输入token数
+	InputTokens *int32 `json:"input_tokens,omitempty"`
+	// 输出token数
+	OutputTokens *int32 `json:"output_tokens,omitempty"`
 }
 
 func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
@@ -496,6 +501,8 @@ func calculateMetricsInfo(modelSteps, toolSteps []*Step) *MetricsInfo {
 	// 计算Model相关指标
 	var totalModelDuration int64
 	var modelErrorCount int64
+	var inputTokens int64
+	var outputTokens int64
 	for _, modelStep := range modelSteps {
 		if modelStep.BasicInfo != nil && modelStep.BasicInfo.Duration != "" {
 			if duration, err := strconv.ParseInt(modelStep.BasicInfo.Duration, 10, 64); err == nil {
@@ -512,6 +519,14 @@ func calculateMetricsInfo(modelSteps, toolSteps []*Step) *MetricsInfo {
 			}
 			if modelStep.ID != nil {
 				metricsInfo.ModelErrors[errorCode] = append(metricsInfo.ModelErrors[errorCode], *modelStep.ID)
+			}
+		}
+		if modelStep.ModelInfo != nil {
+			if modelStep.ModelInfo.InputTokens > 0 {
+				inputTokens += modelStep.ModelInfo.InputTokens
+			}
+			if modelStep.ModelInfo.OutputTokens > 0 {
+				outputTokens += modelStep.ModelInfo.OutputTokens
 			}
 		}
 	}
@@ -567,6 +582,14 @@ func calculateMetricsInfo(modelSteps, toolSteps []*Step) *MetricsInfo {
 	if totalSteps > 0 {
 		toolStepProportion := float64(totalToolSteps) / float64(totalSteps)
 		metricsInfo.ToolStepProportion = &toolStepProportion
+	}
+
+	// 计算输入/输出Token数
+	if inputTokens > 0 {
+		metricsInfo.InputTokens = ptr.Of(int32(inputTokens))
+	}
+	if outputTokens > 0 {
+		metricsInfo.OutputTokens = ptr.Of(int32(outputTokens))
 	}
 
 	return metricsInfo
