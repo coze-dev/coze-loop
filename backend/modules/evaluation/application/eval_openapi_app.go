@@ -56,8 +56,7 @@ type EvalOpenAPIApplication struct {
 }
 
 func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest) (r *openapi.GetEvaluationItemFieldOApiResponse, err error) {
-	//TODO implement me
-	panic("implement me")
+	return nil, nil
 }
 
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,

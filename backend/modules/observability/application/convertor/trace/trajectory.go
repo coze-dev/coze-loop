@@ -1,8 +1,9 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package trace
 
 import (
-	"strconv"
-
 	dtotrajectory "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
@@ -104,14 +105,6 @@ func int64Ptr2int32Ptr(src *int64) *int32 {
 		return nil
 	}
 	result := int32(*src)
-	return &result
-}
-
-func int64Ptr2StrPtr(src *int64) *string {
-	if src == nil {
-		return nil
-	}
-	result := strconv.FormatInt(*src, 10)
 	return &result
 }
 
