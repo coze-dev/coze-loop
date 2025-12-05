@@ -16,7 +16,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 	"github.com/pkg/errors"
 	"github.com/samber/lo"
 )
@@ -484,6 +486,7 @@ func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersion
 	return a, nil
 }
 
+// ExtractByJsonpath 从Span的Input/Output/Tags中提取数据，根据jsonpath返回结果。时间戳按毫秒返回。
 func (s *Span) ExtractByJsonpath(ctx context.Context, key string, jsonpath string) (string, error) {
 	jsonpath = strings.TrimPrefix(jsonpath, key)
 	jsonpath = strings.TrimPrefix(jsonpath, ".")
@@ -495,6 +498,12 @@ func (s *Span) ExtractByJsonpath(ctx context.Context, key string, jsonpath strin
 	} else if strings.HasPrefix(key, "Tags.") {
 		key = strings.TrimPrefix(key, "Tags.")
 		tag := s.GetFieldValue(key, false, false)
+		if key == SpanFieldStartTime || key == SpanFieldDuration || key == SpanFieldLogicDeleteDate ||
+			slices.Contains(TimeTagSlice, key) {
+			if integer, ok := tag.(int64); ok {
+				tag = time_util.MicroSec2MillSec(integer)
+			}
+		}
 		data = conv.ToString(tag)
 	} else {
 		return "", errors.Errorf("unsupported mapping key: %s", key)
