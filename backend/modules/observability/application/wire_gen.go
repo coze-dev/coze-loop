@@ -25,16 +25,19 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	config2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	mq2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
+	storage2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	repo3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
 	service4 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/tool"
 	entity3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
-	repo3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
+	repo4 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	service3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	scheduledtask2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/scheduledtask"
@@ -66,6 +69,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -75,19 +79,12 @@ import (
 // Injectors from wire.go:
 
 func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdable, persistentCmdable redis.PersistentCmdable, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, idgen2 idgen.IIDGenerator, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client, userClient userservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, tagService tagservice.Client, datasetService datasetservice.Client) (ITraceApplication, error) {
-	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
-	if err != nil {
-		return nil, err
-	}
-	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
-	if err != nil {
-		return nil, err
-	}
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
 	if err != nil {
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
+	iStorageProvider := storage.NewTraceStorageProvider()
 	iSpansRedisDao, err := redis2.NewSpansRedisDaoImpl(persistentCmdable)
 	if err != nil {
 		return nil, err
@@ -97,7 +94,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, idgen2, iTrajectoryConfigDao)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +121,7 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 		return nil, err
 	}
 	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
-	iTraceExportService, err := service.NewTraceExportServiceImpl(iTraceRepo, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, iTenantProvider, datasetServiceAdaptor, traceFilterProcessorBuilder, iTraceService)
+	iTraceExportService, err := service.NewTraceExportServiceImpl(iTraceRepo, iStorageProvider, iTraceConfig, iTraceProducer, iAnnotationProducer, iTraceMetrics, iTenantProvider, datasetServiceAdaptor, traceFilterProcessorBuilder, iTraceService)
 	if err != nil {
 		return nil, err
 	}
@@ -141,19 +138,12 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 }
 
 func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, ckDb ck.Provider, benefit2 benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, authClient authservice.Client, meter metrics.Meter, db2 db.Provider, redis3 redis.Cmdable, idgen2 idgen.IIDGenerator, evalService evaluatorservice.Client, persistentCmdable redis.PersistentCmdable) (IObservabilityOpenAPIApplication, error) {
-	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
-	if err != nil {
-		return nil, err
-	}
-	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
-	if err != nil {
-		return nil, err
-	}
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
 	if err != nil {
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
+	iStorageProvider := storage.NewTraceStorageProvider()
 	iSpansRedisDao, err := redis2.NewSpansRedisDaoImpl(persistentCmdable)
 	if err != nil {
 		return nil, err
@@ -163,7 +153,7 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, idgen2, iTrajectoryConfigDao)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2)
 	if err != nil {
 		return nil, err
 	}
@@ -199,21 +189,13 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	return iObservabilityOpenAPIApplication, nil
 }
 
-func InitMetricApplication(ckDb ck.Provider, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client, idGenerator idgen.IIDGenerator) (IMetricApplication, error) {
-	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
-	if err != nil {
-		return nil, err
-	}
-	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
-	if err != nil {
-		return nil, err
-	}
+func InitMetricApplication(ckDb ck.Provider, storageProvider storage2.IStorageProvider, configFactory conf.IConfigLoaderFactory, fileClient fileservice.Client, benefit2 benefit.IBenefitService, authClient authservice.Client, idGenerator idgen.IIDGenerator) (IMetricApplication, error) {
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
 	if err != nil {
 		return nil, err
 	}
 	iTraceConfig := config.NewTraceConfigCenter(iConfigLoader)
-	iMetricRepo, err := repo.NewTraceMetricCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, idGenerator)
+	iMetricRepo, err := provideTraceMetricRepo(iTraceConfig, idGenerator, storageProvider, ckDb)
 	if err != nil {
 		return nil, err
 	}
@@ -233,16 +215,8 @@ func InitMetricApplication(ckDb ck.Provider, configFactory conf.IConfigLoaderFac
 	return iMetricApplication, nil
 }
 
-func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb ck.Provider, db2 db.Provider, mqFactory mq.IFactory, persistentCmdable redis.PersistentCmdable, idGenerator idgen.IIDGenerator) (ITraceIngestionApplication, error) {
+func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, storageProvider storage2.IStorageProvider, ckDb ck.Provider, db2 db.Provider, mqFactory mq.IFactory, persistentCmdable redis.PersistentCmdable, idGenerator idgen.IIDGenerator) (ITraceIngestionApplication, error) {
 	iConfigLoader, err := NewTraceConfigLoader(configFactory)
-	if err != nil {
-		return nil, err
-	}
-	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
-	if err != nil {
-		return nil, err
-	}
-	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +230,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, ckDb
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, idGenerator, iTrajectoryConfigDao)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, storageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idGenerator)
 	if err != nil {
 		return nil, err
 	}
@@ -288,22 +262,16 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
 	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo)
+	iStorageProvider := storage.NewTraceStorageProvider()
+	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
-	iTaskService, err := service3.NewTaskServiceImpl(iTaskRepo, idgen2, iBackfillProducer, processorTaskProcessor, traceFilterProcessorBuilder)
+	iTaskService, err := service3.NewTaskServiceImpl(iTaskRepo, idgen2, iBackfillProducer, processorTaskProcessor, iStorageProvider, iTenantProvider, traceFilterProcessorBuilder)
 	if err != nil {
 		return nil, err
 	}
 	iAuthProvider := auth.NewAuthProvider(authClient)
 	iUserProvider := user.NewUserRPCProvider(userClient)
-	iSpansDao, err := ck2.NewSpansCkDaoImpl(ckDb)
-	if err != nil {
-		return nil, err
-	}
-	iAnnotationDao, err := ck2.NewAnnotationCkDaoImpl(ckDb)
-	if err != nil {
-		return nil, err
-	}
 	iSpansRedisDao, err := redis2.NewSpansRedisDaoImpl(persistentCmdable)
 	if err != nil {
 		return nil, err
@@ -313,11 +281,10 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := repo.NewTraceCKRepoImpl(iSpansDao, iAnnotationDao, iTraceConfig, iSpansRedisDao, iSpanProducer, idgen2, iTrajectoryConfigDao)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2)
 	if err != nil {
 		return nil, err
 	}
-	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iLocker := NewTaskLocker(redis3)
 	iTraceHubService, err := tracehub.NewTraceHubImpl(iTaskRepo, iTraceRepo, iTenantProvider, traceFilterProcessorBuilder, processorTaskProcessor, aid, iBackfillProducer, iLocker, iTraceConfig)
 	if err != nil {
@@ -338,14 +305,14 @@ var (
 	taskDomainSet = wire.NewSet(
 		NewInitTaskProcessor, service3.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, redis2.NewTaskDAO, redis2.NewTaskRunDAO, mysql.NewTaskRunDaoImpl, producer.NewBackfillProducerImpl, NewScheduledTask,
 	)
-	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, metrics2.NewTraceMetricsImpl, collector.NewEventCollectorProvider, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, producer.NewSpanWithAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
+	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, provideTraceRepo, storage.NewTraceStorageProvider, metrics2.NewTraceMetricsImpl, collector.NewEventCollectorProvider, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, producer.NewSpanWithAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
 		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, evaluator.NewEvaluatorRPCProvider, NewDatasetServiceAdapter, redis2.NewSpansRedisDaoImpl, mysql.NewTrajectoryConfigDaoImpl, taskDomainSet,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(
-		NewIngestionApplication, service.NewIngestionServiceImpl, repo.NewTraceCKRepoImpl, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, config.NewTraceConfigCenter, NewTraceConfigLoader,
+		NewIngestionApplication, service.NewIngestionServiceImpl, provideTraceRepo, config.NewTraceConfigCenter, NewTraceConfigLoader,
 		NewIngestionCollectorFactory, producer.NewSpanWithAnnotationProducerImpl, redis2.NewSpansRedisDaoImpl, mysql.NewTrajectoryConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
@@ -355,10 +322,51 @@ var (
 		traceDomainSet, service3.NewTaskCallbackServiceImpl,
 	)
 	metricsSet = wire.NewSet(
-		NewMetricApplication, service2.NewMetricsService, repo.NewTraceMetricCKRepoImpl, tenant.NewTenantProvider, auth.NewAuthProvider, NewTraceConfigLoader,
-		NewTraceProcessorBuilder, config.NewTraceConfigCenter, NewMetricDefinitions, ck2.NewSpansCkDaoImpl, ck2.NewAnnotationCkDaoImpl, file.NewFileRPCProvider,
+		NewMetricApplication, service2.NewMetricsService, provideTraceMetricRepo, tenant.NewTenantProvider, auth.NewAuthProvider, NewTraceConfigLoader,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, NewMetricDefinitions, file.NewFileRPCProvider,
 	)
 )
+
+func provideTraceRepo(
+	traceConfig config2.ITraceConfig,
+	storageProvider storage2.IStorageProvider,
+	spanRedisDao redis2.ISpansRedisDao,
+	ckProvider ck.Provider,
+	spanProducer mq2.ISpanProducer,
+	trajectoryConfDao mysql.ITrajectoryConfigDao,
+	idGenerator idgen.IIDGenerator,
+) (repo2.ITraceRepo, error) {
+	options, err := buildTraceRepoOptions(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	return repo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, options...)
+}
+
+func provideTraceMetricRepo(
+	traceConfig config2.ITraceConfig,
+	idGenerator idgen.IIDGenerator,
+	storageProvider storage2.IStorageProvider,
+	ckProvider ck.Provider,
+) (repo3.IMetricRepo, error) {
+	options, err := buildTraceRepoOptions(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	return repo.NewTraceMetricCKRepoImpl(traceConfig, idGenerator, storageProvider, options...)
+}
+
+func buildTraceRepoOptions(ckProvider ck.Provider) ([]repo.TraceRepoOption, error) {
+	ckSpanDao, err := ck2.NewSpansCkDaoImpl(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	ckAnnoDao, err := ck2.NewAnnotationCkDaoImpl(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	return []repo.TraceRepoOption{repo.WithTraceStorageDaos(ck2.TraceStorageTypeCK, ckSpanDao, ckAnnoDao)}, nil
+}
 
 func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "observability")
@@ -407,10 +415,11 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 }
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
-	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo3.ITaskRepo,
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo4.ITaskRepo,
 ) *processor.TaskProcessor {
 	taskProcessor := processor.NewTaskProcessor()
-	taskProcessor.Register(entity3.TaskTypeAutoEval, processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
+	taskProcessor.Register(entity3.TaskTypeAutoEval, processor.NewAutoEvaluateProcessor(
+		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &processor.EvalTargetBuilderImpl{}))
 	return taskProcessor
 }
 
@@ -420,7 +429,7 @@ func NewScheduledTask(
 	traceHubService tracehub.ITraceHubService,
 	taskService service3.ITaskService,
 	taskProcessor processor.TaskProcessor,
-	taskRepo repo3.ITaskRepo,
+	taskRepo repo4.ITaskRepo,
 ) []scheduledtask.ScheduledTask {
 	return []scheduledtask.ScheduledTask{scheduledtask2.NewStatusCheckTask(locker, config3, traceHubService, taskService, taskProcessor, taskRepo), scheduledtask2.NewLocalCacheRefreshTask(traceHubService, taskRepo)}
 }

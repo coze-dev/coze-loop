@@ -8,7 +8,6 @@ package apis
 
 import (
 	"context"
-
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -41,6 +40,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/foundation/application"
 	application3 "github.com/coze-dev/coze-loop/backend/modules/llm/application"
 	application6 "github.com/coze-dev/coze-loop/backend/modules/observability/application"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	application2 "github.com/coze-dev/coze-loop/backend/modules/prompt/application"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -155,12 +155,12 @@ func InitDataHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Prov
 	return dataHandler, nil
 }
 
-func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, idgen2 idgen.IIDGenerator, benefit2 benefit.IBenefitService, fileClient fileservice.Client, authCli authservice.Client, userClient userservice.Client, evalClient evaluatorservice.Client, evalSetClient evaluationsetservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, datasetClient datasetservice.Client, redis2 redis.Cmdable, persistentCmdable redis.PersistentCmdable, experimentClient experimentservice.Client, taskProcessor processor.TaskProcessor, aid int32) (*ObservabilityHandler, error) {
+func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Provider, meter metrics.Meter, mqFactory mq.IFactory, configFactory conf.IConfigLoaderFactory, idgen2 idgen.IIDGenerator, benefit2 benefit.IBenefitService, fileClient fileservice.Client, authCli authservice.Client, userClient userservice.Client, evalClient evaluatorservice.Client, evalSetClient evaluationsetservice.Client, tagClient tagservice.Client, limiterFactory limiter.IRateLimiterFactory, datasetClient datasetservice.Client, redis2 redis.Cmdable, persistentCmdable redis.PersistentCmdable, storageProvider storage.IStorageProvider, experimentClient experimentservice.Client, taskProcessor processor.TaskProcessor, aid int32) (*ObservabilityHandler, error) {
 	iTraceApplication, err := application6.InitTraceApplication(db2, ckDb, redis2, persistentCmdable, meter, mqFactory, configFactory, idgen2, fileClient, benefit2, authCli, userClient, evalClient, evalSetClient, tagClient, datasetClient)
 	if err != nil {
 		return nil, err
 	}
-	iTraceIngestionApplication, err := application6.InitTraceIngestionApplication(configFactory, ckDb, db2, mqFactory, persistentCmdable, idgen2)
+	iTraceIngestionApplication, err := application6.InitTraceIngestionApplication(configFactory, storageProvider, ckDb, db2, mqFactory, persistentCmdable, idgen2)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iMetricApplication, err := application6.InitMetricApplication(ckDb, configFactory, fileClient, benefit2, authCli, idgen2)
+	iMetricApplication, err := application6.InitMetricApplication(ckDb, storageProvider, configFactory, fileClient, benefit2, authCli, idgen2)
 	if err != nil {
 		return nil, err
 	}

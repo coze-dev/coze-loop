@@ -151,15 +151,12 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 		LogID:            s.LogID,
 		TraceID:          s.TraceID,
 		DurationMicros:   s.DurationInUs / 1000,
-		PSM:              s.ServerEnv.PSM,
 		CallType:         callType,
 		WorkspaceID:      spaceID,
 		SpanName:         s.SpanName,
 		SpanType:         spanType,
 		Method:           s.Method,
 		StatusCode:       s.StatusCode,
-		Input:            s.SensitiveTags.Input,
-		Output:           s.SensitiveTags.Output,
 		SystemTagsString: systemTagsString,
 		SystemTagsLong:   systemTagsLong,
 		SystemTagsDouble: systemTagsDouble,
@@ -168,6 +165,13 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 		TagsDouble:       tagsDouble,
 		TagsBool:         tagsBool,
 		TagsByte:         tagsByte,
+	}
+	if s.ServerEnv != nil {
+		result.PSM = s.ServerEnv.PSM
+	}
+	if s.SensitiveTags != nil {
+		result.Input = s.SensitiveTags.Input
+		result.Output = s.SensitiveTags.Output
 	}
 
 	return result
