@@ -135,6 +135,8 @@ func MetricsInfoDO2DTO(info *loop_span.MetricsInfo) *dtotrajectory.MetricsInfo {
 		ModelErrors:        info.ModelErrors,
 		ModelErrorRate:     info.ModelErrorRate,
 		ToolStepProportion: info.ToolStepProportion,
+		InputTokens:        info.InputTokens,
+		OutputTokens:       info.OutputTokens,
 	}
 }
 
