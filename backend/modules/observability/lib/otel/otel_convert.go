@@ -66,9 +66,9 @@ var (
 			DataType:  dataTypeString,
 		},
 		"psm": {
-			attributeKey: []string{"service.name"},
-			isTag:        false,
-			dataType:     dataTypeString,
+			AttributeKey: []string{"service.name"},
+			IsTag:        false,
+			DataType:     dataTypeString,
 		},
 
 		// model
