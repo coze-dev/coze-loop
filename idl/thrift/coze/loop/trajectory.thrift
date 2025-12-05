@@ -87,4 +87,6 @@ struct MetricsInfo {
     5: optional map<i32, list<string>> model_errors // Model错误分布，格式为：错误码-->list<ModelStepID>
     6: optional double model_error_rate // Model错误率
     7: optional double tool_step_proportion // Tool Step占比(分母是总子Step)
+    8: optional i32 input_tokens // 输入token数
+    9: optional i32 output_tokens // 输出token数
 }

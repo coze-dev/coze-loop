@@ -2920,6 +2920,34 @@ func (p *MetricsInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3092,6 +3120,34 @@ func (p *MetricsInfo) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *MetricsInfo) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.InputTokens = _field
+	return offset, nil
+}
+
+func (p *MetricsInfo) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.OutputTokens = _field
+	return offset, nil
+}
+
 func (p *MetricsInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -3102,6 +3158,8 @@ func (p *MetricsInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -3121,6 +3179,8 @@ func (p *MetricsInfo) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -3219,6 +3279,24 @@ func (p *MetricsInfo) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *MetricsInfo) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetInputTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 8)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.InputTokens)
+	}
+	return offset
+}
+
+func (p *MetricsInfo) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOutputTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 9)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.OutputTokens)
+	}
+	return offset
+}
+
 func (p *MetricsInfo) field1Length() int {
 	l := 0
 	if p.IsSetLlmDuration() {
@@ -3302,6 +3380,24 @@ func (p *MetricsInfo) field7Length() int {
 	return l
 }
 
+func (p *MetricsInfo) field8Length() int {
+	l := 0
+	if p.IsSetInputTokens() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *MetricsInfo) field9Length() int {
+	l := 0
+	if p.IsSetOutputTokens() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *MetricsInfo) DeepCopy(s interface{}) error {
 	src, ok := s.(*MetricsInfo)
 	if !ok {
@@ -3381,6 +3477,16 @@ func (p *MetricsInfo) DeepCopy(s interface{}) error {
 	if src.ToolStepProportion != nil {
 		tmp := *src.ToolStepProportion
 		p.ToolStepProportion = &tmp
+	}
+
+	if src.InputTokens != nil {
+		tmp := *src.InputTokens
+		p.InputTokens = &tmp
+	}
+
+	if src.OutputTokens != nil {
+		tmp := *src.OutputTokens
+		p.OutputTokens = &tmp
 	}
 
 	return nil
