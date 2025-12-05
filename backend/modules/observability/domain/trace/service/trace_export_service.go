@@ -468,8 +468,7 @@ func (r *TraceExportServiceImpl) hasTrajectory(fieldMappings []entity.FieldMappi
 	return false
 }
 
-func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.Span, i int,
-	fieldMappings []entity.FieldMapping, workspaceID int64, dataset *entity.Dataset, trajectory *loop_span.Trajectory) *entity.DatasetItem {
+func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.Span, i int, fieldMappings []entity.FieldMapping, workspaceID int64, dataset *entity.Dataset, trajectory *loop_span.Trajectory) *entity.DatasetItem {
 	item := entity.NewDatasetItem(workspaceID, dataset.ID, span, nil)
 	for _, mapping := range fieldMappings {
 		var value string

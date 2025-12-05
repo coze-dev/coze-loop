@@ -138,14 +138,13 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 		spanMap[span.SpanID] = span
 	}
 
-	var trajectoryID *string
+	trajectoryID := ptr.Of(spanList[0].TraceID)
 
 	// 找到root节点
 	var rootSpan *Span
 	for _, span := range spanList {
 		if span.ParentID == "" || span.ParentID == "0" {
 			rootSpan = span
-			trajectoryID = &span.SpanID
 			break
 		}
 	}
@@ -180,9 +179,6 @@ func BuildTrajectoryFromSpans(spanList SpanList) *Trajectory {
 	for _, agentSpan := range agentSpans {
 		if agentSpan == nil {
 			continue
-		}
-		if trajectoryID == nil {
-			trajectoryID = &agentSpan.SpanID
 		}
 		agentStep := &AgentStep{
 			ID:        &agentSpan.SpanID,
