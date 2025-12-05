@@ -422,3 +422,23 @@ func ConvertRateLimitDTO2DO(limit *commondto.RateLimit) (*commonentity.RateLimit
 		Period: period,
 	}, nil
 }
+
+func ConvertRuntimeParamDTO2DO(dto *commondto.RuntimeParam) *commonentity.RuntimeParam {
+	if dto == nil {
+		return nil
+	}
+	return &commonentity.RuntimeParam{
+		JSONValue: dto.JSONValue,
+		JSONDemo:  dto.JSONDemo,
+	}
+}
+
+func ConvertRuntimeParamDO2DTO(do *commonentity.RuntimeParam) *commondto.RuntimeParam {
+	if do == nil {
+		return nil
+	}
+	return &commondto.RuntimeParam{
+		JSONValue: do.JSONValue,
+		JSONDemo:  do.JSONDemo,
+	}
+}

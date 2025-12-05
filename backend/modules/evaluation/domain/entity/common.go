@@ -369,3 +369,8 @@ type RateLimit struct {
 	Burst  *int32         `json:"burst,omitempty"`
 	Period *time.Duration `json:"period,omitempty"`
 }
+
+type RuntimeParam struct {
+	JSONValue *string `json:"json_value,omitempty"`
+	JSONDemo  *string `json:"json_demo,omitempty"`
+}

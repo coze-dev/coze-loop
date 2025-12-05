@@ -1169,8 +1169,8 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 
 				// 4. 评估器调试
 				mockEvaluatorService.EXPECT().
-					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					DoAndReturn(func(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
+					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 						// 验证输入数据已被正确处理
 						assert.Equal(t, int64(123), evaluator.SpaceID)
 						assert.Equal(t, entity.EvaluatorTypePrompt, evaluator.EvaluatorType)
@@ -2470,7 +2470,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.8),
@@ -2529,14 +2529,14 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 
 				// 使用 InOrder 来确保调用顺序
 				gomock.InOrder(
-					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						&entity.EvaluatorOutputData{
 							EvaluatorResult: &entity.EvaluatorResult{
 								Score:     gptr.Of(0.9),
 								Reasoning: "result 1",
 							},
 						}, nil),
-					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						&entity.EvaluatorOutputData{
 							EvaluatorResult: &entity.EvaluatorResult{
 								Score:     gptr.Of(0.7),
@@ -2713,14 +2713,14 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 
 				// 使用 InOrder 来确保调用顺序
 				gomock.InOrder(
-					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						&entity.EvaluatorOutputData{
 							EvaluatorResult: &entity.EvaluatorResult{
 								Score:     gptr.Of(0.8),
 								Reasoning: "success result",
 							},
 						}, nil),
-					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						nil, errors.New("evaluation failed")),
 				)
 			},
@@ -2797,7 +2797,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
 				// Mock 100次调用
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.8),
@@ -2839,7 +2839,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
 				// 返回 nil output 和 error
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("code execution failed"))
 			},
 			wantResp: &evaluatorservice.BatchDebugEvaluatorResponse{
@@ -2898,7 +2898,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
 				// 第一个成功
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.9),
@@ -2907,11 +2907,11 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 					}, nil).Times(1)
 
 				// 第二个失败 (nil output + error)
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("processing error")).Times(1)
 
 				// 第三个成功但有 evaluator run error
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.7),
@@ -3968,7 +3968,7 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 					Return(builtinEvaluator, nil)
 
 				mockEvaluatorService.EXPECT().
-					DebugEvaluator(gomock.Any(), builtinEvaluator, gomock.Any(), gomock.Any()).
+					DebugEvaluator(gomock.Any(), builtinEvaluator, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(outputData, nil)
 			},
 			wantResp: &evaluatorservice.DebugBuiltinEvaluatorResponse{
@@ -4029,7 +4029,7 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 					Return(builtinEvaluator, nil)
 
 				mockEvaluatorService.EXPECT().
-					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantResp:    nil,

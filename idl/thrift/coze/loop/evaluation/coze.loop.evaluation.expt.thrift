@@ -30,6 +30,8 @@ struct CreateExperimentRequest {
     32: optional expt.SourceType source_type (api.body = 'source_type')
     33: optional string source_id (api.body = 'source_id')
 
+    41: optional map<i64, evaluator.EvaluatorRunConfig> evaluator_version_run_configs (api.body='evaluator_version_run_configs', api.js_conv='true')     // 评估器版本ID对应的评估器运行配置信息
+
     200: optional common.Session session
 
     255: optional base.Base Base

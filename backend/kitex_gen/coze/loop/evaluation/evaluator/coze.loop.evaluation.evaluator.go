@@ -9836,11 +9836,13 @@ type RunEvaluatorRequest struct {
 	// experiment id
 	ExperimentID *int64 `thrift:"experiment_id,4,optional" frugal:"4,optional,i64" json:"experiment_id" form:"experiment_id" `
 	// experiment run id
-	ExperimentRunID *int64            `thrift:"experiment_run_id,5,optional" frugal:"5,optional,i64" json:"experiment_run_id" form:"experiment_run_id" `
-	ItemID          *int64            `thrift:"item_id,6,optional" frugal:"6,optional,i64" json:"item_id" form:"item_id" `
-	TurnID          *int64            `thrift:"turn_id,7,optional" frugal:"7,optional,i64" json:"turn_id" form:"turn_id" `
-	Ext             map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Base            *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ExperimentRunID *int64 `thrift:"experiment_run_id,5,optional" frugal:"5,optional,i64" json:"experiment_run_id" form:"experiment_run_id" `
+	ItemID          *int64 `thrift:"item_id,6,optional" frugal:"6,optional,i64" json:"item_id" form:"item_id" `
+	TurnID          *int64 `thrift:"turn_id,7,optional" frugal:"7,optional,i64" json:"turn_id" form:"turn_id" `
+	// 评估器运行配置参数
+	EvaluatorRunConf *evaluator.EvaluatorRunConfig `thrift:"evaluator_run_conf,11,optional" frugal:"11,optional,evaluator.EvaluatorRunConfig" form:"evaluator_run_conf" json:"evaluator_run_conf,omitempty"`
+	Ext              map[string]string             `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Base             *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewRunEvaluatorRequest() *RunEvaluatorRequest {
@@ -9924,6 +9926,18 @@ func (p *RunEvaluatorRequest) GetTurnID() (v int64) {
 	return *p.TurnID
 }
 
+var RunEvaluatorRequest_EvaluatorRunConf_DEFAULT *evaluator.EvaluatorRunConfig
+
+func (p *RunEvaluatorRequest) GetEvaluatorRunConf() (v *evaluator.EvaluatorRunConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorRunConf() {
+		return RunEvaluatorRequest_EvaluatorRunConf_DEFAULT
+	}
+	return p.EvaluatorRunConf
+}
+
 var RunEvaluatorRequest_Ext_DEFAULT map[string]string
 
 func (p *RunEvaluatorRequest) GetExt() (v map[string]string) {
@@ -9968,6 +9982,9 @@ func (p *RunEvaluatorRequest) SetItemID(val *int64) {
 func (p *RunEvaluatorRequest) SetTurnID(val *int64) {
 	p.TurnID = val
 }
+func (p *RunEvaluatorRequest) SetEvaluatorRunConf(val *evaluator.EvaluatorRunConfig) {
+	p.EvaluatorRunConf = val
+}
 func (p *RunEvaluatorRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -9983,6 +10000,7 @@ var fieldIDToName_RunEvaluatorRequest = map[int16]string{
 	5:   "experiment_run_id",
 	6:   "item_id",
 	7:   "turn_id",
+	11:  "evaluator_run_conf",
 	100: "ext",
 	255: "Base",
 }
@@ -10005,6 +10023,10 @@ func (p *RunEvaluatorRequest) IsSetItemID() bool {
 
 func (p *RunEvaluatorRequest) IsSetTurnID() bool {
 	return p.TurnID != nil
+}
+
+func (p *RunEvaluatorRequest) IsSetEvaluatorRunConf() bool {
+	return p.EvaluatorRunConf != nil
 }
 
 func (p *RunEvaluatorRequest) IsSetExt() bool {
@@ -10090,6 +10112,14 @@ func (p *RunEvaluatorRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10230,6 +10260,14 @@ func (p *RunEvaluatorRequest) ReadField7(iprot thrift.TProtocol) error {
 	p.TurnID = _field
 	return nil
 }
+func (p *RunEvaluatorRequest) ReadField11(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorRunConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvaluatorRunConf = _field
+	return nil
+}
 func (p *RunEvaluatorRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -10300,6 +10338,10 @@ func (p *RunEvaluatorRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -10448,6 +10490,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *RunEvaluatorRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorRunConf() {
+		if err = oprot.WriteFieldBegin("evaluator_run_conf", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvaluatorRunConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *RunEvaluatorRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -10531,6 +10591,9 @@ func (p *RunEvaluatorRequest) DeepEqual(ano *RunEvaluatorRequest) bool {
 	if !p.Field7DeepEqual(ano.TurnID) {
 		return false
 	}
+	if !p.Field11DeepEqual(ano.EvaluatorRunConf) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -10605,6 +10668,13 @@ func (p *RunEvaluatorRequest) Field7DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.TurnID != *src {
+		return false
+	}
+	return true
+}
+func (p *RunEvaluatorRequest) Field11DeepEqual(src *evaluator.EvaluatorRunConfig) bool {
+
+	if !p.EvaluatorRunConf.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -10884,7 +10954,9 @@ type DebugEvaluatorRequest struct {
 	// 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace
 	InputData     *evaluator.EvaluatorInputData `thrift:"input_data,3,required" frugal:"3,required,evaluator.EvaluatorInputData" form:"input_data,required" json:"input_data,required"`
 	EvaluatorType evaluator.EvaluatorType       `thrift:"evaluator_type,4,required" frugal:"4,required,EvaluatorType" json:"evaluator_type" form:"evaluator_type,required" `
-	Base          *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 评估器运行配置参数
+	EvaluatorRunConf *evaluator.EvaluatorRunConfig `thrift:"evaluator_run_conf,11,optional" frugal:"11,optional,evaluator.EvaluatorRunConfig" form:"evaluator_run_conf" json:"evaluator_run_conf,omitempty"`
+	Base             *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewDebugEvaluatorRequest() *DebugEvaluatorRequest {
@@ -10932,6 +11004,18 @@ func (p *DebugEvaluatorRequest) GetEvaluatorType() (v evaluator.EvaluatorType) {
 	return
 }
 
+var DebugEvaluatorRequest_EvaluatorRunConf_DEFAULT *evaluator.EvaluatorRunConfig
+
+func (p *DebugEvaluatorRequest) GetEvaluatorRunConf() (v *evaluator.EvaluatorRunConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorRunConf() {
+		return DebugEvaluatorRequest_EvaluatorRunConf_DEFAULT
+	}
+	return p.EvaluatorRunConf
+}
+
 var DebugEvaluatorRequest_Base_DEFAULT *base.Base
 
 func (p *DebugEvaluatorRequest) GetBase() (v *base.Base) {
@@ -10955,6 +11039,9 @@ func (p *DebugEvaluatorRequest) SetInputData(val *evaluator.EvaluatorInputData) 
 func (p *DebugEvaluatorRequest) SetEvaluatorType(val evaluator.EvaluatorType) {
 	p.EvaluatorType = val
 }
+func (p *DebugEvaluatorRequest) SetEvaluatorRunConf(val *evaluator.EvaluatorRunConfig) {
+	p.EvaluatorRunConf = val
+}
 func (p *DebugEvaluatorRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -10964,6 +11051,7 @@ var fieldIDToName_DebugEvaluatorRequest = map[int16]string{
 	2:   "evaluator_content",
 	3:   "input_data",
 	4:   "evaluator_type",
+	11:  "evaluator_run_conf",
 	255: "Base",
 }
 
@@ -10973,6 +11061,10 @@ func (p *DebugEvaluatorRequest) IsSetEvaluatorContent() bool {
 
 func (p *DebugEvaluatorRequest) IsSetInputData() bool {
 	return p.InputData != nil
+}
+
+func (p *DebugEvaluatorRequest) IsSetEvaluatorRunConf() bool {
+	return p.EvaluatorRunConf != nil
 }
 
 func (p *DebugEvaluatorRequest) IsSetBase() bool {
@@ -11034,6 +11126,14 @@ func (p *DebugEvaluatorRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetEvaluatorType = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -11133,6 +11233,14 @@ func (p *DebugEvaluatorRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.EvaluatorType = _field
 	return nil
 }
+func (p *DebugEvaluatorRequest) ReadField11(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorRunConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvaluatorRunConf = _field
+	return nil
+}
 func (p *DebugEvaluatorRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -11162,6 +11270,10 @@ func (p *DebugEvaluatorRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -11250,6 +11362,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *DebugEvaluatorRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorRunConf() {
+		if err = oprot.WriteFieldBegin("evaluator_run_conf", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvaluatorRunConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *DebugEvaluatorRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -11295,6 +11425,9 @@ func (p *DebugEvaluatorRequest) DeepEqual(ano *DebugEvaluatorRequest) bool {
 	if !p.Field4DeepEqual(ano.EvaluatorType) {
 		return false
 	}
+	if !p.Field11DeepEqual(ano.EvaluatorRunConf) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -11325,6 +11458,13 @@ func (p *DebugEvaluatorRequest) Field3DeepEqual(src *evaluator.EvaluatorInputDat
 func (p *DebugEvaluatorRequest) Field4DeepEqual(src evaluator.EvaluatorType) bool {
 
 	if p.EvaluatorType != src {
+		return false
+	}
+	return true
+}
+func (p *DebugEvaluatorRequest) Field11DeepEqual(src *evaluator.EvaluatorRunConfig) bool {
+
+	if !p.EvaluatorRunConf.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -11586,7 +11726,9 @@ type BatchDebugEvaluatorRequest struct {
 	// 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace
 	InputData     []*evaluator.EvaluatorInputData `thrift:"input_data,3,required" frugal:"3,required,list<evaluator.EvaluatorInputData>" form:"input_data,required" json:"input_data,required"`
 	EvaluatorType evaluator.EvaluatorType         `thrift:"evaluator_type,4,required" frugal:"4,required,EvaluatorType" json:"evaluator_type" form:"evaluator_type,required" `
-	Base          *base.Base                      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 评估器运行配置参数
+	EvaluatorRunConf *evaluator.EvaluatorRunConfig `thrift:"evaluator_run_conf,11,optional" frugal:"11,optional,evaluator.EvaluatorRunConfig" form:"evaluator_run_conf" json:"evaluator_run_conf,omitempty"`
+	Base             *base.Base                    `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchDebugEvaluatorRequest() *BatchDebugEvaluatorRequest {
@@ -11629,6 +11771,18 @@ func (p *BatchDebugEvaluatorRequest) GetEvaluatorType() (v evaluator.EvaluatorTy
 	return
 }
 
+var BatchDebugEvaluatorRequest_EvaluatorRunConf_DEFAULT *evaluator.EvaluatorRunConfig
+
+func (p *BatchDebugEvaluatorRequest) GetEvaluatorRunConf() (v *evaluator.EvaluatorRunConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorRunConf() {
+		return BatchDebugEvaluatorRequest_EvaluatorRunConf_DEFAULT
+	}
+	return p.EvaluatorRunConf
+}
+
 var BatchDebugEvaluatorRequest_Base_DEFAULT *base.Base
 
 func (p *BatchDebugEvaluatorRequest) GetBase() (v *base.Base) {
@@ -11652,6 +11806,9 @@ func (p *BatchDebugEvaluatorRequest) SetInputData(val []*evaluator.EvaluatorInpu
 func (p *BatchDebugEvaluatorRequest) SetEvaluatorType(val evaluator.EvaluatorType) {
 	p.EvaluatorType = val
 }
+func (p *BatchDebugEvaluatorRequest) SetEvaluatorRunConf(val *evaluator.EvaluatorRunConfig) {
+	p.EvaluatorRunConf = val
+}
 func (p *BatchDebugEvaluatorRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -11661,11 +11818,16 @@ var fieldIDToName_BatchDebugEvaluatorRequest = map[int16]string{
 	2:   "evaluator_content",
 	3:   "input_data",
 	4:   "evaluator_type",
+	11:  "evaluator_run_conf",
 	255: "Base",
 }
 
 func (p *BatchDebugEvaluatorRequest) IsSetEvaluatorContent() bool {
 	return p.EvaluatorContent != nil
+}
+
+func (p *BatchDebugEvaluatorRequest) IsSetEvaluatorRunConf() bool {
+	return p.EvaluatorRunConf != nil
 }
 
 func (p *BatchDebugEvaluatorRequest) IsSetBase() bool {
@@ -11727,6 +11889,14 @@ func (p *BatchDebugEvaluatorRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetEvaluatorType = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -11841,6 +12011,14 @@ func (p *BatchDebugEvaluatorRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.EvaluatorType = _field
 	return nil
 }
+func (p *BatchDebugEvaluatorRequest) ReadField11(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorRunConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvaluatorRunConf = _field
+	return nil
+}
 func (p *BatchDebugEvaluatorRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -11870,6 +12048,10 @@ func (p *BatchDebugEvaluatorRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -11966,6 +12148,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *BatchDebugEvaluatorRequest) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorRunConf() {
+		if err = oprot.WriteFieldBegin("evaluator_run_conf", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvaluatorRunConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 func (p *BatchDebugEvaluatorRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -12011,6 +12211,9 @@ func (p *BatchDebugEvaluatorRequest) DeepEqual(ano *BatchDebugEvaluatorRequest) 
 	if !p.Field4DeepEqual(ano.EvaluatorType) {
 		return false
 	}
+	if !p.Field11DeepEqual(ano.EvaluatorRunConf) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -12047,6 +12250,13 @@ func (p *BatchDebugEvaluatorRequest) Field3DeepEqual(src []*evaluator.EvaluatorI
 func (p *BatchDebugEvaluatorRequest) Field4DeepEqual(src evaluator.EvaluatorType) bool {
 
 	if p.EvaluatorType != src {
+		return false
+	}
+	return true
+}
+func (p *BatchDebugEvaluatorRequest) Field11DeepEqual(src *evaluator.EvaluatorRunConfig) bool {
+
+	if !p.EvaluatorRunConf.DeepEqual(src) {
 		return false
 	}
 	return true
