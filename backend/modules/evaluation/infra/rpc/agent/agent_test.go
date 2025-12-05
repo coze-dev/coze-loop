@@ -34,7 +34,7 @@ func TestAgentAdapter_CallTraceAgent(t *testing.T) {
 			ctx := context.Background()
 			adapter, ctx := tt.setup(ctx)
 
-			result, err := adapter.CallTraceAgent(ctx, 123, "http://example.com")
+			result, err := adapter.CallTraceAgent(ctx, 123, "http://example.com", 0, 0)
 
 			if tt.wantErr {
 				assert.Error(t, err)
