@@ -39,18 +39,6 @@ type TraceProducerImpl struct {
 	producerProxy map[string]*producerProxy
 }
 
-func NewTraceProducerImpl(traceConfig config.ITraceConfig, mqFactory mq.IFactory) (mq2.ITraceProducer, error) {
-	var err error
-	traceProducerOnce.Do(func() {
-		singletonTraceProducer, err = newTraceProducerImpl(traceConfig, mqFactory)
-	})
-	if err != nil {
-		return nil, err
-	} else {
-		return singletonTraceProducer, nil
-	}
-}
-
 func (t *TraceProducerImpl) IngestSpans(ctx context.Context, td *entity.TraceData) error {
 	if t.producerProxy == nil || t.producerProxy[td.Tenant] == nil {
 		return errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode, errorx.WithExtraMsg("tenant producer not exist"))
@@ -84,6 +72,18 @@ func (t *TraceProducerImpl) IngestSpans(ctx context.Context, td *entity.TraceDat
 		}
 	}
 	return nil
+}
+
+func NewTraceProducerImpl(traceConfig config.ITraceConfig, mqFactory mq.IFactory) (mq2.ITraceProducer, error) {
+	var err error
+	traceProducerOnce.Do(func() {
+		singletonTraceProducer, err = newTraceProducerImpl(traceConfig, mqFactory)
+	})
+	if err != nil {
+		return nil, err
+	} else {
+		return singletonTraceProducer, nil
+	}
 }
 
 func newTraceProducerImpl(traceConfig config.ITraceConfig, mqFactory mq.IFactory) (mq2.ITraceProducer, error) {

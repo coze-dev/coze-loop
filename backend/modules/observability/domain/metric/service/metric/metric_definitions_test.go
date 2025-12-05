@@ -15,6 +15,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	consts "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/const"
 	generalmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	modelmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
 	servicemetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
@@ -204,6 +205,7 @@ func renderExpressions(t *testing.T, defs []entity.IMetricDefinition, gran entit
 		_ = def.Type()
 		_ = def.GroupBy()
 		_ = def.Source()
+		_ = def.OExpression()
 		_, _ = def.Where(context.Background(), f, nil)
 		res[def.Name()] = renderExpression(t, def, gran)
 	}
@@ -237,6 +239,77 @@ func expectedBaseExpression(name string, gran entity.MetricGranularity) (string,
 		return generator(gran), true
 	}
 	return "", false
+}
+
+// 额外覆盖：校验各 Wrapper 与复合指标、常量指标的行为
+func TestWrapperProperties(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	defs := []entity.IMetricDefinition{
+		modelmetrics.NewModelDurationMetric(),
+		servicemetrics.NewServiceDurationMetric(),
+	}
+	granularities := []entity.MetricGranularity{entity.MetricGranularity1Min, entity.MetricGranularity1Hour}
+
+	for _, def := range defs {
+		adapter, ok := def.(entity.IMetricAdapter)
+		require.True(t, ok)
+		wrappers := adapter.Wrappers()
+		require.NotEmpty(t, wrappers)
+		for _, w := range wrappers {
+			wrapped := w.Wrap(def)
+			// 名称后缀断言
+			name := wrapped.Name()
+			require.True(t, strings.HasPrefix(name, def.Name()))
+			require.True(t, strings.HasSuffix(name, "_avg") || strings.HasSuffix(name, "_min") || strings.HasSuffix(name, "_max") || strings.HasSuffix(name, "_pct50") || strings.HasSuffix(name, "_pct90") || strings.HasSuffix(name, "_pct99") || strings.HasSuffix(name, "_sum") || strings.HasSuffix(name, "_by_time"))
+			// 类型与表达式不为空
+			require.NotEmpty(t, wrapped.Type())
+			for _, gran := range granularities {
+				expr := wrapped.Expression(gran)
+				require.NotNil(t, expr)
+				require.NotEmpty(t, expr.Expression)
+			}
+			// OExpression 非空（用于离线计算）
+			require.NotNil(t, wrapped.OExpression())
+			// Where/GroupBy 可调用
+			f := spanfiltermocks.NewMockFilter(ctrl)
+			f.EXPECT().BuildLLMSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			f.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			_, _ = wrapped.Where(context.Background(), f, nil)
+			_ = wrapped.GroupBy()
+		}
+	}
+}
+
+func TestCompoundMetricsDefinition(t *testing.T) {
+	compoundDefs := []entity.IMetricDefinition{
+		generalmetrics.NewGeneralModelLatencyMetric(),
+		generalmetrics.NewGeneralToolLatencyMetric(),
+	}
+	for _, def := range compoundDefs {
+		compound, ok := def.(entity.IMetricCompound)
+		require.True(t, ok)
+		// 复合指标的运算符与子指标集合
+		require.Equal(t, entity.MetricOperatorDivide, compound.Operator())
+		subs := compound.GetMetrics()
+		require.Len(t, subs, 2)
+		// 子指标的表达式可渲染
+		for _, sub := range subs {
+			expr := sub.Expression(entity.MetricGranularity1Min)
+			require.NotNil(t, expr)
+		}
+	}
+}
+
+func TestConstMinuteMetric(t *testing.T) {
+	def := consts.NewConstMinuteMetric()
+	// 常量指标基本属性
+	require.Equal(t, entity.MetricTypeSummary, def.Type())
+	// 1min 粒度下表达式应为 "1"
+	expr := def.Expression(entity.MetricGranularity1Min)
+	require.NotNil(t, expr)
+	require.Equal(t, "1", expr.Expression)
 }
 
 var baseExpressionGenerators = map[string]func(entity.MetricGranularity) string{
