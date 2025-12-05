@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -144,6 +145,7 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 
 	// Build query parameters
 	listParam := &repo.ListSpansParam{
+		WorkSpaceID:        strconv.FormatInt(sub.t.WorkspaceID, 10),
 		Tenants:            tenants,
 		Filters:            h.buildSpanFilters(ctx, sub.t),
 		StartAt:            backfillTime.StartAt,
@@ -153,8 +155,11 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		NotQueryAnnotation: true, // No annotation query required during backfill
 	}
 
-	if sub.tr.BackfillDetail != nil && sub.tr.BackfillDetail.LastSpanPageToken != nil {
-		listParam.PageToken = *sub.tr.BackfillDetail.LastSpanPageToken
+	if sub.tr.BackfillDetail != nil && sub.tr.BackfillDetail.LastSpanPageToken != "" {
+		listParam.PageToken = sub.tr.BackfillDetail.LastSpanPageToken
+	}
+	if sub.tr.BackfillDetail == nil {
+		sub.tr.BackfillDetail = &entity.BackfillDetail{}
 	}
 
 	totalCount := int64(0)
@@ -174,6 +179,11 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		totalCount += int64(len(spans))
 		logs.CtxInfo(ctx, "Processed %d spans completed, total=%d, task_id=%d", len(spans), totalCount, sub.t.ID)
 
+		if pageToken != "" {
+			listParam.PageToken = pageToken
+			sub.tr.BackfillDetail.LastSpanPageToken = pageToken
+		}
+
 		// todo 不应该这里直接写po字段
 		err = h.taskRepo.UpdateTaskRunWithOCC(ctx, sub.tr.ID, sub.tr.WorkspaceID, map[string]interface{}{
 			"backfill_detail": ToJSONString(ctx, sub.tr.BackfillDetail),
@@ -188,14 +198,12 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 			if err = sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 				Task:     sub.t,
 				TaskRun:  sub.tr,
-				IsFinish: false,
+				IsFinish: false, // 任务可能同时有历史回溯和新任务，不能直接关闭
 			}); err != nil {
 				return err
 			}
 			return nil
 		}
-		listParam.PageToken = pageToken
-		sub.tr.BackfillDetail.LastSpanPageToken = &pageToken
 	}
 }
 
@@ -424,8 +432,6 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
 	for _, span := range spans {
 		// Execute processing logic according to the task type
-		logs.CtxInfo(ctx, "processing span for backfill, span_id=%s, trace_id=%s, task_id=%d",
-			span.SpanID, span.TraceID, sub.t.ID)
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		sampler := sub.t.Sampler
 		if taskCount+1 > sampler.SampleSize {

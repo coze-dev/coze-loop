@@ -51,6 +51,30 @@ func (p *ChatMessagePart) IsValid() error {
 			return fmt.Errorf("field ImageURL not valid, %w", err)
 		}
 	}
+	if p.VideoURL != nil {
+		if err := p.VideoURL.IsValid(); err != nil {
+			return fmt.Errorf("field VideoURL not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ChatMessageVideoURL) IsValid() error {
+	if p.Detail != nil {
+		if err := p.Detail.IsValid(); err != nil {
+			return fmt.Errorf("field Detail not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *VideoURLDetail) IsValid() error {
+	if p.Fps != nil {
+		if *p.Fps < float64(0.2) {
+			return fmt.Errorf("field Fps ge rule failed, current value: %v", *p.Fps)
+		}
+		if *p.Fps > float64(5) {
+			return fmt.Errorf("field Fps le rule failed, current value: %v", *p.Fps)
+		}
+	}
 	return nil
 }
 func (p *ChatMessageImageURL) IsValid() error {

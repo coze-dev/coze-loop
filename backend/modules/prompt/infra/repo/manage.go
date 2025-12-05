@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
 	metricsinfra "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql/convertor"
@@ -38,6 +39,7 @@ type ManageRepoImpl struct {
 	promptCommitDAO       mysql.IPromptCommitDAO
 	promptDraftDAO        mysql.IPromptUserDraftDAO
 	commitLabelMappingDAO mysql.ICommitLabelMappingDAO
+	promptRelationDAO     mysql.IPromptRelationDAO
 
 	promptBasicCacheDAO redis.IPromptBasicDAO
 	promptCacheDAO      redis.IPromptDAO
@@ -53,6 +55,7 @@ func NewManageRepo(
 	promptCommitDao mysql.IPromptCommitDAO,
 	promptDraftDao mysql.IPromptUserDraftDAO,
 	commitLabelMappingDAO mysql.ICommitLabelMappingDAO,
+	promptRelationDAO mysql.IPromptRelationDAO,
 	promptBasicCacheDAO redis.IPromptBasicDAO,
 	promptCacheDAO redis.IPromptDAO,
 ) repo.IManageRepo {
@@ -63,6 +66,7 @@ func NewManageRepo(
 		promptCommitDAO:       promptCommitDao,
 		promptDraftDAO:        promptDraftDao,
 		commitLabelMappingDAO: commitLabelMappingDAO,
+		promptRelationDAO:     promptRelationDAO,
 		promptBasicCacheDAO:   promptBasicCacheDAO,
 		promptCacheDAO:        promptCacheDAO,
 		promptCacheMetrics:    metricsinfra.NewPromptCacheMetrics(meter),
@@ -106,6 +110,46 @@ func (d *ManageRepoImpl) CreatePrompt(ctx context.Context, promptDO *entity.Prom
 			}
 		}
 
+		// Handle snippet relations if prompt contains snippets
+		if promptDO.PromptDraft != nil && promptDO.PromptDraft.PromptDetail != nil &&
+			promptDO.PromptDraft.PromptDetail.PromptTemplate != nil &&
+			promptDO.PromptDraft.PromptDetail.PromptTemplate.HasSnippets &&
+			len(promptDO.PromptDraft.PromptDetail.PromptTemplate.Snippets) > 0 {
+
+			snippets := promptDO.PromptDraft.PromptDetail.PromptTemplate.Snippets
+			relations := make([]*model.PromptRelation, 0, len(snippets))
+			relationIDs, err := d.idgen.GenMultiIDs(ctx, len(snippets))
+			if err != nil {
+				return err
+			}
+			for i, snippet := range snippets {
+				if snippet == nil {
+					continue
+				}
+				var snippetVersion string
+				if snippet.PromptCommit != nil && snippet.PromptCommit.CommitInfo != nil {
+					snippetVersion = snippet.PromptCommit.CommitInfo.Version
+				}
+
+				relation := &model.PromptRelation{
+					ID:                relationIDs[i],
+					SpaceID:           promptDO.SpaceID,
+					MainPromptID:      promptID,
+					MainPromptVersion: "", // Empty for draft
+					MainDraftUserID:   promptDO.PromptDraft.DraftInfo.UserID,
+					SubPromptID:       snippet.ID,
+					SubPromptVersion:  snippetVersion,
+				}
+				relations = append(relations, relation)
+			}
+
+			if len(relations) > 0 {
+				if err := d.promptRelationDAO.BatchCreate(ctx, relations, opt); err != nil {
+					return err
+				}
+			}
+		}
+
 		return nil
 	})
 }
@@ -121,7 +165,11 @@ func (d *ManageRepoImpl) DeletePrompt(ctx context.Context, promptID int64) (err 
 	if promptBasicPO == nil {
 		return errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("prompt is not found, prompt id = %d", promptID)))
 	}
-	err = d.promptBasicDAO.Delete(ctx, promptID)
+	err = d.promptBasicDAO.Delete(ctx, promptID, promptBasicPO.SpaceID)
+	if err != nil {
+		return err
+	}
+	err = d.promptRelationDAO.DeleteByMainPrompt(ctx, promptBasicPO.ID, "", "")
 	if err != nil {
 		return err
 	}
@@ -402,12 +450,20 @@ func (d *ManageRepoImpl) ListPrompt(ctx context.Context, param repo.ListPromptPa
 		return nil, errorx.New("param(SpaceID or PageNum or PageSize) is invalid, param = %s", json.Jsonify(param))
 	}
 
+	// Convert PromptType slice to string slice
+	var promptTypes []string
+	for _, pt := range param.FilterPromptTypes {
+		promptTypes = append(promptTypes, string(pt))
+	}
+
 	listBasicParam := mysql.ListPromptBasicParam{
 		SpaceID: param.SpaceID,
 
 		KeyWord:       param.KeyWord,
 		CreatedBys:    param.CreatedBys,
 		CommittedOnly: param.CommittedOnly,
+		PromptTypes:   promptTypes,
+		PromptIDs:     param.PromptIDs,
 
 		Offset:  (param.PageNum - 1) * param.PageSize,
 		Limit:   param.PageSize,
@@ -528,6 +584,12 @@ func (d *ManageRepoImpl) SaveDraft(ctx context.Context, promptDO *entity.Prompt)
 				draftInfo = convertor.DraftPO2DO(createdDraftPO).DraftInfo
 			}
 
+			// 使用统一的方法管理 snippet relations（无需区分创建/更新场景）
+			err = d.manageDraftSnippetRelations(ctx, promptDO, userID, basicPO.SpaceID, opt)
+			if err != nil {
+				return err
+			}
+
 			return nil
 		}
 
@@ -561,6 +623,13 @@ func (d *ManageRepoImpl) SaveDraft(ctx context.Context, promptDO *entity.Prompt)
 			draftInfo = convertor.DraftPO2DO(updatedDraftPO).DraftInfo
 		}
 
+		// Handle snippet relationships incrementally for update scenario
+		// 使用统一的方法管理 snippet relations（无需区分创建/更新场景）
+		err = d.manageDraftSnippetRelations(ctx, promptDO, userID, basicPO.SpaceID, opt)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -568,6 +637,123 @@ func (d *ManageRepoImpl) SaveDraft(ctx context.Context, promptDO *entity.Prompt)
 	}
 
 	return draftInfo, nil
+}
+
+// manageDraftSnippetRelations统一管理snippet关系，统一处理创建和更新场景
+// 只要has_snippets为true，就查询已有的relation，和当前草稿嵌入的片段对比，
+// 判断哪些需要增加，哪些需要删除，哪些保持不动
+func (d *ManageRepoImpl) manageDraftSnippetRelations(ctx context.Context, promptDO *entity.Prompt, userID string, spaceID int64, opt db.Option) error {
+	if promptDO == nil || promptDO.PromptDraft == nil || promptDO.PromptDraft.PromptDetail == nil {
+		return nil
+	}
+
+	promptDetail := promptDO.PromptDraft.PromptDetail
+	if promptDetail.PromptTemplate == nil {
+		return nil
+	}
+
+	hasSnippets := promptDetail.PromptTemplate.HasSnippets
+
+	// 如果没有片段，删除所有现有关系
+	if !hasSnippets {
+		return d.promptRelationDAO.DeleteByMainPrompt(ctx, promptDO.ID, "", userID, opt)
+	}
+
+	// 统一处理：查询已有的relation，和当前草稿嵌入的片段对比
+	// 判断哪些需要增加，哪些需要删除，哪些保持不动
+
+	// 获取当前草稿中嵌入的片段引用（包含版本信息）
+	currentSnippetRefs := make(map[service.SnippetReference]bool)
+	if promptDetail.PromptTemplate.Snippets != nil {
+		for _, snippet := range promptDetail.PromptTemplate.Snippets {
+			if snippet != nil && snippet.ID > 0 {
+				// 从snippet中获取版本信息
+				var version string
+				if snippet.PromptCommit != nil && snippet.PromptCommit.CommitInfo != nil {
+					version = snippet.PromptCommit.CommitInfo.Version
+				}
+				currentSnippetRefs[service.SnippetReference{
+					PromptID:      snippet.ID,
+					CommitVersion: version,
+				}] = true
+			}
+		}
+	}
+
+	// 查询已有的relation
+	existingRelations, err := d.promptRelationDAO.List(ctx, mysql.ListPromptRelationParam{
+		MainPromptID:    &promptDO.ID,
+		MainDraftUserID: &userID,
+	}, opt)
+	if err != nil {
+		return err
+	}
+
+	// 构建现有关系的复合key映射
+	existingRelationMap := make(map[service.SnippetReference]*model.PromptRelation)
+	for _, relation := range existingRelations {
+		key := service.SnippetReference{
+			PromptID:      relation.SubPromptID,
+			CommitVersion: relation.SubPromptVersion,
+		}
+		existingRelationMap[key] = relation
+	}
+
+	// 确定需要删除和添加的关系
+	var relationsToDelete []int64
+	var relationsToAdd []service.SnippetReference
+
+	// 找出需要删除的关系（存在于DB但不在当前片段中）
+	for key, existingRelation := range existingRelationMap {
+		if !currentSnippetRefs[key] {
+			relationsToDelete = append(relationsToDelete, existingRelation.ID)
+		}
+	}
+
+	// 找出需要添加的关系（存在于当前片段但不在DB中）
+	for ref := range currentSnippetRefs {
+		if _, exists := existingRelationMap[ref]; !exists {
+			relationsToAdd = append(relationsToAdd, ref)
+		}
+	}
+
+	// 删除不再需要的关系
+	if len(relationsToDelete) > 0 {
+		err = d.promptRelationDAO.BatchDeleteByIDs(ctx, relationsToDelete, opt)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 添加新的关系
+	if len(relationsToAdd) > 0 {
+		ids, err := d.idgen.GenMultiIDs(ctx, len(relationsToAdd))
+		if err != nil {
+			return err
+		}
+		var newRelationPOs []*model.PromptRelation
+		for i, ref := range relationsToAdd {
+			relationPO := &model.PromptRelation{
+				ID:                ids[i],
+				SpaceID:           spaceID,
+				MainPromptID:      promptDO.ID,
+				MainPromptVersion: "", // Empty for draft
+				MainDraftUserID:   userID,
+				SubPromptID:       ref.PromptID,
+				SubPromptVersion:  ref.CommitVersion,
+			}
+			newRelationPOs = append(newRelationPOs, relationPO)
+		}
+
+		if len(newRelationPOs) > 0 {
+			err = d.promptRelationDAO.BatchCreate(ctx, newRelationPOs, opt)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (d *ManageRepoImpl) CommitDraft(ctx context.Context, param repo.CommitDraftParam) (err error) {
@@ -632,9 +818,63 @@ func (d *ManageRepoImpl) CommitDraft(ctx context.Context, param repo.CommitDraft
 		err = d.promptBasicDAO.Update(ctx, basicPO.ID, map[string]interface{}{
 			q.PromptBasic.LatestCommitTime.ColumnName().String(): timeNow,
 			q.PromptBasic.LatestVersion.ColumnName().String():    param.CommitVersion,
+			q.PromptBasic.UpdatedBy.ColumnName().String():        param.UserID,
 		}, opt)
 		if err != nil {
 			return err
+		}
+
+		// 只有在草稿包含snippet时才处理relation拷贝
+		if draftDO.PromptDetail != nil && draftDO.PromptDetail.PromptTemplate != nil &&
+			draftDO.PromptDetail.PromptTemplate.HasSnippets {
+
+			// 拷贝草稿的relation到提交版本
+			// 1. 查询草稿的所有relation
+			draftRelations, err := d.promptRelationDAO.List(ctx, mysql.ListPromptRelationParam{
+				MainPromptID:    &param.PromptID,
+				MainDraftUserID: &param.UserID,
+			}, opt)
+			if err != nil {
+				return err
+			}
+
+			// 2. 如果有草稿relation，拷贝到提交版本
+			if len(draftRelations) > 0 {
+				relationIDs, err := d.idgen.GenMultiIDs(ctx, len(draftRelations))
+				if err != nil {
+					return err
+				}
+
+				var commitRelations []*model.PromptRelation
+				for i, draftRelation := range draftRelations {
+					commitRelation := &model.PromptRelation{
+						ID:                relationIDs[i],
+						SpaceID:           draftRelation.SpaceID,
+						MainPromptID:      draftRelation.MainPromptID,
+						MainPromptVersion: param.CommitVersion, // 使用提交版本号
+						MainDraftUserID:   "",                  // 提交版本没有草稿用户ID
+						SubPromptID:       draftRelation.SubPromptID,
+						SubPromptVersion:  draftRelation.SubPromptVersion,
+					}
+					commitRelations = append(commitRelations, commitRelation)
+				}
+
+				// 批量创建提交版本的relation
+				err = d.promptRelationDAO.BatchCreate(ctx, commitRelations, opt)
+				if err != nil {
+					return err
+				}
+
+				// 3. 删除草稿的relation
+				draftRelationIDs := make([]int64, 0, len(draftRelations))
+				for _, relation := range draftRelations {
+					draftRelationIDs = append(draftRelationIDs, relation.ID)
+				}
+				err = d.promptRelationDAO.BatchDeleteByIDs(ctx, draftRelationIDs, opt)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		// 提交版本绑定label
@@ -736,9 +976,109 @@ func (d *ManageRepoImpl) ListCommitInfo(ctx context.Context, param repo.ListComm
 	commitInfoDOs := convertor.BatchGetCommitInfoDOFromCommitDO(commitDOs)
 	if len(commitPOs) <= param.PageSize {
 		result.CommitInfoDOs = commitInfoDOs
+		result.CommitDOs = commitDOs
 		return result, nil
 	}
-	result.NextPageToken = commitPOs[param.PageSize].ID
+	result.NextPageToken = commitPOs[param.PageSize].CreatedAt.Unix()
 	result.CommitInfoDOs = commitInfoDOs[:len(commitPOs)-1]
+	result.CommitDOs = commitDOs[:len(commitPOs)-1]
+	return result, nil
+}
+
+func (d *ManageRepoImpl) MGetVersionsByPromptID(ctx context.Context, promptID int64) ([]string, error) {
+	if promptID <= 0 {
+		return nil, errorx.New("promptID is invalid, promptID = %d", promptID)
+	}
+
+	versions, err := d.promptCommitDAO.MGetVersionsByPromptID(ctx, promptID)
+	if err != nil {
+		return nil, err
+	}
+	return versions, nil
+}
+
+func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListParentPromptParam) (result map[string][]*repo.PromptCommitVersions, err error) {
+	if param.SubPromptID <= 0 {
+		return nil, errorx.New("param(SubPromptID) is invalid, param = %s", json.Jsonify(param))
+	}
+
+	// Query prompt relations by sub-prompt ID
+	listRelationParam := mysql.ListPromptRelationParam{
+		SubPromptID:       &param.SubPromptID,
+		SubPromptVersions: param.SubPromptVersions,
+	}
+
+	relations, err := d.promptRelationDAO.List(ctx, listRelationParam)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(relations) == 0 {
+		return nil, nil
+	}
+
+	// Group relations by sub-prompt version
+	relationsBySubVersion := make(map[string][]*model.PromptRelation)
+	for _, relation := range relations {
+		// filer draft
+		if relation.MainPromptVersion == "" {
+			continue
+		}
+		subVersion := relation.SubPromptVersion
+		relationsBySubVersion[subVersion] = append(relationsBySubVersion[subVersion], relation)
+	}
+
+	// Collect all main prompt IDs to batch query
+	getMainPromptPram := make([]repo.GetPromptParam, 0)
+	mainPromptMap := make(map[int64]bool)
+	for _, relations := range relationsBySubVersion {
+		for _, relation := range relations {
+			if !mainPromptMap[relation.MainPromptID] {
+				mainPromptMap[relation.MainPromptID] = true
+				getMainPromptPram = append(getMainPromptPram, repo.GetPromptParam{
+					PromptID: relation.MainPromptID,
+				})
+			}
+		}
+	}
+
+	// Query all main prompt basic info
+	mainPromptBasics, err := d.MGetPrompt(ctx, getMainPromptPram)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(mainPromptBasics) <= 0 {
+		return nil, nil
+	}
+
+	// Build result map
+	result = make(map[string][]*repo.PromptCommitVersions)
+	// Organize results by sub-prompt version
+	for subVersion, relations := range relationsBySubVersion {
+		promptCommitVersions := make([]*repo.PromptCommitVersions, 0, len(mainPromptBasics))
+
+		for _, prompt := range mainPromptBasics {
+			promptCommitVersion := &repo.PromptCommitVersions{
+				PromptID:    prompt.ID,
+				SpaceID:     prompt.SpaceID,
+				PromptKey:   prompt.PromptKey,
+				PromptBasic: prompt.PromptBasic,
+			}
+			for _, relation := range relations {
+				if prompt.ID == relation.MainPromptID {
+					promptCommitVersion.CommitVersions = append(promptCommitVersion.CommitVersions, relation.MainPromptVersion)
+				}
+			}
+			if len(promptCommitVersion.CommitVersions) > 0 {
+				promptCommitVersions = append(promptCommitVersions, promptCommitVersion)
+			}
+		}
+
+		if len(promptCommitVersions) > 0 {
+			result[subVersion] = promptCommitVersions
+		}
+	}
+
 	return result, nil
 }

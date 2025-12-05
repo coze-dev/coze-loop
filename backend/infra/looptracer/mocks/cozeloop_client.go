@@ -54,6 +54,46 @@ func (mr *MockClientMockRecorder) Close(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockClient)(nil).Close), ctx)
 }
 
+// Execute mocks base method.
+func (m *MockClient) Execute(ctx context.Context, param *entity.ExecuteParam, options ...cozeloop.ExecuteOption) (entity.ExecuteResult, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, param}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Execute", varargs...)
+	ret0, _ := ret[0].(entity.ExecuteResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Execute indicates an expected call of Execute.
+func (mr *MockClientMockRecorder) Execute(ctx, param any, options ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, param}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockClient)(nil).Execute), varargs...)
+}
+
+// ExecuteStreaming mocks base method.
+func (m *MockClient) ExecuteStreaming(ctx context.Context, param *entity.ExecuteParam, options ...cozeloop.ExecuteStreamingOption) (entity.StreamReader[entity.ExecuteResult], error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, param}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExecuteStreaming", varargs...)
+	ret0, _ := ret[0].(entity.StreamReader[entity.ExecuteResult])
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecuteStreaming indicates an expected call of ExecuteStreaming.
+func (mr *MockClientMockRecorder) ExecuteStreaming(ctx, param any, options ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, param}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteStreaming", reflect.TypeOf((*MockClient)(nil).ExecuteStreaming), varargs...)
+}
+
 // Flush mocks base method.
 func (m *MockClient) Flush(ctx context.Context) {
 	m.ctrl.T.Helper()

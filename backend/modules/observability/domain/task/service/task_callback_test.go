@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -18,6 +19,7 @@ import (
 	tenant_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	trace_repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
@@ -47,6 +49,12 @@ func TestTaskCallbackServiceImpl_CallBackSuccess(t *testing.T) {
 	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
 	mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7)).AnyTimes()
+	mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+		ID: 101,
+		SpanFilter: &entity.SpanFilterFields{
+			PlatformType: loop_span.PlatformType("callback_all"),
+		},
+	}, nil).AnyTimes()
 
 	now := time.Now()
 	span := &loop_span.Span{
@@ -102,12 +110,14 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 	mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
 	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
 	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 
 	impl := &TaskCallbackServiceImpl{
 		benefitSvc:     mockBenefit,
 		tenantProvider: mockTenant,
 		traceRepo:      mockTraceRepo,
+		taskRepo:       mockTaskRepo,
 		config:         mockConfig,
 	}
 
@@ -115,6 +125,13 @@ func TestTraceHubServiceImpl_CallBackSpanNotFound(t *testing.T) {
 	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
 	mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7)).AnyTimes()
 	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{}, nil).AnyTimes()
+	// 添加缺失的GetTask期望
+	mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+		ID: 101,
+		SpanFilter: &entity.SpanFilterFields{
+			PlatformType: loop_span.PlatformType("callback_all"),
+		},
+	}, nil).AnyTimes()
 
 	event := &entity.AutoEvalEvent{
 		TurnEvalResults: []*entity.OnlineExptTurnEvalResult{
@@ -314,5 +331,355 @@ func TestTaskCallbackServiceImpl_updateTaskRunDetailsCount(t *testing.T) {
 		impl := &TaskCallbackServiceImpl{}
 		err := impl.updateTaskRunDetailsCount(ctx, taskID, &entity.OnlineExptTurnEvalResult{Ext: map[string]string{"run_id": "abc"}}, 0)
 		require.Error(t, err)
+	})
+}
+
+func TestTaskCallbackServiceImpl_AutoEvalCorrection(t *testing.T) {
+	t.Parallel()
+
+	t.Run("auto eval correction success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
+		mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+
+		impl := &TaskCallbackServiceImpl{
+			benefitSvc:     mockBenefit,
+			tenantProvider: mockTenant,
+			traceRepo:      mockTraceRepo,
+			taskRepo:       mockTaskRepo,
+			config:         mockConfig,
+		}
+
+		// Set up expectations
+		mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+		mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+			ID: 101,
+			SpanFilter: &entity.SpanFilterFields{
+				PlatformType: loop_span.PlatformType("callback_all"),
+			},
+		}, nil).AnyTimes()
+
+		now := time.Now()
+		span := &loop_span.Span{
+			SpanID:           "span-1",
+			TraceID:          "trace-1",
+			SystemTagsString: map[string]string{loop_span.SpanFieldTenant: "tenant"},
+			LogicDeleteTime:  now.Add(24 * time.Hour).UnixMicro(),
+			StartTime:        now.UnixMicro(),
+		}
+
+		mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil).AnyTimes()
+
+		annotations := loop_span.AnnotationList{
+			{
+				ID:             "anno-1",
+				SpanID:         "span-1",
+				TraceID:        "trace-1",
+				WorkspaceID:    "1",
+				StartTime:      now,
+				AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+				Metadata: loop_span.AutoEvaluateMetadata{
+					TaskID:             101,
+					EvaluatorRecordID:  123,
+					EvaluatorVersionID: 1,
+				},
+			},
+		}
+
+		mockTraceRepo.EXPECT().ListAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListAnnotationsParam{})).Return(annotations, nil).AnyTimes()
+		mockTraceRepo.EXPECT().InsertAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.InsertAnnotationParam{})).Return(nil).AnyTimes()
+
+		event := &entity.CorrectionEvent{
+			EvaluatorRecordID: 123,
+			EvaluatorResult: &entity.EvaluatorResult{
+				Correction: &entity.Correction{
+					Score:   0.95,
+					Explain: "Corrected score",
+				},
+			},
+			Ext: map[string]string{
+				"workspace_id": "1",
+				"span_id":      "span-1",
+				"trace_id":     "trace-1",
+				"start_time":   strconv.FormatInt(now.UnixMilli()*1000, 10),
+				"task_id":      "101",
+			},
+			CreatedAt: now.Unix(),
+			UpdatedAt: now.Unix(),
+		}
+
+		err := impl.AutoEvalCorrection(context.Background(), event)
+		assert.NoError(t, err)
+	})
+
+	t.Run("auto eval correction with missing workspace", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
+		mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+
+		impl := &TaskCallbackServiceImpl{
+			benefitSvc:     mockBenefit,
+			tenantProvider: mockTenant,
+			traceRepo:      mockTraceRepo,
+			taskRepo:       mockTaskRepo,
+			config:         mockConfig,
+		}
+
+		event := &entity.CorrectionEvent{
+			EvaluatorRecordID: 123,
+			EvaluatorResult: &entity.EvaluatorResult{
+				Correction: &entity.Correction{
+					Score:   0.95,
+					Explain: "Corrected score",
+				},
+			},
+			Ext: map[string]string{
+				// Missing workspace_id
+				"span_id":    "span-1",
+				"trace_id":   "trace-1",
+				"start_time": strconv.FormatInt(time.Now().UnixMilli()*1000, 10),
+				"task_id":    "101",
+			},
+		}
+
+		err := impl.AutoEvalCorrection(context.Background(), event)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "workspace_id is empty")
+	})
+
+	t.Run("auto eval correction span not found", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
+		mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+
+		impl := &TaskCallbackServiceImpl{
+			benefitSvc:     mockBenefit,
+			tenantProvider: mockTenant,
+			traceRepo:      mockTraceRepo,
+			taskRepo:       mockTaskRepo,
+			config:         mockConfig,
+		}
+
+		// Set up expectations
+		mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+		mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+			ID: 101,
+			SpanFilter: &entity.SpanFilterFields{
+				PlatformType: loop_span.PlatformType("callback_all"),
+			},
+		}, nil).AnyTimes()
+
+		mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{}, nil).AnyTimes()
+
+		now := time.Now()
+		event := &entity.CorrectionEvent{
+			EvaluatorRecordID: 123,
+			EvaluatorResult: &entity.EvaluatorResult{
+				Correction: &entity.Correction{
+					Score:   0.95,
+					Explain: "Corrected score",
+				},
+			},
+			Ext: map[string]string{
+				"workspace_id": "1",
+				"span_id":      "span-1",
+				"trace_id":     "trace-1",
+				"start_time":   strconv.FormatInt(now.UnixMilli()*1000, 10),
+				"task_id":      "101",
+			},
+			CreatedAt: now.Unix(),
+			UpdatedAt: now.Unix(),
+		}
+
+		err := impl.AutoEvalCorrection(context.Background(), event)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "span not found")
+	})
+
+	t.Run("auto eval correction annotation not found", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
+		mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+
+		impl := &TaskCallbackServiceImpl{
+			benefitSvc:     mockBenefit,
+			tenantProvider: mockTenant,
+			traceRepo:      mockTraceRepo,
+			taskRepo:       mockTaskRepo,
+			config:         mockConfig,
+		}
+
+		// Set up expectations
+		mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+		mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+			ID: 101,
+			SpanFilter: &entity.SpanFilterFields{
+				PlatformType: loop_span.PlatformType("callback_all"),
+			},
+		}, nil).AnyTimes()
+
+		now := time.Now()
+		span := &loop_span.Span{
+			SpanID:           "span-1",
+			TraceID:          "trace-1",
+			SystemTagsString: map[string]string{loop_span.SpanFieldTenant: "tenant"},
+			LogicDeleteTime:  now.Add(24 * time.Hour).UnixMicro(),
+			StartTime:        now.UnixMicro(),
+		}
+
+		mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil).AnyTimes()
+
+		// Return empty annotations
+		mockTraceRepo.EXPECT().ListAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListAnnotationsParam{})).Return(loop_span.AnnotationList{}, nil).AnyTimes()
+
+		event := &entity.CorrectionEvent{
+			EvaluatorRecordID: 123,
+			EvaluatorResult: &entity.EvaluatorResult{
+				Correction: &entity.Correction{
+					Score:   0.95,
+					Explain: "Corrected score",
+				},
+			},
+			Ext: map[string]string{
+				"workspace_id": "1",
+				"span_id":      "span-1",
+				"trace_id":     "trace-1",
+				"start_time":   strconv.FormatInt(now.UnixMilli()*1000, 10),
+				"task_id":      "101",
+			},
+			CreatedAt: now.Unix(),
+			UpdatedAt: now.Unix(),
+		}
+
+		err := impl.AutoEvalCorrection(context.Background(), event)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "annotation not found")
+	})
+
+	t.Run("auto eval correction with insert error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
+		mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+
+		impl := &TaskCallbackServiceImpl{
+			benefitSvc:     mockBenefit,
+			tenantProvider: mockTenant,
+			traceRepo:      mockTraceRepo,
+			taskRepo:       mockTaskRepo,
+			config:         mockConfig,
+		}
+
+		// Set up expectations
+		mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+		mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+			ID: 101,
+			SpanFilter: &entity.SpanFilterFields{
+				PlatformType: loop_span.PlatformType("callback_all"),
+			},
+		}, nil).AnyTimes()
+
+		now := time.Now()
+		span := &loop_span.Span{
+			SpanID:           "span-1",
+			TraceID:          "trace-1",
+			SystemTagsString: map[string]string{loop_span.SpanFieldTenant: "tenant"},
+			LogicDeleteTime:  now.Add(24 * time.Hour).UnixMicro(),
+			StartTime:        now.UnixMicro(),
+		}
+
+		mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil).AnyTimes()
+
+		annotations := loop_span.AnnotationList{
+			{
+				ID:             "anno-1",
+				SpanID:         "span-1",
+				TraceID:        "trace-1",
+				WorkspaceID:    "1",
+				StartTime:      now,
+				AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+				Metadata: loop_span.AutoEvaluateMetadata{
+					TaskID:             101,
+					EvaluatorRecordID:  123,
+					EvaluatorVersionID: 1,
+				},
+			},
+		}
+
+		mockTraceRepo.EXPECT().ListAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListAnnotationsParam{})).Return(annotations, nil).AnyTimes()
+		mockTraceRepo.EXPECT().InsertAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.InsertAnnotationParam{})).Return(assert.AnError).AnyTimes()
+
+		event := &entity.CorrectionEvent{
+			EvaluatorRecordID: 123,
+			EvaluatorResult: &entity.EvaluatorResult{
+				Correction: &entity.Correction{
+					Score:   0.95,
+					Explain: "Corrected score",
+				},
+			},
+			Ext: map[string]string{
+				"workspace_id": "1",
+				"span_id":      "span-1",
+				"trace_id":     "trace-1",
+				"start_time":   strconv.FormatInt(now.UnixMilli()*1000, 10),
+				"task_id":      "101",
+			},
+			CreatedAt: now.Unix(),
+			UpdatedAt: now.Unix(),
+		}
+
+		err := impl.AutoEvalCorrection(context.Background(), event)
+		assert.NoError(t, err) // Should not return error, just log it
+	})
+}
+
+func TestNewTaskCallbackServiceImpl(t *testing.T) {
+	t.Parallel()
+
+	t.Run("new task callback service impl", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		t.Cleanup(ctrl.Finish)
+
+		mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
+		mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+		mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+		mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+		mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+
+		taskProcessor := processor.NewTaskProcessor()
+		impl := NewTaskCallbackServiceImpl(
+			mockTaskRepo,
+			mockTraceRepo,
+			*taskProcessor, // taskProcessor (dereference pointer)
+			mockTenant,
+			mockConfig,
+			mockBenefit,
+		)
+
+		assert.NotNil(t, impl)
 	})
 }

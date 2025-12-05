@@ -25,9 +25,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	mq3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
 	metric_general "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	metric_model "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
@@ -66,6 +69,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	obstorage "github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -88,9 +92,8 @@ var (
 	traceDomainSet = wire.NewSet(
 		service.NewTraceServiceImpl,
 		service.NewTraceExportServiceImpl,
-		obrepo.NewTraceCKRepoImpl,
-		ckdao.NewSpansCkDaoImpl,
-		ckdao.NewAnnotationCkDaoImpl,
+		provideTraceRepo,
+		obstorage.NewTraceStorageProvider,
 		obmetrics.NewTraceMetricsImpl,
 		obcollector.NewEventCollectorProvider,
 		mq2.NewTraceProducerImpl,
@@ -119,9 +122,7 @@ var (
 	traceIngestionSet = wire.NewSet(
 		NewIngestionApplication,
 		service.NewIngestionServiceImpl,
-		obrepo.NewTraceCKRepoImpl,
-		ckdao.NewSpansCkDaoImpl,
-		ckdao.NewAnnotationCkDaoImpl,
+		provideTraceRepo,
 		obconfig.NewTraceConfigCenter,
 		NewTraceConfigLoader,
 		NewIngestionCollectorFactory,
@@ -146,18 +147,56 @@ var (
 	metricsSet = wire.NewSet(
 		NewMetricApplication,
 		metric_service.NewMetricsService,
-		obrepo.NewTraceMetricCKRepoImpl,
+		provideTraceMetricRepo,
 		tenant.NewTenantProvider,
 		auth.NewAuthProvider,
 		NewTraceConfigLoader,
 		NewTraceProcessorBuilder,
 		obconfig.NewTraceConfigCenter,
 		NewMetricDefinitions,
-		ckdao.NewSpansCkDaoImpl,
-		ckdao.NewAnnotationCkDaoImpl,
 		file.NewFileRPCProvider,
 	)
 )
+
+func provideTraceRepo(
+	traceConfig config.ITraceConfig,
+	storageProvider storage.IStorageProvider,
+	spanRedisDao redis2.ISpansRedisDao,
+	ckProvider ck.Provider,
+	spanProducer mq3.ISpanProducer,
+) (repo.ITraceRepo, error) {
+	options, err := buildTraceRepoOptions(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, options...)
+}
+
+func provideTraceMetricRepo(
+	traceConfig config.ITraceConfig,
+	storageProvider storage.IStorageProvider,
+	ckProvider ck.Provider,
+) (metric_repo.IMetricRepo, error) {
+	options, err := buildTraceRepoOptions(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	return obrepo.NewTraceMetricCKRepoImpl(traceConfig, storageProvider, options...)
+}
+
+func buildTraceRepoOptions(ckProvider ck.Provider) ([]obrepo.TraceRepoOption, error) {
+	ckSpanDao, err := ckdao.NewSpansCkDaoImpl(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	ckAnnoDao, err := ckdao.NewAnnotationCkDaoImpl(ckProvider)
+	if err != nil {
+		return nil, err
+	}
+	return []obrepo.TraceRepoOption{
+		obrepo.WithTraceStorageDaos(ckdao.TraceStorageTypeCK, ckSpanDao, ckAnnoDao),
+	}, nil
+}
 
 func NewTaskLocker(cmdable redis.Cmdable) lock.ILocker {
 	return lock.NewRedisLockerWithHolder(cmdable, "observability")
@@ -289,7 +328,8 @@ func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor,
 	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo,
 ) *task_processor.TaskProcessor {
 	taskProcessor := task_processor.NewTaskProcessor()
-	taskProcessor.Register(task_entity.TaskTypeAutoEval, task_processor.NewAutoEvaluteProcessor(0, datasetServiceProvider, evalService, evaluationService, taskRepo))
+	taskProcessor.Register(task_entity.TaskTypeAutoEval, task_processor.NewAutoEvaluateProcessor(
+		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &task_processor.EvalTargetBuilderImpl{}))
 	return taskProcessor
 }
 
@@ -350,6 +390,7 @@ func InitOpenAPIApplication(
 
 func InitMetricApplication(
 	ckDb ck.Provider,
+	storageProvider storage.IStorageProvider,
 	configFactory conf.IConfigLoaderFactory,
 	fileClient fileservice.Client,
 	benefit benefit.IBenefitService,
@@ -361,6 +402,7 @@ func InitMetricApplication(
 
 func InitTraceIngestionApplication(
 	configFactory conf.IConfigLoaderFactory,
+	storageProvider storage.IStorageProvider,
 	ckDb ck.Provider,
 	mqFactory mq.IFactory,
 	persistentCmdable redis.PersistentCmdable,

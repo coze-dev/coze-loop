@@ -1,8 +1,6 @@
 module github.com/coze-dev/coze-loop/backend
 
-go 1.24.1
-
-toolchain go1.24.6
+go 1.24.6
 
 replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
 
@@ -17,9 +15,9 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/baidubce/bce-qianfan-sdk/go/qianfan v0.0.15
-	github.com/bytedance/gg v1.0.0
+	github.com/bytedance/gg v1.1.0
 	github.com/bytedance/gopkg v0.1.3
-	github.com/bytedance/sonic v1.14.1
+	github.com/bytedance/sonic v1.14.2
 	github.com/cenk/backoff v2.2.1+incompatible
 	github.com/cloudwego/eino v0.3.55
 	github.com/cloudwego/eino-ext/components/model/ark v0.1.8
@@ -32,13 +30,12 @@ require (
 	github.com/cloudwego/eino-ext/components/model/qianfan v0.0.0-20250520101807-b2008771903a
 	github.com/cloudwego/eino-ext/components/model/qwen v0.0.0-20250520101807-b2008771903a
 	github.com/cloudwego/eino-ext/libs/acl/openai v0.0.0-20250519084852-38fafa73d9ea
-	github.com/cloudwego/gopkg v0.1.4
+	github.com/cloudwego/gopkg v0.1.6
 	github.com/cloudwego/hertz v0.10.1
-	github.com/cloudwego/kitex v0.13.1
+	github.com/cloudwego/kitex v0.15.2
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
-	github.com/coze-dev/cozeloop-go v0.1.10-0.20250901062520-61d3699b1e83
-	github.com/coze-dev/cozeloop-go/spec v0.1.4-0.20250829072213-3812ddbfb735
+	github.com/coze-dev/cozeloop-go/spec v0.1.6
 	github.com/deatil/go-encoding v1.0.3003
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/dolthub/go-mysql-server v0.18.0
@@ -77,18 +74,18 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cast v1.7.1
 	github.com/spf13/viper v1.20.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/vincent-petithory/dataurl v1.0.0
 	github.com/volcengine/volcengine-go-sdk v1.1.4
 	github.com/xeipuuv/gojsonschema v1.2.0
-	go.opentelemetry.io/proto/otlp v1.7.1
+	go.opentelemetry.io/proto/otlp v1.9.0
 	go.uber.org/mock v0.4.0
-	golang.org/x/crypto v0.40.0
+	golang.org/x/crypto v0.41.0
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
 	golang.org/x/sync v0.16.0
-	golang.org/x/text v0.27.0
-	gonum.org/v1/gonum v0.15.0
+	golang.org/x/text v0.28.0
+	gonum.org/v1/gonum v0.16.0
 	google.golang.org/api v0.215.0
 	gorm.io/datatypes v1.2.5
 	gorm.io/driver/clickhouse v0.6.1
@@ -99,9 +96,13 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
+require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
 
-require github.com/brianvoe/gofakeit/v6 v6.28.0
+require (
+	github.com/brianvoe/gofakeit/v6 v6.28.0
+	github.com/coze-dev/coze-loop/backend/modules/observability/lib v0.0.0-00010101000000-000000000000
+	github.com/coze-dev/cozeloop-go v0.1.16
+)
 
 require (
 	cloud.google.com/go v0.116.0 // indirect
@@ -132,19 +133,18 @@ require (
 	github.com/baidubce/bce-sdk-go v0.9.164 // indirect
 	github.com/bluele/gcache v0.0.2 // indirect
 	github.com/bufbuild/protocompile v0.8.0 // indirect
-	github.com/bytedance/sonic/loader v0.3.0 // indirect
+	github.com/bytedance/sonic/loader v0.4.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/cloudwego/configmanager v0.2.3 // indirect
-	github.com/cloudwego/dynamicgo v0.6.2 // indirect
+	github.com/cloudwego/dynamicgo v0.7.0 // indirect
 	github.com/cloudwego/fastpb v0.0.5 // indirect
-	github.com/cloudwego/frugal v0.2.5 // indirect
-	github.com/cloudwego/iasm v0.2.0 // indirect
+	github.com/cloudwego/frugal v0.3.0 // indirect
 	github.com/cloudwego/localsession v0.1.2 // indirect
-	github.com/cloudwego/netpoll v0.7.0 // indirect
+	github.com/cloudwego/netpoll v0.7.2 // indirect
 	github.com/cloudwego/runtimex v0.1.1 // indirect
-	github.com/cloudwego/thriftgo v0.4.1 // indirect
+	github.com/cloudwego/thriftgo v0.4.3 // indirect
 	github.com/cohesion-org/deepseek-go v1.2.8 // indirect
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -238,23 +238,23 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.54.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.54.0 // indirect
-	go.opentelemetry.io/otel v1.36.0
-	go.opentelemetry.io/otel/metric v1.36.0 // indirect
-	go.opentelemetry.io/otel/trace v1.36.0 // indirect
+	go.opentelemetry.io/otel v1.38.0 // indirect
+	go.opentelemetry.io/otel/metric v1.38.0 // indirect
+	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/arch v0.15.0 // indirect
-	golang.org/x/mod v0.25.0 // indirect
-	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
-	golang.org/x/tools v0.34.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250728155136-f173205681a0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250728155136-f173205681a0 // indirect
-	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.6
+	golang.org/x/tools v0.35.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect
+	google.golang.org/grpc v1.75.1
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/src-d/go-errors.v1 v1.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
@@ -264,3 +264,5 @@ require (
 	gorm.io/rawsql v1.0.3-0.20250401110442-7e49778bc820
 	stathat.com/c/consistent v1.0.0 // indirect
 )
+
+replace github.com/coze-dev/coze-loop/backend/modules/observability/lib => github.com/coze-dev/coze-loop/backend/modules/observability/lib v0.0.0-20251118131611-99b3d466d529

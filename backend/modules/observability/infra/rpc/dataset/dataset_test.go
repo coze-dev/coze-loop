@@ -8,17 +8,16 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/dataset"
 	dataset_domain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/dataset/mocks"
 )
 
-//go:generate mockgen -source=dataset.go -destination=mocks/mock_dataset.go
 //go:generate mockgen -package=mocks -destination=mocks/mock_datasetservice_client.go github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/datasetservice Client
 
 // Test helper functions

@@ -13,9 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
-	eval_target_d "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
@@ -34,33 +32,36 @@ import (
 	"github.com/spf13/cast"
 )
 
-var _ taskexe.Processor = (*AutoEvaluteProcessor)(nil)
+var _ taskexe.Processor = (*AutoEvaluateProcessor)(nil)
 
-type AutoEvaluteProcessor struct {
+type AutoEvaluateProcessor struct {
 	evalSvc               rpc.IEvaluatorRPCAdapter
 	evaluationSvc         rpc.IEvaluationRPCAdapter
 	datasetServiceAdaptor *service.DatasetServiceAdaptor
 	taskRepo              repo.ITaskRepo
 	aid                   int32
+	evalTargetBuilder     EvalTargetBuilder
 }
 
-func NewAutoEvaluteProcessor(
+func NewAutoEvaluateProcessor(
 	aid int32,
 	datasetServiceProvider *service.DatasetServiceAdaptor,
 	evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter,
 	taskRepo repo.ITaskRepo,
-) *AutoEvaluteProcessor {
-	return &AutoEvaluteProcessor{
+	evalTargetBuilder EvalTargetBuilder,
+) *AutoEvaluateProcessor {
+	return &AutoEvaluateProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
 		evalSvc:               evalService,
 		evaluationSvc:         evaluationService,
 		taskRepo:              taskRepo,
 		aid:                   aid,
+		evalTargetBuilder:     evalTargetBuilder,
 	}
 }
 
-func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) error {
+func (p *AutoEvaluateProcessor) ValidateConfig(ctx context.Context, config any) error {
 	cfg, ok := config.(*task_entity.ObservabilityTask)
 	if !ok {
 		return errorx.NewByCode(obErrorx.CommonInvalidParamCode)
@@ -96,7 +97,7 @@ func (p *AutoEvaluteProcessor) ValidateConfig(ctx context.Context, config any) e
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) error {
+func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) error {
 	taskRun := tconv.TaskRunDO2DTO(ctx, trigger.TaskRun, nil)
 	if taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig() == nil {
 		return nil
@@ -109,7 +110,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 	}
 	turns := buildItems(ctx, []*loop_span.Span{trigger.Span}, mapping, taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema(), strconv.FormatInt(taskRun.ID, 10))
 	if len(turns) == 0 {
-		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, turns is empty")
+		logs.CtxInfo(ctx, "[task-debug] AutoEvaluateProcessor Invoke, turns is empty")
 		return nil
 	}
 	taskTTL := trigger.Task.GetTaskttl()
@@ -119,7 +120,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 	taskRunCount, _ := p.taskRepo.GetTaskRunCount(ctx, trigger.Task.ID, taskRun.ID)
 	if (trigger.Task.Sampler.CycleCount != 0 && taskRunCount > trigger.Task.Sampler.CycleCount) ||
 		(taskCount > trigger.Task.Sampler.SampleSize) {
-		logs.CtxInfo(ctx, "[task-debug] AutoEvaluteProcessor Invoke, subCount:%v,taskCount:%v", taskRunCount, taskCount)
+		logs.CtxInfo(ctx, "[task-debug] AutoEvaluateProcessor Invoke, subCount:%v,taskCount:%v", taskRunCount, taskCount)
 		_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
 		_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
 		return nil
@@ -156,7 +157,7 @@ func (p *AutoEvaluteProcessor) Invoke(ctx context.Context, trigger *taskexe.Trig
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnTaskCreated(ctx context.Context, currentTask *task_entity.ObservabilityTask) error {
+func (p *AutoEvaluateProcessor) OnTaskCreated(ctx context.Context, currentTask *task_entity.ObservabilityTask) error {
 	taskRuns, err := p.taskRepo.GetBackfillTaskRun(ctx, nil, currentTask.ID)
 	if err != nil {
 		logs.CtxError(ctx, "GetBackfillTaskRun failed, taskID:%d, err:%v", currentTask.ID, err)
@@ -200,7 +201,7 @@ func (p *AutoEvaluteProcessor) OnTaskCreated(ctx context.Context, currentTask *t
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnTaskUpdated(ctx context.Context, currentTask *task_entity.ObservabilityTask, taskOp task_entity.TaskStatus) error {
+func (p *AutoEvaluateProcessor) OnTaskUpdated(ctx context.Context, currentTask *task_entity.ObservabilityTask, taskOp task_entity.TaskStatus) error {
 	switch taskOp {
 	case task_entity.TaskStatusSuccess:
 		if currentTask.TaskStatus != task_entity.TaskStatusDisabled {
@@ -230,7 +231,7 @@ func (p *AutoEvaluteProcessor) OnTaskUpdated(ctx context.Context, currentTask *t
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnTaskFinished(ctx context.Context, param taskexe.OnTaskFinishedReq) error {
+func (p *AutoEvaluateProcessor) OnTaskFinished(ctx context.Context, param taskexe.OnTaskFinishedReq) error {
 	err := p.OnTaskRunFinished(ctx, taskexe.OnTaskRunFinishedReq{
 		Task:    param.Task,
 		TaskRun: param.TaskRun,
@@ -260,7 +261,7 @@ const (
 	BackFillI18N     = "BackFill"
 )
 
-func (p *AutoEvaluteProcessor) OnTaskRunCreated(ctx context.Context, param taskexe.OnTaskRunCreatedReq) error {
+func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param taskexe.OnTaskRunCreatedReq) error {
 	currentTask := param.CurrentTask
 	ctx = session.WithCtxUser(ctx, &session.User{ID: currentTask.CreatedBy})
 	sessionInfo := p.getSession(ctx, currentTask)
@@ -327,7 +328,7 @@ func (p *AutoEvaluteProcessor) OnTaskRunCreated(ctx context.Context, param taske
 		logs.CtxError(ctx, "CreateDataset failed, workspace_id=%d, err=%#v", currentTask.WorkspaceID, err)
 		return err
 	}
-	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, datasetID:%d", datasetID)
+	logs.CtxInfo(ctx, "[auto_task] AutoEvaluateProcessor OnChangeProcessor, datasetID:%d", datasetID)
 	// Step 2: create experiment
 	maxAliveTime := param.RunEndAt - param.RunStartAt
 	submitExperimentReq := rpc.SubmitExperimentReq{
@@ -341,15 +342,12 @@ func (p *AutoEvaluteProcessor) OnTaskRunCreated(ctx context.Context, param taske
 		TargetFieldMapping: &expt.TargetFieldMapping{
 			FromEvalSet: []*expt.FieldMapping{},
 		},
-		CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
-			SourceTargetID: gptr.Of(cast.ToString(currentTask.ID)),
-			EvalTargetType: gptr.Of(eval_target_d.EvalTargetType_Trace),
-		},
-		ExptType:     gptr.Of(expt.ExptType_Online),
-		MaxAliveTime: gptr.Of(maxAliveTime),
-		SourceType:   gptr.Of(expt.SourceType_AutoTask),
-		SourceID:     gptr.Of(cast.ToString(currentTask.ID)),
-		Session:      sessionInfo,
+		CreateEvalTargetParam: p.evalTargetBuilder.Build(ctx, currentTask),
+		ExptType:              gptr.Of(expt.ExptType_Online),
+		MaxAliveTime:          gptr.Of(maxAliveTime),
+		SourceType:            gptr.Of(expt.SourceType_AutoTask),
+		SourceID:              gptr.Of(cast.ToString(currentTask.ID)),
+		Session:               sessionInfo,
 	}
 	logs.CtxInfo(ctx, "[auto_task] SubmitExperiment:%+v", submitExperimentReq)
 	exptID, exptRunID, err := p.evaluationSvc.SubmitExperiment(ctx, &submitExperimentReq)
@@ -357,7 +355,7 @@ func (p *AutoEvaluteProcessor) OnTaskRunCreated(ctx context.Context, param taske
 		logs.CtxError(ctx, "SubmitExperiment failed, workspace_id=%d, err=%#v", currentTask.WorkspaceID, err)
 		return err
 	}
-	logs.CtxInfo(ctx, "[auto_task] AutoEvaluteProcessor OnChangeProcessor, exptID:%d, exptRunID:%d", exptID, exptRunID)
+	logs.CtxInfo(ctx, "[auto_task] AutoEvaluateProcessor OnChangeProcessor, exptID:%d, exptRunID:%d", exptID, exptRunID)
 
 	evaluationSetConfig, err := p.datasetServiceAdaptor.GetDatasetProvider(category).GetDataset(ctx, currentTask.WorkspaceID, datasetID, category)
 	if err != nil {
@@ -398,7 +396,7 @@ func (p *AutoEvaluteProcessor) OnTaskRunCreated(ctx context.Context, param taske
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) OnTaskRunFinished(ctx context.Context, param taskexe.OnTaskRunFinishedReq) error {
+func (p *AutoEvaluateProcessor) OnTaskRunFinished(ctx context.Context, param taskexe.OnTaskRunFinishedReq) error {
 	if param.TaskRun == nil || param.TaskRun.TaskRunConfig == nil || param.TaskRun.TaskRunConfig.AutoEvaluateRunConfig == nil {
 		return nil
 	}
@@ -423,14 +421,14 @@ func (p *AutoEvaluteProcessor) OnTaskRunFinished(ctx context.Context, param task
 	return nil
 }
 
-func (p *AutoEvaluteProcessor) getSession(ctx context.Context, task *task_entity.ObservabilityTask) *common.Session {
+func (p *AutoEvaluateProcessor) getSession(ctx context.Context, task *task_entity.ObservabilityTask) *common.Session {
 	userIDStr := session.UserIDInCtxOrEmpty(ctx)
 	if userIDStr == "" {
 		userIDStr = task.CreatedBy
 	}
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {
-		logs.CtxError(ctx, "[task-debug] AutoEvaluteProcessor OnChangeProcessor, ParseInt err:%v", err)
+		logs.CtxError(ctx, "[task-debug] AutoEvaluateProcessor OnChangeProcessor, ParseInt err:%v", err)
 	}
 	return &common.Session{
 		UserID: gptr.Of(userID),

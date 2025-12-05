@@ -55,6 +55,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListParentPrompt": kitex.NewMethodInfo(
+		listParentPromptHandler,
+		newPromptManageServiceListParentPromptArgs,
+		newPromptManageServiceListParentPromptResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"UpdatePrompt": kitex.NewMethodInfo(
 		updatePromptHandler,
 		newPromptManageServiceUpdatePromptArgs,
@@ -263,6 +270,25 @@ func newPromptManageServiceListPromptArgs() interface{} {
 
 func newPromptManageServiceListPromptResult() interface{} {
 	return manage.NewPromptManageServiceListPromptResult()
+}
+
+func listParentPromptHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*manage.PromptManageServiceListParentPromptArgs)
+	realResult := result.(*manage.PromptManageServiceListParentPromptResult)
+	success, err := handler.(manage.PromptManageService).ListParentPrompt(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptManageServiceListParentPromptArgs() interface{} {
+	return manage.NewPromptManageServiceListParentPromptArgs()
+}
+
+func newPromptManageServiceListParentPromptResult() interface{} {
+	return manage.NewPromptManageServiceListParentPromptResult()
 }
 
 func updatePromptHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -503,6 +529,16 @@ func (p *kClient) ListPrompt(ctx context.Context, request *manage.ListPromptRequ
 	_args.Request = request
 	var _result manage.PromptManageServiceListPromptResult
 	if err = p.c.Call(ctx, "ListPrompt", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListParentPrompt(ctx context.Context, request *manage.ListParentPromptRequest) (r *manage.ListParentPromptResponse, err error) {
+	var _args manage.PromptManageServiceListParentPromptArgs
+	_args.Request = request
+	var _result manage.PromptManageServiceListParentPromptResult
+	if err = p.c.Call(ctx, "ListParentPrompt", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

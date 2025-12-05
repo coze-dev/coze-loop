@@ -2758,6 +2758,7 @@ func TestTraceServiceImpl_SearchTraceOApi(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				repoMock.EXPECT().GetTrace(gomock.Any(), &repo.GetTraceParam{
+					WorkSpaceID:        "123",
 					Tenants:            []string{"tenant1"},
 					TraceID:            "trace-123",
 					LogID:              "",

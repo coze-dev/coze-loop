@@ -1090,6 +1090,16 @@ func TestExptMangerImpl_CheckConnector(t *testing.T) {
 				SpaceID: 789,
 				EvalConf: &entity.EvaluationConfiguration{
 					ConnectorConf: entity.Connector{
+						TargetConf: &entity.TargetConf{
+							TargetVersionID: 1,
+							IngressConf: &entity.TargetIngressConf{
+								EvalSetAdapter: &entity.FieldAdapter{
+									FieldConfs: []*entity.FieldConf{
+										{FromField: "field1"},
+									},
+								},
+							},
+						},
 						EvaluatorsConf: &entity.EvaluatorsConf{
 							EvaluatorConf: []*entity.EvaluatorConf{
 								{
@@ -1108,7 +1118,11 @@ func TestExptMangerImpl_CheckConnector(t *testing.T) {
 				},
 				Target: &entity.EvalTarget{
 					EvalTargetType: entity.EvalTargetTypeLoopTrace,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID: 1,
+					},
 				},
+				TargetVersionID: 1,
 				EvalSet: &entity.EvaluationSet{
 					EvaluationSetVersion: &entity.EvaluationSetVersion{
 						EvaluationSetSchema: &entity.EvaluationSetSchema{
