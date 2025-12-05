@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo/mocks"
+	consts "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/const"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/stretchr/testify/assert"
@@ -93,7 +94,7 @@ func TestMetricsService_buildDrillDownFields(t *testing.T) {
 						FieldType: loop_span.FieldTypeString,
 					},
 					"group_obj": {
-						FieldName: "group_field", 
+						FieldName: "group_field",
 						FieldType: loop_span.FieldTypeString,
 					},
 					"metric_obj": {
@@ -128,12 +129,12 @@ func TestMetricsService_buildDrillDownFields(t *testing.T) {
 		result := svc.buildDrillDownFields(platformCfg, groupCfg, definition)
 
 		assert.Len(t, result, 4) // platform + group + metric + space_id
-		
+
 		fieldNames := make([]string, len(result))
 		for i, field := range result {
 			fieldNames[i] = field.FieldName
 		}
-		
+
 		assert.Contains(t, fieldNames, "platform_field")
 		assert.Contains(t, fieldNames, "group_field")
 		assert.Contains(t, fieldNames, "metric_field")
@@ -183,7 +184,7 @@ func TestMetricsService_buildDrillDownFields(t *testing.T) {
 				fieldCount++
 			}
 		}
-		
+
 		assert.Equal(t, 1, fieldCount) // 同一个字段只应该出现一次
 		assert.Len(t, result, 2)       // common_field + space_id
 	})
@@ -221,23 +222,16 @@ func TestMetricsService_extractMetrics(t *testing.T) {
 				`{"group_alias":"group1"}`: {
 					{Timestamp: "1", Value: "100"},
 				},
-				"all": {
-					{Timestamp: "2", Value: "200"},
-				},
 			},
 		}
 
 		events := svc.extractMetrics("test_metric", metric)
 
-		assert.Len(t, events, 2)
-		
+		assert.Len(t, events, 1)
+
 		// 验证第一个事件（有分组）
 		assert.Equal(t, "100", events[0].MetricValue)
 		assert.Equal(t, "group1", events[0].ObjectKeys["group_field"])
-		
-		// 验证第二个事件（默认分组）
-		assert.Equal(t, "200", events[1].MetricValue)
-		assert.Empty(t, events[1].ObjectKeys)
 	})
 
 	t.Run("summary metric", func(t *testing.T) {
@@ -291,14 +285,14 @@ func TestMetricsService_extractMetrics(t *testing.T) {
 			Pie: map[string]string{
 				`{"category_alias":"A"}`: "100",
 				`{"category_alias":"B"}`: "200",
-				"all":                     "300",
+				"all":                    "300",
 			},
 		}
 
 		events := svc.extractMetrics("test_metric", metric)
 
 		assert.Len(t, events, 3)
-		
+
 		// 验证事件值
 		values := make([]string, len(events))
 		for i, event := range events {
@@ -335,7 +329,7 @@ func TestMetricsService_queryOfflineMetrics(t *testing.T) {
 		defer ctrl.Finish()
 
 		repoMock := repomocks.NewMockIOfflineMetricRepo(ctrl)
-		
+
 		// 模拟多次查询调用
 		repoMock.EXPECT().
 			GetMetrics(gomock.Any(), gomock.Any()).
@@ -353,7 +347,7 @@ func TestMetricsService_queryOfflineMetrics(t *testing.T) {
 		}
 
 		metricDefB := &testMetricDefinition{
-			name:       "metric_b", 
+			name:       "metric_b",
 			metricType: entity.MetricTypeSummary,
 		}
 
@@ -411,7 +405,7 @@ func TestMetricsService_queryOfflineMetrics(t *testing.T) {
 		defer ctrl.Finish()
 
 		repoMock := repomocks.NewMockIOfflineMetricRepo(ctrl)
-		
+
 		repoMock.EXPECT().
 			GetMetrics(gomock.Any(), gomock.Any()).
 			Return(nil, errors.New("database error")).
@@ -523,7 +517,7 @@ func TestMetricsService_buildOfflineMetricQuery(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.NotNil(t, builder)
-		
+
 		// 验证过滤条件中使用了自定义的metric name
 		filters := builder.mRepoReq.Filters
 		assert.NotNil(t, filters)
@@ -603,12 +597,7 @@ func TestMetricsService_buildTraverseMetrics(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		constDef := &testConstMetricDefinition{
-			testMetricDefinition: &testMetricDefinition{
-				name:       "const_metric",
-				metricType: entity.MetricTypeSummary,
-			},
-		}
+		constDef := consts.NewConstMinuteMetric()
 
 		pMetrics := &entity.PlatformMetrics{
 			MetricGroups: map[string]*entity.MetricGroup{
@@ -626,19 +615,18 @@ func TestMetricsService_buildTraverseMetrics(t *testing.T) {
 
 		svc := &MetricsService{
 			metricDefMap: map[string]entity.IMetricDefinition{
-				"const_metric": constDef,
+				constDef.Name(): constDef,
 			},
 			pMetrics: pMetrics,
 		}
 
 		metrics, err := svc.buildTraverseMetrics(context.Background(), &TraverseMetricsReq{
 			PlatformTypes: []loop_span.PlatformType{"test_platform"},
-			MetricsNames:  []string{"const_metric"},
+			MetricsNames:  []string{},
 		})
 
 		assert.NoError(t, err)
-		assert.Len(t, metrics, 1) // 常量指标在buildTraverseMetrics中不会被跳过，只有在traverseMetric中才会被跳过
-		// 注意：常量指标是在traverseMetric阶段被跳过的，不是在buildTraverseMetrics阶段
+		assert.Len(t, metrics, 0)
 	})
 
 	t.Run("metric not found in metricDefMap", func(t *testing.T) {
@@ -704,7 +692,7 @@ func TestMetricsService_buildTraverseMetrics(t *testing.T) {
 		defer ctrl.Finish()
 
 		pMetrics := &entity.PlatformMetrics{
-			MetricGroups: map[string]*entity.MetricGroup{},
+			MetricGroups:     map[string]*entity.MetricGroup{},
 			DrillDownObjects: map[string]*loop_span.FilterField{},
 			PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
 				loop_span.PlatformType("test_platform"): {
@@ -768,25 +756,18 @@ func TestMetricsService_buildTraverseMetrics(t *testing.T) {
 			WorkspaceID:   1,
 			StartDate:     "2025-11-17",
 		}
-		
+
 		// 模拟TraverseMetrics方法中的处理逻辑
 		if len(req.PlatformTypes) == 0 {
 			req.PlatformTypes = []loop_span.PlatformType{"platform1", "platform2"}
 		}
-		
+
 		metrics, err := svc.buildTraverseMetrics(context.Background(), req)
 
 		assert.NoError(t, err)
 		assert.Len(t, metrics, 2) // 两个平台类型
 	})
 }
-
-// 辅助测试结构体
-type testConstMetricDefinition struct {
-	*testMetricDefinition
-}
-
-func (d *testConstMetricDefinition) constFunc() {}
 
 // 自定义测试指标定义，支持自定义OExpression
 type customTestMetricDefinition struct {

@@ -14,8 +14,7 @@ func NewOfflineMetricDaoImpl() (dao.IOfflineMetricDao, error) {
 	return new(OfflineMetricDaoImpl), nil
 }
 
-type OfflineMetricDaoImpl struct {
-}
+type OfflineMetricDaoImpl struct{}
 
 func (o *OfflineMetricDaoImpl) GetMetrics(ctx context.Context, param *dao.GetMetricsParam) ([]map[string]any, error) {
 	return nil, nil

@@ -218,6 +218,7 @@ func (m *MetricApplication) TraverseMetrics(ctx context.Context, req *metric.Tra
 	sReq := &service.TraverseMetricsReq{
 		MetricsNames: req.GetMetricNames(),
 		StartDate:    req.GetStartDate(),
+		QueryTimeout: 60 * time.Second,
 	}
 	for _, platformType := range req.GetPlatformTypes() {
 		sReq.PlatformTypes = append(sReq.PlatformTypes, loop_span.PlatformType(platformType))

@@ -106,7 +106,7 @@ func (s *SpansCkDaoImpl) buildMetricsSql(ctx context.Context, param *dao.GetMetr
 		OmitColumns:      []string{"input", "output"}, // 当前不用, 先忽略
 	})
 	if err != nil {
-		return "", errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid get trace request"))
+		return "", errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid build metric request"))
 	}
 	var (
 		innerQuery     string

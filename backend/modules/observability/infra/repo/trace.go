@@ -444,6 +444,7 @@ func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMe
 		EndAt:        time_util.MillSec2MicroSec(param.EndAt),
 		Granularity:  param.Granularity,
 		Extra:        spanStorage.StorageConfig,
+		Source:       param.Source,
 	})
 	if err != nil {
 		return nil, err

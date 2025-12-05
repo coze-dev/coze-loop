@@ -29,6 +29,7 @@ type metricTraverseParam struct {
 	StartDate       string
 	StartAt         int64 // ms
 	EndAt           int64 // ms
+	QueryTimeout    time.Duration
 }
 
 func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetricsReq) (*TraverseMetricsResp, error) {
@@ -60,6 +61,7 @@ func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetri
 			StartDate:       req.StartDate,
 			StartAt:         startAt,
 			EndAt:           endAt,
+			QueryTimeout:    req.QueryTimeout,
 		}
 		st := time.Now()
 		resp.Statistic.Total++
@@ -73,6 +75,7 @@ func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetri
 				Error:        err,
 				TimeCost:     time.Since(st),
 			})
+			time.Sleep(20 * time.Second)
 		} else {
 			logs.CtxInfo(ctx, "traverse metric %s at %s successfully, cost %s",
 				metric.metricDef.Name(), metric.platformType, time.Since(st))
@@ -150,10 +153,13 @@ func (m *MetricsService) traverseMetric(ctx context.Context, param *metricTraver
 		GroupBySpaceID:  true,
 	}
 	var mResp *QueryMetricsResp
-	err := backoff.RetryWithMaxTimes(ctx, 3, func() error {
-		iCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
-		defer cancel()
-		resp, err := m.queryOnlineMetrics(iCtx, qReq)
+	err := backoff.RetryWithMaxTimes(ctx, 2, func() error {
+		if param.QueryTimeout > 0 {
+			iCtx, cancel := context.WithTimeout(ctx, param.QueryTimeout)
+			defer cancel()
+			ctx = iCtx
+		}
+		resp, err := m.queryOnlineMetrics(ctx, qReq)
 		if err != nil {
 			return err
 		}
@@ -308,7 +314,8 @@ func (m *MetricsService) queryOfflineMetrics(ctx context.Context, req *QueryMetr
 
 func (m *MetricsService) buildOfflineMetricQuery(ctx context.Context, req *QueryMetricsReq, metricName string) (*metricQueryBuilder, error) {
 	mBuilder := &metricQueryBuilder{
-		mInfo: &metricInfo{},
+		metricNames: []string{metricName},
+		mInfo:       &metricInfo{},
 	}
 	mDef := m.metricDefMap[metricName]
 	if mDef == nil {
@@ -345,7 +352,7 @@ func (m *MetricsService) buildOfflineMetricQuery(ctx context.Context, req *Query
 							FieldName: loop_span.SpanFieldSpaceId,
 							FieldType: loop_span.FieldTypeString,
 							Values:    []string{strconv.FormatInt(req.WorkspaceID, 10)},
-							QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+							QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 						},
 						{
 							FieldName: "platform_type",

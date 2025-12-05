@@ -47,6 +47,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	processor2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/receiver"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	repo2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/exporter/clickhouseexporter"
@@ -395,6 +396,20 @@ func NewTraceProcessorBuilder(
 
 func NewMetricsPlatformConfig() *entity.PlatformMetrics {
 	return &entity.PlatformMetrics{
+		DrillDownObjects: map[string]*loop_span.FilterField{
+			"model_id": &loop_span.FilterField{
+				FieldName: "model_name",
+				FieldType: loop_span.FieldTypeString,
+			},
+			"span_name": &loop_span.FilterField{
+				FieldName: loop_span.SpanFieldSpanName,
+				FieldType: loop_span.FieldTypeString,
+			},
+			"status_code": &loop_span.FilterField{
+				FieldName: loop_span.SpanFieldStatusCode,
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
 		MetricGroups: map[string]*entity.MetricGroup{
 			"all": {
 				MetricDefinitions: []entity.IMetricDefinition{general.NewGeneralTotalCountMetric(), general.NewGeneralFailRatioMetric(), general.NewGeneralModelTotalTokensMetric(), general.NewGeneralModelLatencyMetric(), general.NewGeneralModelFailRatioMetric(), general.NewGeneralToolTotalCountMetric(), general.NewGeneralToolLatencyMetric(), general.NewGeneralToolFailRatioMetric(), model.NewModelDurationMetric(), model.NewModelInputTokenCountMetric(), model.NewModelOutputTokenCountMetric(), model.NewModelTotalCountPieMetric(), model.NewModelQPMAllMetric(), model.NewModelQPMFailMetric(), model.NewModelQPMSuccessMetric(), model.NewModelQPSAllMetric(), model.NewModelQPSFailMetric(), model.NewModelQPSSuccessMetric(), model.NewModelSuccessRatioMetric(), model.NewModelSystemTokenCountMetric(), model.NewModelTokenCountMetric(), model.NewModelTokenCountPieMetric(), model.NewModelToolChoiceTokenCountMetric(), model.NewModelTPMMetric(), model.NewModelTPOTMetric(), model.NewModelTPSMetric(), model.NewModelTTFTMetric(), model.NewModelTotalCountMetric(), model.NewModelTotalSuccessCountMetric(), model.NewModelTotalErrorCountMetricc(), service4.NewServiceDurationMetric(), service4.NewServiceExecutionStepCountMetric(), service4.NewServiceMessageCountMetric(), service4.NewServiceQPMAllMetric(), service4.NewServiceQPMSuccessMetric(), service4.NewServiceQPMFailMetric(), service4.NewServiceQPSAllMetric(), service4.NewServiceQPSSuccessMetric(), service4.NewServiceQPSFailMetric(), service4.NewServiceSpanCountMetric(), service4.NewServiceSpanErrorCountMetric(), service4.NewServiceSuccessRatioMetric(), service4.NewServiceTraceCountMetric(), service4.NewServiceTraceSuccessCountMetric(), service4.NewServiceTraceErrorCountMetric(), service4.NewServiceUserCountMetric(), tool.NewToolDurationMetric(), tool.NewToolSuccessRatioMetric(), tool.NewToolTotalCountMetric(), tool.NewToolTotalCountPieMetric(), tool.NewToolTotalSuccessCountMetric(), tool.NewToolTotalErrorCountMetric(), agent.NewAgentExecutionStepAvgMetric(), agent.NewAgentToolExecutionStepAvgMetric(), agent.NewAgentModelExecutionStepAvgMetric()},

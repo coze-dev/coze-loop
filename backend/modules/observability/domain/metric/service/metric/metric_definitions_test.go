@@ -15,6 +15,8 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	agentmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/agent"
+	consts "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/const"
 	generalmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	modelmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
 	servicemetrics "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
@@ -127,6 +129,7 @@ func TestMetricExpressions(t *testing.T) {
 
 func collectBaseMetricDefinitions() []entity.IMetricDefinition {
 	return []entity.IMetricDefinition{
+		// General
 		generalmetrics.NewGeneralTotalCountMetric(),
 		generalmetrics.NewGeneralFailRatioMetric(),
 		generalmetrics.NewGeneralModelFailRatioMetric(),
@@ -135,8 +138,11 @@ func collectBaseMetricDefinitions() []entity.IMetricDefinition {
 		generalmetrics.NewGeneralToolFailRatioMetric(),
 		generalmetrics.NewGeneralToolLatencyMetric(),
 		generalmetrics.NewGeneralToolTotalCountMetric(),
+
+		// Model
 		modelmetrics.NewModelDurationMetric(),
 		modelmetrics.NewModelInputTokenCountMetric(),
+		modelmetrics.NewModelOutputTokenCountMetric(),
 		modelmetrics.NewModelQPMAllMetric(),
 		modelmetrics.NewModelQPMFailMetric(),
 		modelmetrics.NewModelQPMSuccessMetric(),
@@ -153,6 +159,12 @@ func collectBaseMetricDefinitions() []entity.IMetricDefinition {
 		modelmetrics.NewModelTPSMetric(),
 		modelmetrics.NewModelTTFTMetric(),
 		modelmetrics.NewModelErrorCodePieMetric(),
+		modelmetrics.NewModelTotalCountMetric(),
+		modelmetrics.NewModelTotalCountPieMetric(),
+		modelmetrics.NewModelTotalErrorCountMetricc(),
+		modelmetrics.NewModelTotalSuccessCountMetric(),
+
+		// Service
 		servicemetrics.NewServiceDurationMetric(),
 		servicemetrics.NewServiceExecutionStepCountMetric(),
 		servicemetrics.NewServiceMessageCountMetric(),
@@ -166,11 +178,24 @@ func collectBaseMetricDefinitions() []entity.IMetricDefinition {
 		servicemetrics.NewServiceSuccessRatioMetric(),
 		servicemetrics.NewServiceTraceCountMetric(),
 		servicemetrics.NewServiceUserCountMetric(),
+		servicemetrics.NewServiceTraceErrorCountMetric(),
+		servicemetrics.NewServiceTraceSuccessCountMetric(),
+		servicemetrics.NewServiceSpanErrorCountMetric(),
+		servicemetrics.NewServiceSpanSuccessCountMetric(),
+
+		// Tool
 		toolmetrics.NewToolDurationMetric(),
 		toolmetrics.NewToolSuccessRatioMetric(),
 		toolmetrics.NewToolTotalCountMetric(),
-		toolmetrics.
-			NewToolErrorCodePieMetric(),
+		toolmetrics.NewToolErrorCodePieMetric(),
+		toolmetrics.NewToolTotalCountPieMetric(),
+		toolmetrics.NewToolTotalErrorCountMetric(),
+		toolmetrics.NewToolTotalSuccessCountMetric(),
+
+		// Agent（复合指标）
+		agentmetrics.NewAgentExecutionStepAvgMetric(),
+		agentmetrics.NewAgentModelExecutionStepAvgMetric(),
+		agentmetrics.NewAgentToolExecutionStepAvgMetric(),
 	}
 }
 
@@ -204,6 +229,7 @@ func renderExpressions(t *testing.T, defs []entity.IMetricDefinition, gran entit
 		_ = def.Type()
 		_ = def.GroupBy()
 		_ = def.Source()
+		_ = def.OExpression()
 		_, _ = def.Where(context.Background(), f, nil)
 		res[def.Name()] = renderExpression(t, def, gran)
 	}
@@ -239,6 +265,97 @@ func expectedBaseExpression(name string, gran entity.MetricGranularity) (string,
 	return "", false
 }
 
+// 额外覆盖：校验各 Wrapper 与复合指标、常量指标的行为
+func TestWrapperProperties(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	defs := []entity.IMetricDefinition{
+		modelmetrics.NewModelDurationMetric(),
+		servicemetrics.NewServiceDurationMetric(),
+	}
+	granularities := []entity.MetricGranularity{entity.MetricGranularity1Min, entity.MetricGranularity1Hour}
+
+	for _, def := range defs {
+		adapter, ok := def.(entity.IMetricAdapter)
+		require.True(t, ok)
+		wrappers := adapter.Wrappers()
+		require.NotEmpty(t, wrappers)
+		for _, w := range wrappers {
+			wrapped := w.Wrap(def)
+			// 名称后缀断言
+			name := wrapped.Name()
+			require.True(t, strings.HasPrefix(name, def.Name()))
+			require.True(t, strings.HasSuffix(name, "_avg") || strings.HasSuffix(name, "_min") || strings.HasSuffix(name, "_max") || strings.HasSuffix(name, "_pct50") || strings.HasSuffix(name, "_pct90") || strings.HasSuffix(name, "_pct99") || strings.HasSuffix(name, "_sum") || strings.HasSuffix(name, "_by_time"))
+			// 类型与表达式不为空
+			require.NotEmpty(t, wrapped.Type())
+			for _, gran := range granularities {
+				expr := wrapped.Expression(gran)
+				require.NotNil(t, expr)
+				require.NotEmpty(t, expr.Expression)
+			}
+			// OExpression 非空（用于离线计算）
+			require.NotNil(t, wrapped.OExpression())
+			// Where/GroupBy 可调用
+			f := spanfiltermocks.NewMockFilter(ctrl)
+			f.EXPECT().BuildLLMSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			f.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			_, _ = wrapped.Where(context.Background(), f, nil)
+			_ = wrapped.GroupBy()
+		}
+	}
+}
+
+func TestCompoundMetricsDefinition(t *testing.T) {
+	compoundDefs := []entity.IMetricDefinition{
+		generalmetrics.NewGeneralModelLatencyMetric(),
+		generalmetrics.NewGeneralToolLatencyMetric(),
+	}
+	for _, def := range compoundDefs {
+		compound, ok := def.(entity.IMetricCompound)
+		require.True(t, ok)
+		// 复合指标的运算符与子指标集合
+		require.Equal(t, entity.MetricOperatorDivide, compound.Operator())
+		subs := compound.GetMetrics()
+		require.Len(t, subs, 2)
+		// 子指标的表达式可渲染
+		for _, sub := range subs {
+			expr := sub.Expression(entity.MetricGranularity1Min)
+			require.NotNil(t, expr)
+		}
+	}
+}
+
+func TestAgentCompoundMetricsDefinition(t *testing.T) {
+	compoundDefs := []entity.IMetricDefinition{
+		agentmetrics.NewAgentExecutionStepAvgMetric(),
+		agentmetrics.NewAgentModelExecutionStepAvgMetric(),
+		agentmetrics.NewAgentToolExecutionStepAvgMetric(),
+	}
+	for _, def := range compoundDefs {
+		compound, ok := def.(entity.IMetricCompound)
+		require.True(t, ok)
+		require.Equal(t, entity.MetricOperatorDivide, compound.Operator())
+		subs := compound.GetMetrics()
+		require.Len(t, subs, 2)
+		for _, sub := range subs {
+			expr := sub.Expression(entity.MetricGranularity1Hour)
+			require.NotNil(t, expr)
+			require.NotEmpty(t, expr.Expression)
+		}
+	}
+}
+
+func TestConstMinuteMetric(t *testing.T) {
+	def := consts.NewConstMinuteMetric()
+	// 常量指标基本属性
+	require.Equal(t, entity.MetricTypeSummary, def.Type())
+	// 1min 粒度下表达式应为 "1"
+	expr := def.Expression(entity.MetricGranularity1Min)
+	require.NotNil(t, expr)
+	require.Equal(t, "1", expr.Expression)
+}
+
 var baseExpressionGenerators = map[string]func(entity.MetricGranularity) string{
 	entity.MetricNameGeneralTotalCount:         countExpr,
 	entity.MetricNameGeneralToolTotalCount:     countExpr,
@@ -261,6 +378,7 @@ var baseExpressionGenerators = map[string]func(entity.MetricGranularity) string{
 	entity.MetricNameToolDuration:              durationMillisExpr(loop_span.SpanFieldDuration),
 	entity.MetricNameModelTTFT:                 durationMillisExpr(loop_span.SpanFieldLatencyFirstResp),
 	entity.MetricNameModelInputTokenCount:      sumFieldExpr(loop_span.SpanFieldInputTokens),
+	entity.MetricNameModelOutputTokenCount:     sumFieldExpr(loop_span.SpanFieldOutputTokens),
 	entity.MetricNameModelSystemTokenCount:     sumFieldExpr("model_system_tokens"),
 	entity.MetricNameModelToolChoiceTokenCount: sumFieldExpr("model_tool_choice_tokens"),
 	entity.MetricNameModelSuccessRatio:         successRatioExpr,
@@ -283,6 +401,18 @@ var baseExpressionGenerators = map[string]func(entity.MetricGranularity) string{
 	entity.MetricNameServiceQPSSuccess:         qpsSuccessExpr,
 	entity.MetricNameServiceMessageCount:       uniqFieldExpr(loop_span.SpanFieldMessageID),
 	entity.MetricNameServiceUserCount:          uniqFieldExpr(loop_span.SpanFieldUserID),
+	// 新增覆盖
+	entity.MetricNameModelTotalCount:          countExpr,
+	entity.MetricNameModelTotalCountPie:       countExpr,
+	entity.MetricNameModelTotalErrorCount:     countIfErrorExpr,
+	entity.MetricNameModelTotalSuccessCount:   countIfSuccessExpr,
+	entity.MetricNameServiceTraceErrorCount:   countIfErrorExpr,
+	entity.MetricNameServiceTraceSuccessCount: countIfSuccessExpr,
+	entity.MetricNameServiceSpanErrorCount:    countIfErrorExpr,
+	entity.MetricNameServiceSpanSuccessCount:  countIfSuccessExpr,
+	entity.MetricNameToolTotalCountPie:        countExpr,
+	entity.MetricNameToolTotalErrorCount:      countIfErrorExpr,
+	entity.MetricNameToolTotalSuccessCount:    countIfSuccessExpr,
 }
 
 func countExpr(entity.MetricGranularity) string {
@@ -361,4 +491,12 @@ func qpsFailExpr(gran entity.MetricGranularity) string {
 func qpsSuccessExpr(gran entity.MetricGranularity) string {
 	den := entity.GranularityToSecond(gran)
 	return fmt.Sprintf("countIf(1, %s = 0)/%d", loop_span.SpanFieldStatusCode, den)
+}
+
+func countIfErrorExpr(entity.MetricGranularity) string {
+	return fmt.Sprintf("countIf(1, %s != 0)", loop_span.SpanFieldStatusCode)
+}
+
+func countIfSuccessExpr(entity.MetricGranularity) string {
+	return fmt.Sprintf("countIf(1, %s = 0)", loop_span.SpanFieldStatusCode)
 }

@@ -19,7 +19,7 @@ const (
 	getTraceSuffix   = "get_trace"
 	listSpansSuffix  = "list_spans"
 	traceOApiSuffix  = "trace_oapi"
-	metricSendSuffic = "send_metric"
+	metricSendSuffix = "send_metric"
 
 	throughputSuffix = ".throughput"
 	latencySuffix    = ".latency"
@@ -129,6 +129,6 @@ func (t *TraceMetricsImpl) EmitSendMetric(start time.Time, isError bool) {
 		[]metrics.T{
 			{Name: tagIsErr, Value: strconv.FormatBool(isError)},
 		},
-		metrics.Counter(1, metrics.WithSuffix(metricSendSuffic+throughputSuffix)),
-		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(metricSendSuffic+latencySuffix)))
+		metrics.Counter(1, metrics.WithSuffix(metricSendSuffix+throughputSuffix)),
+		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(metricSendSuffix+latencySuffix)))
 }

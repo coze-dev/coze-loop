@@ -47,6 +47,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/receiver"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/exporter/clickhouseexporter"
@@ -252,6 +253,20 @@ func NewTraceProcessorBuilder(
 
 func NewMetricsPlatformConfig() *metrics_entity.PlatformMetrics {
 	return &metrics_entity.PlatformMetrics{
+		DrillDownObjects: map[string]*loop_span.FilterField{
+			"model_id": &loop_span.FilterField{
+				FieldName: "model_name",
+				FieldType: loop_span.FieldTypeString,
+			},
+			"span_name": &loop_span.FilterField{
+				FieldName: loop_span.SpanFieldSpanName,
+				FieldType: loop_span.FieldTypeString,
+			},
+			"status_code": &loop_span.FilterField{
+				FieldName: loop_span.SpanFieldStatusCode,
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
 		MetricGroups: map[string]*metrics_entity.MetricGroup{
 			"all": {
 				MetricDefinitions: []metrics_entity.IMetricDefinition{

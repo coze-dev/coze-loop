@@ -54,6 +54,7 @@ type TraverseMetricsReq struct {
 	MetricsNames  []string
 	WorkspaceID   int64
 	StartDate     string // e.g. 2025-11-17
+	QueryTimeout  time.Duration
 }
 
 type TraverseMetricsResp struct {
@@ -309,7 +310,9 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 
 func (m *MetricsService) queryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
 	qCfg := m.traceConfig.GetMetricQueryConfig(ctx)
-	if !qCfg.SupportOffline {
+	if !qCfg.SupportOffline { // 不支持离线指标
+		return m.queryOnlineMetrics(ctx, req)
+	} else if m.pMetrics.PlatformMetricDefs[req.PlatformType] == nil { // 不在离线指标计算范围内
 		return m.queryOnlineMetrics(ctx, req)
 	}
 	boundary := getDaysBeforeTimeStamp(qCfg.OfflineCriticalPoint)
@@ -411,6 +414,7 @@ func (m *MetricsService) buildOnlineMetricQuery(ctx context.Context, req *QueryM
 			}
 			return nil
 		})
+		mBuilder.mRepoReq.Source = repo.MetricSourceOffline
 	}
 	return mBuilder, nil
 }
@@ -585,7 +589,9 @@ func (m *MetricsService) formatSummaryData(data []map[string]any, mInfo *metricI
 			}
 			return item.Alias, true
 		})
-	if len(data) == 1 {
+	if len(data) == 0 {
+		return ret
+	} else if len(data) == 1 {
 		isSummaryData := true
 		for k, v := range data[0] {
 			if _, ok := metricNameMap[k]; !ok {
@@ -702,7 +708,7 @@ func (m *MetricsService) mergeMetrics(onlineMetrics, offlineMetrics map[string]*
 			ret[metricName] = m.mergeTimeSeriesMetric(onlineMetric, offlineMetric)
 		} else if onlineMetric.Summary != "" || offlineMetric.Summary != "" {
 			ret[metricName] = m.mergeSummaryMetric(onlineMetric, offlineMetric)
-		} else if onlineMetric.Pie != nil || offlineMetric.Pie != nil {
+		} else if len(onlineMetric.Pie) > 0 || len(offlineMetric.Pie) > 0 {
 			ret[metricName] = m.mergePieMetric(onlineMetric, offlineMetric)
 		}
 	}

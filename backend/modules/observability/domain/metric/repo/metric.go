@@ -10,6 +10,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
+const MetricSourceOffline = "offline"
+
 type GetMetricsParam struct {
 	WorkSpaceID  string
 	Tenants      []string
@@ -19,6 +21,7 @@ type GetMetricsParam struct {
 	StartAt      int64
 	EndAt        int64
 	Granularity  entity.MetricGranularity
+	Source       string
 }
 
 type GetMetricsResult struct {
