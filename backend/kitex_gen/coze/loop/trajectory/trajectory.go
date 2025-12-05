@@ -3858,6 +3858,10 @@ type MetricsInfo struct {
 	ModelErrorRate *float64 `thrift:"model_error_rate,6,optional" frugal:"6,optional,double" form:"model_error_rate" json:"model_error_rate,omitempty" query:"model_error_rate"`
 	// Tool Step占比(分母是总子Step)
 	ToolStepProportion *float64 `thrift:"tool_step_proportion,7,optional" frugal:"7,optional,double" form:"tool_step_proportion" json:"tool_step_proportion,omitempty" query:"tool_step_proportion"`
+	// 输入token数
+	InputTokens *int32 `thrift:"input_tokens,8,optional" frugal:"8,optional,i32" form:"input_tokens" json:"input_tokens,omitempty" query:"input_tokens"`
+	// 输出token数
+	OutputTokens *int32 `thrift:"output_tokens,9,optional" frugal:"9,optional,i32" form:"output_tokens" json:"output_tokens,omitempty" query:"output_tokens"`
 }
 
 func NewMetricsInfo() *MetricsInfo {
@@ -3950,6 +3954,30 @@ func (p *MetricsInfo) GetToolStepProportion() (v float64) {
 	}
 	return *p.ToolStepProportion
 }
+
+var MetricsInfo_InputTokens_DEFAULT int32
+
+func (p *MetricsInfo) GetInputTokens() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetInputTokens() {
+		return MetricsInfo_InputTokens_DEFAULT
+	}
+	return *p.InputTokens
+}
+
+var MetricsInfo_OutputTokens_DEFAULT int32
+
+func (p *MetricsInfo) GetOutputTokens() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOutputTokens() {
+		return MetricsInfo_OutputTokens_DEFAULT
+	}
+	return *p.OutputTokens
+}
 func (p *MetricsInfo) SetLlmDuration(val *string) {
 	p.LlmDuration = val
 }
@@ -3971,6 +3999,12 @@ func (p *MetricsInfo) SetModelErrorRate(val *float64) {
 func (p *MetricsInfo) SetToolStepProportion(val *float64) {
 	p.ToolStepProportion = val
 }
+func (p *MetricsInfo) SetInputTokens(val *int32) {
+	p.InputTokens = val
+}
+func (p *MetricsInfo) SetOutputTokens(val *int32) {
+	p.OutputTokens = val
+}
 
 var fieldIDToName_MetricsInfo = map[int16]string{
 	1: "llm_duration",
@@ -3980,6 +4014,8 @@ var fieldIDToName_MetricsInfo = map[int16]string{
 	5: "model_errors",
 	6: "model_error_rate",
 	7: "tool_step_proportion",
+	8: "input_tokens",
+	9: "output_tokens",
 }
 
 func (p *MetricsInfo) IsSetLlmDuration() bool {
@@ -4008,6 +4044,14 @@ func (p *MetricsInfo) IsSetModelErrorRate() bool {
 
 func (p *MetricsInfo) IsSetToolStepProportion() bool {
 	return p.ToolStepProportion != nil
+}
+
+func (p *MetricsInfo) IsSetInputTokens() bool {
+	return p.InputTokens != nil
+}
+
+func (p *MetricsInfo) IsSetOutputTokens() bool {
+	return p.OutputTokens != nil
 }
 
 func (p *MetricsInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -4079,6 +4123,22 @@ func (p *MetricsInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.DOUBLE {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4250,6 +4310,28 @@ func (p *MetricsInfo) ReadField7(iprot thrift.TProtocol) error {
 	p.ToolStepProportion = _field
 	return nil
 }
+func (p *MetricsInfo) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.InputTokens = _field
+	return nil
+}
+func (p *MetricsInfo) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.OutputTokens = _field
+	return nil
+}
 
 func (p *MetricsInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4283,6 +4365,14 @@ func (p *MetricsInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -4467,6 +4557,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *MetricsInfo) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetInputTokens() {
+		if err = oprot.WriteFieldBegin("input_tokens", thrift.I32, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.InputTokens); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *MetricsInfo) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOutputTokens() {
+		if err = oprot.WriteFieldBegin("output_tokens", thrift.I32, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.OutputTokens); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
 
 func (p *MetricsInfo) String() string {
 	if p == nil {
@@ -4501,6 +4627,12 @@ func (p *MetricsInfo) DeepEqual(ano *MetricsInfo) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.ToolStepProportion) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.InputTokens) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.OutputTokens) {
 		return false
 	}
 	return true
@@ -4600,6 +4732,30 @@ func (p *MetricsInfo) Field7DeepEqual(src *float64) bool {
 		return false
 	}
 	if *p.ToolStepProportion != *src {
+		return false
+	}
+	return true
+}
+func (p *MetricsInfo) Field8DeepEqual(src *int32) bool {
+
+	if p.InputTokens == src {
+		return true
+	} else if p.InputTokens == nil || src == nil {
+		return false
+	}
+	if *p.InputTokens != *src {
+		return false
+	}
+	return true
+}
+func (p *MetricsInfo) Field9DeepEqual(src *int32) bool {
+
+	if p.OutputTokens == src {
+		return true
+	} else if p.OutputTokens == nil || src == nil {
+		return false
+	}
+	if *p.OutputTokens != *src {
 		return false
 	}
 	return true
