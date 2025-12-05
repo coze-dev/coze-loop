@@ -8,6 +8,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 )
 
@@ -42,6 +43,13 @@ func (ExptItemResultConvertor) PO2DO(rl *model.ExptItemResult) *entity.ExptItemR
 		ErrMsg:    conv.UnsafeBytesToString(gptr.Indirect(rl.ErrMsg)),
 		LogID:     rl.LogID,
 	}
+	// 反序列化 Ext 字段
+	if rl.Ext != nil && len(*rl.Ext) > 0 {
+		var ext map[string]string
+		if err := json.Unmarshal(*rl.Ext, &ext); err == nil {
+			po.Ext = ext
+		}
+	}
 	return po
 }
 
@@ -56,6 +64,13 @@ func (ExptItemResultConvertor) DO2PO(result *entity.ExptItemResult) *model.ExptI
 		Status:    int32(result.Status),
 		ErrMsg:    gptr.Of(conv.UnsafeStringToBytes(result.ErrMsg)),
 		LogID:     result.LogID,
+	}
+	// 序列化 Ext 字段
+	if result.Ext != nil && len(result.Ext) > 0 {
+		extBytes, err := json.Marshal(result.Ext)
+		if err == nil {
+			po.Ext = &extBytes
+		}
 	}
 
 	return po

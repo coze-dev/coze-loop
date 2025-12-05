@@ -642,6 +642,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 			ItemID:    item.ItemID,
 			ItemIdx:   itemIdx,
 			Status:    entity.ItemRunState_Queueing,
+			Ext:       invokeExptReq.Ext,
 		}
 		eirs = append(eirs, eir)
 		itemIdx++
