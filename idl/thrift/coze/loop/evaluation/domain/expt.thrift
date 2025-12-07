@@ -249,7 +249,7 @@ struct ExperimentTurnPayload {
     // 人工标注结果结果
     6: optional TurnAnnotateResult annotate_result
     // 轨迹分析结果
-    7: optional TrajectoryAnalysisResult trajectory_ayalysis_result
+    7: optional TrajectoryAnalysisResult trajectory_analysis_result
 }
 
 struct TrajectoryAnalysisResult {

@@ -11044,7 +11044,7 @@ type ExperimentTurnPayload struct {
 	// 人工标注结果结果
 	AnnotateResult_ *TurnAnnotateResult_ `thrift:"annotate_result,6,optional" frugal:"6,optional,TurnAnnotateResult_" form:"annotate_result" json:"annotate_result,omitempty" query:"annotate_result"`
 	// 轨迹分析结果
-	TrajectoryAyalysisResult_ *TrajectoryAnalysisResult_ `thrift:"trajectory_ayalysis_result,7,optional" frugal:"7,optional,TrajectoryAnalysisResult_" form:"trajectory_ayalysis_result" json:"trajectory_ayalysis_result,omitempty" query:"trajectory_ayalysis_result"`
+	TrajectoryAnalysisResult_ *TrajectoryAnalysisResult_ `thrift:"trajectory_analysis_result,7,optional" frugal:"7,optional,TrajectoryAnalysisResult_" form:"trajectory_analysis_result" json:"trajectory_analysis_result,omitempty" query:"trajectory_analysis_result"`
 }
 
 func NewExperimentTurnPayload() *ExperimentTurnPayload {
@@ -11121,16 +11121,16 @@ func (p *ExperimentTurnPayload) GetAnnotateResult_() (v *TurnAnnotateResult_) {
 	return p.AnnotateResult_
 }
 
-var ExperimentTurnPayload_TrajectoryAyalysisResult__DEFAULT *TrajectoryAnalysisResult_
+var ExperimentTurnPayload_TrajectoryAnalysisResult__DEFAULT *TrajectoryAnalysisResult_
 
-func (p *ExperimentTurnPayload) GetTrajectoryAyalysisResult_() (v *TrajectoryAnalysisResult_) {
+func (p *ExperimentTurnPayload) GetTrajectoryAnalysisResult_() (v *TrajectoryAnalysisResult_) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetTrajectoryAyalysisResult_() {
-		return ExperimentTurnPayload_TrajectoryAyalysisResult__DEFAULT
+	if !p.IsSetTrajectoryAnalysisResult_() {
+		return ExperimentTurnPayload_TrajectoryAnalysisResult__DEFAULT
 	}
-	return p.TrajectoryAyalysisResult_
+	return p.TrajectoryAnalysisResult_
 }
 func (p *ExperimentTurnPayload) SetTurnID(val int64) {
 	p.TurnID = val
@@ -11150,8 +11150,8 @@ func (p *ExperimentTurnPayload) SetSystemInfo(val *TurnSystemInfo) {
 func (p *ExperimentTurnPayload) SetAnnotateResult_(val *TurnAnnotateResult_) {
 	p.AnnotateResult_ = val
 }
-func (p *ExperimentTurnPayload) SetTrajectoryAyalysisResult_(val *TrajectoryAnalysisResult_) {
-	p.TrajectoryAyalysisResult_ = val
+func (p *ExperimentTurnPayload) SetTrajectoryAnalysisResult_(val *TrajectoryAnalysisResult_) {
+	p.TrajectoryAnalysisResult_ = val
 }
 
 var fieldIDToName_ExperimentTurnPayload = map[int16]string{
@@ -11161,7 +11161,7 @@ var fieldIDToName_ExperimentTurnPayload = map[int16]string{
 	4: "evaluator_output",
 	5: "system_info",
 	6: "annotate_result",
-	7: "trajectory_ayalysis_result",
+	7: "trajectory_analysis_result",
 }
 
 func (p *ExperimentTurnPayload) IsSetEvalSet() bool {
@@ -11184,8 +11184,8 @@ func (p *ExperimentTurnPayload) IsSetAnnotateResult_() bool {
 	return p.AnnotateResult_ != nil
 }
 
-func (p *ExperimentTurnPayload) IsSetTrajectoryAyalysisResult_() bool {
-	return p.TrajectoryAyalysisResult_ != nil
+func (p *ExperimentTurnPayload) IsSetTrajectoryAnalysisResult_() bool {
+	return p.TrajectoryAnalysisResult_ != nil
 }
 
 func (p *ExperimentTurnPayload) Read(iprot thrift.TProtocol) (err error) {
@@ -11347,7 +11347,7 @@ func (p *ExperimentTurnPayload) ReadField7(iprot thrift.TProtocol) error {
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.TrajectoryAyalysisResult_ = _field
+	p.TrajectoryAnalysisResult_ = _field
 	return nil
 }
 
@@ -11510,11 +11510,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *ExperimentTurnPayload) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTrajectoryAyalysisResult_() {
-		if err = oprot.WriteFieldBegin("trajectory_ayalysis_result", thrift.STRUCT, 7); err != nil {
+	if p.IsSetTrajectoryAnalysisResult_() {
+		if err = oprot.WriteFieldBegin("trajectory_analysis_result", thrift.STRUCT, 7); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.TrajectoryAyalysisResult_.Write(oprot); err != nil {
+		if err := p.TrajectoryAnalysisResult_.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -11560,7 +11560,7 @@ func (p *ExperimentTurnPayload) DeepEqual(ano *ExperimentTurnPayload) bool {
 	if !p.Field6DeepEqual(ano.AnnotateResult_) {
 		return false
 	}
-	if !p.Field7DeepEqual(ano.TrajectoryAyalysisResult_) {
+	if !p.Field7DeepEqual(ano.TrajectoryAnalysisResult_) {
 		return false
 	}
 	return true
@@ -11610,7 +11610,7 @@ func (p *ExperimentTurnPayload) Field6DeepEqual(src *TurnAnnotateResult_) bool {
 }
 func (p *ExperimentTurnPayload) Field7DeepEqual(src *TrajectoryAnalysisResult_) bool {
 
-	if !p.TrajectoryAyalysisResult_.DeepEqual(src) {
+	if !p.TrajectoryAnalysisResult_.DeepEqual(src) {
 		return false
 	}
 	return true

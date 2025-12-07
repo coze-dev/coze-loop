@@ -213,7 +213,7 @@ func ExperimentTurnPayloadDO2DTO(from *entity.ExperimentTurnPayload) *domain_exp
 		EvaluatorOutput:           TurnEvaluatorOutputDO2DTO(from.EvaluatorOutput),
 		SystemInfo:                TurnSystemInfoDO2DTO(from.SystemInfo),
 		AnnotateResult_:           TurnAnnotationDO2DTO(from.AnnotateResult),
-		TrajectoryAyalysisResult_: TurnTrajectoryAnalysisResultDO2DTO(from.AnalysisRecord),
+		TrajectoryAnalysisResult_: TurnTrajectoryAnalysisResultDO2DTO(from.AnalysisRecord),
 	}
 }
 

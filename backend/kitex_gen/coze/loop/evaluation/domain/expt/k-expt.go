@@ -7531,7 +7531,7 @@ func (p *ExperimentTurnPayload) FastReadField7(buf []byte) (int, error) {
 	} else {
 		offset += l
 	}
-	p.TrajectoryAyalysisResult_ = _field
+	p.TrajectoryAnalysisResult_ = _field
 	return offset, nil
 }
 
@@ -7623,9 +7623,9 @@ func (p *ExperimentTurnPayload) fastWriteField6(buf []byte, w thrift.NocopyWrite
 
 func (p *ExperimentTurnPayload) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetTrajectoryAyalysisResult_() {
+	if p.IsSetTrajectoryAnalysisResult_() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 7)
-		offset += p.TrajectoryAyalysisResult_.FastWriteNocopy(buf[offset:], w)
+		offset += p.TrajectoryAnalysisResult_.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -7684,9 +7684,9 @@ func (p *ExperimentTurnPayload) field6Length() int {
 
 func (p *ExperimentTurnPayload) field7Length() int {
 	l := 0
-	if p.IsSetTrajectoryAyalysisResult_() {
+	if p.IsSetTrajectoryAnalysisResult_() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.TrajectoryAyalysisResult_.BLength()
+		l += p.TrajectoryAnalysisResult_.BLength()
 	}
 	return l
 }
@@ -7744,14 +7744,14 @@ func (p *ExperimentTurnPayload) DeepCopy(s interface{}) error {
 	}
 	p.AnnotateResult_ = _annotateResult_
 
-	var _trajectoryAyalysisResult_ *TrajectoryAnalysisResult_
-	if src.TrajectoryAyalysisResult_ != nil {
-		_trajectoryAyalysisResult_ = &TrajectoryAnalysisResult_{}
-		if err := _trajectoryAyalysisResult_.DeepCopy(src.TrajectoryAyalysisResult_); err != nil {
+	var _trajectoryAnalysisResult_ *TrajectoryAnalysisResult_
+	if src.TrajectoryAnalysisResult_ != nil {
+		_trajectoryAnalysisResult_ = &TrajectoryAnalysisResult_{}
+		if err := _trajectoryAnalysisResult_.DeepCopy(src.TrajectoryAnalysisResult_); err != nil {
 			return err
 		}
 	}
-	p.TrajectoryAyalysisResult_ = _trajectoryAyalysisResult_
+	p.TrajectoryAnalysisResult_ = _trajectoryAnalysisResult_
 
 	return nil
 }
