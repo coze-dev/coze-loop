@@ -284,8 +284,12 @@ func TurnTrajectoryAnalysisResultDO2DTO(from *entity.AnalysisRecord) *domain_exp
 	if from == nil {
 		return &domain_expt.TrajectoryAnalysisResult_{}
 	}
+	var id *int64
+	if from.ID > 0 {
+		id = ptr.Of(from.ID)
+	}
 	return &domain_expt.TrajectoryAnalysisResult_{
-		RecordID: ptr.Of(from.ID),
+		RecordID: id,
 		Status:   ptr.Of(InsightAnalysisStatus2DTO(from.Status)),
 	}
 }
