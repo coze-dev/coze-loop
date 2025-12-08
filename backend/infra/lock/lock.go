@@ -84,6 +84,8 @@ func (r *redisLocker) LockWithRenew(parent context.Context, key string, ttl time
 		return locked, parent, nop, err
 	}
 
+	logs.CtxInfo(parent, "LockWithRenew lock %s success", key)
+
 	ctx, cancel = context.WithCancel(parent)
 	goroutine.Go(parent, func() {
 		defer cancel()
