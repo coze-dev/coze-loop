@@ -98,6 +98,9 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 
 func (p PromptRPCAdapter) convMsgToContent(msg *prompt.Message) *entity.Content {
 	if len(msg.GetParts()) == 0 {
+		if len(gptr.Indirect(msg.Content)) == 0 {
+			return nil
+		}
 		return &entity.Content{
 			ContentType: gptr.Of(entity.ContentTypeText),
 			Text:        msg.Content,
