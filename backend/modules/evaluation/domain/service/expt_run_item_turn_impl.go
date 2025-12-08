@@ -102,6 +102,13 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return existRecord, nil
 	}
 
+	if etec.Event.AsyncReportTrigger {
+		if etec.ExptTurnRunResult == nil || etec.ExptTurnRunResult.TargetResult == nil {
+			return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result must not be nil in async reported event"))
+		}
+		return etec.ExptTurnRunResult.TargetResult, nil
+	}
+
 	if err := e.CheckBenefit(ctx, etec.Event.ExptID, etec.Event.SpaceID, etec.Expt.CreditCost == entity.CreditCostFree, etec.Event.Session); err != nil {
 		return nil, err
 	}

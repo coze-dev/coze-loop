@@ -548,8 +548,11 @@ var (
 func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, expts []*entity.Experiment) ([]*entity.ExptColumnEvalTarget, error) {
 	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
 	for _, expt := range expts {
+		if !expt.ContainsEvalTarget() {
+			continue
+		}
 		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
-		if expt.ContainsEvalTarget() && expt.TargetType.SupptTrajectory() {
+		if expt.TargetType.SupptTrajectory() {
 			columns = append(columns, columnEvalTargetTrajectory)
 		}
 		res = append(res, &entity.ExptColumnEvalTarget{

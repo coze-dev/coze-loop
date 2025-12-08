@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/mohae/deepcopy"
 	"github.com/samber/lo"
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
@@ -114,6 +115,10 @@ func (e *exptEventPublisher) PublishExptScheduleEvent(ctx context.Context, event
 }
 
 func (e *exptEventPublisher) PublishExptRecordEvalEvent(ctx context.Context, event *entity.ExptItemEvalEvent, duration *time.Duration) error {
+	if copied, ok := deepcopy.Copy(event).(*entity.ExptItemEvalEvent); ok {
+		copied.AsyncReportTrigger = true
+		event = copied
+	}
 	return e.batchSend(ctx, rocket.ExptRecordEvalEventRMQKey, []any{event}, duration)
 }
 
