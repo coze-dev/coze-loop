@@ -60,13 +60,16 @@ func NewTaskCallbackServiceImpl(
 func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error {
 	for _, turn := range event.TurnEvalResults {
 		workspaceIDStr, workspaceID := turn.GetWorkspaceIDFromExt()
-		task, err := t.taskRepo.GetTask(ctx, turn.GetTaskIDFromExt(), nil, nil)
-		if err != nil {
-			return err
-		}
-		platformType := loop_span.PlatformType("callback_all")
-		if task != nil && task.SpanFilter != nil {
-			platformType = task.SpanFilter.PlatformType
+		platformType, ok := turn.GetPlatformType()
+		if !ok {
+			task, err := t.taskRepo.GetTask(ctx, turn.GetTaskIDFromExt(), nil, nil)
+			if err != nil {
+				return err
+			}
+			logs.CtxInfo(ctx, "PlatformType not found in message, get from task [%#v]", task)
+			if task != nil && task.SpanFilter != nil {
+				platformType = task.SpanFilter.PlatformType
+			}
 		}
 		tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, platformType)
 		if err != nil {
@@ -90,6 +93,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			[]string{turn.GetSpanIDFromExt()},
 			turn.GetTraceIDFromExt(),
 			workspaceIDStr,
+			// span_start_time都有了之后，可以不需要提前那么久
 			turn.GetStartTimeFromExt()/1000-(24*time.Duration(storageDuration)*time.Hour).Milliseconds(),
 			turn.GetStartTimeFromExt()/1000+10*time.Minute.Milliseconds(),
 		)
@@ -141,13 +145,16 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 	if workspaceID == 0 {
 		return fmt.Errorf("workspace_id is empty")
 	}
-	task, err := t.taskRepo.GetTask(ctx, event.GetTaskIDFromExt(), nil, nil)
-	if err != nil {
-		return err
-	}
-	platformType := loop_span.PlatformType("callback_all")
-	if task != nil && task.SpanFilter != nil {
-		platformType = task.SpanFilter.PlatformType
+	platformType, ok := event.GetPlatfromType()
+	if !ok {
+		task, err := t.taskRepo.GetTask(ctx, event.GetTaskIDFromExt(), nil, nil)
+		if err != nil {
+			return err
+		}
+		logs.CtxInfo(ctx, "PlatformType not found in message, get from task [%#v]", task)
+		if task != nil && task.SpanFilter != nil {
+			platformType = task.SpanFilter.PlatformType
+		}
 	}
 	tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, platformType)
 	if err != nil {
@@ -158,8 +165,8 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 		[]string{event.GetSpanIDFromExt()},
 		event.GetTraceIDFromExt(),
 		workspaceIDStr,
-		event.GetStartTimeFromExt()/1000-time.Second.Milliseconds(),
-		event.GetStartTimeFromExt()/1000+time.Second.Milliseconds(),
+		event.GetStartTimeFromExt()/1000-time.Hour.Milliseconds(),
+		event.GetStartTimeFromExt()/1000+time.Hour.Milliseconds(),
 	)
 	if err != nil {
 		return err
@@ -174,8 +181,8 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 		SpanID:      event.GetSpanIDFromExt(),
 		TraceID:     event.GetTraceIDFromExt(),
 		WorkspaceId: workspaceID,
-		StartAt:     event.GetStartTimeFromExt() - 5*time.Second.Milliseconds(),
-		EndAt:       event.GetStartTimeFromExt() + 5*time.Second.Milliseconds(),
+		StartAt:     event.GetStartTimeFromExt() - time.Hour.Milliseconds(),
+		EndAt:       event.GetStartTimeFromExt() + time.Hour.Milliseconds(),
 	})
 	if err != nil {
 		return err

@@ -234,8 +234,13 @@ func (s *OnlineExptTurnEvalResult) GetStartTimeFromExt() int64 {
 	if s == nil {
 		return 0
 	}
-	startTimeStr := s.Ext["start_time"]
-	startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
+	timeStr := ""
+	if spanStartTime, ok := s.Ext["span_start_time"]; ok {
+		timeStr = spanStartTime
+	} else {
+		timeStr = s.Ext["start_time"]
+	}
+	startTime, err := strconv.ParseInt(timeStr, 10, 64)
 	if err != nil {
 		return 0
 	}
@@ -280,6 +285,13 @@ func (s *OnlineExptTurnEvalResult) GetUserID() string {
 		return ""
 	}
 	return s.BaseInfo.CreatedBy.UserID
+}
+
+func (s *OnlineExptTurnEvalResult) GetPlatformType() (loop_span.PlatformType, bool) {
+	if platform, ok := s.Ext["platform_type"]; ok {
+		return loop_span.PlatformType(platform), ok
+	}
+	return loop_span.PlatformCallbackAll, false
 }
 
 type EvaluatorRunError struct {
@@ -336,8 +348,13 @@ func (c *CorrectionEvent) GetStartTimeFromExt() int64 {
 	if c == nil {
 		return 0
 	}
-	startTimeStr := c.Ext["start_time"]
-	startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
+	timeStr := ""
+	if spanStartTime, ok := c.Ext["span_start_time"]; ok {
+		timeStr = spanStartTime
+	} else {
+		timeStr = c.Ext["start_time"]
+	}
+	startTime, err := strconv.ParseInt(timeStr, 10, 64)
 	if err != nil {
 		return 0
 	}
@@ -373,6 +390,13 @@ func (c *CorrectionEvent) GetUpdateBy() string {
 		return ""
 	}
 	return c.EvaluatorResult.Correction.UpdatedBy
+}
+
+func (c *CorrectionEvent) GetPlatfromType() (loop_span.PlatformType, bool) {
+	if platform, ok := c.Ext["platform_type"]; ok {
+		return loop_span.PlatformType(platform), ok
+	}
+	return loop_span.PlatformCallbackAll, false
 }
 
 type BackFillEvent struct {
