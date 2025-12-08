@@ -6,8 +6,6 @@ package prompt
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
-
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/promptexecuteservice"
@@ -74,7 +72,6 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "prompt execute resp=%v", json.Jsonify(resp))
 	if resp == nil {
 		return nil, errorx.NewByCode(errno.CommonRPCErrorCode)
 	}
