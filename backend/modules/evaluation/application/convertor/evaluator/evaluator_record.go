@@ -30,7 +30,7 @@ func ConvertEvaluatorRecordDTO2DO(dto *evaluatordto.EvaluatorRecord) *evaluatord
 		BaseInfo:            commonconvertor.ConvertBaseInfoDTO2DO(dto.BaseInfo),
 	}
 	// 填充 ext 字段
-	if dto.Ext != nil && len(dto.Ext) > 0 {
+	if len(dto.Ext) > 0 {
 		do.Ext = dto.Ext
 	}
 	return do
