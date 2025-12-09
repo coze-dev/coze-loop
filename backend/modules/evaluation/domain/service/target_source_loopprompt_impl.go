@@ -133,10 +133,10 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 		var outputStr string
 		if executePromptResult == nil {
 			outputStr = ""
-		} else if executePromptResult.Content != nil {
-			outputStr = *executePromptResult.Content
+		} else if cont := gptr.Indirect(executePromptResult.Content); len(cont) > 0 {
+			outputStr = cont
 		} else if executePromptResult.ToolCalls != nil {
-			outputStr, err = json.MarshalString(executePromptResult.ToolCalls)
+			outputStr, _ = json.MarshalString(executePromptResult.ToolCalls)
 		} else {
 			outputStr = ""
 		}
