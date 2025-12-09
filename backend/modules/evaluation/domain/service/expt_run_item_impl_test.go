@@ -511,8 +511,8 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
 		execCtx := &entity.ExptItemEvalCtx{
 			Event: &entity.ExptItemEvalEvent{
-				SpaceID:      1,
-				ExptID:       1,
+				SpaceID:       1,
+				ExptID:        1,
 				EvalSetItemID: 1,
 				Ext: map[string]string{
 					"event_key1": "event_value1",
@@ -527,10 +527,10 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
 		}
 		itemResult := &entity.ExptItemResult{
-			ID:    1,
+			ID:     1,
 			ItemID: 1,
 			Ext: map[string]string{
-				"item_key1": "item_value1",
+				"item_key1":  "item_value1",
 				"event_key2": "item_value2_override",
 			},
 		}
@@ -558,8 +558,8 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 		}
 		execCtx := &entity.ExptItemEvalCtx{
 			Event: &entity.ExptItemEvalEvent{
-				SpaceID:      1,
-				ExptID:       1,
+				SpaceID:       1,
+				ExptID:        1,
 				EvalSetItemID: 1,
 				Ext:           map[string]string{},
 			},
@@ -584,8 +584,8 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
 		execCtx := &entity.ExptItemEvalCtx{
 			Event: &entity.ExptItemEvalEvent{
-				SpaceID:      1,
-				ExptID:       1,
+				SpaceID:       1,
+				ExptID:        1,
 				EvalSetItemID: 1,
 				Ext: map[string]string{
 					"event_key": "event_value",
@@ -599,9 +599,9 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
 		}
 		itemResult := &entity.ExptItemResult{
-			ID:    1,
+			ID:     1,
 			ItemID: 1,
-			Ext:   nil,
+			Ext:    nil,
 		}
 		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{itemResult}, nil)
 		etec, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
@@ -615,8 +615,8 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
 		execCtx := &entity.ExptItemEvalCtx{
 			Event: &entity.ExptItemEvalEvent{
-				SpaceID:      1,
-				ExptID:       1,
+				SpaceID:       1,
+				ExptID:        1,
 				EvalSetItemID: 1,
 				Ext: map[string]string{
 					"event_key": "event_value",

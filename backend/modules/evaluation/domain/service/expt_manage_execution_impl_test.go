@@ -1877,11 +1877,11 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 		{
 			name: "Online实验_EvalSet为nil",
 			expt: &entity.Experiment{
-				ID:       1,
-				SpaceID:  100,
-				ExptType: entity.ExptType_Online,
+				ID:        1,
+				SpaceID:   100,
+				ExptType:  entity.ExptType_Online,
 				EvalSetID: 10,
-				EvalSet:  nil,
+				EvalSet:   nil,
 			},
 			wantErr: true,
 			errMsg:  "with empty EvalSet: 10",
@@ -1889,22 +1889,22 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 		{
 			name: "Online实验_EvalSet不为nil_成功",
 			expt: &entity.Experiment{
-				ID:       1,
-				SpaceID:  100,
-				ExptType: entity.ExptType_Online,
+				ID:        1,
+				SpaceID:   100,
+				ExptType:  entity.ExptType_Online,
 				EvalSetID: 10,
-				EvalSet:  &entity.EvaluationSet{ID: 10},
+				EvalSet:   &entity.EvaluationSet{ID: 10},
 			},
 			wantErr: false,
 		},
 		{
 			name: "default类型_EvalSetVersionID为0",
 			expt: &entity.Experiment{
-				ID:              1,
-				SpaceID:         100,
-				ExptType:        0,
+				ID:               1,
+				SpaceID:          100,
+				ExptType:         0,
 				EvalSetVersionID: 0,
-				EvalSet:         nil,
+				EvalSet:          nil,
 			},
 			wantErr: true,
 			errMsg:  "with invalid EvalSetVersion 0",
@@ -1912,11 +1912,11 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 		{
 			name: "default类型_EvalSet为nil",
 			expt: &entity.Experiment{
-				ID:              1,
-				SpaceID:         100,
-				ExptType:        0,
+				ID:               1,
+				SpaceID:          100,
+				ExptType:         0,
 				EvalSetVersionID: 10,
-				EvalSet:         nil,
+				EvalSet:          nil,
 			},
 			wantErr: true,
 			errMsg:  "with invalid EvalSetVersion 10",
@@ -1924,12 +1924,12 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 		{
 			name: "default类型_EvaluationSetVersion为nil",
 			expt: &entity.Experiment{
-				ID:              1,
-				SpaceID:         100,
-				ExptType:        0,
+				ID:               1,
+				SpaceID:          100,
+				ExptType:         0,
 				EvalSetVersionID: 10,
 				EvalSet: &entity.EvaluationSet{
-					ID:                10,
+					ID:                   10,
 					EvaluationSetVersion: nil,
 				},
 			},
@@ -1939,9 +1939,9 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 		{
 			name: "default类型_ItemCount为0",
 			expt: &entity.Experiment{
-				ID:              1,
-				SpaceID:         100,
-				ExptType:        0,
+				ID:               1,
+				SpaceID:          100,
+				ExptType:         0,
 				EvalSetVersionID: 10,
 				EvalSet: &entity.EvaluationSet{
 					ID: 10,
@@ -1957,9 +1957,9 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 		{
 			name: "default类型_成功",
 			expt: &entity.Experiment{
-				ID:              1,
-				SpaceID:         100,
-				ExptType:        0,
+				ID:               1,
+				SpaceID:          100,
+				ExptType:         0,
 				EvalSetVersionID: 10,
 				EvalSet: &entity.EvaluationSet{
 					ID: 10,
@@ -1973,7 +1973,7 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 		},
 	}
 
-		for _, tt := range tests {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := mgr.CheckEvalSet(ctx, tt.expt, session)
 			if tt.wantErr {
@@ -1995,11 +1995,11 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name         string
-		invokeReq    *entity.InvokeExptReq
-		setup        func()
-		wantErr      bool
-		verifyExt    func(*testing.T, []*entity.ExptItemResult)
+		name      string
+		invokeReq *entity.InvokeExptReq
+		setup     func()
+		wantErr   bool
+		verifyExt func(*testing.T, []*entity.ExptItemResult)
 	}{
 		{
 			name: "Ext字段正确设置",
