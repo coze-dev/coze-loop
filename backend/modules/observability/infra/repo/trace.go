@@ -162,8 +162,9 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid list spans request"))
 	}
+	filters := req.Filters
 	if pageToken != nil {
-		req.Filters = t.addPageTokenFilter(pageToken, req.Filters)
+		filters = t.addPageTokenFilter(pageToken, req.Filters)
 	}
 	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
 	if err != nil {
@@ -176,7 +177,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		AnnoTableMap:     tableCfg.AnnoTableMap,
 		StartTime:        time_util.MillSec2MicroSec(req.StartAt),
 		EndTime:          time_util.MillSec2MicroSec(req.EndAt),
-		Filters:          req.Filters,
+		Filters:          filters,
 		Limit:            req.Limit + 1,
 		OrderByStartTime: req.DescByStartTime,
 		OmitColumns:      req.OmitColumns,
