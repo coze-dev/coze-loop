@@ -32,6 +32,27 @@ type ExptItemEvalEvent struct {
 	Session    *Session
 }
 
+func (e *ExptItemEvalEvent) GetExptID() int64 {
+	if e == nil {
+		return 0
+	}
+	return e.ExptID
+}
+
+func (e *ExptItemEvalEvent) GetExptRunID() int64 {
+	if e == nil {
+		return 0
+	}
+	return e.ExptRunID
+}
+
+func (e *ExptItemEvalEvent) GetEvalSetItemID() int64 {
+	if e == nil {
+		return 0
+	}
+	return e.EvalSetItemID
+}
+
 type CalculateMode int
 
 const (

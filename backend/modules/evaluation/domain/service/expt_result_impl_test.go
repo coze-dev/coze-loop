@@ -767,7 +767,7 @@ func TestExptResultServiceImpl_GetIncompleteTurns(t *testing.T) {
 						continue
 					}
 					if got[i].TurnID != wantTurn.TurnID || got[i].ItemID != wantTurn.ItemID {
-						t.Errorf("GetIncompleteTurns() got[%d] = {TurnID: %v, ItemID: %v}, want {TurnID: %v, ItemID: %v}",
+						t.Errorf("GetIncompleteTurns() got[%d] = {RecordID: %v, ItemID: %v}, want {RecordID: %v, ItemID: %v}",
 							i, got[i].TurnID, got[i].ItemID, wantTurn.TurnID, wantTurn.ItemID)
 					}
 				}
@@ -3566,7 +3566,7 @@ func TestParseTurnKey(t *testing.T) {
 					t.Errorf("ParseTurnKey() got.ItemID = %v, want %v", got.ItemID, tt.want.ItemID)
 				}
 				if got.TurnID != tt.want.TurnID {
-					t.Errorf("ParseTurnKey() got.TurnID = %v, want %v", got.TurnID, tt.want.TurnID)
+					t.Errorf("ParseTurnKey() got.RecordID = %v, want %v", got.TurnID, tt.want.TurnID)
 				}
 			}
 		})
