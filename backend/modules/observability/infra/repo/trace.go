@@ -406,7 +406,7 @@ func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Inser
 		Extra:       spanStorage.StorageConfig,
 	})
 	if err != nil {
-		return nil
+		return err
 	}
 	span := param.Span
 	annotationType := ""

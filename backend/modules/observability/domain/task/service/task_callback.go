@@ -6,7 +6,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -93,9 +92,8 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			[]string{turn.GetSpanIDFromExt()},
 			turn.GetTraceIDFromExt(),
 			workspaceIDStr,
-			// span_start_time都有了之后，可以不需要提前那么久
-			turn.GetStartTimeFromExt()/1000-(24*time.Duration(storageDuration)*time.Hour).Milliseconds(),
-			turn.GetStartTimeFromExt()/1000+time.Hour.Milliseconds(),
+			turn.GetStartTimeFromExt(storageDuration),
+			turn.GetEndTimeFromExt(),
 		)
 		if err != nil {
 			return err
@@ -165,8 +163,8 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 		[]string{event.GetSpanIDFromExt()},
 		event.GetTraceIDFromExt(),
 		workspaceIDStr,
-		event.GetStartTimeFromExt()/1000-time.Hour.Milliseconds(),
-		event.GetStartTimeFromExt()/1000+time.Hour.Milliseconds(),
+		event.GetStartTimeFromExt(),
+		event.GetEndTimeFromExt(),
 	)
 	if err != nil {
 		return err
@@ -181,8 +179,8 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 		SpanID:      event.GetSpanIDFromExt(),
 		TraceID:     event.GetTraceIDFromExt(),
 		WorkspaceId: workspaceID,
-		StartAt:     event.GetStartTimeFromExt()/1000 - time.Hour.Milliseconds(),
-		EndAt:       event.GetStartTimeFromExt()/1000 + time.Hour.Milliseconds(),
+		StartAt:     event.GetStartTimeFromExt(),
+		EndAt:       event.GetEndTimeFromExt(),
 	})
 	if err != nil {
 		return err

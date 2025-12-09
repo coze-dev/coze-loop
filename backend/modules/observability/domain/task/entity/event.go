@@ -6,6 +6,7 @@ package entity
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -230,21 +231,47 @@ func (s *OnlineExptTurnEvalResult) GetTraceIDFromExt() string {
 	return s.Ext["trace_id"]
 }
 
-func (s *OnlineExptTurnEvalResult) GetStartTimeFromExt() int64 {
+func (s *OnlineExptTurnEvalResult) GetStartTimeFromExt(storageDuration int64) int64 {
 	if s == nil {
 		return 0
 	}
-	timeStr := ""
 	if spanStartTime, ok := s.Ext["span_start_time"]; ok {
-		timeStr = spanStartTime
+		timeStr := spanStartTime
+		startTime, err := strconv.ParseInt(timeStr, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return startTime
 	} else {
-		timeStr = s.Ext["start_time"]
+		// span_start_time都有了之后，可以不需要提前那么久
+		timeStr := s.Ext["start_time"]
+		startTime, err := strconv.ParseInt(timeStr, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return startTime/1000 - (24 * time.Duration(storageDuration) * time.Hour).Milliseconds()
 	}
-	startTime, err := strconv.ParseInt(timeStr, 10, 64)
-	if err != nil {
+}
+
+func (s *OnlineExptTurnEvalResult) GetEndTimeFromExt() int64 {
+	if s == nil {
 		return 0
 	}
-	return startTime
+	if spanEndTime, ok := s.Ext["span_end_time"]; ok {
+		timeStr := spanEndTime
+		endTime, err := strconv.ParseInt(timeStr, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return endTime
+	} else {
+		timeStr := s.Ext["start_time"]
+		startTime, err := strconv.ParseInt(timeStr, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return startTime/1000 + time.Hour.Milliseconds()
+	}
 }
 
 func (s *OnlineExptTurnEvalResult) GetTaskIDFromExt() int64 {
@@ -348,17 +375,42 @@ func (c *CorrectionEvent) GetStartTimeFromExt() int64 {
 	if c == nil {
 		return 0
 	}
-	timeStr := ""
 	if spanStartTime, ok := c.Ext["span_start_time"]; ok {
-		timeStr = spanStartTime
+		timeStr := spanStartTime
+		startTime, err := strconv.ParseInt(timeStr, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return startTime
 	} else {
-		timeStr = c.Ext["start_time"]
+		timeStr := c.Ext["start_time"]
+		startTime, err := strconv.ParseInt(timeStr, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return startTime/1000 - time.Hour.Milliseconds()
 	}
-	startTime, err := strconv.ParseInt(timeStr, 10, 64)
-	if err != nil {
+}
+
+func (c *CorrectionEvent) GetEndTimeFromExt() int64 {
+	if c == nil {
 		return 0
 	}
-	return startTime
+	if spanEndTime, ok := c.Ext["span_end_time"]; ok {
+		timeStr := spanEndTime
+		endTime, err := strconv.ParseInt(timeStr, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return endTime
+	} else {
+		timeStr := c.Ext["start_time"]
+		startTime, err := strconv.ParseInt(timeStr, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return startTime/1000 + time.Hour.Milliseconds()
+	}
 }
 
 func (c *CorrectionEvent) GetTaskIDFromExt() int64 {

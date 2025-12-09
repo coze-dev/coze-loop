@@ -147,7 +147,8 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 			"span_id":         trigger.Span.SpanID,
 			"task_id":         cast.ToString(trigger.Task.ID),
 			"task_run_id":     cast.ToString(taskRun.ID),
-			"span_start_time": cast.ToString(trigger.Span.StartTime),
+			"span_start_time": cast.ToString(trigger.Span.StartTime/1000 - time.Hour.Milliseconds()),
+			"span_end_time":   cast.ToString(trigger.Span.StartTime/1000 + time.Hour.Milliseconds()),
 			"platform_type":   string(trigger.Task.GetPlatformType()),
 		},
 	})
