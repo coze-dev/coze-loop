@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -108,10 +109,18 @@ func (c *Content) PaddingContent(ctx context.Context) error {
 	defer protocol.ReleaseRequest(req)
 	defer protocol.ReleaseResponse(resp)
 
+	urlStr := gptr.Indirect(c.FullContent.URL)
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return errorx.Wrapf(err, "PaddingContent found invalid url: %s", urlStr)
+	}
+	if parsedURL.Scheme == "https" || parsedURL.Scheme == "" {
+		parsedURL.Scheme = "http"
+	}
 	req.SetMethod(consts.MethodGet)
-	req.SetRequestURI(gptr.Indirect(c.FullContent.URL))
+	req.SetRequestURI(parsedURL.String())
 	if err := client.DoTimeout(ctx, req, resp, time.Second*3); err != nil {
-		return errorx.Wrapf(err, "get content object storage bytes fail, url: %v", c.FullContent.URL)
+		return errorx.Wrapf(err, "get content object storage bytes fail, url: %v", parsedURL.String())
 	}
 	if resp.StatusCode() != http.StatusOK {
 		return errorx.New("content object storage http req return code %v, url: %v, body: %s", resp.StatusCode(), c.FullContent.URL, conv.UnsafeBytesToString(resp.Body()))
