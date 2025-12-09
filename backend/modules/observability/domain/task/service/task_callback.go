@@ -95,7 +95,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			workspaceIDStr,
 			// span_start_time都有了之后，可以不需要提前那么久
 			turn.GetStartTimeFromExt()/1000-(24*time.Duration(storageDuration)*time.Hour).Milliseconds(),
-			turn.GetStartTimeFromExt()/1000+10*time.Minute.Milliseconds(),
+			turn.GetStartTimeFromExt()/1000+time.Hour.Milliseconds(),
 		)
 		if err != nil {
 			return err
@@ -145,7 +145,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 	if workspaceID == 0 {
 		return fmt.Errorf("workspace_id is empty")
 	}
-	platformType, ok := event.GetPlatfromType()
+	platformType, ok := event.GetPlatformType()
 	if !ok {
 		task, err := t.taskRepo.GetTask(ctx, event.GetTaskIDFromExt(), nil, nil)
 		if err != nil {
@@ -181,8 +181,8 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 		SpanID:      event.GetSpanIDFromExt(),
 		TraceID:     event.GetTraceIDFromExt(),
 		WorkspaceId: workspaceID,
-		StartAt:     event.GetStartTimeFromExt() - time.Hour.Milliseconds(),
-		EndAt:       event.GetStartTimeFromExt() + time.Hour.Milliseconds(),
+		StartAt:     event.GetStartTimeFromExt()/1000 - time.Hour.Milliseconds(),
+		EndAt:       event.GetStartTimeFromExt()/1000 + time.Hour.Milliseconds(),
 	})
 	if err != nil {
 		return err

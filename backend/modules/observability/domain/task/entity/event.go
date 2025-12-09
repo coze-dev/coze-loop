@@ -392,7 +392,7 @@ func (c *CorrectionEvent) GetUpdateBy() string {
 	return c.EvaluatorResult.Correction.UpdatedBy
 }
 
-func (c *CorrectionEvent) GetPlatfromType() (loop_span.PlatformType, bool) {
+func (c *CorrectionEvent) GetPlatformType() (loop_span.PlatformType, bool) {
 	if platform, ok := c.Ext["platform_type"]; ok {
 		return loop_span.PlatformType(platform), ok
 	}
