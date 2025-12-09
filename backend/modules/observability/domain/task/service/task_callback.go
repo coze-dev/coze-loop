@@ -194,7 +194,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCorrection(ctx context.Context, event 
 
 	annotation.CorrectAutoEvaluateScore(event.EvaluatorResult.Correction.Score, event.EvaluatorResult.Correction.Explain, event.GetUpdateBy())
 	span.Annotations = make(loop_span.AnnotationList, 0)
-	span.Annotations[0] = annotation
+	span.Annotations = append(span.Annotations, annotation)
 
 	// Then synchronize the observability data
 	param := &tracerepo.InsertAnnotationParam{
