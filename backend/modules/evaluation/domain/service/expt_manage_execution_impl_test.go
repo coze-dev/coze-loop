@@ -15,6 +15,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	benefitMocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
+	idgenMocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	lockMocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	idemMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
@@ -1855,6 +1856,294 @@ func TestExptMangerImpl_SetExptTerminating(t *testing.T) {
 			err := mgr.SetExptTerminating(ctx, tt.exptID, tt.runID, tt.spaceID, session)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SetExptTerminating() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+
+	tests := []struct {
+		name    string
+		expt    *entity.Experiment
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "Online实验_EvalSet为nil",
+			expt: &entity.Experiment{
+				ID:       1,
+				SpaceID:  100,
+				ExptType: entity.ExptType_Online,
+				EvalSetID: 10,
+				EvalSet:  nil,
+			},
+			wantErr: true,
+			errMsg:  "with empty EvalSet: 10",
+		},
+		{
+			name: "Online实验_EvalSet不为nil_成功",
+			expt: &entity.Experiment{
+				ID:       1,
+				SpaceID:  100,
+				ExptType: entity.ExptType_Online,
+				EvalSetID: 10,
+				EvalSet:  &entity.EvaluationSet{ID: 10},
+			},
+			wantErr: false,
+		},
+		{
+			name: "default类型_EvalSetVersionID为0",
+			expt: &entity.Experiment{
+				ID:              1,
+				SpaceID:         100,
+				ExptType:        0,
+				EvalSetVersionID: 0,
+				EvalSet:         nil,
+			},
+			wantErr: true,
+			errMsg:  "with invalid EvalSetVersion 0",
+		},
+		{
+			name: "default类型_EvalSet为nil",
+			expt: &entity.Experiment{
+				ID:              1,
+				SpaceID:         100,
+				ExptType:        0,
+				EvalSetVersionID: 10,
+				EvalSet:         nil,
+			},
+			wantErr: true,
+			errMsg:  "with invalid EvalSetVersion 10",
+		},
+		{
+			name: "default类型_EvaluationSetVersion为nil",
+			expt: &entity.Experiment{
+				ID:              1,
+				SpaceID:         100,
+				ExptType:        0,
+				EvalSetVersionID: 10,
+				EvalSet: &entity.EvaluationSet{
+					ID:                10,
+					EvaluationSetVersion: nil,
+				},
+			},
+			wantErr: true,
+			errMsg:  "with invalid EvalSetVersion 10",
+		},
+		{
+			name: "default类型_ItemCount为0",
+			expt: &entity.Experiment{
+				ID:              1,
+				SpaceID:         100,
+				ExptType:        0,
+				EvalSetVersionID: 10,
+				EvalSet: &entity.EvaluationSet{
+					ID: 10,
+					EvaluationSetVersion: &entity.EvaluationSetVersion{
+						ID:        10,
+						ItemCount: 0,
+					},
+				},
+			},
+			wantErr: true,
+			errMsg:  "with empty EvalSetVersion 10",
+		},
+		{
+			name: "default类型_成功",
+			expt: &entity.Experiment{
+				ID:              1,
+				SpaceID:         100,
+				ExptType:        0,
+				EvalSetVersionID: 10,
+				EvalSet: &entity.EvaluationSet{
+					ID: 10,
+					EvaluationSetVersion: &entity.EvaluationSetVersion{
+						ID:        10,
+						ItemCount: 5,
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+		for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := mgr.CheckEvalSet(ctx, tt.expt, session)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+
+	tests := []struct {
+		name         string
+		invokeReq    *entity.InvokeExptReq
+		setup        func()
+		wantErr      bool
+		verifyExt    func(*testing.T, []*entity.ExptItemResult)
+	}{
+		{
+			name: "Ext字段正确设置",
+			invokeReq: &entity.InvokeExptReq{
+				ExptID:  1,
+				RunID:   2,
+				SpaceID: 100,
+				Items: []*entity.EvaluationSetItem{
+					{
+						ItemID: 10,
+						Turns:  []*entity.Turn{{ID: 1}},
+					},
+				},
+				Ext: map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				},
+			},
+			setup: func() {
+				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
+					EXPECT().
+					GetItemIDListByExptID(ctx, int64(100), int64(1)).
+					Return([]int64{}, nil)
+
+				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
+					EXPECT().
+					GetMaxItemIdxByExptID(ctx, int64(1), int64(100)).
+					Return(int32(0), nil)
+
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().
+					GenMultiIDs(ctx, 2).
+					Return([]int64{1001, 1002}, nil)
+
+				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+					EXPECT().
+					BatchCreateNX(ctx, gomock.Any()).
+					Do(func(_ context.Context, etrs []*entity.ExptTurnResult) {
+						assert.Len(t, etrs, 1)
+					}).
+					Return(nil)
+
+				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
+					EXPECT().
+					BatchCreateNX(ctx, gomock.Any()).
+					Do(func(_ context.Context, eirs []*entity.ExptItemResult) {
+						assert.Len(t, eirs, 1)
+						assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, eirs[0].Ext)
+					}).
+					Return(nil)
+
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().
+					GenMultiIDs(ctx, 1).
+					Return([]int64{2001}, nil)
+
+				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
+					EXPECT().
+					BatchCreateNXRunLogs(ctx, gomock.Any()).
+					Return(nil)
+
+				mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).
+					EXPECT().
+					ArithOperateCount(ctx, int64(1), int64(100), gomock.Any()).
+					Return(nil)
+			},
+			wantErr: false,
+			verifyExt: func(t *testing.T, eirs []*entity.ExptItemResult) {
+				if assert.Len(t, eirs, 1) {
+					assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, eirs[0].Ext)
+				}
+			},
+		},
+		{
+			name: "Ext字段为空map",
+			invokeReq: &entity.InvokeExptReq{
+				ExptID:  1,
+				RunID:   2,
+				SpaceID: 100,
+				Items: []*entity.EvaluationSetItem{
+					{
+						ItemID: 10,
+						Turns:  []*entity.Turn{{ID: 1}},
+					},
+				},
+				Ext: map[string]string{},
+			},
+			setup: func() {
+				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
+					EXPECT().
+					GetItemIDListByExptID(ctx, int64(100), int64(1)).
+					Return([]int64{}, nil)
+
+				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
+					EXPECT().
+					GetMaxItemIdxByExptID(ctx, int64(1), int64(100)).
+					Return(int32(0), nil)
+
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().
+					GenMultiIDs(ctx, 2).
+					Return([]int64{1001, 1002}, nil)
+
+				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+					EXPECT().
+					BatchCreateNX(ctx, gomock.Any()).
+					Return(nil)
+
+				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
+					EXPECT().
+					BatchCreateNX(ctx, gomock.Any()).
+					Do(func(_ context.Context, eirs []*entity.ExptItemResult) {
+						assert.Len(t, eirs, 1)
+						assert.Equal(t, map[string]string{}, eirs[0].Ext)
+					}).
+					Return(nil)
+
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().
+					GenMultiIDs(ctx, 1).
+					Return([]int64{2001}, nil)
+
+				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
+					EXPECT().
+					BatchCreateNXRunLogs(ctx, gomock.Any()).
+					Return(nil)
+
+				mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).
+					EXPECT().
+					ArithOperateCount(ctx, int64(1), int64(100), gomock.Any()).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup()
+			err := mgr.Invoke(ctx, tt.invokeReq)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
