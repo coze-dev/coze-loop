@@ -307,6 +307,7 @@ type ExptTurnResultRunLog struct {
 	TargetResultID     int64
 	EvaluatorResultIds *EvaluatorResults
 	ErrMsg             string
+	UpdatedAt          time.Time
 }
 
 type ExptTurnEvaluatorResultRef struct {
