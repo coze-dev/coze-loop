@@ -66,7 +66,7 @@ func (ExptItemResultConvertor) DO2PO(result *entity.ExptItemResult) *model.ExptI
 		LogID:     result.LogID,
 	}
 	// 序列化 Ext 字段
-	if result.Ext != nil && len(result.Ext) > 0 {
+	if len(result.Ext) > 0 {
 		extBytes, err := json.Marshal(result.Ext)
 		if err == nil {
 			po.Ext = &extBytes
