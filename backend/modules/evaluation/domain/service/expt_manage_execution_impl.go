@@ -40,7 +40,7 @@ func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, 
 		e.CheckConnector,
 	}
 
-	if expt.ExptType == entity.ExptType_Offline {
+	if expt.ExptType != entity.ExptType_Online {
 		if opt.CheckBenefit {
 			checkers = append(checkers, e.CheckBenefit)
 		}
