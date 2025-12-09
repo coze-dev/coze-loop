@@ -261,6 +261,7 @@ func (e *ExptMangerImpl) CheckBenefit(ctx context.Context, expt *entity.Experime
 	}
 
 	if result.IsFreeEvaluate != nil && *result.IsFreeEvaluate {
+		expt.CreditCost = entity.CreditCostFree
 		if err := e.exptRepo.Update(ctx, &entity.Experiment{
 			ID:         expt.ID,
 			SpaceID:    expt.SpaceID,
