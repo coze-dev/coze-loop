@@ -759,7 +759,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		return nil, err
 	}
 
-	logs.CtxInfo(ctx, "report target record, record_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID())
+	logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID())
 
 	outputData := target.ToInvokeOutputDataDO(req)
 	outputData.TimeConsumingMS = gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS)
@@ -774,7 +774,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval()+time.Second*3)); err != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*3)); err != nil {
 			return nil, err
 		}
 	}

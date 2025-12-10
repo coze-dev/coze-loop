@@ -93,7 +93,7 @@ const (
 
 const (
 	defaultDaemonInterval        = 20 * time.Second
-	defaultZombieIntervalSecond  = 60 * 60 * 24
+	defaultZombieIntervalSecond  = 60 * 60 * 36
 	defaultItemEvalConcurNum     = 3
 	defaultItemEvalInterval      = 20 * time.Second
 	defaultSpaceExptConcurLimit  = 200

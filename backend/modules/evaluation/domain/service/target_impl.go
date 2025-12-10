@@ -285,7 +285,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		logID := logs.GetLogID(ctx)
 
 		if evalTargetDO.EvalTargetType.SupptTrajectory() {
-			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval())
+			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(spaceID))
 			trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
 			if err != nil {
 				logs.CtxError(ctx, "ExtractTrajectory fail, space_id: %v, target_id: %v, target_version_id: %v, trace_id: %v, err: %v",
@@ -601,7 +601,7 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	}
 
 	goroutine.Go(ctx, func() {
-		time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval())
+		time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(param.SpaceID))
 		if err := recordTrajectory(); err != nil {
 			logs.CtxError(ctx, "extract and record trajectory fail, record_id: %v, err: %v", record.ID, err)
 		}

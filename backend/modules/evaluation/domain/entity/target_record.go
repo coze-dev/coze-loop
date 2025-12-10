@@ -121,12 +121,20 @@ type ExecuteTargetCtx struct {
 }
 
 type TargetTrajectoryConf struct {
-	ExtractIntervalSecond int64 `json:"extract_interval_second" mapstructure:"extract_interval_second"`
+	ExtractIntervalSecond      int64           `json:"extract_interval_second" mapstructure:"extract_interval_second"`
+	SpaceExtractIntervalSecond map[int64]int64 `json:"space_extract_interval_second" mapstructure:"space_extract_interval_second"`
 }
 
-func (t *TargetTrajectoryConf) GetExtractInterval() time.Duration {
-	if t != nil && t.ExtractIntervalSecond > 0 {
+func (t *TargetTrajectoryConf) GetExtractInterval(spaceID int64) time.Duration {
+	const defaultInterval = time.Second * 10
+	if t == nil {
+		return defaultInterval
+	}
+	if interval := t.SpaceExtractIntervalSecond[spaceID]; spaceID > 0 && interval > 0 {
+		return time.Duration(interval) * time.Second
+	}
+	if t.ExtractIntervalSecond > 0 {
 		return time.Duration(t.ExtractIntervalSecond) * time.Second
 	}
-	return time.Second * 15
+	return defaultInterval
 }
