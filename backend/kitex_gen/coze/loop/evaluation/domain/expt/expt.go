@@ -18,6 +18,18 @@ import (
 const (
 	PromptUserQueryFieldKey = "builtin_prompt_user_query"
 
+	ColumnEvalTargetNameActualOutput = "actual_output"
+
+	ColumnEvalTargetNameTrajectory = "trajectory"
+
+	ColumnEvalTargetNameEvalTargetTotalLatency = "eval_target_total_latency"
+
+	ColumnEvalTargetNameEvaluatorInputTokens = "eval_target_input_tokens"
+
+	ColumnEvalTargetNameEvaluatorOutputTokens = "eval_target_output_tokens"
+
+	ColumnEvalTargetNameEvaluatorTotalTokens = "eval_target_total_tokens"
+
 	ExptResultExportTypeCSV = "CSV"
 
 	CSVExportStatusUnknown = "Unknown"
