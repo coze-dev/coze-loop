@@ -153,6 +153,17 @@ struct ColumnEvaluator {
     7: optional bool builtin
 }
 
+struct ExptColumnEvalTarget {
+    1: optional i64 experiment_id (api.js_conv='true', go.tag='json:"experiment_id"')
+    2: optional list<ColumnEvalTarget> column_eval_targets
+}
+
+struct ColumnEvalTarget {
+    1: optional string name
+    2: optional string description
+    3: optional string label
+}
+
 struct ColumnEvalSetField {
     1: optional string key
     2: optional string name
