@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
@@ -246,6 +247,8 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 	filter := &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
 	}
+	req.TraceID = strings.TrimSpace(req.TraceID)
+	req.LogID = strings.TrimSpace(req.LogID)
 	if req.TraceID != "" {
 		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
 			FieldName: loop_span.SpanFieldTraceId,
@@ -253,13 +256,16 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 			Values:    []string{req.TraceID},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		})
-	} else {
+	} else if req.LogID != "" {
 		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
 			FieldName: loop_span.SpanFieldLogID,
 			FieldType: loop_span.FieldTypeString,
 			Values:    []string{req.LogID},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		})
+	} else {
+		// traceID or logID is expected
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("traceID or logID is expected"))
 	}
 	if len(req.SpanIDs) > 0 {
 		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
