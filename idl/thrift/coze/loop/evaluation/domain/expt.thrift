@@ -343,6 +343,12 @@ struct ExptAggregateResult {
     4: optional map<i64, AnnotationAggregateResult> annotation_results (go.tag = 'json:"annotation_results"')    // tag_key_id -> result
 }
 
+struct EvalTargetAggregateResult {
+    1: required i64 target_id (api.js_conv = 'true', go.tag = 'json:"target_id"')
+    2: optional list<AggregatorResult> aggregator_results
+    3: optional string name
+}
+
 // 评估器版本粒度聚合结果
 struct EvaluatorAggregateResult {
     1: required i64 evaluator_version_id (api.js_conv = 'true', go.tag = 'json:"evaluator_version_id"')
