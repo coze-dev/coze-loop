@@ -12,6 +12,7 @@ import (
 //go:generate mockgen -destination=mocks/data_provider.go -package=mocks . IDatasetRPCAdapter
 type IDatasetRPCAdapter interface {
 	CreateDataset(ctx context.Context, param *CreateDatasetParam) (id int64, err error)
+	CreateDatasetWithImport(ctx context.Context, param *CreateDatasetWithImportParam) (id int64, jobID int64, err error)
 	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error)
 	DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
@@ -56,6 +57,19 @@ type CreateDatasetParam struct {
 	EvaluationSetItems *entity.EvaluationSetSchema
 	BizCategory        *entity.BizCategory
 	Session            *entity.Session
+}
+
+type CreateDatasetWithImportParam struct {
+	SpaceID            int64
+	Name               string
+	Desc               *string
+	EvaluationSetItems *entity.EvaluationSetSchema
+	BizCategory        *entity.BizCategory
+
+	SourceType    *entity.SetSourceType
+	Source        *entity.DatasetIOEndpoint
+	FieldMappings []*entity.FieldMapping
+	Session       *entity.Session
 }
 
 type ListDatasetsParam struct {

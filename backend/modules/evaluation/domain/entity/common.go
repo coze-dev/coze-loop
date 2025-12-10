@@ -437,3 +437,46 @@ type RateLimit struct {
 	Burst  *int32         `json:"burst,omitempty"`
 	Period *time.Duration `json:"period,omitempty"`
 }
+
+type FileFormat int64
+
+const (
+	FileFormat_JSONL   FileFormat = 1
+	FileFormat_Parquet FileFormat = 2
+	FileFormat_CSV     FileFormat = 3
+	FileFormat_XLSX    FileFormat = 4
+	/*[100, 200) 压缩格式*/
+	FileFormat_ZIP FileFormat = 100
+)
+
+func (p FileFormat) String() string {
+	switch p {
+	case FileFormat_JSONL:
+		return "JSONL"
+	case FileFormat_Parquet:
+		return "Parquet"
+	case FileFormat_CSV:
+		return "CSV"
+	case FileFormat_XLSX:
+		return "XLSX"
+	case FileFormat_ZIP:
+		return "ZIP"
+	}
+	return "<UNSET>"
+}
+
+func FileFormatFromString(s string) (FileFormat, error) {
+	switch s {
+	case "JSONL":
+		return FileFormat_JSONL, nil
+	case "Parquet":
+		return FileFormat_Parquet, nil
+	case "CSV":
+		return FileFormat_CSV, nil
+	case "XLSX":
+		return FileFormat_XLSX, nil
+	case "ZIP":
+		return FileFormat_ZIP, nil
+	}
+	return FileFormat(0), fmt.Errorf("not a valid FileFormat string")
+}

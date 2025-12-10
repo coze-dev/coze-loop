@@ -111,6 +111,11 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 	}, nil
 }
 
+func (e *EvaluationSetApplicationImpl) CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest) (r *eval_set.CreateEvaluationSetWithImportResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
 func (e *EvaluationSetApplicationImpl) UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest) (resp *eval_set.UpdateEvaluationSetResponse, err error) {
 	// 参数校验
 	if req == nil {

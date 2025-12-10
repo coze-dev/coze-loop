@@ -48,6 +48,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CreateEvaluationSetWithImport": kitex.NewMethodInfo(
+		createEvaluationSetWithImportHandler,
+		newEvaluationSetServiceCreateEvaluationSetWithImportArgs,
+		newEvaluationSetServiceCreateEvaluationSetWithImportResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateEvaluationSetVersion": kitex.NewMethodInfo(
 		createEvaluationSetVersionHandler,
 		newEvaluationSetServiceCreateEvaluationSetVersionArgs,
@@ -258,6 +265,25 @@ func newEvaluationSetServiceListEvaluationSetsArgs() interface{} {
 
 func newEvaluationSetServiceListEvaluationSetsResult() interface{} {
 	return eval_set.NewEvaluationSetServiceListEvaluationSetsResult()
+}
+
+func createEvaluationSetWithImportHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceCreateEvaluationSetWithImportArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceCreateEvaluationSetWithImportResult)
+	success, err := handler.(eval_set.EvaluationSetService).CreateEvaluationSetWithImport(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceCreateEvaluationSetWithImportArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceCreateEvaluationSetWithImportArgs()
+}
+
+func newEvaluationSetServiceCreateEvaluationSetWithImportResult() interface{} {
+	return eval_set.NewEvaluationSetServiceCreateEvaluationSetWithImportResult()
 }
 
 func createEvaluationSetVersionHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -545,6 +571,16 @@ func (p *kClient) ListEvaluationSets(ctx context.Context, req *eval_set.ListEval
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceListEvaluationSetsResult
 	if err = p.c.Call(ctx, "ListEvaluationSets", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest) (r *eval_set.CreateEvaluationSetWithImportResponse, err error) {
+	var _args eval_set.EvaluationSetServiceCreateEvaluationSetWithImportArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceCreateEvaluationSetWithImportResult
+	if err = p.c.Call(ctx, "CreateEvaluationSetWithImport", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

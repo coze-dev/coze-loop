@@ -4,6 +4,7 @@ include "../../../base.thrift"
 include "domain/eval_set.thrift"
 include "domain/common.thrift"
 include "../data/domain/dataset.thrift"
+include "../data/domain/dataset_job.thrift"
 
 struct CreateEvaluationSetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
@@ -19,6 +20,29 @@ struct CreateEvaluationSetRequest {
 
 struct CreateEvaluationSetResponse {
     1: optional i64 evaluation_set_id (api.js_conv="true", go.tag='json:"evaluation_set_id"'),
+
+    255: base.BaseResp BaseResp
+}
+
+struct CreateEvaluationSetWithImportRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+
+    2: optional string name (vt.min_size = "1", vt.max_size = "255"),
+    3: optional string description (vt.max_size = "2048"),
+    4: optional eval_set.EvaluationSetSchema evaluation_set_schema,
+    5: optional eval_set.BizCategory biz_category (vt.max_size = "128") // 业务分类
+
+    6: optional dataset_job.SourceType source_type (vt.defined_only = "true")
+    7: required dataset_job.DatasetIOEndpoint source
+    8: optional list<dataset_job.FieldMapping> fieldMappings (vt.min_size = "1", vt.elem.skip = "false")
+
+    200: optional common.Session session (api.none = 'true')
+    255: optional base.Base Base
+}
+
+struct CreateEvaluationSetWithImportResponse {
+    1: optional i64 evaluation_set_id (api.js_conv="true", go.tag='json:"evaluation_set_id"'),
+    2: optional i64 job_id (api.js_conv="true", go.tag='json:"job_id"')
 
     255: base.BaseResp BaseResp
 }
@@ -324,6 +348,7 @@ service EvaluationSetService {
     DeleteEvaluationSetResponse DeleteEvaluationSet(1: DeleteEvaluationSetRequest req) (api.category="evaluation_set", api.delete = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id"),
     GetEvaluationSetResponse GetEvaluationSet(1: GetEvaluationSetRequest req) (api.category="evaluation_set", api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id"),
     ListEvaluationSetsResponse ListEvaluationSets(1: ListEvaluationSetsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/list"),
+    CreateEvaluationSetWithImportResponse CreateEvaluationSetWithImport(1: CreateEvaluationSetWithImportRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/create_with_import")
 
     // 版本管理
     CreateEvaluationSetVersionResponse CreateEvaluationSetVersion(1: CreateEvaluationSetVersionRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/versions"),

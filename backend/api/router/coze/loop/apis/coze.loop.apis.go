@@ -121,6 +121,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				_v11.POST("/evaluation_sets", append(_evaluation_setsMw(handler), apis.CreateEvaluationSet)...)
 				_evaluation_sets := _v11.Group("/evaluation_sets", _evaluation_setsMw(handler)...)
+				_evaluation_sets.POST("/create_with_import", append(_createevaluationsetwithimportMw(handler), apis.CreateEvaluationSetWithImport)...)
 				_evaluation_sets.DELETE("/:evaluation_set_id", append(_evaluation_set_idMw(handler), apis.DeleteEvaluationSet)...)
 				_evaluation_set_id := _evaluation_sets.Group("/:evaluation_set_id", _evaluation_set_idMw(handler)...)
 				_evaluation_set_id.PUT("/schema", append(_updateevaluationsetschemaMw(handler), apis.UpdateEvaluationSetSchema)...)

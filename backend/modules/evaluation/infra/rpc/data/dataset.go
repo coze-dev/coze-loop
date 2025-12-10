@@ -63,6 +63,10 @@ func (a *DatasetRPCAdapter) CreateDataset(ctx context.Context, param *rpc.Create
 	return resp.GetDatasetID(), nil
 }
 
+func (a *DatasetRPCAdapter) CreateDatasetWithImport(ctx context.Context, param *rpc.CreateDatasetWithImportParam) (id int64, jobID int64, err error) {
+	return 0, 0, nil
+}
+
 func (a *DatasetRPCAdapter) UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error) {
 	resp, err := a.client.UpdateDataset(ctx, &dataset.UpdateDatasetRequest{
 		WorkspaceID: &spaceID,
