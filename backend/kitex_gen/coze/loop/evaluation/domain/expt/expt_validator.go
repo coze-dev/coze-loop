@@ -231,6 +231,9 @@ func (p *SourceTarget) IsValid() error {
 func (p *ExptAggregateResult_) IsValid() error {
 	return nil
 }
+func (p *EvalTargetAggregateResult_) IsValid() error {
+	return nil
+}
 func (p *EvaluatorAggregateResult_) IsValid() error {
 	return nil
 }

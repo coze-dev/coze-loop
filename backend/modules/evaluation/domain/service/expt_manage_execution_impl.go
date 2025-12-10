@@ -57,18 +57,11 @@ func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, 
 
 func (e *ExptMangerImpl) CheckEvalSet(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
 	switch expt.ExptType {
-	case entity.ExptType_Offline:
-		if expt.EvalSetVersionID == 0 || expt.EvalSet == nil || expt.EvalSet.EvaluationSetVersion == nil {
-			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with invalid EvalSetVersion %d", expt.EvalSetVersionID)))
-		}
-		if expt.EvalSet.EvaluationSetVersion.ItemCount <= 0 {
-			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with empty EvalSetVersion %d", expt.EvalSetVersionID)))
-		}
 	case entity.ExptType_Online:
 		if expt.EvalSet == nil {
 			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with empty EvalSet: %d", expt.EvalSetID)))
 		}
-	default: // 默认离线实验
+	default:
 		if expt.EvalSetVersionID == 0 || expt.EvalSet == nil || expt.EvalSet.EvaluationSetVersion == nil {
 			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with invalid EvalSetVersion %d", expt.EvalSetVersionID)))
 		}
@@ -76,7 +69,6 @@ func (e *ExptMangerImpl) CheckEvalSet(ctx context.Context, expt *entity.Experime
 			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with empty EvalSetVersion %d", expt.EvalSetVersionID)))
 		}
 	}
-
 	return nil
 }
 
