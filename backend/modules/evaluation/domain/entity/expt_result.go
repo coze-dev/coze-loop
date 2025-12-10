@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
@@ -699,4 +700,11 @@ type ColumnEvalTarget struct {
 	Name  string
 	Desc  string
 	Label *string
+}
+
+func (c *ColumnEvalTarget) IsMtrColumn() bool {
+	return c != nil && (c.Name == consts.ReportColumnNameEvalTargetTotalLatency ||
+		c.Name == consts.ReportColumnNameEvalTargetInputTokens ||
+		c.Name == consts.ReportColumnNameEvalTargetOutputTokens ||
+		c.Name == consts.ReportColumnNameEvalTargetTotalTokens)
 }
