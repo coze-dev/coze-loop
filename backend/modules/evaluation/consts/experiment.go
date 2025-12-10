@@ -3,6 +3,10 @@
 
 package consts
 
+import (
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
+)
+
 const (
 	ActionCreateExpt = "createLoopEvaluationExperiment"
 	ActionReadExpt   = "listLoopEvaluationExperiment"
@@ -35,8 +39,14 @@ const (
 )
 
 const (
-	ReportColumnNameEvalTargetActualOutput  = "actual_output"
+	ReportColumnNameEvalTargetActualOutput  = expt.ColumnEvalTargetNameActualOutput
 	ReportColumnLabelEvalTargetActualOutput = "实际输出"
-	ReportColumnNameEvalTargetTrajectory    = "trajectory"
-	ReportColumnLabelEvalTargetTrajectory   = "轨迹"
+
+	ReportColumnNameEvalTargetTrajectory  = expt.ColumnEvalTargetNameTrajectory
+	ReportColumnLabelEvalTargetTrajectory = "轨迹"
+
+	ReportColumnNameEvalTargetTotalLatency = expt.ColumnEvalTargetNameEvalTargetTotalLatency
+	ReportColumnNameEvalTargetInputTokens  = expt.ColumnEvalTargetNameEvaluatorInputTokens
+	ReportColumnNameEvalTargetOutputTokens = expt.ColumnEvalTargetNameEvaluatorOutputTokens
+	ReportColumnNameEvalTargetTotalTokens  = expt.ColumnEvalTargetNameEvaluatorTotalTokens
 )

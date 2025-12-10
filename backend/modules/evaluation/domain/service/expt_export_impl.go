@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
@@ -426,6 +427,24 @@ func getColumnNameEvaluatorReason(evaluatorName, version string) string {
 	return fmt.Sprintf("%s<%s>_reason", evaluatorName, version)
 }
 
+func (e *exportCSVHelper) buildColumnEvalTargetContent(columnName string, data *entity.EvalTargetOutputData) string {
+	if data == nil {
+		return ""
+	}
+	switch columnName {
+	case consts.ReportColumnNameEvalTargetTotalLatency:
+		return strconv.FormatInt(gptr.Indirect(data.TimeConsumingMS), 10)
+	case consts.ReportColumnNameEvalTargetInputTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.InputTokens, 10)
+	case consts.ReportColumnNameEvalTargetOutputTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.OutputTokens, 10)
+	case consts.ReportColumnNameEvalTargetTotalTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.TotalTokens, 10)
+	default:
+		return geDatasetCellOrActualOutputData(data.OutputFields[columnName])
+	}
+}
+
 func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 	rows := make([][]string, 0)
 	for _, itemResult := range e.allItemResults {
@@ -465,10 +484,8 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 			for _, col := range e.columnsEvalTarget {
 				if payload.TargetOutput != nil &&
 					payload.TargetOutput.EvalTargetRecord != nil &&
-					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil &&
-					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields != nil {
-					val := geDatasetCellOrActualOutputData(payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[col.Name])
-					rowData = append(rowData, val)
+					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
+					rowData = append(rowData, e.buildColumnEvalTargetContent(col.Name, payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData))
 				} else {
 					rowData = append(rowData, "")
 				}
