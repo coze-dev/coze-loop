@@ -285,6 +285,16 @@ type MGetExperimentResultParam struct {
 	Page               Page
 }
 
+type MGetExperimentReportResult struct {
+	ColumnEvaluators      []*ColumnEvaluator
+	ExptColumnEvaluators  []*ExptColumnEvaluator
+	ColumnEvalSetFields   []*ColumnEvalSetField
+	ExptColumnAnnotations []*ExptColumnAnnotation
+	ItemResults           []*ItemResult
+	ExptColumnsEvalTarget []*ExptColumnEvalTarget
+	Total                 int64
+}
+
 type ExptTurnResultRunLog struct {
 	ID                 int64
 	SpaceID            int64
@@ -678,4 +688,15 @@ type ColumnAnnotation struct {
 type ExptColumnAnnotation struct {
 	ExptID            int64
 	ColumnAnnotations []*ColumnAnnotation
+}
+
+type ExptColumnEvalTarget struct {
+	ExptID  int64
+	Columns []*ColumnEvalTarget
+}
+
+type ColumnEvalTarget struct {
+	Name  string
+	Desc  string
+	Label *string
 }

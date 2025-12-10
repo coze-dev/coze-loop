@@ -90,6 +90,9 @@ func (p *ColumnEvalSetField) IsValid() error {
 func (p *ColumnEvaluator) IsValid() error {
 	return nil
 }
+func (p *ColumnEvalTarget) IsValid() error {
+	return nil
+}
 func (p *TargetOutput) IsValid() error {
 	if p.Error != nil {
 		if err := p.Error.IsValid(); err != nil {

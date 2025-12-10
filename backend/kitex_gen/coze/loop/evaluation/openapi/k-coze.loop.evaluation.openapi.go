@@ -13195,6 +13195,20 @@ func (p *ListExperimentResultOpenAPIData) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField100(buf[offset:])
@@ -13302,6 +13316,31 @@ func (p *ListExperimentResultOpenAPIData) FastReadField3(buf []byte) (int, error
 	return offset, nil
 }
 
+func (p *ListExperimentResultOpenAPIData) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*experiment.ColumnEvalTarget, 0, size)
+	values := make([]experiment.ColumnEvalTarget, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.ColumnEvalTargets = _field
+	return offset, nil
+}
+
 func (p *ListExperimentResultOpenAPIData) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -13327,6 +13366,7 @@ func (p *ListExperimentResultOpenAPIData) FastWriteNocopy(buf []byte, w thrift.N
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -13338,6 +13378,7 @@ func (p *ListExperimentResultOpenAPIData) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -13392,6 +13433,22 @@ func (p *ListExperimentResultOpenAPIData) fastWriteField3(buf []byte, w thrift.N
 	return offset
 }
 
+func (p *ListExperimentResultOpenAPIData) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetColumnEvalTargets() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 4)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.ColumnEvalTargets {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
 func (p *ListExperimentResultOpenAPIData) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTotal() {
@@ -13433,6 +13490,19 @@ func (p *ListExperimentResultOpenAPIData) field3Length() int {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.ListBeginLength()
 		for _, v := range p.ItemResults {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *ListExperimentResultOpenAPIData) field4Length() int {
+	l := 0
+	if p.IsSetColumnEvalTargets() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.ColumnEvalTargets {
 			_ = v
 			l += v.BLength()
 		}
@@ -13497,6 +13567,21 @@ func (p *ListExperimentResultOpenAPIData) DeepCopy(s interface{}) error {
 			}
 
 			p.ItemResults = append(p.ItemResults, _elem)
+		}
+	}
+
+	if src.ColumnEvalTargets != nil {
+		p.ColumnEvalTargets = make([]*experiment.ColumnEvalTarget, 0, len(src.ColumnEvalTargets))
+		for _, elem := range src.ColumnEvalTargets {
+			var _elem *experiment.ColumnEvalTarget
+			if elem != nil {
+				_elem = &experiment.ColumnEvalTarget{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.ColumnEvalTargets = append(p.ColumnEvalTargets, _elem)
 		}
 	}
 
