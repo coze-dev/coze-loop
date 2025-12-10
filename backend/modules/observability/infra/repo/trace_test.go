@@ -494,7 +494,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				req: &repo.GetTraceParam{
-					TraceID:            "123",
+					LogID:              "123",
 					Tenants:            []string{"test"},
 					NotQueryAnnotation: false,
 				},
@@ -594,6 +594,34 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					SystemTagsDouble: map[string]float64{},
 				},
 			},
+		},
+		{
+			name: "get trace failed due to blank id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+					TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+						"test": {
+							loop_span.TTL3d: {
+								SpanTable: "spans",
+							},
+						},
+					},
+				}, nil)
+				return fields{
+					spansDao:    daomock.NewMockISpansDao(ctrl),
+					annoDao:     daomock.NewMockIAnnotationDao(ctrl),
+					traceConfig: traceConfigMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &repo.GetTraceParam{
+					TraceID: " ",
+					Tenants: []string{"test"},
+				},
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
