@@ -230,6 +230,7 @@ struct BatchGetExperimentResultResponse {
     3: optional list<expt.ExptColumnEvaluator> expt_column_evaluators (api.body = "expt_column_evaluators")
     // 人工标注标签表头信息
     4: optional list<expt.ExptColumnAnnotation> expt_column_annotations (api.body = "expt_column_annotations")
+    5: optional list<expt.ExptColumnEvalTarget> expt_column_eval_target (api.body = "expt_column_eval_target")
 
     // item粒度实验结果详情
     10: optional list<expt.ItemResult> item_results (api.body = "item_results")
