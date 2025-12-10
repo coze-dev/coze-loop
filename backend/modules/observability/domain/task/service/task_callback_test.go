@@ -683,3 +683,175 @@ func TestNewTaskCallbackServiceImpl(t *testing.T) {
 		assert.NotNil(t, impl)
 	})
 }
+
+// 新增：覆盖 event.ext 中包含 span_start_time/span_end_time 的回调路径（AutoEvalCallback）
+func TestTaskCallbackServiceImpl_CallBack_WithSpanTimes(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
+	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+
+	impl := &TaskCallbackServiceImpl{
+		benefitSvc:     mockBenefit,
+		tenantProvider: mockTenant,
+		traceRepo:      mockTraceRepo,
+		taskRepo:       mockTaskRepo,
+		config:         mockConfig,
+	}
+
+	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
+	mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7)).AnyTimes()
+	mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+		ID: 101,
+		SpanFilter: &entity.SpanFilterFields{PlatformType: loop_span.PlatformType("callback_all")},
+	}, nil).AnyTimes()
+
+	now := time.Now()
+	span := &loop_span.Span{
+		SpanID:           "span-1",
+		TraceID:          "trace-1",
+		SystemTagsString: map[string]string{loop_span.SpanFieldTenant: "tenant"},
+		LogicDeleteTime:  now.Add(24 * time.Hour).UnixMicro(),
+		StartTime:        now.UnixMicro(),
+	}
+
+	// ext 中包含 span_start_time/span_end_time，期望 ListSpans 使用它们作为时间范围
+	startMS := now.Add(-time.Minute).UnixMilli()
+	endMS := now.UnixMilli()
+
+	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).DoAndReturn(
+		func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+			require.Equal(t, startMS, param.StartAt)
+			require.Equal(t, endMS, param.EndAt)
+			return &repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil
+		},
+	).AnyTimes()
+	mockTaskRepo.EXPECT().IncrTaskRunSuccessCount(gomock.Any(), int64(101), int64(202), gomock.Any()).Return(nil).AnyTimes()
+	mockTraceRepo.EXPECT().InsertAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.InsertAnnotationParam{})).DoAndReturn(
+		func(_ context.Context, param *repo.InsertAnnotationParam) error {
+			require.NotNil(t, param.AnnotationType)
+			require.Equal(t, loop_span.AnnotationTypeAutoEvaluate, *param.AnnotationType)
+			return nil
+		},
+	).AnyTimes()
+
+	event := &entity.AutoEvalEvent{
+		TurnEvalResults: []*entity.OnlineExptTurnEvalResult{
+			{
+				EvaluatorVersionID: 1,
+				Score:              0.9,
+				Reasoning:          "ok",
+				Status:             entity.EvaluatorRunStatus_Success,
+				BaseInfo:           &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: "user-1"}},
+				Ext: map[string]string{
+					"workspace_id": strconv.FormatInt(1, 10),
+					"span_id":      "span-1",
+					"trace_id":     "trace-1",
+					"span_start_time": strconv.FormatInt(startMS, 10),
+					"span_end_time":  strconv.FormatInt(endMS, 10),
+					"task_id":        strconv.FormatInt(101, 10),
+					"run_id":         strconv.FormatInt(202, 10),
+				},
+			},
+		},
+	}
+
+	require.NoError(t, impl.AutoEvalCallback(context.Background(), event))
+}
+
+// 新增：覆盖 event.ext 中包含 span_start_time/span_end_time 的修正路径（AutoEvalCorrection）
+func TestTaskCallbackServiceImpl_AutoEvalCorrection_WithSpanTimes(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockBenefit := benefit_mocks.NewMockIBenefitService(ctrl)
+	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+	mockTraceRepo := trace_repo_mocks.NewMockITraceRepo(ctrl)
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+
+	impl := &TaskCallbackServiceImpl{
+		benefitSvc:     mockBenefit,
+		tenantProvider: mockTenant,
+		traceRepo:      mockTraceRepo,
+		taskRepo:       mockTaskRepo,
+		config:         mockConfig,
+	}
+
+	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+	mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
+		ID: 101,
+		SpanFilter: &entity.SpanFilterFields{PlatformType: loop_span.PlatformType("callback_all")},
+	}, nil).AnyTimes()
+
+	now := time.Now()
+	span := &loop_span.Span{
+		SpanID:           "span-1",
+		TraceID:          "trace-1",
+		SystemTagsString: map[string]string{loop_span.SpanFieldTenant: "tenant"},
+		LogicDeleteTime:  now.Add(24 * time.Hour).UnixMicro(),
+		StartTime:        now.UnixMicro(),
+	}
+
+	startMS := now.Add(-time.Minute).UnixMilli()
+	endMS := now.UnixMilli()
+
+	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListSpansParam{})).DoAndReturn(
+		func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+			require.Equal(t, startMS, param.StartAt)
+			require.Equal(t, endMS, param.EndAt)
+			return &repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil
+		},
+	).AnyTimes()
+
+	annotations := loop_span.AnnotationList{
+		{
+			ID:             "anno-1",
+			SpanID:         "span-1",
+			TraceID:        "trace-1",
+			WorkspaceID:    "1",
+			StartTime:      now,
+			AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+			Metadata: loop_span.AutoEvaluateMetadata{
+				TaskID:             101,
+				EvaluatorRecordID:  123,
+				EvaluatorVersionID: 1,
+			},
+		},
+	}
+
+	mockTraceRepo.EXPECT().ListAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.ListAnnotationsParam{})).DoAndReturn(
+		func(_ context.Context, param *repo.ListAnnotationsParam) (loop_span.AnnotationList, error) {
+			require.Equal(t, startMS, param.StartAt)
+			require.Equal(t, endMS, param.EndAt)
+			return annotations, nil
+		},
+	).AnyTimes()
+	mockTraceRepo.EXPECT().InsertAnnotations(gomock.Any(), gomock.AssignableToTypeOf(&repo.InsertAnnotationParam{})).Return(nil).AnyTimes()
+
+	event := &entity.CorrectionEvent{
+		EvaluatorRecordID: 123,
+		EvaluatorResult: &entity.EvaluatorResult{Correction: &entity.Correction{Score: 0.95, Explain: "Corrected score"}},
+		Ext: map[string]string{
+			"workspace_id":    "1",
+			"span_id":         "span-1",
+			"trace_id":        "trace-1",
+			"span_start_time": strconv.FormatInt(startMS, 10),
+			"span_end_time":   strconv.FormatInt(endMS, 10),
+			"task_id":         "101",
+		},
+		CreatedAt: now.Unix(),
+		UpdatedAt: now.Unix(),
+	}
+
+	require.NoError(t, impl.AutoEvalCorrection(context.Background(), event))
+}
