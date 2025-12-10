@@ -170,6 +170,7 @@ type ExptItemResult struct {
 	ErrMsg    string
 	ItemIdx   int32
 	LogID     string
+	Ext       map[string]string
 }
 
 type ExptItemResultRunLog struct {
