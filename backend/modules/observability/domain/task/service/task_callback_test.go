@@ -709,7 +709,7 @@ func TestTaskCallbackServiceImpl_CallBack_WithSpanTimes(t *testing.T) {
 	mockBenefit.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{StorageDuration: 1}, nil).AnyTimes()
 	mockConfig.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7)).AnyTimes()
 	mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
-		ID: 101,
+		ID:         101,
 		SpanFilter: &entity.SpanFilterFields{PlatformType: loop_span.PlatformType("callback_all")},
 	}, nil).AnyTimes()
 
@@ -751,13 +751,13 @@ func TestTaskCallbackServiceImpl_CallBack_WithSpanTimes(t *testing.T) {
 				Status:             entity.EvaluatorRunStatus_Success,
 				BaseInfo:           &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: "user-1"}},
 				Ext: map[string]string{
-					"workspace_id": strconv.FormatInt(1, 10),
-					"span_id":      "span-1",
-					"trace_id":     "trace-1",
+					"workspace_id":    strconv.FormatInt(1, 10),
+					"span_id":         "span-1",
+					"trace_id":        "trace-1",
 					"span_start_time": strconv.FormatInt(startMS, 10),
-					"span_end_time":  strconv.FormatInt(endMS, 10),
-					"task_id":        strconv.FormatInt(101, 10),
-					"run_id":         strconv.FormatInt(202, 10),
+					"span_end_time":   strconv.FormatInt(endMS, 10),
+					"task_id":         strconv.FormatInt(101, 10),
+					"run_id":          strconv.FormatInt(202, 10),
 				},
 			},
 		},
@@ -789,7 +789,7 @@ func TestTaskCallbackServiceImpl_AutoEvalCorrection_WithSpanTimes(t *testing.T) 
 
 	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 	mockTaskRepo.EXPECT().GetTask(gomock.Any(), int64(101), gomock.Any(), gomock.Any()).Return(&entity.ObservabilityTask{
-		ID: 101,
+		ID:         101,
 		SpanFilter: &entity.SpanFilterFields{PlatformType: loop_span.PlatformType("callback_all")},
 	}, nil).AnyTimes()
 
@@ -840,7 +840,7 @@ func TestTaskCallbackServiceImpl_AutoEvalCorrection_WithSpanTimes(t *testing.T) 
 
 	event := &entity.CorrectionEvent{
 		EvaluatorRecordID: 123,
-		EvaluatorResult: &entity.EvaluatorResult{Correction: &entity.Correction{Score: 0.95, Explain: "Corrected score"}},
+		EvaluatorResult:   &entity.EvaluatorResult{Correction: &entity.Correction{Score: 0.95, Explain: "Corrected score"}},
 		Ext: map[string]string{
 			"workspace_id":    "1",
 			"span_id":         "span-1",
