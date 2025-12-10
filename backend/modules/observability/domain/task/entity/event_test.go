@@ -91,8 +91,8 @@ func TestOnlineExptTurnEvalResult_Workspace_Task_User_Platform(t *testing.T) {
 
 	res := &OnlineExptTurnEvalResult{
 		Ext: map[string]string{
-			"workspace_id": "9",
-			"task_id":      "101",
+			"workspace_id":  "9",
+			"task_id":       "101",
 			"platform_type": string(loop_span.PlatformCallbackAll),
 		},
 		BaseInfo: &BaseInfo{CreatedBy: &UserInfo{UserID: "u-1"}},
@@ -120,13 +120,34 @@ func TestOnlineExptTurnEvalResult_Workspace_Task_User_Platform(t *testing.T) {
 	assert.Equal(t, loop_span.PlatformCallbackAll, pt2)
 }
 
+func TestOnlineExptTurnEvalResult_InvalidNumbers(t *testing.T) {
+	t.Parallel()
+
+	// span_end_time 非法 -> GetEndTimeFromExt 返回 0
+	res1 := &OnlineExptTurnEvalResult{Ext: map[string]string{"span_end_time": "abc"}}
+	assert.Equal(t, int64(0), res1.GetEndTimeFromExt())
+
+	// start_time 非法 -> GetStartTimeFromExt、GetEndTimeFromExt 返回 0
+	res2 := &OnlineExptTurnEvalResult{Ext: map[string]string{"start_time": "not-a-number"}}
+	assert.Equal(t, int64(0), res2.GetStartTimeFromExt(7))
+	assert.Equal(t, int64(0), res2.GetEndTimeFromExt())
+
+	// 同时存在 span_end_time（非法）和 start_time（合法） -> EndTime 优先取 span_end_time=0
+	now := time.Now().UnixMilli()
+	res3 := &OnlineExptTurnEvalResult{Ext: map[string]string{
+		"span_end_time": "abc",
+		"start_time":    strconv.FormatInt(now*1000, 10),
+	}}
+	assert.Equal(t, int64(0), res3.GetEndTimeFromExt())
+}
+
 func TestCorrectionEvent_ValidateAndAccessors(t *testing.T) {
 	t.Parallel()
 
 	// 校验成功
 	evt := &CorrectionEvent{
 		EvaluatorRecordID: 1,
-		EvaluatorResult: &EvaluatorResult{Correction: &Correction{Score: 0.5, Explain: "ok"}},
+		EvaluatorResult:   &EvaluatorResult{Correction: &Correction{Score: 0.5, Explain: "ok"}},
 	}
 	require.NoError(t, evt.Validate())
 
@@ -165,7 +186,7 @@ func TestCorrectionEvent_ExtAccessorsAndTimes(t *testing.T) {
 	assert.Equal(t, endMS, evt.GetEndTimeFromExt())
 
 	// 使用 start_time 推导（微秒输入）
-	startMicro := now.Add(-2 * time.Minute).UnixMilli() * 1000
+	startMicro := now.Add(-2*time.Minute).UnixMilli() * 1000
 	evt2 := &CorrectionEvent{Ext: map[string]string{
 		"start_time": strconv.FormatInt(startMicro, 10),
 	}}
@@ -192,4 +213,17 @@ func TestCorrectionEvent_ExtAccessorsAndTimes(t *testing.T) {
 	assert.Equal(t, "", nilEvt.GetUpdateBy())
 	// GetPlatformType 未对 nil 接收者做防御，调用将产生 panic
 	require.Panics(t, func() { _, _ = nilEvt.GetPlatformType() })
+}
+
+func TestCorrectionEvent_InvalidNumbers(t *testing.T) {
+	t.Parallel()
+
+	// span_end_time 非法 -> GetEndTimeFromExt 返回 0
+	evt1 := &CorrectionEvent{Ext: map[string]string{"span_end_time": "bad"}}
+	assert.Equal(t, int64(0), evt1.GetEndTimeFromExt())
+
+	// start_time 非法 -> GetStartTimeFromExt、GetEndTimeFromExt 返回 0
+	evt2 := &CorrectionEvent{Ext: map[string]string{"start_time": "NaN"}}
+	assert.Equal(t, int64(0), evt2.GetStartTimeFromExt())
+	assert.Equal(t, int64(0), evt2.GetEndTimeFromExt())
 }
