@@ -18529,8 +18529,9 @@ type ListExperimentResultOpenAPIData struct {
 	// 评估器列
 	ColumnEvaluators []*experiment.ColumnEvaluator `thrift:"column_evaluators,2,optional" frugal:"2,optional,list<experiment.ColumnEvaluator>" form:"column_evaluators" json:"column_evaluators,omitempty" query:"column_evaluators"`
 	// 评测行级结果
-	ItemResults []*experiment.ItemResult_ `thrift:"item_results,3,optional" frugal:"3,optional,list<experiment.ItemResult_>" form:"item_results" json:"item_results,omitempty" query:"item_results"`
-	Total       *int64                    `thrift:"total,100,optional" frugal:"100,optional,i64" form:"total" json:"total,omitempty" query:"total"`
+	ItemResults       []*experiment.ItemResult_      `thrift:"item_results,3,optional" frugal:"3,optional,list<experiment.ItemResult_>" form:"item_results" json:"item_results,omitempty" query:"item_results"`
+	ColumnEvalTargets []*experiment.ColumnEvalTarget `thrift:"column_eval_targets,4,optional" frugal:"4,optional,list<experiment.ColumnEvalTarget>" form:"column_eval_targets" json:"column_eval_targets,omitempty" query:"column_eval_targets"`
+	Total             *int64                         `thrift:"total,100,optional" frugal:"100,optional,i64" form:"total" json:"total,omitempty" query:"total"`
 }
 
 func NewListExperimentResultOpenAPIData() *ListExperimentResultOpenAPIData {
@@ -18576,6 +18577,18 @@ func (p *ListExperimentResultOpenAPIData) GetItemResults() (v []*experiment.Item
 	return p.ItemResults
 }
 
+var ListExperimentResultOpenAPIData_ColumnEvalTargets_DEFAULT []*experiment.ColumnEvalTarget
+
+func (p *ListExperimentResultOpenAPIData) GetColumnEvalTargets() (v []*experiment.ColumnEvalTarget) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetColumnEvalTargets() {
+		return ListExperimentResultOpenAPIData_ColumnEvalTargets_DEFAULT
+	}
+	return p.ColumnEvalTargets
+}
+
 var ListExperimentResultOpenAPIData_Total_DEFAULT int64
 
 func (p *ListExperimentResultOpenAPIData) GetTotal() (v int64) {
@@ -18596,6 +18609,9 @@ func (p *ListExperimentResultOpenAPIData) SetColumnEvaluators(val []*experiment.
 func (p *ListExperimentResultOpenAPIData) SetItemResults(val []*experiment.ItemResult_) {
 	p.ItemResults = val
 }
+func (p *ListExperimentResultOpenAPIData) SetColumnEvalTargets(val []*experiment.ColumnEvalTarget) {
+	p.ColumnEvalTargets = val
+}
 func (p *ListExperimentResultOpenAPIData) SetTotal(val *int64) {
 	p.Total = val
 }
@@ -18604,6 +18620,7 @@ var fieldIDToName_ListExperimentResultOpenAPIData = map[int16]string{
 	1:   "column_eval_set_fields",
 	2:   "column_evaluators",
 	3:   "item_results",
+	4:   "column_eval_targets",
 	100: "total",
 }
 
@@ -18617,6 +18634,10 @@ func (p *ListExperimentResultOpenAPIData) IsSetColumnEvaluators() bool {
 
 func (p *ListExperimentResultOpenAPIData) IsSetItemResults() bool {
 	return p.ItemResults != nil
+}
+
+func (p *ListExperimentResultOpenAPIData) IsSetColumnEvalTargets() bool {
+	return p.ColumnEvalTargets != nil
 }
 
 func (p *ListExperimentResultOpenAPIData) IsSetTotal() bool {
@@ -18660,6 +18681,14 @@ func (p *ListExperimentResultOpenAPIData) Read(iprot thrift.TProtocol) (err erro
 		case 3:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18771,6 +18800,29 @@ func (p *ListExperimentResultOpenAPIData) ReadField3(iprot thrift.TProtocol) err
 	p.ItemResults = _field
 	return nil
 }
+func (p *ListExperimentResultOpenAPIData) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*experiment.ColumnEvalTarget, 0, size)
+	values := make([]experiment.ColumnEvalTarget, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ColumnEvalTargets = _field
+	return nil
+}
 func (p *ListExperimentResultOpenAPIData) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -18799,6 +18851,10 @@ func (p *ListExperimentResultOpenAPIData) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -18901,6 +18957,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ListExperimentResultOpenAPIData) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetColumnEvalTargets() {
+		if err = oprot.WriteFieldBegin("column_eval_targets", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ColumnEvalTargets)); err != nil {
+			return err
+		}
+		for _, v := range p.ColumnEvalTargets {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 func (p *ListExperimentResultOpenAPIData) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTotal() {
 		if err = oprot.WriteFieldBegin("total", thrift.I64, 100); err != nil {
@@ -18943,6 +19025,9 @@ func (p *ListExperimentResultOpenAPIData) DeepEqual(ano *ListExperimentResultOpe
 	if !p.Field3DeepEqual(ano.ItemResults) {
 		return false
 	}
+	if !p.Field4DeepEqual(ano.ColumnEvalTargets) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Total) {
 		return false
 	}
@@ -18981,6 +19066,19 @@ func (p *ListExperimentResultOpenAPIData) Field3DeepEqual(src []*experiment.Item
 		return false
 	}
 	for i, v := range p.ItemResults {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListExperimentResultOpenAPIData) Field4DeepEqual(src []*experiment.ColumnEvalTarget) bool {
+
+	if len(p.ColumnEvalTargets) != len(src) {
+		return false
+	}
+	for i, v := range p.ColumnEvalTargets {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

@@ -21,6 +21,10 @@ const (
 	ContentTypeMultiPart = "MultiPart"
 
 	ContentTypeMultiPartVariable = "multi_part_variable"
+
+	ArgSchemaKeyActualOutput = "actual_output"
+
+	ArgSchemaKeyTrajectory = "trajectory"
 )
 
 type Role int64

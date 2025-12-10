@@ -4,9 +4,13 @@
 package consts
 
 import (
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 )
 
 const (
-	InputFieldKeyPromptUserQuery = expt.PromptUserQueryFieldKey
+	EvalTargetInputFieldKeyPromptUserQuery = expt.PromptUserQueryFieldKey
+
+	EvalTargetOutputFieldKeyActualOutput = common.ArgSchemaKeyActualOutput
+	EvalTargetOutputFieldKeyTrajectory   = common.ArgSchemaKeyTrajectory
 )

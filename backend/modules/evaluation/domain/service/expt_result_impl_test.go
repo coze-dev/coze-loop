@@ -1401,12 +1401,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 			defer ctrl.Finish()
 
 			svc := tt.setup(ctrl)
-			got, _, _, _, _, _, err := svc.MGetExperimentResult(context.Background(), tt.param)
+			got, err := svc.MGetExperimentResult(context.Background(), tt.param)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MGetExperimentResult() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+			if !tt.wantErr && !reflect.DeepEqual(got.ExptColumnEvaluators, tt.want) {
 				t.Errorf("MGetExperimentResult() got = %v, want %v", got, tt.want)
 			}
 		})
