@@ -215,7 +215,40 @@ func TestCorrectionEvent_ExtAccessorsAndTimes(t *testing.T) {
 	require.Panics(t, func() { _, _ = nilEvt.GetPlatformType() })
 }
 
+func TestOnlineExptTurnEvalResult_InvalidSpanStartTime(t *testing.T) {
+		// 当 span_start_time 非法时，GetStartTimeFromExt 返回 0（不会回退到 start_time）
+	t.Parallel()
+
+	res1 := &OnlineExptTurnEvalResult{Ext: map[string]string{"span_start_time": "bad"}}
+	assert.Equal(t, int64(0), res1.GetStartTimeFromExt(7))
+
+	// 同时存在非法的 span_start_time 与合法的 start_time，仍返回 0
+	now := time.Now().UnixMilli()
+	res2 := &OnlineExptTurnEvalResult{Ext: map[string]string{
+		"span_start_time": "not-a-number",
+		"start_time":      strconv.FormatInt(now*1000, 10),
+	}}
+	assert.Equal(t, int64(0), res2.GetStartTimeFromExt(7))
+}
+
+func TestCorrectionEvent_InvalidSpanStartTime(t *testing.T) {
+		// 当 span_start_time 非法时，GetStartTimeFromExt 返回 0（不会回退到 start_time）
+	t.Parallel()
+
+	evt1 := &CorrectionEvent{Ext: map[string]string{"span_start_time": "NaN"}}
+	assert.Equal(t, int64(0), evt1.GetStartTimeFromExt())
+
+	// 同时存在非法的 span_start_time 与合法的 start_time，仍返回 0
+	now := time.Now().UnixMilli()
+	evt2 := &CorrectionEvent{Ext: map[string]string{
+		"span_start_time": "bad",
+		"start_time":      strconv.FormatInt(now*1000, 10),
+	}}
+	assert.Equal(t, int64(0), evt2.GetStartTimeFromExt())
+}
+
 func TestCorrectionEvent_InvalidNumbers(t *testing.T) {
+	// 保留：测试 span_end_time 非法与 start_time 非法
 	t.Parallel()
 
 	// span_end_time 非法 -> GetEndTimeFromExt 返回 0
