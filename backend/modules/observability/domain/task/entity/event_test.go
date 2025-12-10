@@ -216,7 +216,7 @@ func TestCorrectionEvent_ExtAccessorsAndTimes(t *testing.T) {
 }
 
 func TestOnlineExptTurnEvalResult_InvalidSpanStartTime(t *testing.T) {
-		// 当 span_start_time 非法时，GetStartTimeFromExt 返回 0（不会回退到 start_time）
+	// 当 span_start_time 非法时，GetStartTimeFromExt 返回 0（不会回退到 start_time）
 	t.Parallel()
 
 	res1 := &OnlineExptTurnEvalResult{Ext: map[string]string{"span_start_time": "bad"}}
@@ -232,7 +232,7 @@ func TestOnlineExptTurnEvalResult_InvalidSpanStartTime(t *testing.T) {
 }
 
 func TestCorrectionEvent_InvalidSpanStartTime(t *testing.T) {
-		// 当 span_start_time 非法时，GetStartTimeFromExt 返回 0（不会回退到 start_time）
+	// 当 span_start_time 非法时，GetStartTimeFromExt 返回 0（不会回退到 start_time）
 	t.Parallel()
 
 	evt1 := &CorrectionEvent{Ext: map[string]string{"span_start_time": "NaN"}}
