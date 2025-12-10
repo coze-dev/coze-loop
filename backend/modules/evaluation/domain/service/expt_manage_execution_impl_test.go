@@ -1993,13 +1993,13 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 	defer ctrl.Finish()
 	mgr := newTestExptManager(ctrl)
 	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
 
 	tests := []struct {
 		name      string
 		invokeReq *entity.InvokeExptReq
-		setup     func()
+		setup     func(*testing.T)
 		wantErr   bool
-		verifyExt func(*testing.T, []*entity.ExptItemResult)
 	}{
 		{
 			name: "Ext字段正确设置",
@@ -2007,6 +2007,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 				ExptID:  1,
 				RunID:   2,
 				SpaceID: 100,
+				Session: session,
 				Items: []*entity.EvaluationSetItem{
 					{
 						ItemID: 10,
@@ -2018,7 +2019,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 					"key2": "value2",
 				},
 			},
-			setup: func() {
+			setup: func(t *testing.T) {
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
 					EXPECT().
 					GetItemIDListByExptID(ctx, int64(100), int64(1)).
@@ -2065,13 +2066,53 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 					EXPECT().
 					ArithOperateCount(ctx, int64(1), int64(100), gomock.Any()).
 					Return(nil)
+
+				// Mock GetDetail
+				mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
+					EXPECT().
+					CheckWriteFlagByID(ctx, gomock.Any(), int64(1)).
+					Return(false).AnyTimes()
+
+				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+					EXPECT().
+					MGetByID(ctx, []int64{1}, int64(100)).
+					Return([]*entity.Experiment{{ID: 1, SpaceID: 100, ExptType: entity.ExptType_Offline}}, nil)
+
+				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
+					EXPECT().
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.EvaluationSet{}, nil).AnyTimes()
+
+				mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+					EXPECT().
+					GetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.EvalTarget{}, nil).AnyTimes()
+
+				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
+					EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]*entity.Evaluator{}, nil).AnyTimes()
+
+				mgr.exptResultService.(*svcMocks.MockExptResultService).
+					EXPECT().
+					MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]*entity.ExptStats{}, nil).AnyTimes()
+
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
+					EXPECT().
+					BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
+
+				// Mock PublishExptScheduleEvent
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
+					Do(func(_ context.Context, event *entity.ExptScheduleEvent, _ *time.Duration) {
+						assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, event.Ext)
+					}).
+					Return(nil)
 			},
 			wantErr: false,
-			verifyExt: func(t *testing.T, eirs []*entity.ExptItemResult) {
-				if assert.Len(t, eirs, 1) {
-					assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, eirs[0].Ext)
-				}
-			},
 		},
 		{
 			name: "Ext字段为空map",
@@ -2079,6 +2120,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 				ExptID:  1,
 				RunID:   2,
 				SpaceID: 100,
+				Session: session,
 				Items: []*entity.EvaluationSetItem{
 					{
 						ItemID: 10,
@@ -2087,7 +2129,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 				},
 				Ext: map[string]string{},
 			},
-			setup: func() {
+			setup: func(t *testing.T) {
 				mgr.itemResultRepo.(*repoMocks.MockIExptItemResultRepo).
 					EXPECT().
 					GetItemIDListByExptID(ctx, int64(100), int64(1)).
@@ -2131,6 +2173,51 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 					EXPECT().
 					ArithOperateCount(ctx, int64(1), int64(100), gomock.Any()).
 					Return(nil)
+
+				// Mock GetDetail
+				mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
+					EXPECT().
+					CheckWriteFlagByID(ctx, gomock.Any(), int64(1)).
+					Return(false).AnyTimes()
+
+				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+					EXPECT().
+					MGetByID(ctx, []int64{1}, int64(100)).
+					Return([]*entity.Experiment{{ID: 1, SpaceID: 100, ExptType: entity.ExptType_Offline}}, nil)
+
+				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
+					EXPECT().
+					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.EvaluationSet{}, nil).AnyTimes()
+
+				mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+					EXPECT().
+					GetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(&entity.EvalTarget{}, nil).AnyTimes()
+
+				mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
+					EXPECT().
+					BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]*entity.Evaluator{}, nil).AnyTimes()
+
+				mgr.exptResultService.(*svcMocks.MockExptResultService).
+					EXPECT().
+					MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]*entity.ExptStats{}, nil).AnyTimes()
+
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
+					EXPECT().
+					BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
+
+				// Mock PublishExptScheduleEvent
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
+					Do(func(_ context.Context, event *entity.ExptScheduleEvent, _ *time.Duration) {
+						assert.Equal(t, map[string]string{}, event.Ext)
+					}).
+					Return(nil)
 			},
 			wantErr: false,
 		},
@@ -2138,7 +2225,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
+			tt.setup(t)
 			err := mgr.Invoke(ctx, tt.invokeReq)
 			if tt.wantErr {
 				assert.Error(t, err)
