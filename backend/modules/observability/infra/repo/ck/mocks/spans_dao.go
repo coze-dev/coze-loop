@@ -13,8 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	ck "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
-	model "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck/gorm_gen/model"
+	dao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,10 +42,10 @@ func (m *MockISpansDao) EXPECT() *MockISpansDaoMockRecorder {
 }
 
 // Get mocks base method.
-func (m *MockISpansDao) Get(arg0 context.Context, arg1 *ck.QueryParam) ([]*model.ObservabilitySpan, error) {
+func (m *MockISpansDao) Get(arg0 context.Context, arg1 *dao.QueryParam) ([]*dao.Span, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1)
-	ret0, _ := ret[0].([]*model.ObservabilitySpan)
+	ret0, _ := ret[0].([]*dao.Span)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -58,7 +57,7 @@ func (mr *MockISpansDaoMockRecorder) Get(arg0, arg1 any) *gomock.Call {
 }
 
 // GetMetrics mocks base method.
-func (m *MockISpansDao) GetMetrics(ctx context.Context, param *ck.GetMetricsParam) ([]map[string]any, error) {
+func (m *MockISpansDao) GetMetrics(ctx context.Context, param *dao.GetMetricsParam) ([]map[string]any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMetrics", ctx, param)
 	ret0, _ := ret[0].([]map[string]any)
@@ -73,7 +72,7 @@ func (mr *MockISpansDaoMockRecorder) GetMetrics(ctx, param any) *gomock.Call {
 }
 
 // Insert mocks base method.
-func (m *MockISpansDao) Insert(arg0 context.Context, arg1 *ck.InsertParam) error {
+func (m *MockISpansDao) Insert(arg0 context.Context, arg1 *dao.InsertParam) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Insert", arg0, arg1)
 	ret0, _ := ret[0].(error)

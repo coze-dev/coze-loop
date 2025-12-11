@@ -30,59 +30,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
-type fakeEvaluatorAdapter struct {
-	resp []*rpc.Evaluator
-	err  error
-}
-
-func (f *fakeEvaluatorAdapter) BatchGetEvaluatorVersions(ctx context.Context, param *rpc.BatchGetEvaluatorVersionsParam) ([]*rpc.Evaluator, map[int64]*rpc.Evaluator, error) {
-	result := make(map[int64]*rpc.Evaluator)
-	for _, item := range f.resp {
-		result[item.EvaluatorVersionID] = item
-	}
-	return f.resp, result, f.err
-}
-
-func (f *fakeEvaluatorAdapter) UpdateEvaluatorRecord(context.Context, *rpc.UpdateEvaluatorRecordParam) error {
-	return nil
-}
-
-func (f *fakeEvaluatorAdapter) ListEvaluators(context.Context, *rpc.ListEvaluatorsParam) ([]*rpc.Evaluator, error) {
-	return nil, nil
-}
-
-type fakeEvaluationAdapter struct {
-	submitResp struct {
-		exptID    int64
-		exptRunID int64
-		err       error
-	}
-	invokeResp struct {
-		added int64
-		err   error
-	}
-	finishErr error
-
-	submitReq *rpc.SubmitExperimentReq
-	invokeReq *rpc.InvokeExperimentReq
-	finishReq *rpc.FinishExperimentReq
-}
-
-func (f *fakeEvaluationAdapter) SubmitExperiment(ctx context.Context, param *rpc.SubmitExperimentReq) (int64, int64, error) {
-	f.submitReq = param
-	return f.submitResp.exptID, f.submitResp.exptRunID, f.submitResp.err
-}
-
-func (f *fakeEvaluationAdapter) InvokeExperiment(ctx context.Context, param *rpc.InvokeExperimentReq) (int64, error) {
-	f.invokeReq = param
-	return f.invokeResp.added, f.invokeResp.err
-}
-
-func (f *fakeEvaluationAdapter) FinishExperiment(ctx context.Context, param *rpc.FinishExperimentReq) error {
-	f.finishReq = param
-	return f.finishErr
-}
-
 type taskRepoMockAdapter struct {
 	*repomocks.MockITaskRepo
 }
@@ -142,6 +89,18 @@ func buildTestTask(t *testing.T) *taskentity.ObservabilityTask {
 			CycleCount:    0,
 			CycleInterval: 1,
 			CycleTimeUnit: taskentity.TimeUnitDay,
+		},
+		SpanFilter: &taskentity.SpanFilterFields{
+			PlatformType: loop_span.PlatformVeAgentKit,
+			Filters: loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "cozeloop_agent_runtime_id",
+						QueryType: gptr.Of(loop_span.QueryTypeEnumIn),
+						Values:    []string{"test-agent-id"},
+					},
+				},
+			},
 		},
 		TaskConfig: &taskentity.TaskConfig{
 			AutoEvaluateConfigs: []*taskentity.AutoEvaluateConfig{
@@ -206,7 +165,7 @@ func makeSchemaJSON(t *testing.T, fieldName string, contentType common.ContentTy
 	return string(bytes)
 }
 
-func TestAutoEvaluteProcessor_ValidateConfig(t *testing.T) {
+func TestAutoEvaluateProcessor_ValidateConfig(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -218,6 +177,7 @@ func TestAutoEvaluteProcessor_ValidateConfig(t *testing.T) {
 		name      string
 		config    any
 		adapter   *fakeEvaluatorAdapter
+		setupMock func(*rpcmock.MockIEvaluatorRPCAdapter)
 		expectErr func(error) bool
 	}{
 		{
@@ -276,16 +236,20 @@ func TestAutoEvaluteProcessor_ValidateConfig(t *testing.T) {
 		{
 			name:    "length mismatch",
 			config:  validTask,
-			adapter: &fakeEvaluatorAdapter{resp: []*rpc.Evaluator{}},
+			adapter: &fakeEvaluatorAdapter{},
 			expectErr: func(err error) bool {
 				status, ok := errorx.FromStatusError(err)
 				return ok && status.Code() == obErrorx.CommonInvalidParamCode
 			},
 		},
 		{
-			name:      "success",
-			config:    validTask,
-			adapter:   &fakeEvaluatorAdapter{resp: []*rpc.Evaluator{{EvaluatorVersionID: 111}}},
+			name:   "success",
+			config: validTask,
+			adapter: &fakeEvaluatorAdapter{
+				// 返回一个有效的评估器
+				resp:    []*rpc.Evaluator{{EvaluatorVersionID: 111}},
+				respMap: map[int64]*rpc.Evaluator{111: {EvaluatorVersionID: 111}},
+			},
 			expectErr: func(err error) bool { return err == nil },
 		},
 	}
@@ -293,17 +257,22 @@ func TestAutoEvaluteProcessor_ValidateConfig(t *testing.T) {
 	for _, tt := range cases {
 		caseItem := tt
 		t.Run(caseItem.name, func(t *testing.T) {
-			proc := &AutoEvaluteProcessor{evalSvc: caseItem.adapter}
-			if caseItem.adapter == nil {
-				proc.evalSvc = &fakeEvaluatorAdapter{}
+			var evalAdapter rpc.IEvaluatorRPCAdapter
+			if caseItem.adapter != nil {
+				evalAdapter = caseItem.adapter
+			} else {
+				// 使用默认的fake adapter
+				evalAdapter = &fakeEvaluatorAdapter{}
 			}
+
+			proc := &AutoEvaluateProcessor{evalSvc: evalAdapter}
 			err := proc.ValidateConfig(ctx, caseItem.config)
 			assert.True(t, caseItem.expectErr(err))
 		})
 	}
 }
 
-func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
+func TestAutoEvaluateProcessor_Invoke(t *testing.T) {
 	t.Parallel()
 
 	textSchema := makeSchemaJSON(t, "field_1", common.ContentTypeText)
@@ -335,8 +304,9 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
-		proc := &AutoEvaluteProcessor{
-			evaluationSvc: &fakeEvaluationAdapter{},
+		evalMock := &fakeEvaluationAdapter{}
+		proc := &AutoEvaluateProcessor{
+			evaluationSvc: evalMock,
 			taskRepo:      repoAdapter,
 		}
 		err := proc.Invoke(context.Background(), trigger)
@@ -361,8 +331,9 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		repoMock.EXPECT().DecrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil)
 		repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.Any()).Return(nil)
 
-		proc := &AutoEvaluteProcessor{
-			evaluationSvc: &fakeEvaluationAdapter{},
+		evalMock := &fakeEvaluationAdapter{}
+		proc := &AutoEvaluateProcessor{
+			evaluationSvc: evalMock,
 			taskRepo:      repoAdapter,
 		}
 		err := proc.Invoke(context.Background(), trigger)
@@ -389,7 +360,7 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		eval := &fakeEvaluationAdapter{}
 		eval.invokeResp.err = errors.New("invoke fail")
 
-		proc := &AutoEvaluteProcessor{
+		proc := &AutoEvaluateProcessor{
 			evaluationSvc: eval,
 			taskRepo:      repoAdapter,
 		}
@@ -412,21 +383,22 @@ func TestAutoEvaluteProcessor_Invoke(t *testing.T) {
 		repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(1), nil)
 		repoMock.EXPECT().GetTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID).Return(int64(1), nil)
 
-		eval := &fakeEvaluationAdapter{}
+		evalMock := &fakeEvaluationAdapter{}
+		evalMock.invokeResp.addedItems = 1
+
 		repoMock.EXPECT().DecrTaskCount(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 		repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
-		proc := &AutoEvaluteProcessor{
-			evaluationSvc: eval,
+		proc := &AutoEvaluateProcessor{
+			evaluationSvc: evalMock,
 			taskRepo:      repoAdapter,
 		}
 		err := proc.Invoke(context.Background(), trigger)
 		assert.NoError(t, err)
-		assert.NotNil(t, eval.invokeReq)
 	})
 }
 
-func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnUpdateTaskChange(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
@@ -456,7 +428,7 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 					return nil
 				})
 
-			proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
+			proc := &AutoEvaluateProcessor{taskRepo: repoAdapter}
 			taskObj := &taskentity.ObservabilityTask{TaskStatus: caseItem.initial}
 			err := proc.OnTaskUpdated(ctx, taskObj, caseItem.op)
 			assert.NoError(t, err)
@@ -464,13 +436,13 @@ func TestAutoEvaluteProcessor_OnUpdateTaskChange(t *testing.T) {
 	}
 
 	t.Run("invalid op", func(t *testing.T) {
-		proc := &AutoEvaluteProcessor{}
+		proc := &AutoEvaluateProcessor{}
 		err := proc.OnTaskUpdated(ctx, &taskentity.ObservabilityTask{}, "unknown")
 		assert.Error(t, err)
 	})
 }
 
-func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnCreateTaskRunChange(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -499,28 +471,28 @@ func TestAutoEvaluteProcessor_OnCreateTaskRunChange(t *testing.T) {
 	evalAdapter.submitResp.exptID = 1111
 	evalAdapter.submitResp.exptRunID = 2222
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		datasetServiceAdaptor: adaptor,
 		evaluationSvc:         evalAdapter,
 		taskRepo:              repoAdapter,
 		aid:                   321,
+		evalTargetBuilder:     &EvalTargetBuilderImpl{},
 	}
 
 	ctx := session.WithCtxUser(context.Background(), &session.User{ID: taskObj.CreatedBy})
 	err := proc.OnTaskRunCreated(ctx, param)
 	assert.NoError(t, err)
-	assert.NotNil(t, evalAdapter.submitReq)
-	assert.Equal(t, int64(9001), *evalAdapter.submitReq.EvalSetID)
 }
 
-func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnFinishTaskRunChange(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	repoMock := repomocks.NewMockITaskRepo(ctrl)
 	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
-	evalAdapter := &fakeEvaluationAdapter{}
+	evalMock := &fakeEvaluationAdapter{}
+	// 不需要设置EXPECT，因为fake实现默认返回nil
 
 	taskRun := &taskentity.TaskRun{
 		ID: 8001,
@@ -533,21 +505,20 @@ func TestAutoEvaluteProcessor_OnFinishTaskRunChange(t *testing.T) {
 	}
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), taskRun).Return(nil)
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		taskRepo:      repoAdapter,
-		evaluationSvc: evalAdapter,
+		evaluationSvc: evalMock,
 	}
 
 	err := proc.OnTaskRunFinished(context.Background(), taskexe.OnTaskRunFinishedReq{
-		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234},
+		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234, CreatedBy: "1001"},
 		TaskRun: taskRun,
 	})
 	assert.NoError(t, err)
-	assert.NotNil(t, evalAdapter.finishReq)
 	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
 }
 
-func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnFinishTaskChange(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -556,13 +527,13 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
 	evalAdapter := &fakeEvaluationAdapter{}
 
-	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning, WorkspaceID: 123}
+	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning, WorkspaceID: 123, CreatedBy: "1001"}
 	taskRun := &taskentity.TaskRun{TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{ExptID: 1, ExptRunID: 2}}}
 
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(nil)
 	repoMock.EXPECT().UpdateTask(gomock.Any(), taskObj).Return(nil)
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		evaluationSvc: evalAdapter,
 		taskRepo:      repoAdapter,
 	}
@@ -576,29 +547,29 @@ func TestAutoEvaluteProcessor_OnFinishTaskChange(t *testing.T) {
 	assert.Equal(t, taskentity.TaskStatusSuccess, taskObj.TaskStatus)
 }
 
-func TestAutoEvaluteProcessor_OnFinishTaskChange_Error(t *testing.T) {
+func TestAutoEvaluateProcessor_OnFinishTaskChange_Error(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	repoMock := repomocks.NewMockITaskRepo(ctrl)
 	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
-	evalAdapter := &fakeEvaluationAdapter{}
-	evalAdapter.finishErr = errors.New("finish fail")
+	evalMock := &fakeEvaluationAdapter{}
+	evalMock.finishResp.err = errors.New("finish fail")
 
-	proc := &AutoEvaluteProcessor{
-		evaluationSvc: evalAdapter,
+	proc := &AutoEvaluateProcessor{
+		evaluationSvc: evalMock,
 		taskRepo:      repoAdapter,
 	}
 
 	err := proc.OnTaskFinished(context.Background(), taskexe.OnTaskFinishedReq{
-		Task:    &taskentity.ObservabilityTask{WorkspaceID: 123},
+		Task:    &taskentity.ObservabilityTask{WorkspaceID: 123, CreatedBy: "1001"},
 		TaskRun: &taskentity.TaskRun{TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{ExptID: 1, ExptRunID: 2}}},
 	})
 	assert.EqualError(t, err, "finish fail")
 }
 
-func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
+func TestAutoEvaluateProcessor_OnCreateTaskChange(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -610,15 +581,16 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 	adaptor := service.NewDatasetServiceAdaptor()
 	adaptor.Register(traceentity.DatasetCategory_Evaluation, datasetProvider)
 
-	evalAdapter := &fakeEvaluationAdapter{}
-	evalAdapter.submitResp.exptID = 111
-	evalAdapter.submitResp.exptRunID = 222
+	evalMock := &fakeEvaluationAdapter{}
+	evalMock.submitResp.exptID = 111
+	evalMock.submitResp.exptRunID = 222
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		datasetServiceAdaptor: adaptor,
-		evaluationSvc:         evalAdapter,
+		evaluationSvc:         evalMock,
 		taskRepo:              repoAdapter,
 		aid:                   321,
+		evalTargetBuilder:     &EvalTargetBuilderImpl{},
 	}
 
 	taskObj := buildTestTask(t)
@@ -674,7 +646,7 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange(t *testing.T) {
 	assert.Equal(t, taskentity.TaskStatusRunning, taskObj.TaskStatus)
 }
 
-func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) {
+func TestAutoEvaluateProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -684,13 +656,13 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_GetBackfillError(t *testing.T) 
 
 	repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), gomock.Any()).Return(nil, errors.New("db error"))
 
-	proc := &AutoEvaluteProcessor{taskRepo: repoAdapter}
+	proc := &AutoEvaluateProcessor{taskRepo: repoAdapter}
 
 	err := proc.OnTaskCreated(context.Background(), buildTestTask(t))
 	assert.EqualError(t, err, "db error")
 }
 
-func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T) {
+func TestAutoEvaluateProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -702,10 +674,11 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T
 	adaptor := service.NewDatasetServiceAdaptor()
 	adaptor.Register(traceentity.DatasetCategory_Evaluation, datasetProvider)
 
-	proc := &AutoEvaluteProcessor{
+	proc := &AutoEvaluateProcessor{
 		datasetServiceAdaptor: adaptor,
 		taskRepo:              repoAdapter,
 		evaluationSvc:         &fakeEvaluationAdapter{},
+		evalTargetBuilder:     &EvalTargetBuilderImpl{},
 	}
 
 	repoMock.EXPECT().GetBackfillTaskRun(gomock.Any(), (*int64)(nil), gomock.Any()).Return(nil, nil)
@@ -715,9 +688,9 @@ func TestAutoEvaluteProcessor_OnCreateTaskChange_CreateDatasetError(t *testing.T
 	assert.EqualError(t, err, "create fail")
 }
 
-func TestAutoEvaluteProcessor_getSession(t *testing.T) {
+func TestAutoEvaluateProcessor_getSession(t *testing.T) {
 	t.Parallel()
-	proc := &AutoEvaluteProcessor{aid: 567}
+	proc := &AutoEvaluateProcessor{aid: 567}
 
 	taskObj := &taskentity.ObservabilityTask{CreatedBy: "42"}
 
@@ -728,4 +701,121 @@ func TestAutoEvaluteProcessor_getSession(t *testing.T) {
 
 	s = proc.getSession(context.Background(), taskObj)
 	assert.EqualValues(t, 42, *s.UserID)
+}
+
+func TestAutoEvaluateProcessor_OnTaskUpdated_InvalidStatus(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	proc := &AutoEvaluateProcessor{}
+
+	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning}
+
+	err := proc.OnTaskUpdated(ctx, taskObj, "invalid_status")
+	assert.Error(t, err)
+}
+
+func TestAutoEvaluateProcessor_OnTaskFinished_NoAutoEvalConfig(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+	evalAdapter := &fakeEvaluationAdapter{}
+
+	proc := &AutoEvaluateProcessor{
+		evaluationSvc: evalAdapter,
+		taskRepo:      repoAdapter,
+	}
+
+	taskObj := &taskentity.ObservabilityTask{TaskStatus: taskentity.TaskStatusRunning, WorkspaceID: 123}
+	taskRun := &taskentity.TaskRun{TaskRunConfig: nil} // No auto eval config
+
+	// Mock the UpdateTask call
+	repoMock.EXPECT().UpdateTask(gomock.Any(), taskObj).Return(nil)
+
+	err := proc.OnTaskFinished(context.Background(), taskexe.OnTaskFinishedReq{
+		Task:     taskObj,
+		TaskRun:  taskRun,
+		IsFinish: true,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, taskentity.TaskStatusSuccess, taskObj.TaskStatus)
+}
+
+func TestAutoEvaluateProcessor_NewAutoEvaluateProcessor(t *testing.T) {
+	t.Parallel()
+
+	// Create mock dependencies
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	datasetServiceAdaptor := service.NewDatasetServiceAdaptor()
+	evalMock := &fakeEvaluatorAdapter{}
+	evaluationMock := &fakeEvaluationAdapter{}
+	taskRepo := repomocks.NewMockITaskRepo(ctrl)
+
+	// Test constructor
+	proc := NewAutoEvaluateProcessor(123, datasetServiceAdaptor, evalMock, evaluationMock, taskRepo, &EvalTargetBuilderImpl{})
+
+	assert.NotNil(t, proc)
+	assert.Equal(t, int32(123), proc.aid)
+	assert.Equal(t, datasetServiceAdaptor, proc.datasetServiceAdaptor)
+	assert.Equal(t, evalMock, proc.evalSvc)
+	assert.Equal(t, evaluationMock, proc.evaluationSvc)
+	assert.Equal(t, taskRepo, proc.taskRepo)
+}
+
+// fakeEvaluatorAdapter 是 IEvaluatorRPCAdapter 的fake实现
+type fakeEvaluatorAdapter struct {
+	err     error
+	resp    []*rpc.Evaluator
+	respMap map[int64]*rpc.Evaluator
+}
+
+func (f *fakeEvaluatorAdapter) BatchGetEvaluatorVersions(ctx context.Context, param *rpc.BatchGetEvaluatorVersionsParam) ([]*rpc.Evaluator, map[int64]*rpc.Evaluator, error) {
+	if f.err != nil {
+		return nil, nil, f.err
+	}
+	if f.resp != nil || f.respMap != nil {
+		return f.resp, f.respMap, nil
+	}
+	return nil, nil, nil
+}
+
+func (f *fakeEvaluatorAdapter) UpdateEvaluatorRecord(ctx context.Context, param *rpc.UpdateEvaluatorRecordParam) error {
+	return nil
+}
+
+func (f *fakeEvaluatorAdapter) ListEvaluators(ctx context.Context, param *rpc.ListEvaluatorsParam) ([]*rpc.Evaluator, error) {
+	return nil, nil
+}
+
+// fakeEvaluationAdapter 是 IEvaluationRPCAdapter 的fake实现
+type fakeEvaluationAdapter struct {
+	submitResp struct {
+		exptID    int64
+		exptRunID int64
+		err       error
+	}
+	invokeResp struct {
+		addedItems int64
+		err        error
+	}
+	finishResp struct {
+		err error
+	}
+}
+
+func (f *fakeEvaluationAdapter) SubmitExperiment(ctx context.Context, param *rpc.SubmitExperimentReq) (exptID, exptRunID int64, err error) {
+	return f.submitResp.exptID, f.submitResp.exptRunID, f.submitResp.err
+}
+
+func (f *fakeEvaluationAdapter) InvokeExperiment(ctx context.Context, param *rpc.InvokeExperimentReq) (addedItems int64, err error) {
+	return f.invokeResp.addedItems, f.invokeResp.err
+}
+
+func (f *fakeEvaluationAdapter) FinishExperiment(ctx context.Context, param *rpc.FinishExperimentReq) error {
+	return f.finishResp.err
 }

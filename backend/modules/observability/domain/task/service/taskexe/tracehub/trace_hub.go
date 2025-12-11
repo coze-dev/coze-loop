@@ -49,7 +49,6 @@ func NewTraceHubImpl(
 		config:           config,
 		localCache:       NewLocalCache(),
 	}
-
 	return impl, nil
 }
 

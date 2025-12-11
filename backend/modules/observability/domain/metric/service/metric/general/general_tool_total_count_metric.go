@@ -45,6 +45,12 @@ func (m *GeneralToolTotalCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
+func (m *GeneralToolTotalCountMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewGeneralToolTotalCountMetric() entity.IMetricDefinition {
 	return &GeneralToolTotalCountMetric{}
 }

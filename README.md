@@ -163,7 +163,7 @@ Join our technical discussion groups to share experiences with other developers 
 
 ![Image](https://p9-arcosite.byteimg.com/tos-cn-i-goo7wpa0wc/818dd6ec45d24041873ca101681186c1~tplv-goo7wpa0wc-image.image)
 
-* Discord Server: [Coze Community](https://discord.gg/a6YtkysB)
+* Discord Server: [Coze Community](https://discord.com/invite/sTVN9EVS4B)
 
 * Telegram Group: [Coze](https://t.me/+pP9CkPnomDA0Mjgx)
 

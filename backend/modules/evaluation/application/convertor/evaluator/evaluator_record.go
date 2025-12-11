@@ -15,7 +15,7 @@ func ConvertEvaluatorRecordDTO2DO(dto *evaluatordto.EvaluatorRecord) *evaluatord
 	if dto == nil {
 		return nil
 	}
-	return &evaluatordo.EvaluatorRecord{
+	do := &evaluatordo.EvaluatorRecord{
 		ID:                  gptr.Indirect(dto.ID),
 		ExperimentID:        gptr.Indirect(dto.ExperimentID),
 		ExperimentRunID:     gptr.Indirect(dto.ExperimentRunID),
@@ -29,13 +29,18 @@ func ConvertEvaluatorRecordDTO2DO(dto *evaluatordto.EvaluatorRecord) *evaluatord
 		Status:              evaluatordo.EvaluatorRunStatus(dto.GetStatus()),
 		BaseInfo:            commonconvertor.ConvertBaseInfoDTO2DO(dto.BaseInfo),
 	}
+	// 填充 ext 字段
+	if len(dto.Ext) > 0 {
+		do.Ext = dto.Ext
+	}
+	return do
 }
 
 func ConvertEvaluatorRecordDO2DTO(do *evaluatordo.EvaluatorRecord) *evaluatordto.EvaluatorRecord {
 	if do == nil {
 		return nil
 	}
-	return &evaluatordto.EvaluatorRecord{
+	dto := &evaluatordto.EvaluatorRecord{
 		ID:                  gptr.Of(do.ID),
 		ExperimentID:        gptr.Of(do.ExperimentID),
 		ExperimentRunID:     gptr.Of(do.ExperimentRunID),
@@ -49,4 +54,9 @@ func ConvertEvaluatorRecordDO2DTO(do *evaluatordo.EvaluatorRecord) *evaluatordto
 		Status:              evaluatordto.EvaluatorRunStatusPtr(evaluatordto.EvaluatorRunStatus(do.Status)),
 		BaseInfo:            commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
 	}
+	// 填充 ext 字段，使用 evaluator_record 表里的 ext
+	if len(do.Ext) > 0 {
+		dto.Ext = do.Ext
+	}
+	return dto
 }

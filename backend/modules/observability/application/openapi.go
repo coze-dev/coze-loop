@@ -18,6 +18,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
 
@@ -28,17 +29,15 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/otel"
-
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
@@ -269,7 +268,7 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 
 		spans := otel.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans)
 
-		tenantSpanMap := o.unpackTenant(ctx, spans)
+		tenantSpanMap := o.unpackTenant(ctx, tconv.OtelSpans2LoopSpans(spans))
 		for ingestTenant := range tenantSpanMap {
 			if e = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
 				Tenant:           ingestTenant,

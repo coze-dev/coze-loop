@@ -47,12 +47,17 @@ const (
 	FieldTypeDouble FieldType = "double"
 	FieldTypeBool   FieldType = "bool"
 
-	PlatformDefault    PlatformType = "default"
-	PlatformCozeLoop   PlatformType = "cozeloop"
-	PlatformPrompt     PlatformType = "prompt"
-	PlatformEvaluator  PlatformType = "evaluator"
-	PlatformEvalTarget PlatformType = "evaluation_target"
-	PlatformOpenAPI    PlatformType = "open_api"
+	PlatformDefault      PlatformType = "default"
+	PlatformCozeLoop     PlatformType = "cozeloop"
+	PlatformPrompt       PlatformType = "prompt"
+	PlatformEvaluator    PlatformType = "evaluator"
+	PlatformEvalTarget   PlatformType = "evaluation_target"
+	PlatformOpenAPI      PlatformType = "open_api"
+	PlatformCozeWorkflow PlatformType = "coze_workflow"
+	PlatformCozeBot      PlatformType = "coze_bot"
+	PlatformVeAgentKit   PlatformType = "ve_agentkit"
+	PlatformVeADK        PlatformType = "veadk"
+	PlatformCallbackAll  PlatformType = "callback_all"
 
 	SpanListTypeRootSpan SpanListType = "root_span"
 	SpanListTypeAllSpan  SpanListType = "all_span"
@@ -151,10 +156,6 @@ func (f *FilterFields) Traverse(fn func(f *FilterField) error) error {
 	}
 	return nil
 }
-
-//func (f *FilterFields) Filter[T FilterObject](objs []T) []T  {
-//
-//}
 
 func (f *FilterFields) Satisfied(obj FilterObject) bool {
 	op := QueryAndOrEnumAnd

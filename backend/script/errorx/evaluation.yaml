@@ -28,7 +28,7 @@ error_code:
     message: resource is deleted
     description: resource is deleted
     no_affect_stability: true
-    
+
   - name: ExperimentValidateFail
     code: 4001
     message: experiment configuration validation failed
@@ -92,6 +92,12 @@ error_code:
     code: 4011
     message: cannot terminate an non-running experiment, please try again later
     description: cannot terminate an non-running experiment, please try again later
+    no_affect_stability: true
+
+  - name: ExperimentStatusNotAllowedToInvoke
+    code: 4012
+    message: experiment status is not allowed to invoke
+    description: experiment status is not allowed to invoke, only Processing or Pending status can invoke
     no_affect_stability: true
 
   - name: ContentTypeNotSupported

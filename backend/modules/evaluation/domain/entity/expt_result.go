@@ -170,6 +170,7 @@ type ExptItemResult struct {
 	ErrMsg    string
 	ItemIdx   int32
 	LogID     string
+	Ext       map[string]string
 }
 
 type ExptItemResultRunLog struct {
@@ -572,6 +573,7 @@ type ItemResult struct {
 	TurnResults []*TurnResult
 	SystemInfo  *ItemSystemInfo
 	ItemIndex   *int64
+	Ext         map[string]string
 }
 
 type ExperimentTurnPayload struct {

@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	kitexspan "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/stretchr/testify/assert"
 )
@@ -336,4 +337,162 @@ func TestFieldTypeDTO2DO(t *testing.T) {
 	fieldType := filter.FieldTypeDouble
 	assert.Equal(t, loop_span.FieldType(fieldType), fieldTypeDTO2DO(&fieldType))
 	assert.Equal(t, loop_span.FieldTypeString, fieldTypeDTO2DO(nil))
+}
+
+func TestOtelSpan2LoopSpan(t *testing.T) {
+	tests := []struct {
+		name string
+		span *otel.LoopSpan
+	}{
+		{
+			name: "complete otel span conversion",
+			span: &otel.LoopSpan{
+				StartTime:      1234567890,
+				SpanID:         "span-123",
+				ParentID:       "parent-456",
+				TraceID:        "trace-789",
+				DurationMicros: 987654321,
+				CallType:       "http",
+				PSM:            "test-service",
+				LogID:          "log-123",
+				WorkspaceID:    "workspace-456",
+				SpanName:       "test-span",
+				SpanType:       "model",
+				Method:         "POST",
+				StatusCode:     0,
+				Input:          `{"input": "test"}`,
+				Output:         `{"output": "result"}`,
+				ObjectStorage:  "tos://bucket/key",
+				SystemTagsString: map[string]string{
+					"sys_str": "value1",
+				},
+				SystemTagsLong: map[string]int64{
+					"sys_long": 123,
+				},
+				SystemTagsDouble: map[string]float64{
+					"sys_double": 1.23,
+				},
+				TagsString: map[string]string{
+					"tag_str": "value2",
+				},
+				TagsLong: map[string]int64{
+					"tag_long": 456,
+				},
+				TagsDouble: map[string]float64{
+					"tag_double": 4.56,
+				},
+				TagsBool: map[string]bool{
+					"tag_bool": true,
+				},
+				TagsByte: map[string]string{
+					"tag_bytes": "010101",
+				},
+			},
+		},
+		{
+			name: "minimal otel span conversion",
+			span: &otel.LoopSpan{
+				StartTime:   0,
+				SpanID:      "minimal",
+				ParentID:    "",
+				TraceID:     "trace-min",
+				WorkspaceID: "ws",
+				SpanName:    "min-span",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := OtelSpan2LoopSpan(tt.span)
+
+			assert.NotNil(t, result)
+			assert.Equal(t, tt.span.StartTime, result.StartTime)
+			assert.Equal(t, tt.span.SpanID, result.SpanID)
+			assert.Equal(t, tt.span.ParentID, result.ParentID)
+			assert.Equal(t, tt.span.TraceID, result.TraceID)
+			assert.Equal(t, tt.span.DurationMicros, result.DurationMicros)
+			assert.Equal(t, tt.span.CallType, result.CallType)
+			assert.Equal(t, tt.span.PSM, result.PSM)
+			assert.Equal(t, tt.span.LogID, result.LogID)
+			assert.Equal(t, tt.span.WorkspaceID, result.WorkspaceID)
+			assert.Equal(t, tt.span.SpanName, result.SpanName)
+			assert.Equal(t, tt.span.SpanType, result.SpanType)
+			assert.Equal(t, tt.span.Method, result.Method)
+			assert.Equal(t, tt.span.StatusCode, result.StatusCode)
+			assert.Equal(t, tt.span.Input, result.Input)
+			assert.Equal(t, tt.span.Output, result.Output)
+			assert.Equal(t, tt.span.ObjectStorage, result.ObjectStorage)
+			assert.Equal(t, tt.span.SystemTagsString, result.SystemTagsString)
+			assert.Equal(t, tt.span.SystemTagsLong, result.SystemTagsLong)
+			assert.Equal(t, tt.span.SystemTagsDouble, result.SystemTagsDouble)
+			assert.Equal(t, tt.span.TagsString, result.TagsString)
+			assert.Equal(t, tt.span.TagsLong, result.TagsLong)
+			assert.Equal(t, tt.span.TagsDouble, result.TagsDouble)
+			assert.Equal(t, tt.span.TagsBool, result.TagsBool)
+			assert.Equal(t, tt.span.TagsByte, result.TagsByte)
+		})
+	}
+}
+
+func TestOtelSpans2LoopSpans(t *testing.T) {
+	tests := []struct {
+		name  string
+		spans []*otel.LoopSpan
+	}{
+		{
+			name: "multiple otel spans conversion",
+			spans: []*otel.LoopSpan{
+				{
+					SpanID:      "span-1",
+					TraceID:     "trace-1",
+					SpanName:    "span1",
+					WorkspaceID: "ws1",
+				},
+				{
+					SpanID:      "span-2",
+					TraceID:     "trace-2",
+					SpanName:    "span2",
+					WorkspaceID: "ws2",
+				},
+				{
+					SpanID:      "span-3",
+					TraceID:     "trace-3",
+					SpanName:    "span3",
+					WorkspaceID: "ws3",
+				},
+			},
+		},
+		{
+			name:  "empty spans list",
+			spans: []*otel.LoopSpan{},
+		},
+		{
+			name:  "nil spans list",
+			spans: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := OtelSpans2LoopSpans(tt.spans)
+
+			if tt.spans == nil {
+				assert.NotNil(t, result)
+				assert.Len(t, result, 0)
+				return
+			}
+
+			assert.NotNil(t, result)
+			assert.Len(t, result, len(tt.spans))
+
+			for i, span := range tt.spans {
+				assert.NotNil(t, result[i])
+				assert.Equal(t, span.SpanID, result[i].SpanID)
+				assert.Equal(t, span.TraceID, result[i].TraceID)
+				assert.Equal(t, span.SpanName, result[i].SpanName)
+				assert.Equal(t, span.WorkspaceID, result[i].WorkspaceID)
+			}
+		})
+	}
 }

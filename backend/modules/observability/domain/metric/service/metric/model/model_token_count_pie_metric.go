@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 type ModelTokenCountPieMetric struct{}
@@ -42,7 +43,18 @@ func (m *ModelTokenCountPieMetric) Expression(granularity entity.MetricGranulari
 }
 
 func (m *ModelTokenCountPieMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return filter.BuildLLMSpanFilter(ctx, env)
+	filters, err := filter.BuildLLMSpanFilter(ctx, env)
+	if err != nil {
+		return nil, err
+	}
+	// 聚合非空
+	filters = append(filters, &loop_span.FilterField{
+		FieldName: "model_name",
+		FieldType: loop_span.FieldTypeString,
+		Values:    []string{""},
+		QueryType: ptr.Of(loop_span.QueryTypeEnumNotEq),
+	})
+	return filters, nil
 }
 
 func (m *ModelTokenCountPieMetric) GroupBy() []*entity.Dimension {
@@ -54,6 +66,12 @@ func (m *ModelTokenCountPieMetric) GroupBy() []*entity.Dimension {
 			},
 			Alias: "name",
 		},
+	}
+}
+
+func (m *ModelTokenCountPieMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
 	}
 }
 

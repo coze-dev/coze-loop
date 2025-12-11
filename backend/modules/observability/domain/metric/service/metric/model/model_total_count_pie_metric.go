@@ -12,25 +12,25 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-type ModelNamePieMetric struct{}
+type ModelTotalCountPieMetric struct{}
 
-func (m *ModelNamePieMetric) Name() string {
-	return entity.MetricNameModelNamePie
+func (m *ModelTotalCountPieMetric) Name() string {
+	return entity.MetricNameModelTotalCountPie
 }
 
-func (m *ModelNamePieMetric) Type() entity.MetricType {
-	return entity.MetricOperatorPie
+func (m *ModelTotalCountPieMetric) Type() entity.MetricType {
+	return entity.MetricTypePie
 }
 
-func (m *ModelNamePieMetric) Source() entity.MetricSource {
+func (m *ModelTotalCountPieMetric) Source() entity.MetricSource {
 	return entity.MetricSourceInnerStorage
 }
 
-func (m *ModelNamePieMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return &entity.Expression{Expression: "1"}
+func (m *ModelTotalCountPieMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return &entity.Expression{Expression: "count()"}
 }
 
-func (m *ModelNamePieMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+func (m *ModelTotalCountPieMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	filters, err := filter.BuildLLMSpanFilter(ctx, env)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (m *ModelNamePieMetric) Where(ctx context.Context, filter span_filter.Filte
 	return filters, nil
 }
 
-func (m *ModelNamePieMetric) GroupBy() []*entity.Dimension {
+func (m *ModelTotalCountPieMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{
 		{
 			Field: &loop_span.FilterField{
@@ -57,6 +57,12 @@ func (m *ModelNamePieMetric) GroupBy() []*entity.Dimension {
 	}
 }
 
-func NewModelNamePieMetric() entity.IMetricDefinition {
-	return &ModelNamePieMetric{}
+func (m *ModelTotalCountPieMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
+func NewModelTotalCountPieMetric() entity.IMetricDefinition {
+	return &ModelTotalCountPieMetric{}
 }

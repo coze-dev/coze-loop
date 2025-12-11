@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	"github.com/stretchr/testify/assert"
 	semconv1_27_0 "go.opentelemetry.io/otel/semconv/v1.27.0"
@@ -200,7 +199,7 @@ func TestSpanTypeMapping(t *testing.T) {
 func TestSetLogID(t *testing.T) {
 	tests := []struct {
 		name            string
-		span            *loop_span.Span
+		span            *LoopSpan
 		expectedLogID   string
 		shouldHaveLogID bool
 	}{
@@ -212,7 +211,7 @@ func TestSetLogID(t *testing.T) {
 		},
 		{
 			name: "span with nil TagsString",
-			span: &loop_span.Span{
+			span: &LoopSpan{
 				TagsString: nil,
 			},
 			expectedLogID:   "",
@@ -220,7 +219,7 @@ func TestSetLogID(t *testing.T) {
 		},
 		{
 			name: "span with logid in TagsString",
-			span: &loop_span.Span{
+			span: &LoopSpan{
 				TagsString: map[string]string{
 					"logid": "test-log-id",
 					"other": "value",
@@ -231,7 +230,7 @@ func TestSetLogID(t *testing.T) {
 		},
 		{
 			name: "span without logid in TagsString",
-			span: &loop_span.Span{
+			span: &LoopSpan{
 				TagsString: map[string]string{
 					"other": "value",
 				},
@@ -750,7 +749,7 @@ func TestProcessAttributesAndEvents(t *testing.T) {
 			events:       []*SpanEvent{},
 			validate: func(t *testing.T, result map[string]interface{}) {
 				assert.NotNil(t, result)
-				// Should have entries for all fieldConfMap keys, but values might be nil
+				// Should have entries for all FieldConfMap keys, but values might be nil
 				assert.Contains(t, result, "span_type")
 			},
 		},
@@ -1206,23 +1205,23 @@ func TestProcessAttributeKey(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		conf         fieldConf
+		conf         FieldConf
 		attributeMap map[string]*AnyValue
 		expected     interface{}
 	}{
 		{
 			name: "no attribute keys in config",
-			conf: fieldConf{
-				attributeKey: []string{},
+			conf: FieldConf{
+				AttributeKey: []string{},
 			},
 			attributeMap: map[string]*AnyValue{},
 			expected:     nil,
 		},
 		{
 			name: "attribute key found",
-			conf: fieldConf{
-				attributeKey: []string{"test.key"},
-				dataType:     dataTypeString,
+			conf: FieldConf{
+				AttributeKey: []string{"test.key"},
+				DataType:     dataTypeString,
 			},
 			attributeMap: map[string]*AnyValue{
 				"test.key": {Value: &AnyValue_StringValue{StringValue: "test-value"}},
@@ -1231,9 +1230,9 @@ func TestProcessAttributeKey(t *testing.T) {
 		},
 		{
 			name: "attribute key not found",
-			conf: fieldConf{
-				attributeKey: []string{"missing.key"},
-				dataType:     dataTypeString,
+			conf: FieldConf{
+				AttributeKey: []string{"missing.key"},
+				DataType:     dataTypeString,
 			},
 			attributeMap: map[string]*AnyValue{
 				"other.key": {Value: &AnyValue_StringValue{StringValue: "other-value"}},
@@ -1242,9 +1241,9 @@ func TestProcessAttributeKey(t *testing.T) {
 		},
 		{
 			name: "multiple attribute keys, first found",
-			conf: fieldConf{
-				attributeKey: []string{"first.key", "second.key"},
-				dataType:     dataTypeString,
+			conf: FieldConf{
+				AttributeKey: []string{"first.key", "second.key"},
+				DataType:     dataTypeString,
 			},
 			attributeMap: map[string]*AnyValue{
 				"first.key":  {Value: &AnyValue_StringValue{StringValue: "first-value"}},
@@ -1534,7 +1533,7 @@ func TestProcessAttributePrefix(t *testing.T) {
 	tests := []struct {
 		name         string
 		fieldKey     string
-		conf         fieldConf
+		conf         FieldConf
 		attributeMap map[string]*AnyValue
 		expected     string
 		validate     func(t *testing.T, result string)
@@ -1542,8 +1541,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "no attribute prefix keys",
 			fieldKey: "test_field",
-			conf: fieldConf{
-				attributeKeyPrefix: []string{},
+			conf: FieldConf{
+				AttributeKeyPrefix: []string{},
 			},
 			attributeMap: map[string]*AnyValue{},
 			expected:     "",
@@ -1551,8 +1550,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "no matching attributes",
 			fieldKey: "test_field",
-			conf: fieldConf{
-				attributeKeyPrefix: []string{"non.existing.prefix"},
+			conf: FieldConf{
+				AttributeKeyPrefix: []string{"non.existing.prefix"},
 			},
 			attributeMap: map[string]*AnyValue{},
 			expected:     "",
@@ -1560,8 +1559,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "basic attribute aggregation",
 			fieldKey: "test_field",
-			conf: fieldConf{
-				attributeKeyPrefix: []string{"test.prefix"},
+			conf: FieldConf{
+				AttributeKeyPrefix: []string{"test.prefix"},
 			},
 			attributeMap: map[string]*AnyValue{
 				"test.prefix.child1": {Value: &AnyValue_StringValue{StringValue: "value1"}},
@@ -1580,8 +1579,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "GenAI completion output special process",
 			fieldKey: tracespec.Output,
-			conf: fieldConf{
-				attributeKeyPrefix: []string{string(semconv1_27_0.GenAICompletionKey)},
+			conf: FieldConf{
+				AttributeKeyPrefix: []string{string(semconv1_27_0.GenAICompletionKey)},
 			},
 			attributeMap: map[string]*AnyValue{
 				string(semconv1_27_0.GenAICompletionKey) + ".0.content": {Value: &AnyValue_StringValue{StringValue: "response1"}},
@@ -1611,8 +1610,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "GenAI prompt input special process",
 			fieldKey: tracespec.Input,
-			conf: fieldConf{
-				attributeKeyPrefix:    []string{string(semconv1_27_0.GenAIPromptKey)},
+			conf: FieldConf{
+				AttributeKeyPrefix:    []string{string(semconv1_27_0.GenAIPromptKey)},
 				attributeHighLevelKey: []highLevelKeyRuleConf{{key: "messages", rule: highLevelKeyRuleMap}},
 			},
 			attributeMap: map[string]*AnyValue{
@@ -1634,8 +1633,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "GenAI prompt input with tools special process",
 			fieldKey: tracespec.Input,
-			conf: fieldConf{
-				attributeKeyPrefix:    []string{string(semconv1_27_0.GenAIPromptKey)},
+			conf: FieldConf{
+				AttributeKeyPrefix:    []string{string(semconv1_27_0.GenAIPromptKey)},
 				attributeHighLevelKey: []highLevelKeyRuleConf{{key: "messages", rule: highLevelKeyRuleMap}},
 			},
 			attributeMap: map[string]*AnyValue{
@@ -1669,8 +1668,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "OpenInference input messages special process",
 			fieldKey: tracespec.Input,
-			conf: fieldConf{
-				attributeKeyPrefix: []string{openInferenceAttributeModelInputMessages},
+			conf: FieldConf{
+				AttributeKeyPrefix: []string{openInferenceAttributeModelInputMessages},
 			},
 			attributeMap: map[string]*AnyValue{
 				openInferenceAttributeModelInputMessages + ".0.message.role":    {Value: &AnyValue_StringValue{StringValue: "user"}},
@@ -1690,8 +1689,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "OpenInference input messages with tools special process",
 			fieldKey: tracespec.Input,
-			conf: fieldConf{
-				attributeKeyPrefix: []string{openInferenceAttributeModelInputMessages},
+			conf: FieldConf{
+				AttributeKeyPrefix: []string{openInferenceAttributeModelInputMessages},
 			},
 			attributeMap: map[string]*AnyValue{
 				openInferenceAttributeModelInputMessages + ".0.message.role":    {Value: &AnyValue_StringValue{StringValue: "user"}},
@@ -1713,8 +1712,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "OpenInference output messages special process",
 			fieldKey: tracespec.Output,
-			conf: fieldConf{
-				attributeKeyPrefix: []string{openInferenceAttributeModelOutputMessages},
+			conf: FieldConf{
+				AttributeKeyPrefix: []string{openInferenceAttributeModelOutputMessages},
 			},
 			attributeMap: map[string]*AnyValue{
 				openInferenceAttributeModelOutputMessages + ".0.message.role":    {Value: &AnyValue_StringValue{StringValue: "assistant"}},
@@ -1734,8 +1733,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "default case no special processing",
 			fieldKey: "custom_field",
-			conf: fieldConf{
-				attributeKeyPrefix: []string{"custom.prefix"},
+			conf: FieldConf{
+				AttributeKeyPrefix: []string{"custom.prefix"},
 			},
 			attributeMap: map[string]*AnyValue{
 				"custom.prefix.child1": {Value: &AnyValue_StringValue{StringValue: "value1"}},
@@ -1754,8 +1753,8 @@ func TestProcessAttributePrefix(t *testing.T) {
 		{
 			name:     "empty aggregation result",
 			fieldKey: "test_field",
-			conf: fieldConf{
-				attributeKeyPrefix: []string{"empty.prefix"},
+			conf: FieldConf{
+				AttributeKeyPrefix: []string{"empty.prefix"},
 			},
 			attributeMap: map[string]*AnyValue{
 				"empty.prefix": {Value: &AnyValue_StringValue{StringValue: ""}},

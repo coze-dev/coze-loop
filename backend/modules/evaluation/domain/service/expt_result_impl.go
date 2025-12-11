@@ -772,6 +772,10 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 			TurnResults: make([]*entity.TurnResult, 0),
 			ItemIndex:   gptr.Of(int64(itemResultPO.ItemIdx)),
 		}
+		// 填充 ext 字段，使用 expt_item_result 表里的 ext
+		if len(itemResultPO.Ext) > 0 {
+			itemResult.Ext = itemResultPO.Ext
+		}
 		if state, ok := itemID2ItemRunState[itemID]; ok {
 			itemResult.SystemInfo = &entity.ItemSystemInfo{
 				RunState: state,

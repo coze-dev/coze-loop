@@ -41,6 +41,10 @@ func (a *SelfWrapper) GroupBy() []*entity.Dimension {
 	return nil
 }
 
+func (a *SelfWrapper) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
+}
+
 func NewSelfWrapper() entity.IMetricWrapper {
 	return &SelfWrapper{}
 }

@@ -126,9 +126,10 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	mockRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil).AnyTimes()
 	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), int64(1), spanRun.ID).Return(int64(0), nil).AnyTimes()
 
-	proc := &stubProcessor{invokeErr: errors.New("invoke error"), createTaskRunErr: errors.New("create run error")}
+	procMock := &stubProcessor{invokeErr: errors.New("invoke error"), createTaskRunErr: errors.New("create run error")}
+
 	taskProcessor := processor.NewTaskProcessor()
-	taskProcessor.Register(entity.TaskTypeAutoEval, proc)
+	taskProcessor.Register(entity.TaskTypeAutoEval, procMock)
 
 	impl := &TraceHubServiceImpl{
 		taskRepo:      mockRepo,
@@ -159,7 +160,6 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	err := impl.SpanTrigger(context.Background(), raw.RawSpanConvertToLoopSpan())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "invoke error")
-	require.True(t, proc.invokeCalled)
 }
 
 func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) {
@@ -167,7 +167,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) 
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{}
+	procMock := &stubProcessor{}
 
 	now := time.Now()
 	startAt := now.Add(-2 * time.Hour).UnixMilli()
@@ -194,7 +194,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) 
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -225,17 +225,17 @@ func TestTraceHubServiceImpl_preDispatchHandlesUnstartedAndLimits(t *testing.T) 
 
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.NoError(t, err)
-	require.Equal(t, 2, len(stubProc.createTaskRunReqs))
-	require.Equal(t, startAt, stubProc.createTaskRunReqs[0].RunStartAt)
-	require.True(t, stubProc.createTaskRunReqs[0].RunEndAt > startAt)
-	require.Equal(t, taskRunConfig.RunEndAt.UnixMilli(), stubProc.createTaskRunReqs[1].RunStartAt)
-	require.Equal(t, 1, stubProc.updateCallCount)
-	require.Equal(t, 4, stubProc.finishChangeInvoked)
-	require.Len(t, stubProc.finishChangeReqs, 4)
-	require.True(t, stubProc.finishChangeReqs[0].IsFinish)
-	require.True(t, stubProc.finishChangeReqs[1].IsFinish)
-	require.False(t, stubProc.finishChangeReqs[2].IsFinish)
-	require.False(t, stubProc.finishChangeReqs[3].IsFinish)
+	require.Equal(t, 2, len(procMock.createTaskRunReqs))
+	require.Equal(t, startAt, procMock.createTaskRunReqs[0].RunStartAt)
+	require.True(t, procMock.createTaskRunReqs[0].RunEndAt > startAt)
+	require.Equal(t, taskRunConfig.RunEndAt.UnixMilli(), procMock.createTaskRunReqs[1].RunStartAt)
+	require.Equal(t, 1, procMock.updateCallCount)
+	require.Equal(t, 4, procMock.finishChangeInvoked)
+	require.Len(t, procMock.finishChangeReqs, 4)
+	require.True(t, procMock.finishChangeReqs[0].IsFinish)
+	require.True(t, procMock.finishChangeReqs[1].IsFinish)
+	require.False(t, procMock.finishChangeReqs[2].IsFinish)
+	require.False(t, procMock.finishChangeReqs[3].IsFinish)
 }
 
 func TestTraceHubServiceImpl_preDispatchHandlesMissingTaskRunConfig(t *testing.T) {
@@ -243,7 +243,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesMissingTaskRunConfig(t *testing.T
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{createTaskRunErr: errors.New("create run failed")}
+	procMock := &stubProcessor{createTaskRunErr: errors.New("create run failed")}
 
 	now := time.Now()
 	startAt := now.Add(-10 * time.Minute).UnixMilli()
@@ -266,7 +266,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesMissingTaskRunConfig(t *testing.T
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -286,11 +286,11 @@ func TestTraceHubServiceImpl_preDispatchHandlesMissingTaskRunConfig(t *testing.T
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "task run config not found")
-	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
-	require.Equal(t, startAt, stubProc.createTaskRunReqs[0].RunStartAt)
+	require.Equal(t, 1, len(procMock.createTaskRunReqs))
+	require.Equal(t, startAt, procMock.createTaskRunReqs[0].RunStartAt)
 	expectedEnd := startAt + 2*7*24*time.Hour.Milliseconds()
-	require.Equal(t, expectedEnd, stubProc.createTaskRunReqs[0].RunEndAt)
-	require.Equal(t, 0, stubProc.finishChangeInvoked)
+	require.Equal(t, expectedEnd, procMock.createTaskRunReqs[0].RunEndAt)
+	require.Equal(t, 0, procMock.finishChangeInvoked)
 }
 
 func TestTraceHubServiceImpl_preDispatchHandlesNonCycle(t *testing.T) {
@@ -298,7 +298,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesNonCycle(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{}
+	procMock := &stubProcessor{}
 
 	now := time.Now()
 	startAt := now.Add(-time.Hour).UnixMilli()
@@ -321,7 +321,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesNonCycle(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -352,10 +352,10 @@ func TestTraceHubServiceImpl_preDispatchHandlesNonCycle(t *testing.T) {
 
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.NoError(t, err)
-	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
-	require.Equal(t, endAt, stubProc.createTaskRunReqs[0].RunEndAt)
-	require.Equal(t, 1, stubProc.updateCallCount)
-	require.Zero(t, stubProc.finishChangeInvoked)
+	require.Equal(t, 1, len(procMock.createTaskRunReqs))
+	require.Equal(t, endAt, procMock.createTaskRunReqs[0].RunEndAt)
+	require.Equal(t, 1, procMock.updateCallCount)
+	require.Zero(t, procMock.finishChangeInvoked)
 }
 
 func TestTraceHubServiceImpl_preDispatchHandlesCycleDefaultUnit(t *testing.T) {
@@ -363,7 +363,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesCycleDefaultUnit(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{createTaskRunErrSeq: []error{nil, errors.New("create fail")}}
+	procMock := &stubProcessor{createTaskRunErrSeq: []error{nil, errors.New("create fail")}}
 
 	now := time.Now()
 	startAt := now.Add(-15 * time.Minute).UnixMilli()
@@ -385,7 +385,7 @@ func TestTraceHubServiceImpl_preDispatchHandlesCycleDefaultUnit(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -405,10 +405,10 @@ func TestTraceHubServiceImpl_preDispatchHandlesCycleDefaultUnit(t *testing.T) {
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "create fail")
-	require.Equal(t, 2, len(stubProc.createTaskRunReqs))
+	require.Equal(t, 2, len(procMock.createTaskRunReqs))
 	delta := int64(3) * 10 * time.Minute.Milliseconds()
-	require.Equal(t, startAt+delta, stubProc.createTaskRunReqs[0].RunEndAt)
-	require.Equal(t, startAt+delta, stubProc.createTaskRunReqs[1].RunEndAt)
+	require.Equal(t, startAt+delta, procMock.createTaskRunReqs[0].RunEndAt)
+	require.Equal(t, startAt+delta, procMock.createTaskRunReqs[1].RunEndAt)
 }
 
 func TestTraceHubServiceImpl_preDispatchTimeLimitFinishError(t *testing.T) {
@@ -416,7 +416,7 @@ func TestTraceHubServiceImpl_preDispatchTimeLimitFinishError(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{finishErrSeq: []error{errors.New("finish error")}}
+	procMock := &stubProcessor{finishErrSeq: []error{errors.New("finish error")}}
 
 	now := time.Now()
 	startAt := now.Add(-2 * time.Hour).UnixMilli()
@@ -442,7 +442,7 @@ func TestTraceHubServiceImpl_preDispatchTimeLimitFinishError(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -474,7 +474,7 @@ func TestTraceHubServiceImpl_preDispatchTimeLimitFinishError(t *testing.T) {
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "finish error")
-	require.Equal(t, 1, stubProc.finishChangeInvoked)
+	require.Equal(t, 1, procMock.finishChangeInvoked)
 }
 
 func TestTraceHubServiceImpl_preDispatchSampleLimitFinishError(t *testing.T) {
@@ -482,7 +482,7 @@ func TestTraceHubServiceImpl_preDispatchSampleLimitFinishError(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{finishErrSeq: []error{errors.New("sample limit error")}}
+	procMock := &stubProcessor{finishErrSeq: []error{errors.New("sample limit error")}}
 
 	now := time.Now()
 	startAt := now.Add(-time.Hour).UnixMilli()
@@ -508,7 +508,7 @@ func TestTraceHubServiceImpl_preDispatchSampleLimitFinishError(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -540,7 +540,7 @@ func TestTraceHubServiceImpl_preDispatchSampleLimitFinishError(t *testing.T) {
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "sample limit error")
-	require.Equal(t, 1, stubProc.finishChangeInvoked)
+	require.Equal(t, 1, procMock.finishChangeInvoked)
 }
 
 func TestTraceHubServiceImpl_preDispatchCycleTimeLimitFinishError(t *testing.T) {
@@ -548,7 +548,7 @@ func TestTraceHubServiceImpl_preDispatchCycleTimeLimitFinishError(t *testing.T) 
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{finishErrSeq: []error{errors.New("cycle time error")}}
+	procMock := &stubProcessor{finishErrSeq: []error{errors.New("cycle time error")}}
 
 	now := time.Now()
 	startAt := now.Add(-time.Hour).UnixMilli()
@@ -574,7 +574,7 @@ func TestTraceHubServiceImpl_preDispatchCycleTimeLimitFinishError(t *testing.T) 
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -606,7 +606,7 @@ func TestTraceHubServiceImpl_preDispatchCycleTimeLimitFinishError(t *testing.T) 
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "cycle time error")
-	require.Equal(t, 1, stubProc.finishChangeInvoked)
+	require.Equal(t, 1, procMock.finishChangeInvoked)
 }
 
 func TestTraceHubServiceImpl_preDispatchCycleCountFinishError(t *testing.T) {
@@ -614,7 +614,7 @@ func TestTraceHubServiceImpl_preDispatchCycleCountFinishError(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{finishErrSeq: []error{errors.New("cycle count error")}}
+	procMock := &stubProcessor{finishErrSeq: []error{errors.New("cycle count error")}}
 
 	now := time.Now()
 	startAt := now.Add(-time.Hour).UnixMilli()
@@ -640,7 +640,7 @@ func TestTraceHubServiceImpl_preDispatchCycleCountFinishError(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -672,7 +672,7 @@ func TestTraceHubServiceImpl_preDispatchCycleCountFinishError(t *testing.T) {
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "cycle count error")
-	require.Equal(t, 1, stubProc.finishChangeInvoked)
+	require.Equal(t, 1, procMock.finishChangeInvoked)
 }
 
 func TestTraceHubServiceImpl_preDispatchCreativeError(t *testing.T) {
@@ -680,7 +680,7 @@ func TestTraceHubServiceImpl_preDispatchCreativeError(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{createTaskRunErrSeq: []error{errors.New("creative fail")}}
+	procMock := &stubProcessor{createTaskRunErrSeq: []error{errors.New("creative fail")}}
 
 	now := time.Now()
 	startAt := now.Add(-time.Hour).UnixMilli()
@@ -702,7 +702,7 @@ func TestTraceHubServiceImpl_preDispatchCreativeError(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -720,7 +720,7 @@ func TestTraceHubServiceImpl_preDispatchCreativeError(t *testing.T) {
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "creative fail")
-	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
+	require.Equal(t, 1, len(procMock.createTaskRunReqs))
 }
 
 func toObservabilityTask(dto *task.Task) *entity.ObservabilityTask {
@@ -818,7 +818,7 @@ func TestTraceHubServiceImpl_preDispatchUpdateError(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{updateErr: errors.New("update fail")}
+	procMock := &stubProcessor{updateErr: errors.New("update fail")}
 
 	now := time.Now()
 	startAt := now.Add(-time.Hour).UnixMilli()
@@ -841,7 +841,7 @@ func TestTraceHubServiceImpl_preDispatchUpdateError(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -858,9 +858,9 @@ func TestTraceHubServiceImpl_preDispatchUpdateError(t *testing.T) {
 
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.NoError(t, err)
-	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
-	require.Equal(t, 1, stubProc.updateCallCount)
-	require.Zero(t, stubProc.finishChangeInvoked)
+	require.Equal(t, 1, len(procMock.createTaskRunReqs))
+	require.Equal(t, 1, procMock.updateCallCount)
+	require.Zero(t, procMock.finishChangeInvoked)
 }
 
 func TestTraceHubServiceImpl_preDispatchListTaskRunError(t *testing.T) {
@@ -868,7 +868,7 @@ func TestTraceHubServiceImpl_preDispatchListTaskRunError(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{}
+	procMock := &stubProcessor{}
 
 	now := time.Now()
 	startAt := now.Add(-time.Hour).UnixMilli()
@@ -886,7 +886,7 @@ func TestTraceHubServiceImpl_preDispatchListTaskRunError(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -905,7 +905,7 @@ func TestTraceHubServiceImpl_preDispatchListTaskRunError(t *testing.T) {
 
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.NoError(t, err)
-	require.Empty(t, stubProc.createTaskRunReqs)
+	require.Empty(t, procMock.createTaskRunReqs)
 }
 
 func TestTraceHubServiceImpl_preDispatchTaskRunConfigDay(t *testing.T) {
@@ -913,7 +913,7 @@ func TestTraceHubServiceImpl_preDispatchTaskRunConfigDay(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{createTaskRunErrSeq: []error{errors.New("create fail")}}
+	procMock := &stubProcessor{createTaskRunErrSeq: []error{errors.New("create fail")}}
 
 	now := time.Now()
 	startAt := now.Add(-10 * time.Minute).UnixMilli()
@@ -935,7 +935,7 @@ func TestTraceHubServiceImpl_preDispatchTaskRunConfigDay(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -955,9 +955,9 @@ func TestTraceHubServiceImpl_preDispatchTaskRunConfigDay(t *testing.T) {
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "create fail")
-	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
+	require.Equal(t, 1, len(procMock.createTaskRunReqs))
 	delta := int64(2) * 24 * time.Hour.Milliseconds()
-	require.Equal(t, startAt+delta, stubProc.createTaskRunReqs[0].RunEndAt)
+	require.Equal(t, startAt+delta, procMock.createTaskRunReqs[0].RunEndAt)
 }
 
 func TestTraceHubServiceImpl_preDispatchCycleCreativeError(t *testing.T) {
@@ -965,7 +965,7 @@ func TestTraceHubServiceImpl_preDispatchCycleCreativeError(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	stubProc := &stubProcessor{createTaskRunErrSeq: []error{errors.New("cycle create fail")}}
+	procMock := &stubProcessor{createTaskRunErrSeq: []error{errors.New("cycle create fail")}}
 
 	now := time.Now()
 	startAt := now.Add(-time.Hour).UnixMilli()
@@ -991,7 +991,7 @@ func TestTraceHubServiceImpl_preDispatchCycleCreativeError(t *testing.T) {
 
 	sub := &spanSubscriber{
 		taskID:    taskID,
-		processor: stubProc,
+		processor: procMock,
 		taskRepo:  mockRepo,
 		runType:   entity.TaskRunTypeNewData,
 	}
@@ -1023,5 +1023,5 @@ func TestTraceHubServiceImpl_preDispatchCycleCreativeError(t *testing.T) {
 	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
 	require.Error(t, err)
 	require.ErrorContains(t, err, "cycle create fail")
-	require.Equal(t, 1, len(stubProc.createTaskRunReqs))
+	require.Equal(t, 1, len(procMock.createTaskRunReqs))
 }

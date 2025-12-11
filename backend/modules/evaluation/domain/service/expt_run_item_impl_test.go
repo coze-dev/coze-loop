@@ -314,11 +314,12 @@ func Test_ExptItemEvalCtxExecutor_buildExptTurnEvalCtx(t *testing.T) {
 	t.Run("无existTurnRunResult", func(t *testing.T) {
 		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
 		execCtx := &entity.ExptItemEvalCtx{
-			Event:               &entity.ExptItemEvalEvent{SpaceID: 1},
+			Event:               &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 1, EvalSetItemID: 1},
 			EvalSetItem:         &entity.EvaluationSetItem{Turns: []*entity.Turn{turn}, BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))}},
 			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{}},
 			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
 		}
+		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{}, nil)
 		etec, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, etec)
@@ -461,11 +462,12 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 	t.Run("GetRecordByID返回错误", func(t *testing.T) {
 		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
 		execCtx := &entity.ExptItemEvalCtx{
-			Event:               &entity.ExptItemEvalEvent{SpaceID: 1},
+			Event:               &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 1, EvalSetItemID: 1},
 			EvalSetItem:         &entity.EvaluationSetItem{Turns: []*entity.Turn{turn}, BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))}},
 			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{1: {TargetResultID: 123, EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 100}}}}},
 			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
 		}
+		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{}, nil)
 		mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("mock get record error"))
 		_, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
 		assert.Error(t, err)
@@ -475,11 +477,12 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 	t.Run("BatchGetEvaluatorRecord返回错误", func(t *testing.T) {
 		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
 		execCtx := &entity.ExptItemEvalCtx{
-			Event:               &entity.ExptItemEvalEvent{SpaceID: 1},
+			Event:               &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 1, EvalSetItemID: 1},
 			EvalSetItem:         &entity.EvaluationSetItem{Turns: []*entity.Turn{turn}, BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))}},
 			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{1: {TargetResultID: 123, EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 100}}}}},
 			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
 		}
+		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{}, nil)
 		mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvalTargetRecord{ID: 123}, nil)
 		mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("mock batchget error"))
 		_, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
@@ -490,17 +493,148 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 	t.Run("BatchGetEvaluatorRecord返回正常", func(t *testing.T) {
 		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
 		execCtx := &entity.ExptItemEvalCtx{
-			Event:               &entity.ExptItemEvalEvent{SpaceID: 1},
+			Event:               &entity.ExptItemEvalEvent{SpaceID: 1, ExptID: 1, EvalSetItemID: 1},
 			EvalSetItem:         &entity.EvaluationSetItem{Turns: []*entity.Turn{turn}, BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))}},
 			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{1: {TargetResultID: 123, EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 100}}}}},
 			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
 		}
+		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{}, nil)
 		mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvalTargetRecord{ID: 123}, nil)
 		mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{{ID: 100, EvaluatorVersionID: 1}}, nil)
 		etec, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, etec)
 		assert.NotNil(t, etec.ExptTurnRunResult.EvaluatorResults)
+	})
+
+	t.Run("Ext字段处理_从Event.Ext和ItemResult.Ext合并", func(t *testing.T) {
+		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
+		execCtx := &entity.ExptItemEvalCtx{
+			Event: &entity.ExptItemEvalEvent{
+				SpaceID:       1,
+				ExptID:        1,
+				EvalSetItemID: 1,
+				Ext: map[string]string{
+					"event_key1": "event_value1",
+					"event_key2": "event_value2",
+				},
+			},
+			EvalSetItem: &entity.EvaluationSetItem{
+				Turns:    []*entity.Turn{turn},
+				BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))},
+			},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{}},
+			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
+		}
+		itemResult := &entity.ExptItemResult{
+			ID:     1,
+			ItemID: 1,
+			Ext: map[string]string{
+				"item_key1":  "item_value1",
+				"event_key2": "item_value2_override",
+			},
+		}
+		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{itemResult}, nil)
+		etec, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, etec)
+		assert.NotNil(t, etec.Ext)
+		assert.Equal(t, "event_value1", etec.Ext["event_key1"])
+		assert.Equal(t, "item_value2_override", etec.Ext["event_key2"])
+		assert.Equal(t, "item_value1", etec.Ext["item_key1"])
+		assert.Equal(t, "taskid", etec.Ext["task_id"])
+		assert.Equal(t, "1", etec.Ext["workspace_id"])
+		assert.Equal(t, "1000", etec.Ext["start_time"])
+	})
+
+	t.Run("Ext字段处理_从FieldDataList提取span_id_run_id_trace_id", func(t *testing.T) {
+		turn := &entity.Turn{
+			ID: 1,
+			FieldDataList: []*entity.FieldData{
+				{Name: "span_id", Content: &entity.Content{Text: gptr.Of("span123")}},
+				{Name: "run_id", Content: &entity.Content{Text: gptr.Of("run456")}},
+				{Name: "trace_id", Content: &entity.Content{Text: gptr.Of("trace789")}},
+			},
+		}
+		execCtx := &entity.ExptItemEvalCtx{
+			Event: &entity.ExptItemEvalEvent{
+				SpaceID:       1,
+				ExptID:        1,
+				EvalSetItemID: 1,
+				Ext:           map[string]string{},
+			},
+			EvalSetItem: &entity.EvaluationSetItem{
+				Turns:    []*entity.Turn{turn},
+				BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))},
+			},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{}},
+			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
+		}
+		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{}, nil)
+		etec, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, etec)
+		assert.NotNil(t, etec.Ext)
+		assert.Equal(t, "span123", etec.Ext["span_id"])
+		assert.Equal(t, "run456", etec.Ext["run_id"])
+		assert.Equal(t, "trace789", etec.Ext["trace_id"])
+	})
+
+	t.Run("Ext字段处理_ItemResult.Ext为nil", func(t *testing.T) {
+		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
+		execCtx := &entity.ExptItemEvalCtx{
+			Event: &entity.ExptItemEvalEvent{
+				SpaceID:       1,
+				ExptID:        1,
+				EvalSetItemID: 1,
+				Ext: map[string]string{
+					"event_key": "event_value",
+				},
+			},
+			EvalSetItem: &entity.EvaluationSetItem{
+				Turns:    []*entity.Turn{turn},
+				BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))},
+			},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{}},
+			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
+		}
+		itemResult := &entity.ExptItemResult{
+			ID:     1,
+			ItemID: 1,
+			Ext:    nil,
+		}
+		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{itemResult}, nil)
+		etec, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, etec)
+		assert.NotNil(t, etec.Ext)
+		assert.Equal(t, "event_value", etec.Ext["event_key"])
+	})
+
+	t.Run("Ext字段处理_BatchGet返回错误", func(t *testing.T) {
+		turn := &entity.Turn{ID: 1, FieldDataList: []*entity.FieldData{}}
+		execCtx := &entity.ExptItemEvalCtx{
+			Event: &entity.ExptItemEvalEvent{
+				SpaceID:       1,
+				ExptID:        1,
+				EvalSetItemID: 1,
+				Ext: map[string]string{
+					"event_key": "event_value",
+				},
+			},
+			EvalSetItem: &entity.EvaluationSetItem{
+				Turns:    []*entity.Turn{turn},
+				BaseInfo: &entity.BaseInfo{CreatedAt: gptr.Of(int64(1))},
+			},
+			ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{}},
+			Expt:                &entity.Experiment{SourceID: "taskid", SpaceID: 1},
+		}
+		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return(nil, errors.New("batch get error"))
+		etec, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, etec)
+		assert.NotNil(t, etec.Ext)
+		assert.Equal(t, "event_value", etec.Ext["event_key"])
 	})
 }
 

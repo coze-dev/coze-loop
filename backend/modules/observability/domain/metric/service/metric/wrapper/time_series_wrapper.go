@@ -46,7 +46,11 @@ func (a *TimeSeriesWrapper) GroupBy() []*entity.Dimension {
 	return a.originalMetric.GroupBy()
 }
 
-type TimeSeriesWrapperOption func(*TimeSeriesWrapper)
+func (a *TimeSeriesWrapper) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
 
 func NewTimeSeriesWrapper() entity.IMetricWrapper {
 	return &TimeSeriesWrapper{}

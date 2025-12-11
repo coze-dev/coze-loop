@@ -28,6 +28,8 @@ const (
 	keySpanTypeCfgKey                  = "key_span_type"
 	backfillMqProducerCfgKey           = "backfill_mq_producer_config"
 	consumerListeningCfgKey            = "consumer_listening"
+	metricPlatformTenantCfgKey         = "metric_platform_tenants"
+	metricQueryConfigKey               = "metric_query_config"
 )
 
 type TraceConfigCenter struct {
@@ -187,6 +189,25 @@ func (t *TraceConfigCenter) GetConsumerListening(ctx context.Context) (*config.C
 		return nil, err
 	}
 	return consumerListening, nil
+}
+
+func (t *TraceConfigCenter) GetMetricPlatformTenants(ctx context.Context) (*config.PlatformTenantsCfg, error) {
+	cfg := new(config.PlatformTenantsCfg)
+	if err := t.UnmarshalKey(ctx, metricPlatformTenantCfgKey, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func (t *TraceConfigCenter) GetMetricQueryConfig(ctx context.Context) *config.MetricQueryConfig {
+	cfg := new(config.MetricQueryConfig)
+	if err := t.UnmarshalKey(ctx, metricQueryConfigKey, cfg); err != nil {
+		logs.CtxWarn(ctx, "fail to get metric query cfg, %v", err)
+		return &config.MetricQueryConfig{
+			SupportOffline: false,
+		}
+	}
+	return cfg
 }
 
 func NewTraceConfigCenter(confP conf.IConfigLoader) config.ITraceConfig {

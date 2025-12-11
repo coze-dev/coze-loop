@@ -5,9 +5,10 @@ package model
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	consts "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/const"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
@@ -27,17 +28,7 @@ func (m *ModelQPMSuccessMetric) Source() entity.MetricSource {
 }
 
 func (m *ModelQPMSuccessMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	denominator := entity.GranularityToSecond(granularity) / 60
-	expression := fmt.Sprintf("countIf(1, %%s = 0)/%d", denominator)
-	return &entity.Expression{
-		Expression: expression,
-		Fields: []*loop_span.FilterField{
-			{
-				FieldName: loop_span.SpanFieldStatusCode,
-				FieldType: loop_span.FieldTypeLong,
-			},
-		},
-	}
+	return &entity.Expression{}
 }
 
 func (m *ModelQPMSuccessMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
@@ -46,6 +37,21 @@ func (m *ModelQPMSuccessMetric) Where(ctx context.Context, filter span_filter.Fi
 
 func (m *ModelQPMSuccessMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ModelQPMSuccessMetric) GetMetrics() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{
+		wrapper.NewTimeSeriesWrapper().Wrap(NewModelTotalSuccessCountMetric()),
+		consts.NewConstMinuteMetric(),
+	}
+}
+
+func (m *ModelQPMSuccessMetric) Operator() entity.MetricOperator {
+	return entity.MetricOperatorDivide
+}
+
+func (m *ModelQPMSuccessMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewModelQPMSuccessMetric() entity.IMetricDefinition {

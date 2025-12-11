@@ -89,6 +89,10 @@ func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskDO *entity.Ob
 	if err != nil {
 		return filters
 	}
+	if err = taskDO.SpanFilter.Filters.Traverse(processSpecificFilter); err != nil {
+		logs.CtxError(ctx, "traverse filter fields failed, task_id=%d, err=%v", taskDO.ID, err)
+		return filters
+	}
 	filters = combineFilters(builtinFilter, &taskDO.SpanFilter.Filters)
 
 	return filters

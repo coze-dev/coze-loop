@@ -27,6 +27,8 @@ const (
 
 	PlatformTypeVeADK = "veadk"
 
+	PlatformTypeVeAgentkit = "ve_agentkit"
+
 	PlatformTypeLoopAll = "loop_all"
 
 	PlatformTypeInnerCozeloop = "inner_cozeloop"

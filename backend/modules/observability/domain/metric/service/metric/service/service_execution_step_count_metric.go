@@ -53,6 +53,12 @@ func (m *ServiceExecutionStepCountMetric) Wrappers() []entity.IMetricWrapper {
 	}
 }
 
+func (m *ServiceExecutionStepCountMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewServiceExecutionStepCountMetric() entity.IMetricDefinition {
 	return &ServiceExecutionStepCountMetric{}
 }

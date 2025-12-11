@@ -1,16 +1,15 @@
 {
   "recommendations": [
+    "aaron-bond.better-comments",
+    "codezombiech.gitignore",
     "cpylua.language-postcss",
     "editorconfig.editorconfig",
     "esbenp.prettier-vscode",
-    "mkaufman.htmlhint",
-    "streetsidesoftware.code-spell-checker",
-    "codezombiech.gitignore",
-    "aaron-bond.better-comments",
+    "foxundermoon.shell-format",
     "jasonnutter.search-node-modules",
     "jock.svg",
     "mikestead.dotenv",
-    "foxundermoon.shell-format",
+    "streetsidesoftware.code-spell-checker",
     "stylelint.vscode-stylelint"
   ],
   "unwantedRecommendations": [

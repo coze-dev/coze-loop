@@ -10,8 +10,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	v1 "go.opentelemetry.io/proto/otlp/trace/v1"
-
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 // ExportTraceServiceRequest Internal struct, compared to PB struct: TraceID & SpanID & ParentSpanId is string, int64/uint64 -> string, can support otel json source data
@@ -233,7 +231,6 @@ type KeyValueList struct {
 func (x *KeyValueList) String(ctx context.Context) string {
 	marshalString, err := sonic.MarshalString(x)
 	if err != nil {
-		logs.CtxError(ctx, "KeyValueList marshal failed err=%+v", err)
 		return ""
 	}
 	return marshalString
@@ -246,7 +243,6 @@ type ArrayValue struct {
 func (x *ArrayValue) String(ctx context.Context) string {
 	marshalString, err := sonic.MarshalString(x)
 	if err != nil {
-		logs.CtxError(ctx, "ArrayValue marshal failed err=%+v", err)
 		return ""
 	}
 	return marshalString

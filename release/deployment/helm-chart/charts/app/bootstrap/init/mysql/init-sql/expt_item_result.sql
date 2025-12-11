@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS `expt_item_result`
     `updated_at`  timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`  timestamp       NULL     DEFAULT NULL COMMENT '删除时间',
     `log_id`      varchar(128)    NOT NULL DEFAULT '' COMMENT '日志 id',
+    `ext`         blob COMMENT '补充信息',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_item_idx` (`space_id`, `expt_id`, `item_id`),
     KEY `idx_expt_status` (`space_id`, `expt_id`, `status`),

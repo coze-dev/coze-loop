@@ -26,6 +26,7 @@ type ExptItemResult struct {
 	UpdatedAt time.Time      `gorm:"column:updated_at;type:timestamp;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                                                               // 更新时间
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;type:timestamp;comment:删除时间" json:"deleted_at"`                                                                                                                                  // 删除时间
 	LogID     string         `gorm:"column:log_id;type:varchar(128);not null;comment:日志 id" json:"log_id"`                                                                                                                             // 日志 id
+	Ext       *[]byte        `gorm:"column:ext;type:blob binary;comment:补充信息" json:"ext"`                                                                                                                                              // 补充信息
 }
 
 // TableName ExptItemResult's table name

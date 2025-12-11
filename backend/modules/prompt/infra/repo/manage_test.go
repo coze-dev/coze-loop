@@ -1395,7 +1395,7 @@ func TestManageRepoImpl_ListCommitInfo(t *testing.T) {
 						CommittedAt: time.Unix(2000, 0),
 					},
 				},
-				NextPageToken: 3,
+				NextPageToken: 3000,
 				CommitDOs: []*entity.PromptCommit{
 					{
 						CommitInfo: &entity.CommitInfo{

@@ -49,7 +49,30 @@ struct GetDrillDownValuesResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct TraverseMetricsRequest {
+    1: optional list<common.PlatformType> platform_types
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional list<string> metric_names
+    4: optional string start_date
+
+    255: optional base.Base Base
+}
+
+
+struct TraverseMetricsStatistic {
+    1: optional i32 total
+    2: optional i32 success
+    3: optional i32 failure
+}
+
+struct TraverseMetricsResponse {
+    1: optional TraverseMetricsStatistic statistic
+
+    255: optional base.BaseResp BaseResp
+}
+
 service MetricService {
     GetMetricsResponse GetMetrics(1: GetMetricsRequest Req) (api.post='/api/observability/v1/metrics/list')
     GetDrillDownValuesResponse GetDrillDownValues(1: GetDrillDownValuesRequest Req) (api.post='/api/observability/v1/metrics/drill_down_values')
+    TraverseMetricsResponse TraverseMetrics(1: TraverseMetricsRequest Req)
 }

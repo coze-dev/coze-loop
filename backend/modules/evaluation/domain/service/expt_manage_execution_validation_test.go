@@ -115,24 +115,43 @@ func TestExptMangerImpl_checkTargetConnector_VersionIDValidation(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "loop_trace_target_should_skip_validation",
+			name: "loop_trace_target_should_fail_validation", // 修正测试名称以符合实际行为
 			expt: &entity.Experiment{
 				TargetVersionID: 123,
+				TargetType:      entity.EvalTargetTypeLoopPrompt, // 添加TargetType以触发fixTargetConf
 				Target: &entity.EvalTarget{
 					EvalTargetType: entity.EvalTargetTypeLoopTrace,
+				},
+				EvalSet: &entity.EvaluationSet{
+					EvaluationSetVersion: &entity.EvaluationSetVersion{
+						EvaluationSetSchema: &entity.EvaluationSetSchema{
+							FieldSchemas: []*entity.FieldSchema{
+								{Name: "field1"},
+							},
+						},
+					},
 				},
 				EvalConf: &entity.EvaluationConfiguration{
 					ConnectorConf: entity.Connector{
 						TargetConf: &entity.TargetConf{
-							TargetVersionID: 456, // Different version ID should be ignored
+							TargetVersionID: 456, // Different version ID should cause error
+							IngressConf: &entity.TargetIngressConf{
+								EvalSetAdapter: &entity.FieldAdapter{
+									FieldConfs: []*entity.FieldConf{
+										{FromField: "field1"},
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			setupMocks: func(mgr *testExptManager) {
-				// No mocks needed as validation should be skipped
+				// No mocks needed
 			},
-			expectedError: false,
+			expectedError:     true,
+			expectedErrorCode: "601204001",
+			expectedErrorMsg:  "target config's version id not match",
 		},
 		{
 			name: "nil_target_should_skip_validation",

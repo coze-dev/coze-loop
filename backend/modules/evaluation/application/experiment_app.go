@@ -862,7 +862,7 @@ func (e *experimentApplication) InvokeExperiment(ctx context.Context, req *expt.
 	logs.CtxInfo(ctx, "InvokeExperiment expt: %v", json.Jsonify(got))
 	if got.Status != entity.ExptStatus_Processing && got.Status != entity.ExptStatus_Pending {
 		logs.CtxInfo(ctx, "expt status not allow to invoke, expt_id: %v, status: %v", req.GetExperimentID(), got.Status)
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("expt status not allow to invoke"))
+		return nil, errorx.NewByCode(errno.ExperimentStatusNotAllowedToInvokeCode, errorx.WithExtraMsg(fmt.Sprintf("expt status not allow to invoke, expt_id: %v, status: %v", req.GetExperimentID(), got.Status)))
 	}
 	itemDOS := evaluation_set.ItemDTO2DOs(req.Items)
 	idMap, evalSetErrors, itemOutputs, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{

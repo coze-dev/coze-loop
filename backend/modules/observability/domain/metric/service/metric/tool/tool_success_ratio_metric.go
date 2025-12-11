@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -29,15 +30,7 @@ func (m *ToolSuccessRatioMetric) Source() entity.MetricSource {
 }
 
 func (m *ToolSuccessRatioMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return &entity.Expression{
-		Expression: "countIf(1, %s = 0) / count()",
-		Fields: []*loop_span.FilterField{
-			{
-				FieldName: loop_span.SpanFieldStatusCode,
-				FieldType: loop_span.FieldTypeLong,
-			},
-		},
-	}
+	return &entity.Expression{}
 }
 
 func (m *ToolSuccessRatioMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
@@ -53,6 +46,21 @@ func (m *ToolSuccessRatioMetric) Where(ctx context.Context, filter span_filter.F
 
 func (m *ToolSuccessRatioMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ToolSuccessRatioMetric) GetMetrics() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{
+		wrapper.NewTimeSeriesWrapper().Wrap(NewToolTotalSuccessCountMetric()),
+		wrapper.NewTimeSeriesWrapper().Wrap(NewToolTotalCountMetric()),
+	}
+}
+
+func (m *ToolSuccessRatioMetric) Operator() entity.MetricOperator {
+	return entity.MetricOperatorDivide
+}
+
+func (m *ToolSuccessRatioMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewToolSuccessRatioMetric() entity.IMetricDefinition {

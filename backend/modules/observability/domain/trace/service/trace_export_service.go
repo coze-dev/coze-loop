@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -12,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -86,6 +88,7 @@ type ITraceExportService interface {
 
 func NewTraceExportServiceImpl(
 	tRepo repo.ITraceRepo,
+	storageProvider storage.IStorageProvider,
 	traceConfig config.ITraceConfig,
 	traceProducer mq.ITraceProducer,
 	annotationProducer mq.IAnnotationProducer,
@@ -261,7 +264,8 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 	spanIDs := lo.Map(sids, func(s SpanID, _ int) string { return s.SpanID })
 	traceIDs := lo.UniqMap(sids, func(s SpanID, _ int) string { return s.TraceID })
 	result, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
-		Tenants: tenant,
+		WorkSpaceID: strconv.FormatInt(workspaceID, 10),
+		Tenants:     tenant,
 		Filters: &loop_span.FilterFields{
 			FilterFields: []*loop_span.FilterField{
 				{
@@ -402,6 +406,7 @@ func (r *TraceExportServiceImpl) addSpanAnnotations(ctx context.Context, spans [
 			continue
 		}
 		err = r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
+			WorkSpaceID:    span.WorkspaceID,
 			Tenant:         span.GetTenant(),
 			TTL:            span.GetTTL(ctx),
 			Span:           span,

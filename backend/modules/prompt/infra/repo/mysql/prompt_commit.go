@@ -134,15 +134,15 @@ func (d *PromptCommitDAOImpl) List(ctx context.Context, param ListCommitParam, o
 	tx = tx.Where(q.PromptCommit.PromptID.Eq(param.PromptID))
 	if param.Cursor == nil {
 		if param.Asc {
-			tx = tx.Order(q.PromptCommit.ID.Asc())
+			tx = tx.Order(q.PromptCommit.CreatedAt.Asc())
 		} else {
-			tx = tx.Order(q.PromptCommit.ID.Desc())
+			tx = tx.Order(q.PromptCommit.CreatedAt.Desc())
 		}
 	} else {
 		if param.Asc {
-			tx = tx.Where(q.PromptCommit.ID.Gte(*param.Cursor)).Order(q.PromptCommit.ID.Asc())
+			tx = tx.Where(q.PromptCommit.CreatedAt.Gte(time.Unix(*param.Cursor, 0))).Order(q.PromptCommit.CreatedAt.Asc())
 		} else {
-			tx = tx.Where(q.PromptCommit.ID.Lte(*param.Cursor)).Order(q.PromptCommit.ID.Desc())
+			tx = tx.Where(q.PromptCommit.CreatedAt.Lte(time.Unix(*param.Cursor, 0))).Order(q.PromptCommit.CreatedAt.Desc())
 		}
 	}
 	tx = tx.Limit(param.Limit)

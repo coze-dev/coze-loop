@@ -4,11 +4,9 @@
 package otel
 
 import (
-	"context"
 	"encoding/hex"
 	"strconv"
 
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	v3 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	v2 "go.opentelemetry.io/proto/otlp/common/v1"
 	v1 "go.opentelemetry.io/proto/otlp/trace/v1"
@@ -35,7 +33,7 @@ func otelAnyValuePbToJson(src *v2.AnyValue) *AnyValue {
 	case *v2.AnyValue_BytesValue:
 		innerAnyValue.Value = &AnyValue_BytesValue{BytesValue: src.GetBytesValue()}
 	default:
-		logs.CtxError(context.Background(), "OtelAnyValuePbToJson unknown type: %v", src.Value)
+		return innerAnyValue
 	}
 	return innerAnyValue
 }

@@ -112,6 +112,10 @@ const (
 	terminateNonRunningExperimentErrorMessage           = "cannot terminate an non-running experiment, please try again later"
 	terminateNonRunningExperimentErrorNoAffectStability = true
 
+	ExperimentStatusNotAllowedToInvokeCode              = 601204012 // experiment status is not allowed to invoke, only Processing or Pending status can invoke
+	experimentStatusNotAllowedToInvokeMessage           = "experiment status is not allowed to invoke"
+	experimentStatusNotAllowedToInvokeNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -501,6 +505,12 @@ func init() {
 		TerminateNonRunningExperimentErrorCode,
 		terminateNonRunningExperimentErrorMessage,
 		code.WithAffectStability(!terminateNonRunningExperimentErrorNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentStatusNotAllowedToInvokeCode,
+		experimentStatusNotAllowedToInvokeMessage,
+		code.WithAffectStability(!experimentStatusNotAllowedToInvokeNoAffectStability),
 	)
 
 	code.Register(

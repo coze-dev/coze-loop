@@ -11,84 +11,81 @@ import (
 	"strings"
 
 	"github.com/bytedance/gg/gptr"
-
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/otel/open_inference"
-	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/bytedance/sonic"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/open_inference"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 
 	semconv1_26_0 "go.opentelemetry.io/otel/semconv/v1.26.0"
 	semconv1_27_0 "go.opentelemetry.io/otel/semconv/v1.27.0"
 	semconv1_32_0 "go.opentelemetry.io/otel/semconv/v1.32.0"
-
-	"github.com/bytedance/sonic"
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
-// Field configuration, supports configuring data sources and export methods for fields, currently supports attribute, event, is_tag, data_type
+// FieldConfMap Field configuration, supports configuring data sources and export methods for fields, currently supports attribute, event, is_tag, data_type
 // Among them, attributes and events support configuring multiple, while tags and datatypes only support configuring one.
 // Other types of configurations need to be manually processed in the code.
 var (
-	fieldConfMap = map[string]fieldConf{
+	FieldConfMap = map[string]FieldConf{
 		// common
 		"span_type": {
-			attributeKey: []string{
+			AttributeKey: []string{
 				otelAttributeSpanType,
 				otelTraceLoopAttributeModelSpanType,
 				string(semconv1_32_0.GenAIOperationNameKey),
 				openInferenceAttributeSpanKind,
 			},
-			isTag:    false,
-			dataType: dataTypeString,
+			IsTag:    false,
+			DataType: dataTypeString,
 		},
 		tagKeyThreadID: {
-			attributeKey: []string{string(semconv1_26_0.SessionIDKey)},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{string(semconv1_26_0.SessionIDKey)},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tagKeyLogID: {
-			attributeKey: []string{otelAttributeLogID},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{otelAttributeLogID},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tagKeyUserID: {
-			attributeKey: []string{string(semconv1_32_0.UserIDKey)},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{string(semconv1_32_0.UserIDKey)},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tagKeyMessageID: {
-			attributeKey: []string{string(semconv1_32_0.MessagingMessageIDKey)},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{string(semconv1_32_0.MessagingMessageIDKey)},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tracespec.Error: {
-			attributeKeyPrefix: []string{
+			AttributeKeyPrefix: []string{
 				otelAttributeErrorPrefix,
 				openInferenceAttributeException,
 			},
-			eventName: []string{semconv1_32_0.ExceptionEventName},
-			isTag:     true,
-			dataType:  dataTypeString,
+			EventName: []string{semconv1_32_0.ExceptionEventName},
+			IsTag:     true,
+			DataType:  dataTypeString,
 		},
 
 		// model
 		tracespec.ModelProvider: {
-			attributeKey: []string{string(semconv1_32_0.GenAISystemKey)},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{string(semconv1_32_0.GenAISystemKey)},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tracespec.Input: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				openInferenceAttributeInput,
 				springAIAttributeToolInput,
 				otelAttributeInput,
+				apmInput,
 			},
-			attributeKeyPrefix: []string{
+			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelInputMessages,
 				openInferenceAttributeToolInput,
 				string(semconv1_27_0.GenAIPromptKey),
 			},
-			eventName: []string{otelEventModelSystemMessage, otelEventModelUserMessage, otelEventModelToolMessage, otelEventModelAssistantMessage, otelSpringAIEventModelPrompt},
-			dataType:  dataTypeString,
+			EventName: []string{otelEventModelSystemMessage, otelEventModelUserMessage, otelEventModelToolMessage, otelEventModelAssistantMessage, otelSpringAIEventModelPrompt},
+			DataType:  dataTypeString,
 			eventHighLevelKey: []highLevelKeyRuleConf{
 				{
 					key:  "messages",
@@ -103,17 +100,18 @@ var (
 			},
 		},
 		tracespec.Output: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				openInferenceAttributeOutput,
 				springAIAttributeToolOutput,
 				otelAttributeOutput,
+				apmOutput,
 			},
-			attributeKeyPrefix: []string{
+			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelOutputMessages,
 				string(semconv1_27_0.GenAICompletionKey),
 			},
-			eventName: []string{otelEventModelChoice, otelSpringAIEventModelCompletion},
-			dataType:  dataTypeString,
+			EventName: []string{otelEventModelChoice, otelSpringAIEventModelCompletion},
+			DataType:  dataTypeString,
 			eventHighLevelKey: []highLevelKeyRuleConf{
 				{
 					key:  "choices",
@@ -132,103 +130,103 @@ var (
 			},
 		},
 		tagKeyStartTimeFirstResp: {
-			attributeKey: []string{otelAttributeModelTimeToFirstToken},
-			isTag:        true,
-			dataType:     dataTypeInt64,
+			AttributeKey: []string{otelAttributeModelTimeToFirstToken},
+			IsTag:        true,
+			DataType:     dataTypeInt64,
 		},
 		tracespec.Stream: {
-			attributeKey: []string{otelAttributeModelStream},
-			isTag:        true,
-			dataType:     dataTypeBool,
+			AttributeKey: []string{otelAttributeModelStream},
+			IsTag:        true,
+			DataType:     dataTypeBool,
 		},
 		tracespec.ModelName: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				string(semconv1_32_0.GenAIRequestModelKey),
 				string(semconv1_27_0.GenAIResponseModelKey),
 				openInferenceAttributeModelName,
 			},
-			isTag:    true,
-			dataType: dataTypeString,
+			IsTag:    true,
+			DataType: dataTypeString,
 		},
 		"temperature": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestTemperatureKey)},
-			isTag:        true,
-			dataType:     dataTypeFloat64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestTemperatureKey)},
+			IsTag:        true,
+			DataType:     dataTypeFloat64,
 		},
 		"top_p": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestTopPKey)},
-			isTag:        true,
-			dataType:     dataTypeFloat64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestTopPKey)},
+			IsTag:        true,
+			DataType:     dataTypeFloat64,
 		},
 		"top_k": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestTopKKey)},
-			isTag:        true,
-			dataType:     dataTypeInt64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestTopKKey)},
+			IsTag:        true,
+			DataType:     dataTypeInt64,
 		},
 		"max_tokens": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestMaxTokensKey)},
-			isTag:        true,
-			dataType:     dataTypeInt64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestMaxTokensKey)},
+			IsTag:        true,
+			DataType:     dataTypeInt64,
 		},
 		"frequency_penalty": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestFrequencyPenaltyKey)},
-			isTag:        true,
-			dataType:     dataTypeFloat64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestFrequencyPenaltyKey)},
+			IsTag:        true,
+			DataType:     dataTypeFloat64,
 		},
 		"presence_penalty": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestPresencePenaltyKey)},
-			isTag:        true,
-			dataType:     dataTypeFloat64,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestPresencePenaltyKey)},
+			IsTag:        true,
+			DataType:     dataTypeFloat64,
 		},
 		"stop_sequences": {
-			attributeKey: []string{string(semconv1_32_0.GenAIRequestStopSequencesKey)},
-			isTag:        true,
-			dataType:     dataTypeArrayString,
+			AttributeKey: []string{string(semconv1_32_0.GenAIRequestStopSequencesKey)},
+			IsTag:        true,
+			DataType:     dataTypeArrayString,
 		},
 		tracespec.InputTokens: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				string(semconv1_32_0.GenAIUsageInputTokensKey),
 				string(semconv1_26_0.GenAiUsagePromptTokensKey),
 				openInferenceAttributeModelInputTokens,
 			},
-			isTag:    true,
-			dataType: dataTypeInt64,
+			IsTag:    true,
+			DataType: dataTypeInt64,
 		},
 		tracespec.OutputTokens: {
-			attributeKey: []string{
+			AttributeKey: []string{
 				string(semconv1_32_0.GenAIUsageOutputTokensKey),
 				string(semconv1_26_0.GenAiUsageCompletionTokensKey),
 				openInferenceAttributeModelOutputTokens,
 			},
-			isTag:    true,
-			dataType: dataTypeInt64,
+			IsTag:    true,
+			DataType: dataTypeInt64,
 		},
 
 		// prompt
 		tracespec.PromptKey: {
-			attributeKey: []string{otelAttributePromptKey},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{otelAttributePromptKey},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tracespec.PromptVersion: {
-			attributeKey: []string{otelAttributePromptVersion},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{otelAttributePromptVersion},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 		tracespec.PromptProvider: {
-			attributeKey: []string{otelAttributePromptProvider},
-			isTag:        true,
-			dataType:     dataTypeString,
+			AttributeKey: []string{otelAttributePromptProvider},
+			IsTag:        true,
+			DataType:     dataTypeString,
 		},
 	}
 )
 
-type fieldConf struct {
-	attributeKey          []string
-	attributeKeyPrefix    []string
-	eventName             []string
-	isTag                 bool
-	dataType              string
+type FieldConf struct {
+	AttributeKey          []string
+	AttributeKeyPrefix    []string
+	EventName             []string
+	IsTag                 bool
+	DataType              string
 	eventHighLevelKey     []highLevelKeyRuleConf // config from inner to outer, such as choices.message.xxx, config is ["message", "choices"]
 	attributeHighLevelKey []highLevelKeyRuleConf // config from inner to outer, such as choices.message.xxx, config is ["message", "choices"]
 }
@@ -253,18 +251,18 @@ var (
 func init() {
 	registeredAttributeMap = make(map[string]bool)
 	registeredAttributePrefixMap = make(map[string]bool)
-	for _, fieldConf := range fieldConfMap {
-		for _, attribute := range fieldConf.attributeKey {
+	for _, fieldConf := range FieldConfMap {
+		for _, attribute := range fieldConf.AttributeKey {
 			registeredAttributeMap[attribute] = true
 		}
-		for _, attributePrefix := range fieldConf.attributeKeyPrefix {
+		for _, attributePrefix := range fieldConf.AttributeKeyPrefix {
 			registeredAttributePrefixMap[attributePrefix] = true
 		}
 	}
 }
 
-func OtelSpansConvertToSendSpans(ctx context.Context, spaceID string, spans []*ResourceScopeSpan) loop_span.SpanList {
-	result := make(loop_span.SpanList, 0)
+func OtelSpansConvertToSendSpans(ctx context.Context, spaceID string, spans []*ResourceScopeSpan) []*LoopSpan {
+	result := make([]*LoopSpan, 0)
 	for i := range spans {
 		if span := OtelSpanConvertToSendSpan(ctx, spaceID, spans[i]); span != nil {
 			result = append(result, span)
@@ -273,19 +271,13 @@ func OtelSpansConvertToSendSpans(ctx context.Context, spaceID string, spans []*R
 	return result
 }
 
-func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScopeSpan *ResourceScopeSpan) *loop_span.Span {
+func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScopeSpan *ResourceScopeSpan) *LoopSpan {
 	if resourceScopeSpan == nil || resourceScopeSpan.Span == nil {
 		return nil
 	}
 	span := resourceScopeSpan.Span
-	startTimeUnixNanoInt64, err := strconv.ParseInt(span.StartTimeUnixNano, 10, 64)
-	if err != nil {
-		logs.CtxError(ctx, "startTimeUnixNano convert to int64 failed err=%+v", err)
-	}
-	endTimeUnixNanoInt64, err := strconv.ParseInt(span.EndTimeUnixNano, 10, 64)
-	if err != nil {
-		logs.CtxError(ctx, "endTimeUnixNano convert to int64 failed err=%+v", err)
-	}
+	startTimeUnixNanoInt64, _ := strconv.ParseInt(span.StartTimeUnixNano, 10, 64)
+	endTimeUnixNanoInt64, _ := strconv.ParseInt(span.EndTimeUnixNano, 10, 64)
 
 	attributeMap := make(map[string]*AnyValue)
 	for _, spanAttribute := range span.Attributes {
@@ -309,18 +301,18 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 		if srcValue == nil {
 			continue
 		}
-		conf, ok := fieldConfMap[fieldKey]
+		conf, ok := FieldConfMap[fieldKey]
 		if !ok {
 			continue
 		}
 
-		switch conf.dataType {
+		switch conf.DataType {
 		case dataTypeString, dataTypeDefault:
 			value, ok := srcValue.(string)
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsString[fieldKey] = value
 			} else {
 				switch fieldKey {
@@ -338,7 +330,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsLong[fieldKey] = value
 			}
 		case dataTypeBool:
@@ -346,7 +338,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsBool[fieldKey] = value
 			}
 		case dataTypeFloat64:
@@ -354,7 +346,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsDouble[fieldKey] = value
 			}
 		case dataTypeArrayString:
@@ -362,7 +354,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			if !ok {
 				continue
 			}
-			if conf.isTag {
+			if conf.IsTag {
 				tagsString[fieldKey] = strings.Join(value, ",")
 			}
 		default:
@@ -383,7 +375,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 	// set runtime
 	calRuntime(systemTagsString, resourceScopeSpan)
 
-	result := &loop_span.Span{
+	result := &LoopSpan{
 		StartTime:        startTimeUnixNanoInt64 / 1000,
 		SpanID:           span.SpanId,
 		ParentID:         span.ParentSpanId,
@@ -414,7 +406,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 	return result
 }
 
-func setLogID(span *loop_span.Span) {
+func setLogID(span *LoopSpan) {
 	if span == nil || span.TagsString == nil {
 		return
 	}
@@ -471,9 +463,7 @@ func calCallOptions(ctx context.Context, tagsDouble map[string]float64, tagsLong
 		modelCallOption.Stop = strings.Split(stopSequences, ",")
 		delete(tagsLong, "stop_sequences")
 		bytes, err := sonic.Marshal(modelCallOption)
-		if err != nil {
-			logs.CtxError(ctx, "modelCallOption marshal failed err=%+v", err)
-		} else {
+		if err == nil {
 			tagsString[tracespec.CallOptions] = string(bytes)
 		}
 	}
@@ -573,7 +563,7 @@ func processAttributesAndEvents(ctx context.Context, attributeMap map[string]*An
 
 	// for a certain field, process it gradually according to its value priority,
 	// first processing the low priority ones, and then processing the high priority ones.
-	for fieldKey, conf := range fieldConfMap {
+	for fieldKey, conf := range FieldConfMap {
 		var singleRes interface{}
 		// attribute key
 		attributeKeyRes := processAttributeKey(ctx, conf, attributeMap)
@@ -610,11 +600,11 @@ func getSamePrefixAttributesMap(attributeMap map[string]*AnyValue, prefixKey str
 	return samePrefixAttributesMap
 }
 
-func processAttributeKey(ctx context.Context, conf fieldConf, attributeMap map[string]*AnyValue) interface{} {
-	if attributeKeys := conf.attributeKey; len(attributeKeys) > 0 {
+func processAttributeKey(ctx context.Context, conf FieldConf, attributeMap map[string]*AnyValue) interface{} {
+	if attributeKeys := conf.AttributeKey; len(attributeKeys) > 0 {
 		for _, key := range attributeKeys {
 			if x, ok := attributeMap[key]; ok {
-				return getValueByDataType(x, conf.dataType)
+				return getValueByDataType(x, conf.DataType)
 			}
 		}
 	}
@@ -622,8 +612,8 @@ func processAttributeKey(ctx context.Context, conf fieldConf, attributeMap map[s
 	return nil
 }
 
-func processAttributePrefix(ctx context.Context, fieldKey string, conf fieldConf, attributeMap map[string]*AnyValue) string {
-	for _, attributePrefixKey := range conf.attributeKeyPrefix {
+func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf, attributeMap map[string]*AnyValue) string {
+	for _, attributePrefixKey := range conf.AttributeKeyPrefix {
 		srcAttrAggrRes := aggregateAttributesByPrefix(attributeMap, attributePrefixKey)
 		if srcAttrAggrRes == nil {
 			continue
@@ -659,33 +649,26 @@ func processAttributePrefix(ctx context.Context, fieldKey string, conf fieldConf
 		case openInferenceAttributeModelInputMessages: // openInference input message
 			srcInput, err := open_inference.ConvertToModelInput(srcAttrAggrRes)
 			if err != nil {
-				logs.CtxWarn(ctx, "input ConvertToModelInput failed err=%+v", err)
 				continue
 			}
 			// pack tools
 			srcTools := aggregateAttributesByPrefix(attributeMap, openInferenceAttributeModelInputTools)
 			toBeMarshalObject, err = open_inference.AddTools2ModelInput(srcInput, srcTools)
 			if err != nil {
-				logs.CtxWarn(ctx, "openInference AddTools2ModelInput failed err=%+v", err)
 				continue
 			}
 		case openInferenceAttributeModelOutputMessages: // openInference output message
 			resObject, err := open_inference.ConvertToModelOutput(srcAttrAggrRes)
-			if err != nil {
-				logs.CtxWarn(ctx, "input ConvertToModelOutput failed err=%+v", err)
-			} else {
+			if err == nil {
 				toBeMarshalObject = resObject
 			}
 		default:
 		}
 
 		tempBytes, err := sonic.Marshal(toBeMarshalObject)
-		if err != nil {
-			logs.CtxError(ctx, "input aggregateAttributes failed err=%+v", err)
-		} else {
+		if err == nil {
 			return string(tempBytes)
 		}
-
 	}
 
 	return ""
@@ -701,14 +684,14 @@ func aggregateAttributesByPrefix(attributeMap map[string]*AnyValue, attributePre
 	return srcAttrAggrRes
 }
 
-func processEvent(ctx context.Context, fieldKey string, conf fieldConf, events []*SpanEvent, attributeMap map[string]*AnyValue) string {
-	if len(events) == 0 || len(conf.eventName) == 0 {
+func processEvent(ctx context.Context, fieldKey string, conf FieldConf, events []*SpanEvent, attributeMap map[string]*AnyValue) string {
+	if len(events) == 0 || len(conf.EventName) == 0 {
 		return ""
 	}
 	eventSlice := make([]map[string]interface{}, 0)
 	isAllOtelMessage := true // only otel standard message events require packaging on the outer layer, the rest are not included
 	for _, event := range events {
-		if !slices.Contains(conf.eventName, event.Name) {
+		if !slices.Contains(conf.EventName, event.Name) {
 			continue
 		}
 		if !slices.Contains(otelMessageEventNameMap, event.Name) {
@@ -754,9 +737,7 @@ func processEvent(ctx context.Context, fieldKey string, conf fieldConf, events [
 			}
 		}
 		bytes, err := sonic.Marshal(toBeMarshalObject)
-		if err != nil {
-			logs.CtxError(ctx, "modelInputEventMessageSlice marshal failed err=%+v", err)
-		} else {
+		if err == nil {
 			resBytes = bytes
 		}
 
@@ -775,9 +756,7 @@ func getModelTools(ctx context.Context, attributeMap map[string]*AnyValue) inter
 				if fParam, ok := fMap["parameters"]; ok {
 					if fParamStr, ok := fParam.(string); ok {
 						tempParameter := make(map[string]interface{}, 0)
-						if err := sonic.UnmarshalString(fParamStr, &tempParameter); err != nil {
-							logs.CtxInfo(ctx, "getModelTools UnmarshalString failed err=%+v", err)
-						} else {
+						if err := sonic.UnmarshalString(fParamStr, &tempParameter); err == nil {
 							fMap["parameters"] = tempParameter
 						}
 					}
