@@ -46,6 +46,23 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, para
 	})
 }
 
+func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Context, param *entity.CreateEvaluationSetWithImportParam) (id int64, jobID int64, err error) {
+	if param == nil {
+		return 0, 0, errorx.NewByCode(errno.CommonInternalErrorCode)
+	}
+	return d.datasetRPCAdapter.CreateDatasetWithImport(ctx, &rpc.CreateDatasetWithImportParam{
+		SpaceID:            param.SpaceID,
+		Name:               param.Name,
+		Desc:               param.Description,
+		EvaluationSetItems: param.EvaluationSetSchema,
+		BizCategory:        param.BizCategory,
+		SourceType:         param.SourceType,
+		Source:             param.Source,
+		FieldMappings:      param.FieldMappings,
+		Session:            param.Session,
+	})
+}
+
 func (d *EvaluationSetServiceImpl) UpdateEvaluationSet(ctx context.Context, param *entity.UpdateEvaluationSetParam) (err error) {
 	if param == nil {
 		return errorx.NewByCode(errno.CommonInternalErrorCode)

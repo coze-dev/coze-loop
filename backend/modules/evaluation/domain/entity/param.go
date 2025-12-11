@@ -16,6 +16,18 @@ type CreateEvaluationSetParam struct {
 	Session             *Session
 }
 
+type CreateEvaluationSetWithImportParam struct {
+	SpaceID             int64
+	Name                string
+	Description         *string
+	EvaluationSetSchema *EvaluationSetSchema
+	BizCategory         *BizCategory
+	SourceType          *SetSourceType
+	Source              *DatasetIOEndpoint
+	FieldMappings       []*FieldMapping
+	Session             *Session
+}
+
 type UpdateEvaluationSetParam struct {
 	SpaceID         int64
 	EvaluationSetID int64

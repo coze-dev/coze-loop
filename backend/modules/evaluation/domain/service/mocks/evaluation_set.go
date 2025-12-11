@@ -71,6 +71,22 @@ func (mr *MockIEvaluationSetServiceMockRecorder) CreateEvaluationSet(ctx, param 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluationSet", reflect.TypeOf((*MockIEvaluationSetService)(nil).CreateEvaluationSet), ctx, param)
 }
 
+// CreateEvaluationSetWithImport mocks base method.
+func (m *MockIEvaluationSetService) CreateEvaluationSetWithImport(ctx context.Context, param *entity.CreateEvaluationSetWithImportParam) (int64, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateEvaluationSetWithImport", ctx, param)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateEvaluationSetWithImport indicates an expected call of CreateEvaluationSetWithImport.
+func (mr *MockIEvaluationSetServiceMockRecorder) CreateEvaluationSetWithImport(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluationSetWithImport", reflect.TypeOf((*MockIEvaluationSetService)(nil).CreateEvaluationSetWithImport), ctx, param)
+}
+
 // DeleteEvaluationSet mocks base method.
 func (m *MockIEvaluationSetService) DeleteEvaluationSet(ctx context.Context, spaceID, evaluationSetID int64) error {
 	m.ctrl.T.Helper()

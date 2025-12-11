@@ -112,8 +112,63 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, 
 }
 
 func (e *EvaluationSetApplicationImpl) CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest) (r *eval_set.CreateEvaluationSetWithImportResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+	defer func() {
+		e.metric.EmitCreate(req.GetWorkspaceID(), err)
+	}()
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.Name == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("name is nil"))
+	}
+	if req.EvaluationSetSchema == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("schema is nil"))
+	}
+	if req.Source == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source is nil"))
+	}
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	// domain调用
+	var session *entity.Session
+	if req.Session != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+			AppID:  gptr.Indirect(req.Session.AppID),
+		}
+	}
+	var bizCategory *entity.BizCategory
+	if req.BizCategory != nil {
+		bc := entity.BizCategory(gptr.Indirect(req.BizCategory))
+		bizCategory = &bc
+	}
+	id, jobID, err := e.evaluationSetService.CreateEvaluationSetWithImport(ctx, &entity.CreateEvaluationSetWithImportParam{
+		SpaceID:             req.WorkspaceID,
+		Name:                gptr.Indirect(req.Name),
+		Description:         req.Description,
+		EvaluationSetSchema: evaluation_set.SchemaDTO2DO(req.EvaluationSetSchema),
+		BizCategory:         bizCategory,
+		SourceType:          evaluation_set.SourceTypeDTO2DO(req.SourceType),
+		Source:              evaluation_set.DatasetIOEndpointDTO2DO(req.Source),
+		FieldMappings:       evaluation_set.FieldMappingsDTO2DOs(req.FieldMappings),
+		Session:             session,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// 返回结果构建、错误处理
+	return &eval_set.CreateEvaluationSetWithImportResponse{
+		EvaluationSetID: gptr.Of(id),
+		JobID:           gptr.Of(jobID),
+	}, nil
 }
 
 func (e *EvaluationSetApplicationImpl) UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest) (resp *eval_set.UpdateEvaluationSetResponse, err error) {
