@@ -314,6 +314,11 @@ enum FieldType {
     AnnotationScore = 49 // 使用二级key, field_key为tag_key_id, value为score
     AnnotationText = 50 // 使用二级key, field_key为tag_key_id, value为文本
     AnnotationCategorical = 51  // 使用二级key, field_key为tag_key_id, value为tag_value_id
+
+    TotalLatency = 60 // 目前使用固定key：total_latency
+    InputTokens = 61 // 目前使用固定key：input_tokens
+    OutputTokens = 62 // 目前使用固定key：output_tokens
+    TotalTokens = 63 // 目前使用固定key：total_tokens
 }
 
 // 字段过滤器

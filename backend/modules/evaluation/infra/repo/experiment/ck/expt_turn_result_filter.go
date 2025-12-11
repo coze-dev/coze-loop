@@ -48,6 +48,7 @@ type ExptTurnResultFilterMapCond struct {
 	AnnotationFloatFilters  []*FieldFilter
 	AnnotationBoolFilters   []*FieldFilter
 	AnnotationStringFilters []*FieldFilter
+	EvalTargetMetricsFilters []*FieldFilter
 }
 
 type KeywordMapCond struct {
@@ -344,6 +345,65 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 			//*whereSQL += " AND etrf.annotation_string NOT IN?"
 			*whereSQL += fmt.Sprintf(" AND etrf.annotation_string['%s'] NOT IN ?", f.Key)
 			*args = append(*args, f.Values)
+		}
+	}
+	for _, f := range cond.MapCond.EvalTargetMetricsFilters {
+		switch f.Op {
+		case "=":
+			intValue, err := strconv.ParseInt(fmt.Sprintf("%v", f.Values[0]), 10, 64)
+			if err != nil {
+				logs.CtxError(context.Background(), "Parse int64 value failed: %v", err)
+				continue
+			}
+			*whereSQL += fmt.Sprintf(" AND etrf.eval_target_metrics['%s'] = ?", f.Key)
+			*args = append(*args, intValue)
+		case ">", ">=", "<", "<=", "!=":
+			intValue, err := strconv.ParseInt(fmt.Sprintf("%v", f.Values[0]), 10, 64)
+			if err != nil {
+				logs.CtxError(context.Background(), "Parse int64 value failed: %v", err)
+				continue
+			}
+			*whereSQL += fmt.Sprintf(" AND etrf.eval_target_metrics['%s'] %s ?", f.Key, f.Op)
+			*args = append(*args, intValue)
+		case "BETWEEN":
+			intValue1, err1 := strconv.ParseInt(fmt.Sprintf("%v", f.Values[0]), 10, 64)
+			intValue2, err2 := strconv.ParseInt(fmt.Sprintf("%v", f.Values[1]), 10, 64)
+			if err1 != nil || err2 != nil {
+				logs.CtxError(context.Background(), "Parse int64 value failed: %v, %v", err1, err2)
+				continue
+			}
+			*whereSQL += fmt.Sprintf(" AND etrf.eval_target_metrics['%s'] BETWEEN ? AND ?", f.Key)
+			*args = append(*args, intValue1, intValue2)
+		case "in", "IN":
+			// 将 Values 转换为 int64 切片
+			intValues := make([]int64, 0, len(f.Values))
+			for _, v := range f.Values {
+				intValue, err := strconv.ParseInt(fmt.Sprintf("%v", v), 10, 64)
+				if err != nil {
+					logs.CtxError(context.Background(), "Parse int64 value failed: %v", err)
+					continue
+				}
+				intValues = append(intValues, intValue)
+			}
+			if len(intValues) > 0 {
+				*whereSQL += fmt.Sprintf(" AND etrf.eval_target_metrics['%s'] IN ?", f.Key)
+				*args = append(*args, intValues)
+			}
+		case "NOT IN":
+			// 将 Values 转换为 int64 切片
+			intValues := make([]int64, 0, len(f.Values))
+			for _, v := range f.Values {
+				intValue, err := strconv.ParseInt(fmt.Sprintf("%v", v), 10, 64)
+				if err != nil {
+					logs.CtxError(context.Background(), "Parse int64 value failed: %v", err)
+					continue
+				}
+				intValues = append(intValues, intValue)
+			}
+			if len(intValues) > 0 {
+				*whereSQL += fmt.Sprintf(" AND etrf.eval_target_metrics['%s'] NOT IN ?", f.Key)
+				*args = append(*args, intValues)
+			}
 		}
 	}
 }

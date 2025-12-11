@@ -504,6 +504,14 @@ const (
 	FieldType_AnnotationText FieldType = 50
 	// 使用二级key, field_key为tag_key_id, value为tag_value_id
 	FieldType_AnnotationCategorical FieldType = 51
+	// 目前使用固定key：total_latency
+	FieldType_TotalLatency FieldType = 60
+	// 目前使用固定key：input_tokens
+	FieldType_InputTokens FieldType = 61
+	// 目前使用固定key：output_tokens
+	FieldType_OutputTokens FieldType = 62
+	// 目前使用固定key：total_tokens
+	FieldType_TotalTokens FieldType = 63
 )
 
 func (p FieldType) String() string {
@@ -562,6 +570,14 @@ func (p FieldType) String() string {
 		return "AnnotationText"
 	case FieldType_AnnotationCategorical:
 		return "AnnotationCategorical"
+	case FieldType_TotalLatency:
+		return "TotalLatency"
+	case FieldType_InputTokens:
+		return "InputTokens"
+	case FieldType_OutputTokens:
+		return "OutputTokens"
+	case FieldType_TotalTokens:
+		return "TotalTokens"
 	}
 	return "<UNSET>"
 }
@@ -622,6 +638,14 @@ func FieldTypeFromString(s string) (FieldType, error) {
 		return FieldType_AnnotationText, nil
 	case "AnnotationCategorical":
 		return FieldType_AnnotationCategorical, nil
+	case "TotalLatency":
+		return FieldType_TotalLatency, nil
+	case "InputTokens":
+		return FieldType_InputTokens, nil
+	case "OutputTokens":
+		return FieldType_OutputTokens, nil
+	case "TotalTokens":
+		return FieldType_TotalTokens, nil
 	}
 	return FieldType(0), fmt.Errorf("not a valid FieldType string")
 }

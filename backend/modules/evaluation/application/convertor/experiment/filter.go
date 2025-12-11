@@ -316,6 +316,7 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 			AnnotationFloatFilters:  []*entity.FieldFilter{},
 			AnnotationBoolFilters:   []*entity.FieldFilter{},
 			AnnotationStringFilters: []*entity.FieldFilter{},
+			EvalTargetMetricsFilters: []*entity.FieldFilter{},
 		},
 		ItemSnapshotCond: &entity.ItemSnapshotFilter{
 			BoolMapFilters:   []*entity.FieldFilter{},
@@ -427,6 +428,22 @@ func ConvertExptTurnResultFilterAccelerator(experimentFilter *domain_expt.Experi
 			//	}
 			case domain_expt.FieldType_ItemID:
 				result.ItemIDs = append(result.ItemIDs, fieldFilter)
+			case domain_expt.FieldType_TotalLatency:
+				// 使用固定key：total_latency
+				fieldFilter.Key = "total_latency"
+				result.MapCond.EvalTargetMetricsFilters = append(result.MapCond.EvalTargetMetricsFilters, fieldFilter)
+			case domain_expt.FieldType_InputTokens:
+				// 使用固定key：input_tokens
+				fieldFilter.Key = "input_tokens"
+				result.MapCond.EvalTargetMetricsFilters = append(result.MapCond.EvalTargetMetricsFilters, fieldFilter)
+			case domain_expt.FieldType_OutputTokens:
+				// 使用固定key：output_tokens
+				fieldFilter.Key = "output_tokens"
+				result.MapCond.EvalTargetMetricsFilters = append(result.MapCond.EvalTargetMetricsFilters, fieldFilter)
+			case domain_expt.FieldType_TotalTokens:
+				// 使用固定key：total_tokens
+				fieldFilter.Key = "total_tokens"
+				result.MapCond.EvalTargetMetricsFilters = append(result.MapCond.EvalTargetMetricsFilters, fieldFilter)
 			default:
 				// 其它主表字段可按需补充
 			}

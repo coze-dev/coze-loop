@@ -37,6 +37,7 @@ func ExptTurnResultFilterEntity2PO(filterEntity *entity.ExptTurnResultFilterEnti
 		AnnotationFloat:  filterEntity.AnnotationFloat,
 		AnnotationBool:   annotationBool,
 		AnnotationString: filterEntity.AnnotationString,
+		EvalTargetMetrics: filterEntity.EvalTargetMetrics,
 		CreatedDate:      filterEntity.CreatedDate,
 		EvalSetVersionID: strconv.FormatInt(filterEntity.EvalSetVersionID, 10),
 		UpdatedAt:        filterEntity.UpdatedAt,
@@ -71,6 +72,7 @@ func ExptTurnResultFilterPO2Entity(filterPO *model.ExptTurnResultFilter) *entity
 		AnnotationFloat:  filterPO.AnnotationFloat,
 		AnnotationBool:   annotationBool,
 		AnnotationString: filterPO.AnnotationString,
+		EvalTargetMetrics: filterPO.EvalTargetMetrics,
 		CreatedDate:      filterPO.CreatedDate,
 		EvalSetVersionID: ParseStringToInt64(filterPO.EvalSetVersionID),
 	}
