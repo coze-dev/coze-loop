@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS expt_turn_result_filter
     `created_date` Date,
     `created_at` DateTime,
     `updated_at` DateTime,
+    `eval_target_metrics` Map(String, Int64),
     INDEX idx_space_id space_id TYPE bloom_filter() GRANULARITY 1,
     INDEX idx_expt_id expt_id TYPE bloom_filter() GRANULARITY 1,
     INDEX idx_item_id item_id TYPE bloom_filter() GRANULARITY 1,

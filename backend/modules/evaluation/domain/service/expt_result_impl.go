@@ -1056,6 +1056,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 			AnnotationFloat:  make(map[string]float64),
 			AnnotationBool:   make(map[string]bool),
 			AnnotationString: make(map[string]string),
+			EvalTargetMetrics: make(map[string]int64),
 			CreatedDate:      ptr.From(createdDate),
 			EvalSetVersionID: evalSetVersionID,
 		}
@@ -1107,6 +1108,16 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 		if ok {
 			for outputFieldKey, outputFieldValue := range evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields {
 				exptTurnResultFilter.EvalTargetData[outputFieldKey] = outputFieldValue.GetText()
+			}
+			// 填充 eval_target_metrics
+			if evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage != nil {
+				usage := evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage
+				exptTurnResultFilter.EvalTargetMetrics["input_tokens"] = usage.InputTokens
+				exptTurnResultFilter.EvalTargetMetrics["output_tokens"] = usage.OutputTokens
+				exptTurnResultFilter.EvalTargetMetrics["total_tokens"] = usage.TotalTokens
+			}
+			if evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS != nil {
+				exptTurnResultFilter.EvalTargetMetrics["total_latency"] = *evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS
 			}
 		}
 		evaluatorScoreCorrected, ok := exptResultBuilder.turnResultID2ScoreCorrected[exptTurnResult.ID]
