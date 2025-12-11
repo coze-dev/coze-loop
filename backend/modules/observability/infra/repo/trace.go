@@ -203,10 +203,10 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 			Limit:     int32(min(len(spanIDs)*100, 10000)),
 			Extra:     spanStorage.StorageConfig,
 		})
-		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		if err != nil {
 			return nil, err
 		}
+		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		annoDOList := converter.AnnotationListPO2DO(annotations)
 		spanDOList.SetAnnotations(annoDOList)
 	}
@@ -311,10 +311,10 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 			Limit:     int32(min(len(spanIDs)*100, 10000)),
 			Extra:     spanStorage.StorageConfig,
 		})
-		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		if err != nil {
 			return nil, err
 		}
+		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		annoDOList := converter.AnnotationListPO2DO(annotations)
 		spanDOList.SetAnnotations(annoDOList.Uniq())
 	}
