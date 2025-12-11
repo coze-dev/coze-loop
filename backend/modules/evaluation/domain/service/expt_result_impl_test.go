@@ -3571,3 +3571,225 @@ func TestParseTurnKey(t *testing.T) {
 		})
 	}
 }
+
+func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
+	tests := []struct {
+		name                string
+		baselineItemResults []*entity.ExptItemResult
+		baselineTurnResults []*entity.ExptTurnResult
+		itemID2ItemRunState map[int64]entity.ItemRunState
+		wantExt              map[string]string
+		wantRunState         entity.ItemRunState
+	}{
+		{
+			name: "Ext字段有值且itemID2ItemRunState存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:     1,
+					ItemID: 1,
+					TurnID: 0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{
+				1: entity.ItemRunState_Processing,
+			},
+			wantExt: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+			},
+			wantRunState: entity.ItemRunState_Processing,
+		},
+		{
+			name: "Ext字段为空map且itemID2ItemRunState不存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext:     map[string]string{},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:     1,
+					ItemID: 1,
+					TurnID: 0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{},
+			wantExt:              nil,
+			wantRunState:         entity.ItemRunState_Success,
+		},
+		{
+			name: "Ext字段为nil且itemID2ItemRunState不存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Fail,
+					Ext:     nil,
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:     1,
+					ItemID: 1,
+					TurnID: 0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{},
+			wantExt:              nil,
+			wantRunState:         entity.ItemRunState_Fail,
+		},
+		{
+			name: "Ext字段有值且itemID2ItemRunState不存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext: map[string]string{
+						"span_id": "span-123",
+					},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:     1,
+					ItemID: 1,
+					TurnID: 0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{},
+			wantExt: map[string]string{
+				"span_id": "span-123",
+			},
+			wantRunState: entity.ItemRunState_Success,
+		},
+		{
+			name: "多个ItemResult，Ext字段和itemID2ItemRunState混合",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext: map[string]string{
+						"key1": "value1",
+					},
+				},
+				{
+					ItemID:  2,
+					ItemIdx: 1,
+					Status:  entity.ItemRunState_Fail,
+					Ext:     map[string]string{},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:     1,
+					ItemID: 1,
+					TurnID: 0,
+					TurnIdx: 0,
+				},
+				{
+					ID:     2,
+					ItemID: 2,
+					TurnID: 0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{
+				1: entity.ItemRunState_Processing,
+			},
+			wantExt: map[string]string{
+				"key1": "value1",
+			},
+			wantRunState: entity.ItemRunState_Processing,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// 创建必要的 mocks
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+			mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+			mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
+			mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+			mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+			mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
+
+			// 创建参数
+			param := &entity.MGetExperimentResultParam{
+				SpaceID: 100,
+				ExptIDs: []int64{1},
+			}
+
+			// 调用 NewPayloadBuilder
+			builder := NewPayloadBuilder(
+				context.Background(),
+				param,
+				1,
+				tt.baselineTurnResults,
+				tt.baselineItemResults,
+				mockExperimentRepo,
+				mockExptTurnResultRepo,
+				mockExptAnnotateRepo,
+				mockEvalTargetService,
+				mockEvaluatorRecordService,
+				mockEvaluationSetItemService,
+				nil,
+				nil,
+				tt.itemID2ItemRunState,
+			)
+
+			// 验证结果
+			assert.NotNil(t, builder)
+			assert.NotNil(t, builder.ItemResults)
+
+			// 验证第一个 ItemResult 的 Ext 字段和 RunState
+			if len(builder.ItemResults) > 0 {
+				firstItemResult := builder.ItemResults[0]
+				assert.NotNil(t, firstItemResult.SystemInfo)
+
+				// 验证 Ext 字段
+				if tt.wantExt == nil {
+					assert.Nil(t, firstItemResult.Ext)
+				} else {
+					assert.NotNil(t, firstItemResult.Ext)
+					assert.Equal(t, tt.wantExt, firstItemResult.Ext)
+				}
+
+				// 验证 RunState
+				assert.Equal(t, tt.wantRunState, firstItemResult.SystemInfo.RunState)
+			}
+
+			// 如果有多个 ItemResult，验证第二个
+			if len(builder.ItemResults) > 1 && len(tt.baselineItemResults) > 1 {
+				secondItemResult := builder.ItemResults[1]
+				assert.NotNil(t, secondItemResult.SystemInfo)
+				// 第二个 ItemResult 的 Ext 应该是空的（因为 baselineItemResults[1].Ext 是空 map）
+				assert.Nil(t, secondItemResult.Ext)
+				// 第二个 ItemResult 的 RunState 应该是 baselineItemResults[1].Status（因为 itemID2ItemRunState 中没有 2）
+				assert.Equal(t, tt.baselineItemResults[1].Status, secondItemResult.SystemInfo.RunState)
+			}
+		})
+	}
+}
