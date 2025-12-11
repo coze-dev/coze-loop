@@ -7216,9 +7216,10 @@ func (p *ColumnEvalSetField) Field6DeepEqual(src *string) bool {
 type ItemResult_ struct {
 	ItemID int64 `thrift:"item_id,1,required" frugal:"1,required,i64" json:"item_id" form:"item_id,required" query:"item_id,required"`
 	// row粒度实验结果详情
-	TurnResults []*TurnResult_  `thrift:"turn_results,2,optional" frugal:"2,optional,list<TurnResult_>" form:"turn_results" json:"turn_results,omitempty" query:"turn_results"`
-	SystemInfo  *ItemSystemInfo `thrift:"system_info,3,optional" frugal:"3,optional,ItemSystemInfo" form:"system_info" json:"system_info,omitempty" query:"system_info"`
-	ItemIndex   *int64          `thrift:"item_index,4,optional" frugal:"4,optional,i64" json:"item_index" form:"item_index" query:"item_index"`
+	TurnResults []*TurnResult_    `thrift:"turn_results,2,optional" frugal:"2,optional,list<TurnResult_>" form:"turn_results" json:"turn_results,omitempty" query:"turn_results"`
+	SystemInfo  *ItemSystemInfo   `thrift:"system_info,3,optional" frugal:"3,optional,ItemSystemInfo" form:"system_info" json:"system_info,omitempty" query:"system_info"`
+	ItemIndex   *int64            `thrift:"item_index,4,optional" frugal:"4,optional,i64" json:"item_index" form:"item_index" query:"item_index"`
+	Ext         map[string]string `thrift:"ext,5,optional" frugal:"5,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 }
 
 func NewItemResult_() *ItemResult_ {
@@ -7270,6 +7271,18 @@ func (p *ItemResult_) GetItemIndex() (v int64) {
 	}
 	return *p.ItemIndex
 }
+
+var ItemResult__Ext_DEFAULT map[string]string
+
+func (p *ItemResult_) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return ItemResult__Ext_DEFAULT
+	}
+	return p.Ext
+}
 func (p *ItemResult_) SetItemID(val int64) {
 	p.ItemID = val
 }
@@ -7282,12 +7295,16 @@ func (p *ItemResult_) SetSystemInfo(val *ItemSystemInfo) {
 func (p *ItemResult_) SetItemIndex(val *int64) {
 	p.ItemIndex = val
 }
+func (p *ItemResult_) SetExt(val map[string]string) {
+	p.Ext = val
+}
 
 var fieldIDToName_ItemResult_ = map[int16]string{
 	1: "item_id",
 	2: "turn_results",
 	3: "system_info",
 	4: "item_index",
+	5: "ext",
 }
 
 func (p *ItemResult_) IsSetTurnResults() bool {
@@ -7300,6 +7317,10 @@ func (p *ItemResult_) IsSetSystemInfo() bool {
 
 func (p *ItemResult_) IsSetItemIndex() bool {
 	return p.ItemIndex != nil
+}
+
+func (p *ItemResult_) IsSetExt() bool {
+	return p.Ext != nil
 }
 
 func (p *ItemResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -7349,6 +7370,14 @@ func (p *ItemResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7442,6 +7471,35 @@ func (p *ItemResult_) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemIndex = _field
 	return nil
 }
+func (p *ItemResult_) ReadField5(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
 
 func (p *ItemResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -7463,6 +7521,10 @@ func (p *ItemResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -7561,6 +7623,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ItemResult_) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *ItemResult_) String() string {
 	if p == nil {
@@ -7586,6 +7677,9 @@ func (p *ItemResult_) DeepEqual(ano *ItemResult_) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.ItemIndex) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Ext) {
 		return false
 	}
 	return true
@@ -7627,6 +7721,19 @@ func (p *ItemResult_) Field4DeepEqual(src *int64) bool {
 	}
 	if *p.ItemIndex != *src {
 		return false
+	}
+	return true
+}
+func (p *ItemResult_) Field5DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

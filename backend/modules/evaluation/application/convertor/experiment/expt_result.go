@@ -140,12 +140,17 @@ func ItemResultsDO2DTOs(from []*entity.ItemResult) []*domain_expt.ItemResult_ {
 }
 
 func ItemResultsDO2DTO(from *entity.ItemResult) *domain_expt.ItemResult_ {
-	return &domain_expt.ItemResult_{
+	dto := &domain_expt.ItemResult_{
 		ItemID:      from.ItemID,
 		TurnResults: TurnResultsDO2DTOs(from.TurnResults),
 		SystemInfo:  ItemSystemInfoDO2DTO(from.SystemInfo),
 		ItemIndex:   from.ItemIndex,
 	}
+	// 填充 ext 字段，使用 expt_item_result 表里的 ext
+	if len(from.Ext) > 0 {
+		dto.Ext = from.Ext
+	}
+	return dto
 }
 
 func TurnResultsDO2DTOs(from []*entity.TurnResult) []*domain_expt.TurnResult_ {

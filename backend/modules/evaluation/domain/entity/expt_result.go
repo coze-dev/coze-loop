@@ -573,6 +573,7 @@ type ItemResult struct {
 	TurnResults []*TurnResult
 	SystemInfo  *ItemSystemInfo
 	ItemIndex   *int64
+	Ext         map[string]string
 }
 
 type ExperimentTurnPayload struct {
