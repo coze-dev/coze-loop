@@ -4,8 +4,8 @@
 /* eslint-disable complexity */
 import { useShallow } from 'zustand/react/shallow';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { useModalData } from '@cozeloop/hooks';
 import { CollapseCard } from '@cozeloop/components';
-import { useModalData } from '@cozeloop/base-hooks';
 import { ToolChoiceType } from '@cozeloop/api-schema/prompt';
 import {
   IconCozPlus,

@@ -4,8 +4,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
 
 import { usePromptStore } from '@/store/use-prompt-store';
 import { usePromptMockDataStore } from '@/store/use-mockdata-store';

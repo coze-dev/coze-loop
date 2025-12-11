@@ -13,10 +13,10 @@
   "dependencies": {
     "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
     "@cozeloop/api-schema": "workspace:*",
-    "@cozeloop/base-hooks": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/components": "workspace:*",
     "@cozeloop/env-adapter": "workspace:*",
+    "@cozeloop/hooks": "workspace:*",
     "@cozeloop/i18n-adapter": "workspace:*",
     "@cozeloop/tea-adapter": "workspace:*",
     "@cozeloop/trace-struct-data": "workspace:*",
@@ -56,3 +56,4 @@
   },
   "// deps": "immer@^10.0.3 为脚本自动补齐，请勿改动"
 }
+

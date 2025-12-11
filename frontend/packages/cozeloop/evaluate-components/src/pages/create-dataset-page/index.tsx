@@ -1,9 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import { RouteBackAction } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
 import { Layout, Typography } from '@coze-arch/coze-design';
 
 import { DatasetCreateForm } from '../../components/dataset-create-form';

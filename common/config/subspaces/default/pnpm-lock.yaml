@@ -66,9 +66,6 @@ importers:
       '@cozeloop/auth-pages':
         specifier: workspace:*
         version: link:../../packages/cozeloop/auth-pages
-      '@cozeloop/base-hooks':
-        specifier: workspace:*
-        version: link:../../packages/cozeloop/base-hooks
       '@cozeloop/biz-hooks-adapter':
         specifier: workspace:*
         version: link:../../packages/cozeloop/biz-hooks
@@ -81,6 +78,9 @@ importers:
       '@cozeloop/guard':
         specifier: workspace:*
         version: link:../../packages/cozeloop/guard
+      '@cozeloop/hooks':
+        specifier: workspace:*
+        version: link:../../packages/cozeloop/base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
         version: link:../../packages/cozeloop/i18n
@@ -1736,9 +1736,6 @@ importers:
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
-      '@cozeloop/base-hooks':
-        specifier: workspace:*
-        version: link:../base-hooks
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
@@ -1760,6 +1757,9 @@ importers:
       '@cozeloop/guard':
         specifier: workspace:*
         version: link:../guard
+      '@cozeloop/hooks':
+        specifier: workspace:*
+        version: link:../base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
         version: link:../i18n
@@ -1942,9 +1942,6 @@ importers:
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
-      '@cozeloop/base-hooks':
-        specifier: workspace:*
-        version: link:../base-hooks
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
@@ -1963,6 +1960,9 @@ importers:
       '@cozeloop/guard':
         specifier: workspace:*
         version: link:../guard
+      '@cozeloop/hooks':
+        specifier: workspace:*
+        version: link:../base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
         version: link:../i18n
@@ -2434,9 +2434,6 @@ importers:
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../../api-schema
-      '@cozeloop/base-hooks':
-        specifier: workspace:*
-        version: link:../../base-hooks
       '@cozeloop/biz-hooks-adapter':
         specifier: workspace:*
         version: link:../../biz-hooks
@@ -2446,6 +2443,9 @@ importers:
       '@cozeloop/env-adapter':
         specifier: workspace:*
         version: link:../../env
+      '@cozeloop/hooks':
+        specifier: workspace:*
+        version: link:../../base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
         version: link:../../i18n
@@ -3084,9 +3084,6 @@ importers:
       '@coze-arch/fetch-stream':
         specifier: workspace:*
         version: link:../../arch/fetch-stream
-      '@cozeloop/base-hooks':
-        specifier: workspace:*
-        version: link:../base-hooks
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
@@ -3099,6 +3096,9 @@ importers:
       '@cozeloop/guard':
         specifier: workspace:*
         version: link:../guard
+      '@cozeloop/hooks':
+        specifier: workspace:*
+        version: link:../base-hooks
       '@cozeloop/observation-component-adapter':
         specifier: workspace:*
         version: link:../observation/trace-detail-open
@@ -3388,9 +3388,6 @@ importers:
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
-      '@cozeloop/base-hooks':
-        specifier: workspace:*
-        version: link:../base-hooks
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
@@ -3406,6 +3403,9 @@ importers:
       '@cozeloop/guard':
         specifier: workspace:*
         version: link:../guard
+      '@cozeloop/hooks':
+        specifier: workspace:*
+        version: link:../base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
         version: link:../i18n

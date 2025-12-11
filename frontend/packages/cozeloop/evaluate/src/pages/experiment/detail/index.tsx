@@ -6,9 +6,9 @@ import { useCallback, useState } from 'react';
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import { LoopTabs } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
 import { Layout, Spin } from '@coze-arch/coze-design';
 
 import {

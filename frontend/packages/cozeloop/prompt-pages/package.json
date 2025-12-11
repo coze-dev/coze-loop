@@ -14,11 +14,11 @@
     "@coze-arch/bot-md-box-adapter": "workspace:*",
     "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
     "@coze-arch/fetch-stream": "workspace:*",
-    "@cozeloop/base-hooks": "workspace:*",
     "@cozeloop/biz-components-adapter": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/components": "workspace:*",
     "@cozeloop/guard": "workspace:*",
+    "@cozeloop/hooks": "workspace:*",
     "@cozeloop/observation-component-adapter": "workspace:*",
     "@cozeloop/prompt-components": "workspace:*",
     "@cozeloop/tea-adapter": "workspace:*",
@@ -62,3 +62,4 @@
     "react-router-dom": "^6.22.0"
   }
 }
+

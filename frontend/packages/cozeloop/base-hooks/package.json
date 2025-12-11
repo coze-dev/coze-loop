@@ -1,5 +1,5 @@
 {
-  "name": "@cozeloop/base-hooks",
+  "name": "@cozeloop/hooks",
   "version": "0.0.1",
   "description": "Hooks for CozeLoop",
   "author": "qihai@bytedance.com",
@@ -28,3 +28,4 @@
     "react": "~18.2.0"
   }
 }
+

@@ -9,8 +9,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useRequest } from 'ahooks';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
 import { PromptCreate } from '@cozeloop/prompt-components';
+import { useModalData } from '@cozeloop/hooks';
 import { useNavigateModule, useSpace } from '@cozeloop/biz-hooks-adapter';
-import { useModalData } from '@cozeloop/base-hooks';
 import {
   type Label,
   type CommitInfo,

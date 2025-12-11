@@ -7,10 +7,10 @@ import { useState } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
 import cn from 'classnames';
+import { useModalData } from '@cozeloop/hooks';
 import { MultipartEditor, TextWithCopy } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { uploadFile } from '@cozeloop/biz-components-adapter';
-import { useModalData } from '@cozeloop/base-hooks';
 import {
   ContentType,
   type Message,

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { clamp } from 'lodash-es';
 import classNames from 'classnames';
-import { useMouseDownOffset } from '@cozeloop/base-hooks';
+import { useMouseDownOffset } from '@cozeloop/hooks';
 import { Layout, SideSheet } from '@coze-arch/coze-design';
 
 import { type TraceDetailContext } from '@/trace-detail';
