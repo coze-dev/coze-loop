@@ -32,6 +32,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	repo3 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	service2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/agent"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/general"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/model"
 	service4 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/service"
@@ -46,6 +47,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	processor2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/receiver"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	repo2 "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/collector/exporter/clickhouseexporter"
@@ -197,11 +199,19 @@ func InitMetricApplication(ckDb ck.Provider, storageProvider storage2.IStoragePr
 	if err != nil {
 		return nil, err
 	}
-	v := NewMetricDefinitions()
+	iOfflineMetricDao, err := ck2.NewOfflineMetricDaoImpl()
+	if err != nil {
+		return nil, err
+	}
+	iOfflineMetricRepo, err := repo.NewOfflineMetricRepoImpl(iOfflineMetricDao, iTraceConfig)
+	if err != nil {
+		return nil, err
+	}
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
 	traceFilterProcessorBuilder := NewTraceProcessorBuilder(iTraceConfig, iFileProvider, benefit2)
-	iMetricsService, err := service2.NewMetricsService(iMetricRepo, v, iTenantProvider, traceFilterProcessorBuilder)
+	platformMetrics := NewMetricsPlatformConfig()
+	iMetricsService, err := service2.NewMetricsService(iMetricRepo, iOfflineMetricRepo, iTenantProvider, traceFilterProcessorBuilder, iTraceConfig, platformMetrics)
 	if err != nil {
 		return nil, err
 	}
@@ -318,8 +328,8 @@ var (
 		traceDomainSet, service3.NewTaskCallbackServiceImpl,
 	)
 	metricsSet = wire.NewSet(
-		NewMetricApplication, service2.NewMetricsService, provideTraceMetricRepo, tenant.NewTenantProvider, auth.NewAuthProvider, NewTraceConfigLoader,
-		NewTraceProcessorBuilder, config.NewTraceConfigCenter, NewMetricDefinitions, file.NewFileRPCProvider,
+		NewMetricApplication, service2.NewMetricsService, provideTraceMetricRepo, repo.NewOfflineMetricRepoImpl, tenant.NewTenantProvider, auth.NewAuthProvider, NewTraceConfigLoader,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, ck2.NewOfflineMetricDaoImpl, file.NewFileRPCProvider, NewMetricsPlatformConfig,
 	)
 )
 
@@ -384,8 +394,28 @@ func NewTraceProcessorBuilder(
 		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewExpireErrorProcessorFactory(benefitSvc)})
 }
 
-func NewMetricDefinitions() []entity.IMetricDefinition {
-	return []entity.IMetricDefinition{general.NewGeneralTotalCountMetric(), general.NewGeneralFailRatioMetric(), general.NewGeneralModelTotalTokensMetric(), general.NewGeneralModelLatencyMetric(), general.NewGeneralModelFailRatioMetric(), general.NewGeneralToolTotalCountMetric(), general.NewGeneralToolLatencyMetric(), general.NewGeneralToolFailRatioMetric(), model.NewModelDurationMetric(), model.NewModelInputTokenCountMetric(), model.NewModelOutputTokenCountMetric(), model.NewModelNamePieMetric(), model.NewModelQPMAllMetric(), model.NewModelQPMFailMetric(), model.NewModelQPMSuccessMetric(), model.NewModelQPSAllMetric(), model.NewModelQPSFailMetric(), model.NewModelQPSSuccessMetric(), model.NewModelSuccessRatioMetric(), model.NewModelSystemTokenCountMetric(), model.NewModelTokenCountMetric(), model.NewModelTokenCountPieMetric(), model.NewModelToolChoiceTokenCountMetric(), model.NewModelTPMMetric(), model.NewModelTPOTMetric(), model.NewModelTPSMetric(), model.NewModelTTFTMetric(), service4.NewServiceDurationMetric(), service4.NewServiceExecutionStepCountMetric(), service4.NewServiceMessageCountMetric(), service4.NewServiceQPMAllMetric(), service4.NewServiceQPMSuccessMetric(), service4.NewServiceQPMFailMetric(), service4.NewServiceQPSAllMetric(), service4.NewServiceQPSSuccessMetric(), service4.NewServiceQPSFailMetric(), service4.NewServiceSpanCountMetric(), service4.NewServiceSuccessRatioMetric(), service4.NewServiceTraceCountMetric(), service4.NewServiceUserCountMetric(), tool.NewToolDurationMetric(), tool.NewToolNamePieMetric(), tool.NewToolSuccessRatioMetric(), tool.NewToolTotalCountMetric()}
+func NewMetricsPlatformConfig() *entity.PlatformMetrics {
+	return &entity.PlatformMetrics{
+		DrillDownObjects: map[string]*loop_span.FilterField{
+			"model_id": &loop_span.FilterField{
+				FieldName: "model_name",
+				FieldType: loop_span.FieldTypeString,
+			},
+			"span_name": &loop_span.FilterField{
+				FieldName: loop_span.SpanFieldSpanName,
+				FieldType: loop_span.FieldTypeString,
+			},
+			"status_code": &loop_span.FilterField{
+				FieldName: loop_span.SpanFieldStatusCode,
+				FieldType: loop_span.FieldTypeLong,
+			},
+		},
+		MetricGroups: map[string]*entity.MetricGroup{
+			"all": {
+				MetricDefinitions: []entity.IMetricDefinition{general.NewGeneralTotalCountMetric(), general.NewGeneralFailRatioMetric(), general.NewGeneralModelTotalTokensMetric(), general.NewGeneralModelLatencyMetric(), general.NewGeneralModelFailRatioMetric(), general.NewGeneralToolTotalCountMetric(), general.NewGeneralToolLatencyMetric(), general.NewGeneralToolFailRatioMetric(), model.NewModelDurationMetric(), model.NewModelInputTokenCountMetric(), model.NewModelOutputTokenCountMetric(), model.NewModelTotalCountPieMetric(), model.NewModelQPMAllMetric(), model.NewModelQPMFailMetric(), model.NewModelQPMSuccessMetric(), model.NewModelQPSAllMetric(), model.NewModelQPSFailMetric(), model.NewModelQPSSuccessMetric(), model.NewModelSuccessRatioMetric(), model.NewModelSystemTokenCountMetric(), model.NewModelTokenCountMetric(), model.NewModelTokenCountPieMetric(), model.NewModelToolChoiceTokenCountMetric(), model.NewModelTPMMetric(), model.NewModelTPOTMetric(), model.NewModelTPSMetric(), model.NewModelTTFTMetric(), model.NewModelTotalCountMetric(), model.NewModelTotalSuccessCountMetric(), model.NewModelTotalErrorCountMetricc(), service4.NewServiceDurationMetric(), service4.NewServiceExecutionStepCountMetric(), service4.NewServiceMessageCountMetric(), service4.NewServiceQPMAllMetric(), service4.NewServiceQPMSuccessMetric(), service4.NewServiceQPMFailMetric(), service4.NewServiceQPSAllMetric(), service4.NewServiceQPSSuccessMetric(), service4.NewServiceQPSFailMetric(), service4.NewServiceSpanCountMetric(), service4.NewServiceSpanErrorCountMetric(), service4.NewServiceSuccessRatioMetric(), service4.NewServiceTraceCountMetric(), service4.NewServiceTraceSuccessCountMetric(), service4.NewServiceTraceErrorCountMetric(), service4.NewServiceUserCountMetric(), tool.NewToolDurationMetric(), tool.NewToolSuccessRatioMetric(), tool.NewToolTotalCountMetric(), tool.NewToolTotalCountPieMetric(), tool.NewToolTotalSuccessCountMetric(), tool.NewToolTotalErrorCountMetric(), agent.NewAgentExecutionStepAvgMetric(), agent.NewAgentToolExecutionStepAvgMetric(), agent.NewAgentModelExecutionStepAvgMetric()},
+			},
+		},
+	}
 }
 
 func NewIngestionCollectorFactory(mqFactory mq.IFactory, traceRepo repo2.ITraceRepo) service.IngestionCollectorFactory {

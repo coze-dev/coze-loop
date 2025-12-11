@@ -43,6 +43,7 @@ type GetMetricsParam struct {
 	EndAt        int64
 	Granularity  metrics_entity.MetricGranularity
 	Extra        map[string]string
+	Source       string
 }
 
 //go:generate mockgen -destination=mocks/spans_dao.go -package=mocks . ISpansDao
