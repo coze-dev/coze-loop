@@ -145,17 +145,12 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSetWithImport(ctx context
 			AppID:  gptr.Indirect(req.Session.AppID),
 		}
 	}
-	var bizCategory *entity.BizCategory
-	if req.BizCategory != nil {
-		bc := entity.BizCategory(gptr.Indirect(req.BizCategory))
-		bizCategory = &bc
-	}
 	id, jobID, err := e.evaluationSetService.CreateEvaluationSetWithImport(ctx, &entity.CreateEvaluationSetWithImportParam{
 		SpaceID:             req.WorkspaceID,
 		Name:                gptr.Indirect(req.Name),
 		Description:         req.Description,
 		EvaluationSetSchema: evaluation_set.SchemaDTO2DO(req.EvaluationSetSchema),
-		BizCategory:         bizCategory,
+		BizCategory:         req.BizCategory,
 		SourceType:          evaluation_set.SourceTypeDTO2DO(req.SourceType),
 		Source:              evaluation_set.DatasetIOEndpointDTO2DO(req.Source),
 		FieldMappings:       evaluation_set.FieldMappingsDTO2DOs(req.FieldMappings),
