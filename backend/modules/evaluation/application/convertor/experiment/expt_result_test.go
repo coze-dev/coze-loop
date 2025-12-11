@@ -14,10 +14,10 @@ import (
 
 func TestItemResultsDO2DTO_ExtField(t *testing.T) {
 	tests := []struct {
-		name     string
-		from     *entity.ItemResult
-		wantExt  map[string]string
-		wantNil  bool
+		name    string
+		from    *entity.ItemResult
+		wantExt map[string]string
+		wantNil bool
 	}{
 		{
 			name: "Ext字段有值",
@@ -65,15 +65,15 @@ func TestItemResultsDO2DTO_ExtField(t *testing.T) {
 				TurnResults: []*entity.TurnResult{},
 				ItemIndex:   gptr.Of(int64(10)),
 				Ext: map[string]string{
-					"span_id": "span-123",
+					"span_id":  "span-123",
 					"trace_id": "trace-456",
-					"log_id": "log-789",
+					"log_id":   "log-789",
 				},
 			},
 			wantExt: map[string]string{
-				"span_id": "span-123",
+				"span_id":  "span-123",
 				"trace_id": "trace-456",
-				"log_id": "log-789",
+				"log_id":   "log-789",
 			},
 			wantNil: false,
 		},
@@ -169,4 +169,3 @@ func TestItemResultsDO2DTOs_ExtField(t *testing.T) {
 		})
 	}
 }
-
