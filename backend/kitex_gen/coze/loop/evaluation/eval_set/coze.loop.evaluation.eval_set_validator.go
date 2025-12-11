@@ -130,6 +130,31 @@ func (p *CreateEvaluationSetWithImportResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ParseImportSourceFileRequest) IsValid() error {
+	if p.File == nil {
+		return fmt.Errorf("field File not_nil rule failed")
+	}
+	if err := p.File.IsValid(); err != nil {
+		return fmt.Errorf("field File not valid, %w", err)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ParseImportSourceFileResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ConflictField) IsValid() error {
+	return nil
+}
 func (p *UpdateEvaluationSetRequest) IsValid() error {
 	if p.Name != nil {
 		if len(*p.Name) < int(1) {

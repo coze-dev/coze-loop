@@ -56,6 +56,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ParseImportSourceFile": kitex.NewMethodInfo(
+		parseImportSourceFileHandler,
+		newEvaluationSetServiceParseImportSourceFileArgs,
+		newEvaluationSetServiceParseImportSourceFileResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateEvaluationSetVersion": kitex.NewMethodInfo(
 		createEvaluationSetVersionHandler,
 		newEvaluationSetServiceCreateEvaluationSetVersionArgs,
@@ -285,6 +292,25 @@ func newEvaluationSetServiceCreateEvaluationSetWithImportArgs() interface{} {
 
 func newEvaluationSetServiceCreateEvaluationSetWithImportResult() interface{} {
 	return eval_set.NewEvaluationSetServiceCreateEvaluationSetWithImportResult()
+}
+
+func parseImportSourceFileHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceParseImportSourceFileArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceParseImportSourceFileResult)
+	success, err := handler.(eval_set.EvaluationSetService).ParseImportSourceFile(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceParseImportSourceFileArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceParseImportSourceFileArgs()
+}
+
+func newEvaluationSetServiceParseImportSourceFileResult() interface{} {
+	return eval_set.NewEvaluationSetServiceParseImportSourceFileResult()
 }
 
 func createEvaluationSetVersionHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -582,6 +608,16 @@ func (p *kClient) CreateEvaluationSetWithImport(ctx context.Context, req *eval_s
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceCreateEvaluationSetWithImportResult
 	if err = p.c.Call(ctx, "CreateEvaluationSetWithImport", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest) (r *eval_set.ParseImportSourceFileResponse, err error) {
+	var _args eval_set.EvaluationSetServiceParseImportSourceFileArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceParseImportSourceFileResult
+	if err = p.c.Call(ctx, "ParseImportSourceFile", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

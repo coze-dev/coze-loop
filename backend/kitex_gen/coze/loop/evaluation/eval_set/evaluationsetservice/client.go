@@ -17,6 +17,7 @@ type Client interface {
 	GetEvaluationSet(ctx context.Context, req *eval_set.GetEvaluationSetRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetResponse, err error)
 	ListEvaluationSets(ctx context.Context, req *eval_set.ListEvaluationSetsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetsResponse, err error)
 	CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest, callOptions ...callopt.Option) (r *eval_set.CreateEvaluationSetWithImportResponse, err error)
+	ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest, callOptions ...callopt.Option) (r *eval_set.ParseImportSourceFileResponse, err error)
 	CreateEvaluationSetVersion(ctx context.Context, req *eval_set.CreateEvaluationSetVersionRequest, callOptions ...callopt.Option) (r *eval_set.CreateEvaluationSetVersionResponse, err error)
 	GetEvaluationSetVersion(ctx context.Context, req *eval_set.GetEvaluationSetVersionRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetVersionResponse, err error)
 	ListEvaluationSetVersions(ctx context.Context, req *eval_set.ListEvaluationSetVersionsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetVersionsResponse, err error)
@@ -88,6 +89,11 @@ func (p *kEvaluationSetServiceClient) ListEvaluationSets(ctx context.Context, re
 func (p *kEvaluationSetServiceClient) CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest, callOptions ...callopt.Option) (r *eval_set.CreateEvaluationSetWithImportResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.CreateEvaluationSetWithImport(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest, callOptions ...callopt.Option) (r *eval_set.ParseImportSourceFileResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ParseImportSourceFile(ctx, req)
 }
 
 func (p *kEvaluationSetServiceClient) CreateEvaluationSetVersion(ctx context.Context, req *eval_set.CreateEvaluationSetVersionRequest, callOptions ...callopt.Option) (r *eval_set.CreateEvaluationSetVersionResponse, err error) {

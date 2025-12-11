@@ -47,6 +47,28 @@ struct CreateEvaluationSetWithImportResponse {
     255: base.BaseResp BaseResp
 }
 
+struct ParseImportSourceFileRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+    2: optional dataset_job.DatasetIOFile file (vt.not_nil = "true")                // 如果 path 为文件夹，此处只默认解析当前路径级别下所有指定类型的文件，不嵌套解析
+
+    255: optional base.Base base
+}
+
+struct ParseImportSourceFileResponse {
+    1: optional i64 bytes (api.js_conv="true", go.tag='json:"bytes"')       // 文件大小，单位为 byte
+    10: optional list<eval_set.FieldSchema> field_schemas,        // 数据集字段约束
+    3: optional list<ConflictField> conflicts         // 冲突详情。key: 列名，val：冲突详情
+    4: optional list<string> files_with_ambiguous_column // 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况
+
+    /*base*/
+    255: optional base.BaseResp baseResp
+}
+
+struct ConflictField {
+    1: optional string field_name                           // 存在冲突的列名
+    2: optional map<string, eval_set.FieldSchema> detail_m // 冲突详情。key: 文件名，val：该文件中包含的类型
+}
+
 struct UpdateEvaluationSetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
@@ -349,6 +371,7 @@ service EvaluationSetService {
     GetEvaluationSetResponse GetEvaluationSet(1: GetEvaluationSetRequest req) (api.category="evaluation_set", api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id"),
     ListEvaluationSetsResponse ListEvaluationSets(1: ListEvaluationSetsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/list"),
     CreateEvaluationSetWithImportResponse CreateEvaluationSetWithImport(1: CreateEvaluationSetWithImportRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/create_with_import")
+    ParseImportSourceFileResponse ParseImportSourceFile(1: ParseImportSourceFileRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/parse_import_source_file")
 
     // 版本管理
     CreateEvaluationSetVersionResponse CreateEvaluationSetVersion(1: CreateEvaluationSetVersionRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/versions"),

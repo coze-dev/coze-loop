@@ -26371,8 +26371,8 @@ func (p *ListExptInsightAnalysisCommentResponse) Field255DeepEqual(src *base.Bas
 }
 
 type GetAnalysisRecordFeedbackVoteRequest struct {
-	WorkspaceID             *int64          `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	ExptID                  *int64          `thrift:"expt_id,2,optional" frugal:"2,optional,i64" json:"expt_id" form:"expt_id" `
+	WorkspaceID             *int64          `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" query:"workspace_id" `
+	ExptID                  *int64          `thrift:"expt_id,2,optional" frugal:"2,optional,i64" json:"expt_id" query:"expt_id" `
 	InsightAnalysisRecordID *int64          `thrift:"insight_analysis_record_id,3,optional" frugal:"3,optional,i64" json:"insight_analysis_record_id" path:"insight_analysis_record_id" `
 	Session                 *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base                    *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`

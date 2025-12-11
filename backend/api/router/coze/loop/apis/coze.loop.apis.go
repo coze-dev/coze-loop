@@ -145,6 +145,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets.GET("/:evaluation_set_id", append(_getevaluationsetMw(handler), apis.GetEvaluationSet)...)
 				_evaluation_sets.PATCH("/:evaluation_set_id", append(_updateevaluationsetMw(handler), apis.UpdateEvaluationSet)...)
 				_evaluation_sets.POST("/list", append(_listevaluationsetsMw(handler), apis.ListEvaluationSets)...)
+				_evaluation_sets.POST("/parse_import_source_file", append(_parseimportsourcefileMw(handler), apis.ParseImportSourceFile)...)
 				_v11.POST("/evaluator_template", append(_evaluator_templateMw(handler), apis.CreateEvaluatorTemplate)...)
 				_evaluator_template := _v11.Group("/evaluator_template", _evaluator_templateMw(handler)...)
 				_evaluator_template.DELETE("/:evaluator_template_id", append(_deleteevaluatortemplateMw(handler), apis.DeleteEvaluatorTemplate)...)

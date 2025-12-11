@@ -166,6 +166,11 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSetWithImport(ctx context
 	}, nil
 }
 
+func (e *EvaluationSetApplicationImpl) ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest) (r *eval_set.ParseImportSourceFileResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
 func (e *EvaluationSetApplicationImpl) UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest) (resp *eval_set.UpdateEvaluationSetResponse, err error) {
 	// 参数校验
 	if req == nil {

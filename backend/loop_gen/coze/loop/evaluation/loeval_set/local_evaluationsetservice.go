@@ -150,6 +150,27 @@ func (l *LocalEvaluationSetService) CreateEvaluationSetWithImport(ctx context.Co
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationSetService) ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest, callOptions ...callopt.Option) (*eval_set.ParseImportSourceFileResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceParseImportSourceFileArgs)
+		result := out.(*eval_set.EvaluationSetServiceParseImportSourceFileResult)
+		resp, err := l.impl.ParseImportSourceFile(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceParseImportSourceFileArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceParseImportSourceFileResult{}
+	ctx = l.injectRPCInfo(ctx, "ParseImportSourceFile")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // CreateEvaluationSetVersion
 // 版本管理
 func (l *LocalEvaluationSetService) CreateEvaluationSetVersion(ctx context.Context, req *eval_set.CreateEvaluationSetVersionRequest, callOptions ...callopt.Option) (*eval_set.CreateEvaluationSetVersionResponse, error) {
