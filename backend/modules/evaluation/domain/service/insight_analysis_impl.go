@@ -229,6 +229,23 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 	return analysisRecord, nil
 }
 
+func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordFeedbackVoteByUser(ctx context.Context, spaceID, exptID, recordID int64, session *entity.Session) (*entity.ExptInsightAnalysisFeedbackVote, error) {
+	if session == nil || session.UserID == "" {
+		return nil, nil
+	}
+
+	vote, err := e.repo.GetFeedbackVoteByUser(ctx, spaceID, exptID, recordID, session.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if vote != nil && vote.VoteType == entity.None {
+		return nil, nil
+	}
+
+	return vote, nil
+}
+
 func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Context, userID string, spaceID, exptID int64) error {
 	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
 	if err != nil {

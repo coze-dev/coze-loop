@@ -1433,3 +1433,31 @@ func (e *experimentApplication) ListExptInsightAnalysisComment(ctx context.Conte
 		BaseResp:                            base.NewBaseResp(),
 	}, nil
 }
+
+func (e *experimentApplication) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	vote, err := e.IExptInsightAnalysisService.GetAnalysisRecordFeedbackVoteByUser(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.GetAnalysisRecordFeedbackVoteResponse{
+		Vote:     experiment.ExptInsightAnalysisFeedbackVoteDO2DTO(vote),
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
