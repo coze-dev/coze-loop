@@ -4,8 +4,8 @@
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useShallow } from 'zustand/react/shallow';
 import { nanoid } from 'nanoid';
+import { useModalData } from '@cozeloop/hooks';
 import { CollapseCard } from '@cozeloop/components';
-import { useModalData } from '@cozeloop/base-hooks';
 import {
   ContentType,
   Role,

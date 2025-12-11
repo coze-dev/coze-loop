@@ -175,7 +175,7 @@
       "tags": ["level-3"]
     },
     {
-      "packageName": "@cozeloop/base-hooks",
+      "packageName": "@cozeloop/hooks",
       "projectFolder": "frontend/packages/cozeloop/base-hooks",
       "tags": ["level-3"]
     },

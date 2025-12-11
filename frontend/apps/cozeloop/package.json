@@ -31,11 +31,11 @@
     "@cozeloop/account": "workspace:*",
     "@cozeloop/api-schema": "workspace:*",
     "@cozeloop/auth-pages": "workspace:*",
-    "@cozeloop/base-hooks": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/components": "workspace:*",
     "@cozeloop/evaluate-pages": "workspace:*",
     "@cozeloop/guard": "workspace:*",
+    "@cozeloop/hooks": "workspace:*",
     "@cozeloop/i18n-adapter": "workspace:*",
     "@cozeloop/observation-pages": "workspace:*",
     "@cozeloop/prompt-pages": "workspace:*",
@@ -70,3 +70,4 @@
     "vitest": "~3.0.5"
   }
 }
+

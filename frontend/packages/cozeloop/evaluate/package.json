@@ -15,7 +15,6 @@
   "dependencies": {
     "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
     "@cozeloop/api-schema": "workspace:*",
-    "@cozeloop/base-hooks": "workspace:*",
     "@cozeloop/biz-components-adapter": "workspace:*",
     "@cozeloop/biz-config-adapter": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
@@ -23,6 +22,7 @@
     "@cozeloop/evaluate-adapter": "workspace:*",
     "@cozeloop/evaluate-components": "workspace:*",
     "@cozeloop/guard": "workspace:*",
+    "@cozeloop/hooks": "workspace:*",
     "@cozeloop/i18n-adapter": "workspace:*",
     "@cozeloop/observation-component-adapter": "workspace:*",
     "@cozeloop/prompt-components": "workspace:*",
@@ -64,3 +64,4 @@
     "react-router-dom": "^6.22.0"
   }
 }
+

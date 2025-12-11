@@ -4,6 +4,7 @@
 import { useState } from 'react';
 
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import {
   useFetchDatasetDetail,
   DatasetItemList,
@@ -14,7 +15,6 @@ import {
 import { LoopTabs } from '@cozeloop/components';
 import { type Version } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
 import { Layout, Loading, Tabs } from '@coze-arch/coze-design';
 

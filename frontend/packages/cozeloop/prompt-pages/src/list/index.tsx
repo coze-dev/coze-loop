@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 
 import { useDebounce, usePagination } from 'ahooks';
 import { PromptCreate } from '@cozeloop/prompt-components';
+import { useModalData } from '@cozeloop/hooks';
 import { Guard, GuardPoint, useGuard, useGuards } from '@cozeloop/guard';
 import {
   DEFAULT_PAGE_SIZE,
@@ -19,7 +20,6 @@ import {
   useSpace,
 } from '@cozeloop/biz-hooks-adapter';
 import { UserSelect } from '@cozeloop/biz-components-adapter';
-import { useModalData } from '@cozeloop/base-hooks';
 import { type Prompt } from '@cozeloop/api-schema/prompt';
 import { StonePromptApi, type promptManage } from '@cozeloop/api-schema';
 import {

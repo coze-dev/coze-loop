@@ -6,13 +6,13 @@ import { useEffect, useState } from 'react';
 import { isEqual } from 'lodash-es';
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import {
   verifyContrastExperiment,
   ExperimentContrastChart,
 } from '@cozeloop/evaluate-components';
 import { LoopTabs } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
 
 import { batchGetExperiment } from '@/request/experiment';

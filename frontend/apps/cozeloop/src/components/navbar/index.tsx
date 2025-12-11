@@ -5,12 +5,12 @@ import { useEffect, useRef, useState } from 'react';
 
 import classNames from 'classnames';
 import { useHover } from 'ahooks';
+import { useNavbarCollapsed } from '@cozeloop/hooks';
 import {
   useApp,
   useBaseURL,
   useNavigateModule,
 } from '@cozeloop/biz-hooks-adapter';
-import { useNavbarCollapsed } from '@cozeloop/base-hooks';
 import { IconCozSideNav } from '@coze-arch/coze-design/icons';
 import { Nav, Divider } from '@coze-arch/coze-design';
 

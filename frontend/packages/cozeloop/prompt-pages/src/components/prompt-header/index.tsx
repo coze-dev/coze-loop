@@ -13,6 +13,7 @@ import {
   getPlaceholderErrorContent,
   PromptCreate,
 } from '@cozeloop/prompt-components';
+import { useModalData } from '@cozeloop/hooks';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import {
   EditIconButton,
@@ -20,7 +21,6 @@ import {
   TooltipWhenDisabled,
 } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
-import { useModalData } from '@cozeloop/base-hooks';
 import { ContentType, Role, type Prompt } from '@cozeloop/api-schema/prompt';
 import {
   IconCozLoading,

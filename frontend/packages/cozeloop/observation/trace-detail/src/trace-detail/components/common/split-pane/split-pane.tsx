@@ -3,7 +3,7 @@
 import React, { useState, type ReactNode, useEffect } from 'react';
 
 import classNames from 'classnames';
-import { useMouseDownOffset } from '@cozeloop/base-hooks';
+import { useMouseDownOffset } from '@cozeloop/hooks';
 
 import styles from './index.module.less';
 
