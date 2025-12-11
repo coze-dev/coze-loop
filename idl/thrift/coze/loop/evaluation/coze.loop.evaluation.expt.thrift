@@ -554,8 +554,8 @@ struct ListExptInsightAnalysisCommentResponse {
 }
 
 struct GetAnalysisRecordFeedbackVoteRequest {
-    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    2: optional i64 expt_id (api.body = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    1: optional i64 workspace_id (api.query = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: optional i64 expt_id (api.query = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
     3: optional i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
 
     200: optional common.Session session

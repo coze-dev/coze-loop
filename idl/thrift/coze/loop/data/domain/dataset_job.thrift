@@ -41,12 +41,25 @@ enum FileFormat {
     ZIP = 100
 }
 
+enum SourceType {
+    File = 1
+    Dataset = 2
+}
+
 struct DatasetIOFile {
     1: required dataset.StorageProvider provider (vt.defined_only='true')
     2: required string path (vt.min_size='1')
     3: optional FileFormat format                                             // 数据文件的格式
     4: optional FileFormat compress_format                                     // 压缩包格式
     5: optional list<string> files                                            // path 为文件夹或压缩包时，数据文件列表, 服务端设置
+    6: optional string original_file_name                                       // 原始的文件名，创建文件时由前端写入。为空则与 path 保持一致
+    7: optional string download_url                                            // 文件下载地址
+    100: optional string provider_id                                          // 存储提供方ID，目前主要在 provider==imagex 时生效
+    101: optional ProviderAuth provider_auth                                   // 存储提供方鉴权信息，目前主要在 provider==imagex 时生效
+}
+
+struct ProviderAuth {
+    1: optional i64 provider_account_id (api.js_conv="true", go.tag='json:"provider_account_id"') // provider == VETOS 时，此处存储的是用户在 fornax 上托管的方舟账号的ID
 }
 
 struct DatasetIODataset {
