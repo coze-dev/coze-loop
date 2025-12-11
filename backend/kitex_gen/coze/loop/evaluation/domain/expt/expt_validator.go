@@ -340,3 +340,6 @@ func (p *ExptInsightAnalysisFeedbackComment) IsValid() error {
 	}
 	return nil
 }
+func (p *ExptInsightAnalysisFeedbackVote) IsValid() error {
+	return nil
+}

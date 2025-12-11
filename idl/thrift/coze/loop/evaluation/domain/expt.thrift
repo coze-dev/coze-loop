@@ -521,6 +521,11 @@ struct ExptInsightAnalysisFeedbackComment {
     6: optional common.BaseInfo base_info
 }
 
+struct ExptInsightAnalysisFeedbackVote {
+    1: optional i64 id (api.js_conv='true', go.tag='json:"comment_id"')
+    2: optional FeedbackActionType feedback_action_type
+}
+
 // 反馈动作
 typedef string FeedbackActionType(ts.enum="true")
 

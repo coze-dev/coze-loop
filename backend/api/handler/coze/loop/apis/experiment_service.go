@@ -270,3 +270,19 @@ func ListExptInsightAnalysisComment(ctx context.Context, c *app.RequestContext) 
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// GetAnalysisRecordFeedbackVote .
+// @router /api/evaluation/v1/insight_analysis_records/:insight_analysis_record_id/feedback_vote [GET]
+func GetAnalysisRecordFeedbackVote(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.GetAnalysisRecordFeedbackVoteRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.GetAnalysisRecordFeedbackVoteResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

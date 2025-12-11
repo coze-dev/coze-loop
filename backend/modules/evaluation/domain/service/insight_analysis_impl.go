@@ -239,10 +239,6 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordFeedbackVoteByUser(ctx 
 		return nil, err
 	}
 
-	if vote != nil && vote.VoteType == entity.None {
-		return nil, nil
-	}
-
 	return vote, nil
 }
 

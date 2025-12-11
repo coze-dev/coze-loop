@@ -258,6 +258,13 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						_results0.POST("/batch_get", append(_batchgetexperimentresultMw(handler), apis.BatchGetExperimentResult)...)
 					}
 				}
+				{
+					_insight_analysis_records0 := _v11.Group("/insight_analysis_records", _insight_analysis_records0Mw(handler)...)
+					{
+						_insight_analysis_record_id0 := _insight_analysis_records0.Group("/:insight_analysis_record_id", _insight_analysis_record_id0Mw(handler)...)
+						_insight_analysis_record_id0.GET("/feedback_vote", append(_getanalysisrecordfeedbackvoteMw(handler), apis.GetAnalysisRecordFeedbackVote)...)
+					}
+				}
 			}
 		}
 		{

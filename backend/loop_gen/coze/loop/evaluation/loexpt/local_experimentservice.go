@@ -691,6 +691,27 @@ func (l *LocalExperimentService) ListExptInsightAnalysisComment(ctx context.Cont
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalExperimentService) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (*expt.GetAnalysisRecordFeedbackVoteResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceGetAnalysisRecordFeedbackVoteArgs)
+		result := out.(*expt.ExperimentServiceGetAnalysisRecordFeedbackVoteResult)
+		resp, err := l.impl.GetAnalysisRecordFeedbackVote(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceGetAnalysisRecordFeedbackVoteArgs{Req: req}
+	result := &expt.ExperimentServiceGetAnalysisRecordFeedbackVoteResult{}
+	ctx = l.injectRPCInfo(ctx, "GetAnalysisRecordFeedbackVote")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

@@ -1769,3 +1769,18 @@ func _createevaluationsetwithimportMw(handler *apis.APIHandler) []app.HandlerFun
 	// your code...
 	return nil
 }
+
+func _insight_analysis_records0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _insight_analysis_record_id0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getanalysisrecordfeedbackvoteMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
