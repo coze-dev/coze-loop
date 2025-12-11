@@ -3578,8 +3578,8 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 		baselineItemResults []*entity.ExptItemResult
 		baselineTurnResults []*entity.ExptTurnResult
 		itemID2ItemRunState map[int64]entity.ItemRunState
-		wantExt              map[string]string
-		wantRunState         entity.ItemRunState
+		wantExt             map[string]string
+		wantRunState        entity.ItemRunState
 	}{
 		{
 			name: "Ext字段有值且itemID2ItemRunState存在",
@@ -3596,9 +3596,9 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 			},
 			baselineTurnResults: []*entity.ExptTurnResult{
 				{
-					ID:     1,
-					ItemID: 1,
-					TurnID: 0,
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
 					TurnIdx: 0,
 				},
 			},
@@ -3623,15 +3623,15 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 			},
 			baselineTurnResults: []*entity.ExptTurnResult{
 				{
-					ID:     1,
-					ItemID: 1,
-					TurnID: 0,
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
 					TurnIdx: 0,
 				},
 			},
 			itemID2ItemRunState: map[int64]entity.ItemRunState{},
-			wantExt:              nil,
-			wantRunState:         entity.ItemRunState_Success,
+			wantExt:             nil,
+			wantRunState:        entity.ItemRunState_Success,
 		},
 		{
 			name: "Ext字段为nil且itemID2ItemRunState不存在",
@@ -3645,15 +3645,15 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 			},
 			baselineTurnResults: []*entity.ExptTurnResult{
 				{
-					ID:     1,
-					ItemID: 1,
-					TurnID: 0,
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
 					TurnIdx: 0,
 				},
 			},
 			itemID2ItemRunState: map[int64]entity.ItemRunState{},
-			wantExt:              nil,
-			wantRunState:         entity.ItemRunState_Fail,
+			wantExt:             nil,
+			wantRunState:        entity.ItemRunState_Fail,
 		},
 		{
 			name: "Ext字段有值且itemID2ItemRunState不存在",
@@ -3669,9 +3669,9 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 			},
 			baselineTurnResults: []*entity.ExptTurnResult{
 				{
-					ID:     1,
-					ItemID: 1,
-					TurnID: 0,
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
 					TurnIdx: 0,
 				},
 			},
@@ -3701,15 +3701,15 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 			},
 			baselineTurnResults: []*entity.ExptTurnResult{
 				{
-					ID:     1,
-					ItemID: 1,
-					TurnID: 0,
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
 					TurnIdx: 0,
 				},
 				{
-					ID:     2,
-					ItemID: 2,
-					TurnID: 0,
+					ID:      2,
+					ItemID:  2,
+					TurnID:  0,
 					TurnIdx: 0,
 				},
 			},
