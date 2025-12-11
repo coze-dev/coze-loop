@@ -67,6 +67,10 @@ func (a *DatasetRPCAdapter) CreateDatasetWithImport(ctx context.Context, param *
 	return 0, 0, nil
 }
 
+func (a *DatasetRPCAdapter) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
+	return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("ParseImportSourceFile not implemented"))
+}
+
 func (a *DatasetRPCAdapter) UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error) {
 	resp, err := a.client.UpdateDataset(ctx, &dataset.UpdateDatasetRequest{
 		WorkspaceID: &spaceID,

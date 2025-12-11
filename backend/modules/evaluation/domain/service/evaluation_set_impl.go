@@ -63,6 +63,13 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Con
 	})
 }
 
+func (d *EvaluationSetServiceImpl) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
+	if param == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode)
+	}
+	return d.datasetRPCAdapter.ParseImportSourceFile(ctx, param)
+}
+
 func (d *EvaluationSetServiceImpl) UpdateEvaluationSet(ctx context.Context, param *entity.UpdateEvaluationSetParam) (err error) {
 	if param == nil {
 		return errorx.NewByCode(errno.CommonInternalErrorCode)

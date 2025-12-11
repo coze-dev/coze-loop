@@ -1,7 +1,11 @@
 package evaluation_set
 
 import (
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
+	domain_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
+	evalsetpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
@@ -85,5 +89,33 @@ func FieldMappingDTO2DO(dto *dataset_job.FieldMapping) *entity.FieldMapping {
 	return &entity.FieldMapping{
 		Source: dto.Source,
 		Target: dto.Target,
+	}
+}
+
+func ConflictFieldDO2DTOs(dos []*entity.ConflictField) []*evalsetpb.ConflictField {
+	if len(dos) == 0 {
+		return nil
+	}
+	res := make([]*evalsetpb.ConflictField, 0, len(dos))
+	for _, do := range dos {
+		res = append(res, ConflictFieldDO2DTO(do))
+	}
+	return res
+}
+
+func ConflictFieldDO2DTO(do *entity.ConflictField) *evalsetpb.ConflictField {
+	if do == nil {
+		return nil
+	}
+	var detail map[string]*domain_eval_set.FieldSchema
+	if len(do.Detail) > 0 {
+		detail = make(map[string]*domain_eval_set.FieldSchema, len(do.Detail))
+		for k, v := range do.Detail {
+			detail[k] = FieldSchemaDO2DTO(v)
+		}
+	}
+	return &evalsetpb.ConflictField{
+		FieldName: gptr.Of(do.FieldName),
+		DetailM:   detail,
 	}
 }

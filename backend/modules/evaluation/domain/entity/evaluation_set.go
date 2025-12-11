@@ -171,6 +171,23 @@ type DatasetIODataset struct {
 	VersionID *int64
 }
 
+type ParseImportSourceFileParam struct {
+	SpaceID int64
+	File    *DatasetIOFile
+}
+
+type ConflictField struct {
+	FieldName string
+	Detail    map[string]*FieldSchema
+}
+
+type ParseImportSourceFileResult struct {
+	Bytes                    int64
+	FieldSchemas             []*FieldSchema
+	Conflicts                []*ConflictField
+	FilesWithAmbiguousColumn []string
+}
+
 type FieldMapping struct {
 	Source string
 	Target string

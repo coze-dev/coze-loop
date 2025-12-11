@@ -209,6 +209,21 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) CreateDatasetWithImport(ctx, param
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDatasetWithImport", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).CreateDatasetWithImport), ctx, param)
 }
 
+// ParseImportSourceFile mocks base method.
+func (m *MockIDatasetRPCAdapter) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParseImportSourceFile", ctx, param)
+	ret0, _ := ret[0].(*entity.ParseImportSourceFileResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParseImportSourceFile indicates an expected call of ParseImportSourceFile.
+func (mr *MockIDatasetRPCAdapterMockRecorder) ParseImportSourceFile(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseImportSourceFile", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ParseImportSourceFile), ctx, param)
+}
+
 // DeleteDataset mocks base method.
 func (m *MockIDatasetRPCAdapter) DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) error {
 	m.ctrl.T.Helper()

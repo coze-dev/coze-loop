@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	domain_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
@@ -167,8 +168,42 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSetWithImport(ctx context
 }
 
 func (e *EvaluationSetApplicationImpl) ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest) (r *eval_set.ParseImportSourceFileResponse, err error) {
-	// TODO implement me
-	panic("implement me")
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.File == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("file is nil"))
+	}
+
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	param := &entity.ParseImportSourceFileParam{
+		SpaceID: req.WorkspaceID,
+		File:    evaluation_set.DatasetIOFileDTO2DO(req.GetFile()),
+	}
+
+	result, err := e.evaluationSetService.ParseImportSourceFile(ctx, param)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &eval_set.ParseImportSourceFileResponse{
+		BaseResp: base.NewBaseResp(),
+	}
+	if result != nil {
+		resp.Bytes = gptr.Of(result.Bytes)
+		resp.FieldSchemas = evaluation_set.FieldSchemaDO2DTOs(result.FieldSchemas)
+		resp.Conflicts = evaluation_set.ConflictFieldDO2DTOs(result.Conflicts)
+		resp.FilesWithAmbiguousColumn = result.FilesWithAmbiguousColumn
+	}
+
+	return resp, nil
 }
 
 func (e *EvaluationSetApplicationImpl) UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest) (resp *eval_set.UpdateEvaluationSetResponse, err error) {
