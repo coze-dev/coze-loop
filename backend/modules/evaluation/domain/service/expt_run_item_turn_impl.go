@@ -332,7 +332,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		}
 
 		// 根据评估器类型创建对应的输入数据
-		inputData, err := e.buildEvaluatorInputData(ev.EvaluatorType, ec, turnFields, targetFields)
+		inputData, err := e.buildEvaluatorInputData(ev.EvaluatorType, ev.GetInputSchemas(), ec, turnFields, targetFields)
 		if err != nil {
 			return nil, err
 		}
@@ -350,7 +350,8 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 				ExperimentRunID:    etec.Event.ExptRunID,
 				ItemID:             item.ItemID,
 				TurnID:             turn.ID,
-				Ext:                etec.Ext,
+				Ext:                e.buildRunEvaluatorExt(etec.Ext, ec.RunConf),
+				EvaluatorRunConf:   ec.RunConf,
 			})
 			if err != nil {
 				return err
@@ -375,12 +376,13 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 // buildEvaluatorInputData 根据评估器类型构建输入数据，提取公共字段映射逻辑
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(
 	evaluatorType entity.EvaluatorType,
+	inputSchemas []*entity.ArgsSchema,
 	ec *entity.EvaluatorConf,
 	turnFields map[string]*entity.Content,
 	targetFields map[string]*entity.Content,
 ) (*entity.EvaluatorInputData, error) {
-	if evaluatorType == entity.EvaluatorTypeCode {
-		// Code评估器：分离字段数据源
+	if evaluatorType == entity.EvaluatorTypeCode || (evaluatorType == entity.EvaluatorTypeCustomRPC && len(inputSchemas) == 0) {
+		// Code评估器、无input_schemas的自定义服务评估器：分离字段数据源
 		evaluateDatasetFields, err := e.buildFieldsFromSource(ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
 		if err != nil {
 			return nil, err
@@ -398,7 +400,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(
 			EvaluateTargetOutputFields: evaluateTargetOutputFields,
 		}, nil
 	} else {
-		// Prompt评估器：保持现有逻辑，合并所有字段到InputFields
+		// Prompt评估器等：保持现有逻辑，合并所有字段到InputFields
 		inputFields := make(map[string]*entity.Content)
 
 		// 处理来自评测对象的字段
@@ -486,4 +488,16 @@ func (e *DefaultExptTurnEvaluationImpl) getContentByJsonPath(content *entity.Con
 		ContentType: ptr.Of(entity.ContentTypeText),
 		Text:        ptr.Of(text),
 	}, nil
+}
+
+func (e *DefaultExptTurnEvaluationImpl) buildRunEvaluatorExt(ext map[string]string, runConf *entity.EvaluatorRunConfig) map[string]string {
+	builtExt := gmap.Clone(ext)
+	if builtExt == nil {
+		builtExt = make(map[string]string)
+	}
+	if runConf != nil && runConf.EvaluatorRuntimeParam != nil && runConf.EvaluatorRuntimeParam.JSONValue != nil && len(*runConf.EvaluatorRuntimeParam.JSONValue) > 0 {
+		builtExt[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = *runConf.EvaluatorRuntimeParam.JSONValue
+	}
+
+	return builtExt
 }

@@ -221,6 +221,7 @@ func (e *EvaluatorsConf) GetEvaluatorConcurNum() int {
 type EvaluatorConf struct {
 	EvaluatorVersionID int64
 	IngressConf        *EvaluatorIngressConf
+	RunConf            *EvaluatorRunConfig
 }
 
 func (e *EvaluatorConf) Valid(ctx context.Context) error {

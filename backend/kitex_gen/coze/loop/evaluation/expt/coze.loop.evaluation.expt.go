@@ -45,8 +45,10 @@ type CreateExperimentRequest struct {
 	MaxAliveTime          *int64                             `thrift:"max_alive_time,31,optional" frugal:"31,optional,i64" form:"max_alive_time" json:"max_alive_time,omitempty"`
 	SourceType            *expt.SourceType                   `thrift:"source_type,32,optional" frugal:"32,optional,SourceType" form:"source_type" json:"source_type,omitempty"`
 	SourceID              *string                            `thrift:"source_id,33,optional" frugal:"33,optional,string" form:"source_id" json:"source_id,omitempty"`
-	Session               *common.Session                    `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base                  *base.Base                         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 评估器版本ID对应的评估器运行配置信息
+	EvaluatorVersionRunConfigs map[int64]*evaluator.EvaluatorRunConfig `thrift:"evaluator_version_run_configs,41,optional" frugal:"41,optional,map<i64:evaluator.EvaluatorRunConfig>" form:"evaluator_version_run_configs" json:"evaluator_version_run_configs,string,omitempty"`
+	Session                    *common.Session                         `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base                       *base.Base                              `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateExperimentRequest() *CreateExperimentRequest {
@@ -267,6 +269,18 @@ func (p *CreateExperimentRequest) GetSourceID() (v string) {
 	return *p.SourceID
 }
 
+var CreateExperimentRequest_EvaluatorVersionRunConfigs_DEFAULT map[int64]*evaluator.EvaluatorRunConfig
+
+func (p *CreateExperimentRequest) GetEvaluatorVersionRunConfigs() (v map[int64]*evaluator.EvaluatorRunConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorVersionRunConfigs() {
+		return CreateExperimentRequest_EvaluatorVersionRunConfigs_DEFAULT
+	}
+	return p.EvaluatorVersionRunConfigs
+}
+
 var CreateExperimentRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentRequest) GetSession() (v *common.Session) {
@@ -344,6 +358,9 @@ func (p *CreateExperimentRequest) SetSourceType(val *expt.SourceType) {
 func (p *CreateExperimentRequest) SetSourceID(val *string) {
 	p.SourceID = val
 }
+func (p *CreateExperimentRequest) SetEvaluatorVersionRunConfigs(val map[int64]*evaluator.EvaluatorRunConfig) {
+	p.EvaluatorVersionRunConfigs = val
+}
 func (p *CreateExperimentRequest) SetSession(val *common.Session) {
 	p.Session = val
 }
@@ -370,6 +387,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	31:  "max_alive_time",
 	32:  "source_type",
 	33:  "source_id",
+	41:  "evaluator_version_run_configs",
 	200: "session",
 	255: "Base",
 }
@@ -440,6 +458,10 @@ func (p *CreateExperimentRequest) IsSetSourceType() bool {
 
 func (p *CreateExperimentRequest) IsSetSourceID() bool {
 	return p.SourceID != nil
+}
+
+func (p *CreateExperimentRequest) IsSetEvaluatorVersionRunConfigs() bool {
+	return p.EvaluatorVersionRunConfigs != nil
 }
 
 func (p *CreateExperimentRequest) IsSetSession() bool {
@@ -609,6 +631,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 33:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField33(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 41:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField41(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -880,6 +910,35 @@ func (p *CreateExperimentRequest) ReadField33(iprot thrift.TProtocol) error {
 	p.SourceID = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField41(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[int64]*evaluator.EvaluatorRunConfig, size)
+	values := make([]evaluator.EvaluatorRunConfig, size)
+	for i := 0; i < size; i++ {
+		var _key int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		_val := &values[i]
+		_val.InitDefault()
+		if err := _val.Read(iprot); err != nil {
+			return err
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.EvaluatorVersionRunConfigs = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -973,6 +1032,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField33(oprot); err != nil {
 			fieldId = 33
+			goto WriteFieldError
+		}
+		if err = p.writeField41(oprot); err != nil {
+			fieldId = 41
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -1339,6 +1402,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 33 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField41(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorVersionRunConfigs() {
+		if err = oprot.WriteFieldBegin("evaluator_version_run_configs", thrift.MAP, 41); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.I64, thrift.STRUCT, len(p.EvaluatorVersionRunConfigs)); err != nil {
+			return err
+		}
+		for k, v := range p.EvaluatorVersionRunConfigs {
+			if err := oprot.WriteI64(k); err != nil {
+				return err
+			}
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -1442,6 +1534,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field33DeepEqual(ano.SourceID) {
+		return false
+	}
+	if !p.Field41DeepEqual(ano.EvaluatorVersionRunConfigs) {
 		return false
 	}
 	if !p.Field200DeepEqual(ano.Session) {
@@ -1648,6 +1743,19 @@ func (p *CreateExperimentRequest) Field33DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.SourceID, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field41DeepEqual(src map[int64]*evaluator.EvaluatorRunConfig) bool {
+
+	if len(p.EvaluatorVersionRunConfigs) != len(src) {
+		return false
+	}
+	for k, v := range p.EvaluatorVersionRunConfigs {
+		_src := src[k]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

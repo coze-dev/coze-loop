@@ -936,6 +936,8 @@ type Experiment struct {
 	MaxAliveTime          *int64                   `thrift:"max_alive_time,41,optional" frugal:"41,optional,i64" form:"max_alive_time" json:"max_alive_time,omitempty" query:"max_alive_time"`
 	SourceType            *SourceType              `thrift:"source_type,42,optional" frugal:"42,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
 	SourceID              *string                  `thrift:"source_id,43,optional" frugal:"43,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
+	// 评估器版本ID对应的评估器运行配置信息
+	EvaluatorVersionRunConfigs map[int64]*evaluator.EvaluatorRunConfig `thrift:"evaluator_version_run_configs,51,optional" frugal:"51,optional,map<i64:evaluator.EvaluatorRunConfig>" form:"evaluator_version_run_configs" json:"evaluator_version_run_configs,string,omitempty" query:"evaluator_version_run_configs"`
 }
 
 func NewExperiment() *Experiment {
@@ -1256,6 +1258,18 @@ func (p *Experiment) GetSourceID() (v string) {
 	}
 	return *p.SourceID
 }
+
+var Experiment_EvaluatorVersionRunConfigs_DEFAULT map[int64]*evaluator.EvaluatorRunConfig
+
+func (p *Experiment) GetEvaluatorVersionRunConfigs() (v map[int64]*evaluator.EvaluatorRunConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorVersionRunConfigs() {
+		return Experiment_EvaluatorVersionRunConfigs_DEFAULT
+	}
+	return p.EvaluatorVersionRunConfigs
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1334,6 +1348,9 @@ func (p *Experiment) SetSourceType(val *SourceType) {
 func (p *Experiment) SetSourceID(val *string) {
 	p.SourceID = val
 }
+func (p *Experiment) SetEvaluatorVersionRunConfigs(val map[int64]*evaluator.EvaluatorRunConfig) {
+	p.EvaluatorVersionRunConfigs = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:  "id",
@@ -1362,6 +1379,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	41: "max_alive_time",
 	42: "source_type",
 	43: "source_id",
+	51: "evaluator_version_run_configs",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1466,6 +1484,10 @@ func (p *Experiment) IsSetSourceType() bool {
 
 func (p *Experiment) IsSetSourceID() bool {
 	return p.SourceID != nil
+}
+
+func (p *Experiment) IsSetEvaluatorVersionRunConfigs() bool {
+	return p.EvaluatorVersionRunConfigs != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -1689,6 +1711,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 43:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField43(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 51:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField51(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2030,6 +2060,35 @@ func (p *Experiment) ReadField43(iprot thrift.TProtocol) error {
 	p.SourceID = _field
 	return nil
 }
+func (p *Experiment) ReadField51(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[int64]*evaluator.EvaluatorRunConfig, size)
+	values := make([]evaluator.EvaluatorRunConfig, size)
+	for i := 0; i < size; i++ {
+		var _key int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		_val := &values[i]
+		_val.InitDefault()
+		if err := _val.Read(iprot); err != nil {
+			return err
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.EvaluatorVersionRunConfigs = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2139,6 +2198,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField43(oprot); err != nil {
 			fieldId = 43
+			goto WriteFieldError
+		}
+		if err = p.writeField51(oprot); err != nil {
+			fieldId = 51
 			goto WriteFieldError
 		}
 	}
@@ -2651,6 +2714,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 43 end error: ", p), err)
 }
+func (p *Experiment) writeField51(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorVersionRunConfigs() {
+		if err = oprot.WriteFieldBegin("evaluator_version_run_configs", thrift.MAP, 51); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.I64, thrift.STRUCT, len(p.EvaluatorVersionRunConfigs)); err != nil {
+			return err
+		}
+		for k, v := range p.EvaluatorVersionRunConfigs {
+			if err := oprot.WriteI64(k); err != nil {
+				return err
+			}
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -2742,6 +2834,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field43DeepEqual(ano.SourceID) {
+		return false
+	}
+	if !p.Field51DeepEqual(ano.EvaluatorVersionRunConfigs) {
 		return false
 	}
 	return true
@@ -3029,6 +3124,19 @@ func (p *Experiment) Field43DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.SourceID, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *Experiment) Field51DeepEqual(src map[int64]*evaluator.EvaluatorRunConfig) bool {
+
+	if len(p.EvaluatorVersionRunConfigs) != len(src) {
+		return false
+	}
+	for k, v := range p.EvaluatorVersionRunConfigs {
+		_src := src[k]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }
