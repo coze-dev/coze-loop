@@ -71,7 +71,7 @@ function EvaluatorDetailPage() {
 
       const res = await StoneEvaluationApi.UpdateEvaluatorDraft({
         workspace_id: spaceID,
-        evaluator_id: evaluator?.evaluator_id || '',
+        evaluator_id: id || '',
         evaluator_content: evaluatorContent,
         evaluator_type: values.evaluator_type || EvaluatorType.Prompt,
       });

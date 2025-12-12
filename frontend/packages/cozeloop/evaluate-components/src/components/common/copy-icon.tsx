@@ -10,8 +10,7 @@ export function CopyIcon({
   className,
   onClick,
 }: {
-  /** 待复制的文本 */
-  text: string | undefined;
+  /** 待复制的文本 */ text: string | undefined;
   className?: string;
   onClick?: (e: React.MouseEvent) => void;
 }) {

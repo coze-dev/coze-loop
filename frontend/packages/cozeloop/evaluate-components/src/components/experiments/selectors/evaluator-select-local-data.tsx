@@ -54,6 +54,7 @@ export function EvaluatorSelectLocalData({
             )}
           </span>
         ),
+
         value: evaluator?.current_version?.id ?? '',
         evaluator,
       }))}

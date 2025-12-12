@@ -1,0 +1,60 @@
+.execute-area-content {
+  position: relative;
+
+  overflow: hidden auto;
+  display: flex;
+  flex:1;
+  flex-direction: column;
+  gap: 24px;
+
+  height: 100%;
+  padding: 0 22px 0 0;
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 48px 48px;
+
+  &-to-bottom{
+    pointer-events: none;
+    cursor: pointer;
+
+    position: absolute;
+    z-index: 10;
+    right: 16px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 36px;
+    height: 36px;
+
+    opacity: 0;
+    background: var(--Bg-COZ-bg-max, #FFF);
+    border: 1px solid var(--Stroke-COZ-stroke-primary, rgba(82, 100, 154, 13%));
+    border-radius: 50%;
+
+
+    transition: opacity 0.3s;
+
+    &:hover {
+      background-color: #f5f5f5;
+    }
+
+    &.visible {
+      pointer-events: auto;
+      opacity: 1;
+    }
+  }
+}
+
+.execute-sub-area-content{
+  position: relative;
+  overflow-y: auto;
+  flex:1;
+  padding: 4px 8px;
+
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 48px 48px;
+}

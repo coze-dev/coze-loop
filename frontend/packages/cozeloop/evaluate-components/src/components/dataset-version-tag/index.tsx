@@ -25,7 +25,7 @@ export const DatasetVersionTag = ({
   }
   return datasetDetail?.change_uncommitted ? (
     <Tag color="yellow" className="font-normal">
-      {I18n.t('changes_not_submitted')}
+      {I18n.t('unsubmitted_changes')}
     </Tag>
   ) : (
     <Tag color="primary" className="font-normal">

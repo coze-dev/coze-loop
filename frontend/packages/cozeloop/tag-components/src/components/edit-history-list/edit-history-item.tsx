@@ -44,15 +44,14 @@ const generateDescFromChangeLog = (
       desc.push(
         <span>
           <span>
-            {I18n.t('tag_creator_name', { placeholder1: updatedBy || '-' })}
+            {I18n.t('creator')}:@{updatedBy || '-'}
           </span>
           ,
           <span>
-            {I18n.t('tag_creation_time', {
-              placeholder1: updatedAt
-                ? formatTimestampToString(updatedAt, 'YYYY-MM-DD HH:mm:ss')
-                : '-',
-            })}
+            {I18n.t('create_time')}:
+            {updatedAt
+              ? formatTimestampToString(updatedAt, 'YYYY-MM-DD HH:mm:ss')
+              : '-'}
           </span>
         </span>,
       );
@@ -86,10 +85,10 @@ const generateDescFromChangeLog = (
               {TAG_METADATA[fieldName] ?? fieldName}
             </span>
             <span>
-              {I18n.t('tag_placeholder_update_end', {
-                placeholder1: TAG_METADATA[beforeValue] ?? beforeValue,
-                placeholder3: TAG_METADATA[afterValue] ?? afterValue,
-              })}
+              {I18n.t('from')}
+              {TAG_METADATA[beforeValue] ?? beforeValue}
+              {I18n.t('update_to')}
+              {TAG_METADATA[afterValue] ?? afterValue}
             </span>
           </span>,
         );
@@ -126,7 +125,7 @@ export const EditHistoryItem = (props: EditHistoryItemProps) => {
       <Descriptions.Item itemKey={I18n.t('submit_user')}>
         <UserProfile name={updatedBy?.name} avatarUrl={updatedBy?.avatar_url} />
       </Descriptions.Item>
-      <Descriptions.Item itemKey={I18n.t('change_log')}>
+      <Descriptions.Item itemKey={I18n.t('tag_change_log')}>
         <div className="relative">
           <div
             ref={contentRef}
@@ -146,7 +145,7 @@ export const EditHistoryItem = (props: EditHistoryItemProps) => {
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="text-brand-9 text-[13px] cursor-pointer text-right"
               >
-                {isExpanded ? I18n.t('collapse') : I18n.t('extend')}
+                {isExpanded ? I18n.t('collapse') : I18n.t('expand')}
               </Typography.Text>
             </div>
           ) : null}

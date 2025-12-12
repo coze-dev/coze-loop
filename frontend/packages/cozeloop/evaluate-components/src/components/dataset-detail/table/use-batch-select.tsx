@@ -1,6 +1,6 @@
-/* eslint-disable @coze-arch/max-line-per-function */
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @coze-arch/max-line-per-function */
 import { useMemo, useState } from 'react';
 
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
@@ -100,6 +100,7 @@ export const useBatchSelect = ({
         onChange={handleBatchSelect}
       />
     ),
+
     key: 'check',
     width: 50,
     fixed: 'left',
@@ -128,16 +129,16 @@ export const useBatchSelect = ({
         sendEvent(EVENT_NAMES.cozeloop_dataset_batch_action);
       }}
     >
-      {I18n.t('batch_select')}
+      {I18n.t('bulk_select')}
     </Button>
   );
 
   const handleDelete = () => {
     Modal.confirm({
-      title: I18n.t('delete_data_items'),
+      title: I18n.t('delete_data_item'),
       content: `${I18n.t('cozeloop_open_evaluate_confirm_delete_selected_data_irreversible', { placeholder1: batchSelectItems.size })}`,
-      okText: I18n.t('space_member_role_type_del_btn'),
-      cancelText: I18n.t('global_btn_cancel'),
+      okText: I18n.t('delete'),
+      cancelText: I18n.t('cancel'),
       okButtonProps: {
         color: 'red',
       },
@@ -170,7 +171,7 @@ export const useBatchSelect = ({
           setBatchSelectedItems(new Set());
         }}
       >
-        {I18n.t('cancel_selection')}
+        {I18n.t('unselect')}
       </Typography.Text>
       <Guard point={GuardPoint['eval.dataset.batch_delete']}>
         <Button

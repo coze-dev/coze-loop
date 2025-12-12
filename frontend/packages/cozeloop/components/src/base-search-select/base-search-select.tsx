@@ -15,6 +15,8 @@ import {
   Button,
 } from '@coze-arch/coze-design';
 
+import { useI18n } from '@/provider';
+
 import { getOptionsNotInList, transformValueToArray } from './utils';
 import { type BaseSelectProps } from './types';
 
@@ -28,6 +30,7 @@ import styles from './index.module.less';
  */
 // eslint-disable-next-line @coze-arch/max-line-per-function
 const BaseSearchSelect = (props: BaseSelectProps) => {
+  const I18n = useI18n();
   const {
     optionList: _optionList,
     loadOptionByIds,
@@ -39,6 +42,7 @@ const BaseSearchSelect = (props: BaseSelectProps) => {
     onDropdownVisibleChange,
     showRefreshBtn,
     onClickRefresh,
+    disabledCacheOptions,
   } = props;
 
   // 是否在搜索中
@@ -113,7 +117,7 @@ const BaseSearchSelect = (props: BaseSelectProps) => {
    */
   const cacheOptions = useMemo(() => {
     // searchWord 表示处于搜索中, 不应该展示不在选项列表中的选项
-    if (!value || searchWord) {
+    if (!value || searchWord || disabledCacheOptions) {
       return optionList;
     }
 
@@ -131,8 +135,9 @@ const BaseSearchSelect = (props: BaseSelectProps) => {
     // value 不在选项列表, 则对value进行处理, 前面已经处理为arr了
     // 所以这里可以直接按arr 处理 返回缓存中的选项
     const optionsInCache = optionsNotInList.map(k => optionMapRef.current[k]);
-
-    return [...optionsInCache, ...optionList];
+    // 有可能存在远端数据被删除，id无法拉去到的情况
+    const newOptions = [...optionsInCache, ...optionList].filter(Boolean);
+    return newOptions;
   }, [optionList, value, searchWord, refreshFlag]);
 
   /**
@@ -162,7 +167,7 @@ const BaseSearchSelect = (props: BaseSelectProps) => {
     <Select
       suffix={
         showRefreshBtn && dropdownVisible ? (
-          <Tooltip theme="dark" content="刷新">
+          <Tooltip theme="dark" content={I18n.t('refresh')}>
             <div className="flex flex-row items-center">
               <Button
                 className="!h-6 !w-6"
@@ -171,6 +176,7 @@ const BaseSearchSelect = (props: BaseSelectProps) => {
                 color="secondary"
                 onClick={() => onClickRefresh?.()}
               />
+
               <div className="h-3 w-0 border-0 border-l border-solid coz-stroke-primary ml-[2px]" />
             </div>
           </Tooltip>

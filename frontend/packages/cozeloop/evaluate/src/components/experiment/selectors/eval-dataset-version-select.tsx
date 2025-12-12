@@ -29,10 +29,10 @@ export default function EvalDatasetVersionSelect(
 
   return (
     <Select
-      placeholder={I18n.t('please_select', { field: '' })}
+      placeholder={I18n.t('please_select_evaluation_set_version')}
       filter={true}
       searchPosition="dropdown"
-      searchPlaceholder={I18n.t('please_input', { field: '' })}
+      searchPlaceholder={I18n.t('please_enter')}
       remote
       {...props}
       loading={service.loading}

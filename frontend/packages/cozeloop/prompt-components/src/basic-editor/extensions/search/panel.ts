@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable max-lines-per-function */
 import createEle from 'crelt';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type EditorView,
   type Panel,
@@ -51,7 +52,16 @@ export class SearchPanel implements Panel {
 
   constructor(readonly view: EditorView) {
     this.commit = this.commit.bind(this);
-    this.query = getSearchQuery(view.state);
+    const initialQuery = getSearchQuery(view.state);
+    this.query =
+      initialQuery ??
+      new SearchQuery({
+        search: '',
+        caseSensitive: false,
+        regexp: false,
+        wholeWord: false,
+        replace: '',
+      });
     this.matchCount = new MatchCount();
 
     const searchLine = this.initSearchLine(view);
@@ -106,7 +116,7 @@ export class SearchPanel implements Panel {
   private initExpandButton(view: EditorView, onExpandChange?: () => void) {
     this.expand = new IconChevronRight({
       name: 'expand',
-      title: phrase(view, '展开'),
+      title: phrase(view, I18n.t('expand')),
       onchange: onExpandChange,
     });
 
@@ -153,8 +163,8 @@ export class SearchPanel implements Panel {
 
     this.searchField = createEle('input', {
       value: this.query.search,
-      placeholder: phrase(view, '查找'),
-      title: phrase(view, '查找'),
+      placeholder: phrase(view, I18n.t('find')),
+      title: phrase(view, I18n.t('find')),
       class: 'cm-custom-text-field',
       name: 'search',
       form: '',
@@ -172,7 +182,7 @@ export class SearchPanel implements Panel {
         this.commit();
       },
       name: 'case',
-      title: phrase(view, '区分大小写'),
+      title: phrase(view, I18n.t('prompt_case_sensitive')),
     });
 
     this.reField = new IconRegExp({
@@ -182,7 +192,7 @@ export class SearchPanel implements Panel {
         this.searchField.focus();
         this.commit();
       },
-      title: phrase(view, '正则表达式'),
+      title: phrase(view, I18n.t('regex')),
     });
 
     this.wordField = new IconWholeWord({
@@ -192,7 +202,7 @@ export class SearchPanel implements Panel {
         this.searchField.focus();
         this.commit();
       },
-      title: phrase(view, '全词匹配'),
+      title: phrase(view, I18n.t('prompt_whole_word_match')),
     });
 
     // const enter = new IconEnter({
@@ -207,7 +217,7 @@ export class SearchPanel implements Panel {
         findPrevious(view);
         this.updateMatchCount(view.state, this.query);
       },
-      title: phrase(view, '上一个匹配'),
+      title: phrase(view, I18n.t('prompt_previous_match')),
     });
 
     this.arrowDown = new IconArrowDown({
@@ -216,7 +226,7 @@ export class SearchPanel implements Panel {
         findNext(view);
         this.updateMatchCount(view.state, this.query);
       },
-      title: phrase(view, '下一个匹配'),
+      title: phrase(view, I18n.t('prompt_next_match')),
     });
 
     inputWrapperRef.current = createEle(
@@ -252,7 +262,7 @@ export class SearchPanel implements Panel {
             new IconClose({
               name: 'close-icon',
               onclick: () => closeSearchPanel(view),
-              title: phrase(view, '关闭'),
+              title: phrase(view, I18n.t('close')),
             }).dom,
           ],
         ),
@@ -290,8 +300,8 @@ export class SearchPanel implements Panel {
 
     this.replaceField = createEle('input', {
       value: this.query.replace,
-      placeholder: phrase(view, '替换'),
-      title: phrase(view, '替换'),
+      placeholder: phrase(view, I18n.t('replace')),
+      title: phrase(view, I18n.t('replace')),
       class: 'cm-custom-text-field',
       name: 'replace',
       form: '',
@@ -307,7 +317,7 @@ export class SearchPanel implements Panel {
         replaceNext(view);
         this.updateMatchCount(view.state, this.query);
       },
-      title: phrase(view, '替换'),
+      title: phrase(view, I18n.t('replace')),
     });
 
     this.replaceAll = new IconReplaceAll({
@@ -316,7 +326,7 @@ export class SearchPanel implements Panel {
         replaceAll(view);
         this.updateMatchCount(view.state, this.query);
       },
-      title: phrase(view, '替换所有'),
+      title: phrase(view, I18n.t('prompt_replace_all')),
     });
 
     inputWrapperRef.current = createEle(

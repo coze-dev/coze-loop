@@ -20,7 +20,11 @@ import { batchGetExperiment } from '@/request/experiment';
 import ExperimentContrastTable from './components/contrast-table';
 import ExperimentContrastHeader from './components/contrast-header';
 
-export default function ExperimentContrast() {
+export default function ExperimentContrast({
+  defaultModuleRoute,
+}: {
+  defaultModuleRoute?: string;
+}) {
   const { spaceID } = useSpace();
   const [experimentIds, setExperimentIds] = useState<string[]>([]);
   const [experiments, setExperiments] = useState<Experiment[]>([]);
@@ -80,7 +84,9 @@ export default function ExperimentContrast() {
           onExperimentIdsChange={ids => {
             setSearchParams({ experiment_ids: ids.join(',') });
           }}
+          defaultModuleRoute={defaultModuleRoute}
         />
+
         <LoopTabs
           type="card"
           activeKey={activeKey}

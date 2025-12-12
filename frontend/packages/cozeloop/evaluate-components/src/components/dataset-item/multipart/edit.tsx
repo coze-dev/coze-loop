@@ -278,7 +278,7 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
         className="!pl-2"
         disabled={items?.length >= maxPartCount}
       >
-        {I18n.t('plaintext')}
+        {I18n.t('text')}
       </Dropdown.Item>
       <Dropdown.Item
         onClick={handleAddImageFile}
@@ -318,6 +318,7 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
               icon={<IconCozHandle className="drag-handle  coz-fg-primary" />}
               className="!w-[16px] !min-w-[16px] !p-0 !h-[24px] !rounded-[4px] "
             />
+
             <div className="flex-1">
               <MultipartItemRenderer
                 item={item}
@@ -338,10 +339,9 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
           // disabled={items.length >= maxPartCount}
         >
           {I18n.t('add_data')}
-          <Typography.Text
-            className="ml-1"
-            type="secondary"
-          >{`${items.length}/${maxPartCount}`}</Typography.Text>
+          <Typography.Text className="ml-1" type="secondary">
+            {`${items.length}/${maxPartCount}`}
+          </Typography.Text>
         </Button>
       </Dropdown>
       {/* 隐藏的文件上传组件 */}
@@ -357,6 +357,7 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
         showUploadList={false}
         style={{ display: 'none' }}
       />
+
       {/* 外链输入模态框 */}
       {showUrlModal ? (
         <UrlInputModal

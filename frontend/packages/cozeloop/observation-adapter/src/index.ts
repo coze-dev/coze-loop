@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type ObservationTraceAdapters } from '@cozeloop/adapter-interfaces';
 
 import { useFetchSpanDetail } from './hooks/use-fetch-span-detail';

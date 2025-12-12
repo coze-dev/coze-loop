@@ -1,0 +1,36 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.row-border {
+  border-top: 1px solid var(--semi-color-border);
+}
+
+.cell-thead {
+  color: var(--semi-color-text-2);
+  background-color: var(--fornax-table-header-color);
+  border: 1px solid white;
+}
+
+.cell {
+  padding: 8px 12px;
+}
+
+.cell-left {
+  width: 0;
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.cell-right {
+  width: 70px;
+  flex-grow: 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}

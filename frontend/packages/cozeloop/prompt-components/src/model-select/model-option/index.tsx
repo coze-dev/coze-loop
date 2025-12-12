@@ -30,6 +30,8 @@ export interface ModelItemProps extends Model {
   /** model tags */
   tags?: Array<string>;
   disabled?: boolean;
+  status?: Int64;
+  statusInfo?: React.ReactNode;
 }
 
 export type ModelOptionProps = {
@@ -161,7 +163,7 @@ export function ModelOption({
                 </Tag>
               </Tooltip>
             ) : null} */}
-
+            {model.statusInfo}
             {modelTags?.length ? (
               <Space spacing={4}>
                 {modelTags.slice(0, 3).map(item => (

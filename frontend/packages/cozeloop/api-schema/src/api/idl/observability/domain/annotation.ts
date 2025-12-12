@@ -5,9 +5,12 @@ export enum AnnotationType {
   EvaluationSet = "manual_evaluation_set",
   ManualFeedback = "manual_feedback",
   CozeFeedback = "coze_feedback",
+  OpenAPIFeedback = "openapi_feedback",
 }
 export enum ValueType {
   String = "string",
+  Category = "category",
+  Number = "number",
   Long = "long",
   Double = "double",
   Bool = "bool",
@@ -51,4 +54,9 @@ export interface Annotation {
   base_info?: common.BaseInfo,
   auto_evaluate?: AutoEvaluate,
   manual_feedback?: ManualFeedback,
+}
+export interface AnnotationEvaluator {
+  evaluator_version_id: number,
+  evaluator_name: string,
+  evaluator_version: string,
 }

@@ -1,3 +1,5 @@
+import * as task from './domain/task';
+export { task };
 import * as export_dataset from './domain/export_dataset';
 export { export_dataset };
 import * as annotation from './domain/annotation';
@@ -34,6 +36,18 @@ export interface ListSpansResponse {
   next_page_token: string,
   has_more: boolean,
 }
+export interface ListPreSpanRequest {
+  workspace_id: string,
+  trace_id: string,
+  /** ms */
+  start_time: string,
+  span_id?: string,
+  previous_response_id?: string,
+  platform_type?: common.PlatformType,
+}
+export interface ListPreSpanResponse {
+  spans: span.OutputSpan[]
+}
 export interface TokenCost {
   input: string,
   output: string,
@@ -53,6 +67,20 @@ export interface GetTraceRequest {
   span_ids?: string[],
 }
 export interface GetTraceResponse {
+  spans: span.OutputSpan[],
+  traces_advance_info?: TraceAdvanceInfo,
+}
+export interface SearchTraceTreeRequest {
+  workspace_id: string,
+  trace_id: string,
+  /** ms */
+  start_time: string,
+  /** ms */
+  end_time: string,
+  platform_type?: common.PlatformType,
+  filters?: filter.FilterFields,
+}
+export interface SearchTraceTreeResponse {
   spans: span.OutputSpan[],
   traces_advance_info?: TraceAdvanceInfo,
 }
@@ -91,7 +119,8 @@ export interface GetTracesMetaInfoRequest {
 export interface GetTracesMetaInfoResponse {
   field_metas: {
     [key: string | number]: FieldMeta
-  }
+  },
+  key_span_type?: string[],
 }
 export interface CreateViewRequest {
   enterprise_id?: string,
@@ -222,6 +251,40 @@ export interface PreviewExportTracesToDatasetResponse {
   /** 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg */
   msg?: string,
 }
+export interface ChangeEvaluatorScoreRequest {
+  workspace_id: string,
+  annotation_id: string,
+  span_id: string,
+  start_time: string,
+  correction: annotation.Correction,
+  platform_type?: common.PlatformType,
+}
+export interface ChangeEvaluatorScoreResponse {
+  annotation: annotation.Annotation
+}
+export interface ListAnnotationEvaluatorsRequest {
+  workspace_id: string,
+  name?: string,
+}
+export interface ListAnnotationEvaluatorsResponse {
+  evaluators: annotation.AnnotationEvaluator[]
+}
+export interface ExtractSpanInfoRequest {
+  workspace_id: string,
+  trace_id: string,
+  span_ids: string[],
+  start_time?: string,
+  end_time?: string,
+  platform_type?: common.PlatformType,
+  field_mappings?: export_dataset.FieldMapping[],
+}
+export interface SpanInfo {
+  span_id: string,
+  field_list: export_dataset.FieldData[],
+}
+export interface ExtractSpanInfoResponse {
+  span_infos: SpanInfo[]
+}
 export const ListSpans = /*#__PURE__*/createAPI<ListSpansRequest, ListSpansResponse>({
   "url": "/api/observability/v1/spans/list",
   "method": "POST",
@@ -231,6 +294,18 @@ export const ListSpans = /*#__PURE__*/createAPI<ListSpansRequest, ListSpansRespo
     "body": ["workspace_id", "start_time", "end_time", "filters", "page_size", "order_bys", "page_token", "platform_type", "span_list_type"]
   },
   "resType": "ListSpansResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ListPreSpan = /*#__PURE__*/createAPI<ListPreSpanRequest, ListPreSpanResponse>({
+  "url": "/api/observability/v1/spans/pre_list",
+  "method": "POST",
+  "name": "ListPreSpan",
+  "reqType": "ListPreSpanRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "trace_id", "start_time", "span_id", "previous_response_id", "platform_type"]
+  },
+  "resType": "ListPreSpanResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
   "service": "observabilityTrace"
 });
@@ -244,6 +319,18 @@ export const GetTrace = /*#__PURE__*/createAPI<GetTraceRequest, GetTraceResponse
     "path": ["trace_id"]
   },
   "resType": "GetTraceResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const SearchTraceTree = /*#__PURE__*/createAPI<SearchTraceTreeRequest, SearchTraceTreeResponse>({
+  "url": "/api/observability/v1/traces/search_tree",
+  "method": "POST",
+  "name": "SearchTraceTree",
+  "reqType": "SearchTraceTreeRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "trace_id", "start_time", "end_time", "platform_type", "filters"]
+  },
+  "resType": "SearchTraceTreeResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
   "service": "observabilityTrace"
 });
@@ -392,6 +479,42 @@ export const PreviewExportTracesToDataset = /*#__PURE__*/createAPI<PreviewExport
     "body": ["workspace_id", "span_ids", "category", "config", "start_time", "end_time", "platform_type", "export_type", "field_mappings"]
   },
   "resType": "PreviewExportTracesToDatasetResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ChangeEvaluatorScore = /*#__PURE__*/createAPI<ChangeEvaluatorScoreRequest, ChangeEvaluatorScoreResponse>({
+  "url": "/api/observability/v1/traces/change_eval_score",
+  "method": "POST",
+  "name": "ChangeEvaluatorScore",
+  "reqType": "ChangeEvaluatorScoreRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "annotation_id", "span_id", "start_time", "correction", "platform_type"]
+  },
+  "resType": "ChangeEvaluatorScoreResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ListAnnotationEvaluators = /*#__PURE__*/createAPI<ListAnnotationEvaluatorsRequest, ListAnnotationEvaluatorsResponse>({
+  "url": "/api/observability/v1/annotation/list_evaluators",
+  "method": "GET",
+  "name": "ListAnnotationEvaluators",
+  "reqType": "ListAnnotationEvaluatorsRequest",
+  "reqMapping": {
+    "query": ["workspace_id", "name"]
+  },
+  "resType": "ListAnnotationEvaluatorsResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ExtractSpanInfo = /*#__PURE__*/createAPI<ExtractSpanInfoRequest, ExtractSpanInfoResponse>({
+  "url": "/api/observability/v1/trace/extract_span_info",
+  "method": "POST",
+  "name": "ExtractSpanInfo",
+  "reqType": "ExtractSpanInfoRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "trace_id", "span_ids", "start_time", "end_time", "platform_type", "field_mappings"]
+  },
+  "resType": "ExtractSpanInfoResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
   "service": "observabilityTrace"
 });

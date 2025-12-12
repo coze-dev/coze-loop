@@ -1,18 +1,21 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @coze-arch/max-line-per-function */
 import { useRef, useState } from 'react';
 
 import { isEqual } from 'lodash-es';
 import cs from 'classnames';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
-import { InfoTooltip } from '@cozeloop/components';
+import {
+  InfoTooltip,
+  SentinelForm,
+  type SentinelFormApi,
+} from '@cozeloop/components';
 import { useNavigateModule, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozDocument } from '@coze-arch/coze-design/icons';
 import {
-  type FormApi,
-  Form,
   Button,
   Toast,
   FormInput,
@@ -42,9 +45,8 @@ export interface DatasetCreateFormProps {
 
 // const FormColumnConfig = withField()
 
-// eslint-disable-next-line @coze-arch/max-line-per-function
 export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
-  const formRef = useRef<FormApi<IDatasetCreateForm>>();
+  const formRef = useRef<SentinelFormApi<IDatasetCreateForm>>();
   const { spaceID } = useSpace();
   const navigate = useNavigateModule();
   const [template, setTemplate] = useState<CreateTemplate>(
@@ -66,7 +68,11 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
         },
       });
       Toast.success(I18n.t('create_success'));
+      formRef.current?.submitLog?.();
       navigate(`evaluation/datasets/${res.evaluation_set_id}`);
+    } catch (e) {
+      console.log(e);
+      formRef.current?.submitLog?.(true, e);
     } finally {
       setLoading(false);
     }
@@ -90,7 +96,8 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
           </Typography.Text>
         </div>
       </div>
-      <Form<IDatasetCreateForm>
+      <SentinelForm<IDatasetCreateForm>
+        formID={I18n.t('evaluate_evaluation_new_testset')}
         getFormApi={formApi => {
           formRef.current = formApi;
         }}
@@ -146,7 +153,7 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
                           );
                         } else {
                           Modal.warning({
-                            title: I18n.t('information_not_saved'),
+                            title: I18n.t('information_unsaved'),
                             width: 420,
                             content: I18n.t(
                               'switching_modification_overwritten_tips',
@@ -160,7 +167,7 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
                             },
                             okText: I18n.t('global_btn_confirm'),
                             okButtonColor: 'yellow',
-                            cancelText: I18n.t('global_btn_cancel'),
+                            cancelText: I18n.t('cancel'),
                           });
                         }
                       }}
@@ -178,7 +185,7 @@ export const DatasetCreateForm = ({ header }: DatasetCreateFormProps) => {
             </FormSectionLayout>
           </div>
         )}
-      </Form>
+      </SentinelForm>
       <div className="flex justify-end w-[800px] m-[24px] mx-auto">
         <Guard point={GuardPoint['eval.dataset_create.create']}>
           <Button

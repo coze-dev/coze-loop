@@ -25,11 +25,12 @@
     "@cozeloop/api-schema": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/components": "workspace:*",
+    "@cozeloop/hooks": "workspace:*",
     "@cozeloop/i18n-adapter": "workspace:*",
     "@cozeloop/tea-adapter": "workspace:*",
     "@lezer/common": "^1.2.2",
-    "@shikijs/langs": "^3.9.2",
-    "@shikijs/themes": "^3.2.2",
+    "@shikijs/langs": "3.3.0",
+    "@shikijs/themes": "3.3.0",
     "ahooks": "^3.7.8",
     "classnames": "^2.3.2",
     "codemirror-shiki": "^0.3.0",
@@ -52,7 +53,6 @@
     "@coze-arch/bot-typings": "workspace:*",
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
-    "@coze-arch/vitest-config": "workspace:*",
     "@cozeloop/tailwind-config": "workspace:*",
     "@types/lodash-es": "^4.17.10",
     "@types/react": "18.2.37",
@@ -60,10 +60,11 @@
     "@vitest/coverage-v8": "~3.0.5",
     "happy-dom": "^20.0.10",
     "react-dom": "~18.2.0",
-    "storybook": "^7.6.7",
     "tsconfig-paths": "4.1.0",
     "vite": "^4.3.9",
     "vite-plugin-svgr": "~3.3.0",
     "vitest": "~3.0.5"
-  }
+  },
+  "peerDependencies": {}
 }
+

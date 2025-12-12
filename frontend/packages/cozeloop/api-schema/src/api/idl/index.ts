@@ -1,12 +1,14 @@
 export * as promptDebug from './prompt/coze.loop.prompt.debug';
 export * as promptManage from './prompt/coze.loop.prompt.manage';
 export * as observabilityTrace from './observability/coze.loop.observability.trace';
+export * as observabilityTask from './observability/coze.loop.observability.task';
+export * as observabilityMetric from './observability/coze.loop.observability.metric';
 export * as evaluationEvalSet from './evaluation/coze.loop.evaluation.eval_set';
 export * as evaluationEvalTarget from './evaluation/coze.loop.evaluation.eval_target';
 export * as evaluationEvaluator from './evaluation/coze.loop.evaluation.evaluator';
 export * as evaluationExpt from './evaluation/coze.loop.evaluation.expt';
 export * as dataDataset from './data/coze.loop.data.dataset';
-export * as dataTag from './data/coze.loop.data.tag';
+export * as dateTag from './data/coze.loop.data.tag';
 export * as llmManage from './llm/coze.loop.llm.manage';
 export * as foundationUpload from './foundation/coze.loop.foundation.file';
 export * as foundationUser from './foundation/coze.loop.foundation.user';

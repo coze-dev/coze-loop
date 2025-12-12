@@ -11,6 +11,10 @@ export interface ListEvaluatorsRequest {
   creator_ids?: string[],
   evaluator_type?: evaluator.EvaluatorType[],
   with_version?: boolean,
+  /** 是否查询预置评估器 */
+  builtin?: boolean,
+  /** 筛选器选项 */
+  filter_option?: evaluator.EvaluatorFilterOption,
   page_size?: number,
   page_number?: number,
   order_bys?: common.OrderBy[],
@@ -65,6 +69,11 @@ export interface UpdateEvaluatorRequest {
   name?: string,
   /** 描述 */
   description?: string,
+  /** 是否预置评估器 */
+  builtin?: boolean,
+  evaluator_info?: evaluator.EvaluatorInfo,
+  builtin_visible_version?: string,
+  box_type?: evaluator.EvaluatorBoxType,
 }
 export interface UpdateEvaluatorResponse {}
 export interface CloneEvaluatorRequest {
@@ -91,6 +100,8 @@ export interface GetEvaluatorVersionRequest {
   evaluator_version_id: string,
   /** 是否查询已删除的评估器，默认不查询 */
   include_deleted?: boolean,
+  /** 是否预置评估器 */
+  builtin?: boolean,
 }
 export interface GetEvaluatorVersionResponse {
   evaluator?: evaluator.Evaluator
@@ -241,6 +252,74 @@ export interface ValidateEvaluatorResponse {
   error_message?: string,
   evaluator_output_data?: evaluator.EvaluatorOutputData,
 }
+export interface ListTemplatesV2Request {
+  /** 筛选器选项 */
+  filter_option?: evaluator.EvaluatorFilterOption,
+  page_size?: number,
+  page_number?: number,
+  order_bys?: common.OrderBy[],
+}
+export interface ListTemplatesV2Response {
+  evaluator_templates?: evaluator.EvaluatorTemplate[],
+  total?: string,
+}
+export interface GetTemplateV2Request {
+  evaluator_template_id?: string,
+  /** 是否查询自定义code评估器模板，默认不查询 */
+  custom_code?: boolean,
+}
+export interface GetTemplateV2Response {
+  evaluator_template?: evaluator.EvaluatorTemplate
+}
+export interface DebugBuiltinEvaluatorRequest {
+  evaluator_id: string,
+  input_data: evaluator.EvaluatorInputData,
+  /** 空间 id */
+  workspace_id: string,
+}
+export interface DebugBuiltinEvaluatorResponse {
+  output_data: evaluator.EvaluatorOutputData
+}
+export interface UpdateBuiltinEvaluatorTagsRequest {
+  evaluator_id: string,
+  workspace_id?: string,
+  /** 评估器标签 */
+  tags?: {
+    [key: string | number]: {
+      [key: string | number]: string[]
+    }
+  },
+}
+export interface UpdateBuiltinEvaluatorTagsResponse {
+  evaluator: evaluator.Evaluator
+}
+export interface CreateEvaluatorTemplateRequest {
+  evaluator_template: evaluator.EvaluatorTemplate
+}
+export interface CreateEvaluatorTemplateResponse {
+  evaluator_template: evaluator.EvaluatorTemplate
+}
+export interface UpdateEvaluatorTemplateRequest {
+  evaluator_template_id: string,
+  evaluator_template: evaluator.EvaluatorTemplate,
+}
+export interface UpdateEvaluatorTemplateResponse {
+  evaluator_template: evaluator.EvaluatorTemplate
+}
+export interface DeleteEvaluatorTemplateRequest {
+  evaluator_template_id: string
+}
+export interface DeleteEvaluatorTemplateResponse {}
+export interface ListEvaluatorTagsRequest {
+  /** 评估器标签类型，默认预置评估器 */
+  tag_type?: evaluator.EvaluatorTagType
+}
+export interface ListEvaluatorTagsResponse {
+  /** 筛选器选项 */
+  tags?: {
+    [key: string | number]: string[]
+  }
+}
 /**
  * 评估器
  * 按查询条件查询evaluator
@@ -251,7 +330,7 @@ export const ListEvaluators = /*#__PURE__*/createAPI<ListEvaluatorsRequest, List
   "name": "ListEvaluators",
   "reqType": "ListEvaluatorsRequest",
   "reqMapping": {
-    "body": ["workspace_id", "search_name", "creator_ids", "evaluator_type", "with_version", "page_size", "page_number", "order_bys"]
+    "body": ["workspace_id", "search_name", "creator_ids", "evaluator_type", "with_version", "builtin", "filter_option", "page_size", "page_number", "order_bys"]
   },
   "resType": "ListEvaluatorsResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
@@ -305,7 +384,7 @@ export const UpdateEvaluator = /*#__PURE__*/createAPI<UpdateEvaluatorRequest, Up
   "reqType": "UpdateEvaluatorRequest",
   "reqMapping": {
     "path": ["evaluator_id"],
-    "body": ["workspace_id", "evaluator_type", "name", "description"]
+    "body": ["workspace_id", "evaluator_type", "name", "description", "builtin", "evaluator_info", "builtin_visible_version", "box_type"]
   },
   "resType": "UpdateEvaluatorResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
@@ -376,7 +455,7 @@ export const GetEvaluatorVersion = /*#__PURE__*/createAPI<GetEvaluatorVersionReq
   "name": "GetEvaluatorVersion",
   "reqType": "GetEvaluatorVersionRequest",
   "reqMapping": {
-    "query": ["workspace_id", "include_deleted"],
+    "query": ["workspace_id", "include_deleted", "builtin"],
     "path": ["evaluator_version_id"]
   },
   "resType": "GetEvaluatorVersionResponse",
@@ -520,6 +599,118 @@ export const ValidateEvaluator = /*#__PURE__*/createAPI<ValidateEvaluatorRequest
     "body": ["workspace_id", "evaluator_content", "evaluator_type", "input_data"]
   },
   "resType": "ValidateEvaluatorResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/** 查询评估器模板 */
+export const ListTemplatesV2 = /*#__PURE__*/createAPI<ListTemplatesV2Request, ListTemplatesV2Response>({
+  "url": "/api/evaluation/v1/evaluator_template/list",
+  "method": "POST",
+  "name": "ListTemplatesV2",
+  "reqType": "ListTemplatesV2Request",
+  "reqMapping": {
+    "body": ["filter_option", "page_size", "page_number", "order_bys"]
+  },
+  "resType": "ListTemplatesV2Response",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+export const GetTemplateV2 = /*#__PURE__*/createAPI<GetTemplateV2Request, GetTemplateV2Response>({
+  "url": "/api/evaluation/v1/evaluator_template/:evaluator_template_id",
+  "method": "GET",
+  "name": "GetTemplateV2",
+  "reqType": "GetTemplateV2Request",
+  "reqMapping": {
+    "path": ["evaluator_template_id"],
+    "query": ["custom_code"]
+  },
+  "resType": "GetTemplateV2Response",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/** 创建评估器模板 */
+export const CreateEvaluatorTemplate = /*#__PURE__*/createAPI<CreateEvaluatorTemplateRequest, CreateEvaluatorTemplateResponse>({
+  "url": "/api/evaluation/v1/evaluator_template",
+  "method": "POST",
+  "name": "CreateEvaluatorTemplate",
+  "reqType": "CreateEvaluatorTemplateRequest",
+  "reqMapping": {
+    "body": ["evaluator_template"]
+  },
+  "resType": "CreateEvaluatorTemplateResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/** 更新评估器模板 */
+export const UpdateEvaluatorTemplate = /*#__PURE__*/createAPI<UpdateEvaluatorTemplateRequest, UpdateEvaluatorTemplateResponse>({
+  "url": "/api/evaluation/v1/evaluator_template/:evaluator_template_id",
+  "method": "PATCH",
+  "name": "UpdateEvaluatorTemplate",
+  "reqType": "UpdateEvaluatorTemplateRequest",
+  "reqMapping": {
+    "path": ["evaluator_template_id"],
+    "body": ["evaluator_template"]
+  },
+  "resType": "UpdateEvaluatorTemplateResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/** 删除 */
+export const DeleteEvaluatorTemplate = /*#__PURE__*/createAPI<DeleteEvaluatorTemplateRequest, DeleteEvaluatorTemplateResponse>({
+  "url": "/api/evaluation/v1/evaluator_template/:evaluator_template_id",
+  "method": "DELETE",
+  "name": "DeleteEvaluatorTemplate",
+  "reqType": "DeleteEvaluatorTemplateRequest",
+  "reqMapping": {
+    "path": ["evaluator_template_id"]
+  },
+  "resType": "DeleteEvaluatorTemplateResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/**
+ * 调试预置评估器
+ * 调试预置评估器
+*/
+export const DebugBuiltinEvaluator = /*#__PURE__*/createAPI<DebugBuiltinEvaluatorRequest, DebugBuiltinEvaluatorResponse>({
+  "url": "/api/evaluation/v1/evaluators/debug_builtin",
+  "method": "POST",
+  "name": "DebugBuiltinEvaluator",
+  "reqType": "DebugBuiltinEvaluatorRequest",
+  "reqMapping": {
+    "body": ["evaluator_id", "input_data", "workspace_id"]
+  },
+  "resType": "DebugBuiltinEvaluatorResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/**
+ * 更新预置评估器tag
+ * 更新预置评估器
+*/
+export const UpdateBuiltinEvaluatorTags = /*#__PURE__*/createAPI<UpdateBuiltinEvaluatorTagsRequest, UpdateBuiltinEvaluatorTagsResponse>({
+  "url": "/api/evaluation/v1/evaluators/:evaluator_id/update_builtin_tags",
+  "method": "PATCH",
+  "name": "UpdateBuiltinEvaluatorTags",
+  "reqType": "UpdateBuiltinEvaluatorTagsRequest",
+  "reqMapping": {
+    "path": ["evaluator_id"],
+    "body": ["workspace_id", "tags"]
+  },
+  "resType": "UpdateBuiltinEvaluatorTagsResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/** 查询Tag */
+export const ListEvaluatorTags = /*#__PURE__*/createAPI<ListEvaluatorTagsRequest, ListEvaluatorTagsResponse>({
+  "url": "/api/evaluation/v1/evaluators/list_tags",
+  "method": "POST",
+  "name": "ListEvaluatorTags",
+  "reqType": "ListEvaluatorTagsRequest",
+  "reqMapping": {
+    "query": ["tag_type"]
+  },
+  "resType": "ListEvaluatorTagsResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });

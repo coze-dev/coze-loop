@@ -57,6 +57,7 @@ const specBar: ISpec = {
     '#00B2B2',
     '#00B2B2',
   ],
+
   xField: 'name',
   yField: 'score',
   // barMaxWidth: 40,
@@ -85,6 +86,7 @@ const specBar: ISpec = {
       },
     },
   ],
+
   legends: {
     visible: true,
     orient: 'bottom',
@@ -177,6 +179,7 @@ function EvaluatorChart({
         showEvalTarget={showEvalTargetTooltip}
       />
     ),
+
     [evaluator, experiments, spaceID],
   );
 
@@ -240,8 +243,7 @@ export function ExperimentContrastChart({
 }: {
   spaceID: Int64;
   experiments: Experiment[] | undefined;
-  experimentIds: Int64[] | undefined;
-  // 仅展示 base experiment 的 evaluator
+  experimentIds: Int64[] | undefined; // 仅展示 base experiment 的 evaluator
   onlyBaseExperimentEvluators?: boolean;
   selectedEvaluatorsId?: Int64[];
   showActions?: boolean;
@@ -368,6 +370,7 @@ export function ExperimentContrastChart({
             value={selectedEvaluatorIds}
             onChange={val => setSelectedEvaluatorIds(val as Int64[])}
           />
+
           <RefreshButton
             onRefresh={() => {
               service.refresh();

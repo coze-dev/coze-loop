@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useEffect, useState } from 'react';
 
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { TypographyText } from '@cozeloop/evaluate-components';
 import { LoopTable } from '@cozeloop/components';
 import {
   type EvaluatorRecord,
@@ -119,6 +119,7 @@ export default function EvaluatorResultTable({
         },
       },
     ];
+
     setColumns(newColumns);
   }, [columnEvaluators, spaceID, evaluatorRecordMap]);
   return (

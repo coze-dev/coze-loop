@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import { uniq } from 'lodash-es';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   ColumnsManage,
@@ -15,7 +16,6 @@ import {
   EvaluateSetSelect,
   ExperimentEvaluatorLogicFilter,
   getTableSelectionRows,
-  TypographyText,
   useExperimentListStore,
   type SemiTableSort,
 } from '@cozeloop/evaluate-components';
@@ -71,12 +71,9 @@ export default function ExperimentSelectModal({
   onClose,
   onReportCompare,
 }: {
-  /** 对比试验组，数组中第一个认为是基准试验 */
-  contrastExperiments?: Experiment[];
-  /** 默认筛选条件 */
-  defaultFilter?: Filter;
-  /** 禁用某些筛选条件的编辑 */
-  disabledFilterFields?: (keyof Filter)[];
+  /** 对比试验组，数组中第一个认为是基准试验 */ contrastExperiments?: Experiment[];
+  /** 默认筛选条件 */ defaultFilter?: Filter;
+  /** 禁用某些筛选条件的编辑 */ disabledFilterFields?: (keyof Filter)[];
   onOk?: (experimentIds: Int64[], experiments: Experiment[]) => void;
   onClose?: () => void;
   onReportCompare?: (status: string) => void;
@@ -134,6 +131,7 @@ export default function ExperimentSelectModal({
             value={filter?.name}
             onChange={val => updateFilter('name', val)}
           />
+
           <EvaluateSetSelect
             prefix={I18n.t('evaluation_set')}
             value={filter?.eval_set}
@@ -160,12 +158,14 @@ export default function ExperimentSelectModal({
               updateFilter('eval_set', val);
             }}
           />
+
           <ExperimentStatusSelect
             value={filter?.status}
             disabled={disabledFilterFields?.includes('status')}
             maxTagCount={undefined}
             onChange={val => updateFilter('status', val as ExptStatus[])}
           />
+
           <ExperimentEvaluatorLogicFilter
             value={logicFilter}
             // 评测集改为外露了，这里将评测集从逻辑条件中移除
@@ -187,6 +187,7 @@ export default function ExperimentSelectModal({
       }
     />
   );
+
   return (
     <Modal
       title={I18n.t('select_experiment')}
@@ -228,7 +229,9 @@ export default function ExperimentSelectModal({
         </Space>
 
         <div className="shrink-0 flex items-center gap-1">
-          <span className="font-medium">{I18n.t('selected')}</span>
+          <span className="font-medium">
+            {I18n.t('evaluate_selected_label')}
+          </span>
           <div className="flex items-center gap-1">
             {selectedExperiments.map(experiment => (
               <Tag

@@ -108,14 +108,16 @@ export const TagsDetail = ({
       onOk: () => {
         setChanged(false);
         setBlockLeave(false);
-        updateTag(values).then(() => {
-          Toast.success(I18n.t('save_success'));
-          setTimeout(() => {
-            navigate(
-              `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
-            );
-          }, 300);
-        });
+        updateTag(values)
+          .then(() => {
+            Toast.success(I18n.t('save_success'));
+            setTimeout(() => {
+              navigate(
+                `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
+              );
+            }, 300);
+          })
+          .catch(err => console.error(err));
       },
       okText: I18n.t('save'),
       cancelText: I18n.t('cancel'),
@@ -154,6 +156,7 @@ export const TagsDetail = ({
           tagListPagePath={tagListPagePath}
           tagListPageQuery={tagListPageQuery}
         />
+
         <div className="flex flex-1 h-full overflow-hidden">
           <TagDetailContent
             ref={contentRef}
@@ -162,6 +165,7 @@ export const TagsDetail = ({
             onValueChange={handleValueChange}
             onSubmit={handleSubmit}
           />
+
           {editHistoryVisible ? (
             <div>
               <EditHistoryList onClose={() => setEditHistoryVisible(false)} />

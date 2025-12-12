@@ -16,7 +16,7 @@ export function OpenDetailText({
   customOpen?: () => void;
 }) {
   return (
-    <Tooltip theme="dark" content={I18n.t('detail')}>
+    <Tooltip theme="dark" content={I18n.t('view_detail')}>
       <div
         className={classNames(
           'flex-shrink-0 text-sm text-brand-9 font-normal cursor-pointer !p-[2px] ',
@@ -31,7 +31,7 @@ export function OpenDetailText({
           }
         }}
       >
-        {text || I18n.t('detail')}
+        {text || I18n.t('view_detail')}
       </div>
     </Tooltip>
   );

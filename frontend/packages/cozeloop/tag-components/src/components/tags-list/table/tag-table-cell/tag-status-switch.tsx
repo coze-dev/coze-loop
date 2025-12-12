@@ -47,9 +47,11 @@ export const TagStatusSwitch = (props: TagStatusSwitchProps) => {
           updateTagStatus({
             tagKeyIds: [tagInfo.tag_key_id ?? ''],
             toStatus: enabled ? TagStatus.Inactive : TagStatus.Active,
-          }).then(() => {
-            tagInfo.status = enabled ? TagStatus.Inactive : TagStatus.Active;
-          });
+          })
+            .then(() => {
+              tagInfo.status = enabled ? TagStatus.Inactive : TagStatus.Active;
+            })
+            .catch(err => console.error(err));
         }}
       >
         <span>

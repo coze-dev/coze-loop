@@ -15,6 +15,7 @@ import { EvaluateTargetMappingField } from '@/components/selectors/evaluate-targ
 import PromptEvalTargetVersionFormSelect from '../../components/eval-target-prompt-version-form-select';
 import PromptEvalTargetFormSelect from '../../components/eval-target-prompt-form-select';
 import usePromptDetail from './use-prompt-detail';
+import { PromptUserQueryFieldMapping } from './prompt-user-query-field-mappding';
 import { EvalTargetPromptDetail } from './eval-target-prompt-detail';
 import { EvalTargetDynamicParams } from './dynamic-params/eval-target-dynamic-params';
 
@@ -86,14 +87,18 @@ const PluginEvalTargetForm = (props: PluginEvalTargetFormProps) => {
 
   useEffect(() => {
     if (variableList?.length > 0) {
-      const payload = {};
-      const currentMapping = formValues?.evalTargetMapping || {};
       // 构造初始数据 { input: '', output: ''}
       variableList.forEach(v => {
         // 如果当前 Mapping 有对应的值, 则直接使用当前的值
-        payload[v?.name || ''] = currentMapping?.[v?.name || ''] || '';
+        const schema = evaluationSetSchemas?.find(s => s.name === v?.name);
+        if (schema && v?.name) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          onChange(`evalTargetMapping.${v?.name}`, schema);
+        }
       });
-      onChange('evalTargetMapping', payload);
+      // onChange('evalTargetMapping', payload);
+      // fieldApi.setValue;
     }
     // 变量列表变了, 代表着所选的prompt或版本发生了变化
   }, [variableList]);
@@ -105,6 +110,7 @@ const PluginEvalTargetForm = (props: PluginEvalTargetFormProps) => {
         <>
           {/* prompt 选择 */}
           <PromptEvalTargetFormSelect
+            fieldClassName="evaluate-prompt-eval-target-form-select"
             className="w-full"
             field="evalTarget"
             onChangeWithObject={false}
@@ -129,25 +135,28 @@ const PluginEvalTargetForm = (props: PluginEvalTargetFormProps) => {
             />
           </Form.Slot>
           <div className="evaluate-target-mapping-field-wrapper">
+            <Form.Label required={true} className="mb-2">
+              {EvaluateTargetMappingFieldLabel}
+            </Form.Label>
             <EvaluateTargetMappingField
+              keyTitle={I18n.t('variable')}
               field="evalTargetMapping"
               prefixField="evalTargetMapping"
-              label={EvaluateTargetMappingFieldLabel}
+              fieldClassName="!py-0"
+              noLabel={true}
               evaluationSetSchemas={evaluationSetSchemas}
               rules={[
                 {
                   required: true,
-                  validator: (_, value) => {
+                  validator: (_, value, cb) => {
                     // 需要配置变量, 并且配置过字段映射
                     // 没有值, 或者为空对象
                     if (variableList?.length > 0 && isEmpty(value)) {
-                      return new Error(
-                        I18n.t('evaluate_please_configure_field_mapping'),
-                      );
+                      cb(I18n.t('please_configure_field_mapping'));
+                      return false;
                     }
                     return true;
                   },
-                  message: I18n.t('evaluate_please_configure_field_mapping'),
                 },
               ]}
               loading={loading}
@@ -155,6 +164,11 @@ const PluginEvalTargetForm = (props: PluginEvalTargetFormProps) => {
               selectProps={{
                 prefix: I18n.t('evaluation_set'),
               }}
+            />
+            <PromptUserQueryFieldMapping
+              evaluationSetSchemas={evaluationSetSchemas}
+              // 没有变量时, user_query 是必填项
+              required={!variableList?.length}
             />
             <EvalTargetDynamicParams
               initialValue={formValues.target_runtime_param}

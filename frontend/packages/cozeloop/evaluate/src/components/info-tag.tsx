@@ -3,8 +3,8 @@
 import { type ReactNode } from 'react';
 
 import classNames from 'classnames';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { TypographyText } from '@cozeloop/evaluate-components';
 import {
   type ColumnAnnotation,
   type ColumnEvaluator,
@@ -53,7 +53,7 @@ export function AnnotationInfo(props: {
   return (
     <BaseInfo
       name={annotation.tag_key_name}
-      tag={I18n.t('manual_calibration')}
+      tag={I18n.t('manual_annotation')}
       tagProps={tagProps}
       className={className}
     />

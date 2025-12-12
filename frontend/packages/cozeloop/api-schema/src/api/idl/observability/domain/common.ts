@@ -8,6 +8,7 @@ export enum PlatformType {
   Workflow = "coze_workflow",
   Ark = "ark",
   VeADK = "veadk",
+  VeAgentkit = "ve_agentkit",
   LoopAll = "loop_all",
   InnerCozeloop = "inner_cozeloop",
   InnerDoubao = "inner_doubao",
@@ -45,4 +46,7 @@ export enum ContentType {
   Image = "Image",
   Audio = "Audio",
   MultiPart = "MultiPart",
+}
+export interface Session {
+  user_id?: string
 }

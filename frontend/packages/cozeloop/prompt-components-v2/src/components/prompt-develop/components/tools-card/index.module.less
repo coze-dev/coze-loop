@@ -1,0 +1,34 @@
+.tools-editor-container {
+  cursor: pointer;
+
+  overflow: hidden;
+  display: flex;
+
+  width: 100%;
+  height: 509px;
+
+  background: #fff;
+  border: 1px solid rgba(82, 100, 154, 13%);
+  border-radius: 6px;
+
+
+  .tools-editor{
+    flex:1;
+
+    &-header{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      height: 42px;
+      padding: 8px 12px;
+
+      background: #F0F0F7;
+      border-bottom: 1px solid rgba(82, 100, 154, 13%);
+    }
+
+    &:first-of-type{
+      border-right: 1px solid rgba(82, 100, 154, 13%);
+    }
+  }
+}

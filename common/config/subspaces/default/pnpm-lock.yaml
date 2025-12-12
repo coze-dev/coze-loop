@@ -1034,7 +1034,7 @@ importers:
     dependencies:
       '@bytedance/calypso':
         specifier: 0.1.0-beta.8
-        version: 0.1.0-beta.8(@babel/runtime@7.27.6)(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.17.1)(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
+        version: 0.1.0-beta.8(@babel/runtime@7.27.6)(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.17.1)(@types/react@18.2.37)(immer@10.1.1)(react-dom@18.2.0)(react@18.2.0)
     devDependencies:
       '@coze-arch/bot-typings':
         specifier: workspace:*
@@ -1319,6 +1319,9 @@ importers:
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
+      '@cozeloop/observation-components':
+        specifier: workspace:*
+        version: link:../observation-components
       '@types/node':
         specifier: 18.18.9
         version: 18.18.9
@@ -1331,6 +1334,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
+      ahooks:
+        specifier: 3.7.8
+        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -1340,12 +1346,6 @@ importers:
 
   ../../../frontend/packages/cozeloop/api-schema:
     dependencies:
-      '@coze-arch/idl2ts-runtime':
-        specifier: workspace:*
-        version: link:../../../infra/idl/idl2ts-runtime
-      '@coze-arch/logger':
-        specifier: workspace:*
-        version: link:../../arch/logger
       eventemitter3:
         specifier: ^5.0.1
         version: 5.0.1
@@ -1356,12 +1356,27 @@ importers:
       '@coze-arch/idl2ts-cli':
         specifier: workspace:*
         version: link:../../../infra/idl/idl2ts-cli
+      '@coze-arch/idl2ts-runtime':
+        specifier: workspace:*
+        version: link:../../../infra/idl/idl2ts-runtime
+      '@coze-arch/logger':
+        specifier: workspace:*
+        version: link:../../arch/logger
       '@coze-arch/ts-config':
         specifier: workspace:*
         version: link:../../../config/ts-config
       '@coze-arch/vitest-config':
         specifier: workspace:*
         version: link:../../../config/vitest-config
+      '@microsoft/api-extractor':
+        specifier: 7.43.0
+        version: 7.43.0(@types/node@18.18.9)
+      '@rsbuild/core':
+        specifier: ~1.1.0
+        version: 1.1.13
+      '@rslib/core':
+        specifier: ~0.11.0
+        version: 0.11.2(@microsoft/api-extractor@7.43.0)
       '@types/node':
         specifier: 18.18.9
         version: 18.18.9
@@ -1435,6 +1450,9 @@ importers:
 
   ../../../frontend/packages/cozeloop/base-hooks:
     dependencies:
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
       '@cozeloop/stores':
         specifier: workspace:*
         version: link:../stores
@@ -1487,13 +1505,22 @@ importers:
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
         version: link:../i18n
+      '@cozeloop/tea-adapter':
+        specifier: workspace:*
+        version: link:../tea
       classnames:
         specifier: ^2.3.2
         version: 2.5.1
       nanoid:
         specifier: ^4.0.2
         version: 4.0.2
+      zustand:
+        specifier: ^4.4.7
+        version: 4.5.7(@types/react@18.2.37)(immer@10.1.1)(react@18.2.0)
     devDependencies:
+      '@coze-arch/bot-typings':
+        specifier: workspace:*
+        version: link:../../arch/bot-typings
       '@coze-arch/eslint-config':
         specifier: workspace:*
         version: link:../../../config/eslint-config
@@ -1535,6 +1562,10 @@ importers:
         version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/biz-config:
+    dependencies:
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
     devDependencies:
       '@coze-arch/eslint-config':
         specifier: workspace:*
@@ -1566,6 +1597,9 @@ importers:
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
       '@cozeloop/route-base':
         specifier: workspace:*
         version: link:../route
@@ -1588,9 +1622,6 @@ importers:
       '@coze-arch/vitest-config':
         specifier: workspace:*
         version: link:../../../config/vitest-config
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
       '@types/react':
         specifier: 18.2.37
         version: 18.2.37
@@ -1608,28 +1639,46 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
+        version: 3.0.9(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/components:
     dependencies:
+      '@codemirror/commands':
+        specifier: ^6.3.3
+        version: 6.8.1
+      '@codemirror/state':
+        specifier: ^6.4.1
+        version: 6.5.2
+      '@codemirror/view':
+        specifier: ^6.34.1
+        version: 6.37.2
       '@coze-arch/coze-design':
         specifier: 0.0.7-alpha.985c0d
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@coze-editor/editor':
+        specifier: 0.1.0-alpha.dac011
+        version: 0.1.0-alpha.dac011(@codemirror/autocomplete@6.18.6)(@codemirror/language@6.11.1)(@codemirror/state@6.5.2)(@codemirror/view@6.37.2)(@lezer/common@1.2.3)(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)(typescript@5.8.2)(vue@3.5.16)
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
-      '@cozeloop/biz-hooks-adapter':
+      '@cozeloop/hooks':
         specifier: workspace:*
-        version: link:../biz-hooks
-      '@cozeloop/i18n-adapter':
-        specifier: workspace:*
-        version: link:../i18n
+        version: link:../base-hooks
       '@cozeloop/toolkit':
         specifier: workspace:*
         version: link:../toolkit
       '@monaco-editor/react':
         specifier: ^4.5.2
         version: 4.7.0(monaco-editor@0.45.0)(react-dom@18.2.0)(react@18.2.0)
+      '@rjsf/core':
+        specifier: ~5.24.9
+        version: 5.24.13(@rjsf/utils@5.24.13)(react@18.2.0)
+      '@rjsf/utils':
+        specifier: ~5.24.9
+        version: 5.24.13(react@18.2.0)
+      '@rjsf/validator-ajv8':
+        specifier: ~5.24.9
+        version: 5.24.13(@rjsf/utils@5.24.13)
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
@@ -1639,6 +1688,9 @@ importers:
       copy-to-clipboard:
         specifier: ^3.3.3
         version: 3.3.3
+      dayjs:
+        specifier: ^1.11.7
+        version: 1.11.13
       immer:
         specifier: ^10.0.3
         version: 10.1.1
@@ -1707,6 +1759,67 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
 
+  ../../../frontend/packages/cozeloop/components-with-adapter:
+    dependencies:
+      '@coze-arch/coze-design':
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@cozeloop/biz-hooks-adapter':
+        specifier: workspace:*
+        version: link:../biz-hooks
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
+    devDependencies:
+      '@coze-arch/bot-typings':
+        specifier: workspace:*
+        version: link:../../arch/bot-typings
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@cozeloop/tailwind-config':
+        specifier: workspace:*
+        version: link:../tailwind-config
+      '@types/lodash-es':
+        specifier: ^4.17.10
+        version: 4.17.12
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      happy-dom:
+        specifier: ^20.0.10
+        version: 20.0.10
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
+      react-router-dom:
+        specifier: ^6.22.0
+        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
+      tsconfig-paths:
+        specifier: 4.1.0
+        version: 4.1.0
+      vite:
+        specifier: ^4.3.9
+        version: 4.5.14(@types/node@18.18.9)
+      vite-plugin-svgr:
+        specifier: ~3.3.0
+        version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(happy-dom@20.0.10)
+
   ../../../frontend/packages/cozeloop/env:
     devDependencies:
       '@coze-arch/eslint-config':
@@ -1730,12 +1843,21 @@ importers:
 
   ../../../frontend/packages/cozeloop/evaluate:
     dependencies:
+      '@coze-arch/bot-md-box-adapter':
+        specifier: workspace:*
+        version: link:../../arch/bot-md-box-adapter
       '@coze-arch/coze-design':
         specifier: 0.0.7-alpha.985c0d
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@cozeloop/adapter-interfaces':
+        specifier: workspace:*
+        version: link:../adapter-interfaces
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
+      '@cozeloop/base-with-adapter-components':
+        specifier: workspace:*
+        version: link:../components-with-adapter
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
@@ -1769,6 +1891,9 @@ importers:
       '@cozeloop/prompt-components':
         specifier: workspace:*
         version: link:../prompt-components
+      '@cozeloop/shared-components':
+        specifier: workspace:*
+        version: link:../shared-components
       '@cozeloop/tag-components':
         specifier: workspace:*
         version: link:../tag-components
@@ -1779,8 +1904,8 @@ importers:
         specifier: workspace:*
         version: link:../toolkit
       '@visactor/vchart':
-        specifier: 1.13.8
-        version: 1.13.8
+        specifier: 1.13.11
+        version: 1.13.11
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
@@ -1818,6 +1943,9 @@ importers:
       '@coze-arch/vitest-config':
         specifier: workspace:*
         version: link:../../../config/vitest-config
+      '@cozeloop/stores':
+        specifier: workspace:*
+        version: link:../stores
       '@testing-library/jest-dom':
         specifier: ^6.1.5
         version: 6.6.3
@@ -1875,6 +2003,9 @@ importers:
       '@cozeloop/components':
         specifier: workspace:*
         version: link:../components
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
       '@cozeloop/prompt-components':
         specifier: workspace:*
         version: link:../prompt-components
@@ -1939,9 +2070,15 @@ importers:
       '@coze-arch/coze-design':
         specifier: 0.0.7-alpha.985c0d
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@cozeloop/adapter-interfaces':
+        specifier: workspace:*
+        version: link:../adapter-interfaces
       '@cozeloop/api-schema':
         specifier: workspace:*
         version: link:../api-schema
+      '@cozeloop/base-with-adapter-components':
+        specifier: workspace:*
+        version: link:../components-with-adapter
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
@@ -1972,6 +2109,9 @@ importers:
       '@cozeloop/prompt-components':
         specifier: workspace:*
         version: link:../prompt-components
+      '@cozeloop/shared-components':
+        specifier: workspace:*
+        version: link:../shared-components
       '@cozeloop/stores':
         specifier: workspace:*
         version: link:../stores
@@ -1997,8 +2137,8 @@ importers:
         specifier: ^3.0.0
         version: 3.5.0(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.17.1)(@types/react@18.2.37)(immer@10.1.1)(react-dom@18.2.0)(react@18.2.0)
       '@visactor/vchart':
-        specifier: 1.13.8
-        version: 1.13.8
+        specifier: 1.13.11
+        version: 1.13.11
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
@@ -2035,6 +2175,9 @@ importers:
       papaparse:
         specifier: ^5.4.1
         version: 5.5.3
+      react-resizable-panels:
+        specifier: ~2.1.6
+        version: 2.1.9(react-dom@18.2.0)(react@18.2.0)
       sortablejs:
         specifier: ~1.15.2
         version: 1.15.6
@@ -2144,6 +2287,9 @@ importers:
       '@coze-arch/coze-design':
         specifier: 0.0.7-alpha.985c0d
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@cozeloop/biz-hooks-adapter':
+        specifier: workspace:*
+        version: link:../biz-hooks
       '@cozeloop/evaluate':
         specifier: workspace:*
         version: link:../evaluate
@@ -2217,6 +2363,9 @@ importers:
       '@cozeloop/biz-hooks-adapter':
         specifier: workspace:*
         version: link:../biz-hooks
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
       classnames:
         specifier: ^2.3.2
         version: 2.5.1
@@ -2384,7 +2533,7 @@ importers:
         version: link:../i18n
       '@cozeloop/observation-components':
         specifier: workspace:*
-        version: link:../observation-v2
+        version: link:../observation-components
       '@cozeloop/tag-components':
         specifier: workspace:*
         version: link:../tag-components
@@ -2462,86 +2611,7 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
-  ../../../frontend/packages/cozeloop/observation-pages:
-    dependencies:
-      '@coze-arch/coze-design':
-        specifier: 0.0.7-alpha.985c0d
-        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
-      '@cozeloop/api-schema':
-        specifier: workspace:*
-        version: link:../api-schema
-      '@cozeloop/biz-hooks-adapter':
-        specifier: workspace:*
-        version: link:../biz-hooks
-      '@cozeloop/components':
-        specifier: workspace:*
-        version: link:../components
-      '@cozeloop/guard':
-        specifier: workspace:*
-        version: link:../guard
-      '@cozeloop/i18n-adapter':
-        specifier: workspace:*
-        version: link:../i18n
-      '@cozeloop/observation-components':
-        specifier: workspace:*
-        version: link:../observation-v2
-    devDependencies:
-      '@coze-arch/bot-typings':
-        specifier: workspace:*
-        version: link:../../arch/bot-typings
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/stylelint-config':
-        specifier: workspace:*
-        version: link:../../../config/stylelint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@testing-library/jest-dom':
-        specifier: ^6.1.5
-        version: 6.6.3
-      '@testing-library/react':
-        specifier: ^14.1.2
-        version: 14.3.1(react-dom@18.2.0)(react@18.2.0)
-      '@testing-library/react-hooks':
-        specifier: ^8.0.1
-        version: 8.0.1(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
-      '@types/lodash-es':
-        specifier: ^4.17.10
-        version: 4.17.12
-      '@types/papaparse':
-        specifier: ^5.3.9
-        version: 5.3.16
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@types/react-dom':
-        specifier: 18.2.15
-        version: 18.2.15
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      react-dom:
-        specifier: 18.2.0
-        version: 18.2.0(react@18.2.0)
-      react-router-dom:
-        specifier: ^6.22.0
-        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
-      stylelint:
-        specifier: ^15.11.0
-        version: 15.11.0(typescript@5.8.2)
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(happy-dom@20.0.10)
-
-  ../../../frontend/packages/cozeloop/observation-v2:
+  ../../../frontend/packages/cozeloop/observation-components:
     dependencies:
       '@coze-arch/coze-design':
         specifier: 0.0.7-alpha.985c0d
@@ -2743,6 +2813,85 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
 
+  ../../../frontend/packages/cozeloop/observation-pages:
+    dependencies:
+      '@coze-arch/coze-design':
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@cozeloop/api-schema':
+        specifier: workspace:*
+        version: link:../api-schema
+      '@cozeloop/biz-hooks-adapter':
+        specifier: workspace:*
+        version: link:../biz-hooks
+      '@cozeloop/components':
+        specifier: workspace:*
+        version: link:../components
+      '@cozeloop/guard':
+        specifier: workspace:*
+        version: link:../guard
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
+      '@cozeloop/observation-components':
+        specifier: workspace:*
+        version: link:../observation-components
+    devDependencies:
+      '@coze-arch/bot-typings':
+        specifier: workspace:*
+        version: link:../../arch/bot-typings
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/stylelint-config':
+        specifier: workspace:*
+        version: link:../../../config/stylelint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@testing-library/jest-dom':
+        specifier: ^6.1.5
+        version: 6.6.3
+      '@testing-library/react':
+        specifier: ^14.1.2
+        version: 14.3.1(react-dom@18.2.0)(react@18.2.0)
+      '@testing-library/react-hooks':
+        specifier: ^8.0.1
+        version: 8.0.1(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
+      '@types/lodash-es':
+        specifier: ^4.17.10
+        version: 4.17.12
+      '@types/papaparse':
+        specifier: ^5.3.9
+        version: 5.3.16
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
+      react-router-dom:
+        specifier: ^6.22.0
+        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
+      stylelint:
+        specifier: ^15.11.0
+        version: 15.11.0(typescript@5.8.2)
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(happy-dom@20.0.10)
+
   ../../../frontend/packages/cozeloop/prompt-components:
     dependencies:
       '@codemirror/commands':
@@ -2787,6 +2936,9 @@ importers:
       '@cozeloop/components':
         specifier: workspace:*
         version: link:../components
+      '@cozeloop/hooks':
+        specifier: workspace:*
+        version: link:../base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
         version: link:../i18n
@@ -2797,11 +2949,11 @@ importers:
         specifier: ^1.2.2
         version: 1.2.3
       '@shikijs/langs':
-        specifier: ^3.9.2
-        version: 3.12.2
+        specifier: 3.3.0
+        version: 3.3.0
       '@shikijs/themes':
-        specifier: ^3.2.2
-        version: 3.6.0
+        specifier: 3.3.0
+        version: 3.3.0
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
@@ -2863,9 +3015,6 @@ importers:
       '@coze-arch/ts-config':
         specifier: workspace:*
         version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
         version: link:../tailwind-config
@@ -2887,9 +3036,172 @@ importers:
       react-dom:
         specifier: 18.2.0
         version: 18.2.0(react@18.2.0)
-      storybook:
-        specifier: ^7.6.7
-        version: 7.6.20
+      tsconfig-paths:
+        specifier: 4.1.0
+        version: 4.1.0
+      vite:
+        specifier: ^4.3.9
+        version: 4.5.14(@types/node@18.18.9)
+      vite-plugin-svgr:
+        specifier: ~3.3.0
+        version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(happy-dom@20.0.10)
+
+  ../../../frontend/packages/cozeloop/prompt-components-v2:
+    dependencies:
+      '@bytedance/calypso':
+        specifier: 0.1.0-beta.8
+        version: 0.1.0-beta.8(@babel/runtime@7.27.6)(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.17.1)(@types/react@18.2.37)(immer@10.1.1)(react-dom@18.2.0)(react@18.2.0)
+      '@codemirror/commands':
+        specifier: ^6.3.3
+        version: 6.8.1
+      '@codemirror/language':
+        specifier: ^6.10.1
+        version: 6.11.1
+      '@codemirror/merge':
+        specifier: ^6.10.0
+        version: 6.10.2
+      '@codemirror/search':
+        specifier: ^6.5.5
+        version: 6.5.11
+      '@codemirror/state':
+        specifier: ^6.4.1
+        version: 6.5.2
+      '@codemirror/view':
+        specifier: ^6.34.1
+        version: 6.37.2
+      '@coze-arch/coze-design':
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@coze-arch/fetch-stream':
+        specifier: workspace:*
+        version: link:../../arch/fetch-stream
+      '@coze-editor/editor':
+        specifier: 0.1.0-alpha.dac011
+        version: 0.1.0-alpha.dac011(@codemirror/autocomplete@6.18.6)(@codemirror/language@6.11.1)(@codemirror/state@6.5.2)(@codemirror/view@6.37.2)(@lezer/common@1.2.3)(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)(typescript@5.8.2)(vue@3.5.16)
+      '@coze-editor/extension-regexp-decorator':
+        specifier: 0.1.0-alpha.0fd19e
+        version: 0.1.0-alpha.0fd19e(@codemirror/state@6.5.2)(@codemirror/view@6.37.2)
+      '@cozeloop/api-schema':
+        specifier: workspace:*
+        version: link:../api-schema
+      '@cozeloop/components':
+        specifier: workspace:*
+        version: link:../components
+      '@cozeloop/hooks':
+        specifier: workspace:*
+        version: link:../base-hooks
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
+      '@cozeloop/toolkit':
+        specifier: workspace:*
+        version: link:../toolkit
+      '@lezer/common':
+        specifier: ^1.2.2
+        version: 1.2.3
+      '@shikijs/langs':
+        specifier: 3.3.0
+        version: 3.3.0
+      '@shikijs/themes':
+        specifier: 3.3.0
+        version: 3.3.0
+      ahooks:
+        specifier: 3.7.8
+        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
+      ajv:
+        specifier: ~8.12.0
+        version: 8.12.0
+      classnames:
+        specifier: ^2.3.2
+        version: 2.5.1
+      codemirror-shiki:
+        specifier: ^0.3.0
+        version: 0.3.0(@codemirror/state@6.5.2)(@codemirror/view@6.37.2)(shiki@3.6.0)
+      crelt:
+        specifier: ^1.0.5
+        version: 1.0.6
+      dayjs:
+        specifier: ^1.11.7
+        version: 1.11.13
+      eventsource-parser:
+        specifier: ^1.0.0
+        version: 1.1.2
+      immer:
+        specifier: ^10.0.3
+        version: 10.1.1
+      js-base64:
+        specifier: ^3.7.7
+        version: 3.7.8
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
+      lucide-react:
+        specifier: ^0.438.0
+        version: 0.438.0(react@18.2.0)
+      mermaid:
+        specifier: ^11.4.1
+        version: 11.11.0
+      mitt:
+        specifier: ^3.0.1
+        version: 3.0.1
+      nanoid:
+        specifier: ^4.0.2
+        version: 4.0.2
+      re-resizable:
+        specifier: ~6.9.11
+        version: 6.9.18(react-dom@18.2.0)(react@18.2.0)
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      shiki:
+        specifier: ^3.2.2
+        version: 3.6.0
+      sortablejs:
+        specifier: ~1.15.2
+        version: 1.15.6
+      svg-pan-zoom:
+        specifier: ^3.6.2
+        version: 3.6.2
+      tippy.js:
+        specifier: ^6.3.7
+        version: 6.3.7
+      zustand:
+        specifier: ^4.4.7
+        version: 4.5.7(@types/react@18.2.37)(immer@10.1.1)(react@18.2.0)
+    devDependencies:
+      '@coze-arch/bot-typings':
+        specifier: workspace:*
+        version: link:../../arch/bot-typings
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@cozeloop/tailwind-config':
+        specifier: workspace:*
+        version: link:../tailwind-config
+      '@types/lodash-es':
+        specifier: ^4.17.10
+        version: 4.17.12
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      happy-dom:
+        specifier: ^20.0.10
+        version: 20.0.10
+      react-dom:
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
       tsconfig-paths:
         specifier: 4.1.0
         version: 4.1.0
@@ -2905,15 +3217,12 @@ importers:
 
   ../../../frontend/packages/cozeloop/prompt-pages:
     dependencies:
-      '@coze-arch/bot-md-box-adapter':
-        specifier: workspace:*
-        version: link:../../arch/bot-md-box-adapter
       '@coze-arch/coze-design':
         specifier: 0.0.7-alpha.985c0d
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
-      '@coze-arch/fetch-stream':
+      '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../../arch/fetch-stream
+        version: link:../api-schema
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
@@ -2923,57 +3232,33 @@ importers:
       '@cozeloop/components':
         specifier: workspace:*
         version: link:../components
-      '@cozeloop/guard':
-        specifier: workspace:*
-        version: link:../guard
       '@cozeloop/hooks':
         specifier: workspace:*
         version: link:../base-hooks
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
       '@cozeloop/observation-adapter':
         specifier: workspace:*
         version: link:../observation-adapter
-      '@cozeloop/prompt-components':
+      '@cozeloop/observation-components':
         specifier: workspace:*
-        version: link:../prompt-components
-      '@cozeloop/tea-adapter':
+        version: link:../observation-components
+      '@cozeloop/prompt-components-v2':
         specifier: workspace:*
-        version: link:../tea
+        version: link:../prompt-components-v2
       '@cozeloop/toolkit':
         specifier: workspace:*
         version: link:../toolkit
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
-      ajv:
-        specifier: ~8.12.0
-        version: 8.12.0
       classnames:
         specifier: ^2.3.2
         version: 2.5.1
-      dayjs:
-        specifier: ^1.11.7
-        version: 1.11.13
-      eventsource-parser:
-        specifier: ^1.0.0
-        version: 1.1.2
-      immer:
-        specifier: ^10.0.3
-        version: 10.1.1
-      lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.21
-      nanoid:
-        specifier: ^4.0.2
-        version: 4.0.2
       re-resizable:
         specifier: ~6.9.11
         version: 6.9.18(react-dom@18.2.0)(react@18.2.0)
-      sortablejs:
-        specifier: ~1.15.2
-        version: 1.15.6
-      zustand:
-        specifier: ^4.4.7
-        version: 4.5.7(@types/react@18.2.37)(immer@10.1.1)(react@18.2.0)
     devDependencies:
       '@coze-arch/bot-typings':
         specifier: workspace:*
@@ -2987,15 +3272,9 @@ importers:
       '@coze-arch/vitest-config':
         specifier: workspace:*
         version: link:../../../config/vitest-config
-      '@cozeloop/api-schema':
-        specifier: workspace:*
-        version: link:../api-schema
       '@cozeloop/tailwind-config':
         specifier: workspace:*
         version: link:../tailwind-config
-      '@types/lodash-es':
-        specifier: ^4.17.10
-        version: 4.17.12
       '@types/react':
         specifier: 18.2.37
         version: 18.2.37
@@ -3017,9 +3296,6 @@ importers:
       react-router-dom:
         specifier: ^6.22.0
         version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
-      storybook:
-        specifier: ^7.6.7
-        version: 7.6.20
       tsconfig-paths:
         specifier: 4.1.0
         version: 4.1.0
@@ -3041,18 +3317,12 @@ importers:
       '@coze-arch/ts-config':
         specifier: workspace:*
         version: link:../../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../../config/vitest-config
       '@types/node':
         specifier: 18.18.9
         version: 18.18.9
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
 
   ../../../frontend/packages/cozeloop/route:
     dependencies:
@@ -3169,6 +3439,73 @@ importers:
       webpack:
         specifier: ~5.91.0
         version: 5.91.0
+
+  ../../../frontend/packages/cozeloop/shared-components:
+    dependencies:
+      '@coze-arch/coze-design':
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@cozeloop/api-schema':
+        specifier: workspace:*
+        version: link:../api-schema
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
+      ahooks:
+        specifier: 3.7.8
+        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
+      classnames:
+        specifier: ^2.3.2
+        version: 2.5.1
+    devDependencies:
+      '@coze-arch/bot-typings':
+        specifier: workspace:*
+        version: link:../../arch/bot-typings
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@cozeloop/guard':
+        specifier: workspace:*
+        version: link:../guard
+      '@types/lodash-es':
+        specifier: ^4.17.10
+        version: 4.17.12
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      less:
+        specifier: ^4.2.0
+        version: 4.4.2
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
+      react-router-dom:
+        specifier: ^6.22.0
+        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
+      sucrase:
+        specifier: ^3.32.0
+        version: 3.35.0
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(less@4.4.2)
 
   ../../../frontend/packages/cozeloop/stores:
     dependencies:
@@ -3480,12 +3817,18 @@ importers:
 
   ../../../frontend/packages/cozeloop/toolkit:
     dependencies:
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
       dayjs:
         specifier: ^1.11.7
         version: 1.11.13
       json-bigint:
         specifier: ~1.0.0
         version: 1.0.0
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
     devDependencies:
       '@coze-arch/eslint-config':
         specifier: workspace:*
@@ -3496,9 +3839,21 @@ importers:
       '@coze-arch/vitest-config':
         specifier: workspace:*
         version: link:../../../config/vitest-config
+      '@types/json-bigint':
+        specifier: ~1.0.4
+        version: 1.0.4
+      '@types/lodash-es':
+        specifier: ^4.17.10
+        version: 4.17.12
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
       '@vitest/coverage-v8':
         specifier: ~3.0.5
         version: 3.0.9(vitest@3.0.9)
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
       tsconfig-paths:
         specifier: 4.1.0
         version: 4.1.0
@@ -5613,7 +5968,7 @@ packages:
     resolution: {integrity: sha512-foZ7qr0IsUBjzWIq+SuBLfdQCpJ1j8cTuNNT4owngTHoN5KsJb8L9t65fzz7SCeSWzescoOil/0ldqiL041ABg==}
     dev: true
 
-  /@bytedance/calypso@0.1.0-beta.8(@babel/runtime@7.27.6)(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.17.1)(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0):
+  /@bytedance/calypso@0.1.0-beta.8(@babel/runtime@7.27.6)(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.17.1)(@types/react@18.2.37)(immer@10.1.1)(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-noJz3Ohh8eBxSPHjuH3ZB4FEt+9jT6fYMlhLf6Kpn0UUbOYsF85Qi43nsHf/rgjlgQFykYrv8MnNlld139bKig==}
     peerDependencies:
       react: 18.2.0
@@ -7955,6 +8310,37 @@ packages:
       langium: 3.3.1
     dev: false
 
+  /@microsoft/api-extractor-model@7.28.13(@types/node@18.18.9):
+    resolution: {integrity: sha512-39v/JyldX4MS9uzHcdfmjjfS6cYGAoXV+io8B5a338pkHiSt+gy2eXQ0Q7cGFJ7quSa1VqqlMdlPrB6sLR/cAw==}
+    dependencies:
+      '@microsoft/tsdoc': 0.14.2
+      '@microsoft/tsdoc-config': 0.16.2
+      '@rushstack/node-core-library': 4.0.2(@types/node@18.18.9)
+    transitivePeerDependencies:
+      - '@types/node'
+    dev: true
+
+  /@microsoft/api-extractor@7.43.0(@types/node@18.18.9):
+    resolution: {integrity: sha512-GFhTcJpB+MI6FhvXEI9b2K0snulNLWHqC/BbcJtyNYcKUiw7l3Lgis5ApsYncJ0leALX7/of4XfmXk+maT111w==}
+    hasBin: true
+    dependencies:
+      '@microsoft/api-extractor-model': 7.28.13(@types/node@18.18.9)
+      '@microsoft/tsdoc': 0.14.2
+      '@microsoft/tsdoc-config': 0.16.2
+      '@rushstack/node-core-library': 4.0.2(@types/node@18.18.9)
+      '@rushstack/rig-package': 0.5.2
+      '@rushstack/terminal': 0.10.0(@types/node@18.18.9)
+      '@rushstack/ts-command-line': 4.19.1(@types/node@18.18.9)
+      lodash: 4.17.21
+      minimatch: 3.0.8
+      resolve: 1.22.10
+      semver: 7.5.4
+      source-map: 0.6.1
+      typescript: 5.8.2
+    transitivePeerDependencies:
+      - '@types/node'
+    dev: true
+
   /@microsoft/rush-lib@5.147.2(@types/node@18.18.9):
     resolution: {integrity: sha512-MCUkNe91yGv0LZgLraB42eHNRRq0rRG5Xz4xfm1wqdi73NymbaRO/qgOFrIO8QTuDtEneuH6NSAzb0wPkyy/yA==}
     engines: {node: '>=5.6.0'}
@@ -8009,11 +8395,9 @@ packages:
       ajv: 6.12.6
       jju: 1.4.0
       resolve: 1.19.0
-    dev: false
 
   /@microsoft/tsdoc@0.14.2:
     resolution: {integrity: sha512-9b8mPpKrfeGRuhFH5iO1iwCLeIIsV6+H1sRfxbkoGXIyQE2BTsPd9zqSqQJ+pv5sJ/hT5M1zvOFL02MnEezFug==}
-    dev: false
 
   /@module-federation/error-codes@0.14.3:
     resolution: {integrity: sha512-sBJ3XKU9g5Up31jFeXPFsD8AgORV7TLO/cCSMuRewSfgYbG/3vSKLJmfHrO6+PvjZSb9VyV2UaF02ojktW65vw==}
@@ -9409,6 +9793,48 @@ packages:
       '@resvg/resvg-js-win32-x64-msvc': 2.4.1
     dev: false
 
+  /@rjsf/core@5.24.13(@rjsf/utils@5.24.13)(react@18.2.0):
+    resolution: {integrity: sha512-ONTr14s7LFIjx2VRFLuOpagL76sM/HPy6/OhdBfq6UukINmTIs6+aFN0GgcR0aXQHFDXQ7f/fel0o/SO05Htdg==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@rjsf/utils': ^5.24.x
+      react: 18.2.0
+    dependencies:
+      '@rjsf/utils': 5.24.13(react@18.2.0)
+      lodash: 4.17.21
+      lodash-es: 4.17.21
+      markdown-to-jsx: 7.7.7(react@18.2.0)
+      prop-types: 15.8.1
+      react: 18.2.0
+    dev: false
+
+  /@rjsf/utils@5.24.13(react@18.2.0):
+    resolution: {integrity: sha512-rNF8tDxIwTtXzz5O/U23QU73nlhgQNYJ+Sv5BAwQOIyhIE2Z3S5tUiSVMwZHt0julkv/Ryfwi+qsD4FiE5rOuw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      react: 18.2.0
+    dependencies:
+      json-schema-merge-allof: 0.8.1
+      jsonpointer: 5.0.1
+      lodash: 4.17.21
+      lodash-es: 4.17.21
+      react: 18.2.0
+      react-is: 18.3.1
+    dev: false
+
+  /@rjsf/validator-ajv8@5.24.13(@rjsf/utils@5.24.13):
+    resolution: {integrity: sha512-oWHP7YK581M8I5cF1t+UXFavnv+bhcqjtL1a7MG/Kaffi0EwhgcYjODrD8SsnrhncsEYMqSECr4ZOEoirnEUWw==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@rjsf/utils': ^5.24.x
+    dependencies:
+      '@rjsf/utils': 5.24.13(react@18.2.0)
+      ajv: 8.12.0
+      ajv-formats: 2.1.1(ajv@8.12.0)
+      lodash: 4.17.21
+      lodash-es: 4.17.21
+    dev: false
+
   /@rolldown/pluginutils@1.0.0-beta.11:
     resolution: {integrity: sha512-L/gAA/hyCSuzTF1ftlzUSI/IKr2POHsv1Dd78GfqkR83KMNuswWD61JxGV2L7nRwBBBSDr6R1gCkdTmoN7W4ag==}
     dev: true
@@ -9617,7 +10043,7 @@ packages:
     dependencies:
       '@rsbuild/core': 1.1.13
       deepmerge: 4.3.1
-      reduce-configs: 1.1.0
+      reduce-configs: 1.1.1
     dev: true
 
   /@rsbuild/plugin-node-polyfill@0.3.11(@rsbuild/core@1.1.13):
@@ -9675,7 +10101,7 @@ packages:
       deepmerge: 4.3.1
       loader-utils: 2.0.4
       postcss: 8.5.6
-      reduce-configs: 1.1.0
+      reduce-configs: 1.1.1
       sass-embedded: 1.89.2
     dev: true
 
@@ -9724,6 +10150,25 @@ packages:
       postcss: 8.5.6
     transitivePeerDependencies:
       - '@swc/helpers'
+    dev: true
+
+  /@rslib/core@0.11.2(@microsoft/api-extractor@7.43.0):
+    resolution: {integrity: sha512-NubpSx2DF5sSBpzJRQTsS2xFPdC2nCTBTRbQVXUNBYJikmJY6XgI1MU2jPzrecjX7QZOaH8APt2AEiWl0YNlrg==}
+    engines: {node: '>=16.7.0'}
+    hasBin: true
+    peerDependencies:
+      '@microsoft/api-extractor': ^7
+      typescript: 5.8.2
+    peerDependenciesMeta:
+      '@microsoft/api-extractor':
+        optional: true
+      typescript:
+        optional: true
+    dependencies:
+      '@microsoft/api-extractor': 7.43.0(@types/node@18.18.9)
+      '@rsbuild/core': 1.4.16
+      rsbuild-plugin-dts: 0.11.2(@microsoft/api-extractor@7.43.0)(@rsbuild/core@1.4.16)
+      tinyglobby: 0.2.14
     dev: true
 
   /@rslib/core@0.11.2(typescript@5.8.2):
@@ -10521,6 +10966,23 @@ packages:
       z-schema: 5.0.5
     dev: false
 
+  /@rushstack/node-core-library@4.0.2(@types/node@18.18.9):
+    resolution: {integrity: sha512-hyES82QVpkfQMeBMteQUnrhASL/KHPhd7iJ8euduwNJG4mu2GSOKybf0rOEjOm1Wz7CwJEUm9y0yD7jg2C1bfg==}
+    peerDependencies:
+      '@types/node': 18.18.9
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+    dependencies:
+      '@types/node': 18.18.9
+      fs-extra: 7.0.1
+      import-lazy: 4.0.0
+      jju: 1.4.0
+      resolve: 1.22.10
+      semver: 7.5.4
+      z-schema: 5.0.5
+    dev: true
+
   /@rushstack/node-core-library@5.10.1(@types/node@18.18.9):
     resolution: {integrity: sha512-BSb/KcyBHmUQwINrgtzo6jiH0HlGFmrUy33vO6unmceuVKTEyL2q+P0fQq2oB5hvXVWOEUhxB2QvlkZluvUEmg==}
     peerDependencies:
@@ -10560,6 +11022,13 @@ packages:
       semver: 7.5.4
     transitivePeerDependencies:
       - '@types/node'
+
+  /@rushstack/rig-package@0.5.2:
+    resolution: {integrity: sha512-mUDecIJeH3yYGZs2a48k+pbhM6JYwWlgjs2Ca5f2n1G2/kgdgP9D/07oglEGf6mRyXEnazhEENeYTSNDRCwdqA==}
+    dependencies:
+      resolve: 1.22.10
+      strip-json-comments: 3.1.1
+    dev: true
 
   /@rushstack/rig-package@0.5.3:
     resolution: {integrity: sha512-olzSSjYrvCNxUFZowevC3uz8gvKr3WTpHQ7BkpjtRpA3wK+T0ybep/SRUMfr195gBzJm5gaXw0ZMgjIyHqJUow==}
@@ -10620,6 +11089,19 @@ packages:
     transitivePeerDependencies:
       - '@types/node'
 
+  /@rushstack/terminal@0.10.0(@types/node@18.18.9):
+    resolution: {integrity: sha512-UbELbXnUdc7EKwfH2sb8ChqNgapUOdqcCIdQP4NGxBpTZV2sQyeekuK3zmfQSa/MN+/7b4kBogl2wq0vpkpYGw==}
+    peerDependencies:
+      '@types/node': 18.18.9
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+    dependencies:
+      '@rushstack/node-core-library': 4.0.2(@types/node@18.18.9)
+      '@types/node': 18.18.9
+      supports-color: 8.1.1
+    dev: true
+
   /@rushstack/terminal@0.14.4(@types/node@18.18.9):
     resolution: {integrity: sha512-NxACqERW0PHq8Rpq1V6v5iTHEwkRGxenjEW+VWqRYQ8T9puUzgmGHmEZUaUEDHAe9Qyvp0/Ew04sAiQw9XjhJg==}
     peerDependencies:
@@ -10635,6 +11117,17 @@ packages:
   /@rushstack/tree-pattern@0.2.4:
     resolution: {integrity: sha512-H8i0OinWsdKM1TKEKPeRRTw85e+/7AIFpxm7q1blceZJhuxRBjCGAUZvQXZK4CMLx75xPqh/h1t5WHwFmElAPA==}
     dev: false
+
+  /@rushstack/ts-command-line@4.19.1(@types/node@18.18.9):
+    resolution: {integrity: sha512-J7H768dgcpG60d7skZ5uSSwyCZs/S2HrWP1Ds8d1qYAyaaeJmpmmLr9BVw97RjFzmQPOYnoXcKA4GkqDCkduQg==}
+    dependencies:
+      '@rushstack/terminal': 0.10.0(@types/node@18.18.9)
+      '@types/argparse': 1.0.38
+      argparse: 1.0.10
+      string-argv: 0.3.2
+    transitivePeerDependencies:
+      - '@types/node'
+    dev: true
 
   /@rushstack/ts-command-line@4.23.2(@types/node@18.18.9):
     resolution: {integrity: sha512-JJ7XZX5K3ThBBva38aomgsPv1L7FV6XmSOcR6HtM7HDFZJkepqT65imw26h9ggGqMjsY0R9jcl30tzKcVj9aOQ==}
@@ -10670,10 +11163,10 @@ packages:
       '@shikijs/vscode-textmate': 10.0.2
     dev: false
 
-  /@shikijs/langs@3.12.2:
-    resolution: {integrity: sha512-bVx5PfuZHDSHoBal+KzJZGheFuyH4qwwcwG/n+MsWno5cTlKmaNtTsGzJpHYQ8YPbB5BdEdKU1rga5/6JGY8ww==}
+  /@shikijs/langs@3.3.0:
+    resolution: {integrity: sha512-zt6Kf/7XpBQKSI9eqku+arLkAcDQ3NHJO6zFjiChI8w0Oz6Jjjay7pToottjQGjSDCFk++R85643WbyINcuL+g==}
     dependencies:
-      '@shikijs/types': 3.12.2
+      '@shikijs/types': 3.3.0
     dev: false
 
   /@shikijs/langs@3.6.0:
@@ -10682,14 +11175,20 @@ packages:
       '@shikijs/types': 3.6.0
     dev: false
 
+  /@shikijs/themes@3.3.0:
+    resolution: {integrity: sha512-tXeCvLXBnqq34B0YZUEaAD1lD4lmN6TOHAhnHacj4Owh7Ptb/rf5XCDeROZt2rEOk5yuka3OOW2zLqClV7/SOg==}
+    dependencies:
+      '@shikijs/types': 3.3.0
+    dev: false
+
   /@shikijs/themes@3.6.0:
     resolution: {integrity: sha512-Fq2j4nWr1DF4drvmhqKq8x5vVQ27VncF8XZMBuHuQMZvUSS3NBgpqfwz/FoGe36+W6PvniZ1yDlg2d4kmYDU6w==}
     dependencies:
       '@shikijs/types': 3.6.0
     dev: false
 
-  /@shikijs/types@3.12.2:
-    resolution: {integrity: sha512-K5UIBzxCyv0YoxN3LMrKB9zuhp1bV+LgewxuVwHdl4Gz5oePoUFrr9EfgJlGlDeXCU1b/yhdnXeuRvAnz8HN8Q==}
+  /@shikijs/types@3.3.0:
+    resolution: {integrity: sha512-KPCGnHG6k06QG/2pnYGbFtFvpVJmC3uIpXrAiPrawETifujPBv0Se2oUxm5qYgjCvGJS9InKvjytOdN+bGuX+Q==}
     dependencies:
       '@shikijs/vscode-textmate': 10.0.2
       '@types/hast': 3.0.4
@@ -13321,24 +13820,24 @@ packages:
     dev: false
     optional: true
 
-  /@visactor/vchart@1.13.8:
-    resolution: {integrity: sha512-g8GacKxDvxUiuT4kW83u5vrAoAvpJ0+yca4IUYvdSTxdYXzipJEgiNmSnwd46GP8eBKJj36ZmqzEhLVzPJ+/Pw==}
+  /@visactor/vchart@1.13.11:
+    resolution: {integrity: sha512-doJYOu8/vrnd2Jr7DmIj954C66cLXiGhXTHtaZb+HVFUinec50zw2zYp2ChuQ2Lb5/v+wiY6sR3evYWQHfPytw==}
     dependencies:
       '@visactor/vdataset': 0.19.6
-      '@visactor/vgrammar-core': 0.16.3
-      '@visactor/vgrammar-hierarchy': 0.16.3
-      '@visactor/vgrammar-projection': 0.16.3
-      '@visactor/vgrammar-sankey': 0.16.3
-      '@visactor/vgrammar-util': 0.16.3
-      '@visactor/vgrammar-venn': 0.16.3
-      '@visactor/vgrammar-wordcloud': 0.16.3
-      '@visactor/vgrammar-wordcloud-shape': 0.16.3
-      '@visactor/vrender-components': 0.22.6
-      '@visactor/vrender-core': 0.22.6
-      '@visactor/vrender-kits': 0.22.6
+      '@visactor/vgrammar-core': 0.16.7
+      '@visactor/vgrammar-hierarchy': 0.16.7
+      '@visactor/vgrammar-projection': 0.16.7
+      '@visactor/vgrammar-sankey': 0.16.7
+      '@visactor/vgrammar-util': 0.16.7
+      '@visactor/vgrammar-venn': 0.16.7
+      '@visactor/vgrammar-wordcloud': 0.16.7
+      '@visactor/vgrammar-wordcloud-shape': 0.16.7
+      '@visactor/vrender-components': 0.22.10
+      '@visactor/vrender-core': 0.22.10
+      '@visactor/vrender-kits': 0.22.10
       '@visactor/vscale': 0.19.6
       '@visactor/vutils': 0.19.6
-      '@visactor/vutils-extension': 1.13.8
+      '@visactor/vutils-extension': 1.13.11
     dev: false
 
   /@visactor/vdataset@0.19.6:
@@ -13363,114 +13862,114 @@ packages:
       topojson-client: 3.1.0
     dev: false
 
-  /@visactor/vgrammar-coordinate@0.16.3:
-    resolution: {integrity: sha512-tfDSi3WgY/GWDvbf67eus4a7jR74y7OMod3JrTqyDVzSNZUOgUtS3ieEM71f9yipxjY8gxo53GPDpH/advxUZw==}
+  /@visactor/vgrammar-coordinate@0.16.7:
+    resolution: {integrity: sha512-iVLTgoMeB4a6AyOlzi3Zz/33wzJnVvZeQDxbKm74iQEAqwrdiQjTVCazFlZhFgx/kNCWh4gFVmIcsz4A0K7yyA==}
     dependencies:
-      '@visactor/vgrammar-util': 0.16.3
+      '@visactor/vgrammar-util': 0.16.7
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vgrammar-core@0.16.3:
-    resolution: {integrity: sha512-cd7hmh9JobbCDUJPOshmQB5V0KVM0GLTPBe/ZySJDi1cUSWpukAgRrLozEk/M5XgDbVIT+4pjqe6siacCad8dg==}
+  /@visactor/vgrammar-core@0.16.7:
+    resolution: {integrity: sha512-bBcys8VVI6AtFmkan0Uy/77iUmkE652a6kmAMxI6eUU86qSEHIMgHuB0Q6JwXuBPhFQ2YaZ0cEKMeVzwG2rMSw==}
     dependencies:
       '@visactor/vdataset': 0.19.6
-      '@visactor/vgrammar-coordinate': 0.16.3
-      '@visactor/vgrammar-util': 0.16.3
-      '@visactor/vrender-components': 0.22.6
-      '@visactor/vrender-core': 0.22.6
-      '@visactor/vrender-kits': 0.22.6
+      '@visactor/vgrammar-coordinate': 0.16.7
+      '@visactor/vgrammar-util': 0.16.7
+      '@visactor/vrender-components': 0.22.10
+      '@visactor/vrender-core': 0.22.10
+      '@visactor/vrender-kits': 0.22.10
       '@visactor/vscale': 0.19.6
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vgrammar-hierarchy@0.16.3:
-    resolution: {integrity: sha512-qnfSWRt1PErkVPTtet8DVc4MY+WwmgJoNNW2FALFht1qUfPdglTqT96drPbkurwiZMzSk+Xfr7+IPUA8ZQwWag==}
+  /@visactor/vgrammar-hierarchy@0.16.7:
+    resolution: {integrity: sha512-YaMR/0gvgS463pv3WUbp2t/AAahnGwVdiZRwoaaPRYwgW3sLj5bM8F6kI5UAT1g4las+WTb/OqC/J7p7xl1yMg==}
     dependencies:
-      '@visactor/vgrammar-core': 0.16.3
-      '@visactor/vgrammar-util': 0.16.3
-      '@visactor/vrender-core': 0.22.6
-      '@visactor/vrender-kits': 0.22.6
+      '@visactor/vgrammar-core': 0.16.7
+      '@visactor/vgrammar-util': 0.16.7
+      '@visactor/vrender-core': 0.22.10
+      '@visactor/vrender-kits': 0.22.10
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vgrammar-projection@0.16.3:
-    resolution: {integrity: sha512-c+MJ3qgtsNQHwZCDBVT7fNahNxe0g827IiytQWvrtMxavLIrtJqeul5H+6BYrGvYk8d81ByxNZdoVNn/mfNtDw==}
+  /@visactor/vgrammar-projection@0.16.7:
+    resolution: {integrity: sha512-ql1q0fbvwsBAHdqKq0lNc0eqWPTXclVWUVmaiWXDTHGdIaQadIVxbSN4c1ZF+PjQZqlHANvMedE+H3NkH86sUQ==}
     dependencies:
-      '@visactor/vgrammar-core': 0.16.3
-      '@visactor/vgrammar-util': 0.16.3
+      '@visactor/vgrammar-core': 0.16.7
+      '@visactor/vgrammar-util': 0.16.7
       '@visactor/vutils': 0.19.6
       d3-geo: 1.12.1
     dev: false
 
-  /@visactor/vgrammar-sankey@0.16.3:
-    resolution: {integrity: sha512-7j0xx77Yn2KzY4EcZ27qFF6R1KTcmy3BtQQewOHA1uoUX8ZRsfe57eziYRiBhyVrzdFWoa0IJqzH7Yk/zITvuQ==}
+  /@visactor/vgrammar-sankey@0.16.7:
+    resolution: {integrity: sha512-1e+6T1CYdr5325iHx0nYdbziJCTSzFZD+YPNci/aqDeVYioCKLFM3aHsXvZDVYkSf1LWAadZKmTIyMeY8/iLbw==}
     dependencies:
-      '@visactor/vgrammar-core': 0.16.3
-      '@visactor/vgrammar-util': 0.16.3
-      '@visactor/vrender-core': 0.22.6
-      '@visactor/vrender-kits': 0.22.6
+      '@visactor/vgrammar-core': 0.16.7
+      '@visactor/vgrammar-util': 0.16.7
+      '@visactor/vrender-core': 0.22.10
+      '@visactor/vrender-kits': 0.22.10
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vgrammar-util@0.16.3:
-    resolution: {integrity: sha512-aF9MqjTR7YvBAVDtp1A/CDVcXFGlO+TxkHVPEQVrn7cVu2DGRXCZnu/iQ+AUhttVYaWlSRflZj4cnQrKS4zy4g==}
+  /@visactor/vgrammar-util@0.16.7:
+    resolution: {integrity: sha512-TSUMaWDF+icwmeLFKJc3JJNVi+VrCtNgh9mHzetZx7xdIU1N4ezYZ6dT+PRNIXVETXlhB/WhJwEv9CWiUh23Mw==}
     dependencies:
-      '@visactor/vrender-core': 0.22.6
+      '@visactor/vrender-core': 0.22.10
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vgrammar-venn@0.16.3:
-    resolution: {integrity: sha512-M6mtCrpOcPrD6nkQFZ3Fl0Z2zPaKFTyRIPeO235vDwB/ZzefN5BObh85UGsv0swK46L5yu3daBxW0VtrGMBZRA==}
+  /@visactor/vgrammar-venn@0.16.7:
+    resolution: {integrity: sha512-d8ezA0f92wUmm/BgG9hUpDX1mpiW6Vb3RSJPyJIs62Qg243OUU4mfhKnmYeggFG1q/B2RCD+H+Slkk2nPlWH3Q==}
     dependencies:
-      '@visactor/vgrammar-core': 0.16.3
-      '@visactor/vgrammar-util': 0.16.3
-      '@visactor/vrender-core': 0.22.6
-      '@visactor/vrender-kits': 0.22.6
+      '@visactor/vgrammar-core': 0.16.7
+      '@visactor/vgrammar-util': 0.16.7
+      '@visactor/vrender-core': 0.22.10
+      '@visactor/vrender-kits': 0.22.10
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vgrammar-wordcloud-shape@0.16.3:
-    resolution: {integrity: sha512-ZWRHbec4WM2W3v2t57gRaX1IUGy+nDRjumcctgzSvmCpmR3nORgLKmMhxXYEA0VwcpY+umM0lVcd42iqPH8c7g==}
+  /@visactor/vgrammar-wordcloud-shape@0.16.7:
+    resolution: {integrity: sha512-vaAlS8GoZ57Ny2FRc3vSSUeC99t33tDDji99OLb8dmKYcVv4HPzsd3UOo+rSp+fkARiutrnJ75gTC/U55zlv2A==}
     dependencies:
-      '@visactor/vgrammar-core': 0.16.3
-      '@visactor/vgrammar-util': 0.16.3
-      '@visactor/vrender-core': 0.22.6
-      '@visactor/vrender-kits': 0.22.6
+      '@visactor/vgrammar-core': 0.16.7
+      '@visactor/vgrammar-util': 0.16.7
+      '@visactor/vrender-core': 0.22.10
+      '@visactor/vrender-kits': 0.22.10
       '@visactor/vscale': 0.19.6
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vgrammar-wordcloud@0.16.3:
-    resolution: {integrity: sha512-uIHUJ3CGir+IjDjv4SpJR5SZvWSIYU2VoBdoCvFdhP9j8t15wadGYfe0/br9d6xOM3laiSCFYvPdhy0Ke5sP4w==}
+  /@visactor/vgrammar-wordcloud@0.16.7:
+    resolution: {integrity: sha512-fWaxIHxs0w/xeskZNRQnK4pNIsoCOEADHI1rS/WeQboHh+3NeAAtGaxvVd1d1VFbVA5TFk4iWe9w+JLv34GxSQ==}
     dependencies:
-      '@visactor/vgrammar-core': 0.16.3
-      '@visactor/vgrammar-util': 0.16.3
-      '@visactor/vrender-core': 0.22.6
-      '@visactor/vrender-kits': 0.22.6
+      '@visactor/vgrammar-core': 0.16.7
+      '@visactor/vgrammar-util': 0.16.7
+      '@visactor/vrender-core': 0.22.10
+      '@visactor/vrender-kits': 0.22.10
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vrender-components@0.22.6:
-    resolution: {integrity: sha512-YHLjA2GzP5LQxAAgzo2iniBxDldy9GtEzjm/sCXrrOGzzwMFlyhAeXCbUVEIMhTTfpRdK5LocAP1PSJsv4BObA==}
+  /@visactor/vrender-components@0.22.10:
+    resolution: {integrity: sha512-rfsci9y9AkEp/TCqCs0wpYdmPYqRnViEZ3EF9yiKhuFMExzdO8opga7JPfHJSbGCMoaqU5mWVCiEALsQkFuRQg==}
     dependencies:
-      '@visactor/vrender-core': 0.22.6
-      '@visactor/vrender-kits': 0.22.6
+      '@visactor/vrender-core': 0.22.10
+      '@visactor/vrender-kits': 0.22.10
       '@visactor/vscale': 0.19.6
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vrender-core@0.22.6:
-    resolution: {integrity: sha512-R/MPjAuF9vT5atn7tAqhA5K1FMqYzv2SOhREsJpgP6QbJSnGR2uMTrNENRFvrM81ikR6yeh7WeTx6Fh2av+M4A==}
+  /@visactor/vrender-core@0.22.10:
+    resolution: {integrity: sha512-I2+/odcPphPujZtA26S4RG8Yn9BNPt4jlcsbOPwDGP5MvN7oLkWTSMgu4C9r0/lWYvfkwi5JpaoU8lLBZT7e6w==}
     dependencies:
       '@visactor/vutils': 0.19.6
       color-convert: 2.0.1
     dev: false
 
-  /@visactor/vrender-kits@0.22.6:
-    resolution: {integrity: sha512-0yRvhMhnT3JeFKCOi8riubkuKjNMIlzcW1FQV+kIyOGGV6nCSjvFL4+XDuEGalHlHt76BSlM1/cmxnmRNTHCRQ==}
+  /@visactor/vrender-kits@0.22.10:
+    resolution: {integrity: sha512-XjhThrOLvd1m7+o2jKNGKZSSAlHQG4cIm7H6BV2ew9/eQ532Fj8Vd7N17KU8bBnXzPulCmPpnEFj++E4Mnoqpg==}
     dependencies:
       '@resvg/resvg-js': 2.4.1
-      '@visactor/vrender-core': 0.22.6
+      '@visactor/vrender-core': 0.22.10
       '@visactor/vutils': 0.19.6
       gifuct-js: 2.1.2
       lottie-web: 5.13.0
@@ -13483,8 +13982,8 @@ packages:
       '@visactor/vutils': 0.19.6
     dev: false
 
-  /@visactor/vutils-extension@1.13.8:
-    resolution: {integrity: sha512-mOtUJjUEthQTHyYnynWJs8wbbW+UoW0z18lH++TqGoDbsJLcr4Mlpxhe8IDP/bda7kRVTI/FHbzVHhKWKLBvxw==}
+  /@visactor/vutils-extension@1.13.11:
+    resolution: {integrity: sha512-S4CuOE8AdbxmjNJlF15EF95OvxBs+g2ZQO7sg9yDpZv4A9KlNuLJm33amQ3isTRelIfjgcnCNuWUc82V6U1YAQ==}
     dependencies:
       '@visactor/vdataset': 0.19.6
       '@visactor/vutils': 0.19.6
@@ -15465,7 +15964,6 @@ packages:
     resolution: {integrity: sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ==}
     engines: {node: ^12.20.0 || >=14}
     requiresBuild: true
-    dev: false
     optional: true
 
   /common-path-prefix@3.0.0:
@@ -15505,6 +16003,23 @@ packages:
     transitivePeerDependencies:
       - supports-color
     dev: true
+
+  /compute-gcd@1.2.1:
+    resolution: {integrity: sha512-TwMbxBNz0l71+8Sc4czv13h4kEqnchV9igQZBi6QUaz09dnz13juGnnaWWJTRsP3brxOoxeB4SA2WELLw1hCtg==}
+    dependencies:
+      validate.io-array: 1.0.6
+      validate.io-function: 1.0.2
+      validate.io-integer-array: 1.0.0
+    dev: false
+
+  /compute-lcm@1.1.2:
+    resolution: {integrity: sha512-OFNPdQAXnQhDSKioX8/XYT6sdUlXwpeMjfd6ApxMJfyZ4GxmLR1xvMERctlYhlHwIiz6CSpBc2+qYKjHGZw4TQ==}
+    dependencies:
+      compute-gcd: 1.2.1
+      validate.io-array: 1.0.6
+      validate.io-function: 1.0.2
+      validate.io-integer-array: 1.0.0
+    dev: false
 
   /compute-scroll-into-view@1.0.20:
     resolution: {integrity: sha512-UCB0ioiyj8CRjtrvaceBLqqhZCVP+1B8+NWQhmdsm0VXOJtobBCf1dBQmebCCo34qZmUwZfIH2MZLqNHazrfjg==}
@@ -15602,6 +16117,12 @@ packages:
   /cookie@0.7.1:
     resolution: {integrity: sha512-6DnInpx7SJ2AK3+CTUE/ZM0vWTUboZCegxhC2xiIydHR9jNuTAASBrfEpHhiGOZw/nX51bHt6YQl8jsGo4y/0w==}
     engines: {node: '>= 0.6'}
+    dev: true
+
+  /copy-anything@2.0.6:
+    resolution: {integrity: sha512-1j20GZTsvKNkc4BY3NpMOM8tt///wY3FpIzozTOFO2ffuZcV61nojHXVKIy3WM+7ADCy5FVhdZYHYDdgTU0yJw==}
+    dependencies:
+      is-what: 3.14.1
     dev: true
 
   /copy-descriptor@0.1.1:
@@ -16873,6 +17394,15 @@ packages:
     engines: {node: '>=4'}
     hasBin: true
     dev: true
+
+  /errno@0.1.8:
+    resolution: {integrity: sha512-dJ6oBr5SQ1VSd9qkk7ByRgb/1SH4JZjCHSW/mr63/QcXO9zLVxvJ6Oy13nio03rxpSnVDDjFor75SjVeZWPW/A==}
+    hasBin: true
+    requiresBuild: true
+    dependencies:
+      prr: 1.0.1
+    dev: true
+    optional: true
 
   /error-ex@1.3.2:
     resolution: {integrity: sha512-7dFHNmqeFSEt2ZBsCriorKnn3Z2pj+fd9kmI6QoWw4//DL+icEBfc0U7qJCisqrTsKTjw4fNFy2pW9OqStD84g==}
@@ -19257,7 +19787,6 @@ packages:
     engines: {node: '>=0.10.0'}
     dependencies:
       safer-buffer: 2.1.2
-    dev: false
 
   /icss-utils@4.1.1:
     resolution: {integrity: sha512-4aFq7wvWyMHKgxsH8QQtGpvbASCf+eM3wPRLI6R+MgAnTCZ6STYsRvttLvRWK0Nfif5piF394St3HeJDaljGPA==}
@@ -19290,6 +19819,14 @@ packages:
   /ignore@7.0.5:
     resolution: {integrity: sha512-Hs59xBNfUIunMFgWAbGX5cq6893IbWg4KnrjbYwX3tx0ztorVgTDA6B2sxf8ejHJ4wz8BqGUMYlnzNBer5NvGg==}
     engines: {node: '>= 4'}
+
+  /image-size@0.5.5:
+    resolution: {integrity: sha512-6TDAlDPZxUFCv+fuOkIoXT/V/f3Qbq8e37p+YOiYrUv3v9cc3/6x78VdfPgFVaB9dZYeLUfKgHRebpkm/oP2VQ==}
+    engines: {node: '>=0.10.0'}
+    hasBin: true
+    requiresBuild: true
+    dev: true
+    optional: true
 
   /immediate@3.0.6:
     resolution: {integrity: sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==}
@@ -19869,6 +20406,10 @@ packages:
       call-bound: 1.0.4
       get-intrinsic: 1.3.0
 
+  /is-what@3.14.1:
+    resolution: {integrity: sha512-sNxgpk9793nzSs7bA6JQJGeIuRBQhAaNGG77kzYQgMkrID+lS6SlK07K5LaptscDlSaIgH+GPFzf+d75FVxozA==}
+    dev: true
+
   /is-whitespace-character@1.0.4:
     resolution: {integrity: sha512-SDweEzfIZM0SJV0EUga669UTKlmL0Pq8Lno0QDQsPnvECB3IM2aP0gdx5TrU0A01MAPfViaZiI2V1QMZLaKK5w==}
     dev: true
@@ -19918,7 +20459,7 @@ packages:
     resolution: {integrity: sha512-A2xsDNST1yB94rErEnwqlzSvGllCJ4e8lDMe1OWBH2hvpfc/2qzgMEiDshTO1HwO+PIDTiYeOc7ZDB7Ds49BOg==}
     engines: {node: '>=18'}
     dependencies:
-      dompurify: 3.2.4
+      dompurify: 3.2.6
       jsdom: 26.1.0
     transitivePeerDependencies:
       - bufferutil
@@ -20240,6 +20781,21 @@ packages:
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
     dev: true
 
+  /json-schema-compare@0.2.2:
+    resolution: {integrity: sha512-c4WYmDKyJXhs7WWvAWm3uIYnfyWFoIp+JEoX34rctVvEkMYCPGhXtvmFFXiffBbxfZsvQ0RNnV5H7GvDF5HCqQ==}
+    dependencies:
+      lodash: 4.17.21
+    dev: false
+
+  /json-schema-merge-allof@0.8.1:
+    resolution: {integrity: sha512-CTUKmIlPJbsWfzRRnOXz+0MjIqvnleIXwFTzz+t9T86HnYX/Rozria6ZVGLktAU9e+NygNljveP+yxqtQp/Q4w==}
+    engines: {node: '>=12.0.0'}
+    dependencies:
+      compute-lcm: 1.1.2
+      json-schema-compare: 0.2.2
+      lodash: 4.17.21
+    dev: false
+
   /json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
 
@@ -20288,6 +20844,11 @@ packages:
       '@jsep-plugin/assignment': 1.3.0(jsep@1.4.0)
       '@jsep-plugin/regex': 1.0.4(jsep@1.4.0)
       jsep: 1.4.0
+
+  /jsonpointer@5.0.1:
+    resolution: {integrity: sha512-p/nXbhSEcu3pZRdkW1OfJhpsVtW1gd4Wa1fnQc9YLiTfAjn0312eMKimbdIQzuZl9aa9xUGaRlP9T/CJE/ditQ==}
+    engines: {node: '>=0.10.0'}
+    dev: false
 
   /jsonwebtoken@9.0.2:
     resolution: {integrity: sha512-PRp66vJ865SSqOlgqS8hujT5U4AOgMfhrwYIuIhfKaoSCZcirrmASQr8CX7cUg+RMih+hgznrjp99o+W4pJLHQ==}
@@ -20471,6 +21032,24 @@ packages:
       dotenv-expand: 10.0.0
     dev: true
 
+  /less@4.4.2:
+    resolution: {integrity: sha512-j1n1IuTX1VQjIy3tT7cyGbX7nvQOsFLoIqobZv4ttI5axP923gA44zUj6miiA6R5Aoms4sEGVIIcucXUbRI14g==}
+    engines: {node: '>=14'}
+    hasBin: true
+    dependencies:
+      copy-anything: 2.0.6
+      parse-node-version: 1.0.1
+      tslib: 2.8.1
+    optionalDependencies:
+      errno: 0.1.8
+      graceful-fs: 4.2.11
+      image-size: 0.5.5
+      make-dir: 2.1.0
+      mime: 1.6.0
+      needle: 3.3.1
+      source-map: 0.6.1
+    dev: true
+
   /leven@2.1.0:
     resolution: {integrity: sha512-nvVPLpIHUxCUoRLrFqTgSxXJ614d8AgQoWl7zPe/2VadE8+1dpU3LBhowRuBAcuwruWtOdD8oYC9jDNJjXDPyA==}
     engines: {node: '>=0.10.0'}
@@ -20611,7 +21190,6 @@ packages:
   /lodash.get@4.4.2:
     resolution: {integrity: sha512-z+Uw/vLuy6gQe8cfaFWD7p0wVv8fJl3mbzXh33RS+0oW2wvUqiRXiQ69gLWSLpgB5/6sU+r6BlQR0MBILadqTQ==}
     deprecated: This package is deprecated. Use the optional chaining (?.) operator instead.
-    dev: false
 
   /lodash.includes@4.3.0:
     resolution: {integrity: sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==}
@@ -20622,7 +21200,6 @@ packages:
   /lodash.isequal@4.5.0:
     resolution: {integrity: sha512-pDo3lu8Jhfjqls6GkMgpahsF9kCyayhgykjyLMNFTKWrpVdAQtYyB4muAMWozBB4ig/dtWAmsMxLEI8wuz+DYQ==}
     deprecated: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
-    dev: false
 
   /lodash.isinteger@4.0.4:
     resolution: {integrity: sha512-DBwtEWN2caHQ9/imiNeEA5ys1JoRtRfY3d7V9wkqtbycnAmTvRRmbHKDV4a0EYc678/dia0jrte4tjYwVBaZUA==}
@@ -20875,7 +21452,6 @@ packages:
       react: 18.2.0
     dependencies:
       react: 18.2.0
-    dev: true
 
   /marked-mangle@1.1.10(marked@15.0.7):
     resolution: {integrity: sha512-TrpN67SMJJdzXXWIzOd/QmnpsC5o1B44PUYaG2bh1XEbqVjA0UCI2ijFuE5LWESwKeI2gCP5FqcUHRGQwFtDIA==}
@@ -20936,7 +21512,7 @@ packages:
   /md5.js@1.3.5:
     resolution: {integrity: sha512-xitP+WxNPcTTOgnTJcrhM0xvdPepipPSf3I8EIpGKeFLjt3PlJLIDG3u8EX53ZIubkb+5U2+3rELYpEhHhzdkg==}
     dependencies:
-      hash-base: 3.0.5
+      hash-base: 3.1.2
       inherits: 2.0.4
       safe-buffer: 5.2.1
     dev: true
@@ -21288,7 +21864,7 @@ packages:
       '@jsonjoy.com/util': 1.9.0(tslib@2.8.1)
       glob-to-regex.js: 1.2.0(tslib@2.8.1)
       thingies: 2.5.0(tslib@2.8.1)
-      tree-dump: 1.0.3(tslib@2.8.1)
+      tree-dump: 1.1.0(tslib@2.8.1)
       tslib: 2.8.1
     dev: true
 
@@ -22245,6 +22821,17 @@ packages:
   /natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
+  /needle@3.3.1:
+    resolution: {integrity: sha512-6k0YULvhpw+RoLNiQCRKOl09Rv1dPLr8hHnVjHqdolKwDrdNyk+Hmrthi4lIGPPz3r39dLx0hsF5s40sZ3Us4Q==}
+    engines: {node: '>= 4.4.x'}
+    hasBin: true
+    requiresBuild: true
+    dependencies:
+      iconv-lite: 0.6.3
+      sax: 1.4.3
+    dev: true
+    optional: true
+
   /negotiator@0.6.3:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
     engines: {node: '>= 0.6'}
@@ -22827,6 +23414,11 @@ packages:
       error-ex: 1.3.2
       json-parse-even-better-errors: 2.3.1
       lines-and-columns: 1.2.4
+
+  /parse-node-version@1.0.1:
+    resolution: {integrity: sha512-3YHlOa/JgH6Mnpr05jP9eDG254US9ek25LyIxZlDItp2iJtwyaXQb57lBYLdT3MowkUFYEV2XXNAYIPlESvJlA==}
+    engines: {node: '>= 0.10'}
+    dev: true
 
   /parse-passwd@1.0.0:
     resolution: {integrity: sha512-1Y1A//QUXEZK7YKz+rD9WydcE1+EuPr6ZBgKecAB8tmoW6UFv0NREVJe1p+jRxtThkcbbKkfwIbWJe/IeE6m2Q==}
@@ -23525,6 +24117,12 @@ packages:
 
   /proxy-from-env@1.1.0:
     resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
+
+  /prr@1.0.1:
+    resolution: {integrity: sha512-yPw4Sng1gWghHQWj0B3ZggWUm4qVbPwPFcRG8KyxiU7J2OHFSoEHKS+EZ3fv5l1t9CyCiop6l/ZYeWbrgoQejw==}
+    requiresBuild: true
+    dev: true
+    optional: true
 
   /public-encrypt@4.0.3:
     resolution: {integrity: sha512-zVpa8oKZSz5bTMTFClc1fQOnyyEzpl5ozpi1B5YcvBrdohMjH2rfsBtyXcuNuwjsDIXmBYlF2N5FlJYhR29t8Q==}
@@ -24324,10 +24922,6 @@ packages:
       strip-indent: 4.0.0
     dev: true
 
-  /reduce-configs@1.1.0:
-    resolution: {integrity: sha512-DQxy6liNadHfrLahZR7lMdc227NYVaQZhY5FMsxLEjX8X0SCuH+ESHSLCoz2yDZFq1/CLMDOAHdsEHwOEXKtvg==}
-    dev: true
-
   /reduce-configs@1.1.1:
     resolution: {integrity: sha512-EYtsVGAQarE8daT54cnaY1PIknF2VB78ug6Zre2rs36EsJfC40EG6hmTU2A2P1ZuXnKAt2KI0fzOGHcX7wzdPw==}
     dev: true
@@ -24660,7 +25254,6 @@ packages:
     dependencies:
       is-core-module: 2.16.1
       path-parse: 1.0.7
-    dev: false
 
   /resolve@1.22.10:
     resolution: {integrity: sha512-NPRy+/ncIMeDlTAsuqwKIiferiawhefFJtkNSW0qZJEqMEb+qBt/77B/jGeeek+F0uOeN05CDa6HXbbIgtVX4w==}
@@ -24796,6 +25389,28 @@ packages:
   /rrweb-cssom@0.8.0:
     resolution: {integrity: sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw==}
     dev: false
+
+  /rsbuild-plugin-dts@0.11.2(@microsoft/api-extractor@7.43.0)(@rsbuild/core@1.4.16):
+    resolution: {integrity: sha512-D3sSqcrxRnuIbGaXZgmV8K/WLaJ6lBe0mD3SemWAexBXYezu4rj1ndqQeRwkDBji+XU6wLUA+w43GyWtY4E79g==}
+    engines: {node: '>=16.7.0'}
+    peerDependencies:
+      '@microsoft/api-extractor': ^7
+      '@rsbuild/core': 1.x
+      typescript: 5.8.2
+    peerDependenciesMeta:
+      '@microsoft/api-extractor':
+        optional: true
+      typescript:
+        optional: true
+    dependencies:
+      '@ast-grep/napi': 0.37.0
+      '@microsoft/api-extractor': 7.43.0(@types/node@18.18.9)
+      '@rsbuild/core': 1.4.16
+      magic-string: 0.30.17
+      picocolors: 1.1.1
+      tinyglobby: 0.2.14
+      tsconfig-paths: 4.2.0
+    dev: true
 
   /rsbuild-plugin-dts@0.11.2(@rsbuild/core@1.4.16)(typescript@5.8.2):
     resolution: {integrity: sha512-D3sSqcrxRnuIbGaXZgmV8K/WLaJ6lBe0mD3SemWAexBXYezu4rj1ndqQeRwkDBji+XU6wLUA+w43GyWtY4E79g==}
@@ -25108,6 +25723,12 @@ packages:
       semver: 7.7.2
       webpack: 5.91.0(esbuild@0.18.20)
     dev: true
+
+  /sax@1.4.3:
+    resolution: {integrity: sha512-yqYn1JhPczigF94DMS+shiDMjDowYO6y9+wB/4WgO0Y19jWYk0lQ4tuG5KI7kj4FTp1wxPj5IFfcrz/s1c3jjQ==}
+    requiresBuild: true
+    dev: true
+    optional: true
 
   /saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
@@ -27667,10 +28288,34 @@ packages:
     dependencies:
       builtins: 1.0.3
 
+  /validate.io-array@1.0.6:
+    resolution: {integrity: sha512-DeOy7CnPEziggrOO5CZhVKJw6S3Yi7e9e65R1Nl/RTN1vTQKnzjfvks0/8kQ40FP/dsjRAOd4hxmJ7uLa6vxkg==}
+    dev: false
+
+  /validate.io-function@1.0.2:
+    resolution: {integrity: sha512-LlFybRJEriSuBnUhQyG5bwglhh50EpTL2ul23MPIuR1odjO7XaMLFV8vHGwp7AZciFxtYOeiSCT5st+XSPONiQ==}
+    dev: false
+
+  /validate.io-integer-array@1.0.0:
+    resolution: {integrity: sha512-mTrMk/1ytQHtCY0oNO3dztafHYyGU88KL+jRxWuzfOmQb+4qqnWmI+gykvGp8usKZOM0H7keJHEbRaFiYA0VrA==}
+    dependencies:
+      validate.io-array: 1.0.6
+      validate.io-integer: 1.0.5
+    dev: false
+
+  /validate.io-integer@1.0.5:
+    resolution: {integrity: sha512-22izsYSLojN/P6bppBqhgUDjCkr5RY2jd+N2a3DCAUey8ydvrZ/OkGvFPR7qfOpwR2LC5p4Ngzxz36g5Vgr/hQ==}
+    dependencies:
+      validate.io-number: 1.0.3
+    dev: false
+
+  /validate.io-number@1.0.3:
+    resolution: {integrity: sha512-kRAyotcbNaSYoDnXvb4MHg/0a1egJdLwS6oJ38TJY7aw9n93Fl/3blIXdyYvPOp55CNxywooG/3BcrwNrBpcSg==}
+    dev: false
+
   /validator@13.15.15:
     resolution: {integrity: sha512-BgWVbCI72aIQy937xbawcs+hrVaN/CZ2UwutgaJ36hGqRrLNM+f5LUT/YPRbo8IV/ASeFzXszezV+y2+rq3l8A==}
     engines: {node: '>= 0.10'}
-    dev: false
 
   /varint@6.0.0:
     resolution: {integrity: sha512-cXEIW6cfr15lFv563k4GuVuW/fiwjknytD37jIOLSdSWuOI6WnO/oKwmP2FQTU2l01LP8/M5TSAJpzUaGe3uWg==}
@@ -27764,6 +28409,31 @@ packages:
       es-module-lexer: 1.7.0
       pathe: 2.0.3
       vite: 6.3.5(@types/node@18.18.9)(yaml@2.8.0)
+    transitivePeerDependencies:
+      - '@types/node'
+      - jiti
+      - less
+      - lightningcss
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - yaml
+    dev: true
+
+  /vite-node@3.0.9(less@4.4.2):
+    resolution: {integrity: sha512-w3Gdx7jDcuT9cNn9jExXgOyKmf5UOTb6WMHz8LGAm54eS1Elf5OuBhCxl6zJxGhEeIkgsE1WbHuoL0mj/UXqXg==}
+    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
+    hasBin: true
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.3
+      es-module-lexer: 1.7.0
+      pathe: 2.0.3
+      vite: 6.3.5(less@4.4.2)
     transitivePeerDependencies:
       - '@types/node'
       - jiti
@@ -27946,6 +28616,57 @@ packages:
       rollup: 4.43.0
       tinyglobby: 0.2.14
       yaml: 2.8.0
+    optionalDependencies:
+      fsevents: 2.3.3
+    dev: true
+
+  /vite@6.3.5(less@4.4.2):
+    resolution: {integrity: sha512-cZn6NDFE7wdTpINgs++ZJ4N49W2vRp8LCKrn3Ob1kYNtOo21vfDoaV5GzBfLU4MovSAB8uNRm4jgzVQZ+mBzPQ==}
+    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': 18.18.9
+      jiti: '>=1.21.0'
+      less: '*'
+      lightningcss: ^1.21.0
+      sass: '*'
+      sass-embedded: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.16.0
+      tsx: ^4.8.1
+      yaml: ^2.4.2
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      jiti:
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      sass-embedded:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+      tsx:
+        optional: true
+      yaml:
+        optional: true
+    dependencies:
+      esbuild: 0.25.5
+      fdir: 6.4.6(picomatch@4.0.2)
+      less: 4.4.2
+      picomatch: 4.0.2
+      postcss: 8.5.6
+      rollup: 4.43.0
+      tinyglobby: 0.2.14
     optionalDependencies:
       fsevents: 2.3.3
     dev: true
@@ -28191,6 +28912,69 @@ packages:
       tinyrainbow: 2.0.0
       vite: 6.3.5(@types/node@18.18.9)(yaml@2.8.0)
       vite-node: 3.0.9(@types/node@18.18.9)(yaml@2.8.0)
+      why-is-node-running: 2.3.0
+    transitivePeerDependencies:
+      - jiti
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - yaml
+    dev: true
+
+  /vitest@3.0.9(less@4.4.2):
+    resolution: {integrity: sha512-BbcFDqNyBlfSpATmTtXOAOj71RNKDDvjBM/uPfnxxVGrG+FSH2RQIwgeEngTaTkuU/h0ScFvf+tRcKfYXzBybQ==}
+    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
+    hasBin: true
+    peerDependencies:
+      '@edge-runtime/vm': '*'
+      '@types/debug': ^4.1.12
+      '@types/node': 18.18.9
+      '@vitest/browser': 3.0.9
+      '@vitest/ui': 3.0.9
+      happy-dom: '*'
+      jsdom: '*'
+    peerDependenciesMeta:
+      '@edge-runtime/vm':
+        optional: true
+      '@types/debug':
+        optional: true
+      '@types/node':
+        optional: true
+      '@vitest/browser':
+        optional: true
+      '@vitest/ui':
+        optional: true
+      happy-dom:
+        optional: true
+      jsdom:
+        optional: true
+    dependencies:
+      '@vitest/expect': 3.0.9
+      '@vitest/mocker': 3.0.9(vite@6.3.5)
+      '@vitest/pretty-format': 3.2.4
+      '@vitest/runner': 3.0.9
+      '@vitest/snapshot': 3.0.9
+      '@vitest/spy': 3.0.9
+      '@vitest/utils': 3.0.9
+      chai: 5.2.0
+      debug: 4.3.3
+      expect-type: 1.2.1
+      magic-string: 0.30.17
+      pathe: 2.0.3
+      std-env: 3.9.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.2
+      tinypool: 1.1.1
+      tinyrainbow: 2.0.0
+      vite: 6.3.5(less@4.4.2)
+      vite-node: 3.0.9(less@4.4.2)
       why-is-node-running: 2.3.0
     transitivePeerDependencies:
       - jiti
@@ -28794,7 +29578,6 @@ packages:
       validator: 13.15.15
     optionalDependencies:
       commander: 9.5.0
-    dev: false
 
   /zod-validation-error@1.2.0(zod@3.22.4):
     resolution: {integrity: sha512-laJkD/ugwEh8CpuH+xXv5L9Z+RLz3lH8alNxolfaHZJck611OJj97R4Rb+ZqA7WNly2kNtTo4QwjdjXw9scpiw==}

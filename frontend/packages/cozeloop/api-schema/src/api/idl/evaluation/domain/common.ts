@@ -53,6 +53,7 @@ export interface ArgsSchema {
   support_content_types?: ContentType[],
   /** 序列化后的jsonSchema字符串，例如："{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}, \"age\": {\"type\": \"integer\"}, \"isStudent\": {\"type\": \"boolean\"}}, \"required\": [\"name\", \"age\", \"isStudent\"]}" */
   json_schema?: string,
+  default_value?: Content,
 }
 export interface UserInfo {
   /** 姓名 */
@@ -97,4 +98,9 @@ export interface Session {
 export interface RuntimeParam {
   json_value?: string,
   json_demo?: string,
+}
+export interface RateLimit {
+  rate?: number,
+  burst?: number,
+  period?: string,
 }

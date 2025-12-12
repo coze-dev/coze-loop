@@ -8,6 +8,7 @@ import {
   useRef,
 } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EditorProvider,
   Renderer,
@@ -89,7 +90,7 @@ export const PromptBasicEditor = forwardRef<
       forbidJinjaHighlight,
       forbidVariables,
       readOnly,
-      linePlaceholder = '请输入内容，支持按此格式书写变量：{{USER_NAME}}',
+      linePlaceholder = I18n.t('prompt_please_input_content_variable_format'),
       customExtensions = [],
       autoScrollToBottom,
       onBlur,
@@ -188,6 +189,7 @@ export const PromptBasicEditor = forwardRef<
               variables={variables}
               isNormalTemplate={!isJinja2Template && !isGoTemplate}
             />
+
             <JinjaHighlight isJinja2Template={isJinja2Template} />
           </>
         )}

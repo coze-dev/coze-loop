@@ -11,6 +11,7 @@
     "test:cov": "npm run test -- --coverage"
   },
   "dependencies": {
+    "@cozeloop/i18n-adapter": "workspace:*",
     "@cozeloop/stores": "workspace:*",
     "zustand": "^4.4.7"
   },

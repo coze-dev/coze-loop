@@ -8,13 +8,19 @@ import { useState, type MutableRefObject } from 'react';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
+  type CreateExperimentValues,
   ExptCreateFormCtx,
   ExtCreateStep,
   useEvalTargetDefinition,
 } from '@cozeloop/evaluate-components';
-import { RouteBackAction, PageError } from '@cozeloop/components';
+import {
+  SentinelForm,
+  type SentinelFormApi,
+  PageError,
+} from '@cozeloop/components';
 import { useNavigateModule, useSpace } from '@cozeloop/biz-hooks-adapter';
-import { Form, Spin } from '@coze-arch/coze-design';
+import { RouteBackAction } from '@cozeloop/base-with-adapter-components';
+import { Spin } from '@coze-arch/coze-design';
 
 import { submitExperiment } from '@/request/experiment';
 
@@ -58,16 +64,30 @@ const reportStep = (params: {
   newTimeRef.current = getCurrentTime();
 };
 
-const BackComponent = () => (
+const BackComponent = ({
+  defaultModuleRoute = 'evaluation/experiments',
+}: {
+  defaultModuleRoute?: string;
+}) => (
   <div className="px-6 py-3 h-[56px] flex-shrink-0 flex flex-row items-center">
-    <RouteBackAction defaultModuleRoute="evaluation/experiments" />
+    <RouteBackAction defaultModuleRoute={defaultModuleRoute} />
     <span className="ml-2 text-[18px] font-medium coz-fg-plus">
       {I18n.t('new_experiment')}
     </span>
   </div>
 );
 
-export default function ExperimentCreatePage() {
+interface ExperimentCreatePageProps {
+  getFormApi?: (formApi: SentinelFormApi<CreateExperimentValues>) => void;
+  onSuccess?: (experimentId: string) => void;
+  defaultModuleRoute?: string;
+}
+
+export default function ExperimentCreatePage({
+  getFormApi,
+  onSuccess,
+  defaultModuleRoute,
+}: ExperimentCreatePageProps) {
   const { spaceID } = useSpace();
 
   const { step, goNext, goPrevious } = useStepNavigation();
@@ -107,11 +127,11 @@ export default function ExperimentCreatePage() {
     // 保存当前步骤的值
     if (formRef?.current?.formApi) {
       const currentValues = formRef.current.formApi.getValues();
-      const prevStepValues = calcNextStepRenderValue(
+      const nextStepRenderData = calcNextStepRenderValue(
         createExperimentValues,
         currentValues,
       );
-      setCreateExperimentValues(prevStepValues);
+      setCreateExperimentValues(nextStepRenderData);
     }
 
     reportStep({
@@ -142,18 +162,24 @@ export default function ExperimentCreatePage() {
         throw new Error('experimentId is undefined');
       }
       setBlockLeave(false);
+
+      await formRef.current?.submitLog?.();
       setTimeout(() => {
         sendEvent(EVENT_NAMES.cozeloop_experiment_create_total_cost, {
           duration: getCurrentTime() - startTimeRef.current,
           method: copyExperimentID ? 'copy' : 'create',
         });
-
-        navigateModule(`evaluation/experiments/${experimentId}`, {
-          replace: true,
-        });
+        if (!onSuccess) {
+          navigateModule(`evaluation/experiments/${experimentId}`, {
+            replace: true,
+          });
+        } else {
+          onSuccess(experimentId);
+        }
       }, 100);
     } catch (e) {
-      console.error(I18n.t('submit_form_problems'), e);
+      formRef.current?.submitLog?.(true, e);
+      console.error('提交表单遇到问题', e);
     } finally {
       setNextStepLoading(false);
     }
@@ -191,15 +217,13 @@ export default function ExperimentCreatePage() {
           console.error('xxx 遇到问题e', e);
         }
         // 普通下一步
-
         if (values) {
           // 更新全局状态，确保包含最新的表单值
-
-          setCreateExperimentValues(prev => {
-            const prevStepValues = calcNextStepRenderValue(prev, values);
-            return prevStepValues;
-          });
-
+          setCreateExperimentValues(prev => ({
+            ...prev,
+            ...values,
+            target_runtime_param: values?.target_runtime_param,
+          }));
           // 设置下一步
           goNext();
         }
@@ -223,15 +247,17 @@ export default function ExperimentCreatePage() {
         <ExptCreateFormCtx.Provider
           value={{ nextStepLoading, setNextStepLoading }}
         >
-          <BackComponent />
+          <BackComponent defaultModuleRoute={defaultModuleRoute} />
           {/* 步骤指示器 */}
           <StepIndicator steps={STEPS} currentStep={step} />
-          <Form
+          <SentinelForm
+            formID={I18n.t('evaluate_evaluation_experiment_creation')}
             ref={formRef}
             className="flex-1 min-h-0 flex flex-col"
             onValueChange={v => {
               setBlockLeave(true);
             }}
+            getFormApi={getFormApi}
           >
             {({ formState }) => (
               <>
@@ -316,7 +342,7 @@ export default function ExperimentCreatePage() {
                 />
               </>
             )}
-          </Form>
+          </SentinelForm>
         </ExptCreateFormCtx.Provider>
       </ErrorBoundary>
     </div>

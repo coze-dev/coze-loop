@@ -13,6 +13,7 @@ import {
   type EvaluatorVersion,
   type EvalTargetType,
   type FieldSchema,
+  type Experiment,
 } from '@cozeloop/api-schema/evaluation';
 import { type RuleItem, type SelectProps } from '@coze-arch/coze-design';
 
@@ -222,6 +223,7 @@ export interface EvalTargetDefinition {
    */
   transformCopyExperimentValues?: (
     values: CreateExperimentValues,
+    experiment?: Experiment,
   ) => Promise<CreateExperimentValues>;
   /**
    * 获取初始化数据

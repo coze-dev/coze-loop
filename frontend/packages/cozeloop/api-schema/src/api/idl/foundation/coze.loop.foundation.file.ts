@@ -73,6 +73,29 @@ export interface SignDownloadFileResponse {
   /** the index corresponding to the keys of request */
   uris?: string[]
 }
+export interface UploadFileOption {
+  /** file name */
+  file_name?: string,
+  /** custom mimetype -> ext mapping */
+  mime_type_ext_mapping?: {
+    [key: string | number]: string
+  },
+}
+export interface UploadFileForServerRequest {
+  /** file mime type */
+  mime_type: string,
+  /** file binary data */
+  body: Blob,
+  /** workspace id */
+  workspace_id: string,
+  /** upload options */
+  option?: UploadFileOption,
+}
+export interface UploadFileForServerResponse {
+  code?: number,
+  msg?: string,
+  data?: FileData,
+}
 export const SignUploadFile = /*#__PURE__*/createAPI<SignUploadFileRequest, SignUploadFileResponse>({
   "url": "/api/foundation/v1/sign_upload_files",
   "method": "POST",

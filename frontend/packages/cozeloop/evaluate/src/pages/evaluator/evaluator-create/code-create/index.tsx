@@ -1,34 +1,20 @@
-/*
- * Copyright 2025
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/* eslint-disable max-lines */
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable complexity */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable @coze-arch/max-line-per-function */
-import { useLocation, useParams } from 'react-router-dom';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useState, useRef, useCallback } from 'react';
 
 import { nanoid } from 'nanoid';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { Guard, GuardPoint } from '@cozeloop/guard';
 import { sourceNameRuleValidator } from '@cozeloop/evaluate-components';
+import { SentinelForm, type SentinelFormRef } from '@cozeloop/components';
 import { useNavigateModule, useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
+  type EvaluatorTemplate,
   EvaluatorType,
-  TemplateType,
   LanguageType,
   type evaluator,
 } from '@cozeloop/api-schema/evaluation';
@@ -39,7 +25,7 @@ import {
   IconCozExpand,
 } from '@coze-arch/coze-design/icons';
 import {
-  Form,
+  type Form,
   FormInput,
   Button,
   Toast,
@@ -65,20 +51,23 @@ import {
 } from '@/components/evaluator-code/types';
 import CodeEvaluatorConfig from '@/components/evaluator-code';
 
+import { EvaluatorTypeTagText } from '../../evaluator-template/types';
+import { EvaluatorTemplateListPanel } from '../../evaluator-template/evaluator-template-list-panel';
 import SubmitCheckModal from './submit-check-modal';
+import { useTemplateQuery } from './hooks/use-template-query';
 import { CodeCreateHeader } from './header';
 import { FullScreenEditorConfigModal } from './full-screen-editor-config-modal';
-import { CodeTemplateModal } from './code-template-modal';
 
 import styles from './index.module.less';
 
+const disabledEvaluatorTypes = [EvaluatorTypeTagText.Prompt];
+
 const CodeEvaluatorCreatePage = () => {
   const { spaceID } = useSpace();
-  const { id } = useParams<{ id: string }>();
   const navigateModule = useNavigateModule();
   const location = useLocation();
   // 使用特定类型作为formRef类型
-  const formRef = useRef<Form<IFormValues>>(null);
+  const formRef = useRef<SentinelFormRef<IFormValues>>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,6 +119,7 @@ const CodeEvaluatorCreatePage = () => {
             evaluator_content: {
               code_evaluator: {
                 code_content: formValues.config.funcExecutor.code,
+                code_template_key: templateInfo?.key,
                 language_type:
                   formValues.config.funcExecutor.language ===
                   CodeEvaluatorLanguageFE.Javascript
@@ -149,7 +139,7 @@ const CodeEvaluatorCreatePage = () => {
         content: I18n.t('evaluate_code_evaluator_created_successfully'),
         top: 80,
       });
-
+      formRef.current?.submitLog?.();
       // 跳转到详情页面
       navigateModule(
         `evaluation/evaluators/code/${submitResult.evaluator_id}`,
@@ -157,6 +147,7 @@ const CodeEvaluatorCreatePage = () => {
       );
     } catch (error) {
       console.error(I18n.t('evaluate_save_failed'), error);
+      formRef.current?.submitLog?.(true, error);
       Toast.error({
         content: I18n.t('evaluate_save_failed_please_retry'),
         top: 80,
@@ -164,7 +155,7 @@ const CodeEvaluatorCreatePage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [spaceID, navigateModule]);
+  }, [spaceID, navigateModule, templateInfo]);
 
   // 处理提交检查弹窗
   const handleSubmitCheck = useCallback(() => {
@@ -289,7 +280,7 @@ const CodeEvaluatorCreatePage = () => {
       } catch (error) {
         console.error(I18n.t('evaluate_debug_failed'), error);
         Toast.error({
-          content: `调试失败: ${(error as Error)?.message || I18n.t('evaluate_unknown_error')}`,
+          content: `${I18n.t('evaluate_debug_failed')}: ${(error as Error)?.message || I18n.t('evaluate_unknown_error')}`,
           top: 80,
         });
       } finally {
@@ -298,24 +289,26 @@ const CodeEvaluatorCreatePage = () => {
     } catch (error) {
       console.error(I18n.t('evaluate_form_validation_failed'), error);
       Toast.error({
-        content: `表单验证失败: ${(error as Error)?.message || ''}`,
+        content: `${I18n.t('evaluate_form_validation_failed')}: ${(error as Error)?.message || ''}`,
         top: 80,
       });
     }
   };
 
-  // 处理模板选择
   const handleTemplateSelect = useCallback(
-    template => {
-      const { code_evaluator } = template || {};
+    (template: EvaluatorTemplate, options?: { codeLanguageType?: string }) => {
+      const { code_evaluator } = template?.evaluator_content || {};
+      const languageType = options?.codeLanguageType || LanguageType.Python;
+
       if (code_evaluator) {
-        const { code_template_key, code_template_name, language_type } =
-          code_evaluator;
+        const templateKey = template?.id;
+        const templateName = template?.name || '';
+        const { lang_2_code_content } = code_evaluator;
 
         // 更新URL参数
         const searchParams = new URLSearchParams(location.search);
-        searchParams.set('templateKey', code_template_key || '');
-        searchParams.set('templateLang', language_type || '');
+        searchParams.set('templateKey', templateKey || '');
+        searchParams.set('templateLang', languageType || '');
         window.history.replaceState(
           null,
           '',
@@ -324,17 +317,17 @@ const CodeEvaluatorCreatePage = () => {
 
         // 设置模板信息
         setTemplateInfo({
-          key: code_template_key || '',
-          name: code_template_name || '',
-          lang: language_type || '',
+          key: templateKey || '',
+          name: templateName || '',
+          lang: languageType || '',
         });
 
         // 这里可以根据模板内容更新表单值
-        if (code_evaluator.code_content && formRef.current) {
+        if (code_evaluator.lang_2_code_content && formRef.current) {
           formRef.current.formApi.setValue('config.funcExecutor', {
-            code: code_evaluator.code_content,
+            code: lang_2_code_content?.[languageType as string] || '',
             language:
-              codeEvaluatorLanguageMap[language_type] ||
+              codeEvaluatorLanguageMap[languageType] ||
               CodeEvaluatorLanguageFE.Javascript,
           });
         }
@@ -346,98 +339,7 @@ const CodeEvaluatorCreatePage = () => {
     [location.pathname, location.search],
   );
 
-  // 从URL查询参数中获取模板信息
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const templateKey = searchParams.get('templateKey');
-    const templateLang = searchParams.get('templateLang');
-    // 复制评估器
-    if (id) {
-      StoneEvaluationApi.GetEvaluator({
-        workspace_id: spaceID,
-        evaluator_id: id,
-      }).then(res => {
-        const { evaluator } = res;
-        if (evaluator) {
-          const sourceName = res.evaluator?.name || '';
-          const copySubfix = '_Copy';
-          const newName = sourceName
-            .slice(0, 50 - copySubfix.length)
-            .concat(copySubfix);
-          const { code_evaluator } =
-            evaluator.current_version?.evaluator_content || {};
-          formRef.current?.formApi.setValues({
-            name: newName,
-            description: evaluator.description,
-            config: {
-              funcExecutor: {
-                code: code_evaluator?.code_content || '',
-                language:
-                  codeEvaluatorLanguageMap[
-                    code_evaluator?.language_type as LanguageType
-                  ] || CodeEvaluatorLanguageFE.Javascript,
-              },
-              testData: {
-                source: TestDataSource.Custom,
-                customData: defaultTestData[0],
-              },
-            },
-          });
-        }
-      });
-    } else if (templateKey) {
-      // 获取模板信息
-      StoneEvaluationApi.GetTemplateInfo({
-        builtin_template_key: templateKey,
-        builtin_template_type: TemplateType.Code,
-        language_type: (templateLang ||
-          CodeEvaluatorLanguageFE.Python) as LanguageType,
-      }).then(res => {
-        const { code_evaluator } = res.builtin_template || {};
-        if (res.builtin_template?.code_evaluator && code_evaluator) {
-          setTemplateInfo({
-            key: templateKey,
-            name:
-              code_evaluator.code_template_name ||
-              I18n.t('evaluate_unnamed_template'),
-            lang: templateLang || '',
-          });
-          const formApi = formRef.current?.formApi;
-          if (!formApi) {
-            return;
-          }
-          const funcExecutorValue = formApi.getValue('config.funcExecutor');
-          const name = formApi.getValue('name');
-
-          const extraPayload: Record<string, unknown> = {
-            ...funcExecutorValue,
-          };
-
-          // 使用表单API更新表单值
-          if (code_evaluator.code_content && formApi) {
-            extraPayload.code = code_evaluator.code_content;
-          }
-
-          // 更新语言选择
-          if (code_evaluator.language_type && formApi) {
-            extraPayload.language =
-              codeEvaluatorLanguageMap[
-                code_evaluator.language_type as LanguageType
-              ];
-          }
-          if (!name) {
-            formApi.setValue(
-              'name',
-              code_evaluator.code_template_name ||
-                I18n.t('evaluate_unnamed_template'),
-            );
-          }
-
-          formApi.setValue('config.funcExecutor', extraPayload);
-        }
-      });
-    }
-  }, [location.search]);
+  useTemplateQuery({ formRef, setTemplateInfo });
 
   return (
     <div className={styles['code-create-page-container']}>
@@ -447,7 +349,8 @@ const CodeEvaluatorCreatePage = () => {
         ref={scrollContainerRef}
         className="p-6 pt-[12px] flex-1 overflow-y-auto styled-scrollbar pr-[18px]"
       >
-        <Form<IFormValues>
+        <SentinelForm<IFormValues>
+          formID={I18n.t('evaluate_evaluation_new_code_evaluator')}
           ref={formRef}
           initValues={{
             config: {
@@ -462,10 +365,10 @@ const CodeEvaluatorCreatePage = () => {
           className="flex-1 w-[1000px] mx-auto form-default"
         >
           <div className="h-[28px] mb-3 text-[16px] leading-7 font-medium coz-fg-plus">
-            {I18n.t('evaluate_basic_info')}
+            {I18n.t('basic_info')}
           </div>
           <FormInput
-            label={I18n.t('evaluate_name')}
+            label={I18n.t('name')}
             field="name"
             placeholder={I18n.t('please_input_name')}
             required={true}
@@ -493,7 +396,7 @@ const CodeEvaluatorCreatePage = () => {
           />
           <FormTextArea
             label={I18n.t('description')}
-            placeholder={I18n.t('please_input_description')}
+            placeholder={I18n.t('enter_description')}
             autosize={{ minRows: 1 }}
             maxCount={200}
             maxLength={200}
@@ -522,7 +425,7 @@ const CodeEvaluatorCreatePage = () => {
                 icon={<IconCozTemplate />}
                 onClick={() => setTemplateModalVisible(true)}
               >
-                {`${I18n.t('evaluate_template_select')}${
+                {`${I18n.t('evaluate_select_template')}${
                   templateInfo?.name ? `(${templateInfo.name})` : ''
                 }`}
               </Button>
@@ -557,7 +460,7 @@ const CodeEvaluatorCreatePage = () => {
               editorHeight="100%"
             />
           </div>
-        </Form>
+        </SentinelForm>
       </div>
 
       <div className="flex-shrink-0 p-6">
@@ -588,12 +491,18 @@ const CodeEvaluatorCreatePage = () => {
         </div>
       </div>
 
-      <CodeTemplateModal
-        visible={templateModalVisible}
-        isShowCustom={false}
-        onCancel={() => setTemplateModalVisible(false)}
-        onSelect={handleTemplateSelect}
-      />
+      {templateModalVisible ? (
+        <EvaluatorTemplateListPanel
+          defaultEvaluatorType={EvaluatorTypeTagText.Code}
+          disabledEvaluatorTypes={disabledEvaluatorTypes}
+          onApply={(template, options) =>
+            handleTemplateSelect(template, options)
+          }
+          onClose={() => {
+            setTemplateModalVisible(false);
+          }}
+        />
+      ) : null}
 
       <SubmitCheckModal
         formRef={formRef}

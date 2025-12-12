@@ -42,6 +42,7 @@ export default function AddContrastExperiment({
               ExptStatus.Failed,
               ExptStatus.Terminated,
             ],
+
             eval_set: [currentExperiments?.[0]?.eval_set?.id ?? ''].filter(
               Boolean,
             ),

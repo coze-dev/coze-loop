@@ -49,8 +49,7 @@ export function ExportStatusPreview({
   // estimatedTime,
   // errorMessage,
 }: {
-  exportRecord: ExptResultExportRecord;
-  // estimatedTime?: string;
+  exportRecord: ExptResultExportRecord; // estimatedTime?: string;
   // errorMessage?: string;
 }) {
   const { csv_export_status: status, error } = exportRecord;
@@ -95,16 +94,16 @@ export function ExportStatusPreview({
       {errorMessage}
       {/* 预计时间 */}
       {/* {estimatedTime ? (
-        <span className="ml-2 text-xs font-large text-center text-[color:var(--text-color-text-2,#42464E)]">
-          {estimatedTime}
-        </span>
-      ) : null} */}
+         <span className="ml-2 text-xs font-large text-center text-[color:var(--text-color-text-2,#42464E)]">
+           {estimatedTime}
+         </span>
+        ) : null} */}
       {/* 错误 */}
       {/* {errorMessage ? (
-        <span className="ml-2 text-xs font-large text-center text-[color:var(--text-color-text-2,#42464E)]">
-          {errorMessage}
-        </span>
-      ) : null} */}
+         <span className="ml-2 text-xs font-large text-center text-[color:var(--text-color-text-2,#42464E)]">
+           {errorMessage}
+         </span>
+        ) : null} */}
     </div>
   );
 }

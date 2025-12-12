@@ -1,28 +1,11 @@
-/*
- * Copyright 2025 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
-{
-  /* start_aigc */
-}
 import { useCallback, useState } from 'react';
 
 import { useRequest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
-  convertEvaluationSetItemListToTableData,
   EvaluateSetSelect,
   EvaluateSetVersionSelect,
 } from '@cozeloop/evaluate-components';
@@ -37,6 +20,7 @@ import {
 } from '@coze-arch/coze-design';
 
 import type { StepOneEvaluateSetProps } from '../types';
+import { codeEvaluatorConvertEvaluationSetItemListToTableData } from './utils';
 import CommonTable from './common-table';
 
 const FormEvaluateSetSelect = withField(EvaluateSetSelect);
@@ -81,7 +65,7 @@ const StepOneEvaluateSet: React.FC<StepOneEvaluateSetProps> = ({
         const schemaData =
           fieldVersionData?.version?.evaluation_set_schema?.field_schemas ?? [];
 
-        const tableData = convertEvaluationSetItemListToTableData(
+        const tableData = codeEvaluatorConvertEvaluationSetItemListToTableData(
           response.items ?? [],
           schemaData,
         );
@@ -145,7 +129,7 @@ const StepOneEvaluateSet: React.FC<StepOneEvaluateSetProps> = ({
         <div className="flex flex-row items-center justify-center py-8">
           <IconCozLoading className="w-4 h-4 animate-spin coz-fg-secondary" />
           <div className="ml-[6px] text-sm coz-fg-secondary">
-            正在加载数据...
+            {I18n.t('evaluate_loading_data')}
           </div>
         </div>
       );
@@ -171,10 +155,10 @@ const StepOneEvaluateSet: React.FC<StepOneEvaluateSetProps> = ({
           <FormEvaluateSetSelect
             className="w-full"
             field="evaluationSetId"
-            label="评测集"
+            label={I18n.t('evaluation_set')}
             remote={true}
             filter={true}
-            placeholder={'请选择评测集'}
+            placeholder={I18n.t('select_evaluation_set')}
             onChange={handleEvaluationSetChange}
             onChangeWithObject={false}
           />
@@ -187,10 +171,10 @@ const StepOneEvaluateSet: React.FC<StepOneEvaluateSetProps> = ({
             filter={true}
             field="evaluationSetVersion"
             label={{
-              text: '版本',
+              text: I18n.t('version'),
               className: 'justify-between pr-0',
             }}
-            placeholder={'请选择版本号'}
+            placeholder={I18n.t('please_select_a_version_number')}
           />
         </div>
 
@@ -198,7 +182,7 @@ const StepOneEvaluateSet: React.FC<StepOneEvaluateSetProps> = ({
         {formValues?.evaluationSetDetail ? (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              描述
+              {I18n.t('description')}
             </label>
             <div className="text-sm coz-fg-primary font-normal">
               {formValues?.evaluationSetDetail?.description || '-'}
@@ -214,15 +198,15 @@ const StepOneEvaluateSet: React.FC<StepOneEvaluateSetProps> = ({
       <div className="flex pt-4 gap-2 justify-end">
         <Tooltip
           theme="dark"
-          content="如果你的评测集中已经包含评测对象输出，可直接导入你选中的数据"
+          content={I18n.t('evaluate_import_data_from_eval_set_with_output_tip')}
         >
           <Button onClick={onDirectImport} color="primary" disabled={isEmpty}>
-            直接导入
+            {I18n.t('evaluate_direct_import')}
           </Button>
         </Tooltip>
 
         <Button onClick={onNextStep} disabled={isEmpty}>
-          下一步：评测对象
+          {I18n.t('next_step_evaluation_object')}
         </Button>
       </div>
     </>
@@ -230,6 +214,3 @@ const StepOneEvaluateSet: React.FC<StepOneEvaluateSetProps> = ({
 };
 
 export default StepOneEvaluateSet;
-{
-  /* end_aigc */
-}

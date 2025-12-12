@@ -95,12 +95,14 @@ export const EvaluateTargetMappingField: FC<
           optionGroups={optionGroups}
           rules={[
             {
-              validator: (_rule, v) => {
+              validator: (_rule, v, callback) => {
                 if (!v) {
-                  return new Error(I18n.t('please_select', { field: '' }));
+                  callback(I18n.t('please_select'));
+                  return false;
                 }
                 if (getTypeText(v) !== getTypeText(k)) {
-                  return new Error(I18n.t('selected_fields_inconsistent'));
+                  callback(I18n.t('selected_fields_inconsistent'));
+                  return false;
                 }
                 return true;
               },

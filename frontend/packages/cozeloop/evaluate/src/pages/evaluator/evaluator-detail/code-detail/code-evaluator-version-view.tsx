@@ -1,19 +1,6 @@
-/*
- * Copyright 2025 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+import { I18n } from '@cozeloop/i18n-adapter';
 import { CodeEditor } from '@cozeloop/components';
 import {
   type EvaluatorVersion,
@@ -21,15 +8,11 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 
 import { codeEvaluatorLanguageMap } from '@/constants';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface Props {
   version: EvaluatorVersion;
 }
 
-{
-  /* start_aigc */
-}
 export function CodeEvaluatorVersionView({ version }: Props) {
   const codeEvaluator = version.evaluator_content?.code_evaluator;
   // 从API结构中获取数据
@@ -104,7 +87,4 @@ export function CodeEvaluatorVersionView({ version }: Props) {
       )}
     </div>
   );
-}
-{
-  /* end_aigc */
 }

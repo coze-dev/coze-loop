@@ -26,12 +26,25 @@ export const useSvgPanZoom = ({
       if (panZoomTigerRef.current) {
         return;
       }
+      const el = document.querySelector(svgSelector);
+      if (!el) {
+        // 选择器未命中元素，优雅降级
+        return;
+      }
       const panZoomTiger = svgPanZoom.default(svgSelector, {
         viewportSelector,
         mouseWheelZoomEnabled: false,
       });
       panZoomTigerRef.current = panZoomTiger;
     });
+
+    return () => {
+      // 清理实例，避免重复初始化与内存泄漏
+      if (panZoomTigerRef.current) {
+        panZoomTigerRef.current.destroy?.();
+        panZoomTigerRef.current = null;
+      }
+    };
   }, [renderedChart]);
 
   const zoomIn = () => {

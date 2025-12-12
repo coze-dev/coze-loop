@@ -1,14 +1,18 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import type { ReactNode } from 'react';
+
 import classNames from 'classnames';
 
 interface PrimaryPageHeaderProps {
-  pageTitle?: string;
-  filterSlot?: React.ReactNode;
-  children?: React.ReactNode;
+  pageTitle?: ReactNode;
+  filterSlot?: ReactNode;
+  children?: ReactNode;
+  headerClassName?: string;
+  titleClassName?: string;
   contentClassName?: string;
   className?: string;
-  titleSlot?: React.ReactNode;
+  titleSlot?: ReactNode;
 }
 
 export const PrimaryPage = ({
@@ -17,6 +21,8 @@ export const PrimaryPage = ({
   children,
   contentClassName,
   className,
+  headerClassName,
+  titleClassName,
   titleSlot,
 }: PrimaryPageHeaderProps) => (
   <div
@@ -25,12 +31,24 @@ export const PrimaryPage = ({
       className,
     )}
   >
-    <div className="flex items-center justify-between py-4 px-6">
-      <div className="text-[20px] font-medium leading-6 coz-fg-plus ">
-        {pageTitle}
+    {pageTitle || titleSlot ? (
+      <div
+        className={classNames(
+          'flex items-center justify-between py-4 px-6',
+          headerClassName,
+        )}
+      >
+        <div
+          className={classNames(
+            'text-[20px] font-medium leading-6 coz-fg-plus',
+            titleClassName,
+          )}
+        >
+          {pageTitle}
+        </div>
+        <div>{titleSlot}</div>
       </div>
-      <div>{titleSlot}</div>
-    </div>
+    ) : null}
     {filterSlot ? (
       <div className="box-border coz-fg-secondary pt-1 pb-3 px-6">
         {filterSlot}
