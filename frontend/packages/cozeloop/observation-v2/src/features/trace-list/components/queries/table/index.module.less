@@ -1,0 +1,18 @@
+/* stylelint-disable declaration-no-important */
+/* stylelint-disable no-descending-specificity */
+#trace-table {
+  :global {
+    .semi-table-tbody {
+      .semi-table-row:last-child {
+        .semi-table-row-cell {
+          border-bottom: 1px solid rgba(var(--coze-stroke-5), var(--coze-stroke-5-alpha)) !important;
+        }
+      }
+    }
+
+    .semi-table-row-cell {
+      height: 42px !important;
+      border-top: 0 !important;
+    }
+  }
+}

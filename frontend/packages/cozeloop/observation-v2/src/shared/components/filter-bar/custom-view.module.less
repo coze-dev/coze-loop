@@ -1,0 +1,67 @@
+/* stylelint-disable declaration-no-important */
+.button-wrapper {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-sizing: border-box;
+  max-width: 200px;
+  height: 32px;
+
+  &.active {
+    background-color: rgb(var(--coze-up-brand-3));
+
+    &::before {
+      pointer-events: none;
+      content: '';
+
+      position: absolute;
+      z-index: 1;
+      inset: 0 -1px;
+
+      border: 1px solid rgb(var(--coze-up-brand-9));
+    }
+
+    span {
+      color: rgb(var(--coze-up-brand-9)) !important;
+
+    }
+  }
+}
+
+.dropdown-item {
+  @apply overflow-hidden box-border !pl-2 max-w-[264px] min-w-[264px];
+
+  :global {
+    .coz-item-text {
+      @apply !w-full;
+    }
+  }
+}
+
+
+.edit-input {
+  display: flex;
+  flex: 1;
+  align-items: center;
+
+  :global {
+    .semi-input-wrapper {
+      height: 24px;
+      max-height: 24px;
+    }
+  }
+}
+
+.custom-view-select {
+  min-width: 120px;
+
+  :global {
+    .custom-view-button-group {
+      display: none;
+    }
+  }
+
+}

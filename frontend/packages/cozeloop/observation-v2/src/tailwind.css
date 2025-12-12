@@ -1,0 +1,375 @@
+/* stylelint-disable declaration-block-no-redundant-longhand-properties */
+/* stylelint-disable no-duplicate-selectors */
+/* stylelint-disable no-descending-specificity */
+/* stylelint-disable selector-class-pattern */
+/* stylelint-disable order/properties-order */
+/* stylelint-disable rule-empty-line-before */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#cozeloop-observation-components,
+#trace-detail-side-sheet-panel,
+#cozeloop-trace-detail {
+  .semi-button-content-right {
+    margin-left: 4px;
+  }
+
+  /** Button **/
+  .coz-btn-large {
+    height: 36px;
+    font-size: 14px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .coz-btn-large.semi-button-with-icon-only {
+    width: 36px;
+    height: 36px;
+  }
+  .coz-select-option-item-icon-multiple-selected {
+    background-color: rgba(var(--coze-up-brand-9), 1);
+    border-color: rgba(var(--coze-up-brand-9), 1);
+  }
+
+  .coz-btn-default {
+    height: 32px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .coz-btn-default.semi-button-with-icon-only {
+    width: 32px;
+    height: 32px;
+  }
+
+  .coz-btn-small {
+    height: 28px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .coz-btn-small.semi-button-with-icon-only {
+    width: 28px;
+    height: 28px;
+  }
+
+  .coz-btn-mini {
+    height: 24px;
+    padding-left: 8px;
+    padding-right: 8px;
+    .semi-button-content-right {
+      margin-left: 3px;
+    }
+  }
+  .coz-btn-mini.semi-button-with-icon-only {
+    width: 24px;
+    height: 24px;
+  }
+
+  /** select **/
+  .semi-select-large {
+    min-height: 36px;
+    height: 36px;
+  }
+
+  .semi-select-default {
+    min-height: 32px;
+    height: 32px;
+  }
+
+  .semi-select-small {
+    min-height: 28px;
+    height: 28px;
+    border-radius: 5px;
+  }
+
+  .semi-select-with-prefix .semi-select-prefix-text {
+    margin-right: 0;
+    flex-shrink: 0;
+    color: var(--coz-fg-secondary);
+  }
+
+  .semi-select-disabled {
+    border: 1px solid var(--coz-stroke-plus, rgba(68, 83, 130, 25%));
+    background: var(--coz-mg-primary, rgba(87, 104, 161, 8%));
+    opacity: 1;
+  }
+
+  .semi-cascader-disabled {
+    border: 1px solid var(--coz-stroke-plus, rgba(68, 83, 130, 25%));
+    background: var(--coz-mg-primary, rgba(87, 104, 161, 8%));
+    opacity: 1;
+  }
+
+  .semi-select-disabled .semi-select-selection-text {
+    color: var(--coz-fg-dim);
+  }
+
+  .coz-select-option-item-icon-selected {
+    color: rgba(var(--coze-up-brand-9), 1);
+  }
+
+  .semi-radio-disabled .semi-radio-addon {
+    color: var(--coz-fg-dim);
+  }
+
+  /** Collapse **/
+  .semi-collapse-header:hover {
+    background-color: transparent;
+  }
+
+  /** Radio **/
+  .semi-radio-addon-buttonRadio {
+    border-radius: 4px;
+  }
+
+  .semi-radio-buttonRadioGroup {
+    border-radius: 6px;
+  }
+
+  /** Tag **/
+  .coz-tag-small {
+    height: 20px;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .coz-tag-mini {
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 2px;
+  }
+
+  .coz-tag-brand {
+    background: rgba(var(--coze-up-brand-4), 1);
+  }
+  .coz-tag-primary {
+    color: var(--coz-fg-primary);
+    background: var(--coz-mg-plus, rgba(82, 100, 154, 13%));
+  }
+  .coz-tag-green {
+    color: #00815c;
+    background: #e6f7ed;
+  }
+  .coz-tag-yellow {
+    color: #a05f01;
+    background: #fbeee1;
+  }
+  .coz-tag-red {
+    color: #d0292f;
+    background: #ffebe9;
+  }
+  .semi-tag-prefix-icon {
+    .text-lg {
+      font-size: 12px;
+    }
+  }
+
+  .semi-tag-closable {
+    border-width: 0;
+  }
+
+  /** input textarea **/
+  input,
+  textarea {
+    caret-color: var(--Fg-COZ-fg-plus, rgba(8, 13, 30, 90%));
+  }
+
+  /** dialog modal **/
+  .coz-popconfirm {
+    padding: 14px;
+  }
+  .semi-modal-confirm-content {
+    margin-top: 8px;
+  }
+  .coz-popconfirm-title {
+    margin-bottom: 8px;
+  }
+  .coz-popconfirm-foot {
+    margin-top: 16px;
+  }
+
+  .semi-typography-primary {
+    --semi-color-text-0: var(--coz-fg-plus);
+  }
+
+  .semi-typography-tertiary {
+    --semi-color-text-2: var(--coz-fg-secondary);
+  }
+
+  .coz-item-text,
+  .semi-select,
+  .coz-btn-primary {
+    --coze-fg-3: 8, 13, 30;
+    --coze-fg-3-alpha: 0.9;
+  }
+
+  .cm-placeholder {
+    color: var(--coz-fg-dim);
+  }
+
+  .semi-form-field[x-label-pos='top'] {
+    .semi-form-field-label {
+      line-height: 20px;
+      margin-bottom: 8px;
+    }
+  }
+  .semi-form-field-label {
+    color: var(--coz-fg-primary);
+  }
+
+  .semi-form-field-error-message {
+    color: rgba(var(--coze-red-5), 1);
+  }
+
+  .semi-input-textarea-wrapper {
+    border-radius: 6px;
+  }
+
+  .semi-empty-content {
+    margin-top: 20px;
+  }
+
+  .semi-empty-description {
+    margin-top: 12px;
+    color: var(--coz-fg-secondary);
+  }
+
+  .semi-radioGroup-buttonRadio {
+    background-color: rgba(var(--coze-bg-5), var(--coze-bg-5-alpha));
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+  }
+  .semi-radioGroup-buttonRadio .semi-radio-addon-buttonRadio {
+    padding: 5px;
+    color: var(--coz-fg-secondary);
+    font-size: 12px;
+    line-height: 16px;
+    border-radius: 6px;
+  }
+  .semi-radioGroup-buttonRadio .semi-radio-addon-buttonRadio-hover {
+    color: rgba(var(--coze-fg-2), var(--coze-fg-2-alpha));
+    background-color: rgba(var(--coze-bg-5), var(--coze-bg-5-alpha));
+  }
+  .semi-radioGroup-buttonRadio .semi-radio-addon-buttonRadio-checked {
+    color: rgb(var(--coze-up-brand-9));
+    font-weight: 500;
+  }
+  .semi-radio-addon-buttonRadio-checked,
+  .semi-radio-addon-buttonRadio-checked:active {
+    color: rgba(var(--coze-fg-3), var(--coze-fg-3-alpha));
+    background-color: rgba(var(--coze-bg-3), var(--coze-bg-3-alpha));
+  }
+
+  .semi-input-group .coz-select.semi-select:first-child {
+    border-top-left-radius: var(--coze-6);
+    border-bottom-left-radius: var(--coze-6);
+  }
+  .semi-input-group .coz-select.semi-select:last-child {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-top-right-radius: var(--coze-6);
+    border-bottom-right-radius: var(--coze-6);
+  }
+
+  .semi-input-textarea-wrapper-error:active,
+  .semi-input-textarea-wrapper-error:hover {
+    --semi-color-fill-1: rgba(var(--coze-bg-5), var(--coze-bg-5-alpha));
+    --semi-color-fill-2: rgba(var(--coze-bg-6), var(--coze-bg-6-alpha));
+  }
+  .semi-modal-footer {
+    .semi-button {
+      margin-left: 8px;
+    }
+  }
+  .semi-modal-close {
+    border-radius: 4px;
+  }
+
+  .coz-popconfirm-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  /** 去除svg的focus样式 **/
+  svg:focus {
+    outline: none;
+  }
+
+  /** 添加表单间距样式 **/
+  .form-default {
+    .semi-form-field {
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+  }
+
+  .form-small {
+    .semi-form-field {
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+  }
+
+  .form-mini {
+    .semi-form-field {
+      padding-top: 6px;
+      padding-bottom: 6px;
+    }
+  }
+
+  .api-error-toast {
+    .semi-toast-content {
+      > svg {
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  .semi-tooltip-wrapper .semi-tooltip-content {
+    font-size: var(--coze-14);
+    font-weight: 500;
+  }
+
+  /** 覆写notification 的样式 **/
+  .semi-notification-notice-icon {
+    margin-right: 6px;
+    width: 16px;
+    color: #00815c;
+    .semi-icon {
+      font-size: 16px;
+      margin-top: 4px;
+    }
+  }
+  .semi-notification-notice-title {
+    font-size: 14px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--semi-color-fill-2);
+    border-radius: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--semi-color-fill-1);
+  }
+
+  .styled-scrollbar {
+    scrollbar-gutter: stable;
+    overflow: hidden;
+  }
+
+  .styled-scrollbar:hover {
+    overflow: auto;
+  }
+}

@@ -1,0 +1,52 @@
+/* stylelint-disable no-descending-specificity */
+/* stylelint-disable declaration-no-important */
+.date-picker {
+  box-sizing: border-box;
+  min-width: 328px;
+
+  :global {
+    .coz-date-picker-select {
+      height: 36px;
+      border: 1px solid var(--coz-stroke-plus);
+    }
+
+    .semi-select {
+      border-left: none !important;
+    }
+
+    .semi-select-disabled {
+      @apply !bg-transparent !border-[var(--coz-stroke-plus)] !opacity-100;
+
+      .semi-select-prefix,
+      .semi-select-selection {
+        @apply !opacity-50;
+      }
+    }
+  }
+}
+
+.date-picker-trigger {
+  :global {
+    .semi-select {
+      border-color: var(--coz-stroke-plus) !important;
+    }
+
+    .semi-select-arrow-empty {
+      display: none !important;
+    }
+
+    .semi-select-selection {
+      margin-left: 0;
+    }
+  }
+}
+
+.preset-time-dropdown {
+  min-width: 152px !important;
+
+  :global {
+    .option-prefix-icon {
+      @apply !mr-1;
+    }
+  }
+}

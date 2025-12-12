@@ -240,23 +240,13 @@
       "tags": ["level-3"]
     },
     {
-      "packageName": "@cozeloop/observation-component",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-detail",
+      "packageName": "@cozeloop/observation-components",
+      "projectFolder": "frontend/packages/cozeloop/observation-v2",
       "tags": ["level-3"]
     },
     {
-      "packageName": "@cozeloop/observation-component-adapter",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-detail-open",
-      "tags": ["level-3"]
-    },
-    {
-      "packageName": "@cozeloop/trace-list",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-list",
-      "tags": ["level-3"]
-    },
-    {
-      "packageName": "@cozeloop/trace-struct-data",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-struct-data",
+      "packageName": "@cozeloop/observation-adapter",
+      "projectFolder": "frontend/packages/cozeloop/observation-adapter",
       "tags": ["level-3"]
     },
     {

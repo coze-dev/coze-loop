@@ -54,7 +54,7 @@
       "path": "../guard/tsconfig.build.json"
     },
     {
-      "path": "../observation/trace-detail-open/tsconfig.build.json"
+      "path": "../observation-adapter/tsconfig.build.json"
     },
     {
       "path": "../prompt-components/tsconfig.build.json"

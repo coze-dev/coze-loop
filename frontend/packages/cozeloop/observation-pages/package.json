@@ -8,13 +8,18 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
-    "dev": "storybook dev -p 6006",
     "lint": "eslint ./ --cache",
     "test": "vitest --run --passWithNoTests",
     "test:cov": "npm run test -- --coverage"
   },
   "dependencies": {
-    "@cozeloop/trace-list": "workspace:*"
+    "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
+    "@cozeloop/api-schema": "workspace:*",
+    "@cozeloop/biz-hooks-adapter": "workspace:*",
+    "@cozeloop/components": "workspace:*",
+    "@cozeloop/guard": "workspace:*",
+    "@cozeloop/i18n-adapter": "workspace:*",
+    "@cozeloop/observation-components": "workspace:*"
   },
   "devDependencies": {
     "@coze-arch/bot-typings": "workspace:*",
