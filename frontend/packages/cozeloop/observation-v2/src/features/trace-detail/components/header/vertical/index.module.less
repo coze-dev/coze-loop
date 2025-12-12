@@ -1,0 +1,35 @@
+.vertical-header {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.desc {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  justify-content: center;
+
+  .name {
+    :global(.semi-typography) {
+      font-weight: 600;
+      line-height: 20px;
+    }
+  }
+}
+
+.icon-wrapper {
+  width: 28px;
+  height: 28px;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}

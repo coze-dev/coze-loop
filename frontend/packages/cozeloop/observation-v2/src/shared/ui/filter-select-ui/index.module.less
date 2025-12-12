@@ -1,0 +1,37 @@
+/* stylelint-disable declaration-no-important */
+
+
+.sized-select {
+  position: relative;
+
+  display: flex;
+
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 12px;
+
+  border: 1px solid var(--coz-stroke-primary);
+  border-radius: 6px;
+
+  &.empty {
+    @apply !border-transparent !pl-0;
+  }
+}
+
+.logic-expr-wrapper {
+  @apply h-full max-w-full w-full;
+
+  &.logic-expr-wrapper-empty {
+    transform: translateX(-4px);
+  }
+}
+
+.dropdown-item {
+  @apply !py-0 !px-2 !box-border;
+
+  :global {
+    .coz-item-text-disabled {
+      color: var(--coz-fg-dim) !important;
+    }
+  }
+}

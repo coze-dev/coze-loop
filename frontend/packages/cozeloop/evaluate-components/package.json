@@ -24,7 +24,7 @@
     "@cozeloop/guard": "workspace:*",
     "@cozeloop/hooks": "workspace:*",
     "@cozeloop/i18n-adapter": "workspace:*",
-    "@cozeloop/observation-component-adapter": "workspace:*",
+    "@cozeloop/observation-adapter": "workspace:*",
     "@cozeloop/prompt-components": "workspace:*",
     "@cozeloop/stores": "workspace:*",
     "@cozeloop/tea-adapter": "workspace:*",

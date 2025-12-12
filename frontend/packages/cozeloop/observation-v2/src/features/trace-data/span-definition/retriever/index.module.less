@@ -1,0 +1,42 @@
+
+
+@border-color: #1D1C2314;
+
+.function-collapse {
+  border: 1px solid @border-color;
+  border-radius: 8px;
+
+  .function-panel-content{
+    padding: 0;
+
+    :global{
+      .semi-collapse-content{
+        padding: 8px 0 12px;
+      }
+
+      .semi-collapse-header{
+        margin: 0;
+        padding: 6px 12px;
+      }
+
+      .semi-collapse-header:hover{
+        background-color: transparent;
+      }
+    }
+
+    &:last-child{
+      border-bottom: 0;
+    }
+  }
+
+  .copy-icon {
+    display:flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 14px;
+    height: 14px;
+
+    color: var(--coz-fg-secondary);
+  }
+}

@@ -19,7 +19,7 @@
     "@cozeloop/components": "workspace:*",
     "@cozeloop/guard": "workspace:*",
     "@cozeloop/hooks": "workspace:*",
-    "@cozeloop/observation-component-adapter": "workspace:*",
+    "@cozeloop/observation-adapter": "workspace:*",
     "@cozeloop/prompt-components": "workspace:*",
     "@cozeloop/tea-adapter": "workspace:*",
     "@cozeloop/toolkit": "workspace:*",
