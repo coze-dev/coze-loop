@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
@@ -162,8 +163,9 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid list spans request"))
 	}
+	filters := req.Filters
 	if pageToken != nil {
-		req.Filters = t.addPageTokenFilter(pageToken, req.Filters)
+		filters = t.addPageTokenFilter(pageToken, req.Filters)
 	}
 	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
 	if err != nil {
@@ -176,7 +178,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		AnnoTableMap:     tableCfg.AnnoTableMap,
 		StartTime:        time_util.MillSec2MicroSec(req.StartAt),
 		EndTime:          time_util.MillSec2MicroSec(req.EndAt),
-		Filters:          req.Filters,
+		Filters:          filters,
 		Limit:            req.Limit + 1,
 		OrderByStartTime: req.DescByStartTime,
 		OmitColumns:      req.OmitColumns,
@@ -201,10 +203,10 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 			Limit:     int32(min(len(spanIDs)*100, 10000)),
 			Extra:     spanStorage.StorageConfig,
 		})
-		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		if err != nil {
 			return nil, err
 		}
+		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		annoDOList := converter.AnnotationListPO2DO(annotations)
 		spanDOList.SetAnnotations(annoDOList)
 	}
@@ -246,6 +248,8 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 	filter := &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
 	}
+	req.TraceID = strings.TrimSpace(req.TraceID)
+	req.LogID = strings.TrimSpace(req.LogID)
 	if req.TraceID != "" {
 		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
 			FieldName: loop_span.SpanFieldTraceId,
@@ -253,13 +257,16 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 			Values:    []string{req.TraceID},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		})
-	} else {
+	} else if req.LogID != "" {
 		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
 			FieldName: loop_span.SpanFieldLogID,
 			FieldType: loop_span.FieldTypeString,
 			Values:    []string{req.LogID},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		})
+	} else {
+		// traceID or logID is expected
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("traceID or logID is expected"))
 	}
 	if len(req.SpanIDs) > 0 {
 		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
@@ -304,10 +311,10 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 			Limit:     int32(min(len(spanIDs)*100, 10000)),
 			Extra:     spanStorage.StorageConfig,
 		})
-		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		if err != nil {
 			return nil, err
 		}
+		logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
 		annoDOList := converter.AnnotationListPO2DO(annotations)
 		spanDOList.SetAnnotations(annoDOList.Uniq())
 	}
@@ -405,7 +412,7 @@ func (t *TraceRepoImpl) InsertAnnotations(ctx context.Context, param *repo.Inser
 		Extra:       spanStorage.StorageConfig,
 	})
 	if err != nil {
-		return nil
+		return err
 	}
 	span := param.Span
 	annotationType := ""
@@ -428,7 +435,6 @@ func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMe
 	if err != nil {
 		return nil, err
 	}
-	st := time.Now()
 	metrics, err := spanDao.GetMetrics(ctx, &dao.GetMetricsParam{
 		Tables:       tableCfg.SpanTables,
 		Aggregations: param.Aggregations,
@@ -438,11 +444,11 @@ func (t *TraceRepoImpl) GetMetrics(ctx context.Context, param *metric_repo.GetMe
 		EndAt:        time_util.MillSec2MicroSec(param.EndAt),
 		Granularity:  param.Granularity,
 		Extra:        spanStorage.StorageConfig,
+		Source:       param.Source,
 	})
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "get metrics successfully, cost %v", time.Since(st))
 	return &metric_repo.GetMetricsResult{
 		Data: metrics,
 	}, nil

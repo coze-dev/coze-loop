@@ -57,6 +57,10 @@ func (m *ModelTTFTMetric) Wrappers() []entity.IMetricWrapper {
 	}
 }
 
+func (m *ModelTTFTMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
+}
+
 func NewModelTTFTMetric() entity.IMetricDefinition {
 	return &ModelTTFTMetric{}
 }

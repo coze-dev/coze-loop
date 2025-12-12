@@ -12,25 +12,25 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
-type ToolNamePieMetric struct{}
+type ToolTotalCountPieMetric struct{}
 
-func (m *ToolNamePieMetric) Name() string {
-	return entity.MetricNameToolNamePie
+func (m *ToolTotalCountPieMetric) Name() string {
+	return entity.MetricNameToolTotalCountPie
 }
 
-func (m *ToolNamePieMetric) Type() entity.MetricType {
-	return entity.MetricTypePie
+func (m *ToolTotalCountPieMetric) Type() entity.MetricType {
+	return entity.MetricTypeSummary
 }
 
-func (m *ToolNamePieMetric) Source() entity.MetricSource {
+func (m *ToolTotalCountPieMetric) Source() entity.MetricSource {
 	return entity.MetricSourceInnerStorage
 }
 
-func (m *ToolNamePieMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	return &entity.Expression{Expression: "1"}
+func (m *ToolTotalCountPieMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
+	return &entity.Expression{Expression: "count()"}
 }
 
-func (m *ToolNamePieMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
+func (m *ToolTotalCountPieMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	return []*loop_span.FilterField{
 		{
 			FieldName: loop_span.SpanFieldSpanType,
@@ -41,7 +41,7 @@ func (m *ToolNamePieMetric) Where(ctx context.Context, filter span_filter.Filter
 	}, nil
 }
 
-func (m *ToolNamePieMetric) GroupBy() []*entity.Dimension {
+func (m *ToolTotalCountPieMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{
 		{
 			Field: &loop_span.FilterField{
@@ -53,6 +53,12 @@ func (m *ToolNamePieMetric) GroupBy() []*entity.Dimension {
 	}
 }
 
-func NewToolNamePieMetric() entity.IMetricDefinition {
-	return &ToolNamePieMetric{}
+func (m *ToolTotalCountPieMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
+func NewToolTotalCountPieMetric() entity.IMetricDefinition {
+	return &ToolTotalCountPieMetric{}
 }

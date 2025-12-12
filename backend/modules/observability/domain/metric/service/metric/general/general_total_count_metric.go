@@ -37,6 +37,12 @@ func (m *GeneralTotalCountMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
 }
 
+func (m *GeneralTotalCountMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeSum,
+	}
+}
+
 func NewGeneralTotalCountMetric() entity.IMetricDefinition {
 	return &GeneralTotalCountMetric{}
 }

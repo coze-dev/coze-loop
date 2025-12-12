@@ -2375,10 +2375,1112 @@ func (p *GetDrillDownValuesResponse) Field255DeepEqual(src *base.BaseResp) bool 
 	return true
 }
 
+type TraverseMetricsRequest struct {
+	PlatformTypes []common.PlatformType `thrift:"platform_types,1,optional" frugal:"1,optional,list<string>" form:"platform_types" json:"platform_types,omitempty" query:"platform_types"`
+	WorkspaceID   *int64                `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	MetricNames   []string              `thrift:"metric_names,3,optional" frugal:"3,optional,list<string>" form:"metric_names" json:"metric_names,omitempty" query:"metric_names"`
+	StartDate     *string               `thrift:"start_date,4,optional" frugal:"4,optional,string" form:"start_date" json:"start_date,omitempty" query:"start_date"`
+	Base          *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewTraverseMetricsRequest() *TraverseMetricsRequest {
+	return &TraverseMetricsRequest{}
+}
+
+func (p *TraverseMetricsRequest) InitDefault() {
+}
+
+var TraverseMetricsRequest_PlatformTypes_DEFAULT []common.PlatformType
+
+func (p *TraverseMetricsRequest) GetPlatformTypes() (v []common.PlatformType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPlatformTypes() {
+		return TraverseMetricsRequest_PlatformTypes_DEFAULT
+	}
+	return p.PlatformTypes
+}
+
+var TraverseMetricsRequest_WorkspaceID_DEFAULT int64
+
+func (p *TraverseMetricsRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return TraverseMetricsRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var TraverseMetricsRequest_MetricNames_DEFAULT []string
+
+func (p *TraverseMetricsRequest) GetMetricNames() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMetricNames() {
+		return TraverseMetricsRequest_MetricNames_DEFAULT
+	}
+	return p.MetricNames
+}
+
+var TraverseMetricsRequest_StartDate_DEFAULT string
+
+func (p *TraverseMetricsRequest) GetStartDate() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStartDate() {
+		return TraverseMetricsRequest_StartDate_DEFAULT
+	}
+	return *p.StartDate
+}
+
+var TraverseMetricsRequest_Base_DEFAULT *base.Base
+
+func (p *TraverseMetricsRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return TraverseMetricsRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *TraverseMetricsRequest) SetPlatformTypes(val []common.PlatformType) {
+	p.PlatformTypes = val
+}
+func (p *TraverseMetricsRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *TraverseMetricsRequest) SetMetricNames(val []string) {
+	p.MetricNames = val
+}
+func (p *TraverseMetricsRequest) SetStartDate(val *string) {
+	p.StartDate = val
+}
+func (p *TraverseMetricsRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_TraverseMetricsRequest = map[int16]string{
+	1:   "platform_types",
+	2:   "workspace_id",
+	3:   "metric_names",
+	4:   "start_date",
+	255: "Base",
+}
+
+func (p *TraverseMetricsRequest) IsSetPlatformTypes() bool {
+	return p.PlatformTypes != nil
+}
+
+func (p *TraverseMetricsRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *TraverseMetricsRequest) IsSetMetricNames() bool {
+	return p.MetricNames != nil
+}
+
+func (p *TraverseMetricsRequest) IsSetStartDate() bool {
+	return p.StartDate != nil
+}
+
+func (p *TraverseMetricsRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *TraverseMetricsRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraverseMetricsRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TraverseMetricsRequest) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]common.PlatformType, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem common.PlatformType
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.PlatformTypes = _field
+	return nil
+}
+func (p *TraverseMetricsRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *TraverseMetricsRequest) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.MetricNames = _field
+	return nil
+}
+func (p *TraverseMetricsRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StartDate = _field
+	return nil
+}
+func (p *TraverseMetricsRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *TraverseMetricsRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TraverseMetricsRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TraverseMetricsRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPlatformTypes() {
+		if err = oprot.WriteFieldBegin("platform_types", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.PlatformTypes)); err != nil {
+			return err
+		}
+		for _, v := range p.PlatformTypes {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TraverseMetricsRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *TraverseMetricsRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMetricNames() {
+		if err = oprot.WriteFieldBegin("metric_names", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.MetricNames)); err != nil {
+			return err
+		}
+		for _, v := range p.MetricNames {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *TraverseMetricsRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStartDate() {
+		if err = oprot.WriteFieldBegin("start_date", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.StartDate); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *TraverseMetricsRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *TraverseMetricsRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TraverseMetricsRequest(%+v)", *p)
+
+}
+
+func (p *TraverseMetricsRequest) DeepEqual(ano *TraverseMetricsRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.PlatformTypes) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.MetricNames) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.StartDate) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *TraverseMetricsRequest) Field1DeepEqual(src []common.PlatformType) bool {
+
+	if len(p.PlatformTypes) != len(src) {
+		return false
+	}
+	for i, v := range p.PlatformTypes {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *TraverseMetricsRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *TraverseMetricsRequest) Field3DeepEqual(src []string) bool {
+
+	if len(p.MetricNames) != len(src) {
+		return false
+	}
+	for i, v := range p.MetricNames {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *TraverseMetricsRequest) Field4DeepEqual(src *string) bool {
+
+	if p.StartDate == src {
+		return true
+	} else if p.StartDate == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.StartDate, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TraverseMetricsRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TraverseMetricsStatistic struct {
+	Total   *int32 `thrift:"total,1,optional" frugal:"1,optional,i32" form:"total" json:"total,omitempty" query:"total"`
+	Success *int32 `thrift:"success,2,optional" frugal:"2,optional,i32" form:"success" json:"success,omitempty" query:"success"`
+	Failure *int32 `thrift:"failure,3,optional" frugal:"3,optional,i32" form:"failure" json:"failure,omitempty" query:"failure"`
+}
+
+func NewTraverseMetricsStatistic() *TraverseMetricsStatistic {
+	return &TraverseMetricsStatistic{}
+}
+
+func (p *TraverseMetricsStatistic) InitDefault() {
+}
+
+var TraverseMetricsStatistic_Total_DEFAULT int32
+
+func (p *TraverseMetricsStatistic) GetTotal() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotal() {
+		return TraverseMetricsStatistic_Total_DEFAULT
+	}
+	return *p.Total
+}
+
+var TraverseMetricsStatistic_Success_DEFAULT int32
+
+func (p *TraverseMetricsStatistic) GetSuccess() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return TraverseMetricsStatistic_Success_DEFAULT
+	}
+	return *p.Success
+}
+
+var TraverseMetricsStatistic_Failure_DEFAULT int32
+
+func (p *TraverseMetricsStatistic) GetFailure() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFailure() {
+		return TraverseMetricsStatistic_Failure_DEFAULT
+	}
+	return *p.Failure
+}
+func (p *TraverseMetricsStatistic) SetTotal(val *int32) {
+	p.Total = val
+}
+func (p *TraverseMetricsStatistic) SetSuccess(val *int32) {
+	p.Success = val
+}
+func (p *TraverseMetricsStatistic) SetFailure(val *int32) {
+	p.Failure = val
+}
+
+var fieldIDToName_TraverseMetricsStatistic = map[int16]string{
+	1: "total",
+	2: "success",
+	3: "failure",
+}
+
+func (p *TraverseMetricsStatistic) IsSetTotal() bool {
+	return p.Total != nil
+}
+
+func (p *TraverseMetricsStatistic) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *TraverseMetricsStatistic) IsSetFailure() bool {
+	return p.Failure != nil
+}
+
+func (p *TraverseMetricsStatistic) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraverseMetricsStatistic[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TraverseMetricsStatistic) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Total = _field
+	return nil
+}
+func (p *TraverseMetricsStatistic) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Success = _field
+	return nil
+}
+func (p *TraverseMetricsStatistic) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Failure = _field
+	return nil
+}
+
+func (p *TraverseMetricsStatistic) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TraverseMetricsStatistic"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TraverseMetricsStatistic) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotal() {
+		if err = oprot.WriteFieldBegin("total", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Total); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TraverseMetricsStatistic) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.I32, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Success); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *TraverseMetricsStatistic) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFailure() {
+		if err = oprot.WriteFieldBegin("failure", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Failure); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *TraverseMetricsStatistic) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TraverseMetricsStatistic(%+v)", *p)
+
+}
+
+func (p *TraverseMetricsStatistic) DeepEqual(ano *TraverseMetricsStatistic) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Total) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Success) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Failure) {
+		return false
+	}
+	return true
+}
+
+func (p *TraverseMetricsStatistic) Field1DeepEqual(src *int32) bool {
+
+	if p.Total == src {
+		return true
+	} else if p.Total == nil || src == nil {
+		return false
+	}
+	if *p.Total != *src {
+		return false
+	}
+	return true
+}
+func (p *TraverseMetricsStatistic) Field2DeepEqual(src *int32) bool {
+
+	if p.Success == src {
+		return true
+	} else if p.Success == nil || src == nil {
+		return false
+	}
+	if *p.Success != *src {
+		return false
+	}
+	return true
+}
+func (p *TraverseMetricsStatistic) Field3DeepEqual(src *int32) bool {
+
+	if p.Failure == src {
+		return true
+	} else if p.Failure == nil || src == nil {
+		return false
+	}
+	if *p.Failure != *src {
+		return false
+	}
+	return true
+}
+
+type TraverseMetricsResponse struct {
+	Statistic *TraverseMetricsStatistic `thrift:"statistic,1,optional" frugal:"1,optional,TraverseMetricsStatistic" form:"statistic" json:"statistic,omitempty" query:"statistic"`
+	BaseResp  *base.BaseResp            `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewTraverseMetricsResponse() *TraverseMetricsResponse {
+	return &TraverseMetricsResponse{}
+}
+
+func (p *TraverseMetricsResponse) InitDefault() {
+}
+
+var TraverseMetricsResponse_Statistic_DEFAULT *TraverseMetricsStatistic
+
+func (p *TraverseMetricsResponse) GetStatistic() (v *TraverseMetricsStatistic) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStatistic() {
+		return TraverseMetricsResponse_Statistic_DEFAULT
+	}
+	return p.Statistic
+}
+
+var TraverseMetricsResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *TraverseMetricsResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return TraverseMetricsResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *TraverseMetricsResponse) SetStatistic(val *TraverseMetricsStatistic) {
+	p.Statistic = val
+}
+func (p *TraverseMetricsResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_TraverseMetricsResponse = map[int16]string{
+	1:   "statistic",
+	255: "BaseResp",
+}
+
+func (p *TraverseMetricsResponse) IsSetStatistic() bool {
+	return p.Statistic != nil
+}
+
+func (p *TraverseMetricsResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *TraverseMetricsResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraverseMetricsResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TraverseMetricsResponse) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewTraverseMetricsStatistic()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Statistic = _field
+	return nil
+}
+func (p *TraverseMetricsResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *TraverseMetricsResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TraverseMetricsResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TraverseMetricsResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStatistic() {
+		if err = oprot.WriteFieldBegin("statistic", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Statistic.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TraverseMetricsResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *TraverseMetricsResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TraverseMetricsResponse(%+v)", *p)
+
+}
+
+func (p *TraverseMetricsResponse) DeepEqual(ano *TraverseMetricsResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Statistic) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *TraverseMetricsResponse) Field1DeepEqual(src *TraverseMetricsStatistic) bool {
+
+	if !p.Statistic.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TraverseMetricsResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type MetricService interface {
 	GetMetrics(ctx context.Context, req *GetMetricsRequest) (r *GetMetricsResponse, err error)
 
 	GetDrillDownValues(ctx context.Context, req *GetDrillDownValuesRequest) (r *GetDrillDownValuesResponse, err error)
+
+	TraverseMetrics(ctx context.Context, req *TraverseMetricsRequest) (r *TraverseMetricsResponse, err error)
 }
 
 type MetricServiceClient struct {
@@ -2425,6 +3527,15 @@ func (p *MetricServiceClient) GetDrillDownValues(ctx context.Context, req *GetDr
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *MetricServiceClient) TraverseMetrics(ctx context.Context, req *TraverseMetricsRequest) (r *TraverseMetricsResponse, err error) {
+	var _args MetricServiceTraverseMetricsArgs
+	_args.Req = req
+	var _result MetricServiceTraverseMetricsResult
+	if err = p.Client_().Call(ctx, "TraverseMetrics", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 
 type MetricServiceProcessor struct {
 	processorMap map[string]thrift.TProcessorFunction
@@ -2448,6 +3559,7 @@ func NewMetricServiceProcessor(handler MetricService) *MetricServiceProcessor {
 	self := &MetricServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
 	self.AddToProcessorMap("GetMetrics", &metricServiceProcessorGetMetrics{handler: handler})
 	self.AddToProcessorMap("GetDrillDownValues", &metricServiceProcessorGetDrillDownValues{handler: handler})
+	self.AddToProcessorMap("TraverseMetrics", &metricServiceProcessorTraverseMetrics{handler: handler})
 	return self
 }
 func (p *MetricServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -2547,6 +3659,54 @@ func (p *metricServiceProcessorGetDrillDownValues) Process(ctx context.Context, 
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("GetDrillDownValues", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type metricServiceProcessorTraverseMetrics struct {
+	handler MetricService
+}
+
+func (p *metricServiceProcessorTraverseMetrics) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := MetricServiceTraverseMetricsArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("TraverseMetrics", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := MetricServiceTraverseMetricsResult{}
+	var retval *TraverseMetricsResponse
+	if retval, err2 = p.handler.TraverseMetrics(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing TraverseMetrics: "+err2.Error())
+		oprot.WriteMessageBegin("TraverseMetrics", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("TraverseMetrics", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -3245,6 +4405,350 @@ func (p *MetricServiceGetDrillDownValuesResult) DeepEqual(ano *MetricServiceGetD
 }
 
 func (p *MetricServiceGetDrillDownValuesResult) Field0DeepEqual(src *GetDrillDownValuesResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type MetricServiceTraverseMetricsArgs struct {
+	Req *TraverseMetricsRequest `thrift:"Req,1" frugal:"1,default,TraverseMetricsRequest"`
+}
+
+func NewMetricServiceTraverseMetricsArgs() *MetricServiceTraverseMetricsArgs {
+	return &MetricServiceTraverseMetricsArgs{}
+}
+
+func (p *MetricServiceTraverseMetricsArgs) InitDefault() {
+}
+
+var MetricServiceTraverseMetricsArgs_Req_DEFAULT *TraverseMetricsRequest
+
+func (p *MetricServiceTraverseMetricsArgs) GetReq() (v *TraverseMetricsRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return MetricServiceTraverseMetricsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *MetricServiceTraverseMetricsArgs) SetReq(val *TraverseMetricsRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_MetricServiceTraverseMetricsArgs = map[int16]string{
+	1: "Req",
+}
+
+func (p *MetricServiceTraverseMetricsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *MetricServiceTraverseMetricsArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MetricServiceTraverseMetricsArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *MetricServiceTraverseMetricsArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewTraverseMetricsRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *MetricServiceTraverseMetricsArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TraverseMetrics_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MetricServiceTraverseMetricsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("Req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *MetricServiceTraverseMetricsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MetricServiceTraverseMetricsArgs(%+v)", *p)
+
+}
+
+func (p *MetricServiceTraverseMetricsArgs) DeepEqual(ano *MetricServiceTraverseMetricsArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *MetricServiceTraverseMetricsArgs) Field1DeepEqual(src *TraverseMetricsRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type MetricServiceTraverseMetricsResult struct {
+	Success *TraverseMetricsResponse `thrift:"success,0,optional" frugal:"0,optional,TraverseMetricsResponse"`
+}
+
+func NewMetricServiceTraverseMetricsResult() *MetricServiceTraverseMetricsResult {
+	return &MetricServiceTraverseMetricsResult{}
+}
+
+func (p *MetricServiceTraverseMetricsResult) InitDefault() {
+}
+
+var MetricServiceTraverseMetricsResult_Success_DEFAULT *TraverseMetricsResponse
+
+func (p *MetricServiceTraverseMetricsResult) GetSuccess() (v *TraverseMetricsResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return MetricServiceTraverseMetricsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *MetricServiceTraverseMetricsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*TraverseMetricsResponse)
+}
+
+var fieldIDToName_MetricServiceTraverseMetricsResult = map[int16]string{
+	0: "success",
+}
+
+func (p *MetricServiceTraverseMetricsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *MetricServiceTraverseMetricsResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MetricServiceTraverseMetricsResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *MetricServiceTraverseMetricsResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewTraverseMetricsResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *MetricServiceTraverseMetricsResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TraverseMetrics_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MetricServiceTraverseMetricsResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *MetricServiceTraverseMetricsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MetricServiceTraverseMetricsResult(%+v)", *p)
+
+}
+
+func (p *MetricServiceTraverseMetricsResult) DeepEqual(ano *MetricServiceTraverseMetricsResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *MetricServiceTraverseMetricsResult) Field0DeepEqual(src *TraverseMetricsResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

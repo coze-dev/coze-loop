@@ -215,6 +215,13 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	for k, v := range eiec.Event.Ext {
 		etec.Ext[k] = v
 	}
+	// 从 ExptItemResult 中获取 Ext 字段并合并到 etec.Ext
+	itemResults, err := e.ItemResultRepo.BatchGet(ctx, spaceID, eiec.Event.ExptID, []int64{eiec.Event.EvalSetItemID})
+	if err == nil && len(itemResults) > 0 && itemResults[0].Ext != nil {
+		for k, v := range itemResults[0].Ext {
+			etec.Ext[k] = v
+		}
+	}
 	for _, fieldData := range eiec.EvalSetItem.Turns[0].FieldDataList {
 		if fieldData.Name == "span_id" {
 			etec.Ext["span_id"] = fieldData.Content.GetText()

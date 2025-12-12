@@ -13,6 +13,7 @@ import (
 type Client interface {
 	GetMetrics(ctx context.Context, req *metric.GetMetricsRequest, callOptions ...callopt.Option) (r *metric.GetMetricsResponse, err error)
 	GetDrillDownValues(ctx context.Context, req *metric.GetDrillDownValuesRequest, callOptions ...callopt.Option) (r *metric.GetDrillDownValuesResponse, err error)
+	TraverseMetrics(ctx context.Context, req *metric.TraverseMetricsRequest, callOptions ...callopt.Option) (r *metric.TraverseMetricsResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -52,4 +53,9 @@ func (p *kObservabilityMetricServiceClient) GetMetrics(ctx context.Context, req 
 func (p *kObservabilityMetricServiceClient) GetDrillDownValues(ctx context.Context, req *metric.GetDrillDownValuesRequest, callOptions ...callopt.Option) (r *metric.GetDrillDownValuesResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetDrillDownValues(ctx, req)
+}
+
+func (p *kObservabilityMetricServiceClient) TraverseMetrics(ctx context.Context, req *metric.TraverseMetricsRequest, callOptions ...callopt.Option) (r *metric.TraverseMetricsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.TraverseMetrics(ctx, req)
 }

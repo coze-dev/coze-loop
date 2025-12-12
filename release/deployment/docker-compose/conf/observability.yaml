@@ -61,6 +61,16 @@ trace_platform_tenants:
     evaluation_target:
       - "cozeloop"
 
+metric_platform_tenants:
+  config:
+    cozeloop:
+      - "cozeloop"
+    prompt:
+      - "cozeloop"
+
+metric_query_config:
+  support_offline: false
+
 trace_max_duration_day:
   default: 180
   cozeloop: 180

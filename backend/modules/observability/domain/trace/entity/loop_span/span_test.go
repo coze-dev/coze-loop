@@ -5,6 +5,7 @@ package loop_span
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -224,8 +225,10 @@ func TestSpan_ExtractByJsonpath(t *testing.T) {
 			"tag1": `{"custom": "value"}`,
 		},
 		TagsLong: map[string]int64{
-			"count": 42,
+			"count":                   42,
+			SpanFieldLatencyFirstResp: 1 * time.Second.Microseconds(),
 		},
+		DurationMicros: 5 * time.Second.Microseconds(),
 	}
 
 	// 测试从Input字段提取数据
@@ -309,6 +312,16 @@ func TestSpan_ExtractByJsonpath(t *testing.T) {
 	result, err = span.ExtractByJsonpath(ctx, "Tags.nonexistent", "path")
 	assert.NoError(t, err)
 	assert.Equal(t, result, "")
+
+	// 测试duration_micros
+	result, err = span.ExtractByJsonpath(ctx, "Tags.duration", "")
+	assert.NoError(t, err)
+	assert.Equal(t, strconv.FormatInt(5*time.Second.Milliseconds(), 10), result)
+
+	// 测试latency_first_resp
+	result, err = span.ExtractByJsonpath(ctx, "Tags.latency_first_resp", "")
+	assert.NoError(t, err)
+	assert.Equal(t, strconv.FormatInt(1*time.Second.Milliseconds(), 10), result)
 }
 
 // TestGetFieldValue_SystemTags tests the GetFieldValue method with system tags

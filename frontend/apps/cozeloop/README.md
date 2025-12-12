@@ -200,7 +200,7 @@ npm run build:ts
 
 ## 📄 许可证
 
-本项目采用 [Apache 2.0](../../LICENSE) 许可证。
+本项目采用 [Apache 2.0](../../../LICENSE) 许可证。
 
 ## 🔗 相关链接
 
@@ -208,11 +208,6 @@ npm run build:ts
 - [文档中心](https://docs.coze.com)
 - [问题反馈](https://github.com/coze-dev/coze-loop/issues)
 - [讨论区](https://github.com/coze-dev/coze-loop/discussions)
-
-## 👥 维护团队
-
-- **作者**: <qihai@bytedance.com>
-- **维护者**: CozeLoop 开发团队
 
 ---
 

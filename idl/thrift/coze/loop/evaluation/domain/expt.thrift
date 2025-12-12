@@ -170,6 +170,8 @@ struct ItemResult {
     2: optional list<TurnResult> turn_results
     3: optional ItemSystemInfo system_info
     4: optional i64 item_index (api.js_conv='true', go.tag='json:"item_index"')
+
+    5: optional map<string, string> ext
 }
 
 // 行级结果 可能包含多个实验

@@ -348,7 +348,7 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 	}
 
 	// span processors
-	processors, err := r.buildHelper.BuildListSpansProcessors(ctx, span_processor.Settings{
+	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
 		WorkspaceId:    req.WorkspaceID,
 		PlatformType:   req.PlatformType,
 		QueryStartTime: req.StartTime - timeutil.Day2MillSec(30), // past 30 days
@@ -1200,10 +1200,12 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	}
 	span := spans[0]
 	event.Annotation.StartTime = time.UnixMicro(span.StartTime)
+	event.Annotation.SpanID = span.SpanID
 	if err := event.Annotation.GenID(); err != nil {
 		logs.CtxWarn(ctx, "failed to generate annotation id for %+v, %v", event.Annotation, err)
 		return nil
 	}
+	span.AddAnnotation(event.Annotation)
 	// retry if failed
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
 		WorkSpaceID:    span.WorkspaceID,

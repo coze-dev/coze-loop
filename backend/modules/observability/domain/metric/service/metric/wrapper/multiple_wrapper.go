@@ -46,6 +46,10 @@ func (a *MultiWrapper) GroupBy() []*entity.Dimension {
 	return nil
 }
 
+func (a *MultiWrapper) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
+}
+
 func NewMultiWrapper(wrappers ...entity.IMetricWrapper) entity.IMetricWrapper {
 	return &MultiWrapper{
 		wrappers: wrappers,
