@@ -92,7 +92,7 @@ export const TagsListTable = ({
       render: (_: string, record) => <TagStatusSwitch tagInfo={record} />,
     },
     {
-      title: I18n.t('operate'),
+      title: I18n.t('operation'),
       dataIndex: 'operator',
       width: 68,
       render: (_: string, record) => (
@@ -135,7 +135,7 @@ export const TagsListTable = ({
           size="full_screen"
           icon={<IconCozIllusAdd />}
           title={I18n.t('no_tags_available')}
-          description={I18n.t('click_create_button')}
+          description={I18n.t('click_to_create')}
         />
       }
     />

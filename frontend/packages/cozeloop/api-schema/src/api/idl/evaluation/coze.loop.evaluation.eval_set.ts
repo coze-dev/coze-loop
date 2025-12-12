@@ -131,6 +131,7 @@ export interface BatchCreateEvaluationSetItemsResponse {
     [key: string | number]: string
   },
   errors?: dataset.ItemErrorGroup[],
+  item_outputs?: dataset.CreateDatasetItemOutput[],
 }
 export interface UpdateEvaluationSetItemRequest {
   workspace_id: string,

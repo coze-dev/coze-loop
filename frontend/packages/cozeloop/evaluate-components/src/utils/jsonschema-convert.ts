@@ -127,8 +127,8 @@ export const validColumnSchema = ({
 }) => {
   try {
     const schemaObj = JSON.parse(schema);
-    const vaild = isValidSchema(schemaObj);
-    if (!vaild) {
+    const valid = isValidSchema(schemaObj);
+    if (!valid) {
       cb?.(I18n.t('cozeloop_open_evaluate_json_schema_format_error'));
       return false;
     }

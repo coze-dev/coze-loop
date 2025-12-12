@@ -6,7 +6,10 @@ import { debounce } from 'lodash-es';
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
+import {
+  useOpenWindow,
+  useResourcePageJump,
+} from '@cozeloop/biz-hooks-adapter';
 import { tag } from '@cozeloop/api-schema/data';
 import { DataApi, StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozPlus, IconCozRefresh } from '@coze-arch/coze-design/icons';
@@ -37,7 +40,7 @@ export function TagSelect({
   const [dropdownVisible, setDropdownVisible] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const selectRef = useRef<any>(null);
-
+  const { openBlank } = useOpenWindow();
   const { getTagDetailURL, getTagCreateURL } = useResourcePageJump();
 
   const addTag = useRequest(
@@ -81,10 +84,11 @@ export function TagSelect({
                 onAdd?.(val);
               }}
               onDetail={info => {
-                window.open(getTagDetailURL(info.tag_key_id || ''));
+                openBlank(getTagDetailURL(info.tag_key_id || ''));
               }}
             />
           ),
+
           value: item.tag_key_id,
         }));
     },
@@ -117,6 +121,7 @@ export function TagSelect({
                 color="secondary"
                 onClick={() => search.run('')}
               />
+
               <div className="h-3 w-0 border-0 border-l border-solid coz-stroke-primary ml-[2px]" />
             </div>
           </Tooltip>
@@ -129,11 +134,11 @@ export function TagSelect({
         <div
           className="w-full pt-2 pl-[10px] cursor-pointer font-medium text-brand-9 flex items-center"
           onClick={() => {
-            window.open(getTagCreateURL());
+            openBlank(getTagCreateURL());
           }}
         >
           <IconCozPlus />
-          <span className="ml-2">{I18n.t('create_new_tag')}</span>
+          <span className="ml-2">{I18n.t('create_tag')}</span>
         </div>
       }
     />

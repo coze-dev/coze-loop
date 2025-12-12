@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import zhCH from '@cozeloop/observation-components/zh-CN';
 import enUS from '@cozeloop/observation-components/en-US';
 import {

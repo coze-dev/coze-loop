@@ -1,9 +1,8 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// start_aigc
 import { useCallback, useMemo } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ContentType } from '@cozeloop/api-schema/evaluation';
 import { Button, useFormState } from '@coze-arch/coze-design';
 
@@ -52,6 +51,7 @@ const StepThreeGenerateOutput: React.FC<
         content_type: ContentType.Text,
       },
     ],
+
     [fieldSchemas],
   );
 
@@ -64,7 +64,9 @@ const StepThreeGenerateOutput: React.FC<
     <div className="flex flex-col">
       {/* 数据预览表格 */}
       <div>
-        <div className="mb-2 text-sm font-medium text-gray-700">模拟数据</div>
+        <div className="mb-2 text-sm font-medium text-gray-700">
+          {I18n.t('evaluate_simulated_data')}
+        </div>
         <CommonTable
           supportMultiSelect={false}
           data={mergeData}
@@ -75,14 +77,13 @@ const StepThreeGenerateOutput: React.FC<
       {/* 操作按钮 */}
       <div className="flex pt-4 gap-2 ml-auto">
         <Button color="primary" onClick={onPrevStep}>
-          上一步：关联评测对象
+          {I18n.t('evaluate_previous_step_associate_targets')}
         </Button>
 
-        <Button onClick={handleImport}>导入数据</Button>
+        <Button onClick={handleImport}>{I18n.t('import_data')}</Button>
       </div>
     </div>
   );
 };
 
 export default StepThreeGenerateOutput;
-// end_aigc

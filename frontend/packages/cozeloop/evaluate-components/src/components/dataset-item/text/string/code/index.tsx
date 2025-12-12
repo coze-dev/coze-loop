@@ -41,6 +41,7 @@ export const CodeDatasetItem = ({
             setLanguage(value as string);
           }}
         />
+
         <Button
           icon={<IconCozCopy />}
           onClick={() => {
@@ -50,7 +51,7 @@ export const CodeDatasetItem = ({
           color="primary"
           size="small"
         >
-          {I18n.t('evaluate_copy')}
+          {I18n.t('copy')}
         </Button>
       </div>
       <div className="flex-1 rounded-[6px] py-3 bg-[#1e1e1e] overflow-hidden">

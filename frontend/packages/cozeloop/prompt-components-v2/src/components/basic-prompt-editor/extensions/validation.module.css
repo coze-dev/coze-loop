@@ -1,0 +1,7 @@
+.valid {
+  color: var(--Green-COZColorGreen7, #00A136);
+}
+
+.invalid {
+  color: #0607094D;
+}

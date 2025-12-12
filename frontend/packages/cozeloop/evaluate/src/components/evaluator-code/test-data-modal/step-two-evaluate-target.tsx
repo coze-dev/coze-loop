@@ -1,11 +1,8 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
-{
-  /* start_aigc */
-}
 import { useCallback, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type EvalTargetDefinition,
   useEvalTargetDefinition,
@@ -43,6 +40,7 @@ const getOptionList = (option: EvalTargetDefinition) => {
         </div>
       </div>
     ),
+
     value: type,
   };
 };
@@ -92,7 +90,10 @@ const StepTwoEvaluateTarget: React.FC<StepTwoEvaluateTargetProps> = ({
   const geMockData = async () => {
     try {
       if (!formValues?.evalTarget || !formValues?.evalTargetVersion) {
-        Toast.info({ content: '请选择评测对象和版本', top: 80 });
+        Toast.info({
+          content: I18n.t('evaluate_please_select_target_and_version'),
+          top: 80,
+        });
         return;
       }
 
@@ -131,6 +132,8 @@ const StepTwoEvaluateTarget: React.FC<StepTwoEvaluateTargetProps> = ({
 
       setLoading(false);
       onNextStep();
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -150,8 +153,8 @@ const StepTwoEvaluateTarget: React.FC<StepTwoEvaluateTargetProps> = ({
             <FormSelect
               className="w-full"
               field="evalTargetType"
-              label="类型"
-              placeholder="请选择类型"
+              label={I18n.t('type')}
+              placeholder={I18n.t('select_type')}
               optionList={evalTargetTypeOptions}
               showClear={true}
               onChange={value =>
@@ -174,11 +177,11 @@ const StepTwoEvaluateTarget: React.FC<StepTwoEvaluateTargetProps> = ({
       {/* 固定在底部的操作按钮 */}
       <div className="flex-shrink-0 flex pt-4 ml-auto gap-1 border-t border-[var(--coz-border)]">
         <Button color="primary" onClick={onPrevStep} loading={loading}>
-          上一步：评测集配置
+          {I18n.t('evaluate_previous_step_dataset_config')}
         </Button>
 
         <Button onClick={geMockData} loading={loading}>
-          下一步：生成模拟输出
+          {I18n.t('evaluate_next_step_generate_simulated_output')}
         </Button>
       </div>
     </div>
@@ -186,6 +189,3 @@ const StepTwoEvaluateTarget: React.FC<StepTwoEvaluateTargetProps> = ({
 };
 
 export default StepTwoEvaluateTarget;
-{
-  /* end_aigc */
-}

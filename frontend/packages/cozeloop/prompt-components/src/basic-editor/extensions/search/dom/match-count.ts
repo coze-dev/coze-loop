@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @typescript-eslint/naming-convention */
 import createEle from 'crelt';
+import { I18n } from '@cozeloop/i18n-adapter';
 
 interface CountData {
   matchIndex: number;
@@ -31,7 +32,7 @@ export class MatchCount {
 
       this.dom.style.color = 'unset';
     } else {
-      this.dom.innerText = '无结果';
+      this.dom.innerText = I18n.t('prompt_no_results');
 
       if (this._data.searching) {
         this.dom.style.color = 'red';

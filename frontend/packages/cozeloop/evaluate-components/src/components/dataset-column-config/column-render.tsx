@@ -63,19 +63,18 @@ export const ColumnRender = ({
   const allColumnField = useFieldApi(fieldKey);
   const type = typeField.getValue() as DataType;
   const isExist = keyField.getValue() !== undefined;
-  const disabelChangeDatasetType = disabledDataTypeSelect && isExist;
+  const disableChangeDatasetType = disabledDataTypeSelect && isExist;
   const { AdvanceConfigNode, showAdditional, inputType, isForm, isJSON } =
     useColumnAdvanceConfig({
       fieldKey: `${fieldKey}.${index}`,
-      disabelChangeDatasetType,
+      disableChangeDatasetType,
     });
   const isObject = [DataType.Object, DataType.ArrayObject].includes(type);
   const getHeader = () => (
     <div className="flex w-full justify-between">
       <div className="flex items-center gap-[4px]">
         <Typography.Text className="text-[14px] !font-semibold">
-          {nameField.getValue() ||
-            `${I18n.t('column_placeholder', { placeholder1: index + 1 })}`}
+          {nameField.getValue() || `${I18n.t('column')} ${index + 1}`}
         </Typography.Text>
         {activeKey.includes(`${index}`) ? (
           <IconCozArrowDown
@@ -105,11 +104,11 @@ export const ColumnRender = ({
           <Popconfirm
             content={
               <Typography.Text className="break-all text-[12px] !coz-fg-secondary">
-                {I18n.t('task_delete_confirm_btn')}{' '}
+                {I18n.t('delete_confirm')}{' '}
                 <Typography.Text className="!font-medium">
                   {nameField.getValue()}
-                </Typography.Text>
-                {I18n.t('cozeloop_open_evaluate_column_braces_irreversible')}
+                </Typography.Text>{' '}
+                {I18n.t('evaluate_column_irreversible_action')}
               </Typography.Text>
             }
             title={I18n.t('delete_column')}
@@ -189,17 +188,17 @@ export const ColumnRender = ({
             ]}
           ></FormInput>
           <TooltipWhenDisabled
-            disabled={disabelChangeDatasetType}
-            content={I18n.t('draft_has_existing_data_can_not_modifying')}
+            disabled={disableChangeDatasetType}
+            content={I18n.t('cannot_modify_data_type_tip')}
             theme="dark"
             className="top-9"
           >
             <FormDataTypeSelect
               label={I18n.t('data_type')}
-              labelWidth={95}
+              labelWidth={90}
               treeData={MUTIPART_DATA_TYPE_LIST_WITH_ARRAY}
               fieldClassName={'w-[190px]'}
-              disabled={disabelChangeDatasetType || isJSON}
+              disabled={disableChangeDatasetType || isJSON}
               onChange={newType => {
                 columnField.setValue({
                   ...columnField.getValue(),
@@ -223,8 +222,9 @@ export const ColumnRender = ({
             disabled={disabledDataTypeSelect}
             field={`${fieldKey}.${index}.isRequired`}
           />
+
           <FormAdditionalPropertyField
-            disabled={disabelChangeDatasetType}
+            disabled={disableChangeDatasetType}
             label={{
               text: I18n.t('redundant_fields_allowed'),
               required: true,
@@ -252,7 +252,7 @@ export const ColumnRender = ({
             inputType={inputType}
             showAdditional={showAdditional}
             fieldKey={`${fieldKey}.${index}`}
-            disabelChangeDatasetType={disabelChangeDatasetType}
+            disableChangeDatasetType={disableChangeDatasetType}
           />
         ) : null}
         {type === DataType.MultiPart ? (

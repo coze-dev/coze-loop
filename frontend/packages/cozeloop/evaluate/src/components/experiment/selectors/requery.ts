@@ -41,7 +41,7 @@ export async function listSourceEvalTargetVersion(
         eval_target_content: {
           coze_bot: {
             bot_name: `CozeBot ${index + 1}`,
-            description: I18n.t('version_description'),
+            description: I18n.t('evaluate_version_description'),
           },
           prompt: {
             name: `Prompt ${index + 1}`,
@@ -99,7 +99,7 @@ export async function listEvaluationSets(
   const targets = new Array(10).fill(1).map((_, index) => {
     const item: EvaluationSet = {
       id: createId(),
-      name: I18n.t('pedia_dataset'),
+      name: `${I18n.t('pedia_dataset', { index })}`,
       base_info: {
         created_at: new Date().toLocaleString(),
         created_by: {
@@ -134,7 +134,7 @@ export async function listEvaluationSetVersions(
       const item: EvaluationSetVersion = {
         id: createId(),
         version: `0.0.${index + 1}`,
-        description: I18n.t('version_description'),
+        description: I18n.t('evaluate_version_description'),
       };
       return item;
     });

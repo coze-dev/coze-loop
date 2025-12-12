@@ -4,7 +4,6 @@ import { type ReactNode } from 'react';
 
 import { JsonViewer } from '@textea/json-viewer';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { IS_DISABLED_MULTI_MODEL_EVAL } from '@cozeloop/biz-hooks-adapter';
 import {
   type FieldData,
   type Content,
@@ -69,6 +68,7 @@ export interface DatasetFieldItemRenderProps extends DatasetItemBaseProps {
 }
 export interface DatasetItemProps extends DatasetItemBaseProps {
   className?: string;
+  containerClassName?: string;
   fieldContent?: Content;
   onChange?: (content: Content) => void;
 }
@@ -240,6 +240,7 @@ export const MUTABLE_DATA_TYPE_LIST = [
         </Popover>
       </div>
     ),
+
     value: DataType.MultiPart,
   },
 ];
@@ -247,8 +248,9 @@ export const MUTABLE_DATA_TYPE_LIST = [
 export const DATA_TYPE_LIST_WITH_ARRAY = [...DATA_TYPE_LIST, ARRAY_TYPE_LIST];
 export const MUTIPART_DATA_TYPE_LIST_WITH_ARRAY = [
   ...DATA_TYPE_LIST_WITH_ARRAY,
-  ...(IS_DISABLED_MULTI_MODEL_EVAL ? [] : MUTABLE_DATA_TYPE_LIST),
+  ...MUTABLE_DATA_TYPE_LIST,
 ];
+
 export const getDataTypeListWithArray = (
   disableObj: boolean,
   renderDisableLabel: (label: string) => ReactNode,
@@ -299,12 +301,14 @@ export const DISPLAY_TYPE_MAP = {
     FieldDisplayFormat.JSON,
     FieldDisplayFormat.Markdown,
   ],
+
   [DataType.MultiPart]: [
     FieldDisplayFormat.PlainText,
     FieldDisplayFormat.Code,
     FieldDisplayFormat.JSON,
     FieldDisplayFormat.Markdown,
   ],
+
   [DataType.Integer]: [FieldDisplayFormat.PlainText],
   [DataType.Float]: [FieldDisplayFormat.PlainText],
   [DataType.Boolean]: [FieldDisplayFormat.PlainText],
@@ -325,12 +329,12 @@ export const DISPLAY_FORMAT_MAP = {
 
 export interface FieldObjectSchema {
   key: string;
+  type?: DataType;
   // 变量名称
   propertyKey?: string;
-  // obejct对象的子数据
-  children?: FieldObjectSchema[];
   isRequired?: boolean;
-  type?: DataType;
+  // object对象的子数据
+  children?: FieldObjectSchema[];
   additionalProperties?: boolean;
 }
 export interface ConvertFieldSchema extends FieldSchema {

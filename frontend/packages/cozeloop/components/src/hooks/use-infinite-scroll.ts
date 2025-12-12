@@ -16,8 +16,11 @@ import {
   useRequest,
   useUpdateEffect,
 } from 'ahooks';
-
-import { getClientHeight, getScrollHeight, getScrollTop } from '../utils/rect';
+import {
+  getClientHeight,
+  getScrollHeight,
+  getScrollTop,
+} from '@cozeloop/toolkit';
 
 /**
  * ahook的实现，在刷新列表时会出现以下两个问题

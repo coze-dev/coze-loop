@@ -72,14 +72,18 @@ export const DatasetImportItemsModal = ({
     onSuccess,
     onError,
   }) => {
-    await uploadFile({
-      file: fileInstance,
-      fileType: fileInstance.type?.includes('image') ? 'image' : 'object',
-      onProgress,
-      onSuccess,
-      onError,
-      spaceID,
-    });
+    try {
+      await uploadFile({
+        file: fileInstance,
+        fileType: fileInstance.type?.includes('image') ? 'image' : 'object',
+        onProgress,
+        onSuccess,
+        onError,
+        spaceID,
+      });
+    } catch (error) {
+      console.error('upload file failed', error);
+    }
     const fileType = getFileType(fileInstance?.name);
     formRef?.current?.setValue('fileType', fileType);
     const { headers, error } = await getFileHeaders(fileInstance);
@@ -101,9 +105,7 @@ export const DatasetImportItemsModal = ({
         datasetID: datasetDetail?.id as string,
       });
       return res?.map(item => ({
-        label: `${I18n.t('cozeloop_open_evaluate_template_placeholder0', {
-          placeholder0: FILE_FORMAT_MAP[item?.format || FileFormat.CSV],
-        })}`,
+        label: `${I18n.t('cozeloop_open_evaluate_template_placeholder0', { placeholder0: FILE_FORMAT_MAP[item?.format || FileFormat.CSV] })}`,
         value: item.url,
       }));
     },
@@ -138,6 +140,8 @@ export const DatasetImportItemsModal = ({
         startProgressTask(res.job_id);
         setVisible(false);
       }
+    } catch (error) {
+      console.error('import data failed', error);
     } finally {
       setLoading(false);
     }
@@ -206,9 +210,7 @@ export const DatasetImportItemsModal = ({
                           className="!coz-fg-secondary"
                           size="small"
                         >
-                          {I18n.t(
-                            'cozeloop_open_evaluate_supported_file_formats_limit',
-                          )}
+                          {I18n.t('evaluation_set_import_files_tips')}
                         </Typography.Text>
                         {templateUrlList?.length ? (
                           <Dropdown
@@ -255,7 +257,7 @@ export const DatasetImportItemsModal = ({
                                 className="ml-[12px]"
                                 size="small"
                               >
-                                {I18n.t('evaluate_dataset_download_template')}
+                                {I18n.t('download_template')}
                                 {downloadingTemplateLoading ? (
                                   <Loading
                                     loading
@@ -276,7 +278,7 @@ export const DatasetImportItemsModal = ({
                     rules={[
                       {
                         required: true,
-                        message: I18n.t('please_upload_file'),
+                        message: I18n.t('upload_file'),
                       },
                     ]}
                   ></Form.Upload>
@@ -293,6 +295,7 @@ export const DatasetImportItemsModal = ({
                             />
                           </div>
                         ),
+
                         required: true,
                       }}
                     >
@@ -340,6 +343,7 @@ export const DatasetImportItemsModal = ({
                     ]}
                     label={I18n.t('import_method')}
                   />
+
                   <div className="h-6" />
                 </div>
                 <div className="flex justify-end px-6">

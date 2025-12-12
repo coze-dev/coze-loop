@@ -1,6 +1,5 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
 /* eslint-disable complexity */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable @coze-arch/max-line-per-function */
@@ -37,9 +36,10 @@ import {
 
 import { VersionListPane } from '../version-list-pane';
 import { Header } from '../header';
+import { EvaluatorTypeTagText } from '../../evaluator-template/types';
+import { EvaluatorTemplateListPanel } from '../../evaluator-template/evaluator-template-list-panel';
 import { SubmitVersionModal } from '../../evaluator-create/submit-version-modal';
 import { FullScreenEditorConfigModal } from '../../evaluator-create/code-create/full-screen-editor-config-modal';
-import { CodeTemplateModal } from '../../evaluator-create/code-create/code-template-modal';
 import { CodeEvaluatorVersionView } from './code-evaluator-version-view';
 import {
   CodeEvaluatorConfigField,
@@ -54,6 +54,8 @@ interface IFormValue {
   description?: string;
   config: CodeEvaluatorValue;
 }
+
+const disabledEvaluatorTypes = [EvaluatorTypeTagText.Prompt];
 
 function CodeEvaluatorDetailPage() {
   const { spaceID } = useSpace();
@@ -284,7 +286,7 @@ function CodeEvaluatorDetailPage() {
     } catch (error) {
       console.error(I18n.t('evaluate_debug_failed'), error);
       Toast.error({
-        content: `调试失败: ${(error as Error)?.message || I18n.t('evaluate_unknown_error')}`,
+        content: `${I18n.t('evaluate_debug_failed')}: ${(error as Error)?.message || I18n.t('evaluate_unknown_error')}`,
         top: 80,
       });
     }
@@ -344,7 +346,7 @@ function CodeEvaluatorDetailPage() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 mb-2">加载失败</div>
+          <div className="text-red-500 mb-2">{I18n.t('load_failed')}</div>
           <div className="text-gray-500 text-sm">{service.error.message}</div>
         </div>
       </div>
@@ -355,7 +357,9 @@ function CodeEvaluatorDetailPage() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <div className="text-gray-500">评估器不存在</div>
+          <div className="text-gray-500">
+            {I18n.t('evaluate_evaluator_not_exist')}
+          </div>
         </div>
       </div>
     );
@@ -470,12 +474,16 @@ function CodeEvaluatorDetailPage() {
         }}
       />
 
-      <CodeTemplateModal
-        visible={templateModalVisible}
-        isShowCustom={false}
-        onCancel={() => setTemplateModalVisible(false)}
-        onSelect={handleTemplateSelect}
-      />
+      {templateModalVisible ? (
+        <EvaluatorTemplateListPanel
+          defaultEvaluatorType={EvaluatorTypeTagText.Code}
+          disabledEvaluatorTypes={disabledEvaluatorTypes}
+          onApply={template => handleTemplateSelect(template.evaluator_content)}
+          onClose={() => {
+            setTemplateModalVisible(false);
+          }}
+        />
+      ) : null}
 
       <FullScreenEditorConfigModal
         formRef={formRef}

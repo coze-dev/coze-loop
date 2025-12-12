@@ -3,11 +3,11 @@
 import { useMemo } from 'react';
 
 import classNames from 'classnames';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EvaluatorIcon,
-  getEvaluatorJumpUrl,
-  TypographyText,
+  getEvaluatorJumpUrlV2,
 } from '@cozeloop/evaluate-components';
 import { JumpIconButton } from '@cozeloop/components';
 import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
@@ -33,23 +33,21 @@ export default function EvaluatorColumnPreview({
   className?: string;
   style?: React.CSSProperties;
 }) {
-  const { name, version, evaluator_id, evaluator_version_id, evaluator_type } =
+  const { name, version, evaluator_id, builtin, evaluator_version_id } =
     evaluator ?? {};
 
+  const { evaluator_type } = evaluator ?? {};
+
   const jumpUrl = useMemo(
-    () =>
-      getEvaluatorJumpUrl({
-        evaluatorType: evaluator_type,
-        evaluatorId: evaluator_id,
-        evaluatorVersionId: evaluator_version_id,
-      }),
-    [evaluator_type, evaluator_id, evaluator_version_id],
+    () => getEvaluatorJumpUrlV2(evaluator, evaluator_version_id),
+    [evaluator, evaluator_version_id],
   );
 
   const { openBlank } = useOpenWindow();
   if (!evaluator) {
     return <>-</>;
   }
+
   return (
     <div
       className={`group inline-flex items-center overflow-hidden gap-1 max-w-[100%] ${className}`}
@@ -69,10 +67,10 @@ export default function EvaluatorColumnPreview({
         {...tagProps}
         className={classNames('shrink-0', tagProps.className)}
       >
-        {version}
+        {builtin ? 'latest' : version}
       </Tag>
       {enableLinkJump ? (
-        <Tooltip theme="dark" content={I18n.t('detail')}>
+        <Tooltip theme="dark" content={I18n.t('view_detail')}>
           <div>
             <JumpIconButton
               className={defaultShowLinkJump ? '' : '!hidden group-hover:!flex'}

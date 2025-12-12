@@ -42,7 +42,7 @@
       "path": "../i18n/tsconfig.build.json"
     },
     {
-      "path": "../observation-v2/tsconfig.build.json"
+      "path": "../observation-components/tsconfig.build.json"
     },
     {
       "path": "../tag-components/tsconfig.build.json"

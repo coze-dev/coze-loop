@@ -1,9 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// start_aigc
 import { useCallback, useState, useEffect } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type EvaluationSetItemTableData } from '@cozeloop/evaluate-components';
 import { CodeEditor, IDRender } from '@cozeloop/components';
 import {
@@ -37,9 +37,6 @@ const CollapsibleEditorArray: React.FC<{
 
   const originSelectedData = values?.config?.testData?.originSelectedData || [];
 
-  {
-    /* start_aigc */
-  }
   const handleDeleteItem = useCallback(
     (indexToDelete: number, event: React.MouseEvent) => {
       // 阻止事件冒泡，防止触发面板折叠/展开
@@ -56,9 +53,6 @@ const CollapsibleEditorArray: React.FC<{
     },
     [data, onChange],
   );
-  {
-    /* end_aigc */
-  }
 
   const handleItemChange = useCallback(
     (index: number, value: string) => {
@@ -84,9 +78,6 @@ const CollapsibleEditorArray: React.FC<{
       <Collapse expandIconPosition="left" className="flex flex-col gap-1">
         {data.map((item, index) => {
           const key = originSelectedData[index]?.item_id || `item-${index}`;
-          {
-            /* start_aigc */
-          }
           return (
             <Collapse.Panel
               header={
@@ -103,7 +94,6 @@ const CollapsibleEditorArray: React.FC<{
               itemKey={key}
               className={styles.customCollapsePanelWrapper}
             >
-              {/* end_aigc */}
               <div style={{ height: 284 }}>
                 <CodeEditor
                   language="json"
@@ -234,7 +224,7 @@ export const EvalSetTestData: React.FC<EvalSetTestDataProps> = ({
               color="var(--coz-fg-dim, rgba(55, 67, 106, 0.38))"
             />
           }
-          description="暂无测试数据"
+          description={I18n.t('evaluate_no_test_data')}
         >
           <Button
             size="small"
@@ -244,7 +234,7 @@ export const EvalSetTestData: React.FC<EvalSetTestDataProps> = ({
             onClick={handleOpenModal}
             disabled={disabled}
           >
-            构造测试数据
+            {I18n.t('construct_test_data')}
           </Button>
         </Empty>
       </div>
@@ -261,4 +251,3 @@ export const EvalSetTestData: React.FC<EvalSetTestDataProps> = ({
 };
 
 export default EvalSetTestData;
-// end_aigc

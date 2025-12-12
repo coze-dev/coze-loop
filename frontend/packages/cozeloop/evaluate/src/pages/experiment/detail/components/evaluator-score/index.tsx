@@ -4,10 +4,10 @@ import { useState } from 'react';
 
 import classNames from 'classnames';
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { EvaluatorManualScore } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   TraceTrigger,
-  EvaluatorManualScore,
   EvaluatorResultPanel,
   useGlobalEvalConfig,
 } from '@cozeloop/evaluate-components';
@@ -62,6 +62,9 @@ export default function EvaluatorScore({
     >
       {hasResult ? (
         <Popover
+          contentClassName="max-h-[500px] overflow-auto"
+          stopPropagation={true}
+          position="left"
           content={
             <EvaluatorResultPanel
               result={evaluatorResult}

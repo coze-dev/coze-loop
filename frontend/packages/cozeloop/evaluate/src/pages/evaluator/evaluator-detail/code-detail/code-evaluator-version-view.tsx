@@ -1,6 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
+import { I18n } from '@cozeloop/i18n-adapter';
 import { CodeEditor } from '@cozeloop/components';
 import {
   type EvaluatorVersion,
@@ -8,15 +8,11 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 
 import { codeEvaluatorLanguageMap } from '@/constants';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface Props {
   version: EvaluatorVersion;
 }
 
-{
-  /* start_aigc */
-}
 export function CodeEvaluatorVersionView({ version }: Props) {
   const codeEvaluator = version.evaluator_content?.code_evaluator;
   // 从API结构中获取数据
@@ -91,7 +87,4 @@ export function CodeEvaluatorVersionView({ version }: Props) {
       )}
     </div>
   );
-}
-{
-  /* end_aigc */
 }

@@ -1,12 +1,11 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
 import { type NavigateOptions, type To } from 'react-router-dom';
 
 export interface RouteInfoURLParams {
   spaceID?: string;
   enterpriseID?: string;
-  organizeID?: string;
+  organizationID?: string;
 }
 
 /**
@@ -32,17 +31,17 @@ export interface RouteInfo {
    */
   detail: string;
   /**
-   * 空间 id
+   * URL 中获取的空间 id
    */
   spaceID?: string;
   /**
-   * 企业 id
+   * URL 中获取的企业 id
    */
   enterpriseID?: string;
   /**
-   * 组织 id
+   * URL 中获取的组织 id
    */
-  organizeID?: string;
+  organizationID?: string;
 }
 
 /**

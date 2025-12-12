@@ -1,6 +1,5 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useEffect, useState } from 'react';
 
@@ -51,7 +50,7 @@ export function CodeTemplateModal({
   const [codeValue, setCodeValue] = useState<string>();
 
   const listService = useRequest(
-    async () =>
+    () =>
       StoneEvaluationApi.ListTemplates({
         builtin_template_type: TemplateType.Code,
       }),
@@ -227,7 +226,7 @@ export function CodeTemplateModal({
               disabled={!currentData}
               onClick={() => currentData && onSelect(currentData)}
             >
-              {I18n.t('evaluate_confirm')}
+              {I18n.t('confirm')}
             </Button>
           </div>
         </div>

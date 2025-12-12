@@ -47,7 +47,7 @@ export const MultipartRender = ({ inputType }: MultipartRenderProps) => {
   const getHeader = () => (
     <div className="flex w-full justify-between">
       <div className="flex items-center gap-[4px]">
-        {I18n.t('cozeloop_open_evaluate_data_structure')}
+        {I18n.t('data_structure')}
         {activeKey?.length ? (
           <IconCozArrowDown
             onClick={() => setActiveKey([])}
@@ -62,6 +62,7 @@ export const MultipartRender = ({ inputType }: MultipartRenderProps) => {
       </div>
     </div>
   );
+
   return (
     <Collapse
       className={styles['object-collapse']}
@@ -71,7 +72,7 @@ export const MultipartRender = ({ inputType }: MultipartRenderProps) => {
     >
       <Collapse.Panel itemKey={'1'} header={getHeader()} showArrow={false}>
         <Typography.Text className="coz-fg-secondary mb-2 block -mt-1">
-          {I18n.t('cozeloop_open_evaluate_preset_array_object_data_type')}
+          {I18n.t('evaluate_preset_array_object_data_type')}
         </Typography.Text>
         {inputType === InputType.Form ? (
           <>
@@ -83,7 +84,7 @@ export const MultipartRender = ({ inputType }: MultipartRenderProps) => {
                 {fieldValue?.children?.length ? (
                   <JSONSchemaHeader
                     showAdditional={false}
-                    disabelChangeDatasetType={true}
+                    disableChangeDatasetType={true}
                   />
                 ) : null}
                 <TreeEditor

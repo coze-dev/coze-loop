@@ -1,7 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { TypographyText } from '@cozeloop/evaluate-components';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
 import { IconCozTrashCan } from '@coze-arch/coze-design/icons';
 import { type ColumnProps, Popconfirm } from '@coze-arch/coze-design';
@@ -28,17 +28,17 @@ function ExperimentColumnHeader({
       <TypographyText>
         {index === 0
           ? I18n.t('benchmark_group')
-          : I18n.t('experimental_group_index')}{' '}
-        + {index} - {experiment.name}
+          : `${I18n.t('experimental_group')} ${index}`}{' '}
+        - {experiment.name}
       </TypographyText>
       {index !== 0 && enableDelete ? (
         <Popconfirm
           title={I18n.t('remove_experimental_group')}
           content={
             <>
-              {I18n.t('confirm_removal', {
-                field: <span className="font-medium">{experiment.name}</span>,
-              })}
+              {I18n.t('evaluate_confirm_to_remove')}
+              <span className="font-medium">{experiment.name}</span>{' '}
+              {I18n.t('evaluate_question_particle')}
             </>
           }
           okText={I18n.t('remove')}
@@ -89,6 +89,7 @@ export function getExperimentContrastColumns(
           }
         />
       ),
+
       dataIndex: `experimentResult.${experiment.id}`,
       // fixed: index === 0 ? true : undefined,
       align: 'left',

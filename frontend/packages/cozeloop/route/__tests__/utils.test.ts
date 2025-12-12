@@ -1,6 +1,5 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { paddingPath, getPath } from '../src/utils';
@@ -50,7 +49,7 @@ describe('utils', () => {
     it('should warn and return path when path already starts with baseURL', () => {
       const result = getPath('/space/123/home', '/space/123');
       expect(result).toBe('/space/123/home');
-      expect(consoleSpy).toHaveBeenCalledWith('你可以直接使用home');
+      expect(consoleSpy).toHaveBeenCalledWith('You can directly use home');
     });
 
     it('should handle baseURL without leading slash', () => {

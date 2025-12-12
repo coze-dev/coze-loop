@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type FC } from 'react';
 
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EqualItem,
   ReadonlyItem,
   getTypeText,
-  TypographyText,
 } from '@cozeloop/evaluate-components';
 import { BaseSearchSelect } from '@cozeloop/components';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
@@ -76,11 +76,12 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
           typeText={getTypeText(keySchema)}
           value={keySchema?.name}
         />
+
         <EqualItem />
         <BaseSearchSelect
           validateStatus={validateStatus}
           className={styles.select}
-          placeholder={I18n.t('please_select', { field: '' })}
+          placeholder={I18n.t('please_select')}
           prefix={
             value?.schemaSourceType &&
             schemaSourceTypeMap[value.schemaSourceType]

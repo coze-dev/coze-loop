@@ -15,6 +15,11 @@ export interface PromptBasic {
   created_at?: string,
   updated_at?: string,
   latest_committed_at?: string,
+  prompt_type?: PromptType,
+}
+export enum PromptType {
+  Normal = "normal",
+  Snippet = "snippet",
 }
 export interface PromptCommit {
   detail?: PromptDetail,
@@ -51,10 +56,17 @@ export interface PromptTemplate {
   template_type?: TemplateType,
   messages?: Message[],
   variable_defs?: VariableDef[],
+  has_snippet?: boolean,
+  snippets?: Prompt[],
+  metadata?: {
+    [key: string | number]: string
+  },
 }
 export enum TemplateType {
   Normal = "normal",
   Jinja2 = "jinja2",
+  GoTemplate = "go_template",
+  CustomTemplate_M = "custom_template_m",
 }
 export interface Tool {
   type?: ToolType,
@@ -62,6 +74,7 @@ export interface Tool {
 }
 export enum ToolType {
   Function = "function",
+  GoogleSearch = "google_search",
 }
 export interface Function {
   name?: string,
@@ -69,11 +82,17 @@ export interface Function {
   parameters?: string,
 }
 export interface ToolCallConfig {
-  tool_choice?: ToolChoiceType
+  tool_choice?: ToolChoiceType,
+  tool_choice_specification?: ToolChoiceSpecification,
+}
+export interface ToolChoiceSpecification {
+  type?: ToolType,
+  name?: string,
 }
 export enum ToolChoiceType {
   None = "none",
   Auto = "auto",
+  Specific = "specific",
 }
 export interface ModelConfig {
   model_id?: string,
@@ -84,6 +103,22 @@ export interface ModelConfig {
   presence_penalty?: number,
   frequency_penalty?: number,
   json_mode?: boolean,
+  extra?: string,
+  param_config_values?: ParamConfigValue[],
+}
+export interface ParamConfigValue {
+  /** 传给下游模型的key，与ParamSchema.name对齐 */
+  name?: string,
+  /** 展示名称 */
+  label?: string,
+  /** 传给下游模型的value，与ParamSchema.options对齐 */
+  value?: ParamOption,
+}
+export interface ParamOption {
+  /** 实际值 */
+  value?: string,
+  /** 展示值 */
+  label?: string,
 }
 export interface Message {
   role?: Role,
@@ -92,6 +127,9 @@ export interface Message {
   parts?: ContentPart[],
   tool_call_id?: string,
   tool_calls?: ToolCall[],
+  metadata?: {
+    [key: string | number]: string
+  },
 }
 export enum Role {
   System = "system",
@@ -104,15 +142,25 @@ export interface ContentPart {
   type?: ContentType,
   text?: string,
   image_url?: ImageURL,
+  video_url?: VideoURL,
+  media_config?: MediaConfig,
 }
 export enum ContentType {
   Text = "text",
   ImageURL = "image_url",
+  VideoURL = "video_url",
   MultiPartVariable = "multi_part_variable",
 }
 export interface ImageURL {
   uri?: string,
   url?: string,
+}
+export interface VideoURL {
+  url?: string,
+  uri?: string,
+}
+export interface MediaConfig {
+  fps?: number
 }
 export interface ToolCall {
   index?: string,
@@ -220,4 +268,11 @@ export enum Scenario {
 }
 export interface OverridePromptParams {
   model_config?: ModelConfig
+}
+export interface PromptCommitVersions {
+  id?: string,
+  workspace_id?: string,
+  prompt_key?: string,
+  prompt_basic?: PromptBasic,
+  commit_versions?: string[],
 }

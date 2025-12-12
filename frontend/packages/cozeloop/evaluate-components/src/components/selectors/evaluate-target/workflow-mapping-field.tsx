@@ -131,14 +131,14 @@ function transformSingleSchemaToTreeData(schema: unknown): NodeData {
 
 const getWorkflowMappingRules = (schema: FieldSchema) => [
   {
-    validator: (_rule, v) => {
+    validator: (_rule, v, callback) => {
       if (!v) {
-        return new Error(I18n.t('please_select'));
+        callback(I18n.t('please_select'));
+        return false;
       }
       if (getTypeText(v) !== getTypeText(schema)) {
-        return new Error(
-          I18n.t('cozeloop_open_evaluate_selected_field_type_inconsistent'),
-        );
+        callback(I18n.t('selected_fields_inconsistent'));
+        return false;
       }
       return true;
     },

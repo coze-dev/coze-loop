@@ -259,6 +259,7 @@ export const TagsItem: React.FC<TagsItemProps> = ({
                 src={tagDetail.base_info?.updated_by?.avatar_url}
                 className="w-[20px] h-[20px]"
               />
+
               <Typography.Text
                 className={classNames('text-[13px] !coz-fg-primary')}
               >

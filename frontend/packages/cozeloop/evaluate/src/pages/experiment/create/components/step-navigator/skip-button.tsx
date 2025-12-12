@@ -16,7 +16,7 @@ export const SkipButton = (props: {
 
   return (
     <Popover
-      content={I18n.t('skip_eval_object_execution_config')}
+      content={I18n.t('evaluate_skip_target_execution_config')}
       position="top"
       className="w-[320px] rounded-[8px] !py-2 !px-3"
     >

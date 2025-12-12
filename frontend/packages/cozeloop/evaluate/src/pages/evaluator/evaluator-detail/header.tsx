@@ -7,7 +7,8 @@ import { type Result } from 'ahooks/lib/useRequest/src/types';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { CozeUser } from '@cozeloop/evaluate-components';
-import { RouteBackAction, EditIconButton } from '@cozeloop/components';
+import { EditIconButton } from '@cozeloop/components';
+import { RouteBackAction } from '@cozeloop/base-with-adapter-components';
 import {
   type EvaluatorVersion,
   type Evaluator,
@@ -63,7 +64,7 @@ export function Header({
     } else if (autoSaveService.error) {
       tagContent = I18n.t('draft_auto_save_failed');
     } else if (autoSaveService.data?.lastSaveTime) {
-      tagContent = `${I18n.t('draft_auto_saved_in')} ${dayjs(Number(autoSaveService.data.lastSaveTime)).format('YYYY-MM-DD HH:mm:ss')}`;
+      tagContent = `${I18n.t('draft_auto_saving')} ${dayjs(Number(autoSaveService.data.lastSaveTime)).format('YYYY-MM-DD HH:mm:ss')}`;
     }
 
     if (tagContent) {
@@ -83,6 +84,7 @@ export function Header({
     if (selectedVersion) {
       return (
         <>
+          <div className="mx-3 h-3 w-0 border-0 border-l border-solid coz-stroke-primary" />
           <Tag
             color="green"
             className="!h-5 !px-2 !py-[2px] rounded-[3px] mr-1"
@@ -115,7 +117,7 @@ export function Header({
             color="yellow"
             className="!h-5 !px-2 !py-[2px] rounded-[3px] mr-1"
           >
-            {I18n.t('changes_not_submitted')}
+            {I18n.t('unsubmitted_changes')}
           </Tag>
         ) : null}
 
@@ -127,7 +129,6 @@ export function Header({
   const DebugButtonComponent =
     customDebugButton ||
     (debugButtonProps ? <DebugButton {...debugButtonProps} /> : null);
-
   return (
     <>
       <div className="px-6 py-2 h-[64px] flex-shrink-0 flex flex-row items-center border-0 border-b border-solid coz-stroke-primary">
@@ -145,7 +146,7 @@ export function Header({
             <div className="text-xs font-normal !coz-fg-secondary max-w-[240px] overflow-hidden text-ellipsis whitespace-nowrap leading-4">
               {I18n.t('description')}：{evaluator?.description || '-'}
             </div>
-            <div className="mx-3 h-3 w-0 border-0 border-l border-solid coz-stroke-primary" />
+            {/* <div className="mx-3 h-3 w-0 border-0 border-l border-solid coz-stroke-primary" /> */}
             {renderExtra()}
           </div>
         </div>

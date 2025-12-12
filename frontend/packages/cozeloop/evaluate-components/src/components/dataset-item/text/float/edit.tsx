@@ -9,7 +9,7 @@ export const FloatDatasetItemEdit = ({
   onChange,
 }: DatasetItemProps) => (
   <Input
-    placeholder={I18n.t('input_float_with_precision')}
+    placeholder={I18n.t('evaluate_please_input_float_max_4_decimal')}
     className="rounded-[6px]"
     value={fieldContent?.text}
     onChange={value => {

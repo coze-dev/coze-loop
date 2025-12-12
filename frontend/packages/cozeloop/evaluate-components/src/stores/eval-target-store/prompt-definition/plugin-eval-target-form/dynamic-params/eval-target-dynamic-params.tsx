@@ -13,16 +13,16 @@ import { withField } from '@coze-arch/coze-design';
 import { wait } from '@/utils';
 
 import { DynamicParamsField } from './dynamic-params-field';
-
-const FormEvaluateTargetPromptDynamicParams = withField(
-  EvaluateTargetPromptDynamicParams,
-);
 interface Props {
   promptDetail?: prompt.Prompt;
   disabled?: boolean;
   initialValue?: RuntimeParam;
   onChange?: (v?: RuntimeParam) => void;
 }
+
+const FormEvaluateTargetPromptDynamicParams = withField(
+  EvaluateTargetPromptDynamicParams,
+);
 
 export const EvalTargetDynamicParams = ({
   promptDetail,
@@ -63,7 +63,9 @@ export const EvalTargetDynamicParams = ({
                   variable?.type && variable.type === VariableType.MultiPart,
               );
               if (hasMultiModelVar && !modelRef.current?.ability?.multi_modal) {
-                callback(I18n.t('model_not_support_multimodal'));
+                callback(
+                  I18n.t('model_not_support_multi_modal_adjust_or_change'),
+                );
               }
               callback();
             },

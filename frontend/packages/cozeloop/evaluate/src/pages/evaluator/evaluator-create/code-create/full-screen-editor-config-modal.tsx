@@ -1,8 +1,8 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
 import { useEffect, useRef } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Guard, GuardPoint } from '@cozeloop/guard';
 import { IconCozPlayFill, IconCozMinimize } from '@coze-arch/coze-design/icons';
 import { Form, Modal, Button } from '@coze-arch/coze-design';
@@ -11,7 +11,6 @@ import type { IFormValues } from '@/components/evaluator-code/types';
 import CodeEvaluatorConfig from '@/components/evaluator-code';
 
 import styles from './index.module.less';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 const INIT_DELAY = 200;
 
@@ -70,7 +69,7 @@ const FullScreenEditorConfigModal = (
             className="text-[20px] font-medium"
             style={{ color: 'rgba(8,13,30,0.90)' }}
           >
-            {I18n.t('evaluate_evaluator_config')}
+            {I18n.t('evaluate_evaluator_configuration')}
           </div>
           <div className="flex flex-row items-center gap-2">
             <Guard point={GuardPoint['eval.evaluator_create.debug']} realtime>

@@ -241,7 +241,7 @@
     },
     {
       "packageName": "@cozeloop/observation-components",
-      "projectFolder": "frontend/packages/cozeloop/observation-v2",
+      "projectFolder": "frontend/packages/cozeloop/observation-components",
       "tags": ["level-3"]
     },
     {
@@ -313,6 +313,24 @@
       "packageName": "@cozeloop/toolkit",
       "projectFolder": "frontend/packages/cozeloop/toolkit",
       "tags": ["level-3"]
+    },
+    {
+      "packageName": "@cozeloop/base-with-adapter-components",
+      "projectFolder": "frontend/packages/cozeloop/components-with-adapter",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
+    },
+    {
+      "packageName": "@cozeloop/shared-components",
+      "projectFolder": "frontend/packages/cozeloop/shared-components",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
+    },
+    {
+      "packageName": "@cozeloop/prompt-components-v2",
+      "projectFolder": "frontend/packages/cozeloop/prompt-components-v2",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
     }
   ]
 }

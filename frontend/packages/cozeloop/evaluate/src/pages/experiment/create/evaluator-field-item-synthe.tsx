@@ -5,6 +5,7 @@
 import { useMemo } from 'react';
 
 import {
+  type Evaluator,
   EvaluatorType,
   type EvaluatorVersion,
   type FieldSchema,
@@ -18,6 +19,7 @@ interface EvaluatorFieldItemSyntheProps {
   arrayField: {
     field: string;
   };
+  evaluator?: Evaluator;
   evaluatorType?: EvaluatorType;
   loading: boolean;
   versionDetail?: EvaluatorVersion;
@@ -31,6 +33,7 @@ export function EvaluatorFieldItemSynthe(props: EvaluatorFieldItemSyntheProps) {
     arrayField,
     evaluatorType,
     loading,
+    evaluator,
     versionDetail,
     evaluationSetSchemas,
     evaluateTargetSchemas,
@@ -55,6 +58,7 @@ export function EvaluatorFieldItemSynthe(props: EvaluatorFieldItemSyntheProps) {
     <EvaluatorFieldItemLLM
       arrayField={arrayField}
       loading={loading}
+      evaluator={evaluator}
       versionDetail={versionDetail as EvaluatorVersion}
       evaluationSetSchemas={evaluationSetSchemas}
       evaluateTargetSchemas={evaluateTargetSchemas}

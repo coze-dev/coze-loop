@@ -6,9 +6,12 @@ const UNIX_LEN = 10;
 const UNIX_LEN2 = 13;
 
 export const formatTimestampToString = (
-  timestamp: string | number,
+  timestamp?: string | number,
   format = 'YYYY-MM-DD HH:mm:ss',
 ) => {
+  if (timestamp === undefined || timestamp === null) {
+    return '-';
+  }
   const strLen = `${timestamp}`.length;
   if (strLen === UNIX_LEN) {
     return dayjs.unix(Number(timestamp)).format(format);
@@ -16,19 +19,6 @@ export const formatTimestampToString = (
     return dayjs(Number(timestamp)).format(format);
   }
   return '-';
-};
-
-export const safeParseJson = <T>(
-  jsonString?: string,
-  fallback?: T,
-): T | undefined => {
-  try {
-    if (jsonString) {
-      return JSON.parse(jsonString) as T;
-    }
-  } catch (e) {
-    return fallback;
-  }
 };
 
 export const formateMsToSeconds = (ms?: number | string) => {
@@ -40,3 +30,14 @@ export const formateMsToSeconds = (ms?: number | string) => {
   }
   return `${(Number(ms) / 1000).toFixed(2)}s`;
 };
+
+export const optionsToMap = (
+  options: Array<{ label: string; value: string | number }>,
+) =>
+  options?.reduce(
+    (prev, current) => {
+      prev[current.value] = current.label;
+      return prev;
+    },
+    {} as unknown as Record<string, string>,
+  );

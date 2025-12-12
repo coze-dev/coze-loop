@@ -14,7 +14,7 @@ import {
   EvaluateSetVersionSelect,
   OpenDetailText,
 } from '@cozeloop/evaluate-components';
-import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow, useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
   type EvaluationSet,
   type EvaluationSetVersion,
@@ -35,6 +35,7 @@ export interface EvaluateSetFormProps {
   setCreateExperimentValues: React.Dispatch<
     React.SetStateAction<CreateExperimentValues>
   >;
+
   setNextStepLoading: (loading: boolean) => void;
 }
 
@@ -48,7 +49,7 @@ export const EvaluateSetForm = (props: EvaluateSetFormProps) => {
     createExperimentValues,
   } = props;
   const { spaceID } = useSpace();
-  const { baseURL } = useBaseURL();
+  const { getURL } = useOpenWindow();
   const formState = useFormState();
 
   const { values: formValues } = formState;
@@ -160,7 +161,7 @@ export const EvaluateSetForm = (props: EvaluateSetFormProps) => {
             className="w-full"
             field="evaluationSet"
             label={I18n.t('evaluation_set')}
-            placeholder={I18n.t('please_select', { field: '' })}
+            placeholder={I18n.t('select_evaluation_set')}
             rules={evaluateSetValidators.evaluationSet}
             onChange={handleOnEvaluateSetSelectChange}
             onChangeWithObject={false}
@@ -180,13 +181,15 @@ export const EvaluateSetForm = (props: EvaluateSetFormProps) => {
                     {formSetVersionId ? (
                       <OpenDetailText
                         className="absolute top-2.5 right-0"
-                        url={`${baseURL}/evaluation/datasets/${formState.values.evaluationSet}?version=${formState.values.evaluationSetVersion}`}
+                        url={getURL(
+                          `evaluation/datasets/${formState.values.evaluationSet}?version=${formState.values.evaluationSetVersion}`,
+                        )}
                       />
                     ) : null}
                   </>
                 ),
               }}
-              placeholder={I18n.t('please_select', { field: '' })}
+              placeholder={I18n.t('please_select_a_version_number')}
               rules={evaluateSetValidators.evaluationSetVersion}
               onChange={handleOnEvaluateSetVersionSelectChange}
             />

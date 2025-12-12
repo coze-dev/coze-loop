@@ -77,6 +77,7 @@ const experimentDataToRecordItems = (data: ItemResult[]) => {
             'key',
           ),
           actualOutput,
+          groupExt: group?.ext,
           targetErrorMsg:
             target_output?.eval_target_record?.eval_target_output_data
               ?.eval_target_run_error?.message,
@@ -109,6 +110,7 @@ const getEvaluatorColumns = (params: {
           tagProps={{ className: 'font-normal' }}
         />
       ),
+
       // 用来在列管理里面使用的title
       displayName: evaluator.name ?? '-',
       dataIndex: `evaluatorsResult.${evaluator.evaluator_version_id}_${evaluator.name}`,
@@ -188,10 +190,11 @@ const getActionColumn = (params: {
         actions={[
           {
             label: (
-              <Tooltip content={I18n.t('detail')} theme="dark">
+              <Tooltip content={I18n.t('view_detail')} theme="dark">
                 {I18n.t('detail')}
               </Tooltip>
             ),
+
             onClick: () => onClick(record),
           },
         ]}
@@ -239,6 +242,7 @@ const getAnnotationColumns = (params: {
         onDelete={handleRefresh}
       />
     ),
+
     dataIndex: `annotate_${annotation.tag_key_id}`,
     key: annotation.tag_key_id,
     width: 240,

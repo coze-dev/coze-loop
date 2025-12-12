@@ -24,7 +24,7 @@ import {
 } from '@/utils/jsonschema-convert';
 import {
   getColumnHasRequiredAndAdditional,
-  resetAdditonalProperty,
+  resetAdditionalProperty,
 } from '@/utils/field-convert';
 import {
   DataType,
@@ -36,13 +36,13 @@ import { InfoIconTooltip } from '@/components/common';
 import { RemovePropertyField } from './remove-property-field';
 interface Props {
   fieldKey: string;
-  disabelChangeDatasetType: boolean;
+  disableChangeDatasetType: boolean;
 }
 const FormRemovePropertyField = withField(RemovePropertyField);
 
 export const useColumnAdvanceConfig = ({
   fieldKey,
-  disabelChangeDatasetType,
+  disableChangeDatasetType,
 }: Props) => {
   const fieldApi = useFieldApi(fieldKey);
   const transFieldApi = useFieldApi(`${fieldKey}.default_transformations`);
@@ -116,7 +116,7 @@ export const useColumnAdvanceConfig = ({
             setInputType(newType as InputType);
           },
           okButtonColor: 'yellow',
-          okText: I18n.t('confirm'),
+          okText: I18n.t('global_btn_confirm'),
           cancelText: I18n.t('cancel'),
         });
       }
@@ -134,7 +134,7 @@ export const useColumnAdvanceConfig = ({
         'cozeloop_open_evaluate_enable_object_type_validation_rules',
       ),
       node:
-        showAdditional && !disabelChangeDatasetType ? (
+        showAdditional && !disableChangeDatasetType ? (
           <Popconfirm
             title={I18n.t(
               'cozeloop_open_evaluate_confirm_disable_redundant_field_validation',
@@ -142,12 +142,12 @@ export const useColumnAdvanceConfig = ({
             content={I18n.t(
               'cozeloop_open_evaluate_disable_redundant_validation_default_no',
             )}
-            okText={I18n.t('confirm')}
+            okText={I18n.t('global_btn_confirm')}
             cancelText={I18n.t('cancel')}
             okButtonColor="yellow"
             zIndex={10000}
             onConfirm={() => {
-              const newFieldSchema = resetAdditonalProperty(fieldValue);
+              const newFieldSchema = resetAdditionalProperty(fieldValue);
               fieldApi.setValue(newFieldSchema);
               setShowAdditional(false);
             }}
@@ -160,7 +160,7 @@ export const useColumnAdvanceConfig = ({
           <Switch
             checked={showAdditional}
             size="small"
-            disabled={disabelChangeDatasetType}
+            disabled={disableChangeDatasetType}
             onChange={checked => {
               setShowAdditional(checked);
             }}
@@ -168,6 +168,7 @@ export const useColumnAdvanceConfig = ({
         ),
     },
   ];
+
   const menuItems = [
     {
       title: I18n.t('advanced_validation_rule'),
@@ -188,7 +189,7 @@ export const useColumnAdvanceConfig = ({
           ),
           node: (
             <FormRemovePropertyField
-              disabled={disabelChangeDatasetType}
+              disabled={disableChangeDatasetType}
               initValue={fieldValue?.default_transformations}
               fieldClassName="!py-0"
               onChange={value => {
@@ -270,7 +271,7 @@ export const useColumnAdvanceConfig = ({
       </div>
       {isObject ? (
         <FormRemovePropertyField
-          disabled={disabelChangeDatasetType}
+          disabled={disableChangeDatasetType}
           noLabel
           className="hidden"
           field={`${fieldKey}.default_transformations`}
@@ -278,6 +279,7 @@ export const useColumnAdvanceConfig = ({
       ) : null}
     </>
   );
+
   return {
     AdvanceConfigNode,
     showAdditional,

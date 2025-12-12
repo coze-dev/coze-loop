@@ -120,7 +120,7 @@ const numberOperations: LogicOperation[] = [
     value: 'greater-than',
   },
   {
-    label: I18n.t('greater_than_or_equal_to'),
+    label: I18n.t('task_filter_gte'),
     value: 'greater-than-equals',
   },
   {
@@ -128,7 +128,7 @@ const numberOperations: LogicOperation[] = [
     value: 'less-than',
   },
   {
-    label: I18n.t('less_than_or_equal_to'),
+    label: I18n.t('task_filter_lte'),
     value: 'less-than-equals',
   },
 ];
@@ -171,24 +171,16 @@ function StringSetter({
   ...props
 }: DataTypeSetterProps<string> & { textAreaMode?: boolean }) {
   if (textAreaMode === false) {
-    return (
-      <Input placeholder={I18n.t('please_input', { field: '' })} {...props} />
-    );
+    return <Input placeholder={I18n.t('please_enter')} {...props} />;
   }
-  return (
-    <TextArea
-      placeholder={I18n.t('please_input', { field: '' })}
-      rows={1}
-      {...props}
-    />
-  );
+  return <TextArea placeholder={I18n.t('please_enter')} rows={1} {...props} />;
 }
 
 function NumberSetter(props: DataTypeSetterProps<number>) {
   const { value, onChange, ...rest } = props;
   return (
     <CozInputNumber
-      placeholder={I18n.t('please_input', { field: '' })}
+      placeholder={I18n.t('please_enter')}
       {...rest}
       className={`w-full ${(props as { className?: string }).className ?? ''}`}
       value={value ?? ''}
@@ -216,7 +208,7 @@ function SelectSetter(
   const { value, onChange, optionList = [], className = '', ...rest } = props;
   return (
     <Select
-      placeholder={I18n.t('please_select', { field: '' })}
+      placeholder={I18n.t('please_select')}
       {...rest}
       className={`w-full ${className}`}
       optionList={optionList}
@@ -232,7 +224,7 @@ function CozeUserSetter(
   const { value, onChange, className = '', ...rest } = props;
   return (
     <UserSelect
-      placeholder={I18n.t('please_select', { field: '' })}
+      placeholder={I18n.t('please_select')}
       {...rest}
       className={`w-full ${className}`}
       value={value}

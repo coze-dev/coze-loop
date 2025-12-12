@@ -34,9 +34,11 @@ export const AnnotationRemoveButton = (props: AnnotationRemoveButtonProps) => {
             runAsync({
               ...rest,
               platform_type: platformType as PlatformType,
-            }).then(() => {
-              onClick?.();
-            });
+            })
+              .then(() => {
+                onClick?.();
+              })
+              .catch(err => console.error(err));
             return;
           }
           onClick?.();

@@ -1,25 +1,23 @@
-// Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @typescript-eslint/naming-convention -- skip */
-export { type ApiResponse, ApiOption } from './api/config';
+export type { ApiOption, ApiResponse } from './api/config';
 export * from './api/idl';
 
-export { $notification } from './notification';
+export { $notification, type ApiBizErrorEvent } from './notification';
 
 import {
-  dataDataset,
-  dataTag,
   evaluationEvalSet,
   evaluationEvalTarget,
   evaluationEvaluator,
   evaluationExpt,
-  foundationAuthn,
-  foundationSpace,
-  foundationUpload,
-  foundationUser,
+  dataDataset,
   llmManage,
-  promptDebug,
+  foundationUpload,
   promptManage,
+  promptDebug,
+  foundationAuthn,
+  foundationUser,
+  foundationSpace,
+  dateTag,
 } from './api/idl';
 
 export const StoneEvaluationApi = {
@@ -31,7 +29,7 @@ export const StoneEvaluationApi = {
 
 export const DataApi = {
   ...dataDataset,
-  ...dataTag,
+  ...dateTag,
 };
 
 export const LlmManageApi = {

@@ -43,13 +43,16 @@ export const TagsCreatePage = ({
   const { data: tagSpec, loading: tagSpecLoading } = useGetTagSpec();
 
   const handleSubmit = (values: FormValues) => {
-    service.runAsync(values).then(() => {
-      onCreateSuccess?.();
-      navigate(
-        `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
-      );
-      Toast.success(I18n.t('create_success'));
-    });
+    service
+      .runAsync(values)
+      .then(() => {
+        onCreateSuccess?.();
+        navigate(
+          `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
+        );
+        Toast.success(I18n.t('create_success'));
+      })
+      .catch(err => console.error(err));
   };
 
   if (tagSpecLoading) {

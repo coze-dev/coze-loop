@@ -12,7 +12,7 @@ const defaultStrategyImpl: GuardStrategy = {
     hidden: false,
     guard: false,
     preprocess: (callback?: () => void) => {
-      // 直接调用回调，不做拦截
+      // 开源版直接调用回调，不做拦截
       callback?.();
     },
   }),

@@ -65,11 +65,12 @@ export const InputMappingItemField: FC<CommonFieldProps & MappingItemProps> =
           typeText={getTypeText(keySchema)}
           value={keySchema?.name}
         />
+
         <EqualItem />
         <GroupSelect
           validateStatus={validateStatus}
           className={styles.select}
-          placeholder={I18n.t('please_select', { field: '' })}
+          placeholder={I18n.t('please_select')}
           optionGroups={optionGroups}
           value={selectValue}
           onChange={handleChange}

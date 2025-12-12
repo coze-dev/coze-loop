@@ -1,6 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Evaluator, LanguageType } from '@cozeloop/api-schema/evaluation';
 import { IconCozTemplate, IconCozExpand } from '@coze-arch/coze-design/icons';
 import { useFormState, Button } from '@coze-arch/coze-design';
@@ -17,7 +17,6 @@ import {
   type CodeEvaluatorValue,
 } from '@/components/evaluator-code/types';
 import { BaseCodeEvaluatorConfig } from '@/components/evaluator-code';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface CodeEvaluatorConfigFieldProps {
   disabled?: boolean;
@@ -33,9 +32,6 @@ interface CodeEvaluatorConfigFieldProps {
   editorHeight?: string;
 }
 
-{
-  /* start_aigc */
-}
 /**
  * 将 API 数据转换为组件期望的数据结构
  */
@@ -132,9 +128,7 @@ export function CodeEvaluatorConfigField({
               icon={<IconCozTemplate />}
               onClick={onOpenTemplateModal}
             >
-              {`${I18n.t('evaluate_template_select')}${
-                templateInfo?.name ? `(${templateInfo.name})` : ''
-              }`}
+              {`${I18n.t('evaluate_select_template')}${templateInfo?.name ? `(${templateInfo.name})` : ''}`}
             </Button>
           ) : null}
         </div>
@@ -150,8 +144,4 @@ export function CodeEvaluatorConfigField({
       />
     </div>
   );
-}
-
-{
-  /* end_aigc */
 }

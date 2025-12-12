@@ -22,6 +22,8 @@ export enum ExptStatus {
   Terminated = 13,
   /** System terminated */
   SystemTerminated = 14,
+  /** Terminating */
+  Terminating = 15,
   /** online expt draining */
   Draining = 21,
 }
@@ -79,6 +81,7 @@ export interface EvaluatorFmtResult {
   name?: string,
   score?: number,
 }
+export const PromptUserQueryFieldKey = "builtin_prompt_user_query";
 export interface TargetFieldMapping {
   from_eval_set?: FieldMapping[]
 }
@@ -86,6 +89,7 @@ export interface EvaluatorFieldMapping {
   evaluator_version_id: string,
   from_eval_set?: FieldMapping[],
   from_target?: FieldMapping[],
+  evaluator_id_version_item?: evaluator.EvaluatorIDVersionItem,
 }
 export interface FieldMapping {
   field_name?: string,
@@ -143,6 +147,7 @@ export interface ColumnEvaluator {
   name?: string,
   version?: string,
   description?: string,
+  builtin?: boolean,
 }
 export interface ColumnEvalSetField {
   key?: string,
@@ -158,6 +163,9 @@ export interface ItemResult {
   turn_results?: TurnResult[],
   system_info?: ItemSystemInfo,
   item_index?: string,
+  ext?: {
+    [key: string | number]: string
+  },
 }
 /** 行级结果 可能包含多个实验 */
 export interface TurnResult {

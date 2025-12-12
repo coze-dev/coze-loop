@@ -1,7 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { SchemaEditor } from '@cozeloop/prompt-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
+  EvalTargetType,
   type EvalTarget,
   type RuntimeParam,
 } from '@cozeloop/api-schema/evaluation';
@@ -23,7 +25,17 @@ export function DynamicParams({ data, evalTarget }: Props) {
             {I18n.t('parameter_details')}
           </div>
           <div className="w-[612px] px-5 pb-6">
-            <PromptDynamicParams data={data} evalTarget={evalTarget} />
+            {evalTarget?.eval_target_type === EvalTargetType.CustomRPCServer ? (
+              <SchemaEditor
+                value={data?.json_value || ''}
+                readOnly
+                className="!h-[200px]"
+                language="json"
+              />
+            ) : null}
+            {evalTarget?.eval_target_type === EvalTargetType.CozeLoopPrompt ? (
+              <PromptDynamicParams data={data} evalTarget={evalTarget} />
+            ) : null}
           </div>
         </div>
       }
