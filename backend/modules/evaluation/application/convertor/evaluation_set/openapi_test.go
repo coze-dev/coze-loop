@@ -656,3 +656,30 @@ func TestDatasetItemOutputConversions(t *testing.T) {
 	assert.Equal(t, []*openapi_eval_set.DatasetItemOutput{expected}, OpenAPIDatasetItemOutputDO2DTOs([]*entity.DatasetItemOutput{do}))
 	assert.Nil(t, OpenAPIDatasetItemOutputDO2DTOs(nil))
 }
+
+func TestConvertDOSchemaKeyToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *entity.SchemaKey
+		expected *openapi_eval_set.SchemaKey
+	}{
+		{"nil input", nil, nil},
+		{"string", ptr(entity.SchemaKey_String), ptr(openapi_eval_set.SchemaKeyString)},
+		{"integer", ptr(entity.SchemaKey_Integer), ptr(openapi_eval_set.SchemaKeyInteger)},
+		{"float", ptr(entity.SchemaKey_Float), ptr(openapi_eval_set.SchemaKeyFloat)},
+		{"bool", ptr(entity.SchemaKey_Bool), ptr(openapi_eval_set.SchemaKeyBool)},
+		{"trajectory", ptr(entity.SchemaKey_Trajectory), ptr(openapi_eval_set.SchemaKeyTrajectory)},
+		{"message (unknown mapping)", ptr(entity.SchemaKey_Message), nil},
+		{"single choice (unknown mapping)", ptr(entity.SchemaKey_SingleChoice), nil},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expected, convertDOSchemaKeyToOpenAPI(tt.input))
+		})
+	}
+}
