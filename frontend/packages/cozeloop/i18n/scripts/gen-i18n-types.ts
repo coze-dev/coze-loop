@@ -13,7 +13,8 @@ function generateOptionsMap(locales: Record<string, string>, indent: string) {
   const indent3 = indent2 + indent;
   for (const [key, content] of Object.entries(locales)) {
     const typeInfos = icu2Type(content);
-    const lines = [`${indent}/** ${localeZhCN[key]} */`];
+    const comment = (localeZhCN[key] || '') as string;
+    const lines = comment.includes('*/') ? [] : [`${indent}/** ${comment} */`];
 
     if (!typeInfos.length) {
       lines.push(`${indent}(key: '${key}', fallbackText?: string): string;`);
@@ -53,6 +54,13 @@ import { type ReactNode } from 'react';
 import { type intlClient } from '@cozeloop/intl';
 
 interface I18nTranslateFn {
+  /** 兜底 */
+  (key: string, fallbackText?: string): string;
+  (
+    key: string,
+    options?: Record<string, ReactNode>,
+    fallbackText?: string,
+  ): string;
 ${functionTypes.join('\n')}
 }
 

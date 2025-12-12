@@ -54,6 +54,7 @@ export enum PresetRange {
   AllTime = 'all',
 }
 
+console.log('---observation_time_last_days');
 export const getTimePickerPresets = () => ({
   [PresetRange.Unset]: {
     text: i18nService.t('customize'),

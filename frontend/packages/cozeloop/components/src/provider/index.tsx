@@ -3,11 +3,14 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
 // I18n function type definition
-export type I18nFunction = (
-  key: string,
-  options?: Record<string, unknown>,
-  fallbackText?: string,
-) => string;
+export interface I18nFunction {
+  (key: string, fallbackText?: string): string;
+  (
+    key: string,
+    options?: Record<string, ReactNode>,
+    fallbackText?: string,
+  ): string;
+}
 
 // I18n object interface that matches the structure of @cozeloop/i18n-adapter
 export interface I18nObject {

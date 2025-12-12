@@ -100,6 +100,7 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({
   useEffect(() => {
     if (defaultLocale && !isInitialized.current) {
       i18nService.init(defaultLocale);
+      console.log('---defaultLocale init', defaultLocale);
       isInitialized.current = true;
       setInitialized(true);
     }
