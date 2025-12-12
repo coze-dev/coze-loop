@@ -96,6 +96,9 @@ importers:
       '@cozeloop/tag-pages':
         specifier: workspace:*
         version: link:../../packages/cozeloop/tag-pages
+      '@cozeloop/tea-adapter':
+        specifier: workspace:*
+        version: link:../../packages/cozeloop/tea
       '@cozeloop/toolkit':
         specifier: workspace:*
         version: link:../../packages/cozeloop/toolkit

@@ -1,16 +1,11 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 
 import classNames from 'classnames';
 import { useHover } from 'ahooks';
 import { useNavbarCollapsed } from '@cozeloop/hooks';
-import {
-  useApp,
-  useBaseURL,
-  useNavigateModule,
-} from '@cozeloop/biz-hooks-adapter';
+import { useRouteInfo, useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { IconCozSideNav } from '@coze-arch/coze-design/icons';
 import { Nav, Divider } from '@coze-arch/coze-design';
 
@@ -25,10 +20,9 @@ import { FooterMenus } from './footer-menus';
 import styles from './index.module.less';
 
 export function Navbar() {
-  const navigate = useNavigate();
-  const navigateModule = useNavigateModule();
+  const navigate = useNavigateModule();
   const { isCollapsed, toggleCollapsed } = useNavbarCollapsed();
-  const { app, subModule } = useApp();
+  const { app, subModule } = useRouteInfo();
   /** 选中的导航栏 */
   const [selectedKeys, setSelectedKeys] = useState<string[]>(() => []);
   const menuConfig = useMenuConfig();
@@ -41,15 +35,17 @@ export function Navbar() {
     }
   }, [app, subModule]);
 
-  const { getBasePrefix } = useBaseURL();
-
   const handleSelect = (path: string) => {
     if (!path.startsWith('actions/')) {
       if (path.startsWith('enterprise-manage') || path.startsWith('open')) {
-        navigate(`${getBasePrefix()}/${path}`);
+        navigate(path, {
+          params: {
+            spaceID: undefined,
+          },
+        });
         return;
       } else {
-        navigateModule(path);
+        navigate(path);
       }
     }
   };
