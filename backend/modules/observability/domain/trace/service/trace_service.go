@@ -1204,6 +1204,7 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 		logs.CtxWarn(ctx, "failed to generate annotation id for %+v, %v", event.Annotation, err)
 		return nil
 	}
+	event.Annotation.SpanID = span.SpanID
 	span.AddAnnotation(event.Annotation)
 	// retry if failed
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
