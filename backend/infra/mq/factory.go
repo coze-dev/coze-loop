@@ -50,6 +50,8 @@ type ConsumerConfig struct {
 	ConsumeTimeout time.Duration
 	EnablePPE      *bool
 	IsEnabled      *bool
+	// The owner of consumer
+	Owner string
 }
 
 type CompressionCodec int
