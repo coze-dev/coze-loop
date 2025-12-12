@@ -59,4 +59,6 @@ const (
 	CompressionNone CompressionCodec = iota
 	// CompressionZSTD compression using ZSTD
 	CompressionZSTD
+	// CompressionSnappy compression using Snappy
+	CompressionSnappy
 )
