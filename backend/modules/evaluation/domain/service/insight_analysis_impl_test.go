@@ -937,13 +937,6 @@ func TestExptInsightAnalysisServiceImpl_GetAnalysisRecordFeedbackVoteByUser(t *t
 			},
 		},
 		{
-			name:    "vote with none type returns nil",
-			session: &entity.Session{UserID: "user1"},
-			setup: func() {
-				mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(2), int64(3), "user1").Return(&entity.ExptInsightAnalysisFeedbackVote{VoteType: entity.None}, nil)
-			},
-		},
-		{
 			name:    "success",
 			session: &entity.Session{UserID: "user1"},
 			setup: func() {

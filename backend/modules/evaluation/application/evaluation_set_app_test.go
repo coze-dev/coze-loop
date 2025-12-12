@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	domain_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmock "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
@@ -34,7 +34,7 @@ func TestEvaluationSetApplicationImpl_CreateEvaluationSetWithImport(t *testing.T
 	app := &EvaluationSetApplicationImpl{
 		auth:                 mockAuth,
 		evaluationSetService: mockSvc,
-		metric:              mockMetric,
+		metric:               mockMetric,
 	}
 
 	workspaceID := int64(1001)
@@ -44,8 +44,8 @@ func TestEvaluationSetApplicationImpl_CreateEvaluationSetWithImport(t *testing.T
 			WorkspaceID:         workspaceID,
 			Name:                gptr.Of("dataset"),
 			EvaluationSetSchema: &domain_eval_set.EvaluationSetSchema{},
-			SourceType:          gptr.Of(domain_eval_set.SetSourceType_File),
-			Source:              &domain_eval_set.DatasetIOEndpoint{File: &domain_eval_set.DatasetIOFile{}},
+			SourceType:          gptr.Of(dataset_job.SourceType_File),
+			Source:              &dataset_job.DatasetIOEndpoint{File: &dataset_job.DatasetIOFile{}},
 		}
 	}
 
@@ -169,7 +169,7 @@ func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 	baseReq := func() *eval_set.ParseImportSourceFileRequest {
 		return &eval_set.ParseImportSourceFileRequest{
 			WorkspaceID: workspaceID,
-			File:        &domain_eval_set.DatasetIOFile{Path: gptr.Of("/path")},
+			File:        &dataset_job.DatasetIOFile{Path: "/path"},
 		}
 	}
 
@@ -182,15 +182,17 @@ func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 	}{
 		{"nil req", nil, func() {}, errno.CommonInvalidParamCode, nil},
 		{
-			name: "nil file",
-			req: func() *eval_set.ParseImportSourceFileRequest { r := baseReq(); r.File = nil; return r }(),
+			name:    "nil file",
+			req:     func() *eval_set.ParseImportSourceFileRequest { r := baseReq(); r.File = nil; return r }(),
 			setup:   func() {},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
 			name: "鉴权失败",
 			req:  baseReq(),
-			setup: func() { mockAuth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode)) },
+			setup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
 			wantErr: errno.CommonNoPermissionCode,
 		},
 		{
@@ -208,9 +210,9 @@ func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 			setup: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
 				res := &entity.ParseImportSourceFileResult{
-					Bytes:        int64(123),
-					FieldSchemas: []*entity.FieldSchema{{Name: "f1"}},
-					Conflicts:    []*entity.ConflictField{{FieldName: "c1"}},
+					Bytes:                    int64(123),
+					FieldSchemas:             []*entity.FieldSchema{{Name: "f1"}},
+					Conflicts:                []*entity.ConflictField{{FieldName: "c1"}},
 					FilesWithAmbiguousColumn: []string{"a.csv"},
 				}
 				mockSvc.EXPECT().ParseImportSourceFile(gomock.Any(), gomock.AssignableToTypeOf(&entity.ParseImportSourceFileParam{})).Return(res, nil)
@@ -229,7 +231,9 @@ func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.setup != nil { tc.setup() }
+			if tc.setup != nil {
+				tc.setup()
+			}
 			resp, err := app.ParseImportSourceFile(context.Background(), tc.req)
 			if tc.wantErr != 0 {
 				assert.Error(t, err)
@@ -241,7 +245,9 @@ func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 				assert.Nil(t, resp)
 			} else {
 				assert.NoError(t, err)
-				if tc.check != nil { tc.check(t, resp) }
+				if tc.check != nil {
+					tc.check(t, resp)
+				}
 			}
 		})
 	}
@@ -273,8 +279,8 @@ func TestEvaluationSetApplicationImpl_GetEvaluationSetItemField(t *testing.T) {
 		return &eval_set.GetEvaluationSetItemFieldRequest{
 			WorkspaceID:     workspaceID,
 			EvaluationSetID: evalSetID,
-			ItemPk:          gptr.Of(itemPK),
-			FieldName:       gptr.Of(fieldName),
+			ItemPk:          itemPK,
+			FieldName:       fieldName,
 			TurnID:          turnID,
 		}
 	}
@@ -344,7 +350,9 @@ func TestEvaluationSetApplicationImpl_GetEvaluationSetItemField(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if tc.setup != nil { tc.setup() }
+			if tc.setup != nil {
+				tc.setup()
+			}
 			resp, err := app.GetEvaluationSetItemField(context.Background(), tc.req)
 			if tc.wantErr != 0 {
 				assert.Error(t, err)
@@ -356,7 +364,9 @@ func TestEvaluationSetApplicationImpl_GetEvaluationSetItemField(t *testing.T) {
 				assert.Nil(t, resp)
 			} else {
 				assert.NoError(t, err)
-				if tc.check != nil { tc.check(t, resp) }
+				if tc.check != nil {
+					tc.check(t, resp)
+				}
 			}
 		})
 	}
