@@ -629,6 +629,6 @@ service ExperimentService {
     GetExptInsightAnalysisRecordResponse GetExptInsightAnalysisRecord(1: GetExptInsightAnalysisRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id")
     FeedbackExptInsightAnalysisReportResponse FeedbackExptInsightAnalysisReport(1: FeedbackExptInsightAnalysisReportRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/feedback")
     ListExptInsightAnalysisCommentResponse ListExptInsightAnalysisComment(1: ListExptInsightAnalysisCommentRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/comments/list")
-    GetAnalysisRecordFeedbackVoteResponse GetAnalysisRecordFeedbackVote(1: GetAnalysisRecordFeedbackVoteRequest req) (api.get="/api/evaluation/v1/insight_analysis_records/:insight_analysis_record_id/feedback_vote")
+    GetAnalysisRecordFeedbackVoteResponse GetAnalysisRecordFeedbackVote(1: GetAnalysisRecordFeedbackVoteRequest req) (api.get="/api/evaluation/v1/experiments/insight_analysis_records/:insight_analysis_record_id/feedback_vote")
 }
 

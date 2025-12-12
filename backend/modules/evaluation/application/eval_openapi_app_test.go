@@ -2232,3 +2232,172 @@ func newFailedInvokeResultReq(workspaceID, invokeID int64, errorMessage string) 
 		ErrorMessage: gptr.Of(errorMessage),
 	}
 }
+
+func TestEvalOpenAPIApplication_GetEvaluationItemFieldOApi(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(61001)
+	evalSetID := int64(61002)
+	itemID := int64(9001)
+	versionID := int64(8001)
+	turnID := int64(7001)
+	fieldName := "question"
+
+	buildReq := func() *openapi.GetEvaluationItemFieldOApiRequest {
+		return &openapi.GetEvaluationItemFieldOApiRequest{
+			WorkspaceID:     gptr.Of(workspaceID),
+			EvaluationSetID: gptr.Of(evalSetID),
+			VersionID:       gptr.Of(versionID),
+			ItemID:          gptr.Of(itemID),
+			FieldName:       gptr.Of(fieldName),
+			TurnID:          gptr.Of(turnID),
+		}
+	}
+
+	tests := []struct {
+		name    string
+		req     *openapi.GetEvaluationItemFieldOApiRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService)
+		wantErr int32
+		check   func(t *testing.T, resp *openapi.GetEvaluationItemFieldOApiResponse)
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockEvaluationSetItemService) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "set not found",
+			req:  buildReq(),
+			setup: func(_ *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockEvaluationSetItemService) {
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(nil, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "auth failed",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockEvaluationSetItemService) {
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "batch get items error",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService) {
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				itemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.BatchGetEvaluationSetItemsParam{})).Return(nil, errors.New("batch error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "item not found",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService) {
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				itemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.BatchGetEvaluationSetItemsParam{})).Return([]*entity.EvaluationSetItem{}, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "get field error",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService) {
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				itemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.BatchGetEvaluationSetItemsParam{})).Return([]*entity.EvaluationSetItem{{ID: itemID}}, nil)
+				itemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.AssignableToTypeOf(&entity.GetEvaluationSetItemFieldParam{})).Return(nil, errors.New("field error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "success",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService) {
+				owner := gptr.Of("owner")
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID, BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: owner}}}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationWithoutSPIParam) error {
+					assert.Equal(t, strconv.FormatInt(evalSetID, 10), param.ObjectID)
+					assert.Equal(t, workspaceID, param.SpaceID)
+					return nil
+				})
+				itemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.BatchGetEvaluationSetItemsParam{})).Return([]*entity.EvaluationSetItem{{ID: itemID}}, nil)
+				fd := &entity.FieldData{Name: fieldName}
+				itemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.AssignableToTypeOf(&entity.GetEvaluationSetItemFieldParam{})).DoAndReturn(func(_ context.Context, param *entity.GetEvaluationSetItemFieldParam) (*entity.FieldData, error) {
+					assert.Equal(t, workspaceID, param.SpaceID)
+					assert.Equal(t, evalSetID, param.EvaluationSetID)
+					assert.Equal(t, itemID, param.ItemPK)
+					assert.Equal(t, fieldName, param.FieldName)
+					assert.Equal(t, turnID, gptr.Indirect(param.TurnID))
+					return fd, nil
+				})
+			},
+			check: func(t *testing.T, resp *openapi.GetEvaluationItemFieldOApiResponse) {
+				if assert.NotNil(t, resp) {
+					assert.NotNil(t, resp.FieldData)
+					assert.Equal(t, fieldName, resp.FieldData.GetName())
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		caseData := tt
+		t.Run(caseData.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			evalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+			itemSvc := servicemocks.NewMockEvaluationSetItemService(ctrl)
+			metric := &fakeOpenAPIMetric{}
+
+			app := &EvalOpenAPIApplication{
+				auth:                     auth,
+				evaluationSetService:     evalSetSvc,
+				evaluationSetItemService: itemSvc,
+				metric:                   metric,
+			}
+
+			if caseData.setup != nil {
+				caseData.setup(auth, evalSetSvc, itemSvc)
+			}
+
+			resp, err := app.GetEvaluationItemFieldOApi(context.Background(), caseData.req)
+
+			if caseData.wantErr != 0 {
+				assert.Error(t, err)
+				if caseData.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, caseData.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if caseData.check != nil {
+					caseData.check(t, resp)
+				}
+			}
+
+			if caseData.req != nil {
+				assert.True(t, metric.called)
+				assert.Equal(t, caseData.req.GetWorkspaceID(), metric.spaceID)
+				assert.Equal(t, caseData.req.GetEvaluationSetID(), metric.evaluationSetID)
+			}
+		})
+	}
+}
