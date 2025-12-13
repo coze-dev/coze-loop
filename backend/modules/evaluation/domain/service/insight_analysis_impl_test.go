@@ -172,7 +172,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 				}, nil)
 				mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
-				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
+				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
 				mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -266,7 +266,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 				}, nil)
 				mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
-				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(0), errors.New("agent error"))
+				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(0), errors.New("agent error"))
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error {
 					assert.Equal(t, entity.InsightAnalysisStatus_Failed, record.Status)
 					return nil
@@ -289,7 +289,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 				}, nil)
 				mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
-				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
+				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
 				mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish error"))
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error {
 					assert.Equal(t, entity.InsightAnalysisStatus_Failed, record.Status)
@@ -930,6 +930,7 @@ func TestNewInsightAnalysisService(t *testing.T) {
 		mockNotifyRPCAdapter,
 		mockUserProvider,
 		mockExptRepo,
+		repoMocks.NewMockIEvalTargetRepo(ctrl),
 	)
 
 	assert.NotNil(t, service)

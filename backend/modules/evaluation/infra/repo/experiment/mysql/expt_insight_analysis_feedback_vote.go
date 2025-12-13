@@ -23,7 +23,7 @@ type IExptInsightAnalysisFeedbackVoteDAO interface {
 	Create(ctx context.Context, feedbackVote *model.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
 	Update(ctx context.Context, feedbackVote *model.ExptInsightAnalysisFeedbackVote, opts ...db.Option) error
 	GetByUser(ctx context.Context, spaceID, exptID, recordID int64, userID string, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackVote, error)
-	Count(ctx context.Context, spaceID, exptID, recordID int64) (int64, int64, error)
+	Count(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (int64, int64, error)
 }
 
 func NewExptInsightAnalysisFeedbackVoteDAO(db db.Provider) IExptInsightAnalysisFeedbackVoteDAO {
@@ -59,7 +59,7 @@ func (e exptInsightAnalysisFeedbackVoteDAO) Update(ctx context.Context, feedback
 }
 
 func (e exptInsightAnalysisFeedbackVoteDAO) GetByUser(ctx context.Context, spaceID, exptID, recordID int64, userID string, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackVote, error) {
-	db := e.db.NewSession(ctx)
+	db := e.db.NewSession(ctx, opts...)
 	q := query.Use(db).ExptInsightAnalysisFeedbackVote
 
 	feedbackVote, err := q.WithContext(ctx).Where(
@@ -78,8 +78,8 @@ func (e exptInsightAnalysisFeedbackVoteDAO) GetByUser(ctx context.Context, space
 	return feedbackVote, nil
 }
 
-func (e exptInsightAnalysisFeedbackVoteDAO) Count(ctx context.Context, spaceID, exptID, recordID int64) (int64, int64, error) {
-	db := e.db.NewSession(ctx)
+func (e exptInsightAnalysisFeedbackVoteDAO) Count(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (int64, int64, error) {
+	db := e.db.NewSession(ctx, opts...)
 	type VoteStatistic struct {
 		UpvoteCount   int64 `json:"upvote_count"`
 		DownvoteCount int64 `json:"downvote_count"`
