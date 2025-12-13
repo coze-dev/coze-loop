@@ -84,6 +84,12 @@ type Content struct {
 	Image       *Image                      `thrift:"image,11,optional" frugal:"11,optional,Image" mapstructure:"image" form:"image" json:"image,omitempty" query:"image"`
 	MultiPart   []*Content                  `thrift:"multi_part,12,optional" frugal:"12,optional,list<Content>" mapstructure:"multi_part" form:"multi_part" json:"multi_part,omitempty" query:"multi_part"`
 	Audio       *Audio                      `thrift:"audio,13,optional" frugal:"13,optional,Audio" mapstructure:"audio" form:"audio" json:"audio,omitempty" query:"audio"`
+	// 超大文本相关字段
+	ContentOmitted *bool `thrift:"content_omitted,30,optional" frugal:"30,optional,bool" form:"content_omitted" json:"content_omitted,omitempty" query:"content_omitted"`
+	// 被省略数据的完整信息，批量返回时会签发相应的 url，用户可以点击下载. 同时支持通过该字段传入已经上传好的超长数据(dataOmitted 为 true 时生效)
+	FullContent *dataset.ObjectStorage `thrift:"full_content,31,optional" frugal:"31,optional,dataset.ObjectStorage" form:"full_content" json:"full_content,omitempty" query:"full_content"`
+	// 超长数据完整内容的大小，单位 byte
+	FullContentBytes *int32 `thrift:"full_content_bytes,32,optional" frugal:"32,optional,i32" form:"full_content_bytes" json:"full_content_bytes,omitempty" query:"full_content_bytes"`
 }
 
 func NewContent() *Content {
@@ -164,6 +170,42 @@ func (p *Content) GetAudio() (v *Audio) {
 	}
 	return p.Audio
 }
+
+var Content_ContentOmitted_DEFAULT bool
+
+func (p *Content) GetContentOmitted() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetContentOmitted() {
+		return Content_ContentOmitted_DEFAULT
+	}
+	return *p.ContentOmitted
+}
+
+var Content_FullContent_DEFAULT *dataset.ObjectStorage
+
+func (p *Content) GetFullContent() (v *dataset.ObjectStorage) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFullContent() {
+		return Content_FullContent_DEFAULT
+	}
+	return p.FullContent
+}
+
+var Content_FullContentBytes_DEFAULT int32
+
+func (p *Content) GetFullContentBytes() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFullContentBytes() {
+		return Content_FullContentBytes_DEFAULT
+	}
+	return *p.FullContentBytes
+}
 func (p *Content) SetContentType(val *ContentType) {
 	p.ContentType = val
 }
@@ -182,6 +224,15 @@ func (p *Content) SetMultiPart(val []*Content) {
 func (p *Content) SetAudio(val *Audio) {
 	p.Audio = val
 }
+func (p *Content) SetContentOmitted(val *bool) {
+	p.ContentOmitted = val
+}
+func (p *Content) SetFullContent(val *dataset.ObjectStorage) {
+	p.FullContent = val
+}
+func (p *Content) SetFullContentBytes(val *int32) {
+	p.FullContentBytes = val
+}
 
 var fieldIDToName_Content = map[int16]string{
 	1:  "content_type",
@@ -190,6 +241,9 @@ var fieldIDToName_Content = map[int16]string{
 	11: "image",
 	12: "multi_part",
 	13: "audio",
+	30: "content_omitted",
+	31: "full_content",
+	32: "full_content_bytes",
 }
 
 func (p *Content) IsSetContentType() bool {
@@ -214,6 +268,18 @@ func (p *Content) IsSetMultiPart() bool {
 
 func (p *Content) IsSetAudio() bool {
 	return p.Audio != nil
+}
+
+func (p *Content) IsSetContentOmitted() bool {
+	return p.ContentOmitted != nil
+}
+
+func (p *Content) IsSetFullContent() bool {
+	return p.FullContent != nil
+}
+
+func (p *Content) IsSetFullContentBytes() bool {
+	return p.FullContentBytes != nil
 }
 
 func (p *Content) Read(iprot thrift.TProtocol) (err error) {
@@ -277,6 +343,30 @@ func (p *Content) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 30:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField30(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 31:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField31(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 32:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField32(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -384,6 +474,36 @@ func (p *Content) ReadField13(iprot thrift.TProtocol) error {
 	p.Audio = _field
 	return nil
 }
+func (p *Content) ReadField30(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ContentOmitted = _field
+	return nil
+}
+func (p *Content) ReadField31(iprot thrift.TProtocol) error {
+	_field := dataset.NewObjectStorage()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.FullContent = _field
+	return nil
+}
+func (p *Content) ReadField32(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FullContentBytes = _field
+	return nil
+}
 
 func (p *Content) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -413,6 +533,18 @@ func (p *Content) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField30(oprot); err != nil {
+			fieldId = 30
+			goto WriteFieldError
+		}
+		if err = p.writeField31(oprot); err != nil {
+			fieldId = 31
+			goto WriteFieldError
+		}
+		if err = p.writeField32(oprot); err != nil {
+			fieldId = 32
 			goto WriteFieldError
 		}
 	}
@@ -549,6 +681,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
+func (p *Content) writeField30(oprot thrift.TProtocol) (err error) {
+	if p.IsSetContentOmitted() {
+		if err = oprot.WriteFieldBegin("content_omitted", thrift.BOOL, 30); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.ContentOmitted); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
+}
+func (p *Content) writeField31(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFullContent() {
+		if err = oprot.WriteFieldBegin("full_content", thrift.STRUCT, 31); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.FullContent.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 31 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 31 end error: ", p), err)
+}
+func (p *Content) writeField32(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFullContentBytes() {
+		if err = oprot.WriteFieldBegin("full_content_bytes", thrift.I32, 32); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.FullContentBytes); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 32 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 32 end error: ", p), err)
+}
 
 func (p *Content) String() string {
 	if p == nil {
@@ -580,6 +766,15 @@ func (p *Content) DeepEqual(ano *Content) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.Audio) {
+		return false
+	}
+	if !p.Field30DeepEqual(ano.ContentOmitted) {
+		return false
+	}
+	if !p.Field31DeepEqual(ano.FullContent) {
+		return false
+	}
+	if !p.Field32DeepEqual(ano.FullContentBytes) {
 		return false
 	}
 	return true
@@ -644,6 +839,37 @@ func (p *Content) Field12DeepEqual(src []*Content) bool {
 func (p *Content) Field13DeepEqual(src *Audio) bool {
 
 	if !p.Audio.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *Content) Field30DeepEqual(src *bool) bool {
+
+	if p.ContentOmitted == src {
+		return true
+	} else if p.ContentOmitted == nil || src == nil {
+		return false
+	}
+	if *p.ContentOmitted != *src {
+		return false
+	}
+	return true
+}
+func (p *Content) Field31DeepEqual(src *dataset.ObjectStorage) bool {
+
+	if !p.FullContent.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *Content) Field32DeepEqual(src *int32) bool {
+
+	if p.FullContentBytes == src {
+		return true
+	} else if p.FullContentBytes == nil || src == nil {
+		return false
+	}
+	if *p.FullContentBytes != *src {
 		return false
 	}
 	return true

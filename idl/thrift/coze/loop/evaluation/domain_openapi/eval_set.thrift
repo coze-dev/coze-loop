@@ -14,6 +14,13 @@ const FieldDisplayFormat FieldDisplayFormat_JSON = "json"
 const FieldDisplayFormat FieldDisplayFormate_YAML = "yaml"
 const FieldDisplayFormat FieldDisplayFormate_Code = "code"
 
+typedef string SchemaKey(ts.enum="true")
+const SchemaKey SchemaKey_String = "string"
+const SchemaKey SchemaKey_Integer = "integer"
+const SchemaKey SchemaKey_Float = "float"
+const SchemaKey SchemaKey_Bool = "bool"
+const SchemaKey SchemaKey_Trajectory = "trajectory"
+
 // 字段Schema
 struct FieldSchema {
     1: optional string name
@@ -22,6 +29,7 @@ struct FieldSchema {
     4: optional FieldDisplayFormat default_display_format // 默认渲染格式，如 code, json, etc.mai
     5: optional bool is_required
     6: optional string text_schema  // JSON Schema字符串
+    7: optional SchemaKey schema_key                    // 对应的内置 schema
 
     10: optional string key    // 唯一键，创建列时无需关注，更新列的时候携带即可
 }

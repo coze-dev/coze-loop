@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -298,6 +299,10 @@ func TestPreviewResponseDO2DTO(t *testing.T) {
 								},
 							},
 						},
+						SpanInfo: &dataset0.ExportSpanInfo{
+							TraceID: gptr.Of(""),
+							SpanID:  gptr.Of(""),
+						},
 					},
 				},
 			},
@@ -332,6 +337,10 @@ func TestPreviewResponseDO2DTO(t *testing.T) {
 								Type:       gptr.Of(dataset.ItemErrorType_MismatchSchema),
 								FieldNames: []string{"field1"},
 							},
+						},
+						SpanInfo: &dataset0.ExportSpanInfo{
+							TraceID: gptr.Of(""),
+							SpanID:  gptr.Of(""),
 						},
 					},
 				},
@@ -726,6 +735,10 @@ func TestConvertDatasetItemsDO2DTO(t *testing.T) {
 							},
 						},
 					},
+					SpanInfo: &dataset0.ExportSpanInfo{
+						SpanID:  gptr.Of(""),
+						TraceID: gptr.Of(""),
+					},
 				},
 			},
 		},
@@ -749,6 +762,10 @@ func TestConvertDatasetItemsDO2DTO(t *testing.T) {
 							Type:       gptr.Of(dataset.ItemErrorType_MismatchSchema),
 							FieldNames: []string{"field1", "field2"},
 						},
+					},
+					SpanInfo: &dataset0.ExportSpanInfo{
+						SpanID:  gptr.Of(""),
+						TraceID: gptr.Of(""),
 					},
 				},
 			},
@@ -815,6 +832,10 @@ func TestConvertDatasetItemsDO2DTO(t *testing.T) {
 								},
 							},
 						},
+					},
+					SpanInfo: &dataset0.ExportSpanInfo{
+						TraceID: ptr.Of(""),
+						SpanID:  ptr.Of(""),
 					},
 				},
 			},

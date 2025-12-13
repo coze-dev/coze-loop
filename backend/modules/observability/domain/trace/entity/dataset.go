@@ -34,6 +34,20 @@ const (
 	ContentType_MultiPart ContentType = "MultiPart"
 )
 
+type SchemaKey int64
+
+const (
+	SchemaKey_String  SchemaKey = 1
+	SchemaKey_Integer SchemaKey = 2
+	SchemaKey_Float   SchemaKey = 3
+	SchemaKey_Bool    SchemaKey = 4
+	SchemaKey_Message SchemaKey = 5
+	// 单选
+	SchemaKey_SingleChoice SchemaKey = 6
+	// 轨迹
+	SchemaKey_Trajectory SchemaKey = 7
+)
+
 type FieldDisplayFormat int64
 
 const (
@@ -100,6 +114,7 @@ type FieldSchema struct {
 	ContentType ContentType
 	// [20,50) 内容格式限制相关
 	TextSchema    string
+	SchemaKey     SchemaKey
 	DisplayFormat FieldDisplayFormat
 }
 
@@ -296,6 +311,10 @@ type FieldMapping struct {
 	TraceFieldJsonpath string
 }
 
+func (f *FieldMapping) IsTrajectory() bool {
+	return f.FieldSchema.SchemaKey == SchemaKey_Trajectory
+}
+
 type ItemErrorGroup struct {
 	Type    int64
 	Summary string
@@ -310,8 +329,9 @@ type ItemErrorDetail struct {
 	// 单条错误数据在输入数据中的索引。从 0 开始，下同
 	Index *int32
 	// [startIndex, endIndex] 表示区间错误范围, 如 ExceedDatasetCapacity 错误时
-	StartIndex *int32
-	EndIndex   *int32
+	StartIndex      *int32
+	EndIndex        *int32
+	MessagesByField map[string]string
 }
 
 const (

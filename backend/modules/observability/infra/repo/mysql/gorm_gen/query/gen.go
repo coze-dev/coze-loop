@@ -17,29 +17,32 @@ import (
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
-		db:                   db,
-		ObservabilityTask:    newObservabilityTask(db, opts...),
-		ObservabilityTaskRun: newObservabilityTaskRun(db, opts...),
-		ObservabilityView:    newObservabilityView(db, opts...),
+		db:                            db,
+		ObservabilityTask:             newObservabilityTask(db, opts...),
+		ObservabilityTaskRun:          newObservabilityTaskRun(db, opts...),
+		ObservabilityTrajectoryConfig: newObservabilityTrajectoryConfig(db, opts...),
+		ObservabilityView:             newObservabilityView(db, opts...),
 	}
 }
 
 type Query struct {
 	db *gorm.DB
 
-	ObservabilityTask    observabilityTask
-	ObservabilityTaskRun observabilityTaskRun
-	ObservabilityView    observabilityView
+	ObservabilityTask             observabilityTask
+	ObservabilityTaskRun          observabilityTaskRun
+	ObservabilityTrajectoryConfig observabilityTrajectoryConfig
+	ObservabilityView             observabilityView
 }
 
 func (q *Query) Available() bool { return q.db != nil }
 
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
-		db:                   db,
-		ObservabilityTask:    q.ObservabilityTask.clone(db),
-		ObservabilityTaskRun: q.ObservabilityTaskRun.clone(db),
-		ObservabilityView:    q.ObservabilityView.clone(db),
+		db:                            db,
+		ObservabilityTask:             q.ObservabilityTask.clone(db),
+		ObservabilityTaskRun:          q.ObservabilityTaskRun.clone(db),
+		ObservabilityTrajectoryConfig: q.ObservabilityTrajectoryConfig.clone(db),
+		ObservabilityView:             q.ObservabilityView.clone(db),
 	}
 }
 
@@ -53,24 +56,27 @@ func (q *Query) WriteDB() *Query {
 
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
-		db:                   db,
-		ObservabilityTask:    q.ObservabilityTask.replaceDB(db),
-		ObservabilityTaskRun: q.ObservabilityTaskRun.replaceDB(db),
-		ObservabilityView:    q.ObservabilityView.replaceDB(db),
+		db:                            db,
+		ObservabilityTask:             q.ObservabilityTask.replaceDB(db),
+		ObservabilityTaskRun:          q.ObservabilityTaskRun.replaceDB(db),
+		ObservabilityTrajectoryConfig: q.ObservabilityTrajectoryConfig.replaceDB(db),
+		ObservabilityView:             q.ObservabilityView.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
-	ObservabilityTask    *observabilityTaskDo
-	ObservabilityTaskRun *observabilityTaskRunDo
-	ObservabilityView    *observabilityViewDo
+	ObservabilityTask             *observabilityTaskDo
+	ObservabilityTaskRun          *observabilityTaskRunDo
+	ObservabilityTrajectoryConfig *observabilityTrajectoryConfigDo
+	ObservabilityView             *observabilityViewDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
-		ObservabilityTask:    q.ObservabilityTask.WithContext(ctx),
-		ObservabilityTaskRun: q.ObservabilityTaskRun.WithContext(ctx),
-		ObservabilityView:    q.ObservabilityView.WithContext(ctx),
+		ObservabilityTask:             q.ObservabilityTask.WithContext(ctx),
+		ObservabilityTaskRun:          q.ObservabilityTaskRun.WithContext(ctx),
+		ObservabilityTrajectoryConfig: q.ObservabilityTrajectoryConfig.WithContext(ctx),
+		ObservabilityView:             q.ObservabilityView.WithContext(ctx),
 	}
 }
 
