@@ -92,6 +92,12 @@ type traverseMetric struct {
 }
 
 func (m *MetricsService) buildTraverseMetrics(ctx context.Context, req *TraverseMetricsReq) ([]*traverseMetric, error) {
+	metricGroupBelong := make(map[string]string)
+	for groupName, metricGroup := range m.pMetrics.MetricGroups {
+		for _, metricDef := range metricGroup.MetricDefinitions {
+			metricGroupBelong[metricDef.Name()] = groupName
+		}
+	}
 	seen := make(map[string]bool)
 	ret := make([]*traverseMetric, 0)
 	for _, platformType := range req.PlatformTypes {
@@ -124,9 +130,13 @@ func (m *MetricsService) buildTraverseMetrics(ctx context.Context, req *Traverse
 						continue
 					}
 					seen[key] = true
+					actualGroupName := metricGroupBelong[metric.Name()]
+					if actualGroupName == "" {
+						return nil, fmt.Errorf("metric %s not found in any group defined", metric.Name())
+					}
 					ret = append(ret, &traverseMetric{
 						platformType: platformType,
-						groupName:    groupName,
+						groupName:    actualGroupName,
 						metricDef:    metric,
 					})
 				}
