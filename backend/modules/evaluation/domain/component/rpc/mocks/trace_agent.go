@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	rpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -42,28 +43,29 @@ func (m *MockIAgentAdapter) EXPECT() *MockIAgentAdapterMockRecorder {
 }
 
 // CallTraceAgent mocks base method.
-func (m *MockIAgentAdapter) CallTraceAgent(ctx context.Context, spaceID int64, url string, exptId, startTime, endTime int64) (int64, error) {
+func (m *MockIAgentAdapter) CallTraceAgent(ctx context.Context, param *rpc.CallTraceAgentParam) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CallTraceAgent", ctx, spaceID, url, exptId, startTime, endTime)
+	ret := m.ctrl.Call(m, "CallTraceAgent", ctx, param)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CallTraceAgent indicates an expected call of CallTraceAgent.
-func (mr *MockIAgentAdapterMockRecorder) CallTraceAgent(ctx, spaceID, url, exptId, startTime, endTime any) *gomock.Call {
+func (mr *MockIAgentAdapterMockRecorder) CallTraceAgent(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallTraceAgent", reflect.TypeOf((*MockIAgentAdapter)(nil).CallTraceAgent), ctx, spaceID, url, exptId, startTime, endTime)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallTraceAgent", reflect.TypeOf((*MockIAgentAdapter)(nil).CallTraceAgent), ctx, param)
 }
 
 // GetReport mocks base method.
-func (m *MockIAgentAdapter) GetReport(ctx context.Context, spaceID, reportID int64) (string, []*entity.InsightAnalysisReportIndex, error) {
+func (m *MockIAgentAdapter) GetReport(ctx context.Context, spaceID, reportID int64) (string, []*entity.InsightAnalysisReportIndex, entity.ReportStatus, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetReport", ctx, spaceID, reportID)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].([]*entity.InsightAnalysisReportIndex)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].(entity.ReportStatus)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // GetReport indicates an expected call of GetReport.

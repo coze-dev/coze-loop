@@ -159,7 +159,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 	}
 	if target.EvalTargetVersion == nil || target.EvalTargetVersion.SourceTargetVersion == "" {
 		logs.CtxWarn(ctx, "Experiment %d has no source target version %s", exptID, expt.TargetVersionID)
-		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg(fmt.Sprintf("Experiment %d has no source target version %s", exptID, expt.TargetVersionID)))
+		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg(fmt.Sprintf("Experiment %d has no source target version %d", exptID, expt.TargetVersionID)))
 	}
 	param.EvalTargetVersion = target.EvalTargetVersion.SourceTargetVersion
 	if err != nil {

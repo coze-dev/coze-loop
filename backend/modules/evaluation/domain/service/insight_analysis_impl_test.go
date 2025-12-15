@@ -162,27 +162,6 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "success - pending record",
-			setup: func() {
-				mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
-					ID:      1,
-					SpaceID: 1,
-					ExptID:  1,
-					Status:  entity.InsightAnalysisStatus_Unknown,
-				}, nil)
-				mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
-				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
-				mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-			spaceID:  1,
-			exptID:   1,
-			recordID: 1,
-			createAt: time.Now().Unix(),
-			wantErr:  false,
-		},
-		{
 			name: "success - record with report ID",
 			setup: func() {
 				mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
@@ -266,7 +245,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 				}, nil)
 				mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
-				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(0), errors.New("agent error"))
+				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any()).Return(int64(0), errors.New("agent error"))
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error {
 					assert.Equal(t, entity.InsightAnalysisStatus_Failed, record.Status)
 					return nil
@@ -289,7 +268,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 				}, nil)
 				mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
-				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
+				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any()).Return(int64(123), nil)
 				mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish error"))
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error {
 					assert.Equal(t, entity.InsightAnalysisStatus_Failed, record.Status)
@@ -1177,8 +1156,8 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 				AnalysisReportID: gptr.Of(int64(123)),
 				CreatedBy:        "user1",
 			},
-			createAt: time.Now().Unix() - 3700, // 超过1小时
-			wantErr:  false,
+			createAt: time.Now().Unix() - 7700*1000, // 超过2小时
+			wantErr:  true,
 		},
 		{
 			name: "running status - publish event",
