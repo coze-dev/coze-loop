@@ -141,7 +141,9 @@ export const HorizontalTraceHeader = ({
             />
           </Tooltip>
         ) : null}
-        {bizId === BIZ.Cozeloop || bizId === BIZ.Fornax ? (
+        {bizId === BIZ.Cozeloop ||
+        bizId === BIZ.Fornax ||
+        bizId === BIZ.CozeLoopOpen ? (
           <Tooltip content={t('copy_detail_link')} theme="dark">
             <Button
               color="secondary"

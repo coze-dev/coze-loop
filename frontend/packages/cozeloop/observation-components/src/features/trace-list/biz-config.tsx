@@ -242,6 +242,24 @@ export const getBizConfig = (customParams: Record<string, any>) => ({
       visibility: true,
     },
   },
+  [BIZ.CozeLoopOpen]: {
+    ...getDefaultBizConfig(),
+    initPlatformConfig: {
+      value: [PlatformType.Cozeloop, PlatformType.Prompt] as string[],
+      defaultValue: PlatformType.Cozeloop,
+      format: 'string',
+    },
+    platformTypeOptions: [
+      {
+        value: PlatformType.Cozeloop,
+        label: 'Cozeloop',
+      },
+      {
+        value: PlatformType.Prompt,
+        label: 'Prompt',
+      },
+    ] as OptionProps[],
+  },
 });
 
 export const getDefaultBizConfig = () => ({
