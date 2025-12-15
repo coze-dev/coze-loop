@@ -12,6 +12,82 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
+func TestExptColumnEvalTargetDO2DTOs(t *testing.T) {
+	label := gptr.Of("label-1")
+	from := []*entity.ExptColumnEvalTarget{
+		{
+			ExptID: 101,
+			Columns: []*entity.ColumnEvalTarget{
+				{
+					Name:  "col-1",
+					Desc:  "desc-1",
+					Label: label,
+				},
+				{
+					Name: "col-2",
+					Desc: "desc-2",
+				},
+			},
+		},
+		{
+			ExptID: 202,
+		},
+	}
+
+	got := ExptColumnEvalTargetDO2DTOs(from)
+
+	assert.Len(t, got, len(from))
+	assert.NotNil(t, got[0].ExperimentID)
+	assert.Equal(t, from[0].ExptID, *got[0].ExperimentID)
+	assert.Len(t, got[0].ColumnEvalTargets, len(from[0].Columns))
+	assert.NotNil(t, got[0].ColumnEvalTargets[0].Name)
+	assert.Equal(t, from[0].Columns[0].Name, *got[0].ColumnEvalTargets[0].Name)
+	assert.NotNil(t, got[0].ColumnEvalTargets[0].Description)
+	assert.Equal(t, from[0].Columns[0].Desc, *got[0].ColumnEvalTargets[0].Description)
+	assert.Same(t, label, got[0].ColumnEvalTargets[0].Label)
+
+	assert.NotNil(t, got[0].ColumnEvalTargets[1].Name)
+	assert.Equal(t, from[0].Columns[1].Name, *got[0].ColumnEvalTargets[1].Name)
+	assert.NotNil(t, got[0].ColumnEvalTargets[1].Description)
+	assert.Equal(t, from[0].Columns[1].Desc, *got[0].ColumnEvalTargets[1].Description)
+	assert.Nil(t, got[0].ColumnEvalTargets[1].Label)
+
+	assert.NotNil(t, got[1].ExperimentID)
+	assert.Equal(t, from[1].ExptID, *got[1].ExperimentID)
+	assert.Len(t, got[1].ColumnEvalTargets, 0)
+}
+
+func TestColumnEvalTargetDO2DTOs(t *testing.T) {
+	label := gptr.Of("label-1")
+	from := []*entity.ColumnEvalTarget{
+		{
+			Name:  "col-1",
+			Desc:  "desc-1",
+			Label: label,
+		},
+		{
+			Name: "col-2",
+			Desc: "desc-2",
+		},
+	}
+
+	got := ColumnEvalTargetDO2DTOs(from)
+
+	assert.Len(t, got, len(from))
+
+	assert.NotNil(t, got[0].Name)
+	assert.Equal(t, from[0].Name, *got[0].Name)
+	assert.NotNil(t, got[0].Description)
+	assert.Equal(t, from[0].Desc, *got[0].Description)
+	assert.Same(t, label, got[0].Label)
+
+	assert.NotNil(t, got[1].Name)
+	assert.Equal(t, from[1].Name, *got[1].Name)
+	assert.NotNil(t, got[1].Description)
+	assert.Equal(t, from[1].Desc, *got[1].Description)
+	assert.Nil(t, got[1].Label)
+}
+
 func TestItemResultsDO2DTO_ExtField(t *testing.T) {
 	tests := []struct {
 		name    string

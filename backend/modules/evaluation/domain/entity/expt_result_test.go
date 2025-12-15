@@ -460,11 +460,11 @@ func TestExptTurnResultFilterAccelerator_HasFilters(t *testing.T) {
 				ItemRunStatus:           []*FieldFilter{{Key: "status1"}},
 				TurnRunStatus:           []*FieldFilter{{Key: "turn1"}},
 				MapCond: &ExptTurnResultFilterMapCond{
-					EvalTargetDataFilters:   []*FieldFilter{{Key: "target1"}},
-					EvaluatorScoreFilters:   []*FieldFilter{{Key: "score1"}},
-					AnnotationFloatFilters:  []*FieldFilter{{Key: "float1"}},
-					AnnotationBoolFilters:   []*FieldFilter{{Key: "bool1"}},
-					AnnotationStringFilters: []*FieldFilter{{Key: "string1"}},
+					EvalTargetDataFilters:    []*FieldFilter{{Key: "target1"}},
+					EvaluatorScoreFilters:    []*FieldFilter{{Key: "score1"}},
+					AnnotationFloatFilters:   []*FieldFilter{{Key: "float1"}},
+					AnnotationBoolFilters:    []*FieldFilter{{Key: "bool1"}},
+					AnnotationStringFilters:  []*FieldFilter{{Key: "string1"}},
 					EvalTargetMetricsFilters: []*FieldFilter{{Key: "total_latency"}},
 				},
 				ItemSnapshotCond: &ItemSnapshotFilter{

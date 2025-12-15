@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
@@ -432,11 +431,11 @@ func NewSession(ctx context.Context) *Session {
 }
 
 type ExptTurnResultFilterMapCond struct {
-	EvalTargetDataFilters   []*FieldFilter
-	EvaluatorScoreFilters   []*FieldFilter
-	AnnotationFloatFilters  []*FieldFilter
-	AnnotationBoolFilters   []*FieldFilter
-	AnnotationStringFilters []*FieldFilter
+	EvalTargetDataFilters    []*FieldFilter
+	EvaluatorScoreFilters    []*FieldFilter
+	AnnotationFloatFilters   []*FieldFilter
+	AnnotationBoolFilters    []*FieldFilter
+	AnnotationStringFilters  []*FieldFilter
 	EvalTargetMetricsFilters []*FieldFilter
 }
 
@@ -703,11 +702,4 @@ type ColumnEvalTarget struct {
 	Name  string
 	Desc  string
 	Label *string
-}
-
-func (c *ColumnEvalTarget) IsMtrColumn() bool {
-	return c != nil && (c.Name == consts.ReportColumnNameEvalTargetTotalLatency ||
-		c.Name == consts.ReportColumnNameEvalTargetInputTokens ||
-		c.Name == consts.ReportColumnNameEvalTargetOutputTokens ||
-		c.Name == consts.ReportColumnNameEvalTargetTotalTokens)
 }

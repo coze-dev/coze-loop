@@ -1051,18 +1051,18 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 	updatedAt := time.Now()
 	for _, exptTurnResult := range b.BaseExptTurnResultDO {
 		exptTurnResultFilter := &entity.ExptTurnResultFilterEntity{
-			SpaceID:          b.SpaceID,
-			ExptID:           b.BaselineExptID,
-			ItemID:           exptTurnResult.ItemID,
-			TurnID:           exptTurnResult.TurnID,
-			EvalTargetData:   make(map[string]string),
-			EvaluatorScore:   make(map[string]float64),
-			AnnotationFloat:  make(map[string]float64),
-			AnnotationBool:   make(map[string]bool),
-			AnnotationString: make(map[string]string),
+			SpaceID:           b.SpaceID,
+			ExptID:            b.BaselineExptID,
+			ItemID:            exptTurnResult.ItemID,
+			TurnID:            exptTurnResult.TurnID,
+			EvalTargetData:    make(map[string]string),
+			EvaluatorScore:    make(map[string]float64),
+			AnnotationFloat:   make(map[string]float64),
+			AnnotationBool:    make(map[string]bool),
+			AnnotationString:  make(map[string]string),
 			EvalTargetMetrics: make(map[string]int64),
-			CreatedDate:      ptr.From(createdDate),
-			EvalSetVersionID: evalSetVersionID,
+			CreatedDate:       ptr.From(createdDate),
+			EvalSetVersionID:  evalSetVersionID,
 		}
 		exptTurnResultFilter.ExptID = b.BaselineExptID
 		exptTurnResultFilter.SpaceID = b.SpaceID

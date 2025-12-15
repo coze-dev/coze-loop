@@ -202,11 +202,11 @@ func TestConvertExptTurnResultFilterAccelerator(t *testing.T) {
 				ItemRunStatus: []*entity.FieldFilter{},
 				TurnRunStatus: []*entity.FieldFilter{},
 				MapCond: &entity.ExptTurnResultFilterMapCond{
-					EvalTargetDataFilters:   []*entity.FieldFilter{},
-					EvaluatorScoreFilters:   []*entity.FieldFilter{},
-					AnnotationFloatFilters:  []*entity.FieldFilter{},
-					AnnotationBoolFilters:   []*entity.FieldFilter{},
-					AnnotationStringFilters: []*entity.FieldFilter{},
+					EvalTargetDataFilters:    []*entity.FieldFilter{},
+					EvaluatorScoreFilters:    []*entity.FieldFilter{},
+					AnnotationFloatFilters:   []*entity.FieldFilter{},
+					AnnotationBoolFilters:    []*entity.FieldFilter{},
+					AnnotationStringFilters:  []*entity.FieldFilter{},
 					EvalTargetMetricsFilters: []*entity.FieldFilter{},
 				},
 				ItemSnapshotCond: &entity.ItemSnapshotFilter{

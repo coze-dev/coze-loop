@@ -15,9 +15,9 @@ import (
 
 func TestExptTurnResultFilterEntity2PO_EvalTargetMetrics(t *testing.T) {
 	tests := []struct {
-		name        string
+		name         string
 		filterEntity *entity.ExptTurnResultFilterEntity
-		want        *model.ExptTurnResultFilter
+		want         *model.ExptTurnResultFilter
 	}{
 		{
 			name: "with EvalTargetMetrics",
@@ -57,18 +57,18 @@ func TestExptTurnResultFilterEntity2PO_EvalTargetMetrics(t *testing.T) {
 		{
 			name: "with empty EvalTargetMetrics",
 			filterEntity: &entity.ExptTurnResultFilterEntity{
-				SpaceID:          1,
-				ExptID:           2,
-				ItemID:           3,
-				ItemIdx:          4,
-				TurnID:           5,
-				Status:           entity.ItemRunState_Success,
-				EvalTargetData:   make(map[string]string),
-				EvaluatorScore:   make(map[string]float64),
-				AnnotationFloat:  make(map[string]float64),
-				AnnotationBool:   make(map[string]bool),
-				AnnotationString: make(map[string]string),
-				EvalTargetMetrics: make(map[string]int64),
+				SpaceID:                 1,
+				ExptID:                  2,
+				ItemID:                  3,
+				ItemIdx:                 4,
+				TurnID:                  5,
+				Status:                  entity.ItemRunState_Success,
+				EvalTargetData:          make(map[string]string),
+				EvaluatorScore:          make(map[string]float64),
+				AnnotationFloat:         make(map[string]float64),
+				AnnotationBool:          make(map[string]bool),
+				AnnotationString:        make(map[string]string),
+				EvalTargetMetrics:       make(map[string]int64),
 				CreatedDate:             time.Now(),
 				EvaluatorScoreCorrected: false,
 				EvalSetVersionID:        6,
@@ -80,9 +80,9 @@ func TestExptTurnResultFilterEntity2PO_EvalTargetMetrics(t *testing.T) {
 			},
 		},
 		{
-			name:        "nil filterEntity",
+			name:         "nil filterEntity",
 			filterEntity: nil,
-			want:        nil,
+			want:         nil,
 		},
 	}
 
@@ -101,9 +101,9 @@ func TestExptTurnResultFilterEntity2PO_EvalTargetMetrics(t *testing.T) {
 
 func TestExptTurnResultFilterPO2Entity_EvalTargetMetrics(t *testing.T) {
 	tests := []struct {
-		name string
+		name     string
 		filterPO *model.ExptTurnResultFilter
-		want    *entity.ExptTurnResultFilterEntity
+		want     *entity.ExptTurnResultFilterEntity
 	}{
 		{
 			name: "with EvalTargetMetrics",
@@ -143,18 +143,18 @@ func TestExptTurnResultFilterPO2Entity_EvalTargetMetrics(t *testing.T) {
 		{
 			name: "with empty EvalTargetMetrics",
 			filterPO: &model.ExptTurnResultFilter{
-				SpaceID:          "1",
-				ExptID:           "2",
-				ItemID:           "3",
-				ItemIdx:          4,
-				TurnID:           "5",
-				Status:           2,
-				EvalTargetData:   make(map[string]string),
-				EvaluatorScore:   make(map[string]float64),
-				AnnotationFloat:  make(map[string]float64),
-				AnnotationBool:   make(map[string]int8),
-				AnnotationString: make(map[string]string),
-				EvalTargetMetrics: make(map[string]int64),
+				SpaceID:                 "1",
+				ExptID:                  "2",
+				ItemID:                  "3",
+				ItemIdx:                 4,
+				TurnID:                  "5",
+				Status:                  2,
+				EvalTargetData:          make(map[string]string),
+				EvaluatorScore:          make(map[string]float64),
+				AnnotationFloat:         make(map[string]float64),
+				AnnotationBool:          make(map[string]int8),
+				AnnotationString:        make(map[string]string),
+				EvalTargetMetrics:       make(map[string]int64),
 				EvaluatorScoreCorrected: 0,
 				EvalSetVersionID:        "6",
 				CreatedDate:             time.Now(),
@@ -221,4 +221,3 @@ func TestExptTurnResultFilterEntity2PO_And_PO2Entity_EvalTargetMetrics(t *testin
 	assert.NotNil(t, entity)
 	assert.Equal(t, original.EvalTargetMetrics, entity.EvalTargetMetrics)
 }
-
