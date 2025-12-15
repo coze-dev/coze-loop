@@ -811,3 +811,82 @@ func (d *customTestMetricDefinition) OExpression() *entity.OExpression {
 		MetricName: d.name,
 	}
 }
+
+func TestMetricsService_buildTraverseMetrics_GroupBelong(t *testing.T) {
+	t.Parallel()
+
+	t.Run("compound sub-metrics use actual group", func(t *testing.T) {
+		t.Parallel()
+		metric1 := &testMetricDefinition{name: "metric_numerator", metricType: entity.MetricTypeSummary}
+		metric2 := &testMetricDefinition{name: "metric_denominator", metricType: entity.MetricTypeSummary}
+		compound := &testCompoundMetricDefinition{
+			testMetricDefinition: &testMetricDefinition{name: "metric_ratio", metricType: entity.MetricTypeSummary},
+			metrics:              []entity.IMetricDefinition{metric1, metric2},
+			operator:             entity.MetricOperatorDivide,
+		}
+		pMetrics := &entity.PlatformMetrics{
+			MetricGroups: map[string]*entity.MetricGroup{
+				"group_a": {MetricDefinitions: []entity.IMetricDefinition{compound}},
+				"group_b": {MetricDefinitions: []entity.IMetricDefinition{metric1, metric2}},
+			},
+			DrillDownObjects: map[string]*loop_span.FilterField{},
+			PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
+				loop_span.PlatformType("test_platform"): {MetricGroups: []string{"group_a", "group_b"}},
+			},
+		}
+		svc := &MetricsService{
+			metricDefMap: map[string]entity.IMetricDefinition{
+				metric1.Name():  metric1,
+				metric2.Name():  metric2,
+				compound.Name(): compound,
+			},
+			pMetrics: pMetrics,
+		}
+		metrics, err := svc.buildTraverseMetrics(context.Background(), &TraverseMetricsReq{
+			PlatformTypes: []loop_span.PlatformType{"test_platform"},
+			MetricsNames:  []string{"metric_ratio"},
+		})
+		assert.NoError(t, err)
+		assert.Len(t, metrics, 2)
+		nameToGroup := map[string]string{}
+		for _, tm := range metrics {
+			nameToGroup[tm.metricDef.Name()] = tm.groupName
+		}
+		assert.Equal(t, "group_b", nameToGroup["metric_numerator"])
+		assert.Equal(t, "group_b", nameToGroup["metric_denominator"])
+	})
+
+	t.Run("sub-metric not in any group returns error", func(t *testing.T) {
+		t.Parallel()
+		metric1 := &testMetricDefinition{name: "metric_numerator", metricType: entity.MetricTypeSummary}
+		metric2 := &testMetricDefinition{name: "metric_denominator", metricType: entity.MetricTypeSummary}
+		compound := &testCompoundMetricDefinition{
+			testMetricDefinition: &testMetricDefinition{name: "metric_ratio", metricType: entity.MetricTypeSummary},
+			metrics:              []entity.IMetricDefinition{metric1, metric2},
+			operator:             entity.MetricOperatorDivide,
+		}
+		pMetrics := &entity.PlatformMetrics{
+			MetricGroups: map[string]*entity.MetricGroup{
+				"group_a": {MetricDefinitions: []entity.IMetricDefinition{compound}},
+			},
+			DrillDownObjects: map[string]*loop_span.FilterField{},
+			PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
+				loop_span.PlatformType("test_platform"): {MetricGroups: []string{"group_a"}},
+			},
+		}
+		svc := &MetricsService{
+			metricDefMap: map[string]entity.IMetricDefinition{
+				metric1.Name():  metric1,
+				metric2.Name():  metric2,
+				compound.Name(): compound,
+			},
+			pMetrics: pMetrics,
+		}
+		metrics, err := svc.buildTraverseMetrics(context.Background(), &TraverseMetricsReq{
+			PlatformTypes: []loop_span.PlatformType{"test_platform"},
+			MetricsNames:  []string{"metric_ratio"},
+		})
+		assert.Error(t, err)
+		assert.Nil(t, metrics)
+	})
+}
