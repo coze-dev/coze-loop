@@ -52,6 +52,30 @@ func ExptColumnEvaluatorsDO2DTOs(from []*entity.ExptColumnEvaluator) []*domain_e
 	return dtos
 }
 
+func ExptColumnEvalTargetDO2DTOs(columns []*entity.ExptColumnEvalTarget) []*domain_expt.ExptColumnEvalTarget {
+	dtos := make([]*domain_expt.ExptColumnEvalTarget, 0, len(columns))
+	for _, f := range columns {
+		dto := &domain_expt.ExptColumnEvalTarget{
+			ExperimentID:      gptr.Of(f.ExptID),
+			ColumnEvalTargets: ColumnEvalTargetDO2DTOs(f.Columns),
+		}
+		dtos = append(dtos, dto)
+	}
+	return dtos
+}
+
+func ColumnEvalTargetDO2DTOs(from []*entity.ColumnEvalTarget) []*domain_expt.ColumnEvalTarget {
+	evaluators := make([]*domain_expt.ColumnEvalTarget, 0, len(from))
+	for _, f := range from {
+		evaluators = append(evaluators, &domain_expt.ColumnEvalTarget{
+			Name:        gptr.Of(f.Name),
+			Description: gptr.Of(f.Desc),
+			Label:       f.Label,
+		})
+	}
+	return evaluators
+}
+
 func ColumnEvaluatorsDO2DTOs(from []*entity.ColumnEvaluator) []*domain_expt.ColumnEvaluator {
 	evaluators := make([]*domain_expt.ColumnEvaluator, 0, len(from))
 	for _, f := range from {

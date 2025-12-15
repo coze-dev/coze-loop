@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gopkg/util/logger"
 
@@ -252,10 +253,11 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 		// total    int64
 		maxPage = 500
 
-		colEvaluators    []*entity.ColumnEvaluator
-		colEvalSetFields []*entity.ColumnEvalSetField
-		colAnnotation    []*entity.ColumnAnnotation
-		allItemResults   []*entity.ItemResult
+		colEvaluators     []*entity.ColumnEvaluator
+		colEvalSetFields  []*entity.ColumnEvalSetField
+		colAnnotation     []*entity.ColumnAnnotation
+		allItemResults    []*entity.ItemResult
+		columnsEvalTarget []*entity.ColumnEvalTarget
 	)
 
 	for {
@@ -266,21 +268,24 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 			BaseExptID: ptr.Of(exptID),
 			Page:       page,
 		}
-		columnEvaluators, _, columnEvalSetFields, exptColumnAnnotation, itemResults, total, err := e.exptResultService.MGetExperimentResult(ctx, param)
+		result, err := e.exptResultService.MGetExperimentResult(ctx, param)
 		if err != nil {
 			return err
 		}
 
-		colEvaluators = columnEvaluators
-		colEvalSetFields = columnEvalSetFields
-		for _, columnAnnotation := range exptColumnAnnotation {
+		colEvaluators = result.ColumnEvaluators
+		colEvalSetFields = result.ColumnEvalSetFields
+		if len(result.ExptColumnsEvalTarget) > 0 {
+			columnsEvalTarget = result.ExptColumnsEvalTarget[0].Columns
+		}
+		for _, columnAnnotation := range result.ExptColumnAnnotations {
 			if columnAnnotation.ExptID == exptID {
 				colAnnotation = columnAnnotation.ColumnAnnotations
 			}
 		}
-		allItemResults = append(allItemResults, itemResults...)
+		allItemResults = append(allItemResults, result.ItemResults...)
 
-		if pageNum*pageSize >= int(total) {
+		if pageNum*pageSize >= int(result.Total) {
 			break
 		}
 
@@ -302,10 +307,11 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 		fileClient:         e.fileClient,
 		fileName:           fileName,
 
-		colEvaluators:    colEvaluators,
-		colAnnotations:   colAnnotation,
-		colEvalSetFields: colEvalSetFields,
-		allItemResults:   allItemResults,
+		colEvaluators:     colEvaluators,
+		colAnnotations:    colAnnotation,
+		colEvalSetFields:  colEvalSetFields,
+		allItemResults:    allItemResults,
+		columnsEvalTarget: columnsEvalTarget,
 	}
 
 	err = exportHelper.exportCSV(ctx)
@@ -322,10 +328,11 @@ type exportCSVHelper struct {
 	fileName  string
 	withLogID bool
 
-	colEvaluators    []*entity.ColumnEvaluator
-	colEvalSetFields []*entity.ColumnEvalSetField
-	colAnnotations   []*entity.ColumnAnnotation
-	allItemResults   []*entity.ItemResult
+	colEvaluators     []*entity.ColumnEvaluator
+	colEvalSetFields  []*entity.ColumnEvalSetField
+	colAnnotations    []*entity.ColumnAnnotation
+	allItemResults    []*entity.ItemResult
+	columnsEvalTarget []*entity.ColumnEvalTarget
 
 	exptRepo           repo.IExperimentRepo
 	exptTurnResultRepo repo.IExptTurnResultRepo
@@ -380,8 +387,9 @@ func (e exportCSVHelper) buildColumns(ctx context.Context) ([]string, error) {
 		columns = append(columns, ptr.From(colEvalSetField.Name))
 	}
 
-	// 实际输出
-	columns = append(columns, consts.OutputSchemaKey)
+	for _, col := range e.columnsEvalTarget {
+		columns = append(columns, gcond.If(len(col.DisplayName) > 0, col.DisplayName, col.Name))
+	}
 
 	// colEvaluators
 	for _, colEvaluator := range e.colEvaluators {
@@ -420,6 +428,24 @@ func getColumnNameEvaluatorReason(evaluatorName, version string) string {
 	return fmt.Sprintf("%s<%s>_reason", evaluatorName, version)
 }
 
+func (e *exportCSVHelper) buildColumnEvalTargetContent(columnName string, data *entity.EvalTargetOutputData) string {
+	if data == nil {
+		return ""
+	}
+	switch columnName {
+	case consts.ReportColumnNameEvalTargetTotalLatency:
+		return strconv.FormatInt(gptr.Indirect(data.TimeConsumingMS), 10)
+	case consts.ReportColumnNameEvalTargetInputTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.InputTokens, 10)
+	case consts.ReportColumnNameEvalTargetOutputTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.OutputTokens, 10)
+	case consts.ReportColumnNameEvalTargetTotalTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.TotalTokens, 10)
+	default:
+		return geDatasetCellOrActualOutputData(data.OutputFields[columnName])
+	}
+}
+
 func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 	rows := make([][]string, 0)
 	for _, itemResult := range e.allItemResults {
@@ -456,17 +482,15 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 			datasetFields := getDatasetFields(e.colEvalSetFields, payload.EvalSet.Turn.FieldDataList)
 			rowData = append(rowData, datasetFields...)
 
-			// 实际输出
-			var actualOutput string
-			if payload.TargetOutput == nil ||
-				payload.TargetOutput.EvalTargetRecord == nil ||
-				payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData == nil ||
-				payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields == nil {
-				actualOutput = ""
-			} else {
-				actualOutput = geDatasetCellOrActualOutputData(payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey])
+			for _, col := range e.columnsEvalTarget {
+				if payload.TargetOutput != nil &&
+					payload.TargetOutput.EvalTargetRecord != nil &&
+					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
+					rowData = append(rowData, e.buildColumnEvalTargetContent(col.Name, payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData))
+				} else {
+					rowData = append(rowData, "")
+				}
 			}
-			rowData = append(rowData, actualOutput)
 
 			// 评估器结果，按ColumnEvaluators的顺序排序
 			evaluatorRecords := make(map[int64]*entity.EvaluatorRecord)

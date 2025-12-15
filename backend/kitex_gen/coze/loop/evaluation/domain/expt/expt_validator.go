@@ -104,6 +104,12 @@ func (p *ExptColumnEvaluator) IsValid() error {
 func (p *ColumnEvaluator) IsValid() error {
 	return nil
 }
+func (p *ExptColumnEvalTarget) IsValid() error {
+	return nil
+}
+func (p *ColumnEvalTarget) IsValid() error {
+	return nil
+}
 func (p *ColumnEvalSetField) IsValid() error {
 	return nil
 }
@@ -229,6 +235,9 @@ func (p *SourceTarget) IsValid() error {
 	return nil
 }
 func (p *ExptAggregateResult_) IsValid() error {
+	return nil
+}
+func (p *EvalTargetAggregateResult_) IsValid() error {
 	return nil
 }
 func (p *EvaluatorAggregateResult_) IsValid() error {
