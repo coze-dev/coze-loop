@@ -536,7 +536,7 @@ var (
 		Name:  consts.ReportColumnNameEvalTargetActualOutput,
 		Label: gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
 	}
-	columnEvalTargetTrajectory = &entity.ColumnEvalTarget{
+	columnEvalTargetTrajectory = &entity.ColumnEvalTarget{ // nolint:unused
 		Name:  consts.ReportColumnNameEvalTargetTrajectory,
 		Label: gptr.Of(consts.ReportColumnLabelEvalTargetTrajectory),
 	}
