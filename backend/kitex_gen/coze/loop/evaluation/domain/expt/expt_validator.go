@@ -54,6 +54,24 @@ func (p *Experiment) IsValid() error {
 	}
 	return nil
 }
+func (p *ExperimentTemplate) IsValid() error {
+	if p.TargetFieldMapping != nil {
+		if err := p.TargetFieldMapping.IsValid(); err != nil {
+			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
+		}
+	}
+	if p.TargetRuntimeParam != nil {
+		if err := p.TargetRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *TokenUsage) IsValid() error {
 	return nil
 }
@@ -212,6 +230,19 @@ func (p *ExperimentFilter) IsValid() error {
 	}
 	return nil
 }
+func (p *ExperimentTemplateFilter) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	if p.KeywordSearch != nil {
+		if err := p.KeywordSearch.IsValid(); err != nil {
+			return fmt.Errorf("field KeywordSearch not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *Filters) IsValid() error {
 	return nil
 }
@@ -235,6 +266,11 @@ func (p *SourceTarget) IsValid() error {
 	return nil
 }
 func (p *ExptAggregateResult_) IsValid() error {
+	if p.WeightedResult_ != nil {
+		if err := p.WeightedResult_.IsValid(); err != nil {
+			return fmt.Errorf("field WeightedResult_ not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *EvalTargetAggregateResult_) IsValid() error {
