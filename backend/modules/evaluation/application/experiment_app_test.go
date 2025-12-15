@@ -3910,7 +3910,7 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 		// Mock the auth.AuthorizationWithoutSPI call
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		// Mock the CreateAnalysisRecord call
-		mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
+		mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(123), nil)
 
 		_, err := app.InsightAnalysisExperiment(ctx, req)
 		assert.NoError(t, err)
@@ -3940,7 +3940,7 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 			EndAt:     &[]time.Time{time.Now()}[0],
 		}, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-		mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(0), errors.New("create analysis record error"))
+		mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(0), errors.New("create analysis record error"))
 
 		_, err := app.InsightAnalysisExperiment(ctx, req)
 		assert.Error(t, err)
