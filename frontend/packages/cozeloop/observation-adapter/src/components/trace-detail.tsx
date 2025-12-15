@@ -17,7 +17,7 @@ import {
 } from '@cozeloop/observation-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
-import { type span } from '@cozeloop/api-schema/observation';
+import { type PlatformType, type span } from '@cozeloop/api-schema/observation';
 import { observabilityTrace } from '@cozeloop/api-schema';
 import { type TraceDetailExtraProps } from '@cozeloop/adapter-interfaces';
 
@@ -47,7 +47,14 @@ export const TraceDetailWrapper = <
   Component: T;
 }) => {
   const Wrapper = (props: Parameters<T>[number]) => {
-    const { forceOverwrite, traceID, startTime, endTime, customParams } = props;
+    const {
+      forceOverwrite,
+      traceID,
+      startTime,
+      endTime,
+      customParams,
+      platformType,
+    } = props;
     const space = useSpace();
     const spaceID = customParams?.spaceID || space.spaceID;
     const lang = I18n.language === 'zh-CN' ? zhCH : enUS;
@@ -83,14 +90,21 @@ export const TraceDetailWrapper = <
         <Component
           {...(traceDetailOpenPanelProps as any)}
           getTraceDetailData={
-            props.getTraceDetailData ??
-            observabilityTrace.GetTrace({
-              workspace_id: spaceID,
-              start_time: amendStartTime,
-              end_time: amendEndTime,
-              trace_id: traceID,
-            })
+            !props.getTraceDetailData
+              ? () =>
+                  observabilityTrace.GetTrace({
+                    workspace_id: spaceID,
+                    start_time: amendStartTime,
+                    end_time: amendEndTime,
+                    trace_id: traceID,
+                    platform_type: platformType as PlatformType,
+                  })
+              : undefined
           }
+          customParams={{
+            spaceID,
+            platformType,
+          }}
         />
       </ConfigProvider>
     );

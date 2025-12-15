@@ -211,7 +211,9 @@ export const TraceListApp = React.forwardRef<
     applyFilters: queryState.filters,
     tracesRefreshKey,
     buildInFetchTracesAdvanceInfo:
-      bizId === BIZ.Cozeloop || bizId === BIZ.Fornax
+      bizId === BIZ.Cozeloop ||
+      bizId === BIZ.Fornax ||
+      bizId === BIZ.CozeLoopOpen
         ? undefined
         : _getTracesAdvanceInfo,
   });
