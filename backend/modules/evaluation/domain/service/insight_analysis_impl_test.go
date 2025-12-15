@@ -32,6 +32,7 @@ func newTestInsightAnalysisService(ctrl *gomock.Controller) (*ExptInsightAnalysi
 	mockAgentAdapter := rpcMocks.NewMockIAgentAdapter(ctrl)
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
+	mockTargetRepo := repoMocks.NewMockIEvalTargetRepo(ctrl)
 
 	service := &ExptInsightAnalysisServiceImpl{
 		repo:                    mockRepo,
@@ -42,6 +43,7 @@ func newTestInsightAnalysisService(ctrl *gomock.Controller) (*ExptInsightAnalysi
 		notifyRPCAdapter:        mockNotifyRPCAdapter,
 		userProvider:            mockUserProvider,
 		exptRepo:                mockExptRepo,
+		targetRepo:              mockTargetRepo,
 	}
 
 	return service, &testInsightAnalysisServiceMocks{
@@ -53,6 +55,7 @@ func newTestInsightAnalysisService(ctrl *gomock.Controller) (*ExptInsightAnalysi
 		agentAdapter:            mockAgentAdapter,
 		notifyRPCAdapter:        mockNotifyRPCAdapter,
 		userProvider:            mockUserProvider,
+		targetRepo:              mockTargetRepo,
 	}
 }
 
@@ -65,6 +68,7 @@ type testInsightAnalysisServiceMocks struct {
 	agentAdapter            *rpcMocks.MockIAgentAdapter
 	notifyRPCAdapter        *rpcMocks.MockINotifyRPCAdapter
 	userProvider            *rpcMocks.MockIUserProvider
+	targetRepo              *repoMocks.MockIEvalTargetRepo
 }
 
 func TestExptInsightAnalysisServiceImpl_CreateAnalysisRecord(t *testing.T) {
@@ -170,8 +174,9 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 					ExptID:           1,
 					Status:           entity.InsightAnalysisStatus_Running,
 					AnalysisReportID: gptr.Of(int64(123)),
+					CreatedAt:        time.Now(),
 				}, nil)
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("", entity.ReportStatus_Running, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil, entity.ReportStatus_Running, nil)
 				mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			spaceID:  1,
@@ -243,6 +248,24 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 					ExptID:  1,
 					Status:  entity.InsightAnalysisStatus_Unknown,
 				}, nil)
+				start := time.Now().Add(-time.Hour)
+				end := time.Now()
+				mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(1)).Return(&entity.Experiment{
+					ID:              1,
+					SpaceID:         1,
+					TargetType:      entity.EvalTargetTypeLoopPrompt,
+					TargetVersionID: 1,
+					TargetID:        1,
+					StartAt:         &start,
+					EndAt:           &end,
+				}, nil)
+				mocks.targetRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(1)).Return(&entity.EvalTarget{
+					SourceTargetID: "123",
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						SourceTargetVersion: "v1",
+					},
+				}, nil)
+				mocks.exptRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), []int64{int64(1)}, int64(1)).Return([]*entity.ExptEvaluatorRef{}, nil)
 				mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
 				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any()).Return(int64(0), errors.New("agent error"))
@@ -266,6 +289,24 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 					ExptID:  1,
 					Status:  entity.InsightAnalysisStatus_Unknown,
 				}, nil)
+				start := time.Now().Add(-time.Hour)
+				end := time.Now()
+				mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(1)).Return(&entity.Experiment{
+					ID:              1,
+					SpaceID:         1,
+					TargetType:      entity.EvalTargetTypeLoopPrompt,
+					TargetVersionID: 1,
+					TargetID:        1,
+					StartAt:         &start,
+					EndAt:           &end,
+				}, nil)
+				mocks.targetRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(1)).Return(&entity.EvalTarget{
+					SourceTargetID: "123",
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						SourceTargetVersion: "v1",
+					},
+				}, nil)
+				mocks.exptRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), []int64{int64(1)}, int64(1)).Return([]*entity.ExptEvaluatorRef{}, nil)
 				mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
 				mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any()).Return(int64(123), nil)
@@ -339,9 +380,9 @@ func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord(t *testing.T) {
 					ExptID:           1,
 					Status:           entity.InsightAnalysisStatus_Success,
 					AnalysisReportID: gptr.Of(int64(123)),
-					CreatedBy:        "user1",
+					CreatedAt:        time.Now(),
 				}, nil)
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report content", entity.ReportStatus_Success, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report content", nil, entity.ReportStatus_Success, nil)
 				mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(1)).Return(int64(5), int64(2), nil)
 				mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(1), int64(1), "user1").Return(nil, nil)
 			},
@@ -366,10 +407,11 @@ func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord(t *testing.T) {
 			name: "status running - early return",
 			setup: func() {
 				mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
-					ID:      1,
-					SpaceID: 1,
-					ExptID:  1,
-					Status:  entity.InsightAnalysisStatus_Running,
+					ID:        1,
+					SpaceID:   1,
+					ExptID:    1,
+					Status:    entity.InsightAnalysisStatus_Running,
+					CreatedAt: time.Now(),
 				}, nil)
 			},
 			spaceID:  1,
@@ -404,7 +446,7 @@ func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord(t *testing.T) {
 					Status:           entity.InsightAnalysisStatus_Success,
 					AnalysisReportID: gptr.Of(int64(123)),
 				}, nil)
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("", entity.ReportStatus_Unknown, errors.New("agent error"))
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil, entity.ReportStatus_Unknown, errors.New("agent error"))
 			},
 			spaceID:  1,
 			exptID:   1,
@@ -422,7 +464,7 @@ func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord(t *testing.T) {
 					Status:           entity.InsightAnalysisStatus_Success,
 					AnalysisReportID: gptr.Of(int64(123)),
 				}, nil)
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report", entity.ReportStatus_Success, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report", nil, entity.ReportStatus_Success, nil)
 				mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(1)).Return(int64(0), int64(0), errors.New("count error"))
 			},
 			spaceID:  1,
@@ -441,7 +483,7 @@ func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord(t *testing.T) {
 					Status:           entity.InsightAnalysisStatus_Success,
 					AnalysisReportID: gptr.Of(int64(123)),
 				}, nil)
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report", entity.ReportStatus_Success, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report", nil, entity.ReportStatus_Success, nil)
 				mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(1)).Return(int64(5), int64(2), nil)
 				mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(1), int64(1), "user1").Return(nil, errors.New("get vote error"))
 			},
@@ -461,7 +503,7 @@ func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord(t *testing.T) {
 					Status:           entity.InsightAnalysisStatus_Success,
 					AnalysisReportID: gptr.Of(int64(123)),
 				}, nil)
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report", entity.ReportStatus_Success, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), gomock.Any(), gomock.Any()).Return("test report", nil, entity.ReportStatus_Success, nil)
 				mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(1)).Return(int64(5), int64(2), nil)
 				mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(1), int64(1), "user1").Return(&entity.ExptInsightAnalysisFeedbackVote{
 					VoteType: entity.Upvote,
@@ -513,6 +555,9 @@ func TestExptInsightAnalysisServiceImpl_ListAnalysisRecord(t *testing.T) {
 					{ID: 1, SpaceID: 1, ExptID: 1},
 					{ID: 2, SpaceID: 1, ExptID: 1},
 				}, int64(2), nil)
+				// 新逻辑：仅对第一个记录查询反馈信息
+				mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(1)).Return(int64(0), int64(0), nil)
+				mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(1), int64(1), "user1").Return(nil, nil)
 			},
 			spaceID: 1,
 			exptID:  1,
@@ -1051,7 +1096,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 		{
 			name: "agent adapter error",
 			setup: func() {
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", entity.ReportStatus_Unknown, errors.New("agent error"))
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", nil, entity.ReportStatus_Unknown, errors.New("agent error"))
 			},
 			record: &entity.ExptInsightAnalysisRecord{
 				ID:               1,
@@ -1066,7 +1111,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 		{
 			name: "report status failed",
 			setup: func() {
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", entity.ReportStatus_Failed, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", nil, entity.ReportStatus_Failed, nil)
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			record: &entity.ExptInsightAnalysisRecord{
@@ -1082,7 +1127,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 		{
 			name: "report status failed - update error",
 			setup: func() {
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", entity.ReportStatus_Failed, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", nil, entity.ReportStatus_Failed, nil)
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).Return(errors.New("update error"))
 			},
 			record: &entity.ExptInsightAnalysisRecord{
@@ -1098,7 +1143,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 		{
 			name: "report status success",
 			setup: func() {
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("report content", entity.ReportStatus_Success, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("report content", nil, entity.ReportStatus_Success, nil)
 				mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(1)).Return(&entity.Experiment{
 					ID:   1,
 					Name: "test experiment",
@@ -1122,7 +1167,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 		{
 			name: "report status success - notify error (should not fail)",
 			setup: func() {
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("report content", entity.ReportStatus_Success, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("report content", nil, entity.ReportStatus_Success, nil)
 				mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(1)).Return(&entity.Experiment{
 					ID:   1,
 					Name: "test experiment",
@@ -1146,7 +1191,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 		{
 			name: "timeout case",
 			setup: func() {
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", entity.ReportStatus_Running, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", nil, entity.ReportStatus_Running, nil)
 				mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			record: &entity.ExptInsightAnalysisRecord{
@@ -1162,7 +1207,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 		{
 			name: "running status - publish event",
 			setup: func() {
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", entity.ReportStatus_Running, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", nil, entity.ReportStatus_Running, nil)
 				mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			record: &entity.ExptInsightAnalysisRecord{
@@ -1178,7 +1223,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 		{
 			name: "running status - publish event error",
 			setup: func() {
-				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", entity.ReportStatus_Running, nil)
+				mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(123)).Return("", nil, entity.ReportStatus_Running, nil)
 				mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish error"))
 			},
 			record: &entity.ExptInsightAnalysisRecord{
