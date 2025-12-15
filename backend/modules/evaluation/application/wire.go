@@ -71,6 +71,7 @@ var (
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
 		flagSet,
+		domainservice.NewDefaultURLProcessor,
 	)
 
 	evaluatorSet = wire.NewSet(

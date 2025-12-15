@@ -45,6 +45,7 @@ import (
 	foundationapp "github.com/coze-dev/coze-loop/backend/modules/foundation/application"
 	llmapp "github.com/coze-dev/coze-loop/backend/modules/llm/application"
 	obapp "github.com/coze-dev/coze-loop/backend/modules/observability/application"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
 	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	promptapp "github.com/coze-dev/coze-loop/backend/modules/prompt/application"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -219,6 +220,7 @@ func InitObservabilityHandler(
 	datasetClient datasetservice.Client,
 	redis redis.Cmdable,
 	persistentCmdable redis.PersistentCmdable,
+	storageProvider storage.IStorageProvider,
 	experimentClient experimentservice.Client,
 	taskProcessor task_processor.TaskProcessor,
 	aid int32,

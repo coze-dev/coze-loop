@@ -52,5 +52,10 @@ func (e *AnnotationConsumer) HandleMessage(ctx context.Context, ext *mq.MessageE
 		return nil
 	}
 	logs.CtxInfo(ctx, "Handle annotation message %+v, annotation: %+v", event, event.Annotation)
-	return e.handler.Send(ctx, event)
+	err := e.handler.Send(ctx, event)
+	if err != nil {
+		logs.CtxError(ctx, "handle annotation msg failed, err: %v", err)
+		return err
+	}
+	return nil
 }

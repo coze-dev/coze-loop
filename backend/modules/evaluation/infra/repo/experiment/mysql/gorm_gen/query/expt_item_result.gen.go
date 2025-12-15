@@ -39,6 +39,7 @@ func newExptItemResult(db *gorm.DB, opts ...gen.DOOption) exptItemResult {
 	_exptItemResult.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_exptItemResult.DeletedAt = field.NewField(tableName, "deleted_at")
 	_exptItemResult.LogID = field.NewString(tableName, "log_id")
+	_exptItemResult.Ext = field.NewBytes(tableName, "ext")
 
 	_exptItemResult.fillFieldMap()
 
@@ -62,6 +63,7 @@ type exptItemResult struct {
 	UpdatedAt field.Time   // 更新时间
 	DeletedAt field.Field  // 删除时间
 	LogID     field.String // 日志 id
+	Ext       field.Bytes  // 补充信息
 
 	fieldMap map[string]field.Expr
 }
@@ -90,6 +92,7 @@ func (e *exptItemResult) updateTableName(table string) *exptItemResult {
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
 	e.LogID = field.NewString(table, "log_id")
+	e.Ext = field.NewBytes(table, "ext")
 
 	e.fillFieldMap()
 
@@ -118,7 +121,7 @@ func (e *exptItemResult) GetFieldByName(fieldName string) (field.OrderExpr, bool
 }
 
 func (e *exptItemResult) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 12)
+	e.fieldMap = make(map[string]field.Expr, 13)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_id"] = e.ExptID
@@ -131,6 +134,7 @@ func (e *exptItemResult) fillFieldMap() {
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt
 	e.fieldMap["log_id"] = e.LogID
+	e.fieldMap["ext"] = e.Ext
 }
 
 func (e exptItemResult) clone(db *gorm.DB) exptItemResult {

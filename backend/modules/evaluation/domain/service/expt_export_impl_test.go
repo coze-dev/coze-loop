@@ -27,6 +27,78 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
+func TestExportCSVHelper_buildColumnEvalTargetContent(t *testing.T) {
+	ctx := context.Background()
+	helper := &exportCSVHelper{}
+
+	textContent := &entity.Content{
+		ContentType: ptr.Of(entity.ContentTypeText),
+		Text:        ptr.Of("text-value"),
+	}
+
+	tests := []struct {
+		name       string
+		columnName string
+		data       *entity.EvalTargetOutputData
+		want       string
+	}{
+		{
+			name:       "data is nil",
+			columnName: consts.ReportColumnNameEvalTargetTotalLatency,
+			data:       nil,
+			want:       "",
+		},
+		{
+			name:       "total latency",
+			columnName: consts.ReportColumnNameEvalTargetTotalLatency,
+			data:       &entity.EvalTargetOutputData{TimeConsumingMS: ptr.Of(int64(123))},
+			want:       "123",
+		},
+		{
+			name:       "input tokens",
+			columnName: consts.ReportColumnNameEvalTargetInputTokens,
+			data:       &entity.EvalTargetOutputData{EvalTargetUsage: &entity.EvalTargetUsage{InputTokens: 10}},
+			want:       "10",
+		},
+		{
+			name:       "output tokens",
+			columnName: consts.ReportColumnNameEvalTargetOutputTokens,
+			data:       &entity.EvalTargetOutputData{EvalTargetUsage: &entity.EvalTargetUsage{OutputTokens: 20}},
+			want:       "20",
+		},
+		{
+			name:       "total tokens",
+			columnName: consts.ReportColumnNameEvalTargetTotalTokens,
+			data:       &entity.EvalTargetOutputData{EvalTargetUsage: &entity.EvalTargetUsage{TotalTokens: 30}},
+			want:       "30",
+		},
+		{
+			name:       "default text field",
+			columnName: "custom_col",
+			data: &entity.EvalTargetOutputData{
+				OutputFields: map[string]*entity.Content{"custom_col": textContent},
+			},
+			want: "text-value",
+		},
+		{
+			name:       "default missing field",
+			columnName: "missing_col",
+			data: &entity.EvalTargetOutputData{
+				OutputFields: map[string]*entity.Content{},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := helper.buildColumnEvalTargetContent(ctx, tt.columnName, tt.data)
+			assert.Equal(t, tt.want, got)
+			assert.Nil(t, err)
+		})
+	}
+}
+
 func newTestExptResultExportService(ctrl *gomock.Controller) *ExptResultExportService {
 	return &ExptResultExportService{
 		txDB:               dbMocks.NewMockProvider(ctrl),
@@ -38,6 +110,7 @@ func newTestExptResultExportService(ctrl *gomock.Controller) *ExptResultExportSe
 		fileClient:         fileserverMocks.NewMockObjectStorage(ctrl),
 		configer:           componentMocks.NewMockIConfiger(ctrl),
 		benefitService:     benefitMocks.NewMockIBenefitService(ctrl),
+		urlProcessor:       NewDefaultURLProcessor(),
 	}
 }
 
@@ -521,7 +594,13 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 				}
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(colEvaluators, nil, colEvalSetFields, exptColAnnotation, itemResults, int64(len(itemResults)), nil).
+					Return(&entity.MGetExperimentReportResult{
+						ColumnEvaluators:      colEvaluators,
+						ColumnEvalSetFields:   colEvalSetFields,
+						ExptColumnAnnotations: exptColAnnotation,
+						ItemResults:           itemResults,
+						Total:                 int64(len(itemResults)),
+					}, nil).
 					Times(1)
 
 				svc.fileClient.(*fileserverMocks.MockObjectStorage).EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -537,7 +616,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 				// MGetExperimentResult返回错误
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(nil, nil, nil, nil, nil, int64(0), fmt.Errorf("MGetExperimentResult error"))
+					Return(nil, fmt.Errorf("MGetExperimentResult error"))
 			},
 			wantErr: true,
 		},
@@ -558,13 +637,25 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 				// 第一次调用返回第一页数据
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(colEvaluators, nil, colEvalSetFields, exptColAnnotation, itemResults1, int64(150), nil).
+					Return(&entity.MGetExperimentReportResult{
+						ColumnEvaluators:      colEvaluators,
+						ColumnEvalSetFields:   colEvalSetFields,
+						ExptColumnAnnotations: exptColAnnotation,
+						ItemResults:           itemResults1,
+						Total:                 int64(150),
+					}, nil).
 					Times(1)
 
 				// 第二次调用返回第二页数据
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(colEvaluators, nil, colEvalSetFields, exptColAnnotation, itemResults2, int64(150), nil).
+					Return(&entity.MGetExperimentReportResult{
+						ColumnEvaluators:      colEvaluators,
+						ColumnEvalSetFields:   colEvalSetFields,
+						ExptColumnAnnotations: exptColAnnotation,
+						ItemResults:           itemResults2,
+						Total:                 int64(150),
+					}, nil).
 					Times(1)
 
 				svc.fileClient.(*fileserverMocks.MockObjectStorage).EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -585,7 +676,13 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(colEvaluators, nil, colEvalSetFields, exptColAnnotation, itemResults, int64(1), nil).
+					Return(&entity.MGetExperimentReportResult{
+						ColumnEvaluators:      colEvaluators,
+						ColumnEvalSetFields:   colEvalSetFields,
+						ExptColumnAnnotations: exptColAnnotation,
+						ItemResults:           itemResults,
+						Total:                 int64(1),
+					}, nil).
 					Times(1)
 
 				svc.fileClient.(*fileserverMocks.MockObjectStorage).EXPECT().
@@ -687,7 +784,13 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(colEvaluators, nil, colEvalSetFields, exptColAnnotation, itemResults, int64(1), nil).
+					Return(&entity.MGetExperimentReportResult{
+						ColumnEvaluators:      colEvaluators,
+						ColumnEvalSetFields:   colEvalSetFields,
+						ExptColumnAnnotations: exptColAnnotation,
+						ItemResults:           itemResults,
+						Total:                 int64(1),
+					}, nil).
 					Times(1)
 
 				svc.fileClient.(*fileserverMocks.MockObjectStorage).EXPECT().
@@ -717,7 +820,7 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 				// Mock DoExportCSV失败
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(nil, nil, nil, nil, nil, int64(0), fmt.Errorf("export failed")).
+					Return(nil, fmt.Errorf("export failed")).
 					Times(1)
 
 				// Mock GetErrCtrl
@@ -754,7 +857,13 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(colEvaluators, nil, colEvalSetFields, exptColAnnotation, itemResults, int64(1), nil).
+					Return(&entity.MGetExperimentReportResult{
+						ColumnEvaluators:      colEvaluators,
+						ColumnEvalSetFields:   colEvalSetFields,
+						ExptColumnAnnotations: exptColAnnotation,
+						ItemResults:           itemResults,
+						Total:                 int64(1),
+					}, nil).
 					Times(1)
 
 				svc.fileClient.(*fileserverMocks.MockObjectStorage).EXPECT().
@@ -833,6 +942,7 @@ func TestNewExptResultExportService(t *testing.T) {
 	mockFileClient := fileserverMocks.NewMockObjectStorage(ctrl)
 	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
 	mockBenefit := benefitMocks.NewMockIBenefitService(ctrl)
+	urlProcessor := NewDefaultURLProcessor()
 	svc := NewExptResultExportService(
 		mockTxDB,
 		mockRepo,
@@ -843,6 +953,7 @@ func TestNewExptResultExportService(t *testing.T) {
 		mockFileClient,
 		mockConfiger,
 		mockBenefit,
+		urlProcessor,
 	)
 
 	impl, ok := svc.(*ExptResultExportService)

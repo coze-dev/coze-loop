@@ -55,6 +55,21 @@ func (mr *MockITenantProviderMockRecorder) GetIngestTenant(ctx, spans any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIngestTenant", reflect.TypeOf((*MockITenantProvider)(nil).GetIngestTenant), ctx, spans)
 }
 
+// GetMetricTenantsByPlatformType mocks base method.
+func (m *MockITenantProvider) GetMetricTenantsByPlatformType(ctx context.Context, platformType loop_span.PlatformType) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetricTenantsByPlatformType", ctx, platformType)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMetricTenantsByPlatformType indicates an expected call of GetMetricTenantsByPlatformType.
+func (mr *MockITenantProviderMockRecorder) GetMetricTenantsByPlatformType(ctx, platformType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricTenantsByPlatformType", reflect.TypeOf((*MockITenantProvider)(nil).GetMetricTenantsByPlatformType), ctx, platformType)
+}
+
 // GetOAPIQueryTenants mocks base method.
 func (m *MockITenantProvider) GetOAPIQueryTenants(ctx context.Context, platformType loop_span.PlatformType) []string {
 	m.ctrl.T.Helper()

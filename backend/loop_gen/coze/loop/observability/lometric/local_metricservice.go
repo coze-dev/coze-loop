@@ -64,6 +64,27 @@ func (l *LocalMetricService) GetDrillDownValues(ctx context.Context, Req *metric
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalMetricService) TraverseMetrics(ctx context.Context, Req *metric.TraverseMetricsRequest, callOptions ...callopt.Option) (*metric.TraverseMetricsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*metric.MetricServiceTraverseMetricsArgs)
+		result := out.(*metric.MetricServiceTraverseMetricsResult)
+		resp, err := l.impl.TraverseMetrics(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &metric.MetricServiceTraverseMetricsArgs{Req: Req}
+	result := &metric.MetricServiceTraverseMetricsResult{}
+	ctx = l.injectRPCInfo(ctx, "TraverseMetrics")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalMetricService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

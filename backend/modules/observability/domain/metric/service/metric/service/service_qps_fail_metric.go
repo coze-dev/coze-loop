@@ -5,9 +5,10 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
+	consts "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/const"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 )
@@ -27,17 +28,7 @@ func (m *ServiceQPSFailMetric) Source() entity.MetricSource {
 }
 
 func (m *ServiceQPSFailMetric) Expression(granularity entity.MetricGranularity) *entity.Expression {
-	denominator := entity.GranularityToSecond(granularity)
-	expression := fmt.Sprintf("countIf(1, %%s != 0)/%d", denominator)
-	return &entity.Expression{
-		Expression: expression,
-		Fields: []*loop_span.FilterField{
-			{
-				FieldName: loop_span.SpanFieldStatusCode,
-				FieldType: loop_span.FieldTypeLong,
-			},
-		},
-	}
+	return &entity.Expression{}
 }
 
 func (m *ServiceQPSFailMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
@@ -46,6 +37,21 @@ func (m *ServiceQPSFailMetric) Where(ctx context.Context, filter span_filter.Fil
 
 func (m *ServiceQPSFailMetric) GroupBy() []*entity.Dimension {
 	return []*entity.Dimension{}
+}
+
+func (m *ServiceQPSFailMetric) GetMetrics() []entity.IMetricDefinition {
+	return []entity.IMetricDefinition{
+		wrapper.NewTimeSeriesWrapper().Wrap(NewServiceTraceErrorCountMetric()),
+		consts.NewConstSecondMetric(),
+	}
+}
+
+func (m *ServiceQPSFailMetric) Operator() entity.MetricOperator {
+	return entity.MetricOperatorDivide
+}
+
+func (m *ServiceQPSFailMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewServiceQPSFailMetric() entity.IMetricDefinition {

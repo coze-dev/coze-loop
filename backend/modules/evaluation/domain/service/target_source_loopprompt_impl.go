@@ -155,6 +155,7 @@ func (t *PromptSourceEvalTargetServiceImpl) Execute(ctx context.Context, spaceID
 		evaluatorOutputData.EvalTargetUsage = &entity.EvalTargetUsage{
 			InputTokens:  executePromptResult.TokenUsage.InputTokens,
 			OutputTokens: executePromptResult.TokenUsage.OutputTokens,
+			TotalTokens:  executePromptResult.TokenUsage.InputTokens + executePromptResult.TokenUsage.OutputTokens,
 		}
 	}
 

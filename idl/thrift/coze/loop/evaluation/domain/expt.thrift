@@ -159,6 +159,13 @@ struct ExptColumnEvalTarget {
     2: optional list<ColumnEvalTarget> column_eval_targets
 }
 
+const string ColumnEvalTargetName_ActualOutput = "actual_output"
+const string ColumnEvalTargetName_Trajectory = "trajectory"
+const string ColumnEvalTargetName_EvalTargetTotalLatency = "eval_target_total_latency"
+const string ColumnEvalTargetName_EvaluatorInputTokens = "eval_target_input_tokens"
+const string ColumnEvalTargetName_EvaluatorOutputTokens = "eval_target_output_tokens"
+const string ColumnEvalTargetName_EvaluatorTotalTokens = "eval_target_total_tokens"
+
 struct ColumnEvalTarget {
     1: optional string name
     2: optional string description
@@ -181,6 +188,8 @@ struct ItemResult {
     2: optional list<TurnResult> turn_results
     3: optional ItemSystemInfo system_info
     4: optional i64 item_index (api.js_conv='true', go.tag='json:"item_index"')
+
+    5: optional map<string, string> ext
 }
 
 // 行级结果 可能包含多个实验
@@ -314,6 +323,11 @@ enum FieldType {
     AnnotationScore = 49 // 使用二级key, field_key为tag_key_id, value为score
     AnnotationText = 50 // 使用二级key, field_key为tag_key_id, value为文本
     AnnotationCategorical = 51  // 使用二级key, field_key为tag_key_id, value为tag_value_id
+
+    TotalLatency = 60 // 目前使用固定key：total_latency
+    InputTokens = 61 // 目前使用固定key：input_tokens
+    OutputTokens = 62 // 目前使用固定key：output_tokens
+    TotalTokens = 63 // 目前使用固定key：total_tokens
 }
 
 // 字段过滤器
@@ -361,6 +375,12 @@ struct ExptAggregateResult {
     2: optional map<i64, EvaluatorAggregateResult> evaluator_results (go.tag = 'json:"evaluator_results"')
     3: optional ExptAggregateCalculateStatus status
     4: optional map<i64, AnnotationAggregateResult> annotation_results (go.tag = 'json:"annotation_results"')    // tag_key_id -> result
+}
+
+struct EvalTargetAggregateResult {
+    1: required i64 target_id (api.js_conv = 'true', go.tag = 'json:"target_id"')
+    2: optional list<AggregatorResult> aggregator_results
+    3: optional string name
 }
 
 // 评估器版本粒度聚合结果

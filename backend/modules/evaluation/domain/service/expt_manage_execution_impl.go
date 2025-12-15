@@ -40,7 +40,7 @@ func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, 
 		e.CheckConnector,
 	}
 
-	if expt.ExptType == entity.ExptType_Offline {
+	if expt.ExptType != entity.ExptType_Online {
 		if opt.CheckBenefit {
 			checkers = append(checkers, e.CheckBenefit)
 		}
@@ -57,20 +57,18 @@ func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, 
 
 func (e *ExptMangerImpl) CheckEvalSet(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
 	switch expt.ExptType {
-	case entity.ExptType_Offline:
+	case entity.ExptType_Online:
+		if expt.EvalSet == nil {
+			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with empty EvalSet: %d", expt.EvalSetID)))
+		}
+	default:
 		if expt.EvalSetVersionID == 0 || expt.EvalSet == nil || expt.EvalSet.EvaluationSetVersion == nil {
 			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with invalid EvalSetVersion %d", expt.EvalSetVersionID)))
 		}
 		if expt.EvalSet.EvaluationSetVersion.ItemCount <= 0 {
 			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with empty EvalSetVersion %d", expt.EvalSetVersionID)))
 		}
-	case entity.ExptType_Online:
-		if expt.EvalSet == nil {
-			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with empty EvalSet: %d", expt.EvalSetID)))
-		}
-	default:
 	}
-
 	return nil
 }
 
@@ -120,8 +118,7 @@ func (e *ExptMangerImpl) CheckConnector(ctx context.Context, expt *entity.Experi
 }
 
 func (e *ExptMangerImpl) checkTargetConnector(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
-	if expt.Target == nil ||
-		expt.Target.EvalTargetType == entity.EvalTargetTypeLoopTrace {
+	if expt.Target == nil || expt.ExptType == entity.ExptType_Online {
 		return nil
 	}
 
@@ -256,6 +253,7 @@ func (e *ExptMangerImpl) CheckBenefit(ctx context.Context, expt *entity.Experime
 	}
 
 	if result.IsFreeEvaluate != nil && *result.IsFreeEvaluate {
+		expt.CreditCost = entity.CreditCostFree
 		if err := e.exptRepo.Update(ctx, &entity.Experiment{
 			ID:         expt.ID,
 			SpaceID:    expt.SpaceID,
@@ -643,6 +641,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 			ItemID:    item.ItemID,
 			ItemIdx:   itemIdx,
 			Status:    entity.ItemRunState_Queueing,
+			Ext:       invokeExptReq.Ext,
 		}
 		eirs = append(eirs, eir)
 		itemIdx++

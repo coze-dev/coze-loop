@@ -50,6 +50,12 @@ func (m *MinWrapper) GroupBy() []*entity.Dimension {
 	return m.originalMetric.GroupBy()
 }
 
+func (m *MinWrapper) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeMin,
+	}
+}
+
 func NewMinWrapper() entity.IMetricWrapper {
 	return &MinWrapper{}
 }

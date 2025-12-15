@@ -50,6 +50,12 @@ func (a *AvgWrapper) GroupBy() []*entity.Dimension {
 	return a.originalMetric.GroupBy()
 }
 
+func (a *AvgWrapper) OExpression() *entity.OExpression {
+	return &entity.OExpression{
+		AggrType: entity.MetricOfflineAggrTypeAvg,
+	}
+}
+
 func NewAvgWrapper() entity.IMetricWrapper {
 	return &AvgWrapper{}
 }

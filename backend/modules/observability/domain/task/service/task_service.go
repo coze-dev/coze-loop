@@ -13,6 +13,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -83,6 +85,8 @@ func NewTaskServiceImpl(
 	idGenerator idgen.IIDGenerator,
 	backfillProducer mq.IBackfillProducer,
 	taskProcessor *processor.TaskProcessor,
+	storageProvider storage.IStorageProvider,
+	tenantProvider tenant.ITenantProvider,
 	buildHelper traceservice.TraceFilterProcessorBuilder,
 ) (ITaskService, error) {
 	return &TaskServiceImpl{
@@ -90,6 +94,8 @@ func NewTaskServiceImpl(
 		idGenerator:      idGenerator,
 		backfillProducer: backfillProducer,
 		taskProcessor:    *taskProcessor,
+		storageProvider:  storageProvider,
+		tenantProvider:   tenantProvider,
 		buildHelper:      buildHelper,
 	}, nil
 }
@@ -99,10 +105,22 @@ type TaskServiceImpl struct {
 	idGenerator      idgen.IIDGenerator
 	backfillProducer mq.IBackfillProducer
 	taskProcessor    processor.TaskProcessor
+	storageProvider  storage.IStorageProvider
+	tenantProvider   tenant.ITenantProvider
 	buildHelper      traceservice.TraceFilterProcessorBuilder
 }
 
 func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (resp *CreateTaskResp, err error) {
+	// storage准备
+	tenants, err := t.tenantProvider.GetTenantsByPlatformType(ctx, req.Task.SpanFilter.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+	if err = t.storageProvider.PrepareStorageForTask(ctx, strconv.FormatInt(req.Task.WorkspaceID, 10), tenants); err != nil {
+		logs.CtxError(ctx, "PrepareStorageForTask err:%v", err)
+		return nil, err
+	}
+
 	taskDO := req.Task
 	// 校验task name是否存在
 	checkResp, err := t.CheckTaskName(ctx, &CheckTaskNameReq{
@@ -133,6 +151,7 @@ func (t *TaskServiceImpl) CreateTask(ctx context.Context, req *CreateTaskReq) (r
 	if err != nil {
 		return nil, err
 	}
+
 	// 创建任务的数据准备
 	// 数据回流任务——创建/更新输出数据集
 	// 自动评测历史回溯——创建空壳子

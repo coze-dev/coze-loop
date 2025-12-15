@@ -1130,7 +1130,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 					FilterPromptTypes: []entity.PromptType{prompt.PromptTypeNormal},
 					PageNum:           1,
 					PageSize:          10,
-					OrderBy:           mysql.ListPromptBasicOrderByID,
+					OrderBy:           mysql.ListPromptBasicOrderByCreatedAt,
 					Asc:               false,
 				}).Return(&repo.ListPromptResult{
 					Total: 1,
@@ -1233,7 +1233,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 					FilterPromptTypes: []entity.PromptType{entity.PromptTypeNormal},
 					PageNum:           1,
 					PageSize:          10,
-					OrderBy:           mysql.ListPromptBasicOrderByID,
+					OrderBy:           mysql.ListPromptBasicOrderByCreatedAt,
 					Asc:               false,
 				}).Return(&repo.ListPromptResult{
 					Total: 2,
@@ -1366,7 +1366,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 					FilterPromptTypes: []entity.PromptType{entity.PromptTypeNormal},
 					PageNum:           1,
 					PageSize:          10,
-					OrderBy:           mysql.ListPromptBasicOrderByID,
+					OrderBy:           mysql.ListPromptBasicOrderByCreatedAt,
 					Asc:               false,
 				}).Return(&repo.ListPromptResult{
 					Total: 1,
@@ -1510,7 +1510,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 					FilterPromptTypes: []entity.PromptType{entity.PromptTypeNormal},
 					PageNum:           1,
 					PageSize:          10,
-					OrderBy:           mysql.ListPromptBasicOrderByID,
+					OrderBy:           mysql.ListPromptBasicOrderByCreatedAt,
 					Asc:               false,
 				}).Return(nil, errorx.New("list prompt error"))
 
@@ -1543,7 +1543,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 					FilterPromptTypes: []entity.PromptType{entity.PromptTypeSnippet},
 					PageNum:           1,
 					PageSize:          10,
-					OrderBy:           mysql.ListPromptBasicOrderByID,
+					OrderBy:           mysql.ListPromptBasicOrderByCreatedAt,
 					Asc:               false,
 				}).Return(&repo.ListPromptResult{
 					Total: 1,
@@ -2869,7 +2869,7 @@ func TestPromptManageApplicationImpl_listPromptOrderBy(t *testing.T) {
 		arg  *manage.ListPromptOrderBy
 		exp  int
 	}{
-		{"nil", nil, mysql.ListPromptBasicOrderByID},
+		{"nil", nil, mysql.ListPromptBasicOrderByCreatedAt},
 		{"created", ptr.Of(manage.ListPromptOrderByCreatedAt), mysql.ListPromptBasicOrderByCreatedAt},
 		{"committed", ptr.Of(manage.ListPromptOrderByCommitedAt), mysql.ListPromptBasicOrderByLatestCommittedAt},
 		{"default", ptr.Of(manage.ListPromptOrderBy("unknown")), mysql.ListPromptBasicOrderByID},

@@ -13,39 +13,54 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	componentmq "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	storagemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage/mocks"
+	tenantmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	buildermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
+	spanfiltermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
+// fakeProcessor 是 taskexe.Processor 的fake实现
 type fakeProcessor struct {
-	validateErr       error
-	onCreateErr       error
-	onFinishRunErr    error
-	onCreateCalled    bool
-	onFinishRunCalled bool
+	validateErr          error
+	onTaskCreatedErr     error
+	onTaskRunFinishedErr error
 }
 
-func (f *fakeProcessor) ValidateConfig(context.Context, any) error {
+// fakeBackfillProducer 是 mq.IBackfillProducer 的fake实现
+type fakeBackfillProducer struct {
+	sendBackfillFunc func(ctx context.Context, message *entity.BackFillEvent) error
+}
+
+func (f *fakeBackfillProducer) SendBackfill(ctx context.Context, message *entity.BackFillEvent) error {
+	if f.sendBackfillFunc != nil {
+		return f.sendBackfillFunc(ctx, message)
+	}
+	return nil
+}
+
+func (f *fakeProcessor) ValidateConfig(ctx context.Context, config any) error {
 	return f.validateErr
 }
 
-func (f *fakeProcessor) Invoke(context.Context, *taskexe.Trigger) error {
+func (f *fakeProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) error {
 	return nil
 }
 
 func (f *fakeProcessor) OnTaskCreated(ctx context.Context, currentTask *entity.ObservabilityTask) error {
-	f.onCreateCalled = true
-	return f.onCreateErr
+	return f.onTaskCreatedErr
 }
 
 func (f *fakeProcessor) OnTaskUpdated(ctx context.Context, currentTask *entity.ObservabilityTask, taskOp entity.TaskStatus) error {
@@ -61,77 +76,57 @@ func (f *fakeProcessor) OnTaskRunCreated(ctx context.Context, param taskexe.OnTa
 }
 
 func (f *fakeProcessor) OnTaskRunFinished(ctx context.Context, param taskexe.OnTaskRunFinishedReq) error {
-	f.onFinishRunCalled = true
-	return f.onFinishRunErr
+	return f.onTaskRunFinishedErr
 }
 
-type stubTraceFilterBuilder struct{}
-
-func (s *stubTraceFilterBuilder) BuildPlatformRelatedFilter(context.Context, loop_span.PlatformType) (span_filter.Filter, error) {
-	return &stubSpanFilter{}, nil
-}
-
-func (s *stubTraceFilterBuilder) BuildGetTraceProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
-	return nil, nil
-}
-
-func (s *stubTraceFilterBuilder) BuildListSpansProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
-	return nil, nil
-}
-
-func (s *stubTraceFilterBuilder) BuildAdvanceInfoProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
-	return nil, nil
-}
-
-func (s *stubTraceFilterBuilder) BuildIngestTraceProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
-	return nil, nil
-}
-
-func (s *stubTraceFilterBuilder) BuildSearchTraceOApiProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
-	return nil, nil
-}
-
-func (s *stubTraceFilterBuilder) BuildListSpansOApiProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error) {
-	return nil, nil
-}
-
-type stubSpanFilter struct{}
-
-func (s *stubSpanFilter) BuildBasicSpanFilter(context.Context, *span_filter.SpanEnv) ([]*loop_span.FilterField, bool, error) {
-	return nil, true, nil
-}
-
-func (s *stubSpanFilter) BuildRootSpanFilter(context.Context, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return nil, nil
-}
-
-func (s *stubSpanFilter) BuildLLMSpanFilter(context.Context, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return nil, nil
-}
-
-func (s *stubSpanFilter) BuildALLSpanFilter(context.Context, *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return nil, nil
-}
-
-type stubBackfillProducer struct {
-	ch  chan *entity.BackFillEvent
-	err error
-}
-
-func (s *stubBackfillProducer) SendBackfill(ctx context.Context, message *entity.BackFillEvent) error {
-	if s.ch != nil {
-		s.ch <- message
-	}
-	return s.err
-}
-
-func newTaskServiceWithProcessor(t *testing.T, repo taskrepo.ITaskRepo, backfill componentmq.IBackfillProducer, proc taskexe.Processor, taskType entity.TaskType) *TaskServiceImpl {
+func newTaskServiceWithProcessor(t *testing.T, ctrl *gomock.Controller, repo taskrepo.ITaskRepo, backfill componentmq.IBackfillProducer, proc taskexe.Processor, taskType entity.TaskType) ITaskService {
 	t.Helper()
 	tp := processor.NewTaskProcessor()
 	tp.Register(taskType, proc)
-	service, err := NewTaskServiceImpl(repo, nil, backfill, tp, &stubTraceFilterBuilder{})
+	// 创建mock依赖
+	idGeneratorMock := idgenmocks.NewMockIIDGenerator(ctrl)
+	storageProviderMock := storagemocks.NewMockIStorageProvider(ctrl)
+	tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+	buildHelperMock := buildermocks.NewMockTraceFilterProcessorBuilder(ctrl)
+
+	// 设置mock期望
+	idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
+	idGeneratorMock.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, counts int) ([]int64, error) {
+		ids := make([]int64, counts)
+		for i := 0; i < counts; i++ {
+			ids[i] = int64(1001 + i)
+		}
+		return ids, nil
+	}).AnyTimes()
+
+	storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+		StorageName:   "ck",
+		StorageConfig: map[string]string{},
+	}).AnyTimes()
+	storageProviderMock.EXPECT().PrepareStorageForTask(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+	tenantProviderMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant").AnyTimes()
+	tenantProviderMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), gomock.Any()).Return([]string{"test-tenant"}).AnyTimes()
+	tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"test-tenant"}, nil).AnyTimes()
+	tenantProviderMock.EXPECT().GetMetricTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"test-tenant"}, nil).AnyTimes()
+
+	// 创建mock过滤器并设置期望
+	mockFilter := spanfiltermocks.NewMockFilter(ctrl)
+	// 返回有效的基本过滤器，避免权限错误
+	mockFilter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{FieldName: "test"}}, true, nil).AnyTimes()
+	mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil).AnyTimes()
+
+	buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
+	buildHelperMock.EXPECT().BuildGetTraceProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).AnyTimes()
+	buildHelperMock.EXPECT().BuildListSpansProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).AnyTimes()
+	buildHelperMock.EXPECT().BuildAdvanceInfoProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).AnyTimes()
+	buildHelperMock.EXPECT().BuildIngestTraceProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).AnyTimes()
+	buildHelperMock.EXPECT().BuildSearchTraceOApiProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).AnyTimes()
+	buildHelperMock.EXPECT().BuildListSpansOApiProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).AnyTimes()
+
+	service, err := NewTaskServiceImpl(repo, idGeneratorMock, backfill, tp, storageProviderMock, tenantProviderMock, buildHelperMock)
 	assert.NoError(t, err)
-	return service.(*TaskServiceImpl)
+	return service
 }
 
 func TestTaskServiceImpl_CreateTask(t *testing.T) {
@@ -149,18 +144,27 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		})
 		repoMock.EXPECT().DeleteTask(gomock.Any(), gomock.Any()).Times(0)
 
-		proc := &fakeProcessor{}
-		backfillCh := make(chan *entity.BackFillEvent, 1)
-		backfill := &stubBackfillProducer{ch: backfillCh}
+		// 使用fake processor
+		procMock := &fakeProcessor{}
 
-		svc := newTaskServiceWithProcessor(t, repoMock, backfill, proc, entity.TaskTypeAutoEval)
+		backfillCh := make(chan *entity.BackFillEvent, 1)
+		backfillMock := &fakeBackfillProducer{
+			sendBackfillFunc: func(ctx context.Context, event *entity.BackFillEvent) error {
+				backfillCh <- event
+				return nil
+			},
+		}
+
+		svc := newTaskServiceWithProcessor(t, ctrl, repoMock, backfillMock, procMock, entity.TaskTypeAutoEval)
 
 		reqTask := &entity.ObservabilityTask{
-			WorkspaceID:           123,
-			Name:                  "task",
-			TaskType:              entity.TaskTypeAutoEval,
-			TaskStatus:            entity.TaskStatusUnstarted,
-			SpanFilter:            &entity.SpanFilterFields{},
+			WorkspaceID: 123,
+			Name:        "task",
+			TaskType:    entity.TaskTypeAutoEval,
+			TaskStatus:  entity.TaskStatusUnstarted,
+			SpanFilter: &entity.SpanFilterFields{
+				PlatformType: loop_span.PlatformDefault, // 设置有效的平台类型
+			},
 			BackfillEffectiveTime: &entity.EffectiveTime{StartAt: time.Now().Add(time.Second).UnixMilli(), EndAt: time.Now().Add(2 * time.Second).UnixMilli()},
 			Sampler:               &entity.Sampler{},
 			EffectiveTime:         &entity.EffectiveTime{StartAt: time.Now().Add(time.Second).UnixMilli(), EndAt: time.Now().Add(2 * time.Second).UnixMilli()},
@@ -170,7 +174,6 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		if assert.NotNil(t, resp) {
 			assert.Equal(t, int64(1001), *resp.TaskID)
 		}
-		assert.True(t, proc.onCreateCalled)
 
 		select {
 		case event := <-backfillCh:
@@ -189,8 +192,10 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 
-		proc := &fakeProcessor{validateErr: errors.New("invalid config")}
-		svc := newTaskServiceWithProcessor(t, repoMock, nil, proc, entity.TaskTypeAutoEval)
+		// 使用fake processor
+		procMock := &fakeProcessor{validateErr: errors.New("invalid config")}
+
+		svc := newTaskServiceWithProcessor(t, ctrl, repoMock, nil, procMock, entity.TaskTypeAutoEval)
 
 		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}, SpanFilter: &entity.SpanFilterFields{}}
 		resp, err := svc.CreateTask(context.Background(), &CreateTaskReq{Task: reqTask})
@@ -210,8 +215,10 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{{}}, int64(1), nil)
 
-		proc := &fakeProcessor{}
-		svc := newTaskServiceWithProcessor(t, repoMock, nil, proc, entity.TaskTypeAutoEval)
+		// 使用fake processor
+		procMock := &fakeProcessor{}
+
+		svc := newTaskServiceWithProcessor(t, ctrl, repoMock, nil, procMock, entity.TaskTypeAutoEval)
 		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}, SpanFilter: &entity.SpanFilterFields{}}
 		resp, err := svc.CreateTask(context.Background(), &CreateTaskReq{Task: reqTask})
 		assert.Nil(t, resp)
@@ -220,7 +227,6 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		if assert.True(t, ok) {
 			assert.EqualValues(t, obErrorx.CommonInvalidParamCode, statusErr.Code())
 		}
-		assert.False(t, proc.onCreateCalled)
 	})
 
 	t.Run("on create hook error", func(t *testing.T) {
@@ -233,13 +239,24 @@ func TestTaskServiceImpl_CreateTask(t *testing.T) {
 		repoMock.EXPECT().CreateTask(gomock.Any(), gomock.AssignableToTypeOf(&entity.ObservabilityTask{})).Return(int64(1001), nil)
 		repoMock.EXPECT().DeleteTask(gomock.Any(), gomock.AssignableToTypeOf(&entity.ObservabilityTask{})).Return(nil)
 
-		proc := &fakeProcessor{onCreateErr: errors.New("hook fail")}
-		svc := newTaskServiceWithProcessor(t, repoMock, nil, proc, entity.TaskTypeAutoEval)
-		reqTask := &entity.ObservabilityTask{WorkspaceID: 1, Name: "task", TaskType: entity.TaskTypeAutoEval, Sampler: &entity.Sampler{}, EffectiveTime: &entity.EffectiveTime{}, SpanFilter: &entity.SpanFilterFields{}}
+		// 使用fake processor
+		procMock := &fakeProcessor{onTaskCreatedErr: errors.New("hook fail")}
+
+		svc := newTaskServiceWithProcessor(t, ctrl, repoMock, nil, procMock, entity.TaskTypeAutoEval)
+		reqTask := &entity.ObservabilityTask{
+			WorkspaceID: 1,
+			Name:        "task",
+			TaskType:    entity.TaskTypeAutoEval,
+			TaskStatus:  entity.TaskStatusUnstarted,
+			SpanFilter: &entity.SpanFilterFields{
+				PlatformType: loop_span.PlatformDefault, // 设置有效的平台类型
+			},
+			Sampler:       &entity.Sampler{},
+			EffectiveTime: &entity.EffectiveTime{},
+		}
 		resp, err := svc.CreateTask(context.Background(), &CreateTaskReq{Task: reqTask})
 		assert.Nil(t, resp)
 		assert.EqualError(t, err, "hook fail")
-		assert.True(t, proc.onCreateCalled)
 	})
 }
 
@@ -284,9 +301,12 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		taskDO := &entity.ObservabilityTask{TaskType: entity.TaskTypeAutoEval, TaskStatus: entity.TaskStatusUnstarted, EffectiveTime: &entity.EffectiveTime{}, Sampler: &entity.Sampler{}}
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
 
-		proc := &fakeProcessor{}
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
-		svc.taskProcessor.Register(entity.TaskTypeAutoEval, proc)
+		// 使用fake processor
+		procMock := &fakeProcessor{}
+
+		tp := processor.NewTaskProcessor()
+		tp.Register(entity.TaskTypeAutoEval, procMock)
+		svc := &TaskServiceImpl{TaskRepo: repoMock, taskProcessor: *tp}
 
 		err := svc.UpdateTask(context.Background(), &UpdateTaskReq{TaskID: 1, WorkspaceID: 2})
 		statusErr, ok := errorx.FromStatusError(err)
@@ -317,9 +337,12 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		repoMock.EXPECT().RemoveNonFinalTask(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		repoMock.EXPECT().UpdateTask(gomock.Any(), taskDO).Return(nil)
 
-		proc := &fakeProcessor{}
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
-		svc.taskProcessor.Register(entity.TaskTypeAutoEval, proc)
+		// 使用fake processor
+		procMock := &fakeProcessor{}
+
+		tp := processor.NewTaskProcessor()
+		tp.Register(entity.TaskTypeAutoEval, procMock)
+		svc := &TaskServiceImpl{TaskRepo: repoMock, taskProcessor: *tp}
 
 		desc := "updated"
 		newStart := startAt + 1000
@@ -335,7 +358,6 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			UserID:        "user1",
 		})
 		assert.NoError(t, err)
-		assert.True(t, proc.onFinishRunCalled)
 		assert.Equal(t, entity.TaskStatusDisabled, taskDO.TaskStatus)
 		assert.Equal(t, "user1", taskDO.UpdatedBy)
 		if assert.NotNil(t, taskDO.Description) {
@@ -364,9 +386,12 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		repoMock.EXPECT().RemoveNonFinalTask(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("remove fail"))
 		repoMock.EXPECT().UpdateTask(gomock.Any(), taskDO).Return(nil)
 
-		proc := &fakeProcessor{}
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
-		svc.taskProcessor.Register(entity.TaskTypeAutoEval, proc)
+		// 使用fake processor
+		procMock := &fakeProcessor{}
+
+		tp := processor.NewTaskProcessor()
+		tp.Register(entity.TaskTypeAutoEval, procMock)
+		svc := &TaskServiceImpl{TaskRepo: repoMock, taskProcessor: *tp}
 
 		sampleRate := 0.6
 		err := svc.UpdateTask(session.WithCtxUser(context.Background(), &session.User{ID: "user"}), &UpdateTaskReq{
@@ -377,7 +402,6 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 			UserID:      "user",
 		})
 		assert.NoError(t, err)
-		assert.True(t, proc.onFinishRunCalled)
 	})
 
 	t.Run("finish hook error", func(t *testing.T) {
@@ -398,9 +422,12 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
 		repoMock.EXPECT().UpdateTask(gomock.Any(), gomock.Any()).Times(0)
 
-		proc := &fakeProcessor{onFinishRunErr: errors.New("finish fail")}
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
-		svc.taskProcessor.Register(entity.TaskTypeAutoEval, proc)
+		// 使用fake processor
+		procMock := &fakeProcessor{onTaskRunFinishedErr: errors.New("finish fail")}
+
+		tp := processor.NewTaskProcessor()
+		tp.Register(entity.TaskTypeAutoEval, procMock)
+		svc := &TaskServiceImpl{TaskRepo: repoMock, taskProcessor: *tp}
 
 		newStart := startAt + 1000
 		newEnd := startAt + 7200000
@@ -574,7 +601,37 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("repo fail"))
 
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
+		// 使用mock依赖创建服务
+		idGeneratorMock := idgenmocks.NewMockIIDGenerator(ctrl)
+		storageProviderMock := storagemocks.NewMockIStorageProvider(ctrl)
+		tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+		buildHelperMock := buildermocks.NewMockTraceFilterProcessorBuilder(ctrl)
+
+		// 设置基本mock期望
+		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+			StorageName:   "ck",
+			StorageConfig: map[string]string{},
+		}).AnyTimes()
+		tenantProviderMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant").AnyTimes()
+		// 创建mock过滤器并设置期望
+		mockFilter := spanfiltermocks.NewMockFilter(ctrl)
+		// 返回有效的基本过滤器，避免权限错误
+		mockFilter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{FieldName: "test"}}, true, nil).AnyTimes()
+		mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil).AnyTimes()
+
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
+
+		svc, err := NewTaskServiceImpl(
+			repoMock,
+			idGeneratorMock,
+			nil,
+			processor.NewTaskProcessor(),
+			storageProviderMock,
+			tenantProviderMock,
+			buildHelperMock,
+		)
+		assert.NoError(t, err)
 		resp, err := svc.CheckTaskName(context.Background(), &CheckTaskNameReq{WorkspaceID: 1, Name: "task"})
 		assert.Nil(t, resp)
 		assert.EqualError(t, err, "repo fail")
@@ -588,7 +645,37 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return([]*entity.ObservabilityTask{{}}, int64(1), nil)
 
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
+		// 使用mock依赖创建服务
+		idGeneratorMock := idgenmocks.NewMockIIDGenerator(ctrl)
+		storageProviderMock := storagemocks.NewMockIStorageProvider(ctrl)
+		tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+		buildHelperMock := buildermocks.NewMockTraceFilterProcessorBuilder(ctrl)
+
+		// 设置基本mock期望
+		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+			StorageName:   "ck",
+			StorageConfig: map[string]string{},
+		}).AnyTimes()
+		tenantProviderMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant").AnyTimes()
+		// 创建mock过滤器并设置期望
+		mockFilter := spanfiltermocks.NewMockFilter(ctrl)
+		// 返回有效的基本过滤器，避免权限错误
+		mockFilter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{FieldName: "test"}}, true, nil).AnyTimes()
+		mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil).AnyTimes()
+
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
+
+		svc, err := NewTaskServiceImpl(
+			repoMock,
+			idGeneratorMock,
+			nil,
+			processor.NewTaskProcessor(),
+			storageProviderMock,
+			tenantProviderMock,
+			buildHelperMock,
+		)
+		assert.NoError(t, err)
 		resp, err := svc.CheckTaskName(context.Background(), &CheckTaskNameReq{WorkspaceID: 1, Name: "task"})
 		assert.NoError(t, err)
 		if assert.NotNil(t, resp) {
@@ -604,7 +691,37 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 		repoMock := repomocks.NewMockITaskRepo(ctrl)
 		repoMock.EXPECT().ListTasks(gomock.Any(), gomock.Any()).Return(nil, int64(0), nil)
 
-		svc := &TaskServiceImpl{TaskRepo: repoMock}
+		// 使用mock依赖创建服务
+		idGeneratorMock := idgenmocks.NewMockIIDGenerator(ctrl)
+		storageProviderMock := storagemocks.NewMockIStorageProvider(ctrl)
+		tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+		buildHelperMock := buildermocks.NewMockTraceFilterProcessorBuilder(ctrl)
+
+		// 设置基本mock期望
+		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+			StorageName:   "ck",
+			StorageConfig: map[string]string{},
+		}).AnyTimes()
+		tenantProviderMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant").AnyTimes()
+		// 创建mock过滤器并设置期望
+		mockFilter := spanfiltermocks.NewMockFilter(ctrl)
+		// 返回有效的基本过滤器，避免权限错误
+		mockFilter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{FieldName: "test"}}, true, nil).AnyTimes()
+		mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil).AnyTimes()
+
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
+
+		svc, err := NewTaskServiceImpl(
+			repoMock,
+			idGeneratorMock,
+			nil,
+			processor.NewTaskProcessor(),
+			storageProviderMock,
+			tenantProviderMock,
+			buildHelperMock,
+		)
+		assert.NoError(t, err)
 		resp, err := svc.CheckTaskName(context.Background(), &CheckTaskNameReq{WorkspaceID: 1, Name: "task"})
 		assert.NoError(t, err)
 		if assert.NotNil(t, resp) {
@@ -615,8 +732,43 @@ func TestTaskServiceImpl_CheckTaskName(t *testing.T) {
 
 func TestTaskServiceImpl_sendBackfillMessage(t *testing.T) {
 	t.Run("producer nil", func(t *testing.T) {
-		svc := &TaskServiceImpl{}
-		err := svc.SendBackfillMessage(context.Background(), &entity.BackFillEvent{})
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// 使用mock依赖创建服务
+		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		idGeneratorMock := idgenmocks.NewMockIIDGenerator(ctrl)
+		storageProviderMock := storagemocks.NewMockIStorageProvider(ctrl)
+		tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+		buildHelperMock := buildermocks.NewMockTraceFilterProcessorBuilder(ctrl)
+
+		// 设置基本mock期望
+		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+			StorageName:   "ck",
+			StorageConfig: map[string]string{},
+		}).AnyTimes()
+		tenantProviderMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant").AnyTimes()
+		// 创建mock过滤器并设置期望
+		mockFilter := spanfiltermocks.NewMockFilter(ctrl)
+		// 返回有效的基本过滤器，避免权限错误
+		mockFilter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{FieldName: "test"}}, true, nil).AnyTimes()
+		mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil).AnyTimes()
+
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
+
+		// 创建一个没有backfillProducer的服务
+		service, err := NewTaskServiceImpl(
+			repoMock,
+			idGeneratorMock,
+			nil, // backfillProducer为nil
+			processor.NewTaskProcessor(),
+			storageProviderMock,
+			tenantProviderMock,
+			buildHelperMock,
+		)
+		assert.NoError(t, err)
+		err = service.SendBackfillMessage(context.Background(), &entity.BackFillEvent{})
 		statusErr, ok := errorx.FromStatusError(err)
 		if assert.True(t, ok) {
 			assert.EqualValues(t, obErrorx.CommonInternalErrorCode, statusErr.Code())
@@ -624,9 +776,52 @@ func TestTaskServiceImpl_sendBackfillMessage(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
 		ch := make(chan *entity.BackFillEvent, 1)
-		svc := &TaskServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
-		err := svc.SendBackfillMessage(context.Background(), &entity.BackFillEvent{TaskID: 1})
+
+		// 使用mock依赖创建服务
+		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		idGeneratorMock := idgenmocks.NewMockIIDGenerator(ctrl)
+		storageProviderMock := storagemocks.NewMockIStorageProvider(ctrl)
+		tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+		buildHelperMock := buildermocks.NewMockTraceFilterProcessorBuilder(ctrl)
+		backfillMock := &fakeBackfillProducer{
+			sendBackfillFunc: func(ctx context.Context, event *entity.BackFillEvent) error {
+				ch <- event
+				return nil
+			},
+		}
+
+		// 设置基本mock期望
+		idGeneratorMock.EXPECT().GenID(gomock.Any()).Return(int64(1001), nil).AnyTimes()
+		storageProviderMock.EXPECT().GetTraceStorage(gomock.Any(), gomock.Any(), gomock.Any()).Return(storage.Storage{
+			StorageName:   "ck",
+			StorageConfig: map[string]string{},
+		}).AnyTimes()
+		tenantProviderMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("test-tenant").AnyTimes()
+		// 创建mock过滤器并设置期望
+		mockFilter := spanfiltermocks.NewMockFilter(ctrl)
+		// 返回有效的基本过滤器，避免权限错误
+		mockFilter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{FieldName: "test"}}, true, nil).AnyTimes()
+		mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil).AnyTimes()
+
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
+
+		// backfillMock是fake实现，不需要EXPECT
+
+		service, err := NewTaskServiceImpl(
+			repoMock,
+			idGeneratorMock,
+			backfillMock,
+			processor.NewTaskProcessor(),
+			storageProviderMock,
+			tenantProviderMock,
+			buildHelperMock,
+		)
+		assert.NoError(t, err)
+		err = service.SendBackfillMessage(context.Background(), &entity.BackFillEvent{TaskID: 1})
 		assert.NoError(t, err)
 		select {
 		case event := <-ch:

@@ -9,28 +9,27 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gopkg/util/logger"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
-	"github.com/coze-dev/coze-loop/backend/pkg/localos"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -44,6 +43,7 @@ type ExptResultExportService struct {
 	fileClient         fileserver.ObjectStorage
 	configer           component.IConfiger
 	benefitService     benefit.IBenefitService
+	urlProcessor       component.IURLProcessor
 }
 
 func NewExptResultExportService(
@@ -56,6 +56,7 @@ func NewExptResultExportService(
 	fileClient fileserver.ObjectStorage,
 	configer component.IConfiger,
 	benefitService benefit.IBenefitService,
+	urlProcessor component.IURLProcessor,
 ) IExptResultExportService {
 	return &ExptResultExportService{
 		repo:               repo,
@@ -67,6 +68,7 @@ func NewExptResultExportService(
 		fileClient:         fileClient,
 		configer:           configer,
 		benefitService:     benefitService,
+		urlProcessor:       urlProcessor,
 	}
 }
 
@@ -147,22 +149,9 @@ func (e ExptResultExportService) GetExptExportRecord(ctx context.Context, spaceI
 		if err != nil {
 			return nil, err
 		}
-
-		unescaped, err := url.QueryUnescape(conv.UnescapeUnicode(signURL))
-		if err != nil {
-			logs.CtxWarn(ctx, "QueryUnescape fail, raw: %v", signURL)
-		} else {
-			signURL = unescaped
-		}
-
-		parsedURL, err := url.Parse(signURL)
-		if err == nil {
-			if parsedURL.Host == localos.GetLocalOSHost() {
-				signURL = fmt.Sprintf("%s?%s", parsedURL.Path, parsedURL.RawQuery)
-			}
-		}
-
+		signURL = e.urlProcessor.ProcessSignURL(ctx, signURL)
 		exportRecord.URL = ptr.Of(signURL)
+		logs.CtxInfo(ctx, "get export record sign url final: %v", signURL)
 	}
 
 	exportRecord.Expired = isExportRecordExpired(exportRecord.StartAt)
@@ -399,7 +388,7 @@ func (e exportCSVHelper) buildColumns(ctx context.Context) ([]string, error) {
 	}
 
 	for _, col := range e.columnsEvalTarget {
-		columns = append(columns, col.Name)
+		columns = append(columns, gcond.If(len(col.DisplayName) > 0, col.DisplayName, col.Name))
 	}
 
 	// colEvaluators
@@ -437,6 +426,24 @@ func getColumnNameEvaluator(evaluatorName, version string) string {
 
 func getColumnNameEvaluatorReason(evaluatorName, version string) string {
 	return fmt.Sprintf("%s<%s>_reason", evaluatorName, version)
+}
+
+func (e *exportCSVHelper) buildColumnEvalTargetContent(ctx context.Context, columnName string, data *entity.EvalTargetOutputData) (string, error) {
+	if data == nil {
+		return "", nil
+	}
+	switch columnName {
+	case consts.ReportColumnNameEvalTargetTotalLatency:
+		return strconv.FormatInt(gptr.Indirect(data.TimeConsumingMS), 10), nil
+	case consts.ReportColumnNameEvalTargetInputTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.InputTokens, 10), nil
+	case consts.ReportColumnNameEvalTargetOutputTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.OutputTokens, 10), nil
+	case consts.ReportColumnNameEvalTargetTotalTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.TotalTokens, 10), nil
+	default:
+		return geDatasetCellOrActualOutputData(ctx, data.OutputFields[columnName])
+	}
 }
 
 func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
@@ -481,13 +488,12 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 			for _, col := range e.columnsEvalTarget {
 				if payload.TargetOutput != nil &&
 					payload.TargetOutput.EvalTargetRecord != nil &&
-					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil &&
-					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields != nil {
-					val, err := geDatasetCellOrActualOutputData(ctx, payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[col.Name])
+					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
+					cont, err := e.buildColumnEvalTargetContent(ctx, col.Name, payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData)
 					if err != nil {
 						return nil, err
 					}
-					rowData = append(rowData, val)
+					rowData = append(rowData, cont)
 				} else {
 					rowData = append(rowData, "")
 				}

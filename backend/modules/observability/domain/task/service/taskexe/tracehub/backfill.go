@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -33,8 +34,6 @@ const (
 // 定时任务+锁
 func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFillEvent) error {
 	// 1. Set the current task context
-	logs.CtxInfo(ctx, "BackFill msg %+v", event)
-
 	var (
 		lockKey    string
 		lockCancel func()
@@ -144,6 +143,7 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 
 	// Build query parameters
 	listParam := &repo.ListSpansParam{
+		WorkSpaceID:        strconv.FormatInt(sub.t.WorkspaceID, 10),
 		Tenants:            tenants,
 		Filters:            h.buildSpanFilters(ctx, sub.t),
 		StartAt:            backfillTime.StartAt,
