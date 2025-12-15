@@ -6,6 +6,7 @@ package processor
 import (
 	"context"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"strconv"
 	"time"
 
@@ -155,6 +156,21 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 	if err != nil {
 		_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
 		_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+		// 实验已失败，终止此轮自动化任务，避免后续 span 继续触发链路
+		if statusErr, ok := errorx.FromStatusError(err); ok {
+			if statusErr.Code() == errno.ExperimentStatusNotAllowedToInvokeCode {
+				logs.CtxWarn(ctx, "[auto_task] experiment already failed (code=%d), terminate task_id=%d", statusErr.Code(), trigger.Task.ID)
+				// 仅置 task run 为终态 因为即使是不循环的任务也可能同时包含 NewData && Backfill
+				err := p.OnTaskRunTerminated(ctx, taskexe.OnTaskRunTerminatedReq{
+					Task:    trigger.Task,
+					TaskRun: trigger.TaskRun,
+				})
+				if err != nil {
+					logs.CtxError(ctx, "Do OnTaskFailed failed, err: %v", err)
+					return err
+				}
+			}
+		}
 		return err
 	}
 	return nil
@@ -413,6 +429,23 @@ func (p *AutoEvaluateProcessor) OnTaskRunFinished(ctx context.Context, param tas
 	}); err != nil {
 		return err
 	}
+	// Set task run status to completed
+	taskRun.RunStatus = task.RunStatusDone
+	// Update task run
+	err := p.taskRepo.UpdateTaskRun(ctx, taskRun)
+	if err != nil {
+		logs.CtxError(ctx, "[auto_task] OnFinishTaskRunProcessor, UpdateTaskRun err, taskRunID:%d, err:%v", taskRun.ID, err)
+		return err
+	}
+	return nil
+}
+
+func (p *AutoEvaluateProcessor) OnTaskRunTerminated(ctx context.Context, param taskexe.OnTaskRunTerminatedReq) error {
+	if param.TaskRun == nil {
+		return nil
+	}
+	taskRun := param.TaskRun
+
 	// Set task run status to completed
 	taskRun.RunStatus = task.RunStatusDone
 	// Update task run
