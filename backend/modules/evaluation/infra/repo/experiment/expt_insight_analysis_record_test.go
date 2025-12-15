@@ -593,3 +593,26 @@ func TestExptInsightAnalysisRecordRepo_List_Error(t *testing.T) {
 	assert.Nil(t, comments)
 	assert.Equal(t, int64(0), total)
 }
+
+// New test for constructor NewExptInsightAnalysisRecordRepo
+func TestNewExptInsightAnalysisRecordRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	analysisRecordDAO := mocks.NewMockIExptInsightAnalysisRecordDAO(ctrl)
+	feedbackCommentDAO := mocks.NewMockIExptInsightAnalysisFeedbackCommentDAO(ctrl)
+	feedbackVoteDAO := mocks.NewMockIExptInsightAnalysisFeedbackVoteDAO(ctrl)
+	idGenerator := mockidgen.NewMockIIDGenerator(ctrl)
+	writeTracker := platestwritemocks.NewMockILatestWriteTracker(ctrl)
+
+	repoIface := NewExptInsightAnalysisRecordRepo(analysisRecordDAO, feedbackCommentDAO, feedbackVoteDAO, idGenerator, writeTracker)
+	assert.NotNil(t, repoIface)
+
+	impl, ok := repoIface.(*ExptInsightAnalysisRecordRepo)
+	assert.True(t, ok)
+	assert.Equal(t, analysisRecordDAO, impl.exptInsightAnalysisRecordDAO)
+	assert.Equal(t, feedbackCommentDAO, impl.exptInsightAnalysisFeedbackCommentDAO)
+	assert.Equal(t, feedbackVoteDAO, impl.exptInsightAnalysisFeedbackVoteDAO)
+	assert.Equal(t, idGenerator, impl.idgenerator)
+	assert.Equal(t, writeTracker, impl.writeTracker)
+}

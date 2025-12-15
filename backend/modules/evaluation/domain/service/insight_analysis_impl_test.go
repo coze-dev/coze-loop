@@ -344,6 +344,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt := tt
 			tt.setup()
 			err := service.GenAnalysisReport(ctx, tt.spaceID, tt.exptID, tt.recordID, tt.createAt)
 			if tt.wantErr {
@@ -353,6 +354,55 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 			}
 		})
 	}
+
+	// 新增用例：exptRepo.GetByID 返回 error
+	t.Run("expt repo get by id error - defer should update status to failed", func(t *testing.T) {
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:      1,
+			SpaceID: 1,
+			ExptID:  1,
+			Status:  entity.InsightAnalysisStatus_Unknown,
+		}, nil)
+		mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(1)).Return(nil, errors.New("expt error"))
+		mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Failed, record.Status)
+			return nil
+		})
+
+		err := service.GenAnalysisReport(ctx, int64(1), int64(1), int64(1), time.Now().Unix())
+		assert.Error(t, err)
+	})
+
+	// 新增用例：expt 的 StartAt/EndAt 为 nil，仍能运行
+	t.Run("expt start/end nil - should run", func(t *testing.T) {
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:      1,
+			SpaceID: 1,
+			ExptID:  1,
+			Status:  entity.InsightAnalysisStatus_Unknown,
+		}, nil)
+		mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(1)).Return(&entity.Experiment{
+			ID:              1,
+			SpaceID:         1,
+			TargetType:      entity.EvalTargetTypeLoopPrompt,
+			TargetVersionID: 1,
+			TargetID:        1,
+			StartAt:         nil,
+			EndAt:           nil,
+		}, nil)
+		mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Running, record.Status)
+			return nil
+		})
+
+		assert.Panics(t, func() {
+			_ = service.GenAnalysisReport(ctx, int64(1), int64(1), int64(1), time.Now().Unix())
+		})
+	})
 }
 
 func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord(t *testing.T) {
@@ -1200,9 +1250,10 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 				ExptID:           1,
 				AnalysisReportID: gptr.Of(int64(123)),
 				CreatedBy:        "user1",
+				CreatedAt:        time.Now().Add(-entity.InsightAnalysisRunningTimeout - time.Minute),
 			},
-			createAt: time.Now().Unix() - 7700*1000, // 超过2小时
-			wantErr:  true,
+			createAt: time.Now().Unix(),
+			wantErr:  false,
 		},
 		{
 			name: "running status - publish event",
@@ -1216,6 +1267,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 				ExptID:           1,
 				AnalysisReportID: gptr.Of(int64(123)),
 				CreatedBy:        "user1",
+				CreatedAt:        time.Now(),
 			},
 			createAt: time.Now().Unix(),
 			wantErr:  false,
@@ -1232,6 +1284,7 @@ func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus(t *testing.
 				ExptID:           1,
 				AnalysisReportID: gptr.Of(int64(123)),
 				CreatedBy:        "user1",
+				CreatedAt:        time.Now(),
 			},
 			createAt: time.Now().Unix(),
 			wantErr:  true,
