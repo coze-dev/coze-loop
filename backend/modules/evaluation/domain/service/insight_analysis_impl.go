@@ -162,9 +162,6 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg(fmt.Sprintf("Experiment %d has no source target version %d", exptID, expt.TargetVersionID)))
 	}
 	param.EvalTargetVersion = target.EvalTargetVersion.SourceTargetVersion
-	if err != nil {
-		return err
-	}
 
 	evaluators, err := e.exptRepo.GetEvaluatorRefByExptIDs(ctx, []int64{exptID}, spaceID)
 	if err != nil {

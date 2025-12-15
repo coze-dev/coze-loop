@@ -466,6 +466,108 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	// 新增用例：SourceTargetID 解析失败（strconv.ParseInt 返回错误），应当返回错误，且 defer 将状态置为 Failed
+	t.Run("parse eval target id error - defer should update status to failed", func(t *testing.T) {
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:      1,
+			SpaceID: 1,
+			ExptID:  1,
+			Status:  entity.InsightAnalysisStatus_Unknown,
+		}, nil)
+		mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
+		start := time.Now().Add(-time.Hour)
+		end := time.Now()
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(1)).Return(&entity.Experiment{
+			ID:              1,
+			SpaceID:         1,
+			TargetType:      entity.EvalTargetTypeLoopPrompt,
+			TargetVersionID: 1,
+			TargetID:        1,
+			StartAt:         &start,
+			EndAt:           &end,
+		}, nil)
+		mocks.targetRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(1)).Return(&entity.EvalTarget{
+			SourceTargetID:    "abc", // 非数字，触发 ParseInt 错误
+			EvalTargetVersion: &entity.EvalTargetVersion{SourceTargetVersion: "v1"},
+		}, nil)
+		mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Failed, record.Status)
+			return nil
+		})
+
+		err := service.GenAnalysisReport(ctx, int64(1), int64(1), int64(1), time.Now().Unix())
+		assert.Error(t, err)
+	})
+
+	// 新增用例：EvalTargetVersion 为 nil，返回错误，且 defer 将状态置为 Failed
+	t.Run("eval target version nil - defer should update status to failed", func(t *testing.T) {
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:      1,
+			SpaceID: 1,
+			ExptID:  1,
+			Status:  entity.InsightAnalysisStatus_Unknown,
+		}, nil)
+		mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
+		start := time.Now().Add(-time.Hour)
+		end := time.Now()
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(1)).Return(&entity.Experiment{
+			ID:              1,
+			SpaceID:         1,
+			TargetType:      entity.EvalTargetTypeLoopPrompt,
+			TargetVersionID: 1,
+			TargetID:        1,
+			StartAt:         &start,
+			EndAt:           &end,
+		}, nil)
+		mocks.targetRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(1)).Return(&entity.EvalTarget{
+			SourceTargetID:    "123",
+			EvalTargetVersion: nil,
+		}, nil)
+		mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Failed, record.Status)
+			return nil
+		})
+
+		err := service.GenAnalysisReport(ctx, int64(1), int64(1), int64(1), time.Now().Unix())
+		assert.Error(t, err)
+	})
+
+	// 新增用例：EvalTargetVersion.SourceTargetVersion 为空字符串，返回错误，且 defer 将状态置为 Failed
+	t.Run("eval target version empty - defer should update status to failed", func(t *testing.T) {
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:      1,
+			SpaceID: 1,
+			ExptID:  1,
+			Status:  entity.InsightAnalysisStatus_Unknown,
+		}, nil)
+		mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), gomock.Any(), gomock.Any()).Return("http://test-url.com", make(map[string][]string), nil)
+		start := time.Now().Add(-time.Hour)
+		end := time.Now()
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(1), int64(1)).Return(&entity.Experiment{
+			ID:              1,
+			SpaceID:         1,
+			TargetType:      entity.EvalTargetTypeLoopPrompt,
+			TargetVersionID: 1,
+			TargetID:        1,
+			StartAt:         &start,
+			EndAt:           &end,
+		}, nil)
+		mocks.targetRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), int64(1), int64(1)).Return(&entity.EvalTarget{
+			SourceTargetID:    "123",
+			EvalTargetVersion: &entity.EvalTargetVersion{SourceTargetVersion: ""},
+		}, nil)
+		mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, record *entity.ExptInsightAnalysisRecord, opts ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Failed, record.Status)
+			return nil
+		})
+
+		err := service.GenAnalysisReport(ctx, int64(1), int64(1), int64(1), time.Now().Unix())
+		assert.Error(t, err)
+	})
+
 }
 
 func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord(t *testing.T) {
