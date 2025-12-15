@@ -19,6 +19,7 @@ import (
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	serviceMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 func newTestInsightAnalysisService(ctrl *gomock.Controller) (*ExptInsightAnalysisServiceImpl, *testInsightAnalysisServiceMocks) {
@@ -69,7 +70,375 @@ type testInsightAnalysisServiceMocks struct {
 	targetRepo              *repoMocks.MockIEvalTargetRepo
 }
 
-// ... (原有测试内容省略，保持不变)
+// ... (原有其它测试保持不变)
+
+// 并行子测试：GetAnalysisRecord 的多个分支
+func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord_Parallel(t *testing.T) {
+	t.Parallel()
+	// Running 且已超时：更新成功
+	t.Run("RunningTimeout_UpdateSuccess", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:        1,
+			SpaceID:   1,
+			ExptID:    1,
+			Status:    entity.InsightAnalysisStatus_Running,
+			CreatedAt: time.Now().Add(-entity.InsightAnalysisRunningTimeout - time.Second),
+		}, nil)
+		mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
+				assert.Equal(t, entity.InsightAnalysisStatus_Failed, rec.Status)
+				return nil
+			},
+		)
+		res, err := service.GetAnalysisRecordByID(ctx, 1, 1, 1, &entity.Session{UserID: "u"})
+		assert.NoError(t, err)
+		assert.Equal(t, entity.InsightAnalysisStatus_Failed, res.Status)
+	})
+	// Running 且已超时：更新失败
+	t.Run("RunningTimeout_UpdateError", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(1)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:        1,
+			SpaceID:   1,
+			ExptID:    1,
+			Status:    entity.InsightAnalysisStatus_Running,
+			CreatedAt: time.Now().Add(-entity.InsightAnalysisRunningTimeout - time.Second),
+		}, nil)
+		mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).Return(errors.New("update error"))
+		_, err := service.GetAnalysisRecordByID(ctx, 1, 1, 1, &entity.Session{UserID: "u"})
+		assert.Error(t, err)
+	})
+	// Running 未超时：直接返回
+	t.Run("Running_NoTimeout_Return", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(2)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:        2,
+			SpaceID:   1,
+			ExptID:    1,
+			Status:    entity.InsightAnalysisStatus_Running,
+			CreatedAt: time.Now(),
+		}, nil)
+		res, err := service.GetAnalysisRecordByID(ctx, 1, 1, 2, &entity.Session{UserID: "u"})
+		assert.NoError(t, err)
+		assert.Equal(t, entity.InsightAnalysisStatus_Running, res.Status)
+	})
+	// Failed：直接返回
+	t.Run("Failed_Return", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(3)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:      3,
+			SpaceID: 1,
+			ExptID:  1,
+			Status:  entity.InsightAnalysisStatus_Failed,
+		}, nil)
+		res, err := service.GetAnalysisRecordByID(ctx, 1, 1, 3, &entity.Session{UserID: "u"})
+		assert.NoError(t, err)
+		assert.Equal(t, entity.InsightAnalysisStatus_Failed, res.Status)
+	})
+	// Success：拉取报告与反馈
+	t.Run("Success_FullFlow", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(4)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:               4,
+			SpaceID:          1,
+			ExptID:           1,
+			Status:           entity.InsightAnalysisStatus_Success,
+			AnalysisReportID: ptr.Of(int64(100)),
+		}, nil)
+		mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(100)).Return("rep", []*entity.InsightAnalysisReportIndex{{ID: "k", Title: "t"}}, entity.ReportStatus_Success, nil)
+		mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(4)).Return(int64(10), int64(2), nil)
+		mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(1), int64(4), "u").Return(&entity.ExptInsightAnalysisFeedbackVote{VoteType: entity.Upvote}, nil)
+		res, err := service.GetAnalysisRecordByID(ctx, 1, 1, 4, &entity.Session{UserID: "u"})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(10), res.ExptInsightAnalysisFeedback.UpvoteCount)
+		assert.Equal(t, int64(2), res.ExptInsightAnalysisFeedback.DownvoteCount)
+		assert.Equal(t, entity.Upvote, res.ExptInsightAnalysisFeedback.CurrentUserVoteType)
+		assert.Equal(t, "rep", res.AnalysisReportContent)
+		assert.Len(t, res.AnalysisReportIndex, 1)
+	})
+	// CountFeedbackVote error
+	t.Run("Success_CountVoteError", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(5)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:               5,
+			SpaceID:          1,
+			ExptID:           1,
+			Status:           entity.InsightAnalysisStatus_Success,
+			AnalysisReportID: ptr.Of(int64(100)),
+		}, nil)
+		mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(100)).Return("rep", []*entity.InsightAnalysisReportIndex{}, entity.ReportStatus_Success, nil)
+		mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(5)).Return(int64(0), int64(0), errors.New("count err"))
+		_, err := service.GetAnalysisRecordByID(ctx, 1, 1, 5, &entity.Session{UserID: "u"})
+		assert.Error(t, err)
+	})
+	// GetFeedbackVoteByUser error
+	t.Run("Success_GetUserVoteError", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), int64(1), int64(1), int64(6)).Return(&entity.ExptInsightAnalysisRecord{
+			ID:               6,
+			SpaceID:          1,
+			ExptID:           1,
+			Status:           entity.InsightAnalysisStatus_Success,
+			AnalysisReportID: ptr.Of(int64(100)),
+		}, nil)
+		mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(100)).Return("rep", []*entity.InsightAnalysisReportIndex{}, entity.ReportStatus_Success, nil)
+		mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(1), int64(6)).Return(int64(1), int64(2), nil)
+		mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(1), int64(6), "u").Return(nil, errors.New("get err"))
+		_, err := service.GetAnalysisRecordByID(ctx, 1, 1, 6, &entity.Session{UserID: "u"})
+		assert.Error(t, err)
+	})
+}
+
+// 并行子测试：notifyAnalysisComplete 的多个分支
+func TestExptInsightAnalysisServiceImpl_notifyAnalysisComplete_Parallel(t *testing.T) {
+	t.Parallel()
+	// 正常通知
+	t.Run("Success", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).Return(&entity.Experiment{Name: "expt"}, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"u"}).Return([]*entity.UserInfo{{Email: ptr.Of("u@c.com")}}, nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), "u@c.com", gomock.Any(), gomock.Any()).Return(nil)
+		assert.NoError(t, service.notifyAnalysisComplete(ctx, "u", 1, 2))
+	})
+	// GetByID 错误
+	t.Run("GetByIDError", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).Return(nil, errors.New("expt err"))
+		assert.Error(t, service.notifyAnalysisComplete(ctx, "u", 1, 2))
+	})
+	// MGetUserInfo 错误
+	t.Run("MGetUserInfoError", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).Return(&entity.Experiment{Name: "expt"}, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"u"}).Return(nil, errors.New("user err"))
+		assert.Error(t, service.notifyAnalysisComplete(ctx, "u", 1, 2))
+	})
+	// 用户为空或长度不为1
+	t.Run("UserEmptyOrNil", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).Return(&entity.Experiment{Name: "expt"}, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"u"}).Return([]*entity.UserInfo{}, nil)
+		assert.NoError(t, service.notifyAnalysisComplete(ctx, "u", 1, 2))
+	})
+	// 用户指针为 nil
+	t.Run("UserNil", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).Return(&entity.Experiment{Name: "expt"}, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"u"}).Return([]*entity.UserInfo{nil}, nil)
+		assert.NoError(t, service.notifyAnalysisComplete(ctx, "u", 1, 2))
+	})
+}
+
+// 并行子测试：ListAnalysisRecord 的多个分支
+func TestExptInsightAnalysisServiceImpl_ListAnalysisRecord_Parallel(t *testing.T) {
+	t.Parallel()
+	t.Run("TotalZero_Return", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		mocks.repo.EXPECT().ListAnalysisRecord(gomock.Any(), int64(1), int64(2), gomock.Any()).Return([]*entity.ExptInsightAnalysisRecord{}, int64(0), nil)
+		recs, total, err := service.ListAnalysisRecord(ctx, 1, 2, entity.NewPage(1, 10), &entity.Session{UserID: "u"})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(0), total)
+		assert.Len(t, recs, 0)
+	})
+	// 正常路径：反馈计数与用户投票设置
+	t.Run("Success_FeedbackFilled", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		records := []*entity.ExptInsightAnalysisRecord{{ID: 11, SpaceID: 1, ExptID: 2}}
+		mocks.repo.EXPECT().ListAnalysisRecord(gomock.Any(), int64(1), int64(2), gomock.Any()).Return(records, int64(2), nil)
+		mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(2), int64(11)).Return(int64(5), int64(3), nil)
+		mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(2), int64(11), "u").Return(&entity.ExptInsightAnalysisFeedbackVote{VoteType: entity.Downvote}, nil)
+		recs, total, err := service.ListAnalysisRecord(ctx, 1, 2, entity.NewPage(1, 10), &entity.Session{UserID: "u"})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), total)
+		assert.Equal(t, int64(5), recs[0].ExptInsightAnalysisFeedback.UpvoteCount)
+		assert.Equal(t, int64(3), recs[0].ExptInsightAnalysisFeedback.DownvoteCount)
+		assert.Equal(t, entity.Downvote, recs[0].ExptInsightAnalysisFeedback.CurrentUserVoteType)
+	})
+	// 侧路错误：CountFeedbackVote 失败不阻塞主流程
+	t.Run("SidePath_CountFeedbackVoteError", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		records := []*entity.ExptInsightAnalysisRecord{{ID: 12, SpaceID: 1, ExptID: 2}}
+		mocks.repo.EXPECT().ListAnalysisRecord(gomock.Any(), int64(1), int64(2), gomock.Any()).Return(records, int64(2), nil)
+		mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(2), int64(12)).Return(int64(0), int64(0), errors.New("count err"))
+		recs, total, err := service.ListAnalysisRecord(ctx, 1, 2, entity.NewPage(1, 10), &entity.Session{UserID: "u"})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), total)
+		assert.Equal(t, int64(12), recs[0].ID)
+	})
+	// 侧路错误：GetFeedbackVoteByUser 失败不阻塞主流程
+	t.Run("SidePath_GetFeedbackVoteByUserError", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
+		ctx := context.Background()
+		records := []*entity.ExptInsightAnalysisRecord{{ID: 13, SpaceID: 1, ExptID: 2}}
+		mocks.repo.EXPECT().ListAnalysisRecord(gomock.Any(), int64(1), int64(2), gomock.Any()).Return(records, int64(2), nil)
+		mocks.repo.EXPECT().CountFeedbackVote(gomock.Any(), int64(1), int64(2), int64(13)).Return(int64(1), int64(2), nil)
+		mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(2), int64(13), "u").Return(nil, errors.New("get err"))
+		recs, total, err := service.ListAnalysisRecord(ctx, 1, 2, entity.NewPage(1, 10), &entity.Session{UserID: "u"})
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), total)
+		assert.Equal(t, int64(13), recs[0].ID)
+	})
+}
+
+// 并行子测试：FeedbackExptInsightAnalysis 的多个分支
+func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	spaceID, exptID, recordID := int64(1), int64(2), int64(3)
+	// Upvote
+	t.Run("Upvote", func(t *testing.T) {
+		t.Parallel()
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Upvote, Session: &entity.Session{UserID: "u"}}
+		mocks.repo.EXPECT().CreateFeedbackVote(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, v *entity.ExptInsightAnalysisFeedbackVote, _ ...db.Option) error {
+			assert.Equal(t, entity.Upvote, v.VoteType)
+			assert.Equal(t, "u", v.CreatedBy)
+			return nil
+		})
+		assert.NoError(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+	// CancelUpvote
+	t.Run("CancelUpvote", func(t *testing.T) {
+		t.Parallel()
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_CancelUpvote, Session: &entity.Session{UserID: "u"}}
+		mocks.repo.EXPECT().UpdateFeedbackVote(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, v *entity.ExptInsightAnalysisFeedbackVote, _ ...db.Option) error {
+			assert.Equal(t, entity.None, v.VoteType)
+			return nil
+		})
+		assert.NoError(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+	// CancelDownvote
+	t.Run("CancelDownvote", func(t *testing.T) {
+		t.Parallel()
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_CancelDownvote, Session: &entity.Session{UserID: "u"}}
+		mocks.repo.EXPECT().UpdateFeedbackVote(gomock.Any(), gomock.Any()).Return(nil)
+		assert.NoError(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+	// Downvote
+	t.Run("Downvote", func(t *testing.T) {
+		t.Parallel()
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Downvote, Session: &entity.Session{UserID: "u"}}
+		mocks.repo.EXPECT().CreateFeedbackVote(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, v *entity.ExptInsightAnalysisFeedbackVote, _ ...db.Option) error {
+			assert.Equal(t, entity.Downvote, v.VoteType)
+			return nil
+		})
+		assert.NoError(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+	// CreateComment
+	t.Run("CreateComment", func(t *testing.T) {
+		t.Parallel()
+		c := "hello"
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_CreateComment, Comment: &c, Session: &entity.Session{UserID: "u"}}
+		mocks.repo.EXPECT().CreateFeedbackComment(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, cmt *entity.ExptInsightAnalysisFeedbackComment, _ ...db.Option) error {
+			assert.Equal(t, "hello", cmt.Comment)
+			assert.Equal(t, "u", cmt.CreatedBy)
+			return nil
+		})
+		assert.NoError(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+	// Update_Comment 参数缺失
+	t.Run("UpdateComment_MissingID", func(t *testing.T) {
+		t.Parallel()
+		c := "hello"
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Update_Comment, Comment: &c, Session: &entity.Session{UserID: "u"}}
+		assert.Error(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+	// Update_Comment 正常
+	t.Run("UpdateComment_Success", func(t *testing.T) {
+		t.Parallel()
+		c := "hello"
+		cid := int64(77)
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Update_Comment, Comment: &c, CommentID: &cid, Session: &entity.Session{UserID: "u"}}
+		mocks.repo.EXPECT().UpdateFeedbackComment(gomock.Any(), gomock.Any()).Return(nil)
+		assert.NoError(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+	// Delete_Comment 缺失ID
+	t.Run("DeleteComment_MissingID", func(t *testing.T) {
+		t.Parallel()
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Delete_Comment, Session: &entity.Session{UserID: "u"}}
+		assert.Error(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+	// Delete_Comment 正常
+	t.Run("DeleteComment_Success", func(t *testing.T) {
+		t.Parallel()
+		cid := int64(88)
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Delete_Comment, CommentID: &cid, Session: &entity.Session{UserID: "u"}}
+		mocks.repo.EXPECT().DeleteFeedbackComment(gomock.Any(), int64(1), int64(2), int64(88)).Return(nil)
+		assert.NoError(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+	// Session 为空
+	t.Run("NilSession_Error", func(t *testing.T) {
+		t.Parallel()
+		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Upvote}
+		assert.Error(t, service.FeedbackExptInsightAnalysis(ctx, param))
+	})
+}
 
 // 新增用例覆盖 GetAnalysisRecordByID 里的超时分支（insight_analysis_impl.go:242）
 func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord_StatusRunningTimeout_UpdateSuccess(t *testing.T) {
@@ -129,4 +498,286 @@ func TestExptInsightAnalysisServiceImpl_GetAnalysisRecord_StatusRunningTimeout_U
 	assert.Error(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, entity.InsightAnalysisStatus_Failed, res.Status)
+}
+
+// ------------------- CreateAnalysisRecord -------------------
+func TestExptInsightAnalysisServiceImpl_CreateAnalysisRecord_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	record := &entity.ExptInsightAnalysisRecord{SpaceID: 1, ExptID: 2}
+
+	mocks.repo.EXPECT().CreateAnalysisRecord(gomock.Any(), record).Return(int64(123), nil)
+	mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, ev *entity.ExportCSVEvent, d *time.Duration) error {
+			assert.Equal(t, int64(123), ev.ExportID)
+			assert.Equal(t, int64(2), ev.ExperimentID)
+			assert.Equal(t, int64(1), ev.SpaceID)
+			assert.Equal(t, entity.ExportSceneInsightAnalysis, ev.ExportScene)
+			return nil
+		},
+	)
+
+	id, err := service.CreateAnalysisRecord(ctx, record, &entity.Session{UserID: "user1"})
+	assert.NoError(t, err)
+	assert.Equal(t, int64(123), id)
+}
+
+func TestExptInsightAnalysisServiceImpl_CreateAnalysisRecord_RepoError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	record := &entity.ExptInsightAnalysisRecord{SpaceID: 1, ExptID: 2}
+
+	mocks.repo.EXPECT().CreateAnalysisRecord(gomock.Any(), record).Return(int64(0), errors.New("create error"))
+
+	id, err := service.CreateAnalysisRecord(ctx, record, &entity.Session{UserID: "user1"})
+	assert.Error(t, err)
+	assert.Equal(t, int64(0), id)
+}
+
+func TestExptInsightAnalysisServiceImpl_CreateAnalysisRecord_PublishError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	record := &entity.ExptInsightAnalysisRecord{SpaceID: 1, ExptID: 2}
+
+	mocks.repo.EXPECT().CreateAnalysisRecord(gomock.Any(), record).Return(int64(123), nil)
+	mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish error"))
+
+	id, err := service.CreateAnalysisRecord(ctx, record, &entity.Session{UserID: "user1"})
+	assert.Error(t, err)
+	assert.Equal(t, int64(0), id)
+}
+
+// ------------------- GenAnalysisReport -------------------
+func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_AlreadyHasReport_CheckStatusSuccess(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	spaceID, exptID, recordID := int64(1), int64(2), int64(3)
+
+	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{
+		ID:               recordID,
+		SpaceID:          spaceID,
+		ExptID:           exptID,
+		CreatedBy:        "user1",
+		AnalysisReportID: ptr.Of(int64(100)),
+		CreatedAt:        time.Now().Add(-time.Hour),
+	}, nil)
+	// GetReport -> Success
+	mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), spaceID, int64(100)).Return("report", []*entity.InsightAnalysisReportIndex{{ID: "1", Title: "t"}}, entity.ReportStatus_Success, nil)
+	// notifyAnalysisComplete
+	mocks.exptRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(&entity.Experiment{Name: "expt"}, nil)
+	mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"user1"}).Return([]*entity.UserInfo{{Email: ptr.Of("u@c.com")}}, nil)
+	mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), "u@c.com", gomock.Any(), gomock.Any()).Return(nil)
+	// UpdateAnalysisRecord -> Success
+	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Success, rec.Status)
+			return nil
+		},
+	)
+
+	err := service.GenAnalysisReport(ctx, spaceID, exptID, recordID, time.Now().Unix())
+	assert.NoError(t, err)
+}
+
+func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_SuccessPath(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	spaceID, exptID, recordID := int64(1), int64(2), int64(3)
+	createAt := time.Now().Unix()
+
+	// no AnalysisReportID yet
+	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{
+		ID:        recordID,
+		SpaceID:   spaceID,
+		ExptID:    exptID,
+		CreatedBy: "user1",
+	}, nil)
+	// export CSV
+	fileName := "insight_analysis_1_3.csv"
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	// sign download
+	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return("http://example.com/f", nil, nil)
+	// expt info
+	now := time.Now()
+	end := now.Add(time.Hour)
+	mocks.exptRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(&entity.Experiment{
+		StartAt:         &now,
+		EndAt:           &end,
+		TargetType:      entity.EvalTargetTypeLoopPrompt,
+		TargetID:        10,
+		TargetVersionID: 20,
+	}, nil)
+	// target version
+	mocks.targetRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), spaceID, int64(20)).Return(&entity.EvalTarget{
+		SourceTargetID:    "123",
+		EvalTargetVersion: &entity.EvalTargetVersion{SourceTargetVersion: "1.2.3"},
+	}, nil)
+	// evaluators
+	mocks.exptRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), []int64{exptID}, spaceID).Return([]*entity.ExptEvaluatorRef{{EvaluatorID: 1, EvaluatorVersionID: 2}}, nil)
+	// call agent
+	mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any()).Return(int64(999), nil)
+	// publish re-check event
+	mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	// update record in defer
+	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
+			assert.Equal(t, recordID, rec.ID)
+			assert.Equal(t, spaceID, rec.SpaceID)
+			assert.Equal(t, exptID, rec.ExptID)
+			assert.NotNil(t, rec.ExptResultFilePath)
+			assert.Equal(t, fileName, *rec.ExptResultFilePath)
+			assert.Equal(t, entity.InsightAnalysisStatus_Running, rec.Status)
+			assert.NotNil(t, rec.AnalysisReportID)
+			assert.Equal(t, int64(999), *rec.AnalysisReportID)
+			return nil
+		},
+	)
+
+	err := service.GenAnalysisReport(ctx, spaceID, exptID, recordID, createAt)
+	assert.NoError(t, err)
+}
+
+func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_DoExportCSVError_FailedAndReturn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	spaceID, exptID, recordID := int64(1), int64(2), int64(3)
+
+	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
+	fileName := "insight_analysis_1_3.csv"
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(errors.New("export error"))
+	// should update as Failed in defer
+	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Failed, rec.Status)
+			assert.NotNil(t, rec.ExptResultFilePath)
+			assert.Equal(t, fileName, *rec.ExptResultFilePath)
+			return nil
+		},
+	)
+
+	err := service.GenAnalysisReport(ctx, spaceID, exptID, recordID, time.Now().Unix())
+	assert.Error(t, err)
+}
+
+func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_UpdateRecordError_ReturnsUpdateErr(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	spaceID, exptID, recordID := int64(1), int64(2), int64(3)
+
+	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
+	fileName := "insight_analysis_1_3.csv"
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return("http://example.com/f", nil, nil)
+	now := time.Now()
+	end := now.Add(time.Hour)
+	mocks.exptRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(&entity.Experiment{StartAt: &now, EndAt: &end, TargetType: entity.EvalTargetTypeLoopPrompt, TargetID: 10, TargetVersionID: 20}, nil)
+	mocks.targetRepo.EXPECT().GetEvalTargetVersion(gomock.Any(), spaceID, int64(20)).Return(&entity.EvalTarget{SourceTargetID: "123", EvalTargetVersion: &entity.EvalTargetVersion{SourceTargetVersion: "1.2.3"}}, nil)
+	mocks.exptRepo.EXPECT().GetEvaluatorRefByExptIDs(gomock.Any(), []int64{exptID}, spaceID).Return([]*entity.ExptEvaluatorRef{{EvaluatorID: 1, EvaluatorVersionID: 2}}, nil)
+	mocks.agentAdapter.EXPECT().CallTraceAgent(gomock.Any(), gomock.Any()).Return(int64(999), nil)
+	mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).Return(errors.New("update fail"))
+
+	err := service.GenAnalysisReport(ctx, spaceID, exptID, recordID, time.Now().Unix())
+	assert.Error(t, err)
+}
+
+// ------------------- checkAnalysisReportGenStatus -------------------
+func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus_StatusFailed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	record := &entity.ExptInsightAnalysisRecord{ID: 1, SpaceID: 1, ExptID: 2, AnalysisReportID: ptr.Of(int64(100))}
+
+	mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(100)).Return("", nil, entity.ReportStatus_Failed, nil)
+	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Failed, rec.Status)
+			return nil
+		},
+	)
+
+	err := service.checkAnalysisReportGenStatus(ctx, record, time.Now().Unix())
+	assert.NoError(t, err)
+}
+
+func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus_StatusSuccess_Notify(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	record := &entity.ExptInsightAnalysisRecord{ID: 1, SpaceID: 1, ExptID: 2, AnalysisReportID: ptr.Of(int64(100)), CreatedBy: "user1"}
+
+	mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(100)).Return("content", []*entity.InsightAnalysisReportIndex{{ID: "1", Title: "t"}}, entity.ReportStatus_Success, nil)
+	mocks.exptRepo.EXPECT().GetByID(gomock.Any(), int64(2), int64(1)).Return(&entity.Experiment{Name: "expt"}, nil)
+	mocks.userProvider.EXPECT().MGetUserInfo(gomock.Any(), []string{"user1"}).Return([]*entity.UserInfo{{Email: ptr.Of("u@c.com")}}, nil)
+	mocks.notifyRPCAdapter.EXPECT().SendMessageCard(gomock.Any(), "u@c.com", gomock.Any(), gomock.Any()).Return(nil)
+	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Success, rec.Status)
+			return nil
+		},
+	)
+
+	err := service.checkAnalysisReportGenStatus(ctx, record, time.Now().Unix())
+	assert.NoError(t, err)
+}
+
+func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus_StatusRunningTimeout(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	old := time.Now().Add(-entity.InsightAnalysisRunningTimeout - time.Second)
+	record := &entity.ExptInsightAnalysisRecord{ID: 1, SpaceID: 1, ExptID: 2, CreatedAt: old, AnalysisReportID: ptr.Of(int64(100))}
+
+	mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(100)).Return("", nil, entity.ReportStatus_Running, nil)
+	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
+			assert.Equal(t, entity.InsightAnalysisStatus_Failed, rec.Status)
+			return nil
+		},
+	)
+
+	err := service.checkAnalysisReportGenStatus(ctx, record, time.Now().Unix())
+	assert.NoError(t, err)
+}
+
+func TestExptInsightAnalysisServiceImpl_checkAnalysisReportGenStatus_StatusRunningRequeue(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+	record := &entity.ExptInsightAnalysisRecord{ID: 1, SpaceID: 1, ExptID: 2, CreatedAt: time.Now(), AnalysisReportID: ptr.Of(int64(100))}
+
+	mocks.agentAdapter.EXPECT().GetReport(gomock.Any(), int64(1), int64(100)).Return("", nil, entity.ReportStatus_Running, nil)
+	mocks.publisher.EXPECT().PublishExptExportCSVEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	err := service.checkAnalysisReportGenStatus(ctx, record, time.Now().Unix())
+	assert.NoError(t, err)
 }
