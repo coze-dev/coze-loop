@@ -2009,10 +2009,10 @@ func TestEvalOpenAPIApplication_ListExperimentResultOApi(t *testing.T) {
 				itemResults := []*entity.ItemResult{{ItemID: 10}}
 				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.AssignableToTypeOf(&entity.MGetExperimentResultParam{})).
 					Return(&entity.MGetExperimentReportResult{
-						ColumnEvaluators: columnEvaluators,
+						ColumnEvaluators:    columnEvaluators,
 						ColumnEvalSetFields: columnFields,
-						ItemResults:     itemResults,
-						Total:           int64(3),
+						ItemResults:         itemResults,
+						Total:               int64(3),
 					}, nil)
 			},
 		},
