@@ -1799,3 +1799,8 @@ func _parseimportsourcefileMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _calculateexperimentaggrresultMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

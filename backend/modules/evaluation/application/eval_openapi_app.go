@@ -990,7 +990,8 @@ func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context
 	}
 	return &openapi.GetExperimentAggrResultOApiResponse{
 		Data: &openapi.GetExperimentAggrResultOpenAPIData{
-			EvaluatorResults: res,
+			EvaluatorResults:      res,
+			EvalTargetAggrResult_: experiment_convertor.OpenTargetAggrResultDO2DTO(aggrResult.TargetResults),
 		},
 	}, nil
 }

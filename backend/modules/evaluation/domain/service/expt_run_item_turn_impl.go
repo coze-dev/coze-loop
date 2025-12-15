@@ -182,7 +182,25 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		}
 		switch etec.Expt.Target.EvalTargetType {
 		case entity.EvalTargetTypeCustomRPCServer:
-			return gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content }), nil
+			fields := gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content })
+			for name, content := range fields {
+				if content.IsContentOmitted() {
+					req := &entity.GetEvaluationSetItemFieldParam{
+						SpaceID:         spaceID,
+						EvaluationSetID: turn.EvalSetID,
+						ItemPK:          turn.ItemID,
+						FieldName:       name,
+						TurnID:          gptr.Of(turn.ID),
+					}
+					logs.CtxInfo(ctx, "found omitted content turn, turn_info: %v", json.Jsonify(req))
+					fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, req)
+					if err != nil {
+						return nil, err
+					}
+					fields[name] = fd.Content
+				}
+			}
+			return fields, nil
 		default:
 			return e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
 		}

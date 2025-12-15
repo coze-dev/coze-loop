@@ -370,6 +370,9 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 }
 
 func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error) {
+	if len(traceID) == 0 {
+		return nil, errorx.New("ExtractTrajectory with null traceID")
+	}
 	trajectories, err := e.trajectoryAdapter.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
 	if err != nil {
 		return nil, err
@@ -463,6 +466,10 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 		},
 	}
+
+	traceID, _ := e.emitTargetTrace(ctx, record, &entity.Session{UserID: userID})
+	record.TraceID = traceID
+
 	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record); err != nil {
 		return nil, callee, err
 	}
@@ -583,10 +590,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		return err
 	}
 
-	if err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session); err != nil {
-		logs.CtxError(ctx, "emitTargetTrace fail, target_id: %v, target_version_id: %v, record_id: %v, err: %v",
-			record.TargetID, record.TargetVersionID, record.ID, err)
-	}
+	//traceID, err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session)
+	//if err != nil {
+	//	logs.CtxError(ctx, "emitTargetTrace fail, target_id: %v, target_version_id: %v, record_id: %v, err: %v",
+	//		record.TargetID, record.TargetVersionID, record.ID, err)
+	//}
 
 	recordTrajectory := func() error {
 		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, nil)
@@ -597,9 +605,16 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		if !ok {
 			return errorx.New("EvalTargetOutputData deepcopy fail")
 		}
+		if od == nil {
+			od = &entity.EvalTargetOutputData{}
+		}
+		if od.OutputFields == nil {
+			od.OutputFields = map[string]*entity.Content{}
+		}
 		od.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
 		return e.evalTargetRepo.UpdateEvalTargetRecord(ctx, &entity.EvalTargetRecord{
 			ID:                   record.ID,
+			TraceID:              record.TraceID,
 			EvalTargetOutputData: od,
 		})
 	}
@@ -614,10 +629,10 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	return nil
 }
 
-func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, record *entity.EvalTargetRecord, session *entity.Session) error {
+func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, record *entity.EvalTargetRecord, session *entity.Session) (string, error) {
 	if record.EvalTargetOutputData == nil {
 		logs.CtxInfo(ctx, "emitTargetTrace with null data")
-		return nil
+		return "", nil
 	}
 
 	ctx, span := looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(record.SpaceID, 10)))
@@ -636,7 +651,7 @@ func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, record *ent
 	if record.TargetVersionID > 0 {
 		evalTargetDO, err := e.GetEvalTargetVersion(ctx, record.SpaceID, record.TargetVersionID, false)
 		if err != nil {
-			return err
+			return "", err
 		}
 		spanParam.TargetType = evalTargetDO.EvalTargetType.String()
 	}
@@ -656,7 +671,7 @@ func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, record *ent
 	})
 	span.Finish(ctx)
 
-	return nil
+	return span.GetTraceID(), nil
 }
 
 func (e *EvalTargetServiceImpl) ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error {

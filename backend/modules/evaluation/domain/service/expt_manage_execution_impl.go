@@ -541,12 +541,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 	}
 
 	if !opt.NoAggrCalculate {
-		if err = e.publisher.PublishExptAggrCalculateEvent(ctx, []*entity.AggrCalculateEvent{
-			{
-				ExperimentID:  exptID,
-				SpaceID:       spaceID,
-				CalculateMode: entity.CreateAllFields,
-			},
+		if err = e.exptAggrResultService.PublishExptAggrResultEvent(ctx, &entity.AggrCalculateEvent{
+			ExperimentID:  exptID,
+			SpaceID:       spaceID,
+			CalculateMode: entity.CreateAllFields,
 		}, gptr.Of(time.Second*3)); err != nil {
 			logs.CtxError(ctx, "PublishExptAggrCalculateEvent fail, expt_id: %v, err: %v", exptID, err)
 		}

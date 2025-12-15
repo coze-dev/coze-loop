@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -36,4 +37,5 @@ type ExptAggrResultService interface {
 	UpdateExptAggrResult(ctx context.Context, param *entity.UpdateExptAggrResultParam) error
 	CreateAnnotationAggrResult(ctx context.Context, param *entity.CreateSpecificFieldAggrResultParam) error
 	UpdateAnnotationAggrResult(ctx context.Context, param *entity.UpdateExptAggrResultParam) (err error)
+	PublishExptAggrResultEvent(ctx context.Context, event *entity.AggrCalculateEvent, duration *time.Duration) error
 }
