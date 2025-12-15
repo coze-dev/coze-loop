@@ -70,6 +70,45 @@ type testInsightAnalysisServiceMocks struct {
 	targetRepo              *repoMocks.MockIEvalTargetRepo
 }
 
+func TestNewInsightAnalysisService(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repoMocks.NewMockIExptInsightAnalysisRecordRepo(ctrl)
+	mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
+	mockFileClient := fileMocks.NewMockObjectStorage(ctrl)
+	mockAgentAdapter := rpcMocks.NewMockIAgentAdapter(ctrl)
+	mockExptResultExportService := serviceMocks.NewMockIExptResultExportService(ctrl)
+	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
+	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
+	mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	mockTargetRepo := repoMocks.NewMockIEvalTargetRepo(ctrl)
+
+	service := NewInsightAnalysisService(
+		mockRepo,
+		mockPublisher,
+		mockFileClient,
+		mockAgentAdapter,
+		mockExptResultExportService,
+		mockNotifyRPCAdapter,
+		mockUserProvider,
+		mockExptRepo,
+		mockTargetRepo,
+	)
+
+	impl, ok := service.(*ExptInsightAnalysisServiceImpl)
+	assert.True(t, ok)
+	assert.Equal(t, mockRepo, impl.repo)
+	assert.Equal(t, mockPublisher, impl.exptPublisher)
+	assert.Equal(t, mockFileClient, impl.fileClient)
+	assert.Equal(t, mockAgentAdapter, impl.agentAdapter)
+	assert.Equal(t, mockExptResultExportService, impl.exptResultExportService)
+	assert.Equal(t, mockNotifyRPCAdapter, impl.notifyRPCAdapter)
+	assert.Equal(t, mockUserProvider, impl.userProvider)
+	assert.Equal(t, mockExptRepo, impl.exptRepo)
+	assert.Equal(t, mockTargetRepo, impl.targetRepo)
+}
+
 // ... (原有其它测试保持不变)
 
 // 并行子测试：GetAnalysisRecord 的多个分支
