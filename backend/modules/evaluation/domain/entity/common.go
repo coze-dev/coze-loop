@@ -119,7 +119,7 @@ func (c *Content) PaddingContent(ctx context.Context) error {
 	}
 	req.SetMethod(consts.MethodGet)
 	req.SetRequestURI(parsedURL.String())
-	if err := client.DoTimeout(ctx, req, resp, time.Second*3); err != nil {
+	if err := client.DoTimeout(ctx, req, resp, time.Second*5); err != nil {
 		return errorx.Wrapf(err, "get content object storage bytes fail, url: %v", parsedURL.String())
 	}
 	if resp.StatusCode() != http.StatusOK {
