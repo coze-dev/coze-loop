@@ -788,6 +788,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 			name: "正常获取实验结果 - 无ck - 无filter",
 			param: &entity.MGetExperimentResultParam{
 				SpaceID: 100,
+
 				ExptIDs: []int64{1},
 			},
 			setup: func(ctrl *gomock.Controller) ExptResultServiceImpl {
@@ -807,6 +808,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
+					EvalSetID:        1,
+					EvalSetVersionID: 1,
+					ExptType:         entity.ExptType_Offline,
+				}}, nil).AnyTimes()
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{EvalSetVersionID: 1}, nil).AnyTimes()
 				mockExptTurnResultRepo.EXPECT().ListTurnResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{{ID: 1, ItemID: 1}}, int64(1), nil)
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
@@ -931,6 +938,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
+					EvalSetID:        1,
+					EvalSetVersionID: 1,
+					ExptType:         entity.ExptType_Offline,
+				}}, nil).AnyTimes()
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					EvalSetVersionID: 1,
 					EvalSetID:        1,
@@ -1035,7 +1048,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockLWT := lwtMocks.NewMockILatestWriteTracker(ctrl)
 				mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
 
-				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("get experiment error"))
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return(nil, fmt.Errorf("get experiment error"))
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 
@@ -1066,10 +1079,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
-				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
 					EvalSetVersionID: 1,
 					EvalSetID:        1,
-				}, nil)
+					ExptType:         entity.ExptType_Offline,
+				}}, nil)
 				mockExptTurnResultRepo.EXPECT().ListTurnResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), fmt.Errorf("list turn result error"))
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
@@ -1117,8 +1132,9 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 		{
 			name: "在线实验对比场景",
 			param: &entity.MGetExperimentResultParam{
-				SpaceID: 100,
-				ExptIDs: []int64{1, 2},
+				SpaceID:    100,
+				ExptIDs:    []int64{1, 2},
+				BaseExptID: ptr.Of(int64(1)),
 			},
 			setup: func(ctrl *gomock.Controller) ExptResultServiceImpl {
 				mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
@@ -1130,10 +1146,19 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
-				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
-					ExptType:         entity.ExptType_Online,
-					EvalSetVersionID: 1,
-					EvalSetID:        1,
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1, 2}, int64(100)).Return([]*entity.Experiment{
+					{
+						ID:               1,
+						ExptType:         entity.ExptType_Online,
+						EvalSetVersionID: 1,
+						EvalSetID:        1,
+					},
+					{
+						ID:               2,
+						ExptType:         entity.ExptType_Online,
+						EvalSetVersionID: 1,
+						EvalSetID:        1,
+					},
 				}, nil)
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
@@ -1275,6 +1300,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
+					EvalSetVersionID: 1,
+					EvalSetID:        1,
+					ExptType:         entity.ExptType_Offline,
+				}}, nil).AnyTimes()
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					EvalSetVersionID: 1,
 					EvalSetID:        1,
@@ -1406,8 +1437,8 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				t.Errorf("MGetExperimentResult() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && !reflect.DeepEqual(got.ExptColumnEvaluators, tt.want) {
-				t.Errorf("MGetExperimentResult() got = %v, want %v", got, tt.want)
+			if !tt.wantErr && !reflect.DeepEqual(got.ColumnEvaluators, tt.want) {
+				t.Errorf("MGetExperimentResult() got = %v, want %v", got.ColumnEvaluators, tt.want)
 			}
 		})
 	}
