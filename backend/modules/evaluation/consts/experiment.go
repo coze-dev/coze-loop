@@ -45,8 +45,12 @@ const (
 	ReportColumnNameEvalTargetTrajectory  = expt.ColumnEvalTargetNameTrajectory
 	ReportColumnLabelEvalTargetTrajectory = "轨迹"
 
-	ReportColumnNameEvalTargetTotalLatency = expt.ColumnEvalTargetNameEvalTargetTotalLatency
-	ReportColumnNameEvalTargetInputTokens  = expt.ColumnEvalTargetNameEvaluatorInputTokens
-	ReportColumnNameEvalTargetOutputTokens = expt.ColumnEvalTargetNameEvaluatorOutputTokens
-	ReportColumnNameEvalTargetTotalTokens  = expt.ColumnEvalTargetNameEvaluatorTotalTokens
+	ReportColumnNameEvalTargetTotalLatency        = expt.ColumnEvalTargetNameEvalTargetTotalLatency
+	ReportColumnDisplayNameEvalTargetTotalLatency = "Total Latency(ms)"
+	ReportColumnNameEvalTargetInputTokens         = expt.ColumnEvalTargetNameEvaluatorInputTokens
+	ReportColumnDisplayNameEvalTargetInputTokens  = "Input Tokens"
+	ReportColumnNameEvalTargetOutputTokens        = expt.ColumnEvalTargetNameEvaluatorOutputTokens
+	ReportColumnDisplayNameEvalTargetOutputTokens = "Output Tokens"
+	ReportColumnNameEvalTargetTotalTokens         = expt.ColumnEvalTargetNameEvaluatorTotalTokens
+	ReportColumnDisplayNameEvalTargetTotalTokens  = "Total Tokens"
 )

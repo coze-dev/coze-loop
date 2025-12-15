@@ -540,11 +540,11 @@ var (
 		Name:  consts.ReportColumnNameEvalTargetTrajectory,
 		Label: gptr.Of(consts.ReportColumnLabelEvalTargetTrajectory),
 	}
-	columnsEvalTargetMtr = []*entity.ColumnEvalTarget{
-		{Name: consts.ReportColumnNameEvalTargetTotalLatency},
-		{Name: consts.ReportColumnNameEvalTargetInputTokens},
-		{Name: consts.ReportColumnNameEvalTargetOutputTokens},
-		{Name: consts.ReportColumnNameEvalTargetTotalTokens},
+	columnsEvalTargetMtr = []*entity.ColumnEvalTarget{ // todo(@liushengyang): configuration-driven
+		{Name: consts.ReportColumnNameEvalTargetTotalLatency, DisplayName: consts.ReportColumnDisplayNameEvalTargetTotalLatency},
+		{Name: consts.ReportColumnNameEvalTargetInputTokens, DisplayName: consts.ReportColumnDisplayNameEvalTargetInputTokens},
+		{Name: consts.ReportColumnNameEvalTargetOutputTokens, DisplayName: consts.ReportColumnDisplayNameEvalTargetOutputTokens},
+		{Name: consts.ReportColumnNameEvalTargetTotalTokens, DisplayName: consts.ReportColumnDisplayNameEvalTargetTotalTokens},
 	}
 )
 
@@ -555,9 +555,9 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, exp
 			continue
 		}
 		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
-		if expt.TargetType.SupptTrajectory() {
-			columns = append(columns, columnEvalTargetTrajectory)
-		}
+		//if expt.TargetType.SupptTrajectory() {
+		//	columns = append(columns, columnEvalTargetTrajectory)
+		//}
 		columns = append(columns, columnsEvalTargetMtr...)
 		res = append(res, &entity.ExptColumnEvalTarget{
 			ExptID:  expt.ID,

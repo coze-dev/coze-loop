@@ -699,7 +699,8 @@ type ExptColumnEvalTarget struct {
 }
 
 type ColumnEvalTarget struct {
-	Name  string
-	Desc  string
-	Label *string
+	Name        string
+	Desc        string
+	Label       *string
+	DisplayName string
 }

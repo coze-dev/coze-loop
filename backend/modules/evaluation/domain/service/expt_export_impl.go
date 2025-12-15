@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gopkg/util/logger"
 
@@ -387,7 +388,7 @@ func (e exportCSVHelper) buildColumns(ctx context.Context) ([]string, error) {
 	}
 
 	for _, col := range e.columnsEvalTarget {
-		columns = append(columns, col.Name)
+		columns = append(columns, gcond.If(len(col.DisplayName) > 0, col.DisplayName, col.Name))
 	}
 
 	// colEvaluators
