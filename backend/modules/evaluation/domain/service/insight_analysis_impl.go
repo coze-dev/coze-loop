@@ -132,17 +132,19 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 	if err != nil {
 		return err
 	}
-	if expt.StartAt == nil || expt.EndAt == nil {
-		logs.CtxWarn(ctx, "Experiment %d has no start or end time", exptID)
-	}
 
 	param := &rpc.CallTraceAgentParam{
 		SpaceID:        spaceID,
 		ExptID:         exptID,
 		Url:            url,
-		StartTime:      expt.StartAt.UnixMilli(),
-		EndTime:        expt.EndAt.UnixMilli(),
 		EvalTargetType: expt.TargetType,
+	}
+
+	if expt.StartAt == nil || expt.EndAt == nil {
+		logs.CtxWarn(ctx, "Experiment %d has no start or end time", exptID)
+	} else {
+		param.StartTime = expt.StartAt.UnixMilli()
+		param.EndTime = expt.EndAt.UnixMilli()
 	}
 
 	target, err := e.targetRepo.GetEvalTargetVersion(ctx, spaceID, expt.TargetVersionID)
@@ -220,7 +222,7 @@ func (e ExptInsightAnalysisServiceImpl) checkAnalysisReportGenStatus(ctx context
 	// 超过2小时，未生成分析报告，认为是失败
 	if status == entity.ReportStatus_Running && record.CreatedAt.Add(entity.InsightAnalysisRunningTimeout).Unix() <= time.Now().Unix() {
 		record.Status = entity.InsightAnalysisStatus_Failed
-		logs.CtxWarn(ctx, "checkAnalysisReportGenStatus found timeout event, expt_id: %v, record_id: %v", record.ExptID, record.ID)
+		logs.CtxWarn(ctx, "checkAnalysisReportGenStatus found timeout event, space_id: %v, expt_id: %v, record_id: %v, report_id: %v", record.SpaceID, record.ExptID, record.ID, gptr.Indirect(record.AnalysisReportID))
 		return e.repo.UpdateAnalysisRecord(ctx, record)
 	}
 
