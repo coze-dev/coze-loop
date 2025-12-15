@@ -159,14 +159,14 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 		// 实验已失败，终止此轮自动化任务，避免后续 span 继续触发链路
 		if statusErr, ok := errorx.FromStatusError(err); ok {
 			if statusErr.Code() == errno.ExperimentStatusNotAllowedToInvokeCode {
-				logs.CtxWarn(ctx, "[auto_task] experiment already failed (code=%d), terminate task_id=%d", statusErr.Code(), trigger.Task.ID)
+				logs.CtxWarn(ctx, "[task-debug] experiment already failed (code=%d), terminate task_id=%d, trace_id=%v", statusErr.Code(), trigger.Task.ID, trigger.Span.TraceID)
 				// 仅置 task run 为终态 因为即使是不循环的任务也可能同时包含 NewData && Backfill
 				err := p.OnTaskRunTerminated(ctx, taskexe.OnTaskRunTerminatedReq{
 					Task:    trigger.Task,
 					TaskRun: trigger.TaskRun,
 				})
 				if err != nil {
-					logs.CtxError(ctx, "Do OnTaskFailed failed, err: %v", err)
+					logs.CtxError(ctx, "[task-debug] do OnTaskFailed failed, err: %v", err)
 					return err
 				}
 			}
