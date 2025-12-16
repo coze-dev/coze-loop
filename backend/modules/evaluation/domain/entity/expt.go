@@ -87,6 +87,7 @@ type Experiment struct {
 	TargetID            int64
 	EvaluatorVersionRef []*ExptEvaluatorVersionRef
 	EvalConf            *EvaluationConfiguration
+	ExptTemplateID      int64 // 实验模板ID，0表示未使用模板
 
 	Target     *EvalTarget
 	EvalSet    *EvaluationSet

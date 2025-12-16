@@ -32,7 +32,6 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		ExptStats:                          newExptStats(db, opts...),
 		ExptTemplate:                       newExptTemplate(db, opts...),
 		ExptTemplateEvaluatorRef:           newExptTemplateEvaluatorRef(db, opts...),
-		ExptTemplateRef:                    newExptTemplateRef(db, opts...),
 		ExptTurnAnnotateRecordRef:          newExptTurnAnnotateRecordRef(db, opts...),
 		ExptTurnEvaluatorResultRef:         newExptTurnEvaluatorResultRef(db, opts...),
 		ExptTurnResult:                     newExptTurnResult(db, opts...),
@@ -59,7 +58,6 @@ type Query struct {
 	ExptStats                          exptStats
 	ExptTemplate                       exptTemplate
 	ExptTemplateEvaluatorRef           exptTemplateEvaluatorRef
-	ExptTemplateRef                    exptTemplateRef
 	ExptTurnAnnotateRecordRef          exptTurnAnnotateRecordRef
 	ExptTurnEvaluatorResultRef         exptTurnEvaluatorResultRef
 	ExptTurnResult                     exptTurnResult
@@ -87,7 +85,6 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		ExptStats:                          q.ExptStats.clone(db),
 		ExptTemplate:                       q.ExptTemplate.clone(db),
 		ExptTemplateEvaluatorRef:           q.ExptTemplateEvaluatorRef.clone(db),
-		ExptTemplateRef:                    q.ExptTemplateRef.clone(db),
 		ExptTurnAnnotateRecordRef:          q.ExptTurnAnnotateRecordRef.clone(db),
 		ExptTurnEvaluatorResultRef:         q.ExptTurnEvaluatorResultRef.clone(db),
 		ExptTurnResult:                     q.ExptTurnResult.clone(db),
@@ -122,7 +119,6 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		ExptStats:                          q.ExptStats.replaceDB(db),
 		ExptTemplate:                       q.ExptTemplate.replaceDB(db),
 		ExptTemplateEvaluatorRef:           q.ExptTemplateEvaluatorRef.replaceDB(db),
-		ExptTemplateRef:                    q.ExptTemplateRef.replaceDB(db),
 		ExptTurnAnnotateRecordRef:          q.ExptTurnAnnotateRecordRef.replaceDB(db),
 		ExptTurnEvaluatorResultRef:         q.ExptTurnEvaluatorResultRef.replaceDB(db),
 		ExptTurnResult:                     q.ExptTurnResult.replaceDB(db),
@@ -147,7 +143,6 @@ type queryCtx struct {
 	ExptStats                          *exptStatsDo
 	ExptTemplate                       *exptTemplateDo
 	ExptTemplateEvaluatorRef           *exptTemplateEvaluatorRefDo
-	ExptTemplateRef                    *exptTemplateRefDo
 	ExptTurnAnnotateRecordRef          *exptTurnAnnotateRecordRefDo
 	ExptTurnEvaluatorResultRef         *exptTurnEvaluatorResultRefDo
 	ExptTurnResult                     *exptTurnResultDo
@@ -172,7 +167,6 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		ExptStats:                          q.ExptStats.WithContext(ctx),
 		ExptTemplate:                       q.ExptTemplate.WithContext(ctx),
 		ExptTemplateEvaluatorRef:           q.ExptTemplateEvaluatorRef.WithContext(ctx),
-		ExptTemplateRef:                    q.ExptTemplateRef.WithContext(ctx),
 		ExptTurnAnnotateRecordRef:          q.ExptTurnAnnotateRecordRef.WithContext(ctx),
 		ExptTurnEvaluatorResultRef:         q.ExptTurnEvaluatorResultRef.WithContext(ctx),
 		ExptTurnResult:                     q.ExptTurnResult.WithContext(ctx),
