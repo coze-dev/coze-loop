@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -3901,7 +3902,11 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 
 	t.Run("成功创建洞察分析", func(t *testing.T) {
 		// Mock the manager.Get call
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			CreatedBy: "test-user",
+			StartAt:   &[]time.Time{time.Now()}[0],
+			EndAt:     &[]time.Time{time.Now()}[0],
+		}, nil)
 		// Mock the auth.AuthorizationWithoutSPI call
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		// Mock the CreateAnalysisRecord call
@@ -3929,7 +3934,11 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 	})
 
 	t.Run("创建分析记录失败", func(t *testing.T) {
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			CreatedBy: "test-user",
+			StartAt:   &[]time.Time{time.Now()}[0],
+			EndAt:     &[]time.Time{time.Now()}[0],
+		}, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(0), errors.New("create analysis record error"))
 

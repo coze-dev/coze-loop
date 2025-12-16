@@ -512,6 +512,13 @@ struct ExptInsightAnalysisRecord {
     6: optional string analysis_report_content
     7: optional ExptInsightAnalysisFeedback expt_insight_analysis_feedback
     8: optional common.BaseInfo base_info
+
+    21: optional list<ExptInsightAnalysisIndex> analysis_report_index
+}
+
+struct ExptInsightAnalysisIndex {
+    1: optional string id
+    2: optional string title
 }
 
 // 洞察分析反馈统计

@@ -76,6 +76,26 @@ func (mr *MockIExptInsightAnalysisFeedbackCommentDAOMockRecorder) Delete(ctx, sp
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackCommentDAO)(nil).Delete), ctx, spaceID, exptID, commentID)
 }
 
+// GetByID mocks base method.
+func (m *MockIExptInsightAnalysisFeedbackCommentDAO) GetByID(ctx context.Context, spaceID, exptID, commentID int64, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackComment, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, spaceID, exptID, commentID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetByID", varargs...)
+	ret0, _ := ret[0].(*model.ExptInsightAnalysisFeedbackComment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockIExptInsightAnalysisFeedbackCommentDAOMockRecorder) GetByID(ctx, spaceID, exptID, commentID any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, spaceID, exptID, commentID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackCommentDAO)(nil).GetByID), varargs...)
+}
+
 // GetByRecordID mocks base method.
 func (m *MockIExptInsightAnalysisFeedbackCommentDAO) GetByRecordID(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackComment, error) {
 	m.ctrl.T.Helper()
@@ -97,9 +117,13 @@ func (mr *MockIExptInsightAnalysisFeedbackCommentDAOMockRecorder) GetByRecordID(
 }
 
 // List mocks base method.
-func (m *MockIExptInsightAnalysisFeedbackCommentDAO) List(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page) ([]*model.ExptInsightAnalysisFeedbackComment, int64, error) {
+func (m *MockIExptInsightAnalysisFeedbackCommentDAO) List(ctx context.Context, spaceID, exptID, recordID int64, page entity.Page, opts ...db.Option) ([]*model.ExptInsightAnalysisFeedbackComment, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, spaceID, exptID, recordID, page)
+	varargs := []any{ctx, spaceID, exptID, recordID, page}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
 	ret0, _ := ret[0].([]*model.ExptInsightAnalysisFeedbackComment)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -107,9 +131,10 @@ func (m *MockIExptInsightAnalysisFeedbackCommentDAO) List(ctx context.Context, s
 }
 
 // List indicates an expected call of List.
-func (mr *MockIExptInsightAnalysisFeedbackCommentDAOMockRecorder) List(ctx, spaceID, exptID, recordID, page any) *gomock.Call {
+func (mr *MockIExptInsightAnalysisFeedbackCommentDAOMockRecorder) List(ctx, spaceID, exptID, recordID, page any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackCommentDAO)(nil).List), ctx, spaceID, exptID, recordID, page)
+	varargs := append([]any{ctx, spaceID, exptID, recordID, page}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptInsightAnalysisFeedbackCommentDAO)(nil).List), varargs...)
 }
 
 // Update mocks base method.
