@@ -178,111 +178,41 @@ func GetExptResultExportRecord(ctx context.Context, c *app.RequestContext) {
 // InsightAnalysisExperiment .
 // @router /api/evaluation/v1/experiments/:expt_id/insight_analysis [POST]
 func InsightAnalysisExperiment(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.InsightAnalysisExperimentRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(expt.InsightAnalysisExperimentResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localExptSvc.InsightAnalysisExperiment)
 }
 
 // ListExptInsightAnalysisRecord .
 // @router /api/evaluation/v1/experiments/:expt_id/insight_analysis_records/list [POST]
 func ListExptInsightAnalysisRecord(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.ListExptInsightAnalysisRecordRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(expt.ListExptInsightAnalysisRecordResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localExptSvc.ListExptInsightAnalysisRecord)
 }
 
 // DeleteExptInsightAnalysisRecord .
 // @router /api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id [DELETE]
 func DeleteExptInsightAnalysisRecord(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.DeleteExptInsightAnalysisRecordRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(expt.DeleteExptInsightAnalysisRecordResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localExptSvc.DeleteExptInsightAnalysisRecord)
 }
 
 // GetExptInsightAnalysisRecord .
 // @router /api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id [POST]
 func GetExptInsightAnalysisRecord(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.GetExptInsightAnalysisRecordRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(expt.GetExptInsightAnalysisRecordResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localExptSvc.GetExptInsightAnalysisRecord)
 }
 
 // FeedbackExptInsightAnalysisReport .
 // @router /api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/feedback [POST]
 func FeedbackExptInsightAnalysisReport(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.FeedbackExptInsightAnalysisReportRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(expt.FeedbackExptInsightAnalysisReportResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localExptSvc.FeedbackExptInsightAnalysisReport)
 }
 
 // ListExptInsightAnalysisComment .
 // @router /api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/comments/list [POST]
 func ListExptInsightAnalysisComment(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.ListExptInsightAnalysisCommentRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(expt.ListExptInsightAnalysisCommentResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localExptSvc.ListExptInsightAnalysisComment)
 }
 
 // GetAnalysisRecordFeedbackVote .
 // @router /api/evaluation/v1/insight_analysis_records/:insight_analysis_record_id/feedback_vote [GET]
 func GetAnalysisRecordFeedbackVote(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.GetAnalysisRecordFeedbackVoteRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(expt.GetAnalysisRecordFeedbackVoteResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localExptSvc.GetAnalysisRecordFeedbackVote)
 }

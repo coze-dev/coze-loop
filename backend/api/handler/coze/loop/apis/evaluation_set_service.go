@@ -9,8 +9,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 )
 
@@ -127,15 +125,5 @@ func CreateEvaluationSetWithImport(ctx context.Context, c *app.RequestContext) {
 // ParseImportSourceFile .
 // @router /api/evaluation/v1/evaluation_sets/parse_import_source_file [POST]
 func ParseImportSourceFile(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req eval_set.ParseImportSourceFileRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(eval_set.ParseImportSourceFileResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localEvalSetSvc.ParseImportSourceFile)
 }

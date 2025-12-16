@@ -164,47 +164,17 @@ func ListPreSpan(ctx context.Context, c *app.RequestContext) {
 // UpsertTrajectoryConfig .
 // @router /api/observability/v1/traces/trajectory_config [POST]
 func UpsertTrajectoryConfig(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.UpsertTrajectoryConfigRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.UpsertTrajectoryConfigResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.UpsertTrajectoryConfig)
 }
 
 // GetTrajectoryConfig .
 // @router /api/observability/v1/traces/trajectory_config [GET]
 func GetTrajectoryConfig(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.GetTrajectoryConfigRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.GetTrajectoryConfigResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.GetTrajectoryConfig)
 }
 
 // ListTrajectory .
 // @router /api/observability/v1/traces/trajectory [POST]
 func ListTrajectory(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.ListTrajectoryRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.ListTrajectoryResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.ListTrajectory)
 }
