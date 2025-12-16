@@ -87,6 +87,7 @@ func (e *ExptTemplate) ContainsEvalTarget() bool {
 
 // ExptTemplateEvaluatorRef 实验模板评估器引用DO
 type ExptTemplateEvaluatorRef struct {
+	ID                 int64
 	SpaceID            int64
 	ExptTemplateID     int64
 	EvaluatorID        int64
@@ -159,4 +160,18 @@ func (c *ExptTemplateConfiguration) GetDefaultEvaluatorsConcurNum() int {
 		return defaultConcurNum
 	}
 	return *c.EvaluatorsConcurNum
+}
+
+// CreateExptTemplateParam 创建实验模板参数
+type CreateExptTemplateParam struct {
+	SpaceID              int64
+	Name                 string
+	Description          string
+	EvalSetID            int64
+	EvalSetVersionID     int64
+	TargetID             int64
+	TargetVersionID      int64
+	EvaluatorVersionIDs  []int64
+	TemplateConf         *ExptTemplateConfiguration
+	ExptType             ExptType
 }

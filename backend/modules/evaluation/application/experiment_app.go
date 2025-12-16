@@ -68,6 +68,9 @@ type experimentApplication struct {
 
 	// 新增：EvaluatorService 用于查询内置评估器版本
 	evaluatorService service.EvaluatorService
+
+	// 实验模板管理服务
+	templateManager service.IExptTemplateManager
 }
 
 func NewExperimentApplication(
@@ -87,6 +90,7 @@ func NewExperimentApplication(
 	exptResultExportService service.IExptResultExportService,
 	exptInsightAnalysisService service.IExptInsightAnalysisService,
 	evaluatorService service.EvaluatorService,
+	templateManager service.IExptTemplateManager,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc: resultSvc,
@@ -106,6 +110,7 @@ func NewExperimentApplication(
 		IExptResultExportService:    exptResultExportService,
 		IExptInsightAnalysisService: exptInsightAnalysisService,
 		evaluatorService:            evaluatorService,
+		templateManager:             templateManager,
 	}
 }
 
@@ -130,6 +135,31 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	return &expt.CreateExperimentResponse{
 		Experiment: experiment.ToExptDTO(createExpt),
 		BaseResp:   base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest) (r *expt.CreateExperimentTemplateResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	logs.CtxInfo(ctx, "CreateExperimentTemplate userIDInContext: %s", session.UserID)
+
+	param, err := experiment.ConvertCreateExptTemplateReq(req)
+	if err != nil {
+		return nil, err
+	}
+
+	createTemplate, err := e.templateManager.Create(ctx, param, session)
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.CreateExperimentTemplateResponse{
+		ExperimentTemplate: experiment.ToExptTemplateDTO(createTemplate),
+		BaseResp:           base.NewBaseResp(),
 	}, nil
 }
 
