@@ -2229,17 +2229,6 @@ func newSuccessInvokeResultReq(workspaceID, invokeID int64) *openapi.ReportEvalT
 	}
 }
 
-func newFailedInvokeResultReq(workspaceID, invokeID int64, errorMessage string) *openapi.ReportEvalTargetInvokeResultRequest {
-	status := spi.InvokeEvalTargetStatus_FAILED
-
-	return &openapi.ReportEvalTargetInvokeResultRequest{
-		WorkspaceID:  gptr.Of(workspaceID),
-		InvokeID:     gptr.Of(invokeID),
-		Status:       &status,
-		ErrorMessage: gptr.Of(errorMessage),
-	}
-}
-
 func TestEvalOpenAPIApplication_GetEvaluationItemFieldOApi(t *testing.T) {
 	t.Parallel()
 

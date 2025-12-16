@@ -13,8 +13,7 @@ func NewEvaluationAnalysisService() IEvaluationAnalysisService {
 	return &evaluationAnalysisServiceImpl{}
 }
 
-type evaluationAnalysisServiceImpl struct {
-}
+type evaluationAnalysisServiceImpl struct{}
 
 func (e evaluationAnalysisServiceImpl) GetAnalysisRecord(ctx context.Context, id int64) (record *entity.AnalysisRecord, err error) {
 	return nil, err

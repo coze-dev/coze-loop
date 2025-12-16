@@ -1420,7 +1420,6 @@ func (e *ExptResultBuilder) buildAnalysis(ctx context.Context) error {
 	}
 	e.itemIDTurnID2TrajectoryAnalysis = itemIDTurnID2AnalysisRecord
 	return nil
-
 }
 
 func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
