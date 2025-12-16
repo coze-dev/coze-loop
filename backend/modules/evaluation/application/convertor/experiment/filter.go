@@ -174,6 +174,15 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 			}
 			sourceIDs := parseStringList(cond.GetValue())
 			ff.SourceID = intersectIgnoreNull(ff.SourceID, sourceIDs)
+			case domain_expt.FieldType_ExperimentTemplateID:
+				if len(cond.GetValue()) == 0 {
+					continue
+				}
+				ids, err := parseIntList(cond.GetValue())
+				if err != nil {
+					return nil, err
+				}
+				ff.ExptTemplateIDs = intersectIgnoreNull(ff.ExptTemplateIDs, ids)
 		default:
 			logs.CtxWarn(ctx, "ConvertFilters with unsupport condition: %v", json.Jsonify(cond))
 		}

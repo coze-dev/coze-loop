@@ -337,22 +337,23 @@ type ExptListFilter struct {
 }
 
 type ExptFilterFields struct {
-	CreatedBy    []string
-	Status       []int64
-	EvalSetIDs   []int64
-	TargetIDs    []int64
-	EvaluatorIDs []int64
-	TargetType   []int64
-	ExptType     []int64
-	SourceType   []int64
-	SourceID     []string
+	CreatedBy       []string
+	Status          []int64
+	EvalSetIDs      []int64
+	TargetIDs       []int64
+	EvaluatorIDs    []int64
+	TargetType      []int64
+	ExptType        []int64
+	SourceType      []int64
+	SourceID        []string
+	ExptTemplateIDs []int64
 }
 
 func (e *ExptFilterFields) IsValid() bool {
 	if e == nil {
 		return true
 	}
-	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType} {
+	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptTemplateIDs} {
 		for _, item := range slice {
 			if item < 0 {
 				return false
