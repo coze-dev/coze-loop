@@ -2,7 +2,8 @@ version: "2"
 
 run:
   timeout: 10m
-  skip-dirs:
+issues:
+  exclude-dirs:
     - kitex_gen
     - loop_gen
     - gorm_gen

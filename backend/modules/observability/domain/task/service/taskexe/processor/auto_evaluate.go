@@ -6,9 +6,10 @@ package processor
 import (
 	"context"
 	"fmt"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"strconv"
 	"time"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
