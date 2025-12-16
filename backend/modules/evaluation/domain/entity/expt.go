@@ -159,6 +159,9 @@ func (e *ExptEvaluatorVersionRef) String() string {
 type EvaluationConfiguration struct {
 	ConnectorConf Connector
 	ItemConcurNum *int
+	// 评估器得分加权配置
+	EnableWeightedScore   bool
+	EvaluatorScoreWeights map[int64]float64
 }
 
 type Connector struct {

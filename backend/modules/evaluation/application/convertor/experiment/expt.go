@@ -29,7 +29,9 @@ type EvalConfConvert struct{}
 
 func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest) (*entity.EvaluationConfiguration, error) {
 	ec := &entity.EvaluationConfiguration{
-		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
+		ItemConcurNum:         ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
+		EnableWeightedScore:   gptr.Indirect(cer.EnableWeightedScore),
+		EvaluatorScoreWeights: cer.GetEvaluatorScoreWeights(),
 	}
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
 		TargetVersionID: cer.GetTargetVersionID(),

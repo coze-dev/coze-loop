@@ -587,6 +587,7 @@ type TurnTargetOutput struct {
 
 type TurnEvaluatorOutput struct {
 	EvaluatorRecords map[int64]*EvaluatorRecord
+	WeightedScore    *float64 // 加权汇总得分
 }
 
 type TurnAnnotateResult struct {

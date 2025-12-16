@@ -1305,9 +1305,75 @@ func (e *ExptResultBuilder) getTurnEvaluatorResult(ctx context.Context, itemID, 
 		}
 	}
 
+	// 计算加权分数
+	var weightedScore *float64
+	if e.exptDO != nil && e.exptDO.EvalConf != nil && e.exptDO.EvalConf.EnableWeightedScore {
+		score := e.calculateWeightedScore(evaluatorVersionID2Result, e.exptDO.EvalConf.EvaluatorScoreWeights)
+		if score != nil {
+			weightedScore = score
+		}
+	}
+
 	return &entity.TurnEvaluatorOutput{
 		EvaluatorRecords: evaluatorVersionID2Result,
+		WeightedScore:    weightedScore,
 	}
+}
+
+// calculateWeightedScore 计算加权分数
+func (e *ExptResultBuilder) calculateWeightedScore(
+	evaluatorRecords map[int64]*entity.EvaluatorRecord,
+	weights map[int64]float64,
+) *float64 {
+	if len(evaluatorRecords) == 0 || len(weights) == 0 {
+		return nil
+	}
+
+	var totalWeightedScore float64
+	var totalWeight float64
+	hasValidScore := false
+
+	for evaluatorVersionID, record := range evaluatorRecords {
+		if record == nil {
+			continue
+		}
+
+		// 获取评估器分数（优先使用修正分数）
+		var score *float64
+		if record.EvaluatorOutputData != nil && record.EvaluatorOutputData.EvaluatorResult != nil {
+			if record.EvaluatorOutputData.EvaluatorResult.Correction != nil &&
+				record.EvaluatorOutputData.EvaluatorResult.Correction.Score != nil {
+				score = record.EvaluatorOutputData.EvaluatorResult.Correction.Score
+			} else if record.EvaluatorOutputData.EvaluatorResult.Score != nil {
+				score = record.EvaluatorOutputData.EvaluatorResult.Score
+			}
+		}
+
+		// 如果没有有效分数，跳过
+		if score == nil {
+			continue
+		}
+
+		// 获取权重
+		weight, ok := weights[evaluatorVersionID]
+		if !ok || weight <= 0 {
+			continue
+		}
+
+		// 累加加权分数
+		totalWeightedScore += *score * weight
+		totalWeight += weight
+		hasValidScore = true
+	}
+
+	// 如果没有有效分数或权重总和为0，返回nil
+	if !hasValidScore || totalWeight <= 0 {
+		return nil
+	}
+
+	// 计算加权平均分数
+	weightedScore := totalWeightedScore / totalWeight
+	return &weightedScore
 }
 
 func (e *ExptResultBuilder) buildAnnotateRecords(ctx context.Context) error {
