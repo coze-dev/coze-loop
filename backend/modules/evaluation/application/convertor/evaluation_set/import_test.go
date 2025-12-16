@@ -78,13 +78,13 @@ func TestDatasetIOFileDTO2DO(t *testing.T) {
 			assert.Equal(t, gptr.Indirect(dl), gptr.Indirect(out.DownloadURL))
 			assert.Equal(t, gptr.Indirect(pid), gptr.Indirect(out.ProviderID))
 			if assert.NotNil(t, out.Format) {
-			assert.Equal(t, entity.FileFormat(*format), *out.Format)
+				assert.Equal(t, entity.FileFormat(*format), *out.Format)
 			}
 			if assert.NotNil(t, out.CompressFormat) {
-			assert.Equal(t, entity.FileFormat(*compress), *out.CompressFormat)
+				assert.Equal(t, entity.FileFormat(*compress), *out.CompressFormat)
 			}
 			if assert.NotNil(t, out.ProviderAuth) {
-			assert.Equal(t, gptr.Indirect(pa.ProviderAccountID), gptr.Indirect(out.ProviderAuth.ProviderAccountID))
+				assert.Equal(t, gptr.Indirect(pa.ProviderAccountID), gptr.Indirect(out.ProviderAuth.ProviderAccountID))
 			}
 		}
 	})
@@ -141,7 +141,7 @@ func TestDatasetIOEndpointDTO2DO(t *testing.T) {
 	t.Run("endpoint with file and dataset", func(t *testing.T) {
 		t.Parallel()
 		in := &dataset_job.DatasetIOEndpoint{
-			File: &dataset_job.DatasetIOFile{Provider: dataset.StorageProvider_TOS, Path: "tos://bucket/a"},
+			File:    &dataset_job.DatasetIOFile{Provider: dataset.StorageProvider_TOS, Path: "tos://bucket/a"},
 			Dataset: &dataset_job.DatasetIODataset{DatasetID: 1001},
 		}
 		out := DatasetIOEndpointDTO2DO(in)

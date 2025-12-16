@@ -476,7 +476,10 @@ func TestExptInsightAnalysisFeedbackVoteDO2DTO(t *testing.T) {
 		{"nil input", nil, nil},
 		{
 			name: "upvote",
-			do: &entity.ExptInsightAnalysisFeedbackVote{ID: 1, VoteType: entity.Upvote},
+			do: &entity.ExptInsightAnalysisFeedbackVote{
+				ID:       1,
+				VoteType: entity.Upvote,
+			},
 			expected: &domain_expt.ExptInsightAnalysisFeedbackVote{
 				ID:                 ptr.Of(int64(1)),
 				FeedbackActionType: ptr.Of(domain_expt.FeedbackActionTypeUpvote),
@@ -484,15 +487,15 @@ func TestExptInsightAnalysisFeedbackVoteDO2DTO(t *testing.T) {
 		},
 		{
 			name: "downvote",
-			do: &entity.ExptInsightAnalysisFeedbackVote{ID: 2, VoteType: entity.Downvote},
+			do:   &entity.ExptInsightAnalysisFeedbackVote{ID: 2, VoteType: entity.Downvote},
 			expected: &domain_expt.ExptInsightAnalysisFeedbackVote{
 				ID:                 ptr.Of(int64(2)),
 				FeedbackActionType: ptr.Of(domain_expt.FeedbackActionTypeDownvote),
 			},
 		},
 		{
-			name: "none returns nil",
-			do: &entity.ExptInsightAnalysisFeedbackVote{ID: 3, VoteType: entity.None},
+			name:     "none returns nil",
+			do:       &entity.ExptInsightAnalysisFeedbackVote{ID: 3, VoteType: entity.None},
 			expected: nil,
 		},
 	}

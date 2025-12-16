@@ -9,7 +9,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
-	componentrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	evaluatormtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
 	rmqproducer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
@@ -78,7 +77,7 @@ var TargetDomainServiceSet = wire.NewSet(
 
 // NewEvaluatorSourceServices 创建评估器源服务映射
 func NewEvaluatorSourceServices(
-	llmProvider componentrpc.ILLMProvider,
+	llmProvider rpc.ILLMProvider,
 	metric mtr.EvaluatorExecMetrics,
 	config evalconf.IConfiger,
 	runtimeManager component.IRuntimeManager,
