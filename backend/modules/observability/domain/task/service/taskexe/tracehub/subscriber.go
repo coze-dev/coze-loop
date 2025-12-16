@@ -178,7 +178,7 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 	logs.CtxInfo(ctx, "Task: %v 's TaskRunConfig: %v", s.t.ID, taskRunConfig)
 	// 仅允许处于 running 状态的 TaskRun 继续触发处理器，避免已结束 run 仍被触发
 	if taskRunConfig.RunStatus != entity.TaskRunStatusRunning {
-		logs.CtxInfo(ctx, "skip non-running task run: task_id=%d, run_id=%d, status=%s", s.t.ID, taskRunConfig.ID, taskRunConfig.RunStatus)
+		logs.CtxInfo(ctx, "skip non-running task run: task_id=%d, run_id=%d, status=%s, span_id=%s", s.t.ID, taskRunConfig.ID, taskRunConfig.RunStatus, span.SpanID)
 		return nil
 	}
 
