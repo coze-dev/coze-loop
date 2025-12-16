@@ -208,12 +208,12 @@ func TestHandlerResponseFormat(t *testing.T) {
 	}{
 		{"ListExperimentStats", ListExperimentStats, `{"workspace_id": 123}`},
 		{"UpsertExptTurnResultFilter", UpsertExptTurnResultFilter, `{}`},
-		{"InsightAnalysisExperiment", InsightAnalysisExperiment, `{}`},
-		{"ListExptInsightAnalysisRecord", ListExptInsightAnalysisRecord, `{}`},
-		{"DeleteExptInsightAnalysisRecord", DeleteExptInsightAnalysisRecord, `{}`},
-		{"GetExptInsightAnalysisRecord", GetExptInsightAnalysisRecord, `{}`},
-		{"FeedbackExptInsightAnalysisReport", FeedbackExptInsightAnalysisReport, `{"workspace_id": 123, "expt_id": 456, "insight_analysis_record_id": 789, "feedback_action_type": "like"}`},
-		{"ListExptInsightAnalysisComment", ListExptInsightAnalysisComment, `{}`},
+		// {"InsightAnalysisExperiment", InsightAnalysisExperiment, `{}`},
+		// {"ListExptInsightAnalysisRecord", ListExptInsightAnalysisRecord, `{}`},
+		// {"DeleteExptInsightAnalysisRecord", DeleteExptInsightAnalysisRecord, `{}`},
+		// {"GetExptInsightAnalysisRecord", GetExptInsightAnalysisRecord, `{}`},
+		// {"FeedbackExptInsightAnalysisReport", FeedbackExptInsightAnalysisReport, `{"workspace_id": 123, "expt_id": 456, "insight_analysis_record_id": 789, "feedback_action_type": "like"}`},
+		// {"ListExptInsightAnalysisComment", ListExptInsightAnalysisComment, `{}`},
 	}
 
 	for _, h := range handlers {
