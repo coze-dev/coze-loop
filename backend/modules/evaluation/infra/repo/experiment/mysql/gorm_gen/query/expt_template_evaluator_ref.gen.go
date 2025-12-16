@@ -29,7 +29,7 @@ func newExptTemplateEvaluatorRef(db *gorm.DB, opts ...gen.DOOption) exptTemplate
 	_exptTemplateEvaluatorRef.ALL = field.NewAsterisk(tableName)
 	_exptTemplateEvaluatorRef.ID = field.NewInt64(tableName, "id")
 	_exptTemplateEvaluatorRef.SpaceID = field.NewInt64(tableName, "space_id")
-	_exptTemplateEvaluatorRef.TemplateID = field.NewInt64(tableName, "template_id")
+	_exptTemplateEvaluatorRef.ExptTemplateID = field.NewInt64(tableName, "expt_template_id")
 	_exptTemplateEvaluatorRef.EvaluatorID = field.NewInt64(tableName, "evaluator_id")
 	_exptTemplateEvaluatorRef.EvaluatorVersionID = field.NewInt64(tableName, "evaluator_version_id")
 	_exptTemplateEvaluatorRef.CreatedAt = field.NewTime(tableName, "created_at")
@@ -48,7 +48,7 @@ type exptTemplateEvaluatorRef struct {
 	ALL                field.Asterisk
 	ID                 field.Int64 // id
 	SpaceID            field.Int64 // 空间 id
-	TemplateID         field.Int64 // 实验模板 id
+	ExptTemplateID     field.Int64 // 实验模板 id
 	EvaluatorID        field.Int64 // 评估器 id
 	EvaluatorVersionID field.Int64 // 评估器版本 id
 	CreatedAt          field.Time  // 创建时间
@@ -72,7 +72,7 @@ func (e *exptTemplateEvaluatorRef) updateTableName(table string) *exptTemplateEv
 	e.ALL = field.NewAsterisk(table)
 	e.ID = field.NewInt64(table, "id")
 	e.SpaceID = field.NewInt64(table, "space_id")
-	e.TemplateID = field.NewInt64(table, "template_id")
+	e.ExptTemplateID = field.NewInt64(table, "expt_template_id")
 	e.EvaluatorID = field.NewInt64(table, "evaluator_id")
 	e.EvaluatorVersionID = field.NewInt64(table, "evaluator_version_id")
 	e.CreatedAt = field.NewTime(table, "created_at")
@@ -109,7 +109,7 @@ func (e *exptTemplateEvaluatorRef) fillFieldMap() {
 	e.fieldMap = make(map[string]field.Expr, 8)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
-	e.fieldMap["template_id"] = e.TemplateID
+	e.fieldMap["expt_template_id"] = e.ExptTemplateID
 	e.fieldMap["evaluator_id"] = e.EvaluatorID
 	e.fieldMap["evaluator_version_id"] = e.EvaluatorVersionID
 	e.fieldMap["created_at"] = e.CreatedAt

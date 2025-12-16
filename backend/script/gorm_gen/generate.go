@@ -204,7 +204,6 @@ func generateForEvaluationExpt(db *gorm.DB) {
 		"expt_insight_analysis_feedback_vote",
 		"expt_template",
 		"expt_template_evaluator_ref",
-		"expt_template_ref",
 	}
 
 	var models []any

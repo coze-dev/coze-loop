@@ -47,7 +47,7 @@ func (d *exptTemplateEvaluatorRefDAOImpl) GetByTemplateIDs(ctx context.Context, 
 		return nil, nil
 	}
 	q := query.Use(d.db.NewSession(ctx)).ExptTemplateEvaluatorRef
-	results, err := q.WithContext(ctx).Where(q.TemplateID.In(templateIDs...)).Find()
+	results, err := q.WithContext(ctx).Where(q.ExptTemplateID.In(templateIDs...)).Find()
 	if err != nil {
 		return nil, errorx.Wrapf(err, "get expt_template_evaluator_ref by template_ids fail, template_ids: %v", templateIDs)
 	}
@@ -56,7 +56,7 @@ func (d *exptTemplateEvaluatorRefDAOImpl) GetByTemplateIDs(ctx context.Context, 
 
 func (d *exptTemplateEvaluatorRefDAOImpl) DeleteByTemplateID(ctx context.Context, templateID int64) error {
 	q := query.Use(d.db.NewSession(ctx)).ExptTemplateEvaluatorRef
-	_, err := q.WithContext(ctx).Where(q.TemplateID.Eq(templateID)).Delete()
+	_, err := q.WithContext(ctx).Where(q.ExptTemplateID.Eq(templateID)).Delete()
 	if err != nil {
 		return errorx.Wrapf(err, "delete expt_template_evaluator_ref by template_id fail, template_id: %v", templateID)
 	}

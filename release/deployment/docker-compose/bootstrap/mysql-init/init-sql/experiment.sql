@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `latest_run_id`       bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '最后运行id',
     `target_id`           bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评估对象 id',
     `eval_set_id`         bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评测集 id',
+    `expt_template_id`    bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '实验模板 id',
     `credit_cost`         int                                                            NOT NULL DEFAULT '0' COMMENT '权益消耗模式',
     `source_type`         int unsigned                                                   NOT NULL DEFAULT '1' COMMENT '实验来源类型，评测:1,自动化任务:2...',
     `source_id`           varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci  NOT NULL DEFAULT '0' COMMENT '实验来源id',
