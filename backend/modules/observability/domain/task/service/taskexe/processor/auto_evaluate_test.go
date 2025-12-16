@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -519,6 +520,26 @@ func TestAutoEvaluateProcessor_OnFinishTaskRunChange(t *testing.T) {
 	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
 }
 
+func TestAutoEvaluateProcessor_OnTaskRunTerminated(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+
+	taskRun := &taskentity.TaskRun{ID: 8002, RunStatus: taskentity.TaskRunStatusRunning}
+	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), taskRun).Return(nil)
+
+	proc := &AutoEvaluateProcessor{taskRepo: repoAdapter}
+	err := proc.OnTaskRunTerminated(context.Background(), taskexe.OnTaskRunTerminatedReq{
+		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234, CreatedBy: "1001"},
+		TaskRun: taskRun,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
+}
+
 func TestAutoEvaluateProcessor_OnFinishTaskChange(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
@@ -658,9 +679,21 @@ func TestAutoEvaluateProcessor_Invoke_CycleTask_ExperimentFailedOnlyFinishRun(t 
 	proc := &AutoEvaluateProcessor{taskRepo: repoMock, evaluationSvc: evalAdapter}
 
 	err := proc.Invoke(context.Background(), &taskexe.Trigger{Task: taskObj, Span: span, TaskRun: taskRun})
-	assert.Error(t, err)
+	// 验证返回 BizStatus 错误码
+	status, ok := errorx.FromStatusError(err)
+	assert.True(t, ok)
+	assert.EqualValues(t, 601204012, status.Code())
 	assert.Equal(t, taskentity.TaskStatusRunning, taskObj.TaskStatus)
 	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
+	// 验证 Invoke 参数的 Session 与 Ext 写入
+	require.NotNil(t, evalAdapter.lastInvoke)
+	assert.EqualValues(t, int64(1001), evalAdapter.lastInvoke.Session.GetUserID())
+	assert.Equal(t, strconv.FormatInt(workspaceID, 10), evalAdapter.lastInvoke.Ext["workspace_id"])
+	assert.Equal(t, strconv.FormatInt(taskID, 10), evalAdapter.lastInvoke.Ext["task_id"])
+	assert.Equal(t, strconv.FormatInt(runID, 10), evalAdapter.lastInvoke.Ext["task_run_id"])
+	assert.Equal(t, string(taskObj.GetPlatformType()), evalAdapter.lastInvoke.Ext["platform_type"])
+	assert.NotEmpty(t, evalAdapter.lastInvoke.Ext["span_start_time"])
+	assert.NotEmpty(t, evalAdapter.lastInvoke.Ext["span_end_time"])
 }
 
 func TestAutoEvaluateProcessor_OnCreateTaskChange(t *testing.T) {
@@ -900,6 +933,8 @@ type fakeEvaluationAdapter struct {
 	finishResp struct {
 		err error
 	}
+	// capture last invoke param for assertions
+	lastInvoke *rpc.InvokeExperimentReq
 }
 
 func (f *fakeEvaluationAdapter) SubmitExperiment(ctx context.Context, param *rpc.SubmitExperimentReq) (exptID, exptRunID int64, err error) {
@@ -907,6 +942,7 @@ func (f *fakeEvaluationAdapter) SubmitExperiment(ctx context.Context, param *rpc
 }
 
 func (f *fakeEvaluationAdapter) InvokeExperiment(ctx context.Context, param *rpc.InvokeExperimentReq) (addedItems int64, err error) {
+	f.lastInvoke = param
 	return f.invokeResp.addedItems, f.invokeResp.err
 }
 
