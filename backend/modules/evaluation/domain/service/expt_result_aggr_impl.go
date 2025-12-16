@@ -362,14 +362,86 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 			evaluatorResults[evaluatorVersionID] = &evaluatorAggrResult
 
 		}
-		results = append(results, &entity.ExptAggregateResult{
+		exptAgg := &entity.ExptAggregateResult{
 			ExperimentID:      exptID,
 			EvaluatorResults:  evaluatorResults,
 			AnnotationResults: annotationResults,
-		})
+		}
+
+		// 计算所有聚合指标的加权结果（如 avg、p99 等）
+		experiment, err := e.experimentRepo.GetByID(ctx, exptID, spaceID)
+		if err == nil && experiment != nil && experiment.EvalConf != nil && experiment.EvalConf.EnableWeightedScore {
+			exptAgg.WeightedResults = e.calculateWeightedAggregateResults(evaluatorResults, experiment.EvalConf.EvaluatorScoreWeights)
+		}
+
+		results = append(results, exptAgg)
 	}
 
 	return results, nil
+}
+
+// calculateWeightedAggregateResults 计算所有数值型聚合指标（如 avg、p99 等）的加权结果
+// 约定：对任意 AggregatorType，只要其 Data.Value 为数值类型（Double），则参与加权计算：
+//   weighted_value = Σ(value_i * weight_i) / Σ(weight_i)
+func (e *ExptAggrResultServiceImpl) calculateWeightedAggregateResults(
+	evaluatorResults map[int64]*entity.EvaluatorAggregateResult,
+	weights map[int64]float64,
+) []*entity.AggregatorResult {
+	if len(evaluatorResults) == 0 || len(weights) == 0 {
+		return nil
+	}
+
+	// aggregatorType -> (sum(value_i * w_i), sum(w_i))
+	type aggAcc struct {
+		sumWeighted float64
+		sumWeight   float64
+	}
+	accMap := make(map[entity.AggregatorType]*aggAcc)
+
+	for evaluatorVersionID, result := range evaluatorResults {
+		weight, ok := weights[evaluatorVersionID]
+		if !ok || weight <= 0 {
+			continue
+		}
+
+		for _, aggr := range result.AggregatorResults {
+			if aggr == nil || aggr.Data == nil || aggr.Data.Value == nil {
+				continue
+			}
+
+			v := *aggr.Data.Value
+			if _, ok := accMap[aggr.AggregatorType]; !ok {
+				accMap[aggr.AggregatorType] = &aggAcc{}
+			}
+			acc := accMap[aggr.AggregatorType]
+			acc.sumWeighted += v * weight
+			acc.sumWeight += weight
+		}
+	}
+
+	if len(accMap) == 0 {
+		return nil
+	}
+
+	weightedResults := make([]*entity.AggregatorResult, 0, len(accMap))
+	for aggType, acc := range accMap {
+		if acc.sumWeight <= 0 {
+			continue
+		}
+		value := acc.sumWeighted / acc.sumWeight
+		weightedResults = append(weightedResults, &entity.AggregatorResult{
+			AggregatorType: aggType,
+			Data: &entity.AggregateData{
+				DataType: entity.Double,
+				Value:    &value,
+			},
+		})
+	}
+
+	if len(weightedResults) == 0 {
+		return nil
+	}
+	return weightedResults
 }
 
 func (e *ExptAggrResultServiceImpl) batchGetTagInfoByExperimentIDs(ctx context.Context, spaceID int64, exptIDs []int64) (map[int64]*entity.TagInfo, error) {

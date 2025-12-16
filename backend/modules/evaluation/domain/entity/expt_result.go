@@ -142,6 +142,8 @@ type ExptAggregateResult struct {
 	EvaluatorResults  map[int64]*EvaluatorAggregateResult
 	Status            int64
 	AnnotationResults map[int64]*AnnotationAggregateResult
+	// WeightedResults 加权聚合结果列表，对每种聚合指标（Average、p99 等）给出加权后的结果
+	WeightedResults []*AggregatorResult
 }
 
 type EvaluatorAggregateResult struct {

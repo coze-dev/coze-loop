@@ -266,11 +266,6 @@ func (p *SourceTarget) IsValid() error {
 	return nil
 }
 func (p *ExptAggregateResult_) IsValid() error {
-	if p.WeightedResult_ != nil {
-		if err := p.WeightedResult_.IsValid(); err != nil {
-			return fmt.Errorf("field WeightedResult_ not valid, %w", err)
-		}
-	}
 	return nil
 }
 func (p *EvalTargetAggregateResult_) IsValid() error {

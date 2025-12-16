@@ -15265,7 +15265,7 @@ type ExptAggregateResult_ struct {
 	Status           *ExptAggregateCalculateStatus        `thrift:"status,3,optional" frugal:"3,optional,ExptAggregateCalculateStatus" form:"status" json:"status,omitempty" query:"status"`
 	// tag_key_id -> result
 	AnnotationResults map[int64]*AnnotationAggregateResult_ `thrift:"annotation_results,4,optional" frugal:"4,optional,map<i64:AnnotationAggregateResult_>" json:"annotation_results" form:"annotation_results" query:"annotation_results"`
-	WeightedResult_   *EvaluatorAggregateResult_            `thrift:"weighted_result,10,optional" frugal:"10,optional,EvaluatorAggregateResult_" json:"weighted_result" form:"weighted_result" query:"weighted_result"`
+	WeightedResults   []*AggregatorResult_                  `thrift:"weighted_results,10,optional" frugal:"10,optional,list<AggregatorResult_>" json:"weighted_results" form:"weighted_results" query:"weighted_results"`
 }
 
 func NewExptAggregateResult_() *ExptAggregateResult_ {
@@ -15318,16 +15318,16 @@ func (p *ExptAggregateResult_) GetAnnotationResults() (v map[int64]*AnnotationAg
 	return p.AnnotationResults
 }
 
-var ExptAggregateResult__WeightedResult__DEFAULT *EvaluatorAggregateResult_
+var ExptAggregateResult__WeightedResults_DEFAULT []*AggregatorResult_
 
-func (p *ExptAggregateResult_) GetWeightedResult_() (v *EvaluatorAggregateResult_) {
+func (p *ExptAggregateResult_) GetWeightedResults() (v []*AggregatorResult_) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetWeightedResult_() {
-		return ExptAggregateResult__WeightedResult__DEFAULT
+	if !p.IsSetWeightedResults() {
+		return ExptAggregateResult__WeightedResults_DEFAULT
 	}
-	return p.WeightedResult_
+	return p.WeightedResults
 }
 func (p *ExptAggregateResult_) SetExperimentID(val int64) {
 	p.ExperimentID = val
@@ -15341,8 +15341,8 @@ func (p *ExptAggregateResult_) SetStatus(val *ExptAggregateCalculateStatus) {
 func (p *ExptAggregateResult_) SetAnnotationResults(val map[int64]*AnnotationAggregateResult_) {
 	p.AnnotationResults = val
 }
-func (p *ExptAggregateResult_) SetWeightedResult_(val *EvaluatorAggregateResult_) {
-	p.WeightedResult_ = val
+func (p *ExptAggregateResult_) SetWeightedResults(val []*AggregatorResult_) {
+	p.WeightedResults = val
 }
 
 var fieldIDToName_ExptAggregateResult_ = map[int16]string{
@@ -15350,7 +15350,7 @@ var fieldIDToName_ExptAggregateResult_ = map[int16]string{
 	2:  "evaluator_results",
 	3:  "status",
 	4:  "annotation_results",
-	10: "weighted_result",
+	10: "weighted_results",
 }
 
 func (p *ExptAggregateResult_) IsSetEvaluatorResults() bool {
@@ -15365,8 +15365,8 @@ func (p *ExptAggregateResult_) IsSetAnnotationResults() bool {
 	return p.AnnotationResults != nil
 }
 
-func (p *ExptAggregateResult_) IsSetWeightedResult_() bool {
-	return p.WeightedResult_ != nil
+func (p *ExptAggregateResult_) IsSetWeightedResults() bool {
+	return p.WeightedResults != nil
 }
 
 func (p *ExptAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -15422,7 +15422,7 @@ func (p *ExptAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 10:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -15546,11 +15546,26 @@ func (p *ExptAggregateResult_) ReadField4(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *ExptAggregateResult_) ReadField10(iprot thrift.TProtocol) error {
-	_field := NewEvaluatorAggregateResult_()
-	if err := _field.Read(iprot); err != nil {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
 		return err
 	}
-	p.WeightedResult_ = _field
+	_field := make([]*AggregatorResult_, 0, size)
+	values := make([]AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.WeightedResults = _field
 	return nil
 }
 
@@ -15691,11 +15706,19 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *ExptAggregateResult_) writeField10(oprot thrift.TProtocol) (err error) {
-	if p.IsSetWeightedResult_() {
-		if err = oprot.WriteFieldBegin("weighted_result", thrift.STRUCT, 10); err != nil {
+	if p.IsSetWeightedResults() {
+		if err = oprot.WriteFieldBegin("weighted_results", thrift.LIST, 10); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.WeightedResult_.Write(oprot); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.WeightedResults)); err != nil {
+			return err
+		}
+		for _, v := range p.WeightedResults {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15735,7 +15758,7 @@ func (p *ExptAggregateResult_) DeepEqual(ano *ExptAggregateResult_) bool {
 	if !p.Field4DeepEqual(ano.AnnotationResults) {
 		return false
 	}
-	if !p.Field10DeepEqual(ano.WeightedResult_) {
+	if !p.Field10DeepEqual(ano.WeightedResults) {
 		return false
 	}
 	return true
@@ -15786,10 +15809,16 @@ func (p *ExptAggregateResult_) Field4DeepEqual(src map[int64]*AnnotationAggregat
 	}
 	return true
 }
-func (p *ExptAggregateResult_) Field10DeepEqual(src *EvaluatorAggregateResult_) bool {
+func (p *ExptAggregateResult_) Field10DeepEqual(src []*AggregatorResult_) bool {
 
-	if !p.WeightedResult_.DeepEqual(src) {
+	if len(p.WeightedResults) != len(src) {
 		return false
+	}
+	for i, v := range p.WeightedResults {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

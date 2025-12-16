@@ -10445,7 +10445,7 @@ func (p *ExptAggregateResult_) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 10:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField10(buf[offset:])
 				offset += l
 				if err != nil {
@@ -10580,13 +10580,26 @@ func (p *ExptAggregateResult_) FastReadField4(buf []byte) (int, error) {
 
 func (p *ExptAggregateResult_) FastReadField10(buf []byte) (int, error) {
 	offset := 0
-	_field := NewEvaluatorAggregateResult_()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
 		return offset, err
-	} else {
-		offset += l
 	}
-	p.WeightedResult_ = _field
+	_field := make([]*AggregatorResult_, 0, size)
+	values := make([]AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.WeightedResults = _field
 	return offset, nil
 }
 
@@ -10672,9 +10685,16 @@ func (p *ExptAggregateResult_) fastWriteField4(buf []byte, w thrift.NocopyWriter
 
 func (p *ExptAggregateResult_) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetWeightedResult_() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
-		offset += p.WeightedResult_.FastWriteNocopy(buf[offset:], w)
+	if p.IsSetWeightedResults() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 10)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.WeightedResults {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -10727,9 +10747,13 @@ func (p *ExptAggregateResult_) field4Length() int {
 
 func (p *ExptAggregateResult_) field10Length() int {
 	l := 0
-	if p.IsSetWeightedResult_() {
+	if p.IsSetWeightedResults() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.WeightedResult_.BLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.WeightedResults {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -10783,14 +10807,20 @@ func (p *ExptAggregateResult_) DeepCopy(s interface{}) error {
 		}
 	}
 
-	var _weightedResult_ *EvaluatorAggregateResult_
-	if src.WeightedResult_ != nil {
-		_weightedResult_ = &EvaluatorAggregateResult_{}
-		if err := _weightedResult_.DeepCopy(src.WeightedResult_); err != nil {
-			return err
+	if src.WeightedResults != nil {
+		p.WeightedResults = make([]*AggregatorResult_, 0, len(src.WeightedResults))
+		for _, elem := range src.WeightedResults {
+			var _elem *AggregatorResult_
+			if elem != nil {
+				_elem = &AggregatorResult_{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.WeightedResults = append(p.WeightedResults, _elem)
 		}
 	}
-	p.WeightedResult_ = _weightedResult_
 
 	return nil
 }
