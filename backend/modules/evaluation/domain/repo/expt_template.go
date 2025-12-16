@@ -17,5 +17,7 @@ type IExptTemplateRepo interface {
 	MGetByID(ctx context.Context, ids []int64, spaceID int64) ([]*entity.ExptTemplate, error)
 	Update(ctx context.Context, template *entity.ExptTemplate) error
 	UpdateFields(ctx context.Context, templateID int64, ufields map[string]any) error
+	UpdateWithRefs(ctx context.Context, template *entity.ExptTemplate, refs []*entity.ExptTemplateEvaluatorRef) error
 	Delete(ctx context.Context, id, spaceID int64) error
+	List(ctx context.Context, page, size int32, filter *entity.ExptTemplateListFilter, orders []*entity.OrderBy, spaceID int64) ([]*entity.ExptTemplate, int64, error)
 }

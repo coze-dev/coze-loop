@@ -17,6 +17,7 @@ import (
 type IExptTemplateEvaluatorRefDAO interface {
 	Create(ctx context.Context, refs []*model.ExptTemplateEvaluatorRef) error
 	GetByTemplateIDs(ctx context.Context, templateIDs []int64) ([]*model.ExptTemplateEvaluatorRef, error)
+	DeleteByTemplateID(ctx context.Context, templateID int64) error
 }
 
 func NewExptTemplateEvaluatorRefDAO(db db.Provider) IExptTemplateEvaluatorRefDAO {
@@ -51,4 +52,13 @@ func (d *exptTemplateEvaluatorRefDAOImpl) GetByTemplateIDs(ctx context.Context, 
 		return nil, errorx.Wrapf(err, "get expt_template_evaluator_ref by template_ids fail, template_ids: %v", templateIDs)
 	}
 	return results, nil
+}
+
+func (d *exptTemplateEvaluatorRefDAOImpl) DeleteByTemplateID(ctx context.Context, templateID int64) error {
+	q := query.Use(d.db.NewSession(ctx)).ExptTemplateEvaluatorRef
+	_, err := q.WithContext(ctx).Where(q.TemplateID.Eq(templateID)).Delete()
+	if err != nil {
+		return errorx.Wrapf(err, "delete expt_template_evaluator_ref by template_id fail, template_id: %v", templateID)
+	}
+	return nil
 }

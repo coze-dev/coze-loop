@@ -512,8 +512,7 @@ const (
 	FieldType_OutputTokens FieldType = 62
 	// 目前使用固定key：total_tokens
 	FieldType_TotalTokens          FieldType = 63
-	FieldType_ExperimentID         FieldType = 70
-	FieldType_ExperimentTemplateID FieldType = 71
+	FieldType_ExperimentTemplateID FieldType = 70
 )
 
 func (p FieldType) String() string {
@@ -580,8 +579,6 @@ func (p FieldType) String() string {
 		return "OutputTokens"
 	case FieldType_TotalTokens:
 		return "TotalTokens"
-	case FieldType_ExperimentID:
-		return "ExperimentID"
 	case FieldType_ExperimentTemplateID:
 		return "ExperimentTemplateID"
 	}
@@ -652,8 +649,6 @@ func FieldTypeFromString(s string) (FieldType, error) {
 		return FieldType_OutputTokens, nil
 	case "TotalTokens":
 		return FieldType_TotalTokens, nil
-	case "ExperimentID":
-		return FieldType_ExperimentID, nil
 	case "ExperimentTemplateID":
 		return FieldType_ExperimentTemplateID, nil
 	}

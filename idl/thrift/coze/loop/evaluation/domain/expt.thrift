@@ -363,8 +363,7 @@ enum FieldType {
     OutputTokens = 62 // 目前使用固定key：output_tokens
     TotalTokens = 63 // 目前使用固定key：total_tokens
 
-    ExperimentID = 70
-    ExperimentTemplateID = 71
+    ExperimentTemplateID = 70
 }
 
 // 字段过滤器

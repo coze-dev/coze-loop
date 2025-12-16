@@ -365,6 +365,42 @@ func (e *ExptFilterFields) IsValid() bool {
 	return true
 }
 
+// ExptTemplateListFilter 实验模板列表筛选器
+type ExptTemplateListFilter struct {
+	FuzzyName string
+	Includes  *ExptTemplateFilterFields
+	Excludes  *ExptTemplateFilterFields
+}
+
+// ExptTemplateFilterFields 实验模板筛选字段
+type ExptTemplateFilterFields struct {
+	CreatedBy    []string
+	EvalSetIDs   []int64
+	TargetIDs    []int64
+	EvaluatorIDs []int64
+	TargetType   []int64
+	ExptType     []int64
+}
+
+func (e *ExptTemplateFilterFields) IsValid() bool {
+	if e == nil {
+		return true
+	}
+	for _, slice := range [][]int64{e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptType} {
+		for _, item := range slice {
+			if item < 0 {
+				return false
+			}
+		}
+	}
+	for _, item := range e.CreatedBy {
+		if len(item) <= 0 {
+			return false
+		}
+	}
+	return true
+}
+
 type ExptItemRunLogFilter struct {
 	Status      []ItemRunState
 	ResultState *ExptItemResultState

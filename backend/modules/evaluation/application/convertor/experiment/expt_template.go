@@ -226,3 +226,69 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 
 	return targetMapping, evaluatorMappings, runtimeParam
 }
+
+// ToExptTemplateDTOs 批量转换实验模板实体为DTO
+func ToExptTemplateDTOs(templates []*entity.ExptTemplate) []*domain_expt.ExperimentTemplate {
+	if len(templates) == 0 {
+		return nil
+	}
+	dtos := make([]*domain_expt.ExperimentTemplate, 0, len(templates))
+	for _, template := range templates {
+		dtos = append(dtos, ToExptTemplateDTO(template))
+	}
+	return dtos
+}
+
+// ConvertUpdateExptTemplateReq 转换更新实验模板请求为实体参数
+func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*entity.UpdateExptTemplateParam, error) {
+	param := &entity.UpdateExptTemplateParam{
+		TemplateID:      req.GetTemplateID(),
+		SpaceID:         req.GetWorkspaceID(),
+		Name:            req.GetName(),
+		Description:     req.GetDesc(),
+		EvalSetVersionID: req.GetEvalSetVersionID(),
+		TargetVersionID: req.GetTargetVersionID(),
+		EvaluatorVersionIDs: req.GetEvaluatorVersionIds(),
+		ExptType:        entity.ExptType(gptr.Indirect(req.ExptType)),
+	}
+
+	// 转换字段映射和运行时参数
+	var targetFieldMapping *entity.TargetIngressConf
+	var evaluatorFieldMapping []*entity.EvaluatorConf
+	if req.TargetFieldMapping != nil || req.TargetRuntimeParam != nil {
+		targetFieldMapping = toTargetFieldMappingDOForTemplate(req.TargetFieldMapping, req.TargetRuntimeParam)
+	}
+	if req.EvaluatorFieldMapping != nil {
+		evaluatorFieldMapping = toEvaluatorFieldMappingDoForTemplate(req.EvaluatorFieldMapping)
+	}
+
+	// 构建模板配置
+	if targetFieldMapping != nil || len(evaluatorFieldMapping) > 0 || req.EnableWeightedScore != nil || req.DefaultItemConcurNum != nil || req.DefaultEvaluatorsConcurNum != nil {
+		templateConf := &entity.ExptTemplateConfiguration{
+			EnableWeightedScore:   gptr.Indirect(req.EnableWeightedScore),
+			EvaluatorScoreWeights: req.GetEvaluatorScoreWeights(),
+			ItemConcurNum:         ptr.ConvIntPtr[int32, int](req.DefaultItemConcurNum),
+			EvaluatorsConcurNum:   ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+		}
+
+		// 构建 ConnectorConf
+		if targetFieldMapping != nil || len(evaluatorFieldMapping) > 0 {
+			templateConf.ConnectorConf = entity.Connector{
+				TargetConf: &entity.TargetConf{
+					TargetVersionID: req.GetTargetVersionID(),
+					IngressConf:     targetFieldMapping,
+				},
+			}
+
+			if len(evaluatorFieldMapping) > 0 {
+				templateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
+					EvaluatorConf: evaluatorFieldMapping,
+				}
+			}
+		}
+
+		param.TemplateConf = templateConf
+	}
+
+	return param, nil
+}

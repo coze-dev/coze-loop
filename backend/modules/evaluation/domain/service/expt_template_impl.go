@@ -19,20 +19,23 @@ func NewExptTemplateManager(
 	idgen idgen.IIDGenerator,
 	evaluatorService EvaluatorService,
 	evalTargetService IEvalTargetService,
+	evaluationSetService IEvaluationSetService,
 ) IExptTemplateManager {
 	return &ExptTemplateManagerImpl{
-		templateRepo:     templateRepo,
-		idgen:            idgen,
-		evaluatorService: evaluatorService,
-		evalTargetService: evalTargetService,
+		templateRepo:          templateRepo,
+		idgen:                 idgen,
+		evaluatorService:      evaluatorService,
+		evalTargetService:     evalTargetService,
+		evaluationSetService:  evaluationSetService,
 	}
 }
 
 type ExptTemplateManagerImpl struct {
-	templateRepo     repo.IExptTemplateRepo
-	idgen            idgen.IIDGenerator
-	evaluatorService EvaluatorService
-	evalTargetService IEvalTargetService
+	templateRepo          repo.IExptTemplateRepo
+	idgen                 idgen.IIDGenerator
+	evaluatorService      EvaluatorService
+	evalTargetService     IEvalTargetService
+	evaluationSetService  IEvaluationSetService
 }
 
 func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error) {
@@ -156,10 +159,238 @@ func (e *ExptTemplateManagerImpl) MGet(ctx context.Context, templateIDs []int64,
 	return e.templateRepo.MGetByID(ctx, templateIDs, spaceID)
 }
 
-func (e *ExptTemplateManagerImpl) Update(ctx context.Context, template *entity.ExptTemplate, session *entity.Session) error {
-	return e.templateRepo.Update(ctx, template)
+func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.UpdateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
+	// 获取现有模板
+	existingTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, param.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if existingTemplate == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("template %d not found", param.TemplateID)))
+	}
+
+	// 如果名称改变，检查新名称是否可用
+	if param.Name != "" && param.Name != existingTemplate.Name {
+		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, session)
+		if !pass {
+			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 验证模板配置
+	if param.TemplateConf != nil {
+		if err := param.TemplateConf.Valid(ctx); err != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+		}
+	}
+
+	// 解析评估器版本ID，获取评估器ID
+	evaluatorVersionRefs := make([]*entity.ExptTemplateEvaluatorVersionRef, 0, len(param.EvaluatorVersionIDs))
+	if len(param.EvaluatorVersionIDs) > 0 {
+		spaceIDPtr := &param.SpaceID
+		evaluators, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, spaceIDPtr, param.EvaluatorVersionIDs, false)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "get evaluators by version_ids fail")
+		}
+
+		evaluatorMap := make(map[int64]*entity.Evaluator)
+		for _, ev := range evaluators {
+			if ev != nil {
+				versionID := ev.GetEvaluatorVersionID()
+				if versionID > 0 {
+					evaluatorMap[versionID] = ev
+				}
+			}
+		}
+
+		for _, versionID := range param.EvaluatorVersionIDs {
+			ev, ok := evaluatorMap[versionID]
+			if !ok {
+				return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("evaluator version %d not found", versionID)))
+			}
+			evaluatorVersionRefs = append(evaluatorVersionRefs, &entity.ExptTemplateEvaluatorVersionRef{
+				EvaluatorID:        ev.ID,
+				EvaluatorVersionID: versionID,
+			})
+		}
+	}
+
+	// 构建更新后的模板实体
+	updatedTemplate := &entity.ExptTemplate{
+		ID:                param.TemplateID,
+		SpaceID:           param.SpaceID,
+		CreatedBy:         existingTemplate.CreatedBy, // 保持原有创建者
+		Name:              param.Name,
+		Description:       param.Description,
+		EvalSetID:         existingTemplate.EvalSetID, // 不允许修改
+		EvalSetVersionID:  param.EvalSetVersionID,
+		TargetID:          existingTemplate.TargetID, // 不允许修改
+		TargetType:       existingTemplate.TargetType, // 不允许修改
+		TargetVersionID:   param.TargetVersionID,
+		EvaluatorVersionRef: evaluatorVersionRefs,
+		TemplateConf:      param.TemplateConf,
+		ExptType:          param.ExptType,
+	}
+
+	// 如果某些字段为空，保持原有值
+	if updatedTemplate.Name == "" {
+		updatedTemplate.Name = existingTemplate.Name
+	}
+	if updatedTemplate.Description == "" {
+		updatedTemplate.Description = existingTemplate.Description
+	}
+	if updatedTemplate.EvalSetVersionID == 0 {
+		updatedTemplate.EvalSetVersionID = existingTemplate.EvalSetVersionID
+	}
+	if updatedTemplate.TargetVersionID == 0 {
+		updatedTemplate.TargetVersionID = existingTemplate.TargetVersionID
+	}
+	if updatedTemplate.ExptType == 0 {
+		updatedTemplate.ExptType = existingTemplate.ExptType
+	}
+	if updatedTemplate.TemplateConf == nil {
+		updatedTemplate.TemplateConf = existingTemplate.TemplateConf
+	}
+
+	// 转换为评估器引用DO
+	refs := updatedTemplate.ToEvaluatorRefDO()
+
+	// 更新数据库
+	if err := e.templateRepo.UpdateWithRefs(ctx, updatedTemplate, refs); err != nil {
+		return nil, err
+	}
+
+	// 重新获取更新后的模板
+	return e.templateRepo.GetByID(ctx, param.TemplateID, param.SpaceID)
 }
 
 func (e *ExptTemplateManagerImpl) Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error {
 	return e.templateRepo.Delete(ctx, templateID, spaceID)
+}
+
+func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
+	templates, count, err := e.templateRepo.List(ctx, page, pageSize, filter, orderBys, spaceID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if len(templates) == 0 {
+		return templates, count, nil
+	}
+
+	// 填充关联数据（类似 ListExperiments 的处理方式）
+	// 收集需要查询的ID
+	var (
+		evalSetIDs      []int64
+		targetIDs       []int64
+		evaluatorIDs    []int64
+		evaluatorIDMap  = make(map[int64]bool)
+	)
+
+	for _, template := range templates {
+		if template.EvalSetID > 0 {
+			evalSetIDs = append(evalSetIDs, template.EvalSetID)
+		}
+		if template.TargetID > 0 {
+			targetIDs = append(targetIDs, template.TargetID)
+		}
+		for _, ref := range template.EvaluatorVersionRef {
+			if ref.EvaluatorID > 0 && !evaluatorIDMap[ref.EvaluatorID] {
+				evaluatorIDs = append(evaluatorIDs, ref.EvaluatorID)
+				evaluatorIDMap[ref.EvaluatorID] = true
+			}
+		}
+	}
+
+	// 并发查询关联数据
+	type result struct {
+		evalSets   map[int64]*entity.EvaluationSet
+		targets    map[int64]*entity.EvalTarget
+		evaluators map[int64]*entity.Evaluator
+		err        error
+	}
+
+	resultChan := make(chan result, 1)
+	go func() {
+		var res result
+		res.evalSets = make(map[int64]*entity.EvaluationSet)
+		res.targets = make(map[int64]*entity.EvalTarget)
+		res.evaluators = make(map[int64]*entity.Evaluator)
+
+		// 查询评测集
+		if len(evalSetIDs) > 0 {
+			spaceIDPtr := &spaceID
+			evalSets, err := e.evaluationSetService.BatchGetEvaluationSets(ctx, spaceIDPtr, evalSetIDs, nil)
+			if err != nil {
+				res.err = err
+				resultChan <- res
+				return
+			}
+			for _, es := range evalSets {
+				res.evalSets[es.ID] = es
+			}
+		}
+
+		// 查询评估对象
+		if len(targetIDs) > 0 {
+			for _, targetID := range targetIDs {
+				target, err := e.evalTargetService.GetEvalTarget(ctx, targetID)
+				if err != nil {
+					res.err = err
+					resultChan <- res
+					return
+				}
+				if target != nil {
+					res.targets[target.ID] = target
+				}
+			}
+		}
+
+		// 查询评估器
+		if len(evaluatorIDs) > 0 {
+			evaluators, err := e.evaluatorService.BatchGetEvaluator(ctx, spaceID, evaluatorIDs, false)
+			if err != nil {
+				res.err = err
+				resultChan <- res
+				return
+			}
+			for _, ev := range evaluators {
+				res.evaluators[ev.ID] = ev
+			}
+		}
+
+		resultChan <- res
+	}()
+
+	res := <-resultChan
+	if res.err != nil {
+		return nil, 0, res.err
+	}
+
+	// 填充关联数据
+	for _, template := range templates {
+		if template.EvalSetID > 0 {
+			if es, ok := res.evalSets[template.EvalSetID]; ok {
+				template.EvalSet = es
+			}
+		}
+		if template.TargetID > 0 {
+			if t, ok := res.targets[template.TargetID]; ok {
+				template.Target = t
+			}
+		}
+		if len(template.EvaluatorVersionRef) > 0 {
+			template.Evaluators = make([]*entity.Evaluator, 0, len(template.EvaluatorVersionRef))
+			for _, ref := range template.EvaluatorVersionRef {
+				if ev, ok := res.evaluators[ref.EvaluatorID]; ok {
+					template.Evaluators = append(template.Evaluators, ev)
+				}
+			}
+		}
+	}
+
+	return templates, count, nil
 }

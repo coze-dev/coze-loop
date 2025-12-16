@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 )
 
 func NewExptTemplateRepo(
@@ -166,6 +167,41 @@ func (e *exptTemplateRepoImpl) UpdateFields(ctx context.Context, templateID int6
 	return e.templateDAO.UpdateFields(ctx, templateID, ufields)
 }
 
+func (e *exptTemplateRepoImpl) UpdateWithRefs(ctx context.Context, template *entity.ExptTemplate, refs []*entity.ExptTemplateEvaluatorRef) error {
+	// 更新模板基本信息
+	po, err := convert.NewExptTemplateConverter().DO2PO(template)
+	if err != nil {
+		return err
+	}
+
+	if err := e.templateDAO.Update(ctx, po); err != nil {
+		return err
+	}
+
+	// 删除旧的评估器引用
+	if err := e.templateEvaluatorRefDAO.DeleteByTemplateID(ctx, template.ID); err != nil {
+		return err
+	}
+
+	// 创建新的评估器引用
+	if len(refs) > 0 {
+		ids, err := e.idgen.GenMultiIDs(ctx, len(refs))
+		if err != nil {
+			return err
+		}
+		for i, ref := range refs {
+			ref.ID = ids[i]
+		}
+
+		refPos := convert.NewExptTemplateEvaluatorRefConverter().DO2PO(refs)
+		if err := e.templateEvaluatorRefDAO.Create(ctx, refPos); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (e *exptTemplateRepoImpl) Delete(ctx context.Context, id, spaceID int64) error {
 	// 验证spaceID
 	po, err := e.templateDAO.GetByID(ctx, id)
@@ -180,4 +216,41 @@ func (e *exptTemplateRepoImpl) Delete(ctx context.Context, id, spaceID int64) er
 	}
 
 	return e.templateDAO.Delete(ctx, id)
+}
+
+func (e *exptTemplateRepoImpl) List(ctx context.Context, page, size int32, filter *entity.ExptTemplateListFilter, orders []*entity.OrderBy, spaceID int64) ([]*entity.ExptTemplate, int64, error) {
+	pos, count, err := e.templateDAO.List(ctx, page, size, filter, orders, spaceID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if len(pos) == 0 {
+		return nil, count, nil
+	}
+
+	templateIDs := slices.Transform(pos, func(t *model.ExptTemplate, _ int) int64 {
+		return t.ID
+	})
+
+	refs, err := e.templateEvaluatorRefDAO.GetByTemplateIDs(ctx, templateIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 构建refs映射
+	refsMap := make(map[int64][]*model.ExptTemplateEvaluatorRef)
+	for _, ref := range refs {
+		refsMap[ref.TemplateID] = append(refsMap[ref.TemplateID], ref)
+	}
+
+	results := make([]*entity.ExptTemplate, 0, len(pos))
+	for _, po := range pos {
+		do, err := convert.NewExptTemplateConverter().PO2DO(po, refsMap[po.ID])
+		if err != nil {
+			return nil, 0, err
+		}
+		results = append(results, do)
+	}
+
+	return results, count, nil
 }

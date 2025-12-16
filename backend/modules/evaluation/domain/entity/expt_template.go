@@ -175,3 +175,16 @@ type CreateExptTemplateParam struct {
 	TemplateConf         *ExptTemplateConfiguration
 	ExptType             ExptType
 }
+
+// UpdateExptTemplateParam 更新实验模板参数
+type UpdateExptTemplateParam struct {
+	TemplateID           int64
+	SpaceID              int64
+	Name                 string
+	Description          string
+	EvalSetVersionID      int64
+	TargetVersionID      int64
+	EvaluatorVersionIDs  []int64
+	TemplateConf         *ExptTemplateConfiguration
+	ExptType             ExptType
+}

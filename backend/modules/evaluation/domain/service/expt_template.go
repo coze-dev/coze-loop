@@ -15,6 +15,7 @@ type IExptTemplateManager interface {
 	Create(ctx context.Context, param *entity.CreateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error)
 	Get(ctx context.Context, templateID, spaceID int64, session *entity.Session) (*entity.ExptTemplate, error)
 	MGet(ctx context.Context, templateIDs []int64, spaceID int64, session *entity.Session) ([]*entity.ExptTemplate, error)
-	Update(ctx context.Context, template *entity.ExptTemplate, session *entity.Session) error
+	Update(ctx context.Context, param *entity.UpdateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error)
 	Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error
+	List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error)
 }
