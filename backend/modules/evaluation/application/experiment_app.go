@@ -1451,7 +1451,7 @@ func (e *experimentApplication) GetAnalysisRecordFeedbackVote(ctx context.Contex
 		return nil, err
 	}
 
-	vote, err := e.IExptInsightAnalysisService.GetAnalysisRecordFeedbackVoteByUser(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
+	vote, err := e.GetAnalysisRecordFeedbackVoteByUser(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
 	if err != nil {
 		return nil, err
 	}
