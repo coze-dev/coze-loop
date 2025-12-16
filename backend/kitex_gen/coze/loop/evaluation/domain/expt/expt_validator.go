@@ -332,6 +332,9 @@ func (p *ExptInsightAnalysisRecord) IsValid() error {
 	}
 	return nil
 }
+func (p *ExptInsightAnalysisIndex) IsValid() error {
+	return nil
+}
 func (p *ExptInsightAnalysisFeedback) IsValid() error {
 	return nil
 }

@@ -59,3 +59,4 @@ backend/script/errorx/.env
 .cursor/
 .specify/
 specs/
+.puml

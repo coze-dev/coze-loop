@@ -508,3 +508,30 @@ func TestExptInsightAnalysisFeedbackVoteDO2DTO(t *testing.T) {
 		})
 	}
 }
+
+// 新增：expt_insight_analysis.go:36 的方法测试
+func TestAnalysisReportIndex2DTO(t *testing.T) {
+	t.Run("nil input returns nil", func(t *testing.T) {
+		var in []*entity.InsightAnalysisReportIndex
+		out := AnalysisReportIndex2DTO(in)
+		assert.Nil(t, out)
+	})
+
+	t.Run("empty slice returns nil", func(t *testing.T) {
+		out := AnalysisReportIndex2DTO([]*entity.InsightAnalysisReportIndex{})
+		assert.Nil(t, out)
+	})
+
+	t.Run("convert multiple items", func(t *testing.T) {
+		in := []*entity.InsightAnalysisReportIndex{
+			{ID: "a1", Title: "Alpha"},
+			{ID: "b2", Title: "Beta"},
+		}
+		out := AnalysisReportIndex2DTO(in)
+		expected := []*domain_expt.ExptInsightAnalysisIndex{
+			{ID: ptr.Of("a1"), Title: ptr.Of("Alpha")},
+			{ID: ptr.Of("b2"), Title: ptr.Of("Beta")},
+		}
+		assert.Equal(t, expected, out)
+	})
+}
