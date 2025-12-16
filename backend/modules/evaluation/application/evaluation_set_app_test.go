@@ -1,4 +1,6 @@
-// 新增：CreateEvaluationSetWithImport、ParseImportSourceFile、GetEvaluationSetItemField 单测
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package application
 
 import (
