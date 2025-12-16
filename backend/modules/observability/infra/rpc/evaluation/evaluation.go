@@ -76,7 +76,12 @@ func (e *EvaluationProvider) InvokeExperiment(ctx context.Context, param *rpc.In
 	})
 	if err != nil {
 		logs.CtxError(ctx, "InvokeExperiment failed, err: %v", err)
-		return 0, errorx.NewByCode(obErrorx.CommonRPCErrorCode, errorx.WithExtraMsg("InvokeExperiment failed"))
+		// 透传下游 BizStatus 错误码（Kitex biz exception），以便上层做精确处理
+		if statusErr, ok := errorx.FromStatusError(err); ok {
+			return 0, statusErr
+		}
+		// 其他非 BizStatus 错误保留原始错误作为 cause，并包装为通用 RPC 错误
+		return 0, errorx.WrapByCode(err, obErrorx.CommonRPCErrorCode)
 	}
 	return int64(len(resp.GetAddedItems())), nil
 }
