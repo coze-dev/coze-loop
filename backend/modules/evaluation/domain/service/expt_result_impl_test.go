@@ -788,6 +788,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 			name: "正常获取实验结果 - 无ck - 无filter",
 			param: &entity.MGetExperimentResultParam{
 				SpaceID: 100,
+
 				ExptIDs: []int64{1},
 			},
 			setup: func(ctrl *gomock.Controller) ExptResultServiceImpl {
@@ -807,6 +808,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
+					EvalSetID:        1,
+					EvalSetVersionID: 1,
+					ExptType:         entity.ExptType_Offline,
+				}}, nil).AnyTimes()
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{EvalSetVersionID: 1}, nil).AnyTimes()
 				mockExptTurnResultRepo.EXPECT().ListTurnResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{{ID: 1, ItemID: 1}}, int64(1), nil)
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
@@ -931,6 +938,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
+					EvalSetID:        1,
+					EvalSetVersionID: 1,
+					ExptType:         entity.ExptType_Offline,
+				}}, nil).AnyTimes()
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					EvalSetVersionID: 1,
 					EvalSetID:        1,
@@ -1035,7 +1048,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockLWT := lwtMocks.NewMockILatestWriteTracker(ctrl)
 				mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
 
-				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("get experiment error"))
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return(nil, fmt.Errorf("get experiment error"))
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 
@@ -1066,10 +1079,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
-				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
 					EvalSetVersionID: 1,
 					EvalSetID:        1,
-				}, nil)
+					ExptType:         entity.ExptType_Offline,
+				}}, nil)
 				mockExptTurnResultRepo.EXPECT().ListTurnResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), fmt.Errorf("list turn result error"))
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
@@ -1117,8 +1132,9 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 		{
 			name: "在线实验对比场景",
 			param: &entity.MGetExperimentResultParam{
-				SpaceID: 100,
-				ExptIDs: []int64{1, 2},
+				SpaceID:    100,
+				ExptIDs:    []int64{1, 2},
+				BaseExptID: ptr.Of(int64(1)),
 			},
 			setup: func(ctrl *gomock.Controller) ExptResultServiceImpl {
 				mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
@@ -1130,10 +1146,19 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
-				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
-					ExptType:         entity.ExptType_Online,
-					EvalSetVersionID: 1,
-					EvalSetID:        1,
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1, 2}, int64(100)).Return([]*entity.Experiment{
+					{
+						ID:               1,
+						ExptType:         entity.ExptType_Online,
+						EvalSetVersionID: 1,
+						EvalSetID:        1,
+					},
+					{
+						ID:               2,
+						ExptType:         entity.ExptType_Online,
+						EvalSetVersionID: 1,
+						EvalSetID:        1,
+					},
 				}, nil)
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
@@ -1275,6 +1300,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
+					EvalSetVersionID: 1,
+					EvalSetID:        1,
+					ExptType:         entity.ExptType_Offline,
+				}}, nil).AnyTimes()
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					EvalSetVersionID: 1,
 					EvalSetID:        1,
@@ -1401,13 +1432,13 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 			defer ctrl.Finish()
 
 			svc := tt.setup(ctrl)
-			got, _, _, _, _, _, err := svc.MGetExperimentResult(context.Background(), tt.param)
+			got, err := svc.MGetExperimentResult(context.Background(), tt.param)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MGetExperimentResult() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MGetExperimentResult() got = %v, want %v", got, tt.want)
+			if !tt.wantErr && !reflect.DeepEqual(got.ColumnEvaluators, tt.want) {
+				t.Errorf("MGetExperimentResult() got = %v, want %v", got.ColumnEvaluators, tt.want)
 			}
 		})
 	}
@@ -3567,6 +3598,228 @@ func TestParseTurnKey(t *testing.T) {
 				if got.TurnID != tt.want.TurnID {
 					t.Errorf("ParseTurnKey() got.TurnID = %v, want %v", got.TurnID, tt.want.TurnID)
 				}
+			}
+		})
+	}
+}
+
+func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
+	tests := []struct {
+		name                string
+		baselineItemResults []*entity.ExptItemResult
+		baselineTurnResults []*entity.ExptTurnResult
+		itemID2ItemRunState map[int64]entity.ItemRunState
+		wantExt             map[string]string
+		wantRunState        entity.ItemRunState
+	}{
+		{
+			name: "Ext字段有值且itemID2ItemRunState存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{
+				1: entity.ItemRunState_Processing,
+			},
+			wantExt: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+			},
+			wantRunState: entity.ItemRunState_Processing,
+		},
+		{
+			name: "Ext字段为空map且itemID2ItemRunState不存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext:     map[string]string{},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{},
+			wantExt:             nil,
+			wantRunState:        entity.ItemRunState_Success,
+		},
+		{
+			name: "Ext字段为nil且itemID2ItemRunState不存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Fail,
+					Ext:     nil,
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{},
+			wantExt:             nil,
+			wantRunState:        entity.ItemRunState_Fail,
+		},
+		{
+			name: "Ext字段有值且itemID2ItemRunState不存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext: map[string]string{
+						"span_id": "span-123",
+					},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{},
+			wantExt: map[string]string{
+				"span_id": "span-123",
+			},
+			wantRunState: entity.ItemRunState_Success,
+		},
+		{
+			name: "多个ItemResult，Ext字段和itemID2ItemRunState混合",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext: map[string]string{
+						"key1": "value1",
+					},
+				},
+				{
+					ItemID:  2,
+					ItemIdx: 1,
+					Status:  entity.ItemRunState_Fail,
+					Ext:     map[string]string{},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+				{
+					ID:      2,
+					ItemID:  2,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{
+				1: entity.ItemRunState_Processing,
+			},
+			wantExt: map[string]string{
+				"key1": "value1",
+			},
+			wantRunState: entity.ItemRunState_Processing,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// 创建必要的 mocks
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+			mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+			mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
+			mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+			mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+			mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
+
+			// 创建参数
+			param := &entity.MGetExperimentResultParam{
+				SpaceID: 100,
+				ExptIDs: []int64{1},
+			}
+
+			// 调用 NewPayloadBuilder
+			builder := NewPayloadBuilder(
+				context.Background(),
+				param,
+				1,
+				tt.baselineTurnResults,
+				tt.baselineItemResults,
+				mockExperimentRepo,
+				mockExptTurnResultRepo,
+				mockExptAnnotateRepo,
+				mockEvalTargetService,
+				mockEvaluatorRecordService,
+				mockEvaluationSetItemService,
+				nil,
+				nil,
+				tt.itemID2ItemRunState,
+			)
+
+			// 验证结果
+			assert.NotNil(t, builder)
+			assert.NotNil(t, builder.ItemResults)
+
+			// 验证第一个 ItemResult 的 Ext 字段和 RunState
+			if len(builder.ItemResults) > 0 {
+				firstItemResult := builder.ItemResults[0]
+				assert.NotNil(t, firstItemResult.SystemInfo)
+
+				// 验证 Ext 字段
+				if tt.wantExt == nil {
+					assert.Nil(t, firstItemResult.Ext)
+				} else {
+					assert.NotNil(t, firstItemResult.Ext)
+					assert.Equal(t, tt.wantExt, firstItemResult.Ext)
+				}
+
+				// 验证 RunState
+				assert.Equal(t, tt.wantRunState, firstItemResult.SystemInfo.RunState)
+			}
+
+			// 如果有多个 ItemResult，验证第二个
+			if len(builder.ItemResults) > 1 && len(tt.baselineItemResults) > 1 {
+				secondItemResult := builder.ItemResults[1]
+				assert.NotNil(t, secondItemResult.SystemInfo)
+				// 第二个 ItemResult 的 Ext 应该是空的（因为 baselineItemResults[1].Ext 是空 map）
+				assert.Nil(t, secondItemResult.Ext)
+				// 第二个 ItemResult 的 RunState 应该是 baselineItemResults[1].Status（因为 itemID2ItemRunState 中没有 2）
+				assert.Equal(t, tt.baselineItemResults[1].Status, secondItemResult.SystemInfo.RunState)
 			}
 		})
 	}

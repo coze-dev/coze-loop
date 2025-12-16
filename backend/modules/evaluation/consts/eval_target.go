@@ -8,5 +8,5 @@ import (
 )
 
 const (
-	InputFieldKeyPromptUserQuery = expt.PromptUserQueryFieldKey
+	EvalTargetInputFieldKeyPromptUserQuery = expt.PromptUserQueryFieldKey
 )

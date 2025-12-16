@@ -52,6 +52,30 @@ func ExptColumnEvaluatorsDO2DTOs(from []*entity.ExptColumnEvaluator) []*domain_e
 	return dtos
 }
 
+func ExptColumnEvalTargetDO2DTOs(columns []*entity.ExptColumnEvalTarget) []*domain_expt.ExptColumnEvalTarget {
+	dtos := make([]*domain_expt.ExptColumnEvalTarget, 0, len(columns))
+	for _, f := range columns {
+		dto := &domain_expt.ExptColumnEvalTarget{
+			ExperimentID:      gptr.Of(f.ExptID),
+			ColumnEvalTargets: ColumnEvalTargetDO2DTOs(f.Columns),
+		}
+		dtos = append(dtos, dto)
+	}
+	return dtos
+}
+
+func ColumnEvalTargetDO2DTOs(from []*entity.ColumnEvalTarget) []*domain_expt.ColumnEvalTarget {
+	evaluators := make([]*domain_expt.ColumnEvalTarget, 0, len(from))
+	for _, f := range from {
+		evaluators = append(evaluators, &domain_expt.ColumnEvalTarget{
+			Name:        gptr.Of(f.Name),
+			Description: gptr.Of(f.Desc),
+			Label:       f.Label,
+		})
+	}
+	return evaluators
+}
+
 func ColumnEvaluatorsDO2DTOs(from []*entity.ColumnEvaluator) []*domain_expt.ColumnEvaluator {
 	evaluators := make([]*domain_expt.ColumnEvaluator, 0, len(from))
 	for _, f := range from {
@@ -140,12 +164,17 @@ func ItemResultsDO2DTOs(from []*entity.ItemResult) []*domain_expt.ItemResult_ {
 }
 
 func ItemResultsDO2DTO(from *entity.ItemResult) *domain_expt.ItemResult_ {
-	return &domain_expt.ItemResult_{
+	dto := &domain_expt.ItemResult_{
 		ItemID:      from.ItemID,
 		TurnResults: TurnResultsDO2DTOs(from.TurnResults),
 		SystemInfo:  ItemSystemInfoDO2DTO(from.SystemInfo),
 		ItemIndex:   from.ItemIndex,
 	}
+	// 填充 ext 字段，使用 expt_item_result 表里的 ext
+	if len(from.Ext) > 0 {
+		dto.Ext = from.Ext
+	}
+	return dto
 }
 
 func TurnResultsDO2DTOs(from []*entity.TurnResult) []*domain_expt.TurnResult_ {

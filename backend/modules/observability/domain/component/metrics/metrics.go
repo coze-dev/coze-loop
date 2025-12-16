@@ -10,4 +10,5 @@ type ITraceMetrics interface {
 	EmitListSpans(workspaceId int64, spanType string, start time.Time, isError bool)
 	EmitGetTrace(workspaceId int64, start time.Time, isError bool)
 	EmitTraceOapi(method string, workspaceId int64, platformType, spanListType string, spanSize int64, errorCode int, start time.Time, isError bool)
+	EmitSendMetric(start time.Time, isError bool)
 }

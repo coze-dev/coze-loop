@@ -10,6 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service/metric/wrapper"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 type ModelTPOTMetric struct{}
@@ -47,7 +48,17 @@ func (m *ModelTPOTMetric) Expression(granularity entity.MetricGranularity) *enti
 }
 
 func (m *ModelTPOTMetric) Where(ctx context.Context, filter span_filter.Filter, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
-	return filter.BuildLLMSpanFilter(ctx, env)
+	filters, err := filter.BuildLLMSpanFilter(ctx, env)
+	if err != nil {
+		return nil, err
+	}
+	filters = append(filters, &loop_span.FilterField{
+		FieldName: loop_span.SpanFieldOutputTokens,
+		FieldType: loop_span.FieldTypeLong,
+		Values:    []string{"0"},
+		QueryType: ptr.Of(loop_span.QueryTypeEnumGt),
+	})
+	return filters, nil
 }
 
 func (m *ModelTPOTMetric) GroupBy() []*entity.Dimension {
@@ -63,6 +74,10 @@ func (m *ModelTPOTMetric) Wrappers() []entity.IMetricWrapper {
 		wrapper.NewPct90Wrapper(),
 		wrapper.NewPct99Wrapper(),
 	}
+}
+
+func (m *ModelTPOTMetric) OExpression() *entity.OExpression {
+	return &entity.OExpression{}
 }
 
 func NewModelTPOTMetric() entity.IMetricDefinition {

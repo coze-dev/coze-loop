@@ -16,9 +16,10 @@ import (
 const (
 	traceSpansMetricsName = "trace_spans"
 
-	getTraceSuffix  = "get_trace"
-	listSpansSuffix = "list_spans"
-	traceOApiSuffix = "trace_oapi"
+	getTraceSuffix   = "get_trace"
+	listSpansSuffix  = "list_spans"
+	traceOApiSuffix  = "trace_oapi"
+	metricSendSuffix = "send_metric"
 
 	throughputSuffix = ".throughput"
 	latencySuffix    = ".latency"
@@ -118,4 +119,16 @@ func (t *TraceMetricsImpl) EmitTraceOapi(method string, workspaceId int64, platf
 		metrics.Counter(1, metrics.WithSuffix(traceOApiSuffix+throughputSuffix)),
 		metrics.Counter(spanSize, metrics.WithSuffix(traceOApiSuffix+sizeSuffix)),
 		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(traceOApiSuffix+latencySuffix)))
+}
+
+func (t *TraceMetricsImpl) EmitSendMetric(start time.Time, isError bool) {
+	if t.spansMetrics == nil {
+		return
+	}
+	t.spansMetrics.Emit(
+		[]metrics.T{
+			{Name: tagIsErr, Value: strconv.FormatBool(isError)},
+		},
+		metrics.Counter(1, metrics.WithSuffix(metricSendSuffix+throughputSuffix)),
+		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(metricSendSuffix+latencySuffix)))
 }

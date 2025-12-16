@@ -223,7 +223,7 @@ func (t *ObservabilityTask) GetCurrentTaskRun() *TaskRun {
 	return nil
 }
 
-func (t ObservabilityTask) GetTaskttl() int64 {
+func (t *ObservabilityTask) GetTaskttl() int64 {
 	ttl := 30 * 24 * time.Hour.Milliseconds()
 	if t.EffectiveTime != nil && t.EffectiveTime.EndAt != 0 && t.EffectiveTime.EndAt > time.Now().UnixMilli() {
 		ttl += t.EffectiveTime.EndAt - time.Now().UnixMilli()
@@ -319,4 +319,11 @@ func (t *ObservabilityTask) ShouldTriggerBackfill() bool {
 	return t.BackfillEffectiveTime.StartAt > 0 &&
 		t.BackfillEffectiveTime.EndAt > 0 &&
 		t.BackfillEffectiveTime.StartAt < t.BackfillEffectiveTime.EndAt
+}
+
+func (t *ObservabilityTask) GetPlatformType() loop_span.PlatformType {
+	if t.SpanFilter != nil {
+		return t.SpanFilter.PlatformType
+	}
+	return loop_span.PlatformDefault
 }

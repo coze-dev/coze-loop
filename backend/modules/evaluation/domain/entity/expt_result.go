@@ -170,6 +170,7 @@ type ExptItemResult struct {
 	ErrMsg    string
 	ItemIdx   int32
 	LogID     string
+	Ext       map[string]string
 }
 
 type ExptItemResultRunLog struct {
@@ -282,6 +283,16 @@ type MGetExperimentResultParam struct {
 	FilterAccelerators map[int64]*ExptTurnResultFilterAccelerator
 	UseAccelerator     bool
 	Page               Page
+}
+
+type MGetExperimentReportResult struct {
+	ColumnEvaluators      []*ColumnEvaluator
+	ExptColumnEvaluators  []*ExptColumnEvaluator
+	ColumnEvalSetFields   []*ColumnEvalSetField
+	ExptColumnAnnotations []*ExptColumnAnnotation
+	ItemResults           []*ItemResult
+	ExptColumnsEvalTarget []*ExptColumnEvalTarget
+	Total                 int64
 }
 
 type ExptTurnResultRunLog struct {
@@ -420,11 +431,12 @@ func NewSession(ctx context.Context) *Session {
 }
 
 type ExptTurnResultFilterMapCond struct {
-	EvalTargetDataFilters   []*FieldFilter
-	EvaluatorScoreFilters   []*FieldFilter
-	AnnotationFloatFilters  []*FieldFilter
-	AnnotationBoolFilters   []*FieldFilter
-	AnnotationStringFilters []*FieldFilter
+	EvalTargetDataFilters    []*FieldFilter
+	EvaluatorScoreFilters    []*FieldFilter
+	AnnotationFloatFilters   []*FieldFilter
+	AnnotationBoolFilters    []*FieldFilter
+	AnnotationStringFilters  []*FieldFilter
+	EvalTargetMetricsFilters []*FieldFilter
 }
 
 type FieldFilter struct {
@@ -483,7 +495,8 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 		len(e.MapCond.EvaluatorScoreFilters) > 0 ||
 		len(e.MapCond.AnnotationFloatFilters) > 0 ||
 		len(e.MapCond.AnnotationBoolFilters) > 0 ||
-		len(e.MapCond.AnnotationStringFilters) > 0))
+		len(e.MapCond.AnnotationStringFilters) > 0 ||
+		len(e.MapCond.EvalTargetMetricsFilters) > 0))
 	hasFilters = hasFilters || (e.ItemSnapshotCond != nil && (len(e.ItemSnapshotCond.BoolMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.FloatMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.IntMapFilters) > 0 ||
@@ -572,6 +585,7 @@ type ItemResult struct {
 	TurnResults []*TurnResult
 	SystemInfo  *ItemSystemInfo
 	ItemIndex   *int64
+	Ext         map[string]string
 }
 
 type ExperimentTurnPayload struct {
@@ -635,6 +649,7 @@ type ExptTurnResultFilterEntity struct {
 	AnnotationFloat         map[string]float64 `json:"annotation_float"`
 	AnnotationBool          map[string]bool    `json:"annotation_bool"`
 	AnnotationString        map[string]string  `json:"annotation_string"`
+	EvalTargetMetrics       map[string]int64   `json:"eval_target_metrics"`
 	CreatedDate             time.Time          `json:"created_date"`
 	EvaluatorScoreCorrected bool               `json:"evaluator_score_corrected"`
 	EvalSetVersionID        int64              `json:"eval_set_version_id"`
@@ -676,4 +691,16 @@ type ColumnAnnotation struct {
 type ExptColumnAnnotation struct {
 	ExptID            int64
 	ColumnAnnotations []*ColumnAnnotation
+}
+
+type ExptColumnEvalTarget struct {
+	ExptID  int64
+	Columns []*ColumnEvalTarget
+}
+
+type ColumnEvalTarget struct {
+	Name        string
+	Desc        string
+	Label       *string
+	DisplayName string
 }

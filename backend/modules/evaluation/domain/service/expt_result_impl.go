@@ -18,6 +18,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -25,6 +26,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
@@ -242,9 +244,7 @@ func NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID int64, evaluat
 	return refs
 }
 
-func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (
-	columnEvaluators []*entity.ColumnEvaluator, exptColumnEvaluators []*entity.ExptColumnEvaluator, columnEvalSetFields []*entity.ColumnEvalSetField, columnAnnotations []*entity.ExptColumnAnnotation, itemResults []*entity.ItemResult, total int64, err error,
-) {
+func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (res *entity.MGetExperimentReportResult, err error) {
 	var (
 		spaceID        = param.SpaceID
 		exptIDs        = param.ExptIDs
@@ -267,40 +267,67 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		baseExptID = exptIDs[0]
 	}
 
-	baseExpt, err := e.ExperimentRepo.GetByID(ctx, baseExptID, spaceID)
-	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
-	}
-	baseExptEvalSetVersionID := baseExpt.EvalSetVersionID
+	allExptIDs := make([]int64, 0, len(exptIDs)+1)
+	allExptIDs = gslice.Uniq(append(append(allExptIDs, baseExptID), exptIDs...))
 
-	columnEvaluators, exptColumnEvaluators, err = e.getColumnEvaluators(ctx, spaceID, exptIDs)
+	exptList, err := e.ExperimentRepo.MGetByID(ctx, allExptIDs, spaceID)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, err
 	}
 
-	columnEvalSetFields, err = e.getColumnEvalSetFields(ctx, spaceID, baseExpt.EvalSetID, baseExptEvalSetVersionID)
+	exptMap := gslice.ToMap(exptList, func(t *entity.Experiment) (int64, *entity.Experiment) { return t.ID, t })
+	sortedExpts := make([]*entity.Experiment, 0, len(exptList))
+	for _, id := range allExptIDs {
+		got := exptMap[id]
+		if got == nil {
+			return nil, errorx.New("expt %v not found", id)
+		}
+		sortedExpts = append(sortedExpts, got)
+	}
+	baseExpt := exptMap[baseExptID]
+
+	columnEvaluators, exptColumnEvaluators, err := e.getColumnEvaluators(ctx, spaceID, exptIDs)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, err
 	}
 
-	columnAnnotations, err = e.getColumnAnnotations(ctx, spaceID, exptIDs)
+	columnEvalSetFields, err := e.getColumnEvalSetFields(ctx, spaceID, baseExpt.EvalSetID, baseExpt.EvalSetVersionID)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, err
+	}
+
+	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, sortedExpts)
+	if err != nil {
+		return nil, err
+	}
+
+	res = &entity.MGetExperimentReportResult{
+		ColumnEvaluators:      columnEvaluators,
+		ExptColumnEvaluators:  exptColumnEvaluators,
+		ColumnEvalSetFields:   columnEvalSetFields,
+		ExptColumnsEvalTarget: columnsEvalTarget,
 	}
 
 	if baseExpt.ExptType == entity.ExptType_Online && len(exptIDs) > 1 {
 		// 在线实验对比场景，不返回行级结果
-		return columnEvaluators, exptColumnEvaluators, columnEvalSetFields, nil, nil, 0, nil
+		return res, nil
 	}
+
+	columnAnnotations, err := e.getColumnAnnotations(ctx, spaceID, exptIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	res.ExptColumnAnnotations = columnAnnotations
 
 	// 获取baseline 该分页的turn_result
 	turnResultDAOs, itemID2ItemRunState, total, err := e.ListTurnResult(ctx, param, baseExpt)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, err
 	}
 
 	if len(turnResultDAOs) == 0 {
-		return columnEvaluators, exptColumnEvaluators, columnEvalSetFields, columnAnnotations, nil, 0, nil
+		return res, nil
 	}
 
 	itemIDMap := make(map[int64]bool)
@@ -312,17 +339,19 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 	})
 	itemResultDAOs, err := e.ExptItemResultRepo.BatchGet(ctx, spaceID, baseExptID, itemIDs)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, err
 	}
 
 	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, nil, nil, itemID2ItemRunState)
 
-	itemResults, err = payloadBuilder.BuildItemResults(ctx)
+	itemResults, err := payloadBuilder.BuildItemResults(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, nil, 0, err
+		return nil, err
 	}
 
-	return columnEvaluators, exptColumnEvaluators, columnEvalSetFields, columnAnnotations, itemResults, total, nil
+	res.ItemResults = itemResults
+	res.Total = total
+	return res, nil
 }
 
 func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity.MGetExperimentResultParam, expt *entity.Experiment) (turnResultDAOs []*entity.ExptTurnResult, itemID2ItemRunState map[int64]entity.ItemRunState, totalTurn int64, err error) {
@@ -500,6 +529,42 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 
 	}
 	return turnResultDAOs, itemID2ItemRunState, total, nil
+}
+
+var (
+	columnEvalTargetActualOutput = &entity.ColumnEvalTarget{
+		Name:  consts.ReportColumnNameEvalTargetActualOutput,
+		Label: gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
+	}
+	columnEvalTargetTrajectory = &entity.ColumnEvalTarget{ // nolint:unused
+		Name:  consts.ReportColumnNameEvalTargetTrajectory,
+		Label: gptr.Of(consts.ReportColumnLabelEvalTargetTrajectory),
+	}
+	columnsEvalTargetMtr = []*entity.ColumnEvalTarget{ // todo(@liushengyang): configuration-driven
+		{Name: consts.ReportColumnNameEvalTargetTotalLatency, DisplayName: consts.ReportColumnDisplayNameEvalTargetTotalLatency},
+		{Name: consts.ReportColumnNameEvalTargetInputTokens, DisplayName: consts.ReportColumnDisplayNameEvalTargetInputTokens},
+		{Name: consts.ReportColumnNameEvalTargetOutputTokens, DisplayName: consts.ReportColumnDisplayNameEvalTargetOutputTokens},
+		{Name: consts.ReportColumnNameEvalTargetTotalTokens, DisplayName: consts.ReportColumnDisplayNameEvalTargetTotalTokens},
+	}
+)
+
+func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, expts []*entity.Experiment) ([]*entity.ExptColumnEvalTarget, error) {
+	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
+	for _, expt := range expts {
+		if !expt.ContainsEvalTarget() {
+			continue
+		}
+		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
+		//if expt.TargetType.SupptTrajectory() {
+		//	columns = append(columns, columnEvalTargetTrajectory)
+		//}
+		columns = append(columns, columnsEvalTargetMtr...)
+		res = append(res, &entity.ExptColumnEvalTarget{
+			ExptID:  expt.ID,
+			Columns: columns,
+		})
+	}
+	return res, nil
 }
 
 // getColumnEvaluators 试验对比无需返回多试验的评估器合集,没有评估器的column,前端从实验接口获取评估器数据
@@ -772,6 +837,10 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 			TurnResults: make([]*entity.TurnResult, 0),
 			ItemIndex:   gptr.Of(int64(itemResultPO.ItemIdx)),
 		}
+		// 填充 ext 字段，使用 expt_item_result 表里的 ext
+		if len(itemResultPO.Ext) > 0 {
+			itemResult.Ext = itemResultPO.Ext
+		}
 		if state, ok := itemID2ItemRunState[itemID]; ok {
 			itemResult.SystemInfo = &entity.ItemSystemInfo{
 				RunState: state,
@@ -982,17 +1051,18 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 	updatedAt := time.Now()
 	for _, exptTurnResult := range b.BaseExptTurnResultDO {
 		exptTurnResultFilter := &entity.ExptTurnResultFilterEntity{
-			SpaceID:          b.SpaceID,
-			ExptID:           b.BaselineExptID,
-			ItemID:           exptTurnResult.ItemID,
-			TurnID:           exptTurnResult.TurnID,
-			EvalTargetData:   make(map[string]string),
-			EvaluatorScore:   make(map[string]float64),
-			AnnotationFloat:  make(map[string]float64),
-			AnnotationBool:   make(map[string]bool),
-			AnnotationString: make(map[string]string),
-			CreatedDate:      ptr.From(createdDate),
-			EvalSetVersionID: evalSetVersionID,
+			SpaceID:           b.SpaceID,
+			ExptID:            b.BaselineExptID,
+			ItemID:            exptTurnResult.ItemID,
+			TurnID:            exptTurnResult.TurnID,
+			EvalTargetData:    make(map[string]string),
+			EvaluatorScore:    make(map[string]float64),
+			AnnotationFloat:   make(map[string]float64),
+			AnnotationBool:    make(map[string]bool),
+			AnnotationString:  make(map[string]string),
+			EvalTargetMetrics: make(map[string]int64),
+			CreatedDate:       ptr.From(createdDate),
+			EvalSetVersionID:  evalSetVersionID,
 		}
 		exptTurnResultFilter.ExptID = b.BaselineExptID
 		exptTurnResultFilter.SpaceID = b.SpaceID
@@ -1042,6 +1112,16 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 		if ok {
 			for outputFieldKey, outputFieldValue := range evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields {
 				exptTurnResultFilter.EvalTargetData[outputFieldKey] = outputFieldValue.GetText()
+			}
+			// 填充 eval_target_metrics
+			if evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage != nil {
+				usage := evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetUsage
+				exptTurnResultFilter.EvalTargetMetrics["input_tokens"] = usage.InputTokens
+				exptTurnResultFilter.EvalTargetMetrics["output_tokens"] = usage.OutputTokens
+				exptTurnResultFilter.EvalTargetMetrics["total_tokens"] = usage.TotalTokens
+			}
+			if evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS != nil {
+				exptTurnResultFilter.EvalTargetMetrics["total_latency"] = *evalTargetOutput.EvalTargetRecord.EvalTargetOutputData.TimeConsumingMS
 			}
 		}
 		evaluatorScoreCorrected, ok := exptResultBuilder.turnResultID2ScoreCorrected[exptTurnResult.ID]

@@ -1328,10 +1328,12 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	}
 	span := spans[0]
 	event.Annotation.StartTime = time.UnixMicro(span.StartTime)
+	event.Annotation.SpanID = span.SpanID
 	if err := event.Annotation.GenID(); err != nil {
 		logs.CtxWarn(ctx, "failed to generate annotation id for %+v, %v", event.Annotation, err)
 		return nil
 	}
+	span.AddAnnotation(event.Annotation)
 	// retry if failed
 	return r.traceRepo.InsertAnnotations(ctx, &repo.InsertAnnotationParam{
 		WorkSpaceID:    span.WorkspaceID,

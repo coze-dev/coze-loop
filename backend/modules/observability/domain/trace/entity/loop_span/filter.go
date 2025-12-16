@@ -57,6 +57,7 @@ const (
 	PlatformCozeBot      PlatformType = "coze_bot"
 	PlatformVeAgentKit   PlatformType = "ve_agentkit"
 	PlatformVeADK        PlatformType = "veadk"
+	PlatformCallbackAll  PlatformType = "callback_all"
 
 	SpanListTypeRootSpan SpanListType = "root_span"
 	SpanListTypeAllSpan  SpanListType = "all_span"
