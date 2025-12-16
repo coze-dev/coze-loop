@@ -13268,7 +13268,7 @@ SkipFieldError:
 
 func (p *CreateExperimentTemplateResponse) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := expt.NewExperimentTemplate()
+	_field := expt.NewExptTemplate()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -13352,9 +13352,9 @@ func (p *CreateExperimentTemplateResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _experimentTemplate *expt.ExperimentTemplate
+	var _experimentTemplate *expt.ExptTemplate
 	if src.ExperimentTemplate != nil {
-		_experimentTemplate = &expt.ExperimentTemplate{}
+		_experimentTemplate = &expt.ExptTemplate{}
 		if err := _experimentTemplate.DeepCopy(src.ExperimentTemplate); err != nil {
 			return err
 		}
@@ -13664,7 +13664,7 @@ SkipFieldError:
 
 func (p *GetExperimentTemplateResponse) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := expt.NewExperimentTemplate()
+	_field := expt.NewExptTemplate()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -13748,9 +13748,9 @@ func (p *GetExperimentTemplateResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _experimentTemplate *expt.ExperimentTemplate
+	var _experimentTemplate *expt.ExptTemplate
 	if src.ExperimentTemplate != nil {
-		_experimentTemplate = &expt.ExperimentTemplate{}
+		_experimentTemplate = &expt.ExptTemplate{}
 		if err := _experimentTemplate.DeepCopy(src.ExperimentTemplate); err != nil {
 			return err
 		}
@@ -14908,7 +14908,7 @@ SkipFieldError:
 
 func (p *UpdateExperimentTemplateResponse) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := expt.NewExperimentTemplate()
+	_field := expt.NewExptTemplate()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -14992,9 +14992,9 @@ func (p *UpdateExperimentTemplateResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _experimentTemplate *expt.ExperimentTemplate
+	var _experimentTemplate *expt.ExptTemplate
 	if src.ExperimentTemplate != nil {
-		_experimentTemplate = &expt.ExperimentTemplate{}
+		_experimentTemplate = &expt.ExptTemplate{}
 		if err := _experimentTemplate.DeepCopy(src.ExperimentTemplate); err != nil {
 			return err
 		}
@@ -15858,8 +15858,8 @@ func (p *ListExperimentTemplatesResponse) FastReadField1(buf []byte) (int, error
 	if err != nil {
 		return offset, err
 	}
-	_field := make([]*expt.ExperimentTemplate, 0, size)
-	values := make([]expt.ExperimentTemplate, size)
+	_field := make([]*expt.ExptTemplate, 0, size)
+	values := make([]expt.ExptTemplate, size)
 	for i := 0; i < size; i++ {
 		_elem := &values[i]
 		_elem.InitDefault()
@@ -15995,11 +15995,11 @@ func (p *ListExperimentTemplatesResponse) DeepCopy(s interface{}) error {
 	}
 
 	if src.ExperimentTemplates != nil {
-		p.ExperimentTemplates = make([]*expt.ExperimentTemplate, 0, len(src.ExperimentTemplates))
+		p.ExperimentTemplates = make([]*expt.ExptTemplate, 0, len(src.ExperimentTemplates))
 		for _, elem := range src.ExperimentTemplates {
-			var _elem *expt.ExperimentTemplate
+			var _elem *expt.ExptTemplate
 			if elem != nil {
-				_elem = &expt.ExperimentTemplate{}
+				_elem = &expt.ExptTemplate{}
 				if err := _elem.DeepCopy(elem); err != nil {
 					return err
 				}

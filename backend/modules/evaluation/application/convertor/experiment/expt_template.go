@@ -123,7 +123,7 @@ func toEvaluatorFieldMappingDoForTemplate(mapping []*domain_expt.EvaluatorFieldM
 }
 
 // ToExptTemplateDTO 转换实验模板实体为DTO
-func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExperimentTemplate {
+func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate {
 	if template == nil {
 		return nil
 	}
@@ -133,7 +133,7 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExperimentTem
 		evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
 	}
 
-	dto := &domain_expt.ExperimentTemplate{
+	dto := &domain_expt.ExptTemplate{
 		ID:          gptr.Of(template.ID),
 		WorkspaceID: gptr.Of(template.SpaceID),
 		Name:        gptr.Of(template.Name),
@@ -228,11 +228,11 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 }
 
 // ToExptTemplateDTOs 批量转换实验模板实体为DTO
-func ToExptTemplateDTOs(templates []*entity.ExptTemplate) []*domain_expt.ExperimentTemplate {
+func ToExptTemplateDTOs(templates []*entity.ExptTemplate) []*domain_expt.ExptTemplate {
 	if len(templates) == 0 {
 		return nil
 	}
-	dtos := make([]*domain_expt.ExperimentTemplate, 0, len(templates))
+	dtos := make([]*domain_expt.ExptTemplate, 0, len(templates))
 	for _, template := range templates {
 		dtos = append(dtos, ToExptTemplateDTO(template))
 	}

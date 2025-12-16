@@ -977,6 +977,7 @@ type Experiment struct {
 	MaxAliveTime          *int64                   `thrift:"max_alive_time,41,optional" frugal:"41,optional,i64" form:"max_alive_time" json:"max_alive_time,omitempty" query:"max_alive_time"`
 	SourceType            *SourceType              `thrift:"source_type,42,optional" frugal:"42,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
 	SourceID              *string                  `thrift:"source_id,43,optional" frugal:"43,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
+	ExptTemplate          *ExptTemplate            `thrift:"expt_template,50,optional" frugal:"50,optional,ExptTemplate" form:"expt_template" json:"expt_template,omitempty" query:"expt_template"`
 }
 
 func NewExperiment() *Experiment {
@@ -1297,6 +1298,18 @@ func (p *Experiment) GetSourceID() (v string) {
 	}
 	return *p.SourceID
 }
+
+var Experiment_ExptTemplate_DEFAULT *ExptTemplate
+
+func (p *Experiment) GetExptTemplate() (v *ExptTemplate) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptTemplate() {
+		return Experiment_ExptTemplate_DEFAULT
+	}
+	return p.ExptTemplate
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1375,6 +1388,9 @@ func (p *Experiment) SetSourceType(val *SourceType) {
 func (p *Experiment) SetSourceID(val *string) {
 	p.SourceID = val
 }
+func (p *Experiment) SetExptTemplate(val *ExptTemplate) {
+	p.ExptTemplate = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:  "id",
@@ -1403,6 +1419,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	41: "max_alive_time",
 	42: "source_type",
 	43: "source_id",
+	50: "expt_template",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1507,6 +1524,10 @@ func (p *Experiment) IsSetSourceType() bool {
 
 func (p *Experiment) IsSetSourceID() bool {
 	return p.SourceID != nil
+}
+
+func (p *Experiment) IsSetExptTemplate() bool {
+	return p.ExptTemplate != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -1730,6 +1751,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 43:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField43(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 50:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField50(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2071,6 +2100,14 @@ func (p *Experiment) ReadField43(iprot thrift.TProtocol) error {
 	p.SourceID = _field
 	return nil
 }
+func (p *Experiment) ReadField50(iprot thrift.TProtocol) error {
+	_field := NewExptTemplate()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptTemplate = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2180,6 +2217,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField43(oprot); err != nil {
 			fieldId = 43
+			goto WriteFieldError
+		}
+		if err = p.writeField50(oprot); err != nil {
+			fieldId = 50
 			goto WriteFieldError
 		}
 	}
@@ -2692,6 +2733,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 43 end error: ", p), err)
 }
+func (p *Experiment) writeField50(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptTemplate() {
+		if err = oprot.WriteFieldBegin("expt_template", thrift.STRUCT, 50); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptTemplate.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -2783,6 +2842,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field43DeepEqual(ano.SourceID) {
+		return false
+	}
+	if !p.Field50DeepEqual(ano.ExptTemplate) {
 		return false
 	}
 	return true
@@ -3073,9 +3135,16 @@ func (p *Experiment) Field43DeepEqual(src *string) bool {
 	}
 	return true
 }
+func (p *Experiment) Field50DeepEqual(src *ExptTemplate) bool {
+
+	if !p.ExptTemplate.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 
 // 离线实验模板，用于预先配置评测对象、评测集与评估器，并在创建实验时复用
-type ExperimentTemplate struct {
+type ExptTemplate struct {
 	ID          *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
 	WorkspaceID *int64  `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	Name        *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
@@ -3104,299 +3173,299 @@ type ExperimentTemplate struct {
 	BaseInfo *common.BaseInfo `thrift:"base_info,99,optional" frugal:"99,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
-func NewExperimentTemplate() *ExperimentTemplate {
-	return &ExperimentTemplate{}
+func NewExptTemplate() *ExptTemplate {
+	return &ExptTemplate{}
 }
 
-func (p *ExperimentTemplate) InitDefault() {
+func (p *ExptTemplate) InitDefault() {
 }
 
-var ExperimentTemplate_ID_DEFAULT int64
+var ExptTemplate_ID_DEFAULT int64
 
-func (p *ExperimentTemplate) GetID() (v int64) {
+func (p *ExptTemplate) GetID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetID() {
-		return ExperimentTemplate_ID_DEFAULT
+		return ExptTemplate_ID_DEFAULT
 	}
 	return *p.ID
 }
 
-var ExperimentTemplate_WorkspaceID_DEFAULT int64
+var ExptTemplate_WorkspaceID_DEFAULT int64
 
-func (p *ExperimentTemplate) GetWorkspaceID() (v int64) {
+func (p *ExptTemplate) GetWorkspaceID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetWorkspaceID() {
-		return ExperimentTemplate_WorkspaceID_DEFAULT
+		return ExptTemplate_WorkspaceID_DEFAULT
 	}
 	return *p.WorkspaceID
 }
 
-var ExperimentTemplate_Name_DEFAULT string
+var ExptTemplate_Name_DEFAULT string
 
-func (p *ExperimentTemplate) GetName() (v string) {
+func (p *ExptTemplate) GetName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetName() {
-		return ExperimentTemplate_Name_DEFAULT
+		return ExptTemplate_Name_DEFAULT
 	}
 	return *p.Name
 }
 
-var ExperimentTemplate_Desc_DEFAULT string
+var ExptTemplate_Desc_DEFAULT string
 
-func (p *ExperimentTemplate) GetDesc() (v string) {
+func (p *ExptTemplate) GetDesc() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDesc() {
-		return ExperimentTemplate_Desc_DEFAULT
+		return ExptTemplate_Desc_DEFAULT
 	}
 	return *p.Desc
 }
 
-var ExperimentTemplate_CreatorBy_DEFAULT string
+var ExptTemplate_CreatorBy_DEFAULT string
 
-func (p *ExperimentTemplate) GetCreatorBy() (v string) {
+func (p *ExptTemplate) GetCreatorBy() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCreatorBy() {
-		return ExperimentTemplate_CreatorBy_DEFAULT
+		return ExptTemplate_CreatorBy_DEFAULT
 	}
 	return *p.CreatorBy
 }
 
-var ExperimentTemplate_EvalSetID_DEFAULT int64
+var ExptTemplate_EvalSetID_DEFAULT int64
 
-func (p *ExperimentTemplate) GetEvalSetID() (v int64) {
+func (p *ExptTemplate) GetEvalSetID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvalSetID() {
-		return ExperimentTemplate_EvalSetID_DEFAULT
+		return ExptTemplate_EvalSetID_DEFAULT
 	}
 	return *p.EvalSetID
 }
 
-var ExperimentTemplate_EvalSetVersionID_DEFAULT int64
+var ExptTemplate_EvalSetVersionID_DEFAULT int64
 
-func (p *ExperimentTemplate) GetEvalSetVersionID() (v int64) {
+func (p *ExptTemplate) GetEvalSetVersionID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvalSetVersionID() {
-		return ExperimentTemplate_EvalSetVersionID_DEFAULT
+		return ExptTemplate_EvalSetVersionID_DEFAULT
 	}
 	return *p.EvalSetVersionID
 }
 
-var ExperimentTemplate_TargetID_DEFAULT int64
+var ExptTemplate_TargetID_DEFAULT int64
 
-func (p *ExperimentTemplate) GetTargetID() (v int64) {
+func (p *ExptTemplate) GetTargetID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetTargetID() {
-		return ExperimentTemplate_TargetID_DEFAULT
+		return ExptTemplate_TargetID_DEFAULT
 	}
 	return *p.TargetID
 }
 
-var ExperimentTemplate_TargetVersionID_DEFAULT int64
+var ExptTemplate_TargetVersionID_DEFAULT int64
 
-func (p *ExperimentTemplate) GetTargetVersionID() (v int64) {
+func (p *ExptTemplate) GetTargetVersionID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetTargetVersionID() {
-		return ExperimentTemplate_TargetVersionID_DEFAULT
+		return ExptTemplate_TargetVersionID_DEFAULT
 	}
 	return *p.TargetVersionID
 }
 
-var ExperimentTemplate_EvaluatorVersionIds_DEFAULT []int64
+var ExptTemplate_EvaluatorVersionIds_DEFAULT []int64
 
-func (p *ExperimentTemplate) GetEvaluatorVersionIds() (v []int64) {
+func (p *ExptTemplate) GetEvaluatorVersionIds() (v []int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluatorVersionIds() {
-		return ExperimentTemplate_EvaluatorVersionIds_DEFAULT
+		return ExptTemplate_EvaluatorVersionIds_DEFAULT
 	}
 	return p.EvaluatorVersionIds
 }
 
-var ExperimentTemplate_TargetFieldMapping_DEFAULT *TargetFieldMapping
+var ExptTemplate_TargetFieldMapping_DEFAULT *TargetFieldMapping
 
-func (p *ExperimentTemplate) GetTargetFieldMapping() (v *TargetFieldMapping) {
+func (p *ExptTemplate) GetTargetFieldMapping() (v *TargetFieldMapping) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetTargetFieldMapping() {
-		return ExperimentTemplate_TargetFieldMapping_DEFAULT
+		return ExptTemplate_TargetFieldMapping_DEFAULT
 	}
 	return p.TargetFieldMapping
 }
 
-var ExperimentTemplate_EvaluatorFieldMapping_DEFAULT []*EvaluatorFieldMapping
+var ExptTemplate_EvaluatorFieldMapping_DEFAULT []*EvaluatorFieldMapping
 
-func (p *ExperimentTemplate) GetEvaluatorFieldMapping() (v []*EvaluatorFieldMapping) {
+func (p *ExptTemplate) GetEvaluatorFieldMapping() (v []*EvaluatorFieldMapping) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluatorFieldMapping() {
-		return ExperimentTemplate_EvaluatorFieldMapping_DEFAULT
+		return ExptTemplate_EvaluatorFieldMapping_DEFAULT
 	}
 	return p.EvaluatorFieldMapping
 }
 
-var ExperimentTemplate_TargetRuntimeParam_DEFAULT *common.RuntimeParam
+var ExptTemplate_TargetRuntimeParam_DEFAULT *common.RuntimeParam
 
-func (p *ExperimentTemplate) GetTargetRuntimeParam() (v *common.RuntimeParam) {
+func (p *ExptTemplate) GetTargetRuntimeParam() (v *common.RuntimeParam) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetTargetRuntimeParam() {
-		return ExperimentTemplate_TargetRuntimeParam_DEFAULT
+		return ExptTemplate_TargetRuntimeParam_DEFAULT
 	}
 	return p.TargetRuntimeParam
 }
 
-var ExperimentTemplate_EnableWeightedScore_DEFAULT bool
+var ExptTemplate_EnableWeightedScore_DEFAULT bool
 
-func (p *ExperimentTemplate) GetEnableWeightedScore() (v bool) {
+func (p *ExptTemplate) GetEnableWeightedScore() (v bool) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEnableWeightedScore() {
-		return ExperimentTemplate_EnableWeightedScore_DEFAULT
+		return ExptTemplate_EnableWeightedScore_DEFAULT
 	}
 	return *p.EnableWeightedScore
 }
 
-var ExperimentTemplate_EvaluatorScoreWeights_DEFAULT map[int64]float64
+var ExptTemplate_EvaluatorScoreWeights_DEFAULT map[int64]float64
 
-func (p *ExperimentTemplate) GetEvaluatorScoreWeights() (v map[int64]float64) {
+func (p *ExptTemplate) GetEvaluatorScoreWeights() (v map[int64]float64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEvaluatorScoreWeights() {
-		return ExperimentTemplate_EvaluatorScoreWeights_DEFAULT
+		return ExptTemplate_EvaluatorScoreWeights_DEFAULT
 	}
 	return p.EvaluatorScoreWeights
 }
 
-var ExperimentTemplate_DefaultItemConcurNum_DEFAULT int32
+var ExptTemplate_DefaultItemConcurNum_DEFAULT int32
 
-func (p *ExperimentTemplate) GetDefaultItemConcurNum() (v int32) {
+func (p *ExptTemplate) GetDefaultItemConcurNum() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDefaultItemConcurNum() {
-		return ExperimentTemplate_DefaultItemConcurNum_DEFAULT
+		return ExptTemplate_DefaultItemConcurNum_DEFAULT
 	}
 	return *p.DefaultItemConcurNum
 }
 
-var ExperimentTemplate_DefaultEvaluatorsConcurNum_DEFAULT int32
+var ExptTemplate_DefaultEvaluatorsConcurNum_DEFAULT int32
 
-func (p *ExperimentTemplate) GetDefaultEvaluatorsConcurNum() (v int32) {
+func (p *ExptTemplate) GetDefaultEvaluatorsConcurNum() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDefaultEvaluatorsConcurNum() {
-		return ExperimentTemplate_DefaultEvaluatorsConcurNum_DEFAULT
+		return ExptTemplate_DefaultEvaluatorsConcurNum_DEFAULT
 	}
 	return *p.DefaultEvaluatorsConcurNum
 }
 
-var ExperimentTemplate_ExptType_DEFAULT ExptType
+var ExptTemplate_ExptType_DEFAULT ExptType
 
-func (p *ExperimentTemplate) GetExptType() (v ExptType) {
+func (p *ExptTemplate) GetExptType() (v ExptType) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetExptType() {
-		return ExperimentTemplate_ExptType_DEFAULT
+		return ExptTemplate_ExptType_DEFAULT
 	}
 	return *p.ExptType
 }
 
-var ExperimentTemplate_BaseInfo_DEFAULT *common.BaseInfo
+var ExptTemplate_BaseInfo_DEFAULT *common.BaseInfo
 
-func (p *ExperimentTemplate) GetBaseInfo() (v *common.BaseInfo) {
+func (p *ExptTemplate) GetBaseInfo() (v *common.BaseInfo) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseInfo() {
-		return ExperimentTemplate_BaseInfo_DEFAULT
+		return ExptTemplate_BaseInfo_DEFAULT
 	}
 	return p.BaseInfo
 }
-func (p *ExperimentTemplate) SetID(val *int64) {
+func (p *ExptTemplate) SetID(val *int64) {
 	p.ID = val
 }
-func (p *ExperimentTemplate) SetWorkspaceID(val *int64) {
+func (p *ExptTemplate) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
-func (p *ExperimentTemplate) SetName(val *string) {
+func (p *ExptTemplate) SetName(val *string) {
 	p.Name = val
 }
-func (p *ExperimentTemplate) SetDesc(val *string) {
+func (p *ExptTemplate) SetDesc(val *string) {
 	p.Desc = val
 }
-func (p *ExperimentTemplate) SetCreatorBy(val *string) {
+func (p *ExptTemplate) SetCreatorBy(val *string) {
 	p.CreatorBy = val
 }
-func (p *ExperimentTemplate) SetEvalSetID(val *int64) {
+func (p *ExptTemplate) SetEvalSetID(val *int64) {
 	p.EvalSetID = val
 }
-func (p *ExperimentTemplate) SetEvalSetVersionID(val *int64) {
+func (p *ExptTemplate) SetEvalSetVersionID(val *int64) {
 	p.EvalSetVersionID = val
 }
-func (p *ExperimentTemplate) SetTargetID(val *int64) {
+func (p *ExptTemplate) SetTargetID(val *int64) {
 	p.TargetID = val
 }
-func (p *ExperimentTemplate) SetTargetVersionID(val *int64) {
+func (p *ExptTemplate) SetTargetVersionID(val *int64) {
 	p.TargetVersionID = val
 }
-func (p *ExperimentTemplate) SetEvaluatorVersionIds(val []int64) {
+func (p *ExptTemplate) SetEvaluatorVersionIds(val []int64) {
 	p.EvaluatorVersionIds = val
 }
-func (p *ExperimentTemplate) SetTargetFieldMapping(val *TargetFieldMapping) {
+func (p *ExptTemplate) SetTargetFieldMapping(val *TargetFieldMapping) {
 	p.TargetFieldMapping = val
 }
-func (p *ExperimentTemplate) SetEvaluatorFieldMapping(val []*EvaluatorFieldMapping) {
+func (p *ExptTemplate) SetEvaluatorFieldMapping(val []*EvaluatorFieldMapping) {
 	p.EvaluatorFieldMapping = val
 }
-func (p *ExperimentTemplate) SetTargetRuntimeParam(val *common.RuntimeParam) {
+func (p *ExptTemplate) SetTargetRuntimeParam(val *common.RuntimeParam) {
 	p.TargetRuntimeParam = val
 }
-func (p *ExperimentTemplate) SetEnableWeightedScore(val *bool) {
+func (p *ExptTemplate) SetEnableWeightedScore(val *bool) {
 	p.EnableWeightedScore = val
 }
-func (p *ExperimentTemplate) SetEvaluatorScoreWeights(val map[int64]float64) {
+func (p *ExptTemplate) SetEvaluatorScoreWeights(val map[int64]float64) {
 	p.EvaluatorScoreWeights = val
 }
-func (p *ExperimentTemplate) SetDefaultItemConcurNum(val *int32) {
+func (p *ExptTemplate) SetDefaultItemConcurNum(val *int32) {
 	p.DefaultItemConcurNum = val
 }
-func (p *ExperimentTemplate) SetDefaultEvaluatorsConcurNum(val *int32) {
+func (p *ExptTemplate) SetDefaultEvaluatorsConcurNum(val *int32) {
 	p.DefaultEvaluatorsConcurNum = val
 }
-func (p *ExperimentTemplate) SetExptType(val *ExptType) {
+func (p *ExptTemplate) SetExptType(val *ExptType) {
 	p.ExptType = val
 }
-func (p *ExperimentTemplate) SetBaseInfo(val *common.BaseInfo) {
+func (p *ExptTemplate) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
 
-var fieldIDToName_ExperimentTemplate = map[int16]string{
+var fieldIDToName_ExptTemplate = map[int16]string{
 	1:  "id",
 	2:  "workspace_id",
 	3:  "name",
@@ -3418,83 +3487,83 @@ var fieldIDToName_ExperimentTemplate = map[int16]string{
 	99: "base_info",
 }
 
-func (p *ExperimentTemplate) IsSetID() bool {
+func (p *ExptTemplate) IsSetID() bool {
 	return p.ID != nil
 }
 
-func (p *ExperimentTemplate) IsSetWorkspaceID() bool {
+func (p *ExptTemplate) IsSetWorkspaceID() bool {
 	return p.WorkspaceID != nil
 }
 
-func (p *ExperimentTemplate) IsSetName() bool {
+func (p *ExptTemplate) IsSetName() bool {
 	return p.Name != nil
 }
 
-func (p *ExperimentTemplate) IsSetDesc() bool {
+func (p *ExptTemplate) IsSetDesc() bool {
 	return p.Desc != nil
 }
 
-func (p *ExperimentTemplate) IsSetCreatorBy() bool {
+func (p *ExptTemplate) IsSetCreatorBy() bool {
 	return p.CreatorBy != nil
 }
 
-func (p *ExperimentTemplate) IsSetEvalSetID() bool {
+func (p *ExptTemplate) IsSetEvalSetID() bool {
 	return p.EvalSetID != nil
 }
 
-func (p *ExperimentTemplate) IsSetEvalSetVersionID() bool {
+func (p *ExptTemplate) IsSetEvalSetVersionID() bool {
 	return p.EvalSetVersionID != nil
 }
 
-func (p *ExperimentTemplate) IsSetTargetID() bool {
+func (p *ExptTemplate) IsSetTargetID() bool {
 	return p.TargetID != nil
 }
 
-func (p *ExperimentTemplate) IsSetTargetVersionID() bool {
+func (p *ExptTemplate) IsSetTargetVersionID() bool {
 	return p.TargetVersionID != nil
 }
 
-func (p *ExperimentTemplate) IsSetEvaluatorVersionIds() bool {
+func (p *ExptTemplate) IsSetEvaluatorVersionIds() bool {
 	return p.EvaluatorVersionIds != nil
 }
 
-func (p *ExperimentTemplate) IsSetTargetFieldMapping() bool {
+func (p *ExptTemplate) IsSetTargetFieldMapping() bool {
 	return p.TargetFieldMapping != nil
 }
 
-func (p *ExperimentTemplate) IsSetEvaluatorFieldMapping() bool {
+func (p *ExptTemplate) IsSetEvaluatorFieldMapping() bool {
 	return p.EvaluatorFieldMapping != nil
 }
 
-func (p *ExperimentTemplate) IsSetTargetRuntimeParam() bool {
+func (p *ExptTemplate) IsSetTargetRuntimeParam() bool {
 	return p.TargetRuntimeParam != nil
 }
 
-func (p *ExperimentTemplate) IsSetEnableWeightedScore() bool {
+func (p *ExptTemplate) IsSetEnableWeightedScore() bool {
 	return p.EnableWeightedScore != nil
 }
 
-func (p *ExperimentTemplate) IsSetEvaluatorScoreWeights() bool {
+func (p *ExptTemplate) IsSetEvaluatorScoreWeights() bool {
 	return p.EvaluatorScoreWeights != nil
 }
 
-func (p *ExperimentTemplate) IsSetDefaultItemConcurNum() bool {
+func (p *ExptTemplate) IsSetDefaultItemConcurNum() bool {
 	return p.DefaultItemConcurNum != nil
 }
 
-func (p *ExperimentTemplate) IsSetDefaultEvaluatorsConcurNum() bool {
+func (p *ExptTemplate) IsSetDefaultEvaluatorsConcurNum() bool {
 	return p.DefaultEvaluatorsConcurNum != nil
 }
 
-func (p *ExperimentTemplate) IsSetExptType() bool {
+func (p *ExptTemplate) IsSetExptType() bool {
 	return p.ExptType != nil
 }
 
-func (p *ExperimentTemplate) IsSetBaseInfo() bool {
+func (p *ExptTemplate) IsSetBaseInfo() bool {
 	return p.BaseInfo != nil
 }
 
-func (p *ExperimentTemplate) Read(iprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -3683,7 +3752,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentTemplate[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptTemplate[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -3693,7 +3762,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *ExperimentTemplate) ReadField1(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3704,7 +3773,7 @@ func (p *ExperimentTemplate) ReadField1(iprot thrift.TProtocol) error {
 	p.ID = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField2(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3715,7 +3784,7 @@ func (p *ExperimentTemplate) ReadField2(iprot thrift.TProtocol) error {
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField3(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -3726,7 +3795,7 @@ func (p *ExperimentTemplate) ReadField3(iprot thrift.TProtocol) error {
 	p.Name = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField4(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -3737,7 +3806,7 @@ func (p *ExperimentTemplate) ReadField4(iprot thrift.TProtocol) error {
 	p.Desc = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField5(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -3748,7 +3817,7 @@ func (p *ExperimentTemplate) ReadField5(iprot thrift.TProtocol) error {
 	p.CreatorBy = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField20(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField20(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3759,7 +3828,7 @@ func (p *ExperimentTemplate) ReadField20(iprot thrift.TProtocol) error {
 	p.EvalSetID = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField21(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField21(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3770,7 +3839,7 @@ func (p *ExperimentTemplate) ReadField21(iprot thrift.TProtocol) error {
 	p.EvalSetVersionID = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField22(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField22(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3781,7 +3850,7 @@ func (p *ExperimentTemplate) ReadField22(iprot thrift.TProtocol) error {
 	p.TargetID = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField23(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField23(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -3792,7 +3861,7 @@ func (p *ExperimentTemplate) ReadField23(iprot thrift.TProtocol) error {
 	p.TargetVersionID = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField30(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField30(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -3815,7 +3884,7 @@ func (p *ExperimentTemplate) ReadField30(iprot thrift.TProtocol) error {
 	p.EvaluatorVersionIds = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField40(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField40(iprot thrift.TProtocol) error {
 	_field := NewTargetFieldMapping()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -3823,7 +3892,7 @@ func (p *ExperimentTemplate) ReadField40(iprot thrift.TProtocol) error {
 	p.TargetFieldMapping = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField41(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField41(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -3846,7 +3915,7 @@ func (p *ExperimentTemplate) ReadField41(iprot thrift.TProtocol) error {
 	p.EvaluatorFieldMapping = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField42(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField42(iprot thrift.TProtocol) error {
 	_field := common.NewRuntimeParam()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -3854,7 +3923,7 @@ func (p *ExperimentTemplate) ReadField42(iprot thrift.TProtocol) error {
 	p.TargetRuntimeParam = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField50(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField50(iprot thrift.TProtocol) error {
 
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -3865,7 +3934,7 @@ func (p *ExperimentTemplate) ReadField50(iprot thrift.TProtocol) error {
 	p.EnableWeightedScore = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField51(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField51(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
 		return err
@@ -3894,7 +3963,7 @@ func (p *ExperimentTemplate) ReadField51(iprot thrift.TProtocol) error {
 	p.EvaluatorScoreWeights = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField60(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField60(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -3905,7 +3974,7 @@ func (p *ExperimentTemplate) ReadField60(iprot thrift.TProtocol) error {
 	p.DefaultItemConcurNum = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField61(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField61(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -3916,7 +3985,7 @@ func (p *ExperimentTemplate) ReadField61(iprot thrift.TProtocol) error {
 	p.DefaultEvaluatorsConcurNum = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField90(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField90(iprot thrift.TProtocol) error {
 
 	var _field *ExptType
 	if v, err := iprot.ReadI32(); err != nil {
@@ -3928,7 +3997,7 @@ func (p *ExperimentTemplate) ReadField90(iprot thrift.TProtocol) error {
 	p.ExptType = _field
 	return nil
 }
-func (p *ExperimentTemplate) ReadField99(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField99(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -3937,9 +4006,9 @@ func (p *ExperimentTemplate) ReadField99(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ExperimentTemplate) Write(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ExperimentTemplate"); err != nil {
+	if err = oprot.WriteStructBegin("ExptTemplate"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -4037,7 +4106,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ExperimentTemplate) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetID() {
 		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
 			goto WriteFieldBeginError
@@ -4055,7 +4124,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetWorkspaceID() {
 		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
 			goto WriteFieldBeginError
@@ -4073,7 +4142,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetName() {
 		if err = oprot.WriteFieldBegin("name", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
@@ -4091,7 +4160,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDesc() {
 		if err = oprot.WriteFieldBegin("desc", thrift.STRING, 4); err != nil {
 			goto WriteFieldBeginError
@@ -4109,7 +4178,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField5(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCreatorBy() {
 		if err = oprot.WriteFieldBegin("creator_by", thrift.STRING, 5); err != nil {
 			goto WriteFieldBeginError
@@ -4127,7 +4196,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField20(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvalSetID() {
 		if err = oprot.WriteFieldBegin("eval_set_id", thrift.I64, 20); err != nil {
 			goto WriteFieldBeginError
@@ -4145,7 +4214,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField21(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField21(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvalSetVersionID() {
 		if err = oprot.WriteFieldBegin("eval_set_version_id", thrift.I64, 21); err != nil {
 			goto WriteFieldBeginError
@@ -4163,7 +4232,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField22(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField22(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetID() {
 		if err = oprot.WriteFieldBegin("target_id", thrift.I64, 22); err != nil {
 			goto WriteFieldBeginError
@@ -4181,7 +4250,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField23(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField23(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetVersionID() {
 		if err = oprot.WriteFieldBegin("target_version_id", thrift.I64, 23); err != nil {
 			goto WriteFieldBeginError
@@ -4199,7 +4268,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField30(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField30(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorVersionIds() {
 		if err = oprot.WriteFieldBegin("evaluator_version_ids", thrift.LIST, 30); err != nil {
 			goto WriteFieldBeginError
@@ -4225,7 +4294,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField40(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField40(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetFieldMapping() {
 		if err = oprot.WriteFieldBegin("target_field_mapping", thrift.STRUCT, 40); err != nil {
 			goto WriteFieldBeginError
@@ -4243,7 +4312,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField41(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField41(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorFieldMapping() {
 		if err = oprot.WriteFieldBegin("evaluator_field_mapping", thrift.LIST, 41); err != nil {
 			goto WriteFieldBeginError
@@ -4269,7 +4338,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField42(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField42(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetRuntimeParam() {
 		if err = oprot.WriteFieldBegin("target_runtime_param", thrift.STRUCT, 42); err != nil {
 			goto WriteFieldBeginError
@@ -4287,7 +4356,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 42 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField50(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField50(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEnableWeightedScore() {
 		if err = oprot.WriteFieldBegin("enable_weighted_score", thrift.BOOL, 50); err != nil {
 			goto WriteFieldBeginError
@@ -4305,7 +4374,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField51(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField51(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorScoreWeights() {
 		if err = oprot.WriteFieldBegin("evaluator_score_weights", thrift.MAP, 51); err != nil {
 			goto WriteFieldBeginError
@@ -4334,7 +4403,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField60(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField60(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDefaultItemConcurNum() {
 		if err = oprot.WriteFieldBegin("default_item_concur_num", thrift.I32, 60); err != nil {
 			goto WriteFieldBeginError
@@ -4352,7 +4421,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 60 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField61(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField61(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDefaultEvaluatorsConcurNum() {
 		if err = oprot.WriteFieldBegin("default_evaluators_concur_num", thrift.I32, 61); err != nil {
 			goto WriteFieldBeginError
@@ -4370,7 +4439,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 61 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField90(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField90(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExptType() {
 		if err = oprot.WriteFieldBegin("expt_type", thrift.I32, 90); err != nil {
 			goto WriteFieldBeginError
@@ -4388,7 +4457,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
 }
-func (p *ExperimentTemplate) writeField99(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField99(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 99); err != nil {
 			goto WriteFieldBeginError
@@ -4407,15 +4476,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 99 end error: ", p), err)
 }
 
-func (p *ExperimentTemplate) String() string {
+func (p *ExptTemplate) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ExperimentTemplate(%+v)", *p)
+	return fmt.Sprintf("ExptTemplate(%+v)", *p)
 
 }
 
-func (p *ExperimentTemplate) DeepEqual(ano *ExperimentTemplate) bool {
+func (p *ExptTemplate) DeepEqual(ano *ExptTemplate) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -4481,7 +4550,7 @@ func (p *ExperimentTemplate) DeepEqual(ano *ExperimentTemplate) bool {
 	return true
 }
 
-func (p *ExperimentTemplate) Field1DeepEqual(src *int64) bool {
+func (p *ExptTemplate) Field1DeepEqual(src *int64) bool {
 
 	if p.ID == src {
 		return true
@@ -4493,7 +4562,7 @@ func (p *ExperimentTemplate) Field1DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field2DeepEqual(src *int64) bool {
+func (p *ExptTemplate) Field2DeepEqual(src *int64) bool {
 
 	if p.WorkspaceID == src {
 		return true
@@ -4505,7 +4574,7 @@ func (p *ExperimentTemplate) Field2DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field3DeepEqual(src *string) bool {
+func (p *ExptTemplate) Field3DeepEqual(src *string) bool {
 
 	if p.Name == src {
 		return true
@@ -4517,7 +4586,7 @@ func (p *ExperimentTemplate) Field3DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field4DeepEqual(src *string) bool {
+func (p *ExptTemplate) Field4DeepEqual(src *string) bool {
 
 	if p.Desc == src {
 		return true
@@ -4529,7 +4598,7 @@ func (p *ExperimentTemplate) Field4DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field5DeepEqual(src *string) bool {
+func (p *ExptTemplate) Field5DeepEqual(src *string) bool {
 
 	if p.CreatorBy == src {
 		return true
@@ -4541,7 +4610,7 @@ func (p *ExperimentTemplate) Field5DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field20DeepEqual(src *int64) bool {
+func (p *ExptTemplate) Field20DeepEqual(src *int64) bool {
 
 	if p.EvalSetID == src {
 		return true
@@ -4553,7 +4622,7 @@ func (p *ExperimentTemplate) Field20DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field21DeepEqual(src *int64) bool {
+func (p *ExptTemplate) Field21DeepEqual(src *int64) bool {
 
 	if p.EvalSetVersionID == src {
 		return true
@@ -4565,7 +4634,7 @@ func (p *ExperimentTemplate) Field21DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field22DeepEqual(src *int64) bool {
+func (p *ExptTemplate) Field22DeepEqual(src *int64) bool {
 
 	if p.TargetID == src {
 		return true
@@ -4577,7 +4646,7 @@ func (p *ExperimentTemplate) Field22DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field23DeepEqual(src *int64) bool {
+func (p *ExptTemplate) Field23DeepEqual(src *int64) bool {
 
 	if p.TargetVersionID == src {
 		return true
@@ -4589,7 +4658,7 @@ func (p *ExperimentTemplate) Field23DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field30DeepEqual(src []int64) bool {
+func (p *ExptTemplate) Field30DeepEqual(src []int64) bool {
 
 	if len(p.EvaluatorVersionIds) != len(src) {
 		return false
@@ -4602,14 +4671,14 @@ func (p *ExperimentTemplate) Field30DeepEqual(src []int64) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field40DeepEqual(src *TargetFieldMapping) bool {
+func (p *ExptTemplate) Field40DeepEqual(src *TargetFieldMapping) bool {
 
 	if !p.TargetFieldMapping.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field41DeepEqual(src []*EvaluatorFieldMapping) bool {
+func (p *ExptTemplate) Field41DeepEqual(src []*EvaluatorFieldMapping) bool {
 
 	if len(p.EvaluatorFieldMapping) != len(src) {
 		return false
@@ -4622,14 +4691,14 @@ func (p *ExperimentTemplate) Field41DeepEqual(src []*EvaluatorFieldMapping) bool
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field42DeepEqual(src *common.RuntimeParam) bool {
+func (p *ExptTemplate) Field42DeepEqual(src *common.RuntimeParam) bool {
 
 	if !p.TargetRuntimeParam.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field50DeepEqual(src *bool) bool {
+func (p *ExptTemplate) Field50DeepEqual(src *bool) bool {
 
 	if p.EnableWeightedScore == src {
 		return true
@@ -4641,7 +4710,7 @@ func (p *ExperimentTemplate) Field50DeepEqual(src *bool) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field51DeepEqual(src map[int64]float64) bool {
+func (p *ExptTemplate) Field51DeepEqual(src map[int64]float64) bool {
 
 	if len(p.EvaluatorScoreWeights) != len(src) {
 		return false
@@ -4654,7 +4723,7 @@ func (p *ExperimentTemplate) Field51DeepEqual(src map[int64]float64) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field60DeepEqual(src *int32) bool {
+func (p *ExptTemplate) Field60DeepEqual(src *int32) bool {
 
 	if p.DefaultItemConcurNum == src {
 		return true
@@ -4666,7 +4735,7 @@ func (p *ExperimentTemplate) Field60DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field61DeepEqual(src *int32) bool {
+func (p *ExptTemplate) Field61DeepEqual(src *int32) bool {
 
 	if p.DefaultEvaluatorsConcurNum == src {
 		return true
@@ -4678,7 +4747,7 @@ func (p *ExperimentTemplate) Field61DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field90DeepEqual(src *ExptType) bool {
+func (p *ExptTemplate) Field90DeepEqual(src *ExptType) bool {
 
 	if p.ExptType == src {
 		return true
@@ -4690,7 +4759,7 @@ func (p *ExperimentTemplate) Field90DeepEqual(src *ExptType) bool {
 	}
 	return true
 }
-func (p *ExperimentTemplate) Field99DeepEqual(src *common.BaseInfo) bool {
+func (p *ExptTemplate) Field99DeepEqual(src *common.BaseInfo) bool {
 
 	if !p.BaseInfo.DeepEqual(src) {
 		return false

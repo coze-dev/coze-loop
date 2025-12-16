@@ -531,7 +531,7 @@ type ExptTemplateFilterConvertor struct {
 }
 
 // Convert 转换实验模板筛选选项为实体筛选器
-func (e *ExptTemplateFilterConvertor) Convert(ctx context.Context, etf *domain_expt.ExperimentTemplateFilter, spaceID int64) (*entity.ExptTemplateListFilter, error) {
+func (e *ExptTemplateFilterConvertor) Convert(ctx context.Context, etf *domain_expt.ExptTemplateFilter, spaceID int64) (*entity.ExptTemplateListFilter, error) {
 	if etf == nil {
 		return nil, nil
 	}

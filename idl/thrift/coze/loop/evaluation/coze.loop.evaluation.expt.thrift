@@ -376,7 +376,7 @@ struct CreateExperimentTemplateRequest {
 }
 
 struct CreateExperimentTemplateResponse {
-    1: optional expt.ExperimentTemplate experiment_template
+    1: optional expt.ExptTemplate experiment_template
 
     255: base.BaseResp BaseResp
 }
@@ -389,7 +389,7 @@ struct GetExperimentTemplateRequest {
 }
 
 struct GetExperimentTemplateResponse {
-    1: optional expt.ExperimentTemplate experiment_template
+    1: optional expt.ExptTemplate experiment_template
 
     255: base.BaseResp BaseResp
 }
@@ -427,7 +427,7 @@ struct UpdateExperimentTemplateRequest {
 }
 
 struct UpdateExperimentTemplateResponse {
-    1: optional expt.ExperimentTemplate experiment_template
+    1: optional expt.ExptTemplate experiment_template
 
     255: base.BaseResp BaseResp
 }
@@ -455,7 +455,7 @@ struct ListExperimentTemplatesRequest {
 }
 
 struct ListExperimentTemplatesResponse {
-    1: optional list<expt.ExperimentTemplate> experiment_templates (api.body = 'experiment_templates')
+    1: optional list<expt.ExptTemplate> experiment_templates (api.body = 'experiment_templates')
     2: optional i32 total (api.body = 'total')
 
     255: base.BaseResp BaseResp

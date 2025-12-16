@@ -225,6 +225,11 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.ItemConcurNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemConcurNum)))
 	}
 
+	// 关联的实验模板（仅在查询时按需填充基础信息）
+	if experiment.ExptTemplate != nil {
+		res.ExptTemplate = ToExptTemplateDTO(experiment.ExptTemplate)
+	}
+
 	res.EvalTarget = target.EvalTargetDO2DTO(experiment.Target)
 	if experiment.ExptType != entity.ExptType_Online {
 		res.EvalSet = evaluation_set.EvaluationSetDO2DTO(experiment.EvalSet)

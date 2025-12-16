@@ -61,10 +61,12 @@ struct Experiment {
     41: optional i64 max_alive_time
     42: optional SourceType source_type
     43: optional string source_id
+
+    50: optional ExptTemplate expt_template
 }
 
 // 离线实验模板，用于预先配置评测对象、评测集与评估器，并在创建实验时复用
-struct ExperimentTemplate {
+struct ExptTemplate {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
     2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
     3: optional string name

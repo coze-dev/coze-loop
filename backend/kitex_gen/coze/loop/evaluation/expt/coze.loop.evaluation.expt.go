@@ -17913,8 +17913,8 @@ func (p *CreateExperimentTemplateRequest) Field255DeepEqual(src *base.Base) bool
 }
 
 type CreateExperimentTemplateResponse struct {
-	ExperimentTemplate *expt.ExperimentTemplate `thrift:"experiment_template,1,optional" frugal:"1,optional,expt.ExperimentTemplate" form:"experiment_template" json:"experiment_template,omitempty" query:"experiment_template"`
-	BaseResp           *base.BaseResp           `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExperimentTemplate *expt.ExptTemplate `thrift:"experiment_template,1,optional" frugal:"1,optional,expt.ExptTemplate" form:"experiment_template" json:"experiment_template,omitempty" query:"experiment_template"`
+	BaseResp           *base.BaseResp     `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewCreateExperimentTemplateResponse() *CreateExperimentTemplateResponse {
@@ -17924,9 +17924,9 @@ func NewCreateExperimentTemplateResponse() *CreateExperimentTemplateResponse {
 func (p *CreateExperimentTemplateResponse) InitDefault() {
 }
 
-var CreateExperimentTemplateResponse_ExperimentTemplate_DEFAULT *expt.ExperimentTemplate
+var CreateExperimentTemplateResponse_ExperimentTemplate_DEFAULT *expt.ExptTemplate
 
-func (p *CreateExperimentTemplateResponse) GetExperimentTemplate() (v *expt.ExperimentTemplate) {
+func (p *CreateExperimentTemplateResponse) GetExperimentTemplate() (v *expt.ExptTemplate) {
 	if p == nil {
 		return
 	}
@@ -17947,7 +17947,7 @@ func (p *CreateExperimentTemplateResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *CreateExperimentTemplateResponse) SetExperimentTemplate(val *expt.ExperimentTemplate) {
+func (p *CreateExperimentTemplateResponse) SetExperimentTemplate(val *expt.ExptTemplate) {
 	p.ExperimentTemplate = val
 }
 func (p *CreateExperimentTemplateResponse) SetBaseResp(val *base.BaseResp) {
@@ -18031,7 +18031,7 @@ ReadStructEndError:
 }
 
 func (p *CreateExperimentTemplateResponse) ReadField1(iprot thrift.TProtocol) error {
-	_field := expt.NewExperimentTemplate()
+	_field := expt.NewExptTemplate()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -18137,7 +18137,7 @@ func (p *CreateExperimentTemplateResponse) DeepEqual(ano *CreateExperimentTempla
 	return true
 }
 
-func (p *CreateExperimentTemplateResponse) Field1DeepEqual(src *expt.ExperimentTemplate) bool {
+func (p *CreateExperimentTemplateResponse) Field1DeepEqual(src *expt.ExptTemplate) bool {
 
 	if !p.ExperimentTemplate.DeepEqual(src) {
 		return false
@@ -18463,8 +18463,8 @@ func (p *GetExperimentTemplateRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type GetExperimentTemplateResponse struct {
-	ExperimentTemplate *expt.ExperimentTemplate `thrift:"experiment_template,1,optional" frugal:"1,optional,expt.ExperimentTemplate" form:"experiment_template" json:"experiment_template,omitempty" query:"experiment_template"`
-	BaseResp           *base.BaseResp           `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExperimentTemplate *expt.ExptTemplate `thrift:"experiment_template,1,optional" frugal:"1,optional,expt.ExptTemplate" form:"experiment_template" json:"experiment_template,omitempty" query:"experiment_template"`
+	BaseResp           *base.BaseResp     `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewGetExperimentTemplateResponse() *GetExperimentTemplateResponse {
@@ -18474,9 +18474,9 @@ func NewGetExperimentTemplateResponse() *GetExperimentTemplateResponse {
 func (p *GetExperimentTemplateResponse) InitDefault() {
 }
 
-var GetExperimentTemplateResponse_ExperimentTemplate_DEFAULT *expt.ExperimentTemplate
+var GetExperimentTemplateResponse_ExperimentTemplate_DEFAULT *expt.ExptTemplate
 
-func (p *GetExperimentTemplateResponse) GetExperimentTemplate() (v *expt.ExperimentTemplate) {
+func (p *GetExperimentTemplateResponse) GetExperimentTemplate() (v *expt.ExptTemplate) {
 	if p == nil {
 		return
 	}
@@ -18497,7 +18497,7 @@ func (p *GetExperimentTemplateResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *GetExperimentTemplateResponse) SetExperimentTemplate(val *expt.ExperimentTemplate) {
+func (p *GetExperimentTemplateResponse) SetExperimentTemplate(val *expt.ExptTemplate) {
 	p.ExperimentTemplate = val
 }
 func (p *GetExperimentTemplateResponse) SetBaseResp(val *base.BaseResp) {
@@ -18581,7 +18581,7 @@ ReadStructEndError:
 }
 
 func (p *GetExperimentTemplateResponse) ReadField1(iprot thrift.TProtocol) error {
-	_field := expt.NewExperimentTemplate()
+	_field := expt.NewExptTemplate()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -18687,7 +18687,7 @@ func (p *GetExperimentTemplateResponse) DeepEqual(ano *GetExperimentTemplateResp
 	return true
 }
 
-func (p *GetExperimentTemplateResponse) Field1DeepEqual(src *expt.ExperimentTemplate) bool {
+func (p *GetExperimentTemplateResponse) Field1DeepEqual(src *expt.ExptTemplate) bool {
 
 	if !p.ExperimentTemplate.DeepEqual(src) {
 		return false
@@ -20153,8 +20153,8 @@ func (p *UpdateExperimentTemplateRequest) Field255DeepEqual(src *base.Base) bool
 }
 
 type UpdateExperimentTemplateResponse struct {
-	ExperimentTemplate *expt.ExperimentTemplate `thrift:"experiment_template,1,optional" frugal:"1,optional,expt.ExperimentTemplate" form:"experiment_template" json:"experiment_template,omitempty" query:"experiment_template"`
-	BaseResp           *base.BaseResp           `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExperimentTemplate *expt.ExptTemplate `thrift:"experiment_template,1,optional" frugal:"1,optional,expt.ExptTemplate" form:"experiment_template" json:"experiment_template,omitempty" query:"experiment_template"`
+	BaseResp           *base.BaseResp     `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewUpdateExperimentTemplateResponse() *UpdateExperimentTemplateResponse {
@@ -20164,9 +20164,9 @@ func NewUpdateExperimentTemplateResponse() *UpdateExperimentTemplateResponse {
 func (p *UpdateExperimentTemplateResponse) InitDefault() {
 }
 
-var UpdateExperimentTemplateResponse_ExperimentTemplate_DEFAULT *expt.ExperimentTemplate
+var UpdateExperimentTemplateResponse_ExperimentTemplate_DEFAULT *expt.ExptTemplate
 
-func (p *UpdateExperimentTemplateResponse) GetExperimentTemplate() (v *expt.ExperimentTemplate) {
+func (p *UpdateExperimentTemplateResponse) GetExperimentTemplate() (v *expt.ExptTemplate) {
 	if p == nil {
 		return
 	}
@@ -20187,7 +20187,7 @@ func (p *UpdateExperimentTemplateResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *UpdateExperimentTemplateResponse) SetExperimentTemplate(val *expt.ExperimentTemplate) {
+func (p *UpdateExperimentTemplateResponse) SetExperimentTemplate(val *expt.ExptTemplate) {
 	p.ExperimentTemplate = val
 }
 func (p *UpdateExperimentTemplateResponse) SetBaseResp(val *base.BaseResp) {
@@ -20271,7 +20271,7 @@ ReadStructEndError:
 }
 
 func (p *UpdateExperimentTemplateResponse) ReadField1(iprot thrift.TProtocol) error {
-	_field := expt.NewExperimentTemplate()
+	_field := expt.NewExptTemplate()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -20377,7 +20377,7 @@ func (p *UpdateExperimentTemplateResponse) DeepEqual(ano *UpdateExperimentTempla
 	return true
 }
 
-func (p *UpdateExperimentTemplateResponse) Field1DeepEqual(src *expt.ExperimentTemplate) bool {
+func (p *UpdateExperimentTemplateResponse) Field1DeepEqual(src *expt.ExptTemplate) bool {
 
 	if !p.ExperimentTemplate.DeepEqual(src) {
 		return false
@@ -21437,9 +21437,9 @@ func (p *ListExperimentTemplatesRequest) Field255DeepEqual(src *base.Base) bool 
 }
 
 type ListExperimentTemplatesResponse struct {
-	ExperimentTemplates []*expt.ExperimentTemplate `thrift:"experiment_templates,1,optional" frugal:"1,optional,list<expt.ExperimentTemplate>" form:"experiment_templates" json:"experiment_templates,omitempty"`
-	Total               *int32                     `thrift:"total,2,optional" frugal:"2,optional,i32" form:"total" json:"total,omitempty"`
-	BaseResp            *base.BaseResp             `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExperimentTemplates []*expt.ExptTemplate `thrift:"experiment_templates,1,optional" frugal:"1,optional,list<expt.ExptTemplate>" form:"experiment_templates" json:"experiment_templates,omitempty"`
+	Total               *int32               `thrift:"total,2,optional" frugal:"2,optional,i32" form:"total" json:"total,omitempty"`
+	BaseResp            *base.BaseResp       `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewListExperimentTemplatesResponse() *ListExperimentTemplatesResponse {
@@ -21449,9 +21449,9 @@ func NewListExperimentTemplatesResponse() *ListExperimentTemplatesResponse {
 func (p *ListExperimentTemplatesResponse) InitDefault() {
 }
 
-var ListExperimentTemplatesResponse_ExperimentTemplates_DEFAULT []*expt.ExperimentTemplate
+var ListExperimentTemplatesResponse_ExperimentTemplates_DEFAULT []*expt.ExptTemplate
 
-func (p *ListExperimentTemplatesResponse) GetExperimentTemplates() (v []*expt.ExperimentTemplate) {
+func (p *ListExperimentTemplatesResponse) GetExperimentTemplates() (v []*expt.ExptTemplate) {
 	if p == nil {
 		return
 	}
@@ -21484,7 +21484,7 @@ func (p *ListExperimentTemplatesResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *ListExperimentTemplatesResponse) SetExperimentTemplates(val []*expt.ExperimentTemplate) {
+func (p *ListExperimentTemplatesResponse) SetExperimentTemplates(val []*expt.ExptTemplate) {
 	p.ExperimentTemplates = val
 }
 func (p *ListExperimentTemplatesResponse) SetTotal(val *int32) {
@@ -21588,8 +21588,8 @@ func (p *ListExperimentTemplatesResponse) ReadField1(iprot thrift.TProtocol) err
 	if err != nil {
 		return err
 	}
-	_field := make([]*expt.ExperimentTemplate, 0, size)
-	values := make([]expt.ExperimentTemplate, size)
+	_field := make([]*expt.ExptTemplate, 0, size)
+	values := make([]expt.ExptTemplate, size)
 	for i := 0; i < size; i++ {
 		_elem := &values[i]
 		_elem.InitDefault()
@@ -21749,7 +21749,7 @@ func (p *ListExperimentTemplatesResponse) DeepEqual(ano *ListExperimentTemplates
 	return true
 }
 
-func (p *ListExperimentTemplatesResponse) Field1DeepEqual(src []*expt.ExperimentTemplate) bool {
+func (p *ListExperimentTemplatesResponse) Field1DeepEqual(src []*expt.ExptTemplate) bool {
 
 	if len(p.ExperimentTemplates) != len(src) {
 		return false

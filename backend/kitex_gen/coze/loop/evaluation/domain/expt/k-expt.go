@@ -416,6 +416,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 50:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField50(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -824,6 +838,18 @@ func (p *Experiment) FastReadField43(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField50(buf []byte) (int, error) {
+	offset := 0
+	_field := NewExptTemplate()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ExptTemplate = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -857,6 +883,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField40(buf[offset:], w)
 		offset += p.fastWriteField42(buf[offset:], w)
 		offset += p.fastWriteField43(buf[offset:], w)
+		offset += p.fastWriteField50(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -891,6 +918,7 @@ func (p *Experiment) BLength() int {
 		l += p.field41Length()
 		l += p.field42Length()
 		l += p.field43Length()
+		l += p.field50Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1151,6 +1179,15 @@ func (p *Experiment) fastWriteField43(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Experiment) fastWriteField50(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExptTemplate() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 50)
+		offset += p.ExptTemplate.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *Experiment) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -1395,6 +1432,15 @@ func (p *Experiment) field43Length() int {
 	return l
 }
 
+func (p *Experiment) field50Length() int {
+	l := 0
+	if p.IsSetExptTemplate() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ExptTemplate.BLength()
+	}
+	return l
+}
+
 func (p *Experiment) DeepCopy(s interface{}) error {
 	src, ok := s.(*Experiment)
 	if !ok {
@@ -1594,10 +1640,19 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		p.SourceID = &tmp
 	}
 
+	var _exptTemplate *ExptTemplate
+	if src.ExptTemplate != nil {
+		_exptTemplate = &ExptTemplate{}
+		if err := _exptTemplate.DeepCopy(src.ExptTemplate); err != nil {
+			return err
+		}
+	}
+	p.ExptTemplate = _exptTemplate
+
 	return nil
 }
 
-func (p *ExperimentTemplate) FastRead(buf []byte) (int, error) {
+func (p *ExptTemplate) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -1893,12 +1948,12 @@ func (p *ExperimentTemplate) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentTemplate[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptTemplate[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *ExperimentTemplate) FastReadField1(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -1912,7 +1967,7 @@ func (p *ExperimentTemplate) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField2(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -1926,7 +1981,7 @@ func (p *ExperimentTemplate) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField3(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1940,7 +1995,7 @@ func (p *ExperimentTemplate) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField4(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1954,7 +2009,7 @@ func (p *ExperimentTemplate) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField5(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -1968,7 +2023,7 @@ func (p *ExperimentTemplate) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField20(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField20(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -1982,7 +2037,7 @@ func (p *ExperimentTemplate) FastReadField20(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField21(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField21(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -1996,7 +2051,7 @@ func (p *ExperimentTemplate) FastReadField21(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField22(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField22(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -2010,7 +2065,7 @@ func (p *ExperimentTemplate) FastReadField22(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField23(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField23(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -2024,7 +2079,7 @@ func (p *ExperimentTemplate) FastReadField23(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField30(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField30(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -2048,7 +2103,7 @@ func (p *ExperimentTemplate) FastReadField30(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField40(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField40(buf []byte) (int, error) {
 	offset := 0
 	_field := NewTargetFieldMapping()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -2060,7 +2115,7 @@ func (p *ExperimentTemplate) FastReadField40(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField41(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField41(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -2085,7 +2140,7 @@ func (p *ExperimentTemplate) FastReadField41(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField42(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField42(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewRuntimeParam()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -2097,7 +2152,7 @@ func (p *ExperimentTemplate) FastReadField42(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField50(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *bool
@@ -2111,7 +2166,7 @@ func (p *ExperimentTemplate) FastReadField50(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField51(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField51(buf []byte) (int, error) {
 	offset := 0
 
 	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
@@ -2143,7 +2198,7 @@ func (p *ExperimentTemplate) FastReadField51(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField60(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField60(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int32
@@ -2157,7 +2212,7 @@ func (p *ExperimentTemplate) FastReadField60(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField61(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField61(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int32
@@ -2171,7 +2226,7 @@ func (p *ExperimentTemplate) FastReadField61(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField90(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField90(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *ExptType
@@ -2187,7 +2242,7 @@ func (p *ExperimentTemplate) FastReadField90(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastReadField99(buf []byte) (int, error) {
+func (p *ExptTemplate) FastReadField99(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -2199,11 +2254,11 @@ func (p *ExperimentTemplate) FastReadField99(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExperimentTemplate) FastWrite(buf []byte) int {
+func (p *ExptTemplate) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *ExperimentTemplate) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -2230,7 +2285,7 @@ func (p *ExperimentTemplate) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
-func (p *ExperimentTemplate) BLength() int {
+func (p *ExptTemplate) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -2257,7 +2312,7 @@ func (p *ExperimentTemplate) BLength() int {
 	return l
 }
 
-func (p *ExperimentTemplate) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
@@ -2266,7 +2321,7 @@ func (p *ExperimentTemplate) fastWriteField1(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetWorkspaceID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
@@ -2275,7 +2330,7 @@ func (p *ExperimentTemplate) fastWriteField2(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
@@ -2284,7 +2339,7 @@ func (p *ExperimentTemplate) fastWriteField3(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetDesc() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
@@ -2293,7 +2348,7 @@ func (p *ExperimentTemplate) fastWriteField4(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetCreatorBy() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
@@ -2302,7 +2357,7 @@ func (p *ExperimentTemplate) fastWriteField5(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEvalSetID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 20)
@@ -2311,7 +2366,7 @@ func (p *ExperimentTemplate) fastWriteField20(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEvalSetVersionID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 21)
@@ -2320,7 +2375,7 @@ func (p *ExperimentTemplate) fastWriteField21(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTargetID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 22)
@@ -2329,7 +2384,7 @@ func (p *ExperimentTemplate) fastWriteField22(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTargetVersionID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 23)
@@ -2338,7 +2393,7 @@ func (p *ExperimentTemplate) fastWriteField23(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField30(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField30(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEvaluatorVersionIds() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 30)
@@ -2354,7 +2409,7 @@ func (p *ExperimentTemplate) fastWriteField30(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField40(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField40(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTargetFieldMapping() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 40)
@@ -2363,7 +2418,7 @@ func (p *ExperimentTemplate) fastWriteField40(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField41(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField41(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEvaluatorFieldMapping() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 41)
@@ -2379,7 +2434,7 @@ func (p *ExperimentTemplate) fastWriteField41(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField42(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField42(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTargetRuntimeParam() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 42)
@@ -2388,7 +2443,7 @@ func (p *ExperimentTemplate) fastWriteField42(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField50(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField50(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEnableWeightedScore() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 50)
@@ -2397,7 +2452,7 @@ func (p *ExperimentTemplate) fastWriteField50(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField51(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField51(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEvaluatorScoreWeights() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 51)
@@ -2414,7 +2469,7 @@ func (p *ExperimentTemplate) fastWriteField51(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField60(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField60(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetDefaultItemConcurNum() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 60)
@@ -2423,7 +2478,7 @@ func (p *ExperimentTemplate) fastWriteField60(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField61(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField61(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetDefaultEvaluatorsConcurNum() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 61)
@@ -2432,7 +2487,7 @@ func (p *ExperimentTemplate) fastWriteField61(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField90(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField90(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetExptType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 90)
@@ -2441,7 +2496,7 @@ func (p *ExperimentTemplate) fastWriteField90(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) fastWriteField99(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptTemplate) fastWriteField99(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBaseInfo() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 99)
@@ -2450,7 +2505,7 @@ func (p *ExperimentTemplate) fastWriteField99(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *ExperimentTemplate) field1Length() int {
+func (p *ExptTemplate) field1Length() int {
 	l := 0
 	if p.IsSetID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2459,7 +2514,7 @@ func (p *ExperimentTemplate) field1Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field2Length() int {
+func (p *ExptTemplate) field2Length() int {
 	l := 0
 	if p.IsSetWorkspaceID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2468,7 +2523,7 @@ func (p *ExperimentTemplate) field2Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field3Length() int {
+func (p *ExptTemplate) field3Length() int {
 	l := 0
 	if p.IsSetName() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2477,7 +2532,7 @@ func (p *ExperimentTemplate) field3Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field4Length() int {
+func (p *ExptTemplate) field4Length() int {
 	l := 0
 	if p.IsSetDesc() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2486,7 +2541,7 @@ func (p *ExperimentTemplate) field4Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field5Length() int {
+func (p *ExptTemplate) field5Length() int {
 	l := 0
 	if p.IsSetCreatorBy() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2495,7 +2550,7 @@ func (p *ExperimentTemplate) field5Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field20Length() int {
+func (p *ExptTemplate) field20Length() int {
 	l := 0
 	if p.IsSetEvalSetID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2504,7 +2559,7 @@ func (p *ExperimentTemplate) field20Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field21Length() int {
+func (p *ExptTemplate) field21Length() int {
 	l := 0
 	if p.IsSetEvalSetVersionID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2513,7 +2568,7 @@ func (p *ExperimentTemplate) field21Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field22Length() int {
+func (p *ExptTemplate) field22Length() int {
 	l := 0
 	if p.IsSetTargetID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2522,7 +2577,7 @@ func (p *ExperimentTemplate) field22Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field23Length() int {
+func (p *ExptTemplate) field23Length() int {
 	l := 0
 	if p.IsSetTargetVersionID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2531,7 +2586,7 @@ func (p *ExperimentTemplate) field23Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field30Length() int {
+func (p *ExptTemplate) field30Length() int {
 	l := 0
 	if p.IsSetEvaluatorVersionIds() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2542,7 +2597,7 @@ func (p *ExperimentTemplate) field30Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field40Length() int {
+func (p *ExptTemplate) field40Length() int {
 	l := 0
 	if p.IsSetTargetFieldMapping() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2551,7 +2606,7 @@ func (p *ExperimentTemplate) field40Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field41Length() int {
+func (p *ExptTemplate) field41Length() int {
 	l := 0
 	if p.IsSetEvaluatorFieldMapping() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2564,7 +2619,7 @@ func (p *ExperimentTemplate) field41Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field42Length() int {
+func (p *ExptTemplate) field42Length() int {
 	l := 0
 	if p.IsSetTargetRuntimeParam() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2573,7 +2628,7 @@ func (p *ExperimentTemplate) field42Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field50Length() int {
+func (p *ExptTemplate) field50Length() int {
 	l := 0
 	if p.IsSetEnableWeightedScore() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2582,7 +2637,7 @@ func (p *ExperimentTemplate) field50Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field51Length() int {
+func (p *ExptTemplate) field51Length() int {
 	l := 0
 	if p.IsSetEvaluatorScoreWeights() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2593,7 +2648,7 @@ func (p *ExperimentTemplate) field51Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field60Length() int {
+func (p *ExptTemplate) field60Length() int {
 	l := 0
 	if p.IsSetDefaultItemConcurNum() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2602,7 +2657,7 @@ func (p *ExperimentTemplate) field60Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field61Length() int {
+func (p *ExptTemplate) field61Length() int {
 	l := 0
 	if p.IsSetDefaultEvaluatorsConcurNum() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2611,7 +2666,7 @@ func (p *ExperimentTemplate) field61Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field90Length() int {
+func (p *ExptTemplate) field90Length() int {
 	l := 0
 	if p.IsSetExptType() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2620,7 +2675,7 @@ func (p *ExperimentTemplate) field90Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) field99Length() int {
+func (p *ExptTemplate) field99Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
 		l += thrift.Binary.FieldBeginLength()
@@ -2629,8 +2684,8 @@ func (p *ExperimentTemplate) field99Length() int {
 	return l
 }
 
-func (p *ExperimentTemplate) DeepCopy(s interface{}) error {
-	src, ok := s.(*ExperimentTemplate)
+func (p *ExptTemplate) DeepCopy(s interface{}) error {
+	src, ok := s.(*ExptTemplate)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}

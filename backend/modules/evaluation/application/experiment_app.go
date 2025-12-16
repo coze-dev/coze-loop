@@ -506,6 +506,11 @@ func (e *experimentApplication) BatchGetExperiments(ctx context.Context, req *ex
 		return nil, err
 	}
 
+	// 按需补充实验关联的模板基础信息
+	if err := e.fillExperimentsTemplate(ctx, dos, req.GetWorkspaceID(), session); err != nil {
+		return nil, err
+	}
+
 	if err := e.AuthReadExperiments(ctx, dos, req.GetWorkspaceID()); err != nil {
 		return nil, err
 	}

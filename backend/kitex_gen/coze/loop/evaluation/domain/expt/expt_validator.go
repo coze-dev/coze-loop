@@ -52,9 +52,14 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.ExptTemplate != nil {
+		if err := p.ExptTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field ExptTemplate not valid, %w", err)
+		}
+	}
 	return nil
 }
-func (p *ExperimentTemplate) IsValid() error {
+func (p *ExptTemplate) IsValid() error {
 	if p.TargetFieldMapping != nil {
 		if err := p.TargetFieldMapping.IsValid(); err != nil {
 			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
