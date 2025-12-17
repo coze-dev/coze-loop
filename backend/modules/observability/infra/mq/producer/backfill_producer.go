@@ -20,6 +20,12 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+const (
+	backfillMsgBaseDelay       = 10 * time.Second
+	backfillMsgMaxDelay        = 10 * time.Minute
+	backfillMsgDelayMultiplier = 1
+)
+
 var (
 	backfillProducerOnce      sync.Once
 	singletonBackfillProducer mq2.IBackfillProducer
@@ -35,7 +41,15 @@ func (b *BackfillProducerImpl) SendBackfill(ctx context.Context, message *entity
 	if err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
-	msg := mq.NewDeferMessage(b.topic, 10*time.Second, bytes)
+	multiplier := backfillMsgDelayMultiplier
+	if message != nil {
+		multiplier = multiplier << uint(message.Retry)
+	}
+	delay := time.Duration(multiplier) * backfillMsgBaseDelay
+	if delay > backfillMsgMaxDelay {
+		delay = backfillMsgMaxDelay
+	}
+	msg := mq.NewDeferMessage(b.topic, delay, bytes)
 	msg.WithTag("backfill")
 	sendMsg, err := b.mqProducer.Send(ctx, msg)
 	if err != nil {

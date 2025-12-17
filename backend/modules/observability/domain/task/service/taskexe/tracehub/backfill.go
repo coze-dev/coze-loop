@@ -29,6 +29,7 @@ const (
 	backfillLockKeyTemplate = "observability:tracehub:backfill:%d"
 	backfillLockMaxHold     = 24 * time.Hour
 	backfillLockTTL         = 3 * time.Minute
+	backfillMaxRetryTimes   = 5
 )
 
 // 定时任务+锁
@@ -90,7 +91,7 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 	// 5. Retrieve span data from the observability service
 	err = h.listAndSendSpans(ctx, sub)
 
-	return h.onHandleDone(ctx, err, sub)
+	return h.onHandleDone(ctx, err, sub, event)
 }
 
 // buildSubscriber sets the context for the current backfill task
@@ -444,8 +445,8 @@ func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*lo
 	return nil, false
 }
 
-// onHandleDone handles completion callback
-func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, err error, sub *spanSubscriber) error {
+// onHandleDone handles completion callback with exponential backoff retry
+func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, err error, sub *spanSubscriber, prevEvent *entity.BackFillEvent) error {
 	if err == nil {
 		logs.CtxInfo(ctx, "backfill completed successfully, task_id=%d", sub.t.ID)
 		return nil
@@ -453,9 +454,21 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, err error, sub *
 
 	// failed, need retry
 	logs.CtxWarn(ctx, "backfill completed with error: %v, task_id=%d", err, sub.t.ID)
+
+	retry := int32(0)
+	if prevEvent != nil {
+		retry = prevEvent.Retry + 1
+	}
+
+	if retry > backfillMaxRetryTimes {
+		logs.CtxWarn(ctx, "backfill retry exceeded maxRetries=%d, task_id=%d", backfillMaxRetryTimes, sub.t.ID)
+		return nil
+	}
+
 	backfillEvent := &entity.BackFillEvent{
 		SpaceID: sub.t.WorkspaceID,
 		TaskID:  sub.t.ID,
+		Retry:   retry,
 	}
 
 	if time.Now().UnixMilli()-(sub.tr.RunEndAt.UnixMilli()-sub.tr.RunStartAt.UnixMilli()) < sub.tr.RunEndAt.UnixMilli() {

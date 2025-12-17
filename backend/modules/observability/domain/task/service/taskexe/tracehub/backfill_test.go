@@ -659,7 +659,7 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 			},
 		}
 
-		err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub)
+		err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub, &entity.BackFillEvent{SpaceID: sub.t.WorkspaceID, TaskID: sub.t.ID})
 		require.NoError(t, err)
 
 		select {
@@ -689,7 +689,7 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 			},
 		}
 
-		err := impl.onHandleDone(context.Background(), nil, sub)
+		err := impl.onHandleDone(context.Background(), nil, sub, &entity.BackFillEvent{SpaceID: sub.t.WorkspaceID, TaskID: sub.t.ID})
 		require.NoError(t, err)
 
 		select {
@@ -698,6 +698,69 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 		case <-time.After(100 * time.Millisecond):
 		}
 	})
+}
+
+func TestTraceHubServiceImpl_OnHandleDone_RetryCountIncrement(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *entity.BackFillEvent, 1)
+	now := time.Now()
+	impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
+	sub := &spanSubscriber{
+		t: &entity.ObservabilityTask{ID: 10, WorkspaceID: 20},
+		tr: &entity.TaskRun{
+			ID:          1,
+			WorkspaceID: 20,
+			TaskID:      10,
+			TaskType:    entity.TaskRunTypeBackFill,
+			RunStatus:   entity.TaskRunStatusRunning,
+			RunStartAt:  now.Add(-time.Hour),
+			RunEndAt:    now.Add(time.Hour),
+		},
+	}
+
+	prev := &entity.BackFillEvent{SpaceID: sub.t.WorkspaceID, TaskID: sub.t.ID, Retry: 2}
+	err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub, prev)
+	require.NoError(t, err)
+
+	select {
+	case msg := <-ch:
+		require.Equal(t, int32(3), msg.Retry)
+		require.Equal(t, int64(20), msg.SpaceID)
+		require.Equal(t, int64(10), msg.TaskID)
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("expected backfill message")
+	}
+}
+
+func TestTraceHubServiceImpl_OnHandleDone_RetryCountExceededNoSend(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *entity.BackFillEvent, 1)
+	now := time.Now()
+	impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
+	sub := &spanSubscriber{
+		t: &entity.ObservabilityTask{ID: 10, WorkspaceID: 20},
+		tr: &entity.TaskRun{
+			ID:          1,
+			WorkspaceID: 20,
+			TaskID:      10,
+			TaskType:    entity.TaskRunTypeBackFill,
+			RunStatus:   entity.TaskRunStatusRunning,
+			RunStartAt:  now.Add(-time.Hour),
+			RunEndAt:    now.Add(time.Hour),
+		},
+	}
+
+	// prev Retry at max (5) → next retry=6, exceeds max, do not send
+	prev := &entity.BackFillEvent{SpaceID: sub.t.WorkspaceID, TaskID: sub.t.ID, Retry: backfillMaxRetryTimes}
+	err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub, prev)
+	require.NoError(t, err)
+
+	select {
+	case <-ch:
+		t.Fatal("did not expect backfill message when retry exceeded")
+	case <-time.After(200 * time.Millisecond):
+		// ok, no message sent
+	}
 }
 
 func TestTraceHubServiceImpl_SendBackfillMessage(t *testing.T) {
