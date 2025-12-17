@@ -1,3 +1,6 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package tracehub
 
 import (
@@ -21,18 +24,23 @@ func (n *noopProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) er
 	n.invoked = true
 	return nil
 }
+
 func (n *noopProcessor) OnTaskRunCreated(ctx context.Context, param taskexe.OnTaskRunCreatedReq) error {
 	return nil
 }
+
 func (n *noopProcessor) OnTaskRunFinished(ctx context.Context, param taskexe.OnTaskRunFinishedReq) error {
 	return nil
 }
+
 func (n *noopProcessor) OnTaskFinished(ctx context.Context, param taskexe.OnTaskFinishedReq) error {
 	return nil
 }
+
 func (n *noopProcessor) OnTaskUpdated(ctx context.Context, currentTask *entity.ObservabilityTask, taskOp entity.TaskStatus) error {
 	return nil
 }
+
 func (n *noopProcessor) OnTaskCreated(ctx context.Context, currentTask *entity.ObservabilityTask) error {
 	return nil
 }

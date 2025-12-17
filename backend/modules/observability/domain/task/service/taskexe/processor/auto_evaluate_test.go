@@ -184,93 +184,123 @@ type fakeExperimentClient struct {
 func (f *fakeExperimentClient) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest, callOptions ...callopt.Option) (*expt.CheckExperimentNameResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest, callOptions ...callopt.Option) (*expt.CreateExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) SubmitExperiment(ctx context.Context, req *expt.SubmitExperimentRequest, callOptions ...callopt.Option) (*expt.SubmitExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) BatchGetExperiments(ctx context.Context, req *expt.BatchGetExperimentsRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentsResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) ListExperiments(ctx context.Context, req *expt.ListExperimentsRequest, callOptions ...callopt.Option) (*expt.ListExperimentsResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) UpdateExperiment(ctx context.Context, req *expt.UpdateExperimentRequest, callOptions ...callopt.Option) (*expt.UpdateExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) DeleteExperiment(ctx context.Context, req *expt.DeleteExperimentRequest, callOptions ...callopt.Option) (*expt.DeleteExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) BatchDeleteExperiments(ctx context.Context, req *expt.BatchDeleteExperimentsRequest, callOptions ...callopt.Option) (*expt.BatchDeleteExperimentsResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) CloneExperiment(ctx context.Context, req *expt.CloneExperimentRequest, callOptions ...callopt.Option) (*expt.CloneExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) RunExperiment(ctx context.Context, req *expt.RunExperimentRequest, callOptions ...callopt.Option) (*expt.RunExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) RetryExperiment(ctx context.Context, req *expt.RetryExperimentRequest, callOptions ...callopt.Option) (*expt.RetryExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) KillExperiment(ctx context.Context, req *expt.KillExperimentRequest, callOptions ...callopt.Option) (*expt.KillExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentResultResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) BatchGetExperimentAggrResult_(ctx context.Context, req *expt.BatchGetExperimentAggrResultRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentAggrResultResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) InvokeExperiment(ctx context.Context, req *expt.InvokeExperimentRequest, callOptions ...callopt.Option) (*expt.InvokeExperimentResponse, error) {
 	return f.invokeResp, f.invokeErr
 }
+
 func (f *fakeExperimentClient) FinishExperiment(ctx context.Context, req *expt.FinishExperimentRequest, callOptions ...callopt.Option) (*expt.FinishExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) ListExperimentStats(ctx context.Context, req *expt.ListExperimentStatsRequest, callOptions ...callopt.Option) (*expt.ListExperimentStatsResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) UpsertExptTurnResultFilter(ctx context.Context, req *expt.UpsertExptTurnResultFilterRequest, callOptions ...callopt.Option) (*expt.UpsertExptTurnResultFilterResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) AssociateAnnotationTag(ctx context.Context, req *expt.AssociateAnnotationTagReq, callOptions ...callopt.Option) (*expt.AssociateAnnotationTagResp, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) DeleteAnnotationTag(ctx context.Context, req *expt.DeleteAnnotationTagReq, callOptions ...callopt.Option) (*expt.DeleteAnnotationTagResp, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) CreateAnnotateRecord(ctx context.Context, req *expt.CreateAnnotateRecordReq, callOptions ...callopt.Option) (*expt.CreateAnnotateRecordResp, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) UpdateAnnotateRecord(ctx context.Context, req *expt.UpdateAnnotateRecordReq, callOptions ...callopt.Option) (*expt.UpdateAnnotateRecordResp, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) ExportExptResult_(ctx context.Context, req *expt.ExportExptResultRequest, callOptions ...callopt.Option) (*expt.ExportExptResultResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) ListExptResultExportRecord(ctx context.Context, req *expt.ListExptResultExportRecordRequest, callOptions ...callopt.Option) (*expt.ListExptResultExportRecordResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) GetExptResultExportRecord(ctx context.Context, req *expt.GetExptResultExportRecordRequest, callOptions ...callopt.Option) (*expt.GetExptResultExportRecordResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) InsightAnalysisExperiment(ctx context.Context, req *expt.InsightAnalysisExperimentRequest, callOptions ...callopt.Option) (*expt.InsightAnalysisExperimentResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) ListExptInsightAnalysisRecord(ctx context.Context, req *expt.ListExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.ListExptInsightAnalysisRecordResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) DeleteExptInsightAnalysisRecord(ctx context.Context, req *expt.DeleteExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.DeleteExptInsightAnalysisRecordResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (*expt.GetExptInsightAnalysisRecordResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest, callOptions ...callopt.Option) (*expt.FeedbackExptInsightAnalysisReportResponse, error) {
 	return nil, nil
 }
+
 func (f *fakeExperimentClient) ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (*expt.ListExptInsightAnalysisCommentResponse, error) {
 	return nil, nil
 }
