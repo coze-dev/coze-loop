@@ -44,6 +44,7 @@ type ExptResultExportService struct {
 	configer           component.IConfiger
 	benefitService     benefit.IBenefitService
 	urlProcessor       component.IURLProcessor
+	evalSetItemSvc     EvaluationSetItemService
 }
 
 func NewExptResultExportService(
@@ -57,6 +58,7 @@ func NewExptResultExportService(
 	configer component.IConfiger,
 	benefitService benefit.IBenefitService,
 	urlProcessor component.IURLProcessor,
+	esis EvaluationSetItemService,
 ) IExptResultExportService {
 	return &ExptResultExportService{
 		repo:               repo,
@@ -69,6 +71,7 @@ func NewExptResultExportService(
 		configer:           configer,
 		benefitService:     benefitService,
 		urlProcessor:       urlProcessor,
+		evalSetItemSvc:     esis,
 	}
 }
 
@@ -312,6 +315,7 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 		colEvalSetFields:  colEvalSetFields,
 		allItemResults:    allItemResults,
 		columnsEvalTarget: columnsEvalTarget,
+		evalSetItemSvc:    e.evalSetItemSvc,
 	}
 
 	err = exportHelper.exportCSV(ctx)
@@ -339,6 +343,7 @@ type exportCSVHelper struct {
 	exptPublisher      events.ExptEventPublisher
 	exptResultService  ExptResultService
 	fileClient         fileserver.ObjectStorage
+	evalSetItemSvc     EvaluationSetItemService
 }
 
 func (e *exportCSVHelper) exportCSV(ctx context.Context) error {
@@ -442,7 +447,7 @@ func (e *exportCSVHelper) buildColumnEvalTargetContent(ctx context.Context, colu
 	case consts.ReportColumnNameEvalTargetTotalTokens:
 		return strconv.FormatInt(data.EvalTargetUsage.GetTotalTokens(), 10), nil
 	default:
-		return geDatasetCellOrActualOutputData(ctx, data.OutputFields[columnName])
+		return e.toContentStr(ctx, data.OutputFields[columnName])
 	}
 }
 
@@ -479,7 +484,7 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 				payload.EvalSet.Turn.FieldDataList == nil {
 				return nil, fmt.Errorf("FieldDataList is nil")
 			}
-			datasetFields, err := getDatasetFields(ctx, e.colEvalSetFields, payload.EvalSet.Turn.FieldDataList)
+			datasetFields, err := e.getDatasetFields(ctx, e.colEvalSetFields, payload.EvalSet)
 			if err != nil {
 				return nil, err
 			}
@@ -572,23 +577,39 @@ func itemRunStateToString(itemRunState entity.ItemRunState) string {
 }
 
 // getDatasetFields 按顺序获取数据集字段
-func getDatasetFields(ctx context.Context, colEvalSetFields []*entity.ColumnEvalSetField, fieldDataList []*entity.FieldData) ([]string, error) {
-	fieldDataMap := slices.ToMap(fieldDataList, func(t *entity.FieldData) (string, *entity.FieldData) {
-		return t.Key, t
-	})
-	fields := make([]string, 0, len(colEvalSetFields))
+func (e *exportCSVHelper) getDatasetFields(ctx context.Context, colEvalSetFields []*entity.ColumnEvalSetField, tes *entity.TurnEvalSet) (fields []string, err error) {
+	fdl := tes.Turn.FieldDataList
+	fdm := slices.ToMap(fdl, func(t *entity.FieldData) (string, *entity.FieldData) { return t.Key, t })
+	fields = make([]string, 0, len(colEvalSetFields))
+
 	for _, colEvalSetField := range colEvalSetFields {
 		if colEvalSetField == nil {
 			continue
 		}
 
-		fieldData, ok := fieldDataMap[ptr.From(colEvalSetField.Key)]
+		fieldData, ok := fdm[ptr.From(colEvalSetField.Key)]
 		if !ok {
 			fields = append(fields, "")
 			continue
 		}
 
-		data, err := geDatasetCellOrActualOutputData(ctx, fieldData.Content)
+		if fieldData.Content == nil {
+			continue
+		}
+
+		if gptr.Indirect(fieldData.Content.ContentOmitted) {
+			if fieldData, err = e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+				SpaceID:         e.spaceID,
+				EvaluationSetID: tes.EvalSetID,
+				ItemPK:          tes.ItemID,
+				FieldName:       gptr.Indirect(colEvalSetField.Name),
+				TurnID:          gptr.Of(tes.Turn.ID),
+			}); err != nil {
+				return nil, err
+			}
+		}
+
+		data, err := e.toContentStr(ctx, fieldData.Content)
 		if err != nil {
 			return nil, err
 		}
@@ -599,13 +620,9 @@ func getDatasetFields(ctx context.Context, colEvalSetFields []*entity.ColumnEval
 	return fields, nil
 }
 
-func geDatasetCellOrActualOutputData(ctx context.Context, data *entity.Content) (string, error) {
+func (e *exportCSVHelper) toContentStr(ctx context.Context, data *entity.Content) (string, error) {
 	if data == nil {
 		return "", nil
-	}
-
-	if err := data.PaddingContent(ctx); err != nil {
-		return "", err
 	}
 
 	switch data.GetContentType() {

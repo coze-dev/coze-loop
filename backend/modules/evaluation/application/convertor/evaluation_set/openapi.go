@@ -5,6 +5,7 @@ package evaluation_set
 
 import (
 	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapi_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -370,46 +371,48 @@ func OpenAPIUserInfoDO2DTO(do *entity.UserInfo) *common.UserInfo {
 }
 
 // OpenAPI EvaluationSetItem 转换
-func OpenAPIItemDTO2DOs(dtos []*openapi_eval_set.EvaluationSetItem) []*entity.EvaluationSetItem {
+func OpenAPIItemDTO2DOs(evalSetID int64, dtos []*openapi_eval_set.EvaluationSetItem) []*entity.EvaluationSetItem {
 	if dtos == nil {
 		return nil
 	}
 	result := make([]*entity.EvaluationSetItem, 0)
 	for _, dto := range dtos {
-		result = append(result, OpenAPIItemDTO2DO(dto))
+		result = append(result, OpenAPIItemDTO2DO(evalSetID, dto))
 	}
 	return result
 }
 
-func OpenAPIItemDTO2DO(dto *openapi_eval_set.EvaluationSetItem) *entity.EvaluationSetItem {
+func OpenAPIItemDTO2DO(evalSetID int64, dto *openapi_eval_set.EvaluationSetItem) *entity.EvaluationSetItem {
 	if dto == nil {
 		return nil
 	}
 	return &entity.EvaluationSetItem{
 		ItemID:  gptr.Indirect(dto.ID),
 		ItemKey: gptr.Indirect(dto.ItemKey),
-		Turns:   OpenAPITurnDTO2DOs(dto.Turns),
+		Turns:   OpenAPITurnDTO2DOs(evalSetID, dto.GetID(), dto.Turns),
 	}
 }
 
-func OpenAPITurnDTO2DOs(dtos []*openapi_eval_set.Turn) []*entity.Turn {
+func OpenAPITurnDTO2DOs(evalSetID, itemID int64, dtos []*openapi_eval_set.Turn) []*entity.Turn {
 	if dtos == nil {
 		return nil
 	}
 	result := make([]*entity.Turn, 0)
 	for _, dto := range dtos {
-		result = append(result, OpenAPITurnDTO2DO(dto))
+		result = append(result, OpenAPITurnDTO2DO(evalSetID, itemID, dto))
 	}
 	return result
 }
 
-func OpenAPITurnDTO2DO(dto *openapi_eval_set.Turn) *entity.Turn {
+func OpenAPITurnDTO2DO(evalSetID, itemID int64, dto *openapi_eval_set.Turn) *entity.Turn {
 	if dto == nil {
 		return nil
 	}
 	return &entity.Turn{
 		ID:            gptr.Indirect(dto.ID),
 		FieldDataList: OpenAPIFieldDataDTO2DOs(dto.FieldDatas),
+		ItemID:        itemID,
+		EvalSetID:     evalSetID,
 	}
 }
 

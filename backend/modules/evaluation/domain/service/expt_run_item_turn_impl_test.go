@@ -32,8 +32,9 @@ func TestNewExptTurnEvaluation(t *testing.T) {
 	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
 	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
 	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
 
-	eval := NewExptTurnEvaluation(mockMetric, mockEvalTargetService, mockEvaluatorService, mockBenefitService, mockEvalAsyncRepo)
+	eval := NewExptTurnEvaluation(mockMetric, mockEvalTargetService, mockEvaluatorService, mockBenefitService, mockEvalAsyncRepo, mockEvalSetItemSvc)
 	assert.NotNil(t, eval)
 }
 
@@ -1360,7 +1361,17 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := service.buildEvaluatorInputData(ctx, tt.evaluatorType, tt.ec, tt.turnFields, tt.targetFields)
+			turn := &entity.Turn{
+				FieldDataList: []*entity.FieldData{},
+			}
+			for key, c := range tt.turnFields {
+				turn.FieldDataList = append(turn.FieldDataList, &entity.FieldData{
+					Name:    key,
+					Content: c,
+				})
+			}
+
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2274,7 +2285,17 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := service.buildEvaluatorInputData(ctx, tt.evaluatorType, tt.ec, tt.turnFields, tt.targetFields)
+			turn := &entity.Turn{
+				FieldDataList: []*entity.FieldData{},
+			}
+			for key, c := range tt.turnFields {
+				turn.FieldDataList = append(turn.FieldDataList, &entity.FieldData{
+					Name:    key,
+					Content: c,
+				})
+			}
+
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)

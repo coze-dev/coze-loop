@@ -39,6 +39,7 @@ func NewExptTurnEvaluation(
 	evaluatorService EvaluatorService,
 	benefitService benefit.IBenefitService,
 	evalAsyncRepo repo.IEvalAsyncRepo,
+	evalSetItemSvc EvaluationSetItemService,
 ) ExptItemTurnEvaluation {
 	return &DefaultExptTurnEvaluationImpl{
 		metric:            metric,
@@ -46,6 +47,7 @@ func NewExptTurnEvaluation(
 		evaluatorService:  evaluatorService,
 		benefitService:    benefitService,
 		evalAsyncRepo:     evalAsyncRepo,
+		evalSetItemSvc:    evalSetItemSvc,
 	}
 }
 
@@ -55,6 +57,7 @@ type DefaultExptTurnEvaluationImpl struct {
 	evaluatorService  EvaluatorService
 	benefitService    benefit.IBenefitService
 	evalAsyncRepo     repo.IEvalAsyncRepo
+	evalSetItemSvc    EvaluationSetItemService
 }
 
 func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.ExptTurnEvalCtx) (trr *entity.ExptTurnRunResult) {
@@ -310,10 +313,6 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	}
 
 	execEvalVerIDMap := gslice.ToMap(execEvaluatorVersionIDs, func(t int64) (int64, bool) { return t, true })
-
-	turnFields := gcond.IfLazyL(turn != nil && len(turn.FieldDataList) > 0, func() map[string]*entity.Content {
-		return gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content })
-	}, nil)
 	targetFields := targetResult.EvalTargetOutputData.OutputFields
 
 	pool, err := goroutine.NewPool(evaluatorsConf.GetEvaluatorConcurNum())
@@ -334,7 +333,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		inputData, err := e.buildEvaluatorInputData(ctx, ev.EvaluatorType, ec, turnFields, targetFields)
+		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields)
 		if err != nil {
 			return nil, err
 		}
@@ -374,10 +373,10 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	return records, err
 }
 
-func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, evaluatorType entity.EvaluatorType, ec *entity.EvaluatorConf,
-	turnFields map[string]*entity.Content, targetFields map[string]*entity.Content,
+func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, spaceID int64, evaluatorType entity.EvaluatorType,
+	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content,
 ) (*entity.EvaluatorInputData, error) {
-	fromEvalSet, err := e.buildFieldsFromSource(ctx, ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
+	fromEvalSet, err := e.buildEvalSetFields(ctx, spaceID, ec.IngressConf.EvalSetAdapter.FieldConfs, evalSetTurn)
 	if err != nil {
 		return nil, err
 	}
@@ -412,8 +411,35 @@ func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Contex
 		if err != nil {
 			return nil, err
 		}
-		if err := content.PaddingContent(ctx); err != nil {
+		result[fc.FieldName] = content
+	}
+
+	return result, nil
+}
+
+func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, spaceID int64, fcs []*entity.FieldConf, evalSetTurn *entity.Turn) (map[string]*entity.Content, error) {
+	result := make(map[string]*entity.Content)
+	fields := gcond.IfLazyL(evalSetTurn != nil && len(evalSetTurn.FieldDataList) > 0, func() map[string]*entity.Content {
+		return gslice.ToMap(evalSetTurn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content })
+	}, nil)
+
+	for _, fc := range fcs {
+		content, err := e.getFieldContent(fc, fields)
+		if err != nil {
 			return nil, err
+		}
+		if gptr.Indirect(content.ContentOmitted) {
+			fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+				SpaceID:         spaceID,
+				EvaluationSetID: evalSetTurn.EvalSetID,
+				ItemPK:          evalSetTurn.ItemID,
+				FieldName:       fc.FieldName,
+				TurnID:          gptr.Of(evalSetTurn.ID),
+			})
+			if err != nil {
+				return nil, err
+			}
+			content = fd.Content
 		}
 		result[fc.FieldName] = content
 	}

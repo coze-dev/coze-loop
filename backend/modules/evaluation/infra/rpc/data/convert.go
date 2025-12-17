@@ -549,12 +549,15 @@ func convertStorageProvider(provider *dataset.StorageProvider) *entity.StoragePr
 	return &entityProvider
 }
 
-func convert2EvaluationSetTurn(ctx context.Context, data []*dataset.FieldData) (turns []*entity.Turn) {
+func convert2EvaluationSetTurn(ctx context.Context, item *dataset.DatasetItem) (turns []*entity.Turn) {
+	data := item.Data
 	if len(data) == 0 {
 		return nil
 	}
 	turn := &entity.Turn{
 		FieldDataList: make([]*entity.FieldData, 0),
+		ItemID:        gptr.Indirect(item.ItemID),
+		EvalSetID:     item.GetDatasetID(),
 	}
 	for _, e := range data {
 		turn.FieldDataList = append(turn.FieldDataList, convert2EvaluationSetFieldData(ctx, e))
@@ -575,7 +578,7 @@ func convert2EvaluationSetItem(ctx context.Context, item *dataset.DatasetItem) (
 		SchemaID:        gptr.Indirect(item.SchemaID),
 		ItemID:          gptr.Indirect(item.ItemID),
 		ItemKey:         gptr.Indirect(item.ItemKey),
-		Turns:           convert2EvaluationSetTurn(ctx, item.Data),
+		Turns:           convert2EvaluationSetTurn(ctx, item),
 		BaseInfo: &entity.BaseInfo{
 			CreatedAt: item.CreatedAt,
 			UpdatedAt: item.UpdatedAt,

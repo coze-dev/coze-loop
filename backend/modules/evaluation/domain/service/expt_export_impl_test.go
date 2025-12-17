@@ -943,6 +943,7 @@ func TestNewExptResultExportService(t *testing.T) {
 	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
 	mockBenefit := benefitMocks.NewMockIBenefitService(ctrl)
 	urlProcessor := NewDefaultURLProcessor()
+	mockEvalSetItemSvc := svcMocks.NewMockEvaluationSetItemService(ctrl)
 	svc := NewExptResultExportService(
 		mockTxDB,
 		mockRepo,
@@ -954,6 +955,7 @@ func TestNewExptResultExportService(t *testing.T) {
 		mockConfiger,
 		mockBenefit,
 		urlProcessor,
+		mockEvalSetItemSvc,
 	)
 
 	impl, ok := svc.(*ExptResultExportService)
@@ -988,6 +990,9 @@ func TestNewExptResultExportService(t *testing.T) {
 	}
 	if impl.benefitService != mockBenefit {
 		t.Errorf("benefit not set correctly")
+	}
+	if impl.evalSetItemSvc != mockEvalSetItemSvc {
+		t.Errorf("evalSetItemSvc not set correctly")
 	}
 }
 
@@ -1043,8 +1048,9 @@ func Test_itemRunStateToString(t *testing.T) {
 	}
 }
 
-func Test_geDatasetCellOrActualOutputData(t *testing.T) {
+func Test_toContentStr(t *testing.T) {
 	ctx := context.Background()
+	ins := &exportCSVHelper{}
 	// 测试用例：覆盖所有内容类型和边界情况,sss
 	tests := []struct {
 		name     string
@@ -1132,7 +1138,7 @@ func Test_geDatasetCellOrActualOutputData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, _ := geDatasetCellOrActualOutputData(ctx, tt.input)
+			result, _ := ins.toContentStr(ctx, tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

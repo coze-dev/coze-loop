@@ -559,7 +559,9 @@ type TurnAnnotateResult struct {
 }
 
 type TurnEvalSet struct {
-	Turn *Turn
+	Turn      *Turn
+	ItemID    int64
+	EvalSetID int64
 }
 
 type TurnSystemInfo struct {

@@ -4,20 +4,8 @@
 package entity
 
 import (
-	"context"
 	"fmt"
-	"net/http"
-	"net/url"
 	"time"
-
-	"github.com/bytedance/gg/gptr"
-	"github.com/cloudwego/hertz/pkg/app/client"
-	"github.com/cloudwego/hertz/pkg/protocol"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
-
-	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 )
 
 // ContentType 定义内容类型
@@ -89,44 +77,6 @@ func (c *Content) SetContentType(contentType ContentType) {
 	if c != nil {
 		c.ContentType = &contentType
 	}
-}
-
-func (c *Content) PaddingContent(ctx context.Context) error {
-	if c == nil || !gptr.Indirect(c.ContentOmitted) {
-		return nil
-	}
-	if c.FullContent == nil || len(gptr.Indirect(c.FullContent.URL)) == 0 {
-		return errorx.New("invalid ObjectStorage Content: %v", json.Jsonify(c.FullContent))
-	}
-	if gptr.Indirect(c.ContentType) != ContentTypeText {
-		return errorx.New("unsupported padding content type: %v", c.ContentType)
-	}
-	if bytes := gptr.Indirect(c.FullContentBytes); bytes > 0 && c.TextBytes() == int(bytes) {
-		return nil
-	}
-
-	req, resp := protocol.AcquireRequest(), protocol.AcquireResponse()
-	defer protocol.ReleaseRequest(req)
-	defer protocol.ReleaseResponse(resp)
-
-	urlStr := gptr.Indirect(c.FullContent.URL)
-	parsedURL, err := url.Parse(urlStr)
-	if err != nil {
-		return errorx.Wrapf(err, "PaddingContent found invalid url: %s", urlStr)
-	}
-	if parsedURL.Scheme == "https" || parsedURL.Scheme == "" {
-		parsedURL.Scheme = "http"
-	}
-	req.SetMethod(consts.MethodGet)
-	req.SetRequestURI(parsedURL.String())
-	if err := client.DoTimeout(ctx, req, resp, time.Second*5); err != nil {
-		return errorx.Wrapf(err, "get content object storage bytes fail, url: %v", parsedURL.String())
-	}
-	if resp.StatusCode() != http.StatusOK {
-		return errorx.New("content object storage http req return code %v, url: %v, body: %s", resp.StatusCode(), c.FullContent.URL, conv.UnsafeBytesToString(resp.Body()))
-	}
-	c.Text = gptr.Of(string(resp.Body()))
-	return nil
 }
 
 type Audio struct {

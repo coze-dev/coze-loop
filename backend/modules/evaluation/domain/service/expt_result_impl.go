@@ -1450,7 +1450,9 @@ func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 				itemIDTurnID2Turn[item.ItemID] = make(map[int64]*entity.TurnEvalSet)
 			}
 			turnEvalSet := &entity.TurnEvalSet{
-				Turn: turn,
+				Turn:      turn,
+				ItemID:    item.ItemID,
+				EvalSetID: evalSetID,
 			}
 			itemIDTurnID2Turn[item.ItemID][turn.ID] = turnEvalSet
 		}

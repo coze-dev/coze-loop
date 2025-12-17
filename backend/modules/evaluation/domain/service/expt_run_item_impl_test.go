@@ -50,6 +50,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 		evaluatorService       EvaluatorService
 		benefitService         benefit.IBenefitService
 		evalAsyncRepo          repo.IEvalAsyncRepo
+		evalSetItemSvc         EvaluationSetItemService
 	}{
 		{
 			name:                   "所有参数有效",
@@ -62,6 +63,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 			evaluatorService:       mockEvaluatorService,
 			benefitService:         mockBenefitService,
 			evalAsyncRepo:          mockEvalAsyncRepo,
+			evalSetItemSvc:         servicemocks.NewMockEvaluationSetItemService(ctrl),
 		},
 		{
 			name:                   "部分参数为nil",
@@ -74,6 +76,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 			evaluatorService:       mockEvaluatorService,
 			benefitService:         mockBenefitService,
 			evalAsyncRepo:          mockEvalAsyncRepo,
+			evalSetItemSvc:         servicemocks.NewMockEvaluationSetItemService(ctrl),
 		},
 		{
 			name:                   "全部为nil",
@@ -86,6 +89,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 			evaluatorService:       nil,
 			benefitService:         nil,
 			evalAsyncRepo:          nil,
+			evalSetItemSvc:         nil,
 		},
 	}
 
@@ -101,6 +105,7 @@ func Test_NewExptItemEvaluation(t *testing.T) {
 				tt.evaluatorService,
 				tt.benefitService,
 				tt.evalAsyncRepo,
+				tt.evalSetItemSvc,
 			)
 			assert.NotNil(t, inst)
 		})
