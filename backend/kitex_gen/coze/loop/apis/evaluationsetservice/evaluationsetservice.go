@@ -126,6 +126,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetEvaluationItemField": kitex.NewMethodInfo(
+		getEvaluationItemFieldHandler,
+		newEvaluationSetServiceGetEvaluationItemFieldArgs,
+		newEvaluationSetServiceGetEvaluationItemFieldResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -463,6 +470,25 @@ func newEvaluationSetServiceClearEvaluationSetDraftItemResult() interface{} {
 	return eval_set.NewEvaluationSetServiceClearEvaluationSetDraftItemResult()
 }
 
+func getEvaluationItemFieldHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceGetEvaluationItemFieldArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceGetEvaluationItemFieldResult)
+	success, err := handler.(eval_set.EvaluationSetService).GetEvaluationItemField(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceGetEvaluationItemFieldArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationItemFieldArgs()
+}
+
+func newEvaluationSetServiceGetEvaluationItemFieldResult() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationItemFieldResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -630,6 +656,16 @@ func (p *kClient) ClearEvaluationSetDraftItem(ctx context.Context, req *eval_set
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceClearEvaluationSetDraftItemResult
 	if err = p.c.Call(ctx, "ClearEvaluationSetDraftItem", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvaluationItemField(ctx context.Context, req *eval_set.GetEvaluationItemFieldRequest) (r *eval_set.GetEvaluationItemFieldResponse, err error) {
+	var _args eval_set.EvaluationSetServiceGetEvaluationItemFieldArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceGetEvaluationItemFieldResult
+	if err = p.c.Call(ctx, "GetEvaluationItemField", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

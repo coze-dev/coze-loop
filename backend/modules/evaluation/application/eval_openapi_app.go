@@ -55,6 +55,10 @@ type EvalOpenAPIApplication struct {
 	evaluatorService service.EvaluatorService
 }
 
+func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest) (r *openapi.GetEvaluationItemFieldOApiResponse, err error) {
+	return nil, nil
+}
+
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
 	targetSvc service.IEvalTargetService,
 	auth rpc.IAuthProvider,
@@ -867,18 +871,24 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 		Page:           entity.NewPage(int(req.GetPageNum()), int(req.GetPageSize())),
 		UseAccelerator: true,
 	}
-	columnEvaluators, _, columnEvalSetFields, _, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
+
+	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err
 	}
-	return &openapi.ListExperimentResultOApiResponse{
+
+	res := &openapi.ListExperimentResultOApiResponse{
 		Data: &openapi.ListExperimentResultOpenAPIData{
-			ColumnEvalSetFields: experiment_convertor.OpenAPIColumnEvalSetFieldsDO2DTOs(columnEvalSetFields),
-			ColumnEvaluators:    experiment_convertor.OpenAPIColumnEvaluatorsDO2DTOs(columnEvaluators),
-			Total:               gptr.Of(total),
-			ItemResults:         experiment_convertor.OpenAPIItemResultsDO2DTOs(itemResults),
+			ColumnEvalSetFields: experiment_convertor.OpenAPIColumnEvalSetFieldsDO2DTOs(result.ColumnEvalSetFields),
+			ColumnEvaluators:    experiment_convertor.OpenAPIColumnEvaluatorsDO2DTOs(result.ColumnEvaluators),
+			Total:               gptr.Of(result.Total),
+			ItemResults:         experiment_convertor.OpenAPIItemResultsDO2DTOs(result.ItemResults),
 		},
-	}, nil
+	}
+	if len(result.ExptColumnsEvalTarget) > 0 {
+		res.Data.ColumnEvalTargets = experiment_convertor.OpenAPIColumnEvalTargetDO2DTOs(result.ExptColumnsEvalTarget[0].Columns)
+	}
+	return res, nil
 }
 
 func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {

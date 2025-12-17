@@ -104,6 +104,12 @@ func (p *ExptColumnEvaluator) IsValid() error {
 func (p *ColumnEvaluator) IsValid() error {
 	return nil
 }
+func (p *ExptColumnEvalTarget) IsValid() error {
+	return nil
+}
+func (p *ColumnEvalTarget) IsValid() error {
+	return nil
+}
 func (p *ColumnEvalSetField) IsValid() error {
 	return nil
 }
@@ -231,6 +237,9 @@ func (p *SourceTarget) IsValid() error {
 func (p *ExptAggregateResult_) IsValid() error {
 	return nil
 }
+func (p *EvalTargetAggregateResult_) IsValid() error {
+	return nil
+}
 func (p *EvaluatorAggregateResult_) IsValid() error {
 	return nil
 }
@@ -313,6 +322,9 @@ func (p *ExptInsightAnalysisRecord) IsValid() error {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *ExptInsightAnalysisIndex) IsValid() error {
 	return nil
 }
 func (p *ExptInsightAnalysisFeedback) IsValid() error {

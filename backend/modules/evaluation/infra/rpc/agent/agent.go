@@ -18,10 +18,10 @@ func NewAgentAdapter() rpc.IAgentAdapter {
 	return &AgentAdapter{}
 }
 
-func (a AgentAdapter) CallTraceAgent(ctx context.Context, spaceID int64, url string) (int64, error) {
+func (a AgentAdapter) CallTraceAgent(ctx context.Context, param *rpc.CallTraceAgentParam) (int64, error) {
 	return 0, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("CallTraceAgent not implement"))
 }
 
-func (a AgentAdapter) GetReport(ctx context.Context, spaceID, reportID int64) (report string, status entity.ReportStatus, err error) {
-	return "", 0, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("GetReport not implement"))
+func (a AgentAdapter) GetReport(ctx context.Context, spaceID, reportID int64) (report string, list []*entity.InsightAnalysisReportIndex, status entity.ReportStatus, err error) {
+	return "", nil, entity.ReportStatus_Failed, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("GetReport not implement"))
 }

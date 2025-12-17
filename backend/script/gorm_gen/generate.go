@@ -252,10 +252,12 @@ func generateForObservability(db *gorm.DB) {
 	observabilityView := g.GenerateModelAs("observability_view", "ObservabilityView")
 	observabilityTask := g.GenerateModelAs("task", "ObservabilityTask")
 	observabilityTaskRun := g.GenerateModelAs("auto_task_run", "ObservabilityTaskRun")
+	observabilityTrajectoryConfig := g.GenerateModelAs("observability_trajectory_config", "ObservabilityTrajectoryConfig")
 
 	g.ApplyBasic(observabilityView)
 	g.ApplyBasic(observabilityTask)
 	g.ApplyBasic(observabilityTaskRun)
+	g.ApplyBasic(observabilityTrajectoryConfig)
 	g.Execute()
 }
 

@@ -231,6 +231,7 @@ func UsageDO2DTO(src *entity.EvalTargetUsage) *eval_target.EvalTargetUsage {
 	return &eval_target.EvalTargetUsage{
 		InputTokens:  src.InputTokens,
 		OutputTokens: src.OutputTokens,
+		TotalTokens:  src.TotalTokens,
 	}
 }
 
@@ -251,6 +252,7 @@ func UsageDTO2DO(src *eval_target.EvalTargetUsage) *entity.EvalTargetUsage {
 	return &entity.EvalTargetUsage{
 		InputTokens:  src.InputTokens,
 		OutputTokens: src.OutputTokens,
+		TotalTokens:  src.TotalTokens,
 	}
 }
 
@@ -346,6 +348,7 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 				InputTokens:  getInt64Value(usage.InputTokens),
 				OutputTokens: getInt64Value(usage.OutputTokens),
 			}
+			evalTargetUsage.TotalTokens = evalTargetUsage.InputTokens + evalTargetUsage.OutputTokens
 		}
 
 		return &entity.EvalTargetOutputData{

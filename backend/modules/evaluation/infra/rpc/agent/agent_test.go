@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -34,7 +35,9 @@ func TestAgentAdapter_CallTraceAgent(t *testing.T) {
 			ctx := context.Background()
 			adapter, ctx := tt.setup(ctx)
 
-			result, err := adapter.CallTraceAgent(ctx, 123, "http://example.com")
+			result, err := adapter.CallTraceAgent(ctx, &rpc.CallTraceAgentParam{
+				ExptID: 123,
+			})
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -68,14 +71,15 @@ func TestAgentAdapter_GetReport(t *testing.T) {
 			ctx := context.Background()
 			adapter, ctx := tt.setup(ctx)
 
-			report, status, err := adapter.GetReport(ctx, 123, 456)
+			report, idx, status, err := adapter.GetReport(ctx, 123, 456)
 
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, "", report)
-				assert.Equal(t, entity.ReportStatus_Unknown, status)
+				assert.Equal(t, nil, idx)
+				assert.Equal(t, entity.ReportStatus_Failed, status)
 			}
 		})
 	}
