@@ -256,6 +256,22 @@ struct ListEvaluationSetVersionItemsOApiResponse {
     255: base.BaseResp BaseResp
 }
 
+struct GetEvaluationItemFieldOApiRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
+    2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
+    3: required i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
+    4: required string fieldName // 列名
+    5: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
+
+    255: optional base.Base Base
+}
+
+struct GetEvaluationItemFieldOApiResponse {
+    1: optional eval_set.FieldData field_data
+
+    255: optional base.BaseResp BaseResp
+}
+
 struct ListEvaluationSetVersionItemsOpenAPIData {
     1: optional list<eval_set.EvaluationSetItem> items
 
@@ -463,6 +479,8 @@ service EvaluationOpenAPIService {
     BatchDeleteEvaluationSetItemsOApiResponse BatchDeleteEvaluationSetItemsOApi(1: BatchDeleteEvaluationSetItemsOApiRequest req) (api.tag="openapi", api.delete = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
     // 查询评测集特定版本数据
     ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
+    // 查询评测集某个filed值，用于获取超长文本的内容
+    GetEvaluationItemFieldOApiResponse GetEvaluationItemFieldOApi(1: GetEvaluationItemFieldOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/field")
     // 更新评测集字段信息
     UpdateEvaluationSetSchemaOApiResponse UpdateEvaluationSetSchemaOApi(1: UpdateEvaluationSetSchemaOApiRequest req) (api.tag="openapi", api.put = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema"),
 

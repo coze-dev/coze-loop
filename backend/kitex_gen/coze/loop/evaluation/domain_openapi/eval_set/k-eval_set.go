@@ -128,6 +128,20 @@ func (p *FieldSchema) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 10:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField10(buf[offset:])
@@ -244,6 +258,20 @@ func (p *FieldSchema) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *FieldSchema) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *SchemaKey
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SchemaKey = _field
+	return offset, nil
+}
+
 func (p *FieldSchema) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 
@@ -271,6 +299,7 @@ func (p *FieldSchema) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -286,6 +315,7 @@ func (p *FieldSchema) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 		l += p.field10Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -342,6 +372,15 @@ func (p *FieldSchema) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetTextSchema() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TextSchema)
+	}
+	return offset
+}
+
+func (p *FieldSchema) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSchemaKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SchemaKey)
 	}
 	return offset
 }
@@ -409,6 +448,15 @@ func (p *FieldSchema) field6Length() int {
 	return l
 }
 
+func (p *FieldSchema) field7Length() int {
+	l := 0
+	if p.IsSetSchemaKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SchemaKey)
+	}
+	return l
+}
+
 func (p *FieldSchema) field10Length() int {
 	l := 0
 	if p.IsSetKey() {
@@ -461,6 +509,11 @@ func (p *FieldSchema) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.TextSchema)
 		}
 		p.TextSchema = &tmp
+	}
+
+	if src.SchemaKey != nil {
+		tmp := *src.SchemaKey
+		p.SchemaKey = &tmp
 	}
 
 	if src.Key != nil {

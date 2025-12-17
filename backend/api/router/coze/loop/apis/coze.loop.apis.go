@@ -134,7 +134,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_items1.POST("/batch_delete", append(_batchdeleteevaluationsetitemsMw(handler), apis.BatchDeleteEvaluationSetItems)...)
 					_items1.POST("/batch_get", append(_batchgetevaluationsetitemsMw(handler), apis.BatchGetEvaluationSetItems)...)
 					_items1.POST("/clear", append(_clearevaluationsetdraftitemMw(handler), apis.ClearEvaluationSetDraftItem)...)
-					_items1.PUT("/:item_id", append(_updateevaluationsetitemMw(handler), apis.UpdateEvaluationSetItem)...)
+					_items1.PUT("/:item_id", append(_item_idMw(handler), apis.UpdateEvaluationSetItem)...)
+					_item_id := _items1.Group("/:item_id", _item_idMw(handler)...)
+					_item_id.GET("/field", append(_getevaluationitemfieldMw(handler), apis.GetEvaluationItemField)...)
 					_items1.POST("/list", append(_listevaluationsetitemsMw(handler), apis.ListEvaluationSetItems)...)
 				}
 				_evaluation_sets.GET("/:evaluation_set_id", append(_getevaluationsetMw(handler), apis.GetEvaluationSet)...)
@@ -340,6 +342,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
 					_traces.POST("/search_tree", append(_searchtracetreeMw(handler), apis.SearchTraceTree)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
+					_traces.POST("/trajectory", append(_listtrajectoryMw(handler), apis.ListTrajectory)...)
+					_traces.GET("/trajectory_config", append(_gettrajectoryconfigMw(handler), apis.GetTrajectoryConfig)...)
+					_traces.POST("/trajectory_config", append(_upserttrajectoryconfigMw(handler), apis.UpsertTrajectoryConfig)...)
 				}
 			}
 		}
@@ -406,7 +411,12 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets0 := _evaluation0.Group("/evaluation_sets", _evaluation_sets0Mw(handler)...)
 				{
 					_evaluation_set_id0 := _evaluation_sets0.Group("/:evaluation_set_id", _evaluation_set_id0Mw(handler)...)
-					_evaluation_set_id0.DELETE("/items", append(_batchdeleteevaluationsetitemsoapiMw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
+					_evaluation_set_id0.DELETE("/items", append(_items2Mw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
+					_items2 := _evaluation_set_id0.Group("/items", _items2Mw(handler)...)
+					{
+						_item_id0 := _items2.Group("/:item_id", _item_id0Mw(handler)...)
+						_item_id0.GET("/field", append(_getevaluationitemfieldoapiMw(handler), apis.GetEvaluationItemFieldOApi)...)
+					}
 					_evaluation_set_id0.GET("/items", append(_listevaluationsetversionitemsoapiMw(handler), apis.ListEvaluationSetVersionItemsOApi)...)
 					_evaluation_set_id0.POST("/items", append(_batchcreateevaluationsetitemsoapiMw(handler), apis.BatchCreateEvaluationSetItemsOApi)...)
 					_evaluation_set_id0.PUT("/items", append(_batchupdateevaluationsetitemsoapiMw(handler), apis.BatchUpdateEvaluationSetItemsOApi)...)

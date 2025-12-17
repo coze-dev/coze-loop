@@ -359,6 +359,27 @@ func (p *ListEvaluationSetVersionItemsOApiResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *GetEvaluationItemFieldOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationItemFieldOApiResponse) IsValid() error {
+	if p.FieldData != nil {
+		if err := p.FieldData.IsValid(); err != nil {
+			return fmt.Errorf("field FieldData not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ListEvaluationSetVersionItemsOpenAPIData) IsValid() error {
 	return nil
 }

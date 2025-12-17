@@ -23,6 +23,7 @@ struct FieldSchema {
     3: optional string description (vt.max_size = "1024")                               // 描述
     4: optional common.ContentType content_type (vt.not_nil = "true") // 类型，如 文本，图片，etc.
     5: optional dataset.FieldDisplayFormat default_format (vt.defined_only = "true")             // 默认渲染格式，如 code, json, etc.
+    8: optional dataset.SchemaKey schema_key                    // 对应的内置 schema
 
     /* [20,50) 内容格式限制相关 */
     20: optional string text_schema                                  // 文本内容格式限制，格式为 JSON schema，协议参考 https://json-schema.org/specification
@@ -32,6 +33,7 @@ struct Item {
     1: required ItemStatus status
     2: optional list<FieldData>  field_list // todo 多模态需要修改
     3: optional list<ItemError> errors     // 错误信息
+    4: optional ExportSpanInfo span_info
 }
 
 struct FieldData {
@@ -54,6 +56,11 @@ struct Image {
 struct ItemError {
     1: optional dataset.ItemErrorType type
     2: optional list<string> field_names       // 有错误的字段名，非必填
+}
+
+struct ExportSpanInfo {
+    1: optional string trace_id
+    2: optional string span_id
 }
 
 struct FieldMapping {
