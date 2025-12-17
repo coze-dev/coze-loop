@@ -426,6 +426,76 @@ func TestAutoEvaluateProcessor_Invoke_WithEvaluationProvider_SuccessAddedItems(t
 	assert.NoError(t, err)
 }
 
+func TestEvaluationProvider_InvokeExperiment_EmptyWorkspaceID_InProcessorPackage(t *testing.T) {
+	t.Parallel()
+	provider := evalrpc.NewEvaluationRPCProvider(&fakeExperimentClient{})
+
+	_, err := provider.InvokeExperiment(context.Background(), &rpc.InvokeExperimentReq{
+		WorkspaceID:     0,
+		EvaluationSetID: 123,
+	})
+	status, ok := errorx.FromStatusError(err)
+	assert.True(t, ok)
+	assert.EqualValues(t, obErrorx.CommonInvalidParamCode, status.Code())
+}
+
+func TestEvaluationProvider_InvokeExperiment_EmptyEvaluationSetID_InProcessorPackage(t *testing.T) {
+	t.Parallel()
+	provider := evalrpc.NewEvaluationRPCProvider(&fakeExperimentClient{})
+
+	_, err := provider.InvokeExperiment(context.Background(), &rpc.InvokeExperimentReq{
+		WorkspaceID:     123,
+		EvaluationSetID: 0,
+	})
+	status, ok := errorx.FromStatusError(err)
+	assert.True(t, ok)
+	assert.EqualValues(t, obErrorx.CommonInvalidParamCode, status.Code())
+}
+
+// 覆盖 Invoke 中 OnTaskRunTerminated 返回错误的分支，确保错误被记录并向上返回
+func TestAutoEvaluateProcessor_Invoke_OnTaskRunTerminatedError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// 构造任务与触发器
+	taskObj := buildTestTask(t)
+	taskObj.Sampler.SampleSize = 5
+	trigger := &taskexe.Trigger{
+		Task: taskObj,
+		Span: buildSpan("hello"),
+		TaskRun: &taskentity.TaskRun{
+			ID:            2002,
+			TaskID:        taskObj.ID,
+			WorkspaceID:   taskObj.WorkspaceID,
+			TaskType:      taskentity.TaskRunTypeNewData,
+			RunStatus:     taskentity.TaskRunStatusRunning,
+			TaskRunConfig: buildTaskRunConfig(makeSchemaJSON(t, "field_1", common.ContentTypeText)),
+		},
+	}
+
+	// 仓库：计数递增/读取/回退，以及 UpdateTaskRun 返回错误以模拟终止失败
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+	repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.AssignableToTypeOf(int64(0))).Return(nil)
+	repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.AssignableToTypeOf(int64(0))).Return(nil)
+	repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(1), nil)
+	repoMock.EXPECT().GetTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID).Return(int64(1), nil)
+	repoMock.EXPECT().DecrTaskCount(gomock.Any(), taskObj.ID, gomock.AssignableToTypeOf(int64(0))).Return(nil)
+	repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.AssignableToTypeOf(int64(0))).Return(nil)
+	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), trigger.TaskRun).Return(errors.New("update failed"))
+
+	// Provider 返回 BizStatus（实验失败），触发 OnTaskRunTerminated
+	eval := &fakeEvaluationAdapter{}
+	eval.invokeResp.err = errorx.NewByCode(errno.ExperimentStatusNotAllowedToInvokeCode)
+
+	proc := &AutoEvaluateProcessor{evaluationSvc: eval, taskRepo: repoAdapter}
+	err := proc.Invoke(context.Background(), trigger)
+	assert.EqualError(t, err, "update failed")
+	// 即使更新失败，RunStatus 也已被置为 Done（OnTaskRunTerminated 在更新前设置状态）
+	assert.Equal(t, taskentity.TaskRunStatusDone, trigger.TaskRun.RunStatus)
+}
+
 func TestAutoEvaluateProcessor_ValidateConfig(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -796,6 +866,28 @@ func TestAutoEvaluateProcessor_OnTaskRunTerminated(t *testing.T) {
 		TaskRun: taskRun,
 	})
 	assert.NoError(t, err)
+	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
+}
+
+func TestAutoEvaluateProcessor_OnTaskRunTerminated_Error(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+
+	taskRun := &taskentity.TaskRun{ID: 8010, RunStatus: taskentity.TaskRunStatusRunning}
+	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), taskRun).Return(errors.New("update failed"))
+
+	proc := &AutoEvaluateProcessor{taskRepo: repoAdapter}
+	err := proc.OnTaskRunTerminated(context.Background(), taskexe.OnTaskRunTerminatedReq{
+		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234, CreatedBy: "1001"},
+		TaskRun: taskRun,
+	})
+	// 断言错误向上返回
+	assert.EqualError(t, err, "update failed")
+	// 即使更新失败，RunStatus 已置为 Done
 	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
 }
 
