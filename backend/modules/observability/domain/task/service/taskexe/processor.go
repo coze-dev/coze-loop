@@ -27,11 +27,6 @@ type OnTaskRunFinishedReq struct {
 	TaskRun *entity.TaskRun
 }
 
-type OnTaskRunTerminatedReq struct {
-	Task    *entity.ObservabilityTask
-	TaskRun *entity.TaskRun
-}
-
 type OnTaskFinishedReq struct {
 	Task     *entity.ObservabilityTask
 	TaskRun  *entity.TaskRun

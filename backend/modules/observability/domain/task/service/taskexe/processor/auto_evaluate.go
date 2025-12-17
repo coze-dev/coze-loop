@@ -162,12 +162,9 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 			if statusErr.Code() == errno.ExperimentStatusNotAllowedToInvokeCode {
 				logs.CtxWarn(ctx, "[task-debug] experiment already failed (code=%d), terminate task_id=%d, trace_id=%v", statusErr.Code(), trigger.Task.ID, trigger.Span.TraceID)
 				// 仅置 task run 为终态 因为即使是不循环的任务也可能同时包含 NewData && Backfill
-				err := p.OnTaskRunTerminated(ctx, taskexe.OnTaskRunTerminatedReq{
-					Task:    trigger.Task,
-					TaskRun: trigger.TaskRun,
-				})
+				err := p.onTaskRunTerminated(ctx, trigger.TaskRun)
 				if err != nil {
-					logs.CtxError(ctx, "[task-debug] do OnTaskFailed failed, err: %v", err)
+					logs.CtxError(ctx, "[task-debug] onTaskRunTerminated failed, err: %v", err)
 					return err
 				}
 			}
@@ -441,11 +438,10 @@ func (p *AutoEvaluateProcessor) OnTaskRunFinished(ctx context.Context, param tas
 	return nil
 }
 
-func (p *AutoEvaluateProcessor) OnTaskRunTerminated(ctx context.Context, param taskexe.OnTaskRunTerminatedReq) error {
-	if param.TaskRun == nil {
+func (p *AutoEvaluateProcessor) onTaskRunTerminated(ctx context.Context, taskRun *task_entity.TaskRun) error {
+	if taskRun == nil {
 		return nil
 	}
-	taskRun := param.TaskRun
 
 	// Set task run status to completed
 	taskRun.RunStatus = task.RunStatusDone

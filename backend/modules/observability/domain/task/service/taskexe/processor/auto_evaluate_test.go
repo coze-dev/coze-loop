@@ -452,7 +452,7 @@ func TestEvaluationProvider_InvokeExperiment_EmptyEvaluationSetID_InProcessorPac
 	assert.EqualValues(t, obErrorx.CommonInvalidParamCode, status.Code())
 }
 
-// 覆盖 Invoke 中 OnTaskRunTerminated 返回错误的分支，确保错误被记录并向上返回
+// 覆盖 Invoke 中 onTaskRunTerminated 返回错误的分支，确保错误被记录并向上返回
 func TestAutoEvaluateProcessor_Invoke_OnTaskRunTerminatedError(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
@@ -485,14 +485,14 @@ func TestAutoEvaluateProcessor_Invoke_OnTaskRunTerminatedError(t *testing.T) {
 	repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.AssignableToTypeOf(int64(0))).Return(nil)
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), trigger.TaskRun).Return(errors.New("update failed"))
 
-	// Provider 返回 BizStatus（实验失败），触发 OnTaskRunTerminated
+	// Provider 返回 BizStatus（实验失败），触发 onTaskRunTerminated
 	eval := &fakeEvaluationAdapter{}
 	eval.invokeResp.err = errorx.NewByCode(errno.ExperimentStatusNotAllowedToInvokeCode)
 
 	proc := &AutoEvaluateProcessor{evaluationSvc: eval, taskRepo: repoAdapter}
 	err := proc.Invoke(context.Background(), trigger)
 	assert.EqualError(t, err, "update failed")
-	// 即使更新失败，RunStatus 也已被置为 Done（OnTaskRunTerminated 在更新前设置状态）
+	// 即使更新失败，RunStatus 也已被置为 Done（onTaskRunTerminated 在更新前设置状态）
 	assert.Equal(t, taskentity.TaskRunStatusDone, trigger.TaskRun.RunStatus)
 }
 
@@ -861,10 +861,7 @@ func TestAutoEvaluateProcessor_OnTaskRunTerminated(t *testing.T) {
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), taskRun).Return(nil)
 
 	proc := &AutoEvaluateProcessor{taskRepo: repoAdapter}
-	err := proc.OnTaskRunTerminated(context.Background(), taskexe.OnTaskRunTerminatedReq{
-		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234, CreatedBy: "1001"},
-		TaskRun: taskRun,
-	})
+	err := proc.onTaskRunTerminated(context.Background(), taskRun)
 	assert.NoError(t, err)
 	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
 }
@@ -881,10 +878,7 @@ func TestAutoEvaluateProcessor_OnTaskRunTerminated_Error(t *testing.T) {
 	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), taskRun).Return(errors.New("update failed"))
 
 	proc := &AutoEvaluateProcessor{taskRepo: repoAdapter}
-	err := proc.OnTaskRunTerminated(context.Background(), taskexe.OnTaskRunTerminatedReq{
-		Task:    &taskentity.ObservabilityTask{WorkspaceID: 1234, CreatedBy: "1001"},
-		TaskRun: taskRun,
-	})
+	err := proc.onTaskRunTerminated(context.Background(), taskRun)
 	// 断言错误向上返回
 	assert.EqualError(t, err, "update failed")
 	// 即使更新失败，RunStatus 已置为 Done
