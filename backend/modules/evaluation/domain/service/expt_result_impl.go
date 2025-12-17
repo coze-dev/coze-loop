@@ -171,9 +171,9 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 		scoreWeights        map[int64]float64
 	)
 	expt, err := e.ExperimentRepo.GetByID(ctx, exptID, spaceID)
-	if err == nil && expt != nil && expt.EvalConf != nil && expt.EvalConf.EnableWeightedScore {
+	if err == nil && expt != nil && expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableWeightedScore {
 		enableWeightedScore = true
-		scoreWeights = expt.EvalConf.EvaluatorScoreWeights
+		scoreWeights = expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorScoreWeights
 	}
 
 	var (
@@ -1364,8 +1364,41 @@ func calculateWeightedScore(
 	evaluatorRecords map[int64]*entity.EvaluatorRecord,
 	weights map[int64]float64,
 ) *float64 {
-	if len(evaluatorRecords) == 0 || len(weights) == 0 {
+	if len(evaluatorRecords) == 0 {
 		return nil
+	}
+
+	// 如果未配置权重（weights 为空），则按所有评估器权重相同计算加权分（即简单平均）
+	if len(weights) == 0 {
+		var (
+			sumScore float64
+			cnt      int
+		)
+		for _, record := range evaluatorRecords {
+			if record == nil {
+				continue
+			}
+			// 获取评估器分数（优先使用修正分数）
+			var score *float64
+			if record.EvaluatorOutputData != nil && record.EvaluatorOutputData.EvaluatorResult != nil {
+				if record.EvaluatorOutputData.EvaluatorResult.Correction != nil &&
+					record.EvaluatorOutputData.EvaluatorResult.Correction.Score != nil {
+					score = record.EvaluatorOutputData.EvaluatorResult.Correction.Score
+				} else if record.EvaluatorOutputData.EvaluatorResult.Score != nil {
+					score = record.EvaluatorOutputData.EvaluatorResult.Score
+				}
+			}
+			if score == nil {
+				continue
+			}
+			sumScore += *score
+			cnt++
+		}
+		if cnt == 0 {
+			return nil
+		}
+		avg := sumScore / float64(cnt)
+		return &avg
 	}
 
 	var totalWeightedScore float64

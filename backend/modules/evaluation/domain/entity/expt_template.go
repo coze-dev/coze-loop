@@ -54,10 +54,6 @@ type ExptTemplateConfiguration struct {
 	ConnectorConf Connector
 	ItemConcurNum *int
 
-	// 评估器得分加权配置
-	EnableWeightedScore   bool
-	EvaluatorScoreWeights map[int64]float64
-
 	// 默认评估器并发数
 	EvaluatorsConcurNum *int
 }

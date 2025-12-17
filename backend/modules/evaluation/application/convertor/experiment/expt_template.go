@@ -34,10 +34,8 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 	// 转换模板配置
 	templateConf := &entity.ExptTemplateConfiguration{
-		EnableWeightedScore:   gptr.Indirect(req.EnableWeightedScore),
-		EvaluatorScoreWeights: req.GetEvaluatorScoreWeights(),
-		ItemConcurNum:         ptr.ConvIntPtr[int32, int](req.DefaultItemConcurNum),
-		EvaluatorsConcurNum:   ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+		ItemConcurNum:       ptr.ConvIntPtr[int32, int](req.DefaultItemConcurNum),
+		EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 	}
 
 	// 构建 ConnectorConf
@@ -51,7 +49,9 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 		if len(evaluatorFieldMapping) > 0 {
 			templateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
-				EvaluatorConf: evaluatorFieldMapping,
+				EvaluatorConf:        evaluatorFieldMapping,
+				EnableWeightedScore:   gptr.Indirect(req.EnableWeightedScore),
+				EvaluatorScoreWeights: req.GetEvaluatorScoreWeights(),
 			}
 		}
 	}

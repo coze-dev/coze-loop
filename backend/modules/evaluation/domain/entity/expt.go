@@ -160,9 +160,6 @@ func (e *ExptEvaluatorVersionRef) String() string {
 type EvaluationConfiguration struct {
 	ConnectorConf Connector
 	ItemConcurNum *int
-	// 评估器得分加权配置
-	EnableWeightedScore   bool
-	EvaluatorScoreWeights map[int64]float64
 }
 
 type Connector struct {
@@ -196,6 +193,9 @@ type TargetIngressConf struct {
 type EvaluatorsConf struct {
 	EvaluatorConcurNum *int
 	EvaluatorConf      []*EvaluatorConf
+	// 评估器得分加权配置（移动自 EvaluationConfiguration）
+	EnableWeightedScore   bool
+	EvaluatorScoreWeights map[int64]float64
 }
 
 func (e *EvaluatorsConf) Valid(ctx context.Context) error {

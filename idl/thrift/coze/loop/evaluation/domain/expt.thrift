@@ -63,6 +63,9 @@ struct Experiment {
     43: optional string source_id
 
     50: optional ExptTemplate expt_template
+    // 评估器得分加权配置
+    51: optional bool enable_weighted_score
+    52: optional map<i64, double> evaluator_score_weights
 }
 
 // 离线实验模板，用于预先配置评测对象、评测集与评估器，并在创建实验时复用

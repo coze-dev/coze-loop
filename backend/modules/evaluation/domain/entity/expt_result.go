@@ -34,7 +34,7 @@ const (
 	// 标注项, FieldKey为TagKeyID
 	FieldType_Annotation FieldType = 23
 
-	// 加权得分, FieldKey为expt_id, value为weightedScore
+	// 加权得分, FieldKey为expt_id
 	FieldType_WeightedScore FieldType = 24
 )
 

@@ -29,18 +29,19 @@ type EvalConfConvert struct{}
 
 func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest) (*entity.EvaluationConfiguration, error) {
 	ec := &entity.EvaluationConfiguration{
-		ItemConcurNum:         ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
-		EnableWeightedScore:   gptr.Indirect(cer.EnableWeightedScore),
-		EvaluatorScoreWeights: cer.GetEvaluatorScoreWeights(),
+		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
 	}
+
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
 		TargetVersionID: cer.GetTargetVersionID(),
 		IngressConf:     toTargetFieldMappingDO(cer.GetTargetFieldMapping(), cer.GetTargetRuntimeParam()),
 	}
 	if cer.GetEvaluatorFieldMapping() != nil {
 		ec.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
-			EvaluatorConcurNum: ptr.ConvIntPtr[int32, int](cer.EvaluatorsConcurNum),
-			EvaluatorConf:      toEvaluatorFieldMappingDo(cer.GetEvaluatorFieldMapping()),
+			EvaluatorConcurNum:   ptr.ConvIntPtr[int32, int](cer.EvaluatorsConcurNum),
+			EvaluatorConf:        toEvaluatorFieldMappingDo(cer.GetEvaluatorFieldMapping()),
+			EnableWeightedScore:   gptr.Indirect(cer.EnableWeightedScore),
+			EvaluatorScoreWeights: cer.GetEvaluatorScoreWeights(),
 		}
 	}
 	return ec, nil
