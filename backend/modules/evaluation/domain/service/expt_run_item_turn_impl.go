@@ -294,7 +294,8 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 }
 
 func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, execEvaluatorVersionIDs []int64, etec *entity.ExptTurnEvalCtx,
-	targetResult *entity.EvalTargetRecord, history []*entity.Message) (map[int64]*entity.EvaluatorRecord, error) {
+	targetResult *entity.EvalTargetRecord, history []*entity.Message,
+) (map[int64]*entity.EvaluatorRecord, error) {
 	var (
 		recordMap      sync.Map
 		item           = etec.EvalSetItem
@@ -374,7 +375,8 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 }
 
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, evaluatorType entity.EvaluatorType, ec *entity.EvaluatorConf,
-	turnFields map[string]*entity.Content, targetFields map[string]*entity.Content) (*entity.EvaluatorInputData, error) {
+	turnFields map[string]*entity.Content, targetFields map[string]*entity.Content,
+) (*entity.EvaluatorInputData, error) {
 	fromEvalSet, err := e.buildFieldsFromSource(ctx, ec.IngressConf.EvalSetAdapter.FieldConfs, turnFields)
 	if err != nil {
 		return nil, err
@@ -401,7 +403,8 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 
 // buildFieldsFromSource 从指定数据源构建字段映射，提取重复的字段处理逻辑
 func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Context, fieldConfs []*entity.FieldConf,
-	sourceFields map[string]*entity.Content) (map[string]*entity.Content, error) {
+	sourceFields map[string]*entity.Content,
+) (map[string]*entity.Content, error) {
 	result := make(map[string]*entity.Content)
 
 	for _, fc := range fieldConfs {

@@ -92,17 +92,17 @@ type TraceApplication struct {
 }
 
 func (t *TraceApplication) UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest) (r *trace.UpsertTrajectoryConfigResponse, err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (t *TraceApplication) GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest) (r *trace.GetTrajectoryConfigResponse, err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest) (r *trace.ListTrajectoryResponse, err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 

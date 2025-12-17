@@ -20,6 +20,7 @@ import (
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
+	configermocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -1531,13 +1532,13 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 	tests := []struct {
 		name    string
 		req     *openapi.ReportEvalTargetInvokeResultRequest
-		setup   func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher)
+		setup   func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, configer *configermocks.MockIConfiger)
 		wantErr bool
 	}{
 		{
 			name: "repo returns error",
 			req:  repoErrorReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockIEvalTargetService, _ *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockIEvalTargetService, _ *eventmocks.MockExptEventPublisher, _ *configermocks.MockIConfiger) {
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(repoErrorReq.GetInvokeID(), 10)).Return(nil, errors.New("repo error"))
 			},
 			wantErr: true,
@@ -1545,7 +1546,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 		{
 			name: "report invoke records returns error",
 			req:  reportErrorReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, _ *configermocks.MockIConfiger) {
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-200 * time.Millisecond).UnixMilli()}
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(reportErrorReq.GetInvokeID(), 10)).Return(actx, nil)
 				targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.AssignableToTypeOf(&entity.ReportTargetRecordParam{})).DoAndReturn(func(_ context.Context, param *entity.ReportTargetRecordParam) error {
@@ -1569,7 +1570,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 		{
 			name: "publisher returns error",
 			req:  publisherErrorReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, configer *configermocks.MockIConfiger) {
 				session := &entity.Session{UserID: "user"}
 				event := &entity.ExptItemEvalEvent{}
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-150 * time.Millisecond).UnixMilli(), Event: event, Session: session}
@@ -1578,10 +1579,12 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 					assert.Equal(t, session, param.Session)
 					return nil
 				})
+				conf := &entity.TargetTrajectoryConf{}
+				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
-						assert.Equal(t, 3*time.Second, *duration)
+						assert.Equal(t, 13*time.Second, *duration)
 					}
 					return errors.New("publish error")
 				})
@@ -1591,7 +1594,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 		{
 			name: "success without event",
 			req:  successReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, _ *configermocks.MockIConfiger) {
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-100 * time.Millisecond).UnixMilli()}
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(successReq.GetInvokeID(), 10)).Return(actx, nil)
 				targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.AssignableToTypeOf(&entity.ReportTargetRecordParam{})).DoAndReturn(func(_ context.Context, param *entity.ReportTargetRecordParam) error {
@@ -1605,7 +1608,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 		{
 			name: "success with event on failure status",
 			req:  failedReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, configer *configermocks.MockIConfiger) {
 				session := &entity.Session{UserID: "owner"}
 				event := &entity.ExptItemEvalEvent{}
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-120 * time.Millisecond).UnixMilli(), Event: event, Session: session}
@@ -1621,10 +1624,12 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 					assert.Equal(t, session, param.Session)
 					return nil
 				})
+				conf := &entity.TargetTrajectoryConf{}
+				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
-						assert.Equal(t, 3*time.Second, *duration)
+						assert.Equal(t, 13*time.Second, *duration)
 					}
 					return nil
 				})
@@ -1644,14 +1649,16 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 			targetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
 			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+			configer := configermocks.NewMockIConfiger(ctrl)
 
 			app := &EvalOpenAPIApplication{
 				targetSvc: targetSvc,
 				asyncRepo: asyncRepo,
 				publisher: publisher,
+				configer:  configer,
 			}
 
-			caseData.setup(t, asyncRepo, targetSvc, publisher)
+			caseData.setup(t, asyncRepo, targetSvc, publisher, configer)
 
 			resp, err := app.ReportEvalTargetInvokeResult_(context.Background(), caseData.req)
 			if caseData.wantErr {
