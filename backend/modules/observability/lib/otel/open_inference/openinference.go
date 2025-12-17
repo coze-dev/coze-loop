@@ -39,7 +39,7 @@ func ConvertToModelInput(input interface{}) (interface{}, error) {
 
 		msg, ok := msgSurface["message"].(map[string]interface{})
 		if !ok {
-			continue
+			msg = msgSurface // maybe no message key, it has been a raw message
 		}
 
 		modelMsg := convertModelMsg(msg)
@@ -62,27 +62,41 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 	if content, ok := msg["content"].(string); ok {
 		modelMsg["content"] = content
 	}
+	if c, ok := msg["reasoning_content"].(string); ok {
+		modelMsg["reasoning_content"] = c
+	}
 
 	// contents
-	if contents, ok := msg["contents"].([]interface{}); ok && len(contents) > 0 {
+	var contents []interface{}
+	if c, ok := msg["contents"].([]interface{}); ok && len(c) > 0 {
+		contents = c
+	} else if c, ok := msg["content"].([]interface{}); ok && len(c) > 0 {
+		contents = c
+	}
+	if len(contents) > 0 {
 		parts := make([]interface{}, 0, len(contents))
 		for _, content := range contents {
 			if mc, ok := content.(map[string]interface{}); ok {
-				if mcContent, ok := mc["message_content"].(map[string]interface{}); ok {
-					part := map[string]interface{}{}
-					switch mcContent["type"] {
-					case string(TextLiteral):
-						part["type"] = string(ModelMessagePartTypeText)
-						part["text"] = mcContent["text"]
-					case string(ImageLiteral):
-						part["type"] = string(ModelMessagePartTypeImage)
-						part["image_url"] = map[string]interface{}{
-							"url": mcContent["image"].(map[string]interface{})["url"],
-						}
-					default:
-					}
-					parts = append(parts, part)
+				mcContent, ok := mc["message_content"].(map[string]interface{})
+				if !ok {
+					mcContent = mc // maybe no message_content key, it has been a raw message
 				}
+				typ, _ := mcContent["type"]
+				text, _ := mcContent["text"]
+				image, _ := mcContent["image_url"]
+				part := map[string]interface{}{}
+				switch typ {
+				case string(TextLiteral):
+					part["type"] = string(ModelMessagePartTypeText)
+					part["text"] = text
+				case string(ImageLiteral):
+					part["type"] = string(ModelMessagePartTypeImage)
+					part["image_url"] = map[string]interface{}{
+						"url": image.(map[string]interface{})["url"],
+					}
+				default:
+				}
+				parts = append(parts, part)
 			}
 		}
 		if len(parts) > 0 {
@@ -143,7 +157,7 @@ func ConvertToModelOutput(input interface{}) (interface{}, error) {
 
 		msg, ok := surface["message"].(map[string]interface{})
 		if !ok {
-			continue
+			msg = surface // maybe no message key, it has been a raw message
 		}
 
 		modelMsg := convertModelMsg(msg)

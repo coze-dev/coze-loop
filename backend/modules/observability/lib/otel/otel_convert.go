@@ -12,8 +12,10 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/litellm"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/open_inference"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 
 	semconv1_26_0 "go.opentelemetry.io/otel/semconv/v1.26.0"
 	semconv1_27_0 "go.opentelemetry.io/otel/semconv/v1.27.0"
@@ -68,7 +70,7 @@ var (
 
 		// model
 		tracespec.ModelProvider: {
-			AttributeKey: []string{string(semconv1_32_0.GenAISystemKey)},
+			AttributeKey: []string{string(semconv1_32_0.GenAISystemKey), string(semconv.GenAIProviderNameKey)},
 			IsTag:        true,
 			DataType:     dataTypeString,
 		},
@@ -135,7 +137,7 @@ var (
 			DataType:     dataTypeInt64,
 		},
 		tracespec.Stream: {
-			AttributeKey: []string{otelAttributeModelStream},
+			AttributeKey: []string{otelAttributeModelStream, liteLlmAttributeModelStream},
 			IsTag:        true,
 			DataType:     dataTypeBool,
 		},
@@ -317,7 +319,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			} else {
 				switch fieldKey {
 				case "span_type":
-					spanType = spanTypeMapping(value)
+					spanType = value
 				case "input":
 					input = value
 				case "output":
@@ -386,7 +388,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 		CallType:         "Custom",
 		WorkspaceID:      spaceID,
 		SpanName:         span.Name,
-		SpanType:         spanType,
+		SpanType:         spanTypeMapping(spanType, span.Name),
 		Method:           "",
 		StatusCode:       statusCode,
 		Input:            input,
@@ -414,7 +416,10 @@ func setLogID(span *LoopSpan) {
 	delete(span.TagsString, "logid")
 }
 
-func spanTypeMapping(spanType string) string {
+func spanTypeMapping(spanType, spanName string) string {
+	if spanName == liteLlmSpanNameRequest {
+		return "model"
+	}
 	desSpanType, ok := otelModelSpanTypeMap[spanType]
 	if ok {
 		spanType = desSpanType
@@ -613,6 +618,7 @@ func processAttributeKey(ctx context.Context, conf FieldConf, attributeMap map[s
 }
 
 func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf, attributeMap map[string]*AnyValue) string {
+	var err error
 	for _, attributePrefixKey := range conf.AttributeKeyPrefix {
 		srcAttrAggrRes := aggregateAttributesByPrefix(attributeMap, attributePrefixKey)
 		if srcAttrAggrRes == nil {
@@ -643,10 +649,16 @@ func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf
 					if tools != nil {
 						temp["tools"] = tools
 						toBeMarshalObject = temp
+					} else {
+						srcTools := aggregateAttributesByPrefix(attributeMap, liteLlmAttributeModelInputTools) // litellm
+						toBeMarshalObject, err = litellm.AddTools2ModelInput(toBeMarshalObject, srcTools)
+						if err != nil {
+							continue
+						}
 					}
 				}
 			}
-		case openInferenceAttributeModelInputMessages: // openInference input message
+		case openInferenceAttributeModelInputMessages: // openInference(or litellm) input message
 			srcInput, err := open_inference.ConvertToModelInput(srcAttrAggrRes)
 			if err != nil {
 				continue
@@ -827,7 +839,13 @@ func aggregateAttributes(srcInput map[string]interface{}, prefix string) interfa
 		return aggregateTrimPrefixAttributes(srcInput)
 	}
 
-	if _, ok := srcInput[prefix]; ok {
+	if obj, ok := srcInput[prefix]; ok { // exist prefix key
+		if objMap, ok := obj.(string); ok { // string to slice
+			var res []interface{}
+			if err := sonic.UnmarshalString(objMap, &res); err == nil {
+				return res
+			}
+		}
 		return srcInput[prefix]
 	}
 
