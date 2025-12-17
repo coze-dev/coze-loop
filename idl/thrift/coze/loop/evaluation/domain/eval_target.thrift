@@ -235,6 +235,7 @@ struct EvalTargetOutputData {
 struct EvalTargetUsage {
     1: i64 input_tokens (api.js_conv='true', go.tag='json:\"input_tokens\"')
     2: i64 output_tokens (api.js_conv='true', go.tag='json:\"output_tokens\"')
+    3: i64 total_tokens (api.js_conv='true', go.tag='json:\"total_tokens\"')
 }
 
 struct EvalTargetRunError {

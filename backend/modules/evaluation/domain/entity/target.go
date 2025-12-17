@@ -73,7 +73,17 @@ func (p EvalTargetType) String() string {
 	return "<UNSET>"
 }
 
+func (p EvalTargetType) SupptTrajectory() bool {
+	switch p {
+	case EvalTargetTypeVolcengineAgent, EvalTargetTypeCustomRPCServer:
+		return true
+	default:
+		return false
+	}
+}
+
 func EvalTargetTypePtr(v EvalTargetType) *EvalTargetType { return &v }
+
 func (p *EvalTargetType) Scan(value interface{}) (err error) {
 	var result sql.NullInt64
 	err = result.Scan(value)

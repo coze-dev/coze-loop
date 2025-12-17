@@ -14,6 +14,10 @@ const (
 	InsightAnalysisStatus_Failed  InsightAnalysisStatus = 3
 )
 
+const (
+	InsightAnalysisRunningTimeout = 2 * time.Hour
+)
+
 type ExptInsightAnalysisRecord struct {
 	ID                    int64
 	SpaceID               int64
@@ -22,6 +26,7 @@ type ExptInsightAnalysisRecord struct {
 	ExptResultFilePath    *string
 	AnalysisReportID      *int64
 	AnalysisReportContent string
+	AnalysisReportIndex   []*InsightAnalysisReportIndex
 	CreatedBy             string
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
@@ -100,3 +105,8 @@ const (
 	// 生成失败
 	ReportStatus_Failed ReportStatus = 3
 )
+
+type InsightAnalysisReportIndex struct {
+	ID    string
+	Title string
+}

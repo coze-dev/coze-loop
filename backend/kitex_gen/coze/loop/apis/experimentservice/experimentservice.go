@@ -231,6 +231,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetAnalysisRecordFeedbackVote": kitex.NewMethodInfo(
+		getAnalysisRecordFeedbackVoteHandler,
+		newExperimentServiceGetAnalysisRecordFeedbackVoteArgs,
+		newExperimentServiceGetAnalysisRecordFeedbackVoteResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -853,6 +860,25 @@ func newExperimentServiceListExptInsightAnalysisCommentResult() interface{} {
 	return expt.NewExperimentServiceListExptInsightAnalysisCommentResult()
 }
 
+func getAnalysisRecordFeedbackVoteHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceGetAnalysisRecordFeedbackVoteArgs)
+	realResult := result.(*expt.ExperimentServiceGetAnalysisRecordFeedbackVoteResult)
+	success, err := handler.(expt.ExperimentService).GetAnalysisRecordFeedbackVote(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceGetAnalysisRecordFeedbackVoteArgs() interface{} {
+	return expt.NewExperimentServiceGetAnalysisRecordFeedbackVoteArgs()
+}
+
+func newExperimentServiceGetAnalysisRecordFeedbackVoteResult() interface{} {
+	return expt.NewExperimentServiceGetAnalysisRecordFeedbackVoteResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -1170,6 +1196,16 @@ func (p *kClient) ListExptInsightAnalysisComment(ctx context.Context, req *expt.
 	_args.Req = req
 	var _result expt.ExperimentServiceListExptInsightAnalysisCommentResult
 	if err = p.c.Call(ctx, "ListExptInsightAnalysisComment", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error) {
+	var _args expt.ExperimentServiceGetAnalysisRecordFeedbackVoteArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceGetAnalysisRecordFeedbackVoteResult
+	if err = p.c.Call(ctx, "GetAnalysisRecordFeedbackVote", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

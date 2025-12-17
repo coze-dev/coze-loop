@@ -693,3 +693,29 @@ func (p *ListExptInsightAnalysisCommentResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *GetAnalysisRecordFeedbackVoteRequest) IsValid() error {
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetAnalysisRecordFeedbackVoteResponse) IsValid() error {
+	if p.Vote != nil {
+		if err := p.Vote.IsValid(); err != nil {
+			return fmt.Errorf("field Vote not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

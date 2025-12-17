@@ -94,6 +94,7 @@ type EvalTargetOutputData struct {
 type EvalTargetUsage struct {
 	InputTokens  int64
 	OutputTokens int64
+	TotalTokens  int64
 }
 
 type EvalTargetRunError struct {

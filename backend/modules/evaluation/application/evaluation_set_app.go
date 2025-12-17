@@ -63,6 +63,16 @@ type EvaluationSetApplicationImpl struct {
 	userInfoService             userinfo.UserInfoService
 }
 
+func (e *EvaluationSetApplicationImpl) CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest) (r *eval_set.CreateEvaluationSetWithImportResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (e *EvaluationSetApplicationImpl) ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest) (r *eval_set.ParseImportSourceFileResponse, err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
 func (e *EvaluationSetApplicationImpl) CreateEvaluationSet(ctx context.Context, req *eval_set.CreateEvaluationSetRequest) (resp *eval_set.CreateEvaluationSetResponse, err error) {
 	defer func() {
 		e.metric.EmitCreate(req.GetWorkspaceID(), err)

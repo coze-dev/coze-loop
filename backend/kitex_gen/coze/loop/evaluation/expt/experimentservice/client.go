@@ -42,6 +42,7 @@ type Client interface {
 	GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (r *expt.GetExptInsightAnalysisRecordResponse, err error)
 	FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest, callOptions ...callopt.Option) (r *expt.FeedbackExptInsightAnalysisReportResponse, err error)
 	ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisCommentResponse, err error)
+	GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -226,4 +227,9 @@ func (p *kExperimentServiceClient) FeedbackExptInsightAnalysisReport(ctx context
 func (p *kExperimentServiceClient) ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisCommentResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListExptInsightAnalysisComment(ctx, req)
+}
+
+func (p *kExperimentServiceClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetAnalysisRecordFeedbackVote(ctx, req)
 }

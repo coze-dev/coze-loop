@@ -19,7 +19,7 @@ type IExptInsightAnalysisRecordDAO interface {
 	Create(ctx context.Context, record *model.ExptInsightAnalysisRecord, opts ...db.Option) error
 	Update(ctx context.Context, record *model.ExptInsightAnalysisRecord, opts ...db.Option) error
 	GetByID(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (*model.ExptInsightAnalysisRecord, error)
-	List(ctx context.Context, spaceID, exptID int64, page entity.Page) ([]*model.ExptInsightAnalysisRecord, int64, error)
+	List(ctx context.Context, spaceID, exptID int64, page entity.Page, opts ...db.Option) ([]*model.ExptInsightAnalysisRecord, int64, error)
 	Delete(ctx context.Context, spaceID, exptID, recordID int64) error
 }
 
@@ -50,7 +50,7 @@ func (e exptInsightAnalysisRecordDAO) Update(ctx context.Context, record *model.
 }
 
 func (e exptInsightAnalysisRecordDAO) GetByID(ctx context.Context, spaceID, exptID, recordID int64, opts ...db.Option) (*model.ExptInsightAnalysisRecord, error) {
-	db := e.db.NewSession(ctx)
+	db := e.db.NewSession(ctx, opts...)
 	q := query.Use(db).ExptInsightAnalysisRecord
 
 	record, err := q.WithContext(ctx).Where(
@@ -65,13 +65,13 @@ func (e exptInsightAnalysisRecordDAO) GetByID(ctx context.Context, spaceID, expt
 	return record, nil
 }
 
-func (e exptInsightAnalysisRecordDAO) List(ctx context.Context, spaceID, exptID int64, page entity.Page) ([]*model.ExptInsightAnalysisRecord, int64, error) {
+func (e exptInsightAnalysisRecordDAO) List(ctx context.Context, spaceID, exptID int64, page entity.Page, opts ...db.Option) ([]*model.ExptInsightAnalysisRecord, int64, error) {
 	var (
 		finds []*model.ExptInsightAnalysisRecord
 		total int64
 	)
 
-	db := e.db.NewSession(ctx).Model(&model.ExptInsightAnalysisRecord{}).Where("space_id = ?", spaceID).Where("expt_id = ?", exptID)
+	db := e.db.NewSession(ctx, opts...).Model(&model.ExptInsightAnalysisRecord{}).Where("space_id = ?", spaceID).Where("expt_id = ?", exptID)
 
 	db = db.Order("created_at desc")
 	// 总记录数

@@ -142,6 +142,10 @@ func (e *Experiment) AsyncCallEvaluators() bool {
 	return false
 }
 
+func (e *Experiment) ContainsEvalTarget() bool {
+	return e != nil && e.TargetVersionID > 0
+}
+
 type ExptEvaluatorVersionRef struct {
 	EvaluatorID        int64
 	EvaluatorVersionID int64

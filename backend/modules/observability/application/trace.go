@@ -10,6 +10,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
+	timeutil "github.com/coze-dev/coze-loop/backend/pkg/time"
 
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
@@ -1140,6 +1141,23 @@ func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTr
 		false); err != nil {
 		return nil, err
 	}
+	if req.StartTime == nil {
+		userID := session.UserIDInCtxOrEmpty(ctx)
+		if userID == "" {
+			return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+		}
+		finalStartTime := t.traceConfig.GetTraceDataMaxDurationDay(ctx, &req.PlatformType)
+		benefitRes, err := t.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+			ConnectorUID: userID,
+			SpaceID:      req.GetWorkspaceID(),
+		})
+		if err == nil && benefitRes != nil {
+			finalStartTime = time.Now().UnixMilli() - timeutil.Day2MillSec(int(benefitRes.StorageDuration))
+		}
+
+		req.SetStartTime(ptr.Of(finalStartTime))
+	}
+
 	resp, err := t.traceService.ListTrajectory(ctx, &service.ListTrajectoryRequest{
 		PlatformType: loop_span.PlatformType(req.PlatformType),
 		WorkspaceID:  req.WorkspaceID,

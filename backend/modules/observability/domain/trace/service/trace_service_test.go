@@ -2686,7 +2686,9 @@ func TestTraceServiceImpl_Send(t *testing.T) {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
 					Spans: loop_span.SpanList{
-						{},
+						{
+							SpanID: "span1",
+						},
 					},
 				}, nil)
 				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
@@ -2719,6 +2721,47 @@ func TestTraceServiceImpl_Send(t *testing.T) {
 				},
 			},
 			wantErr: true,
+		},
+		{
+			name: "spanid is blank",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							SpanID: "",
+						},
+					},
+				}, nil)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"caller1": {
+							AnnotationType: "test",
+							Tenants:        []string{"spans"},
+						},
+					},
+				}, nil)
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				event: &entity.AnnotationEvent{
+					Annotation: &loop_span.Annotation{
+						SpanID:         "span1",
+						TraceID:        "trace1",
+						WorkspaceID:    "workspace1",
+						AnnotationType: "123",
+						Key:            "12",
+					},
+					Caller:     "caller1",
+					RetryTimes: 2,
+				},
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {

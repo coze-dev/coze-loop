@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
+	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -172,6 +173,21 @@ func (m *MockITraceService) GetTracesMetaInfo(ctx context.Context, req *service.
 func (mr *MockITraceServiceMockRecorder) GetTracesMetaInfo(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTracesMetaInfo", reflect.TypeOf((*MockITraceService)(nil).GetTracesMetaInfo), ctx, req)
+}
+
+// GetTrajectories mocks base method.
+func (m *MockITraceService) GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTrajectories", ctx, workspaceID, traceIDs, startTime, endTime, platformType)
+	ret0, _ := ret[0].(map[string]*loop_span.Trajectory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTrajectories indicates an expected call of GetTrajectories.
+func (mr *MockITraceServiceMockRecorder) GetTrajectories(ctx, workspaceID, traceIDs, startTime, endTime, platformType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectories", reflect.TypeOf((*MockITraceService)(nil).GetTrajectories), ctx, workspaceID, traceIDs, startTime, endTime, platformType)
 }
 
 // GetTrajectoryConfig mocks base method.

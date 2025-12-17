@@ -202,11 +202,12 @@ func TestConvertExptTurnResultFilterAccelerator(t *testing.T) {
 				ItemRunStatus: []*entity.FieldFilter{},
 				TurnRunStatus: []*entity.FieldFilter{},
 				MapCond: &entity.ExptTurnResultFilterMapCond{
-					EvalTargetDataFilters:   []*entity.FieldFilter{},
-					EvaluatorScoreFilters:   []*entity.FieldFilter{},
-					AnnotationFloatFilters:  []*entity.FieldFilter{},
-					AnnotationBoolFilters:   []*entity.FieldFilter{},
-					AnnotationStringFilters: []*entity.FieldFilter{},
+					EvalTargetDataFilters:    []*entity.FieldFilter{},
+					EvaluatorScoreFilters:    []*entity.FieldFilter{},
+					AnnotationFloatFilters:   []*entity.FieldFilter{},
+					AnnotationBoolFilters:    []*entity.FieldFilter{},
+					AnnotationStringFilters:  []*entity.FieldFilter{},
+					EvalTargetMetricsFilters: []*entity.FieldFilter{},
 				},
 				ItemSnapshotCond: &entity.ItemSnapshotFilter{
 					BoolMapFilters:   []*entity.FieldFilter{},
@@ -244,6 +245,202 @@ func TestConvertExptTurnResultFilterAccelerator(t *testing.T) {
 			if !tt.wantErr {
 				if len(got.ItemIDs) != len(tt.want.ItemIDs) {
 					t.Errorf("ConvertExptTurnResultFilterAccelerator() = %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
+func TestConvertExptTurnResultFilterAccelerator_EvalTargetMetrics(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *domain_expt.ExperimentFilter
+		want    *entity.ExptTurnResultFilterAccelerator
+		wantErr bool
+	}{
+		{
+			name: "TotalLatency filter",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_TotalLatency,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Equal,
+							Value:    "100",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "total_latency",
+							Op:     "=",
+							Values: []any{"100"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "InputTokens filter",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_InputTokens,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Greater,
+							Value:    "10",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "input_tokens",
+							Op:     ">",
+							Values: []any{"10"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "OutputTokens filter",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_OutputTokens,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Less,
+							Value:    "20",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "output_tokens",
+							Op:     "<",
+							Values: []any{"20"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "TotalTokens filter",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_TotalTokens,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_In,
+							Value:    "30,40,50",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "total_tokens",
+							Op:     "IN",
+							Values: []any{"30", "40", "50"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "multiple EvalTargetMetrics filters",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_TotalLatency,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Equal,
+							Value:    "100",
+						},
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_InputTokens,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Greater,
+							Value:    "10",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "total_latency",
+							Op:     "=",
+							Values: []any{"100"},
+						},
+						{
+							Key:    "input_tokens",
+							Op:     ">",
+							Values: []any{"10"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ConvertExptTurnResultFilterAccelerator(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertExptTurnResultFilterAccelerator() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				if tt.want.MapCond != nil {
+					assert.Equal(t, len(tt.want.MapCond.EvalTargetMetricsFilters), len(got.MapCond.EvalTargetMetricsFilters))
+					for i, wantFilter := range tt.want.MapCond.EvalTargetMetricsFilters {
+						if i < len(got.MapCond.EvalTargetMetricsFilters) {
+							gotFilter := got.MapCond.EvalTargetMetricsFilters[i]
+							assert.Equal(t, wantFilter.Key, gotFilter.Key)
+							assert.Equal(t, wantFilter.Op, gotFilter.Op)
+							assert.Equal(t, wantFilter.Values, gotFilter.Values)
+						}
+					}
 				}
 			}
 		})

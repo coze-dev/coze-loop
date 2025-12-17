@@ -34,13 +34,16 @@ func newObservabilityTrajectoryConfig(db *gorm.DB, opts ...gen.DOOption) observa
 	_observabilityTrajectoryConfig.CreatedBy = field.NewString(tableName, "created_by")
 	_observabilityTrajectoryConfig.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_observabilityTrajectoryConfig.UpdatedBy = field.NewString(tableName, "updated_by")
+	_observabilityTrajectoryConfig.IsDeleted = field.NewBool(tableName, "is_deleted")
+	_observabilityTrajectoryConfig.DeletedAt = field.NewField(tableName, "deleted_at")
+	_observabilityTrajectoryConfig.DeletedBy = field.NewString(tableName, "deleted_by")
 
 	_observabilityTrajectoryConfig.fillFieldMap()
 
 	return _observabilityTrajectoryConfig
 }
 
-// observabilityTrajectoryConfig 观测trace展示规则
+// observabilityTrajectoryConfig 观测轨迹配置
 type observabilityTrajectoryConfig struct {
 	observabilityTrajectoryConfigDo observabilityTrajectoryConfigDo
 
@@ -52,6 +55,9 @@ type observabilityTrajectoryConfig struct {
 	CreatedBy   field.String // 创建人
 	UpdatedAt   field.Time   // 修改时间
 	UpdatedBy   field.String // 修改人
+	IsDeleted   field.Bool   // 是否删除, 0 表示未删除, 1 表示已删除
+	DeletedAt   field.Field  // 删除时间
+	DeletedBy   field.String // 删除人
 
 	fieldMap map[string]field.Expr
 }
@@ -75,6 +81,9 @@ func (o *observabilityTrajectoryConfig) updateTableName(table string) *observabi
 	o.CreatedBy = field.NewString(table, "created_by")
 	o.UpdatedAt = field.NewTime(table, "updated_at")
 	o.UpdatedBy = field.NewString(table, "updated_by")
+	o.IsDeleted = field.NewBool(table, "is_deleted")
+	o.DeletedAt = field.NewField(table, "deleted_at")
+	o.DeletedBy = field.NewString(table, "deleted_by")
 
 	o.fillFieldMap()
 
@@ -107,7 +116,7 @@ func (o *observabilityTrajectoryConfig) GetFieldByName(fieldName string) (field.
 }
 
 func (o *observabilityTrajectoryConfig) fillFieldMap() {
-	o.fieldMap = make(map[string]field.Expr, 7)
+	o.fieldMap = make(map[string]field.Expr, 10)
 	o.fieldMap["id"] = o.ID
 	o.fieldMap["workspace_id"] = o.WorkspaceID
 	o.fieldMap["filter"] = o.Filter
@@ -115,6 +124,9 @@ func (o *observabilityTrajectoryConfig) fillFieldMap() {
 	o.fieldMap["created_by"] = o.CreatedBy
 	o.fieldMap["updated_at"] = o.UpdatedAt
 	o.fieldMap["updated_by"] = o.UpdatedBy
+	o.fieldMap["is_deleted"] = o.IsDeleted
+	o.fieldMap["deleted_at"] = o.DeletedAt
+	o.fieldMap["deleted_by"] = o.DeletedBy
 }
 
 func (o observabilityTrajectoryConfig) clone(db *gorm.DB) observabilityTrajectoryConfig {

@@ -25,6 +25,39 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
+func TestOpenAPIColumnEvalTargetDO2DTOs(t *testing.T) {
+	t.Parallel()
+
+	label := gptr.Of("label-1")
+	from := []*entity.ColumnEvalTarget{
+		{
+			Name:  "col-1",
+			Desc:  "desc-1",
+			Label: label,
+		},
+		nil, // 应跳过
+		{
+			Name: "col-2",
+			Desc: "desc-2",
+		},
+	}
+
+	got := OpenAPIColumnEvalTargetDO2DTOs(from)
+
+	if assert.Len(t, got, 2) {
+		assert.Equal(t, "col-1", gptr.Indirect(got[0].Name))
+		assert.Equal(t, "desc-1", gptr.Indirect(got[0].Description))
+		assert.Same(t, label, got[0].Label)
+
+		assert.Equal(t, "col-2", gptr.Indirect(got[1].Name))
+		assert.Equal(t, "desc-2", gptr.Indirect(got[1].Description))
+		assert.Nil(t, got[1].Label)
+	}
+
+	assert.Nil(t, OpenAPIColumnEvalTargetDO2DTOs(nil))
+	assert.Nil(t, OpenAPIColumnEvalTargetDO2DTOs([]*entity.ColumnEvalTarget{}))
+}
+
 func TestOpenAPITargetFieldMappingDTO2Domain(t *testing.T) {
 	t.Parallel()
 

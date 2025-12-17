@@ -615,6 +615,24 @@ func OpenAPIColumnEvaluatorsDO2DTOs(from []*entity.ColumnEvaluator) []*openapiEx
 	return result
 }
 
+func OpenAPIColumnEvalTargetDO2DTOs(columns []*entity.ColumnEvalTarget) []*openapiExperiment.ColumnEvalTarget {
+	if len(columns) == 0 {
+		return nil
+	}
+	result := make([]*openapiExperiment.ColumnEvalTarget, 0, len(columns))
+	for _, column := range columns {
+		if column == nil {
+			continue
+		}
+		result = append(result, &openapiExperiment.ColumnEvalTarget{
+			Name:        gptr.Of(column.Name),
+			Description: gptr.Of(column.Desc),
+			Label:       column.Label,
+		})
+	}
+	return result
+}
+
 func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.ItemResult_ {
 	if len(from) == 0 {
 		return nil

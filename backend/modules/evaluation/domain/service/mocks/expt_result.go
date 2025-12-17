@@ -144,17 +144,12 @@ func (mr *MockExptResultServiceMockRecorder) InsertExptTurnResultFilterKeyMappin
 }
 
 // MGetExperimentResult mocks base method.
-func (m *MockExptResultService) MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) ([]*entity.ColumnEvaluator, []*entity.ExptColumnEvaluator, []*entity.ColumnEvalSetField, []*entity.ExptColumnAnnotation, []*entity.ItemResult, int64, error) {
+func (m *MockExptResultService) MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MGetExperimentResult", ctx, param)
-	ret0, _ := ret[0].([]*entity.ColumnEvaluator)
-	ret1, _ := ret[1].([]*entity.ExptColumnEvaluator)
-	ret2, _ := ret[2].([]*entity.ColumnEvalSetField)
-	ret3, _ := ret[3].([]*entity.ExptColumnAnnotation)
-	ret4, _ := ret[4].([]*entity.ItemResult)
-	ret5, _ := ret[5].(int64)
-	ret6, _ := ret[6].(error)
-	return ret0, ret1, ret2, ret3, ret4, ret5, ret6
+	ret0, _ := ret[0].(*entity.MGetExperimentReportResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // MGetExperimentResult indicates an expected call of MGetExperimentResult.

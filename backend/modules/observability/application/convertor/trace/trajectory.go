@@ -1,75 +1,79 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package trace
 
 import (
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/common"
+	dtotrajectory "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
-func TrajectoriesDO2DTO(trajectories []*loop_span.Trajectory) []*common.Trajectory {
+func TrajectoriesDO2DTO(trajectories []*loop_span.Trajectory) []*dtotrajectory.Trajectory {
 	if len(trajectories) == 0 {
 		return nil
 	}
-	result := make([]*common.Trajectory, len(trajectories))
+	result := make([]*dtotrajectory.Trajectory, len(trajectories))
 	for i, trajectory := range trajectories {
 		result[i] = TrajectoryDO2DTO(trajectory)
 	}
 	return result
 }
 
-func TrajectoryDO2DTO(trajectory *loop_span.Trajectory) *common.Trajectory {
+func TrajectoryDO2DTO(trajectory *loop_span.Trajectory) *dtotrajectory.Trajectory {
 	if trajectory == nil {
 		return nil
 	}
-	return &common.Trajectory{
+	return &dtotrajectory.Trajectory{
 		ID:         trajectory.ID,
 		RootStep:   RootStepDO2DTO(trajectory.RootStep),
 		AgentSteps: AgentStepsDO2DTO(trajectory.AgentSteps),
 	}
 }
 
-func AgentStepsDO2DTO(steps []*loop_span.AgentStep) []*common.AgentStep {
+func AgentStepsDO2DTO(steps []*loop_span.AgentStep) []*dtotrajectory.AgentStep {
 	if len(steps) == 0 {
 		return nil
 	}
-	result := make([]*common.AgentStep, len(steps))
+	result := make([]*dtotrajectory.AgentStep, len(steps))
 	for i, step := range steps {
 		result[i] = AgentStepDO2DTO(step)
 	}
 	return result
 }
 
-func AgentStepDO2DTO(step *loop_span.AgentStep) *common.AgentStep {
+func AgentStepDO2DTO(step *loop_span.AgentStep) *dtotrajectory.AgentStep {
 	if step == nil {
 		return nil
 	}
-	return &common.AgentStep{
-		ID:        step.ID,
-		ParentID:  step.ParentID,
-		Name:      step.Name,
-		Input:     step.Input,
-		Output:    step.Output,
-		Steps:     StepsDO2DTO(step.Steps),
-		Metadata:  step.Metadata,
-		BasicInfo: BasicInfoDO2DTO(step.BasicInfo),
+	return &dtotrajectory.AgentStep{
+		ID:          step.ID,
+		ParentID:    step.ParentID,
+		Name:        step.Name,
+		Input:       step.Input,
+		Output:      step.Output,
+		Steps:       StepsDO2DTO(step.Steps),
+		Metadata:    step.Metadata,
+		BasicInfo:   BasicInfoDO2DTO(step.BasicInfo),
+		MetricsInfo: MetricsInfoDO2DTO(step.MetricsInfo),
 	}
 }
 
-func StepsDO2DTO(steps []*loop_span.Step) []*common.Step {
+func StepsDO2DTO(steps []*loop_span.Step) []*dtotrajectory.Step {
 	if len(steps) == 0 {
 		return nil
 	}
-	result := make([]*common.Step, len(steps))
+	result := make([]*dtotrajectory.Step, len(steps))
 	for i, step := range steps {
 		result[i] = StepDO2DTO(step)
 	}
 	return result
 }
 
-func StepDO2DTO(step *loop_span.Step) *common.Step {
+func StepDO2DTO(step *loop_span.Step) *dtotrajectory.Step {
 	if step == nil {
 		return nil
 	}
-	return &common.Step{
+	return &dtotrajectory.Step{
 		ID:        step.ID,
 		ParentID:  step.ParentID,
 		Type:      step.Type,
@@ -82,48 +86,77 @@ func StepDO2DTO(step *loop_span.Step) *common.Step {
 	}
 }
 
-func ModelInfoDO2DTO(info *loop_span.ModelInfo) *common.ModelInfo {
+func ModelInfoDO2DTO(info *loop_span.ModelInfo) *dtotrajectory.ModelInfo {
 	if info == nil {
 		return nil
 	}
-	return &common.ModelInfo{
-		InputTokens:               info.InputTokens,
-		OutputTokens:              info.OutputTokens,
-		LatencyFirstResp:          info.LatencyFirstResp,
-		ReasoningTokens:           info.ReasoningTokens,
-		InputReadCachedTokens:     info.InputReadCachedTokens,
-		InputCreationCachedTokens: info.InputCreationCachedTokens,
+	return &dtotrajectory.ModelInfo{
+		InputTokens:               int64Ptr2int32Ptr(&info.InputTokens),
+		OutputTokens:              int64Ptr2int32Ptr(&info.OutputTokens),
+		LatencyFirstResp:          &info.LatencyFirstResp,
+		ReasoningTokens:           int64Ptr2int32Ptr(&info.ReasoningTokens),
+		InputReadCachedTokens:     int64Ptr2int32Ptr(&info.InputReadCachedTokens),
+		InputCreationCachedTokens: int64Ptr2int32Ptr(&info.InputCreationCachedTokens),
 	}
 }
 
-func RootStepDO2DTO(step *loop_span.RootStep) *common.RootStep {
+func int64Ptr2int32Ptr(src *int64) *int32 {
+	if src == nil {
+		return nil
+	}
+	result := int32(*src)
+	return &result
+}
+
+func RootStepDO2DTO(step *loop_span.RootStep) *dtotrajectory.RootStep {
 	if step == nil {
 		return nil
 	}
-	return &common.RootStep{
-		ID:        step.ID,
-		Name:      step.Name,
-		Input:     step.Input,
-		Output:    step.Output,
-		Metadata:  step.Metadata,
-		BasicInfo: BasicInfoDO2DTO(step.BasicInfo),
+	return &dtotrajectory.RootStep{
+		ID:          step.ID,
+		Name:        step.Name,
+		Input:       step.Input,
+		Output:      step.Output,
+		Metadata:    step.Metadata,
+		BasicInfo:   BasicInfoDO2DTO(step.BasicInfo),
+		MetricsInfo: MetricsInfoDO2DTO(step.MetricsInfo),
 	}
 }
 
-func BasicInfoDO2DTO(info *loop_span.BasicInfo) *common.BasicInfo {
+func MetricsInfoDO2DTO(info *loop_span.MetricsInfo) *dtotrajectory.MetricsInfo {
 	if info == nil {
 		return nil
 	}
-	return &common.BasicInfo{
-		StartedAt: info.StartedAt,
-		Duration:  info.Duration,
+	return &dtotrajectory.MetricsInfo{
+		LlmDuration:        info.LlmDuration,
+		ToolDuration:       info.ToolDuration,
+		ToolErrors:         info.ToolErrors,
+		ToolErrorRate:      info.ToolErrorRate,
+		ModelErrors:        info.ModelErrors,
+		ModelErrorRate:     info.ModelErrorRate,
+		ToolStepProportion: info.ToolStepProportion,
+		InputTokens:        info.InputTokens,
+		OutputTokens:       info.OutputTokens,
+	}
+}
+
+func BasicInfoDO2DTO(info *loop_span.BasicInfo) *dtotrajectory.BasicInfo {
+	if info == nil {
+		return nil
+	}
+	return &dtotrajectory.BasicInfo{
+		StartedAt: &info.StartedAt,
+		Duration:  &info.Duration,
 		Error:     ErrorDO2DTO(info.Error),
 	}
 }
 
-func ErrorDO2DTO(e *loop_span.Error) *common.Error {
-	return &common.Error{
-		Code: e.Code,
-		Msg:  e.Msg,
+func ErrorDO2DTO(e *loop_span.Error) *dtotrajectory.Error {
+	if e == nil {
+		return nil
+	}
+	return &dtotrajectory.Error{
+		Code: &e.Code,
+		Msg:  &e.Msg,
 	}
 }

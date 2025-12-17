@@ -179,6 +179,7 @@ func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSc
 				Description: description,
 				ContentType: convertContentTypeDTO2DO(fs.GetContentType()),
 				TextSchema:  textSchema,
+				SchemaKey:   entity.SchemaKey(fs.GetSchemaKey()),
 			}
 		}
 	}
@@ -200,6 +201,7 @@ func ConvertFieldMappingsDTO2DO(mappings []*dataset0.FieldMapping) []entity.Fiel
 				Name:        mapping.GetFieldSchema().GetName(),
 				Description: mapping.GetFieldSchema().GetDescription(),
 				ContentType: convertContentTypeDTO2DO(mapping.GetFieldSchema().GetContentType()),
+				SchemaKey:   entity.SchemaKey(mapping.GetFieldSchema().GetSchemaKey()),
 				TextSchema:  mapping.GetFieldSchema().GetTextSchema(),
 			},
 			TraceFieldKey:      mapping.GetTraceFieldKey(),
@@ -293,6 +295,10 @@ func convertDatasetItemsDO2DTO(items []*entity.DatasetItem) []*dataset0.Item {
 	for i, item := range items {
 		result[i] = &dataset0.Item{
 			Status: dataset0.ItemStatusSuccess,
+			SpanInfo: &dataset0.ExportSpanInfo{
+				TraceID: &item.TraceID,
+				SpanID:  &item.SpanID,
+			},
 		}
 
 		// 转换字段数据为 map

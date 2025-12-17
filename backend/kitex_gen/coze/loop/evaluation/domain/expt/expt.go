@@ -18,6 +18,18 @@ import (
 const (
 	PromptUserQueryFieldKey = "builtin_prompt_user_query"
 
+	ColumnEvalTargetNameActualOutput = "actual_output"
+
+	ColumnEvalTargetNameTrajectory = "trajectory"
+
+	ColumnEvalTargetNameEvalTargetTotalLatency = "eval_target_total_latency"
+
+	ColumnEvalTargetNameEvaluatorInputTokens = "eval_target_input_tokens"
+
+	ColumnEvalTargetNameEvaluatorOutputTokens = "eval_target_output_tokens"
+
+	ColumnEvalTargetNameEvaluatorTotalTokens = "eval_target_total_tokens"
+
 	ExptResultExportTypeCSV = "CSV"
 
 	CSVExportStatusUnknown = "Unknown"
@@ -492,6 +504,14 @@ const (
 	FieldType_AnnotationText FieldType = 50
 	// 使用二级key, field_key为tag_key_id, value为tag_value_id
 	FieldType_AnnotationCategorical FieldType = 51
+	// 目前使用固定key：total_latency
+	FieldType_TotalLatency FieldType = 60
+	// 目前使用固定key：input_tokens
+	FieldType_InputTokens FieldType = 61
+	// 目前使用固定key：output_tokens
+	FieldType_OutputTokens FieldType = 62
+	// 目前使用固定key：total_tokens
+	FieldType_TotalTokens FieldType = 63
 )
 
 func (p FieldType) String() string {
@@ -550,6 +570,14 @@ func (p FieldType) String() string {
 		return "AnnotationText"
 	case FieldType_AnnotationCategorical:
 		return "AnnotationCategorical"
+	case FieldType_TotalLatency:
+		return "TotalLatency"
+	case FieldType_InputTokens:
+		return "InputTokens"
+	case FieldType_OutputTokens:
+		return "OutputTokens"
+	case FieldType_TotalTokens:
+		return "TotalTokens"
 	}
 	return "<UNSET>"
 }
@@ -610,6 +638,14 @@ func FieldTypeFromString(s string) (FieldType, error) {
 		return FieldType_AnnotationText, nil
 	case "AnnotationCategorical":
 		return FieldType_AnnotationCategorical, nil
+	case "TotalLatency":
+		return FieldType_TotalLatency, nil
+	case "InputTokens":
+		return FieldType_InputTokens, nil
+	case "OutputTokens":
+		return FieldType_OutputTokens, nil
+	case "TotalTokens":
+		return FieldType_TotalTokens, nil
 	}
 	return FieldType(0), fmt.Errorf("not a valid FieldType string")
 }
@@ -11072,7 +11108,7 @@ type ExperimentTurnPayload struct {
 	// 人工标注结果结果
 	AnnotateResult_ *TurnAnnotateResult_ `thrift:"annotate_result,6,optional" frugal:"6,optional,TurnAnnotateResult_" form:"annotate_result" json:"annotate_result,omitempty" query:"annotate_result"`
 	// 轨迹分析结果
-	TrajectoryAnalysisInfo *TrajectoryAnalysisInfo `thrift:"trajectory_analysis_info,7,optional" frugal:"7,optional,TrajectoryAnalysisInfo" form:"trajectory_analysis_info" json:"trajectory_analysis_info,omitempty" query:"trajectory_analysis_info"`
+	TrajectoryAnalysisResult_ *TrajectoryAnalysisResult_ `thrift:"trajectory_analysis_result,7,optional" frugal:"7,optional,TrajectoryAnalysisResult_" form:"trajectory_analysis_result" json:"trajectory_analysis_result,omitempty" query:"trajectory_analysis_result"`
 }
 
 func NewExperimentTurnPayload() *ExperimentTurnPayload {
@@ -11149,16 +11185,16 @@ func (p *ExperimentTurnPayload) GetAnnotateResult_() (v *TurnAnnotateResult_) {
 	return p.AnnotateResult_
 }
 
-var ExperimentTurnPayload_TrajectoryAnalysisInfo_DEFAULT *TrajectoryAnalysisInfo
+var ExperimentTurnPayload_TrajectoryAnalysisResult__DEFAULT *TrajectoryAnalysisResult_
 
-func (p *ExperimentTurnPayload) GetTrajectoryAnalysisInfo() (v *TrajectoryAnalysisInfo) {
+func (p *ExperimentTurnPayload) GetTrajectoryAnalysisResult_() (v *TrajectoryAnalysisResult_) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetTrajectoryAnalysisInfo() {
-		return ExperimentTurnPayload_TrajectoryAnalysisInfo_DEFAULT
+	if !p.IsSetTrajectoryAnalysisResult_() {
+		return ExperimentTurnPayload_TrajectoryAnalysisResult__DEFAULT
 	}
-	return p.TrajectoryAnalysisInfo
+	return p.TrajectoryAnalysisResult_
 }
 func (p *ExperimentTurnPayload) SetTurnID(val int64) {
 	p.TurnID = val
@@ -11178,8 +11214,8 @@ func (p *ExperimentTurnPayload) SetSystemInfo(val *TurnSystemInfo) {
 func (p *ExperimentTurnPayload) SetAnnotateResult_(val *TurnAnnotateResult_) {
 	p.AnnotateResult_ = val
 }
-func (p *ExperimentTurnPayload) SetTrajectoryAnalysisInfo(val *TrajectoryAnalysisInfo) {
-	p.TrajectoryAnalysisInfo = val
+func (p *ExperimentTurnPayload) SetTrajectoryAnalysisResult_(val *TrajectoryAnalysisResult_) {
+	p.TrajectoryAnalysisResult_ = val
 }
 
 var fieldIDToName_ExperimentTurnPayload = map[int16]string{
@@ -11189,7 +11225,7 @@ var fieldIDToName_ExperimentTurnPayload = map[int16]string{
 	4: "evaluator_output",
 	5: "system_info",
 	6: "annotate_result",
-	7: "trajectory_analysis_info",
+	7: "trajectory_analysis_result",
 }
 
 func (p *ExperimentTurnPayload) IsSetEvalSet() bool {
@@ -11212,8 +11248,8 @@ func (p *ExperimentTurnPayload) IsSetAnnotateResult_() bool {
 	return p.AnnotateResult_ != nil
 }
 
-func (p *ExperimentTurnPayload) IsSetTrajectoryAnalysisInfo() bool {
-	return p.TrajectoryAnalysisInfo != nil
+func (p *ExperimentTurnPayload) IsSetTrajectoryAnalysisResult_() bool {
+	return p.TrajectoryAnalysisResult_ != nil
 }
 
 func (p *ExperimentTurnPayload) Read(iprot thrift.TProtocol) (err error) {
@@ -11371,11 +11407,11 @@ func (p *ExperimentTurnPayload) ReadField6(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *ExperimentTurnPayload) ReadField7(iprot thrift.TProtocol) error {
-	_field := NewTrajectoryAnalysisInfo()
+	_field := NewTrajectoryAnalysisResult_()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.TrajectoryAnalysisInfo = _field
+	p.TrajectoryAnalysisResult_ = _field
 	return nil
 }
 
@@ -11538,11 +11574,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *ExperimentTurnPayload) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTrajectoryAnalysisInfo() {
-		if err = oprot.WriteFieldBegin("trajectory_analysis_info", thrift.STRUCT, 7); err != nil {
+	if p.IsSetTrajectoryAnalysisResult_() {
+		if err = oprot.WriteFieldBegin("trajectory_analysis_result", thrift.STRUCT, 7); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.TrajectoryAnalysisInfo.Write(oprot); err != nil {
+		if err := p.TrajectoryAnalysisResult_.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -11588,7 +11624,7 @@ func (p *ExperimentTurnPayload) DeepEqual(ano *ExperimentTurnPayload) bool {
 	if !p.Field6DeepEqual(ano.AnnotateResult_) {
 		return false
 	}
-	if !p.Field7DeepEqual(ano.TrajectoryAnalysisInfo) {
+	if !p.Field7DeepEqual(ano.TrajectoryAnalysisResult_) {
 		return false
 	}
 	return true
@@ -11636,70 +11672,70 @@ func (p *ExperimentTurnPayload) Field6DeepEqual(src *TurnAnnotateResult_) bool {
 	}
 	return true
 }
-func (p *ExperimentTurnPayload) Field7DeepEqual(src *TrajectoryAnalysisInfo) bool {
+func (p *ExperimentTurnPayload) Field7DeepEqual(src *TrajectoryAnalysisResult_) bool {
 
-	if !p.TrajectoryAnalysisInfo.DeepEqual(src) {
+	if !p.TrajectoryAnalysisResult_.DeepEqual(src) {
 		return false
 	}
 	return true
 }
 
-type TrajectoryAnalysisInfo struct {
+type TrajectoryAnalysisResult_ struct {
 	RecordID *int64                 `thrift:"record_id,1,optional" frugal:"1,optional,i64" json:"record_id" form:"record_id" query:"record_id"`
 	Status   *InsightAnalysisStatus `thrift:"Status,2,optional" frugal:"2,optional,string" form:"Status" json:"Status,omitempty" query:"Status"`
 }
 
-func NewTrajectoryAnalysisInfo() *TrajectoryAnalysisInfo {
-	return &TrajectoryAnalysisInfo{}
+func NewTrajectoryAnalysisResult_() *TrajectoryAnalysisResult_ {
+	return &TrajectoryAnalysisResult_{}
 }
 
-func (p *TrajectoryAnalysisInfo) InitDefault() {
+func (p *TrajectoryAnalysisResult_) InitDefault() {
 }
 
-var TrajectoryAnalysisInfo_RecordID_DEFAULT int64
+var TrajectoryAnalysisResult__RecordID_DEFAULT int64
 
-func (p *TrajectoryAnalysisInfo) GetRecordID() (v int64) {
+func (p *TrajectoryAnalysisResult_) GetRecordID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetRecordID() {
-		return TrajectoryAnalysisInfo_RecordID_DEFAULT
+		return TrajectoryAnalysisResult__RecordID_DEFAULT
 	}
 	return *p.RecordID
 }
 
-var TrajectoryAnalysisInfo_Status_DEFAULT InsightAnalysisStatus
+var TrajectoryAnalysisResult__Status_DEFAULT InsightAnalysisStatus
 
-func (p *TrajectoryAnalysisInfo) GetStatus() (v InsightAnalysisStatus) {
+func (p *TrajectoryAnalysisResult_) GetStatus() (v InsightAnalysisStatus) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetStatus() {
-		return TrajectoryAnalysisInfo_Status_DEFAULT
+		return TrajectoryAnalysisResult__Status_DEFAULT
 	}
 	return *p.Status
 }
-func (p *TrajectoryAnalysisInfo) SetRecordID(val *int64) {
+func (p *TrajectoryAnalysisResult_) SetRecordID(val *int64) {
 	p.RecordID = val
 }
-func (p *TrajectoryAnalysisInfo) SetStatus(val *InsightAnalysisStatus) {
+func (p *TrajectoryAnalysisResult_) SetStatus(val *InsightAnalysisStatus) {
 	p.Status = val
 }
 
-var fieldIDToName_TrajectoryAnalysisInfo = map[int16]string{
+var fieldIDToName_TrajectoryAnalysisResult_ = map[int16]string{
 	1: "record_id",
 	2: "Status",
 }
 
-func (p *TrajectoryAnalysisInfo) IsSetRecordID() bool {
+func (p *TrajectoryAnalysisResult_) IsSetRecordID() bool {
 	return p.RecordID != nil
 }
 
-func (p *TrajectoryAnalysisInfo) IsSetStatus() bool {
+func (p *TrajectoryAnalysisResult_) IsSetStatus() bool {
 	return p.Status != nil
 }
 
-func (p *TrajectoryAnalysisInfo) Read(iprot thrift.TProtocol) (err error) {
+func (p *TrajectoryAnalysisResult_) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -11752,7 +11788,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TrajectoryAnalysisInfo[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TrajectoryAnalysisResult_[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -11762,7 +11798,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *TrajectoryAnalysisInfo) ReadField1(iprot thrift.TProtocol) error {
+func (p *TrajectoryAnalysisResult_) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -11773,7 +11809,7 @@ func (p *TrajectoryAnalysisInfo) ReadField1(iprot thrift.TProtocol) error {
 	p.RecordID = _field
 	return nil
 }
-func (p *TrajectoryAnalysisInfo) ReadField2(iprot thrift.TProtocol) error {
+func (p *TrajectoryAnalysisResult_) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *InsightAnalysisStatus
 	if v, err := iprot.ReadString(); err != nil {
@@ -11785,9 +11821,9 @@ func (p *TrajectoryAnalysisInfo) ReadField2(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *TrajectoryAnalysisInfo) Write(oprot thrift.TProtocol) (err error) {
+func (p *TrajectoryAnalysisResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("TrajectoryAnalysisInfo"); err != nil {
+	if err = oprot.WriteStructBegin("TrajectoryAnalysisResult"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -11817,7 +11853,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *TrajectoryAnalysisInfo) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *TrajectoryAnalysisResult_) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetRecordID() {
 		if err = oprot.WriteFieldBegin("record_id", thrift.I64, 1); err != nil {
 			goto WriteFieldBeginError
@@ -11835,7 +11871,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *TrajectoryAnalysisInfo) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *TrajectoryAnalysisResult_) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetStatus() {
 		if err = oprot.WriteFieldBegin("Status", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -11854,15 +11890,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
-func (p *TrajectoryAnalysisInfo) String() string {
+func (p *TrajectoryAnalysisResult_) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("TrajectoryAnalysisInfo(%+v)", *p)
+	return fmt.Sprintf("TrajectoryAnalysisResult_(%+v)", *p)
 
 }
 
-func (p *TrajectoryAnalysisInfo) DeepEqual(ano *TrajectoryAnalysisInfo) bool {
+func (p *TrajectoryAnalysisResult_) DeepEqual(ano *TrajectoryAnalysisResult_) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -11877,7 +11913,7 @@ func (p *TrajectoryAnalysisInfo) DeepEqual(ano *TrajectoryAnalysisInfo) bool {
 	return true
 }
 
-func (p *TrajectoryAnalysisInfo) Field1DeepEqual(src *int64) bool {
+func (p *TrajectoryAnalysisResult_) Field1DeepEqual(src *int64) bool {
 
 	if p.RecordID == src {
 		return true
@@ -11889,7 +11925,7 @@ func (p *TrajectoryAnalysisInfo) Field1DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *TrajectoryAnalysisInfo) Field2DeepEqual(src *InsightAnalysisStatus) bool {
+func (p *TrajectoryAnalysisResult_) Field2DeepEqual(src *InsightAnalysisStatus) bool {
 
 	if p.Status == src {
 		return true
@@ -14063,6 +14099,354 @@ func (p *ExptAggregateResult_) Field4DeepEqual(src map[int64]*AnnotationAggregat
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+
+type EvalTargetAggregateResult_ struct {
+	TargetID          int64                `thrift:"target_id,1,required" frugal:"1,required,i64" json:"target_id" form:"target_id,required" query:"target_id,required"`
+	AggregatorResults []*AggregatorResult_ `thrift:"aggregator_results,2,optional" frugal:"2,optional,list<AggregatorResult_>" form:"aggregator_results" json:"aggregator_results,omitempty" query:"aggregator_results"`
+	Name              *string              `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
+}
+
+func NewEvalTargetAggregateResult_() *EvalTargetAggregateResult_ {
+	return &EvalTargetAggregateResult_{}
+}
+
+func (p *EvalTargetAggregateResult_) InitDefault() {
+}
+
+func (p *EvalTargetAggregateResult_) GetTargetID() (v int64) {
+	if p != nil {
+		return p.TargetID
+	}
+	return
+}
+
+var EvalTargetAggregateResult__AggregatorResults_DEFAULT []*AggregatorResult_
+
+func (p *EvalTargetAggregateResult_) GetAggregatorResults() (v []*AggregatorResult_) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAggregatorResults() {
+		return EvalTargetAggregateResult__AggregatorResults_DEFAULT
+	}
+	return p.AggregatorResults
+}
+
+var EvalTargetAggregateResult__Name_DEFAULT string
+
+func (p *EvalTargetAggregateResult_) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return EvalTargetAggregateResult__Name_DEFAULT
+	}
+	return *p.Name
+}
+func (p *EvalTargetAggregateResult_) SetTargetID(val int64) {
+	p.TargetID = val
+}
+func (p *EvalTargetAggregateResult_) SetAggregatorResults(val []*AggregatorResult_) {
+	p.AggregatorResults = val
+}
+func (p *EvalTargetAggregateResult_) SetName(val *string) {
+	p.Name = val
+}
+
+var fieldIDToName_EvalTargetAggregateResult_ = map[int16]string{
+	1: "target_id",
+	2: "aggregator_results",
+	3: "name",
+}
+
+func (p *EvalTargetAggregateResult_) IsSetAggregatorResults() bool {
+	return p.AggregatorResults != nil
+}
+
+func (p *EvalTargetAggregateResult_) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *EvalTargetAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetTargetID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetTargetID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetTargetID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvalTargetAggregateResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_EvalTargetAggregateResult_[fieldId]))
+}
+
+func (p *EvalTargetAggregateResult_) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.TargetID = _field
+	return nil
+}
+func (p *EvalTargetAggregateResult_) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*AggregatorResult_, 0, size)
+	values := make([]AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.AggregatorResults = _field
+	return nil
+}
+func (p *EvalTargetAggregateResult_) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+
+func (p *EvalTargetAggregateResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvalTargetAggregateResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvalTargetAggregateResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("target_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.TargetID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvalTargetAggregateResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAggregatorResults() {
+		if err = oprot.WriteFieldBegin("aggregator_results", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.AggregatorResults)); err != nil {
+			return err
+		}
+		for _, v := range p.AggregatorResults {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvalTargetAggregateResult_) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *EvalTargetAggregateResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvalTargetAggregateResult_(%+v)", *p)
+
+}
+
+func (p *EvalTargetAggregateResult_) DeepEqual(ano *EvalTargetAggregateResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TargetID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.AggregatorResults) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Name) {
+		return false
+	}
+	return true
+}
+
+func (p *EvalTargetAggregateResult_) Field1DeepEqual(src int64) bool {
+
+	if p.TargetID != src {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetAggregateResult_) Field2DeepEqual(src []*AggregatorResult_) bool {
+
+	if len(p.AggregatorResults) != len(src) {
+		return false
+	}
+	for i, v := range p.AggregatorResults {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *EvalTargetAggregateResult_) Field3DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
 	}
 	return true
 }
@@ -20452,6 +20836,264 @@ func (p *ExptInsightAnalysisFeedbackComment) Field5DeepEqual(src string) bool {
 func (p *ExptInsightAnalysisFeedbackComment) Field6DeepEqual(src *common.BaseInfo) bool {
 
 	if !p.BaseInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExptInsightAnalysisFeedbackVote struct {
+	ID                 *int64              `thrift:"id,1,optional" frugal:"1,optional,i64" json:"comment_id" form:"id" query:"id"`
+	FeedbackActionType *FeedbackActionType `thrift:"feedback_action_type,2,optional" frugal:"2,optional,string" form:"feedback_action_type" json:"feedback_action_type,omitempty" query:"feedback_action_type"`
+}
+
+func NewExptInsightAnalysisFeedbackVote() *ExptInsightAnalysisFeedbackVote {
+	return &ExptInsightAnalysisFeedbackVote{}
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) InitDefault() {
+}
+
+var ExptInsightAnalysisFeedbackVote_ID_DEFAULT int64
+
+func (p *ExptInsightAnalysisFeedbackVote) GetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetID() {
+		return ExptInsightAnalysisFeedbackVote_ID_DEFAULT
+	}
+	return *p.ID
+}
+
+var ExptInsightAnalysisFeedbackVote_FeedbackActionType_DEFAULT FeedbackActionType
+
+func (p *ExptInsightAnalysisFeedbackVote) GetFeedbackActionType() (v FeedbackActionType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFeedbackActionType() {
+		return ExptInsightAnalysisFeedbackVote_FeedbackActionType_DEFAULT
+	}
+	return *p.FeedbackActionType
+}
+func (p *ExptInsightAnalysisFeedbackVote) SetID(val *int64) {
+	p.ID = val
+}
+func (p *ExptInsightAnalysisFeedbackVote) SetFeedbackActionType(val *FeedbackActionType) {
+	p.FeedbackActionType = val
+}
+
+var fieldIDToName_ExptInsightAnalysisFeedbackVote = map[int16]string{
+	1: "id",
+	2: "feedback_action_type",
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) IsSetID() bool {
+	return p.ID != nil
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) IsSetFeedbackActionType() bool {
+	return p.FeedbackActionType != nil
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptInsightAnalysisFeedbackVote[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ID = _field
+	return nil
+}
+func (p *ExptInsightAnalysisFeedbackVote) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *FeedbackActionType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FeedbackActionType = _field
+	return nil
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExptInsightAnalysisFeedbackVote"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetID() {
+		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ExptInsightAnalysisFeedbackVote) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFeedbackActionType() {
+		if err = oprot.WriteFieldBegin("feedback_action_type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FeedbackActionType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExptInsightAnalysisFeedbackVote(%+v)", *p)
+
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) DeepEqual(ano *ExptInsightAnalysisFeedbackVote) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.FeedbackActionType) {
+		return false
+	}
+	return true
+}
+
+func (p *ExptInsightAnalysisFeedbackVote) Field1DeepEqual(src *int64) bool {
+
+	if p.ID == src {
+		return true
+	} else if p.ID == nil || src == nil {
+		return false
+	}
+	if *p.ID != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptInsightAnalysisFeedbackVote) Field2DeepEqual(src *FeedbackActionType) bool {
+
+	if p.FeedbackActionType == src {
+		return true
+	} else if p.FeedbackActionType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FeedbackActionType, *src) != 0 {
 		return false
 	}
 	return true

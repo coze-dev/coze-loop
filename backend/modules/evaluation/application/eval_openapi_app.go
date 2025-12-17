@@ -55,6 +55,10 @@ type EvalOpenAPIApplication struct {
 	evaluatorService service.EvaluatorService
 }
 
+func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest) (r *openapi.GetEvaluationItemFieldOApiResponse, err error) {
+	return nil, nil
+}
+
 func NewEvalOpenAPIApplication(asyncRepo repo.IEvalAsyncRepo, publisher events.ExptEventPublisher,
 	targetSvc service.IEvalTargetService,
 	auth rpc.IAuthProvider,
@@ -643,69 +647,6 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 	}, nil
 }
 
-func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest) (r *openapi.GetEvaluationItemFieldOApiResponse, err error) {
-	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	defer func() {
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
-	}()
-
-	// 参数校验
-	if req == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
-	}
-	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, req.WorkspaceID, req.GetEvaluationSetID(), gptr.Of(true))
-	if err != nil {
-		return nil, err
-	}
-	if set == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("errno set not found"))
-	}
-	var ownerID *string
-	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
-		ownerID = set.BaseInfo.CreatedBy.UserID
-	}
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(set.ID, 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.ReadItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
-		OwnerID:         ownerID,
-		ResourceSpaceID: set.SpaceID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
-		SpaceID:         req.GetWorkspaceID(),
-		EvaluationSetID: req.GetEvaluationSetID(),
-		VersionID:       req.VersionID,
-		ItemIDs:         []int64{req.GetItemID()},
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(items) == 0 || items[0] == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("item not found"))
-	}
-	// 调用domain服务
-	fieldData, err := e.evaluationSetItemService.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
-		SpaceID:         req.GetWorkspaceID(),
-		EvaluationSetID: req.GetEvaluationSetID(),
-		ItemPK:          items[0].ID,
-		FieldName:       req.GetFieldName(),
-		TurnID:          req.TurnID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// 构建响应
-	return &openapi.GetEvaluationItemFieldOApiResponse{
-		FieldData: evaluation_set.OpenAPIFieldDataDO2DTO(fieldData),
-	}, nil
-}
-
 func (e *EvalOpenAPIApplication) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -930,18 +871,24 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 		Page:           entity.NewPage(int(req.GetPageNum()), int(req.GetPageSize())),
 		UseAccelerator: true,
 	}
-	columnEvaluators, _, columnEvalSetFields, _, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
+
+	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err
 	}
-	return &openapi.ListExperimentResultOApiResponse{
+
+	res := &openapi.ListExperimentResultOApiResponse{
 		Data: &openapi.ListExperimentResultOpenAPIData{
-			ColumnEvalSetFields: experiment_convertor.OpenAPIColumnEvalSetFieldsDO2DTOs(columnEvalSetFields),
-			ColumnEvaluators:    experiment_convertor.OpenAPIColumnEvaluatorsDO2DTOs(columnEvaluators),
-			Total:               gptr.Of(total),
-			ItemResults:         experiment_convertor.OpenAPIItemResultsDO2DTOs(itemResults),
+			ColumnEvalSetFields: experiment_convertor.OpenAPIColumnEvalSetFieldsDO2DTOs(result.ColumnEvalSetFields),
+			ColumnEvaluators:    experiment_convertor.OpenAPIColumnEvaluatorsDO2DTOs(result.ColumnEvaluators),
+			Total:               gptr.Of(result.Total),
+			ItemResults:         experiment_convertor.OpenAPIItemResultsDO2DTOs(result.ItemResults),
 		},
-	}, nil
+	}
+	if len(result.ExptColumnsEvalTarget) > 0 {
+		res.Data.ColumnEvalTargets = experiment_convertor.OpenAPIColumnEvalTargetDO2DTOs(result.ExptColumnsEvalTarget[0].Columns)
+	}
+	return res, nil
 }
 
 func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {

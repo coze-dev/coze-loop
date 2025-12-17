@@ -460,11 +460,12 @@ func TestExptTurnResultFilterAccelerator_HasFilters(t *testing.T) {
 				ItemRunStatus:           []*FieldFilter{{Key: "status1"}},
 				TurnRunStatus:           []*FieldFilter{{Key: "turn1"}},
 				MapCond: &ExptTurnResultFilterMapCond{
-					EvalTargetDataFilters:   []*FieldFilter{{Key: "target1"}},
-					EvaluatorScoreFilters:   []*FieldFilter{{Key: "score1"}},
-					AnnotationFloatFilters:  []*FieldFilter{{Key: "float1"}},
-					AnnotationBoolFilters:   []*FieldFilter{{Key: "bool1"}},
-					AnnotationStringFilters: []*FieldFilter{{Key: "string1"}},
+					EvalTargetDataFilters:    []*FieldFilter{{Key: "target1"}},
+					EvaluatorScoreFilters:    []*FieldFilter{{Key: "score1"}},
+					AnnotationFloatFilters:   []*FieldFilter{{Key: "float1"}},
+					AnnotationBoolFilters:    []*FieldFilter{{Key: "bool1"}},
+					AnnotationStringFilters:  []*FieldFilter{{Key: "string1"}},
+					EvalTargetMetricsFilters: []*FieldFilter{{Key: "total_latency"}},
 				},
 				ItemSnapshotCond: &ItemSnapshotFilter{
 					BoolMapFilters:   []*FieldFilter{{Key: "snapBool"}},
@@ -500,4 +501,61 @@ func TestExptTurnResultFilterAccelerator_HasFilters_NilPointer(t *testing.T) {
 	assert.Panics(t, func() {
 		filter.HasFilters()
 	}, "Calling HasFilters on nil pointer should panic")
+}
+
+func TestExptTurnResultFilterAccelerator_HasFilters_EvalTargetMetricsFilters(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter *ExptTurnResultFilterAccelerator
+		want   bool
+	}{
+		{
+			name: "has EvalTargetMetricsFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*FieldFilter{
+						{Key: "total_latency"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "has multiple EvalTargetMetricsFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*FieldFilter{
+						{Key: "total_latency"},
+						{Key: "input_tokens"},
+						{Key: "output_tokens"},
+						{Key: "total_tokens"},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "empty EvalTargetMetricsFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*FieldFilter{},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "nil MapCond with EvalTargetMetricsFilters",
+			filter: &ExptTurnResultFilterAccelerator{
+				MapCond: nil,
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.filter.HasFilters()
+			assert.Equal(t, tt.want, got, "HasFilters() = %v, want %v", got, tt.want)
+		})
+	}
 }

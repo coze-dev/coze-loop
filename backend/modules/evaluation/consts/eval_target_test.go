@@ -17,14 +17,14 @@ func TestInputFieldKeyPromptUserQuery(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "verify InputFieldKeyPromptUserQuery constant value",
+			name:     "verify EvalTargetInputFieldKeyPromptUserQuery constant value",
 			expected: "builtin_prompt_user_query",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, InputFieldKeyPromptUserQuery)
+			assert.Equal(t, tt.expected, EvalTargetInputFieldKeyPromptUserQuery)
 		})
 	}
 }
@@ -42,8 +42,8 @@ func TestInputFieldKeyPromptUserQueryConsistency(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, InputFieldKeyPromptUserQuery)
-			assert.Equal(t, InputFieldKeyPromptUserQuery, expt.PromptUserQueryFieldKey)
+			assert.Equal(t, tt.expected, EvalTargetInputFieldKeyPromptUserQuery)
+			assert.Equal(t, EvalTargetInputFieldKeyPromptUserQuery, expt.PromptUserQueryFieldKey)
 		})
 	}
 }
