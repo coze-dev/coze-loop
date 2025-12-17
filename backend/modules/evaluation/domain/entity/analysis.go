@@ -70,9 +70,15 @@ type AgentTrajectoryAnalysisResult struct {
 }
 
 type TrajectoryAnalysisIssue struct {
-	Type       string `json:"type,omitempty"`
-	Desc       string `json:"desc,omitempty"`
-	Suggestion string `json:"suggestion,omitempty"`
+	Type       string        `json:"type,omitempty"`
+	Desc       string        `json:"desc,omitempty"`
+	SourceList []*SourceInfo `json:"source_list,omitempty"`
+	Suggestion string        `json:"suggestion,omitempty"`
+}
+
+type SourceInfo struct {
+	StepId string `json:"step_id,omitempty"`
+	Desc   string `json:"desc,omitempty"`
 }
 
 type AnalysisEvent struct {
