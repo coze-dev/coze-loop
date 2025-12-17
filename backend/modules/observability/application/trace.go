@@ -10,6 +10,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
+	timeutil "github.com/coze-dev/coze-loop/backend/pkg/time"
 
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
@@ -89,21 +90,6 @@ type TraceApplication struct {
 	evalSvc            rpc.IEvaluatorRPCAdapter
 	userSvc            rpc.IUserProvider
 	tagSvc             rpc.ITagRPCAdapter
-}
-
-func (t *TraceApplication) UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest) (r *trace.UpsertTrajectoryConfigResponse, err error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (t *TraceApplication) GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest) (r *trace.GetTrajectoryConfigResponse, err error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest) (r *trace.ListTrajectoryResponse, err error) {
-	// TODO implement me
-	panic("implement me")
 }
 
 func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
@@ -1099,4 +1085,93 @@ func (t *TraceApplication) validateExtractSpanInfoReq(ctx context.Context, req *
 		req.SetEndTime(lo.ToPtr(newEndTime + time.Minute.Milliseconds()))
 	}
 	return nil
+}
+
+func (t *TraceApplication) UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest) (r *trace.UpsertTrajectoryConfigResponse, err error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	if userID == "" {
+		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+
+	if err := t.traceService.UpsertTrajectoryConfig(ctx, &service.UpsertTrajectoryConfigRequest{
+		WorkspaceID: req.WorkspaceID,
+		Filters:     tconv.FilterFieldsDTO2DO(req.Filters),
+		UserID:      userID,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &trace.UpsertTrajectoryConfigResponse{}, nil
+}
+
+func (t *TraceApplication) GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest) (r *trace.GetTrajectoryConfigResponse, err error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	confResp, err := t.traceService.GetTrajectoryConfig(ctx, &service.GetTrajectoryConfigRequest{
+		WorkspaceID: req.WorkspaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if confResp == nil {
+		return &trace.GetTrajectoryConfigResponse{}, nil
+	}
+
+	return &trace.GetTrajectoryConfigResponse{
+		Filters: tconv.FilterFieldsDO2DTO(confResp.Filters),
+	}, nil
+}
+
+func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest) (r *trace.ListTrajectoryResponse, err error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+	if req.StartTime == nil {
+		userID := session.UserIDInCtxOrEmpty(ctx)
+		if userID == "" {
+			return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+		}
+		finalStartTime := t.traceConfig.GetTraceDataMaxDurationDay(ctx, &req.PlatformType)
+		benefitRes, err := t.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+			ConnectorUID: userID,
+			SpaceID:      req.GetWorkspaceID(),
+		})
+		if err == nil && benefitRes != nil {
+			finalStartTime = time.Now().UnixMilli() - timeutil.Day2MillSec(int(benefitRes.StorageDuration))
+		}
+
+		req.SetStartTime(ptr.Of(finalStartTime))
+	}
+
+	resp, err := t.traceService.ListTrajectory(ctx, &service.ListTrajectoryRequest{
+		PlatformType: loop_span.PlatformType(req.PlatformType),
+		WorkspaceID:  req.WorkspaceID,
+		TraceIds:     req.TraceIds,
+		StartTime:    req.StartTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return &trace.ListTrajectoryResponse{}, nil
+	}
+
+	return &trace.ListTrajectoryResponse{
+		Trajectories: tconv.TrajectoriesDO2DTO(resp.Trajectories),
+	}, nil
 }

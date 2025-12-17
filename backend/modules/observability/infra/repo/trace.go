@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
@@ -22,6 +23,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/ck"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/dao/converter"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
+	convertor2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/convertor"
+	model2 "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
 	redis_dao "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -70,9 +74,11 @@ func NewTraceRepoImpl(
 	storageProvider storage.IStorageProvider,
 	spanRedisDao redis_dao.ISpansRedisDao,
 	spanProducer mq.ISpanProducer,
+	trajectoryConfDao mysql.ITrajectoryConfigDao,
+	idGenerator idgen.IIDGenerator,
 	opts ...TraceRepoOption,
 ) (repo.ITraceRepo, error) {
-	impl, err := newTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, opts...)
+	impl, err := newTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -81,10 +87,11 @@ func NewTraceRepoImpl(
 
 func NewTraceMetricCKRepoImpl(
 	traceConfig config.ITraceConfig,
+	idGenerator idgen.IIDGenerator,
 	storageProvider storage.IStorageProvider,
 	opts ...TraceRepoOption,
 ) (metric_repo.IMetricRepo, error) {
-	return newTraceRepoImpl(traceConfig, storageProvider, nil, nil, opts...)
+	return newTraceRepoImpl(traceConfig, storageProvider, nil, nil, nil, idGenerator, opts...)
 }
 
 func newTraceRepoImpl(
@@ -92,15 +99,19 @@ func newTraceRepoImpl(
 	storageProvider storage.IStorageProvider,
 	spanRedisDao redis_dao.ISpansRedisDao,
 	spanProducer mq.ISpanProducer,
+	trajectoryConfDao mysql.ITrajectoryConfigDao,
+	idGenerator idgen.IIDGenerator,
 	opts ...TraceRepoOption,
 ) (*TraceRepoImpl, error) {
 	impl := &TraceRepoImpl{
-		traceConfig:     traceConfig,
-		storageProvider: storageProvider,
-		spanDaos:        make(map[string]dao.ISpansDao),
-		annoDaos:        make(map[string]dao.IAnnotationDao),
-		spanRedisDao:    spanRedisDao,
-		spanProducer:    spanProducer,
+		traceConfig:       traceConfig,
+		storageProvider:   storageProvider,
+		spanDaos:          make(map[string]dao.ISpansDao),
+		annoDaos:          make(map[string]dao.IAnnotationDao),
+		spanRedisDao:      spanRedisDao,
+		spanProducer:      spanProducer,
+		trajectoryConfDao: trajectoryConfDao,
+		idGenerator:       idGenerator,
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -111,12 +122,14 @@ func newTraceRepoImpl(
 }
 
 type TraceRepoImpl struct {
-	traceConfig     config.ITraceConfig
-	storageProvider storage.IStorageProvider
-	spanDaos        map[string]dao.ISpansDao
-	annoDaos        map[string]dao.IAnnotationDao
-	spanRedisDao    redis_dao.ISpansRedisDao
-	spanProducer    mq.ISpanProducer
+	traceConfig       config.ITraceConfig
+	storageProvider   storage.IStorageProvider
+	spanDaos          map[string]dao.ISpansDao
+	annoDaos          map[string]dao.IAnnotationDao
+	spanRedisDao      redis_dao.ISpansRedisDao
+	spanProducer      mq.ISpanProducer
+	trajectoryConfDao mysql.ITrajectoryConfigDao
+	idGenerator       idgen.IIDGenerator
 }
 
 func (t *TraceRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error) {
@@ -126,6 +139,45 @@ func (t *TraceRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpa
 type PageToken struct {
 	StartTime int64  `json:"StartTime"`
 	SpanID    string `json:"SpanID"`
+}
+
+func (t *TraceRepoImpl) UpsertTrajectoryConfig(ctx context.Context, param *repo.UpsertTrajectoryConfigParam) error {
+	trajectoryConfig, err := t.trajectoryConfDao.GetTrajectoryConfig(ctx, param.WorkspaceId)
+	if err != nil {
+		return err
+	}
+
+	if trajectoryConfig == nil {
+		id, err := t.idGenerator.GenID(ctx)
+		if err != nil {
+			return err
+		}
+		traConfPo := &model2.ObservabilityTrajectoryConfig{
+			ID:          id,
+			WorkspaceID: param.WorkspaceId,
+			Filter:      &param.Filters,
+			CreatedAt:   time.Now(),
+			CreatedBy:   param.UserID,
+			UpdatedAt:   time.Now(),
+			UpdatedBy:   param.UserID,
+		}
+		return t.trajectoryConfDao.CreateTrajectoryConfig(ctx, traConfPo)
+	}
+
+	trajectoryConfig.Filter = &param.Filters
+	trajectoryConfig.UpdatedAt = time.Now()
+	trajectoryConfig.UpdatedBy = param.UserID
+	trajectoryConfig.IsDeleted = false
+	return t.trajectoryConfDao.UpdateTrajectoryConfig(ctx, trajectoryConfig)
+}
+
+func (t *TraceRepoImpl) GetTrajectoryConfig(ctx context.Context, param repo.GetTrajectoryConfigParam) (*entity.TrajectoryConfig, error) {
+	trajectoryConfig, err := t.trajectoryConfDao.GetTrajectoryConfig(ctx, param.WorkspaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertor2.TrajectoryConfigPO2DO(trajectoryConfig), nil
 }
 
 func (t *TraceRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTraceParam) error {
@@ -228,6 +280,33 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 	}
 	result.Spans = result.Spans.Uniq()
 	return result, nil
+}
+
+func (t *TraceRepoImpl) ListSpansRepeat(ctx context.Context, req *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+	if req == nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("nil request"))
+	}
+
+	clonedReq := *req
+	totalSpans := loop_span.SpanList{}
+
+	for {
+		resp, err := t.ListSpans(ctx, &clonedReq)
+		if err != nil {
+			return nil, err
+		}
+		totalSpans = append(totalSpans, resp.Spans...)
+		if !resp.HasMore || resp.PageToken == "" {
+			break
+		}
+		clonedReq.PageToken = resp.PageToken
+	}
+
+	return &repo.ListSpansResult{
+		Spans:     totalSpans.Uniq(),
+		PageToken: "",
+		HasMore:   false,
+	}, nil
 }
 
 func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (loop_span.SpanList, error) {

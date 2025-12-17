@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/bytedance/gg/gptr"
@@ -256,6 +257,83 @@ type ExtractSpanInfoResp struct {
 	SpanInfos []*trace.SpanInfo
 }
 
+type UpsertTrajectoryConfigRequest struct {
+	WorkspaceID int64
+	Filters     *loop_span.FilterFields
+	UserID      string
+}
+
+type GetTrajectoryConfigRequest struct {
+	WorkspaceID int64
+}
+
+type GetTrajectoryConfigResponse struct {
+	Filters *loop_span.FilterFields
+}
+
+func (t *GetTrajectoryConfigResponse) GetFiltersWithDefaultFilter() *loop_span.FilterFields {
+	filters := &loop_span.FilterFields{ // 根节点必定保留
+		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumOr),
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName:  loop_span.SpanFieldParentID,
+				FieldType:  loop_span.FieldTypeString,
+				Values:     []string{"", "0"},
+				QueryType:  lo.ToPtr(loop_span.QueryTypeEnumIn),
+				QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumOr),
+			},
+		},
+	}
+	if t.Filters != nil {
+		filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
+			SubFilter: t.Filters,
+		})
+	} else { // 空间从未设置轨迹规则，使用默认规则
+		filters.FilterFields = append(filters.FilterFields, &loop_span.FilterField{
+			SubFilter: &loop_span.FilterFields{
+				QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumOr),
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: loop_span.SpanFieldSpanType,
+						FieldType: loop_span.FieldTypeString,
+						Values:    []string{"model", "agent", "tool", "graph"},
+						QueryType: lo.ToPtr(loop_span.QueryTypeEnumIn),
+					},
+				},
+			},
+		})
+	}
+
+	// EvalTarget特殊逻辑，需要排除EvalTarget
+	resFilter := &loop_span.FilterFields{
+		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldSpanName,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{"EvalTarget"},
+				QueryType: lo.ToPtr(loop_span.QueryTypeEnumNotEq),
+			},
+			{
+				SubFilter: filters,
+			},
+		},
+	}
+
+	return resFilter
+}
+
+type ListTrajectoryRequest struct {
+	PlatformType loop_span.PlatformType
+	WorkspaceID  int64
+	TraceIds     []string
+	StartTime    *int64
+}
+
+type ListTrajectoryResponse struct {
+	Trajectories []*loop_span.Trajectory
+}
+
 type IAnnotationEvent interface {
 	Send(ctx context.Context, msg *entity.AnnotationEvent) error
 }
@@ -280,6 +358,11 @@ type ITraceService interface {
 	ChangeEvaluatorScore(ctx context.Context, req *ChangeEvaluatorScoreRequest) (*ChangeEvaluatorScoreResp, error)
 	ListAnnotationEvaluators(ctx context.Context, req *ListAnnotationEvaluatorsRequest) (*ListAnnotationEvaluatorsResp, error)
 	ExtractSpanInfo(ctx context.Context, req *ExtractSpanInfoRequest) (*ExtractSpanInfoResp, error)
+	UpsertTrajectoryConfig(ctx context.Context, req *UpsertTrajectoryConfigRequest) error
+	GetTrajectoryConfig(ctx context.Context, req *GetTrajectoryConfigRequest) (*GetTrajectoryConfigResponse, error)
+	ListTrajectory(ctx context.Context, req *ListTrajectoryRequest) (*ListTrajectoryResponse, error)
+	GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64,
+		platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error)
 }
 
 func NewTraceServiceImpl(
@@ -505,6 +588,51 @@ func (r *TraceServiceImpl) orderPreSpans(preAndCurrentSpans []*loop_span.Span, r
 	}
 
 	return orderSpans
+}
+
+func (r *TraceServiceImpl) ListTrajectory(ctx context.Context, req *ListTrajectoryRequest) (*ListTrajectoryResponse, error) {
+	if req.StartTime == nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("start_time is required"))
+	}
+	trajectoryMap, err := r.GetTrajectories(ctx, req.WorkspaceID, req.TraceIds, *req.StartTime, time.Now().UnixMilli(), req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+	return &ListTrajectoryResponse{
+		Trajectories: lo.MapToSlice(trajectoryMap, func(key string, value *loop_span.Trajectory) *loop_span.Trajectory {
+			return value
+		}),
+	}, nil
+}
+
+func (r *TraceServiceImpl) GetTrajectoryConfig(ctx context.Context, req *GetTrajectoryConfigRequest) (*GetTrajectoryConfigResponse, error) {
+	trajectoryConfig, err := r.traceRepo.GetTrajectoryConfig(ctx, repo.GetTrajectoryConfigParam{WorkspaceId: req.WorkspaceID})
+	if err != nil {
+		return nil, err
+	}
+	if trajectoryConfig == nil || trajectoryConfig.Filter == nil {
+		return &GetTrajectoryConfigResponse{}, nil
+	}
+	return &GetTrajectoryConfigResponse{
+		Filters: trajectoryConfig.Filter,
+	}, nil
+}
+
+func (r *TraceServiceImpl) UpsertTrajectoryConfig(ctx context.Context, req *UpsertTrajectoryConfigRequest) error {
+	marshalFilters, err := json.MarshalString(req.Filters)
+	if err != nil {
+		return err
+	}
+
+	if err := r.traceRepo.UpsertTrajectoryConfig(ctx, &repo.UpsertTrajectoryConfigParam{
+		WorkspaceId: req.WorkspaceID,
+		Filters:     marshalFilters,
+		UserID:      req.UserID,
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
@@ -1574,6 +1702,203 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 	return &ExtractSpanInfoResp{
 		SpanInfos: spanInfos,
 	}, nil
+}
+
+func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
+	tenant, err := r.tenantProvider.GetTenantsByPlatformType(ctx, platformType)
+	if err != nil {
+		return nil, err
+	}
+
+	trajectoryConfig, err := r.GetTrajectoryConfig(ctx, &GetTrajectoryConfigRequest{WorkspaceID: workspaceID})
+	if err != nil {
+		logs.CtxError(ctx, "Failed to get trajectory config, workspace_id:%d, err:%+v", workspaceID, err)
+		return nil, err
+	}
+
+	allSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
+		Tenants: tenant,
+		Filters: &loop_span.FilterFields{
+			FilterFields: []*loop_span.FilterField{
+				{
+					FieldName: "trace_id",
+					FieldType: loop_span.FieldTypeString,
+					Values:    traceIDs,
+					QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+				},
+			},
+		},
+		StartAt:            startTime,
+		EndAt:              endTime,
+		Limit:              1000,
+		NotQueryAnnotation: true,
+		SelectColumns:      []string{loop_span.SpanFieldTraceId, loop_span.SpanFieldSpanId, loop_span.SpanFieldParentID, loop_span.SpanFieldSpaceId, loop_span.SpanFieldSpanName},
+	})
+	if err != nil {
+		logs.CtxError(ctx, "Failed to list all spans, err:%+v", err)
+		return nil, err
+	}
+
+	selectFilters := r.getSelectFilters(traceIDs, trajectoryConfig, allSpans)
+	selectedSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
+		Tenants:            tenant,
+		Filters:            selectFilters,
+		StartAt:            startTime,
+		EndAt:              endTime,
+		Limit:              100,
+		NotQueryAnnotation: true,
+	})
+	if err != nil {
+		logs.CtxError(ctx, "Failed to list selected spans, err:%+v", err)
+		return nil, err
+	}
+
+	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
+		WorkspaceId:     workspaceID,
+		PlatformType:    platformType,
+		QueryStartTime:  startTime,
+		QueryEndTime:    endTime,
+		SpanDoubleCheck: false,
+	})
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	for _, p := range processors {
+		selectedSpans.Spans, err = p.Transform(ctx, selectedSpans.Spans)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, ptr.Of(r.convertCustomNode(selectedSpans.Spans)), selectFilters)
+	if err != nil {
+		return nil, err
+	}
+	return trajectories, nil
+}
+
+func (r *TraceServiceImpl) convertCustomNode(spans loop_span.SpanList) loop_span.SpanList {
+	// default agent rule
+	for _, span := range spans {
+		if span != nil && slices.Contains([]string{"graph"}, span.SpanType) {
+			span.SpanType = "agent"
+		}
+	}
+
+	return spans
+}
+
+func (r *TraceServiceImpl) getEvalTargetNextLevelSpanID(allSpans *repo.ListSpansResult) []string {
+	evalTargetSpanIDs := make(map[string]struct{})
+	for _, span := range allSpans.Spans {
+		if span.SpanName == "EvalTarget" {
+			evalTargetSpanIDs[span.SpanID] = struct{}{}
+		}
+	}
+
+	result := make([]string, 0)
+	for _, span := range allSpans.Spans {
+		if _, ok := evalTargetSpanIDs[span.ParentID]; ok {
+			result = append(result, span.SpanID)
+		}
+	}
+
+	return result
+}
+
+func (r *TraceServiceImpl) getSelectFilters(traceIDs []string, trajectoryConfig *GetTrajectoryConfigResponse, allSpans *repo.ListSpansResult) *loop_span.FilterFields {
+	tempSpanFilters := &loop_span.FilterFields{
+		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldTraceId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    traceIDs,
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			},
+		},
+	}
+	tempSpanFilters.FilterFields = append(tempSpanFilters.FilterFields, &loop_span.FilterField{
+		SubFilter: trajectoryConfig.GetFiltersWithDefaultFilter(),
+	})
+
+	result := &loop_span.FilterFields{
+		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumOr),
+		FilterFields: []*loop_span.FilterField{
+			{
+				SubFilter: tempSpanFilters,
+			},
+		},
+	}
+	lowSpanIDs := r.getEvalTargetNextLevelSpanID(allSpans)
+	if len(lowSpanIDs) > 0 {
+		result.FilterFields = append(result.FilterFields, &loop_span.FilterField{
+			SubFilter: &loop_span.FilterFields{
+				QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: loop_span.SpanFieldTraceId,
+						FieldType: loop_span.FieldTypeString,
+						Values:    traceIDs,
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+					{
+						FieldName: loop_span.SpanFieldSpanId,
+						FieldType: loop_span.FieldTypeString,
+						Values:    lowSpanIDs,
+						QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+					},
+				},
+			},
+		})
+	}
+
+	return result
+}
+
+func (r *TraceServiceImpl) buildTrajectories(ctx context.Context, allSpans *loop_span.SpanList, selectedSpans *loop_span.SpanList, trajectoryConfig *loop_span.FilterFields) (map[string]*loop_span.Trajectory, error) {
+	// traceID-trajectory
+	trajectoryMap := make(map[string]*loop_span.Trajectory)
+
+	// traceID-spanID-span
+	selectedSpanMap := make(map[string]map[string]*loop_span.Span)
+	for _, span := range *selectedSpans {
+		_, ok := selectedSpanMap[span.TraceID]
+		if !ok {
+			selectedSpanMap[span.TraceID] = make(map[string]*loop_span.Span)
+		}
+		selectedSpanMap[span.TraceID][span.SpanID] = span
+	}
+
+	// traceID-span
+	traceMap := make(map[string][]*loop_span.Span)
+	for _, span := range *allSpans {
+		if _, ok := traceMap[span.TraceID]; !ok {
+			traceMap[span.TraceID] = make([]*loop_span.Span, 0)
+		}
+		if _, ok := selectedSpanMap[span.TraceID]; ok {
+			if span, ok := selectedSpanMap[span.TraceID][span.SpanID]; ok {
+				traceMap[span.TraceID] = append(traceMap[span.TraceID], span)
+				continue
+			}
+		}
+		traceMap[span.TraceID] = append(traceMap[span.TraceID], span)
+	}
+
+	transCfg := loop_span.SpanTransCfgList{
+		{
+			SpanFilter: trajectoryConfig,
+		},
+	}
+	for traceID, spans := range traceMap {
+		filteredSpans, err := transCfg.Transform(ctx, spans)
+		if err != nil {
+			return nil, err
+		}
+
+		trajectoryMap[traceID] = loop_span.BuildTrajectoryFromSpans(filteredSpans)
+	}
+	return trajectoryMap, nil
 }
 
 func buildExtractSpanInfo(ctx context.Context, span *loop_span.Span, fieldMapping *entity.FieldMapping) (string, error) {

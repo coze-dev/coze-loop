@@ -162,13 +162,13 @@ func ListPreSpan(ctx context.Context, c *app.RequestContext) {
 }
 
 // UpsertTrajectoryConfig .
-// @router /api/observability/v1/traces/trajectory_config [POST]
+// @router /api/observability/v1/trajectory_config [POST]
 func UpsertTrajectoryConfig(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.UpsertTrajectoryConfig)
 }
 
 // GetTrajectoryConfig .
-// @router /api/observability/v1/traces/trajectory_config [GET]
+// @router /api/observability/v1/trajectory_config [GET]
 func GetTrajectoryConfig(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.GetTrajectoryConfig)
 }
