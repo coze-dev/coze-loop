@@ -233,6 +233,21 @@ func (mr *MockITraceServiceMockRecorder) ListPreSpan(ctx, req any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPreSpan", reflect.TypeOf((*MockITraceService)(nil).ListPreSpan), ctx, req)
 }
 
+// ListPreSpanOApi mocks base method.
+func (m *MockITraceService) ListPreSpanOApi(ctx context.Context, req *service.ListPreSpanOApiReq) (*service.ListPreSpanOApiResp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPreSpanOApi", ctx, req)
+	ret0, _ := ret[0].(*service.ListPreSpanOApiResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPreSpanOApi indicates an expected call of ListPreSpanOApi.
+func (mr *MockITraceServiceMockRecorder) ListPreSpanOApi(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPreSpanOApi", reflect.TypeOf((*MockITraceService)(nil).ListPreSpanOApi), ctx, req)
+}
+
 // ListSpans mocks base method.
 func (m *MockITraceService) ListSpans(ctx context.Context, req *service.ListSpansReq) (*service.ListSpansResp, error) {
 	m.ctrl.T.Helper()

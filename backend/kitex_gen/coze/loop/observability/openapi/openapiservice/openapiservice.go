@@ -48,6 +48,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListPreSpanOApi": kitex.NewMethodInfo(
+		listPreSpanOApiHandler,
+		newOpenAPIServiceListPreSpanOApiArgs,
+		newOpenAPIServiceListPreSpanOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListTracesOApi": kitex.NewMethodInfo(
 		listTracesOApiHandler,
 		newOpenAPIServiceListTracesOApiArgs,
@@ -197,6 +204,25 @@ func newOpenAPIServiceListSpansOApiResult() interface{} {
 	return openapi.NewOpenAPIServiceListSpansOApiResult()
 }
 
+func listPreSpanOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceListPreSpanOApiArgs)
+	realResult := result.(*openapi.OpenAPIServiceListPreSpanOApiResult)
+	success, err := handler.(openapi.OpenAPIService).ListPreSpanOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceListPreSpanOApiArgs() interface{} {
+	return openapi.NewOpenAPIServiceListPreSpanOApiArgs()
+}
+
+func newOpenAPIServiceListPreSpanOApiResult() interface{} {
+	return openapi.NewOpenAPIServiceListPreSpanOApiResult()
+}
+
 func listTracesOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.OpenAPIServiceListTracesOApiArgs)
 	realResult := result.(*openapi.OpenAPIServiceListTracesOApiResult)
@@ -311,6 +337,16 @@ func (p *kClient) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiR
 	_args.Req = req
 	var _result openapi.OpenAPIServiceListSpansOApiResult
 	if err = p.c.Call(ctx, "ListSpansOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListPreSpanOApi(ctx context.Context, req *openapi.ListPreSpanOApiRequest) (r *openapi.ListPreSpanOApiResponse, err error) {
+	var _args openapi.OpenAPIServiceListPreSpanOApiArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceListPreSpanOApiResult
+	if err = p.c.Call(ctx, "ListPreSpanOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

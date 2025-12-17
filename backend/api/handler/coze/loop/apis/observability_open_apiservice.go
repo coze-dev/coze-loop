@@ -78,3 +78,9 @@ func CreateAnnotation(ctx context.Context, c *app.RequestContext) {
 func DeleteAnnotation(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityOpenAPIClient.DeleteAnnotation)
 }
+
+// ListPreSpanOApi .
+// @router /v1/loop/pre_span/search [POST]
+func ListPreSpanOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListPreSpanOApi)
+}

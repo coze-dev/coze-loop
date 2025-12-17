@@ -148,6 +148,24 @@ struct ListSpansOApiData {
     3: required bool has_more
 }
 
+
+struct ListPreSpanOApiRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"',api.body="workspace_id" vt.gt="0")
+    2: required string trace_id (api.body="trace_id")
+    3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
+    4: optional string span_id (api.body="span_id")
+    5: optional string previous_response_id (api.body="previous_response_id")
+    6: optional common.PlatformType platform_type (api.body="platform_type")
+
+    255: optional base.Base Base
+}
+
+struct ListPreSpanOApiResponse {
+    1: required list<span.OutputSpan> spans
+
+    255: optional base.BaseResp BaseResp
+}
+
 struct ListTracesOApiRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id" vt.gt="0")
     2: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
@@ -176,6 +194,7 @@ service OpenAPIService {
     SearchTraceOApiResponse SearchTraceOApi(1: SearchTraceOApiRequest req) (api.post = '/v1/loop/traces/search')
     SearchTraceTreeOApiResponse SearchTraceTreeOApi(1: SearchTraceTreeOApiRequest req) (api.post = '/v1/loop/traces/search_tree')
     ListSpansOApiResponse ListSpansOApi(1: ListSpansOApiRequest req) (api.post = '/v1/loop/spans/search', api.tag="openapi")
+    ListPreSpanOApiResponse ListPreSpanOApi(1: ListPreSpanOApiRequest req) (api.post = '/v1/loop/pre_span/search', api.tag="openapi")
     ListTracesOApiResponse ListTracesOApi(1: ListTracesOApiRequest req) (api.post = '/v1/loop/traces/list')
     CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req) (api.post = '/v1/loop/annotations', api.tag="openapi")
     DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req) (api.delete = '/v1/loop/annotations', api.tag="openapi")
