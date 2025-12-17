@@ -436,11 +436,11 @@ func (e *exportCSVHelper) buildColumnEvalTargetContent(ctx context.Context, colu
 	case consts.ReportColumnNameEvalTargetTotalLatency:
 		return strconv.FormatInt(gptr.Indirect(data.TimeConsumingMS), 10), nil
 	case consts.ReportColumnNameEvalTargetInputTokens:
-		return strconv.FormatInt(data.EvalTargetUsage.InputTokens, 10), nil
+		return strconv.FormatInt(data.EvalTargetUsage.GetInputTokens(), 10), nil
 	case consts.ReportColumnNameEvalTargetOutputTokens:
-		return strconv.FormatInt(data.EvalTargetUsage.OutputTokens, 10), nil
+		return strconv.FormatInt(data.EvalTargetUsage.GetOutputTokens(), 10), nil
 	case consts.ReportColumnNameEvalTargetTotalTokens:
-		return strconv.FormatInt(data.EvalTargetUsage.TotalTokens, 10), nil
+		return strconv.FormatInt(data.EvalTargetUsage.GetTotalTokens(), 10), nil
 	default:
 		return geDatasetCellOrActualOutputData(ctx, data.OutputFields[columnName])
 	}

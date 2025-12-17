@@ -98,6 +98,27 @@ type EvalTargetUsage struct {
 	TotalTokens  int64
 }
 
+func (e *EvalTargetUsage) GetInputTokens() int64 {
+	if e != nil {
+		return e.InputTokens
+	}
+	return 0
+}
+
+func (e *EvalTargetUsage) GetOutputTokens() int64 {
+	if e != nil {
+		return e.OutputTokens
+	}
+	return 0
+}
+
+func (e *EvalTargetUsage) GetTotalTokens() int64 {
+	if e != nil {
+		return e.TotalTokens
+	}
+	return 0
+}
+
 type EvalTargetRunError struct {
 	Code    int32
 	Message string
