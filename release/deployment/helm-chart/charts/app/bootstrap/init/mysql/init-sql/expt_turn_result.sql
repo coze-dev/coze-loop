@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS `expt_turn_result`
     `log_id`           varchar(128)    NOT NULL DEFAULT '' COMMENT '日志 id',
     `target_result_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT 'target_result_id',
     `err_msg`          blob COMMENT '错误信息',
+    `weighted_score`   decimal(10, 4) DEFAULT NULL COMMENT '加权汇总得分',
     `created_at`       timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`       timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`       timestamp       NULL     DEFAULT NULL COMMENT '删除时间',

@@ -165,6 +165,17 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 	logs.CtxInfo(ctx, "[ExptEval] expt item result with recording run_log, expt_id=%v, expt_run_id=%v, item_id=%v, cnt_op: %v", exptID, exptRunID, itemID, json.Jsonify(statsCntOp))
 
+	// 加载实验配置，判断是否启用加权分数
+	var (
+		enableWeightedScore bool
+		scoreWeights        map[int64]float64
+	)
+	expt, err := e.ExperimentRepo.GetByID(ctx, exptID, spaceID)
+	if err == nil && expt != nil && expt.EvalConf != nil && expt.EvalConf.EnableWeightedScore {
+		enableWeightedScore = true
+		scoreWeights = expt.EvalConf.EvaluatorScoreWeights
+	}
+
 	var (
 		turnEvaluatorRefs []*entity.ExptTurnEvaluatorResultRef
 		turn2Result       = gslice.ToMap(turnResults, func(t *entity.ExptTurnResult) (int64, *entity.ExptTurnResult) { return t.TurnID, t })
@@ -183,6 +194,34 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 		result.ExptRunID = rl.ExptRunID
 
 		turnEvaluatorRefs = append(turnEvaluatorRefs, NewTurnEvaluatorResultRefs(0, result.ExptID, result.ID, spaceID, rl.EvaluatorResultIds)...)
+
+		// 计算并回写当前轮次的加权分数
+		if enableWeightedScore && rl.EvaluatorResultIds != nil && len(rl.EvaluatorResultIds.EvalVerIDToResID) > 0 {
+			evaluatorResultIDs := make([]int64, 0, len(rl.EvaluatorResultIds.EvalVerIDToResID))
+			for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
+				evaluatorResultIDs = append(evaluatorResultIDs, resID)
+			}
+
+			if len(evaluatorResultIDs) > 0 {
+				records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+				if err != nil {
+					logs.CtxError(ctx, "[ExptEval] RecordItemRunLogs BatchGetEvaluatorRecord failed, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, err=%v",
+						exptID, exptRunID, itemID, tid, err)
+				} else {
+					version2Record := make(map[int64]*entity.EvaluatorRecord, len(records))
+					for _, r := range records {
+						if r == nil {
+							continue
+						}
+						version2Record[r.EvaluatorVersionID] = r
+					}
+
+					if ws := calculateWeightedScore(version2Record, scoreWeights); ws != nil {
+						result.WeightedScore = *ws
+					}
+				}
+			}
+		}
 	}
 
 	if len(turnEvaluatorRefs) > 0 {
@@ -1305,23 +1344,23 @@ func (e *ExptResultBuilder) getTurnEvaluatorResult(ctx context.Context, itemID, 
 		}
 	}
 
-	// 计算加权分数
-	var weightedScore *float64
-	if e.exptDO != nil && e.exptDO.EvalConf != nil && e.exptDO.EvalConf.EnableWeightedScore {
-		score := e.calculateWeightedScore(evaluatorVersionID2Result, e.exptDO.EvalConf.EvaluatorScoreWeights)
-		if score != nil {
-			weightedScore = score
-		}
+	// 从 expt_turn_result 表回写的字段中读取加权分数
+	output := &entity.TurnEvaluatorOutput{
+		EvaluatorRecords: evaluatorVersionID2Result,
 	}
 
-	return &entity.TurnEvaluatorOutput{
-		EvaluatorRecords: evaluatorVersionID2Result,
-		WeightedScore:    weightedScore,
+	turnResultID2TurnResult := gslice.ToMap(e.turnResultDO, func(t *entity.ExptTurnResult) (int64, *entity.ExptTurnResult) {
+		return t.ID, t
+	})
+	if tr, ok := turnResultID2TurnResult[turnResultID]; ok {
+		output.WeightedScore = &tr.WeightedScore
 	}
+
+	return output
 }
 
 // calculateWeightedScore 计算加权分数
-func (e *ExptResultBuilder) calculateWeightedScore(
+func calculateWeightedScore(
 	evaluatorRecords map[int64]*entity.EvaluatorRecord,
 	weights map[int64]float64,
 ) *float64 {

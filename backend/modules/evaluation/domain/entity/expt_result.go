@@ -33,6 +33,9 @@ const (
 
 	// 标注项, FieldKey为TagKeyID
 	FieldType_Annotation FieldType = 23
+
+	// 加权得分, FieldKey为expt_id, value为weightedScore
+	FieldType_WeightedScore FieldType = 24
 )
 
 // aggregate result
@@ -126,15 +129,16 @@ func (a AggregatorResult) GetScore() float64 {
 }
 
 type ExptAggrResult struct {
-	ID           int64
-	SpaceID      int64
-	ExperimentID int64
-	FieldType    int32
-	FieldKey     string
-	Score        float64
-	AggrResult   []byte
-	Version      int64
-	Status       int32
+	ID            int64
+	SpaceID       int64
+	ExperimentID  int64
+	FieldType     int32
+	FieldKey      string
+	Score         float64
+	AggrResult    []byte
+	Version       int64
+	Status        int32
+	WeightedScore float64
 }
 
 type ExptAggregateResult struct {
@@ -243,6 +247,8 @@ type ExptTurnResult struct {
 	EvaluatorResults *EvaluatorResults
 	ErrMsg           string
 	TurnIdx          int32
+
+	WeightedScore float64
 }
 
 func (tr *ExptTurnResult) ToRunLogDO() *ExptTurnResultRunLog {

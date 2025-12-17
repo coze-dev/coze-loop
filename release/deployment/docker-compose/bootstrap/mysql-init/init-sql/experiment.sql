@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS `experiment`
     KEY `idx_eval_set_id_delete_at` (`space_id`, `eval_set_id`, `deleted_at`),
     KEY `idx_space_start_at` (`space_id`, `start_at`),
     KEY `idx_space_end_at` (`space_id`, `end_at`),
-    KEY `idx_source_type_source_id` (`source_type`, `source_id`)
+    KEY `idx_source_type_source_id` (`source_type`, `source_id`),
+    KEY `idx_space_expt_template_id_delete_at` (`space_id`, `expt_template_id`, `deleted_at`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='experiment';
