@@ -304,5 +304,6 @@ export const getDefaultBizConfig = () => ({
     customLeftRenderMap: {
       metadata: (v: unknown) => <MetadataExpr {...(v as MetadataExprProps)} />,
     },
+    customRightRenderMap: {},
   },
 });
