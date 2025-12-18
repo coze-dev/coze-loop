@@ -485,6 +485,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		}
 		trrls[rl.TurnID] = rl
 	}
+	eiec.ExistItemEvalResult.TurnResultRunLogs = trrls
 
 	return nil
 }
