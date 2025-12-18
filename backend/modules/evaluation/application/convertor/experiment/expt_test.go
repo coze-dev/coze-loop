@@ -95,7 +95,7 @@ func TestEvalConfConvert_ConvertEntityToDTO(t *testing.T) {
 	err := json.Unmarshal([]byte(raw), &conf)
 	assert.Nil(t, err)
 
-	target, evaluators, _ := NewEvalConfConvert().ConvertEntityToDTO(conf)
+	target, evaluators, _, _ := NewEvalConfConvert().ConvertEntityToDTO(conf)
 	t.Logf("target: %v", json.Jsonify(target))
 	t.Logf("evaluators: %v", json.Jsonify(evaluators))
 }
@@ -693,7 +693,7 @@ func TestEvalConfConvert_ConvertEntityToDTO_RuntimeParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, runtimeParam := converter.ConvertEntityToDTO(tt.ec)
+			_, _, runtimeParam, _ := converter.ConvertEntityToDTO(tt.ec)
 
 			if tt.wantRuntimeParam == nil {
 				assert.Nil(t, runtimeParam)

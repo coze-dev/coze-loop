@@ -218,7 +218,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
 		{ID: 3, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
 	}, nil)
 
-	ids, err := app.resolveEvaluatorVersionIDs(ctx, req)
+	ids, _, err := app.resolveEvaluatorVersionIDs(ctx, req)
 	if err != nil {
 		t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
 	}
@@ -302,7 +302,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs_WithEvaluatorFieldMap
 		{ID: 3, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
 	}, nil)
 
-	ids, err := app.resolveEvaluatorVersionIDs(ctx, req)
+	ids, _, err := app.resolveEvaluatorVersionIDs(ctx, req)
 	if err != nil {
 		t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
 	}

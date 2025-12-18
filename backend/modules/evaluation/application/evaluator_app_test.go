@@ -2199,6 +2199,38 @@ func Test_buildRunEvaluatorRequest_DisableTracing(t *testing.T) {
 	}
 }
 
+// 验证：当请求携带 EvaluatorRunConf 且包含 evaluator_runtime_param.json_value 时，输入数据的 Ext 注入运行时参数
+func Test_buildRunEvaluatorRequest_EvaluatorRunConfRuntimeParam(t *testing.T) {
+	rp := `{"model_config":{"model_id":"m-1","temperature":0.8}}`
+
+	req := &evaluatorservice.RunEvaluatorRequest{
+		WorkspaceID:        123,
+		EvaluatorVersionID: 456,
+		InputData: &evaluatordto.EvaluatorInputData{
+			InputFields: map[string]*common.Content{
+				"input": {ContentType: ptr.Of(common.ContentTypeText), Text: ptr.Of("hello")},
+			},
+		},
+		EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+			EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: ptr.Of(rp)},
+		},
+	}
+
+	got := buildRunEvaluatorRequest("test-evaluator", req)
+	if got == nil || got.InputData == nil {
+		t.Fatalf("nil RunEvaluatorRequest or InputData")
+	}
+
+	// 校验 Ext 注入运行时参数
+	if got.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] != rp {
+		t.Fatalf("runtime_param not injected, got=%s", got.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	}
+	// 基本字段不受影响
+	if got.EvaluatorVersionID != 456 || got.SpaceID != 123 {
+		t.Fatalf("mismatch basic fields: verID=%d spaceID=%d", got.EvaluatorVersionID, got.SpaceID)
+	}
+}
+
 // TestEvaluatorHandlerImpl_ValidateEvaluator 测试 ValidateEvaluator 方法
 func TestEvaluatorHandlerImpl_ValidateEvaluator(t *testing.T) {
 	t.Parallel()
