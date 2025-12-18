@@ -545,10 +545,22 @@ func OpenAPIContentDO2DTO(content *entity.Content) *common.Content {
 		}
 	}
 	return &common.Content{
-		ContentType: convertDOContentTypeToOpenAPI(gptr.Indirect(content.ContentType)),
-		Text:        content.Text,
-		Image:       ConvertImageDO2DTO(content.Image),
-		MultiPart:   multiPart,
+		ContentType:      convertDOContentTypeToOpenAPI(gptr.Indirect(content.ContentType)),
+		Text:             content.Text,
+		Image:            ConvertImageDO2DTO(content.Image),
+		MultiPart:        multiPart,
+		ContentOmitted:   content.ContentOmitted,
+		FullContent:      ConvertObjectStorageDO2DTO(content.FullContent),
+		FullContentBytes: content.FullContentBytes,
+	}
+}
+
+func ConvertObjectStorageDO2DTO(os *entity.ObjectStorage) *common.ObjectStorage {
+	if os == nil {
+		return nil
+	}
+	return &common.ObjectStorage{
+		URL: os.URL,
 	}
 }
 
