@@ -16318,9 +16318,10 @@ type CreateExperimentTemplateRequest struct {
 	TargetID         *int64 `thrift:"target_id,12,optional" frugal:"12,optional,i64" json:"target_id" form:"target_id" `
 	TargetVersionID  *int64 `thrift:"target_version_id,13,optional" frugal:"13,optional,i64" json:"target_version_id" form:"target_version_id" `
 	// 字段映射与运行时参数
-	TargetFieldMapping    *expt.TargetFieldMapping      `thrift:"target_field_mapping,20,optional" frugal:"20,optional,expt.TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty"`
-	EvaluatorFieldMapping []*expt.EvaluatorFieldMapping `thrift:"evaluator_field_mapping,21,optional" frugal:"21,optional,list<expt.EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty"`
-	TargetRuntimeParam    *common.RuntimeParam          `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
+	TargetFieldMapping    *expt.TargetFieldMapping           `thrift:"target_field_mapping,20,optional" frugal:"20,optional,expt.TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty"`
+	EvaluatorFieldMapping []*expt.EvaluatorFieldMapping      `thrift:"evaluator_field_mapping,21,optional" frugal:"21,optional,list<expt.EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty"`
+	TargetRuntimeParam    *common.RuntimeParam               `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
+	CreateEvalTargetParam *eval_target.CreateEvalTargetParam `thrift:"create_eval_target_param,23,optional" frugal:"23,optional,eval_target.CreateEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
 	// 评估器配置（含加权汇总）
 	EvaluatorVersionIds   []int64           `thrift:"evaluator_version_ids,30,optional" frugal:"30,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" `
 	EnableWeightedScore   *bool             `thrift:"enable_weighted_score,31,optional" frugal:"31,optional,bool" json:"enable_weighted_score" form:"enable_weighted_score" `
@@ -16454,6 +16455,18 @@ func (p *CreateExperimentTemplateRequest) GetTargetRuntimeParam() (v *common.Run
 		return CreateExperimentTemplateRequest_TargetRuntimeParam_DEFAULT
 	}
 	return p.TargetRuntimeParam
+}
+
+var CreateExperimentTemplateRequest_CreateEvalTargetParam_DEFAULT *eval_target.CreateEvalTargetParam
+
+func (p *CreateExperimentTemplateRequest) GetCreateEvalTargetParam() (v *eval_target.CreateEvalTargetParam) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCreateEvalTargetParam() {
+		return CreateExperimentTemplateRequest_CreateEvalTargetParam_DEFAULT
+	}
+	return p.CreateEvalTargetParam
 }
 
 var CreateExperimentTemplateRequest_EvaluatorVersionIds_DEFAULT []int64
@@ -16593,6 +16606,9 @@ func (p *CreateExperimentTemplateRequest) SetEvaluatorFieldMapping(val []*expt.E
 func (p *CreateExperimentTemplateRequest) SetTargetRuntimeParam(val *common.RuntimeParam) {
 	p.TargetRuntimeParam = val
 }
+func (p *CreateExperimentTemplateRequest) SetCreateEvalTargetParam(val *eval_target.CreateEvalTargetParam) {
+	p.CreateEvalTargetParam = val
+}
 func (p *CreateExperimentTemplateRequest) SetEvaluatorVersionIds(val []int64) {
 	p.EvaluatorVersionIds = val
 }
@@ -16632,6 +16648,7 @@ var fieldIDToName_CreateExperimentTemplateRequest = map[int16]string{
 	20:  "target_field_mapping",
 	21:  "evaluator_field_mapping",
 	22:  "target_runtime_param",
+	23:  "create_eval_target_param",
 	30:  "evaluator_version_ids",
 	31:  "enable_weighted_score",
 	32:  "evaluator_score_weights",
@@ -16677,6 +16694,10 @@ func (p *CreateExperimentTemplateRequest) IsSetEvaluatorFieldMapping() bool {
 
 func (p *CreateExperimentTemplateRequest) IsSetTargetRuntimeParam() bool {
 	return p.TargetRuntimeParam != nil
+}
+
+func (p *CreateExperimentTemplateRequest) IsSetCreateEvalTargetParam() bool {
+	return p.CreateEvalTargetParam != nil
 }
 
 func (p *CreateExperimentTemplateRequest) IsSetEvaluatorVersionIds() bool {
@@ -16810,6 +16831,14 @@ func (p *CreateExperimentTemplateRequest) Read(iprot thrift.TProtocol) (err erro
 		case 22:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField23(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17038,6 +17067,14 @@ func (p *CreateExperimentTemplateRequest) ReadField22(iprot thrift.TProtocol) er
 	p.TargetRuntimeParam = _field
 	return nil
 }
+func (p *CreateExperimentTemplateRequest) ReadField23(iprot thrift.TProtocol) error {
+	_field := eval_target.NewCreateEvalTargetParam()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CreateEvalTargetParam = _field
+	return nil
+}
 func (p *CreateExperimentTemplateRequest) ReadField30(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -17207,6 +17244,10 @@ func (p *CreateExperimentTemplateRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
 			goto WriteFieldError
 		}
 		if err = p.writeField30(oprot); err != nil {
@@ -17449,6 +17490,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *CreateExperimentTemplateRequest) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCreateEvalTargetParam() {
+		if err = oprot.WriteFieldBegin("create_eval_target_param", thrift.STRUCT, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CreateEvalTargetParam.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
 func (p *CreateExperimentTemplateRequest) writeField30(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorVersionIds() {
 		if err = oprot.WriteFieldBegin("evaluator_version_ids", thrift.LIST, 30); err != nil {
@@ -17675,6 +17734,9 @@ func (p *CreateExperimentTemplateRequest) DeepEqual(ano *CreateExperimentTemplat
 	if !p.Field22DeepEqual(ano.TargetRuntimeParam) {
 		return false
 	}
+	if !p.Field23DeepEqual(ano.CreateEvalTargetParam) {
+		return false
+	}
 	if !p.Field30DeepEqual(ano.EvaluatorVersionIds) {
 		return false
 	}
@@ -17807,6 +17869,13 @@ func (p *CreateExperimentTemplateRequest) Field21DeepEqual(src []*expt.Evaluator
 func (p *CreateExperimentTemplateRequest) Field22DeepEqual(src *common.RuntimeParam) bool {
 
 	if !p.TargetRuntimeParam.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentTemplateRequest) Field23DeepEqual(src *eval_target.CreateEvalTargetParam) bool {
+
+	if !p.CreateEvalTargetParam.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -18712,9 +18781,10 @@ type UpdateExperimentTemplateRequest struct {
 	EvalSetVersionID *int64 `thrift:"eval_set_version_id,10,optional" frugal:"10,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" `
 	TargetVersionID  *int64 `thrift:"target_version_id,11,optional" frugal:"11,optional,i64" json:"target_version_id" form:"target_version_id" `
 	// 字段映射与运行时参数
-	TargetFieldMapping    *expt.TargetFieldMapping      `thrift:"target_field_mapping,20,optional" frugal:"20,optional,expt.TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty"`
-	EvaluatorFieldMapping []*expt.EvaluatorFieldMapping `thrift:"evaluator_field_mapping,21,optional" frugal:"21,optional,list<expt.EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty"`
-	TargetRuntimeParam    *common.RuntimeParam          `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
+	TargetFieldMapping    *expt.TargetFieldMapping           `thrift:"target_field_mapping,20,optional" frugal:"20,optional,expt.TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty"`
+	EvaluatorFieldMapping []*expt.EvaluatorFieldMapping      `thrift:"evaluator_field_mapping,21,optional" frugal:"21,optional,list<expt.EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty"`
+	TargetRuntimeParam    *common.RuntimeParam               `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
+	CreateEvalTargetParam *eval_target.CreateEvalTargetParam `thrift:"create_eval_target_param,23,optional" frugal:"23,optional,eval_target.CreateEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
 	// 评估器配置（含加权汇总）
 	EvaluatorVersionIds   []int64           `thrift:"evaluator_version_ids,30,optional" frugal:"30,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" `
 	EnableWeightedScore   *bool             `thrift:"enable_weighted_score,31,optional" frugal:"31,optional,bool" json:"enable_weighted_score" form:"enable_weighted_score" `
@@ -18830,6 +18900,18 @@ func (p *UpdateExperimentTemplateRequest) GetTargetRuntimeParam() (v *common.Run
 		return UpdateExperimentTemplateRequest_TargetRuntimeParam_DEFAULT
 	}
 	return p.TargetRuntimeParam
+}
+
+var UpdateExperimentTemplateRequest_CreateEvalTargetParam_DEFAULT *eval_target.CreateEvalTargetParam
+
+func (p *UpdateExperimentTemplateRequest) GetCreateEvalTargetParam() (v *eval_target.CreateEvalTargetParam) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCreateEvalTargetParam() {
+		return UpdateExperimentTemplateRequest_CreateEvalTargetParam_DEFAULT
+	}
+	return p.CreateEvalTargetParam
 }
 
 var UpdateExperimentTemplateRequest_EvaluatorVersionIds_DEFAULT []int64
@@ -18954,6 +19036,9 @@ func (p *UpdateExperimentTemplateRequest) SetEvaluatorFieldMapping(val []*expt.E
 func (p *UpdateExperimentTemplateRequest) SetTargetRuntimeParam(val *common.RuntimeParam) {
 	p.TargetRuntimeParam = val
 }
+func (p *UpdateExperimentTemplateRequest) SetCreateEvalTargetParam(val *eval_target.CreateEvalTargetParam) {
+	p.CreateEvalTargetParam = val
+}
 func (p *UpdateExperimentTemplateRequest) SetEvaluatorVersionIds(val []int64) {
 	p.EvaluatorVersionIds = val
 }
@@ -18989,6 +19074,7 @@ var fieldIDToName_UpdateExperimentTemplateRequest = map[int16]string{
 	20:  "target_field_mapping",
 	21:  "evaluator_field_mapping",
 	22:  "target_runtime_param",
+	23:  "create_eval_target_param",
 	30:  "evaluator_version_ids",
 	31:  "enable_weighted_score",
 	32:  "evaluator_score_weights",
@@ -19025,6 +19111,10 @@ func (p *UpdateExperimentTemplateRequest) IsSetEvaluatorFieldMapping() bool {
 
 func (p *UpdateExperimentTemplateRequest) IsSetTargetRuntimeParam() bool {
 	return p.TargetRuntimeParam != nil
+}
+
+func (p *UpdateExperimentTemplateRequest) IsSetCreateEvalTargetParam() bool {
+	return p.CreateEvalTargetParam != nil
 }
 
 func (p *UpdateExperimentTemplateRequest) IsSetEvaluatorVersionIds() bool {
@@ -19148,6 +19238,14 @@ func (p *UpdateExperimentTemplateRequest) Read(iprot thrift.TProtocol) (err erro
 		case 22:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField23(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -19362,6 +19460,14 @@ func (p *UpdateExperimentTemplateRequest) ReadField22(iprot thrift.TProtocol) er
 	p.TargetRuntimeParam = _field
 	return nil
 }
+func (p *UpdateExperimentTemplateRequest) ReadField23(iprot thrift.TProtocol) error {
+	_field := eval_target.NewCreateEvalTargetParam()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CreateEvalTargetParam = _field
+	return nil
+}
 func (p *UpdateExperimentTemplateRequest) ReadField30(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -19519,6 +19625,10 @@ func (p *UpdateExperimentTemplateRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
 			goto WriteFieldError
 		}
 		if err = p.writeField30(oprot); err != nil {
@@ -19737,6 +19847,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *UpdateExperimentTemplateRequest) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCreateEvalTargetParam() {
+		if err = oprot.WriteFieldBegin("create_eval_target_param", thrift.STRUCT, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CreateEvalTargetParam.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
 func (p *UpdateExperimentTemplateRequest) writeField30(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorVersionIds() {
 		if err = oprot.WriteFieldBegin("evaluator_version_ids", thrift.LIST, 30); err != nil {
@@ -19942,6 +20070,9 @@ func (p *UpdateExperimentTemplateRequest) DeepEqual(ano *UpdateExperimentTemplat
 	if !p.Field22DeepEqual(ano.TargetRuntimeParam) {
 		return false
 	}
+	if !p.Field23DeepEqual(ano.CreateEvalTargetParam) {
+		return false
+	}
 	if !p.Field30DeepEqual(ano.EvaluatorVersionIds) {
 		return false
 	}
@@ -20054,6 +20185,13 @@ func (p *UpdateExperimentTemplateRequest) Field21DeepEqual(src []*expt.Evaluator
 func (p *UpdateExperimentTemplateRequest) Field22DeepEqual(src *common.RuntimeParam) bool {
 
 	if !p.TargetRuntimeParam.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *UpdateExperimentTemplateRequest) Field23DeepEqual(src *eval_target.CreateEvalTargetParam) bool {
+
+	if !p.CreateEvalTargetParam.DeepEqual(src) {
 		return false
 	}
 	return true

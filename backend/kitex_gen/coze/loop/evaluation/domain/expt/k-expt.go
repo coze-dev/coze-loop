@@ -430,6 +430,34 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 51:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField51(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 52:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField52(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -850,6 +878,52 @@ func (p *Experiment) FastReadField50(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField51(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EnableWeightedScore = _field
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField52(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[int64]float64, size)
+	for i := 0; i < size; i++ {
+		var _key int64
+		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		var _val float64
+		if v, l, err := thrift.Binary.ReadDouble(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	p.EvaluatorScoreWeights = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -866,6 +940,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField27(buf[offset:], w)
 		offset += p.fastWriteField28(buf[offset:], w)
 		offset += p.fastWriteField41(buf[offset:], w)
+		offset += p.fastWriteField51(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -884,6 +959,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField42(buf[offset:], w)
 		offset += p.fastWriteField43(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
+		offset += p.fastWriteField52(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -919,6 +995,8 @@ func (p *Experiment) BLength() int {
 		l += p.field42Length()
 		l += p.field43Length()
 		l += p.field50Length()
+		l += p.field51Length()
+		l += p.field52Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1188,6 +1266,32 @@ func (p *Experiment) fastWriteField50(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Experiment) fastWriteField51(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnableWeightedScore() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 51)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableWeightedScore)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField52(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvaluatorScoreWeights() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 52)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.EvaluatorScoreWeights {
+			length++
+			offset += thrift.Binary.WriteI64(buf[offset:], k)
+			offset += thrift.Binary.WriteDouble(buf[offset:], v)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I64, thrift.DOUBLE, length)
+	}
+	return offset
+}
+
 func (p *Experiment) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -1441,6 +1545,26 @@ func (p *Experiment) field50Length() int {
 	return l
 }
 
+func (p *Experiment) field51Length() int {
+	l := 0
+	if p.IsSetEnableWeightedScore() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *Experiment) field52Length() int {
+	l := 0
+	if p.IsSetEvaluatorScoreWeights() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		l += (thrift.Binary.I64Length() +
+			thrift.Binary.DoubleLength()) * len(p.EvaluatorScoreWeights)
+	}
+	return l
+}
+
 func (p *Experiment) DeepCopy(s interface{}) error {
 	src, ok := s.(*Experiment)
 	if !ok {
@@ -1648,6 +1772,24 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		}
 	}
 	p.ExptTemplate = _exptTemplate
+
+	if src.EnableWeightedScore != nil {
+		tmp := *src.EnableWeightedScore
+		p.EnableWeightedScore = &tmp
+	}
+
+	if src.EvaluatorScoreWeights != nil {
+		p.EvaluatorScoreWeights = make(map[int64]float64, len(src.EvaluatorScoreWeights))
+		for key, val := range src.EvaluatorScoreWeights {
+			var _key int64
+			_key = key
+
+			var _val float64
+			_val = val
+
+			p.EvaluatorScoreWeights[_key] = _val
+		}
+	}
 
 	return nil
 }

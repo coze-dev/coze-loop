@@ -12180,6 +12180,20 @@ func (p *CreateExperimentTemplateRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 23:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField23(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 30:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField30(buf[offset:])
@@ -12477,6 +12491,18 @@ func (p *CreateExperimentTemplateRequest) FastReadField22(buf []byte) (int, erro
 	return offset, nil
 }
 
+func (p *CreateExperimentTemplateRequest) FastReadField23(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_target.NewCreateEvalTargetParam()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.CreateEvalTargetParam = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentTemplateRequest) FastReadField30(buf []byte) (int, error) {
 	offset := 0
 
@@ -12649,6 +12675,7 @@ func (p *CreateExperimentTemplateRequest) FastWriteNocopy(buf []byte, w thrift.N
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
+		offset += p.fastWriteField23(buf[offset:], w)
 		offset += p.fastWriteField30(buf[offset:], w)
 		offset += p.fastWriteField32(buf[offset:], w)
 		offset += p.fastWriteField42(buf[offset:], w)
@@ -12673,6 +12700,7 @@ func (p *CreateExperimentTemplateRequest) BLength() int {
 		l += p.field20Length()
 		l += p.field21Length()
 		l += p.field22Length()
+		l += p.field23Length()
 		l += p.field30Length()
 		l += p.field31Length()
 		l += p.field32Length()
@@ -12778,6 +12806,15 @@ func (p *CreateExperimentTemplateRequest) fastWriteField22(buf []byte, w thrift.
 	if p.IsSetTargetRuntimeParam() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 22)
 		offset += p.TargetRuntimeParam.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *CreateExperimentTemplateRequest) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCreateEvalTargetParam() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 23)
+		offset += p.CreateEvalTargetParam.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -12970,6 +13007,15 @@ func (p *CreateExperimentTemplateRequest) field22Length() int {
 	return l
 }
 
+func (p *CreateExperimentTemplateRequest) field23Length() int {
+	l := 0
+	if p.IsSetCreateEvalTargetParam() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.CreateEvalTargetParam.BLength()
+	}
+	return l
+}
+
 func (p *CreateExperimentTemplateRequest) field30Length() int {
 	l := 0
 	if p.IsSetEvaluatorVersionIds() {
@@ -13131,6 +13177,15 @@ func (p *CreateExperimentTemplateRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.TargetRuntimeParam = _targetRuntimeParam
+
+	var _createEvalTargetParam *eval_target.CreateEvalTargetParam
+	if src.CreateEvalTargetParam != nil {
+		_createEvalTargetParam = &eval_target.CreateEvalTargetParam{}
+		if err := _createEvalTargetParam.DeepCopy(src.CreateEvalTargetParam); err != nil {
+			return err
+		}
+	}
+	p.CreateEvalTargetParam = _createEvalTargetParam
 
 	if src.EvaluatorVersionIds != nil {
 		p.EvaluatorVersionIds = make([]int64, 0, len(src.EvaluatorVersionIds))
@@ -13916,6 +13971,20 @@ func (p *UpdateExperimentTemplateRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 23:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField23(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 30:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField30(buf[offset:])
@@ -14190,6 +14259,18 @@ func (p *UpdateExperimentTemplateRequest) FastReadField22(buf []byte) (int, erro
 	return offset, nil
 }
 
+func (p *UpdateExperimentTemplateRequest) FastReadField23(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_target.NewCreateEvalTargetParam()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.CreateEvalTargetParam = _field
+	return offset, nil
+}
+
 func (p *UpdateExperimentTemplateRequest) FastReadField30(buf []byte) (int, error) {
 	offset := 0
 
@@ -14349,6 +14430,7 @@ func (p *UpdateExperimentTemplateRequest) FastWriteNocopy(buf []byte, w thrift.N
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
+		offset += p.fastWriteField23(buf[offset:], w)
 		offset += p.fastWriteField30(buf[offset:], w)
 		offset += p.fastWriteField32(buf[offset:], w)
 		offset += p.fastWriteField42(buf[offset:], w)
@@ -14371,6 +14453,7 @@ func (p *UpdateExperimentTemplateRequest) BLength() int {
 		l += p.field20Length()
 		l += p.field21Length()
 		l += p.field22Length()
+		l += p.field23Length()
 		l += p.field30Length()
 		l += p.field31Length()
 		l += p.field32Length()
@@ -14464,6 +14547,15 @@ func (p *UpdateExperimentTemplateRequest) fastWriteField22(buf []byte, w thrift.
 	if p.IsSetTargetRuntimeParam() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 22)
 		offset += p.TargetRuntimeParam.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *UpdateExperimentTemplateRequest) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCreateEvalTargetParam() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 23)
+		offset += p.CreateEvalTargetParam.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -14636,6 +14728,15 @@ func (p *UpdateExperimentTemplateRequest) field22Length() int {
 	return l
 }
 
+func (p *UpdateExperimentTemplateRequest) field23Length() int {
+	l := 0
+	if p.IsSetCreateEvalTargetParam() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.CreateEvalTargetParam.BLength()
+	}
+	return l
+}
+
 func (p *UpdateExperimentTemplateRequest) field30Length() int {
 	l := 0
 	if p.IsSetEvaluatorVersionIds() {
@@ -14780,6 +14881,15 @@ func (p *UpdateExperimentTemplateRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.TargetRuntimeParam = _targetRuntimeParam
+
+	var _createEvalTargetParam *eval_target.CreateEvalTargetParam
+	if src.CreateEvalTargetParam != nil {
+		_createEvalTargetParam = &eval_target.CreateEvalTargetParam{}
+		if err := _createEvalTargetParam.DeepCopy(src.CreateEvalTargetParam); err != nil {
+			return err
+		}
+	}
+	p.CreateEvalTargetParam = _createEvalTargetParam
 
 	if src.EvaluatorVersionIds != nil {
 		p.EvaluatorVersionIds = make([]int64, 0, len(src.EvaluatorVersionIds))

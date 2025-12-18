@@ -978,6 +978,9 @@ type Experiment struct {
 	SourceType            *SourceType              `thrift:"source_type,42,optional" frugal:"42,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
 	SourceID              *string                  `thrift:"source_id,43,optional" frugal:"43,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
 	ExptTemplate          *ExptTemplate            `thrift:"expt_template,50,optional" frugal:"50,optional,ExptTemplate" form:"expt_template" json:"expt_template,omitempty" query:"expt_template"`
+	// 评估器得分加权配置
+	EnableWeightedScore   *bool             `thrift:"enable_weighted_score,51,optional" frugal:"51,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
+	EvaluatorScoreWeights map[int64]float64 `thrift:"evaluator_score_weights,52,optional" frugal:"52,optional,map<i64:double>" form:"evaluator_score_weights" json:"evaluator_score_weights,omitempty" query:"evaluator_score_weights"`
 }
 
 func NewExperiment() *Experiment {
@@ -1310,6 +1313,30 @@ func (p *Experiment) GetExptTemplate() (v *ExptTemplate) {
 	}
 	return p.ExptTemplate
 }
+
+var Experiment_EnableWeightedScore_DEFAULT bool
+
+func (p *Experiment) GetEnableWeightedScore() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnableWeightedScore() {
+		return Experiment_EnableWeightedScore_DEFAULT
+	}
+	return *p.EnableWeightedScore
+}
+
+var Experiment_EvaluatorScoreWeights_DEFAULT map[int64]float64
+
+func (p *Experiment) GetEvaluatorScoreWeights() (v map[int64]float64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorScoreWeights() {
+		return Experiment_EvaluatorScoreWeights_DEFAULT
+	}
+	return p.EvaluatorScoreWeights
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1391,6 +1418,12 @@ func (p *Experiment) SetSourceID(val *string) {
 func (p *Experiment) SetExptTemplate(val *ExptTemplate) {
 	p.ExptTemplate = val
 }
+func (p *Experiment) SetEnableWeightedScore(val *bool) {
+	p.EnableWeightedScore = val
+}
+func (p *Experiment) SetEvaluatorScoreWeights(val map[int64]float64) {
+	p.EvaluatorScoreWeights = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:  "id",
@@ -1420,6 +1453,8 @@ var fieldIDToName_Experiment = map[int16]string{
 	42: "source_type",
 	43: "source_id",
 	50: "expt_template",
+	51: "enable_weighted_score",
+	52: "evaluator_score_weights",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1528,6 +1563,14 @@ func (p *Experiment) IsSetSourceID() bool {
 
 func (p *Experiment) IsSetExptTemplate() bool {
 	return p.ExptTemplate != nil
+}
+
+func (p *Experiment) IsSetEnableWeightedScore() bool {
+	return p.EnableWeightedScore != nil
+}
+
+func (p *Experiment) IsSetEvaluatorScoreWeights() bool {
+	return p.EvaluatorScoreWeights != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -1759,6 +1802,22 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField50(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 51:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField51(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 52:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField52(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2108,6 +2167,46 @@ func (p *Experiment) ReadField50(iprot thrift.TProtocol) error {
 	p.ExptTemplate = _field
 	return nil
 }
+func (p *Experiment) ReadField51(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EnableWeightedScore = _field
+	return nil
+}
+func (p *Experiment) ReadField52(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[int64]float64, size)
+	for i := 0; i < size; i++ {
+		var _key int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val float64
+		if v, err := iprot.ReadDouble(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.EvaluatorScoreWeights = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2221,6 +2320,14 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField50(oprot); err != nil {
 			fieldId = 50
+			goto WriteFieldError
+		}
+		if err = p.writeField51(oprot); err != nil {
+			fieldId = 51
+			goto WriteFieldError
+		}
+		if err = p.writeField52(oprot); err != nil {
+			fieldId = 52
 			goto WriteFieldError
 		}
 	}
@@ -2751,6 +2858,53 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
 }
+func (p *Experiment) writeField51(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableWeightedScore() {
+		if err = oprot.WriteFieldBegin("enable_weighted_score", thrift.BOOL, 51); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableWeightedScore); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
+}
+func (p *Experiment) writeField52(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorScoreWeights() {
+		if err = oprot.WriteFieldBegin("evaluator_score_weights", thrift.MAP, 52); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.I64, thrift.DOUBLE, len(p.EvaluatorScoreWeights)); err != nil {
+			return err
+		}
+		for k, v := range p.EvaluatorScoreWeights {
+			if err := oprot.WriteI64(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteDouble(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 52 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 52 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -2845,6 +2999,12 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.ExptTemplate) {
+		return false
+	}
+	if !p.Field51DeepEqual(ano.EnableWeightedScore) {
+		return false
+	}
+	if !p.Field52DeepEqual(ano.EvaluatorScoreWeights) {
 		return false
 	}
 	return true
@@ -3139,6 +3299,31 @@ func (p *Experiment) Field50DeepEqual(src *ExptTemplate) bool {
 
 	if !p.ExptTemplate.DeepEqual(src) {
 		return false
+	}
+	return true
+}
+func (p *Experiment) Field51DeepEqual(src *bool) bool {
+
+	if p.EnableWeightedScore == src {
+		return true
+	} else if p.EnableWeightedScore == nil || src == nil {
+		return false
+	}
+	if *p.EnableWeightedScore != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field52DeepEqual(src map[int64]float64) bool {
+
+	if len(p.EvaluatorScoreWeights) != len(src) {
+		return false
+	}
+	for k, v := range p.EvaluatorScoreWeights {
+		_src := src[k]
+		if v != _src {
+			return false
+		}
 	}
 	return true
 }

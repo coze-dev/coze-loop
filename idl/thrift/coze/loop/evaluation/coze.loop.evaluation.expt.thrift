@@ -358,6 +358,7 @@ struct CreateExperimentTemplateRequest {
     20: optional expt.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     21: optional list<expt.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
     22: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
+    23: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
 
     // 评估器配置（含加权汇总）
     30: optional list<i64> evaluator_version_ids (api.body='evaluator_version_ids', api.js_conv='true', go.tag='json:"evaluator_version_ids"')
@@ -410,6 +411,7 @@ struct UpdateExperimentTemplateRequest {
     20: optional expt.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     21: optional list<expt.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
     22: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
+    23: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
 
     // 评估器配置（含加权汇总）
     30: optional list<i64> evaluator_version_ids (api.body='evaluator_version_ids', api.js_conv='true', go.tag='json:"evaluator_version_ids"')

@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -101,9 +103,33 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 		return nil, errorx.Wrapf(err, "gen template id fail")
 	}
 
-	// 获取target_type
+	// 处理创建评测对象参数
 	var targetType entity.EvalTargetType
-	if param.TargetID > 0 {
+	var finalTargetID, finalTargetVersionID int64
+	if param.CreateEvalTargetParam != nil && !param.CreateEvalTargetParam.IsNull() {
+		// 如果提供了创建评测对象参数，则创建评测对象
+		opts := make([]entity.Option, 0)
+		opts = append(opts, entity.WithCozeBotPublishVersion(param.CreateEvalTargetParam.BotPublishVersion),
+			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
+			entity.WithRegion(param.CreateEvalTargetParam.Region),
+			entity.WithEnv(param.CreateEvalTargetParam.Env))
+		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
+			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
+				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,
+				Name:      param.CreateEvalTargetParam.CustomEvalTarget.Name,
+				AvatarURL: param.CreateEvalTargetParam.CustomEvalTarget.AvatarURL,
+				Ext:       param.CreateEvalTargetParam.CustomEvalTarget.Ext,
+			}))
+		}
+		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "CreateEvalTarget failed, param: %v", param.CreateEvalTargetParam)
+		}
+		finalTargetID = targetID
+		finalTargetVersionID = targetVersionID
+		targetType = gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType)
+	} else if param.TargetID > 0 {
+		// 如果提供了 target_id，则获取现有的评测对象
 		target, err := e.evalTargetService.GetEvalTarget(ctx, param.TargetID)
 		if err != nil {
 			return nil, errorx.Wrapf(err, "get eval target fail, target_id: %d", param.TargetID)
@@ -111,24 +137,31 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 		if target == nil {
 			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("target %d not found", param.TargetID)))
 		}
+		finalTargetID = param.TargetID
+		finalTargetVersionID = param.TargetVersionID
 		targetType = target.EvalTargetType
 	}
 
 	// 构建模板实体
 	template := &entity.ExptTemplate{
-		ID:                templateID,
-		SpaceID:           param.SpaceID,
-		CreatedBy:         session.UserID,
-		Name:              param.Name,
-		Description:       param.Description,
-		EvalSetID:         param.EvalSetID,
-		EvalSetVersionID:  param.EvalSetVersionID,
-		TargetID:          param.TargetID,
-		TargetType:        targetType,
-		TargetVersionID:   param.TargetVersionID,
+		ID:                 templateID,
+		SpaceID:            param.SpaceID,
+		CreatedBy:          session.UserID,
+		Name:               param.Name,
+		Description:        param.Description,
+		EvalSetID:          param.EvalSetID,
+		EvalSetVersionID:   param.EvalSetVersionID,
+		TargetID:           finalTargetID,
+		TargetType:         targetType,
+		TargetVersionID:    finalTargetVersionID,
 		EvaluatorVersionRef: evaluatorVersionRefs,
-		TemplateConf:      param.TemplateConf,
-		ExptType:          param.ExptType,
+		TemplateConf:       param.TemplateConf,
+		ExptType:            param.ExptType,
+	}
+
+	// 如果创建了评测对象，更新 TemplateConf 中的 TargetVersionID
+	if param.CreateEvalTargetParam != nil && !param.CreateEvalTargetParam.IsNull() && template.TemplateConf != nil && template.TemplateConf.ConnectorConf.TargetConf != nil {
+		template.TemplateConf.ConnectorConf.TargetConf.TargetVersionID = finalTargetVersionID
 	}
 
 	// 转换为评估器引用DO
@@ -218,21 +251,58 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		}
 	}
 
+	// 处理创建评测对象参数（更新模板时）
+	var finalTargetID, finalTargetVersionID int64
+	finalTargetID = existingTemplate.TargetID // 默认保持原有 TargetID
+	finalTargetVersionID = param.TargetVersionID
+	if param.CreateEvalTargetParam != nil && !param.CreateEvalTargetParam.IsNull() {
+		// 如果提供了创建评测对象参数，则创建新的评测对象
+		// 注意：这会导致 TargetID 改变，但根据业务需求，更新模板时允许创建新的评测对象
+		opts := make([]entity.Option, 0)
+		opts = append(opts, entity.WithCozeBotPublishVersion(param.CreateEvalTargetParam.BotPublishVersion),
+			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
+			entity.WithRegion(param.CreateEvalTargetParam.Region),
+			entity.WithEnv(param.CreateEvalTargetParam.Env))
+		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
+			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
+				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,
+				Name:      param.CreateEvalTargetParam.CustomEvalTarget.Name,
+				AvatarURL: param.CreateEvalTargetParam.CustomEvalTarget.AvatarURL,
+				Ext:       param.CreateEvalTargetParam.CustomEvalTarget.Ext,
+			}))
+		}
+		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "CreateEvalTarget failed, param: %v", param.CreateEvalTargetParam)
+		}
+		finalTargetID = targetID
+		finalTargetVersionID = targetVersionID
+	}
+
 	// 构建更新后的模板实体
 	updatedTemplate := &entity.ExptTemplate{
-		ID:                param.TemplateID,
-		SpaceID:           param.SpaceID,
-		CreatedBy:         existingTemplate.CreatedBy, // 保持原有创建者
-		Name:              param.Name,
-		Description:       param.Description,
-		EvalSetID:         existingTemplate.EvalSetID, // 不允许修改
-		EvalSetVersionID:  param.EvalSetVersionID,
-		TargetID:          existingTemplate.TargetID, // 不允许修改
-		TargetType:       existingTemplate.TargetType, // 不允许修改
-		TargetVersionID:   param.TargetVersionID,
+		ID:                 param.TemplateID,
+		SpaceID:            param.SpaceID,
+		CreatedBy:          existingTemplate.CreatedBy, // 保持原有创建者
+		Name:               param.Name,
+		Description:        param.Description,
+		EvalSetID:          existingTemplate.EvalSetID, // 不允许修改
+		EvalSetVersionID:   param.EvalSetVersionID,
+		TargetID:           finalTargetID,
+		TargetType:         existingTemplate.TargetType, // 如果创建了新评测对象，类型应该保持一致或从 CreateEvalTargetParam 获取
+		TargetVersionID:    finalTargetVersionID,
 		EvaluatorVersionRef: evaluatorVersionRefs,
-		TemplateConf:      param.TemplateConf,
-		ExptType:          param.ExptType,
+		TemplateConf:       param.TemplateConf,
+		ExptType:            param.ExptType,
+	}
+
+	// 如果创建了新的评测对象，更新 TargetType
+	if param.CreateEvalTargetParam != nil && !param.CreateEvalTargetParam.IsNull() {
+		updatedTemplate.TargetType = gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType)
+		// 更新 TemplateConf 中的 TargetVersionID
+		if updatedTemplate.TemplateConf != nil && updatedTemplate.TemplateConf.ConnectorConf.TargetConf != nil {
+			updatedTemplate.TemplateConf.ConnectorConf.TargetConf.TargetVersionID = finalTargetVersionID
+		}
 	}
 
 	// 如果某些字段为空，保持原有值

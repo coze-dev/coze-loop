@@ -8,6 +8,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -17,15 +18,16 @@ import (
 // ConvertCreateExptTemplateReq 转换创建实验模板请求为实体参数
 func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*entity.CreateExptTemplateParam, error) {
 	param := &entity.CreateExptTemplateParam{
-		SpaceID:         req.GetWorkspaceID(),
-		Name:            req.GetName(),
-		Description:     req.GetDesc(),
-		EvalSetID:       req.GetEvalSetID(),
-		EvalSetVersionID: req.GetEvalSetVersionID(),
-		TargetID:        req.GetTargetID(),
-		TargetVersionID: req.GetTargetVersionID(),
-		EvaluatorVersionIDs: req.GetEvaluatorVersionIds(),
-		ExptType:        entity.ExptType(gptr.Indirect(req.ExptType)),
+		SpaceID:              req.GetWorkspaceID(),
+		Name:                 req.GetName(),
+		Description:          req.GetDesc(),
+		EvalSetID:            req.GetEvalSetID(),
+		EvalSetVersionID:     req.GetEvalSetVersionID(),
+		TargetID:             req.GetTargetID(),
+		TargetVersionID:      req.GetTargetVersionID(),
+		EvaluatorVersionIDs:  req.GetEvaluatorVersionIds(),
+		ExptType:             entity.ExptType(gptr.Indirect(req.ExptType)),
+		CreateEvalTargetParam: CreateEvalTargetParamDTO2DOForTemplate(req.CreateEvalTargetParam),
 	}
 
 	// 转换字段映射和运行时参数
@@ -153,8 +155,11 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 		dto.TargetFieldMapping = tm
 		dto.EvaluatorFieldMapping = ems
 		dto.TargetRuntimeParam = trtp
-		dto.EnableWeightedScore = gptr.Of(template.TemplateConf.EnableWeightedScore)
-		dto.EvaluatorScoreWeights = template.TemplateConf.EvaluatorScoreWeights
+		// 加权配置已移动到 ConnectorConf.EvaluatorsConf
+		if template.TemplateConf.ConnectorConf.EvaluatorsConf != nil {
+			dto.EnableWeightedScore = gptr.Of(template.TemplateConf.ConnectorConf.EvaluatorsConf.EnableWeightedScore)
+			dto.EvaluatorScoreWeights = template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorScoreWeights
+		}
 		dto.DefaultItemConcurNum = ptr.ConvIntPtr[int, int32](template.TemplateConf.ItemConcurNum)
 		dto.DefaultEvaluatorsConcurNum = ptr.ConvIntPtr[int, int32](template.TemplateConf.EvaluatorsConcurNum)
 	}
@@ -227,6 +232,36 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 	return targetMapping, evaluatorMappings, runtimeParam
 }
 
+// CreateEvalTargetParamDTO2DOForTemplate 转换创建评测对象参数（用于模板）
+func CreateEvalTargetParamDTO2DOForTemplate(param *eval_target.CreateEvalTargetParam) *entity.CreateEvalTargetParam {
+	if param == nil {
+		return nil
+	}
+
+	res := &entity.CreateEvalTargetParam{
+		SourceTargetID:      param.SourceTargetID,
+		SourceTargetVersion: param.SourceTargetVersion,
+		BotPublishVersion:   param.BotPublishVersion,
+		Region:              param.Region,
+		Env:                 param.Env,
+	}
+	if param.EvalTargetType != nil {
+		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))
+	}
+	if param.BotInfoType != nil {
+		res.BotInfoType = gptr.Of(entity.CozeBotInfoType(*param.BotInfoType))
+	}
+	if param.CustomEvalTarget != nil {
+		res.CustomEvalTarget = &entity.CustomEvalTarget{
+			ID:        param.CustomEvalTarget.ID,
+			Name:      param.CustomEvalTarget.Name,
+			AvatarURL: param.CustomEvalTarget.AvatarURL,
+			Ext:       param.CustomEvalTarget.Ext,
+		}
+	}
+	return res
+}
+
 // ToExptTemplateDTOs 批量转换实验模板实体为DTO
 func ToExptTemplateDTOs(templates []*entity.ExptTemplate) []*domain_expt.ExptTemplate {
 	if len(templates) == 0 {
@@ -242,14 +277,15 @@ func ToExptTemplateDTOs(templates []*entity.ExptTemplate) []*domain_expt.ExptTem
 // ConvertUpdateExptTemplateReq 转换更新实验模板请求为实体参数
 func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*entity.UpdateExptTemplateParam, error) {
 	param := &entity.UpdateExptTemplateParam{
-		TemplateID:      req.GetTemplateID(),
-		SpaceID:         req.GetWorkspaceID(),
-		Name:            req.GetName(),
-		Description:     req.GetDesc(),
-		EvalSetVersionID: req.GetEvalSetVersionID(),
-		TargetVersionID: req.GetTargetVersionID(),
-		EvaluatorVersionIDs: req.GetEvaluatorVersionIds(),
-		ExptType:        entity.ExptType(gptr.Indirect(req.ExptType)),
+		TemplateID:            req.GetTemplateID(),
+		SpaceID:               req.GetWorkspaceID(),
+		Name:                  req.GetName(),
+		Description:           req.GetDesc(),
+		EvalSetVersionID:      req.GetEvalSetVersionID(),
+		TargetVersionID:       req.GetTargetVersionID(),
+		EvaluatorVersionIDs:   req.GetEvaluatorVersionIds(),
+		ExptType:              entity.ExptType(gptr.Indirect(req.ExptType)),
+		CreateEvalTargetParam: CreateEvalTargetParamDTO2DOForTemplate(req.CreateEvalTargetParam),
 	}
 
 	// 转换字段映射和运行时参数
@@ -265,10 +301,8 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	// 构建模板配置
 	if targetFieldMapping != nil || len(evaluatorFieldMapping) > 0 || req.EnableWeightedScore != nil || req.DefaultItemConcurNum != nil || req.DefaultEvaluatorsConcurNum != nil {
 		templateConf := &entity.ExptTemplateConfiguration{
-			EnableWeightedScore:   gptr.Indirect(req.EnableWeightedScore),
-			EvaluatorScoreWeights: req.GetEvaluatorScoreWeights(),
-			ItemConcurNum:         ptr.ConvIntPtr[int32, int](req.DefaultItemConcurNum),
-			EvaluatorsConcurNum:   ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+			ItemConcurNum:       ptr.ConvIntPtr[int32, int](req.DefaultItemConcurNum),
+			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 		}
 
 		// 构建 ConnectorConf
@@ -282,7 +316,9 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 
 			if len(evaluatorFieldMapping) > 0 {
 				templateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
-					EvaluatorConf: evaluatorFieldMapping,
+					EvaluatorConf:        evaluatorFieldMapping,
+					EnableWeightedScore:   gptr.Indirect(req.EnableWeightedScore),
+					EvaluatorScoreWeights: req.GetEvaluatorScoreWeights(),
 				}
 			}
 		}

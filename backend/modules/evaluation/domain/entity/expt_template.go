@@ -110,14 +110,14 @@ func (c *ExptTemplateConfiguration) Valid(ctx context.Context) error {
 	if c == nil {
 		return fmt.Errorf("nil ExptTemplateConfiguration")
 	}
-	// 验证评估器得分加权配置
-	if c.EnableWeightedScore {
-		if len(c.EvaluatorScoreWeights) == 0 {
+	// 验证评估器得分加权配置（已移动到 ConnectorConf.EvaluatorsConf）
+	if c.ConnectorConf.EvaluatorsConf != nil && c.ConnectorConf.EvaluatorsConf.EnableWeightedScore {
+		if len(c.ConnectorConf.EvaluatorsConf.EvaluatorScoreWeights) == 0 {
 			return fmt.Errorf("enable_weighted_score is true but evaluator_score_weights is empty")
 		}
 		// 验证权重总和是否大于0
 		var totalWeight float64
-		for _, weight := range c.EvaluatorScoreWeights {
+		for _, weight := range c.ConnectorConf.EvaluatorsConf.EvaluatorScoreWeights {
 			totalWeight += weight
 		}
 		if totalWeight <= 0 {
@@ -170,6 +170,7 @@ type CreateExptTemplateParam struct {
 	EvaluatorVersionIDs  []int64
 	TemplateConf         *ExptTemplateConfiguration
 	ExptType             ExptType
+	CreateEvalTargetParam *CreateEvalTargetParam
 }
 
 // UpdateExptTemplateParam 更新实验模板参数
@@ -183,4 +184,5 @@ type UpdateExptTemplateParam struct {
 	EvaluatorVersionIDs  []int64
 	TemplateConf         *ExptTemplateConfiguration
 	ExptType             ExptType
+	CreateEvalTargetParam *CreateEvalTargetParam
 }
