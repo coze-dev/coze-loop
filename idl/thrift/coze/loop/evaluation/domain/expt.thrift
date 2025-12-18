@@ -62,7 +62,7 @@ struct Experiment {
     42: optional SourceType source_type
     43: optional string source_id
 
-    51: optional map<i64, evaluator.EvaluatorRunConfig> evaluator_version_run_configs (api.js_conv='true')     // 评估器版本ID对应的评估器运行配置信息
+    51: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
 }
 
 struct TokenUsage {
