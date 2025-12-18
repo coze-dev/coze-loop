@@ -252,6 +252,8 @@ func TestBuildItem(t *testing.T) {
 	assert.Len(t, empty, 3)
 }
 
+// Note: key-nil case cannot be safely tested because buildItem dereferences key
+
 func TestBuildItems(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

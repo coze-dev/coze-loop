@@ -32,6 +32,7 @@ type ExptInsightAnalysisServiceImpl struct {
 	notifyRPCAdapter        rpc.INotifyRPCAdapter
 	userProvider            rpc.IUserProvider
 	exptRepo                repo.IExperimentRepo
+	targetRepo              repo.IEvalTargetRepo
 }
 
 func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
@@ -42,6 +43,7 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
 	exptRepo repo.IExperimentRepo,
+	targetRepo repo.IEvalTargetRepo,
 ) IExptInsightAnalysisService {
 	return &ExptInsightAnalysisServiceImpl{
 		repo:                    repo,
@@ -52,6 +54,7 @@ func NewInsightAnalysisService(repo repo.IExptInsightAnalysisRecordRepo,
 		notifyRPCAdapter:        notifyRPCAdapter,
 		userProvider:            userProvider,
 		exptRepo:                exptRepo,
+		targetRepo:              targetRepo,
 	}
 }
 
@@ -125,7 +128,55 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 		return err
 	}
 
-	reportID, err := e.agentAdapter.CallTraceAgent(ctx, spaceID, url)
+	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
+	if err != nil {
+		return err
+	}
+
+	param := &rpc.CallTraceAgentParam{
+		SpaceID:        spaceID,
+		ExptID:         exptID,
+		Url:            url,
+		EvalTargetType: expt.TargetType,
+	}
+
+	if expt.StartAt == nil || expt.EndAt == nil {
+		logs.CtxWarn(ctx, "Experiment %d has no start or end time", exptID)
+	} else {
+		param.StartTime = expt.StartAt.UnixMilli()
+		param.EndTime = expt.EndAt.UnixMilli()
+	}
+
+	target, err := e.targetRepo.GetEvalTargetVersion(ctx, spaceID, expt.TargetVersionID)
+	if err != nil {
+		return err
+	}
+	if target == nil || target.SourceTargetID == "" {
+		logs.CtxWarn(ctx, "Experiment %d has no source target %d", exptID, expt.TargetID)
+		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg(fmt.Sprintf("Experiment %d has no source target %d", exptID, expt.TargetID)))
+	}
+	param.EvalTargetID, err = strconv.ParseInt(target.SourceTargetID, 10, 64)
+	if err != nil {
+		return err
+	}
+	if target.EvalTargetVersion == nil || target.EvalTargetVersion.SourceTargetVersion == "" {
+		logs.CtxWarn(ctx, "Experiment %d has no source target version %s", exptID, expt.TargetVersionID)
+		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg(fmt.Sprintf("Experiment %d has no source target version %d", exptID, expt.TargetVersionID)))
+	}
+	param.EvalTargetVersion = target.EvalTargetVersion.SourceTargetVersion
+
+	evaluators, err := e.exptRepo.GetEvaluatorRefByExptIDs(ctx, []int64{exptID}, spaceID)
+	if err != nil {
+		return err
+	}
+	param.Evaluators = evaluators
+
+	// only allow prompt eval target, but not return error here. The task will fail in the CallTraceAgent.
+	if param.EvalTargetType != entity.EvalTargetTypeLoopPrompt {
+		logs.CtxWarn(ctx, "Illegal evaltarget type %d for expt %d", param.EvalTargetType, exptID)
+	}
+
+	reportID, err := e.agentAdapter.CallTraceAgent(ctx, param)
 	if err != nil {
 		return err
 	}
@@ -150,10 +201,11 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 }
 
 func (e ExptInsightAnalysisServiceImpl) checkAnalysisReportGenStatus(ctx context.Context, record *entity.ExptInsightAnalysisRecord, CreateAt int64) (err error) {
-	_, status, err := e.agentAdapter.GetReport(ctx, record.SpaceID, ptr.From(record.AnalysisReportID))
+	_, _, status, err := e.agentAdapter.GetReport(ctx, record.SpaceID, ptr.From(record.AnalysisReportID))
 	if err != nil {
 		return err
 	}
+
 	if status == entity.ReportStatus_Failed {
 		record.Status = entity.InsightAnalysisStatus_Failed
 		return e.repo.UpdateAnalysisRecord(ctx, record)
@@ -167,10 +219,10 @@ func (e ExptInsightAnalysisServiceImpl) checkAnalysisReportGenStatus(ctx context
 		return e.repo.UpdateAnalysisRecord(ctx, record)
 	}
 
-	defaultIntervalSecond := 60 * 60 * 1
-	if time.Now().Unix()-CreateAt >= int64(defaultIntervalSecond) {
-		logs.CtxWarn(ctx, "checkAnalysisReportGenStatus found timeout event, expt_id: %v, record_id: %v", record.ExptID, record.ID)
+	// 超过2小时，未生成分析报告，认为是失败
+	if status == entity.ReportStatus_Running && record.CreatedAt.Add(entity.InsightAnalysisRunningTimeout).Unix() <= time.Now().Unix() {
 		record.Status = entity.InsightAnalysisStatus_Failed
+		logs.CtxWarn(ctx, "checkAnalysisReportGenStatus found timeout event, space_id: %v, expt_id: %v, record_id: %v, report_id: %v", record.SpaceID, record.ExptID, record.ID, gptr.Indirect(record.AnalysisReportID))
 		return e.repo.UpdateAnalysisRecord(ctx, record)
 	}
 
@@ -195,17 +247,27 @@ func (e ExptInsightAnalysisServiceImpl) GetAnalysisRecordByID(ctx context.Contex
 		return nil, err
 	}
 
+	if analysisRecord.Status == entity.InsightAnalysisStatus_Running && analysisRecord.CreatedAt.Add(entity.InsightAnalysisRunningTimeout).Unix() < time.Now().Unix() {
+		analysisRecord.Status = entity.InsightAnalysisStatus_Failed
+		err = e.repo.UpdateAnalysisRecord(ctx, analysisRecord)
+		if err != nil {
+			logs.CtxError(ctx, "GetAnalysisRecordByID: UpdateAnalysisRecord failed: %v", err)
+		}
+		return analysisRecord, err
+	}
+
 	if analysisRecord.Status == entity.InsightAnalysisStatus_Running ||
 		analysisRecord.Status == entity.InsightAnalysisStatus_Failed {
 		return analysisRecord, nil
 	}
 
-	report, _, err := e.agentAdapter.GetReport(ctx, spaceID, ptr.From(analysisRecord.AnalysisReportID))
+	report, reportIdx, _, err := e.agentAdapter.GetReport(ctx, spaceID, ptr.From(analysisRecord.AnalysisReportID))
 	if err != nil {
 		return nil, err
 	}
 
 	analysisRecord.AnalysisReportContent = report
+	analysisRecord.AnalysisReportIndex = reportIdx
 
 	upvoteCount, downvoteCount, err := e.repo.CountFeedbackVote(ctx, spaceID, exptID, recordID)
 	if err != nil {
@@ -254,7 +316,40 @@ func (e ExptInsightAnalysisServiceImpl) notifyAnalysisComplete(ctx context.Conte
 }
 
 func (e ExptInsightAnalysisServiceImpl) ListAnalysisRecord(ctx context.Context, spaceID, exptID int64, page entity.Page, session *entity.Session) ([]*entity.ExptInsightAnalysisRecord, int64, error) {
-	return e.repo.ListAnalysisRecord(ctx, spaceID, exptID, page)
+	analysisRecords, total, err := e.repo.ListAnalysisRecord(ctx, spaceID, exptID, page)
+	if err != nil {
+		return nil, 0, err
+	}
+	if total == 0 {
+		return analysisRecords, total, nil
+	}
+
+	firstAnalysisRecord := analysisRecords[0]
+
+	upvoteCount, downvoteCount, err := e.repo.CountFeedbackVote(ctx, spaceID, exptID, firstAnalysisRecord.ID)
+	if err != nil {
+		// side path, don't block the main flow
+		logs.CtxWarn(ctx, "CountFeedbackVote failed for space_id: %v, expt_id: %v, record_id: %v, err=%v", spaceID, exptID, firstAnalysisRecord.ID, err)
+		return analysisRecords, total, nil
+	}
+
+	curUserFeedbackVote, err := e.repo.GetFeedbackVoteByUser(ctx, spaceID, exptID, firstAnalysisRecord.ID, session.UserID)
+	if err != nil {
+		// side path, don't block the main flow
+		logs.CtxWarn(ctx, "GetFeedbackVoteByUser failed for space_id: %v, expt_id: %v, record_id: %v, err=%v", spaceID, exptID, firstAnalysisRecord.ID, err)
+		return analysisRecords, total, nil
+	}
+	firstAnalysisRecord.ExptInsightAnalysisFeedback = entity.ExptInsightAnalysisFeedback{
+		UpvoteCount:         upvoteCount,
+		DownvoteCount:       downvoteCount,
+		CurrentUserVoteType: entity.None,
+	}
+	firstAnalysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = entity.None
+	if curUserFeedbackVote != nil {
+		firstAnalysisRecord.ExptInsightAnalysisFeedback.CurrentUserVoteType = curUserFeedbackVote.VoteType
+	}
+
+	return analysisRecords, total, nil
 }
 
 func (e ExptInsightAnalysisServiceImpl) DeleteAnalysisRecord(ctx context.Context, spaceID, exptID, recordID int64) error {

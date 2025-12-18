@@ -8129,6 +8129,20 @@ func (p *BatchGetExperimentResultResponse) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 10:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField10(buf[offset:])
@@ -8295,6 +8309,31 @@ func (p *BatchGetExperimentResultResponse) FastReadField4(buf []byte) (int, erro
 	return offset, nil
 }
 
+func (p *BatchGetExperimentResultResponse) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*expt.ExptColumnEvalTarget, 0, size)
+	values := make([]expt.ExptColumnEvalTarget, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.ExptColumnEvalTarget = _field
+	return offset, nil
+}
+
 func (p *BatchGetExperimentResultResponse) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 
@@ -8358,6 +8397,7 @@ func (p *BatchGetExperimentResultResponse) FastWriteNocopy(buf []byte, w thrift.
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -8372,6 +8412,7 @@ func (p *BatchGetExperimentResultResponse) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field10Length()
 		l += p.field20Length()
 		l += p.field255Length()
@@ -8434,6 +8475,22 @@ func (p *BatchGetExperimentResultResponse) fastWriteField4(buf []byte, w thrift.
 		offset += thrift.Binary.ListBeginLength()
 		var length int
 		for _, v := range p.ExptColumnAnnotations {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *BatchGetExperimentResultResponse) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExptColumnEvalTarget() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 5)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.ExptColumnEvalTarget {
 			length++
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
@@ -8517,6 +8574,19 @@ func (p *BatchGetExperimentResultResponse) field4Length() int {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.ListBeginLength()
 		for _, v := range p.ExptColumnAnnotations {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *BatchGetExperimentResultResponse) field5Length() int {
+	l := 0
+	if p.IsSetExptColumnEvalTarget() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.ExptColumnEvalTarget {
 			_ = v
 			l += v.BLength()
 		}
@@ -8616,6 +8686,21 @@ func (p *BatchGetExperimentResultResponse) DeepCopy(s interface{}) error {
 			}
 
 			p.ExptColumnAnnotations = append(p.ExptColumnAnnotations, _elem)
+		}
+	}
+
+	if src.ExptColumnEvalTarget != nil {
+		p.ExptColumnEvalTarget = make([]*expt.ExptColumnEvalTarget, 0, len(src.ExptColumnEvalTarget))
+		for _, elem := range src.ExptColumnEvalTarget {
+			var _elem *expt.ExptColumnEvalTarget
+			if elem != nil {
+				_elem = &expt.ExptColumnEvalTarget{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.ExptColumnEvalTarget = append(p.ExptColumnEvalTarget, _elem)
 		}
 	}
 

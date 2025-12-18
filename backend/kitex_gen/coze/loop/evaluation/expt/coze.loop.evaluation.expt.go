@@ -10994,6 +10994,7 @@ type BatchGetExperimentResultResponse struct {
 	ExptColumnEvaluators []*expt.ExptColumnEvaluator `thrift:"expt_column_evaluators,3,optional" frugal:"3,optional,list<expt.ExptColumnEvaluator>" form:"expt_column_evaluators" json:"expt_column_evaluators,omitempty"`
 	// 人工标注标签表头信息
 	ExptColumnAnnotations []*expt.ExptColumnAnnotation `thrift:"expt_column_annotations,4,optional" frugal:"4,optional,list<expt.ExptColumnAnnotation>" form:"expt_column_annotations" json:"expt_column_annotations,omitempty"`
+	ExptColumnEvalTarget  []*expt.ExptColumnEvalTarget `thrift:"expt_column_eval_target,5,optional" frugal:"5,optional,list<expt.ExptColumnEvalTarget>" form:"expt_column_eval_target" json:"expt_column_eval_target,omitempty"`
 	// item粒度实验结果详情
 	ItemResults []*expt.ItemResult_ `thrift:"item_results,10,optional" frugal:"10,optional,list<expt.ItemResult_>" form:"item_results" json:"item_results,omitempty"`
 	Total       *int64              `thrift:"total,20,optional" frugal:"20,optional,i64" json:"total" form:"total" `
@@ -11050,6 +11051,18 @@ func (p *BatchGetExperimentResultResponse) GetExptColumnAnnotations() (v []*expt
 	return p.ExptColumnAnnotations
 }
 
+var BatchGetExperimentResultResponse_ExptColumnEvalTarget_DEFAULT []*expt.ExptColumnEvalTarget
+
+func (p *BatchGetExperimentResultResponse) GetExptColumnEvalTarget() (v []*expt.ExptColumnEvalTarget) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptColumnEvalTarget() {
+		return BatchGetExperimentResultResponse_ExptColumnEvalTarget_DEFAULT
+	}
+	return p.ExptColumnEvalTarget
+}
+
 var BatchGetExperimentResultResponse_ItemResults_DEFAULT []*expt.ItemResult_
 
 func (p *BatchGetExperimentResultResponse) GetItemResults() (v []*expt.ItemResult_) {
@@ -11097,6 +11110,9 @@ func (p *BatchGetExperimentResultResponse) SetExptColumnEvaluators(val []*expt.E
 func (p *BatchGetExperimentResultResponse) SetExptColumnAnnotations(val []*expt.ExptColumnAnnotation) {
 	p.ExptColumnAnnotations = val
 }
+func (p *BatchGetExperimentResultResponse) SetExptColumnEvalTarget(val []*expt.ExptColumnEvalTarget) {
+	p.ExptColumnEvalTarget = val
+}
 func (p *BatchGetExperimentResultResponse) SetItemResults(val []*expt.ItemResult_) {
 	p.ItemResults = val
 }
@@ -11112,6 +11128,7 @@ var fieldIDToName_BatchGetExperimentResultResponse = map[int16]string{
 	2:   "column_evaluators",
 	3:   "expt_column_evaluators",
 	4:   "expt_column_annotations",
+	5:   "expt_column_eval_target",
 	10:  "item_results",
 	20:  "total",
 	255: "BaseResp",
@@ -11127,6 +11144,10 @@ func (p *BatchGetExperimentResultResponse) IsSetExptColumnEvaluators() bool {
 
 func (p *BatchGetExperimentResultResponse) IsSetExptColumnAnnotations() bool {
 	return p.ExptColumnAnnotations != nil
+}
+
+func (p *BatchGetExperimentResultResponse) IsSetExptColumnEvalTarget() bool {
+	return p.ExptColumnEvalTarget != nil
 }
 
 func (p *BatchGetExperimentResultResponse) IsSetItemResults() bool {
@@ -11188,6 +11209,14 @@ func (p *BatchGetExperimentResultResponse) Read(iprot thrift.TProtocol) (err err
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -11344,6 +11373,29 @@ func (p *BatchGetExperimentResultResponse) ReadField4(iprot thrift.TProtocol) er
 	p.ExptColumnAnnotations = _field
 	return nil
 }
+func (p *BatchGetExperimentResultResponse) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*expt.ExptColumnEvalTarget, 0, size)
+	values := make([]expt.ExptColumnEvalTarget, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ExptColumnEvalTarget = _field
+	return nil
+}
 func (p *BatchGetExperimentResultResponse) ReadField10(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -11407,6 +11459,10 @@ func (p *BatchGetExperimentResultResponse) Write(oprot thrift.TProtocol) (err er
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField10(oprot); err != nil {
@@ -11541,6 +11597,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *BatchGetExperimentResultResponse) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptColumnEvalTarget() {
+		if err = oprot.WriteFieldBegin("expt_column_eval_target", thrift.LIST, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ExptColumnEvalTarget)); err != nil {
+			return err
+		}
+		for _, v := range p.ExptColumnEvalTarget {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *BatchGetExperimentResultResponse) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetItemResults() {
 		if err = oprot.WriteFieldBegin("item_results", thrift.LIST, 10); err != nil {
@@ -11628,6 +11710,9 @@ func (p *BatchGetExperimentResultResponse) DeepEqual(ano *BatchGetExperimentResu
 	if !p.Field4DeepEqual(ano.ExptColumnAnnotations) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.ExptColumnEvalTarget) {
+		return false
+	}
 	if !p.Field10DeepEqual(ano.ItemResults) {
 		return false
 	}
@@ -11685,6 +11770,19 @@ func (p *BatchGetExperimentResultResponse) Field4DeepEqual(src []*expt.ExptColum
 		return false
 	}
 	for i, v := range p.ExptColumnAnnotations {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchGetExperimentResultResponse) Field5DeepEqual(src []*expt.ExptColumnEvalTarget) bool {
+
+	if len(p.ExptColumnEvalTarget) != len(src) {
+		return false
+	}
+	for i, v := range p.ExptColumnEvalTarget {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

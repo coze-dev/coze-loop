@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -2267,80 +2268,80 @@ func TestExperimentApplication_BatchGetExperimentResult_(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).Return(
-					[]*entity.ColumnEvaluator{
-						{EvaluatorVersionID: 1, Name: gptr.Of("evaluator1")},
-					},
-					nil,
-					[]*entity.ColumnEvalSetField{
-						{Name: gptr.Of("field1"), ContentType: entity.ContentTypeText},
-					},
-					[]*entity.ExptColumnAnnotation{
-						{
-							ExptID: validExptID,
-							ColumnAnnotations: []*entity.ColumnAnnotation{
-								{
-									TagKeyID:    1,
-									TagName:     "name",
-									Description: "desc",
-									TagValues: []*entity.TagValue{
-										{
-											TagValueId:   1,
-											TagValueName: "name",
-											Status:       entity.TagStatusActive,
+					&entity.MGetExperimentReportResult{
+						ColumnEvaluators: []*entity.ColumnEvaluator{
+							{EvaluatorVersionID: 1, Name: gptr.Of("evaluator1")},
+						},
+						ColumnEvalSetFields: []*entity.ColumnEvalSetField{
+							{Name: gptr.Of("field1"), ContentType: entity.ContentTypeText},
+						},
+						ExptColumnAnnotations: []*entity.ExptColumnAnnotation{
+							{
+								ExptID: validExptID,
+								ColumnAnnotations: []*entity.ColumnAnnotation{
+									{
+										TagKeyID:    1,
+										TagName:     "name",
+										Description: "desc",
+										TagValues: []*entity.TagValue{
+											{
+												TagValueId:   1,
+												TagValueName: "name",
+												Status:       entity.TagStatusActive,
+											},
 										},
+										TagContentType: entity.TagContentTypeContinuousNumber,
+										TagContentSpec: &entity.TagContentSpec{ContinuousNumberSpec: &entity.ContinuousNumberSpec{
+											MinValue:            ptr.Of(float64(1)),
+											MinValueDescription: ptr.Of("1"),
+											MaxValue:            ptr.Of(float64(2)),
+											MaxValueDescription: ptr.Of("2"),
+										}},
+										TagStatus: entity.TagStatusActive,
 									},
-									TagContentType: entity.TagContentTypeContinuousNumber,
-									TagContentSpec: &entity.TagContentSpec{ContinuousNumberSpec: &entity.ContinuousNumberSpec{
-										MinValue:            ptr.Of(float64(1)),
-										MinValueDescription: ptr.Of("1"),
-										MaxValue:            ptr.Of(float64(2)),
-										MaxValueDescription: ptr.Of("2"),
-									}},
-									TagStatus: entity.TagStatusActive,
 								},
 							},
 						},
-					},
-
-					[]*entity.ItemResult{
-						{
-							ItemID: 1,
-							SystemInfo: &entity.ItemSystemInfo{
-								RunState: entity.ItemRunState_Success,
-								Error:    nil,
-							},
-							TurnResults: []*entity.TurnResult{
-								{
-									TurnID: 1,
-									ExperimentResults: []*entity.ExperimentResult{
-										{
-											ExperimentID: 1,
-											Payload: &entity.ExperimentTurnPayload{
-												TurnID: 1,
-												AnnotateResult: &entity.TurnAnnotateResult{
-													AnnotateRecords: map[int64]*entity.AnnotateRecord{
-														1: {
-															ID:           1,
-															SpaceID:      1,
-															TagKeyID:     1,
-															ExperimentID: 1,
-															AnnotateData: &entity.AnnotateData{
-																Score:          ptr.Of(float64(1)),
-																TagContentType: entity.TagContentTypeContinuousNumber,
+						ItemResults: []*entity.ItemResult{
+							{
+								ItemID: 1,
+								SystemInfo: &entity.ItemSystemInfo{
+									RunState: entity.ItemRunState_Success,
+									Error:    nil,
+								},
+								TurnResults: []*entity.TurnResult{
+									{
+										TurnID: 1,
+										ExperimentResults: []*entity.ExperimentResult{
+											{
+												ExperimentID: 1,
+												Payload: &entity.ExperimentTurnPayload{
+													TurnID: 1,
+													AnnotateResult: &entity.TurnAnnotateResult{
+														AnnotateRecords: map[int64]*entity.AnnotateRecord{
+															1: {
+																ID:           1,
+																SpaceID:      1,
+																TagKeyID:     1,
+																ExperimentID: 1,
+																AnnotateData: &entity.AnnotateData{
+																	Score:          ptr.Of(float64(1)),
+																	TagContentType: entity.TagContentTypeContinuousNumber,
+																},
+																TagValueID: 1,
 															},
-															TagValueID: 1,
 														},
 													},
 												},
 											},
 										},
+										TurnIndex: nil,
 									},
-									TurnIndex: nil,
 								},
 							},
 						},
+						Total: validTotal,
 					},
-					validTotal,
 					nil,
 				)
 			},
@@ -3901,7 +3902,11 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 
 	t.Run("成功创建洞察分析", func(t *testing.T) {
 		// Mock the manager.Get call
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			CreatedBy: "test-user",
+			StartAt:   &[]time.Time{time.Now()}[0],
+			EndAt:     &[]time.Time{time.Now()}[0],
+		}, nil)
 		// Mock the auth.AuthorizationWithoutSPI call
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		// Mock the CreateAnalysisRecord call
@@ -3929,7 +3934,11 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 	})
 
 	t.Run("创建分析记录失败", func(t *testing.T) {
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			CreatedBy: "test-user",
+			StartAt:   &[]time.Time{time.Now()}[0],
+			EndAt:     &[]time.Time{time.Now()}[0],
+		}, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(0), errors.New("create analysis record error"))
 

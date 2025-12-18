@@ -27,6 +27,14 @@ func (p *Content) IsValid() error {
 			return fmt.Errorf("field Image not valid, %w", err)
 		}
 	}
+	if p.FullContent != nil {
+		if err := p.FullContent.IsValid(); err != nil {
+			return fmt.Errorf("field FullContent not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ObjectStorage) IsValid() error {
 	return nil
 }
 func (p *Image) IsValid() error {

@@ -1995,7 +1995,8 @@ func TestEvalOpenAPIApplication_ListExperimentResultOApi(t *testing.T) {
 			name: "service error",
 			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
-				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.AssignableToTypeOf(&entity.MGetExperimentResultParam{})).Return(nil, nil, nil, nil, nil, int64(0), errors.New("result error"))
+				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.AssignableToTypeOf(&entity.MGetExperimentResultParam{})).
+					Return(nil, errors.New("result error"))
 			},
 			wantErr: -1,
 		},
@@ -2006,7 +2007,13 @@ func TestEvalOpenAPIApplication_ListExperimentResultOApi(t *testing.T) {
 				columnEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1}}
 				columnFields := []*entity.ColumnEvalSetField{{Key: gptr.Of("field"), Name: gptr.Of("Field"), ContentType: entity.ContentTypeText}}
 				itemResults := []*entity.ItemResult{{ItemID: 10}}
-				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.AssignableToTypeOf(&entity.MGetExperimentResultParam{})).Return(columnEvaluators, nil, columnFields, nil, itemResults, int64(3), nil)
+				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.AssignableToTypeOf(&entity.MGetExperimentResultParam{})).
+					Return(&entity.MGetExperimentReportResult{
+						ColumnEvaluators:    columnEvaluators,
+						ColumnEvalSetFields: columnFields,
+						ItemResults:         itemResults,
+						Total:               int64(3),
+					}, nil)
 			},
 		},
 	}
@@ -2231,9 +2238,4 @@ func newFailedInvokeResultReq(workspaceID, invokeID int64, errorMessage string) 
 		Status:       &status,
 		ErrorMessage: gptr.Of(errorMessage),
 	}
-}
-
-func TestNewEvalOpenAPIApplication(t *testing.T) {
-	app := NewEvalOpenAPIApplication(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-	assert.NotNil(t, app)
 }

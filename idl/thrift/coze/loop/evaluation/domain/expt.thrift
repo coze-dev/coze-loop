@@ -155,6 +155,24 @@ struct ColumnEvaluator {
     7: optional bool builtin
 }
 
+struct ExptColumnEvalTarget {
+    1: optional i64 experiment_id (api.js_conv='true', go.tag='json:"experiment_id"')
+    2: optional list<ColumnEvalTarget> column_eval_targets
+}
+
+const string ColumnEvalTargetName_ActualOutput = "actual_output"
+const string ColumnEvalTargetName_Trajectory = "trajectory"
+const string ColumnEvalTargetName_EvalTargetTotalLatency = "eval_target_total_latency"
+const string ColumnEvalTargetName_EvaluatorInputTokens = "eval_target_input_tokens"
+const string ColumnEvalTargetName_EvaluatorOutputTokens = "eval_target_output_tokens"
+const string ColumnEvalTargetName_EvaluatorTotalTokens = "eval_target_total_tokens"
+
+struct ColumnEvalTarget {
+    1: optional string name
+    2: optional string description
+    3: optional string label
+}
+
 struct ColumnEvalSetField {
     1: optional string key
     2: optional string name
@@ -298,6 +316,11 @@ enum FieldType {
     AnnotationScore = 49 // 使用二级key, field_key为tag_key_id, value为score
     AnnotationText = 50 // 使用二级key, field_key为tag_key_id, value为文本
     AnnotationCategorical = 51  // 使用二级key, field_key为tag_key_id, value为tag_value_id
+
+    TotalLatency = 60 // 目前使用固定key：total_latency
+    InputTokens = 61 // 目前使用固定key：input_tokens
+    OutputTokens = 62 // 目前使用固定key：output_tokens
+    TotalTokens = 63 // 目前使用固定key：total_tokens
 }
 
 // 字段过滤器
@@ -345,6 +368,12 @@ struct ExptAggregateResult {
     2: optional map<i64, EvaluatorAggregateResult> evaluator_results (go.tag = 'json:"evaluator_results"')
     3: optional ExptAggregateCalculateStatus status
     4: optional map<i64, AnnotationAggregateResult> annotation_results (go.tag = 'json:"annotation_results"')    // tag_key_id -> result
+}
+
+struct EvalTargetAggregateResult {
+    1: required i64 target_id (api.js_conv = 'true', go.tag = 'json:"target_id"')
+    2: optional list<AggregatorResult> aggregator_results
+    3: optional string name
 }
 
 // 评估器版本粒度聚合结果
@@ -485,6 +514,13 @@ struct ExptInsightAnalysisRecord {
     6: optional string analysis_report_content
     7: optional ExptInsightAnalysisFeedback expt_insight_analysis_feedback
     8: optional common.BaseInfo base_info
+
+    21: optional list<ExptInsightAnalysisIndex> analysis_report_index
+}
+
+struct ExptInsightAnalysisIndex {
+    1: optional string id
+    2: optional string title
 }
 
 // 洞察分析反馈统计
