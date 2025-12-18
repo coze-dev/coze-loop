@@ -6,6 +6,8 @@ package entity
 import (
 	"fmt"
 	"time"
+
+	"github.com/bytedance/gg/gptr"
 )
 
 // ContentType 定义内容类型
@@ -40,6 +42,19 @@ type Content struct {
 	ContentOmitted   *bool               `json:"content_omitted,omitempty"`
 	FullContent      *ObjectStorage      `json:"full_content,omitempty"`       // 被省略数据的完整信息，批量返回时会签发相应的 url，用户可以点击下载. 同时支持通过该字段传入已经上传好的超长数据(dataOmitted 为 true 时生效)
 	FullContentBytes *int32              `json:"full_content_bytes,omitempty"` // 超长数据完整内容的大小，单位 byte
+}
+
+func (c *Content) IsContentOmitted() bool {
+	if c == nil || !gptr.Indirect(c.ContentOmitted) {
+		return false
+	}
+	switch gptr.Indirect(c.ContentType) {
+	case ContentTypeText:
+		b := int(gptr.Indirect(c.FullContentBytes))
+		return b > 0 && b == len(gptr.Indirect(c.Text))
+	default:
+		return false
+	}
 }
 
 // GetText 获取内容文本

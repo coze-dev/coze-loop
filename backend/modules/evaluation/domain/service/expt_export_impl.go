@@ -597,7 +597,7 @@ func (e *exportCSVHelper) getDatasetFields(ctx context.Context, colEvalSetFields
 			continue
 		}
 
-		if gptr.Indirect(fieldData.Content.ContentOmitted) {
+		if fieldData.Content.IsContentOmitted() {
 			if fieldData, err = e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
 				SpaceID:         e.spaceID,
 				EvaluationSetID: tes.EvalSetID,

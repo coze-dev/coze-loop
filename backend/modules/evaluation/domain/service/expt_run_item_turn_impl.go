@@ -176,39 +176,9 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		return nil, err
 	}
 
-	turnFields := gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) {
-		return t.Name, t.Content
-	})
-
-	buildInputFields := func(fieldConfs []*entity.FieldConf) (map[string]*entity.Content, error) {
-		fields := make(map[string]*entity.Content, len(fieldConfs))
-		switch etec.Expt.Target.EvalTargetType {
-		case entity.EvalTargetTypeCustomRPCServer:
-			return turnFields, nil
-		default:
-			for _, fc := range fieldConfs {
-				firstField, err := json.GetFirstJSONPathField(fc.FromField)
-				if err != nil {
-					return nil, err
-				}
-				if firstField == fc.FromField { // 没有下钻字段
-					fields[fc.FieldName] = turnFields[fc.FromField]
-				} else {
-					content, err := e.getContentByJsonPath(turnFields[firstField], fc.FromField)
-					if err != nil {
-						return nil, err
-					}
-					fields[fc.FieldName] = content
-				}
-			}
-
-		}
-		return fields, nil
-	}
-
 	var inputFields map[string]*entity.Content
 	if targetConf.IngressConf != nil && targetConf.IngressConf.EvalSetAdapter != nil {
-		inputFields, err = buildInputFields(targetConf.IngressConf.EvalSetAdapter.FieldConfs)
+		inputFields, err = e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
 		if err != nil {
 			return nil, err
 		}
@@ -428,7 +398,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 		if err != nil {
 			return nil, err
 		}
-		if gptr.Indirect(content.ContentOmitted) {
+		if content.IsContentOmitted() {
 			fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
 				SpaceID:         spaceID,
 				EvaluationSetID: evalSetTurn.EvalSetID,
