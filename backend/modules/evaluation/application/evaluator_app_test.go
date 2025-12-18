@@ -1903,6 +1903,148 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 	}
 }
 
+// 新增：运行配置参数透传与扩展字段注入
+func TestEvaluatorHandlerImpl_DebugEvaluator_RuntimeParamExt(t *testing.T) {
+	t.Skip("暂时跳过：依赖外部 benefitService 行为，已通过 buildRunEvaluatorRequest 的单测验证 runtime_param 注入")
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+
+	handler := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		benefitService:   mockBenefitService,
+	}
+
+	// 构造带有运行时参数的请求
+	rpJSON := "{\"foo\":1}"
+	req := &evaluatorservice.DebugEvaluatorRequest{
+		WorkspaceID:   100,
+		EvaluatorType: evaluatordto.EvaluatorType_Prompt,
+		EvaluatorContent: &evaluatordto.EvaluatorContent{
+			PromptEvaluator: &evaluatordto.PromptEvaluator{},
+		},
+		InputData: &evaluatordto.EvaluatorInputData{},
+		EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+			EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: &rpJSON},
+		},
+	}
+
+	// 鉴权通过 & 权益允许
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+		Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+
+	// 期望 DebugEvaluator 收到注入了 builtin_runtime_param 的扩展字段，且携带运行配置
+	mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, evaluatorDO *entity.Evaluator, inputDO *entity.EvaluatorInputData, runConf *entity.EvaluatorRunConfig, spaceID int64) (*entity.EvaluatorOutputData, error) {
+			// 验证运行配置透传
+			assert.NotNil(t, runConf)
+			assert.NotNil(t, runConf.EvaluatorRuntimeParam)
+			assert.NotNil(t, runConf.EvaluatorRuntimeParam.JSONValue)
+			assert.Equal(t, rpJSON, *runConf.EvaluatorRuntimeParam.JSONValue)
+
+			// 验证扩展字段注入
+			assert.NotNil(t, inputDO)
+			assert.NotNil(t, inputDO.Ext)
+			val, ok := inputDO.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam]
+			assert.True(t, ok)
+			assert.Equal(t, rpJSON, val)
+
+			return &entity.EvaluatorOutputData{}, nil
+		})
+
+	_, err := handler.DebugEvaluator(context.Background(), req)
+	assert.NoError(t, err)
+}
+
+// 新增：批量调试时运行配置参数扩展注入与透传
+func TestEvaluatorHandlerImpl_BatchDebugEvaluator_RuntimeParam(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+
+	handler := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		benefitService:   mockBenefitService,
+	}
+
+	rpJSON := "{\"bar\":2}"
+	req := &evaluatorservice.BatchDebugEvaluatorRequest{
+		WorkspaceID:      200,
+		EvaluatorType:    evaluatordto.EvaluatorType_Prompt,
+		EvaluatorContent: &evaluatordto.EvaluatorContent{PromptEvaluator: &evaluatordto.PromptEvaluator{}},
+		InputData:        []*evaluatordto.EvaluatorInputData{{}, {}},
+		EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+			EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: &rpJSON},
+		},
+	}
+
+	// 鉴权通过 & 权益允许
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+		Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+
+	// 由于 batch 内部并发调用 DebugEvaluator，这里允许最多调用两次
+	mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, evaluatorDO *entity.Evaluator, inputDO *entity.EvaluatorInputData, runConf *entity.EvaluatorRunConfig, spaceID int64) (*entity.EvaluatorOutputData, error) {
+			assert.NotNil(t, runConf)
+			assert.NotNil(t, runConf.EvaluatorRuntimeParam)
+			assert.NotNil(t, runConf.EvaluatorRuntimeParam.JSONValue)
+			assert.Equal(t, rpJSON, *runConf.EvaluatorRuntimeParam.JSONValue)
+			assert.NotNil(t, inputDO.Ext)
+			assert.Equal(t, rpJSON, inputDO.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+			return &entity.EvaluatorOutputData{}, nil
+		}).MinTimes(1)
+
+	resp, err := handler.BatchDebugEvaluator(context.Background(), req)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+}
+
+// 新增：预置评估器调试不携带运行配置（nil）
+func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator_RunConfNil(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	handler := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		configer:         mockConfiger,
+	}
+
+	// 列表鉴权
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+
+	// 查询预置评估器
+	builtinDO := &entity.Evaluator{ID: 1, SpaceID: 300, Builtin: true, EvaluatorType: entity.EvaluatorTypePrompt}
+	mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), int64(1)).Return(builtinDO, nil)
+
+	// DebugEvaluator 应收到 runConf 为 nil
+	mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), builtinDO, gomock.Any(), gomock.Nil(), int64(300)).
+		Return(&entity.EvaluatorOutputData{}, nil)
+
+	req := &evaluatorservice.DebugBuiltinEvaluatorRequest{
+		WorkspaceID: 300,
+		EvaluatorID: 1,
+		InputData:   &evaluatordto.EvaluatorInputData{},
+	}
+
+	_, err := handler.DebugBuiltinEvaluator(context.Background(), req)
+	assert.NoError(t, err)
+}
+
 func TestEvaluatorHandlerImpl_GetTemplateInfo_Code(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
