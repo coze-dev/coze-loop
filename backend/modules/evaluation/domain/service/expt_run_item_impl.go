@@ -146,7 +146,7 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	var evalErr error
 
 	clone.ExptRunID = etec.Event.ExptRunID
-	if result.TargetResult != nil {
+	if result.TargetResult != nil && result.TargetResult.ID > 0 {
 		clone.TargetResultID = result.TargetResult.ID
 	}
 
