@@ -50,8 +50,10 @@ func (c *Content) IsContentOmitted() bool {
 	}
 	switch gptr.Indirect(c.ContentType) {
 	case ContentTypeText:
-		b := int(gptr.Indirect(c.FullContentBytes))
-		return b > 0 && b == len(gptr.Indirect(c.Text))
+		if b := int(gptr.Indirect(c.FullContentBytes)); b > 0 && b == len(gptr.Indirect(c.Text)) {
+			return true
+		}
+		return false
 	default:
 		return false
 	}

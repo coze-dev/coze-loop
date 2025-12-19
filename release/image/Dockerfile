@@ -23,9 +23,13 @@ FROM node:20.13.1-alpine AS frontend_builder
 # 1. Install basic tools (curl, bash, etc.) for alpine
 RUN apk add --no-cache bash
 
+# Use a faster / closer npm registry inside the container (helps in CN network environments)
+ENV NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+
 # 2. Install pnpm and Rush
 RUN corepack enable && \
     corepack prepare pnpm@8.15.8 --activate && \
+    pnpm config set registry https://registry.npmmirror.com && \
     npm install -g @microsoft/rush@5.147.1
 
 WORKDIR /coze-loop
