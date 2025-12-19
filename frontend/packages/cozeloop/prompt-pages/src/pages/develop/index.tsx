@@ -15,11 +15,7 @@ import {
   useOpenWindow,
   useSpace,
 } from '@cozeloop/biz-hooks-adapter';
-import {
-  BenefitBanner,
-  BenefitBannerScene,
-  uploadFile,
-} from '@cozeloop/biz-components-adapter';
+import { uploadFile } from '@cozeloop/biz-components-adapter';
 import { type Prompt } from '@cozeloop/api-schema/prompt';
 
 import { TraceTab } from '@/components/trace-tabs';
@@ -58,11 +54,7 @@ export default function PromptDevelopPage() {
         sendEvent={sendEvent}
         multiModalConfig={{
           imageSupported: true,
-          intranetUrlValidator: url =>
-            url.includes('localhost') ||
-            url.includes('byted.org') ||
-            url.includes('bytedance.net') ||
-            url.includes('byteoversea.net'),
+          intranetUrlValidator: url => url.includes('localhost'),
         }}
         canDiffEdit={false}
         debugAreaConfig={{
@@ -81,13 +73,6 @@ export default function PromptDevelopPage() {
             onSuccess: ({ prompt }) => openBlank(`pe/prompts/${prompt?.id}`),
           },
         }}
-        renerTipBanner={() => (
-          <BenefitBanner
-            closable={false}
-            className="mb-2 mr-6"
-            scene={BenefitBannerScene.PromptDetail}
-          />
-        )}
         onSubmitSuccess={() => {
           showSubmitSuccess(
             () => navigate('observation/traces'),
