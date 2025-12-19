@@ -11,6 +11,8 @@ import {
   EvaluatorListPage,
   EvaluatorCreatePage,
   EvaluatorDetailPage,
+  CodeEvaluatorCreatePage,
+  CodeEvaluatorDetailPage,
   // 实验
   ExperimentListPage,
   ExperimentDetailPage,
@@ -33,11 +35,30 @@ const App = () => {
         <Route path="datasets/:id" element={<DatasetDetailPage />} />
         {/* 评估器 */}
         <Route path="evaluators" element={<EvaluatorListPage />} />
+        <Route path="evaluators/create/llm" element={<EvaluatorCreatePage />} />
+        <Route
+          path="evaluators/create/code"
+          element={<CodeEvaluatorCreatePage />}
+        />
+        <Route
+          path="evaluators/create/code/:id?"
+          element={<CodeEvaluatorCreatePage />}
+        />
+        <Route
+          path="evaluators/create/llm/:id?"
+          element={<EvaluatorCreatePage />}
+        />
         <Route
           path="evaluators/create/:id?"
           element={<EvaluatorCreatePage />}
         />
+        {/* prompt 评估器详情 */}
         <Route path="evaluators/:id" element={<EvaluatorDetailPage />} />
+        {/* code 评估器详情 */}
+        <Route
+          path="evaluators/code/:id?"
+          element={<CodeEvaluatorDetailPage />}
+        />
         {/* 实验 */}
         <Route path="experiments" element={<Navigate to="list" replace />} />
         <Route path="experiments/list" element={<ExperimentListPage />} />
