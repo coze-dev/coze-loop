@@ -66,8 +66,7 @@ export const getPlaceholderErrorContent = (
 export const splitMultimodalContent = (content: string) => {
   const result: Array<{ type: ContentType; text: string }> = [];
 
-  // 使用正则表达式匹配 <multimodal-variable>xxx</multimodal-variable> 标签
-  const regex = /<multimodal-variable>(.*?)<\/multimodal-variable>/g;
+  const regex = /<multimodal-variable>([^<]*)<\/multimodal-variable>/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 

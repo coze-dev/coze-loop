@@ -43,6 +43,10 @@ export default function PromptPlaygroundPage() {
             onClick: ({ debugId }) => traceLogPannel.open(debugId as string),
           },
         }}
+        multiModalConfig={{
+          imageSupported: true,
+          intranetUrlValidator: url => url.includes('localhost'),
+        }}
       />
       <TraceTab
         displayType="drawer"
