@@ -664,7 +664,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		}
 	}
 
-	tenants, err := r.getTenants(ctx, req.PlatformType)
+	tenants, err := r.getTenants(ctx, req.PlatformType, tenant.WithWorkspaceID(req.WorkspaceID))
 	if err != nil {
 		return nil, err
 	}
@@ -1560,8 +1560,8 @@ func (r *TraceServiceImpl) combineFilters(filters ...*loop_span.FilterFields) *l
 	return filterAggr
 }
 
-func (r *TraceServiceImpl) getTenants(ctx context.Context, platform loop_span.PlatformType) ([]string, error) {
-	return r.tenantProvider.GetTenantsByPlatformType(ctx, platform)
+func (r *TraceServiceImpl) getTenants(ctx context.Context, platform loop_span.PlatformType, opts ...tenant.OptFn) ([]string, error) {
+	return r.tenantProvider.GetTenantsByPlatformType(ctx, platform, opts...)
 }
 
 func (r *TraceServiceImpl) ChangeEvaluatorScore(ctx context.Context, req *ChangeEvaluatorScoreRequest) (*ChangeEvaluatorScoreResp, error) {

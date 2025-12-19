@@ -33,7 +33,7 @@ func (t *TenantProviderImpl) GetOAPIQueryTenants(ctx context.Context, platformTy
 	return tenants
 }
 
-func (t *TenantProviderImpl) GetTenantsByPlatformType(ctx context.Context, platform loop_span.PlatformType) ([]string, error) {
+func (t *TenantProviderImpl) GetTenantsByPlatformType(ctx context.Context, platform loop_span.PlatformType, opts ...tenant.OptFn) ([]string, error) {
 	cfg, err := t.traceConfig.GetPlatformTenants(ctx)
 	if err != nil {
 		logs.CtxError(ctx, "fail to get platform tenants, %v", err)
