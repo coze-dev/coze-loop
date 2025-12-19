@@ -119,7 +119,28 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
 
-	param, err := experiment.ConvertCreateReq(req)
+	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
+	evalVersionIDs, evaluatorVersionRunConfigs, err := e.resolveEvaluatorVersionIDs(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 去重
+	if len(evalVersionIDs) > 1 {
+		seen := map[int64]struct{}{}
+		uniq := make([]int64, 0, len(evalVersionIDs))
+		for _, id := range evalVersionIDs {
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			uniq = append(uniq, id)
+		}
+		evalVersionIDs = uniq
+	}
+	req.EvaluatorVersionIds = evalVersionIDs
+
+	param, err := experiment.ConvertCreateReq(req, evaluatorVersionRunConfigs)
 	if err != nil {
 		return nil, err
 	}
@@ -140,45 +161,25 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
 	}
 
-	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
-	evalVersionIDs, evaluatorVersionRunConfigs, err := e.resolveEvaluatorVersionIDs(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	// 去重
-	if len(evalVersionIDs) > 1 {
-		seen := map[int64]struct{}{}
-		uniq := make([]int64, 0, len(evalVersionIDs))
-		for _, id := range evalVersionIDs {
-			if _, ok := seen[id]; ok {
-				continue
-			}
-			seen[id] = struct{}{}
-			uniq = append(uniq, id)
-		}
-		evalVersionIDs = uniq
-	}
-
 	cresp, err := e.CreateExperiment(ctx, &expt.CreateExperimentRequest{
-		WorkspaceID:                req.GetWorkspaceID(),
-		EvalSetVersionID:           req.EvalSetVersionID,
-		EvalSetID:                  req.EvalSetID,
-		EvaluatorVersionIds:        evalVersionIDs,
-		Name:                       req.Name,
-		Desc:                       req.Desc,
-		TargetFieldMapping:         req.TargetFieldMapping,
-		EvaluatorFieldMapping:      req.EvaluatorFieldMapping,
-		ItemConcurNum:              req.ItemConcurNum,
-		EvaluatorsConcurNum:        req.EvaluatorsConcurNum,
-		CreateEvalTargetParam:      req.CreateEvalTargetParam,
-		ExptType:                   req.ExptType,
-		MaxAliveTime:               req.MaxAliveTime,
-		SourceType:                 req.SourceType,
-		SourceID:                   req.SourceID,
-		TargetRuntimeParam:         req.TargetRuntimeParam,
-		EvaluatorVersionRunConfigs: evaluatorVersionRunConfigs,
-		Session:                    req.Session,
+		WorkspaceID:            req.GetWorkspaceID(),
+		EvalSetVersionID:       req.EvalSetVersionID,
+		EvalSetID:              req.EvalSetID,
+		EvaluatorVersionIds:    req.EvaluatorVersionIds,
+		Name:                   req.Name,
+		Desc:                   req.Desc,
+		TargetFieldMapping:     req.TargetFieldMapping,
+		EvaluatorFieldMapping:  req.EvaluatorFieldMapping,
+		ItemConcurNum:          req.ItemConcurNum,
+		EvaluatorsConcurNum:    req.EvaluatorsConcurNum,
+		CreateEvalTargetParam:  req.CreateEvalTargetParam,
+		ExptType:               req.ExptType,
+		MaxAliveTime:           req.MaxAliveTime,
+		SourceType:             req.SourceType,
+		SourceID:               req.SourceID,
+		TargetRuntimeParam:     req.TargetRuntimeParam,
+		EvaluatorIDVersionList: req.EvaluatorIDVersionList,
+		Session:                req.Session,
 	})
 	if err != nil {
 		return nil, err
@@ -205,7 +206,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 // resolveEvaluatorVersionIDs 汇总 evaluator_version_ids：
 // 1) 先取请求中的 EvaluatorVersionIds
 // 2) 从有序 EvaluatorIDVersionList 中批量解析并按输入顺序回填版本ID
-func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, req *expt.SubmitExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, error) {
+func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, error) {
 	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
 	evalVersionIDs = append(evalVersionIDs, req.EvaluatorVersionIds...)
 

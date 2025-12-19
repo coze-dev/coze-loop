@@ -196,7 +196,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
 	//  - (eid: 2, ver: "1.0.0") 重复
 	//  - (eid: 3, ver: "2.0.0")
 	//  并且 EvaluatorFieldMapping 中有一条缺少 evaluator_version_id 的映射，需要回填
-	req := &exptpb.SubmitExperimentRequest{
+	req := &exptpb.CreateExperimentRequest{
 		EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
 			{EvaluatorID: gptr.Of(int64(1)), Version: gptr.Of("BuiltinVisible")},
 			{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
@@ -277,7 +277,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs_WithEvaluatorFieldMap
 	mapping4.SetEvaluatorVersionID(0) // 缺少 evaluator_version_id
 	// 但没有 EvaluatorIDVersionItem，应该跳过
 
-	req := &exptpb.SubmitExperimentRequest{
+	req := &exptpb.CreateExperimentRequest{
 		EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
 			{EvaluatorID: gptr.Of(int64(1)), Version: gptr.Of("BuiltinVisible")},
 			{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},

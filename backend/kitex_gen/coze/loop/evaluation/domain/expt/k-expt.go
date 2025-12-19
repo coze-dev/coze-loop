@@ -417,7 +417,7 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 51:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField51(buf[offset:])
 				offset += l
 				if err != nil {
@@ -841,33 +841,25 @@ func (p *Experiment) FastReadField43(buf []byte) (int, error) {
 func (p *Experiment) FastReadField51(buf []byte) (int, error) {
 	offset := 0
 
-	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
 	offset += l
 	if err != nil {
 		return offset, err
 	}
-	_field := make(map[int64]*evaluator.EvaluatorRunConfig, size)
-	values := make([]evaluator.EvaluatorRunConfig, size)
+	_field := make([]*evaluator.EvaluatorIDVersionItem, 0, size)
+	values := make([]evaluator.EvaluatorIDVersionItem, size)
 	for i := 0; i < size; i++ {
-		var _key int64
-		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_key = v
-		}
-
-		_val := &values[i]
-		_val.InitDefault()
-		if l, err := _val.FastRead(buf[offset:]); err != nil {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
 			return offset, err
 		} else {
 			offset += l
 		}
 
-		_field[_key] = _val
+		_field = append(_field, _elem)
 	}
-	p.EvaluatorVersionRunConfigs = _field
+	p.EvaluatorIDVersionList = _field
 	return offset, nil
 }
 
@@ -1202,17 +1194,16 @@ func (p *Experiment) fastWriteField43(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *Experiment) fastWriteField51(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetEvaluatorVersionRunConfigs() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 51)
-		mapBeginOffset := offset
-		offset += thrift.Binary.MapBeginLength()
+	if p.IsSetEvaluatorIDVersionList() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 51)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
 		var length int
-		for k, v := range p.EvaluatorVersionRunConfigs {
+		for _, v := range p.EvaluatorIDVersionList {
 			length++
-			offset += thrift.Binary.WriteI64(buf[offset:], k)
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I64, thrift.STRUCT, length)
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -1463,13 +1454,11 @@ func (p *Experiment) field43Length() int {
 
 func (p *Experiment) field51Length() int {
 	l := 0
-	if p.IsSetEvaluatorVersionRunConfigs() {
+	if p.IsSetEvaluatorIDVersionList() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.MapBeginLength()
-		for k, v := range p.EvaluatorVersionRunConfigs {
-			_, _ = k, v
-
-			l += thrift.Binary.I64Length()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.EvaluatorIDVersionList {
+			_ = v
 			l += v.BLength()
 		}
 	}
@@ -1675,21 +1664,18 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		p.SourceID = &tmp
 	}
 
-	if src.EvaluatorVersionRunConfigs != nil {
-		p.EvaluatorVersionRunConfigs = make(map[int64]*evaluator.EvaluatorRunConfig, len(src.EvaluatorVersionRunConfigs))
-		for key, val := range src.EvaluatorVersionRunConfigs {
-			var _key int64
-			_key = key
-
-			var _val *evaluator.EvaluatorRunConfig
-			if val != nil {
-				_val = &evaluator.EvaluatorRunConfig{}
-				if err := _val.DeepCopy(val); err != nil {
+	if src.EvaluatorIDVersionList != nil {
+		p.EvaluatorIDVersionList = make([]*evaluator.EvaluatorIDVersionItem, 0, len(src.EvaluatorIDVersionList))
+		for _, elem := range src.EvaluatorIDVersionList {
+			var _elem *evaluator.EvaluatorIDVersionItem
+			if elem != nil {
+				_elem = &evaluator.EvaluatorIDVersionItem{}
+				if err := _elem.DeepCopy(elem); err != nil {
 					return err
 				}
 			}
 
-			p.EvaluatorVersionRunConfigs[_key] = _val
+			p.EvaluatorIDVersionList = append(p.EvaluatorIDVersionList, _elem)
 		}
 	}
 

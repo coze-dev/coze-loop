@@ -564,7 +564,7 @@ func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := converter.ConvertToEntity(tt.request)
+			result, err := converter.ConvertToEntity(tt.request, nil)
 			assert.NoError(t, err)
 
 			assert.NotNil(t, result)
@@ -791,7 +791,7 @@ func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := converter.ConvertToEntity(tt.request)
+			result, err := converter.ConvertToEntity(tt.request, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)

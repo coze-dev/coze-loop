@@ -45,10 +45,10 @@ type CreateExperimentRequest struct {
 	MaxAliveTime          *int64                             `thrift:"max_alive_time,31,optional" frugal:"31,optional,i64" form:"max_alive_time" json:"max_alive_time,omitempty"`
 	SourceType            *expt.SourceType                   `thrift:"source_type,32,optional" frugal:"32,optional,SourceType" form:"source_type" json:"source_type,omitempty"`
 	SourceID              *string                            `thrift:"source_id,33,optional" frugal:"33,optional,string" form:"source_id" json:"source_id,omitempty"`
-	// 评估器版本ID对应的评估器运行配置信息
-	EvaluatorVersionRunConfigs map[int64]*evaluator.EvaluatorRunConfig `thrift:"evaluator_version_run_configs,41,optional" frugal:"41,optional,map<i64:evaluator.EvaluatorRunConfig>" form:"evaluator_version_run_configs" json:"evaluator_version_run_configs,string,omitempty"`
-	Session                    *common.Session                         `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base                       *base.Base                              `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
+	EvaluatorIDVersionList []*evaluator.EvaluatorIDVersionItem `thrift:"evaluator_id_version_list,40,optional" frugal:"40,optional,list<evaluator.EvaluatorIDVersionItem>" form:"evaluator_id_version_list" json:"evaluator_id_version_list,omitempty"`
+	Session                *common.Session                     `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base                   *base.Base                          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateExperimentRequest() *CreateExperimentRequest {
@@ -269,16 +269,16 @@ func (p *CreateExperimentRequest) GetSourceID() (v string) {
 	return *p.SourceID
 }
 
-var CreateExperimentRequest_EvaluatorVersionRunConfigs_DEFAULT map[int64]*evaluator.EvaluatorRunConfig
+var CreateExperimentRequest_EvaluatorIDVersionList_DEFAULT []*evaluator.EvaluatorIDVersionItem
 
-func (p *CreateExperimentRequest) GetEvaluatorVersionRunConfigs() (v map[int64]*evaluator.EvaluatorRunConfig) {
+func (p *CreateExperimentRequest) GetEvaluatorIDVersionList() (v []*evaluator.EvaluatorIDVersionItem) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetEvaluatorVersionRunConfigs() {
-		return CreateExperimentRequest_EvaluatorVersionRunConfigs_DEFAULT
+	if !p.IsSetEvaluatorIDVersionList() {
+		return CreateExperimentRequest_EvaluatorIDVersionList_DEFAULT
 	}
-	return p.EvaluatorVersionRunConfigs
+	return p.EvaluatorIDVersionList
 }
 
 var CreateExperimentRequest_Session_DEFAULT *common.Session
@@ -358,8 +358,8 @@ func (p *CreateExperimentRequest) SetSourceType(val *expt.SourceType) {
 func (p *CreateExperimentRequest) SetSourceID(val *string) {
 	p.SourceID = val
 }
-func (p *CreateExperimentRequest) SetEvaluatorVersionRunConfigs(val map[int64]*evaluator.EvaluatorRunConfig) {
-	p.EvaluatorVersionRunConfigs = val
+func (p *CreateExperimentRequest) SetEvaluatorIDVersionList(val []*evaluator.EvaluatorIDVersionItem) {
+	p.EvaluatorIDVersionList = val
 }
 func (p *CreateExperimentRequest) SetSession(val *common.Session) {
 	p.Session = val
@@ -387,7 +387,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	31:  "max_alive_time",
 	32:  "source_type",
 	33:  "source_id",
-	41:  "evaluator_version_run_configs",
+	40:  "evaluator_id_version_list",
 	200: "session",
 	255: "Base",
 }
@@ -460,8 +460,8 @@ func (p *CreateExperimentRequest) IsSetSourceID() bool {
 	return p.SourceID != nil
 }
 
-func (p *CreateExperimentRequest) IsSetEvaluatorVersionRunConfigs() bool {
-	return p.EvaluatorVersionRunConfigs != nil
+func (p *CreateExperimentRequest) IsSetEvaluatorIDVersionList() bool {
+	return p.EvaluatorIDVersionList != nil
 }
 
 func (p *CreateExperimentRequest) IsSetSession() bool {
@@ -636,9 +636,9 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 41:
-			if fieldTypeId == thrift.MAP {
-				if err = p.ReadField41(iprot); err != nil {
+		case 40:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField40(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -910,33 +910,27 @@ func (p *CreateExperimentRequest) ReadField33(iprot thrift.TProtocol) error {
 	p.SourceID = _field
 	return nil
 }
-func (p *CreateExperimentRequest) ReadField41(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
+func (p *CreateExperimentRequest) ReadField40(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
 	}
-	_field := make(map[int64]*evaluator.EvaluatorRunConfig, size)
-	values := make([]evaluator.EvaluatorRunConfig, size)
+	_field := make([]*evaluator.EvaluatorIDVersionItem, 0, size)
+	values := make([]evaluator.EvaluatorIDVersionItem, size)
 	for i := 0; i < size; i++ {
-		var _key int64
-		if v, err := iprot.ReadI64(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
+		_elem := &values[i]
+		_elem.InitDefault()
 
-		_val := &values[i]
-		_val.InitDefault()
-		if err := _val.Read(iprot); err != nil {
+		if err := _elem.Read(iprot); err != nil {
 			return err
 		}
 
-		_field[_key] = _val
+		_field = append(_field, _elem)
 	}
-	if err := iprot.ReadMapEnd(); err != nil {
+	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.EvaluatorVersionRunConfigs = _field
+	p.EvaluatorIDVersionList = _field
 	return nil
 }
 func (p *CreateExperimentRequest) ReadField200(iprot thrift.TProtocol) error {
@@ -1034,8 +1028,8 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 33
 			goto WriteFieldError
 		}
-		if err = p.writeField41(oprot); err != nil {
-			fieldId = 41
+		if err = p.writeField40(oprot); err != nil {
+			fieldId = 40
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -1402,23 +1396,20 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 33 end error: ", p), err)
 }
-func (p *CreateExperimentRequest) writeField41(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvaluatorVersionRunConfigs() {
-		if err = oprot.WriteFieldBegin("evaluator_version_run_configs", thrift.MAP, 41); err != nil {
+func (p *CreateExperimentRequest) writeField40(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorIDVersionList() {
+		if err = oprot.WriteFieldBegin("evaluator_id_version_list", thrift.LIST, 40); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.I64, thrift.STRUCT, len(p.EvaluatorVersionRunConfigs)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.EvaluatorIDVersionList)); err != nil {
 			return err
 		}
-		for k, v := range p.EvaluatorVersionRunConfigs {
-			if err := oprot.WriteI64(k); err != nil {
-				return err
-			}
+		for _, v := range p.EvaluatorIDVersionList {
 			if err := v.Write(oprot); err != nil {
 				return err
 			}
 		}
-		if err := oprot.WriteMapEnd(); err != nil {
+		if err := oprot.WriteListEnd(); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -1427,9 +1418,9 @@ func (p *CreateExperimentRequest) writeField41(oprot thrift.TProtocol) (err erro
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 41 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
 }
 func (p *CreateExperimentRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
@@ -1536,7 +1527,7 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 	if !p.Field33DeepEqual(ano.SourceID) {
 		return false
 	}
-	if !p.Field41DeepEqual(ano.EvaluatorVersionRunConfigs) {
+	if !p.Field40DeepEqual(ano.EvaluatorIDVersionList) {
 		return false
 	}
 	if !p.Field200DeepEqual(ano.Session) {
@@ -1746,13 +1737,13 @@ func (p *CreateExperimentRequest) Field33DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *CreateExperimentRequest) Field41DeepEqual(src map[int64]*evaluator.EvaluatorRunConfig) bool {
+func (p *CreateExperimentRequest) Field40DeepEqual(src []*evaluator.EvaluatorIDVersionItem) bool {
 
-	if len(p.EvaluatorVersionRunConfigs) != len(src) {
+	if len(p.EvaluatorIDVersionList) != len(src) {
 		return false
 	}
-	for k, v := range p.EvaluatorVersionRunConfigs {
-		_src := src[k]
+	for i, v := range p.EvaluatorIDVersionList {
+		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false
 		}
