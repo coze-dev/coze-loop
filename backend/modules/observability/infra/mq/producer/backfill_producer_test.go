@@ -1,3 +1,6 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package producer
 
 import (
@@ -21,9 +24,11 @@ func (s *stubProducer) Send(ctx context.Context, message *mq.Message) (mq.SendRe
 	s.lastMessage = message
 	return mq.SendResponse{MessageID: "mid"}, nil
 }
+
 func (s *stubProducer) SendBatch(ctx context.Context, messages []*mq.Message) (mq.SendResponse, error) {
 	return mq.SendResponse{}, nil
 }
+
 func (s *stubProducer) SendAsync(ctx context.Context, callback mq.AsyncSendCallback, message *mq.Message) error {
 	return nil
 }
