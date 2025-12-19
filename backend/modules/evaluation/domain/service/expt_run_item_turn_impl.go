@@ -399,13 +399,15 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 			return nil, err
 		}
 		if content.IsContentOmitted() {
-			fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+			req := &entity.GetEvaluationSetItemFieldParam{
 				SpaceID:         spaceID,
 				EvaluationSetID: evalSetTurn.EvalSetID,
 				ItemPK:          evalSetTurn.ItemID,
 				FieldName:       fc.FieldName,
 				TurnID:          gptr.Of(evalSetTurn.ID),
-			})
+			}
+			logs.CtxInfo(ctx, "found omitted content turn, turn_info: %v", json.Jsonify(req))
+			fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, req)
 			if err != nil {
 				return nil, err
 			}
