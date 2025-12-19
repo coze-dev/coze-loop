@@ -76,26 +76,6 @@ func (p SchemaKey) String() string {
 	return "<UNSET>"
 }
 
-func SchemaKeyFromString(s string) (SchemaKey, error) {
-	switch s {
-	case "String":
-		return SchemaKey_String, nil
-	case "Integer":
-		return SchemaKey_Integer, nil
-	case "Float":
-		return SchemaKey_Float, nil
-	case "Bool":
-		return SchemaKey_Bool, nil
-	case "Message":
-		return SchemaKey_Message, nil
-	case "SingleChoice":
-		return SchemaKey_SingleChoice, nil
-	case "Trajectory":
-		return SchemaKey_Trajectory, nil
-	}
-	return SchemaKey(0), fmt.Errorf("not a valid SchemaKey string")
-}
-
 type FieldDisplayFormat int64
 
 const (
