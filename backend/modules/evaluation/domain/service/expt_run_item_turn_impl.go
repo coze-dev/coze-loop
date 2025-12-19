@@ -176,12 +176,19 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		return nil, err
 	}
 
-	var inputFields map[string]*entity.Content
-	if targetConf.IngressConf != nil && targetConf.IngressConf.EvalSetAdapter != nil {
-		inputFields, err = e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
-		if err != nil {
-			return nil, err
+	inputFields, err := func() (map[string]*entity.Content, error) {
+		if targetConf.IngressConf == nil || targetConf.IngressConf.EvalSetAdapter == nil {
+			return nil, nil
 		}
+		switch etec.Expt.Target.EvalTargetType {
+		case entity.EvalTargetTypeCustomRPCServer:
+			return gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content }), nil
+		default:
+			return e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
+		}
+	}()
+	if err != nil {
+		return nil, err
 	}
 
 	ext := gmap.Clone(etec.Ext)
