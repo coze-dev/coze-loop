@@ -140,6 +140,7 @@ struct Message {
     4: optional list<ContentPart> parts
     5: optional string tool_call_id
     6: optional list<ToolCall> tool_calls
+    7: optional bool no_render // 是否不需要渲染
 
     100: optional map<string, string> metadata
 }

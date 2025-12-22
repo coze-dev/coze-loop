@@ -59,6 +59,7 @@ type Message struct {
 	Parts            []*ContentPart `json:"parts,omitempty"`
 	ToolCallID       *string        `json:"tool_call_id,omitempty"`
 	ToolCalls        []*ToolCall    `json:"tool_calls,omitempty"`
+	NoRender         *bool          `json:"no_render,omitempty"`
 
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
@@ -246,28 +247,63 @@ func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*Va
 					formattedMessages = append(formattedMessages, placeholderMessage)
 				}
 			}
-		default:
-			if templateStr := ptr.From(message.Content); templateStr != "" {
-				formattedStr, err := formatText(pt.TemplateType, templateStr, defMap, valMap)
-				if err != nil {
+
+		case RoleTool:
+			// Tool：不渲染
+			formattedMessages = append(formattedMessages, message)
+
+		case RoleSystem, RoleUser:
+			// System/User：渲染，除非 NoRender=true
+			if message.NoRender == nil || !ptr.From(message.NoRender) {
+				// 需要渲染
+				if err := pt.renderMessage(message, defMap, valMap); err != nil {
 					return nil, err
 				}
-				message.Content = ptr.Of(formattedStr)
 			}
-			for _, part := range message.Parts {
-				if part.Type == ContentTypeText && ptr.From(part.Text) != "" {
-					formattedStr, err := formatText(pt.TemplateType, ptr.From(part.Text), defMap, valMap)
-					if err != nil {
-						return nil, err
-					}
-					part.Text = ptr.Of(formattedStr)
+			formattedMessages = append(formattedMessages, message)
+
+		case RoleAssistant:
+			// Assistant：仅当 NoRender=false（显式标记，通常来自原始 prompt）才渲染；nil 或 true 均不渲染
+			if message.NoRender != nil && !ptr.From(message.NoRender) {
+				// NoRender=false，需要渲染
+				if err := pt.renderMessage(message, defMap, valMap); err != nil {
+					return nil, err
 				}
 			}
-			message.Parts = formatMultiPart(message.Parts, defMap, valMap)
+			formattedMessages = append(formattedMessages, message)
+
+		default:
+			// 其他角色默认不渲染
 			formattedMessages = append(formattedMessages, message)
 		}
 	}
 	return formattedMessages, nil
+}
+
+func (pt *PromptTemplate) renderMessage(message *Message, defMap map[string]*VariableDef, valMap map[string]*VariableVal) error {
+	// 渲染消息内容
+	if templateStr := ptr.From(message.Content); templateStr != "" {
+		formattedStr, err := formatText(pt.TemplateType, templateStr, defMap, valMap)
+		if err != nil {
+			return err
+		}
+		message.Content = ptr.Of(formattedStr)
+	}
+
+	// 渲染消息部分
+	for _, part := range message.Parts {
+		if part.Type == ContentTypeText && ptr.From(part.Text) != "" {
+			formattedStr, err := formatText(pt.TemplateType, ptr.From(part.Text), defMap, valMap)
+			if err != nil {
+				return err
+			}
+			part.Text = ptr.Of(formattedStr)
+		}
+	}
+
+	// 格式化多部分内容
+	message.Parts = formatMultiPart(message.Parts, defMap, valMap)
+	return nil
 }
 
 func (pt *PromptTemplate) getTemplateMessages(messages []*Message) []*Message {
@@ -275,7 +311,16 @@ func (pt *PromptTemplate) getTemplateMessages(messages []*Message) []*Message {
 		return nil
 	}
 	var messagesToFormat []*Message
-	messagesToFormat = append(messagesToFormat, pt.Messages...)
+
+	// 对于来自pt的messages（原始托管的message），统一设置no_render为false，表示一定要渲染
+	for _, msg := range pt.Messages {
+		if msg != nil {
+			msg.NoRender = ptr.Of(false)
+			messagesToFormat = append(messagesToFormat, msg)
+		}
+	}
+
+	// 入参的messages的no_render不需要改变，保持原状
 	messagesToFormat = append(messagesToFormat, messages...)
 	return messagesToFormat
 }
