@@ -12,6 +12,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func convert2DatasetOrderBys(ctx context.Context, orderBys []*entity.OrderBy) (datasetOrderBys []*dataset.OrderBy) {
@@ -563,6 +565,7 @@ func convert2EvaluationSetTurn(ctx context.Context, item *dataset.DatasetItem) (
 		turn.FieldDataList = append(turn.FieldDataList, convert2EvaluationSetFieldData(ctx, e))
 	}
 	turns = append(turns, turn)
+	logs.CtxInfo(ctx, "conv turn from item: %v", json.Jsonify(item))
 	return turns
 }
 
