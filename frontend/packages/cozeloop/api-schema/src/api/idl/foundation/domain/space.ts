@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /** 空间类型 */
 export enum SpaceType {
   Undefined = 0,

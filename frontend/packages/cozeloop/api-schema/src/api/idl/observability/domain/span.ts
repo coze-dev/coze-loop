@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as annotation from './annotation';
 export { annotation };
 export enum SpanStatus {

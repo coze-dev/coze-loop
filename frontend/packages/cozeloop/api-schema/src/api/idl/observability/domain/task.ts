@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as export_dataset from './export_dataset';
 export { export_dataset };
 import * as filter from './filter';

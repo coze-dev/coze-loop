@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as metric from './domain/metric';
 export { metric };
 import * as common from './domain/common';
