@@ -410,7 +410,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 				SpaceID:         spaceID,
 				EvaluationSetID: evalSetTurn.EvalSetID,
 				ItemPK:          evalSetTurn.ItemID,
-				FieldName:       fc.FieldName,
+				FieldName:       fc.FromField,
 				TurnID:          gptr.Of(evalSetTurn.ID),
 			}
 			logs.CtxInfo(ctx, "found omitted content turn, turn_info: %v", json.Jsonify(req))
