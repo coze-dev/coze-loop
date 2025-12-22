@@ -260,6 +260,9 @@ export const getBizConfig = (customParams: Record<string, any>) => ({
       },
     ] as OptionProps[],
   },
+  customViewConfig: {
+    visibility: true,
+  },
 });
 
 export const getDefaultBizConfig = () => ({
