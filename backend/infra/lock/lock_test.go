@@ -1,3 +1,6 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package lock
 
 import (
@@ -5,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	redisMocks "github.com/coze-dev/coze-loop/backend/infra/redis/mocks"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/mock/gomock"
+
+	redisMocks "github.com/coze-dev/coze-loop/backend/infra/redis/mocks"
 )
 
 // helper to build a redis.Cmd with given value and error
@@ -134,4 +138,3 @@ func TestRedisLocker_renewLock_ExpireLockLostReturns(t *testing.T) {
 		t.Fatalf("renewLock did not return after ExpireLockIn reported lock lost")
 	}
 }
-

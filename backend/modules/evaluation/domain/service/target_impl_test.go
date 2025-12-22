@@ -930,11 +930,16 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.Nil()).
 				Return(tt.trajectories, tt.err)
 
-			var updated *entity.EvalTargetRecord
+			// use channel to safely observe async UpdateEvalTargetRecord calls from goroutine
+			updatedCh := make(chan *entity.EvalTargetRecord, 1)
 			deps.repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any()).
 				AnyTimes().
 				DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) error {
-					updated = rec
+					// non-blocking send in case of multiple updates
+					select {
+					case updatedCh <- rec:
+					default:
+					}
 					return nil
 				})
 
@@ -955,6 +960,11 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 
 			// wait for trajectory goroutine to complete
 			time.Sleep(1100 * time.Millisecond)
+			var updated *entity.EvalTargetRecord
+			select {
+			case updated = <-updatedCh:
+			default:
+			}
 
 			if !tt.expectHasField {
 				assert.Nil(t, updated)

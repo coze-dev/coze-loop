@@ -314,7 +314,7 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 		svc := ExptResultServiceImpl{}
 		expts := []*entity.Experiment{
 			{
-				ID:            1,
+				ID:              1,
 				TargetVersionID: 0, // ContainsEvalTarget == false
 			},
 		}
@@ -328,9 +328,9 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 		svc := ExptResultServiceImpl{}
 		expts := []*entity.Experiment{
 			{
-				ID:             2,
-				TargetVersionID: 1,                              // ContainsEvalTarget == true
-				TargetType:     entity.EvalTargetTypeCozeBot, // SupptTrajectory == false
+				ID:              2,
+				TargetVersionID: 1,                            // ContainsEvalTarget == true
+				TargetType:      entity.EvalTargetTypeCozeBot, // SupptTrajectory == false
 			},
 		}
 
@@ -353,9 +353,9 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 		svc := ExptResultServiceImpl{}
 		expts := []*entity.Experiment{
 			{
-				ID:             3,
-				TargetVersionID: 1,                                         // ContainsEvalTarget == true
-				TargetType:     entity.EvalTargetTypeVolcengineAgent, // SupptTrajectory == true
+				ID:              3,
+				TargetVersionID: 1,                                    // ContainsEvalTarget == true
+				TargetType:      entity.EvalTargetTypeVolcengineAgent, // SupptTrajectory == true
 			},
 		}
 
