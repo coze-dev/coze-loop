@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export { PromptDevLayout } from './components/prompt-dev-layout';
 
 // start: 编辑器相关导出，外部组件使用得保证code-mirror和coze-editor的实例一致
