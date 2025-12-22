@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
+//go:generate mockgen -destination=mocks/trajectory.go -package=mocks . ITrajectoryAdapter
 type ITrajectoryAdapter interface {
 	ListTrajectory(ctx context.Context, spaceID int64, traceID []string, startTimeMS *int64) ([]*entity.Trajectory, error)
 }
