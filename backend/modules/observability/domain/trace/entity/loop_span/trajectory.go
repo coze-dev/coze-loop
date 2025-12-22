@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 )
@@ -564,20 +565,20 @@ func calculateMetricsInfo(modelSteps, toolSteps []*Step) *MetricsInfo {
 	totalModelSteps := int64(len(modelSteps))
 	if totalModelSteps > 0 {
 		modelErrorRate := float64(modelErrorCount) / float64(totalModelSteps)
-		metricsInfo.ModelErrorRate = &modelErrorRate
+		metricsInfo.ModelErrorRate = ptr.Of(conv.ReduceFloatSignificantDigit(modelErrorRate, 10))
 	}
 
 	totalToolSteps := int64(len(toolSteps))
 	if totalToolSteps > 0 {
 		toolErrorRate := float64(toolErrorCount) / float64(totalToolSteps)
-		metricsInfo.ToolErrorRate = &toolErrorRate
+		metricsInfo.ToolErrorRate = ptr.Of(conv.ReduceFloatSignificantDigit(toolErrorRate, 10))
 	}
 
 	// 计算Tool Step占比
 	totalSteps := totalModelSteps + totalToolSteps
 	if totalSteps > 0 {
 		toolStepProportion := float64(totalToolSteps) / float64(totalSteps)
-		metricsInfo.ToolStepProportion = &toolStepProportion
+		metricsInfo.ToolStepProportion = ptr.Of(conv.ReduceFloatSignificantDigit(toolStepProportion, 10))
 	}
 
 	// 计算输入/输出Token数

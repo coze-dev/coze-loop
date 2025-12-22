@@ -5,6 +5,7 @@ package conv
 
 import (
 	"reflect"
+	"strconv"
 	"unsafe"
 
 	"github.com/bytedance/gg/gconv"
@@ -39,4 +40,14 @@ func ToString(v any) string {
 // if a conversion can not be made.
 func Int64(from interface{}) (int64, error) {
 	return gconv.ToE[int64, any](from)
+}
+
+func ReduceFloatSignificantDigit(src float64, digit int) float64 {
+	rateStr := strconv.FormatFloat(src, 'g', digit, 64)
+	f, err := strconv.ParseFloat(rateStr, 64)
+	if err != nil {
+		return src
+	}
+
+	return f
 }

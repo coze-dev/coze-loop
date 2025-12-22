@@ -34,6 +34,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 	"github.com/samber/lo"
+	"gorm.io/gorm/utils"
 )
 
 type TraceRepoOption func(*TraceRepoImpl)
@@ -286,6 +287,10 @@ func (t *TraceRepoImpl) ListSpansRepeat(ctx context.Context, req *repo.ListSpans
 	if req == nil {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("nil request"))
 	}
+	if len(req.SelectColumns) > 0 && !utils.Contains(req.SelectColumns, loop_span.SpanFieldStartTime) {
+		req.SelectColumns = append(req.SelectColumns, loop_span.SpanFieldStartTime)
+	}
+	req.DescByStartTime = true
 
 	clonedReq := *req
 	totalSpans := loop_span.SpanList{}
