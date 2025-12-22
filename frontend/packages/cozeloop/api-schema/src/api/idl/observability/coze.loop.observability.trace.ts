@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as task from './domain/task';
 export { task };
 import * as export_dataset from './domain/export_dataset';

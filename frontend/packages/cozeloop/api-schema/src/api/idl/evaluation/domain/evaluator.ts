@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as runtime from './../../llm/domain/runtime';
 export { runtime };
 import * as common from './common';

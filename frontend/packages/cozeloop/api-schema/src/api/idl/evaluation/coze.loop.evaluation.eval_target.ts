@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as coze_loop_evaluation_spi from './coze.loop.evaluation.spi';
 export { coze_loop_evaluation_spi };
 import * as eval_target from './domain/eval_target';

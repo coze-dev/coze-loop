@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @typescript-eslint/naming-convention */
 import createEle from 'crelt';
 import { I18n } from '@cozeloop/i18n-adapter';
