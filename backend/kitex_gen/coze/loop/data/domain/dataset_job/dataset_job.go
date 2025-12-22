@@ -193,6 +193,48 @@ func (p *FileFormat) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type SourceType int64
+
+const (
+	SourceType_File    SourceType = 1
+	SourceType_Dataset SourceType = 2
+)
+
+func (p SourceType) String() string {
+	switch p {
+	case SourceType_File:
+		return "File"
+	case SourceType_Dataset:
+		return "Dataset"
+	}
+	return "<UNSET>"
+}
+
+func SourceTypeFromString(s string) (SourceType, error) {
+	switch s {
+	case "File":
+		return SourceType_File, nil
+	case "Dataset":
+		return SourceType_Dataset, nil
+	}
+	return SourceType(0), fmt.Errorf("not a valid SourceType string")
+}
+
+func SourceTypePtr(v SourceType) *SourceType { return &v }
+func (p *SourceType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = SourceType(result.Int64)
+	return
+}
+
+func (p *SourceType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 // 通用任务日志
 type JobLog struct {
 	Content   string `thrift:"content,1,required" frugal:"1,required,string" form:"content,required" json:"content,required" query:"content,required"`
@@ -580,6 +622,14 @@ type DatasetIOFile struct {
 	CompressFormat *FileFormat `thrift:"compress_format,4,optional" frugal:"4,optional,FileFormat" form:"compress_format" json:"compress_format,omitempty" query:"compress_format"`
 	// path 为文件夹或压缩包时，数据文件列表, 服务端设置
 	Files []string `thrift:"files,5,optional" frugal:"5,optional,list<string>" form:"files" json:"files,omitempty" query:"files"`
+	// 原始的文件名，创建文件时由前端写入。为空则与 path 保持一致
+	OriginalFileName *string `thrift:"original_file_name,6,optional" frugal:"6,optional,string" form:"original_file_name" json:"original_file_name,omitempty" query:"original_file_name"`
+	// 文件下载地址
+	DownloadURL *string `thrift:"download_url,7,optional" frugal:"7,optional,string" form:"download_url" json:"download_url,omitempty" query:"download_url"`
+	// 存储提供方ID，目前主要在 provider==imagex 时生效
+	ProviderID *string `thrift:"provider_id,100,optional" frugal:"100,optional,string" form:"provider_id" json:"provider_id,omitempty" query:"provider_id"`
+	// 存储提供方鉴权信息，目前主要在 provider==imagex 时生效
+	ProviderAuth *ProviderAuth `thrift:"provider_auth,101,optional" frugal:"101,optional,ProviderAuth" form:"provider_auth" json:"provider_auth,omitempty" query:"provider_auth"`
 }
 
 func NewDatasetIOFile() *DatasetIOFile {
@@ -638,6 +688,54 @@ func (p *DatasetIOFile) GetFiles() (v []string) {
 	}
 	return p.Files
 }
+
+var DatasetIOFile_OriginalFileName_DEFAULT string
+
+func (p *DatasetIOFile) GetOriginalFileName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOriginalFileName() {
+		return DatasetIOFile_OriginalFileName_DEFAULT
+	}
+	return *p.OriginalFileName
+}
+
+var DatasetIOFile_DownloadURL_DEFAULT string
+
+func (p *DatasetIOFile) GetDownloadURL() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDownloadURL() {
+		return DatasetIOFile_DownloadURL_DEFAULT
+	}
+	return *p.DownloadURL
+}
+
+var DatasetIOFile_ProviderID_DEFAULT string
+
+func (p *DatasetIOFile) GetProviderID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetProviderID() {
+		return DatasetIOFile_ProviderID_DEFAULT
+	}
+	return *p.ProviderID
+}
+
+var DatasetIOFile_ProviderAuth_DEFAULT *ProviderAuth
+
+func (p *DatasetIOFile) GetProviderAuth() (v *ProviderAuth) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetProviderAuth() {
+		return DatasetIOFile_ProviderAuth_DEFAULT
+	}
+	return p.ProviderAuth
+}
 func (p *DatasetIOFile) SetProvider(val dataset.StorageProvider) {
 	p.Provider = val
 }
@@ -653,13 +751,29 @@ func (p *DatasetIOFile) SetCompressFormat(val *FileFormat) {
 func (p *DatasetIOFile) SetFiles(val []string) {
 	p.Files = val
 }
+func (p *DatasetIOFile) SetOriginalFileName(val *string) {
+	p.OriginalFileName = val
+}
+func (p *DatasetIOFile) SetDownloadURL(val *string) {
+	p.DownloadURL = val
+}
+func (p *DatasetIOFile) SetProviderID(val *string) {
+	p.ProviderID = val
+}
+func (p *DatasetIOFile) SetProviderAuth(val *ProviderAuth) {
+	p.ProviderAuth = val
+}
 
 var fieldIDToName_DatasetIOFile = map[int16]string{
-	1: "provider",
-	2: "path",
-	3: "format",
-	4: "compress_format",
-	5: "files",
+	1:   "provider",
+	2:   "path",
+	3:   "format",
+	4:   "compress_format",
+	5:   "files",
+	6:   "original_file_name",
+	7:   "download_url",
+	100: "provider_id",
+	101: "provider_auth",
 }
 
 func (p *DatasetIOFile) IsSetFormat() bool {
@@ -672,6 +786,22 @@ func (p *DatasetIOFile) IsSetCompressFormat() bool {
 
 func (p *DatasetIOFile) IsSetFiles() bool {
 	return p.Files != nil
+}
+
+func (p *DatasetIOFile) IsSetOriginalFileName() bool {
+	return p.OriginalFileName != nil
+}
+
+func (p *DatasetIOFile) IsSetDownloadURL() bool {
+	return p.DownloadURL != nil
+}
+
+func (p *DatasetIOFile) IsSetProviderID() bool {
+	return p.ProviderID != nil
+}
+
+func (p *DatasetIOFile) IsSetProviderAuth() bool {
+	return p.ProviderAuth != nil
 }
 
 func (p *DatasetIOFile) Read(iprot thrift.TProtocol) (err error) {
@@ -731,6 +861,38 @@ func (p *DatasetIOFile) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -845,6 +1007,47 @@ func (p *DatasetIOFile) ReadField5(iprot thrift.TProtocol) error {
 	p.Files = _field
 	return nil
 }
+func (p *DatasetIOFile) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.OriginalFileName = _field
+	return nil
+}
+func (p *DatasetIOFile) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DownloadURL = _field
+	return nil
+}
+func (p *DatasetIOFile) ReadField100(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ProviderID = _field
+	return nil
+}
+func (p *DatasetIOFile) ReadField101(iprot thrift.TProtocol) error {
+	_field := NewProviderAuth()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ProviderAuth = _field
+	return nil
+}
 
 func (p *DatasetIOFile) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -870,6 +1073,22 @@ func (p *DatasetIOFile) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 	}
@@ -984,6 +1203,78 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *DatasetIOFile) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOriginalFileName() {
+		if err = oprot.WriteFieldBegin("original_file_name", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.OriginalFileName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *DatasetIOFile) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDownloadURL() {
+		if err = oprot.WriteFieldBegin("download_url", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DownloadURL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *DatasetIOFile) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetProviderID() {
+		if err = oprot.WriteFieldBegin("provider_id", thrift.STRING, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ProviderID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
+func (p *DatasetIOFile) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetProviderAuth() {
+		if err = oprot.WriteFieldBegin("provider_auth", thrift.STRUCT, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ProviderAuth.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
 
 func (p *DatasetIOFile) String() string {
 	if p == nil {
@@ -1012,6 +1303,18 @@ func (p *DatasetIOFile) DeepEqual(ano *DatasetIOFile) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.Files) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.OriginalFileName) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.DownloadURL) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.ProviderID) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.ProviderAuth) {
 		return false
 	}
 	return true
@@ -1065,6 +1368,231 @@ func (p *DatasetIOFile) Field5DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *DatasetIOFile) Field6DeepEqual(src *string) bool {
+
+	if p.OriginalFileName == src {
+		return true
+	} else if p.OriginalFileName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.OriginalFileName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *DatasetIOFile) Field7DeepEqual(src *string) bool {
+
+	if p.DownloadURL == src {
+		return true
+	} else if p.DownloadURL == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DownloadURL, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *DatasetIOFile) Field100DeepEqual(src *string) bool {
+
+	if p.ProviderID == src {
+		return true
+	} else if p.ProviderID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ProviderID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *DatasetIOFile) Field101DeepEqual(src *ProviderAuth) bool {
+
+	if !p.ProviderAuth.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ProviderAuth struct {
+	// provider == VETOS 时，此处存储的是用户在 fornax 上托管的方舟账号的ID
+	ProviderAccountID *int64 `thrift:"provider_account_id,1,optional" frugal:"1,optional,i64" json:"provider_account_id" form:"provider_account_id" query:"provider_account_id"`
+}
+
+func NewProviderAuth() *ProviderAuth {
+	return &ProviderAuth{}
+}
+
+func (p *ProviderAuth) InitDefault() {
+}
+
+var ProviderAuth_ProviderAccountID_DEFAULT int64
+
+func (p *ProviderAuth) GetProviderAccountID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetProviderAccountID() {
+		return ProviderAuth_ProviderAccountID_DEFAULT
+	}
+	return *p.ProviderAccountID
+}
+func (p *ProviderAuth) SetProviderAccountID(val *int64) {
+	p.ProviderAccountID = val
+}
+
+var fieldIDToName_ProviderAuth = map[int16]string{
+	1: "provider_account_id",
+}
+
+func (p *ProviderAuth) IsSetProviderAccountID() bool {
+	return p.ProviderAccountID != nil
+}
+
+func (p *ProviderAuth) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ProviderAuth[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ProviderAuth) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ProviderAccountID = _field
+	return nil
+}
+
+func (p *ProviderAuth) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ProviderAuth"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ProviderAuth) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetProviderAccountID() {
+		if err = oprot.WriteFieldBegin("provider_account_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ProviderAccountID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ProviderAuth) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ProviderAuth(%+v)", *p)
+
+}
+
+func (p *ProviderAuth) DeepEqual(ano *ProviderAuth) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ProviderAccountID) {
+		return false
+	}
+	return true
+}
+
+func (p *ProviderAuth) Field1DeepEqual(src *int64) bool {
+
+	if p.ProviderAccountID == src {
+		return true
+	} else if p.ProviderAccountID == nil || src == nil {
+		return false
+	}
+	if *p.ProviderAccountID != *src {
+		return false
 	}
 	return true
 }

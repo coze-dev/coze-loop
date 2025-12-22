@@ -183,6 +183,21 @@ func (mr *MockIEvalTargetServiceMockRecorder) ExecuteTarget(ctx, spaceID, target
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteTarget", reflect.TypeOf((*MockIEvalTargetService)(nil).ExecuteTarget), ctx, spaceID, targetID, targetVersionID, param, inputData)
 }
 
+// ExtractTrajectory mocks base method.
+func (m *MockIEvalTargetService) ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExtractTrajectory", ctx, spaceID, traceID, startTimeMS)
+	ret0, _ := ret[0].(*entity.Trajectory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExtractTrajectory indicates an expected call of ExtractTrajectory.
+func (mr *MockIEvalTargetServiceMockRecorder) ExtractTrajectory(ctx, spaceID, traceID, startTimeMS any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTrajectory", reflect.TypeOf((*MockIEvalTargetService)(nil).ExtractTrajectory), ctx, spaceID, traceID, startTimeMS)
+}
+
 // GenerateMockOutputData mocks base method.
 func (m *MockIEvalTargetService) GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error) {
 	m.ctrl.T.Helper()

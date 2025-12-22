@@ -112,6 +112,21 @@ func (mr *MockIExptInsightAnalysisServiceMockRecorder) GetAnalysisRecordByID(arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnalysisRecordByID", reflect.TypeOf((*MockIExptInsightAnalysisService)(nil).GetAnalysisRecordByID), arg0, arg1, arg2, arg3, arg4)
 }
 
+// GetAnalysisRecordFeedbackVoteByUser mocks base method.
+func (m *MockIExptInsightAnalysisService) GetAnalysisRecordFeedbackVoteByUser(arg0 context.Context, arg1, arg2, arg3 int64, arg4 *entity.Session) (*entity.ExptInsightAnalysisFeedbackVote, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnalysisRecordFeedbackVoteByUser", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(*entity.ExptInsightAnalysisFeedbackVote)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnalysisRecordFeedbackVoteByUser indicates an expected call of GetAnalysisRecordFeedbackVoteByUser.
+func (mr *MockIExptInsightAnalysisServiceMockRecorder) GetAnalysisRecordFeedbackVoteByUser(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnalysisRecordFeedbackVoteByUser", reflect.TypeOf((*MockIExptInsightAnalysisService)(nil).GetAnalysisRecordFeedbackVoteByUser), arg0, arg1, arg2, arg3, arg4)
+}
+
 // ListAnalysisRecord mocks base method.
 func (m *MockIExptInsightAnalysisService) ListAnalysisRecord(arg0 context.Context, arg1, arg2 int64, arg3 entity.Page, arg4 *entity.Session) ([]*entity.ExptInsightAnalysisRecord, int64, error) {
 	m.ctrl.T.Helper()

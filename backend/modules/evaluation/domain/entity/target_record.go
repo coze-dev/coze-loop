@@ -5,6 +5,7 @@ package entity
 
 import (
 	"errors"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
@@ -97,6 +98,27 @@ type EvalTargetUsage struct {
 	TotalTokens  int64
 }
 
+func (e *EvalTargetUsage) GetInputTokens() int64 {
+	if e != nil {
+		return e.InputTokens
+	}
+	return 0
+}
+
+func (e *EvalTargetUsage) GetOutputTokens() int64 {
+	if e != nil {
+		return e.OutputTokens
+	}
+	return 0
+}
+
+func (e *EvalTargetUsage) GetTotalTokens() int64 {
+	if e != nil {
+		return e.TotalTokens
+	}
+	return 0
+}
+
 type EvalTargetRunError struct {
 	Code    int32
 	Message string
@@ -118,4 +140,23 @@ type ExecuteTargetCtx struct {
 	ItemID int64
 	// 评测集数据项轮次ID
 	TurnID int64
+}
+
+type TargetTrajectoryConf struct {
+	ExtractIntervalSecond      int64           `json:"extract_interval_second" mapstructure:"extract_interval_second"`
+	SpaceExtractIntervalSecond map[int64]int64 `json:"space_extract_interval_second" mapstructure:"space_extract_interval_second"`
+}
+
+func (t *TargetTrajectoryConf) GetExtractInterval(spaceID int64) time.Duration {
+	const defaultInterval = time.Second * 10
+	if t == nil {
+		return defaultInterval
+	}
+	if interval := t.SpaceExtractIntervalSecond[spaceID]; spaceID > 0 && interval > 0 {
+		return time.Duration(interval) * time.Second
+	}
+	if t.ExtractIntervalSecond > 0 {
+		return time.Duration(t.ExtractIntervalSecond) * time.Second
+	}
+	return defaultInterval
 }

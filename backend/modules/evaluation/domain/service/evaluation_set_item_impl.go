@@ -103,3 +103,16 @@ func (d *EvaluationSetItemServiceImpl) BatchGetEvaluationSetItems(ctx context.Co
 func (d *EvaluationSetItemServiceImpl) ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) (err error) {
 	return d.datasetRPCAdapter.ClearEvaluationSetDraftItem(ctx, spaceID, evaluationSetID)
 }
+
+func (d *EvaluationSetItemServiceImpl) GetEvaluationSetItemField(ctx context.Context, param *entity.GetEvaluationSetItemFieldParam) (fieldData *entity.FieldData, err error) {
+	if param == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode)
+	}
+	return d.datasetRPCAdapter.GetDatasetItemField(ctx, &rpc.GetDatasetItemFieldParam{
+		SpaceID:         param.SpaceID,
+		EvaluationSetID: param.EvaluationSetID,
+		ItemPK:          param.ItemPK,
+		FieldName:       param.FieldName,
+		TurnID:          param.TurnID,
+	})
+}

@@ -333,3 +333,11 @@ func (e *EvalTargetRepoImpl) SaveEvalTargetRecord(ctx context.Context, record *e
 	}
 	return e.evalTargetRecordDao.Save(ctx, po)
 }
+
+func (e *EvalTargetRepoImpl) UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
+	po, err := convertor.EvalTargetRecordDO2PO(record)
+	if err != nil {
+		return err
+	}
+	return e.evalTargetRecordDao.Update(ctx, po)
+}

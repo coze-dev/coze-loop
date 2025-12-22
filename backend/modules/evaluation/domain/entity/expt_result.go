@@ -308,6 +308,7 @@ type ExptTurnResultRunLog struct {
 	TargetResultID     int64
 	EvaluatorResultIds *EvaluatorResults
 	ErrMsg             string
+	UpdatedAt          time.Time
 }
 
 type ExptTurnEvaluatorResultRef struct {
@@ -558,7 +559,9 @@ type TurnAnnotateResult struct {
 }
 
 type TurnEvalSet struct {
-	Turn *Turn
+	Turn      *Turn
+	ItemID    int64
+	EvalSetID int64
 }
 
 type TurnSystemInfo struct {
@@ -600,6 +603,8 @@ type ExperimentTurnPayload struct {
 	SystemInfo *TurnSystemInfo
 	// 标注结果
 	AnnotateResult *TurnAnnotateResult
+	// 分析结果
+	AnalysisRecord *AnalysisRecord
 }
 
 type ExperimentResult struct {
@@ -620,6 +625,7 @@ type ColumnEvalSetField struct {
 	Description *string
 	ContentType ContentType
 	TextSchema  *string
+	SchemaKey   *SchemaKey
 }
 
 type ColumnEvaluator struct {

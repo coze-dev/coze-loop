@@ -52,6 +52,7 @@ func NewExptResultService(
 	evaluationSetItemService EvaluationSetItemService,
 	publisher events.ExptEventPublisher,
 	tagRPCAdapter rpc.ITagRPCAdapter,
+	analysisService IEvaluationAnalysisService,
 ) ExptResultService {
 	return ExptResultServiceImpl{
 		ExptItemResultRepo:          exptItemResultRepo,
@@ -71,6 +72,7 @@ func NewExptResultService(
 		evaluationSetItemService:    evaluationSetItemService,
 		publisher:                   publisher,
 		tagRPCAdapter:               tagRPCAdapter,
+		analysisService:             analysisService,
 	}
 }
 
@@ -93,7 +95,8 @@ type ExptResultServiceImpl struct {
 	evaluatorRecordService      EvaluatorRecordService
 	evaluationSetItemService    EvaluationSetItemService
 
-	publisher events.ExptEventPublisher
+	publisher       events.ExptEventPublisher
+	analysisService IEvaluationAnalysisService
 }
 
 func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error) {
@@ -342,7 +345,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, nil, nil, itemID2ItemRunState)
+	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, itemID2ItemRunState)
 
 	itemResults, err := payloadBuilder.BuildItemResults(ctx)
 	if err != nil {
@@ -536,7 +539,7 @@ var (
 		Name:  consts.ReportColumnNameEvalTargetActualOutput,
 		Label: gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
 	}
-	columnEvalTargetTrajectory = &entity.ColumnEvalTarget{ // nolint:unused
+	columnEvalTargetTrajectory = &entity.ColumnEvalTarget{
 		Name:  consts.ReportColumnNameEvalTargetTrajectory,
 		Label: gptr.Of(consts.ReportColumnLabelEvalTargetTrajectory),
 	}
@@ -555,9 +558,9 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, exp
 			continue
 		}
 		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
-		//if expt.TargetType.SupptTrajectory() {
-		//	columns = append(columns, columnEvalTargetTrajectory)
-		//}
+		if expt.TargetType.SupptTrajectory() {
+			columns = append(columns, columnEvalTargetTrajectory)
+		}
 		columns = append(columns, columnsEvalTargetMtr...)
 		res = append(res, &entity.ExptColumnEvalTarget{
 			ExptID:  expt.ID,
@@ -673,6 +676,7 @@ func (e ExptResultServiceImpl) getColumnEvalSetFields(ctx context.Context, space
 			Description: gptr.Of(field.Description),
 			ContentType: field.ContentType,
 			TextSchema:  gptr.Of(field.TextSchema),
+			SchemaKey:   field.SchemaKey,
 		})
 	}
 
@@ -753,6 +757,7 @@ type PayloadBuilder struct {
 	EvaluationSetItemService                    EvaluationSetItemService
 	EvalTargetService                           IEvalTargetService
 	EvaluatorRecordService                      EvaluatorRecordService
+	AnalysisService                             IEvaluationAnalysisService
 	ExptTurnResultFilterKeyMappingEvaluatorMap  map[string]*entity.ExptTurnResultFilterKeyMapping
 	ExptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping
 }
@@ -764,6 +769,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 	evalTargetService IEvalTargetService,
 	evaluatorRecordService EvaluatorRecordService,
 	evaluationSetItemService EvaluationSetItemService,
+	analysisService IEvaluationAnalysisService,
 	exptTurnResultFilterKeyMappingEvaluatorMap map[string]*entity.ExptTurnResultFilterKeyMapping,
 	exptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping,
 	itemID2ItemRunState map[int64]entity.ItemRunState,
@@ -779,6 +785,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		EvaluationSetItemService: evaluationSetItemService,
 		EvalTargetService:        evalTargetService,
 		EvaluatorRecordService:   evaluatorRecordService,
+		AnalysisService:          analysisService,
 		ExptTurnResultFilterKeyMappingEvaluatorMap:  exptTurnResultFilterKeyMappingEvaluatorMap,
 		ExptTurnResultFilterKeyMappingAnnotationMap: exptTurnResultFilterKeyMappingAnnotationMap,
 		ExptAnnotateRepo: exptAnnotateRepo,
@@ -887,6 +894,7 @@ type ExptResultBuilder struct {
 	itemIDTurnID2Turn                      map[int64]map[int64]*entity.TurnEvalSet
 	turnResultID2ScoreCorrected            map[int64]bool
 	turnResultID2TagKeyID2AnnotateRecord   map[int64]map[int64]*entity.AnnotateRecord // turn_result_id -> tag_key_id -> annotate_record
+	itemIDTurnID2TrajectoryAnalysis        map[int64]map[int64]*entity.AnalysisRecord
 
 	// 错误信息
 	Err error
@@ -898,6 +906,7 @@ type ExptResultBuilder struct {
 	evaluationSetItemService EvaluationSetItemService
 	evalTargetService        IEvalTargetService
 	evaluatorRecordService   EvaluatorRecordService
+	analysisService          IEvaluationAnalysisService
 }
 
 // 1.确定当前分页下数据范围
@@ -919,6 +928,7 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 			evaluatorRecordService:   b.EvaluatorRecordService,
 			evaluationSetItemService: b.EvaluationSetItemService,
 			ExptAnnotateRepo:         b.ExptAnnotateRepo,
+			analysisService:          b.AnalysisService,
 		}
 
 		if exptID == b.BaselineExptID {
@@ -1159,7 +1169,7 @@ func (b *PayloadBuilder) fillItemResults(ctx context.Context) error {
 				exptResult.Payload.TargetOutput = exptResultBuilder.getTurnTargetOutput(ctx, itemID, turnID)
 				exptResult.Payload.SystemInfo = exptResultBuilder.getTurnSystemInfo(ctx, itemID, turnID)
 				exptResult.Payload.AnnotateResult = exptResultBuilder.getTurnAnnotateRecord(ctx, itemID, turnID)
-
+				exptResult.Payload.AnalysisRecord = exptResultBuilder.getAnalysisRecord(ctx, itemID, turnID)
 				itemResult.TurnResults[j].ExperimentResults = append(itemResult.TurnResults[j].ExperimentResults, exptResult)
 			}
 		}
@@ -1224,6 +1234,10 @@ func (e *ExptResultBuilder) build(ctx context.Context) error {
 		return err
 	}
 	err = e.buildAnnotateRecords(ctx)
+	if err != nil {
+		return err
+	}
+	err = e.buildAnalysis(ctx)
 	if err != nil {
 		return err
 	}
@@ -1370,6 +1384,44 @@ func (e *ExptResultBuilder) getTurnAnnotateRecord(ctx context.Context, itemID, t
 	}
 }
 
+func (e *ExptResultBuilder) buildAnalysis(ctx context.Context) error {
+	if e.ExptID != e.BaselineExptID {
+		return nil
+	}
+	// 构建唯一键
+	var uniqueKeys []string
+	for _, d := range e.turnResultDO {
+		uniqueKeys = append(uniqueKeys, fmt.Sprintf("%v_%v_%v_%v", d.SpaceID, d.ExptID, d.ItemID, d.TurnID))
+	}
+	recordMap, err := e.analysisService.BatchGetAnalysisRecordByUniqueKeys(ctx, uniqueKeys)
+	if err != nil {
+		return err
+	}
+	itemIDTurnID2AnalysisRecord := make(map[int64]map[int64]*entity.AnalysisRecord)
+	for k, v := range recordMap {
+		split := strings.Split(k, "_")
+		if len(split) != 4 {
+			return errorx.New("uniqueKey error")
+		}
+		itemID, err := strconv.ParseInt(split[2], 10, 64)
+		if err != nil {
+			return err
+		}
+		turnID, err := strconv.ParseInt(split[3], 10, 64)
+		if err != nil {
+			return err
+		}
+		itemIDTurnID2AnalysisRecord[itemID] = map[int64]*entity.AnalysisRecord{
+			turnID: {
+				ID:     v.ID,
+				Status: v.Status,
+			},
+		}
+	}
+	e.itemIDTurnID2TrajectoryAnalysis = itemIDTurnID2AnalysisRecord
+	return nil
+}
+
 func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 	if e.exptDO == nil {
 		return fmt.Errorf("exptPO is nil")
@@ -1398,7 +1450,9 @@ func (e *ExptResultBuilder) buildEvalSet(ctx context.Context) error {
 				itemIDTurnID2Turn[item.ItemID] = make(map[int64]*entity.TurnEvalSet)
 			}
 			turnEvalSet := &entity.TurnEvalSet{
-				Turn: turn,
+				Turn:      turn,
+				ItemID:    item.ItemID,
+				EvalSetID: evalSetID,
 			}
 			itemIDTurnID2Turn[item.ItemID][turn.ID] = turnEvalSet
 		}
@@ -1420,6 +1474,19 @@ func (e *ExptResultBuilder) getTurnEvalSet(ctx context.Context, itemID, turnID i
 	}
 
 	return turn
+}
+
+func (e *ExptResultBuilder) getAnalysisRecord(ctx context.Context, itemID, turnID int64) *entity.AnalysisRecord {
+	turnID2Analysis, ok := e.itemIDTurnID2TrajectoryAnalysis[itemID]
+	if !ok {
+		return &entity.AnalysisRecord{}
+	}
+	analysis, ok := turnID2Analysis[turnID]
+	if !ok {
+		return &entity.AnalysisRecord{}
+	}
+
+	return analysis
 }
 
 func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
@@ -1802,7 +1869,7 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 		ExptIDs: []int64{exptID},
 	}
 	payloadBuilder := NewPayloadBuilder(ctx, param, exptID, allTurnResults, itemResults, e.ExperimentRepo,
-		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState))
+		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState))
 
 	exptTurnResultFilters, err := payloadBuilder.BuildTurnResultFilter(ctx)
 	if err != nil {
@@ -1825,10 +1892,10 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		// todo 草稿版数据集不支持模糊搜索，本期暂不实现
 		return nil
 	}
-	//evaluationSetVersion, _, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, baseExpt.SpaceID, baseExptEvalSetVersionID, ptr.Of(true))
-	//if err != nil {
+	// evaluationSetVersion, _, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, baseExpt.SpaceID, baseExptEvalSetVersionID, ptr.Of(true))
+	// if err != nil {
 	//	return err
-	//}
+	// }
 	itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, baseExpt.SpaceID, baseExpt.EvalSetID, ptr.Of(baseExpt.EvalSetVersionID))
 	if err != nil {
 		return err
@@ -2052,7 +2119,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 			ExptIDs: []int64{exptID},
 		}
 		payloadBuilder := NewPayloadBuilder(ctx, param, exptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo,
-			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, nil, nil, make(map[int64]entity.ItemRunState))
+			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState))
 		itemResults, err := payloadBuilder.BuildItemResults(ctx)
 		if err != nil {
 			return err

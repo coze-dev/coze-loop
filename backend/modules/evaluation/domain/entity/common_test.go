@@ -62,3 +62,24 @@ func TestStorageProviderFromString(t *testing.T) {
 		})
 	}
 }
+
+func TestFileFormat_String(t *testing.T) {
+	type fields struct {
+		format FileFormat
+		expect string
+	}
+	testCases := []fields{
+		{FileFormat_JSONL, "JSONL"},
+		{FileFormat_Parquet, "Parquet"},
+		{FileFormat_CSV, "CSV"},
+		{FileFormat_XLSX, "XLSX"},
+		{FileFormat_ZIP, "ZIP"},
+		{FileFormat(999), "<UNSET>"}, // 未知值
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.expect, func(t *testing.T) {
+			assert.Equal(t, tc.expect, tc.format.String())
+		})
+	}
+}

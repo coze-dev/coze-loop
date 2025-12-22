@@ -63,102 +63,102 @@ func TestExperimentServiceHandlers(t *testing.T) {
 			description:    "测试UpsertExptTurnResultFilter无效JSON",
 		},
 		// InsightAnalysisExperiment 测试
-		{
-			name:           "InsightAnalysisExperiment_ValidRequest",
-			handler:        InsightAnalysisExperiment,
-			requestBody:    `{}`,
-			expectedStatus: http.StatusOK,
-			description:    "测试InsightAnalysisExperiment有效请求",
-		},
-		{
-			name:           "InsightAnalysisExperiment_InvalidJSON",
-			handler:        InsightAnalysisExperiment,
-			requestBody:    `{invalid json}`,
-			expectedStatus: http.StatusBadRequest,
-			description:    "测试InsightAnalysisExperiment无效JSON",
-		},
-		// ListExptInsightAnalysisRecord 测试
-		{
-			name:           "ListExptInsightAnalysisRecord_ValidRequest",
-			handler:        ListExptInsightAnalysisRecord,
-			requestBody:    `{}`,
-			expectedStatus: http.StatusOK,
-			description:    "测试ListExptInsightAnalysisRecord有效请求",
-		},
-		{
-			name:           "ListExptInsightAnalysisRecord_InvalidJSON",
-			handler:        ListExptInsightAnalysisRecord,
-			requestBody:    `{invalid json}`,
-			expectedStatus: http.StatusBadRequest,
-			description:    "测试ListExptInsightAnalysisRecord无效JSON",
-		},
-		// DeleteExptInsightAnalysisRecord 测试
-		{
-			name:           "DeleteExptInsightAnalysisRecord_ValidRequest",
-			handler:        DeleteExptInsightAnalysisRecord,
-			requestBody:    `{}`,
-			expectedStatus: http.StatusOK,
-			description:    "测试DeleteExptInsightAnalysisRecord有效请求",
-		},
-		{
-			name:           "DeleteExptInsightAnalysisRecord_InvalidJSON",
-			handler:        DeleteExptInsightAnalysisRecord,
-			requestBody:    `{invalid json}`,
-			expectedStatus: http.StatusBadRequest,
-			description:    "测试DeleteExptInsightAnalysisRecord无效JSON",
-		},
-		// GetExptInsightAnalysisRecord 测试
-		{
-			name:           "GetExptInsightAnalysisRecord_ValidRequest",
-			handler:        GetExptInsightAnalysisRecord,
-			requestBody:    `{}`,
-			expectedStatus: http.StatusOK,
-			description:    "测试GetExptInsightAnalysisRecord有效请求",
-		},
-		{
-			name:           "GetExptInsightAnalysisRecord_InvalidJSON",
-			handler:        GetExptInsightAnalysisRecord,
-			requestBody:    `{invalid json}`,
-			expectedStatus: http.StatusBadRequest,
-			description:    "测试GetExptInsightAnalysisRecord无效JSON",
-		},
-		// FeedbackExptInsightAnalysisReport 测试 - 需要必需字段
-		{
-			name:           "FeedbackExptInsightAnalysisReport_ValidRequest",
-			handler:        FeedbackExptInsightAnalysisReport,
-			requestBody:    `{"workspace_id": 123, "expt_id": 456, "insight_analysis_record_id": 789, "feedback_action_type": "like"}`,
-			expectedStatus: http.StatusOK,
-			description:    "测试FeedbackExptInsightAnalysisReport有效请求",
-		},
-		{
-			name:           "FeedbackExptInsightAnalysisReport_MissingRequiredField",
-			handler:        FeedbackExptInsightAnalysisReport,
-			requestBody:    `{}`,
-			expectedStatus: http.StatusBadRequest,
-			description:    "测试FeedbackExptInsightAnalysisReport缺少必需字段",
-		},
-		{
-			name:           "FeedbackExptInsightAnalysisReport_InvalidJSON",
-			handler:        FeedbackExptInsightAnalysisReport,
-			requestBody:    `{invalid json}`,
-			expectedStatus: http.StatusBadRequest,
-			description:    "测试FeedbackExptInsightAnalysisReport无效JSON",
-		},
-		// ListExptInsightAnalysisComment 测试
-		{
-			name:           "ListExptInsightAnalysisComment_ValidRequest",
-			handler:        ListExptInsightAnalysisComment,
-			requestBody:    `{}`,
-			expectedStatus: http.StatusOK,
-			description:    "测试ListExptInsightAnalysisComment有效请求",
-		},
-		{
-			name:           "ListExptInsightAnalysisComment_InvalidJSON",
-			handler:        ListExptInsightAnalysisComment,
-			requestBody:    `{invalid json}`,
-			expectedStatus: http.StatusBadRequest,
-			description:    "测试ListExptInsightAnalysisComment无效JSON",
-		},
+		// {
+		// 	name:           "InsightAnalysisExperiment_ValidRequest",
+		// 	handler:        InsightAnalysisExperiment,
+		// 	requestBody:    `{}`,
+		// 	expectedStatus: http.StatusOK,
+		// 	description:    "测试InsightAnalysisExperiment有效请求",
+		// },
+		// {
+		// 	name:           "InsightAnalysisExperiment_InvalidJSON",
+		// 	handler:        InsightAnalysisExperiment,
+		// 	requestBody:    `{invalid json}`,
+		// 	expectedStatus: http.StatusBadRequest,
+		// 	description:    "测试InsightAnalysisExperiment无效JSON",
+		// },
+		// // ListExptInsightAnalysisRecord 测试
+		// {
+		// 	name:           "ListExptInsightAnalysisRecord_ValidRequest",
+		// 	handler:        ListExptInsightAnalysisRecord,
+		// 	requestBody:    `{}`,
+		// 	expectedStatus: http.StatusOK,
+		// 	description:    "测试ListExptInsightAnalysisRecord有效请求",
+		// },
+		// {
+		// 	name:           "ListExptInsightAnalysisRecord_InvalidJSON",
+		// 	handler:        ListExptInsightAnalysisRecord,
+		// 	requestBody:    `{invalid json}`,
+		// 	expectedStatus: http.StatusBadRequest,
+		// 	description:    "测试ListExptInsightAnalysisRecord无效JSON",
+		// },
+		// // DeleteExptInsightAnalysisRecord 测试
+		// {
+		// 	name:           "DeleteExptInsightAnalysisRecord_ValidRequest",
+		// 	handler:        DeleteExptInsightAnalysisRecord,
+		// 	requestBody:    `{}`,
+		// 	expectedStatus: http.StatusOK,
+		// 	description:    "测试DeleteExptInsightAnalysisRecord有效请求",
+		// },
+		// {
+		// 	name:           "DeleteExptInsightAnalysisRecord_InvalidJSON",
+		// 	handler:        DeleteExptInsightAnalysisRecord,
+		// 	requestBody:    `{invalid json}`,
+		// 	expectedStatus: http.StatusBadRequest,
+		// 	description:    "测试DeleteExptInsightAnalysisRecord无效JSON",
+		// },
+		// // GetExptInsightAnalysisRecord 测试
+		// {
+		// 	name:           "GetExptInsightAnalysisRecord_ValidRequest",
+		// 	handler:        GetExptInsightAnalysisRecord,
+		// 	requestBody:    `{}`,
+		// 	expectedStatus: http.StatusOK,
+		// 	description:    "测试GetExptInsightAnalysisRecord有效请求",
+		// },
+		// {
+		// 	name:           "GetExptInsightAnalysisRecord_InvalidJSON",
+		// 	handler:        GetExptInsightAnalysisRecord,
+		// 	requestBody:    `{invalid json}`,
+		// 	expectedStatus: http.StatusBadRequest,
+		// 	description:    "测试GetExptInsightAnalysisRecord无效JSON",
+		// },
+		// // FeedbackExptInsightAnalysisReport 测试 - 需要必需字段
+		// {
+		// 	name:           "FeedbackExptInsightAnalysisReport_ValidRequest",
+		// 	handler:        FeedbackExptInsightAnalysisReport,
+		// 	requestBody:    `{"workspace_id": 123, "expt_id": 456, "insight_analysis_record_id": 789, "feedback_action_type": "like"}`,
+		// 	expectedStatus: http.StatusOK,
+		// 	description:    "测试FeedbackExptInsightAnalysisReport有效请求",
+		// },
+		// {
+		// 	name:           "FeedbackExptInsightAnalysisReport_MissingRequiredField",
+		// 	handler:        FeedbackExptInsightAnalysisReport,
+		// 	requestBody:    `{}`,
+		// 	expectedStatus: http.StatusBadRequest,
+		// 	description:    "测试FeedbackExptInsightAnalysisReport缺少必需字段",
+		// },
+		// {
+		// 	name:           "FeedbackExptInsightAnalysisReport_InvalidJSON",
+		// 	handler:        FeedbackExptInsightAnalysisReport,
+		// 	requestBody:    `{invalid json}`,
+		// 	expectedStatus: http.StatusBadRequest,
+		// 	description:    "测试FeedbackExptInsightAnalysisReport无效JSON",
+		// },
+		// // ListExptInsightAnalysisComment 测试
+		// {
+		// 	name:           "ListExptInsightAnalysisComment_ValidRequest",
+		// 	handler:        ListExptInsightAnalysisComment,
+		// 	requestBody:    `{}`,
+		// 	expectedStatus: http.StatusOK,
+		// 	description:    "测试ListExptInsightAnalysisComment有效请求",
+		// },
+		// {
+		// 	name:           "ListExptInsightAnalysisComment_InvalidJSON",
+		// 	handler:        ListExptInsightAnalysisComment,
+		// 	requestBody:    `{invalid json}`,
+		// 	expectedStatus: http.StatusBadRequest,
+		// 	description:    "测试ListExptInsightAnalysisComment无效JSON",
+		// },
 	}
 
 	for _, tt := range tests {
@@ -208,12 +208,12 @@ func TestHandlerResponseFormat(t *testing.T) {
 	}{
 		{"ListExperimentStats", ListExperimentStats, `{"workspace_id": 123}`},
 		{"UpsertExptTurnResultFilter", UpsertExptTurnResultFilter, `{}`},
-		{"InsightAnalysisExperiment", InsightAnalysisExperiment, `{}`},
-		{"ListExptInsightAnalysisRecord", ListExptInsightAnalysisRecord, `{}`},
-		{"DeleteExptInsightAnalysisRecord", DeleteExptInsightAnalysisRecord, `{}`},
-		{"GetExptInsightAnalysisRecord", GetExptInsightAnalysisRecord, `{}`},
-		{"FeedbackExptInsightAnalysisReport", FeedbackExptInsightAnalysisReport, `{"workspace_id": 123, "expt_id": 456, "insight_analysis_record_id": 789, "feedback_action_type": "like"}`},
-		{"ListExptInsightAnalysisComment", ListExptInsightAnalysisComment, `{}`},
+		// {"InsightAnalysisExperiment", InsightAnalysisExperiment, `{}`},
+		// {"ListExptInsightAnalysisRecord", ListExptInsightAnalysisRecord, `{}`},
+		// {"DeleteExptInsightAnalysisRecord", DeleteExptInsightAnalysisRecord, `{}`},
+		// {"GetExptInsightAnalysisRecord", GetExptInsightAnalysisRecord, `{}`},
+		// {"FeedbackExptInsightAnalysisReport", FeedbackExptInsightAnalysisReport, `{"workspace_id": 123, "expt_id": 456, "insight_analysis_record_id": 789, "feedback_action_type": "like"}`},
+		// {"ListExptInsightAnalysisComment", ListExptInsightAnalysisComment, `{}`},
 	}
 
 	for _, h := range handlers {

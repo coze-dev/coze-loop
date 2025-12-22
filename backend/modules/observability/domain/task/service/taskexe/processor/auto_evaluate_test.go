@@ -180,6 +180,10 @@ type fakeExperimentClient struct {
 	invokeErr  error
 }
 
+func (f *fakeExperimentClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error) {
+	return nil, nil
+}
+
 // IDL 方法空桩实现（除 InvokeExperiment 外，其余均返回 nil）
 func (f *fakeExperimentClient) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest, callOptions ...callopt.Option) (*expt.CheckExperimentNameResponse, error) {
 	return nil, nil

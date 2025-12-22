@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	domain_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
@@ -37,6 +38,7 @@ func ColumnEvalSetFieldsDO2DTO(from *entity.ColumnEvalSetField) *domain_expt.Col
 		Description: from.Description,
 		ContentType: &contentType,
 		TextSchema:  from.TextSchema,
+		SchemaKey:   gptr.Of(dataset.SchemaKey(gptr.Indirect(from.SchemaKey))),
 	}
 }
 
@@ -210,12 +212,13 @@ func ExperimentResultsDO2DTO(from *entity.ExperimentResult) *domain_expt.Experim
 
 func ExperimentTurnPayloadDO2DTO(from *entity.ExperimentTurnPayload) *domain_expt.ExperimentTurnPayload {
 	return &domain_expt.ExperimentTurnPayload{
-		TurnID:          from.TurnID,
-		EvalSet:         TurnEvalSetDO2DTO(from.EvalSet),
-		TargetOutput:    TurnTargetOutputDO2DTO(from.TargetOutput),
-		EvaluatorOutput: TurnEvaluatorOutputDO2DTO(from.EvaluatorOutput),
-		SystemInfo:      TurnSystemInfoDO2DTO(from.SystemInfo),
-		AnnotateResult_: TurnAnnotationDO2DTO(from.AnnotateResult),
+		TurnID:                    from.TurnID,
+		EvalSet:                   TurnEvalSetDO2DTO(from.EvalSet),
+		TargetOutput:              TurnTargetOutputDO2DTO(from.TargetOutput),
+		EvaluatorOutput:           TurnEvaluatorOutputDO2DTO(from.EvaluatorOutput),
+		SystemInfo:                TurnSystemInfoDO2DTO(from.SystemInfo),
+		AnnotateResult_:           TurnAnnotationDO2DTO(from.AnnotateResult),
+		TrajectoryAnalysisResult_: TurnTrajectoryAnalysisResultDO2DTO(from.AnalysisRecord),
 	}
 }
 
@@ -279,6 +282,20 @@ func TurnEvalSetDO2DTO(from *entity.TurnEvalSet) *domain_expt.TurnEvalSet {
 	}
 	return &domain_expt.TurnEvalSet{
 		Turn: evalsetconv.TurnDO2DTO(from.Turn),
+	}
+}
+
+func TurnTrajectoryAnalysisResultDO2DTO(from *entity.AnalysisRecord) *domain_expt.TrajectoryAnalysisResult_ {
+	if from == nil {
+		return &domain_expt.TrajectoryAnalysisResult_{}
+	}
+	var id *int64
+	if from.ID > 0 {
+		id = ptr.Of(from.ID)
+	}
+	return &domain_expt.TrajectoryAnalysisResult_{
+		RecordID: id,
+		Status:   ptr.Of(InsightAnalysisStatus2DTO(from.Status)),
 	}
 }
 

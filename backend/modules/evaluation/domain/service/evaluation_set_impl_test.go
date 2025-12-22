@@ -606,3 +606,133 @@ func TestEvaluationSetServiceImpl_ListEvaluationSets(t *testing.T) {
 		})
 	}
 }
+
+// ---------------- 追加：CreateEvaluationSetWithImport 与 ParseImportSourceFile 的单测 ----------------
+
+func TestCreateEvaluationSetWithImport(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAdapter := mocks.NewMockIDatasetRPCAdapter(ctrl)
+	service := &EvaluationSetServiceImpl{datasetRPCAdapter: mockAdapter}
+
+	desc := "导入评估集"
+	schema := &entity.EvaluationSetSchema{}
+	sourceType := entity.SetSourceType_File
+	source := &entity.DatasetIOEndpoint{
+		File: &entity.DatasetIOFile{
+			Provider: entity.StorageProvider_S3,
+			Path:     "s3://bucket/data.csv",
+			Format:   gptr.Of(entity.FileFormat_CSV),
+		},
+	}
+	fieldMappings := []*entity.FieldMapping{{Source: "input", Target: "question"}}
+
+	tests := []struct {
+		name        string
+		param       *entity.CreateEvaluationSetWithImportParam
+		expectedID  int64
+		expectedJob int64
+		wantErr     bool
+		wantErrCode int32
+		mockSetup   func()
+	}{
+		{
+			name: "成功创建评估集（包含导入源）",
+			param: &entity.CreateEvaluationSetWithImportParam{
+				SpaceID:             1,
+				Name:                "Set With Import",
+				Description:         &desc,
+				EvaluationSetSchema: schema,
+				SourceType:          gptr.Of(sourceType),
+				Source:              source,
+				FieldMappings:       fieldMappings,
+			},
+			expectedID:  101,
+			expectedJob: 202,
+			wantErr:     false,
+			mockSetup: func() {
+				mockAdapter.EXPECT().CreateDatasetWithImport(gomock.Any(), &rpc.CreateDatasetWithImportParam{
+					SpaceID:            1,
+					Name:               "Set With Import",
+					Desc:               &desc,
+					EvaluationSetItems: schema,
+					SourceType:         gptr.Of(sourceType),
+					Source:             source,
+					FieldMappings:      fieldMappings,
+				}).Return(int64(101), int64(202), nil)
+			},
+		},
+		{
+			name:        "参数为空",
+			param:       nil,
+			expectedID:  0,
+			expectedJob: 0,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+			mockSetup:   func() {},
+		},
+		{
+			name: "RPC错误",
+			param: &entity.CreateEvaluationSetWithImportParam{
+				SpaceID:             9,
+				Name:                "bad",
+				Description:         &desc,
+				EvaluationSetSchema: schema,
+				SourceType:          gptr.Of(sourceType),
+				Source:              source,
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonRPCErrorCode,
+			mockSetup: func() {
+				mockAdapter.EXPECT().CreateDatasetWithImport(gomock.Any(), gomock.Any()).Return(int64(0), int64(0), errorx.NewByCode(errno.CommonRPCErrorCode))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.mockSetup != nil {
+				tt.mockSetup()
+			}
+			id, jobID, err := service.CreateEvaluationSetWithImport(context.Background(), tt.param)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedID, id)
+				assert.Equal(t, tt.expectedJob, jobID)
+			}
+		})
+	}
+}
+
+func TestParseImportSourceFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAdapter := mocks.NewMockIDatasetRPCAdapter(ctrl)
+	service := &EvaluationSetServiceImpl{datasetRPCAdapter: mockAdapter}
+
+	file := &entity.DatasetIOFile{
+		Provider: entity.StorageProvider_S3,
+		Path:     "s3://bucket/data.jsonl",
+		Format:   gptr.Of(entity.FileFormat_JSONL),
+	}
+	param := &entity.ParseImportSourceFileParam{SpaceID: 1, File: file}
+
+	expected := &entity.ParseImportSourceFileResult{Bytes: 1024, FieldSchemas: []*entity.FieldSchema{}, Conflicts: nil, FilesWithAmbiguousColumn: nil}
+
+	t.Run("成功解析导入文件", func(t *testing.T) {
+		mockAdapter.EXPECT().ParseImportSourceFile(gomock.Any(), param).Return(expected, nil)
+		res, err := service.ParseImportSourceFile(context.Background(), param)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, res)
+	})
+}

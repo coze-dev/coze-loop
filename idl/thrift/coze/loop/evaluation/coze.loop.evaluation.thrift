@@ -6,6 +6,9 @@ include "coze.loop.evaluation.expt.thrift"
 include "coze.loop.evaluation.eval_target.thrift"
 include "coze.loop.evaluation.openapi.thrift"
 include "coze.loop.evaluation.spi.thrift"
+include "../trajectory.thrift"
+
+typedef trajectory.Trajectory Trajectory
 
 service EvaluationSetService extends coze.loop.evaluation.eval_set.EvaluationSetService{}
 
