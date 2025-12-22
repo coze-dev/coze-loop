@@ -4021,6 +4021,20 @@ func (p *Message) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -4159,6 +4173,20 @@ func (p *Message) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Message) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.NoRender = _field
+	return offset, nil
+}
+
 func (p *Message) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -4198,6 +4226,7 @@ func (p *Message) FastWrite(buf []byte) int {
 func (p *Message) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -4219,6 +4248,7 @@ func (p *Message) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -4289,6 +4319,15 @@ func (p *Message) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *Message) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetNoRender() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 7)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.NoRender)
 	}
 	return offset
 }
@@ -4372,6 +4411,15 @@ func (p *Message) field6Length() int {
 	return l
 }
 
+func (p *Message) field7Length() int {
+	l := 0
+	if p.IsSetNoRender() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *Message) field100Length() int {
 	l := 0
 	if p.IsSetMetadata() {
@@ -4450,6 +4498,11 @@ func (p *Message) DeepCopy(s interface{}) error {
 
 			p.ToolCalls = append(p.ToolCalls, _elem)
 		}
+	}
+
+	if src.NoRender != nil {
+		tmp := *src.NoRender
+		p.NoRender = &tmp
 	}
 
 	if src.Metadata != nil {

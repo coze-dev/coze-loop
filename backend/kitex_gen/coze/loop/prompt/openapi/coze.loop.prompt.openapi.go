@@ -5455,6 +5455,8 @@ type Message struct {
 	ToolCallID *string `thrift:"tool_call_id,5,optional" frugal:"5,optional,string" form:"tool_call_id" json:"tool_call_id,omitempty" query:"tool_call_id"`
 	// tool调用（role为assistant时有效）
 	ToolCalls []*ToolCall `thrift:"tool_calls,6,optional" frugal:"6,optional,list<ToolCall>" form:"tool_calls" json:"tool_calls,omitempty" query:"tool_calls"`
+	// 是否不需要渲染
+	NoRender *bool `thrift:"no_render,7,optional" frugal:"7,optional,bool" form:"no_render" json:"no_render,omitempty" query:"no_render"`
 	// 消息元信息
 	Metadata map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
 }
@@ -5538,6 +5540,18 @@ func (p *Message) GetToolCalls() (v []*ToolCall) {
 	return p.ToolCalls
 }
 
+var Message_NoRender_DEFAULT bool
+
+func (p *Message) GetNoRender() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNoRender() {
+		return Message_NoRender_DEFAULT
+	}
+	return *p.NoRender
+}
+
 var Message_Metadata_DEFAULT map[string]string
 
 func (p *Message) GetMetadata() (v map[string]string) {
@@ -5567,6 +5581,9 @@ func (p *Message) SetToolCallID(val *string) {
 func (p *Message) SetToolCalls(val []*ToolCall) {
 	p.ToolCalls = val
 }
+func (p *Message) SetNoRender(val *bool) {
+	p.NoRender = val
+}
 func (p *Message) SetMetadata(val map[string]string) {
 	p.Metadata = val
 }
@@ -5578,6 +5595,7 @@ var fieldIDToName_Message = map[int16]string{
 	4:   "reasoning_content",
 	5:   "tool_call_id",
 	6:   "tool_calls",
+	7:   "no_render",
 	100: "metadata",
 }
 
@@ -5603,6 +5621,10 @@ func (p *Message) IsSetToolCallID() bool {
 
 func (p *Message) IsSetToolCalls() bool {
 	return p.ToolCalls != nil
+}
+
+func (p *Message) IsSetNoRender() bool {
+	return p.NoRender != nil
 }
 
 func (p *Message) IsSetMetadata() bool {
@@ -5670,6 +5692,14 @@ func (p *Message) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5802,6 +5832,17 @@ func (p *Message) ReadField6(iprot thrift.TProtocol) error {
 	p.ToolCalls = _field
 	return nil
 }
+func (p *Message) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.NoRender = _field
+	return nil
+}
 func (p *Message) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -5860,6 +5901,10 @@ func (p *Message) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -6008,6 +6053,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *Message) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNoRender() {
+		if err = oprot.WriteFieldBegin("no_render", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.NoRender); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *Message) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMetadata() {
 		if err = oprot.WriteFieldBegin("metadata", thrift.MAP, 100); err != nil {
@@ -6068,6 +6131,9 @@ func (p *Message) DeepEqual(ano *Message) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.ToolCalls) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.NoRender) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Metadata) {
@@ -6147,6 +6213,18 @@ func (p *Message) Field6DeepEqual(src []*ToolCall) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *Message) Field7DeepEqual(src *bool) bool {
+
+	if p.NoRender == src {
+		return true
+	} else if p.NoRender == nil || src == nil {
+		return false
+	}
+	if *p.NoRender != *src {
+		return false
 	}
 	return true
 }

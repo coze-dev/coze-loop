@@ -128,6 +128,7 @@ struct Message {
     4: optional string reasoning_content // 推理思考内容
     5: optional string tool_call_id // tool调用ID（role为tool时有效）
     6: optional list<ToolCall> tool_calls // tool调用（role为assistant时有效）
+    7: optional bool no_render // 是否不需要渲染
 
     100: optional map<string, string> metadata // 消息元信息
 }
