@@ -26,12 +26,19 @@ func ExptAggregateResultDOToDTO(data *entity.ExptAggregateResult) *domain_expt.E
 		annotationResults[tagKeyID] = AnnotationResultDOToDTO(annotationResult)
 	}
 
-	return &domain_expt.ExptAggregateResult_{
+	result := &domain_expt.ExptAggregateResult_{
 		ExperimentID:      data.ExperimentID,
 		EvaluatorResults:  evaluatorResults,
 		Status:            domain_expt.ExptAggregateCalculateStatusPtr(domain_expt.ExptAggregateCalculateStatus(data.Status)),
 		AnnotationResults: annotationResults,
 	}
+
+	// 转换加权结果：一组 AggregatorResult_
+	if len(data.WeightedResults) > 0 {
+		result.WeightedResults = AggregatorResultDOsToDTOs(data.WeightedResults)
+	}
+
+	return result
 }
 
 func EvaluatorResultsDOToDTO(result *entity.EvaluatorAggregateResult) *domain_expt.EvaluatorAggregateResult_ {

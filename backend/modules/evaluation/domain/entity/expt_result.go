@@ -33,6 +33,9 @@ const (
 
 	// 标注项, FieldKey为TagKeyID
 	FieldType_Annotation FieldType = 23
+
+	// 加权得分, FieldKey为expt_id
+	FieldType_WeightedScore FieldType = 24
 )
 
 // aggregate result
@@ -126,15 +129,16 @@ func (a AggregatorResult) GetScore() float64 {
 }
 
 type ExptAggrResult struct {
-	ID           int64
-	SpaceID      int64
-	ExperimentID int64
-	FieldType    int32
-	FieldKey     string
-	Score        float64
-	AggrResult   []byte
-	Version      int64
-	Status       int32
+	ID            int64
+	SpaceID       int64
+	ExperimentID  int64
+	FieldType     int32
+	FieldKey      string
+	Score         float64
+	AggrResult    []byte
+	Version       int64
+	Status        int32
+	WeightedScore float64
 }
 
 type ExptAggregateResult struct {
@@ -142,6 +146,8 @@ type ExptAggregateResult struct {
 	EvaluatorResults  map[int64]*EvaluatorAggregateResult
 	Status            int64
 	AnnotationResults map[int64]*AnnotationAggregateResult
+	// WeightedResults 加权聚合结果列表，对每种聚合指标（Average、p99 等）给出加权后的结果
+	WeightedResults []*AggregatorResult
 }
 
 type EvaluatorAggregateResult struct {
@@ -241,6 +247,8 @@ type ExptTurnResult struct {
 	EvaluatorResults *EvaluatorResults
 	ErrMsg           string
 	TurnIdx          int32
+
+	WeightedScore float64
 }
 
 func (tr *ExptTurnResult) ToRunLogDO() *ExptTurnResultRunLog {
@@ -335,22 +343,59 @@ type ExptListFilter struct {
 }
 
 type ExptFilterFields struct {
-	CreatedBy    []string
-	Status       []int64
-	EvalSetIDs   []int64
-	TargetIDs    []int64
-	EvaluatorIDs []int64
-	TargetType   []int64
-	ExptType     []int64
-	SourceType   []int64
-	SourceID     []string
+	CreatedBy       []string
+	Status          []int64
+	EvalSetIDs      []int64
+	TargetIDs       []int64
+	EvaluatorIDs    []int64
+	TargetType      []int64
+	ExptType        []int64
+	SourceType      []int64
+	SourceID        []string
+	ExptTemplateIDs []int64
 }
 
 func (e *ExptFilterFields) IsValid() bool {
 	if e == nil {
 		return true
 	}
-	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType} {
+	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptTemplateIDs} {
+		for _, item := range slice {
+			if item < 0 {
+				return false
+			}
+		}
+	}
+	for _, item := range e.CreatedBy {
+		if len(item) <= 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// ExptTemplateListFilter 实验模板列表筛选器
+type ExptTemplateListFilter struct {
+	FuzzyName string
+	Includes  *ExptTemplateFilterFields
+	Excludes  *ExptTemplateFilterFields
+}
+
+// ExptTemplateFilterFields 实验模板筛选字段
+type ExptTemplateFilterFields struct {
+	CreatedBy    []string
+	EvalSetIDs   []int64
+	TargetIDs    []int64
+	EvaluatorIDs []int64
+	TargetType   []int64
+	ExptType     []int64
+}
+
+func (e *ExptTemplateFilterFields) IsValid() bool {
+	if e == nil {
+		return true
+	}
+	for _, slice := range [][]int64{e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptType} {
 		for _, item := range slice {
 			if item < 0 {
 				return false
@@ -551,6 +596,7 @@ type TurnTargetOutput struct {
 
 type TurnEvaluatorOutput struct {
 	EvaluatorRecords map[int64]*EvaluatorRecord
+	WeightedScore    *float64 // 加权汇总得分
 }
 
 type TurnAnnotateResult struct {

@@ -42,6 +42,11 @@ type Client interface {
 	GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (r *expt.GetExptInsightAnalysisRecordResponse, err error)
 	FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest, callOptions ...callopt.Option) (r *expt.FeedbackExptInsightAnalysisReportResponse, err error)
 	ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisCommentResponse, err error)
+	CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.CreateExperimentTemplateResponse, err error)
+	GetExperimentTemplate(ctx context.Context, req *expt.GetExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.GetExperimentTemplateResponse, err error)
+	UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentTemplateResponse, err error)
+	DeleteExperimentTemplate(ctx context.Context, req *expt.DeleteExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.DeleteExperimentTemplateResponse, err error)
+	ListExperimentTemplates(ctx context.Context, req *expt.ListExperimentTemplatesRequest, callOptions ...callopt.Option) (r *expt.ListExperimentTemplatesResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -226,4 +231,29 @@ func (p *kExperimentServiceClient) FeedbackExptInsightAnalysisReport(ctx context
 func (p *kExperimentServiceClient) ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisCommentResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListExptInsightAnalysisComment(ctx, req)
+}
+
+func (p *kExperimentServiceClient) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.CreateExperimentTemplateResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreateExperimentTemplate(ctx, req)
+}
+
+func (p *kExperimentServiceClient) GetExperimentTemplate(ctx context.Context, req *expt.GetExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.GetExperimentTemplateResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetExperimentTemplate(ctx, req)
+}
+
+func (p *kExperimentServiceClient) UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentTemplateResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateExperimentTemplate(ctx, req)
+}
+
+func (p *kExperimentServiceClient) DeleteExperimentTemplate(ctx context.Context, req *expt.DeleteExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.DeleteExperimentTemplateResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeleteExperimentTemplate(ctx, req)
+}
+
+func (p *kExperimentServiceClient) ListExperimentTemplates(ctx context.Context, req *expt.ListExperimentTemplatesRequest, callOptions ...callopt.Option) (r *expt.ListExperimentTemplatesResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListExperimentTemplates(ctx, req)
 }

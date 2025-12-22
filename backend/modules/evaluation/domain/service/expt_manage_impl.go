@@ -57,6 +57,7 @@ func NewExptManager(
 	evaluatorService EvaluatorService,
 	benefitService benefit.IBenefitService,
 	exptAggrResultService ExptAggrResultService,
+	templateRepo repo.IExptTemplateRepo,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -81,6 +82,7 @@ func NewExptManager(
 		evaluatorService:            evaluatorService,
 		benefitService:              benefitService,
 		exptAggrResultService:       exptAggrResultService,
+		templateRepo:                templateRepo,
 	}
 }
 
@@ -107,6 +109,7 @@ type ExptMangerImpl struct {
 	evalTargetService           IEvalTargetService
 	evaluatorService            EvaluatorService
 	benefitService              benefit.IBenefitService
+	templateRepo                repo.IExptTemplateRepo
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -186,7 +189,61 @@ func (e *ExptMangerImpl) packExperimentResult(ctx context.Context, expts []*enti
 		}
 	}
 
+	// 填充关联的实验模板基础信息
+	if err := e.fillExptTemplates(ctx, expts, spaceID); err != nil {
+		return nil, err
+	}
+
 	return expts, nil
+}
+
+// fillExptTemplates 为实验列表按需补充关联模板的基础信息（名称、描述等）
+func (e *ExptMangerImpl) fillExptTemplates(ctx context.Context, expts []*entity.Experiment, spaceID int64) error {
+	if len(expts) == 0 || e.templateRepo == nil {
+		return nil
+	}
+
+	idSet := make(map[int64]struct{})
+	for _, ex := range expts {
+		if ex == nil || ex.ExptTemplateID == 0 {
+			continue
+		}
+		idSet[ex.ExptTemplateID] = struct{}{}
+	}
+	if len(idSet) == 0 {
+		return nil
+	}
+
+	templateIDs := make([]int64, 0, len(idSet))
+	for id := range idSet {
+		templateIDs = append(templateIDs, id)
+	}
+
+	templates, err := e.templateRepo.MGetByID(ctx, templateIDs, spaceID)
+	if err != nil {
+		return err
+	}
+	if len(templates) == 0 {
+		return nil
+	}
+
+	templateMap := gslice.ToMap(templates, func(t *entity.ExptTemplate) (int64, *entity.ExptTemplate) {
+		if t == nil {
+			return 0, nil
+		}
+		return t.ID, t
+	})
+
+	for _, ex := range expts {
+		if ex == nil || ex.ExptTemplateID == 0 {
+			continue
+		}
+		if tpl, ok := templateMap[ex.ExptTemplateID]; ok {
+			ex.ExptTemplate = tpl
+		}
+	}
+
+	return nil
 }
 
 func (e *ExptMangerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (pass bool, err error) {
