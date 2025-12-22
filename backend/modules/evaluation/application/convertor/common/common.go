@@ -108,12 +108,15 @@ func ConvertContentDTO2DO(content *commondto.Content) *commonentity.Content {
 		}
 	}
 	return &commonentity.Content{
-		ContentType: contentType,
-		Format:      format,
-		Text:        content.Text,
-		Image:       ConvertImageDTO2DO(content.Image),
-		MultiPart:   multiPart,
-		Audio:       ConvertAudioDTO2DO(content.Audio),
+		ContentType:      contentType,
+		Format:           format,
+		Text:             content.Text,
+		Image:            ConvertImageDTO2DO(content.Image),
+		MultiPart:        multiPart,
+		Audio:            ConvertAudioDTO2DO(content.Audio),
+		ContentOmitted:   content.ContentOmitted,
+		FullContent:      ConvertObjectStorageDTO2DO(content.FullContent),
+		FullContentBytes: content.FullContentBytes,
 	}
 }
 
@@ -144,6 +147,19 @@ func ConvertContentDO2DTO(content *commonentity.Content) *commondto.Content {
 		ContentOmitted:   content.ContentOmitted,
 		FullContent:      ConvertObjectStorageDO2DTO(content.FullContent),
 		FullContentBytes: content.FullContentBytes,
+	}
+}
+
+func ConvertObjectStorageDTO2DO(os *dataset.ObjectStorage) *commonentity.ObjectStorage {
+	if os == nil {
+		return nil
+	}
+	return &commonentity.ObjectStorage{
+		Provider: gptr.Of(commonentity.StorageProvider(gptr.Indirect(os.Provider))),
+		Name:     os.Name,
+		URI:      os.URI,
+		URL:      os.URL,
+		ThumbURL: os.ThumbURL,
 	}
 }
 
