@@ -788,130 +788,129 @@ func TestConvert2EvaluationSetFieldData_RealWorldScenarios(t *testing.T) {
 }
 
 func TestConvert2EvaluationSetTurn(t *testing.T) {
-    ctx := context.Background()
+	ctx := context.Background()
+	t.Run("nil_or_empty_data_returns_nil", func(t *testing.T) {
+		// Data 为 nil
+		item1 := &dataset.DatasetItem{
+			ItemID:    gptr.Of(int64(100)),
+			DatasetID: gptr.Of(int64(200)),
+			Data:      nil,
+		}
+		turns1 := convert2EvaluationSetTurn(ctx, item1)
+		assert.Nil(t, turns1)
 
-    t.Run("nil_or_empty_data_returns_nil", func(t *testing.T) {
-        // Data 为 nil
-        item1 := &dataset.DatasetItem{
-            ItemID:    gptr.Of(int64(100)),
-            DatasetID: gptr.Of(int64(200)),
-            Data:      nil,
-        }
-        turns1 := convert2EvaluationSetTurn(ctx, item1)
-        assert.Nil(t, turns1)
+		// Data 为空切片
+		item2 := &dataset.DatasetItem{
+			ItemID:    gptr.Of(int64(101)),
+			DatasetID: gptr.Of(int64(201)),
+			Data:      []*dataset.FieldData{},
+		}
+		turns2 := convert2EvaluationSetTurn(ctx, item2)
+		assert.Nil(t, turns2)
+	})
 
-        // Data 为空切片
-        item2 := &dataset.DatasetItem{
-            ItemID:    gptr.Of(int64(101)),
-            DatasetID: gptr.Of(int64(201)),
-            Data:      []*dataset.FieldData{},
-        }
-        turns2 := convert2EvaluationSetTurn(ctx, item2)
-        assert.Nil(t, turns2)
-    })
+	t.Run("single_field_converts_to_single_turn", func(t *testing.T) {
+		item := &dataset.DatasetItem{
+			ItemID:    gptr.Of(int64(123)),
+			DatasetID: gptr.Of(int64(456)),
+			Data: []*dataset.FieldData{
+				{
+					Key:         gptr.Of("k1"),
+					Name:        gptr.Of("n1"),
+					ContentType: gptr.Of(dataset.ContentType_Text),
+					Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+					Content:     gptr.Of("hello"),
+				},
+			},
+		}
 
-    t.Run("single_field_converts_to_single_turn", func(t *testing.T) {
-        item := &dataset.DatasetItem{
-            ItemID:    gptr.Of(int64(123)),
-            DatasetID: gptr.Of(int64(456)),
-            Data: []*dataset.FieldData{
-                {
-                    Key:         gptr.Of("k1"),
-                    Name:        gptr.Of("n1"),
-                    ContentType: gptr.Of(dataset.ContentType_Text),
-                    Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
-                    Content:     gptr.Of("hello"),
-                },
-            },
-        }
+		turns := convert2EvaluationSetTurn(ctx, item)
+		assert.NotNil(t, turns)
+		assert.Len(t, turns, 1)
+		turn := turns[0]
+		assert.Equal(t, int64(123), turn.ItemID)
+		assert.Equal(t, int64(456), turn.EvalSetID)
+		assert.Len(t, turn.FieldDataList, 1)
+		fd := turn.FieldDataList[0]
+		assert.Equal(t, "k1", fd.Key)
+		assert.Equal(t, "n1", fd.Name)
+		if assert.NotNil(t, fd.Content) {
+			assert.Equal(t, entity.ContentType("Text"), *fd.Content.ContentType)
+			assert.Equal(t, "hello", *fd.Content.Text)
+		}
+	})
 
-        turns := convert2EvaluationSetTurn(ctx, item)
-        assert.NotNil(t, turns)
-        assert.Len(t, turns, 1)
-        turn := turns[0]
-        assert.Equal(t, int64(123), turn.ItemID)
-        assert.Equal(t, int64(456), turn.EvalSetID)
-        assert.Len(t, turn.FieldDataList, 1)
-        fd := turn.FieldDataList[0]
-        assert.Equal(t, "k1", fd.Key)
-        assert.Equal(t, "n1", fd.Name)
-        if assert.NotNil(t, fd.Content) {
-            assert.Equal(t, entity.ContentType("Text"), *fd.Content.ContentType)
-            assert.Equal(t, "hello", *fd.Content.Text)
-        }
-    })
+	t.Run("multiple_fields_and_parts_are_preserved", func(t *testing.T) {
+		item := &dataset.DatasetItem{
+			ItemID:    gptr.Of(int64(321)),
+			DatasetID: gptr.Of(int64(654)),
+			Data: []*dataset.FieldData{
+				{
+					Key:         gptr.Of("text1"),
+					Name:        gptr.Of("Text 1"),
+					ContentType: gptr.Of(dataset.ContentType_Text),
+					Format:      gptr.Of(dataset.FieldDisplayFormat_Markdown),
+					Content:     gptr.Of("# title"),
+				},
+				{
+					Key:         gptr.Of("mp1"),
+					Name:        gptr.Of("MP 1"),
+					ContentType: gptr.Of(dataset.ContentType_MultiPart),
+					Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+					Content:     gptr.Of("root"),
+					Parts: []*dataset.FieldData{
+						{
+							Key:         gptr.Of("p-text"),
+							Name:        gptr.Of("P Text"),
+							ContentType: gptr.Of(dataset.ContentType_Text),
+							Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
+							Content:     gptr.Of("child text"),
+						},
+					},
+				},
+			},
+		}
 
-    t.Run("multiple_fields_and_parts_are_preserved", func(t *testing.T) {
-        item := &dataset.DatasetItem{
-            ItemID:    gptr.Of(int64(321)),
-            DatasetID: gptr.Of(int64(654)),
-            Data: []*dataset.FieldData{
-                {
-                    Key:         gptr.Of("text1"),
-                    Name:        gptr.Of("Text 1"),
-                    ContentType: gptr.Of(dataset.ContentType_Text),
-                    Format:      gptr.Of(dataset.FieldDisplayFormat_Markdown),
-                    Content:     gptr.Of("# title"),
-                },
-                {
-                    Key:         gptr.Of("mp1"),
-                    Name:        gptr.Of("MP 1"),
-                    ContentType: gptr.Of(dataset.ContentType_MultiPart),
-                    Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
-                    Content:     gptr.Of("root"),
-                    Parts: []*dataset.FieldData{
-                        {
-                            Key:         gptr.Of("p-text"),
-                            Name:        gptr.Of("P Text"),
-                            ContentType: gptr.Of(dataset.ContentType_Text),
-                            Format:      gptr.Of(dataset.FieldDisplayFormat_PlainText),
-                            Content:     gptr.Of("child text"),
-                        },
-                    },
-                },
-            },
-        }
+		turns := convert2EvaluationSetTurn(ctx, item)
+		assert.NotNil(t, turns)
+		assert.Len(t, turns, 1)
+		turn := turns[0]
+		assert.Equal(t, int64(321), turn.ItemID)
+		assert.Equal(t, int64(654), turn.EvalSetID)
+		assert.Len(t, turn.FieldDataList, 2)
 
-        turns := convert2EvaluationSetTurn(ctx, item)
-        assert.NotNil(t, turns)
-        assert.Len(t, turns, 1)
-        turn := turns[0]
-        assert.Equal(t, int64(321), turn.ItemID)
-        assert.Equal(t, int64(654), turn.EvalSetID)
-        assert.Len(t, turn.FieldDataList, 2)
-
-        // 验证第二个字段的 MultiPart 被保留
-        fd2 := turn.FieldDataList[1]
-        if assert.NotNil(t, fd2.Content) {
-            assert.Equal(t, entity.ContentType("MultiPart"), *fd2.Content.ContentType)
-            assert.NotNil(t, fd2.Content.MultiPart)
-            assert.Len(t, fd2.Content.MultiPart, 1)
-            assert.Equal(t, "child text", *fd2.Content.MultiPart[0].Text)
-        }
-    })
+		// 验证第二个字段的 MultiPart 被保留
+		fd2 := turn.FieldDataList[1]
+		if assert.NotNil(t, fd2.Content) {
+			assert.Equal(t, entity.ContentType("MultiPart"), *fd2.Content.ContentType)
+			assert.NotNil(t, fd2.Content.MultiPart)
+			assert.Len(t, fd2.Content.MultiPart, 1)
+			assert.Equal(t, "child text", *fd2.Content.MultiPart[0].Text)
+		}
+	})
 }
 
 func TestToSchemaKey(t *testing.T) {
-    tests := []struct {
-        name     string
-        input    *dataset.SchemaKey
-        expected *entity.SchemaKey
-    }{
-        {"nil_input", nil, nil},
-        {"string", dataset.SchemaKeyPtr(dataset.SchemaKey_String), gptr.Of(entity.SchemaKey_String)},
-        {"integer", dataset.SchemaKeyPtr(dataset.SchemaKey_Integer), gptr.Of(entity.SchemaKey_Integer)},
-        {"float", dataset.SchemaKeyPtr(dataset.SchemaKey_Float), gptr.Of(entity.SchemaKey_Float)},
-        {"bool", dataset.SchemaKeyPtr(dataset.SchemaKey_Bool), gptr.Of(entity.SchemaKey_Bool)},
-        {"message", dataset.SchemaKeyPtr(dataset.SchemaKey_Message), gptr.Of(entity.SchemaKey_Message)},
-        {"single_choice", dataset.SchemaKeyPtr(dataset.SchemaKey_SingleChoice), gptr.Of(entity.SchemaKey_SingleChoice)},
-        {"trajectory", dataset.SchemaKeyPtr(dataset.SchemaKey_Trajectory), gptr.Of(entity.SchemaKey_Trajectory)},
-        {"unknown_value", dataset.SchemaKeyPtr(dataset.SchemaKey(999)), nil},
-    }
+	tests := []struct {
+		name     string
+		input    *dataset.SchemaKey
+		expected *entity.SchemaKey
+	}{
+		{"nil_input", nil, nil},
+		{"string", dataset.SchemaKeyPtr(dataset.SchemaKey_String), gptr.Of(entity.SchemaKey_String)},
+		{"integer", dataset.SchemaKeyPtr(dataset.SchemaKey_Integer), gptr.Of(entity.SchemaKey_Integer)},
+		{"float", dataset.SchemaKeyPtr(dataset.SchemaKey_Float), gptr.Of(entity.SchemaKey_Float)},
+		{"bool", dataset.SchemaKeyPtr(dataset.SchemaKey_Bool), gptr.Of(entity.SchemaKey_Bool)},
+		{"message", dataset.SchemaKeyPtr(dataset.SchemaKey_Message), gptr.Of(entity.SchemaKey_Message)},
+		{"single_choice", dataset.SchemaKeyPtr(dataset.SchemaKey_SingleChoice), gptr.Of(entity.SchemaKey_SingleChoice)},
+		{"trajectory", dataset.SchemaKeyPtr(dataset.SchemaKey_Trajectory), gptr.Of(entity.SchemaKey_Trajectory)},
+		{"unknown_value", dataset.SchemaKeyPtr(dataset.SchemaKey(999)), nil},
+	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            got := toSchemaKey(tt.input)
-            assert.Equal(t, tt.expected, got)
-        })
-    }
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toSchemaKey(tt.input)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
 }
