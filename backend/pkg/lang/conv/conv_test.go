@@ -69,3 +69,8 @@ func TestInt64(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, got, int64(1))
 }
+
+func TestReduceFloatSignificantDigit(t *testing.T) {
+	got := ReduceFloatSignificantDigit(0.1234567890123456789, 10)
+	assert.Equal(t, got, 0.123456789)
+}
