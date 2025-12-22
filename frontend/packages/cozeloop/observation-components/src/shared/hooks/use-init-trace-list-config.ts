@@ -32,7 +32,8 @@ export const useInitTraceListConfig = (params: Params) => {
     ...platformTypeConfig,
     optionList: platformTypeConfig?.optionList ?? config.platformTypeOptions,
     defaultValue:
-      platformTypeConfig?.defaultValue ?? configPlatformTypeConfig.defaultValue,
+      platformTypeConfig?.defaultValue ??
+      configPlatformTypeConfig?.defaultValue,
     visibility: platformTypeConfig?.visibility ?? true,
   };
 
@@ -40,7 +41,7 @@ export const useInitTraceListConfig = (params: Params) => {
     ...spanListTypeConfig,
     optionList: spanListTypeConfig?.optionList ?? config.spanListTypeOptions,
     defaultValue:
-      spanListTypeConfig?.defaultValue ?? configSpanListConfig.defaultValue,
+      spanListTypeConfig?.defaultValue ?? configSpanListConfig?.defaultValue,
     visibility: spanListTypeConfig?.visibility ?? true,
   };
 
