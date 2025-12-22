@@ -431,19 +431,3 @@ func (p FileFormat) String() string {
 	}
 	return "<UNSET>"
 }
-
-func FileFormatFromString(s string) (FileFormat, error) {
-	switch s {
-	case "JSONL":
-		return FileFormat_JSONL, nil
-	case "Parquet":
-		return FileFormat_Parquet, nil
-	case "CSV":
-		return FileFormat_CSV, nil
-	case "XLSX":
-		return FileFormat_XLSX, nil
-	case "ZIP":
-		return FileFormat_ZIP, nil
-	}
-	return FileFormat(0), fmt.Errorf("not a valid FileFormat string")
-}
