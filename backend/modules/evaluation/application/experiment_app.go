@@ -159,6 +159,14 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		evalVersionIDs = uniq
 	}
 
+	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
 	cresp, err := e.CreateExperiment(ctx, &expt.CreateExperimentRequest{
 		WorkspaceID:           req.GetWorkspaceID(),
 		EvalSetVersionID:      req.EvalSetVersionID,
