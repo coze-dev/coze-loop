@@ -286,6 +286,7 @@ func (t *TraceRepoImpl) ListSpansRepeat(ctx context.Context, req *repo.ListSpans
 	if req == nil {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("nil request"))
 	}
+	req.DescByStartTime = true
 
 	clonedReq := *req
 	totalSpans := loop_span.SpanList{}
