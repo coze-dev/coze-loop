@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable security/detect-object-injection */
 /* eslint-disable complexity */
 import { type CSSProperties, useMemo, useState } from 'react';

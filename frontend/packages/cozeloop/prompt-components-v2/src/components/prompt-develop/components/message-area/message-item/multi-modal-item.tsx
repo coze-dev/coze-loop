@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { downloadImageWithCustomName } from '@cozeloop/toolkit';
 import { type ContentPartLoop } from '@cozeloop/components';
 import { ContentType, Role } from '@cozeloop/api-schema/prompt';

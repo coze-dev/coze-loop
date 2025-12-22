@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable security/detect-object-injection */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @coze-arch/max-line-per-function */

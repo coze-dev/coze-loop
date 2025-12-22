@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { createOnigurumaEngine } from 'shiki/engine/oniguruma';
 import { createHighlighterCore } from 'shiki/core';
 import shiki from 'codemirror-shiki';

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @typescript-eslint/naming-convention */
 import { type Prompt, type VariableVal } from '@cozeloop/api-schema/prompt';
 import { type ParamSchema, type Model } from '@cozeloop/api-schema/llm-manage';

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { useInfiniteScroll } from 'ahooks';
 import { DEFAULT_PAGE_SIZE } from '@cozeloop/components';
 import { type tag } from '@cozeloop/api-schema/data';

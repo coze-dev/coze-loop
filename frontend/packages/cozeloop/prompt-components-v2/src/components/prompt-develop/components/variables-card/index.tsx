@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable security/detect-non-literal-regexp */
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useState } from 'react';
