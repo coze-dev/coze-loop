@@ -1818,8 +1818,11 @@ func (r *TraceServiceImpl) getSelectFilters(traceIDs []string, trajectoryConfig 
 			},
 		},
 	}
+
+	realTrajectoryConfig := trajectoryConfig.GetFiltersWithDefaultFilter()
+	_ = realTrajectoryConfig.Traverse(processSpecificFilter)
 	tempSpanFilters.FilterFields = append(tempSpanFilters.FilterFields, &loop_span.FilterField{
-		SubFilter: trajectoryConfig.GetFiltersWithDefaultFilter(),
+		SubFilter: realTrajectoryConfig,
 	})
 
 	result := &loop_span.FilterFields{
