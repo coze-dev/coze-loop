@@ -108,3 +108,87 @@ type BizCategory = string
 const (
 	BizCategoryFromOnlineTrace = "from_online_trace"
 )
+
+type SetSourceType int64
+
+const (
+	SetSourceType_File    SetSourceType = 1
+	SetSourceType_Dataset SetSourceType = 2
+)
+
+func (p SetSourceType) String() string {
+	switch p {
+	case SetSourceType_File:
+		return "File"
+	case SetSourceType_Dataset:
+		return "Dataset"
+	}
+	return "<UNSET>"
+}
+
+func SetSourceTypeFromString(s string) (SetSourceType, error) {
+	switch s {
+	case "File":
+		return SetSourceType_File, nil
+	case "Dataset":
+		return SetSourceType_Dataset, nil
+	}
+	return SetSourceType(0), fmt.Errorf("not a valid SourceType string")
+}
+
+type DatasetIOEndpoint struct {
+	File    *DatasetIOFile
+	Dataset *DatasetIODataset
+}
+
+type DatasetIOFile struct {
+	Provider StorageProvider
+	Path     string
+	// 数据文件的格式
+	Format *FileFormat
+	// 压缩包格式
+	CompressFormat *FileFormat
+	// path 为文件夹或压缩包时，数据文件列表, 服务端设置
+	Files []string
+	// 原始的文件名，创建文件时由前端写入。为空则与 path 保持一致
+	OriginalFileName *string
+	// 文件下载地址
+	DownloadURL *string
+	// 存储提供方ID，目前主要在 provider==imagex 时生效
+	ProviderID *string
+	// 存储提供方鉴权信息，目前主要在 provider==imagex 时生效
+	ProviderAuth *ProviderAuth
+}
+
+type ProviderAuth struct {
+	// provider == VETOS 时，此处存储的是用户在 fornax 上托管的方舟账号的ID
+	ProviderAccountID *int64
+}
+
+type DatasetIODataset struct {
+	SpaceID   *int64
+	DatasetID int64
+	VersionID *int64
+}
+
+type ParseImportSourceFileParam struct {
+	SpaceID int64
+	File    *DatasetIOFile
+}
+
+type ConflictField struct {
+	FieldName string
+	Detail    map[string]*FieldSchema
+}
+
+type ParseImportSourceFileResult struct {
+	Bytes                    int64
+	FieldSchemas             []*FieldSchema
+	Conflicts                []*ConflictField
+	FilesWithAmbiguousColumn []string
+}
+
+type FieldMapping struct {
+	Source string
+	Target string
+}

@@ -220,6 +220,70 @@ func TestBuildTrajectoryFromSpans_ComplexTree(t *testing.T) {
 	assert.NotEmpty(t, s)
 }
 
+func TestBuildTrajectoryFromSpans_ModelIsParentOfTool(t *testing.T) {
+	t.Parallel()
+	traceID := "trace1"
+
+	// 根 agent
+	root := &Span{
+		SpanID:         "r",
+		ParentID:       "", // 作为root
+		TraceID:        traceID,
+		SpanName:       "root-agent",
+		SpanType:       "agent",
+		StartTime:      0,       // us
+		DurationMicros: 3000000, // 3s
+		Input:          "root-in",
+		Output:         "root-out",
+		TagsString:     map[string]string{},
+		TagsLong:       map[string]int64{},
+	}
+
+	// 分支1：model->tool
+	m1 := &Span{
+		SpanID:    "m1",
+		ParentID:  "r",
+		TraceID:   traceID,
+		SpanName:  "parser-1",
+		SpanType:  "model",
+		StartTime: 100, // us
+	}
+	t1 := &Span{
+		SpanID:   "t1",
+		ParentID: "m1",
+		TraceID:  traceID,
+		SpanName: "tool-1",
+		SpanType: "tool",
+	}
+
+	spans := SpanList{root, m1, t1}
+	traj := BuildTrajectoryFromSpans(spans)
+	assert.NotNil(t, traj)
+	assert.NotNil(t, traj.RootStep)
+	assert.NotNil(t, traj.ID)
+	assert.Equal(t, traceID, *traj.ID)
+
+	assert.Equal(t, 1, len(traj.AgentSteps))
+
+	// AgentSteps 包含 root 和 a1
+	// 找到 root 对应的 AgentStep
+	var m1Step, t1Step *Step
+	for _, s := range traj.AgentSteps[0].Steps {
+		if s != nil && s.ID != nil {
+			switch *s.ID {
+			case "m1":
+				m1Step = s
+			case "t1":
+				t1Step = s
+			default:
+			}
+		}
+	}
+	assert.NotNil(t, m1Step)
+	assert.NotNil(t, t1Step)
+	assert.Equal(t, *t1Step.ParentID, "m1")
+}
+
 func TestGetDirectChildren_Sorting(t *testing.T) {
 	t.Parallel()
 	parent := &Span{SpanID: "p"}

@@ -5,6 +5,7 @@ include "eval_target.thrift"
 include "evaluator.thrift"
 include "eval_set.thrift"
 include "../../data/domain/tag.thrift"
+include "../../data/domain/dataset.thrift"
 
 enum ExptStatus {
     Unknown = 0
@@ -178,6 +179,7 @@ struct ColumnEvalSetField {
     4: optional common.ContentType content_type
 //    5: optional datasetv3.FieldDisplayFormat DefaultDisplayFormat
     6: optional string text_schema
+    7: optional dataset.SchemaKey schema_key
 }
 
 struct ItemResult {
@@ -255,6 +257,13 @@ struct ExperimentTurnPayload {
     5: optional TurnSystemInfo system_info
     // 人工标注结果结果
     6: optional TurnAnnotateResult annotate_result
+    // 轨迹分析结果
+    7: optional TrajectoryAnalysisResult trajectory_analysis_result
+}
+
+struct TrajectoryAnalysisResult {
+    1: optional i64 record_id (api.js_conv = 'true', go.tag = 'json:"record_id"')
+    2: optional InsightAnalysisStatus Status
 }
 
 struct KeywordSearch {
@@ -537,6 +546,11 @@ struct ExptInsightAnalysisFeedbackComment {
     4: required i64 record_id (api.js_conv='true', go.tag='json:"record_id"')
     5: required string content
     6: optional common.BaseInfo base_info
+}
+
+struct ExptInsightAnalysisFeedbackVote {
+    1: optional i64 id (api.js_conv='true', go.tag='json:"comment_id"')
+    2: optional FeedbackActionType feedback_action_type
 }
 
 // 反馈动作

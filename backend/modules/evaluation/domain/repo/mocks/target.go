@@ -206,3 +206,17 @@ func (mr *MockIEvalTargetRepoMockRecorder) SaveEvalTargetRecord(ctx, record any)
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveEvalTargetRecord", reflect.TypeOf((*MockIEvalTargetRepo)(nil).SaveEvalTargetRecord), ctx, record)
 }
+
+// UpdateEvalTargetRecord mocks base method.
+func (m *MockIEvalTargetRepo) UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEvalTargetRecord", ctx, record)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEvalTargetRecord indicates an expected call of UpdateEvalTargetRecord.
+func (mr *MockIEvalTargetRepoMockRecorder) UpdateEvalTargetRecord(ctx, record any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvalTargetRecord", reflect.TypeOf((*MockIEvalTargetRepo)(nil).UpdateEvalTargetRecord), ctx, record)
+}

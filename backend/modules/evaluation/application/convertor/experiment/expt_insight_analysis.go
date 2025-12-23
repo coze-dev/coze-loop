@@ -56,6 +56,27 @@ func ExptInsightAnalysisFeedbackDO2DTO(do entity.ExptInsightAnalysisFeedback) *d
 	return dto
 }
 
+func ExptInsightAnalysisFeedbackVoteDO2DTO(do *entity.ExptInsightAnalysisFeedbackVote) *domain_expt.ExptInsightAnalysisFeedbackVote {
+	if do == nil {
+		return nil
+	}
+
+	var action domain_expt.FeedbackActionType
+	switch do.VoteType {
+	case entity.Upvote:
+		action = domain_expt.FeedbackActionTypeUpvote
+	case entity.Downvote:
+		action = domain_expt.FeedbackActionTypeDownvote
+	default:
+		return nil
+	}
+
+	return &domain_expt.ExptInsightAnalysisFeedbackVote{
+		ID:                 ptr.Of(do.ID),
+		FeedbackActionType: ptr.Of(action),
+	}
+}
+
 func InsightAnalysisStatus2DTO(status entity.InsightAnalysisStatus) domain_expt.InsightAnalysisStatus {
 	switch status {
 	case entity.InsightAnalysisStatus_Unknown:

@@ -44,6 +44,7 @@ type ExptResultExportService struct {
 	configer           component.IConfiger
 	benefitService     benefit.IBenefitService
 	urlProcessor       component.IURLProcessor
+	evalSetItemSvc     EvaluationSetItemService
 }
 
 func NewExptResultExportService(
@@ -57,6 +58,7 @@ func NewExptResultExportService(
 	configer component.IConfiger,
 	benefitService benefit.IBenefitService,
 	urlProcessor component.IURLProcessor,
+	esis EvaluationSetItemService,
 ) IExptResultExportService {
 	return &ExptResultExportService{
 		repo:               repo,
@@ -69,6 +71,7 @@ func NewExptResultExportService(
 		configer:           configer,
 		benefitService:     benefitService,
 		urlProcessor:       urlProcessor,
+		evalSetItemSvc:     esis,
 	}
 }
 
@@ -312,6 +315,7 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 		colEvalSetFields:  colEvalSetFields,
 		allItemResults:    allItemResults,
 		columnsEvalTarget: columnsEvalTarget,
+		evalSetItemSvc:    e.evalSetItemSvc,
 	}
 
 	err = exportHelper.exportCSV(ctx)
@@ -339,6 +343,7 @@ type exportCSVHelper struct {
 	exptPublisher      events.ExptEventPublisher
 	exptResultService  ExptResultService
 	fileClient         fileserver.ObjectStorage
+	evalSetItemSvc     EvaluationSetItemService
 }
 
 func (e *exportCSVHelper) exportCSV(ctx context.Context) error {
@@ -428,21 +433,21 @@ func getColumnNameEvaluatorReason(evaluatorName, version string) string {
 	return fmt.Sprintf("%s<%s>_reason", evaluatorName, version)
 }
 
-func (e *exportCSVHelper) buildColumnEvalTargetContent(columnName string, data *entity.EvalTargetOutputData) string {
+func (e *exportCSVHelper) buildColumnEvalTargetContent(ctx context.Context, columnName string, data *entity.EvalTargetOutputData) (string, error) {
 	if data == nil {
-		return ""
+		return "", nil
 	}
 	switch columnName {
 	case consts.ReportColumnNameEvalTargetTotalLatency:
-		return strconv.FormatInt(gptr.Indirect(data.TimeConsumingMS), 10)
+		return strconv.FormatInt(gptr.Indirect(data.TimeConsumingMS), 10), nil
 	case consts.ReportColumnNameEvalTargetInputTokens:
-		return strconv.FormatInt(data.EvalTargetUsage.InputTokens, 10)
+		return strconv.FormatInt(data.EvalTargetUsage.GetInputTokens(), 10), nil
 	case consts.ReportColumnNameEvalTargetOutputTokens:
-		return strconv.FormatInt(data.EvalTargetUsage.OutputTokens, 10)
+		return strconv.FormatInt(data.EvalTargetUsage.GetOutputTokens(), 10), nil
 	case consts.ReportColumnNameEvalTargetTotalTokens:
-		return strconv.FormatInt(data.EvalTargetUsage.TotalTokens, 10)
+		return strconv.FormatInt(data.EvalTargetUsage.GetTotalTokens(), 10), nil
 	default:
-		return geDatasetCellOrActualOutputData(data.OutputFields[columnName])
+		return e.toContentStr(ctx, data.OutputFields[columnName])
 	}
 }
 
@@ -479,14 +484,21 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 				payload.EvalSet.Turn.FieldDataList == nil {
 				return nil, fmt.Errorf("FieldDataList is nil")
 			}
-			datasetFields := getDatasetFields(e.colEvalSetFields, payload.EvalSet.Turn.FieldDataList)
+			datasetFields, err := e.getDatasetFields(ctx, e.colEvalSetFields, payload.EvalSet)
+			if err != nil {
+				return nil, err
+			}
 			rowData = append(rowData, datasetFields...)
 
 			for _, col := range e.columnsEvalTarget {
 				if payload.TargetOutput != nil &&
 					payload.TargetOutput.EvalTargetRecord != nil &&
 					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
-					rowData = append(rowData, e.buildColumnEvalTargetContent(col.Name, payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData))
+					cont, err := e.buildColumnEvalTargetContent(ctx, col.Name, payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData)
+					if err != nil {
+						return nil, err
+					}
+					rowData = append(rowData, cont)
 				} else {
 					rowData = append(rowData, "")
 				}
@@ -565,42 +577,63 @@ func itemRunStateToString(itemRunState entity.ItemRunState) string {
 }
 
 // getDatasetFields 按顺序获取数据集字段
-func getDatasetFields(colEvalSetFields []*entity.ColumnEvalSetField, fieldDataList []*entity.FieldData) []string {
-	fieldDataMap := slices.ToMap(fieldDataList, func(t *entity.FieldData) (string, *entity.FieldData) {
-		return t.Key, t
-	})
-	fields := make([]string, 0, len(colEvalSetFields))
+func (e *exportCSVHelper) getDatasetFields(ctx context.Context, colEvalSetFields []*entity.ColumnEvalSetField, tes *entity.TurnEvalSet) (fields []string, err error) {
+	fdl := tes.Turn.FieldDataList
+	fdm := slices.ToMap(fdl, func(t *entity.FieldData) (string, *entity.FieldData) { return t.Key, t })
+	fields = make([]string, 0, len(colEvalSetFields))
+
 	for _, colEvalSetField := range colEvalSetFields {
 		if colEvalSetField == nil {
 			continue
 		}
 
-		fieldData, ok := fieldDataMap[ptr.From(colEvalSetField.Key)]
+		fieldData, ok := fdm[ptr.From(colEvalSetField.Key)]
 		if !ok {
 			fields = append(fields, "")
 			continue
 		}
 
-		fields = append(fields, geDatasetCellOrActualOutputData(fieldData.Content))
+		if fieldData.Content == nil {
+			continue
+		}
+
+		if fieldData.Content.IsContentOmitted() {
+			if fieldData, err = e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+				SpaceID:         e.spaceID,
+				EvaluationSetID: tes.EvalSetID,
+				ItemPK:          tes.ItemID,
+				FieldName:       gptr.Indirect(colEvalSetField.Name),
+				TurnID:          gptr.Of(tes.Turn.ID),
+			}); err != nil {
+				return nil, err
+			}
+		}
+
+		data, err := e.toContentStr(ctx, fieldData.Content)
+		if err != nil {
+			return nil, err
+		}
+
+		fields = append(fields, data)
 	}
 
-	return fields
+	return fields, nil
 }
 
-func geDatasetCellOrActualOutputData(data *entity.Content) string {
+func (e *exportCSVHelper) toContentStr(ctx context.Context, data *entity.Content) (string, error) {
 	if data == nil {
-		return ""
+		return "", nil
 	}
 
 	switch data.GetContentType() {
 	case entity.ContentTypeText:
-		return data.GetText()
+		return data.GetText(), nil
 	case entity.ContentTypeImage, entity.ContentTypeAudio:
-		return ""
+		return "", nil
 	case entity.ContentTypeMultipart:
-		return formatMultiPartData(data)
+		return formatMultiPartData(data), nil
 	default:
-		return ""
+		return "", nil
 	}
 }
 

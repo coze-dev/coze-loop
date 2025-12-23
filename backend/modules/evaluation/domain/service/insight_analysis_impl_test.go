@@ -691,6 +691,76 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_SuccessPath(t *testing
 	assert.NoError(t, err)
 }
 
+func TestExptInsightAnalysisServiceImpl_GetAnalysisRecordFeedbackVoteByUser(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	service, mocks := newTestInsightAnalysisService(ctrl)
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		setup   func()
+		session *entity.Session
+		want    *entity.ExptInsightAnalysisFeedbackVote
+		wantErr bool
+	}{
+		{
+			name:    "nil session returns nil",
+			session: nil,
+		},
+		{
+			name:    "empty user returns nil",
+			session: &entity.Session{UserID: ""},
+		},
+		{
+			name:    "no vote",
+			session: &entity.Session{UserID: "user1"},
+			setup: func() {
+				mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(2), int64(3), "user1").Return(nil, nil)
+			},
+		},
+		{
+			name:    "success",
+			session: &entity.Session{UserID: "user1"},
+			setup: func() {
+				mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(2), int64(3), "user1").Return(&entity.ExptInsightAnalysisFeedbackVote{VoteType: entity.Upvote}, nil)
+			},
+			want: &entity.ExptInsightAnalysisFeedbackVote{VoteType: entity.Upvote},
+		},
+		{
+			name:    "repo error",
+			session: &entity.Session{UserID: "user1"},
+			setup: func() {
+				mocks.repo.EXPECT().GetFeedbackVoteByUser(gomock.Any(), int64(1), int64(2), int64(3), "user1").Return(nil, errors.New("repo error"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
+			}
+			got, err := service.GetAnalysisRecordFeedbackVoteByUser(ctx, 1, 2, 3, tc.session)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			if tc.want == nil {
+				assert.Nil(t, got)
+			} else {
+				if assert.NotNil(t, got) {
+					assert.Equal(t, tc.want.VoteType, got.VoteType)
+				}
+			}
+		})
+	}
+}
+
 func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_DoExportCSVError_FailedAndReturn(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

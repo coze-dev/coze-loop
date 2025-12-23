@@ -19,6 +19,7 @@ import (
 	idgenMocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -306,6 +307,68 @@ func TestExptResultServiceImpl_CreateStats(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
+	t.Run("skip experiments without eval target", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		expts := []*entity.Experiment{
+			{
+				ID:              1,
+				TargetVersionID: 0, // ContainsEvalTarget == false
+			},
+		}
+
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts)
+		assert.NoError(t, err)
+		assert.Len(t, got, 0)
+	})
+
+	t.Run("experiment with eval target but without trajectory support", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		expts := []*entity.Experiment{
+			{
+				ID:              2,
+				TargetVersionID: 1,                            // ContainsEvalTarget == true
+				TargetType:      entity.EvalTargetTypeCozeBot, // SupptTrajectory == false
+			},
+		}
+
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts)
+		assert.NoError(t, err)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, int64(2), got[0].ExptID)
+			// actual_output + 4 metrics
+			assert.Len(t, got[0].Columns, 1+len(columnsEvalTargetMtr))
+			assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Columns[0].Name)
+
+			// should not contain trajectory column
+			for _, c := range got[0].Columns {
+				assert.NotEqual(t, consts.ReportColumnNameEvalTargetTrajectory, c.Name)
+			}
+		}
+	})
+
+	t.Run("experiment with eval target and trajectory support", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		expts := []*entity.Experiment{
+			{
+				ID:              3,
+				TargetVersionID: 1,                                    // ContainsEvalTarget == true
+				TargetType:      entity.EvalTargetTypeVolcengineAgent, // SupptTrajectory == true
+			},
+		}
+
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts)
+		assert.NoError(t, err)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, int64(3), got[0].ExptID)
+			// actual_output + trajectory + 4 metrics
+			assert.Len(t, got[0].Columns, 2+len(columnsEvalTargetMtr))
+			assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Columns[0].Name)
+			assert.Equal(t, consts.ReportColumnNameEvalTargetTrajectory, got[0].Columns[1].Name)
+		}
+	})
 }
 
 func TestExptResultServiceImpl_GetExptItemTurnResults(t *testing.T) {
@@ -767,7 +830,7 @@ func TestExptResultServiceImpl_GetIncompleteTurns(t *testing.T) {
 						continue
 					}
 					if got[i].TurnID != wantTurn.TurnID || got[i].ItemID != wantTurn.ItemID {
-						t.Errorf("GetIncompleteTurns() got[%d] = {TurnID: %v, ItemID: %v}, want {TurnID: %v, ItemID: %v}",
+						t.Errorf("GetIncompleteTurns() got[%d] = {RecordID: %v, ItemID: %v}, want {RecordID: %v, ItemID: %v}",
 							i, got[i].TurnID, got[i].ItemID, wantTurn.TurnID, wantTurn.ItemID)
 					}
 				}
@@ -788,7 +851,6 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 			name: "正常获取实验结果 - 无ck - 无filter",
 			param: &entity.MGetExperimentResultParam{
 				SpaceID: 100,
-
 				ExptIDs: []int64{1},
 			},
 			setup: func(ctrl *gomock.Controller) ExptResultServiceImpl {
@@ -1939,6 +2001,7 @@ func TestNewExptResultService(t *testing.T) {
 		mockEvaluationSetItemService,
 		mockPublisher,
 		mockTagAdapter,
+		nil,
 	)
 
 	impl, ok := svc.(ExptResultServiceImpl)
@@ -3596,7 +3659,7 @@ func TestParseTurnKey(t *testing.T) {
 					t.Errorf("ParseTurnKey() got.ItemID = %v, want %v", got.ItemID, tt.want.ItemID)
 				}
 				if got.TurnID != tt.want.TurnID {
-					t.Errorf("ParseTurnKey() got.TurnID = %v, want %v", got.TurnID, tt.want.TurnID)
+					t.Errorf("ParseTurnKey() got.RecordID = %v, want %v", got.TurnID, tt.want.TurnID)
 				}
 			}
 		})
@@ -3786,6 +3849,7 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 				mockEvalTargetService,
 				mockEvaluatorRecordService,
 				mockEvaluationSetItemService,
+				nil,
 				nil,
 				nil,
 				tt.itemID2ItemRunState,
