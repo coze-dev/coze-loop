@@ -126,7 +126,7 @@ export function ToolsCard({ uid, defaultVisible }: ToolsCardProps) {
     if (toolCallConfig?.tool_choice === ToolChoiceType.Specific) {
       return toolCallConfig?.tool_choice_specification?.name || '';
     }
-    return toolCallConfig?.tool_choice;
+    return toolCallConfig?.tool_choice ?? ToolChoiceType.Auto;
   }, [toolCallConfig]);
 
   const handleToolSelect = (tool: string) => {
