@@ -6655,9 +6655,9 @@ type Message struct {
 	Parts            []*ContentPart `thrift:"parts,4,optional" frugal:"4,optional,list<ContentPart>" form:"parts" json:"parts,omitempty" query:"parts"`
 	ToolCallID       *string        `thrift:"tool_call_id,5,optional" frugal:"5,optional,string" form:"tool_call_id" json:"tool_call_id,omitempty" query:"tool_call_id"`
 	ToolCalls        []*ToolCall    `thrift:"tool_calls,6,optional" frugal:"6,optional,list<ToolCall>" form:"tool_calls" json:"tool_calls,omitempty" query:"tool_calls"`
-	// 是否不需要渲染
-	NoRender *bool             `thrift:"no_render,7,optional" frugal:"7,optional,bool" form:"no_render" json:"no_render,omitempty" query:"no_render"`
-	Metadata map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
+	// 是否跳过渲染
+	SkipRender *bool             `thrift:"skip_render,7,optional" frugal:"7,optional,bool" form:"skip_render" json:"skip_render,omitempty" query:"skip_render"`
+	Metadata   map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
 }
 
 func NewMessage() *Message {
@@ -6739,16 +6739,16 @@ func (p *Message) GetToolCalls() (v []*ToolCall) {
 	return p.ToolCalls
 }
 
-var Message_NoRender_DEFAULT bool
+var Message_SkipRender_DEFAULT bool
 
-func (p *Message) GetNoRender() (v bool) {
+func (p *Message) GetSkipRender() (v bool) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetNoRender() {
-		return Message_NoRender_DEFAULT
+	if !p.IsSetSkipRender() {
+		return Message_SkipRender_DEFAULT
 	}
-	return *p.NoRender
+	return *p.SkipRender
 }
 
 var Message_Metadata_DEFAULT map[string]string
@@ -6780,8 +6780,8 @@ func (p *Message) SetToolCallID(val *string) {
 func (p *Message) SetToolCalls(val []*ToolCall) {
 	p.ToolCalls = val
 }
-func (p *Message) SetNoRender(val *bool) {
-	p.NoRender = val
+func (p *Message) SetSkipRender(val *bool) {
+	p.SkipRender = val
 }
 func (p *Message) SetMetadata(val map[string]string) {
 	p.Metadata = val
@@ -6794,7 +6794,7 @@ var fieldIDToName_Message = map[int16]string{
 	4:   "parts",
 	5:   "tool_call_id",
 	6:   "tool_calls",
-	7:   "no_render",
+	7:   "skip_render",
 	100: "metadata",
 }
 
@@ -6822,8 +6822,8 @@ func (p *Message) IsSetToolCalls() bool {
 	return p.ToolCalls != nil
 }
 
-func (p *Message) IsSetNoRender() bool {
-	return p.NoRender != nil
+func (p *Message) IsSetSkipRender() bool {
+	return p.SkipRender != nil
 }
 
 func (p *Message) IsSetMetadata() bool {
@@ -7039,7 +7039,7 @@ func (p *Message) ReadField7(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.NoRender = _field
+	p.SkipRender = _field
 	return nil
 }
 func (p *Message) ReadField100(iprot thrift.TProtocol) error {
@@ -7253,11 +7253,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
 func (p *Message) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetNoRender() {
-		if err = oprot.WriteFieldBegin("no_render", thrift.BOOL, 7); err != nil {
+	if p.IsSetSkipRender() {
+		if err = oprot.WriteFieldBegin("skip_render", thrift.BOOL, 7); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.NoRender); err != nil {
+		if err := oprot.WriteBool(*p.SkipRender); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -7332,7 +7332,7 @@ func (p *Message) DeepEqual(ano *Message) bool {
 	if !p.Field6DeepEqual(ano.ToolCalls) {
 		return false
 	}
-	if !p.Field7DeepEqual(ano.NoRender) {
+	if !p.Field7DeepEqual(ano.SkipRender) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Metadata) {
@@ -7417,12 +7417,12 @@ func (p *Message) Field6DeepEqual(src []*ToolCall) bool {
 }
 func (p *Message) Field7DeepEqual(src *bool) bool {
 
-	if p.NoRender == src {
+	if p.SkipRender == src {
 		return true
-	} else if p.NoRender == nil || src == nil {
+	} else if p.SkipRender == nil || src == nil {
 		return false
 	}
-	if *p.NoRender != *src {
+	if *p.SkipRender != *src {
 		return false
 	}
 	return true

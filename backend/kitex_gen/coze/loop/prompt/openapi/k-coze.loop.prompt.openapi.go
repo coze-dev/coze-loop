@@ -4183,7 +4183,7 @@ func (p *Message) FastReadField7(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.NoRender = _field
+	p.SkipRender = _field
 	return offset, nil
 }
 
@@ -4325,9 +4325,9 @@ func (p *Message) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *Message) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetNoRender() {
+	if p.IsSetSkipRender() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 7)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.NoRender)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.SkipRender)
 	}
 	return offset
 }
@@ -4413,7 +4413,7 @@ func (p *Message) field6Length() int {
 
 func (p *Message) field7Length() int {
 	l := 0
-	if p.IsSetNoRender() {
+	if p.IsSetSkipRender() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
 	}
@@ -4500,9 +4500,9 @@ func (p *Message) DeepCopy(s interface{}) error {
 		}
 	}
 
-	if src.NoRender != nil {
-		tmp := *src.NoRender
-		p.NoRender = &tmp
+	if src.SkipRender != nil {
+		tmp := *src.SkipRender
+		p.SkipRender = &tmp
 	}
 
 	if src.Metadata != nil {

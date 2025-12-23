@@ -59,7 +59,7 @@ type Message struct {
 	Parts            []*ContentPart `json:"parts,omitempty"`
 	ToolCallID       *string        `json:"tool_call_id,omitempty"`
 	ToolCalls        []*ToolCall    `json:"tool_calls,omitempty"`
-	NoRender         *bool          `json:"no_render,omitempty"`
+	SkipRender       *bool          `json:"skip_render,omitempty"`
 
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
@@ -253,8 +253,8 @@ func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*Va
 			formattedMessages = append(formattedMessages, message)
 
 		case RoleSystem, RoleUser:
-			// System/User：渲染，除非 NoRender=true
-			if message.NoRender == nil || !ptr.From(message.NoRender) {
+			// System/User：渲染，除非 SkipRender=true
+			if message.SkipRender == nil || !ptr.From(message.SkipRender) {
 				// 需要渲染
 				if err := pt.renderMessage(message, defMap, valMap); err != nil {
 					return nil, err
@@ -263,9 +263,9 @@ func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*Va
 			formattedMessages = append(formattedMessages, message)
 
 		case RoleAssistant:
-			// Assistant：仅当 NoRender=false（显式标记，通常来自原始 prompt）才渲染；nil 或 true 均不渲染
-			if message.NoRender != nil && !ptr.From(message.NoRender) {
-				// NoRender=false，需要渲染
+			// Assistant：仅当 SkipRender=false（显式标记，通常来自原始 prompt）才渲染；nil 或 true 均不渲染
+			if message.SkipRender != nil && !ptr.From(message.SkipRender) {
+				// SkipRender=false，需要渲染
 				if err := pt.renderMessage(message, defMap, valMap); err != nil {
 					return nil, err
 				}
@@ -312,15 +312,15 @@ func (pt *PromptTemplate) getTemplateMessages(messages []*Message) []*Message {
 	}
 	var messagesToFormat []*Message
 
-	// 对于来自pt的messages（原始托管的message），统一设置no_render为false，表示一定要渲染
+	// 对于来自pt的messages（原始托管的message），统一设置skip_render为false，表示一定要渲染
 	for _, msg := range pt.Messages {
 		if msg != nil {
-			msg.NoRender = ptr.Of(false)
+			msg.SkipRender = ptr.Of(false)
 			messagesToFormat = append(messagesToFormat, msg)
 		}
 	}
 
-	// 入参的messages的no_render不需要改变，保持原状
+	// 入参的messages的skip_render不需要改变，保持原状
 	messagesToFormat = append(messagesToFormat, messages...)
 	return messagesToFormat
 }
