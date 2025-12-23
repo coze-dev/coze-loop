@@ -230,7 +230,8 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			err = errorx.New("panic occurred when, reason=%v", e)
 		}
 
-		if err != nil {
+		execErr := err
+		if execErr != nil {
 			logs.CtxError(ctx, "execute target failed, spaceID=%v, targetID=%d, targetVersionID=%d, param=%v, inputData=%v, err=%v",
 				spaceID, targetID, targetVersionID, json.Jsonify(param), json.Jsonify(inputData), err)
 			spanParam.Error = err
@@ -254,20 +255,6 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 					Message: err.Error(),
 				}
 			}
-		} else {
-			if evalTargetDO.EvalTargetType.SupptTrajectory() {
-				time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(spaceID))
-				trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
-				if err != nil {
-					logs.CtxError(ctx, "ExtractTrajectory fail, space_id: %v, target_id: %v, target_version_id: %v, trace_id: %v, err: %v",
-						spaceID, targetID, targetVersionID, span.GetTraceID(), err)
-				} else {
-					if outputData.OutputFields == nil {
-						outputData.OutputFields = make(map[string]*entity.Content)
-					}
-					outputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
-				}
-			}
 		}
 
 		userIDInContext := session.UserIDInCtxOrEmpty(ctx)
@@ -289,6 +276,20 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 
 			span.SetTags(ctx, tags)
 			span.Finish(ctx)
+		}
+
+		if execErr == nil && evalTargetDO.EvalTargetType.SupptTrajectory() {
+			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(spaceID))
+			trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
+			if err != nil {
+				logs.CtxError(ctx, "ExtractTrajectory fail, space_id: %v, target_id: %v, target_version_id: %v, trace_id: %v, err: %v",
+					spaceID, targetID, targetVersionID, span.GetTraceID(), err)
+			} else {
+				if outputData.OutputFields == nil {
+					outputData.OutputFields = make(map[string]*entity.Content)
+				}
+				outputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
+			}
 		}
 
 		recordID, err1 := e.idgen.GenID(ctx)
