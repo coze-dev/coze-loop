@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as coze_loop_foundation_openapi from './coze.loop.foundation.openapi';
 export { coze_loop_foundation_openapi };
 import * as base from './../../../base';

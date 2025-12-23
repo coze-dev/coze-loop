@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export * from '../idl/evaluation/coze.loop.evaluation.eval_set';
 export * from '../idl/evaluation/coze.loop.evaluation.eval_target';
 export * from '../idl/evaluation/coze.loop.evaluation.evaluator';
