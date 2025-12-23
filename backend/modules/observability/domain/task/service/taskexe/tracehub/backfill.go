@@ -90,7 +90,8 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 
 	// 5. Retrieve span data from the observability service
 	err = h.listAndSendSpans(ctx, sub)
-
+	// test error
+	err = errors.New("test")
 	return h.onHandleDone(ctx, err, sub, event)
 }
 
