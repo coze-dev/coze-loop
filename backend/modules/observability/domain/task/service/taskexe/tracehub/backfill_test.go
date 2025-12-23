@@ -734,6 +734,7 @@ func TestTraceHubServiceImpl_OnHandleDone_RetryCountIncrement(t *testing.T) {
 
 func TestTraceHubServiceImpl_OnHandleDone_RetryCountExceededNoSend(t *testing.T) {
 	t.Parallel()
+	ctrl := gomock.NewController(t)
 	ch := make(chan *entity.BackFillEvent, 1)
 	now := time.Now()
 	impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
@@ -752,6 +753,10 @@ func TestTraceHubServiceImpl_OnHandleDone_RetryCountExceededNoSend(t *testing.T)
 
 	// prev Retry at max (5) → next retry=6, exceeds max, do not send
 	prev := &entity.BackFillEvent{SpaceID: sub.t.WorkspaceID, TaskID: sub.t.ID, Retry: backfillMaxRetryTimes}
+	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	impl.taskRepo = mockRepo
+	mockRepo.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(nil)
+
 	err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub, prev)
 	require.NoError(t, err)
 
