@@ -141,8 +141,7 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		logs.CtxError(ctx, "get tenants failed, task_id=%d, err=%v", sub.t.ID, err)
 		return err
 	}
-	// test error
-	return errors.New("test")
+
 	// Build query parameters
 	listParam := &repo.ListSpansParam{
 		WorkSpaceID:        strconv.FormatInt(sub.t.WorkspaceID, 10),
