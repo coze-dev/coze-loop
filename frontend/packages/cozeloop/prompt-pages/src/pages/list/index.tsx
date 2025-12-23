@@ -33,6 +33,7 @@ export default function PromptListPage() {
   const [refreshFlag, refresh] = useRefresh();
   const [isCopyPrompt, setIsCopyPrompt] = useState(false);
   const createModal = useModalData<Prompt>();
+  const [isSnippet, setIsSnippet] = useState(false);
 
   const deleteModal = useModalData<Prompt>();
 
@@ -116,6 +117,10 @@ export default function PromptListPage() {
           />
         }
         onCreatePromptClick={() => createModal.open()}
+        onCreateSegmentClick={() => {
+          createModal.open();
+          setIsSnippet(true);
+        }}
         onTableRow={(record: Prompt) => ({
           onClick: e => onItemClick(record, e),
         })}
@@ -127,10 +132,12 @@ export default function PromptListPage() {
         onCancel={() => {
           setIsCopyPrompt(false);
           createModal.close();
+          setIsSnippet(false);
         }}
         data={createModal.data}
         isEdit={isEdit}
         isCopy={isCopyPrompt}
+        isSnippet={isSnippet}
         onOk={res => {
           if (!isEdit) {
             onItemClick(res);
