@@ -56,7 +56,7 @@ func (r *EvaluatorRecordRepoImpl) GetEvaluatorRecord(ctx context.Context, evalua
 }
 
 func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool) ([]*entity.EvaluatorRecord, error) {
-	const batchSize = 100
+	const batchSize = 50
 	totalIDs := len(evaluatorRecordIDs)
 	if totalIDs == 0 {
 		return []*entity.EvaluatorRecord{}, nil
