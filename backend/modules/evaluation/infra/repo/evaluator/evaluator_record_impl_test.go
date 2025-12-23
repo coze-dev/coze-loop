@@ -495,17 +495,18 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_Pagination(t *testing.T
 	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
 	mockDBProvider := dbmocks.NewMockProvider(ctrl)
 
-	// 构造 150 个 ID，覆盖跨批次场景（100 + 50）
+	// 构造 150 个 ID，覆盖跨批次场景（50 + 50 + 50）
 	var recordIDs []int64
 	for i := int64(1); i <= 150; i++ {
 		recordIDs = append(recordIDs, i)
 	}
 
-	firstBatchIDs := recordIDs[:100]
-	secondBatchIDs := recordIDs[100:]
+	firstBatchIDs := recordIDs[:50]
+	secondBatchIDs := recordIDs[50:100]
+	thirdBatchIDs := recordIDs[100:]
 
-	// 第一批返回 100 条记录
-	var firstBatchPos []*model.EvaluatorRecord
+	// 第一批返回 50 条记录
+	var firstBatchPos, secondBatchPos, thirdBatchPos []*model.EvaluatorRecord
 	for _, id := range firstBatchIDs {
 		firstBatchPos = append(firstBatchPos, &model.EvaluatorRecord{
 			ID:                 id,
@@ -526,7 +527,6 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_Pagination(t *testing.T
 	}
 
 	// 第二批返回 50 条记录
-	var secondBatchPos []*model.EvaluatorRecord
 	for _, id := range secondBatchIDs {
 		secondBatchPos = append(secondBatchPos, &model.EvaluatorRecord{
 			ID:                 id,
@@ -546,12 +546,37 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_Pagination(t *testing.T
 		})
 	}
 
-	mockEvaluatorRecordDAO.EXPECT().
-		BatchGetEvaluatorRecord(gomock.Any(), firstBatchIDs, false).
-		Return(firstBatchPos, nil)
-	mockEvaluatorRecordDAO.EXPECT().
-		BatchGetEvaluatorRecord(gomock.Any(), secondBatchIDs, false).
-		Return(secondBatchPos, nil)
+	// 第三批返回 50 条记录
+	for _, id := range thirdBatchIDs {
+		thirdBatchPos = append(thirdBatchPos, &model.EvaluatorRecord{
+			ID:                 id,
+			SpaceID:            1,
+			EvaluatorVersionID: 1,
+			ExperimentID:       gptr.Of(int64(1)),
+			ExperimentRunID:    1,
+			ItemID:             1,
+			TurnID:             1,
+			TraceID:            "trace_third_batch",
+			LogID:              gptr.Of("log_third_batch"),
+			Status:             int32(entity.EvaluatorRunStatusSuccess),
+			CreatedAt:          time.Unix(0, 0),
+			UpdatedAt:          time.Unix(0, 0),
+			CreatedBy:          "creator",
+			UpdatedBy:          "updater",
+		})
+	}
+
+	gomock.InOrder(
+		mockEvaluatorRecordDAO.EXPECT().
+			BatchGetEvaluatorRecord(gomock.Any(), firstBatchIDs, false).
+			Return(firstBatchPos, nil),
+		mockEvaluatorRecordDAO.EXPECT().
+			BatchGetEvaluatorRecord(gomock.Any(), secondBatchIDs, false).
+			Return(secondBatchPos, nil),
+		mockEvaluatorRecordDAO.EXPECT().
+			BatchGetEvaluatorRecord(gomock.Any(), thirdBatchIDs, false).
+			Return(thirdBatchPos, nil),
+	)
 
 	repo := &EvaluatorRecordRepoImpl{
 		evaluatorRecordDao: mockEvaluatorRecordDAO,
