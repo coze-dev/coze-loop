@@ -160,7 +160,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluators.DELETE("/:evaluator_id", append(_evaluator_idMw(handler), apis.DeleteEvaluator)...)
 				_evaluator_id := _evaluators.Group("/:evaluator_id", _evaluator_idMw(handler)...)
 				_evaluator_id.POST("/submit_version", append(_submitevaluatorversionMw(handler), apis.SubmitEvaluatorVersion)...)
-				_evaluator_id.PATCH("/update_builtin_tags", append(_updatebuiltinevaluatortagsMw(handler), apis.UpdateBuiltinEvaluatorTags)...)
 				{
 					_versions2 := _evaluator_id.Group("/versions", _versions2Mw(handler)...)
 					_versions2.POST("/list", append(_listevaluatorversionsMw(handler), apis.ListEvaluatorVersions)...)

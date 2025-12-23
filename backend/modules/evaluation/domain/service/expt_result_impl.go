@@ -1313,10 +1313,6 @@ func (e *ExptResultBuilder) getTurnEvaluatorResult(ctx context.Context, itemID, 
 		if evaluatorResult == nil {
 			continue
 		}
-
-		if evaluatorResult.EvaluatorOutputData != nil && evaluatorResult.EvaluatorOutputData.EvaluatorRunError != nil {
-			evaluatorResult.EvaluatorOutputData.EvaluatorRunError.Message = errno.ServiceInternalErrMsg
-		}
 	}
 
 	return &entity.TurnEvaluatorOutput{
