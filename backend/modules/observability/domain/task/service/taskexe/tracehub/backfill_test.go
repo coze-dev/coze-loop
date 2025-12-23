@@ -756,7 +756,6 @@ func TestTraceHubServiceImpl_OnHandleDone_RetryCountExceededNoSend(t *testing.T)
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	impl.taskRepo = mockRepo
 	mockRepo.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(nil)
-
 	err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub, prev)
 	require.NoError(t, err)
 
@@ -766,6 +765,9 @@ func TestTraceHubServiceImpl_OnHandleDone_RetryCountExceededNoSend(t *testing.T)
 	case <-time.After(200 * time.Millisecond):
 		// ok, no message sent
 	}
+	mockRepo.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(errors.New("test"))
+	err = impl.onHandleDone(context.Background(), errors.New("flush err"), sub, prev)
+	require.Error(t, err)
 }
 
 func TestTraceHubServiceImpl_SendBackfillMessage(t *testing.T) {
