@@ -1584,7 +1584,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
-						assert.Equal(t, 13*time.Second, *duration)
+						assert.Equal(t, 18*time.Second, *duration)
 					}
 					return errors.New("publish error")
 				})
@@ -1629,7 +1629,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
-						assert.Equal(t, 13*time.Second, *duration)
+						assert.Equal(t, 18*time.Second, *duration)
 					}
 					return nil
 				})
