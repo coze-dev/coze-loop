@@ -457,9 +457,9 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, err error, sub *
 
 	retry := int32(0)
 	if prevEvent != nil {
-		retry = prevEvent.Retry + 1
+		retry = prevEvent.Retry
 	}
-
+	retry++
 	if retry > backfillMaxRetryTimes {
 		logs.CtxWarn(ctx, "backfill retry exceeded maxRetries=%d, task_id=%d", backfillMaxRetryTimes, sub.t.ID)
 		return nil
