@@ -90,8 +90,7 @@ func (h *TraceHubServiceImpl) BackFill(ctx context.Context, event *entity.BackFi
 
 	// 5. Retrieve span data from the observability service
 	err = h.listAndSendSpans(ctx, sub)
-	// test error
-	err = errors.New("test")
+
 	return h.onHandleDone(ctx, err, sub, event)
 }
 
@@ -142,7 +141,8 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		logs.CtxError(ctx, "get tenants failed, task_id=%d, err=%v", sub.t.ID, err)
 		return err
 	}
-
+	// test error
+	return errors.New("test")
 	// Build query parameters
 	listParam := &repo.ListSpansParam{
 		WorkSpaceID:        strconv.FormatInt(sub.t.WorkspaceID, 10),
