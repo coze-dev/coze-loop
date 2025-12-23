@@ -6,6 +6,7 @@ package evaluator
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -465,4 +466,145 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_EmptyIDs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+
+	repo := &EvaluatorRecordRepoImpl{
+		evaluatorRecordDao: mockEvaluatorRecordDAO,
+		dbProvider:         mockDBProvider,
+		idgen:              mockIDGen,
+	}
+
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{}, false)
+	assert.NoError(t, err)
+	assert.Len(t, result, 0)
+}
+
+func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_Pagination(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+
+	// 构造 150 个 ID，覆盖跨批次场景（100 + 50）
+	var recordIDs []int64
+	for i := int64(1); i <= 150; i++ {
+		recordIDs = append(recordIDs, i)
+	}
+
+	firstBatchIDs := recordIDs[:100]
+	secondBatchIDs := recordIDs[100:]
+
+	// 第一批返回 100 条记录
+	var firstBatchPos []*model.EvaluatorRecord
+	for _, id := range firstBatchIDs {
+		firstBatchPos = append(firstBatchPos, &model.EvaluatorRecord{
+			ID:                 id,
+			SpaceID:            1,
+			EvaluatorVersionID: 1,
+			ExperimentID:       gptr.Of(int64(1)),
+			ExperimentRunID:    1,
+			ItemID:             1,
+			TurnID:             1,
+			TraceID:            "trace_first_batch",
+			LogID:              gptr.Of("log_first_batch"),
+			Status:             int32(entity.EvaluatorRunStatusSuccess),
+			CreatedAt:          time.Unix(0, 0),
+			UpdatedAt:          time.Unix(0, 0),
+			CreatedBy:          "creator",
+			UpdatedBy:          "updater",
+		})
+	}
+
+	// 第二批返回 50 条记录
+	var secondBatchPos []*model.EvaluatorRecord
+	for _, id := range secondBatchIDs {
+		secondBatchPos = append(secondBatchPos, &model.EvaluatorRecord{
+			ID:                 id,
+			SpaceID:            1,
+			EvaluatorVersionID: 1,
+			ExperimentID:       gptr.Of(int64(1)),
+			ExperimentRunID:    1,
+			ItemID:             1,
+			TurnID:             1,
+			TraceID:            "trace_second_batch",
+			LogID:              gptr.Of("log_second_batch"),
+			Status:             int32(entity.EvaluatorRunStatusSuccess),
+			CreatedAt:          time.Unix(0, 0),
+			UpdatedAt:          time.Unix(0, 0),
+			CreatedBy:          "creator",
+			UpdatedBy:          "updater",
+		})
+	}
+
+	mockEvaluatorRecordDAO.EXPECT().
+		BatchGetEvaluatorRecord(gomock.Any(), firstBatchIDs, false).
+		Return(firstBatchPos, nil)
+	mockEvaluatorRecordDAO.EXPECT().
+		BatchGetEvaluatorRecord(gomock.Any(), secondBatchIDs, false).
+		Return(secondBatchPos, nil)
+
+	repo := &EvaluatorRecordRepoImpl{
+		evaluatorRecordDao: mockEvaluatorRecordDAO,
+		dbProvider:         mockDBProvider,
+		idgen:              mockIDGen,
+	}
+
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), recordIDs, false)
+	assert.NoError(t, err)
+	assert.Len(t, result, 150)
+	assert.Equal(t, int64(1), result[0].ID)
+	assert.Equal(t, int64(150), result[len(result)-1].ID)
+}
+
+func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_ConvertError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+
+	// 构造一个包含非法 JSON 的记录，触发 convertor.ConvertEvaluatorRecordPO2DO 的错误分支
+	invalidJSON := []byte("invalid-json")
+	mockEvaluatorRecordDAO.EXPECT().
+		BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+		Return([]*model.EvaluatorRecord{
+			{
+				ID:                 1,
+				SpaceID:            1,
+				EvaluatorVersionID: 1,
+				ExperimentID:       gptr.Of(int64(1)),
+				ExperimentRunID:    1,
+				ItemID:             1,
+				TurnID:             1,
+				TraceID:            "trace_error",
+				LogID:              gptr.Of("log_error"),
+				Status:             int32(entity.EvaluatorRunStatusSuccess),
+				OutputData:         &invalidJSON,
+				CreatedAt:          time.Unix(0, 0),
+				UpdatedAt:          time.Unix(0, 0),
+				CreatedBy:          "creator",
+				UpdatedBy:          "updater",
+			},
+		}, nil)
+
+	repo := &EvaluatorRecordRepoImpl{
+		evaluatorRecordDao: mockEvaluatorRecordDAO,
+		dbProvider:         mockDBProvider,
+		idgen:              mockIDGen,
+	}
+
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{1}, false)
+	assert.Error(t, err)
+	assert.Nil(t, result)
 }
