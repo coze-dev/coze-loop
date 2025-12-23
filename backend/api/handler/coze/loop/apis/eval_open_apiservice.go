@@ -115,3 +115,9 @@ func UpdateEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
 func DeleteEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.DeleteEvaluationSetOApi)
 }
+
+// GetEvaluationItemFieldOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/field [GET]
+func GetEvaluationItemFieldOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvaluationItemFieldOApi)
+}

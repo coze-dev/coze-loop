@@ -65,6 +65,96 @@ func (p *CreateEvaluationSetResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *CreateEvaluationSetWithImportRequest) IsValid() error {
+	if p.Name != nil {
+		if len(*p.Name) < int(1) {
+			return fmt.Errorf("field Name min_len rule failed, current value: %d", len(*p.Name))
+		}
+		if len(*p.Name) > int(255) {
+			return fmt.Errorf("field Name max_len rule failed, current value: %d", len(*p.Name))
+		}
+	}
+	if p.Description != nil {
+		if len(*p.Description) > int(2048) {
+			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
+		}
+	}
+	if p.EvaluationSetSchema != nil {
+		if err := p.EvaluationSetSchema.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluationSetSchema not valid, %w", err)
+		}
+	}
+	if p.BizCategory != nil {
+		if len(*p.BizCategory) > int(128) {
+			return fmt.Errorf("field BizCategory max_len rule failed, current value: %d", len(*p.BizCategory))
+		}
+	}
+	if p.SourceType != nil {
+		if p.SourceType.String() == "<UNSET>" {
+			return fmt.Errorf("field SourceType defined_only rule failed")
+		}
+	}
+	if p.Source != nil {
+		if err := p.Source.IsValid(); err != nil {
+			return fmt.Errorf("field Source not valid, %w", err)
+		}
+	}
+	if len(p.FieldMappings) < int(1) {
+		return fmt.Errorf("field FieldMappings MinLen rule failed, current value: %v", p.FieldMappings)
+	}
+	for i := 0; i < len(p.FieldMappings); i++ {
+		_elem := p.FieldMappings[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateEvaluationSetWithImportResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ParseImportSourceFileRequest) IsValid() error {
+	if p.File == nil {
+		return fmt.Errorf("field File not_nil rule failed")
+	}
+	if err := p.File.IsValid(); err != nil {
+		return fmt.Errorf("field File not valid, %w", err)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ParseImportSourceFileResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ConflictField) IsValid() error {
+	return nil
+}
 func (p *UpdateEvaluationSetRequest) IsValid() error {
 	if p.Name != nil {
 		if len(*p.Name) < int(1) {
@@ -429,6 +519,27 @@ func (p *ClearEvaluationSetDraftItemRequest) IsValid() error {
 	return nil
 }
 func (p *ClearEvaluationSetDraftItemResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemFieldRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetEvaluationSetItemFieldResponse) IsValid() error {
+	if p.FieldData != nil {
+		if err := p.FieldData.IsValid(); err != nil {
+			return fmt.Errorf("field FieldData not valid, %w", err)
+		}
+	}
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

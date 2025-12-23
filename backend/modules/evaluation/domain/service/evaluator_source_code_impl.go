@@ -1366,7 +1366,7 @@ func (e *codeEvaluatorSpan) reportCodeRootSpan(ctx context.Context, request *Rep
 		e.SetStatusCode(ctx, 0)
 	case entity.EvaluatorRunStatusFail:
 		e.SetStatusCode(ctx, int(entity.EvaluatorRunStatusFail))
-		e.SetError(ctx, request.errInfo)
+		e.SetError(ctx, tracer.SanitizeErrorForTrace(request.errInfo))
 	default:
 		e.SetStatusCode(ctx, 0) // 默认为成功
 	}

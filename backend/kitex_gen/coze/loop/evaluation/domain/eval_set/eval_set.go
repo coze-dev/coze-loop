@@ -2718,6 +2718,8 @@ type FieldSchema struct {
 	Status *dataset.FieldStatus `thrift:"status,6,optional" frugal:"6,optional,FieldStatus" form:"status" json:"status,omitempty" query:"status"`
 	// 是否必填
 	IsRequired *bool `thrift:"isRequired,7,optional" frugal:"7,optional,bool" form:"isRequired" json:"isRequired,omitempty" query:"isRequired"`
+	// 对应的内置 schema
+	SchemaKey *dataset.SchemaKey `thrift:"schema_key,8,optional" frugal:"8,optional,SchemaKey" form:"schema_key" json:"schema_key,omitempty" query:"schema_key"`
 	// [20,50) 内容格式限制相关
 	TextSchema *string `thrift:"text_schema,20,optional" frugal:"20,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
 	// 多模态规格限制
@@ -2819,6 +2821,18 @@ func (p *FieldSchema) GetIsRequired() (v bool) {
 	return *p.IsRequired
 }
 
+var FieldSchema_SchemaKey_DEFAULT dataset.SchemaKey
+
+func (p *FieldSchema) GetSchemaKey() (v dataset.SchemaKey) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchemaKey() {
+		return FieldSchema_SchemaKey_DEFAULT
+	}
+	return *p.SchemaKey
+}
+
 var FieldSchema_TextSchema_DEFAULT string
 
 func (p *FieldSchema) GetTextSchema() (v string) {
@@ -2887,6 +2901,9 @@ func (p *FieldSchema) SetStatus(val *dataset.FieldStatus) {
 func (p *FieldSchema) SetIsRequired(val *bool) {
 	p.IsRequired = val
 }
+func (p *FieldSchema) SetSchemaKey(val *dataset.SchemaKey) {
+	p.SchemaKey = val
+}
 func (p *FieldSchema) SetTextSchema(val *string) {
 	p.TextSchema = val
 }
@@ -2908,6 +2925,7 @@ var fieldIDToName_FieldSchema = map[int16]string{
 	5:  "default_display_format",
 	6:  "status",
 	7:  "isRequired",
+	8:  "schema_key",
 	20: "text_schema",
 	21: "multi_model_spec",
 	50: "hidden",
@@ -2940,6 +2958,10 @@ func (p *FieldSchema) IsSetStatus() bool {
 
 func (p *FieldSchema) IsSetIsRequired() bool {
 	return p.IsRequired != nil
+}
+
+func (p *FieldSchema) IsSetSchemaKey() bool {
+	return p.SchemaKey != nil
 }
 
 func (p *FieldSchema) IsSetTextSchema() bool {
@@ -3027,6 +3049,14 @@ func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3172,6 +3202,18 @@ func (p *FieldSchema) ReadField7(iprot thrift.TProtocol) error {
 	p.IsRequired = _field
 	return nil
 }
+func (p *FieldSchema) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *dataset.SchemaKey
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset.SchemaKey(v)
+		_field = &tmp
+	}
+	p.SchemaKey = _field
+	return nil
+}
 func (p *FieldSchema) ReadField20(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -3258,6 +3300,10 @@ func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -3420,6 +3466,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *FieldSchema) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchemaKey() {
+		if err = oprot.WriteFieldBegin("schema_key", thrift.I32, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SchemaKey)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 func (p *FieldSchema) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTextSchema() {
 		if err = oprot.WriteFieldBegin("text_schema", thrift.STRING, 20); err != nil {
@@ -3536,6 +3600,9 @@ func (p *FieldSchema) DeepEqual(ano *FieldSchema) bool {
 	if !p.Field7DeepEqual(ano.IsRequired) {
 		return false
 	}
+	if !p.Field8DeepEqual(ano.SchemaKey) {
+		return false
+	}
 	if !p.Field20DeepEqual(ano.TextSchema) {
 		return false
 	}
@@ -3631,6 +3698,18 @@ func (p *FieldSchema) Field7DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.IsRequired != *src {
+		return false
+	}
+	return true
+}
+func (p *FieldSchema) Field8DeepEqual(src *dataset.SchemaKey) bool {
+
+	if p.SchemaKey == src {
+		return true
+	} else if p.SchemaKey == nil || src == nil {
+		return false
+	}
+	if *p.SchemaKey != *src {
 		return false
 	}
 	return true

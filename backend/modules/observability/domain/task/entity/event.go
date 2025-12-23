@@ -454,6 +454,7 @@ func (c *CorrectionEvent) GetPlatformType() (loop_span.PlatformType, bool) {
 type BackFillEvent struct {
 	SpaceID int64 `json:"space_id"`
 	TaskID  int64 `json:"task_id"`
+	Retry   int32 `json:"retry,omitempty"`
 }
 
 func (b *BackFillEvent) Validate() error {

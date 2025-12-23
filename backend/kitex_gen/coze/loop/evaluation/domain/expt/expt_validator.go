@@ -194,6 +194,14 @@ func (p *ExperimentTurnPayload) IsValid() error {
 			return fmt.Errorf("field AnnotateResult_ not valid, %w", err)
 		}
 	}
+	if p.TrajectoryAnalysisResult_ != nil {
+		if err := p.TrajectoryAnalysisResult_.IsValid(); err != nil {
+			return fmt.Errorf("field TrajectoryAnalysisResult_ not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *TrajectoryAnalysisResult_) IsValid() error {
 	return nil
 }
 func (p *KeywordSearch) IsValid() error {
@@ -324,6 +332,9 @@ func (p *ExptInsightAnalysisRecord) IsValid() error {
 	}
 	return nil
 }
+func (p *ExptInsightAnalysisIndex) IsValid() error {
+	return nil
+}
 func (p *ExptInsightAnalysisFeedback) IsValid() error {
 	return nil
 }
@@ -333,5 +344,8 @@ func (p *ExptInsightAnalysisFeedbackComment) IsValid() error {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *ExptInsightAnalysisFeedbackVote) IsValid() error {
 	return nil
 }

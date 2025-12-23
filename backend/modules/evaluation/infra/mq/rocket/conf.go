@@ -20,19 +20,20 @@ const (
 	EvaluatorRecordCorrectionRMQKey = "evaluator_record_correction_rmq"
 	ExptTurnResultFilterRMQKey      = "expt_turn_result_filter_rmq"
 	ExptExportCSVEventRMQKey        = "expt_export_csv_event_rmq"
+	ExptAnalysisEventRMQKey         = "expt_analysis_event_rmq"
 )
 
 type RMQConf struct {
-	Addr  string `mapstructure:"addr"`
-	Topic string `mapstructure:"topic"`
+	Addr  string `json:"addr" mapstructure:"addr"`
+	Topic string `json:"topic" mapstructure:"topic"`
 
-	ProduceTimeout time.Duration `mapstructure:"produce_timeout"`
-	RetryTimes     int           `mapstructure:"retry_times"`
-	ProducerGroup  string        `mapstructure:"producer_group"`
+	ProduceTimeout time.Duration `json:"produce_timeout" mapstructure:"produce_timeout"`
+	RetryTimes     int           `json:"retry_times" mapstructure:"retry_times"`
+	ProducerGroup  string        `json:"producer_group" mapstructure:"producer_group"`
 
-	ConsumerGroup  string        `mapstructure:"consumer_group"`
-	WorkerNum      int           `mapstructure:"worker_num"`
-	ConsumeTimeout time.Duration `mapstructure:"consume_timeout"`
+	ConsumerGroup  string        `json:"consumer_group" mapstructure:"consumer_group"`
+	WorkerNum      int           `json:"worker_num" mapstructure:"worker_num"`
+	ConsumeTimeout time.Duration `json:"consume_timeout" mapstructure:"consume_timeout"`
 }
 
 func (c *RMQConf) Valid() bool {

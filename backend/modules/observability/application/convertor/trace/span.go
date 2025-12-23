@@ -211,6 +211,7 @@ func FilterFieldDTO2DO(field *filter.FilterField) *loop_span.FilterField {
 		FieldName: fieldName,
 		Values:    field.Values,
 		FieldType: fieldTypeDTO2DO(field.FieldType),
+		ExtraInfo: field.ExtraInfo,
 	}
 	if field.QueryAndOr != nil {
 		fField.QueryAndOr = ptr.Of(loop_span.QueryAndOrEnum(*field.QueryAndOr))
@@ -280,4 +281,63 @@ func OtelSpan2LoopSpan(span *otel.LoopSpan) *loop_span.Span {
 		TagsBool:         span.TagsBool,
 		TagsByte:         span.TagsByte,
 	}
+}
+
+func FilterFieldsDO2DTO(f *loop_span.FilterFields) *filter.FilterFields {
+	if f == nil {
+		return nil
+	}
+	ret := &filter.FilterFields{}
+	if f.QueryAndOr != nil {
+		ret.QueryAndOr = ptr.Of(filter.QueryRelation(*f.QueryAndOr))
+	}
+	ret.FilterFields = FilterFieldListDO2DTO(f.FilterFields)
+	return ret
+}
+
+func FilterFieldListDO2DTO(fields []*loop_span.FilterField) []*filter.FilterField {
+	ret := make([]*filter.FilterField, 0)
+	for _, field := range fields {
+		if field == nil {
+			continue
+		}
+		ret = append(ret, FilterFieldDO2DTO(field))
+	}
+	return ret
+}
+
+func FilterFieldDO2DTO(field *loop_span.FilterField) *filter.FilterField {
+	if field == nil {
+		return nil
+	}
+	fieldName := ""
+	if field.FieldName != "" {
+		fieldName = field.FieldName
+	}
+	fField := &filter.FilterField{
+		FieldName: ptr.Of(fieldName),
+		Values:    field.Values,
+		FieldType: fieldTypeDO2DTO(field.FieldType),
+		ExtraInfo: field.ExtraInfo,
+	}
+	if field.QueryAndOr != nil {
+		fField.QueryAndOr = ptr.Of(filter.QueryRelation(*field.QueryAndOr))
+	}
+	if field.QueryType != nil {
+		fField.QueryType = ptr.Of(filter.QueryType(*field.QueryType))
+	}
+	if field.SubFilter != nil {
+		fField.SubFilter = FilterFieldsDO2DTO(field.SubFilter)
+	}
+	if field.IsCustom {
+		fField.IsCustom = ptr.Of(field.IsCustom)
+	}
+	return fField
+}
+
+func fieldTypeDO2DTO(fieldType loop_span.FieldType) *filter.FieldType {
+	if fieldType == "" {
+		return ptr.Of(filter.FieldTypeString)
+	}
+	return ptr.Of(filter.FieldType(fieldType))
 }

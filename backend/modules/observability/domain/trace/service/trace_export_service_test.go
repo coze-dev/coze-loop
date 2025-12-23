@@ -1299,7 +1299,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					[]*entity.DatasetItem{{SpanID: "span-456", DatasetID: 200}}, []entity.ItemErrorGroup{}, nil)
 
 				// Mock注解插入 (覆盖第353-387行)
-				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(nil)
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 				return fields{
 					traceRepo:             repoMock,
@@ -1595,7 +1595,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					[]*entity.DatasetItem{{SpanID: "span-456", DatasetID: 500}}, []entity.ItemErrorGroup{}, nil)
 
 				// Mock注解插入失败 (覆盖第375-384行)
-				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(assert.AnError)
+				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(assert.AnError).AnyTimes()
 
 				return fields{
 					traceRepo:             repoMock,

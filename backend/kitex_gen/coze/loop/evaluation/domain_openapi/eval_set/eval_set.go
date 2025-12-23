@@ -23,12 +23,24 @@ const (
 	FieldDisplayFormateYAML = "yaml"
 
 	FieldDisplayFormateCode = "code"
+
+	SchemaKeyString = "string"
+
+	SchemaKeyInteger = "integer"
+
+	SchemaKeyFloat = "float"
+
+	SchemaKeyBool = "bool"
+
+	SchemaKeyTrajectory = "trajectory"
 )
 
 // 评测集状态
 type EvaluationSetStatus = string
 
 type FieldDisplayFormat = string
+
+type SchemaKey = string
 
 // 字段Schema
 type FieldSchema struct {
@@ -40,6 +52,8 @@ type FieldSchema struct {
 	IsRequired           *bool               `thrift:"is_required,5,optional" frugal:"5,optional,bool" form:"is_required" json:"is_required,omitempty" query:"is_required"`
 	// JSON Schema字符串
 	TextSchema *string `thrift:"text_schema,6,optional" frugal:"6,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
+	// 对应的内置 schema
+	SchemaKey *SchemaKey `thrift:"schema_key,7,optional" frugal:"7,optional,string" form:"schema_key" json:"schema_key,omitempty" query:"schema_key"`
 	// 唯一键，创建列时无需关注，更新列的时候携带即可
 	Key *string `thrift:"key,10,optional" frugal:"10,optional,string" form:"key" json:"key,omitempty" query:"key"`
 }
@@ -123,6 +137,18 @@ func (p *FieldSchema) GetTextSchema() (v string) {
 	return *p.TextSchema
 }
 
+var FieldSchema_SchemaKey_DEFAULT SchemaKey
+
+func (p *FieldSchema) GetSchemaKey() (v SchemaKey) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchemaKey() {
+		return FieldSchema_SchemaKey_DEFAULT
+	}
+	return *p.SchemaKey
+}
+
 var FieldSchema_Key_DEFAULT string
 
 func (p *FieldSchema) GetKey() (v string) {
@@ -152,6 +178,9 @@ func (p *FieldSchema) SetIsRequired(val *bool) {
 func (p *FieldSchema) SetTextSchema(val *string) {
 	p.TextSchema = val
 }
+func (p *FieldSchema) SetSchemaKey(val *SchemaKey) {
+	p.SchemaKey = val
+}
 func (p *FieldSchema) SetKey(val *string) {
 	p.Key = val
 }
@@ -163,6 +192,7 @@ var fieldIDToName_FieldSchema = map[int16]string{
 	4:  "default_display_format",
 	5:  "is_required",
 	6:  "text_schema",
+	7:  "schema_key",
 	10: "key",
 }
 
@@ -188,6 +218,10 @@ func (p *FieldSchema) IsSetIsRequired() bool {
 
 func (p *FieldSchema) IsSetTextSchema() bool {
 	return p.TextSchema != nil
+}
+
+func (p *FieldSchema) IsSetSchemaKey() bool {
+	return p.SchemaKey != nil
 }
 
 func (p *FieldSchema) IsSetKey() bool {
@@ -255,6 +289,14 @@ func (p *FieldSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -363,6 +405,17 @@ func (p *FieldSchema) ReadField6(iprot thrift.TProtocol) error {
 	p.TextSchema = _field
 	return nil
 }
+func (p *FieldSchema) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *SchemaKey
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SchemaKey = _field
+	return nil
+}
 func (p *FieldSchema) ReadField10(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -403,6 +456,10 @@ func (p *FieldSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField10(oprot); err != nil {
@@ -535,6 +592,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *FieldSchema) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchemaKey() {
+		if err = oprot.WriteFieldBegin("schema_key", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SchemaKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *FieldSchema) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetKey() {
 		if err = oprot.WriteFieldBegin("key", thrift.STRING, 10); err != nil {
@@ -584,6 +659,9 @@ func (p *FieldSchema) DeepEqual(ano *FieldSchema) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.TextSchema) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.SchemaKey) {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.Key) {
@@ -660,6 +738,18 @@ func (p *FieldSchema) Field6DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.TextSchema, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *FieldSchema) Field7DeepEqual(src *SchemaKey) bool {
+
+	if p.SchemaKey == src {
+		return true
+	} else if p.SchemaKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SchemaKey, *src) != 0 {
 		return false
 	}
 	return true

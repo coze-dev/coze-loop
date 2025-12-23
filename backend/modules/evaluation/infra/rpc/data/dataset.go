@@ -63,6 +63,14 @@ func (a *DatasetRPCAdapter) CreateDataset(ctx context.Context, param *rpc.Create
 	return resp.GetDatasetID(), nil
 }
 
+func (a *DatasetRPCAdapter) CreateDatasetWithImport(ctx context.Context, param *rpc.CreateDatasetWithImportParam) (id int64, jobID int64, err error) {
+	return 0, 0, nil
+}
+
+func (a *DatasetRPCAdapter) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
+	return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("ParseImportSourceFile not implemented"))
+}
+
 func (a *DatasetRPCAdapter) UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error) {
 	resp, err := a.client.UpdateDataset(ctx, &dataset.UpdateDatasetRequest{
 		WorkspaceID: &spaceID,
@@ -442,4 +450,8 @@ func (a *DatasetRPCAdapter) ClearEvaluationSetDraftItem(ctx context.Context, spa
 
 func (a *DatasetRPCAdapter) QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error) {
 	return nil, "", nil
+}
+
+func (a *DatasetRPCAdapter) GetDatasetItemField(ctx context.Context, param *rpc.GetDatasetItemFieldParam) (fieldData *entity.FieldData, err error) {
+	return nil, nil
 }

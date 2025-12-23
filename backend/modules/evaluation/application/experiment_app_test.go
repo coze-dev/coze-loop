@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -3901,7 +3902,11 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 
 	t.Run("成功创建洞察分析", func(t *testing.T) {
 		// Mock the manager.Get call
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			CreatedBy: "test-user",
+			StartAt:   &[]time.Time{time.Now()}[0],
+			EndAt:     &[]time.Time{time.Now()}[0],
+		}, nil)
 		// Mock the auth.AuthorizationWithoutSPI call
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		// Mock the CreateAnalysisRecord call
@@ -3929,7 +3934,11 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 	})
 
 	t.Run("创建分析记录失败", func(t *testing.T) {
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			CreatedBy: "test-user",
+			StartAt:   &[]time.Time{time.Now()}[0],
+			EndAt:     &[]time.Time{time.Now()}[0],
+		}, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		mockInsightService.EXPECT().CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(0), errors.New("create analysis record error"))
 
@@ -4170,5 +4179,67 @@ func TestListExptInsightAnalysisComment(t *testing.T) {
 		_, err := app.ListExptInsightAnalysisComment(ctx, req)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "list comment error")
+	})
+}
+
+func TestGetAnalysisRecordFeedbackVote(t *testing.T) {
+	ctx, app, _, _, mockInsightService, mockAuth := setupTestApp(t)
+
+	userID := int64(1001)
+	req := &exptpb.GetAnalysisRecordFeedbackVoteRequest{
+		WorkspaceID:             ptr.Of(int64(123)),
+		ExptID:                  ptr.Of(int64(456)),
+		InsightAnalysisRecordID: ptr.Of(int64(789)),
+		Session: &common.Session{
+			UserID: &userID,
+		},
+	}
+
+	t.Run("success", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().GetAnalysisRecordFeedbackVoteByUser(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptInsightAnalysisFeedbackVote{
+			ID:               1,
+			VoteType:         entity.Upvote,
+			SpaceID:          123,
+			ExptID:           456,
+			AnalysisRecordID: 789,
+		}, nil)
+
+		resp, err := app.GetAnalysisRecordFeedbackVote(ctx, req)
+		assert.NoError(t, err)
+		if assert.NotNil(t, resp) {
+			if assert.NotNil(t, resp.GetVote()) {
+				assert.Equal(t, int64(1), resp.GetVote().GetID())
+				assert.Equal(t, expt.FeedbackActionTypeUpvote, resp.GetVote().GetFeedbackActionType())
+			}
+		}
+	})
+
+	t.Run("authorization failed", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("auth error"))
+
+		_, err := app.GetAnalysisRecordFeedbackVote(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "auth error")
+	})
+
+	t.Run("service error", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().GetAnalysisRecordFeedbackVoteByUser(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("service error"))
+
+		_, err := app.GetAnalysisRecordFeedbackVote(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "service error")
+	})
+
+	t.Run("no vote returned", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockInsightService.EXPECT().GetAnalysisRecordFeedbackVoteByUser(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+
+		resp, err := app.GetAnalysisRecordFeedbackVote(ctx, req)
+		assert.NoError(t, err)
+		if assert.NotNil(t, resp) {
+			assert.Nil(t, resp.GetVote())
+		}
 	})
 }

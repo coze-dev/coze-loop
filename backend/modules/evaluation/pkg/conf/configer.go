@@ -16,7 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func NewExptConfiger(configFactory conf.IConfigLoaderFactory) (component.IConfiger, error) {
+func NewConfiger(configFactory conf.IConfigLoaderFactory) (component.IConfiger, error) {
 	loader, err := configFactory.NewConfigLoader(consts.EvaluationConfigFileName)
 	if err != nil {
 		return nil, err
@@ -28,6 +28,12 @@ func NewExptConfiger(configFactory conf.IConfigLoaderFactory) (component.IConfig
 
 type configer struct {
 	loader conf.IConfigLoader
+}
+
+func (c *configer) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf {
+	const key = "eval_target_trajectory_conf"
+	cfg := &entity.TargetTrajectoryConf{}
+	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, cfg) == nil, cfg, nil)
 }
 
 func (c *configer) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {

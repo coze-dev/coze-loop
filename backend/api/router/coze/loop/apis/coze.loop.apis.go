@@ -121,6 +121,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				_v11.POST("/evaluation_sets", append(_evaluation_setsMw(handler), apis.CreateEvaluationSet)...)
 				_evaluation_sets := _v11.Group("/evaluation_sets", _evaluation_setsMw(handler)...)
+				_evaluation_sets.POST("/create_with_import", append(_createevaluationsetwithimportMw(handler), apis.CreateEvaluationSetWithImport)...)
 				_evaluation_sets.DELETE("/:evaluation_set_id", append(_evaluation_set_idMw(handler), apis.DeleteEvaluationSet)...)
 				_evaluation_set_id := _evaluation_sets.Group("/:evaluation_set_id", _evaluation_set_idMw(handler)...)
 				_evaluation_set_id.PUT("/schema", append(_updateevaluationsetschemaMw(handler), apis.UpdateEvaluationSetSchema)...)
@@ -136,10 +137,15 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_items1.POST("/clear", append(_clearevaluationsetdraftitemMw(handler), apis.ClearEvaluationSetDraftItem)...)
 					_items1.PUT("/:item_id", append(_updateevaluationsetitemMw(handler), apis.UpdateEvaluationSetItem)...)
 					_items1.POST("/list", append(_listevaluationsetitemsMw(handler), apis.ListEvaluationSetItems)...)
+					{
+						_item_pk := _items1.Group("/:item_pk", _item_pkMw(handler)...)
+						_item_pk.GET("/field", append(_getevaluationsetitemfieldMw(handler), apis.GetEvaluationSetItemField)...)
+					}
 				}
 				_evaluation_sets.GET("/:evaluation_set_id", append(_getevaluationsetMw(handler), apis.GetEvaluationSet)...)
 				_evaluation_sets.PATCH("/:evaluation_set_id", append(_updateevaluationsetMw(handler), apis.UpdateEvaluationSet)...)
 				_evaluation_sets.POST("/list", append(_listevaluationsetsMw(handler), apis.ListEvaluationSets)...)
+				_evaluation_sets.POST("/parse_import_source_file", append(_parseimportsourcefileMw(handler), apis.ParseImportSourceFile)...)
 				_v11.POST("/evaluator_template", append(_evaluator_templateMw(handler), apis.CreateEvaluatorTemplate)...)
 				_evaluator_template := _v11.Group("/evaluator_template", _evaluator_templateMw(handler)...)
 				_evaluator_template.DELETE("/:evaluator_template_id", append(_deleteevaluatortemplateMw(handler), apis.DeleteEvaluatorTemplate)...)
@@ -154,7 +160,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluators.DELETE("/:evaluator_id", append(_evaluator_idMw(handler), apis.DeleteEvaluator)...)
 				_evaluator_id := _evaluators.Group("/:evaluator_id", _evaluator_idMw(handler)...)
 				_evaluator_id.POST("/submit_version", append(_submitevaluatorversionMw(handler), apis.SubmitEvaluatorVersion)...)
-				_evaluator_id.PATCH("/update_builtin_tags", append(_updatebuiltinevaluatortagsMw(handler), apis.UpdateBuiltinEvaluatorTags)...)
 				{
 					_versions2 := _evaluator_id.Group("/versions", _versions2Mw(handler)...)
 					_versions2.POST("/list", append(_listevaluatorversionsMw(handler), apis.ListEvaluatorVersions)...)
@@ -249,6 +254,13 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 						_aggr_results.POST("/batch_get", append(_batchgetexperimentaggrresultMw(handler), apis.BatchGetExperimentAggrResult)...)
 					}
 					{
+						_insight_analysis_records0 := _experiments.Group("/insight_analysis_records", _insight_analysis_records0Mw(handler)...)
+						{
+							_insight_analysis_record_id0 := _insight_analysis_records0.Group("/:insight_analysis_record_id", _insight_analysis_record_id0Mw(handler)...)
+							_insight_analysis_record_id0.GET("/feedback_vote", append(_getanalysisrecordfeedbackvoteMw(handler), apis.GetAnalysisRecordFeedbackVote)...)
+						}
+					}
+					{
 						_results0 := _experiments.Group("/results", _results0Mw(handler)...)
 						_results0.POST("/batch_get", append(_batchgetexperimentresultMw(handler), apis.BatchGetExperimentResult)...)
 					}
@@ -340,6 +352,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
 					_traces.POST("/search_tree", append(_searchtracetreeMw(handler), apis.SearchTraceTree)...)
 					_traces.GET("/:trace_id", append(_gettraceMw(handler), apis.GetTrace)...)
+					_traces.POST("/trajectory", append(_listtrajectoryMw(handler), apis.ListTrajectory)...)
+					_traces.GET("/trajectory_config", append(_gettrajectoryconfigMw(handler), apis.GetTrajectoryConfig)...)
+					_traces.POST("/trajectory_config", append(_upserttrajectoryconfigMw(handler), apis.UpsertTrajectoryConfig)...)
 				}
 			}
 		}
@@ -406,7 +421,12 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets0 := _evaluation0.Group("/evaluation_sets", _evaluation_sets0Mw(handler)...)
 				{
 					_evaluation_set_id0 := _evaluation_sets0.Group("/:evaluation_set_id", _evaluation_set_id0Mw(handler)...)
-					_evaluation_set_id0.DELETE("/items", append(_batchdeleteevaluationsetitemsoapiMw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
+					_evaluation_set_id0.DELETE("/items", append(_items2Mw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
+					_items2 := _evaluation_set_id0.Group("/items", _items2Mw(handler)...)
+					{
+						_item_id := _items2.Group("/:item_id", _item_idMw(handler)...)
+						_item_id.GET("/field", append(_getevaluationitemfieldoapiMw(handler), apis.GetEvaluationItemFieldOApi)...)
+					}
 					_evaluation_set_id0.GET("/items", append(_listevaluationsetversionitemsoapiMw(handler), apis.ListEvaluationSetVersionItemsOApi)...)
 					_evaluation_set_id0.POST("/items", append(_batchcreateevaluationsetitemsoapiMw(handler), apis.BatchCreateEvaluationSetItemsOApi)...)
 					_evaluation_set_id0.PUT("/items", append(_batchupdateevaluationsetitemsoapiMw(handler), apis.BatchUpdateEvaluationSetItemsOApi)...)

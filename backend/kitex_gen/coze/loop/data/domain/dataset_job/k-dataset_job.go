@@ -399,6 +399,62 @@ func (p *DatasetIOFile) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 100:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField100(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 101:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField101(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -513,6 +569,60 @@ func (p *DatasetIOFile) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *DatasetIOFile) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.OriginalFileName = _field
+	return offset, nil
+}
+
+func (p *DatasetIOFile) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.DownloadURL = _field
+	return offset, nil
+}
+
+func (p *DatasetIOFile) FastReadField100(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ProviderID = _field
+	return offset, nil
+}
+
+func (p *DatasetIOFile) FastReadField101(buf []byte) (int, error) {
+	offset := 0
+	_field := NewProviderAuth()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ProviderAuth = _field
+	return offset, nil
+}
+
 func (p *DatasetIOFile) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -525,6 +635,10 @@ func (p *DatasetIOFile) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField100(buf[offset:], w)
+		offset += p.fastWriteField101(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -538,6 +652,10 @@ func (p *DatasetIOFile) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+		l += p.field100Length()
+		l += p.field101Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -591,6 +709,42 @@ func (p *DatasetIOFile) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *DatasetIOFile) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOriginalFileName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.OriginalFileName)
+	}
+	return offset
+}
+
+func (p *DatasetIOFile) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDownloadURL() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.DownloadURL)
+	}
+	return offset
+}
+
+func (p *DatasetIOFile) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetProviderID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 100)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ProviderID)
+	}
+	return offset
+}
+
+func (p *DatasetIOFile) fastWriteField101(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetProviderAuth() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 101)
+		offset += p.ProviderAuth.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *DatasetIOFile) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -636,6 +790,42 @@ func (p *DatasetIOFile) field5Length() int {
 	return l
 }
 
+func (p *DatasetIOFile) field6Length() int {
+	l := 0
+	if p.IsSetOriginalFileName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.OriginalFileName)
+	}
+	return l
+}
+
+func (p *DatasetIOFile) field7Length() int {
+	l := 0
+	if p.IsSetDownloadURL() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.DownloadURL)
+	}
+	return l
+}
+
+func (p *DatasetIOFile) field100Length() int {
+	l := 0
+	if p.IsSetProviderID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ProviderID)
+	}
+	return l
+}
+
+func (p *DatasetIOFile) field101Length() int {
+	l := 0
+	if p.IsSetProviderAuth() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ProviderAuth.BLength()
+	}
+	return l
+}
+
 func (p *DatasetIOFile) DeepCopy(s interface{}) error {
 	src, ok := s.(*DatasetIOFile)
 	if !ok {
@@ -667,6 +857,156 @@ func (p *DatasetIOFile) DeepCopy(s interface{}) error {
 			}
 			p.Files = append(p.Files, _elem)
 		}
+	}
+
+	if src.OriginalFileName != nil {
+		var tmp string
+		if *src.OriginalFileName != "" {
+			tmp = kutils.StringDeepCopy(*src.OriginalFileName)
+		}
+		p.OriginalFileName = &tmp
+	}
+
+	if src.DownloadURL != nil {
+		var tmp string
+		if *src.DownloadURL != "" {
+			tmp = kutils.StringDeepCopy(*src.DownloadURL)
+		}
+		p.DownloadURL = &tmp
+	}
+
+	if src.ProviderID != nil {
+		var tmp string
+		if *src.ProviderID != "" {
+			tmp = kutils.StringDeepCopy(*src.ProviderID)
+		}
+		p.ProviderID = &tmp
+	}
+
+	var _providerAuth *ProviderAuth
+	if src.ProviderAuth != nil {
+		_providerAuth = &ProviderAuth{}
+		if err := _providerAuth.DeepCopy(src.ProviderAuth); err != nil {
+			return err
+		}
+	}
+	p.ProviderAuth = _providerAuth
+
+	return nil
+}
+
+func (p *ProviderAuth) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ProviderAuth[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *ProviderAuth) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ProviderAccountID = _field
+	return offset, nil
+}
+
+func (p *ProviderAuth) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *ProviderAuth) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *ProviderAuth) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *ProviderAuth) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetProviderAccountID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ProviderAccountID)
+	}
+	return offset
+}
+
+func (p *ProviderAuth) field1Length() int {
+	l := 0
+	if p.IsSetProviderAccountID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ProviderAuth) DeepCopy(s interface{}) error {
+	src, ok := s.(*ProviderAuth)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.ProviderAccountID != nil {
+		tmp := *src.ProviderAccountID
+		p.ProviderAccountID = &tmp
 	}
 
 	return nil

@@ -28,6 +28,7 @@ import (
 )
 
 func TestExportCSVHelper_buildColumnEvalTargetContent(t *testing.T) {
+	ctx := context.Background()
 	helper := &exportCSVHelper{}
 
 	textContent := &entity.Content{
@@ -91,10 +92,101 @@ func TestExportCSVHelper_buildColumnEvalTargetContent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := helper.buildColumnEvalTargetContent(tt.columnName, tt.data)
+			got, err := helper.buildColumnEvalTargetContent(ctx, tt.columnName, tt.data)
 			assert.Equal(t, tt.want, got)
+			assert.Nil(t, err)
 		})
 	}
+}
+
+func TestExportCSVHelper_buildRows_EvalTargetColumns(t *testing.T) {
+	ctx := context.Background()
+
+	makeBaseHelperAndItem := func() (*exportCSVHelper, *entity.ItemResult, *entity.TurnResult, *entity.ExperimentTurnPayload) {
+		turn := &entity.Turn{
+			FieldDataList: []*entity.FieldData{},
+		}
+		payload := &entity.ExperimentTurnPayload{
+			EvalSet: &entity.TurnEvalSet{
+				Turn:      turn,
+				ItemID:    1,
+				EvalSetID: 1,
+			},
+		}
+		turnResult := &entity.TurnResult{
+			TurnID: 1,
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					ExperimentID: 100,
+					Payload:      payload,
+				},
+			},
+		}
+		itemResult := &entity.ItemResult{
+			ItemID: 1,
+			SystemInfo: &entity.ItemSystemInfo{
+				RunState: entity.ItemRunState_Success,
+			},
+			TurnResults: []*entity.TurnResult{turnResult},
+		}
+
+		helper := &exportCSVHelper{
+			allItemResults: []*entity.ItemResult{itemResult},
+		}
+		return helper, itemResult, turnResult, payload
+	}
+
+	t.Run("append empty string when target output is nil", func(t *testing.T) {
+		helper, _, _, _ := makeBaseHelperAndItem()
+		helper.columnsEvalTarget = []*entity.ColumnEvalTarget{
+			{Name: consts.ReportColumnNameEvalTargetTotalLatency},
+			{Name: consts.ReportColumnNameEvalTargetInputTokens},
+		}
+
+		rows, err := helper.buildRows(ctx)
+		assert.NoError(t, err)
+		if assert.Len(t, rows, 1) {
+			row := rows[0]
+			// ID, status, then 2 eval-target columns
+			if assert.Len(t, row, 2+len(helper.columnsEvalTarget)) {
+				assert.Equal(t, "1", row[0])
+				assert.Equal(t, "success", row[1])
+				assert.Equal(t, "", row[2])
+				assert.Equal(t, "", row[3])
+			}
+		}
+	})
+
+	t.Run("append eval target metrics when target output is present", func(t *testing.T) {
+		helper, _, _, payload := makeBaseHelperAndItem()
+		helper.columnsEvalTarget = []*entity.ColumnEvalTarget{
+			{Name: consts.ReportColumnNameEvalTargetTotalLatency},
+			{Name: consts.ReportColumnNameEvalTargetInputTokens},
+		}
+
+		payload.TargetOutput = &entity.TurnTargetOutput{
+			EvalTargetRecord: &entity.EvalTargetRecord{
+				EvalTargetOutputData: &entity.EvalTargetOutputData{
+					TimeConsumingMS: ptr.Of(int64(123)),
+					EvalTargetUsage: &entity.EvalTargetUsage{
+						InputTokens: 10,
+					},
+				},
+			},
+		}
+
+		rows, err := helper.buildRows(ctx)
+		assert.NoError(t, err)
+		if assert.Len(t, rows, 1) {
+			row := rows[0]
+			if assert.Len(t, row, 2+len(helper.columnsEvalTarget)) {
+				assert.Equal(t, "1", row[0])
+				assert.Equal(t, "success", row[1])
+				assert.Equal(t, "123", row[2]) // total latency
+				assert.Equal(t, "10", row[3])  // input tokens
+			}
+		}
+	})
 }
 
 func newTestExptResultExportService(ctrl *gomock.Controller) *ExptResultExportService {
@@ -941,6 +1033,7 @@ func TestNewExptResultExportService(t *testing.T) {
 	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
 	mockBenefit := benefitMocks.NewMockIBenefitService(ctrl)
 	urlProcessor := NewDefaultURLProcessor()
+	mockEvalSetItemSvc := svcMocks.NewMockEvaluationSetItemService(ctrl)
 	svc := NewExptResultExportService(
 		mockTxDB,
 		mockRepo,
@@ -952,6 +1045,7 @@ func TestNewExptResultExportService(t *testing.T) {
 		mockConfiger,
 		mockBenefit,
 		urlProcessor,
+		mockEvalSetItemSvc,
 	)
 
 	impl, ok := svc.(*ExptResultExportService)
@@ -986,6 +1080,9 @@ func TestNewExptResultExportService(t *testing.T) {
 	}
 	if impl.benefitService != mockBenefit {
 		t.Errorf("benefit not set correctly")
+	}
+	if impl.evalSetItemSvc != mockEvalSetItemSvc {
+		t.Errorf("evalSetItemSvc not set correctly")
 	}
 }
 
@@ -1041,7 +1138,9 @@ func Test_itemRunStateToString(t *testing.T) {
 	}
 }
 
-func Test_geDatasetCellOrActualOutputData(t *testing.T) {
+func Test_toContentStr(t *testing.T) {
+	ctx := context.Background()
+	ins := &exportCSVHelper{}
 	// 测试用例：覆盖所有内容类型和边界情况,sss
 	tests := []struct {
 		name     string
@@ -1129,7 +1228,7 @@ func Test_geDatasetCellOrActualOutputData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := geDatasetCellOrActualOutputData(tt.input)
+			result, _ := ins.toContentStr(ctx, tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

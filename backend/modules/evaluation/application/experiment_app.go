@@ -47,8 +47,7 @@ type IExperimentApplication interface {
 }
 
 type experimentApplication struct {
-	idgen idgen.IIDGenerator
-	// tupleSvc  service.IExptTupleService
+	idgen         idgen.IIDGenerator
 	manager       service.IExptManager
 	resultSvc     service.ExptResultService
 	configer      component.IConfiger
@@ -89,9 +88,8 @@ func NewExperimentApplication(
 	evaluatorService service.EvaluatorService,
 ) IExperimentApplication {
 	return &experimentApplication{
-		resultSvc: resultSvc,
-		manager:   manager,
-		// tupleSvc:                 tupleSvc,
+		resultSvc:                   resultSvc,
+		manager:                     manager,
 		idgen:                       idgen,
 		configer:                    configer,
 		ExptAggrResultService:       aggResultSvc,
@@ -137,6 +135,14 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	logs.CtxInfo(ctx, "SubmitExperiment req: %v", json.Jsonify(req))
 	if hasDuplicates(req.EvaluatorVersionIds) {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
+	}
+
+	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
 	}
 
 	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
@@ -1265,6 +1271,7 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
+
 	recordID, err := e.CreateAnalysisRecord(ctx, &entity.ExptInsightAnalysisRecord{
 		SpaceID:   req.GetWorkspaceID(),
 		ExptID:    req.GetExptID(),
@@ -1287,7 +1294,6 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
 		}
 	}
-
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,
@@ -1296,6 +1302,9 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
+
+	// First record contains the upvote/downvote count info for display purpose,
+	// Other records' feedback is not necessary for this list api
 	records, total, err := e.ListAnalysisRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())), session)
 	if err != nil {
 		return nil, err
@@ -1433,5 +1442,33 @@ func (e *experimentApplication) ListExptInsightAnalysisComment(ctx context.Conte
 		ExptInsightAnalysisFeedbackComments: dtos,
 		Total:                               ptr.Of(total),
 		BaseResp:                            base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	vote, err := e.GetAnalysisRecordFeedbackVoteByUser(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.GetAnalysisRecordFeedbackVoteResponse{
+		Vote:     experiment.ExptInsightAnalysisFeedbackVoteDO2DTO(vote),
+		BaseResp: base.NewBaseResp(),
 	}, nil
 }

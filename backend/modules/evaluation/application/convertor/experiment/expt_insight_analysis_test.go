@@ -463,3 +463,75 @@ func TestExptInsightAnalysisFeedbackCommentDO2DTO_EdgeCases(t *testing.T) {
 		assert.Equal(t, "", result.Content)
 	})
 }
+
+// 新增：ExptInsightAnalysisFeedbackVoteDO2DTO 的单测
+func TestExptInsightAnalysisFeedbackVoteDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		do       *entity.ExptInsightAnalysisFeedbackVote
+		expected *domain_expt.ExptInsightAnalysisFeedbackVote
+	}{
+		{"nil input", nil, nil},
+		{
+			name: "upvote",
+			do: &entity.ExptInsightAnalysisFeedbackVote{
+				ID:       1,
+				VoteType: entity.Upvote,
+			},
+			expected: &domain_expt.ExptInsightAnalysisFeedbackVote{
+				ID:                 ptr.Of(int64(1)),
+				FeedbackActionType: ptr.Of(domain_expt.FeedbackActionTypeUpvote),
+			},
+		},
+		{
+			name: "downvote",
+			do:   &entity.ExptInsightAnalysisFeedbackVote{ID: 2, VoteType: entity.Downvote},
+			expected: &domain_expt.ExptInsightAnalysisFeedbackVote{
+				ID:                 ptr.Of(int64(2)),
+				FeedbackActionType: ptr.Of(domain_expt.FeedbackActionTypeDownvote),
+			},
+		},
+		{
+			name:     "none returns nil",
+			do:       &entity.ExptInsightAnalysisFeedbackVote{ID: 3, VoteType: entity.None},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expected, ExptInsightAnalysisFeedbackVoteDO2DTO(tt.do))
+		})
+	}
+}
+
+// 新增：expt_insight_analysis.go:36 的方法测试
+func TestAnalysisReportIndex2DTO(t *testing.T) {
+	t.Run("nil input returns nil", func(t *testing.T) {
+		var in []*entity.InsightAnalysisReportIndex
+		out := AnalysisReportIndex2DTO(in)
+		assert.Nil(t, out)
+	})
+
+	t.Run("empty slice returns nil", func(t *testing.T) {
+		out := AnalysisReportIndex2DTO([]*entity.InsightAnalysisReportIndex{})
+		assert.Nil(t, out)
+	})
+
+	t.Run("convert multiple items", func(t *testing.T) {
+		in := []*entity.InsightAnalysisReportIndex{
+			{ID: "a1", Title: "Alpha"},
+			{ID: "b2", Title: "Beta"},
+		}
+		out := AnalysisReportIndex2DTO(in)
+		expected := []*domain_expt.ExptInsightAnalysisIndex{
+			{ID: ptr.Of("a1"), Title: ptr.Of("Alpha")},
+			{ID: ptr.Of("b2"), Title: ptr.Of("Beta")},
+		}
+		assert.Equal(t, expected, out)
+	})
+}

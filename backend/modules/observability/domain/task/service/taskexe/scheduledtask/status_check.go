@@ -355,6 +355,7 @@ func (t *StatusCheckTask) listRecentTasks(ctx context.Context) ([]*entity.Observ
 						Values: []string{
 							string(entity.TaskStatusSuccess),
 							string(entity.TaskStatusDisabled),
+							string(entity.TaskStatusFailed),
 						},
 						QueryType: ptr.Of(entity.QueryTypeIn),
 						FieldType: ptr.Of(entity.FieldTypeString),

@@ -12,6 +12,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func convert2DatasetOrderBys(ctx context.Context, orderBys []*entity.OrderBy) (datasetOrderBys []*dataset.OrderBy) {
@@ -226,8 +228,33 @@ func convert2EvaluationSetFieldSchema(ctx context.Context, schema *dataset.Field
 		MultiModelSpec:       convert2EvaluationSetMultiModalSpec(ctx, schema.MultiModelSpec),
 		TextSchema:           gptr.Indirect(schema.TextSchema),
 		Hidden:               gptr.Indirect(schema.Hidden),
+		SchemaKey:            toSchemaKey(schema.SchemaKey),
 	}
 	return fieldSchema
+}
+
+func toSchemaKey(key *dataset.SchemaKey) *entity.SchemaKey {
+	if key == nil {
+		return nil
+	}
+	switch *key {
+	case dataset.SchemaKey_String:
+		return gptr.Of(entity.SchemaKey_String)
+	case dataset.SchemaKey_Integer:
+		return gptr.Of(entity.SchemaKey_Integer)
+	case dataset.SchemaKey_Float:
+		return gptr.Of(entity.SchemaKey_Float)
+	case dataset.SchemaKey_Bool:
+		return gptr.Of(entity.SchemaKey_Bool)
+	case dataset.SchemaKey_Message:
+		return gptr.Of(entity.SchemaKey_Message)
+	case dataset.SchemaKey_SingleChoice:
+		return gptr.Of(entity.SchemaKey_SingleChoice)
+	case dataset.SchemaKey_Trajectory:
+		return gptr.Of(entity.SchemaKey_Trajectory)
+	default:
+		return nil
+	}
 }
 
 func convert2EvaluationSetSchema(ctx context.Context, schema *dataset.DatasetSchema) (datasetSchema *entity.EvaluationSetSchema) {
@@ -524,17 +551,21 @@ func convertStorageProvider(provider *dataset.StorageProvider) *entity.StoragePr
 	return &entityProvider
 }
 
-func convert2EvaluationSetTurn(ctx context.Context, data []*dataset.FieldData) (turns []*entity.Turn) {
+func convert2EvaluationSetTurn(ctx context.Context, item *dataset.DatasetItem) (turns []*entity.Turn) {
+	data := item.Data
 	if len(data) == 0 {
 		return nil
 	}
 	turn := &entity.Turn{
 		FieldDataList: make([]*entity.FieldData, 0),
+		ItemID:        gptr.Indirect(item.ItemID),
+		EvalSetID:     item.GetDatasetID(),
 	}
 	for _, e := range data {
 		turn.FieldDataList = append(turn.FieldDataList, convert2EvaluationSetFieldData(ctx, e))
 	}
 	turns = append(turns, turn)
+	logs.CtxInfo(ctx, "conv turn from item: %v", json.Jsonify(item))
 	return turns
 }
 
@@ -550,7 +581,7 @@ func convert2EvaluationSetItem(ctx context.Context, item *dataset.DatasetItem) (
 		SchemaID:        gptr.Indirect(item.SchemaID),
 		ItemID:          gptr.Indirect(item.ItemID),
 		ItemKey:         gptr.Indirect(item.ItemKey),
-		Turns:           convert2EvaluationSetTurn(ctx, item.Data),
+		Turns:           convert2EvaluationSetTurn(ctx, item),
 		BaseInfo: &entity.BaseInfo{
 			CreatedAt: item.CreatedAt,
 			UpdatedAt: item.UpdatedAt,

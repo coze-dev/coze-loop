@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/rpcerror"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/samber/lo"
 )
@@ -215,6 +216,8 @@ func (d *EvaluationSetProvider) AddDatasetItems(ctx context.Context, datasetID i
 			logs.CtxError(ctx, "BatchCreateEvaluationSetItems failed, workspace_id=%d, dataset_id=%d, batch=%d-%d, err=%v", workspaceID, datasetID, i, end-1, err)
 			return successItems, errorGroups, rpcerror.UnwrapRPCError(err)
 		}
+		logs.CtxInfo(ctx, "BatchCreateEvaluationSetItems success, batch %d-%d. resp=%v.",
+			i, end-1, json.MarshalStringIgnoreErr(resp))
 
 		// 处理成功的items
 		for batchSpecificIndex, itemID := range resp.GetAddedItems() {
@@ -315,6 +318,7 @@ func fieldSchemaDO2DTO(fs entity.FieldSchema) *eval_set_domain.FieldSchema {
 		Name:                 &fs.Name,
 		Description:          &fs.Description,
 		ContentType:          &contentType,
+		SchemaKey:            lo.ToPtr(dataset_domain.SchemaKey(fs.SchemaKey)),
 		TextSchema:           &fs.TextSchema,
 		DefaultDisplayFormat: defaultDisplayFormat,
 	}

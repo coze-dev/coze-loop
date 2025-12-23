@@ -27,6 +27,12 @@ import (
 
 const (
 	TraceStorageTypeCK = "ck"
+
+	// 人工标注标签
+	AnnotationManualFeedbackFieldPrefix = "manual_feedback_"
+
+	// 人工标注标签类型
+	AnnotationManualFeedbackType = "manual_feedback"
 )
 
 func NewSpansCkDaoImpl(db ck.Provider) (dao.ISpansDao, error) {
@@ -73,6 +79,12 @@ func (s *SpansCkDaoImpl) Get(ctx context.Context, param *dao.QueryParam) ([]*dao
 	spans := make([]*model.ObservabilitySpan, 0)
 	if err := sql.Find(&spans).Error; err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
+	}
+	for _, span := range spans {
+		if span.SystemTagsString == nil {
+			span.SystemTagsString = make(map[string]string)
+		}
+		span.SystemTagsString[loop_span.SpanFieldTenant] = "cozeloop" // tenant
 	}
 	return convertor.SpanListCKModels2PO(spans), nil
 }
@@ -170,11 +182,27 @@ func (s *SpansCkDaoImpl) formatAggregationExpression(ctx context.Context, dimens
 	return fmt.Sprintf(dimension.Expression.Expression, replacements...), nil
 }
 
+type buildSqlParam struct {
+	spanTable     string
+	annoTable     string
+	queryParam    *dao.QueryParam
+	db            *gorm.DB
+	selectColumns []string
+	omitColumns   []string
+}
+
 func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *dao.QueryParam) (*gorm.DB, error) {
 	db := s.newSession(ctx)
 	var tableQueries []*gorm.DB
 	for _, table := range param.Tables {
-		query, err := s.buildSingleSql(ctx, db, table, param)
+		query, err := s.buildSingleSql(ctx, &buildSqlParam{
+			spanTable:     table,
+			annoTable:     param.AnnoTableMap[table],
+			queryParam:    param,
+			db:            db,
+			selectColumns: param.SelectColumns,
+			omitColumns:   param.OmitColumns,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -203,43 +231,43 @@ func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *dao.QueryParam) (*
 	}
 }
 
-func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, db *gorm.DB, tableName string, param *dao.QueryParam) (*gorm.DB, error) {
-	sqlQuery, err := s.buildSqlForFilterFields(ctx, db, param.Filters)
+func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, param *buildSqlParam) (*gorm.DB, error) {
+	sqlQuery, err := s.buildSqlForFilterFields(ctx, param, param.queryParam.Filters)
 	if err != nil {
 		return nil, err
 	}
 	queryColumns := lo.Ternary(
-		len(param.SelectColumns) == 0,
-		getColumnStr(spanColumns, param.OmitColumns),
-		getColumnStr(param.SelectColumns, param.OmitColumns),
+		len(param.selectColumns) == 0,
+		getColumnStr(spanColumns, param.omitColumns),
+		getColumnStr(param.selectColumns, param.omitColumns),
 	)
-	sqlQuery = db.
-		Table(tableName).Select(queryColumns).
+	sqlQuery = param.db.
+		Table(param.spanTable).Select(queryColumns).
 		Where(sqlQuery).
-		Where("start_time >= ?", param.StartTime).
-		Where("start_time <= ?", param.EndTime)
-	if param.OrderByStartTime {
+		Where("start_time >= ?", param.queryParam.StartTime).
+		Where("start_time <= ?", param.queryParam.EndTime)
+	if param.queryParam.OrderByStartTime {
 		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
 			{Column: clause.Column{Name: "start_time"}, Desc: true},
 			{Column: clause.Column{Name: "span_id"}, Desc: true},
 		}})
 	}
-	sqlQuery = sqlQuery.Limit(int(param.Limit))
+	sqlQuery = sqlQuery.Limit(int(param.queryParam.Limit))
 	return sqlQuery, nil
 }
 
 // chain
-func (s *SpansCkDaoImpl) buildSqlForFilterFields(ctx context.Context, db *gorm.DB, filter *loop_span.FilterFields) (*gorm.DB, error) {
+func (s *SpansCkDaoImpl) buildSqlForFilterFields(ctx context.Context, param *buildSqlParam, filter *loop_span.FilterFields) (*gorm.DB, error) {
 	if filter == nil {
-		return db, nil
+		return param.db, nil
 	}
-	queryChain := db
+	queryChain := param.db
 	if filter.QueryAndOr != nil && *filter.QueryAndOr == loop_span.QueryAndOrEnumOr {
 		for _, subFilter := range filter.FilterFields {
 			if subFilter == nil {
 				continue
 			}
-			subSql, err := s.buildSqlForFilterField(ctx, db, subFilter)
+			subSql, err := s.buildSqlForFilterField(ctx, param, subFilter)
 			if err != nil {
 				return nil, err
 			}
@@ -250,7 +278,7 @@ func (s *SpansCkDaoImpl) buildSqlForFilterFields(ctx context.Context, db *gorm.D
 			if subFilter == nil {
 				continue
 			}
-			subSql, err := s.buildSqlForFilterField(ctx, db, subFilter)
+			subSql, err := s.buildSqlForFilterField(ctx, param, subFilter)
 			if err != nil {
 				return nil, err
 			}
@@ -260,89 +288,32 @@ func (s *SpansCkDaoImpl) buildSqlForFilterFields(ctx context.Context, db *gorm.D
 	return queryChain, nil
 }
 
-func (s *SpansCkDaoImpl) buildSqlForFilterField(ctx context.Context, db *gorm.DB, filter *loop_span.FilterField) (*gorm.DB, error) {
-	queryChain := db
-	if filter.FieldName != "" {
-		if filter.QueryType == nil {
-			return nil, fmt.Errorf("query type is required, not supposed to be here")
+func (s *SpansCkDaoImpl) buildSqlForFilterField(ctx context.Context, param *buildSqlParam, filter *loop_span.FilterField) (*gorm.DB, error) {
+	queryChain := param.db
+	if s.isAnnotationFilter(filter.FieldName) {
+		annoSql, err := s.buildAnnotationSql(ctx, param, filter)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build annotation sql: %v", err)
 		}
+		queryChain = queryChain.Where(annoSql)
+	} else if filter.FieldName != "" {
 		fieldName, err := s.convertFieldName(ctx, filter)
 		if err != nil {
 			return nil, err
 		}
-		fieldValues, err := convertFieldValue(filter)
+		sql, err := s.buildFieldCondition(ctx, param.db, &loop_span.FilterField{
+			FieldName: fieldName,
+			FieldType: filter.FieldType,
+			Values:    filter.Values,
+			QueryType: filter.QueryType,
+		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to build field condition: %v", err)
 		}
-		switch *filter.QueryType {
-		case loop_span.QueryTypeEnumMatch:
-			if len(fieldValues) != 1 {
-				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s like ?", fieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
-		case loop_span.QueryTypeEnumNotMatch:
-			if len(fieldValues) != 1 {
-				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s NOT like ?", fieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
-		case loop_span.QueryTypeEnumEq:
-			if len(fieldValues) != 1 {
-				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s = ?", fieldName), fieldValues[0])
-		case loop_span.QueryTypeEnumNotEq:
-			if len(fieldValues) != 1 {
-				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s != ?", fieldName), fieldValues[0])
-		case loop_span.QueryTypeEnumLte:
-			if len(fieldValues) != 1 {
-				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s <= ?", fieldName), fieldValues[0])
-		case loop_span.QueryTypeEnumGte:
-			if len(fieldValues) != 1 {
-				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s >= ?", fieldName), fieldValues[0])
-		case loop_span.QueryTypeEnumLt:
-			if len(fieldValues) != 1 {
-				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s < ?", fieldName), fieldValues[0])
-		case loop_span.QueryTypeEnumGt:
-			if len(fieldValues) != 1 {
-				return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s > ?", fieldName), fieldValues[0])
-		case loop_span.QueryTypeEnumExist:
-			defaultVal := getFieldDefaultValue(filter)
-			queryChain = queryChain.
-				Where(fmt.Sprintf("%s IS NOT NULL", fieldName)).
-				Where(fmt.Sprintf("%s != ?", fieldName), defaultVal)
-		case loop_span.QueryTypeEnumNotExist:
-			defaultVal := getFieldDefaultValue(filter)
-			queryChain = queryChain.
-				Where(fmt.Sprintf("%s IS NULL", fieldName)).
-				Or(fmt.Sprintf("%s = ?", fieldName), defaultVal)
-		case loop_span.QueryTypeEnumIn:
-			if len(fieldValues) < 1 {
-				return nil, fmt.Errorf("filter field %s should have at least one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s IN (?)", fieldName), fieldValues)
-		case loop_span.QueryTypeEnumNotIn:
-			if len(fieldValues) < 1 {
-				return nil, fmt.Errorf("filter field %s should have at least one value", filter.FieldName)
-			}
-			queryChain = queryChain.Where(fmt.Sprintf("%s NOT IN (?)", fieldName), fieldValues)
-		case loop_span.QueryTypeEnumAlwaysTrue:
-			queryChain = queryChain.Where("1 = 1")
-		default:
-			return nil, fmt.Errorf("filter field type %s not supported", filter.FieldType)
-		}
+		queryChain = queryChain.Where(sql)
 	}
 	if filter.SubFilter != nil {
-		subQuery, err := s.buildSqlForFilterFields(ctx, db, filter.SubFilter)
+		subQuery, err := s.buildSqlForFilterFields(ctx, param, filter.SubFilter)
 		if err != nil {
 			return nil, err
 		}
@@ -353,6 +324,154 @@ func (s *SpansCkDaoImpl) buildSqlForFilterField(ctx context.Context, db *gorm.DB
 		}
 	}
 	return queryChain, nil
+}
+
+func (s *SpansCkDaoImpl) buildFieldCondition(ctx context.Context, db *gorm.DB, filter *loop_span.FilterField) (*gorm.DB, error) {
+	queryChain := db
+	if filter.QueryType == nil {
+		return nil, fmt.Errorf("query type is required, not supposed to be here")
+	}
+	fieldValues, err := convertFieldValue(filter)
+	if err != nil {
+		return nil, err
+	}
+	switch *filter.QueryType {
+	case loop_span.QueryTypeEnumMatch:
+		if len(fieldValues) != 1 {
+			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s like ?", filter.FieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
+	case loop_span.QueryTypeEnumNotMatch:
+		if len(fieldValues) != 1 {
+			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s NOT like ?", filter.FieldName), fmt.Sprintf("%%%v%%", fieldValues[0]))
+	case loop_span.QueryTypeEnumEq:
+		if len(fieldValues) != 1 {
+			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s = ?", filter.FieldName), fieldValues[0])
+	case loop_span.QueryTypeEnumNotEq:
+		if len(fieldValues) != 1 {
+			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s != ?", filter.FieldName), fieldValues[0])
+	case loop_span.QueryTypeEnumLte:
+		if len(fieldValues) != 1 {
+			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s <= ?", filter.FieldName), fieldValues[0])
+	case loop_span.QueryTypeEnumGte:
+		if len(fieldValues) != 1 {
+			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s >= ?", filter.FieldName), fieldValues[0])
+	case loop_span.QueryTypeEnumLt:
+		if len(fieldValues) != 1 {
+			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s < ?", filter.FieldName), fieldValues[0])
+	case loop_span.QueryTypeEnumGt:
+		if len(fieldValues) != 1 {
+			return nil, fmt.Errorf("filter field %s should have one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s > ?", filter.FieldName), fieldValues[0])
+	case loop_span.QueryTypeEnumExist:
+		defaultVal := getFieldDefaultValue(filter)
+		queryChain = queryChain.
+			Where(fmt.Sprintf("%s IS NOT NULL", filter.FieldName)).
+			Where(fmt.Sprintf("%s != ?", filter.FieldName), defaultVal)
+	case loop_span.QueryTypeEnumNotExist:
+		defaultVal := getFieldDefaultValue(filter)
+		queryChain = queryChain.
+			Where(fmt.Sprintf("%s IS NULL", filter.FieldName)).
+			Or(fmt.Sprintf("%s = ?", filter.FieldName), defaultVal)
+	case loop_span.QueryTypeEnumIn:
+		if len(fieldValues) < 1 {
+			return nil, fmt.Errorf("filter field %s should have at least one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s IN (?)", filter.FieldName), fieldValues)
+	case loop_span.QueryTypeEnumNotIn:
+		if len(fieldValues) < 1 {
+			return nil, fmt.Errorf("filter field %s should have at least one value", filter.FieldName)
+		}
+		queryChain = queryChain.Where(fmt.Sprintf("%s NOT IN (?)", filter.FieldName), fieldValues)
+	case loop_span.QueryTypeEnumAlwaysTrue:
+		queryChain = queryChain.Where("1 = 1")
+	default:
+		return nil, fmt.Errorf("filter field type %s not supported", filter.FieldType)
+	}
+	return queryChain, nil
+}
+
+func (s *SpansCkDaoImpl) isAnnotationFilter(fieldName string) bool {
+	if strings.HasPrefix(fieldName, AnnotationManualFeedbackFieldPrefix) {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (s *SpansCkDaoImpl) buildAnnotationSql(ctx context.Context, param *buildSqlParam, filter *loop_span.FilterField) (*gorm.DB, error) {
+	queryChain := param.db
+	fieldName := filter.FieldName
+	if strings.HasPrefix(fieldName, AnnotationManualFeedbackFieldPrefix) {
+		// manual_feedback_{tag_key_id}
+		tagKeyId := fieldName[len(AnnotationManualFeedbackFieldPrefix):]
+		if tagKeyId == "" {
+			return nil, fmt.Errorf("invalid manual feedback field name %s", fieldName)
+		}
+		queryChain = queryChain.
+			Where("annotation_type = ?", AnnotationManualFeedbackType).
+			Where("key = ?", tagKeyId)
+	} else {
+		return nil, fmt.Errorf("field name %s not supported for annotation, not supposed to be here", fieldName)
+	}
+	if filter.QueryType != nil && *filter.QueryType != loop_span.QueryTypeEnumExist {
+		condition := &loop_span.FilterField{
+			FieldType: filter.FieldType,
+			Values:    filter.Values,
+			QueryType: filter.QueryType,
+		}
+		switch filter.FieldType {
+		case loop_span.FieldTypeString:
+			condition.FieldName = "value_string"
+		case loop_span.FieldTypeLong:
+			condition.FieldName = "value_long"
+		case loop_span.FieldTypeDouble:
+			condition.FieldName = "value_float"
+		case loop_span.FieldTypeBool:
+			condition.FieldName = "value_bool"
+		default:
+			return nil, fmt.Errorf("field type %s not supported", filter.FieldType)
+		}
+		fieldSql, err := s.buildFieldCondition(ctx, param.db, condition)
+		if err != nil {
+			return nil, err
+		}
+		queryChain = queryChain.Where(fieldSql)
+	}
+	_ = param.queryParam.Filters.Traverse(func(f *loop_span.FilterField) error {
+		if f.FieldName == loop_span.SpanFieldSpaceId {
+			commonSql, err := s.buildFieldCondition(ctx, param.db, f)
+			if err != nil {
+				return err
+			}
+			queryChain = queryChain.Where(commonSql)
+		}
+		return nil
+	})
+	subsql := param.db.
+		Table(param.annoTable).
+		Select("span_id").
+		Where(queryChain).
+		Where("deleted_at = 0").
+		Where("start_time >= ?", param.queryParam.StartTime).
+		Where("start_time <= ?", param.queryParam.EndTime)
+	query := subsql.ToSQL(func(tx *gorm.DB) *gorm.DB {
+		return tx.Find(nil)
+	})
+	return param.db.Where("span_id in (?)", param.db.Raw(query+" SETTINGS final = 1")), nil
 }
 
 func (s *SpansCkDaoImpl) getSuperFieldsMap(ctx context.Context) map[string]bool {
@@ -396,11 +515,23 @@ func (s *SpansCkDaoImpl) convertFieldName(ctx context.Context, filter *loop_span
 	}
 	switch filter.FieldType {
 	case loop_span.FieldTypeString:
-		return fmt.Sprintf("tags_string['%s']", filter.FieldName), nil
+		if filter.IsSystem {
+			return fmt.Sprintf("system_tags_string['%s']", filter.FieldName), nil
+		} else {
+			return fmt.Sprintf("tags_string['%s']", filter.FieldName), nil
+		}
 	case loop_span.FieldTypeLong:
-		return fmt.Sprintf("tags_long['%s']", filter.FieldName), nil
+		if filter.IsSystem {
+			return fmt.Sprintf("system_tags_long['%s']", filter.FieldName), nil
+		} else {
+			return fmt.Sprintf("tags_long['%s']", filter.FieldName), nil
+		}
 	case loop_span.FieldTypeDouble:
-		return fmt.Sprintf("tags_float['%s']", filter.FieldName), nil
+		if filter.IsSystem {
+			return fmt.Sprintf("system_tags_double['%s']", filter.FieldName), nil
+		} else {
+			return fmt.Sprintf("tags_float['%s']", filter.FieldName), nil
+		}
 	case loop_span.FieldTypeBool:
 		return fmt.Sprintf("tags_bool['%s']", filter.FieldName), nil
 	default: // not expected to be here
@@ -516,6 +647,12 @@ var spanColumns = []string{
 	"logic_delete_date",
 }
 
+var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
+
+func isSafeColumnName(name string) bool {
+	return validColumnRegex.MatchString(name)
+}
+
 var defSuperFieldsMap = map[string]bool{
 	loop_span.SpanFieldStartTime:       true,
 	loop_span.SpanFieldSpanId:          true,
@@ -534,12 +671,6 @@ var defSuperFieldsMap = map[string]bool{
 	loop_span.SpanFieldOutput:          true,
 	loop_span.SpanFieldObjectStorage:   true,
 	loop_span.SpanFieldLogicDeleteDate: true,
-}
-
-var validColumnRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_.]*$`)
-
-func isSafeColumnName(name string) bool {
-	return validColumnRegex.MatchString(name)
 }
 
 func getTimeInterval(granularity metrics_entity.MetricGranularity) string {

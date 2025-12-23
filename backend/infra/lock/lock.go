@@ -84,6 +84,8 @@ func (r *redisLocker) LockWithRenew(parent context.Context, key string, ttl time
 		return locked, parent, nop, err
 	}
 
+	logs.CtxInfo(parent, "LockWithRenew lock %s success", key)
+
 	ctx, cancel = context.WithCancel(parent)
 	goroutine.Go(parent, func() {
 		defer cancel()
@@ -143,8 +145,7 @@ func (r *redisLocker) Unlock(key string) (bool, error) {
 
 func (r *redisLocker) renewLock(ctx context.Context, key string, ttl time.Duration, maxHold time.Duration) {
 	t1 := time.After(maxHold)
-	t2 := time.NewTicker(gvalue.Max(time.Second, ttl-100*time.Millisecond))
-	retry := 0
+	t2 := time.NewTicker(gvalue.Max(time.Second, ttl>>2))
 	unlock := func() {
 		if _, err := r.Unlock(key); err != nil {
 			logs.CtxWarn(ctx, "renew defer unlock failed, key=%s, err=%v", key, err)
@@ -165,19 +166,26 @@ func (r *redisLocker) renewLock(ctx context.Context, key string, ttl time.Durati
 			return
 
 		case <-t2.C:
-			ok, err := r.ExpireLockIn(key, ttl)
-			switch {
-			case err != nil:
-				if retry++; retry >= 3 { // 连续三次失败
-					logs.CtxError(ctx, "renew lock got too many errors, no more retry, key=%s, last_err=%v", key, err)
-					return
+			var renewed bool
+			bf := backoff.NewExponentialBackOff()
+			bf.InitialInterval = 20 * time.Millisecond
+			bf.MaxInterval = 100 * time.Millisecond
+			bf.MaxElapsedTime = time.Millisecond * 300
+			if err := backoff.Retry(func() error {
+				ok, err := r.ExpireLockIn(key, ttl)
+				if err != nil {
+					return err
 				}
-				logs.CtxWarn(ctx, "renew lock got error, will retry, key=%s, err=%v", key, err)
-			case !ok:
-				logs.CtxInfo(ctx, "renew lock got non-ok, exiting, key=%s", key)
-				return // 锁被强占，退出。
-			case ok:
-				retry = 0 // 重置
+				logs.CtxInfo(ctx, "renew lock success, key=%v", key)
+				renewed = ok
+				return nil
+			}, bf); err != nil {
+				logs.CtxError(ctx, "renew lock fail, key=%s, err=%v", key, err)
+				return
+			}
+			if !renewed {
+				logs.CtxInfo(ctx, "renew lock fail, mutex has been released, key=%s", key)
+				return
 			}
 		}
 	}

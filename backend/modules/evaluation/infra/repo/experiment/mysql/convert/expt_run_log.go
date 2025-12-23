@@ -63,6 +63,7 @@ func (ExptTurnResultRunLogConvertor) PO2DO(log *model.ExptTurnResultRunLog) (*en
 		TargetResultID:     log.TargetResultID,
 		EvaluatorResultIds: evalResIDs,
 		ErrMsg:             conv.UnsafeBytesToString(gptr.Indirect(log.ErrMsg)),
+		UpdatedAt:          log.UpdatedAt,
 	}, nil
 }
 

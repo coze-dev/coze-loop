@@ -4,6 +4,7 @@ include "../../../base.thrift"
 include "domain/eval_set.thrift"
 include "domain/common.thrift"
 include "../data/domain/dataset.thrift"
+include "../data/domain/dataset_job.thrift"
 
 struct CreateEvaluationSetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
@@ -21,6 +22,51 @@ struct CreateEvaluationSetResponse {
     1: optional i64 evaluation_set_id (api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
     255: base.BaseResp BaseResp
+}
+
+struct CreateEvaluationSetWithImportRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+
+    2: optional string name (vt.min_size = "1", vt.max_size = "255"),
+    3: optional string description (vt.max_size = "2048"),
+    4: optional eval_set.EvaluationSetSchema evaluation_set_schema,
+    5: optional eval_set.BizCategory biz_category (vt.max_size = "128") // 业务分类
+
+    6: optional dataset_job.SourceType source_type (vt.defined_only = "true")
+    7: required dataset_job.DatasetIOEndpoint source
+    8: optional list<dataset_job.FieldMapping> fieldMappings (vt.min_size = "1", vt.elem.skip = "false")
+
+    200: optional common.Session session (api.none = 'true')
+    255: optional base.Base Base
+}
+
+struct CreateEvaluationSetWithImportResponse {
+    1: optional i64 evaluation_set_id (api.js_conv="true", go.tag='json:"evaluation_set_id"'),
+    2: optional i64 job_id (api.js_conv="true", go.tag='json:"job_id"')
+
+    255: base.BaseResp BaseResp
+}
+
+struct ParseImportSourceFileRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+    2: optional dataset_job.DatasetIOFile file (vt.not_nil = "true")                // 如果 path 为文件夹，此处只默认解析当前路径级别下所有指定类型的文件，不嵌套解析
+
+    255: optional base.Base base
+}
+
+struct ParseImportSourceFileResponse {
+    1: optional i64 bytes (api.js_conv="true", go.tag='json:"bytes"')       // 文件大小，单位为 byte
+    10: optional list<eval_set.FieldSchema> field_schemas,        // 数据集字段约束
+    3: optional list<ConflictField> conflicts         // 冲突详情。key: 列名，val：冲突详情
+    4: optional list<string> files_with_ambiguous_column // 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况
+
+    /*base*/
+    255: optional base.BaseResp baseResp
+}
+
+struct ConflictField {
+    1: optional string field_name                           // 存在冲突的列名
+    2: optional map<string, eval_set.FieldSchema> detail_m // 冲突详情。key: 文件名，val：该文件中包含的类型
 }
 
 struct UpdateEvaluationSetRequest {
@@ -301,6 +347,22 @@ struct ClearEvaluationSetDraftItemResponse {
     255: base.BaseResp BaseResp
 }
 
+struct GetEvaluationSetItemFieldRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
+    2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
+    3: required i64 item_pk (api.path='item_pk',api.js_conv='true', go.tag='json:"item_pk"'), // item 的主键ID，即 item.ID 这一字段
+    5: required string field_name // 列名
+    6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
+
+    255: optional base.Base Base
+}
+
+struct GetEvaluationSetItemFieldResponse {
+    1: optional eval_set.FieldData field_data
+
+    255: optional base.BaseResp BaseResp
+}
+
 service EvaluationSetService {
     // 基本信息管理
     CreateEvaluationSetResponse CreateEvaluationSet(1: CreateEvaluationSetRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets")
@@ -308,6 +370,8 @@ service EvaluationSetService {
     DeleteEvaluationSetResponse DeleteEvaluationSet(1: DeleteEvaluationSetRequest req) (api.category="evaluation_set", api.delete = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id"),
     GetEvaluationSetResponse GetEvaluationSet(1: GetEvaluationSetRequest req) (api.category="evaluation_set", api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id"),
     ListEvaluationSetsResponse ListEvaluationSets(1: ListEvaluationSetsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/list"),
+    CreateEvaluationSetWithImportResponse CreateEvaluationSetWithImport(1: CreateEvaluationSetWithImportRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/create_with_import")
+    ParseImportSourceFileResponse ParseImportSourceFile(1: ParseImportSourceFileRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/parse_import_source_file")
 
     // 版本管理
     CreateEvaluationSetVersionResponse CreateEvaluationSetVersion(1: CreateEvaluationSetVersionRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/versions"),
@@ -325,5 +389,6 @@ service EvaluationSetService {
     ListEvaluationSetItemsResponse ListEvaluationSetItems(1: ListEvaluationSetItemsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/list")
     BatchGetEvaluationSetItemsResponse BatchGetEvaluationSetItems(1: BatchGetEvaluationSetItemsRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_get")
     ClearEvaluationSetDraftItemResponse ClearEvaluationSetDraftItem(1: ClearEvaluationSetDraftItemRequest req) (api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/clear")
+    GetEvaluationSetItemFieldResponse GetEvaluationSetItemField(1: GetEvaluationSetItemFieldRequest req) (api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_pk/field")
 }
 
