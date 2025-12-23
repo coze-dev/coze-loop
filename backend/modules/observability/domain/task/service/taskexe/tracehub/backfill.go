@@ -461,7 +461,16 @@ func (h *TraceHubServiceImpl) onHandleDone(ctx context.Context, err error, sub *
 	}
 	retry++
 	if retry > backfillMaxRetryTimes {
-		logs.CtxWarn(ctx, "backfill retry exceeded maxRetries=%d, task_id=%d", backfillMaxRetryTimes, sub.t.ID)
+		logs.CtxError(ctx, "backfill retry exceeded maxRetries=%d, task_id=%d", backfillMaxRetryTimes, sub.t.ID)
+		// Set task run status to completed
+		curTaskRun := sub.tr
+		curTaskRun.RunStatus = task.RunStatusDone
+		// Update task run
+		err := h.taskRepo.UpdateTaskRun(ctx, curTaskRun)
+		if err != nil {
+			logs.CtxError(ctx, "backfill UpdateTaskRun err, taskRunID:%d, err:%v", curTaskRun.ID, err)
+			return err
+		}
 		return nil
 	}
 
