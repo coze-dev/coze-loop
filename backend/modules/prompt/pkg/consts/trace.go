@@ -26,6 +26,11 @@ const (
 )
 
 const (
+	SpanBaggagePromptKey     = "prompt_key"
+	SpanBaggagePromptVersion = "prompt_version"
+)
+
+const (
 	SpanTagCallTypePromptPlayground = "PromptPlayground"
 	SpanTagCallTypePromptDebug      = "PromptDebug"
 	SpanTagCallTypePTaaS            = "PTaaS"

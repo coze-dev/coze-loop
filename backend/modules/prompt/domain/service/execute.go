@@ -354,6 +354,10 @@ func (p *PromptServiceImpl) startSequenceSpan(ctx context.Context, prompt *entit
 			consts.SpanTagPromptVariables: trace.VariableValsToSpanPromptVariables(variableVals),
 			consts.SpanTagMessages:        trace.MessagesToSpanMessages(messages),
 		}))
+		span.SetBaggage(ctx, map[string]string{
+			consts.SpanBaggagePromptKey:     prompt.PromptKey,
+			consts.SpanBaggagePromptVersion: prompt.GetVersion(),
+		})
 	}
 	return ctx, span
 }
