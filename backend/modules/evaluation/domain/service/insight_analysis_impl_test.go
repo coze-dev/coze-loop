@@ -386,14 +386,14 @@ func TestExptInsightAnalysisServiceImpl_ListAnalysisRecord_Parallel(t *testing.T
 // 并行子测试：FeedbackExptInsightAnalysis 的多个分支
 func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *testing.T) {
 	t.Parallel()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	service, mocks := newTestInsightAnalysisService(ctrl)
-	ctx := context.Background()
 	spaceID, exptID, recordID := int64(1), int64(2), int64(3)
+	ctx := context.Background()
 	// Upvote
 	t.Run("Upvote", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Upvote, Session: &entity.Session{UserID: "u"}}
 		mocks.repo.EXPECT().CreateFeedbackVote(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, v *entity.ExptInsightAnalysisFeedbackVote, _ ...db.Option) error {
 			assert.Equal(t, entity.Upvote, v.VoteType)
@@ -405,6 +405,9 @@ func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *
 	// CancelUpvote
 	t.Run("CancelUpvote", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_CancelUpvote, Session: &entity.Session{UserID: "u"}}
 		mocks.repo.EXPECT().UpdateFeedbackVote(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, v *entity.ExptInsightAnalysisFeedbackVote, _ ...db.Option) error {
 			assert.Equal(t, entity.None, v.VoteType)
@@ -415,6 +418,9 @@ func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *
 	// CancelDownvote
 	t.Run("CancelDownvote", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_CancelDownvote, Session: &entity.Session{UserID: "u"}}
 		mocks.repo.EXPECT().UpdateFeedbackVote(gomock.Any(), gomock.Any()).Return(nil)
 		assert.NoError(t, service.FeedbackExptInsightAnalysis(ctx, param))
@@ -422,6 +428,9 @@ func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *
 	// Downvote
 	t.Run("Downvote", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Downvote, Session: &entity.Session{UserID: "u"}}
 		mocks.repo.EXPECT().CreateFeedbackVote(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, v *entity.ExptInsightAnalysisFeedbackVote, _ ...db.Option) error {
 			assert.Equal(t, entity.Downvote, v.VoteType)
@@ -432,6 +441,9 @@ func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *
 	// CreateComment
 	t.Run("CreateComment", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
 		c := "hello"
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_CreateComment, Comment: &c, Session: &entity.Session{UserID: "u"}}
 		mocks.repo.EXPECT().CreateFeedbackComment(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, cmt *entity.ExptInsightAnalysisFeedbackComment, _ ...db.Option) error {
@@ -444,6 +456,9 @@ func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *
 	// Update_Comment 参数缺失
 	t.Run("UpdateComment_MissingID", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, _ := newTestInsightAnalysisService(ctrl)
 		c := "hello"
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Update_Comment, Comment: &c, Session: &entity.Session{UserID: "u"}}
 		assert.Error(t, service.FeedbackExptInsightAnalysis(ctx, param))
@@ -451,6 +466,9 @@ func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *
 	// Update_Comment 正常
 	t.Run("UpdateComment_Success", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
 		c := "hello"
 		cid := int64(77)
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Update_Comment, Comment: &c, CommentID: &cid, Session: &entity.Session{UserID: "u"}}
@@ -460,12 +478,18 @@ func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *
 	// Delete_Comment 缺失ID
 	t.Run("DeleteComment_MissingID", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, _ := newTestInsightAnalysisService(ctrl)
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Delete_Comment, Session: &entity.Session{UserID: "u"}}
 		assert.Error(t, service.FeedbackExptInsightAnalysis(ctx, param))
 	})
 	// Delete_Comment 正常
 	t.Run("DeleteComment_Success", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, mocks := newTestInsightAnalysisService(ctrl)
 		cid := int64(88)
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Delete_Comment, CommentID: &cid, Session: &entity.Session{UserID: "u"}}
 		mocks.repo.EXPECT().DeleteFeedbackComment(gomock.Any(), int64(1), int64(2), int64(88)).Return(nil)
@@ -474,6 +498,9 @@ func TestExptInsightAnalysisServiceImpl_FeedbackExptInsightAnalysis_Parallel(t *
 	// Session 为空
 	t.Run("NilSession_Error", func(t *testing.T) {
 		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		service, _ := newTestInsightAnalysisService(ctrl)
 		param := &entity.ExptInsightAnalysisFeedbackParam{SpaceID: spaceID, ExptID: exptID, AnalysisRecordID: recordID, FeedbackActionType: entity.FeedbackActionType_Upvote}
 		assert.Error(t, service.FeedbackExptInsightAnalysis(ctx, param))
 	})
