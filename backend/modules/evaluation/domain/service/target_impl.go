@@ -254,6 +254,20 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 					Message: err.Error(),
 				}
 			}
+		} else {
+			if evalTargetDO.EvalTargetType.SupptTrajectory() {
+				time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(spaceID))
+				trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
+				if err != nil {
+					logs.CtxError(ctx, "ExtractTrajectory fail, space_id: %v, target_id: %v, target_version_id: %v, trace_id: %v, err: %v",
+						spaceID, targetID, targetVersionID, span.GetTraceID(), err)
+				} else {
+					if outputData.OutputFields == nil {
+						outputData.OutputFields = make(map[string]*entity.Content)
+					}
+					outputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
+				}
+			}
 		}
 
 		userIDInContext := session.UserIDInCtxOrEmpty(ctx)
@@ -283,17 +297,6 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			return
 		}
 		logID := logs.GetLogID(ctx)
-
-		if evalTargetDO.EvalTargetType.SupptTrajectory() {
-			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(spaceID))
-			trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
-			if err != nil {
-				logs.CtxError(ctx, "ExtractTrajectory fail, space_id: %v, target_id: %v, target_version_id: %v, trace_id: %v, err: %v",
-					spaceID, targetID, targetVersionID, span.GetTraceID(), err)
-			} else {
-				outputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
-			}
-		}
 
 		record = &entity.EvalTargetRecord{
 			ID:                   recordID,

@@ -148,7 +148,7 @@ type TargetTrajectoryConf struct {
 }
 
 func (t *TargetTrajectoryConf) GetExtractInterval(spaceID int64) time.Duration {
-	const defaultInterval = time.Second * 10
+	const defaultInterval = time.Second * 15
 	if t == nil {
 		return defaultInterval
 	}
