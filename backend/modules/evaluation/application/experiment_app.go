@@ -137,6 +137,14 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
 	}
 
+	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
 	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
 	evalVersionIDs, err := e.resolveEvaluatorVersionIDs(ctx, req)
 	if err != nil {

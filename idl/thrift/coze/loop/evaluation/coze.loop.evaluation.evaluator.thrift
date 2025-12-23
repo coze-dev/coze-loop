@@ -516,7 +516,7 @@ service EvaluatorService {
     DebugBuiltinEvaluatorResponse DebugBuiltinEvaluator(1: DebugBuiltinEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug_builtin")// 调试预置评估器
 
     // 更新预置评估器tag
-    UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req) (api.patch="/api/evaluation/v1/evaluators/:evaluator_id/update_builtin_tags")// 更新预置评估器
+    UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req)
     // 查询Tag
     ListEvaluatorTagsResponse ListEvaluatorTags(1: ListEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/list_tags")
 
