@@ -127,6 +127,27 @@ func (l *LocalOpenAPIService) ListSpansOApi(ctx context.Context, req *openapi.Li
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalOpenAPIService) ListPreSpanOApi(ctx context.Context, req *openapi.ListPreSpanOApiRequest, callOptions ...callopt.Option) (*openapi.ListPreSpanOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceListPreSpanOApiArgs)
+		result := out.(*openapi.OpenAPIServiceListPreSpanOApiResult)
+		resp, err := l.impl.ListPreSpanOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceListPreSpanOApiArgs{Req: req}
+	result := &openapi.OpenAPIServiceListPreSpanOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListPreSpanOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalOpenAPIService) ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest, callOptions ...callopt.Option) (*openapi.ListTracesOApiResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*openapi.OpenAPIServiceListTracesOApiArgs)

@@ -458,6 +458,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 			}
 			{
+				_pre_span := _loop.Group("/pre_span", _pre_spanMw(handler)...)
+				_pre_span.POST("/search", append(_listprespanoapiMw(handler), apis.ListPreSpanOApi)...)
+			}
+			{
 				_prompts0 := _loop.Group("/prompts", _prompts0Mw(handler)...)
 				_prompts0.POST("/execute", append(_executeMw(handler), apis.Execute)...)
 				_prompts0.POST("/execute_streaming", append(_executestreamingMw(handler), apis.ExecuteStreaming)...)
