@@ -1783,6 +1783,13 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 }
 
 func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
+	traceIDs = lo.Filter(traceIDs, func(item string, _ int) bool {
+		return item != ""
+	})
+	if len(traceIDs) == 0 {
+		return map[string]*loop_span.Trajectory{}, nil
+	}
+
 	tenant, err := r.tenantProvider.GetTenantsByPlatformType(ctx, platformType)
 	if err != nil {
 		return nil, err
