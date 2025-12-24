@@ -4,6 +4,7 @@ import { type ReactNode } from 'react';
 
 import { JsonViewer } from '@textea/json-viewer';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { IS_DISABLED_MULTI_MODEL_EVAL } from '@cozeloop/biz-config-adapter';
 import {
   type FieldData,
   type Content,
@@ -246,9 +247,10 @@ export const MUTABLE_DATA_TYPE_LIST = [
 ];
 
 export const DATA_TYPE_LIST_WITH_ARRAY = [...DATA_TYPE_LIST, ARRAY_TYPE_LIST];
+
 export const MUTIPART_DATA_TYPE_LIST_WITH_ARRAY = [
   ...DATA_TYPE_LIST_WITH_ARRAY,
-  ...MUTABLE_DATA_TYPE_LIST,
+  ...(IS_DISABLED_MULTI_MODEL_EVAL ? [] : MUTABLE_DATA_TYPE_LIST),
 ];
 
 export const getDataTypeListWithArray = (

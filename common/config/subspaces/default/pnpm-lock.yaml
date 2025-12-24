@@ -2085,6 +2085,9 @@ importers:
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
+      '@cozeloop/biz-config-adapter':
+        specifier: workspace:*
+        version: link:../biz-config
       '@cozeloop/biz-hooks-adapter':
         specifier: workspace:*
         version: link:../biz-hooks
