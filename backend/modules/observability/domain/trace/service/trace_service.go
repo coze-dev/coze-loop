@@ -905,11 +905,12 @@ func (r *TraceServiceImpl) ListPreSpanOApi(ctx context.Context, req *ListPreSpan
 
 	// span processors
 	processors, err := r.buildHelper.BuildSearchTraceOApiProcessors(ctx, span_processor.Settings{
-		WorkspaceId:    req.WorkspaceID,
-		PlatformType:   req.PlatformType,
-		QueryStartTime: req.StartTime - timeutil.Day2MillSec(30), // past 30 days
-		QueryEndTime:   req.StartTime,
-		QueryTenants:   req.Tenants,
+		WorkspaceId:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+		PlatformType:          req.PlatformType,
+		QueryStartTime:        req.StartTime - timeutil.Day2MillSec(30), // past 30 days
+		QueryEndTime:          req.StartTime,
+		QueryTenants:          req.Tenants,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
