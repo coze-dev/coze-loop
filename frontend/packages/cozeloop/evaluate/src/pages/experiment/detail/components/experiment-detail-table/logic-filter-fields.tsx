@@ -6,6 +6,7 @@ import {
   getLogicFieldName,
   type LogicField,
 } from '@cozeloop/evaluate-components';
+import { IS_HIDDEN_EXPERIMENT_DETAIL_FILTER } from '@cozeloop/biz-config-adapter';
 import {
   type ColumnEvaluator,
   FieldType,
@@ -138,6 +139,15 @@ export function getFilterFields(
   fieldSchemas: FieldSchema[],
   columnAnnotations: ColumnAnnotation[],
 ) {
+  const evalSetField: LogicField = {
+    title: I18n.t('evaluation_set'),
+    name: 'eval_set',
+    type: 'options',
+    children: fieldSchemas
+      ?.filter(item => item?.content_type === ContentType.Text)
+      ?.map(getEvalSetLogicField),
+  };
+
   const fields: LogicField[] = [
     {
       title: I18n.t('evaluator'),
@@ -145,14 +155,7 @@ export function getFilterFields(
       type: 'options',
       children: columnEvaluators.map(getEvaluatorLogicField),
     },
-    {
-      title: I18n.t('evaluation_set'),
-      name: 'eval_set',
-      type: 'options',
-      children: fieldSchemas
-        ?.filter(item => item?.content_type === ContentType.Text)
-        ?.map(getEvalSetLogicField),
-    },
+    ...(IS_HIDDEN_EXPERIMENT_DETAIL_FILTER ? [] : [evalSetField]),
     {
       title: I18n.t('manual_annotation'),
       name: 'annotation',

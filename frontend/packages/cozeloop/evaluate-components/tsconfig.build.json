@@ -36,6 +36,9 @@
       "path": "../biz-components/tsconfig.build.json"
     },
     {
+      "path": "../biz-config/tsconfig.build.json"
+    },
+    {
       "path": "../biz-hooks/tsconfig.build.json"
     },
     {

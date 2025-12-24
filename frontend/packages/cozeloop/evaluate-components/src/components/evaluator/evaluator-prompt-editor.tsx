@@ -8,6 +8,7 @@ import {
   type PromptEditorProps,
   getMultimodalVariableText,
 } from '@cozeloop/prompt-components';
+import { IS_DISABLED_MULTI_MODEL_EVAL } from '@cozeloop/biz-config-adapter';
 import {
   ContentType,
   Role,
@@ -99,7 +100,9 @@ export function EvaluatorPromptEditor(props: EvaluatorPromptEditorProps) {
       messageTypeList={props.messageTypeList ?? messageTypeList}
       message={stringMessage}
       onMessageChange={handleMessageChange}
-      modalVariableBtnHidden={stringMessage?.role === Role.System}
+      modalVariableBtnHidden={
+        stringMessage?.role === Role.System || IS_DISABLED_MULTI_MODEL_EVAL
+      }
     />
   );
 }

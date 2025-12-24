@@ -19,6 +19,7 @@
     "@cozeloop/api-schema": "workspace:*",
     "@cozeloop/base-with-adapter-components": "workspace:*",
     "@cozeloop/biz-components-adapter": "workspace:*",
+    "@cozeloop/biz-config-adapter": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/components": "workspace:*",
     "@cozeloop/env-adapter": "workspace:*",
