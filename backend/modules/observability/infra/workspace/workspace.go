@@ -5,10 +5,10 @@ package workspace
 
 import (
 	"context"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 )
 

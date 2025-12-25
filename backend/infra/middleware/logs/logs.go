@@ -20,9 +20,7 @@ const (
 	extraKeyAffectStability = "biz_err_affect_stability"
 )
 
-var (
-	simplifyMethods = []string{"IngestTraces", "OtelIngestTraces"}
-)
+var simplifyMethods = []string{"IngestTraces", "OtelIngestTraces"}
 
 func LogTrafficMW(next endpoint.Endpoint) endpoint.Endpoint {
 	disabled := func() bool {
