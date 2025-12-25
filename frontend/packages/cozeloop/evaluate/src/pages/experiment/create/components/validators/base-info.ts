@@ -23,7 +23,7 @@ export const baseInfoValidators: Record<string, any[]> = {
               err = new Error(I18n.t('name_already_exists'));
             }
           } catch (e) {
-            console.error(I18n.t('interface_problem'), e);
+            console.error('接口遇到问题', e);
           }
           if (err !== null) {
             throw err;
@@ -32,5 +32,6 @@ export const baseInfoValidators: Record<string, any[]> = {
       },
     },
   ],
+
   desc: [],
 };

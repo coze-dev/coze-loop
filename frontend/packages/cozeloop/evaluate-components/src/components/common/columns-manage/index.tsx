@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useMemo } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type ColumnItem,
   ColumnSelector,
   dealColumnsWithStorage,
   setColumnsManageStorage,
 } from '@cozeloop/components';
-import { type ColumnProps } from '@coze-arch/coze-design';
+import { Tooltip, type ColumnProps } from '@coze-arch/coze-design';
 
 type CustomColumnItem = ColumnItem & {
   column: ColumnProps;
@@ -96,13 +97,15 @@ export function ColumnsManage({
   );
 
   return (
-    <div>
-      <ColumnSelector
-        columns={options}
-        defaultColumns={defaultOptions}
-        sortable={sortable}
-        onChange={hanldeColumnsChange}
-      />
-    </div>
+    <Tooltip theme="dark" content={I18n.t('column_management')}>
+      <div>
+        <ColumnSelector
+          columns={options}
+          defaultColumns={defaultOptions}
+          sortable={sortable}
+          onChange={hanldeColumnsChange}
+        />
+      </div>
+    </Tooltip>
   );
 }

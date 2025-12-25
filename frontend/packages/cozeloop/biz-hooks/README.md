@@ -47,10 +47,10 @@ import { /* exported functions/components */ } from '@cozeloop/biz-hooks-adapter
 
 - `useSpace`
 - `useUserInfo`
-- `useNavigateModule,
-  useBaseURL,
-  useCozeLocation,`
-- `useApp`
+- `useNavigateModule`
+- `useOpenWindow`
+- `useRouteInfo`
+- `useCozeLocation`
 - `useBenefit, type BenefitConfig`
 - `useFetchUserBenefit`
 - `useDemoSpace`

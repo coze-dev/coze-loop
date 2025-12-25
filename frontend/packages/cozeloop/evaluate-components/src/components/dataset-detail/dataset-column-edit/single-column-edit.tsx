@@ -102,6 +102,7 @@ export const DatasetSingleColumnEdit = ({
           setVisible(true);
         }}
       />
+
       <Modal
         visible={visible}
         width={960}
@@ -178,7 +179,7 @@ export const DatasetSingleColumnEdit = ({
 
                 <ObjectContent
                   fieldKey={`columns.${selectedFieldIndex}`}
-                  disabelChangeDatasetType={disabledDataTypeSelect}
+                  disableChangeDatasetType={disabledDataTypeSelect}
                   protalID={protalID}
                 />
               </div>
@@ -192,11 +193,11 @@ export const DatasetSingleColumnEdit = ({
 
 export const ObjectContent = ({
   fieldKey,
-  disabelChangeDatasetType = false,
+  disableChangeDatasetType = false,
   protalID,
 }: {
   fieldKey: string;
-  disabelChangeDatasetType?: boolean;
+  disableChangeDatasetType?: boolean;
   protalID: string;
 }) => {
   const fieldApi = useFieldApi(fieldKey);
@@ -209,7 +210,7 @@ export const ObjectContent = ({
     isJSON,
   } = useColumnAdvanceConfig({
     fieldKey,
-    disabelChangeDatasetType,
+    disableChangeDatasetType,
   });
   return (
     <>
@@ -218,7 +219,7 @@ export const ObjectContent = ({
         labelWidth={90}
         zIndex={1070}
         fieldClassName="w-[190px]"
-        disabled={disabelChangeDatasetType || isJSON}
+        disabled={disableChangeDatasetType || isJSON}
         onChange={newType => {
           fieldApi.setValue({
             ...fieldApi.getValue(),
@@ -238,11 +239,12 @@ export const ObjectContent = ({
         }}
         fieldClassName="w-[60px]"
         className="w-full"
-        disabled={disabelChangeDatasetType}
+        disabled={disableChangeDatasetType}
         field={`${fieldKey}.isRequired`}
       />
+
       <FormAdditionalPropertyField
-        disabled={disabelChangeDatasetType}
+        disabled={disableChangeDatasetType}
         label={{
           text: I18n.t('redundant_fields_allowed'),
           required: true,
@@ -254,6 +256,7 @@ export const ObjectContent = ({
         className="w-full"
         field={`${fieldKey}.additionalProperties`}
       />
+
       <Form.TextArea
         label={I18n.t('description')}
         maxCount={200}
@@ -277,7 +280,7 @@ export const ObjectContent = ({
             inputType={inputType}
             showAdditional={showAdditional}
             fieldKey={fieldKey}
-            disabelChangeDatasetType={disabelChangeDatasetType || false}
+            disableChangeDatasetType={disableChangeDatasetType || false}
           />
         ) : null}
       </div>

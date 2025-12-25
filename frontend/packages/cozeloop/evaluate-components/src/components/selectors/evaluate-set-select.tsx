@@ -6,7 +6,7 @@ import { isArray } from 'lodash-es';
 import { useDebounceFn, useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
-import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozPlus } from '@coze-arch/coze-design/icons';
@@ -51,6 +51,7 @@ const genEvaluationSetOption = (
       showSetCount={showSetCount}
     />
   ),
+
   ...item,
 });
 
@@ -62,7 +63,7 @@ export function EvaluateSetSelect(
   },
 ) {
   const { spaceID } = useSpace();
-  const { baseURL } = useBaseURL();
+  const { openBlank } = useOpenWindow();
   const { multiple, showSetCount } = props;
 
   const service = useRequest(async (text?: string) => {
@@ -129,18 +130,17 @@ export function EvaluateSetSelect(
       onSearch={handleSearch.run}
       showRefreshBtn={true}
       onClickRefresh={() => service.run()}
-      emptyContent={I18n.t('no_data_yet')}
       outerBottomSlot={
         !props.disableAddEvalSet ? (
           <div
             onClick={() => {
-              window.open(`${baseURL}/evaluation/datasets/create`);
+              openBlank('evaluation/datasets/create');
             }}
             className="h-8 px-2 flex flex-row items-center cursor-pointer"
           >
             <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
             <div className="text-sm font-medium text-brand-9">
-              {I18n.t('create_evaluation_set')}
+              {I18n.t('new_evaluation_set')}
             </div>
           </div>
         ) : null

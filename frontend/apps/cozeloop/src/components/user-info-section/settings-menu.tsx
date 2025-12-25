@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
 import { PERSONAL_ENTERPRISE_ID } from '@cozeloop/account';
 import { IconCozExit, IconCozSetting } from '@coze-arch/coze-design/icons';
 import { Divider } from '@coze-arch/coze-design';
@@ -34,7 +34,7 @@ export function SettingsMenu({ onAction }: Props) {
     },
   ];
 
-  const { getBasePrefix } = useBaseURL();
+  const { openSelf } = useOpenWindow();
 
   return (
     <div className="w-[270px] py-3">
@@ -44,7 +44,7 @@ export function SettingsMenu({ onAction }: Props) {
       <div className="mx-4">
         <UserInfo
           onClick={() => {
-            window.location.href = getBasePrefix({
+            openSelf('', {
               enterpriseID: PERSONAL_ENTERPRISE_ID,
             });
           }}

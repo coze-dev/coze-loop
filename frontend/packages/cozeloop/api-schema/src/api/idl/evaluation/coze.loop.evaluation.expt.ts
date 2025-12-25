@@ -1,3 +1,7 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+import * as evaluator from './domain/evaluator';
+export { evaluator };
 import * as expt from './domain/expt';
 export { expt };
 import * as common from './domain/common';
@@ -54,6 +58,8 @@ export interface SubmitExperimentRequest {
   max_alive_time?: number,
   source_type?: expt.SourceType,
   source_id?: string,
+  /** 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑 */
+  evaluator_id_version_list?: evaluator.EvaluatorIDVersionItem[],
   ext?: {
     [key: string | number]: string
   },
@@ -198,6 +204,7 @@ export interface InvokeExperimentResponse {
     [key: string | number]: number
   },
   errors?: dataset.ItemErrorGroup[],
+  item_outputs?: dataset.CreateDatasetItemOutput[],
 }
 export interface FinishExperimentRequest {
   workspace_id?: number,
@@ -376,7 +383,7 @@ export const SubmitExperiment = /*#__PURE__*/createAPI<SubmitExperimentRequest, 
   "name": "SubmitExperiment",
   "reqType": "SubmitExperimentRequest",
   "reqMapping": {
-    "body": ["workspace_id", "eval_set_version_id", "target_version_id", "evaluator_version_ids", "name", "desc", "eval_set_id", "target_id", "target_field_mapping", "evaluator_field_mapping", "item_concur_num", "evaluators_concur_num", "create_eval_target_param", "target_runtime_param", "expt_type", "max_alive_time", "source_type", "source_id", "ext", "session"]
+    "body": ["workspace_id", "eval_set_version_id", "target_version_id", "evaluator_version_ids", "name", "desc", "eval_set_id", "target_id", "target_field_mapping", "evaluator_field_mapping", "item_concur_num", "evaluators_concur_num", "create_eval_target_param", "target_runtime_param", "expt_type", "max_alive_time", "source_type", "source_id", "evaluator_id_version_list", "ext", "session"]
   },
   "resType": "SubmitExperimentResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",

@@ -1,5 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { I18n } from '@cozeloop/i18n-adapter';
+
 import DemoSpaceIcon from '../assets/demo-space-icon.svg';
 const BOE_DEMO_SPACE_ID = '7476830560543850540';
 
@@ -11,11 +13,6 @@ export const DEMO_SPACE_ID = IS_RELEASE_VERSION
 
 export const demoSpace = {
   id: DEMO_SPACE_ID,
-  name: 'Demo 空间',
+  name: I18n.t('demo_space'),
   icon_url: DemoSpaceIcon,
 };
-
-/** 是否禁用多模态评测 */
-export const IS_DISABLED_MULTI_MODEL_EVAL = true as boolean;
-/** 是否隐藏实验详情筛选, 临时 */
-export const IS_HIDDEN_EXPERIMENT_DETAIL_FILTER = true as boolean;

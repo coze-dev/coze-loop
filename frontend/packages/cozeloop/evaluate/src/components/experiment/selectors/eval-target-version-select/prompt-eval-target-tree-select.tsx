@@ -87,7 +87,7 @@ export default function PromptEvalTargetTreeSelect({
       loadData={onLoadChildren}
       treeData={treeData}
       style={{ width: '100%' }}
-      placeholder={`${I18n.t('please_select', { field: '' })}`}
+      placeholder={I18n.t('evaluate_please_select_prompt')}
       multiple={true}
       filterTreeNode={true}
       dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
@@ -106,6 +106,7 @@ export default function PromptEvalTargetTreeSelect({
               {item.isLeaf ? `${name} - v${version}` : name}
             </div>
           ),
+
           isRenderInTag: false,
         };
       }}

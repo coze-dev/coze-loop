@@ -1,7 +1,8 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { TextEllipsis } from '@cozeloop/shared-components';
+
 import { type DatasetItemProps } from '../../type';
-import { TextEllipsis } from '../../../text-ellipsis';
 
 export const BoolDatasetItemReadOnly = ({
   fieldContent,

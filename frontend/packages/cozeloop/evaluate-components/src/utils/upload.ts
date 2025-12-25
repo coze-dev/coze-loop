@@ -1,12 +1,24 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { utils as XLSXUtils, read as XLSXRead } from 'xlsx';
 import Papa from 'papaparse';
 import JSZip from 'jszip';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { FileFormat } from '@cozeloop/api-schema/data';
 
 export const CSV_FILE_NAME = 'index.csv';
+
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+type XLSXType = typeof import('xlsx');
+
+let xlsxCache: XLSXType | null = null;
+export async function getXlsx(): Promise<XLSXType> {
+  if (xlsxCache) {
+    return xlsxCache;
+  }
+
+  xlsxCache = await import('xlsx');
+  return xlsxCache;
+}
 
 export const getCSVHeaders = (file: File): Promise<string[]> =>
   new Promise((resolve, reject) => {
@@ -53,12 +65,13 @@ export const getCSVHeaders = (file: File): Promise<string[]> =>
 function getXlsxHeaders(file: File): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = function (e) {
+    reader.onload = async function (e) {
       try {
+        const xlsx = await getXlsx();
         const text = e.target?.result as ArrayBuffer;
         const data = new Uint8Array(text);
         // 使用更小的内存占用读取
-        const workbook = XLSXRead(data, {
+        const workbook = xlsx.read(data, {
           type: 'array',
           // bookSheets: true, // 只读取工作表信息
           // bookProps: true, // 只读取工作簿属性
@@ -70,7 +83,7 @@ function getXlsxHeaders(file: File): Promise<string[]> {
         const worksheet = workbook.Sheets[firstSheetName];
 
         // 获取表头
-        const headers = getHeadersFromWorksheet(worksheet);
+        const headers = await getHeadersFromWorksheet(worksheet);
 
         resolve(headers);
       } catch (error) {
@@ -84,17 +97,18 @@ function getXlsxHeaders(file: File): Promise<string[]> {
   });
 }
 
-function getHeadersFromWorksheet(worksheet) {
+async function getHeadersFromWorksheet(worksheet) {
   if (!worksheet['!ref']) {
     return [];
   }
 
-  const range = XLSXUtils.decode_range(worksheet['!ref']);
+  const xlsx = await getXlsx();
+  const range = xlsx.utils.decode_range(worksheet['!ref']);
   const headers: string[] = [];
 
   // 只读取第一行
   for (let col = range.s.c; col <= range.e.c; col++) {
-    const cellAddress = XLSXUtils.encode_cell({ r: 0, c: col });
+    const cellAddress = xlsx.utils.encode_cell({ r: 0, c: col });
     const cell = worksheet[cellAddress];
 
     if (cell && cell.v !== undefined) {

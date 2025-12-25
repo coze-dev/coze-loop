@@ -18,6 +18,7 @@ import {
   IconCozArrowDown,
   IconCozInfoCircle,
   IconCozLineChart,
+  IconCozPlus,
 } from '@coze-arch/coze-design/icons';
 import { Button, Radio, Select, Tooltip } from '@coze-arch/coze-design';
 
@@ -49,9 +50,6 @@ const defaultColumnsOptions: ExperimentListColumnsOptions = {
   columnManageStorageKey: 'related_experiment_list_column_manage',
 };
 
-// 数据集关联实验中，数据集是固定的不支持筛选
-const defaultDisabledFields = ['eval_set'];
-
 // eslint-disable-next-line @coze-arch/max-line-per-function, complexity, max-lines-per-function
 export function DatasetRelatedExperiment({
   spaceID = '',
@@ -66,6 +64,15 @@ export function DatasetRelatedExperiment({
   sourcePath,
   disableBatchOperate,
   pullExperiments,
+  // 数据集关联实验中，数据集是固定的不支持筛选
+  defaultDisabledFields = ['eval_set'],
+  // 默认跳转路径
+  baseNavgiateUrl = 'evaluation/experiments',
+  defaultChartConfig,
+  disableCreate = true,
+  createUrl = 'evaluation/experiments/create',
+  defaultContrastRoute,
+  customHeaderActions,
 }: {
   spaceID: Int64;
   datasetID?: Int64;
@@ -75,23 +82,29 @@ export function DatasetRelatedExperiment({
   disabledLogicFilterFields?: string[];
   experimentsColumnsOptions?: ExperimentListColumnsOptions;
   refreshKey?: string | number;
-  disableBatchOperate?: boolean;
-  // 拉取实验列表的接口，默认使用 StoneEvaluationApi.PullExperiments
+  disableBatchOperate?: boolean; // 拉取实验列表的接口，默认使用 StoneEvaluationApi.PullExperiments
   pullExperiments?: (
     req: ListExperimentsRequest,
   ) => Promise<ListExperimentsResponse>;
-  /** 来源名称，例如实验列表、关联实验、对比实验等 */
-  sourceName?: string;
-  /** 所属页面来源路径，用来点击返回时使用 */
-  sourcePath?: string;
+  /** 来源名称，例如实验列表、关联实验、对比实验等 */ sourceName?: string;
+  /** 所属页面来源路径，用来点击返回时使用 */ sourcePath?: string;
+  defaultDisabledFields?: string[];
+  baseNavgiateUrl?: string;
+  defaultChartConfig?: ChartConfigValues;
+  disableCreate?: boolean;
+  createUrl?: string;
+  defaultContrastRoute?: string;
+  customHeaderActions?: React.ReactNode;
 }) {
   const navigateModule = useNavigateModule();
   const [evaluators, setEvaluators] = useState<Evaluator[]>([]);
-  const [chartConfig, setChartConfig] = useState<ChartConfigValues>({
-    chartType: 'line',
-    chartVisible: true,
-    evaluators: [],
-  });
+  const [chartConfig, setChartConfig] = useState<ChartConfigValues>(
+    defaultChartConfig ?? {
+      chartType: 'line',
+      chartVisible: true,
+      evaluators: [],
+    },
+  );
 
   const defaultFilter = useMemo(() => ({ eval_set: [datasetID] }), [datasetID]);
   const columnsOptions = useMemo(
@@ -131,6 +144,8 @@ export function DatasetRelatedExperiment({
     columnsOptions,
     pullExperiments,
     source: sourceName,
+    baseNavgiateUrl,
+    createUrl,
   });
 
   const experiments = service.data?.list;
@@ -176,6 +191,7 @@ export function DatasetRelatedExperiment({
         className={classNames('cursor-pointer', expand ? '' : '-rotate-90')}
         onClick={() => updateChartConfig('chartVisible', !expand)}
       />
+
       {expand ? (
         <div className="ml-auto flex items-center gap-2">
           <Radio.Group
@@ -207,7 +223,7 @@ export function DatasetRelatedExperiment({
           </Radio.Group>
           <Select
             prefix={I18n.t('indicator')}
-            placeholder={I18n.t('please_select', { field: '' })}
+            placeholder={I18n.t('please_select')}
             style={{ minWidth: 200 }}
             multiple={true}
             maxTagCount={1}
@@ -221,6 +237,7 @@ export function DatasetRelatedExperiment({
                   style={{ maxWidth: 120 }}
                 />
               ),
+
               value: evaluator?.current_version?.id ?? '',
             }))}
             onChange={val => updateChartConfig('evaluators', val)}
@@ -242,7 +259,11 @@ export function DatasetRelatedExperiment({
           <ExperimentRowSelectionActions
             spaceID={spaceID}
             experiments={selectedExperiments}
-            onRefresh={() => service.refresh()}
+            setSelectedExperiments={setSelectedExperiments}
+            onRefresh={() => {
+              setSelectedExperiments([]);
+              service.refresh();
+            }}
             onCancelSelect={() => {
               setBatchOperate(false);
               setSelectedExperiments([]);
@@ -256,6 +277,7 @@ export function DatasetRelatedExperiment({
                 from: 'dataset_related_experiment_batch_select',
               });
             }}
+            defaultContrastRoute={defaultContrastRoute}
           />
         ) : (
           <>
@@ -265,6 +287,7 @@ export function DatasetRelatedExperiment({
               storageKey={columnsOptions.columnManageStorageKey}
               onColumnsChange={setColumns}
             />
+
             {disableBatchOperate ? null : (
               <Button
                 color="primary"
@@ -273,14 +296,27 @@ export function DatasetRelatedExperiment({
                   setSelectedExperiments([]);
                 }}
               >
-                {I18n.t('batch_select')}
+                {I18n.t('bulk_select')}
               </Button>
             )}
+            {disableCreate ? null : (
+              <Button
+                onClick={() => {
+                  navigateModule(createUrl);
+                }}
+                icon={<IconCozPlus />}
+                color="highlight"
+              >
+                {I18n.t('new_experiment')}
+              </Button>
+            )}
+            {customHeaderActions}
           </>
         )
       }
     />
   );
+
   return (
     <div className={classNames('py-4 flex flex-col', className)}>
       <div className="flex flex-col gap-3">
@@ -310,7 +346,7 @@ export function DatasetRelatedExperiment({
         ) : null}
       </div>
       <div className="text-sm font-semibold mt-5 mb-3">
-        {I18n.t('experiments_list')}
+        {I18n.t('experiment_list')}
       </div>
       <TableWithPagination<Experiment>
         service={service}
@@ -343,7 +379,7 @@ export function DatasetRelatedExperiment({
                 from: sourceName,
               });
               navigateModule(
-                `evaluation/experiments/${record.id}`,
+                `${baseNavgiateUrl}/${record.id}`,
                 sourcePath
                   ? {
                       state: { from: sourcePath },

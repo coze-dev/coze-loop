@@ -5,7 +5,9 @@
 import { useMemo, useRef } from 'react';
 
 import { useRequest } from 'ahooks';
-import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { EVENT_NAMES } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
+import { FooterActions, useReportEvent } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type Prompt } from '@cozeloop/api-schema/prompt';
 import { StonePromptApi } from '@cozeloop/api-schema';
@@ -23,7 +25,7 @@ interface PromptCreateProps {
   isEdit?: boolean;
   isCopy?: boolean;
   onOk: (v: Prompt & { cloned_prompt_id?: Int64 }) => void;
-  onCancel: () => void;
+  onCancel: (e: React.MouseEvent) => void;
 }
 interface FormValueProps {
   prompt_key?: string;
@@ -39,6 +41,7 @@ export function PromptCreate({
   onOk,
   onCancel,
 }: PromptCreateProps) {
+  const sendEvent = useReportEvent();
   const formApi = useRef<FormApi<FormValueProps>>();
   const { spaceID } = useSpace();
 
@@ -79,20 +82,20 @@ export function PromptCreate({
       manual: true,
     },
   );
-  const handleOk = async () => {
-    const formData = await formApi.current?.validate();
+  const handleOk = async e => {
+    const formData = await formApi.current?.validate().catch(console.log);
     if (!formData) {
       return;
     }
 
     if (isCopy) {
       const res = await copyService.runAsync(formData);
-      onOk({ ...data, cloned_prompt_id: res.cloned_prompt_id });
       sendEvent(EVENT_NAMES.prompt_create, {
         prompt_id: `${data?.id || ''}`,
         prompt_key: data?.prompt_key || '',
         original_version: formData?.version,
       });
+      onOk({ ...data, cloned_prompt_id: res.cloned_prompt_id });
     } else if (isEdit) {
       await updateService.runAsync(formData);
       sendEvent(EVENT_NAMES.prompt_create, {
@@ -111,7 +114,8 @@ export function PromptCreate({
     } else {
       const res = await createService.runAsync(formData);
       sendEvent(EVENT_NAMES.prompt_create, {
-        prompt_id: `${data?.id || ''}`,
+        prompt_id: `${res?.prompt_id || ''}`,
+        prompt_key: formData?.prompt_key || '',
       });
       onOk({ ...data, id: res.prompt_id });
     }
@@ -119,27 +123,34 @@ export function PromptCreate({
 
   const modalTitle = useMemo(() => {
     if (isEdit) {
-      return '编辑 Prompt';
+      return I18n.t('edit_prompt');
     }
     if (isCopy) {
-      return '创建副本';
+      return I18n.t('create_copy');
     }
-    return '创建 Prompt';
+    return I18n.t('create_prompt');
   }, [isCopy, isEdit]);
 
   return (
     <Modal
+      data-btm="c26531"
       title={modalTitle}
       visible={visible}
       onCancel={onCancel}
-      onOk={handleOk}
-      cancelText="取消"
-      okText="确定"
-      okButtonProps={{
-        loading:
-          createService.loading || updateService.loading || copyService.loading,
-      }}
       width={900}
+      footer={
+        <FooterActions
+          confirmBtnProps={{
+            loading:
+              createService.loading ||
+              updateService.loading ||
+              copyService.loading,
+            onClick: handleOk,
+            'data-btm': 'd74327',
+          }}
+          cancelBtnProps={{ onClick: onCancel }}
+        />
+      }
     >
       <Form<FormValueProps>
         getFormApi={api => (formApi.current = api)}
@@ -164,15 +175,17 @@ export function PromptCreate({
         <FormInput
           label="Prompt Key"
           field="prompt_key"
-          placeholder="请输入 Prompt key"
+          placeholder={I18n.t('prompt_please_input_prompt_key')}
           rules={[
-            { required: true, message: '请输入 Prompt Key' },
             {
-              validator: (_rule, value) => {
+              required: true,
+              message: I18n.t('prompt_please_input_prompt_key_caps'),
+            },
+            {
+              validator: (_rule, value, callback) => {
                 if (value && !/^[a-zA-Z][a-zA-Z0-9_.]*$/.test(value)) {
-                  return new Error(
-                    '仅支持英文字母、数字、“_”、“.”，且仅支持英文字母开头',
-                  );
+                  callback(I18n.t('prompt_key_format'));
+                  return false;
                 }
                 return true;
               },
@@ -182,23 +195,25 @@ export function PromptCreate({
           max={100}
           disabled={isEdit}
         />
+
         <FormInput
-          label="Prompt 名称"
+          label={I18n.t('prompt_name')}
           field="prompt_name"
-          placeholder="请输入 Prompt 名称"
+          placeholder={I18n.t('prompt_please_input_prompt_name')}
           rules={[
-            { required: true, message: '请输入 Prompt 名称' },
             {
-              validator: (_rule, value) => {
+              required: true,
+              message: I18n.t('prompt_please_input_prompt_name'),
+            },
+            {
+              validator: (_rule, value, callback) => {
                 if (value && !/^[\u4e00-\u9fa5a-zA-Z0-9_.-]+$/.test(value)) {
-                  return new Error(
-                    '仅支持英文字母、数字、中文，“-”，“_”，“.”，且仅支持英文字母、数字、中文开头',
-                  );
+                  callback(I18n.t('prompt_name_format'));
+                  return false;
                 }
                 if (value && /^[_.-]/.test(value)) {
-                  return new Error(
-                    '仅支持英文字母、数字、中文，“-”，“_”，“.”，且仅支持英文字母、数字、中文开头',
-                  );
+                  callback(I18n.t('prompt_name_format'));
+                  return false;
                 }
                 return true;
               },
@@ -207,10 +222,11 @@ export function PromptCreate({
           maxLength={100}
           max={100}
         />
+
         <FormTextArea
-          label="Prompt 描述"
+          label={I18n.t('prompt_description')}
           field="prompt_description"
-          placeholder="请输入 Prompt 描述"
+          placeholder={I18n.t('prompt_please_input_prompt_description')}
           maxCount={500}
           maxLength={500}
         />

@@ -1,13 +1,21 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
+/* eslint-disable max-lines-per-function */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable security/detect-non-literal-regexp */
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
-import { forwardRef, type ReactNode, useEffect, useRef, useState } from 'react';
+import {
+  forwardRef,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import cn from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import {
   type ContentPart,
@@ -137,20 +145,25 @@ export const PromptEditor = forwardRef(
     const [modalVariableCanAdd, setModalVariableCanAdd] = useState(false);
     const formApiRef = useRef<FormApi>();
 
-    const defaultValue = message?.parts?.length
-      ? message?.parts
-          ?.map(it => {
-            if (it.type === ContentType.MultiPartVariable && it?.text) {
-              return getMultimodalVariableText(it.text);
-            }
-            return it.text;
-          })
-          .join('')
-      : message?.content;
+    const defaultValue = useMemo(
+      () =>
+        message?.parts?.length
+          ? message?.parts
+              ?.map(it => {
+                if (it.type === ContentType.MultiPartVariable && it?.text) {
+                  return getMultimodalVariableText(it.text);
+                }
+                return it.text;
+              })
+              .join('')
+          : message?.content,
+      [message?.id, message?.key],
+    );
 
     const placeholderError = getPlaceholderErrorContent(
       message as Message,
       variables,
+      placeholderRoleValue,
     );
 
     const handleModalVariableConfirm = () => {
@@ -218,16 +231,31 @@ export const PromptEditor = forwardRef(
                   <TooltipWhenDisabled
                     disabled={!modalVariableVisible}
                     content={
-                      modalVariableEnable
-                        ? '多模态变量'
-                        : '所选模型不支持多模态，请调整变量类型或更换模型'
+                      modalVariableEnable ? (
+                        <div className="flex flex-col">
+                          <Typography.Text className="text-white">
+                            {I18n.t('prompt_add_new_multi_modal_variable')}
+                          </Typography.Text>
+                          <Typography.Text
+                            style={{ color: 'rgba(227, 232, 250, 0.46)' }}
+                            type="secondary"
+                            size="small"
+                          >
+                            {I18n.t(
+                              'prompt_support_multi_modal_in_prompt_via_variable',
+                            )}
+                          </Typography.Text>
+                        </div>
+                      ) : (
+                        I18n.t('selected_model_not_support_multi_modal')
+                      )
                     }
                     theme="dark"
                   >
                     <span>
                       <Popconfirm
                         className="w-[300px]"
-                        title="添加多模态变量"
+                        title={I18n.t('prompt_add_multi_modal_variable')}
                         content={
                           <Form
                             getFormApi={formApi =>
@@ -249,7 +277,9 @@ export const PromptEditor = forwardRef(
                             <FormTextArea
                               noLabel
                               field="content"
-                              placeholder="输入多模态变量名称"
+                              placeholder={I18n.t(
+                                'prompt_input_multi_modal_variable_name',
+                              )}
                               maxCount={50}
                               maxLength={50}
                               rules={[
@@ -267,7 +297,9 @@ export const PromptEditor = forwardRef(
                                         value.includes('\r')
                                       ) {
                                         callback(
-                                          '只能包含字母、数字或下划线，并且以字母开头',
+                                          I18n.t(
+                                            'prompt_variable_name_rule_letters_numbers_underscore',
+                                          ),
                                         );
                                         return false;
                                       }
@@ -275,13 +307,19 @@ export const PromptEditor = forwardRef(
                                         if (
                                           variables?.some(v => v.key === value)
                                         ) {
-                                          callback('变量名重复');
+                                          callback(
+                                            I18n.t(
+                                              'prompt_variable_name_duplicate',
+                                            ),
+                                          );
                                           return false;
                                         }
                                         return true;
                                       } else {
                                         callback(
-                                          '只能包含字母、数字或下划线，并且以字母开头',
+                                          I18n.t(
+                                            'prompt_variable_name_rule_letters_numbers_underscore',
+                                          ),
                                         );
                                         return false;
                                       }
@@ -297,7 +335,7 @@ export const PromptEditor = forwardRef(
                             />
                           </Form>
                         }
-                        okText="确定"
+                        okText={I18n.t('confirm')}
                         okButtonProps={{
                           disabled: !modalVariableCanAdd,
                         }}
@@ -351,7 +389,7 @@ export const PromptEditor = forwardRef(
                 }}
                 onFocus={() => setEditorActive(true)}
                 onBlur={() => setEditorActive(false)}
-                placeholder="支持输入英文字母和下划线，且首字母必须是字母"
+                placeholder={I18n.t('prompt_var_format')}
               />
             ) : (
               <PromptBasicEditor
@@ -371,6 +409,7 @@ export const PromptEditor = forwardRef(
                   variableKeys={variables?.map(it => it.key || '')}
                   disabled={modalVariableBtnHidden}
                 />
+
                 {children}
               </PromptBasicEditor>
             )}

@@ -6,7 +6,7 @@ import {
   getLogicFieldName,
   type LogicField,
 } from '@cozeloop/evaluate-components';
-import { IS_HIDDEN_EXPERIMENT_DETAIL_FILTER } from '@cozeloop/biz-hooks-adapter';
+import { IS_HIDDEN_EXPERIMENT_DETAIL_FILTER } from '@cozeloop/biz-config-adapter';
 import {
   type ColumnEvaluator,
   FieldType,
@@ -48,11 +48,13 @@ function getEvalSetLogicField(fieldSchema: FieldSchema): LogicField {
       { label: I18n.t('equal_to'), value: 'equals' },
       { label: I18n.t('not_equal_to'), value: 'not-equals' },
     ];
+
     setterProps.multiple = false;
     setterProps.optionList = [
       { label: 'true', value: 'true' },
       { label: 'false', value: 'false' },
     ];
+
     logicField.disabledOperations = [];
   } else if (schemaType === 'object' || schemaType?.includes('array')) {
     // JSON类型数据使用输入框，不支持输入换行
@@ -72,6 +74,7 @@ function getEvaluatorLogicField(evaluator: ColumnEvaluator): LogicField {
         className="max-w-[200px] evaluator-preview-in-cascader"
       />
     ),
+
     name: getLogicFieldName(FieldType.EvaluatorScore, versionId),
     type: 'number',
     setterProps: { step: 0.1 },
@@ -120,6 +123,7 @@ function getAnnotationLogicField(
       { label: I18n.t('equal_to'), value: 'equals' },
       { label: I18n.t('not_equal_to'), value: 'not-equals' },
     ];
+
     setterProps.multiple = false;
     setterProps.optionList = tag_values?.map(item => ({
       label: item.tag_value_name,
@@ -143,6 +147,7 @@ export function getFilterFields(
       ?.filter(item => item?.content_type === ContentType.Text)
       ?.map(getEvalSetLogicField),
   };
+
   const fields: LogicField[] = [
     {
       title: I18n.t('evaluator'),
@@ -171,6 +176,7 @@ export function getFilterFields(
         { label: I18n.t('equal_to'), value: 'equals' },
         { label: I18n.t('not_equal_to'), value: 'not-equals' },
       ],
+
       setterProps: {
         optionList: [
           { label: I18n.t('yes'), value: '1' },
@@ -179,7 +185,7 @@ export function getFilterFields(
       },
     },
     {
-      title: I18n.t('data_item_id'),
+      title: I18n.t('evaluate_data_item_id'),
       name: getLogicFieldName(FieldType.ItemID, ''),
       type: 'string',
       setter: IDSearchInput,
@@ -189,5 +195,6 @@ export function getFilterFields(
       ],
     },
   ];
+
   return fields;
 }

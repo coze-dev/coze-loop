@@ -35,6 +35,7 @@ const genEvaluatorOption = (item: Evaluator) => ({
       </Typography.Text>
     </div>
   ),
+
   ...item,
 });
 
@@ -98,7 +99,6 @@ export function EvaluatorSelect(
     <BaseSearchSelect
       filter
       remote
-      emptyContent={I18n.t('no_data_yet')}
       placeholder={I18n.t('please_select_evaluator')}
       loading={service.loading}
       renderSelectedItem={renderSelectedItem as RenderSelectedItemFn}
@@ -141,7 +141,7 @@ export function EvaluatorSelect(
             <div className="h-8 px-2 flex flex-row items-center cursor-pointer">
               <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
               <div className="text-sm font-medium text-brand-9">
-                {I18n.t('create_evaluator')}
+                {I18n.t('new_evaluator')}
               </div>
             </div>
           </Menu>

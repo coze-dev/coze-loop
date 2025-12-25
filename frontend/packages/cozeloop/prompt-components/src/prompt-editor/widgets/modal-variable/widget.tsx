@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type Root } from 'react-dom/client';
 import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
 import { IconCozCrossCircleFill } from '@coze-arch/coze-design/icons';
 import { Icon } from '@coze-arch/coze-design';
@@ -33,11 +34,11 @@ const ModalVariableDisplay: React.FC<ModalVariableDisplayProps> = ({
   isMultimodal,
   onDelete,
   disabled,
-  disabledTip = '当前 Message 不支持多模态，请调整变量类型或更换 Message 类型',
+  disabledTip = I18n.t('prompt_current_message_not_support_multi_modal'),
 }) => (
   <TooltipWhenDisabled
     content={
-      disabled ? disabledTip : '所选模型不支持多模态，请调整变量类型或更换模型'
+      disabled ? disabledTip : I18n.t('selected_model_not_support_multi_modal')
     }
     theme="dark"
     disabled={!isMultimodal || disabled}
@@ -92,7 +93,6 @@ export class ModalVariableWidget extends WidgetType {
   getEqKey() {
     return [
       this.options.dataInfo?.variableKey,
-      this.options.dataInfo?.uuid,
       this.options.isMultimodal,
       this.options.from,
       this.options.to,

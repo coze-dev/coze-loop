@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   downloadExptExportFile,
   formateTime,
-  TypographyText,
 } from '@cozeloop/evaluate-components';
 import {
   type ColumnItem,
@@ -40,14 +40,14 @@ function ExportTaskRowActions({
 
   const popoverText = useMemo(() => {
     if (inProgress) {
-      return I18n.t('export_in_progress_wait');
+      return I18n.t('evaluate_export_in_progress_wait');
     }
     if (isFailed) {
-      return I18n.t('export_failed_retry');
+      return I18n.t('evaluate_export_failed_retry');
     }
     // 过期
     if (isExpired) {
-      return I18n.t('export_file_expired_100_days_limit');
+      return I18n.t('evaluate_export_file_expired_100_days');
     }
     return null;
   }, [inProgress, isExpired, isFailed]);
@@ -127,7 +127,7 @@ export function getExportExperimentColumns() {
       render: () => <TypographyText>csv</TypographyText>,
     },
     {
-      title: I18n.t('operator'),
+      title: I18n.t('application_operator'),
       value: I18n.t('application_operator'),
       dataIndex: 'base_info',
       key: 'base_info',
@@ -161,6 +161,7 @@ export function getExportExperimentColumns() {
       ),
     },
   ];
+
   return newColumns;
 }
 

@@ -1,10 +1,13 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { useMemo } from 'react';
+
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   TraceTrigger,
   useGlobalEvalConfig,
 } from '@cozeloop/evaluate-components';
+import { ContentType, type FieldSchema } from '@cozeloop/api-schema/evaluation';
 
 import { CellContentRender } from '@/utils/experiment';
 import { type DatasetCellContent } from '@/types';
@@ -30,7 +33,12 @@ export default function ActualOutputWithTrace({
   className?: string;
 }) {
   const { traceEvalTargetPlatformType } = useGlobalEvalConfig();
-
+  const fieldSchema: FieldSchema = useMemo(
+    () => ({
+      content_type: content?.content_type ?? ContentType.Text,
+    }),
+    [content?.content_type],
+  );
   return (
     <div
       className="group flex leading-5 w-full min-h-[20px] overflow-hidden"
@@ -47,19 +55,23 @@ export default function ActualOutputWithTrace({
         expand={expand}
         content={content}
         displayFormat={displayFormat}
+        fieldSchema={fieldSchema}
         className={className}
       />
 
       {enableTrace && traceID ? (
-        <div className="flex ml-auto" onClick={e => e.stopPropagation()}>
+        <div
+          className="flex ml-auto shrink-0"
+          onClick={e => e.stopPropagation()}
+        >
           <TraceTrigger
-            className="ml-1 invisible group-hover:visible"
+            className="ml-1 group-hover:visible"
             traceID={traceID ?? ''}
             platformType={traceEvalTargetPlatformType}
             startTime={startTime}
             endTime={endTime}
             tooltipProps={{
-              content: I18n.t('view_actual_output_trace'),
+              content: I18n.t('evaluate_view_actual_output_trace'),
               theme: 'dark',
             }}
           />

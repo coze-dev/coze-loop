@@ -3,10 +3,10 @@
 import { useState } from 'react';
 
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozCross } from '@coze-arch/coze-design/icons';
 import { IconButton, Input, Select, Tooltip } from '@coze-arch/coze-design';
 
+import { useI18n } from '../provider';
 import type {
   Expr,
   ExprRenderProps,
@@ -109,6 +109,7 @@ export const ExprRender = <L, O, R>({
   errorMsgRender,
 }: ExprRenderProps<L, O, R>) => {
   const isEdit = !readonly;
+  const I18n = useI18n();
 
   const [deleteButtonHover, setDeleteButtonHover] = useState(false);
 
@@ -141,6 +142,7 @@ export const ExprRender = <L, O, R>({
       return (
         <Select
           style={{ width: '100%', minWidth: 50 }}
+          size={elementSize}
           value={`${value.operator}`}
           disabled={readonly}
           onChange={v => patchExpr({ operator: v as O })}

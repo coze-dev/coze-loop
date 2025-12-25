@@ -103,6 +103,7 @@ export const ColumnNameListTag = ({ set }: { set: EvaluationSet }) => {
       </Tag>
     </Dropdown>
   );
+
   return (
     <div
       onClick={e => {

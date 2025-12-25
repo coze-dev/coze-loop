@@ -4,6 +4,12 @@
 import { useMemo, useRef, useState } from 'react';
 
 import classNames from 'classnames';
+import {
+  EvaluatorManualScore,
+  type CustomSubmitManualScore,
+  type EvaluatorManualScoreProps,
+  TypographyText,
+} from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { IconButtonContainer, JumpIconButton } from '@cozeloop/components';
 import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
@@ -23,19 +29,14 @@ import { Divider, Popover, Tag, Toast, Tooltip } from '@coze-arch/coze-design';
 
 import { useGlobalEvalConfig } from '@/stores/eval-global-config';
 
-import { TypographyText } from '../text-ellipsis';
 import { getEvaluatorJumpUrl } from '../evaluator/utils';
 import { CozeUser } from '../common/coze-user';
 import { TraceTrigger } from './trace-trigger';
-import {
-  EvaluatorManualScore,
-  type CustomSubmitManualScore,
-  type EvaluatorManualScoreProps,
-} from './evaluator-manual-score';
 
 interface NameScoreTagProps {
   name: string | undefined;
   type?: EvaluatorType;
+  isBuiltin?: boolean;
   evaluatorResult: EvaluatorResult | undefined;
   updateUser?: UserInfo;
   version: string | undefined;
@@ -64,15 +65,14 @@ export function EvaluatorResultPanel({
   updateUser,
 }: {
   result: EvaluatorResult | undefined;
-  updateUser: UserInfo | undefined;
-  // 暂时不支持手动校准，后续支持
+  updateUser: UserInfo | undefined; // 暂时不支持手动校准，后续支持
   evaluatorManualScoreProps: EvaluatorManualScoreProps;
 }) {
   const { score, reasoning, correction } = result ?? {};
   return (
     <div className="w-80">
       <div className="font-bold mb-1 flex items-center">
-        {I18n.t('evaluate_task_score')}
+        {I18n.t('score')}
         {correction ? (
           <Tag
             color="brand"
@@ -128,6 +128,7 @@ export function EvaluatorNameScoreTag(props: NameScoreTagProps) {
     onReportCalibration,
     onReportEvaluatorTrace,
     customSubmitManualScore,
+    isBuiltin,
   } = props;
   const [visible, setVisible] = useState(false);
   const [panelVisible, setPanelVisible] = useState(false);
@@ -154,8 +155,9 @@ export function EvaluatorNameScoreTag(props: NameScoreTagProps) {
       evaluatorType: type,
       evaluatorId: evaluatorID,
       evaluatorVersionId: evaluatorVersionID,
+      isBuiltin,
     });
-  }, [type, evaluatorID, evaluatorVersionID, enableLinkJump]);
+  }, [type, evaluatorID, evaluatorVersionID, enableLinkJump, isBuiltin]);
 
   const borderClass = border
     ? 'border border-solid border-[var(--coz-stroke-primary)] cursor-pointer hover:bg-[var(--coz-mg-primary)] hover:border-[var(--coz-stroke-plus)]'
@@ -177,7 +179,7 @@ export function EvaluatorNameScoreTag(props: NameScoreTagProps) {
         {showVersion ? (
           <>
             <Tag size="mini" color="primary" className="shrink-0">
-              {version ?? '-'}
+              {isBuiltin ? 'latest' : (version ?? '-')}
             </Tag>
             <Divider layout="vertical" style={{ height: 12 }} />
           </>
@@ -259,7 +261,7 @@ export function EvaluatorNameScoreTag(props: NameScoreTagProps) {
             customSubmitManualScore={customSubmitManualScore}
             onSuccess={() => {
               setVisible(false);
-              Toast.success(I18n.t('update_score_successful'));
+              Toast.success(I18n.t('update_rating_success'));
               onSuccess?.();
             }}
           >
@@ -331,12 +333,14 @@ export function EvaluatorNameScore({
     version,
     evaluator_version_id: versionId,
     evaluator_type,
+    builtin,
   } = evaluator ?? {};
 
   if (!enablePopover) {
     return (
       <EvaluatorNameScoreTag
         name={name}
+        isBuiltin={builtin}
         type={evaluator_type}
         evaluatorResult={evaluatorResult}
         updateUser={updateUser}
@@ -370,6 +374,7 @@ export function EvaluatorNameScore({
         <div className="p-1" style={{ color: 'var(--coz-fg-secondary)' }}>
           <EvaluatorNameScoreTag
             name={name}
+            isBuiltin={builtin}
             type={evaluator_type}
             evaluatorResult={evaluatorResult}
             updateUser={updateUser}
@@ -398,6 +403,7 @@ export function EvaluatorNameScore({
       <div>
         <EvaluatorNameScoreTag
           name={name}
+          isBuiltin={builtin}
           type={evaluator_type}
           evaluatorResult={evaluatorResult}
           updateUser={updateUser}

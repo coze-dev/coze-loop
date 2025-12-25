@@ -135,6 +135,7 @@ export function DraggableCard({
             tagProps={{ className: 'font-normal' }}
           />
         ),
+
         tooltip: evaluator?.description,
         content: (
           <EvaluatorChartCard
@@ -145,6 +146,7 @@ export function DraggableCard({
             maxCount={5}
           />
         ),
+
         fullContent: (
           <EvaluatorChartCard
             ready={ready}
@@ -175,6 +177,7 @@ export function DraggableCard({
                 />
               </div>
             ),
+
             tooltip: annotation?.description,
             content: (
               <AnnotateChartCard
@@ -185,6 +188,7 @@ export function DraggableCard({
                 maxCount={5}
               />
             ),
+
             fullContent: (
               <AnnotateChartCard
                 ready={ready}

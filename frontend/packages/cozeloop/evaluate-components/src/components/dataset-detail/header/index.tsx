@@ -5,8 +5,9 @@ import { Fragment } from 'react';
 
 import { formatTimestampToString } from '@cozeloop/toolkit';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { RouteBackAction, UserProfile } from '@cozeloop/components';
+import { UserProfile } from '@cozeloop/components';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
+import { RouteBackAction } from '@cozeloop/base-with-adapter-components';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
 import { Divider, Typography } from '@coze-arch/coze-design';
 
@@ -21,19 +22,15 @@ export const DatasetDetailHeader = ({
 }) => {
   const navigate = useNavigateModule();
   const detail = [
-    `${I18n.t('description_{placeholder1}', { placeholder1: datasetDetail?.description || '-' })}`,
-    `${I18n.t('cozeloop_open_evaluate_update_time_placeholder1', {
-      placeholder1: formatTimestampToString(
-        datasetDetail?.base_info?.updated_at || '',
-        'YYYY-MM-DD HH:mm:ss',
-      ),
-    })}`,
-    `${I18n.t('cozeloop_open_evaluate_creation_time_placeholder1', {
-      placeholder1: formatTimestampToString(
-        datasetDetail?.base_info?.created_at || '',
-        'YYYY-MM-DD HH:mm:ss',
-      ),
-    })}`,
+    `${I18n.t('description')}:${datasetDetail?.description || '-'}`,
+    `${I18n.t('update_time')}:${formatTimestampToString(
+      datasetDetail?.base_info?.updated_at || '',
+      'YYYY-MM-DD HH:mm:ss',
+    )}`,
+    `${I18n.t('create_time')}:${formatTimestampToString(
+      datasetDetail?.base_info?.created_at || '',
+      'YYYY-MM-DD HH:mm:ss',
+    )}`,
   ]?.filter(Boolean);
 
   return (

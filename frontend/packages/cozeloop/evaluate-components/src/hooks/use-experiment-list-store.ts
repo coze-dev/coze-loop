@@ -111,6 +111,8 @@ export function useExperimentListStore<Filter extends { name?: string }>({
   pullExperiments,
   extraShrinkActions = [],
   source,
+  baseNavgiateUrl,
+  createUrl,
 }: {
   /** 默认筛选值 */
   defaultFilter?: Filter;
@@ -125,6 +127,8 @@ export function useExperimentListStore<Filter extends { name?: string }>({
   ) => Promise<ListExperimentsResponse>;
   extraShrinkActions?: TableColAction[];
   source?: string;
+  baseNavgiateUrl?: string;
+  createUrl?: string;
 } = {}): ExperimentListStore<Filter> {
   const { spaceID } = useSpace();
   const [filter, setFilter] = useState<Filter | undefined>(defaultFilter);
@@ -193,6 +197,8 @@ export function useExperimentListStore<Filter extends { name?: string }>({
     onRefresh: service.refresh,
     extraShrinkActions,
     source,
+    baseNavgiateUrl,
+    createUrl,
   });
 
   const { run: onFilterDebounceChange } = useDebounceFn(

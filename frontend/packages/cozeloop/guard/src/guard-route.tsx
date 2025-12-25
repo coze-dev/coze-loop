@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type PropsWithChildren } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
+
 import { type GuardPoint } from './types';
 import { useGuard } from './hooks/use-guard';
 
@@ -16,8 +18,10 @@ export function GuardRoute({ point, children }: PropsWithChildren<Props>) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center p-4">
-          <h2 className="text-xl font-bold mb-2">权限不足</h2>
-          <p>您没有访问该页面的权限</p>
+          <h2 className="text-xl font-bold mb-2">
+            {I18n.t('insufficient_permissions')}
+          </h2>
+          <p>{I18n.t('no_access_permission_page')}</p>
         </div>
       </div>
     );

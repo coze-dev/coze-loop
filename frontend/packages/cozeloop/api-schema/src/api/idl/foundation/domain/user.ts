@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /** UserInfoDetail 用户详细信息，包含姓名、头像等 */
 export interface UserInfoDetail {
   /** 唯一名称 */

@@ -10,19 +10,19 @@ export * from '../idl/evaluation/domain/evaluator';
 export * from '../idl/evaluation/domain/common';
 export * from '../idl/evaluation/domain/expt';
 
-export { CreateEvalTargetParam } from '../idl/evaluation/coze.loop.evaluation.eval_target';
-export { Turn } from '../idl/evaluation/domain/eval_set';
+export type { CreateEvalTargetParam } from '../idl/evaluation/coze.loop.evaluation.eval_target';
+export type { Turn } from '../idl/evaluation/domain/eval_set';
 export {
-  EvalTargetRecord,
+  type EvalTargetRecord,
   EvalTargetType,
-  EvalTarget,
+  type EvalTarget,
 } from '../idl/evaluation/domain/eval_target';
 
 export {
-  Evaluator,
-  EvaluatorRecord,
-  EvaluatorVersion,
+  type Evaluator,
+  type EvaluatorRecord,
+  type EvaluatorVersion,
   EvaluatorType,
 } from '../idl/evaluation/domain/evaluator';
 
-export { BaseInfo, OrderBy } from '../idl/evaluation/domain/common';
+export type { BaseInfo, OrderBy } from '../idl/evaluation/domain/common';

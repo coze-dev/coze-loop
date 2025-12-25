@@ -13,9 +13,11 @@ import { OutputInfo } from './output-info';
 export function TemplateInfo({
   data,
   notTemplate,
+  noOutputInfo,
 }: {
   data?: EvaluatorContent;
   notTemplate?: boolean;
+  noOutputInfo?: boolean;
 }) {
   const variables = useMemo(() => {
     const messages = data?.prompt_evaluator?.message_list ?? [];
@@ -39,8 +41,12 @@ export function TemplateInfo({
       {variables?.length ? (
         <PromptVariablesList className="mb-3" variables={variables} />
       ) : null}
-      <div className="h-2" />
-      <OutputInfo />
+      {noOutputInfo ? null : (
+        <>
+          <div className="h-2" />
+          <OutputInfo />
+        </>
+      )}
     </>
   );
 }

@@ -17,7 +17,9 @@ import { useSize, useInfiniteScroll } from 'ahooks';
 import { IconCozIllusEmpty } from '@coze-arch/coze-design/illustrations';
 import { EmptyState, type TableProps } from '@coze-arch/coze-design';
 
-import { LoopTable } from '@/table';
+import { useI18n } from '@/provider';
+
+import { LoopTable } from '../table';
 
 interface ExpandData extends Data {
   hasMore?: boolean;
@@ -43,6 +45,7 @@ export const InfiniteScrollTable: <TData extends ExpandData>(
     { service, options, className, ...restTableProps }: Props<TData>,
     ref: ForwardedRef<InfiniteScrollTableRef>,
   ): JSX.Element => {
+    const I18n = useI18n();
     const containerRef = useRef<HTMLDivElement>(null);
 
     const hookRes = useInfiniteScroll(d => service?.(d), {
@@ -82,7 +85,7 @@ export const InfiniteScrollTable: <TData extends ExpandData>(
               <EmptyState
                 size="full_screen"
                 icon={<IconCozIllusEmpty />}
-                title="暂无数据"
+                title={I18n.t('no_data')}
               />
             )
           }

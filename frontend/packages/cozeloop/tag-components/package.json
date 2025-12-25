@@ -17,12 +17,12 @@
     "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
     "@coze-arch/logger": "workspace:*",
     "@cozeloop/api-schema": "workspace:*",
-    "@cozeloop/base-hooks": "workspace:*",
     "@cozeloop/biz-components-adapter": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/components": "workspace:*",
     "@cozeloop/env-adapter": "workspace:*",
     "@cozeloop/guard": "workspace:*",
+    "@cozeloop/hooks": "workspace:*",
     "@cozeloop/i18n-adapter": "workspace:*",
     "@cozeloop/tea-adapter": "workspace:*",
     "@cozeloop/toolkit": "workspace:*",
@@ -60,3 +60,4 @@
     "react-router-dom": "^6.22.0"
   }
 }
+

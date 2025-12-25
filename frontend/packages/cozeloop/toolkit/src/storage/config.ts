@@ -8,6 +8,7 @@ export const LOCAL_STORAGE_KEYS = [
   'trace-columns-key-order',
   'prompt-submit-tip-hide',
   'enterprise-id',
+  'enterprise-organization-id-map',
   'create-enterprise-success',
   'navbar-collapsed',
   'metrics-filter',
@@ -37,6 +38,9 @@ export const cacheConfig: LocalStorageCacheConfigMap = {
     bindAccount: true,
   },
   'enterprise-id': {
+    bindAccount: true,
+  },
+  'enterprise-organization-id-map': {
     bindAccount: true,
   },
   'metrics-filter': {

@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
+import {
+  useOpenWindow,
+  useResourcePageJump,
+} from '@cozeloop/biz-hooks-adapter';
 import { type tag } from '@cozeloop/api-schema/data';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { Modal, Space, Tooltip, Typography } from '@coze-arch/coze-design';
@@ -22,6 +25,7 @@ export function AnnotateItemCard({
   onDelete,
 }: Props) {
   const { getTagDetailURL } = useResourcePageJump();
+  const { openBlank } = useOpenWindow();
   const removeTag = useRequest(
     (tagID: string) =>
       StoneEvaluationApi.DeleteAnnotationTag({
@@ -39,11 +43,11 @@ export function AnnotateItemCard({
         data={data}
         actions={
           <Space spacing={20} className="ml-6">
-            <Tooltip content={I18n.t('detail')} theme="dark">
+            <Tooltip content={I18n.t('view_detail')} theme="dark">
               <Typography.Text
                 link
                 onClick={() => {
-                  window.open(getTagDetailURL(data.tag_key_id || ''));
+                  openBlank(getTagDetailURL(data.tag_key_id || ''));
                 }}
               >
                 {I18n.t('detail')}
@@ -57,7 +61,7 @@ export function AnnotateItemCard({
                     title: I18n.t('delete_this_tag'),
                     content: I18n.t('deleting_tag_affects_labeled_content'),
                     cancelText: I18n.t('cancel'),
-                    okText: I18n.t('confirm'),
+                    okText: I18n.t('global_btn_confirm'),
                     autoLoading: true,
                     onOk: async () => {
                       await removeTag.runAsync(data.tag_key_id || '');

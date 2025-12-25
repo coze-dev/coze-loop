@@ -3,21 +3,18 @@
 export { useSpace } from './use-space';
 export { useUserInfo } from './use-user-info';
 export {
+  useOpenWindow,
   useNavigateModule,
-  useBaseURL,
+  useRouteInfo,
   useCozeLocation,
-} from './use-navigate-module';
-export { useApp } from './use-app';
+} from './route';
 export { useBenefit, type BenefitConfig } from './benefit/use-benefit';
 export { useFetchUserBenefit } from './benefit/use-fetch-user-benefit';
-export {
-  IS_DISABLED_MULTI_MODEL_EVAL,
-  IS_HIDDEN_EXPERIMENT_DETAIL_FILTER,
-} from './constants';
 export { useDemoSpace } from './use-demo-space';
 export { useUserListApi } from './user-select';
 
 export { useResourcePageJump } from './evaluate/use-resource-page-jump';
+export { getAutoTaskUrlPath } from './auto-task';
 
 export { useDataImportApi } from './data-import/use-data-import-api';
 export { useCurrentEnterpriseId } from './use-current-enterprise-id';
@@ -31,5 +28,3 @@ export {
   type ListDatasetImportTemplateReq,
   type ListDatasetImportTemplateResp,
 } from './dataset-template-download';
-
-export { useOpenWindow } from './route';

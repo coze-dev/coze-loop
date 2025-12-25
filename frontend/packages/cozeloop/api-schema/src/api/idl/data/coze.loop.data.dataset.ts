@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as dataset_job from './domain/dataset_job';
 export { dataset_job };
 import * as dataset from './domain/dataset';

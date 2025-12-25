@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { useShallow } from 'zustand/react/shallow';
 import { useUIStore, type BreadcrumbItemConfig } from '@cozeloop/stores';
-import { useApp, useNavigateModule } from '@cozeloop/biz-hooks-adapter';
+import { useRouteInfo, useNavigateModule } from '@cozeloop/biz-hooks-adapter';
 import { SwitchLang } from '@cozeloop/auth-pages';
 import { Breadcrumb } from '@coze-arch/coze-design';
 
@@ -12,7 +12,7 @@ import { useMenuConfig } from '../navbar/menu-config';
 import { getBreadcrumbMap } from './utils';
 
 export function MainBreadcrumb() {
-  const { app, subModule } = useApp();
+  const { app, subModule } = useRouteInfo();
   const { breadcrumbConfig, setBreadcrumbConfig } = useUIStore(
     useShallow(store => ({
       breadcrumbConfig: store.breadcrumbConfig,

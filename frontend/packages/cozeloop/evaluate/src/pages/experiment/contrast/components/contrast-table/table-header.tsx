@@ -129,6 +129,7 @@ export default function ExperimentContrastTableHeader({
           ) : (
             <AnnotationInfo annotation={item.data} />
           ),
+
         dataIndex: item.key,
         key: item.key,
         isFieldColumn: true,
@@ -189,14 +190,17 @@ export default function ExperimentContrastTableHeader({
         expand={expand}
         onChange={setExpand}
       />
+
       <ColumnsManage
         columns={manageableColumns}
         defaultColumns={defaultColumns}
         onColumnsChange={handleColumnManageChange}
         sortable={false}
       />
+
       <RefreshButton onRefresh={onRefresh} />
     </>
   );
+
   return <TableHeader filters={filters} actions={actions} />;
 }

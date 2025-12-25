@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useState, type ReactNode } from 'react';
 
+import classNames from 'classnames';
 import { IconCozMore } from '@coze-arch/coze-design/icons';
 import {
-  Dropdown,
   Space,
   type SpaceProps,
   type TypographyProps,
   Typography,
-  Tooltip,
+  Menu,
 } from '@coze-arch/coze-design';
 
 import { TooltipWhenDisabled } from '../tooltip-when-disabled';
@@ -62,10 +62,13 @@ export function TableColActions({
             key={index}
             content={action.disabledTooltip || action.label}
             disabled={Boolean(action.disabled)}
+            needWrap={false}
           >
             <Typography.Text
               size="small"
-              className={`!text-[13px] ${textClassName}`}
+              className={classNames(`!text-[13px] ${textClassName}`, {
+                'opacity-45': action.disabled ?? disabled,
+              })}
               type={action.type}
               disabled={action.disabled ?? disabled}
               onClick={() => {
@@ -80,20 +83,20 @@ export function TableColActions({
           </TooltipWhenDisabled>
         ))}
         {moreActions.length > 0 && (
-          <Dropdown
+          <Menu
             position="bottomLeft"
             visible={visible}
             trigger="custom"
             className={styles.tableColActionsDropdown}
             onClickOutSide={() => setVisible(false)}
             render={
-              <Dropdown.Menu mode="menu">
+              <Menu.SubMenu mode="menu">
                 {moreActions.map((action, index) => {
                   const isDisabled = action.disabled ?? disabled;
                   const disabledTooltipContent = action.disabledTooltip;
 
                   const dropdownItem = (
-                    <Dropdown.Item
+                    <Menu.Item
                       disabled={isDisabled}
                       onClick={() => {
                         if (!isDisabled) {
@@ -101,7 +104,9 @@ export function TableColActions({
                           action.onClick?.();
                         }
                       }}
-                      className="min-w-[90px] !p-0 !pl-2"
+                      className={classNames('min-w-[90px] !p-0 !pl-2', {
+                        'opacity-50': isDisabled,
+                      })}
                       icon={action.icon}
                       style={{ minWidth: '90px' }}
                     >
@@ -113,26 +118,23 @@ export function TableColActions({
                       >
                         {action.label}
                       </Typography.Text>
-                    </Dropdown.Item>
+                    </Menu.Item>
                   );
 
                   return (
                     <div key={index}>
-                      {isDisabled && disabledTooltipContent ? (
-                        <Tooltip
-                          content={disabledTooltipContent}
-                          keepDOM={true}
-                          theme="dark"
-                        >
-                          {dropdownItem}
-                        </Tooltip>
-                      ) : (
-                        dropdownItem
-                      )}
+                      <TooltipWhenDisabled
+                        content={disabledTooltipContent}
+                        disabled={Boolean(isDisabled && disabledTooltipContent)}
+                        theme="dark"
+                        needWrap={false}
+                      >
+                        {dropdownItem}
+                      </TooltipWhenDisabled>
                     </div>
                   );
                 })}
-              </Dropdown.Menu>
+              </Menu.SubMenu>
             }
           >
             <div
@@ -141,7 +143,7 @@ export function TableColActions({
             >
               <IconCozMore className="text-[#5A4DED]" />
             </div>
-          </Dropdown>
+          </Menu>
         )}
       </Space>
     </div>

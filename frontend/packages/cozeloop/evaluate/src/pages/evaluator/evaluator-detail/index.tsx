@@ -6,10 +6,10 @@ import { type ReactNode, useRef, useState } from 'react';
 
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { ModelConfigInfo, TemplateInfo } from '@cozeloop/evaluate-components';
 import { useDemoSpace, useSpace } from '@cozeloop/biz-hooks-adapter';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
 import {
   EvaluatorType,
   type EvaluatorVersion,
@@ -71,7 +71,7 @@ function EvaluatorDetailPage() {
 
       const res = await StoneEvaluationApi.UpdateEvaluatorDraft({
         workspace_id: spaceID,
-        evaluator_id: evaluator?.evaluator_id || '',
+        evaluator_id: id || '',
         evaluator_content: evaluatorContent,
         evaluator_type: values.evaluator_type || EvaluatorType.Prompt,
       });

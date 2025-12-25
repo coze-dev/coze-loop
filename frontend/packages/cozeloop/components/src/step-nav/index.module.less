@@ -1,0 +1,47 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+.step-nav{
+  height: 24px;
+  display: flex;
+  gap:28px;
+  align-items: center;
+  justify-content: center;
+
+  .tab-step{
+    display: flex;
+    gap: 8px;
+    align-items: center;
+
+    font-weight: 500 !important;
+    color: rgba(32, 41, 69, 62%);
+
+    .tab-icon{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      width: 24px;
+      height: 24px;
+
+      font-size: 13px;
+      font-weight: 500;
+      font-style: normal;
+      line-height: 24px;
+      text-align: center;
+
+      background: rgba(87, 104, 161, 8%);
+      border-radius: 12px;
+
+    }
+  }
+
+  .tab-active{
+    color: #5147FF;
+
+    .tab-icon{
+      color: #fff;
+
+      background: #5147FF;
+    }
+  }
+}

@@ -33,7 +33,7 @@ export function EvaluatorVersionDetail({
         )}
         onClick={() => setOpen(pre => !pre)}
       >
-        {I18n.t('prompt_details')}
+        {I18n.t('prompt_detail')}
         <IconCozArrowRight
           className={classNames(
             'h-4 w-4 ml-2 coz-fg-plus transition-transform',
@@ -59,7 +59,7 @@ export function EvaluatorVersionDetail({
               icon={<IconCozEmpty className="coz-fg-dim text-32px" />}
               title={I18n.t('no_data')}
               className={emptyStyles['empty-state']}
-              // description={I18n.t('select_evaluator_and_version_number_to_view')}
+              // description="请选择评估器和版本号后再查看"
             />
           </div>
         ) : (

@@ -4,3 +4,8 @@ export { useUIStore, UIEvent } from './stores/ui';
 export type { BreadcrumbItemConfig } from './stores/ui';
 export { useI18nStore } from './stores/i18n';
 export type { I18nLang } from './stores/i18n';
+
+export {
+  useEvaluationFlagStore,
+  EvaluationFlagEvent,
+} from './stores/evaluation-flag-store';

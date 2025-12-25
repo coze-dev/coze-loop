@@ -1,19 +1,5 @@
-/*
- * Copyright 2025
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useCallback, useMemo, useRef } from 'react';
 
@@ -45,27 +31,27 @@ import EvalSetTestData from './eval-set-test-data';
 
 const JSON_INDENT = 2;
 
-const dataSourceOptions = [
+const getDataSourceOptions = () => [
   {
     label: I18n.t('evaluate_based_on_evaluation_set'),
     value: TestDataSource.Dataset,
   },
-  { label: I18n.t('evaluate_custom'), value: TestDataSource.Custom },
+  { label: I18n.t('customize'), value: TestDataSource.Custom },
 ];
 
 const toolTipContent = (
   <div>
-    turn代表单轮问答的评测场景，其中：
+    {I18n.t('evaluate_turn_represents_single_round_evaluation')}
     <br />
-    evaluate_dataset_fields：评测集字段
+    {I18n.t('evaluate_evaluate_dataset_fields_desc')}
     <br />
-    evaluate_target_output_fields：评测对象字段
+    {I18n.t('evaluate_evaluate_target_output_fields_desc')}
     <br />
-    ext：补充字段
+    {I18n.t('evaluate_ext_additional_fields')}
     <br />
-    详细内容请参考
+    {I18n.t('evaluate_please_refer_to_details')}
     <a href={EVALUATOR_CODE_DOCUMENT_LINK} target="_blank">
-      文档
+      {I18n.t('document')}
     </a>
     。
   </div>
@@ -90,7 +76,7 @@ const CustomDataContent: React.FC<{
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
           wordWrap: 'on',
-          fontSize: 14,
+          fontSize: 12,
           lineNumbers: 'on',
           folding: true,
           automaticLayout: true,
@@ -154,7 +140,7 @@ const BaseDataSetConfig: React.FC<
       const custom = customData || {};
       return JSON.stringify(custom, null, JSON_INDENT);
     } catch (error) {
-      console.error(I18n.t('evaluate_json_serialize_error'), error);
+      console.error('JSON 序列化错误:', error);
       return '{}';
     }
   }, [customData]);
@@ -171,7 +157,7 @@ const BaseDataSetConfig: React.FC<
         onChange?.({ ...value, customData: parsedData });
       } catch (error) {
         // JSON 解析错误时不更新数据，保持编辑器中的内容
-        console.error(I18n.t('evaluate_json_parse_error'), error);
+        console.error('JSON 解析错误:', error);
       }
     },
     [onChange, value],
@@ -190,6 +176,8 @@ const BaseDataSetConfig: React.FC<
     }
     onChange?.(payload);
   };
+
+  const dataSourceOptions = getDataSourceOptions();
 
   return (
     <>

@@ -175,7 +175,7 @@
       "tags": ["level-3"]
     },
     {
-      "packageName": "@cozeloop/base-hooks",
+      "packageName": "@cozeloop/hooks",
       "projectFolder": "frontend/packages/cozeloop/base-hooks",
       "tags": ["level-3"]
     },
@@ -240,23 +240,13 @@
       "tags": ["level-3"]
     },
     {
-      "packageName": "@cozeloop/observation-component",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-detail",
+      "packageName": "@cozeloop/observation-components",
+      "projectFolder": "frontend/packages/cozeloop/observation-components",
       "tags": ["level-3"]
     },
     {
-      "packageName": "@cozeloop/observation-component-adapter",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-detail-open",
-      "tags": ["level-3"]
-    },
-    {
-      "packageName": "@cozeloop/trace-list",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-list",
-      "tags": ["level-3"]
-    },
-    {
-      "packageName": "@cozeloop/trace-struct-data",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-struct-data",
+      "packageName": "@cozeloop/observation-adapter",
+      "projectFolder": "frontend/packages/cozeloop/observation-adapter",
       "tags": ["level-3"]
     },
     {
@@ -323,6 +313,24 @@
       "packageName": "@cozeloop/toolkit",
       "projectFolder": "frontend/packages/cozeloop/toolkit",
       "tags": ["level-3"]
+    },
+    {
+      "packageName": "@cozeloop/base-with-adapter-components",
+      "projectFolder": "frontend/packages/cozeloop/components-with-adapter",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
+    },
+    {
+      "packageName": "@cozeloop/shared-components",
+      "projectFolder": "frontend/packages/cozeloop/shared-components",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
+    },
+    {
+      "packageName": "@cozeloop/prompt-components-v2",
+      "projectFolder": "frontend/packages/cozeloop/prompt-components-v2",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
     }
   ]
 }

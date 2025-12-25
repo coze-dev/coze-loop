@@ -1,12 +1,16 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import classNames from 'classnames';
 import { useDebounceFn, useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { BaseSearchSelect } from '@cozeloop/components';
-import { useResourcePageJump, useSpace } from '@cozeloop/biz-hooks-adapter';
+import { BaseSearchSelect, type BaseSelectProps } from '@cozeloop/components';
+import {
+  useResourcePageJump,
+  useOpenWindow,
+  useSpace,
+} from '@cozeloop/biz-hooks-adapter';
 import { EvalTargetType } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozPlus } from '@coze-arch/coze-design/icons';
@@ -23,12 +27,16 @@ const PromptEvalTargetSelect = ({
   showCreateBtn = false,
   onlyShowOptionName = false,
   ...props
-}: SelectProps & { showCreateBtn?: boolean; onlyShowOptionName?: boolean }) => {
+}: SelectProps &
+  BaseSelectProps & {
+    showCreateBtn?: boolean;
+    onlyShowOptionName?: boolean;
+  }) => {
   const { spaceID } = useSpace();
   const [createPromptVisible, setCreatePromptVisible] = useState(false);
   const { PromptCreate } = useGlobalEvalConfig();
   const { getPromptDetailURL } = useResourcePageJump();
-
+  const { openBlank } = useOpenWindow();
   const service = useRequest(async (text?: string) => {
     const res = await StoneEvaluationApi.ListSourceEvalTargets({
       target_type: EvalTargetType.CozeLoopPrompt,
@@ -45,6 +53,20 @@ const PromptEvalTargetSelect = ({
     wait: 500,
   });
 
+  const fetchTargetOptionsByIds = useCallback(
+    async (ids: string[] | number[]) => {
+      const res = await StoneEvaluationApi.BatchGetEvalTargetsBySource({
+        workspace_id: spaceID || '',
+        source_target_ids: ids as string[],
+        eval_target_type: EvalTargetType.CozeLoopPrompt,
+        need_source_info: true,
+      });
+      return (res?.eval_targets || []).map(item =>
+        getPromptEvalTargetOption(item, onlyShowOptionName),
+      );
+    },
+    [spaceID],
+  );
   return (
     <>
       <BaseSearchSelect
@@ -53,6 +75,7 @@ const PromptEvalTargetSelect = ({
         loading={service.loading}
         onSearch={handleSearch.run}
         showRefreshBtn={true}
+        loadOptionByIds={fetchTargetOptionsByIds}
         onClickRefresh={() => service.run()}
         outerBottomSlot={
           showCreateBtn ? (
@@ -64,7 +87,7 @@ const PromptEvalTargetSelect = ({
             >
               <IconCozPlus className="h-4 w-4 text-brand-9 mr-2" />
               <div className="text-sm font-medium text-brand-9">
-                {I18n.t('create_new_prompt')}
+                {I18n.t('new_prompt')}
               </div>
             </div>
           ) : null
@@ -72,12 +95,13 @@ const PromptEvalTargetSelect = ({
         optionList={service.data}
         {...props}
       />
+
       {showCreateBtn && PromptCreate ? (
         <PromptCreate
           visible={createPromptVisible}
           onCancel={() => setCreatePromptVisible(false)}
           onOk={res => {
-            window.open(getPromptDetailURL(`${res.id}`));
+            openBlank(getPromptDetailURL(`${res.id}`));
             setCreatePromptVisible(false);
             service.run();
           }}

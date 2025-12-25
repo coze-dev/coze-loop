@@ -36,9 +36,7 @@ export function EvaluatorChartCard({
     );
     const { data } = splitData(originalData, maxCount);
 
-    const nameMap = {
-      [CHART_MORE_KEY]: I18n.t('analytics_subtitle_others'),
-    };
+    const nameMap = { [CHART_MORE_KEY]: I18n.t('analytics_subtitle_others') };
     const result: ChartItemValue[] = data.map(([score, item]) => ({
       name: nameMap[score] ?? score,
       dimension: score,

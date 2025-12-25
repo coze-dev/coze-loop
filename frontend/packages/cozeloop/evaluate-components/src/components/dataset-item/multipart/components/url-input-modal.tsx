@@ -123,7 +123,7 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
                 <Form.Input
                   field={`urls[${idx}]`}
                   label={{
-                    text: `${I18n.t('cozeloop_open_evaluate_image_placeholder1', { placeholder1: idx + 1 })}`,
+                    text: `${I18n.t('image')}${idx + 1}`,
                     required: true,
                   }}
                   fieldClassName="flex-1"
@@ -145,6 +145,7 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
                   ]}
                   className="w-full"
                 />
+
                 <Button
                   size="small"
                   color="secondary"
@@ -167,10 +168,9 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
               className="mt-2"
             >
               {I18n.t('space_member_role_type_add_btn')}{' '}
-              <Typography.Text
-                className="ml-1"
-                type="secondary"
-              >{`${urls.length}/${maxCount}`}</Typography.Text>
+              <Typography.Text className="ml-1" type="secondary">
+                {`${urls.length}/${maxCount}`}
+              </Typography.Text>
             </Button>
             {error ? (
               <div className="text-red-500 text-sm mt-1">{error}</div>
@@ -215,9 +215,7 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
             }
             color={record?.errorType ? 'red' : 'green'}
           >
-            {record?.errorType
-              ? I18n.t('status_failed')
-              : I18n.t('status_success')}
+            {record?.errorType ? I18n.t('failure') : I18n.t('success')}
           </Tag>
           <Typography.Text type="secondary" className="ml-1">
             {record.errorType ? ErrorTypeMap[record.errorType] : ''}

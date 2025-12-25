@@ -51,6 +51,10 @@ expt_export_csv_event_rmq:
 clickhouse_table_config:
   expt_turn_result_filter_table_name: 'expt_turn_result_filter'
 
+evaluator_management_space_config:
+  evaluator_template_space:
+    - "7565071389755228204"
+
 rate_limiter_conf:
   - key_expr: biz_key + string(space_id)
     limit:

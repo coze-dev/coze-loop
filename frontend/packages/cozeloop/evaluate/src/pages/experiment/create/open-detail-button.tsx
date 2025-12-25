@@ -15,7 +15,7 @@ export function OpenDetailButton({
   customOpen?: () => void;
 }) {
   return (
-    <Tooltip theme="dark" content={I18n.t('detail')}>
+    <Tooltip theme="dark" content={I18n.t('view_detail')}>
       <Button
         onClick={e => {
           e.stopPropagation();

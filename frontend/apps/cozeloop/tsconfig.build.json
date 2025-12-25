@@ -88,6 +88,9 @@
       "path": "../../packages/cozeloop/tailwind-config/tsconfig.build.json"
     },
     {
+      "path": "../../packages/cozeloop/tea/tsconfig.build.json"
+    },
+    {
       "path": "../../packages/cozeloop/toolkit/tsconfig.build.json"
     }
   ]

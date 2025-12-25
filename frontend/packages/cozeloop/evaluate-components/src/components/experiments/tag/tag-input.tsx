@@ -4,9 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { TooltipWhenDisabled } from '@cozeloop/components';
-import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
+import {
+  useResourcePageJump,
+  useOpenWindow,
+} from '@cozeloop/biz-hooks-adapter';
 import {
   type AnnotateRecord,
   type ColumnAnnotation,
@@ -22,8 +26,6 @@ import {
   TextArea,
   type TextAreaProps,
 } from '@coze-arch/coze-design';
-
-import { TypographyText } from '@/components/text-ellipsis';
 
 import { TagDetailLink } from './tag-detail-link';
 
@@ -143,6 +145,7 @@ export function TagInput({
           onBlur={e => save.run({ plain_text: e.target.value })}
         />
       );
+
     case tag.TagContentType.Categorical:
       return (
         <CategoryLabel
@@ -157,6 +160,7 @@ export function TagInput({
           onCreateOption={onCreateOption}
         />
       );
+
     case tag.TagContentType.Boolean:
       return useSelectBoolean ? (
         <BooleanLabelSelect
@@ -179,6 +183,7 @@ export function TagInput({
           }}
         />
       );
+
     case tag.TagContentType.ContinuousNumber:
       return (
         <NumberLabel
@@ -197,6 +202,7 @@ export function TagInput({
           }}
         />
       );
+
     default:
       return null;
   }
@@ -237,65 +243,58 @@ export const CategoryLabel = ({
   ...selectProps
 }: CategoryLabelProps) => {
   const { getTagDetailURL } = useResourcePageJump();
+  const { openBlank } = useOpenWindow();
 
   const optionList = useMemo(
-    () => {
-      // 禁用的放后面
-      const arr = [
-        ...(annotation.tag_values || []).filter(
-          e => e.status !== tag.TagStatus.Inactive,
-        ),
-        ...(annotation.tag_values || []).filter(
-          e => e.status === tag.TagStatus.Inactive,
-        ),
-      ];
-      return arr.map(item => ({
-        value: item.tag_value_id,
-        disabled: item.status === tag.TagStatus.Inactive,
-        tagName: item.tag_value_name,
-        label: (
-          <TooltipWhenDisabled
-            content={
-              <div>
-                <span className="mr-1">
-                  {I18n.t(
-                    'cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable',
-                  )}
-                </span>
-                <TagDetailLink tagKey={annotation.tag_key_id} />
-              </div>
-            }
-            spacing={40}
-            position="left"
-            theme="dark"
-            disabled={
-              item.status !== tag.TagStatus.Active &&
-              selectProps.value === item.tag_value_id
-            }
-          >
-            <div className="group flex items-center w-full h-8 overflow-hidden px-2">
-              <div className="flex-1 min-w-0">
-                <TypographyText
-                  className={classNames('max-w-full overflow-hidden', {
-                    '!coz-fg-dim': item.status !== tag.TagStatus.Active,
-                  })}
-                >
-                  {item.tag_value_name}
-                </TypographyText>
-              </div>
+    () =>
+      (annotation.tag_values || [])
+        .sort(a => (a.status === tag.TagStatus.Inactive ? 1 : -1))
+        .map(item => ({
+          value: item.tag_value_id,
+          disabled: item.status === tag.TagStatus.Inactive,
+          tagName: item.tag_value_name,
+          label: (
+            <TooltipWhenDisabled
+              content={
+                <div>
+                  <span className="mr-1">
+                    {I18n.t(
+                      'cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable',
+                    )}
+                  </span>
+                  <TagDetailLink tagKey={annotation.tag_key_id} />
+                </div>
+              }
+              spacing={40}
+              position="left"
+              theme="dark"
+              disabled={
+                item.status !== tag.TagStatus.Active &&
+                selectProps.value === item.tag_value_id
+              }
+            >
+              <div className="group flex items-center w-full h-8 overflow-hidden px-2">
+                <div className="flex-1 min-w-0">
+                  <TypographyText
+                    className={classNames('max-w-full overflow-hidden', {
+                      '!coz-fg-dim': item.status !== tag.TagStatus.Active,
+                    })}
+                  >
+                    {item.tag_value_name}
+                  </TypographyText>
+                </div>
 
-              <IconCozLongArrowTopRight
-                className="ml-1 text-brand-9 shrink-0 cursor-pointer invisible group-hover:visible"
-                onClick={e => {
-                  e.stopPropagation();
-                  window.open(getTagDetailURL(annotation.tag_key_id || ''));
-                }}
-              />
-            </div>
-          </TooltipWhenDisabled>
-        ),
-      }));
-    },
+                <IconCozLongArrowTopRight
+                  className="ml-1 text-brand-9 shrink-0 cursor-pointer invisible group-hover:visible"
+                  onClick={e => {
+                    e.stopPropagation();
+                    openBlank(getTagDetailURL(annotation.tag_key_id || ''));
+                  }}
+                />
+              </div>
+            </TooltipWhenDisabled>
+          ),
+        })),
     [annotation, selectProps.value],
   );
 
@@ -342,7 +341,7 @@ export const CategoryLabel = ({
   return (
     <Select
       className="w-full"
-      placeholder={I18n.t('please_select_a_category')}
+      placeholder={I18n.t('select_category')}
       optionList={optionList}
       filter={(val, option) => option.tagName?.includes(val)}
       onSearch={handleSearch}
@@ -356,7 +355,9 @@ export const CategoryLabel = ({
             })}
             onClick={handleCreate}
           >
-            <span className="coz-fg-dim mr-1">{I18n.t('add')}</span>
+            <span className="coz-fg-dim mr-1">
+              {I18n.t('space_member_role_type_add_btn')}
+            </span>
             <span className="coz-fg-plus">{inputValue}</span>
           </div>
         ) : null
@@ -413,6 +414,7 @@ export const BooleanLabel = ({
     ))}
   </div>
 );
+
 interface BooleanLabelSelectProps extends SelectProps {
   annotation: ColumnAnnotation;
 }

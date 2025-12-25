@@ -28,10 +28,8 @@ export const ExportUpdateTooltipHoc = ({
   isShowTooltip,
   children,
 }: {
-  /** 是否显示升级提示的 Tooltip */
-  isShowTooltip: boolean;
-  /** 被包装的子组件 */
-  children: React.ReactNode;
+  /** 是否显示升级提示的 Tooltip */ isShowTooltip: boolean;
+  /** 被包装的子组件 */ children: React.ReactNode;
 }) => {
   // 获取 UI 事件发布器，用于触发订阅模态框
   const { publish } = useUIStore(
@@ -80,6 +78,7 @@ export const ExportUpdateTooltipHoc = ({
         <span>{I18n.t('you_can_use_this_function_later')}</span>
       </div>
     ),
+
     [handleUpgradeClick],
   );
 

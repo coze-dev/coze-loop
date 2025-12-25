@@ -1,0 +1,153 @@
+{
+  "name": "@cozeloop/observation-components",
+  "version": "0.0.2",
+  "description": "观测对外输出组件",
+  "license": "Apache-2.0",
+  "author": "liuwei.felix@bytedance.com",
+  "maintainers": [],
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./zh-CN": {
+      "import": "./src/i18n/resource/zh-CN.json"
+    },
+    "./en-US": {
+      "import": "./src/i18n/resource/en-US.json"
+    }
+  },
+  "main": "./src/index.ts",
+  "typesVersions": {
+    "*": {
+      ".": [
+        "./src/index.ts"
+      ],
+      "zh-CN": [
+        "./src/i18n/resource/zh-CN.json"
+      ],
+      "en-US": [
+        "./src/i18n/resource/en-US.json"
+      ]
+    }
+  },
+  "files": [
+    "package.json",
+    "README.md",
+    "dist"
+  ],
+  "scripts": {
+    "build-storybook": "storybook build",
+    "dev": "storybook dev -p 6006",
+    "lint": "eslint ./ --cache",
+    "test": "vitest --run --passWithNoTests",
+    "test:cov": "npm run test -- --coverage"
+  },
+  "dependencies": {
+    "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
+    "@cozeloop/api-schema": "workspace:*",
+    "@cozeloop/components": "workspace:*",
+    "@textea/json-viewer": "^3.0.0",
+    "ahooks": "^3.7.8",
+    "axios": "^1.4.0",
+    "classnames": "^2.3.2",
+    "dayjs": "^1.11.7",
+    "immer": "^10.0.3",
+    "intl-messageformat": "^10.7.16",
+    "json-bigint": "~1.0.0",
+    "lodash-es": "^4.17.21",
+    "lru-cache": "^11.2.2",
+    "nanoid": "^4.0.2",
+    "query-string": "^8.1.0",
+    "react-error-boundary": "^4.0.9",
+    "react-json-view": "~1.21.3",
+    "react-resizable-panels": "~2.1.6",
+    "react-router-dom": "^6.22.0",
+    "react-virtuoso": "^4.14.1",
+    "rxjs": "^7.8.0",
+    "zod": "^3.25.76",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@coze-arch/bot-typings": "workspace:*",
+    "@coze-arch/eslint-config": "workspace:*",
+    "@coze-arch/pkg-root-webpack-plugin": "workspace:*",
+    "@coze-arch/postcss-plugin": "workspace:*",
+    "@coze-arch/stylelint-config": "workspace:*",
+    "@coze-arch/subspace-resolve-plugin": "workspace:*",
+    "@coze-arch/tailwind-config": "workspace:*",
+    "@coze-arch/ts-config": "workspace:*",
+    "@coze-arch/vitest-config": "workspace:*",
+    "@cozeloop/tailwind-config": "workspace:*",
+    "@cozeloop/tailwind-plugin": "workspace:*",
+    "@douyinfe/semi-rspack-plugin": "2.61.0",
+    "@microsoft/rush-lib": "~5.147.1",
+    "@rsbuild/core": "~1.1.0",
+    "@rsbuild/plugin-less": "~1.1.0",
+    "@rsbuild/plugin-node-polyfill": "~0.3.0",
+    "@rsbuild/plugin-react": "~1.1.0",
+    "@rsbuild/plugin-sass": "~1.1.0",
+    "@rsbuild/plugin-svgr": "~1.0.6",
+    "@rslib/core": "~0.11.0",
+    "@storybook/addon-essentials": "^7.6.7",
+    "@storybook/addon-interactions": "^7.6.7",
+    "@storybook/addon-links": "^7.6.7",
+    "@storybook/addon-onboarding": "^1.0.10",
+    "@storybook/blocks": "^7.6.7",
+    "@storybook/react": "^7.6.7",
+    "@storybook/react-vite": "^7.6.7",
+    "@storybook/test": "^7.6.7",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/react-hooks": "^8.0.1",
+    "@types/lodash-es": "^4.17.10",
+    "@types/react": "18.2.37",
+    "@types/react-dom": "18.2.15",
+    "@vitest/coverage-v8": "~3.0.5",
+    "react": "~18.2.0",
+    "react-dom": "~18.2.0",
+    "storybook": "^7.6.7",
+    "storybook-react-rsbuild": "~0.1.3",
+    "stylelint": "^15.11.0",
+    "tailwindcss": "~3.3.3",
+    "vite-plugin-svgr": "~3.3.0",
+    "vitest": "~3.0.5"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0",
+    "react-dom": ">=18.2.0"
+  },
+  "botPublishConfig": {
+    "name": "@next-ai/observation-components",
+    "main": "./dist/es/index.js",
+    "types": "./dist/es/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/es/index.js",
+        "types": "./dist/es/index.d.ts"
+      },
+      "./zh-CN": {
+        "import": "./dist/es/zh-CN.json",
+        "types": "./dist/es/zh-CN.json"
+      },
+      "./en-US": {
+        "import": "./dist/es/en-US.json",
+        "types": "./dist/es/en-US.json"
+      }
+    },
+    "typesVersions": {
+      "*": {
+        ".": [
+          "./dist/es/index.d.ts"
+        ],
+        "zh-CN": [
+          "./dist/es/zh-CN.json"
+        ],
+        "en-US": [
+          "./dist/es/en-US.json"
+        ]
+      }
+    }
+  }
+}
+

@@ -1,0 +1,78 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable declaration-no-important */
+/* stylelint-disable no-descending-specificity */
+.expr-value-item-content {
+  flex: 3;
+  width: 0;
+  min-width: 80px;
+
+  &.expr-value-item-content-invalidate {
+    :global {
+      .semi-select {
+        @apply border border-solid !border-[#d0292f];
+
+        .semi-input-wrapper  {
+          @apply border-none;
+        }
+      }
+
+      .coze-input {
+        @apply border border-solid !border-[#d0292f];
+      }
+
+      .semi-input-wrapper {
+        @apply border border-solid !border-[#d0292f];
+      }
+
+    }
+  }
+
+}
+
+.expr-value-item-content-invalidate-text {
+  @apply text-[#d0292f] text-sm whitespace-nowrap;
+}
+
+.expr-op-item-content {
+  flex: 2;
+  width: 0;
+  min-width: 50px;
+
+  &.expr-op-item-content-invalidate {
+    :global {
+      .semi-select {
+        @apply border border-solid !border-[#d0292f];
+      }
+
+    }
+  }
+}
+
+.expr-group-render-content-items {
+  overflow-y: auto;
+  max-height: 500px;
+
+  &.expr-group-render-content-items-invalidate {
+    :global {
+      .semi-select {
+        @apply border border-solid !border-[#d0292f];
+      }
+    }
+  }
+}
+
+
+.render-select {
+  :global {
+    .semi-highlight-tag {
+      color: rgb(var(--coze-up-brand-9)) !important;
+      background-color: transparent !important;
+    }
+
+    .coz-select-option-item-icon-multiple-selected {
+      background-color: rgb(var(--coze-up-brand-9)) !important;
+      border-color: rgb(var(--coze-up-brand-9)) !important;
+    }
+  }
+}

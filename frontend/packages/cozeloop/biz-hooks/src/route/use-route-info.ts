@@ -1,19 +1,5 @@
-/*
- * Copyright 2025 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { useParams } from 'react-router-dom';
 import { useCallback, useMemo } from 'react';
 
@@ -31,8 +17,8 @@ const getBaseURLBase = (params: RouteInfoURLParams) => {
   if (params.enterpriseID) {
     baseURL += `/enterprise/${params.enterpriseID}`;
   }
-  if (params.organizeID) {
-    baseURL += `/organize/${params.organizeID}`;
+  if (params.organizationID) {
+    baseURL += `/organization/${params.organizationID}`;
   }
   if (params.spaceID) {
     baseURL += `/space/${params.spaceID}`;
@@ -42,10 +28,10 @@ const getBaseURLBase = (params: RouteInfoURLParams) => {
 };
 
 export const useRouteInfo: UseRouteInfo = () => {
-  const { enterpriseID, organizeID, spaceID } = useParams<{
+  const { enterpriseID, organizationID, spaceID } = useParams<{
     enterpriseID: string;
     spaceID: string;
-    organizeID: string;
+    organizationID: string;
   }>();
 
   const { pathname } = window.location ?? {};
@@ -53,7 +39,7 @@ export const useRouteInfo: UseRouteInfo = () => {
   const routeInfo = useMemo(() => {
     const baseURL = getBaseURLBase({
       enterpriseID,
-      organizeID,
+      organizationID,
       spaceID,
     });
 
@@ -67,22 +53,22 @@ export const useRouteInfo: UseRouteInfo = () => {
       subModule,
       detail,
     };
-  }, [pathname, enterpriseID, organizeID, spaceID]);
+  }, [pathname, enterpriseID, organizationID, spaceID]);
 
   const getBaseURL: RouteInfo['getBaseURL'] = useCallback(
     params =>
       getBaseURLBase({
         enterpriseID,
-        organizeID,
+        organizationID,
         spaceID,
         ...params,
       }),
-    [enterpriseID, organizeID, spaceID],
+    [enterpriseID, organizationID, spaceID],
   );
 
   return {
     enterpriseID,
-    organizeID,
+    organizationID,
     spaceID,
     getBaseURL,
     ...routeInfo,

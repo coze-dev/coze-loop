@@ -43,7 +43,7 @@ export const experimentRunStatusInfoList: ExperimentRunStatusInfo[] = [
     icon: <IconCozCrossCircleFill />,
   },
   // {
-  //   name: I18n.t('status_failed'),
+  //   name: '失败',
   //   status: ExptStatus.SystemTerminated,
   //   color: 'red',
   //   tagColor: 'red',
@@ -65,8 +65,15 @@ export const experimentRunStatusInfoList: ExperimentRunStatusInfo[] = [
     icon: <IconCozLoading />,
   },
   {
-    name: I18n.t('abort'),
+    name: I18n.t('terminate'),
     status: ExptStatus.Terminated,
+    color: 'orange',
+    tagColor: 'yellow',
+    icon: <IconCozWarningCircleFill />,
+  },
+  {
+    name: I18n.t('terminating'),
+    status: ExptStatus.Terminating,
     color: 'orange',
     tagColor: 'yellow',
     icon: <IconCozWarningCircleFill />,

@@ -1,8 +1,8 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { useRequest } from 'ahooks';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { TypographyText } from '@cozeloop/evaluate-components';
 import { type ColumnAnnotation } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { IconCozTrashCan } from '@coze-arch/coze-design/icons';
@@ -48,7 +48,7 @@ export function AnnotateColumnHeader({
             title: I18n.t('delete_this_tag'),
             content: I18n.t('deleting_tag_affects_labeled_content'),
             cancelText: I18n.t('cancel'),
-            okText: I18n.t('confirm'),
+            okText: I18n.t('global_btn_confirm'),
             autoLoading: true,
             onOk: async () => {
               await removeTag.runAsync();

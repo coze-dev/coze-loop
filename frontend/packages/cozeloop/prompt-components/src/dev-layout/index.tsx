@@ -9,23 +9,35 @@ export function DevLayout({
   children,
   className,
   style,
+  wrapperClassName,
+  domRef,
 }: {
   title: React.ReactNode;
   actionBtns?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  wrapperClassName?: string;
   style?: React.CSSProperties;
+  domRef?: React.Ref<HTMLDivElement>;
 }) {
   return (
     <div
       className={classNames('flex flex-col h-full w-full', className)}
       style={style}
+      ref={domRef}
     >
       <div
-        className="h-[40px] px-6 py-2 box-border coz-fg-plus w-full border-0 border-t border-b border-solid flex justify-between items-center"
-        style={{ background: '#F6F6FB' }}
+        className={classNames(
+          'h-[40px] px-6 py-2 box-border coz-fg-plus w-full border-0 border-t border-b border-solid flex justify-between items-center',
+          wrapperClassName,
+        )}
+        style={{ background: '#FCFCFF' }}
       >
-        <Typography.Text strong>{title}</Typography.Text>
+        {typeof title === 'string' ? (
+          <Typography.Text strong>{title}</Typography.Text>
+        ) : (
+          title
+        )}
         {actionBtns}
       </div>
       {children}

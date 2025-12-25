@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as annotation from './annotation';
 export { annotation };
 export enum SpanStatus {
@@ -46,6 +48,31 @@ export interface OutputSpan {
   logic_delete_date?: string,
   service_name?: string,
   logid?: string,
+  system_tags_string?: {
+    [key: string | number]: string
+  },
+  system_tags_long?: {
+    [key: string | number]: string
+  },
+  system_tags_double?: {
+    [key: string | number]: number
+  },
+  tags_string?: {
+    [key: string | number]: string
+  },
+  tags_long?: {
+    [key: string | number]: string
+  },
+  tags_double?: {
+    [key: string | number]: number
+  },
+  tags_bool?: {
+    [key: string | number]: boolean
+  },
+  tags_bytes?: {
+    [key: string | number]: string
+  },
+  call_type?: string,
   custom_tags?: {
     [key: string | number]: string
   },

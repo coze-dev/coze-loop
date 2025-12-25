@@ -1,0 +1,16 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+.container {
+  padding: 8px 16px;
+
+  border: 1px solid var(--semi-color-border);
+  border-radius: var(--semi-border-radius-medium);
+}
+
+.shadow {
+  transition: box-shadow 0.3s;
+  &:hover {
+    box-shadow: var(--semi-shadow-elevated);
+    z-index: 1;
+  }
+}

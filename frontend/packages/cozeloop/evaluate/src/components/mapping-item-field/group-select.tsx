@@ -5,6 +5,7 @@
 /* eslint-disable import/order */
 /* eslint-disable @coze-arch/tsx-no-leaked-render */
 /* eslint-disable @coze-arch/max-line-per-function */
+import { I18n } from '@cozeloop/i18n-adapter';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   Input,
@@ -23,8 +24,9 @@ import {
 import {
   getInputTypeText,
   type GetInputTypeTextParams,
-  TypographyText,
 } from '@cozeloop/evaluate-components';
+
+import { TypographyText } from '@cozeloop/shared-components';
 
 import {
   type ExpandedProperty,
@@ -34,7 +36,6 @@ import {
 } from './types';
 
 import styles from './group-select.module.less';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 export interface GroupSelectProps
   extends Omit<InputProps, 'value' | 'onChange'> {
@@ -138,7 +139,7 @@ export default function GroupSelect(props: GroupSelectProps) {
     renderSelectedItem,
     validateStatus,
     disabled = false,
-    placeholder = I18n.t('please_select', { field: '' }),
+    placeholder = I18n.t('please_select'),
     separator = defaultSeparator,
     className,
     ...restProps

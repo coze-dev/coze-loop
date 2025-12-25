@@ -11,15 +11,22 @@
     "test:cov": "exit 0"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.3.3",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.34.1",
     "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
+    "@coze-editor/editor": "0.1.0-alpha.dac011",
     "@cozeloop/api-schema": "workspace:*",
-    "@cozeloop/biz-hooks-adapter": "workspace:*",
-    "@cozeloop/i18n-adapter": "workspace:*",
+    "@cozeloop/hooks": "workspace:*",
     "@cozeloop/toolkit": "workspace:*",
     "@monaco-editor/react": "^4.5.2",
+    "@rjsf/core": "~5.24.9",
+    "@rjsf/utils": "~5.24.9",
+    "@rjsf/validator-ajv8": "~5.24.9",
     "ahooks": "^3.7.8",
     "classnames": "^2.3.2",
     "copy-to-clipboard": "^3.3.3",
+    "dayjs": "^1.11.7",
     "immer": "^10.0.3",
     "lodash-es": "^4.17.21",
     "monaco-editor": "^0.45.0",
@@ -47,3 +54,4 @@
   },
   "peerDependencies": {}
 }
+

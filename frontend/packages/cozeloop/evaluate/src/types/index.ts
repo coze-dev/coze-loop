@@ -6,7 +6,7 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 import { FieldDisplayFormat } from '@cozeloop/api-schema/data';
 
-export { DatasetCellContent };
+export type { DatasetCellContent };
 
 /**
  * 逻辑筛选条件

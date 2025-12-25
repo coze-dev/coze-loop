@@ -23,6 +23,9 @@
     },
     {
       "path": "../../../config/vitest-config/tsconfig.build.json"
+    },
+    {
+      "path": "../observation-components/tsconfig.build.json"
     }
   ]
 }

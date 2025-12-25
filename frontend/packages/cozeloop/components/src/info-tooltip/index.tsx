@@ -1,18 +1,43 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
-import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
+import {
+  IconCozInfoCircle,
+  IconCozQuestionMarkCircle,
+} from '@coze-arch/coze-design/icons';
 import { Tooltip } from '@coze-arch/coze-design';
 
 interface Props {
-  content: string;
+  content: string | React.ReactNode;
   className?: string;
+  tooltipClassName?: string;
+  icon?: React.ReactNode;
+  useQuestion?: boolean;
 }
 
-export const InfoTooltip = ({ content, className }: Props) => (
-  <Tooltip content={content} theme="dark">
-    <div className={classNames('h-[17px]', className)}>
-      <IconCozInfoCircle className="coz-fg-secondary cursor-pointer hover:coz-fg-primary" />
-    </div>
-  </Tooltip>
-);
+export const InfoTooltip = ({
+  content,
+  className,
+  tooltipClassName,
+  icon,
+  useQuestion = false,
+}: Props) => {
+  const defaultIcon = useQuestion ? (
+    <IconCozQuestionMarkCircle className="coz-fg-secondary cursor-pointer hover:coz-fg-primary" />
+  ) : (
+    <IconCozInfoCircle className="coz-fg-secondary cursor-pointer hover:coz-fg-primary" />
+  );
+  return (
+    <Tooltip
+      content={
+        <div style={{ maxHeight: 300, overflowY: 'auto' }}>{content}</div>
+      }
+      theme="dark"
+      className={tooltipClassName}
+    >
+      <div className={classNames('h-[17px]', className)}>
+        {icon ?? defaultIcon}
+      </div>
+    </Tooltip>
+  );
+};

@@ -3,6 +3,7 @@
 /* eslint-disable complexity */
 import { useMemo } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { InputSlider } from '@cozeloop/components';
 import { type ParamSchema, type Model } from '@cozeloop/api-schema/llm-manage';
 import { IconCozQuestionMarkCircle } from '@coze-arch/coze-design/icons';
@@ -47,6 +48,7 @@ export const getInputSliderConfig = (
             : modelConfigLabelMap[param?.name || ''] || ''}
         </Typography.Text>
       ),
+
       extra: param?.desc ? (
         <Tooltip
           content={
@@ -81,7 +83,7 @@ export function ModelConfigFormCommunity({
     <>
       {paramsFields.includes('max_tokens') ? (
         <FormInputSlider
-          label="最大回复长度"
+          label={I18n.t('max_tokens')}
           {...getInputSliderConfig('max_tokens', paramSchemas)}
           field="max_tokens"
           labelPosition="left"
@@ -90,7 +92,7 @@ export function ModelConfigFormCommunity({
       ) : null}
       {paramsFields.includes('temperature') ? (
         <FormInputSlider
-          label="生成随机性"
+          label={I18n.t('temperature')}
           {...getInputSliderConfig('temperature', paramSchemas)}
           field="temperature"
           labelPosition="left"

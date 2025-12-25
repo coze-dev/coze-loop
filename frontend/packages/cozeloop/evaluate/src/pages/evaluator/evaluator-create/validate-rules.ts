@@ -12,7 +12,7 @@ export function multiModelValidate(
     message => message.content?.content_type === ContentType.MultiPart,
   );
   if (hasMultiModelVar && !model?.ability?.multi_modal) {
-    return I18n.t('model_not_support_multimodal');
+    return I18n.t('selected_model_not_support_multi_modal');
   }
   return;
 }

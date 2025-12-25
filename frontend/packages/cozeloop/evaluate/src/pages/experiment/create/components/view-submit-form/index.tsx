@@ -6,7 +6,7 @@ import {
   useEvalTargetDefinition,
   DEFAULT_TEXT_STRING_SCHEMA,
 } from '@cozeloop/evaluate-components';
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
+import { useRouteInfo } from '@cozeloop/biz-hooks-adapter';
 import { type EvaluationSetVersion } from '@cozeloop/api-schema/evaluation';
 import { Tag, useFormState } from '@coze-arch/coze-design';
 
@@ -139,7 +139,7 @@ export const ViewSubmitForm = (props: {
   createExperimentValues: CreateExperimentValues;
 }) => {
   const { createExperimentValues } = props;
-  const { baseURL } = useBaseURL();
+  const { getBaseURL } = useRouteInfo();
   const formState = useFormState();
   const formValues = formState.values as CreateExperimentValues;
 
@@ -169,7 +169,7 @@ export const ViewSubmitForm = (props: {
       <RenderEvaluationSet
         evaluationSetDetail={evaluationSetDetail}
         evaluationSetVersionDetail={evaluationSetVersionDetail}
-        baseURL={baseURL}
+        baseURL={getBaseURL()}
       />
 
       <div className="h-10" />

@@ -7,7 +7,11 @@ import { useDebounceFn, useRequest } from 'ahooks';
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
-import { useResourcePageJump, useSpace } from '@cozeloop/biz-hooks-adapter';
+import {
+  useOpenWindow,
+  useResourcePageJump,
+  useSpace,
+} from '@cozeloop/biz-hooks-adapter';
 import { tag } from '@cozeloop/api-schema/data';
 import { DataApi } from '@cozeloop/api-schema';
 import { IconCozPlus } from '@coze-arch/coze-design/icons';
@@ -41,6 +45,7 @@ export function TagSelect(props: TagSelectProps) {
   } = props;
   const { spaceID } = useSpace();
   const { getTagCreateURL } = useResourcePageJump();
+  const { openBlank } = useOpenWindow();
 
   const { loading, data, run } = useRequest(
     async (text?: string) => {
@@ -86,6 +91,7 @@ export function TagSelect(props: TagSelectProps) {
               ) : null}
             </div>
           ),
+
           ...tagInfo,
         }));
     },
@@ -155,7 +161,7 @@ export function TagSelect(props: TagSelectProps) {
 
   return (
     <BaseSearchSelect
-      placeholder={I18n.t('tag_name')}
+      placeholder={I18n.t('tag_tag_name')}
       renderSelectedItem={renderSelectedItem as RenderSelectedItemFn}
       {...rest}
       value={value}
@@ -180,7 +186,7 @@ export function TagSelect(props: TagSelectProps) {
                   space_id: spaceID,
                 },
               );
-              window.open(getTagCreateURL());
+              openBlank(getTagCreateURL());
             }}
           >
             <IconCozPlus className="w-4 h-4" />

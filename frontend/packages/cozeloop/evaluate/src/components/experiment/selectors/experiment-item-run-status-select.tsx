@@ -17,6 +17,7 @@ function RenderSelectedItem(optionNode: Record<string, unknown>) {
   const content = (
     <ExperimentItemRunStatus status={option.value as TurnRunState} />
   );
+
   return {
     isRenderInTag: false,
     content,
@@ -37,7 +38,7 @@ export default function ExperimentItemRunStatusSelect({
   return (
     <Select
       prefix={I18n.t('status')}
-      placeholder={I18n.t('please_select', { field: '' })}
+      placeholder={I18n.t('please_select')}
       multiple={true}
       showClear={true}
       maxTagCount={2}

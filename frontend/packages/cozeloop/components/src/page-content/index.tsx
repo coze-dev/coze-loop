@@ -15,6 +15,8 @@ import {
 } from '@coze-arch/coze-design/illustrations';
 import { Empty, Spin, type EmptyStateProps } from '@coze-arch/coze-design';
 
+import { useI18n } from '@/provider';
+
 interface PageLoadingProps {
   tip?: ReactNode;
   className?: string;
@@ -50,12 +52,13 @@ export function PageLoading(props: PageLoadingProps) {
 }
 
 export function PageNotFound({ className, ...props }: PageContentProps) {
+  const I18n = useI18n();
   return (
     <FullPage className={className}>
       <Empty
         image={<IconCozIllus404 className="text-[160px]" />}
         darkModeImage={<IconCozIllus404Dark className="text-[160px]" />}
-        description="页面丢失了"
+        description={I18n.t('page_not_found')}
         {...props}
       />
     </FullPage>
@@ -63,12 +66,13 @@ export function PageNotFound({ className, ...props }: PageContentProps) {
 }
 
 export function PageError({ className, ...props }: PageContentProps) {
+  const I18n = useI18n();
   return (
     <FullPage className={className}>
       <Empty
         image={<IconCozIllusError className="text-[160px]" />}
         darkModeImage={<IconCozIllusErrorDark className="text-[160px]" />}
-        description="页面加载失败"
+        description={I18n.t('page_load_failed')}
         {...props}
       />
     </FullPage>
@@ -76,12 +80,13 @@ export function PageError({ className, ...props }: PageContentProps) {
 }
 
 export function PageNoAuth({ className, ...props }: PageContentProps) {
+  const I18n = useI18n();
   return (
     <FullPage className={className}>
       <Empty
         image={<IconCozIllusLock className="text-[160px]" />}
         darkModeImage={<IconCozIllusLockDark className="text-[160px]" />}
-        description="暂无权限"
+        description={I18n.t('no_permission')}
         {...props}
       ></Empty>
     </FullPage>

@@ -24,6 +24,7 @@ export { PopoverModelConfigEditor } from './model-config-editor-community/popove
 export { PopoverModelConfigEditorQuery } from './model-config-editor-community/popover-model-config-editor-query';
 export { BasicModelConfigEditor } from './model-config-editor-community/basic-model-config-editor';
 export { ModelSelectWithObject } from './model-select';
+export { type ModelItemProps } from './model-select/model-option';
 
 export { DevLayout } from './dev-layout';
 
@@ -80,3 +81,5 @@ export {
   splitMultimodalContent,
   getMultimodalVariableText,
 } from './utils/prompt';
+export { PromptVersionSelect } from './prompt-version-select';
+export { useVersionList } from './hooks/use-version-list';

@@ -11,6 +11,12 @@ import {
   type BatchGetExperimentAggrResultResponse,
   type BatchGetExperimentResultRequest,
   type BatchGetExperimentResultResponse,
+  type ListExptInsightAnalysisRecordRequest,
+  type ListExptInsightAnalysisRecordResponse,
+  type InsightAnalysisExperimentRequest,
+  type InsightAnalysisExperimentResponse,
+  type GetExptInsightAnalysisRecordRequest,
+  type GetExptInsightAnalysisRecordResponse,
 } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 
@@ -42,4 +48,25 @@ export async function batchGetExperimentResult(
   params: BatchGetExperimentResultRequest,
 ): Promise<BatchGetExperimentResultResponse> {
   return StoneEvaluationApi.BatchGetExperimentResult(params);
+}
+
+// 洞察分析：获取记录列表
+export async function listExptInsightAnalysisRecord(
+  params: ListExptInsightAnalysisRecordRequest,
+): Promise<ListExptInsightAnalysisRecordResponse> {
+  return StoneEvaluationApi.ListExptInsightAnalysisRecord(params);
+}
+
+// 洞察分析：触发分析
+export async function insightAnalysisExperiment(
+  params: InsightAnalysisExperimentRequest,
+): Promise<InsightAnalysisExperimentResponse> {
+  return StoneEvaluationApi.InsightAnalysisExperiment(params);
+}
+
+// 洞察分析：获取单条记录详情
+export async function getExptInsightAnalysisRecord(
+  params: GetExptInsightAnalysisRecordRequest,
+): Promise<GetExptInsightAnalysisRecordResponse> {
+  return StoneEvaluationApi.GetExptInsightAnalysisRecord(params);
 }

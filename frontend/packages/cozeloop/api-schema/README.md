@@ -1,16 +1,8 @@
 # @cozeloop/api-schema
 
-api schema for coze loop
+Coze Loop 的 API Schema 定义包。
 
-## Overview
-
-This package is part of the Coze Loop monorepo and provides api & networking functionality. It includes api, evaluation, prompt.
-
-## Getting Started
-
-### Installation
-
-Add this package to your `package.json`:
+## 安装
 
 ```json
 {
@@ -20,50 +12,31 @@ Add this package to your `package.json`:
 }
 ```
 
-Then run:
-
 ```bash
 rush update
 ```
 
-### Usage
+## 更新 API Schema
 
-```typescript
-import { /* exported functions/components */ } from '@cozeloop/api-schema';
+当后端 API 发生变更时，运行以下命令更新：
 
-// Example usage
-// TODO: Add specific usage examples
+```bash
+rushx update
 ```
 
-## Features
+### 指定分支
 
-- Api
-- Evaluation
-- Prompt
+默认从 `main` 分支拉取 IDL 定义。如需从其他分支更新，可以修改 [package.json](./package.json) 中 `prethrift` 脚本的 `--branch` 参数：
 
-## API Reference
+```json
+{
+  "scripts": {
+    "prethrift": "bash ./scripts/download-thrift.sh --branch=your-branch"
+  }
+}
+```
 
-### Exports
-
-- `*`
-- `*`
-- `*`
-
-
-For detailed API documentation, please refer to the TypeScript definitions.
-
-## Development
-
-This package is built with:
-
-- TypeScript
-- Modern JavaScript
-- Vitest for testing
-- ESLint for code quality
-
-## Contributing
-
-This package is part of the Coze Loop monorepo. Please follow the monorepo contribution guidelines.
+然后执行 `rushx update` 即可从指定分支拉取最新的 API Schema。
 
 ## License
 

@@ -21,8 +21,7 @@ export function EvalTargetCascadeSelect({
   onChange?: (val: EvalTargetCascadeSelectValue) => void;
   typeSelectProps?: SelectProps;
   evalTargetSelectProps?: SelectProps & {
-    /** 选项仅显示名称即可，简化显示渲染 */
-    onlyShowOptionName?: boolean;
+    /** 选项仅显示名称即可，简化显示渲染 */ onlyShowOptionName?: boolean;
   };
 }) {
   const { getEvalTargetDefinitionList, getEvalTargetDefinition } =
@@ -56,7 +55,7 @@ export function EvalTargetCascadeSelect({
   return (
     <div className="flex items-center gap-2 overflow-hidden">
       <Select
-        placeholder={I18n.t('evaluation_object_type')}
+        placeholder={I18n.t('evaluate_target_type')}
         showArrow={false}
         {...typeSelectProps}
         optionList={evalTargetOptions}
@@ -68,6 +67,7 @@ export function EvalTargetCascadeSelect({
           });
         }}
       />
+
       <div className="grow overflow-hidden">{evalTargetSelect}</div>
     </div>
   );

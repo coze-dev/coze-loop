@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import classNames from 'classnames';
 import { useLatest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Model } from '@cozeloop/api-schema/llm-manage';
 import {
   Form,
@@ -136,7 +137,7 @@ export function BasicModelConfigEditor({
           display: 'block',
         }}
       >
-        参数配置
+        {I18n.t('parameter_config')}
       </Typography.Text>
       <ModelConfigFormCommunity model={selectModel} />
       {extra}

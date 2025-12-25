@@ -38,6 +38,7 @@ const getOptionList = (option: EvalTargetDefinition) => {
         </div>
       </div>
     ),
+
     value: type,
   };
 };
@@ -95,6 +96,7 @@ export const EvaluateTargetForm = (props: EvaluateTargetFormProps) => {
   return (
     <>
       <FormSelect
+        fieldClassName="evaluate-eval-target-type-form-select"
         className="w-full"
         field="evalTargetType"
         label={I18n.t('type')}

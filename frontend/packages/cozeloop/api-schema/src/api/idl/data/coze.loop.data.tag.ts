@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as dataset from './domain/dataset';
 export { dataset };
 import * as tag from './domain/tag';
@@ -112,7 +114,7 @@ export const CreateTag = /*#__PURE__*/createAPI<CreateTagRequest, CreateTagRespo
   },
   "resType": "CreateTagResponse",
   "schemaRoot": "api://schemas/data_coze.loop.data.tag",
-  "service": "dataTag"
+  "service": "dateTag"
 });
 /** 更新标签 */
 export const UpdateTag = /*#__PURE__*/createAPI<UpdateTagRequest, UpdateTagResponse>({
@@ -126,7 +128,7 @@ export const UpdateTag = /*#__PURE__*/createAPI<UpdateTagRequest, UpdateTagRespo
   },
   "resType": "UpdateTagResponse",
   "schemaRoot": "api://schemas/data_coze.loop.data.tag",
-  "service": "dataTag"
+  "service": "dateTag"
 });
 /** 批量更新标签状态 */
 export const BatchUpdateTagStatus = /*#__PURE__*/createAPI<BatchUpdateTagStatusRequest, BatchUpdateTagStatusResponse>({
@@ -139,7 +141,7 @@ export const BatchUpdateTagStatus = /*#__PURE__*/createAPI<BatchUpdateTagStatusR
   },
   "resType": "BatchUpdateTagStatusResponse",
   "schemaRoot": "api://schemas/data_coze.loop.data.tag",
-  "service": "dataTag"
+  "service": "dateTag"
 });
 /** 搜索标签 */
 export const SearchTags = /*#__PURE__*/createAPI<SearchTagsRequest, SearchTagsResponse>({
@@ -152,7 +154,7 @@ export const SearchTags = /*#__PURE__*/createAPI<SearchTagsRequest, SearchTagsRe
   },
   "resType": "SearchTagsResponse",
   "schemaRoot": "api://schemas/data_coze.loop.data.tag",
-  "service": "dataTag"
+  "service": "dateTag"
 });
 /** 标签详情 */
 export const GetTagDetail = /*#__PURE__*/createAPI<GetTagDetailRequest, GetTagDetailResponse>({
@@ -166,7 +168,7 @@ export const GetTagDetail = /*#__PURE__*/createAPI<GetTagDetailRequest, GetTagDe
   },
   "resType": "GetTagDetailResponse",
   "schemaRoot": "api://schemas/data_coze.loop.data.tag",
-  "service": "dataTag"
+  "service": "dateTag"
 });
 /** 获取标签限制 */
 export const GetTagSpec = /*#__PURE__*/createAPI<GetTagSpecRequest, GetTagSpecResponse>({
@@ -179,7 +181,7 @@ export const GetTagSpec = /*#__PURE__*/createAPI<GetTagSpecRequest, GetTagSpecRe
   },
   "resType": "GetTagSpecResponse",
   "schemaRoot": "api://schemas/data_coze.loop.data.tag",
-  "service": "dataTag"
+  "service": "dateTag"
 });
 /** 批量获取标签 */
 export const BatchGetTags = /*#__PURE__*/createAPI<BatchGetTagsRequest, BatchGetTagsResponse>({
@@ -192,7 +194,7 @@ export const BatchGetTags = /*#__PURE__*/createAPI<BatchGetTagsRequest, BatchGet
   },
   "resType": "BatchGetTagsResponse",
   "schemaRoot": "api://schemas/data_coze.loop.data.tag",
-  "service": "dataTag"
+  "service": "dateTag"
 });
 /** 将单选标签归档进标签管理 */
 export const ArchiveOptionTag = /*#__PURE__*/createAPI<ArchiveOptionTagRequest, ArchiveOptionTagResponse>({
@@ -206,5 +208,5 @@ export const ArchiveOptionTag = /*#__PURE__*/createAPI<ArchiveOptionTagRequest, 
   },
   "resType": "ArchiveOptionTagResponse",
   "schemaRoot": "api://schemas/data_coze.loop.data.tag",
-  "service": "dataTag"
+  "service": "dateTag"
 });

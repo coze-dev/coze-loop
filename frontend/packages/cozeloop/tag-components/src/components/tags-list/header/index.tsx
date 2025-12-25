@@ -67,6 +67,7 @@ export const TagsListHeader = (props: TagListHeaderProps) => {
           maxTagCount={2}
           showClear
         />
+
         <UserSelect
           placeholder={I18n.t('enter_creator')}
           value={createdBys}

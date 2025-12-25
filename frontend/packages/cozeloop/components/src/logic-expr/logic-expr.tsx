@@ -36,7 +36,7 @@ export function LogicExpr<L = string, O = string, R = string>({
   onChange: _onChange,
   ...restProps
 }: LogicExprProps<L, O, R>) {
-  const [singleTag, setSingleTag] = useState(false);
+  const [singleTag, setSingleTag] = useState(value?.exprs?.length === 1);
 
   // 通用特化逻辑处理
   const onChange = (exprGroup?: ExprGroup<L, O, R>) => {

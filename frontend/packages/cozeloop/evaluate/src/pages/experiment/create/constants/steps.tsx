@@ -31,14 +31,14 @@ export const STEPS: StepConfig[] = [
     nextStepText: I18n.t('next_step_evaluator'),
     guardPoint: GuardPoint['eval.experiment_create.confirm'],
     optional: true,
-    tooltip: I18n.t('skip_eval_object_execution_config'),
+    tooltip: I18n.t('evaluate_skip_target_execution_config'),
   },
   {
     title: I18n.t('evaluator'),
     nextStepText: I18n.t('confirm_experiment_config'),
     guardPoint: GuardPoint['eval.experiment_create.confirm'],
     optional: true,
-    tooltip: I18n.t('skip_evaluator_config_agent_output_only'),
+    tooltip: I18n.t('evaluate_skip_evaluator_config_manual_labeling'),
   },
   {
     hiddenStepBar: true,

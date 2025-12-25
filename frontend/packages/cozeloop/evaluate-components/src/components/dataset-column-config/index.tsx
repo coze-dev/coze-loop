@@ -35,8 +35,6 @@ export interface DatasetColumnConfigRef {
   addColumn: () => void;
 }
 
-const MAX_COLUMN_NUM = 50;
-
 export const DatasetColumnConfig = forwardRef(
   (
     {
@@ -64,10 +62,8 @@ export const DatasetColumnConfig = forwardRef(
     }, [expand]);
 
     const addColumn = () => {
-      if (fieldSchema?.length >= MAX_COLUMN_NUM) {
-        Toast.error(
-          I18n.t('supports_up_to_{num}_columns', { num: MAX_COLUMN_NUM }),
-        );
+      if (fieldSchema?.length >= 50) {
+        Toast.error(I18n.t('evaluate_max_support_50_columns'));
         return;
       }
       fieldApi.setValue([...fieldSchema, DEFAULT_COLUMN_SCHEMA]);
@@ -100,7 +96,7 @@ export const DatasetColumnConfig = forwardRef(
                 setActiveKey={setActiveKey}
                 onDelete={() => {
                   if (fieldSchema?.length === 1) {
-                    Toast.error(I18n.t('retain_at_least_one_column'));
+                    Toast.error(I18n.t('retain_one_data_column'));
                     return;
                   }
                   formApi.validate().catch(err => {
@@ -109,12 +105,8 @@ export const DatasetColumnConfig = forwardRef(
                   fieldApi.setValue(fieldSchema?.filter((_, i) => i !== index));
                 }}
                 onCopy={() => {
-                  if (fieldSchema?.length >= MAX_COLUMN_NUM) {
-                    Toast.error(
-                      I18n.t('supports_up_to_{num}_columns', {
-                        num: MAX_COLUMN_NUM,
-                      }),
-                    );
+                  if (fieldSchema?.length >= 50) {
+                    Toast.error(I18n.t('evaluate_max_support_50_columns'));
                     return;
                   }
                   //往index+1位置插入一个item
@@ -123,7 +115,7 @@ export const DatasetColumnConfig = forwardRef(
                     {
                       ...cloneDeep(item),
                       key: undefined,
-                      name: `${item.name || ''}_copy`.slice(0, MAX_COLUMN_NUM),
+                      name: `${item.name || ''}_copy`.slice(0, 50),
                       type: item.type,
                       description: item.description,
                       content_type: item.content_type,
@@ -153,17 +145,15 @@ export const DatasetColumnConfig = forwardRef(
         </Collapse>
         {showAddButton ? (
           <TooltipWhenDisabled
-            content={I18n.t('supports_up_to_{num}_columns', {
-              num: MAX_COLUMN_NUM,
-            })}
+            content={I18n.t('evaluate_max_support_50_columns')}
             theme="dark"
-            disabled={fieldSchema?.length >= MAX_COLUMN_NUM}
+            disabled={fieldSchema?.length >= 50}
           >
             <Button
               className="w-full"
               icon={<IconCozPlus />}
               color="primary"
-              disabled={fieldSchema?.length >= MAX_COLUMN_NUM}
+              disabled={fieldSchema?.length >= 50}
               onClick={addColumn}
             >
               {I18n.t('add_column')}

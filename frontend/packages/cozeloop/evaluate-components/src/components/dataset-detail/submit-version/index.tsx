@@ -45,6 +45,8 @@ export const SubmitVersion = ({
       Toast.success(I18n.t('submitted_successfully'));
       setVisible(false);
       onSubmit();
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -52,24 +54,26 @@ export const SubmitVersion = ({
 
   return (
     <>
-      <Guard point={GuardPoint['eval.dataset.commit']}>
-        <TooltipWhenDisabled
-          theme="dark"
-          content={I18n.t('no_modification_to_submit')}
-          disabled={!datasetDetail?.change_uncommitted}
-        >
-          <Button
-            color="primary"
-            onClick={() => {
-              setVisible(true);
-              sendEvent(EVENT_NAMES.cozeloop_dataset_submit_version);
-            }}
-            disabled={!datasetDetail?.change_uncommitted}
-          >
-            {I18n.t('submit_new_version')}
-          </Button>
-        </TooltipWhenDisabled>
-      </Guard>
+      <TooltipWhenDisabled
+        theme="dark"
+        content={I18n.t('no_modification_to_submit')}
+        disabled={!datasetDetail?.change_uncommitted}
+      >
+        <div>
+          <Guard point={GuardPoint['eval.dataset.commit']}>
+            <Button
+              color="primary"
+              onClick={() => {
+                setVisible(true);
+                sendEvent(EVENT_NAMES.cozeloop_dataset_submit_version);
+              }}
+              disabled={!datasetDetail?.change_uncommitted}
+            >
+              {I18n.t('submit_new_version')}
+            </Button>
+          </Guard>
+        </div>
+      </TooltipWhenDisabled>
 
       <Modal
         visible={visible}
@@ -119,7 +123,7 @@ export const SubmitVersion = ({
                       value,
                     )
                   ) {
-                    callback(I18n.t('version_number_format_tips'));
+                    callback(I18n.t('eval_version_number_format'));
                     return false;
                   }
                   if (
@@ -129,7 +133,9 @@ export const SubmitVersion = ({
                       datasetDetail?.latest_version || '',
                     ) <= 0
                   ) {
-                    callback(`${I18n.t('new_version_greater_than_current')}`);
+                    callback(
+                      `${I18n.t('new_version_greater_than_current')}: ${datasetDetail?.latest_version}`,
+                    );
                     return false;
                   }
                   return true;
@@ -137,6 +143,7 @@ export const SubmitVersion = ({
               },
             ]}
           />
+
           <Form.TextArea
             maxCount={200}
             field="desc"

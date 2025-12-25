@@ -1,6 +1,6 @@
-/* eslint-disable @coze-arch/max-line-per-function */
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @coze-arch/max-line-per-function */
 import { forwardRef, useImperativeHandle, useState } from 'react';
 
 import classNames from 'classnames';
@@ -77,6 +77,7 @@ function FieldMappingCard({
               open ? 'rotate-90' : '',
             )}
           />
+
           {hasError && !open ? (
             <IconCozWarningCircleFillPalette className="ml-1 w-4 h-4 coz-fg-hglt-red" />
           ) : null}
@@ -85,10 +86,7 @@ function FieldMappingCard({
           onClick={e => e.stopPropagation()}
           className="flex flex-row items-center gap-1 invisible group-hover:visible"
         >
-          <Tooltip
-            content={I18n.t('space_member_role_type_del_btn')}
-            theme="dark"
-          >
+          <Tooltip content={I18n.t('delete')} theme="dark">
             <Button
               color="secondary"
               size="small"

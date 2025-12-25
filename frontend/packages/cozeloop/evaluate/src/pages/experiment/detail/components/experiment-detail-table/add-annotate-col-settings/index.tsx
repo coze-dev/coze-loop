@@ -1,8 +1,8 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useModalData } from '@cozeloop/hooks';
 import { ResizeSidesheet } from '@cozeloop/components';
-import { useModalData } from '@cozeloop/base-hooks';
 import { type ColumnAnnotation } from '@cozeloop/api-schema/evaluation';
 import { Button } from '@coze-arch/coze-design';
 

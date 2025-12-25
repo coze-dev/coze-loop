@@ -1,6 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
+import {
+  useOpenWindow,
+  useResourcePageJump,
+} from '@cozeloop/biz-hooks-adapter';
 import { type EvalTarget } from '@cozeloop/api-schema/evaluation';
 
 import { BaseTargetPreview } from '../base-target-preview';
@@ -23,20 +26,22 @@ const PromptIcon = (
   </div>
 );
 
-export default function PromptTargetPreview({
-  evalTarget,
-  enableLinkJump,
-  jumpBtnClassName,
-  showIcon = false,
-}: {
+export default function PromptTargetPreview(props: {
   evalTarget: EvalTarget | undefined;
   enableLinkJump?: boolean;
   jumpBtnClassName?: string;
   showIcon?: boolean;
 }) {
+  const {
+    evalTarget,
+    enableLinkJump,
+    jumpBtnClassName,
+    showIcon = false,
+  } = props;
   const { name, version, prompt_id } =
     evalTarget?.eval_target_version?.eval_target_content?.prompt ?? {};
   const { getPromptDetailURL } = useResourcePageJump();
+  const { openBlank } = useOpenWindow();
   return (
     <div className="flex">
       {showIcon ? PromptIcon : null}
@@ -48,8 +53,7 @@ export default function PromptTargetPreview({
             return;
           }
           e.stopPropagation();
-          const url = getPromptDetailURL(prompt_id, version);
-          window.open(url);
+          openBlank(getPromptDetailURL(prompt_id, version));
         }}
         enableLinkJump={enableLinkJump}
         jumpBtnClassName={jumpBtnClassName}

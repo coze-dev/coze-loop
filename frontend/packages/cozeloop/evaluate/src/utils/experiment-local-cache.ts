@@ -1,6 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { safeParseJson } from '@cozeloop/toolkit';
+import { safeJsonParse } from '@cozeloop/toolkit';
 import { type AggregatorType } from '@cozeloop/api-schema/evaluation';
 
 interface MetricValueType {
@@ -21,7 +21,7 @@ export function getExperimentDetailLocalCache(experimentID: Int64) {
   const key = `${EXPERIMENT_KEY_PREFIX}${experimentID}`;
   const cacheStr = localStorage.getItem(key);
   const cache: ExperimentDetailLocalCache | undefined =
-    safeParseJson(cacheStr ?? '') || undefined;
+    safeJsonParse(cacheStr ?? '') || undefined;
   return cache;
 }
 

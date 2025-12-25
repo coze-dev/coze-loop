@@ -2,13 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useEffect, useMemo, useState } from 'react';
 
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
-import {
-  TypographyText,
-  getExperimentNameWithIndex,
-} from '@cozeloop/evaluate-components';
+import { getExperimentNameWithIndex } from '@cozeloop/evaluate-components';
 import { JumpIconButton } from '@cozeloop/components';
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
 import {
   type FieldSchema,
   type Experiment,
@@ -35,7 +33,7 @@ function ExperimentDetailColumnHeader({
   experiment: Experiment;
   index: number;
 }) {
-  const { baseURL } = useBaseURL();
+  const { openBlank } = useOpenWindow();
   return (
     <div className="flex items-center gap-1">
       <TypographyText>
@@ -44,7 +42,7 @@ function ExperimentDetailColumnHeader({
       <JumpIconButton
         className="ml-auto"
         onClick={() => {
-          window.open(`${baseURL}/evaluation/experiments/${experiment?.id}`);
+          openBlank(`evaluation/experiments/${experiment?.id}`);
         }}
       />
     </div>
@@ -68,6 +66,7 @@ function getExperimentContrastDetailColumns({
       title: (
         <ExperimentDetailColumnHeader experiment={experiment} index={index} />
       ),
+
       dataIndex: `evaluatorsResult.${experiment.id}`,
       // fixed: index === 0 ? true : undefined,
       align: 'left',

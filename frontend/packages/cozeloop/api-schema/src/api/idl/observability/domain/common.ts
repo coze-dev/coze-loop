@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export enum PlatformType {
   Cozeloop = "cozeloop",
   Prompt = "prompt",
@@ -8,6 +10,7 @@ export enum PlatformType {
   Workflow = "coze_workflow",
   Ark = "ark",
   VeADK = "veadk",
+  VeAgentkit = "ve_agentkit",
   LoopAll = "loop_all",
   InnerCozeloop = "inner_cozeloop",
   InnerDoubao = "inner_doubao",
@@ -45,4 +48,7 @@ export enum ContentType {
   Image = "Image",
   Audio = "Audio",
   MultiPart = "MultiPart",
+}
+export interface Session {
+  user_id?: string
 }

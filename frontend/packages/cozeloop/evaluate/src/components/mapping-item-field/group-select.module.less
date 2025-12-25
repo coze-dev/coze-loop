@@ -6,19 +6,24 @@
 }
 
 .left-panel {
+  scrollbar-width: none;
+
+  overflow-y: auto;
+
   width: 240px;
   height: 224px;
   padding: 4px;
-  overflow-y: auto;
-  scrollbar-width: none;
 }
 
 .right-panel {
+  scrollbar-width: none;
+
+  overflow-y: auto;
+
   width: 240px;
   height: 224px;
   padding: 4px;
-  overflow-y: auto;
-  scrollbar-width: none;
+
   border-left: 1px solid var(--coz-stroke-primary);
 }
 
@@ -27,11 +32,12 @@
 }
 
 .group-title {
-  color: var(--coz-fg-secondary);
   height: 28px;
   padding: 6px 4px 4px 6px;
+
   font-size: 12px;
   font-weight: 400;
+  color: var(--coz-fg-secondary);
   // margin-bottom: 8px;
 }
 
@@ -42,12 +48,15 @@
 }
 
 .option-item {
-  display: flex;
-  height: 32px;
-  align-items: center;
-  padding: 6px 4px 6px 8px;
-  border-radius: 4px;
   cursor: pointer;
+
+  display: flex;
+  align-items: center;
+
+  height: 32px;
+  padding: 6px 4px 6px 8px;
+
+  border-radius: 4px;
 
   &:hover {
     background: var(--coz-mg-primary);
@@ -66,21 +75,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
+
   width: 16px;
   height: 16px;
 }
 
 .option-label {
-  color: var(--coz-fg-primary);
   flex: 1;
+  color: var(--coz-fg-primary);
 }
 
 .type-badge {
   padding: 2px 6px;
-  background-color: var(--coz-bg-fill);
-  border-radius: 4px;
+
   font-size: 12px;
   color: var(--coz-fg-secondary);
+
+  background-color: var(--coz-bg-fill);
+  border-radius: 4px;
 }
 
 .select-container {

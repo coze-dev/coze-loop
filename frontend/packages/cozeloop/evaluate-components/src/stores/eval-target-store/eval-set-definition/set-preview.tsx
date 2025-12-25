@@ -1,6 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
 import {
   type EvaluationSet,
   type EvalTarget,
@@ -16,7 +16,7 @@ export default function SetTargetPreview(props: {
 }) {
   const { evalSet, jumpBtnClassName } = props;
   const { name, evaluation_set_version, id } = evalSet ?? {};
-  const { baseURL } = useBaseURL();
+  const { openBlank } = useOpenWindow();
 
   const versionId = evalSet?.evaluation_set_version?.id;
 
@@ -30,9 +30,7 @@ export default function SetTargetPreview(props: {
             return;
           }
           e.stopPropagation();
-          window.open(
-            `${baseURL}/evaluation/datasets/${id}?version=${versionId}`,
-          );
+          openBlank(`evaluation/datasets/${id}?version=${versionId}`);
         }}
         enableLinkJump={true}
         jumpBtnClassName={jumpBtnClassName}

@@ -27,6 +27,7 @@ export const useViewMode = () => {
       </Typography.Text>
     </div>
   );
+
   const optionList = [
     {
       value: ViewMode.SLIM,
@@ -39,6 +40,7 @@ export const useViewMode = () => {
       chipColor: 'secondary',
     },
   ];
+
   const ViewModeNode = (
     <Select
       optionList={optionList}
@@ -57,6 +59,7 @@ export const useViewMode = () => {
       }}
     />
   );
+
   const isAuto = viewMode === ViewMode.Auto;
   return { viewMode, ViewModeNode, isAuto };
 };

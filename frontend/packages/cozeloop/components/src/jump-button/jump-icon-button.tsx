@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 import { IconCozLongArrowTopRight } from '@coze-arch/coze-design/icons';
 
-import IconButtonContainer from '../id-render/icon-button-container';
+import { IconButtonContainer } from '../id-render/icon-button-container';
 
-export default function JumpIconButton(
+export function JumpIconButton(
   props: {
     className?: string;
     style?: React.CSSProperties;

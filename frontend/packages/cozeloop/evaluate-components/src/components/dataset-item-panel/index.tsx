@@ -112,11 +112,11 @@ export const DatasetItemPanel = ({
       onCancel();
     } else {
       Modal.confirm({
-        title: I18n.t('information_not_saved'),
+        title: I18n.t('information_unsaved'),
         content: I18n.t('leave_current_page_information_will_not_be_saved'),
         onOk: onCancel,
         okButtonColor: 'red',
-        okText: I18n.t('confirm'),
+        okText: I18n.t('global_btn_confirm'),
         cancelText: I18n.t('cancel'),
       });
     }
@@ -201,7 +201,7 @@ export const DatasetItemPanel = ({
                     }
                   }}
                 >
-                  {I18n.t('previous_one')}
+                  {I18n.t('prev_item')}
                 </Button>
               </PopconfirmSave>
               <PopconfirmSave

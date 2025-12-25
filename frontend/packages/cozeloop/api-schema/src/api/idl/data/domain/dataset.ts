@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export enum StorageProvider {
   TOS = 1,
   VETOS = 2,
@@ -317,8 +319,14 @@ export enum ItemErrorType {
   GetImageFailed = 12,
   /** 文件扩展名不合法 */
   IllegalExtension = 13,
+  /** 多模态节点数量超限 */
+  ExceedMaxPartCount = 14,
   /** system erro */
   InternalError = 100,
+  /** 清空数据集失败 */
+  ClearDatasetFailed = 101,
+  /** 读写文件失败 */
+  RWFileFailed = 102,
   /** 上传图片失败 */
   UploadImageFailed = 103,
 }
@@ -337,4 +345,12 @@ export interface ItemErrorGroup {
   error_count?: number,
   /** 批量写入时，每类错误至多提供 5 个错误详情；导入任务，至多提供 10 个错误详情 */
   details?: ItemErrorDetail[],
+}
+export interface CreateDatasetItemOutput {
+  /** item 在 BatchCreateDatasetItemsReq.items 中的索引 */
+  item_index?: number,
+  item_key?: string,
+  item_id?: string,
+  /** 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。 */
+  is_new_item?: boolean,
 }

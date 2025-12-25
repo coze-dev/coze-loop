@@ -285,7 +285,7 @@ export const useTagFormModal = (
           justify="start"
           type="info"
           icon={<IconCozInfoCircleFillPalette className="coz-fg-hglt" />}
-          description={I18n.t('changes_sync_to_space_tag_management')}
+          description={I18n.t('data_engine_changes_sync_to_space_mgmt')}
           closeIcon={null}
         />
         <TagsForm

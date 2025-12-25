@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+// TODO: @楚著 标签模块 Page 级别组件应该放在当前包，而不是在 @cozeloop/tag-components 直接导出。后续重构调整结构优化
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import {

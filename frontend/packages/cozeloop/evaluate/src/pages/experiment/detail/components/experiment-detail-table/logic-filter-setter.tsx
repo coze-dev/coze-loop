@@ -14,14 +14,14 @@ export function InputLimitLengthHOC(limitLength: number) {
     const { onChange, ...rest } = inputProps;
     return (
       <Input
-        placeholder={`${I18n.t('please_enter_max_limit_length', { limitLength })}`}
+        placeholder={`${I18n.t('evaluate_please_input_max_limitLength_chars', { limitLength })}`}
         {...rest}
         onChange={(val, e) => {
           let newVal = val;
           if (val && val.length > limitLength) {
             newVal = val?.slice(0, limitLength);
             Toast.warning(
-              `${I18n.t('input_content_limited_truncated', { limitLength })}`,
+              `${I18n.t('evaluate_input_content_max_limitLength_truncated', { limitLength })}`,
             );
           }
           onChange?.(newVal, e);
@@ -37,14 +37,14 @@ export function TextAreaLimitLengthHOC(limitLength: number) {
     return (
       <TextArea
         rows={1}
-        placeholder={`${I18n.t('please_enter_max_limit_length', { limitLength })}`}
+        placeholder={`${I18n.t('evaluate_please_input_max_limitLength_chars', { limitLength })}`}
         {...rest}
         onChange={(val, e) => {
           let newVal = val;
           if (val && val.length > limitLength) {
             newVal = val?.slice(0, limitLength);
             Toast.warning(
-              `${I18n.t('input_content_limited_truncated', { limitLength })}`,
+              `${I18n.t('evaluate_input_content_max_limitLength_truncated', { limitLength })}`,
             );
           }
           onChange?.(newVal, e);
@@ -68,7 +68,7 @@ export function IDSearchInput(inputProps: InputProps) {
         const val = e.target.value;
         if (val && val.length !== limitLength) {
           Toast.warning(
-            `${I18n.t('id_invalid_must_be_limit_length', { limitLength })}`,
+            `${I18n.t('evaluate_invalid_id_must_be_limitLength', { limitLength })}`,
           );
         }
       }}

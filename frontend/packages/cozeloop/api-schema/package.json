@@ -44,26 +44,96 @@
       ]
     }
   },
+  "files": [
+    "package.json",
+    "README.md",
+    "dist"
+  ],
   "scripts": {
-    "build": "exit 0",
+    "build-sdk": "node build-with-transform.js",
+    "build:direct": "rslib build",
     "lint": "eslint ./ --cache",
     "test": "vitest --run --passWithNoTests",
     "test:cov": "npm run test -- --coverage",
-    "update": "idl2ts gen ./"
+    "prethrift": "bash ./scripts/download-thrift.sh --branch=main",
+    "thrift": "idl2ts gen ./",
+    "update": "npm run thrift"
   },
   "dependencies": {
-    "@coze-arch/idl2ts-runtime": "workspace:*",
-    "@coze-arch/logger": "workspace:*",
     "eventemitter3": "^5.0.1"
   },
   "devDependencies": {
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/idl2ts-cli": "workspace:*",
+    "@coze-arch/idl2ts-runtime": "workspace:*",
+    "@coze-arch/logger": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
     "@coze-arch/vitest-config": "workspace:*",
+    "@microsoft/api-extractor": "7.43.0",
+    "@rsbuild/core": "~1.1.0",
+    "@rslib/core": "~0.11.0",
     "@types/node": "^18",
     "@vitest/coverage-v8": "~3.0.5",
     "sucrase": "^3.32.0",
     "vitest": "~3.0.5"
+  },
+  "botPublishConfig": {
+    "exports": {
+      ".": {
+        "import": "./dist/es/index.mjs",
+        "types": "./dist/es/index.d.ts"
+      },
+      "./observation": {
+        "import": "./dist/es/observation.mjs",
+        "types": "./dist/es/api/observability/index.d.ts"
+      },
+      "./evaluation": {
+        "import": "./dist/es/evaluation.mjs",
+        "types": "./dist/es/api/evaluation/index.d.ts"
+      },
+      "./data": {
+        "import": "./dist/es/data.mjs",
+        "types": "./dist/es/api/data/index.d.ts"
+      },
+      "./llm-manage": {
+        "import": "./dist/es/llmManage.mjs",
+        "types": "./dist/es/api/llm-manage/index.d.ts"
+      },
+      "./foundation": {
+        "import": "./dist/es/foundation.mjs",
+        "types": "./dist/es/api/foundation/index.d.ts"
+      },
+      "./prompt": {
+        "import": "./dist/es/prompt.mjs",
+        "types": "./dist/es/api/prompt/index.d.ts"
+      }
+    },
+    "main": "dist/es/index.mjs",
+    "typesVersions": {
+      "*": {
+        "*": [
+          "./dist/es/index.d.ts"
+        ],
+        "observation": [
+          "./dist/es/api/observability/index.d.ts"
+        ],
+        "evaluation": [
+          "./dist/es/api/evaluation/index.d.ts"
+        ],
+        "data": [
+          "./dist/es/api/data/index.d.ts"
+        ],
+        "llm-manage": [
+          "./dist/es/api/llm-manage/index.d.ts"
+        ],
+        "foundation": [
+          "./dist/es/api/foundation/index.d.ts"
+        ],
+        "prompt": [
+          "./dist/es/api/prompt/index.d.ts"
+        ]
+      }
+    }
   }
 }
+

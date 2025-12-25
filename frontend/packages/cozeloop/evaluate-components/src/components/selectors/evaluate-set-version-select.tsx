@@ -3,7 +3,7 @@
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchFormSelect } from '@cozeloop/components';
-import { useBaseURL, useSpace } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow, useSpace } from '@cozeloop/biz-hooks-adapter';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import { type FormSelect, Typography } from '@coze-arch/coze-design';
 
@@ -12,11 +12,9 @@ import NoVersionJumper from '../common/no-version-jumper';
 export function EvaluateSetVersionSelect({
   evaluationSetId,
   ...props
-}: React.ComponentProps<typeof FormSelect> & {
-  evaluationSetId?: string;
-}) {
+}: React.ComponentProps<typeof FormSelect> & { evaluationSetId?: string }) {
   const { spaceID } = useSpace();
-  const { baseURL } = useBaseURL();
+  const { getURL } = useOpenWindow();
 
   const service = useRequest(
     async () => {
@@ -50,6 +48,7 @@ export function EvaluateSetVersionSelect({
               </Typography.Text>
             </div>
           ),
+
           ...item,
         })) || [];
       // 没有历史版本
@@ -58,10 +57,11 @@ export function EvaluateSetVersionSelect({
           value: '__UNCOMMITTED__',
           label: (
             <NoVersionJumper
-              targetUrl={`${baseURL}/evaluation/datasets/${evaluationSetId}`}
+              targetUrl={getURL(`evaluation/datasets/${evaluationSetId}`)}
               isShowTag={res2?.evaluation_set?.change_uncommitted}
             />
           ),
+
           disabled: true,
         });
       }

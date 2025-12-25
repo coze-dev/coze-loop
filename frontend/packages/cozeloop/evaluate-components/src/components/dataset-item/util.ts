@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable complexity */
 /* eslint-disable @coze-arch/use-error-in-catch */
 import { type JSONSchema7, type JSONSchema7TypeName } from 'json-schema';
@@ -157,7 +158,7 @@ export const validarDatasetItem = (
     }
 
     if (type === DataType.Integer && decimalValue.isInteger() === false) {
-      callback(I18n.t('please_enter_integer'));
+      callback(I18n.t('enter_integer'));
       return false;
     }
     if (type === DataType.Float && multipleOf) {
@@ -165,7 +166,7 @@ export const validarDatasetItem = (
       const division = decimalValue.dividedBy(multipleOfDecimal);
       if (!division.isInteger()) {
         callback(
-          `${I18n.t('decimal_places_support', { num: multipleOfDecimal.decimalPlaces() })}`,
+          `${I18n.t('data_engine_decimal_places_support', { placeholder1: multipleOfDecimal.decimalPlaces() })}`,
         );
         return false;
       }
@@ -184,7 +185,6 @@ export const validateTextFieldData = (
 ) => {
   try {
     const schema = safeJsonParse(fieldSchema?.text_schema);
-    console.info(1111, schema);
     const type = getDataType(fieldSchema);
     const isRequired = fieldSchema?.isRequired;
     switch (type) {
@@ -215,7 +215,7 @@ export const validateTextFieldData = (
           callback(I18n.t('the_input_content_is_not_in_legal_json_format'));
           return false;
         }
-        const validate = ajv.compile(schema);
+        const validate = ajv.compile(schema as any);
         const valid = validate(data);
         getSchemaErrorInfo(validate.errors);
         if (

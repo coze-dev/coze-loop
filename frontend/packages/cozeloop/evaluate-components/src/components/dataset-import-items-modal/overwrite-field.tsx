@@ -9,11 +9,11 @@ interface ImportTypeSectionProps {
 }
 const importTypeList = [
   {
-    label: I18n.t('evaluation_set_append_data'),
+    label: I18n.t('append_data'),
     value: false,
   },
   {
-    label: I18n.t('evaluation_set_overwrite_data'),
+    label: I18n.t('overwrite_data'),
     value: true,
   },
 ];
@@ -31,7 +31,7 @@ export const OverWriteField = ({ value, onChange }: ImportTypeSectionProps) => (
               title: I18n.t('confirm_full_overwrite'),
               content: I18n.t('importing_data_will_overwrite_existing_data'),
               okText: I18n.t('global_btn_confirm'),
-              cancelText: I18n.t('global_btn_cancel'),
+              cancelText: I18n.t('cancel'),
               onOk: () => {
                 onChange?.(type.value);
               },

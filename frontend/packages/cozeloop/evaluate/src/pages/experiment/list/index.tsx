@@ -107,6 +107,7 @@ export default function ExperimentList() {
           onFilterDebounceChange();
         }}
       />
+
       <ExperimentStatusSelect
         value={filter?.status}
         onChange={val => {
@@ -114,6 +115,7 @@ export default function ExperimentList() {
           onFilterDebounceChange();
         }}
       />
+
       <ExperimentEvaluatorLogicFilter
         value={logicFilter}
         onChange={onLogicFilterChange}
@@ -130,6 +132,7 @@ export default function ExperimentList() {
         storageKey={columnsOptions.columnManageStorageKey}
         onColumnsChange={setColumns}
       />
+
       <Button
         color="primary"
         onClick={() => {
@@ -157,6 +160,7 @@ export default function ExperimentList() {
     <ExperimentRowSelectionActions
       spaceID={spaceID}
       experiments={selectedExperiments}
+      setSelectedExperiments={setSelectedExperiments}
       onRefresh={service.refresh}
       onCancelSelect={() => {
         setBatchOperate(false);

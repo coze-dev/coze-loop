@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { get } from 'lodash-es';
 import { type Datum } from '@visactor/vchart/esm/typings';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type Evaluator,
@@ -9,7 +10,6 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 import { Divider } from '@coze-arch/coze-design';
 
-import { TypographyText } from '../text-ellipsis';
 import { EvaluatorPreview } from '../previews/evaluator-preview';
 import { EvalTargetPreview } from '../previews/eval-target-preview';
 import { EvaluationSetPreview } from '../previews/eval-set-preview';

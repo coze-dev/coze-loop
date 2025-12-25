@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable @coze-arch/max-line-per-function */
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +8,9 @@ import { useMemo, useState } from 'react';
 
 import { isEmpty } from 'lodash-es';
 import dayjs from 'dayjs';
+import classNames from 'classnames';
 import { usePagination, useRequest } from 'ahooks';
+import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuards } from '@cozeloop/guard';
 import { EvaluatorIcon } from '@cozeloop/evaluate-components';
@@ -15,18 +18,17 @@ import {
   type ColumnItem,
   TableColActions,
   TableWithPagination,
-  PrimaryPage,
   UserProfile,
   DEFAULT_PAGE_SIZE,
   dealColumnsWithStorage,
   ColumnSelector,
   setColumnsManageStorage,
 } from '@cozeloop/components';
-import { useSpace } from '@cozeloop/biz-hooks-adapter';
+import { useNavigateModule, useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
-  type EvaluatorContent,
   EvaluatorType,
   type Evaluator,
+  type EvaluatorTemplate,
 } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import {
@@ -51,22 +53,26 @@ import {
   type ColumnProps,
 } from '@coze-arch/coze-design';
 
-import { TemplateModal } from '../evaluator-create/template-modal';
-import { CodeTemplateModal } from '../evaluator-create/code-create/code-template-modal';
+import { codeEvaluatorLanguageMapReverse } from '@/constants';
+
+import { EvaluatorTypeTagText } from '../evaluator-template/types';
+import { EvaluatorTemplateListPanel } from '../evaluator-template/evaluator-template-list-panel';
 import { type FilterParams } from './types';
 import { EvaluatorListFilter } from './evaluator-list-filter';
 
 const columnManageStorageKey = 'evaluator_list_column_manage';
 
-function EvaluatorListPage() {
+function EvaluatorListPage({ className }: { className?: string }) {
   const { spaceID } = useSpace();
   const navigate = useNavigate();
+  const navigateModule = useNavigateModule();
 
   const [filterParams, setFilterParams] = useState<FilterParams>();
   const [defaultColumns, setDefaultColumns] = useState<ColumnItem[]>([]);
-  const [templateModalVisible, setTemplateModalVisible] = useState(false);
-  const [codeTemplateModalVisible, setCodeTemplateModalVisible] =
-    useState(false);
+  const [templatePanelVisible, setTemplatePanelVisible] = useState(false);
+  const [evaluatorType, setEvaluatorType] = useState<
+    EvaluatorTypeTagText | undefined
+  >(EvaluatorTypeTagText.Prompt);
   const isSearch =
     filterParams?.search_name || !isEmpty(filterParams?.creator_ids);
 
@@ -133,8 +139,8 @@ function EvaluatorListPage() {
   const columns: ColumnItem[] = useMemo(() => {
     const newDefaultColumns: ColumnItem[] = [
       {
-        title: I18n.t('evaluator_name'),
-        value: I18n.t('evaluator_name'),
+        title: I18n.t('name'),
+        value: I18n.t('name'),
         dataIndex: 'name',
         key: 'name',
         width: 200,
@@ -154,11 +160,12 @@ function EvaluatorListPage() {
                 color="yellow"
                 className="ml-2 flex-shrink-0 !h-5 !px-2 !py-[2px] rounded-[3px] "
               >
-                {I18n.t('changes_not_submitted')}
+                {I18n.t('unsubmitted_changes')}
               </Tag>
             ) : null}
           </div>
         ),
+
         checked: true,
         disabled: true,
       },
@@ -170,7 +177,6 @@ function EvaluatorListPage() {
         width: 100,
         render: (text: Evaluator['evaluator_type']) => (
           <div className="flex items-center gap-1">
-            {/* start_aigc */}
             <EvaluatorIcon iconSize={12} evaluatorType={text} />
             <span
               className="text-[13px] font-normal"
@@ -178,7 +184,6 @@ function EvaluatorListPage() {
             >
               {text === EvaluatorType.Code ? 'Code' : 'LLM'}
             </span>
-            {/* end_aigc */}
           </div>
         ),
         checked: true,
@@ -200,25 +205,9 @@ function EvaluatorListPage() {
           ) : (
             '-'
           ),
+
         checked: true,
       },
-      // {
-      //   title: I18n.t('type'),
-      //   value: I18n.t('type'),
-      //   dataIndex: 'evaluator_type',
-      //   key: 'evaluator_type',
-      //   render: (text: Evaluator['evaluator_type']) =>
-      //     text ? (
-      //       <Tag color="brand">
-      //         {
-      //           // @ts-expect-error 类型问题
-      //           evaluatorTypeMap[text]
-      //         }
-      //       </Tag>
-      //     ) : (
-      //       '-'
-      //     ),
-      // },
       {
         title: I18n.t('description'),
         value: I18n.t('description'),
@@ -233,11 +222,12 @@ function EvaluatorListPage() {
             {text || '-'}
           </Typography.Text>
         ),
+
         checked: true,
       },
       {
-        title: I18n.t('updated_person'),
-        value: I18n.t('updated_person'),
+        title: I18n.t('updater'),
+        value: I18n.t('updater'),
         dataIndex: 'base_info.updated_by',
         key: 'updated_by',
         width: 170,
@@ -247,6 +237,7 @@ function EvaluatorListPage() {
           ) : (
             '-'
           ),
+
         checked: true,
       },
       {
@@ -272,6 +263,7 @@ function EvaluatorListPage() {
           ) : (
             '-'
           ),
+
         checked: true,
       },
       {
@@ -333,10 +325,12 @@ function EvaluatorListPage() {
             maxCount={2}
           />
         ),
+
         checked: true,
         disabled: true,
       },
     ];
+
     const newColumns: ColumnItem[] = dealColumnsWithStorage(
       columnManageStorageKey,
       newDefaultColumns,
@@ -348,7 +342,6 @@ function EvaluatorListPage() {
   const [currentColumns, setCurrentColumns] =
     useState<ColumnProps<Evaluator>[]>(columns);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tableOnChange = ({ sorter, extra }: Record<string, any>) => {
     if (extra?.changeType === 'sorter' && sorter) {
       let field: string | undefined = undefined;
@@ -378,73 +371,113 @@ function EvaluatorListPage() {
     }
   };
 
-  const handleCodeClick = (template?: EvaluatorContent) => {
-    if (!template) {
-      navigate('create/code');
+  const handleApply = (
+    template: EvaluatorTemplate,
+    options?: {
+      /** 仅当评估器类型为代码评估器，并且用户选择了语言类型时，此参数才会生效 */
+      codeLanguageType?: string;
+    },
+  ) => {
+    const isCode = template.evaluator_type === EvaluatorType.Code;
+    if (isCode) {
+      // FIXME: @wuwenqi 这里来自额外参数
+      const languageType =
+        codeEvaluatorLanguageMapReverse[options?.codeLanguageType || 'python'];
+      navigateModule(
+        `evaluation/evaluators/create/code?templateKey=${template.id}&templateLang=${languageType}`,
+      );
     } else {
-      const { code_template_key, language_type } =
-        template.code_evaluator || {};
-      navigate(
-        `create/code?templateKey=${code_template_key}&templateLang=${language_type}`,
+      navigateModule(
+        `evaluation/evaluators/create/llm?templateKey=${template.id}`,
       );
     }
   };
 
+  const handleOnClickCard = (template: EvaluatorTemplate) => {
+    sendEvent(EVENT_NAMES.cozeloop_evaluator_sample_detail_view, {
+      evaluator_sample_card_name: template?.name,
+    });
+  };
+
+  const handleOnClickCreateLLM = () => {
+    sendEvent(EVENT_NAMES.cozeloop_selfbuild_evaluator_type_choose, {
+      evaluator_type: EvaluatorTypeTagText.Prompt,
+    });
+
+    setEvaluatorType(EvaluatorTypeTagText.Prompt);
+    setTemplatePanelVisible(true);
+  };
+
+  const handleOnClickCreateCode = () => {
+    sendEvent(EVENT_NAMES.cozeloop_selfbuild_evaluator_type_choose, {
+      evaluator_type: EvaluatorTypeTagText.Code,
+    });
+    setEvaluatorType(EvaluatorTypeTagText.Code);
+    setTemplatePanelVisible(true);
+  };
+
+  const filterSlot = (
+    <div className="flex flex-row justify-between">
+      <EvaluatorListFilter
+        filterParams={filterParams}
+        onFilter={setFilterParams}
+      />
+
+      <div className="flex flex-row items-center gap-[8px]">
+        <Tooltip content={I18n.t('refresh')} theme="dark">
+          <Button
+            color="primary"
+            icon={<IconCozRefresh />}
+            onClick={() => {
+              service.refresh();
+            }}
+          ></Button>
+        </Tooltip>
+        <ColumnSelector
+          columns={columns}
+          defaultColumns={defaultColumns}
+          onChange={items => {
+            setCurrentColumns(items.filter(i => i.checked));
+            setColumnsManageStorage(columnManageStorageKey, items);
+          }}
+        />
+        <Menu
+          position="bottomRight"
+          clickToHide={true}
+          render={
+            <Menu.SubMenu className="w-[150px]" mode="menu">
+              <Menu.Item onClick={handleOnClickCreateLLM}>
+                <div className="flex flex-row items-center">
+                  <IconCozAi className="mr-1" />
+                  <span>{I18n.t('evaluate_llm_evaluator')}</span>
+                </div>
+              </Menu.Item>
+              <Menu.Item onClick={handleOnClickCreateCode}>
+                <div className="flex flex-row items-center">
+                  <IconCozCode className="mr-1" />
+                  <span>{I18n.t('evaluate_code_evaluator')}</span>
+                </div>
+              </Menu.Item>
+            </Menu.SubMenu>
+          }
+        >
+          <Button type="primary" icon={<IconCozPlus />}>
+            <span className="mr-1">{I18n.t('new_evaluator')}</span>
+            <IconCozArrowDown />
+          </Button>
+        </Menu>
+      </div>
+    </div>
+  );
+
   return (
-    <PrimaryPage
-      pageTitle={I18n.t('evaluator')}
-      filterSlot={
-        <div className="flex flex-row justify-between">
-          <EvaluatorListFilter
-            filterParams={filterParams}
-            onFilter={setFilterParams}
-          />
-          <div className="flex flex-row items-center gap-[8px]">
-            <Tooltip content={I18n.t('refresh')} theme="dark">
-              <Button
-                color="primary"
-                icon={<IconCozRefresh />}
-                onClick={() => {
-                  service.refresh();
-                }}
-              ></Button>
-            </Tooltip>
-            <ColumnSelector
-              columns={columns}
-              defaultColumns={defaultColumns}
-              onChange={items => {
-                setCurrentColumns(items.filter(i => i.checked));
-                setColumnsManageStorage(columnManageStorageKey, items);
-              }}
-            />
-            <Menu
-              position="bottomRight"
-              render={
-                <Menu.SubMenu className="w-[130px]" mode="menu">
-                  <Menu.Item onClick={() => setTemplateModalVisible(true)}>
-                    <div className="flex flex-row items-center">
-                      <IconCozAi className="mr-1" />
-                      <span>{I18n.t('evaluate_llm_evaluator')}</span>
-                    </div>
-                  </Menu.Item>
-                  <Menu.Item onClick={() => setCodeTemplateModalVisible(true)}>
-                    <div className="flex flex-row items-center">
-                      <IconCozCode className="mr-1" />
-                      <span>{I18n.t('evaluate_code_evaluator')}</span>
-                    </div>
-                  </Menu.Item>
-                </Menu.SubMenu>
-              }
-            >
-              <Button type="primary" icon={<IconCozPlus />}>
-                <span className="mr-1">{I18n.t('new_evaluator')}</span>
-                <IconCozArrowDown />
-              </Button>
-            </Menu>
-          </div>
-        </div>
-      }
+    <div
+      className={classNames(
+        'flex flex-col h-full w-full overflow-hidden',
+        className,
+      )}
     >
+      <div className="w-full flex-0 pt-4 pb-3">{filterSlot}</div>
       <div className="flex-1 h-full w-full flex flex-col gap-3 overflow-hidden">
         <TableWithPagination<Evaluator>
           service={service}
@@ -469,10 +502,8 @@ function EvaluatorListPage() {
               <EmptyState
                 size="full_screen"
                 icon={<IconCozIllusEmpty />}
-                title={I18n.t('failed_to_find_related_results')}
-                description={I18n.t(
-                  'try_other_keywords_or_modify_filter_options',
-                )}
+                title={I18n.t('no_results_found')}
+                description={I18n.t('try_other_keywords')}
               />
             ) : (
               <EmptyState
@@ -485,25 +516,18 @@ function EvaluatorListPage() {
           }
         />
       </div>
-      <TemplateModal
-        visible={templateModalVisible}
-        onCancel={() => setTemplateModalVisible(false)}
-        onSelect={evaluatorContent => {
-          if (evaluatorContent) {
-            navigate(
-              `create/llm?templateKey=${evaluatorContent.prompt_evaluator?.prompt_template_key}`,
-            );
-          } else {
-            navigate('create/llm');
-          }
-        }}
-      />
-      <CodeTemplateModal
-        visible={codeTemplateModalVisible}
-        onCancel={() => setCodeTemplateModalVisible(false)}
-        onSelect={handleCodeClick}
-      />
-    </PrimaryPage>
+      {templatePanelVisible ? (
+        <EvaluatorTemplateListPanel
+          defaultEvaluatorType={evaluatorType}
+          onApply={handleApply}
+          onClickCard={handleOnClickCard}
+          onClose={() => {
+            setEvaluatorType(undefined);
+            setTemplatePanelVisible(false);
+          }}
+        />
+      ) : null}
+    </div>
   );
 }
 

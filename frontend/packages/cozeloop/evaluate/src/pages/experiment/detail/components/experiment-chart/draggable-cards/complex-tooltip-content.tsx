@@ -43,9 +43,7 @@ export function ComplexTooltipContent(props: CustomTooltipProps) {
             {item.count ?? '-'}
           </span>
           <span className="text-[var(--coz-fg-secondary)]">
-            {I18n.t('items_placeholder1', {
-              placeholder1: getScorePercentage(item.percentage),
-            })}
+            {I18n.t('tiao')}({getScorePercentage(item.percentage)})
           </span>
         </span>
       </div>

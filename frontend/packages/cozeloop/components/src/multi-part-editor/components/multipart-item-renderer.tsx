@@ -2,16 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 import React from 'react';
 
-import { type Content, ContentType } from '@cozeloop/api-schema/evaluation';
+import { ContentType } from '@cozeloop/api-schema/evaluation';
 import { IconCozTrashCan } from '@coze-arch/coze-design/icons';
 import { Button, TextArea } from '@coze-arch/coze-design';
 
+import { useI18n } from '@/provider';
+
+import { type MultipartItem } from '../type';
+import { VideoItemRenderer } from './video-item-renderer';
 import { ImageItemRenderer } from './image-item-renderer';
 
 interface MultipartItemRendererProps {
-  item: Content;
+  item: MultipartItem;
   readonly?: boolean;
-  onChange: (item: Content) => void;
+  onChange: (item: MultipartItem) => void;
   onRemove: () => void;
 }
 
@@ -21,6 +25,7 @@ export const MultipartItemRenderer: React.FC<MultipartItemRendererProps> = ({
   onChange,
   onRemove,
 }) => {
+  const I18n = useI18n();
   const handleTextChange = (text: string) => {
     onChange({
       ...item,
@@ -37,8 +42,9 @@ export const MultipartItemRenderer: React.FC<MultipartItemRendererProps> = ({
             onChange={handleTextChange}
             autosize={{ minRows: 1, maxRows: 3 }}
             disabled={readonly}
-            placeholder="请输入文本信息"
+            placeholder={I18n.t('please_input_text')}
           />
+
           {readonly ? null : (
             <Button
               icon={<IconCozTrashCan />}
@@ -59,6 +65,17 @@ export const MultipartItemRenderer: React.FC<MultipartItemRendererProps> = ({
           readonly={readonly}
         />
       );
+
+    case 'Video':
+      return (
+        <VideoItemRenderer
+          item={item}
+          onRemove={onRemove}
+          onChange={onChange}
+          readonly={readonly}
+        />
+      );
+
     default:
       return null;
   }

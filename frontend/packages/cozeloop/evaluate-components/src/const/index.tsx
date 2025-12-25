@@ -6,6 +6,9 @@ import { ItemErrorType } from '@cozeloop/api-schema/data';
 export const DEFAULT_PAGE_SIZE = 10;
 export const DATASET_ADD_ITEM_PREFIX = 'dataset-add-item';
 
+export const MAX_ITEM_COUNT = 5000;
+export const MAX_PREVIEW_COUNT = 30000;
+
 export const ErrorTypeMap = {
   [ItemErrorType.MismatchSchema]: I18n.t('schema_mismatch'),
   [ItemErrorType.EmptyData]: I18n.t('empty_data'),

@@ -9,8 +9,8 @@ import { type SelectProps } from '@coze-arch/coze-design';
 
 import { useEvalTargetDefinition } from '@/stores/eval-target-store';
 import { EvaluateSetSelect } from '@/components/selectors/evaluate-set-select';
+import { EvaluatorAggregationSelect } from '@/components/evaluator-ecosystem';
 
-import { EvaluatorSelect } from '../../selectors/evaluator-select';
 import {
   EvalTargetCascadeSelect,
   type EvalTargetCascadeSelectValue,
@@ -21,7 +21,7 @@ import LogicEditor, {
 } from '../../logic-editor';
 import { getLogicFieldName } from '../../../utils/evaluate-logic-condition';
 
-function EvalTargetCascadeSelectSetter(props: SelectProps) {
+export function EvalTargetCascadeSelectSetter(props: SelectProps) {
   return (
     <EvalTargetCascadeSelect
       {...props}
@@ -102,7 +102,7 @@ export function ExperimentEvaluatorLogicFilter({
         title: I18n.t('evaluator'),
         name: getLogicFieldName(FieldType.EvaluatorID, 'evaluator'),
         type: 'options',
-        setter: EvaluatorSelect,
+        setter: EvaluatorAggregationSelect,
         setterProps: {
           className: 'w-full',
           multiple: true,
@@ -119,6 +119,7 @@ export function ExperimentEvaluatorLogicFilter({
           ]
         : []),
     ];
+
     if (disabledFields?.length) {
       return newFilterFields.filter(
         field => !disabledFields.find(key => field.name.includes(key)),

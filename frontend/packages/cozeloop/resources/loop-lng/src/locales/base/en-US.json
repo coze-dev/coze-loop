@@ -1,22 +1,12 @@
 {
-  "platform_name": "Coze Loop",
-  "space_not_exists": "Space does not exist",
-  "back": "Back",
-  "network_error": "Network error",
-  "click_retry": "Click to retry",
-  "document": "Document",
-  "lark_group": "Lark Group",
   "prompt_engineering": "Prompt Engineering",
   "prompt_development": "Prompt Development",
-  "evaluation": "Evaluation",
-  "evaluation_set": "Evaluation set",
-  "evaluator": "Evaluator",
-  "experiment": "Experiment",
-  "observation": "Observation",
+  "click_retry": "Click to retry",
+  "lark_group": "Lark Group",
+  "space_not_exists": "Space does not exist",
+  "platform_name": "Coze Loop",
+  "not_join_space": "You have not joined any spaces.",
   "confirm_logout": "Are you sure you want to log out?",
-  "logout": "Log out",
-  "cancel": "Cancel",
-  "account_settings": "Account settings",
   "no_space": "No available space at present.",
-  "not_join_space": "You have not joined any spaces."
+  "account_settings": "Account settings"
 }

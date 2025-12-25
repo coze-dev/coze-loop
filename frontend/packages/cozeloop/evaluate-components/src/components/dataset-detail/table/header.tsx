@@ -5,13 +5,18 @@ import { Fragment, type ReactNode } from 'react';
 
 import { sendEvent, EVENT_NAMES } from '@cozeloop/tea-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { EvaluationAddDataDropdownMenus } from '@cozeloop/evaluate-adapter/add-data-dropdown';
 import {
   type ColumnItem,
   ColumnSelector,
   type Version,
 } from '@cozeloop/components';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
-import { IconCozArrowDown } from '@coze-arch/coze-design/icons';
+import {
+  IconCozArrowDown,
+  IconCozImport,
+  IconCozPlus,
+} from '@coze-arch/coze-design/icons';
 import { Dropdown, Button, Typography, Divider } from '@coze-arch/coze-design';
 
 import { SubmitVersion } from '../submit-version';
@@ -73,7 +78,8 @@ export const TableHeader = ({
   });
   const ADD_DATA_TYPE_LIST = [
     {
-      label: I18n.t('app_client_add_env'),
+      label: I18n.t('add_manually'),
+      icon: <IconCozPlus />,
       onClick: () => {
         setAddItemsVisible(true);
         sendEvent(EVENT_NAMES.cozeloop_dataset_add_data, {
@@ -83,6 +89,7 @@ export const TableHeader = ({
     },
     {
       label: I18n.t('local_import'),
+      icon: <IconCozImport />,
       onClick: () => {
         setImportModalVisible(true);
         sendEvent(EVENT_NAMES.cozeloop_dataset_add_data, {
@@ -91,6 +98,7 @@ export const TableHeader = ({
       },
     },
   ];
+
   const setNewColumns = (newColumns: ColumnItem[]) => {
     setColumns(newColumns);
   };
@@ -136,6 +144,7 @@ export const TableHeader = ({
           {ExperimentButton}
         </ReportWrapper>
       ),
+
       extra: [ExperimentModalNode],
     },
     {
@@ -149,22 +158,10 @@ export const TableHeader = ({
         <Dropdown
           clickToHide
           render={
-            <Dropdown.Menu mode="menu">
-              {ADD_DATA_TYPE_LIST.map((action, index) => (
-                <Dropdown.Item
-                  key={index}
-                  onClick={() => {
-                    setAddItemsVisible(false);
-                    action.onClick?.();
-                  }}
-                  className="min-w-[90px] !p-0 !pl-2"
-                >
-                  <Typography.Text size="small" className="!text-[13px]">
-                    {action.label}
-                  </Typography.Text>
-                </Dropdown.Item>
-              ))}
-            </Dropdown.Menu>
+            <EvaluationAddDataDropdownMenus
+              evaluationSet={datasetDetail}
+              menuConfigs={ADD_DATA_TYPE_LIST}
+            />
           }
         >
           <Button color="primary">
@@ -173,6 +170,7 @@ export const TableHeader = ({
           </Button>
         </Dropdown>
       ),
+
       hidden: !isDraftVersion,
       extra: [addItemsPanelNode, importModalNode],
     },
@@ -188,6 +186,7 @@ export const TableHeader = ({
           onSubmit={refreshDatasetDetail}
         />
       ),
+
       hidden: !isDraftVersion,
     },
   ];

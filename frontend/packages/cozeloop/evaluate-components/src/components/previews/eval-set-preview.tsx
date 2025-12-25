@@ -1,13 +1,12 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { JumpIconButton } from '@cozeloop/components';
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
+import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
 import { type EvaluationSet } from '@cozeloop/api-schema/evaluation';
 import { Tag, Tooltip } from '@coze-arch/coze-design';
-
-import { TypographyText } from '../text-ellipsis';
 
 /** 评测集预览 */
 export function EvaluationSetPreview({
@@ -22,7 +21,8 @@ export function EvaluationSetPreview({
   jumpBtnClassName?: string;
 }) {
   const { name, evaluation_set_version, id } = evalSet ?? {};
-  const { baseURL } = useBaseURL();
+  const { openBlank } = useOpenWindow();
+
   if (!evalSet) {
     return <>-</>;
   }
@@ -36,9 +36,7 @@ export function EvaluationSetPreview({
       onClick={e => {
         if (enableLinkJump && id) {
           e.stopPropagation();
-          window.open(
-            `${baseURL}/evaluation/datasets/${id}?version=${versionId}`,
-          );
+          openBlank(`evaluation/datasets/${id}?version=${versionId}`);
         }
       }}
     >

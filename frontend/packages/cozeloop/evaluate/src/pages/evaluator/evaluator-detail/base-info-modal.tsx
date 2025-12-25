@@ -103,7 +103,7 @@ export function BaseInfoModal({
         <FormTextArea
           label={I18n.t('description')}
           field="description"
-          placeholder={I18n.t('please_input_description')}
+          placeholder={I18n.t('enter_description')}
           maxCount={200}
           maxLength={200}
         />

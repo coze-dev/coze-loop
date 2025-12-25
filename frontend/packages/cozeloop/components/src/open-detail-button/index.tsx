@@ -4,14 +4,17 @@ import classNames from 'classnames';
 import { IconCozLongArrowTopRight } from '@coze-arch/coze-design/icons';
 import { Tooltip, Button } from '@coze-arch/coze-design';
 
+import { useI18n } from '@/provider';
+
 interface Props {
   url: string;
   className?: string;
 }
 
 export function OpenDetailButton({ url, className }: Props) {
+  const I18n = useI18n();
   return (
-    <Tooltip theme="dark" content="查看详情">
+    <Tooltip theme="dark" content={I18n.t('view_detail')}>
       <Button
         onClick={e => {
           e.stopPropagation();

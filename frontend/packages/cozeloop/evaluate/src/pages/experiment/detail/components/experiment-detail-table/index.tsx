@@ -215,6 +215,7 @@ export default function ({
             },
           }),
         ];
+
     // 评估器列
     const evaluatorColumns: ExperimentDetailColumn[] = getEvaluatorColumns({
       columnEvaluators: column_evaluators,
@@ -267,14 +268,14 @@ export default function ({
     <>
       <div className="w-60">
         <TextArea
-          placeholder={`${I18n.t('enter_keyword_search_max_length', { MAX_SEARCH_LENGTH })}`}
+          placeholder={`${I18n.t('evaluate_please_input_keyword_search_max_length', { MAX_SEARCH_LENGTH })}`}
           rows={1}
           showClear={true}
           value={keyword}
           onChange={val => {
             if (val && val.length > MAX_SEARCH_LENGTH) {
               Toast.warning(
-                `${I18n.t('keyword_search_length_limited_truncated', { MAX_SEARCH_LENGTH })}`,
+                `${I18n.t('evaluate_keyword_search_max_length_truncated', { MAX_SEARCH_LENGTH })}`,
               );
             }
             const newVal = val?.slice(0, MAX_SEARCH_LENGTH);
@@ -303,6 +304,7 @@ export default function ({
           onFilterDebounceChange();
         }}
       />
+
       <LogicEditor
         fields={logicFields}
         value={logicFilter}
@@ -315,6 +317,7 @@ export default function ({
       />
     </>
   );
+
   // 操作
   const actions = (
     <>
@@ -351,6 +354,7 @@ export default function ({
           }
         }}
       />
+
       <TableCellExpand expand={expand} onChange={setExpand} />
       <ColumnsManage
         columns={columns}
@@ -427,6 +431,7 @@ export default function ({
         empty={tableEmpty}
         tableProps={tableProps}
       />
+
       {activeItem && itemDetailVisible ? (
         <ExperimentItemDetail
           spaceID={spaceID}
@@ -446,6 +451,7 @@ export default function ({
 
       {itemTraceVisible ? (
         <TraceTargetTraceDetailPanel
+          item={activeItem}
           // 和服务端的约定，基于Trace的在线评测情况下，traceID和spanID的数据在评测集中存放
           traceID={activeItem?.datasetRow?.trace_id?.content?.text ?? ''}
           spanID={activeItem?.datasetRow?.span_id?.content?.text ?? ''}

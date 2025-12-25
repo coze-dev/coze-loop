@@ -4,7 +4,11 @@
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
-import { useResourcePageJump, useSpace } from '@cozeloop/biz-hooks-adapter';
+import {
+  useResourcePageJump,
+  useOpenWindow,
+  useSpace,
+} from '@cozeloop/biz-hooks-adapter';
 import {
   EvalTargetType,
   type EvalTargetVersion,
@@ -18,11 +22,10 @@ import { getPromptEvalTargetVersionOption } from './utils';
 const PromptEvalTargetVersionSelect = ({
   promptId,
   ...props
-}: React.ComponentProps<typeof FormSelect> & {
-  promptId?: string;
-}) => {
+}: React.ComponentProps<typeof FormSelect> & { promptId?: string }) => {
   const { spaceID } = useSpace();
   const { getPromptDetailURL } = useResourcePageJump();
+  const { getURL } = useOpenWindow();
 
   const service = useRequest(
     async () => {
@@ -44,7 +47,8 @@ const PromptEvalTargetVersionSelect = ({
         const promptUrl = getPromptDetailURL(promptId);
         result?.unshift({
           value: '__UNCOMMITTED__',
-          label: <NoVersionJumper targetUrl={promptUrl} />,
+          label: <NoVersionJumper targetUrl={getURL(promptUrl)} />,
+
           disabled: true,
         });
       }
@@ -64,7 +68,7 @@ const PromptEvalTargetVersionSelect = ({
   return (
     <BaseSearchSelect
       loading={service.loading}
-      emptyContent={I18n.t('no_data_yet')}
+      emptyContent={I18n.t('no_data')}
       placeholder={I18n.t('select_version')}
       showRefreshBtn={true}
       onClickRefresh={() => service.run()}

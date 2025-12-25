@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as dataset from './../data/domain/dataset';
 export { dataset };
 import * as common from './domain/common';
@@ -131,6 +133,7 @@ export interface BatchCreateEvaluationSetItemsResponse {
     [key: string | number]: string
   },
   errors?: dataset.ItemErrorGroup[],
+  item_outputs?: dataset.CreateDatasetItemOutput[],
 }
 export interface UpdateEvaluationSetItemRequest {
   workspace_id: string,

@@ -22,9 +22,10 @@ import {
   type ColumnProps,
 } from '@coze-arch/coze-design';
 
-import { LoopTable } from '@/table';
+import { useI18n } from '@/provider';
 
-import { ErrorTypeMap, type UploadAttachmentDetail } from '../type';
+import { getErrorTypeMap, type UploadAttachmentDetail } from '../type';
+import { LoopTable } from '../../table';
 
 interface UrlInputModalProps {
   visible: boolean;
@@ -34,6 +35,8 @@ interface UrlInputModalProps {
   uploadImageUrl?: (
     urls: string[],
   ) => Promise<UploadAttachmentDetail[] | undefined>;
+  uploadType?: 'image' | 'video';
+  intranetUrlValidator?: (url: string) => boolean;
 }
 
 export const UrlInputModal: React.FC<UrlInputModalProps> = ({
@@ -42,7 +45,10 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
   onCancel,
   maxCount = 6,
   uploadImageUrl,
+  uploadType = 'image',
+  intranetUrlValidator,
 }) => {
+  const I18n = useI18n();
   const [error, setError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isUploaded, setIsUploaded] = useState(false);
@@ -63,7 +69,7 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
   // Upload logic
   const handleUpload = async formValues => {
     if (formValues?.urls?.length === 0) {
-      setError('请至少添加一个图片链接');
+      setError(I18n.t('please_add_at_least_one_image_link'));
       return;
     }
     setIsUploading(true);
@@ -73,7 +79,7 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
       setUploadResults(results || []);
       setIsUploaded(true);
     } catch (err) {
-      setError('上传失败，请重试');
+      setError(I18n.t('upload_failed_please_try_again'));
     } finally {
       setIsUploading(false);
     }
@@ -125,32 +131,41 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
     <Form
       initValues={{ urls: [''] }}
       getFormApi={api => (formRef.current = api)}
-      onSubmit={handleUpload}
+      onSubmit={uploadImageUrl ? handleUpload : undefined}
     >
       {({ formState, formApi }) => {
         const urls: string[] = formState.values?.urls || [''];
         const canAdd = urls.length < maxCount;
         return (
           <div>
-            {urls.map((url, idx) => (
+            {urls.map((_url, idx) => (
               <div key={idx} className="flex  gap-2">
                 <Form.Input
                   field={`urls[${idx}]`}
                   label={{
-                    text: `图片${idx + 1}`,
+                    text: `${uploadType === 'image' ? I18n.t('image') : I18n.t('video')}${idx + 1}`,
                     required: true,
                   }}
                   fieldClassName="flex-1"
-                  placeholder="请输入图片链接"
+                  placeholder={`${I18n.t('please_input_placeholder1_link_public', { placeholder1: uploadType === 'image' ? I18n.t('image') : I18n.t('video') })}`}
                   rules={[
                     {
                       validator: (_, value, cb) => {
                         if (!value) {
-                          cb('请输入图片链接');
+                          cb(
+                            `${I18n.t('please_input_placeholder1_link', { placeholder1: uploadType === 'image' ? I18n.t('image') : I18n.t('video') })}`,
+                          );
+                          return false;
+                        }
+                        if (
+                          intranetUrlValidator &&
+                          intranetUrlValidator(value)
+                        ) {
+                          cb(I18n.t('please_use_public_domain'));
                           return false;
                         }
                         if (!validateUrl(value)) {
-                          cb('请输入有效的URL');
+                          cb(I18n.t('please_enter_a_valid_url'));
                           return false;
                         }
                         return true;
@@ -159,6 +174,7 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
                   ]}
                   className="w-full"
                 />
+
                 <Button
                   size="small"
                   color="secondary"
@@ -181,11 +197,10 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
               onClick={() => formApi.setValue('urls', [...urls, ''])}
               className="mt-2"
             >
-              添加
-              <Typography.Text
-                className="ml-1"
-                type="secondary"
-              >{`${urls.length}/${maxCount}`}</Typography.Text>
+              {I18n.t('space_member_role_type_add_btn')}
+              <Typography.Text className="ml-1" type="secondary">
+                {`${urls.length}/${maxCount}`}
+              </Typography.Text>
             </Button>
             {error ? (
               <div className="text-red-500 text-sm mt-1">{error}</div>
@@ -198,13 +213,13 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
 
   const columns: ColumnProps<UploadAttachmentDetail>[] = [
     {
-      title: '图片地址',
+      title: I18n.t('image_address'),
       dataIndex: 'originImage.url',
       width: 220,
       ellipsis: { showTitle: true },
     },
     {
-      title: '图片预览',
+      title: I18n.t('image_preview'),
       dataIndex: 'originImage.url',
       width: 120,
       render: (url: string) => (
@@ -217,7 +232,7 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
       ),
     },
     {
-      title: '状态',
+      title: I18n.t('status'),
       key: 'status',
       align: 'left',
       width: 200,
@@ -233,10 +248,10 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
             }
             color={record?.errorType ? 'red' : 'green'}
           >
-            {record?.errorType ? '失败' : '成功'}
+            {record?.errorType ? I18n.t('failure') : I18n.t('success')}
           </Tag>
           <Typography.Text type="secondary" className="ml-1">
-            {record.errorType ? ErrorTypeMap[record.errorType] : ''}
+            {record.errorType ? getErrorTypeMap(I18n)[record.errorType] : ''}
           </Typography.Text>
         </div>
       ),
@@ -259,27 +274,27 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
 
   const getConfirmButtonText = () => {
     if (!uploadImageUrl) {
-      return '确认';
+      return I18n.t('global_btn_confirm');
     }
     if (isUploading) {
-      return '上传中...';
+      return I18n.t('cozeloop_open_evaluate_uploading');
     }
     if (isUploaded) {
-      return '导入图片';
+      return `${I18n.t('import')}${uploadType === 'image' ? I18n.t('image') : I18n.t('video')}`;
     }
-    return '上传';
+    return I18n.t('upload');
   };
 
   return (
     <Modal
-      title="添加图片链接"
+      title={`${I18n.t('add_placeholder1_link', { placeholder1: uploadType === 'image' ? I18n.t('image') : I18n.t('video') })}`}
       visible={visible}
       onCancel={handleCancel}
       width={640}
       footer={
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end">
           <Button onClick={handleCancel} color="primary">
-            取消
+            {I18n.t('cancel')}
           </Button>
           <Button
             type="primary"
@@ -295,7 +310,9 @@ export const UrlInputModal: React.FC<UrlInputModalProps> = ({
       {isUploading ? (
         <div className="flex items-center justify-center py-8">
           <Spin size="large" />
-          <span className="ml-2">正在上传图片...</span>
+          <span className="ml-2">
+            {I18n.t('cozeloop_open_evaluate_uploading_image')}
+          </span>
         </div>
       ) : null}
 

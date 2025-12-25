@@ -5,7 +5,6 @@
 import * as sort from 'react-sortable-hoc';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 import {
   IconCozHandle,
   IconCozTableSetting,
@@ -19,10 +18,30 @@ import {
   Tooltip,
   type ColumnProps,
 } from '@coze-arch/coze-design';
+
+import { useI18n } from '@/provider';
 // @ts-expect-error react-sortable-hoc ts type issue
 const { sortableContainer, sortableElement, sortableHandle } = sort;
 const { arrayMove } = sort;
 
+const SortableContainer = sortableContainer(
+  ({ children }: { children: React.ReactNode }) => (
+    <div className="max-w-[200px] w-fit rounded-[6px] py-2 px-1 max-h-[372px] overflow-y-auto flex gap-y-1 flex-col">
+      {children}
+    </div>
+  ),
+);
+
+const DragHandle = sortableHandle(() => {
+  const I18n = useI18n();
+  return (
+    <IconCozHandle
+      className="cursor-grab"
+      aria-label={I18n.t('drag_to_sort')}
+      role="button"
+    />
+  );
+});
 export interface ColumnItem extends ColumnProps {
   key: string;
   value: string;
@@ -47,12 +66,13 @@ export const ColumnSelector = ({
   defaultColumns = columns,
   onChange,
   buttonText,
-  resetButtonText = I18n.t('reset_to_default'),
+  resetButtonText,
   className,
   sortable = true,
   itemRender,
   footerRender,
 }: ColumnSelectorProps) => {
+  const I18n = useI18n();
   const [list, setList] = useState<ColumnItem[]>(() => [...columns]);
   const selectedKeys = useMemo(
     () => list.filter(item => item.checked).map(item => item.key),
@@ -63,17 +83,7 @@ export const ColumnSelector = ({
     [list],
   );
 
-  const DragHandle = sortableHandle(() => (
-    <IconCozHandle
-      className="cursor-grab"
-      aria-label="拖动排序"
-      role="button"
-    />
-  ));
-
   const RenderItem = (value: ColumnItem, slot?: React.ReactNode) => {
-    // const spanRef = useRef<HTMLSpanElement>(null);
-    // const isHovering = useHover(spanRef);
     const render = itemRender ? itemRender(value) : null;
     if (render) {
       return render;
@@ -117,8 +127,9 @@ export const ColumnSelector = ({
           <Checkbox
             disabled={disabledKeys.includes(value.key ?? '') || value.disabled}
             checked={selectedKeys.includes(value.key ?? '')}
-            aria-label={`选择${value.value}`}
+            aria-label={`${I18n.t('select')}${value.value}`}
           />
+
           <Typography.Text
             ellipsis={{
               showTooltip: {
@@ -148,13 +159,6 @@ export const ColumnSelector = ({
 
   const SortableItem = sortableElement(({ value }: { value: ColumnItem }) =>
     RenderItem(value, <DragHandle />),
-  );
-  const SortableContainer = sortableContainer(
-    ({ children }: { children: React.ReactNode }) => (
-      <div className="max-w-[200px] w-fit rounded-[6px] py-2 px-1 max-h-[372px] overflow-y-auto flex gap-y-1 flex-col">
-        {children}
-      </div>
-    ),
   );
 
   const handleSortEnd = ({
@@ -216,7 +220,7 @@ export const ColumnSelector = ({
                   onClick={handleReset}
                 >
                   <span className="text-brand font-medium text-[13px]">
-                    {resetButtonText}
+                    {resetButtonText || I18n.t('reset_to_default')}
                   </span>
                 </Button>
               </div>
@@ -228,7 +232,7 @@ export const ColumnSelector = ({
                 onClick={handleReset}
               >
                 <span className="text-brand font-medium text-[13px]">
-                  {resetButtonText}
+                  {resetButtonText || I18n.t('reset_to_default')}
                 </span>
               </Button>
             )}

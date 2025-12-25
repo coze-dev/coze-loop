@@ -27,7 +27,7 @@ export function getExperimentContrastLogicFields(
   return [
     {
       title: I18n.t('status'),
-      name: getLogicFieldName(FieldType.ItemRunState, ''),
+      name: getLogicFieldName(FieldType.ItemRunState, 'item_status'),
       type: 'options',
       // 禁用等于和不等于操作符
       disabledOperations: ['equals', 'not-equals'],

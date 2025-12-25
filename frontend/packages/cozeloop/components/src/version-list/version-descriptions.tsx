@@ -3,9 +3,10 @@
 /* eslint-disable complexity */
 import cs from 'classnames';
 import { formatTimestampToString } from '@cozeloop/toolkit';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { type UserInfo } from '@cozeloop/api-schema/evaluation';
 import { Descriptions, Tag, Typography } from '@coze-arch/coze-design';
+
+import { useI18n } from '@/provider';
 
 import { UserProfile } from '../user-profile';
 
@@ -29,6 +30,7 @@ export default function VersionDescriptions({
   version: Version | undefined;
   className?: string;
 }) {
+  const I18n = useI18n();
   const {
     version: versionName,
     draftSubmitText = I18n.t('save_time'),
@@ -62,7 +64,7 @@ export default function VersionDescriptions({
       )}
       {isDraft && !submitter ? null : (
         <Descriptions.Item
-          itemKey={I18n.t('submitter')}
+          itemKey={I18n.t('submit_user')}
           className="!text-[13px]"
         >
           <UserProfile

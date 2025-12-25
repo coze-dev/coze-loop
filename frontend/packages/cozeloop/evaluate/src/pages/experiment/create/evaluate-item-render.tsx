@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import classNames from 'classnames';
-import { getEvaluatorJumpUrl } from '@cozeloop/evaluate-components';
+import { getEvaluatorJumpUrlV2 } from '@cozeloop/evaluate-components';
 import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
 import { EvaluatorType } from '@cozeloop/api-schema/evaluation';
 import {
@@ -18,15 +18,14 @@ import { type EvaluatorPro } from '@/types/experiment/experiment-create';
 import { OpenDetailButton } from './open-detail-button';
 import { EvaluatorContentRenderer } from './evaluator-content-renderer';
 
-// eslint-disable-next-line complexity
 export function EvaluateItemRender({
   evaluatorPro,
 }: {
   evaluatorPro: EvaluatorPro;
 }) {
   const [open, setOpen] = useState(true);
-  const { evaluator } = evaluatorPro;
-  const { evaluator_type } = evaluator ?? {};
+  const { evaluator, evaluatorVersion } = evaluatorPro;
+  const { evaluator_type, builtin } = evaluator ?? {};
   const { openBlank } = useOpenWindow();
 
   const icon = useMemo(
@@ -39,19 +38,7 @@ export function EvaluateItemRender({
     [evaluator_type],
   );
 
-  const jumpUrl = useMemo(
-    () =>
-      getEvaluatorJumpUrl({
-        evaluatorType: evaluator?.evaluator_type,
-        evaluatorId: evaluator?.evaluator_id,
-        evaluatorVersionId: evaluatorPro?.evaluatorVersion?.id,
-      }),
-    [
-      evaluator?.evaluator_id,
-      evaluator?.evaluator_type,
-      evaluatorPro?.evaluatorVersion?.id,
-    ],
-  );
+  const jumpUrl = useMemo(() => getEvaluatorJumpUrlV2(evaluator), [evaluator]);
 
   return (
     <div className="border border-solid coz-stroke-primary rounded-[6px]">
@@ -60,13 +47,11 @@ export function EvaluateItemRender({
         onClick={() => setOpen(pre => !pre)}
       >
         <div className="flex flex-row items-center flex-1 text-sm font-semibold coz-fg-plus gap-1">
-          <span className="truncate max-w-[698px]">
-            {evaluatorPro?.evaluator?.name}
-          </span>
-          {evaluatorPro?.evaluatorVersion?.version ? (
+          <span className="truncate max-w-[698px]">{evaluator?.name}</span>
+          {evaluatorVersion?.version ? (
             <Tag color="primary" className="!h-5 !px-2 !py-[2px] rounded-[3px]">
               {icon}
-              {evaluatorPro.evaluatorVersion.version}
+              {builtin ? 'latest' : evaluatorVersion.version}
             </Tag>
           ) : null}
 

@@ -11,10 +11,7 @@ interface UpdateTagStatusParams {
   toStatus: BatchUpdateTagStatusRequest['to_status'];
 }
 
-export const useUpdateTagStatus = (): Result<
-  void,
-  [UpdateTagStatusParams]
-> => {
+export const useUpdateTagStatus = (): Result<void, [UpdateTagStatusParams]> => {
   const { spaceID } = useSpace();
 
   return useRequest(

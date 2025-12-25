@@ -1,6 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { isUndefined } from 'lodash-es';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { InputSlider } from '@cozeloop/components';
 import { IconCozQuestionMarkCircle } from '@coze-arch/coze-design/icons';
 import {
@@ -46,6 +47,7 @@ export const getInputSliderConfig = (
           {param?.name ? modelConfigLabelMap[param.name] || '' : ''}
         </Typography.Text>
       ),
+
       extra: (
         <Tooltip
           content={
@@ -75,15 +77,13 @@ export function ModelConfigForm({ model }: { model?: Model }) {
         labelPosition="left"
         {...getInputSliderConfig('max_tokens', modelParams)}
         label={{
-          text: <Typography.Text>最大回复长度</Typography.Text>,
+          text: <Typography.Text>{I18n.t('max_tokens')}</Typography.Text>,
           extra: (
             <Tooltip
               content={
                 <MdBoxLazy
                   className="!text-white"
-                  markDown={
-                    '- **max_tokens**: 控制模型输出的 Tokens 长度上限。通常 100 Tokens 约等于 150 个中文汉字。'
-                  }
+                  markDown={I18n.t('prompt_max_tokens_description')}
                 />
               }
               theme="dark"

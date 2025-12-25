@@ -1,6 +1,6 @@
-/* eslint-disable max-lines-per-function */
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable max-lines-per-function */
 /* eslint-disable @coze-arch/max-line-per-function */
 /* eslint-disable complexity */
 import { useLocation } from 'react-router-dom';
@@ -17,14 +17,13 @@ import {
 } from '@cozeloop/evaluate-components';
 import { type VariableDef, VariableType } from '@cozeloop/api-schema/prompt';
 import {
-  type EvaluatorContent,
   Role,
   type PromptEvaluator,
   PromptSourceType,
   type Message,
   ContentType,
   type common,
-  TemplateType,
+  type EvaluatorTemplate,
 } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import {
@@ -44,7 +43,8 @@ import {
   withField,
 } from '@coze-arch/coze-design';
 
-import { TemplateModal } from './template-modal';
+import { EvaluatorTypeTagText } from '../evaluator-template/types';
+import { EvaluatorTemplateListPanel } from '../evaluator-template/evaluator-template-list-panel';
 
 import styles from './prompt-field.module.less';
 
@@ -59,6 +59,10 @@ const messageTypeList = [
   },
 ];
 
+const disabledEvaluatorTypes: EvaluatorTypeTagText[] = [
+  EvaluatorTypeTagText.Code,
+];
+
 export function PromptField({
   refreshEditorKey = 0,
   disabled,
@@ -71,8 +75,6 @@ export function PromptField({
   const location = useLocation();
   const [templateVisible, setTemplateVisible] = useState(false);
   const [refreshEditorKey2, setRefreshEditorKey2] = useState(0);
-
-  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const formApi = useFormApi();
   const { values: formValues } = useFormState();
@@ -112,19 +114,20 @@ export function PromptField({
     [promptEvaluator?.message_list?.[1]?.content],
   );
 
-  const afterTemplateSelect = (payload: PromptEvaluator) => {
+  const afterTemplateSelect = (
+    payload: PromptEvaluator,
+    templateId?: string,
+    templateName?: string,
+  ) => {
     promptEvaluatorFieldApi.setValue({
       ...promptEvaluator,
-      model_config:
-        formValues?.current_version?.evaluator_content?.prompt_evaluator
-          ?.model_config,
       message_list: payload.message_list,
       prompt_source_type: PromptSourceType.BuiltinTemplate,
-      prompt_template_key: payload.prompt_template_key,
-      prompt_template_name: payload.prompt_template_name,
+      prompt_template_key: templateId,
+      prompt_template_name: templateName,
     });
     if (!formValues?.name) {
-      formApi.setValue('name', payload.prompt_template_name);
+      formApi.setValue('name', templateName);
     }
   };
 
@@ -140,28 +143,35 @@ export function PromptField({
     // 如果URL中存在模板键，则加载模板
     if (templateKey) {
       // 获取模板信息
-      StoneEvaluationApi.GetTemplateInfo({
-        builtin_template_key: templateKey,
-        builtin_template_type: TemplateType.Prompt,
-      }).then(res => {
-        if (res.builtin_template?.prompt_evaluator) {
-          afterTemplateSelect(res.builtin_template.prompt_evaluator);
-          setRefreshEditorKey2(pre => pre + 1);
-        }
-      });
+      StoneEvaluationApi.GetTemplateV2({
+        evaluator_template_id: templateKey,
+      })
+        .then(res => {
+          if (res.evaluator_template?.evaluator_content?.prompt_evaluator) {
+            afterTemplateSelect(
+              res.evaluator_template.evaluator_content.prompt_evaluator,
+              templateKey,
+              res.evaluator_template.name,
+            );
+            setRefreshEditorKey2(pre => pre + 1);
+          }
+        })
+        .catch(e => console.warn(e));
     }
   }, [location.search]);
 
-  const handleTemplateSelect = (template?: EvaluatorContent) => {
+  const handleTemplateSelect = (template?: EvaluatorTemplate) => {
+    const templatePromptEvaluator =
+      template?.evaluator_content?.prompt_evaluator;
+    const templateKey =
+      templatePromptEvaluator?.prompt_template_key || template?.id;
     // 将模板信息添加到URL查询参数
-    if (template?.prompt_evaluator?.prompt_template_key) {
-      setConfirmLoading(true);
-      const templateKey = template?.prompt_evaluator.prompt_template_key;
+    if (templateKey) {
       const searchParams = new URLSearchParams(location.search);
       searchParams.set('templateKey', templateKey);
 
-      if (template?.prompt_evaluator) {
-        afterTemplateSelect(template?.prompt_evaluator);
+      if (templatePromptEvaluator) {
+        afterTemplateSelect(templatePromptEvaluator, templateKey);
       }
 
       // 更新URL而不导航
@@ -173,7 +183,6 @@ export function PromptField({
     }
 
     setRefreshEditorKey2(pre => pre + 1);
-    setConfirmLoading(false);
     setTemplateVisible(false);
   };
 
@@ -287,9 +296,8 @@ export function PromptField({
             <Button
               size="mini"
               color="secondary"
-              className="!coz-fg-hglt !px-[3px] !h-5"
-              // disabled={disabled}
-              // todo icon
+              className={`${disabled ? '!coz-fg-hglt' : '!coz-fg-disabled'} !px-[3px] !h-5`}
+              disabled={disabled}
               icon={<IconCozTemplate />}
               onClick={() => setTemplateVisible(true)}
             >
@@ -352,14 +360,14 @@ export function PromptField({
           <PromptVariablesList variables={variables} />
         ) : null}
       </div>
-
-      <TemplateModal
-        visible={templateVisible}
-        disabled={disabled}
-        confirmLoading={confirmLoading}
-        onCancel={() => setTemplateVisible(false)}
-        onSelect={handleTemplateSelect}
-      />
+      {templateVisible ? (
+        <EvaluatorTemplateListPanel
+          defaultEvaluatorType={EvaluatorTypeTagText.Prompt}
+          disabledEvaluatorTypes={disabledEvaluatorTypes}
+          onApply={handleTemplateSelect}
+          onClose={() => setTemplateVisible(false)}
+        />
+      ) : null}
     </>
   );
 }

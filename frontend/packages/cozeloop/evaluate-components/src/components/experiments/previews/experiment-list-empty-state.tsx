@@ -16,7 +16,7 @@ export function ExperimentListEmptyState({
       title={
         hasFilterCondition
           ? I18n.t('no_results_found')
-          : I18n.t('no_experiment_yet')
+          : I18n.t('no_experiment')
       }
       description={
         hasFilterCondition

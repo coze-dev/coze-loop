@@ -68,7 +68,10 @@ export const useInitialData = ({
           );
           if (targetDefinition?.transformCopyExperimentValues) {
             const copyData =
-              await targetDefinition?.transformCopyExperimentValues?.(payload);
+              await targetDefinition?.transformCopyExperimentValues?.(
+                payload,
+                experiment,
+              );
             if (copyData) {
               payload = { ...payload, ...copyData };
             }

@@ -7,6 +7,7 @@ import {
   checkResponseData,
   checkFetchResponse,
   onClientError,
+  onClientBizError,
 } from '../notification';
 
 export interface ApiOption {
@@ -24,6 +25,15 @@ export interface ApiResponse {
   msg?: string;
 }
 
+function getBaseUrl() {
+  try {
+    return process.env.API_SCHEMA_BASE_URL || '';
+    // eslint-disable-next-line @coze-arch/use-error-in-catch -- no-catch
+  } catch {
+    return '';
+  }
+}
+
 export function createAPI<
   T extends {},
   K,
@@ -32,12 +42,13 @@ export function createAPI<
 >(meta: IMeta, cancelable?: B) {
   return apiFactory<T, K & ApiResponse, O, B>(meta, cancelable, false, {
     config: {
-      clientFactory: _meta => async (uri, init, options) => {
+      clientFactory: _meta => async (url, init, options) => {
         const headers = {
           'Agw-Js-Conv': 'str', // RESERVED HEADER FOR SERVER
           ...init.headers,
           ...(options?.headers ?? {}),
         };
+        const uri = `${getBaseUrl()}${url}`;
         const opts = { ...init, headers };
 
         try {
@@ -53,6 +64,7 @@ export function createAPI<
           return data;
         } catch (e) {
           options.disableErrorToast || onClientError(uri, e);
+          onClientBizError(uri, e);
           throw e;
         }
       },

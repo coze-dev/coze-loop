@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from 'react';
 
 import { groupBy } from 'lodash-es';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Model } from '@cozeloop/api-schema/llm-manage';
 import {
   Avatar,
@@ -42,6 +43,7 @@ function ModelSelectItem({ item }: { item: ModelItemProps }) {
       ) : null}
       <Typography.Text
         style={{
+          width: '100%',
           maxWidth: '400px',
           fontSize: '13px',
         }}
@@ -60,6 +62,7 @@ export function ModelSelectWithObject(
     onChange?: (model: ModelItemProps | undefined) => void;
     modelList?: ModelItemProps[];
     defaultSelectFirstModel?: boolean;
+    renderSelectedModelItem?: (item: ModelItemProps) => React.ReactNode;
   },
 ) {
   const {
@@ -68,6 +71,7 @@ export function ModelSelectWithObject(
     modelList = [],
     optionClassName,
     defaultSelectFirstModel = false,
+    renderSelectedModelItem,
   } = props;
 
   const { modelGroups, modelOptions, hasSeries } = useMemo(() => {
@@ -105,7 +109,7 @@ export function ModelSelectWithObject(
   return (
     <Select
       key={hasSeries ? 'series' : 'normal'}
-      placeholder="请选择模型"
+      placeholder={I18n.t('choose_model')}
       {...props}
       // 使value为option对象，不能去掉
       onChangeWithObject={true}
@@ -114,14 +118,20 @@ export function ModelSelectWithObject(
         const option = newVal as ModelSelectOption;
         onChange?.(option.model);
       }}
-      renderSelectedItem={item => (
-        <ModelSelectItem item={(item as ModelSelectOption).model || value} />
-      )}
+      renderSelectedItem={item =>
+        renderSelectedModelItem?.(
+          (item as ModelSelectOption).model || value,
+        ) || (
+          <ModelSelectItem item={(item as ModelSelectOption).model || value} />
+        )
+      }
       showTick={!hasSeries}
       filter={(input, option) => {
         if (input && option?.model) {
-          const item = option.model;
-          return item?.name?.includes(input);
+          const item = option.model as Model;
+          return Boolean(
+            item?.name?.toLowerCase()?.includes(input.toLowerCase()),
+          );
         }
         return true;
       }}
@@ -132,7 +142,7 @@ export function ModelSelectWithObject(
               key={group[0]?.series?.name}
               label={`${group[0]?.series?.name} | ${
                 group[0]?.series?.vendor
-                  ? `由${group[0]?.series?.vendor}提供`
+                  ? `${I18n.t('prompt_provided_by_placeholder1', { placeholder1: group[0]?.series?.vendor })}`
                   : ''
               }`}
             >

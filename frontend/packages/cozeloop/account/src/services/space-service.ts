@@ -4,7 +4,7 @@ import { type ListUserSpaceRequest } from '@cozeloop/api-schema/foundation';
 import { FoundationApi } from '@cozeloop/api-schema';
 
 export const spaceService = (() => ({
-  async getSpace(spaceId: number) {
+  async getSpace(spaceId: number, appId?: number) {
     const resp = await FoundationApi.GetSpace({
       space_id: spaceId,
     });

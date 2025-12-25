@@ -1,10 +1,10 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   type ContentPart,
   ContentType,
   type Message,
-  Role,
   type VariableDef,
   VariableType,
 } from '@cozeloop/api-schema/prompt';
@@ -12,20 +12,21 @@ import {
 export const getPlaceholderErrorContent = (
   message?: Message,
   variables?: VariableDef[],
+  placeholderRole?: Int64,
 ) => {
-  if (message?.role === Role.Placeholder) {
+  if (message?.role === placeholderRole) {
     if (!message?.content) {
-      return 'Placeholder 变量名不能为空';
+      return I18n.t('prompt_placeholder_variable_name_not_empty');
     }
     if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(message?.content)) {
-      return '只允许输入英文、数字及下划线且首字母需为英文';
+      return I18n.t('placeholder_format');
     }
     const normalVariables = variables?.filter(
       it => it.type !== VariableType.Placeholder,
     );
     const hasSameKey = normalVariables?.find(it => it.key === message?.content);
     if (hasSameKey) {
-      return 'Placeholder 变量名不能与其他类型变量名重复，请修改 Placeholder 变量名';
+      return I18n.t('prompt_placeholder_variable_name_duplication');
     }
   }
   return '';

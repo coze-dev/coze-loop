@@ -47,6 +47,7 @@ export const JSONSchemaPropertyRender = ({
   const renderDisabledLabel = (label: string) => (
     <Tooltip content={I18n.t('drilled_to_minimum_level_tips')}>{label}</Tooltip>
   );
+
   const isObject =
     jsonValue?.type === DataType.ArrayObject ||
     jsonValue?.type === DataType.Object;

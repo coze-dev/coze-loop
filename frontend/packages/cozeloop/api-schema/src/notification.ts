@@ -5,9 +5,25 @@ import { logger } from '@coze-arch/logger';
 
 import { HttpStatusCode } from './http-codes';
 
+export interface ApiBizErrorEvent {
+  code?: number;
+  msg: string;
+  url: string;
+}
 export const $notification = new EventEmitter<{
   apiError: string;
+  apiBizError: ApiBizErrorEvent;
 }>();
+
+class ApiError extends Error {
+  code: string | number;
+
+  constructor(code: string | number, message: string) {
+    super(message);
+    this.code = code;
+    this.name = 'ApiError';
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- skip
 export function checkResponseData(uri: string, data: any) {
@@ -20,7 +36,7 @@ export function checkResponseData(uri: string, data: any) {
 
   if (typeof data.code === 'number' && data.code !== 0) {
     const msg = data.msg || data.message || 'Unknown error';
-    throw new Error(msg);
+    throw new ApiError(data.code, msg);
   }
 }
 
@@ -65,4 +81,12 @@ export function onClientError(uri: string, e: unknown) {
         : 'Unknown error';
 
   $notification.emit('apiError', error);
+}
+
+export function onClientBizError(url: string, error: unknown) {
+  $notification.emit('apiBizError', {
+    url,
+    code: error instanceof ApiError ? Number(error.code) : -1,
+    msg: error instanceof Error ? error.message : 'Unknown error',
+  });
 }

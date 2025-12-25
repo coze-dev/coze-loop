@@ -1,3 +1,7 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+import * as coze_loop_evaluation_spi from './coze.loop.evaluation.spi';
+export { coze_loop_evaluation_spi };
 import * as eval_target from './domain/eval_target';
 export { eval_target };
 import * as common from './domain/common';
@@ -16,6 +20,12 @@ export interface CreateEvalTargetParam {
   bot_info_type?: eval_target.CozeBotInfoType,
   /** 如果是发布版本则需要填充这个字段 */
   bot_publish_version?: string,
+  /** type=6,并且有搜索对象，搜索结果信息通过这个字段透传 */
+  custom_eval_target?: eval_target.CustomEvalTarget,
+  /** 有区域限制需要填充这个字段 */
+  region?: eval_target.Region,
+  /** 有环境限制需要填充这个字段 */
+  env?: string,
 }
 export interface CreateEvalTargetResponse {
   id?: string,
@@ -51,9 +61,15 @@ export interface ExecuteEvalTargetRequest {
   eval_target_version_id: string,
   input_data: eval_target.EvalTargetInputData,
   experiment_run_id?: string,
+  eval_target?: eval_target.EvalTarget,
 }
 export interface ExecuteEvalTargetResponse {
   eval_target_record: eval_target.EvalTargetRecord
+}
+export type AsyncExecuteEvalTargetRequest = ExecuteEvalTargetRequest;
+export interface AsyncExecuteEvalTargetResponse {
+  invoke_id?: number,
+  callee?: string,
 }
 export interface ListEvalTargetRecordRequest {
   workspace_id: string,
@@ -110,12 +126,66 @@ export interface ListSourceEvalTargetVersionsResponse {
   next_page_token?: string,
   has_more?: boolean,
 }
+export interface SearchCustomEvalTargetRequest {
+  /** 空间ID */
+  workspace_id?: string,
+  /** 透传spi接口 */
+  keyword?: string,
+  /** 应用ID，非必填，创建实验时传应用ID,会根据应用ID从应用模块获取自定义服务详情 */
+  application_id?: string,
+  /** 自定义服务详情，非必填，应用注册调试时传 */
+  custom_rpc_server?: eval_target.CustomRPCServer,
+  /** 必填 */
+  region?: eval_target.Region,
+  /** 环境 */
+  env?: string,
+  page_size?: number,
+  page_token?: string,
+}
+export interface SearchCustomEvalTargetResponse {
+  custom_eval_targets: eval_target.CustomEvalTarget[],
+  next_page_token?: string,
+  has_more?: boolean,
+}
+export interface DebugEvalTargetRequest {
+  workspace_id?: string,
+  /** 类型 */
+  eval_target_type?: eval_target.EvalTargetType,
+  /** 执行参数：如果type=6,则传spi request json序列化结果 */
+  param?: string,
+  /** 动态参数 */
+  target_runtime_param?: common.RuntimeParam,
+  /** 环境 */
+  env?: string,
+  /** 如果type=6,需要前端传入自定义服务相关信息 */
+  custom_rpc_server?: eval_target.CustomRPCServer,
+}
+export interface DebugEvalTargetResponse {
+  eval_target_record?: eval_target.EvalTargetRecord
+}
+export interface AsyncDebugEvalTargetRequest {
+  workspace_id?: string,
+  /** 类型 */
+  eval_target_type?: eval_target.EvalTargetType,
+  /** 执行参数：如果type=6,则传spi request json序列化结果 */
+  param?: string,
+  /** 动态参数 */
+  target_runtime_param?: common.RuntimeParam,
+  /** 环境 */
+  env?: string,
+  /** 如果type=6,需要前端传入自定义服务相关信息 */
+  custom_rpc_server?: eval_target.CustomRPCServer,
+}
 export interface MockEvalTargetOutputRequest {
   workspace_id: string,
   /** EvalTargetID参数实际上为SourceTargetID */
   source_target_id: string,
   eval_target_version: string,
   target_type: eval_target.EvalTargetType,
+}
+export interface AsyncDebugEvalTargetResponse {
+  invoke_id: string,
+  callee?: string,
 }
 export interface MockEvalTargetOutputResponse {
   eval_target?: eval_target.EvalTarget,
@@ -214,6 +284,19 @@ export const BatchGetSourceEvalTargets = /*#__PURE__*/createAPI<BatchGetSourceEv
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
   "service": "evaluationEvalTarget"
 });
+/** 搜索自定义评测对象 */
+export const SearchCustomEvalTarget = /*#__PURE__*/createAPI<SearchCustomEvalTargetRequest, SearchCustomEvalTargetResponse>({
+  "url": "/api/evaluation/v1/eval_targets/search_custom",
+  "method": "POST",
+  "name": "SearchCustomEvalTarget",
+  "reqType": "SearchCustomEvalTargetRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "keyword", "application_id", "custom_rpc_server", "region", "env", "page_size", "page_token"]
+  },
+  "resType": "SearchCustomEvalTargetResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
+  "service": "evaluationEvalTarget"
+});
 /** 执行 */
 export const ExecuteEvalTarget = /*#__PURE__*/createAPI<ExecuteEvalTargetRequest, ExecuteEvalTargetResponse>({
   "url": "/api/evaluation/v1/eval_targets/:eval_target_id/versions/:eval_target_version_id/execute",
@@ -221,7 +304,7 @@ export const ExecuteEvalTarget = /*#__PURE__*/createAPI<ExecuteEvalTargetRequest
   "name": "ExecuteEvalTarget",
   "reqType": "ExecuteEvalTargetRequest",
   "reqMapping": {
-    "body": ["workspace_id", "input_data", "experiment_run_id"],
+    "body": ["workspace_id", "input_data", "experiment_run_id", "eval_target"],
     "path": ["eval_target_id", "eval_target_version_id"]
   },
   "resType": "ExecuteEvalTargetResponse",
@@ -250,6 +333,31 @@ export const BatchGetEvalTargetRecords = /*#__PURE__*/createAPI<BatchGetEvalTarg
     "body": ["workspace_id", "eval_target_record_ids"]
   },
   "resType": "BatchGetEvalTargetRecordsResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
+  "service": "evaluationEvalTarget"
+});
+/** debug */
+export const DebugEvalTarget = /*#__PURE__*/createAPI<DebugEvalTargetRequest, DebugEvalTargetResponse>({
+  "url": "/api/evaluation/v1/eval_targets/debug",
+  "method": "POST",
+  "name": "DebugEvalTarget",
+  "reqType": "DebugEvalTargetRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "eval_target_type", "param", "target_runtime_param", "env", "custom_rpc_server"]
+  },
+  "resType": "DebugEvalTargetResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
+  "service": "evaluationEvalTarget"
+});
+export const AsyncDebugEvalTarget = /*#__PURE__*/createAPI<AsyncDebugEvalTargetRequest, AsyncDebugEvalTargetResponse>({
+  "url": "/api/evaluation/v1/eval_targets/async_debug",
+  "method": "POST",
+  "name": "AsyncDebugEvalTarget",
+  "reqType": "AsyncDebugEvalTargetRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "eval_target_type", "param", "target_runtime_param", "env", "custom_rpc_server"]
+  },
+  "resType": "AsyncDebugEvalTargetResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
   "service": "evaluationEvalTarget"
 });

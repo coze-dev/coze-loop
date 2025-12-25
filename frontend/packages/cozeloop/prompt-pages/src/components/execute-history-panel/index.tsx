@@ -7,10 +7,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Resizable } from 're-resizable';
 import classNames from 'classnames';
 import { useInfiniteScroll } from 'ahooks';
-import {
-  getEndTime,
-  getStartTime,
-} from '@cozeloop/observation-component-adapter';
+import { getEndTime, getStartTime } from '@cozeloop/observation-components';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ResizeSidesheet } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { type DebugLog } from '@cozeloop/api-schema/prompt';
@@ -135,6 +133,7 @@ export const ExecuteHistoryPanel = ({
               </List.Item>
             )}
           />
+
           <div className="mt-[8px] flex justify-center">
             {!noMore && (
               <Button
@@ -143,7 +142,9 @@ export const ExecuteHistoryPanel = ({
                 size="small"
                 color="secondary"
               >
-                {loadingMore ? '加载中' : '加载更多'}
+                {loadingMore
+                  ? I18n.t('prompt_loading_status')
+                  : I18n.t('load_more')}
               </Button>
             )}
           </div>
@@ -158,7 +159,7 @@ export const ExecuteHistoryPanel = ({
         <Empty
           image={<IconCozIllusEmpty width="160" height="160" />}
           darkModeImage={<IconCozIllusEmptyDark width="160" height="160" />}
-          description="暂无调试记录"
+          description={I18n.t('no_debug_record')}
         />
       </div>
     ) : (
@@ -197,7 +198,7 @@ export const ExecuteHistoryPanel = ({
         borderTop: '1px solid var(--semi-color-border)',
         overflowY: 'hidden',
       }}
-      title="调试历史"
+      title={I18n.t('debug_history')}
       zIndex={9}
     >
       <div className="flex w-full h-full" ref={dom}>

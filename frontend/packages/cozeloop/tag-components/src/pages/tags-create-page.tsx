@@ -3,8 +3,8 @@
 import { useRef } from 'react';
 
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
 import { IconCozLongArrowUp } from '@coze-arch/coze-design/icons';
 import { Button, Spin, Toast } from '@coze-arch/coze-design';
 
@@ -43,13 +43,16 @@ export const TagsCreatePage = ({
   const { data: tagSpec, loading: tagSpecLoading } = useGetTagSpec();
 
   const handleSubmit = (values: FormValues) => {
-    service.runAsync(values).then(() => {
-      onCreateSuccess?.();
-      navigate(
-        `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
-      );
-      Toast.success(I18n.t('create_success'));
-    });
+    service
+      .runAsync(values)
+      .then(() => {
+        onCreateSuccess?.();
+        navigate(
+          `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
+        );
+        Toast.success(I18n.t('create_success'));
+      })
+      .catch(err => console.error(err));
   };
 
   if (tagSpecLoading) {

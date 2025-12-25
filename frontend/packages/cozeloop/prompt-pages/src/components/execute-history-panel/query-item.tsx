@@ -4,6 +4,7 @@ import { type CSSProperties } from 'react';
 
 import classNames from 'classnames';
 import { formateMsToSeconds, formatTimestampToString } from '@cozeloop/toolkit';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   IconCozCheckMarkCircleFill,
   IconCozCrossCircleFill,
@@ -53,7 +54,9 @@ export const QueryItem = ({
     </Typography.Text>
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <Typography.Text type="tertiary">耗时:</Typography.Text>
+        <Typography.Text type="tertiary">
+          {I18n.t('prompt_time_consumed')}
+        </Typography.Text>
         <Typography.Text>{formateMsToSeconds(costMs)}</Typography.Text>
         <Typography.Text type="tertiary">Tokens:</Typography.Text>
         <Typography.Text>{duration}</Typography.Text>
@@ -63,16 +66,18 @@ export const QueryItem = ({
             color="green"
             prefixIcon={<IconCozCheckMarkCircleFill />}
           >
-            成功
+            {I18n.t('success')}
           </Tag>
         ) : (
           <Tag size="mini" color="red" prefixIcon={<IconCozCrossCircleFill />}>
-            失败
+            {I18n.t('failure')}
           </Tag>
         )}
       </div>
       <div className="flex gap-2">
-        <Typography.Text type="tertiary">请求发起时间:</Typography.Text>
+        <Typography.Text type="tertiary">
+          {I18n.t('prompt_request_start_time')}
+        </Typography.Text>
         <Typography.Text
           ellipsis={{
             showTooltip: {

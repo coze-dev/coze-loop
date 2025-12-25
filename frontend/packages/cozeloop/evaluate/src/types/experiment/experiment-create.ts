@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
   type EvaluateTargetValues,
-  CreateExperimentValues,
+  type CreateExperimentValues,
 } from '@cozeloop/evaluate-components';
 import {
   type Evaluator,
@@ -18,7 +18,7 @@ export interface EvaluatorPro {
   // key: 评估器字段名，value: 评测目标字段名
   evaluatorMapping?: Record<string, OptionSchema>;
 }
-export { CreateExperimentValues };
+export type { CreateExperimentValues };
 
 export type BaseInfoValues = Pick<CreateExperimentValues, 'name' | 'desc'>;
 

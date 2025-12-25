@@ -1,12 +1,11 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { TypographyText } from '@cozeloop/shared-components';
 import {
   type AnnotateRecord,
   type ColumnAnnotation,
 } from '@cozeloop/api-schema/evaluation';
 import { tag } from '@cozeloop/api-schema/data';
-
-import { TypographyText } from '@/components/text-ellipsis';
 
 interface Props {
   annotation: ColumnAnnotation;

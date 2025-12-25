@@ -6,11 +6,9 @@ import { useMemo, useState } from 'react';
 
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
-import {
-  NODE_CONFIG_MAP,
-  TraceDetail,
-  SpanType,
-} from '@cozeloop/observation-component-adapter';
+import { NODE_CONFIG_MAP, SpanType } from '@cozeloop/observation-components';
+import { observationTraceAdapters } from '@cozeloop/observation-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { ResizeSidesheet, TextWithCopy } from '@cozeloop/components';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import {
@@ -27,6 +25,8 @@ import { IconCozRefresh } from '@coze-arch/coze-design/icons';
 import { Empty, Spin, TabPane, Tabs, Typography } from '@coze-arch/coze-design';
 
 import styles from './index.module.less';
+
+const { TraceDetail } = observationTraceAdapters;
 
 interface TraceTabProps {
   debugID?: Int64;
@@ -108,11 +108,12 @@ export const TraceTab = ({
             style={{ lineHeight: '22px' }}
             displayText="Trace ID"
             content={spansItem[Number(activeTab)].trace_id}
-            copyTooltipText="复制 Trace ID"
+            copyTooltipText={I18n.t('copy_trace_id')}
           />
         ) : null}
       </div>
     ),
+
     [activeTab, layout, spansItem],
   );
   const traceItem = useMemo(() => {
@@ -136,14 +137,14 @@ export const TraceTab = ({
                 type="tertiary"
                 className="flex items-center gap-1"
               >
-                Prompt调试数据在路上，请刷新重试
+                {I18n.t('prompt_prompt_debug_data_loading_refresh')}
               </Typography.Text>
               <Typography.Text
                 className="text-brand-9 cursor-pointer pt-3"
                 icon={<IconCozRefresh className="text-secondary" />}
                 onClick={runAsync}
               >
-                刷新
+                {I18n.t('refresh')}
               </Typography.Text>
             </div>
           }
@@ -161,22 +162,20 @@ export const TraceTab = ({
             {spansItem?.map((item, index) => (
               <TabPane
                 tabIndex={index}
-                tab={`第${index + 1}步`}
+                tab={`${I18n.t('prompt_step_placeholder1', { placeholder1: index + 1 })}`}
                 key={item.span_id || index}
                 itemKey={String(index)}
                 className="px-5"
               >
                 <TraceDetail
                   className="h-full"
-                  spaceID={spaceID}
-                  spaceName={spaceName}
-                  searchType={'trace_id'}
-                  moduleName="prompt_history_trace_list"
-                  id={item.trace_id || ''}
+                  traceID={item.trace_id || ''}
                   startTime={item.started_at}
                   layout={layout}
-                  hideTraceDetailHeader
                   platformType={PlatformType.Prompt}
+                  headerConfig={{
+                    customRender: () => null,
+                  }}
                 />
               </TabPane>
             ))}
@@ -189,15 +188,13 @@ export const TraceTab = ({
           >
             <TraceDetail
               className={className}
-              spaceID={spaceID}
-              spaceName={spaceName}
-              searchType={'trace_id'}
-              moduleName="prompt_history_trace_list"
-              id={spansItem?.[0]?.trace_id || ''}
+              traceID={spansItem?.[0]?.trace_id || ''}
               startTime={spansItem?.[0]?.started_at}
               layout={layout}
-              hideTraceDetailHeader
               platformType={PlatformType.Prompt}
+              headerConfig={{
+                customRender: () => null,
+              }}
             />
           </div>
         )}

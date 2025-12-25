@@ -104,7 +104,7 @@ export default function ExperimentItemDetail({
         }}
         disabled={activeItemStore.isFirst}
       >
-        {I18n.t('previous')}
+        {I18n.t('prev_item')}
       </Button>
       <Button
         icon={<IconCozArrowRight />}
@@ -116,7 +116,7 @@ export default function ExperimentItemDetail({
         }}
         disabled={activeItemStore.isLast}
       >
-        {I18n.t('next')}
+        {I18n.t('next_one')}
       </Button>
       <Divider layout="vertical" style={{ height: '12px' }} />
       <ColumnsManage
@@ -124,9 +124,11 @@ export default function ExperimentItemDetail({
         defaultColumns={defaultDatasetColumns}
         onColumnsChange={setDatasetColumns}
       />
+
       <Divider layout="vertical" style={{ height: '12px' }} />
     </div>
   );
+
   return (
     <ResizeSidesheet
       title={header}
@@ -162,7 +164,7 @@ export default function ExperimentItemDetail({
             borderBottom: '1px solid var(--coz-stroke-primary',
           }}
         >
-          {I18n.t('loop_evaluation_dataset')}
+          {I18n.t('evaluation_set_data')}
         </div>
         <div className="overflow-auto">
           <ExperimentItemDetailTable
@@ -185,6 +187,7 @@ export default function ExperimentItemDetail({
             columnEvaluators={columnEvaluators}
             onRefresh={() => onStepChange?.(0)}
           />
+
           <div className="place-self-center mt-2 text-[var(--coz-fg-dim)] text-xs leading-4">
             {I18n.t('generated_by_ai_tip')}
           </div>

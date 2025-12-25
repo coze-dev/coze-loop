@@ -7,16 +7,16 @@ import { useEffect, useRef, useState } from 'react';
 import { set } from 'lodash-es';
 import { useRequest } from 'ahooks';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import { sourceNameRuleValidator } from '@cozeloop/evaluate-components';
-import { RouteBackAction } from '@cozeloop/components';
+import { SentinelForm, type SentinelFormRef } from '@cozeloop/components';
 import { useSpace, useNavigateModule } from '@cozeloop/biz-hooks-adapter';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
+import { RouteBackAction } from '@cozeloop/base-with-adapter-components';
 import { EvaluatorType, type Evaluator } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import {
   Button,
-  Form,
   FormInput,
   FormTextArea,
   Spin,
@@ -56,7 +56,7 @@ function EvaluatorCreatePage() {
     text: I18n.t('new_evaluator'),
   });
 
-  const formRef = useRef<Form>(null);
+  const formRef = useRef<SentinelFormRef<Evaluator>>(null);
   const [submitValues, setSubmitValues] = useState<Evaluator>();
 
   const sourceService = useRequest(async () => {
@@ -98,58 +98,61 @@ function EvaluatorCreatePage() {
       .catch(e => console.warn(e));
 
   const formContent = (
-    <Form
-      initValues={
-        sourceService.data || {
-          evaluator_type: EvaluatorType.Prompt,
+    <>
+      <SentinelForm
+        formID={I18n.t('evaluate_evaluation_new_llm_evaluator')}
+        initValues={
+          sourceService.data || {
+            evaluator_type: EvaluatorType.Prompt,
+          }
         }
-      }
-      className="flex-1 w-[800px] mx-auto form-default"
-      ref={formRef}
-      onValueChange={(values, changeValues) => {
-        setBlockLeave(true);
-      }}
-    >
-      <div className="h-[28px] mb-3 text-[16px] leading-7 font-medium coz-fg-plus">
-        {I18n.t('basic_info')}
-      </div>
-      <FormInput
-        label={I18n.t('name')}
-        field="name"
-        placeholder={I18n.t('please_input', { field: '' })}
-        required
-        maxLength={50}
-        trigger="blur"
-        rules={[
-          { required: true, message: I18n.t('please_input_name') },
-          { max: 50 },
-          { validator: sourceNameRuleValidator },
-          {
-            asyncValidator: async (_, value: string) => {
-              if (value) {
-                const { pass } = await StoneEvaluationApi.CheckEvaluatorName({
-                  workspace_id: spaceID,
-                  name: value,
-                });
-                if (pass === false) {
-                  throw new Error(I18n.t('name_already_exists'));
+        className="flex-1 w-[800px] mx-auto form-default"
+        ref={formRef}
+        onValueChange={(values, changeValues) => {
+          setBlockLeave(true);
+        }}
+      >
+        <div className="h-[28px] mb-3 text-[16px] leading-7 font-medium coz-fg-plus">
+          {I18n.t('basic_info')}
+        </div>
+        <FormInput
+          label={I18n.t('name')}
+          field="name"
+          placeholder={I18n.t('please_input_name')}
+          required
+          maxLength={50}
+          trigger="blur"
+          rules={[
+            { required: true, message: I18n.t('please_input_name') },
+            { max: 50 },
+            { validator: sourceNameRuleValidator },
+            {
+              asyncValidator: async (_, value: string) => {
+                if (value) {
+                  const { pass } = await StoneEvaluationApi.CheckEvaluatorName({
+                    workspace_id: spaceID,
+                    name: value,
+                  });
+                  if (pass === false) {
+                    throw new Error(I18n.t('name_already_exists'));
+                  }
                 }
-              }
+              },
             },
-          },
-        ]}
-      />
-      <FormTextArea
-        label={I18n.t('description')}
-        field="description"
-        placeholder={I18n.t('please_input_description')}
-        fieldStyle={{ paddingTop: 8 }}
-        maxCount={200}
-        maxLength={200}
-      />
-      <div className="h-7 mt-[10px]" />
-      <PromptConfigField refreshEditorModelKey={refreshEditorModelKey} />
-    </Form>
+          ]}
+        />
+        <FormTextArea
+          label={I18n.t('description')}
+          field="description"
+          placeholder={I18n.t('enter_description')}
+          fieldStyle={{ paddingTop: 8 }}
+          maxCount={200}
+          maxLength={200}
+        />
+        <div className="h-7 mt-[-10px]" />
+        <PromptConfigField refreshEditorModelKey={refreshEditorModelKey} />
+      </SentinelForm>
+    </>
   );
 
   return (
@@ -192,12 +195,14 @@ function EvaluatorCreatePage() {
         onCancel={() => setSubmitValues(undefined)}
         onSuccess={(evaluatorID?: Int64) => {
           setBlockLeave(false);
+          formRef?.current?.submitLog?.();
           setTimeout(() => {
             navigateModule(`evaluation/evaluators/${evaluatorID}`, {
               replace: true,
             });
           }, 100);
         }}
+        onFail={e => formRef?.current?.submitLog?.(true, e)}
       />
     </div>
   );

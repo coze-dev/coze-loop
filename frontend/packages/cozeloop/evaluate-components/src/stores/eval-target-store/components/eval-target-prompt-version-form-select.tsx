@@ -1,7 +1,10 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { I18n } from '@cozeloop/i18n-adapter';
-import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
+import {
+  useResourcePageJump,
+  useOpenWindow,
+} from '@cozeloop/biz-hooks-adapter';
 import {
   type CommonFieldProps,
   type SelectProps,
@@ -25,6 +28,7 @@ const PromptEvalTargetVersionFormSelect: React.FC<
 > = props => {
   const { promptId, sourceTargetVersion } = props;
   const { getPromptDetailURL } = useResourcePageJump();
+  const { getURL } = useOpenWindow();
 
   return (
     <FormSelectInner
@@ -38,7 +42,7 @@ const PromptEvalTargetVersionFormSelect: React.FC<
           <>
             {promptId && sourceTargetVersion ? (
               <OpenDetailText
-                url={getPromptDetailURL(promptId, sourceTargetVersion)}
+                url={getURL(getPromptDetailURL(promptId, sourceTargetVersion))}
               />
             ) : null}
           </>

@@ -20,7 +20,7 @@ export const ImportResultInfo = ({
   <div>
     <div className="flex gap-2 items-center">
       <Typography.Text className="flex-1 leading-[16px]">
-        {I18n.t('status_success')}
+        {I18n.t('success')}
         <Typography.Text className="!font-medium mx-1">
           {progress?.added || 0}
         </Typography.Text>
@@ -34,7 +34,7 @@ export const ImportResultInfo = ({
     {errors?.length ? (
       <div className="mt-2 rounded-[4px] p-2 coz-mg-secondary border border-solid border-[var(--coz-stroke-primary)]">
         <Typography.Text size="small" className="coz-fg-secondary">
-          {I18n.t('cozeloop_open_evaluate_execution_failed_reasons')}
+          {I18n.t('failure_reasons_and_retry')}
         </Typography.Text>
         {errors.map(log => (
           <div className="flex items-center">
@@ -46,7 +46,7 @@ export const ImportResultInfo = ({
                 className="!font-semibold !coz-fg-primary"
               >
                 {log?.error_count && log?.error_count > 0
-                  ? `${I18n.t('cozeloop_open_evaluate_placeholder1_items_in_brackets', { placeholder1: log?.error_count })}`
+                  ? `（${log?.error_count}${I18n.t('tiao')}）`
                   : ''}
               </Typography.Text>
             </Typography.Text>

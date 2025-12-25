@@ -129,12 +129,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
               field="tag_key_name"
               label={I18n.t('tag_name')}
               placeholder={I18n.t('enter_tag_name')}
-              rules={[
-                {
-                  required: true,
-                  message: I18n.t('enter_tag_name'),
-                },
-              ]}
+              rules={[{ required: true, message: I18n.t('enter_tag_name') }]}
               maxLength={50}
               validate={composeValidate([
                 tagNameValidate,
@@ -142,6 +137,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
               ])}
               trigger="blur"
             />
+
             <FormTextArea
               field="description"
               label={I18n.t('description')}
@@ -155,6 +151,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                 return '';
               }}
             />
+
             <Divider className="my-3" />
             <div className="text-[16px] font-semibold leading-[22px] text-[var(--coz-fg-primary)] mb-3 pt-3">
               {I18n.t('tag_configuration')}
@@ -182,6 +179,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                 }
               }}
             />
+
             <>
               {formState.values.content_type === TagContentType.Categorical ? (
                 <ArrayField field="tag_values">
@@ -221,7 +219,9 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                                   fieldClassName="!py-0"
                                   maxLength={50}
                                   onChange={() => {
-                                    formApi.validate(['tag_values']);
+                                    formApi
+                                      .validate(['tag_values'])
+                                      .catch(console.log);
                                   }}
                                   disabled={
                                     !currentValueItem?.tag_status &&
@@ -318,7 +318,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                         ),
                       ])}
                       onChange={() => {
-                        formApi.validate(['tag_values']);
+                        formApi.validate(['tag_values']).catch(console.log);
                       }}
                     />
                   </div>
@@ -333,7 +333,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                       noLabel
                       maxLength={50}
                       onChange={() => {
-                        formApi.validate(['tag_values']);
+                        formApi.validate(['tag_values']).catch(console.log);
                       }}
                       validate={composeValidate([
                         tagNameValidate,

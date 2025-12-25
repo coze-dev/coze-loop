@@ -3,6 +3,7 @@
 /* eslint-disable import/order */
 /* eslint-disable @coze-arch/tsx-no-leaked-render */
 /* eslint-disable @coze-arch/max-line-per-function */
+import { I18n } from '@cozeloop/i18n-adapter';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   Input,
@@ -16,7 +17,8 @@ import {
   IconCozInfoCircle,
 } from '@coze-arch/coze-design/icons';
 
-import { TypographyText } from '../../text-ellipsis';
+import { TypographyText } from '@cozeloop/shared-components';
+
 import {
   type OptionGroup,
   type OptionSchema,
@@ -25,7 +27,6 @@ import {
 
 import styles from './index.module.less';
 
-import { I18n } from '@cozeloop/i18n-adapter';
 export interface GroupSelectProps
   extends Omit<InputProps, 'value' | 'onChange'> {
   /** 选项组数据 */
@@ -154,6 +155,7 @@ export default function GroupSelect(props: GroupSelectProps) {
         </div>
       </div>
     ),
+
     [value, separator, handleSelect],
   );
 

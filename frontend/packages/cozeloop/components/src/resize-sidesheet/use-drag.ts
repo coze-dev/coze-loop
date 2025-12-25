@@ -12,6 +12,7 @@ export interface DragOptions {
   defaultWidth?: number;
   maxWidth?: number;
   minWidth?: number;
+  onDragEnd?: (width: number) => void;
 }
 
 export const useDrag = (options: DragOptions = {}) => {
@@ -22,6 +23,7 @@ export const useDrag = (options: DragOptions = {}) => {
   } = options;
   const [sidePaneWidth, setSidePaneWidth] = useState(defaultWidth);
   const prevWidthRef = useRef(sidePaneWidth);
+  const isActiveRef = useRef(false);
   const { ref, isActive } = useMouseDownOffset(({ offsetX }) => {
     const newWidth = prevWidthRef.current - offsetX;
     setSidePaneWidth([maxWidth, newWidth, minWidth].sort((a, b) => a - b)[1]);
@@ -30,6 +32,10 @@ export const useDrag = (options: DragOptions = {}) => {
     prevWidthRef.current = sidePaneWidth;
     document.body.style.cursor = isActive ? 'col-resize' : '';
     document.body.style.userSelect = isActive ? 'none' : 'auto';
+    if (isActiveRef.current && !isActive) {
+      options?.onDragEnd?.(sidePaneWidth);
+    }
+    isActiveRef.current = isActive;
   }, [isActive]);
   return {
     sidePaneWidth,

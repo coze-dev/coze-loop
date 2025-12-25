@@ -36,7 +36,7 @@ import { useImportDataModal } from './import-data-modal';
 
 interface ObjectStructRenderProps {
   fieldKey: string;
-  disabelChangeDatasetType: boolean;
+  disableChangeDatasetType: boolean;
   inputType: InputType;
   showAdditional: boolean;
 }
@@ -44,7 +44,7 @@ const FormObjectCodeEditor = withField(ObjectCodeEditor);
 
 export const ObjectStructRender = ({
   fieldKey,
-  disabelChangeDatasetType,
+  disableChangeDatasetType,
   inputType,
   showAdditional,
 }: ObjectStructRenderProps) => {
@@ -57,7 +57,7 @@ export const ObjectStructRender = ({
   const getHeader = () => (
     <div className="flex w-full justify-between">
       <div className="flex items-center gap-[4px]">
-        {I18n.t('cozeloop_open_evaluate_data_structure')}
+        {I18n.t('data_structure')}
         {activeKey?.length ? (
           <IconCozArrowDown
             onClick={() => setActiveKey([])}
@@ -74,7 +74,7 @@ export const ObjectStructRender = ({
         onClick={e => e.stopPropagation()}
         className="flex items-center gap-2"
       >
-        {!disabelChangeDatasetType ? (
+        {!disableChangeDatasetType ? (
           <>
             {triggerButton}
             {modalNode}
@@ -83,6 +83,7 @@ export const ObjectStructRender = ({
       </div>
     </div>
   );
+
   return (
     <Collapse
       className={styles['object-collapse']}
@@ -101,7 +102,7 @@ export const ObjectStructRender = ({
                 {fieldValue?.children?.length ? (
                   <JSONSchemaHeader
                     showAdditional={showAdditional}
-                    disabelChangeDatasetType={disabelChangeDatasetType}
+                    disableChangeDatasetType={disableChangeDatasetType}
                   />
                 ) : null}
                 <TreeEditor
@@ -127,7 +128,7 @@ export const ObjectStructRender = ({
                       type === DataType.Object || type === DataType.ArrayObject
                     );
                   }}
-                  isShowAction={!disabelChangeDatasetType}
+                  isShowAction={!disableChangeDatasetType}
                   defaultNodeData={getDefaultFieldData()}
                   labelRender={({ path, parentPath }) => {
                     const prefix = `${fieldKey}.children[${index}]${path ? `.${path}` : ''}`;
@@ -142,7 +143,7 @@ export const ObjectStructRender = ({
                         parentFieldKey={parentKey}
                         fieldKeyPrefix={prefix}
                         level={level}
-                        disabled={disabelChangeDatasetType}
+                        disabled={disableChangeDatasetType}
                       />
                     );
                   }}
@@ -150,7 +151,7 @@ export const ObjectStructRender = ({
               </div>
             ))}
 
-            {!disabelChangeDatasetType && (
+            {!disableChangeDatasetType && (
               <Button
                 color="primary"
                 size="small"
@@ -175,7 +176,7 @@ export const ObjectStructRender = ({
         ) : null}
         {inputType === InputType.JSON ? (
           <FormObjectCodeEditor
-            disabled={disabelChangeDatasetType}
+            disabled={disableChangeDatasetType}
             key={inputType}
             noLabel
             rules={[

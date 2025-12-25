@@ -8,9 +8,10 @@ import {
 
 import { spaceService } from '../services/space-service';
 
+type SpaceType = Space & { space_role_type?: number };
 interface SpaceState {
-  space?: Space;
-  spaces: Space[];
+  space?: SpaceType;
+  spaces: SpaceType[];
   total?: number;
 }
 

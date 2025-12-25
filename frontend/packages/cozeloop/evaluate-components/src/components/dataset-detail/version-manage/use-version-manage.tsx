@@ -59,9 +59,11 @@ export const useVersionManage = ({
   useEffect(() => {
     if (visible) {
       setPage(1);
-      loadMoreData({ page: 1, pageSize: PAGE_SIZE }).then(newVersions => {
-        setVersions(newVersions || []);
-      });
+      loadMoreData({ page: 1, pageSize: PAGE_SIZE })
+        .then(newVersions => {
+          setVersions(newVersions || []);
+        })
+        .catch(console.error);
     }
   }, [visible, datasetDetail?.latest_version]);
 
@@ -71,7 +73,7 @@ export const useVersionManage = ({
       version: '0.0.0',
       description: I18n.t('current_draft'),
       submitTime: datasetDetail?.base_info?.updated_at,
-      draftSubmitText: I18n.t('prompt_prompt_update_time'),
+      draftSubmitText: I18n.t('update_time'),
       isDraft: true,
     }),
     [datasetDetail?.base_info?.updated_at],
@@ -104,6 +106,7 @@ export const useVersionManage = ({
       }}
     />
   );
+
   const VersionChangeButton = (
     <Button
       color="primary"

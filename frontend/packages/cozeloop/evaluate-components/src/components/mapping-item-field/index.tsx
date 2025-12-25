@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type FC } from 'react';
 
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { BaseSearchSelect } from '@cozeloop/components';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
@@ -15,7 +16,6 @@ import {
   type CommonFieldProps,
 } from '@coze-arch/coze-design';
 
-import { TypographyText } from '../text-ellipsis';
 import { EqualItem, ReadonlyItem, getSchemaTypeText } from '../column-item-map';
 import {
   type OptionGroup,
@@ -43,6 +43,7 @@ export interface MappingItemProps {
   validateStatus?: 'error';
   disabled?: boolean;
   selectProps?: SelectProps;
+  isRequired?: boolean;
 }
 
 export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
@@ -58,6 +59,7 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
       validateStatus,
       disabled = false,
       selectProps = {},
+      isRequired,
     } = props;
 
     const selectValue = value
@@ -83,12 +85,14 @@ export const MappingItemField: FC<CommonFieldProps & MappingItemProps> =
           title={keyTitle}
           typeText={getSchemaTypeText(keySchema)}
           value={keySchema?.name}
+          isRequired={isRequired}
         />
+
         <EqualItem />
         <BaseSearchSelect
           validateStatus={validateStatus}
           className={styles.select}
-          placeholder={I18n.t('please_select', { field: '' })}
+          placeholder={I18n.t('please_select')}
           prefix={
             value?.schemaSourceType &&
             schemaSourceTypeMap[value.schemaSourceType]

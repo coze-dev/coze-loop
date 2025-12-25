@@ -32,7 +32,7 @@ export default function LeftRender(
     return (
       <div className="w-56">
         <Cascader
-          placeholder={I18n.t('please_select', { field: '' })}
+          placeholder={I18n.t('please_select')}
           value={expr.left}
           className="w-full"
           disabled={disabled}
@@ -70,7 +70,7 @@ export default function LeftRender(
   return (
     <div className="w-40">
       <Select
-        placeholder={I18n.t('please_select', { field: '' })}
+        placeholder={I18n.t('please_select')}
         value={expr.left}
         className="w-full"
         disabled={disabled}

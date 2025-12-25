@@ -45,7 +45,6 @@ import { /* exported functions/components */ } from '@cozeloop/toolkit';
 
 ### Exports
 
-- `openWindow, relaunchWindow, getFullURL`
 - `notEmpty`
 - `getSafeFileName`
 - `formatTimestampToString,

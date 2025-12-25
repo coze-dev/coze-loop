@@ -1,9 +1,12 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable max-lines */
+/* eslint-disable complexity */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable max-lines-per-function */
 /* eslint-disable @coze-arch/use-error-in-catch */
 /* eslint-disable @coze-arch/max-line-per-function */
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 
 import Sortable from 'sortablejs';
 import { nanoid } from 'nanoid';
@@ -16,17 +19,21 @@ import { StorageProvider } from '@cozeloop/api-schema/data';
 import { IconCozPlus, IconCozHandle } from '@coze-arch/coze-design/icons';
 import {
   Button,
-  Dropdown,
   IconButton,
+  Menu,
   Toast,
   Typography,
   Upload,
   type UploadProps,
 } from '@coze-arch/coze-design';
 
+import { useI18n } from '@/provider';
+
+import { TooltipWhenDisabled } from '../tooltip-when-disabled';
 import { getMultipartConfig } from './utils';
 import {
   ImageStatus,
+  type MultipartItemContentType,
   type MultipartEditorProps,
   type MultipartItem,
 } from './type';
@@ -41,13 +48,24 @@ export const MultipartEditor: React.FC<MultipartEditorProps> = ({
   value,
   onChange,
   className,
-  multipartConfig = {},
+  multipartConfig,
   uploadImageUrl,
   readonly,
+  imageHidden,
+  videoHidden,
+  intranetUrlValidator,
 }) => {
+  const I18n = useI18n();
   const uploadRef = useRef<Upload>(null);
-  const { maxFileCount, maxPartCount, maxFileSize, supportedFormats } =
-    getMultipartConfig(multipartConfig);
+  const {
+    maxFileCount,
+    maxPartCount,
+    maxFileSize,
+    imageEnabled,
+    videoEnabled,
+    imageSupportedFormats,
+    videoSupportedFormats,
+  } = getMultipartConfig(multipartConfig);
   const sortableContainer = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<MultipartItem[]>(
     (value || []).map(item => ({
@@ -56,14 +74,343 @@ export const MultipartEditor: React.FC<MultipartEditorProps> = ({
     })),
   );
   const [showUrlModal, setShowUrlModal] = useState(false);
+  const [currentUploadType, setCurrentUploadType] = useState<'image' | 'video'>(
+    'image',
+  );
+  const [supportedFormats, setSupportedFormats] = useState<string>('');
+
+  const imageCount = items.filter(
+    item =>
+      item.content_type === ContentType.Image || item.content_type === 'Video',
+  ).length;
+
+  const canUsePartLimit = maxPartCount - items.length;
+  const canUseFileLimit = maxFileCount - imageCount;
+  const exceedFileCount = !canUseFileLimit;
+
+  // 处理文件上传
+  const handleUploadFile: UploadProps['customRequest'] = async ({
+    file,
+    onProgress,
+    onSuccess,
+    onError,
+  }) => {
+    const uid = nanoid();
+
+    try {
+      const fileInstance = (file.fileInstance || file) as File;
+      const url = URL.createObjectURL(fileInstance);
+      const beforUploadItem =
+        currentUploadType === 'image'
+          ? {
+              sourceImage: {
+                status: ImageStatus.Loading,
+                file: fileInstance,
+              },
+              image: {
+                name: file.name,
+                url,
+                storage_provider: StorageProvider.ImageX,
+              },
+            }
+          : {
+              sourceVideo: {
+                status: ImageStatus.Loading,
+                file: fileInstance,
+              },
+              video: {
+                name: file.name,
+                url,
+                storage_provider: StorageProvider.ImageX,
+              },
+            };
+      // 添加loading状态的item
+      setItems(prev => [
+        ...prev,
+        {
+          uid,
+          content_type:
+            currentUploadType === 'image' ? ContentType.Image : 'Video',
+          ...beforUploadItem,
+        } as any,
+      ]);
+      const uri = await uploadFile?.({
+        file: fileInstance,
+        fileType: 'image',
+        onProgress,
+        onSuccess,
+        onError,
+        spaceID,
+      });
+
+      // 更新为成功状态
+      setItems(prev =>
+        prev.map(item => {
+          if (item.uid === uid) {
+            const afterUploadItem =
+              currentUploadType === 'image'
+                ? {
+                    sourceImage: {
+                      ...item.sourceImage,
+                      status: ImageStatus.Success,
+                      file: fileInstance,
+                    },
+                    image: {
+                      ...item.image,
+                      url,
+                      uri,
+                      storage_provider: StorageProvider.ImageX,
+                    },
+                  }
+                : {
+                    sourceVideo: {
+                      ...item.sourceVideo,
+                      status: ImageStatus.Success,
+                      file: fileInstance,
+                    },
+                    video: {
+                      ...item.video,
+                      url,
+                      uri,
+                      storage_provider: StorageProvider.ImageX,
+                    },
+                  };
+            return {
+              ...item,
+              ...afterUploadItem,
+            };
+          }
+          return item;
+        }),
+      );
+    } catch (error) {
+      // 更新为错误状态
+      setItems(prev =>
+        prev.map(item =>
+          item.uid === uid
+            ? {
+                ...item,
+                sourceImage: {
+                  ...item.sourceImage,
+                  status: ImageStatus.Error,
+                },
+              }
+            : item,
+        ),
+      );
+    }
+  };
+
+  // 添加文本节点
+  const handleAddText = () => {
+    setItems(prev => [
+      ...prev,
+      {
+        uid: nanoid(),
+        content_type: ContentType.Text,
+        text: '',
+      },
+    ]);
+  };
+
+  // 添加图片文件节点
+  const handleAddImageFile = () => {
+    setCurrentUploadType('image');
+    setSupportedFormats(imageSupportedFormats);
+    setTimeout(() => {
+      uploadRef.current?.openFileDialog();
+    }, 0);
+  };
+
+  // 添加视频文件节点
+  const handleAddVideoFile = () => {
+    setCurrentUploadType('video');
+    setSupportedFormats(videoSupportedFormats);
+    setTimeout(() => {
+      uploadRef.current?.openFileDialog();
+    }, 0);
+  };
+
+  // 添加图片链接节点
+  const handleAddImageUrl = () => {
+    setCurrentUploadType('image');
+    setShowUrlModal(true);
+  };
+
+  // 添加视频链接节点
+  const handleAddVideoUrl = () => {
+    setCurrentUploadType('video');
+    setShowUrlModal(true);
+  };
+
+  // 确认添加图片链接
+  const handleConfirmImageUrl = (results: ImageProps[]) => {
+    const newItems = results.map(result => ({
+      uid: nanoid(),
+      content_type: ContentType.Image,
+      image: {
+        ...result,
+        storage_provider: StorageProvider.ImageX,
+      },
+    }));
+
+    setItems(prev => [...prev, ...newItems]);
+    setShowUrlModal(false);
+  };
+
+  // 确认添加视频链接
+  const handleConfirmVideoUrl = (results: ImageProps[]) => {
+    const newItems = results.map(result => ({
+      uid: nanoid(),
+      content_type: 'Video' as MultipartItemContentType,
+      video: {
+        ...result,
+        storage_provider: StorageProvider.ImageX,
+      },
+    }));
+
+    setItems(prev => [...prev, ...newItems]);
+    setShowUrlModal(false);
+  };
+
+  // 更新item
+  const handleItemChange = (newItem: MultipartItem) => {
+    setItems(prev =>
+      prev.map(item => (item.uid === newItem.uid ? newItem : item)),
+    );
+  };
+
+  // 删除item
+  const handleItemRemove = (index: number) => {
+    setItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getDisabledTooltip = useCallback(
+    ({
+      type,
+      exceed,
+      disabled,
+    }: {
+      type: MultipartItemContentType;
+      exceed?: boolean;
+      disabled?: boolean;
+    }) => {
+      if (type === ContentType.Image) {
+        if (exceed) {
+          return `${I18n.t('multi_modal_image_limit_reached', { canUseFileLimit })}`;
+        }
+        if (disabled) {
+          return I18n.t('model_not_support_multi_modal_image');
+        }
+      } else if (type === 'Video') {
+        if (exceed) {
+          return `${I18n.t('multi_modal_video_limit_reached', { canUseFileLimit })}`;
+        }
+        if (disabled) {
+          return I18n.t('model_not_support_multi_modal_video');
+        }
+      } else {
+        return I18n.t('model_not_support_multi_modal');
+      }
+    },
+    [],
+  );
+
+  const renderImageSubMenu = useCallback(
+    (children: React.ReactNode) => (
+      <TooltipWhenDisabled
+        disabled={exceedFileCount || !imageEnabled}
+        content={getDisabledTooltip({
+          type: ContentType.Image,
+          exceed: exceedFileCount,
+          disabled: !imageEnabled,
+        })}
+        theme="dark"
+        needWrap
+      >
+        {children}
+      </TooltipWhenDisabled>
+    ),
+
+    [exceedFileCount, imageEnabled],
+  );
+
+  const renderVideoSubMenu = useCallback(
+    (children: React.ReactNode) => (
+      <TooltipWhenDisabled
+        disabled={exceedFileCount || !videoEnabled}
+        content={getDisabledTooltip({
+          type: 'Video',
+          exceed: exceedFileCount,
+          disabled: !videoEnabled,
+        })}
+        theme="dark"
+        needWrap
+      >
+        {children}
+      </TooltipWhenDisabled>
+    ),
+
+    [exceedFileCount, videoEnabled],
+  );
+
+  const dropdownMenu = (
+    <Menu.SubMenu mode="menu">
+      <Menu.Item onClick={handleAddText} disabled={imageCount >= maxPartCount}>
+        {I18n.t('text')}
+      </Menu.Item>
+
+      {imageHidden ? null : (
+        <Menu.Item
+          onClick={handleAddImageFile}
+          disabled={exceedFileCount || !imageEnabled}
+        >
+          {renderImageSubMenu(
+            <span className="w-full">{I18n.t('image_source_file')}</span>,
+          )}
+        </Menu.Item>
+      )}
+
+      {imageHidden ? null : (
+        <Menu.Item
+          onClick={handleAddImageUrl}
+          disabled={exceedFileCount || !imageEnabled}
+        >
+          {renderImageSubMenu(
+            <span className="w-full">{I18n.t('image_external_link')}</span>,
+          )}
+        </Menu.Item>
+      )}
+
+      {videoHidden ? null : (
+        <Menu.Item
+          onClick={handleAddVideoFile}
+          disabled={exceedFileCount || !videoEnabled}
+        >
+          {renderVideoSubMenu(
+            <span className="w-full">{I18n.t('video_source_file')}</span>,
+          )}
+        </Menu.Item>
+      )}
+
+      {videoHidden ? null : (
+        <Menu.Item
+          onClick={handleAddVideoUrl}
+          disabled={exceedFileCount || !videoEnabled}
+        >
+          {renderVideoSubMenu(
+            <span className="w-full">{I18n.t('video_external_link')}</span>,
+          )}
+        </Menu.Item>
+      )}
+    </Menu.SubMenu>
+  );
 
   // 同步数据到父组件
   useEffect(() => {
     onChange?.(items);
   }, [items]);
-  const imageCount = items.filter(
-    item => item.content_type === ContentType.Image,
-  ).length;
+
   // 初始化sortablejs拖拽排序
   useEffect(() => {
     if (sortableContainer.current) {
@@ -72,7 +419,6 @@ export const MultipartEditor: React.FC<MultipartEditorProps> = ({
         handle: '.drag-handle',
         ghostClass: styles.ghost,
         onEnd: evt => {
-          console.log(evt);
           setItems(list => {
             const draft = [...(list ?? [])];
             if (draft.length) {
@@ -80,7 +426,6 @@ export const MultipartEditor: React.FC<MultipartEditorProps> = ({
               const [item] = draft.splice(oldIndex, 1);
               draft.splice(newIndex, 0, item);
             }
-            console.log(draft);
             return draft;
           });
         },
@@ -121,162 +466,6 @@ export const MultipartEditor: React.FC<MultipartEditorProps> = ({
       });
     }
   }, []);
-  // 处理文件上传
-  const handleUploadFile: UploadProps['customRequest'] = async ({
-    file,
-    onProgress,
-    onSuccess,
-    onError,
-  }) => {
-    const uid = nanoid();
-
-    try {
-      const fileInstance = (file.fileInstance || file) as File;
-      const url = URL.createObjectURL(fileInstance);
-      // 添加loading状态的item
-      setItems(prev => [
-        ...prev,
-        {
-          uid,
-          content_type: ContentType.Image,
-          sourceImage: {
-            status: ImageStatus.Loading,
-            file: fileInstance,
-          },
-          image: {
-            name: file.name,
-            url,
-            storage_provider: StorageProvider.ImageX,
-          },
-        },
-      ]);
-      const uri = await uploadFile?.({
-        file: fileInstance,
-        fileType: 'image',
-        onProgress,
-        onSuccess,
-        onError,
-        spaceID,
-      });
-
-      // 更新为成功状态
-      setItems(prev =>
-        prev.map(item =>
-          item.uid === uid
-            ? {
-                ...item,
-                sourceImage: {
-                  status: ImageStatus.Success,
-                  file: fileInstance,
-                },
-                image: {
-                  ...item.image,
-                  url,
-                  uri,
-                  storage_provider: StorageProvider.ImageX,
-                },
-              }
-            : item,
-        ),
-      );
-    } catch (error) {
-      // 更新为错误状态
-      setItems(prev =>
-        prev.map(item =>
-          item.uid === uid
-            ? {
-                ...item,
-                sourceImage: {
-                  ...item.sourceImage,
-                  status: ImageStatus.Error,
-                },
-              }
-            : item,
-        ),
-      );
-    }
-  };
-
-  // 添加文本节点
-  const handleAddText = () => {
-    setItems(prev => [
-      ...prev,
-      {
-        uid: nanoid(),
-        content_type: ContentType.Text,
-        text: '',
-      },
-    ]);
-  };
-
-  // 添加图片文件节点
-  const handleAddImageFile = () => {
-    setTimeout(() => {
-      uploadRef.current?.openFileDialog();
-    }, 0);
-  };
-
-  // 添加图片链接节点
-  const handleAddImageUrl = () => {
-    setShowUrlModal(true);
-  };
-
-  // 确认添加图片链接
-  const handleConfirmImageUrl = (results: ImageProps[]) => {
-    const newItems = results.map(result => ({
-      uid: nanoid(),
-      content_type: ContentType.Image,
-      image: {
-        ...result,
-        storage_provider: StorageProvider.ImageX,
-      },
-    }));
-
-    setItems(prev => [...prev, ...newItems]);
-    setShowUrlModal(false);
-  };
-
-  // 更新item
-  const handleItemChange = (newItem: MultipartItem) => {
-    console.log(newItem);
-    setItems(prev =>
-      prev.map(item => (item.uid === newItem.uid ? newItem : item)),
-    );
-  };
-
-  // 删除item
-  const handleItemRemove = (index: number) => {
-    setItems(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const dropdownMenu = (
-    <Dropdown.Menu>
-      <Dropdown.Item
-        onClick={handleAddText}
-        disabled={imageCount >= maxPartCount}
-        className="w-[140px]"
-      >
-        文本
-      </Dropdown.Item>
-      <Dropdown.Item
-        onClick={handleAddImageFile}
-        disabled={imageCount >= maxFileCount}
-        className="w-[140px]"
-      >
-        图片-源文件
-      </Dropdown.Item>
-      <Dropdown.Item
-        onClick={handleAddImageUrl}
-        disabled={imageCount >= maxFileCount}
-        className="w-[140px]"
-      >
-        图片-外链
-      </Dropdown.Item>
-    </Dropdown.Menu>
-  );
-
-  const canUsePartLimit = maxPartCount - items.length;
-  const canUseFileLimit = maxFileCount - imageCount;
 
   return (
     <div
@@ -323,28 +512,31 @@ export const MultipartEditor: React.FC<MultipartEditorProps> = ({
           color="primary"
           disabled
         >
-          添加数据
-          <Typography.Text
-            className="ml-1"
-            type="secondary"
-          >{`${items.length}/${maxPartCount}`}</Typography.Text>
+          {I18n.t('add_data')}
+          <Typography.Text className="ml-1 !text-inherit" type="secondary">
+            {`${items.length}/${maxPartCount}`}
+          </Typography.Text>
         </Button>
       ) : (
-        <Dropdown render={dropdownMenu}>
+        <Menu
+          trigger="click"
+          clickToHide
+          render={dropdownMenu}
+          position="bottomLeft"
+        >
           <Button
             icon={<IconCozPlus />}
             size="small"
             className="!w-fit"
             color="primary"
-            disabled={items.length >= maxPartCount || readonly}
+            disabled={items.length >= maxPartCount}
           >
-            添加数据
-            <Typography.Text
-              className="ml-1"
-              type="secondary"
-            >{`${items.length}/${maxPartCount}`}</Typography.Text>
+            {I18n.t('add_data')}
+            <Typography.Text className="ml-1" type="secondary">
+              {`${items.length}/${maxPartCount}`}
+            </Typography.Text>
           </Button>
-        </Dropdown>
+        </Menu>
       )}
       {/* 隐藏的文件上传组件 */}
       <Upload
@@ -352,7 +544,7 @@ export const MultipartEditor: React.FC<MultipartEditorProps> = ({
         action=""
         maxSize={maxFileSize}
         onSizeError={() => {
-          Toast.error('图片大小不能超过20MB');
+          Toast.error(I18n.t('cozeloop_open_evaluate_image_size_limit_20mb'));
         }}
         accept={supportedFormats}
         customRequest={handleUploadFile}
@@ -363,9 +555,10 @@ export const MultipartEditor: React.FC<MultipartEditorProps> = ({
           canUseFileLimit > canUsePartLimit ? canUsePartLimit : canUseFileLimit
         }
         onExceed={() => {
-          Toast.error('图片数量不能超过20张或节点数量不能超过50个');
+          Toast.error(I18n.t('image_or_node_quantity_limit'));
         }}
       />
+
       {/* 外链输入模态框 */}
       {showUrlModal ? (
         <UrlInputModal
@@ -375,9 +568,15 @@ export const MultipartEditor: React.FC<MultipartEditorProps> = ({
               ? canUsePartLimit
               : canUseFileLimit
           }
-          onConfirm={handleConfirmImageUrl}
+          onConfirm={
+            currentUploadType === 'image'
+              ? handleConfirmImageUrl
+              : handleConfirmVideoUrl
+          }
           onCancel={() => setShowUrlModal(false)}
           uploadImageUrl={uploadImageUrl}
+          uploadType={currentUploadType}
+          intranetUrlValidator={intranetUrlValidator}
         />
       ) : null}
     </div>

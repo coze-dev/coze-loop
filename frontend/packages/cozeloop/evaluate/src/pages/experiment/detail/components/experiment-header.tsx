@@ -1,16 +1,17 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, Guard } from '@cozeloop/guard';
 import {
   RefreshButton,
-  TypographyText,
   ExperimentRunStatus,
 } from '@cozeloop/evaluate-components';
-import { RouteBackAction, EditIconButton } from '@cozeloop/components';
+import { EditIconButton } from '@cozeloop/components';
+import { RouteBackAction } from '@cozeloop/base-with-adapter-components';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
 import { Divider, Tag } from '@coze-arch/coze-design';
 
@@ -20,6 +21,7 @@ import {
   ExperimentInfoEditFormModal,
   ExportMenu,
   RetryButton,
+  KillButton,
 } from '@/components/experiment';
 
 export default function ExperimentHeader({
@@ -27,14 +29,19 @@ export default function ExperimentHeader({
   spaceID,
   onRefreshExperiment,
   onRefresh,
+  defaultModuleRoute = 'evaluation/experiments',
+  defaultContrastRoute,
+  renderExtraButtons,
 }: {
   experiment?: Experiment;
   spaceID: string;
   onRefreshExperiment?: () => void;
   onRefresh?: () => void;
+  defaultModuleRoute?: string;
+  defaultContrastRoute?: string;
+  renderExtraButtons?: (experiment?: Experiment) => ReactNode;
 }) {
   const [editModalVisible, setEditModalVisible] = useState(false);
-
   const isTraceTarget = isTraceTargetExpr(experiment);
   const { name, status, expt_stats, id } = experiment ?? {};
   const {
@@ -52,7 +59,7 @@ export default function ExperimentHeader({
     Number(processing_turn_cnt ?? 0);
   return (
     <header className="flex items-center shrink-0 h-14 px-6 gap-2 text-xs py-3">
-      <RouteBackAction defaultModuleRoute="evaluation/experiments" />
+      <RouteBackAction defaultModuleRoute={defaultModuleRoute} />
       <div className="flex items-center h-6">
         <div className="text-[16px] font-bold max-w-[240px]">
           <TypographyText className="!coz-fg-plus !font-medium !text-[18px] !leading-[22px]">
@@ -72,25 +79,22 @@ export default function ExperimentHeader({
           experiment={experiment}
           enableOnClick={false}
         />
+
         <Tag color="primary" size="small" className="ml-2">
-          {I18n.t('total_count_placeholder1_success_count', {
-            placeholder1: totalCount || 0,
-            success_turn_cnt,
-          })}
+          {I18n.t('total_number')} {totalCount || 0} ({I18n.t('success')}{' '}
+          {success_turn_cnt}
           <Divider
             layout="vertical"
             style={{ marginLeft: 8, marginRight: 8, height: 12 }}
           />
-          {I18n.t('failure_count_fail_turn_cnt', { fail_turn_cnt })}
+          {I18n.t('failure')} {fail_turn_cnt}
           <Divider
             layout="vertical"
             style={{ marginLeft: 8, marginRight: 8, height: 12 }}
           />
           {terminated_turn_cnt ? (
             <>
-              {I18n.t('terminated_count_terminated_turn_cnt', {
-                terminated_turn_cnt,
-              })}
+              {I18n.t('abort')} {terminated_turn_cnt}
               <Divider
                 layout="vertical"
                 style={{ marginLeft: 8, marginRight: 8, height: 12 }}
@@ -99,16 +103,14 @@ export default function ExperimentHeader({
           ) : null}
           {processing_turn_cnt ? (
             <>
-              {I18n.t('processing_count_processing_turn_cnt', {
-                processing_turn_cnt,
-              })}
+              {I18n.t('status_running')} {processing_turn_cnt}
               <Divider
                 layout="vertical"
                 style={{ marginLeft: 8, marginRight: 8, height: 12 }}
               />
             </>
           ) : null}
-          {I18n.t('pending_count_pending_turn_cnt', { pending_turn_cnt })}
+          {I18n.t('to_be_executed')} {pending_turn_cnt})
         </Tag>
       </div>
 
@@ -121,6 +123,14 @@ export default function ExperimentHeader({
           expt_id={id}
           onRefresh={onRefresh}
         />
+
+        <KillButton
+          spaceID={spaceID}
+          status={status}
+          expt_id={id}
+          onRefresh={onRefresh}
+        />
+
         <CreateContrastExperiment
           baseExperiment={experiment}
           disabled={isTraceTarget}
@@ -135,7 +145,10 @@ export default function ExperimentHeader({
               status: s ?? 'success',
             });
           }}
+          defaultContrastRoute={defaultContrastRoute}
         />
+
+        {renderExtraButtons?.(experiment)}
       </div>
       {editModalVisible ? (
         <ExperimentInfoEditFormModal

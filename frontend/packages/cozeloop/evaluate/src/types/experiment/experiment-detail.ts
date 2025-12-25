@@ -20,6 +20,7 @@ export interface ExperimentItem {
   turnIndex: number;
   datasetRow: Record<string, FieldData>;
   actualOutput: Content | undefined;
+  groupExt: Record<string, unknown> | undefined;
   targetErrorMsg: string | undefined;
   evaluatorsResult: Record<string, EvaluatorRecord | undefined>;
   annotateResult: Record<string, AnnotateRecord | undefined>;

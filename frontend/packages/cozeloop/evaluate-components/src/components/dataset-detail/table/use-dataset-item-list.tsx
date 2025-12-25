@@ -42,15 +42,16 @@ export const DRAFT_VERSION = 'draft';
 export const useDatasetItemList = ({
   datasetDetail,
   spaceID,
+  versionID,
   refreshDatasetDetail,
 }: {
   datasetDetail?: EvaluationSet;
   spaceID: string;
-  refreshDatasetDetail: () => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  versionID?: string;
+  refreshDatasetDetail: () => void; // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }): any => {
   const { getSearchParams } = useSearchParam();
-  const defaultVersionID = getSearchParams('version');
+  const defaultVersionID = getSearchParams('version') || versionID;
   /** fieldSchemas 默认值 */
   const defaultVersion = defaultVersionID
     ? {
@@ -121,6 +122,7 @@ export const useDatasetItemList = ({
     {
       defaultPageSize: DEFAULT_PAGE_SIZE,
       refreshDeps: [draftFieldSchemas, currentVersion?.id, orderBy],
+      ready: Boolean(datasetDetail?.id),
     },
   );
   // useEffect(() => {
@@ -286,6 +288,7 @@ export const getFieldColumnConfig = ({
       ) : null}
     </div>
   ),
+
   key: field.key || '',
   displayName: field.name || '',
   width: 200,
@@ -376,6 +379,7 @@ export const getDefaultColumnsItems = ({
       }),
     ) || []),
   ];
+
   const defaultColumnsItems: ColumnItem[] = defaultColumns.map(item => ({
     ...item,
     key: item.key as string,

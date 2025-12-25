@@ -1,0 +1,250 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable no-descending-specificity */
+/* stylelint-disable selector-class-pattern */
+.logic-not {
+  cursor: pointer;
+  user-select: none;
+
+  padding: 1px 2px;
+
+  font-size: 12px;
+  line-height: 14px;
+  color: var(--semi-color-white);
+
+  opacity: 0.35;
+  background-color: rgba(var(--semi-grey-2), 1);
+  border-radius: 2px;
+}
+
+.logic-not_active {
+  opacity: 1;
+  background-color: rgba(var(--semi-red-4), 1);
+}
+
+.logic-toggle {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+
+  margin-right: 8px;
+
+  &::before {
+    content: '';
+
+    position: absolute;
+    top: 12px;
+    left: 50%;
+
+    width: 50%;
+    height: calc(50% - 23px);
+
+    border-color: #D0D4E0;
+    border-style: solid;
+    border-width: 1px 0 0 1px;
+    border-radius: 4px 0 0;
+
+    transition: border-color 0.5s ease 0s;
+  }
+
+  &::after {
+    content: '';
+
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+
+    width: 50%;
+    height: calc(50% - 23px);
+
+    border-color: #D0D4E0;
+    border-style: solid;
+    border-width: 0 0 1px 1px;
+    border-radius: 0 0 0 4px;
+
+    transition: border-color 0.5s ease 0s;
+  }
+
+  .logic-toggle-tag {
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 32px;
+    height: 24px;
+    padding: 4px;
+
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--coz-fg-secondary,#3D79F2);
+    text-align: center;
+
+    background-color: var(--coze-up-brand-10, #99BBFF4D);
+    border-radius: 12px;
+
+    transition: background-color 0.5s ease 0s;
+
+    .logic-toggle-tag-not {
+      margin-right: 4px;
+    }
+
+    .logic-toggle-tag-icon {
+      margin-left: 4px;
+      font-size: 10px;
+    }
+  }
+
+  .logic-toggle-tag_edit {
+    cursor: pointer;
+    user-select: none;
+
+    box-sizing: border-box;
+    width: auto;
+    width: 32px;
+    height: 24px;
+    padding: 4px;
+
+    white-space: nowrap;
+
+    background-color: #99BBFF4D;
+    border-radius: 6px;
+  }
+}
+
+.logic-toggle_and {
+  --border-color: rgba(var(--semi-blue-3), 1);
+  --tag-bg-color: rgba(var(--semi-blue-0), 1);
+  --tag-hover-bg-color: rgba(var(--semi-blue-1), 1);
+}
+
+.logic-toggle_or {
+  --border-color: rgba(var(--semi-orange-3), 1);
+  --tag-bg-color: rgba(var(--semi-orange-0), 1);
+  --tag-hover-bg-color: rgba(var(--semi-orange-1), 1);
+}
+
+.logic-toggle_hide-line {
+  &::before,
+  &::after {
+    display: none;
+  }
+}
+
+.logic-toggle-select-dropdown {
+  :global {
+    .semi-select-option {
+      padding: 4px 6px;
+      font-size: 12px;
+
+      .semi-select-option-icon {
+        margin-right: 4px;
+
+        .semi-icon-default {
+          font-size: 12px;
+        }
+      }
+
+    }
+  }
+}
+
+
+.expr-render-text {
+  display: inline-block;
+
+  max-width: 100%;
+
+  font-size: 12px;
+  line-height: 24px;
+  word-break: break-all;
+}
+
+.expr-render-group {
+  width: 100%;
+
+  .del-expr-group-btn {
+    margin-left: 16px;
+  }
+
+  .expr-render-group-title {
+    display: flex;
+    align-items: center;
+
+    padding: 4px 6px;
+
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+  }
+
+  .expr-render-group-content {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+  }
+
+  .expr-render-expr-items {
+    flex: 1;
+
+    >div:not(:first-of-type) {
+      margin-top: 8px;
+    }
+  }
+}
+
+.expr-render-group_delete {
+  background-color: rgba(var(--semi-red-0), 1);
+}
+
+.expr-render-expr-item {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+
+  box-sizing: border-box;
+  padding: 0 4px;
+
+  border-radius: 4px;
+}
+
+.expr-render-del-btn {
+  height: 20px;
+
+  :global {
+    .semi-icon-default {
+      font-size: 12px;
+      color: rgba(var(--semi-grey-5), 1);
+    }
+  }
+}
+
+
+.expr-render-tool {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+
+  margin-top: 6px;
+  padding: 0 4px 4px;
+
+  .expr-render-tool-btn {
+    height: 20px;
+    padding-right: 6px;
+    padding-left: 6px;
+
+    font-size: 12px;
+    font-weight: 400;
+
+    :global {
+      .semi-icon-default {
+        font-size: 12px;
+      }
+    }
+  }
+}

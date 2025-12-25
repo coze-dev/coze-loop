@@ -51,6 +51,10 @@ expt_export_csv_event_rmq:
 clickhouse_table_config:
   expt_turn_result_filter_table_name: 'expt_turn_result_filter'
 
+evaluator_management_space_config:
+  evaluator_template_space:
+    - "7565071389755228204"
+
 rate_limiter_conf:
   - key_expr: biz_key + string(space_id)
     limit:
@@ -202,10 +206,10 @@ evaluator_prompt_suffix_en-US:
 
 evaluator_prompt_suffix:
   function_call: |
-    
+
     无论如何你必须调用绑定的工具。
   content: |
-    
+
     <输出要求>
     最终输出必须是一个 json 对象，包含 reason 和 score 两个字段。必须严格按照下面的格式输出，不能包含其他任何多余字符，其中 score 必须是json number类型：
     {
@@ -244,31 +248,31 @@ evaluator_template_conf:
                   - 准确指出文本中实际存在的引语。
                   - 以与文本中完全一致的措辞呈现引语，或者进行恰当的意译，且能清晰地对应到文本的特定部分。
                   - 不编造或错误归属引语。
-                
+
                   在打分时，您应该扣除分数的情况包括：
                   - 提及文本中不存在的引语。
                   - 错误引用或歪曲现有引语的内容。
                   - 声称有引语，但在文本中找不到对应的部分。
                 </评分标准>
-                
+
                 <指导说明>
                   - 仔细阅读输入的问题、模型的输出以及参考文本。
                   - 将输出中引用的引语与参考文本的内容进行对比。
                   - 确认引语引用准确且能追溯到文本中。
                 </指导说明>
-                
+
                 <提醒>
                   目标是评估提交内容是否准确引用了文本中的真实引语。
                 </提醒>
-                
+
                 <input>
                 {{input}}
                 </input>
-                
+
                 <output>
                 {{output}}
                 </output>
-                
+
                 使用下面的参考输出来帮助你评估响应的正确性：
                 <reference_outputs>
                 {{reference_output}}

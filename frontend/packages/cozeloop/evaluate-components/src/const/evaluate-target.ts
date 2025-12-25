@@ -8,9 +8,7 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 
 export const evalTargetTypeMap = {
-  [EvalTargetType.CozeBot]: I18n.t(
-    'cozeloop_open_evaluate_coze_intelligent_agent',
-  ),
+  [EvalTargetType.CozeBot]: I18n.t('coze_agent'),
   [EvalTargetType.CozeLoopPrompt]: 'Prompt',
 };
 
@@ -64,10 +62,12 @@ export const DEFAULT_MULTIPART_SCHEMA_OBJ = [
         isRequired: true,
       },
     ],
+
     additionalProperties: false,
     isRequired: false,
   },
 ];
+
 export const DEFAULT_MULTIPART_SCHEMA = JSON.stringify(
   {
     type: 'object',

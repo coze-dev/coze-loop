@@ -72,7 +72,7 @@ export const useEditorObjectHelper = (props: DatasetItemProps) => {
         content={I18n.t(
           'cozeloop_open_evaluate_autocomplete_confirm_overwrite_all_fields',
         )}
-        okText={I18n.t('confirm')}
+        okText={I18n.t('global_btn_confirm')}
         onConfirm={generateJSONObject}
         okButtonColor="yellow"
         cancelText={I18n.t('cancel')}
@@ -88,6 +88,7 @@ export const useEditorObjectHelper = (props: DatasetItemProps) => {
       </Popconfirm>
     </div>
   );
+
   return {
     LoadingNode,
     HelperNode,

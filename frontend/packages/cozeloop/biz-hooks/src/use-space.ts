@@ -17,6 +17,7 @@ export function useSpace() {
       id: space?.id,
       name: space?.name,
       icon_url: DemoSpaceIcon,
+      space_role_type: space?.space_role_type,
     },
     spaceID: space?.id ?? spaceID,
     spaceIDWhenDemoSpaceItsPersonal: space?.id ?? spaceID,

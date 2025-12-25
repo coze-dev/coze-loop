@@ -15,6 +15,7 @@ export { default as ExperimentSelectModal } from './experiment-select-modal';
 export { default as CreateContrastExperiment } from './create-contrast-experiment';
 
 export { default as RetryButton } from './retry-button';
+export { default as KillButton } from './kill-button';
 
 export { default as EvalDatasetVersionSelect } from './selectors/eval-dataset-version-select';
 

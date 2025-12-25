@@ -1,11 +1,10 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { JumpIconButton } from '@cozeloop/components';
 import { type Ellipsis, Tag, Tooltip } from '@coze-arch/coze-design';
-
-import { TypographyText } from '../../components/text-ellipsis';
 
 export function BaseTargetPreview(props: {
   name: React.ReactNode;
@@ -16,6 +15,8 @@ export function BaseTargetPreview(props: {
   jumpBtnClassName?: string;
   onClick?: (e: React.MouseEvent) => void;
   nameEllipsis?: Ellipsis;
+  icon?: React.ReactNode;
+  extraInfo?: React.ReactNode;
 }) {
   const {
     name,
@@ -25,8 +26,11 @@ export function BaseTargetPreview(props: {
     className,
     jumpBtnClassName,
     onClick,
+    icon,
+    extraInfo,
     nameEllipsis = {},
   } = props;
+
   return (
     <div
       className={classNames(
@@ -41,6 +45,7 @@ export function BaseTargetPreview(props: {
         onClick?.(e);
       }}
     >
+      {icon}
       <TypographyText ellipsis={nameEllipsis} className="shrink">
         {name ?? '-'}
       </TypographyText>
@@ -49,6 +54,7 @@ export function BaseTargetPreview(props: {
           {version ?? '-'}
         </Tag>
       ) : null}
+      {extraInfo}
       {enableLinkJump ? (
         <Tooltip theme="dark" content={I18n.t('view_detail')}>
           <div>

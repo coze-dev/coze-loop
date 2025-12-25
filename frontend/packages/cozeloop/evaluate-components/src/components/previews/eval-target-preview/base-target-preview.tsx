@@ -1,11 +1,10 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { JumpIconButton } from '@cozeloop/components';
 import { Tag, Tooltip } from '@coze-arch/coze-design';
-
-import { TypographyText } from '../../text-ellipsis';
 
 export default function BaseTargetPreview({
   name,

@@ -3,8 +3,8 @@
 import { useState } from 'react';
 
 import { useRequest } from 'ahooks';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { TypographyText } from '@cozeloop/evaluate-components';
 import {
   type EvalTarget,
   EvalTargetType,
@@ -47,6 +47,7 @@ export default function CozeBotEvalTargetTreeSelect({
             </TypographyText>
           </span>
         ),
+
         key: item.id?.toString() ?? '',
         value: item.id?.toString() ?? '',
         isLeaf: true,
@@ -93,7 +94,7 @@ export default function CozeBotEvalTargetTreeSelect({
       loadData={onLoadChildren}
       treeData={treeData}
       style={{ width: '100%' }}
-      placeholder={I18n.t('please_select', { field: '' })}
+      placeholder={I18n.t('evaluate_please_select_cozebot')}
       multiple={true}
       filterTreeNode={true}
       dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
@@ -113,6 +114,7 @@ export default function CozeBotEvalTargetTreeSelect({
               {item.isLeaf ? `${name} - v${version}` : name}
             </div>
           ),
+
           isRenderInTag: false,
         };
       }}

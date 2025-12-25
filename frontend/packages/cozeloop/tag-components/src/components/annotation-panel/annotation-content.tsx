@@ -65,32 +65,36 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
 
       return;
     }
-    runAsync(tagKeyIds).then(d => {
-      const initVal = {
-        tags:
-          manualFeedback?.map(an => {
-            const { tag_key_id } = an.manual_feedback ?? {};
-            const tagInfo = d?.tag_info_list?.find(
-              t => t.tag_key_id === tag_key_id,
-            );
-            return {
-              tagInfo,
-              annotation: {
-                ...an,
-                manual_feedback: {
-                  ...(an.manual_feedback ?? {}),
-                  template_tag_key_id: tagInfo?.tag_key_id ?? '',
-                  tag_key_id: an.manual_feedback?.tag_key_id ?? '',
-                  tag_key_name: an.manual_feedback?.tag_key_name ?? '',
+    runAsync(tagKeyIds)
+      .then(d => {
+        const initVal = {
+          tags:
+            manualFeedback?.map(an => {
+              const { tag_key_id } = an.manual_feedback ?? {};
+              const tagInfo = d?.tag_info_list?.find(
+                t => t.tag_key_id === tag_key_id,
+              );
+              return {
+                tagInfo,
+                annotation: {
+                  ...an,
+                  manual_feedback: {
+                    ...(an.manual_feedback ?? {}),
+                    template_tag_key_id: tagInfo?.tag_key_id ?? '',
+                    tag_key_id: an.manual_feedback?.tag_key_id ?? '',
+                    tag_key_name: an.manual_feedback?.tag_key_name ?? '',
+                  },
                 },
-              },
-              isRemoteValue: true,
-            };
-          }) ?? [],
-      };
-      setInitValues(initVal);
-      setDataReady(true);
-    });
+                isRemoteValue: true,
+              };
+            }) ?? [],
+        };
+        setInitValues(initVal);
+        setDataReady(true);
+      })
+      .catch(e => {
+        console.error(e);
+      });
   }, [manualFeedback, span.span_id]);
 
   const formRef = useRef<Form>(null);
@@ -129,9 +133,7 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                     <div key={key} className="flex flex-col mb-[20px]">
                       <div className="flex items-center gap-x-2 text-[13px] font-normal leading-5 text-[var(--coz-fg-secondary)]">
                         <span>
-                          {I18n.t('tag_number_with_placeholder', {
-                            placeholder1: index + 1,
-                          })}
+                          {I18n.t('tag')} {index + 1}
                         </span>
                         <Tooltip
                           theme="dark"
@@ -218,6 +220,7 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                             }
                           }}
                         />
+
                         <AnnotationRemoveButton
                           annotation_id={tagItem?.annotation?.id}
                           span_id={span.span_id}

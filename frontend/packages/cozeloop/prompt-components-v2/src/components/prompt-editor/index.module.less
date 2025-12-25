@@ -1,0 +1,116 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable font-family-no-missing-generic-family-keyword */
+/* stylelint-disable declaration-no-important */
+.prompt-editor-container {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: stretch;
+
+  background: var(--Bg-COZ-bg-max, #FFF);
+  border: 1px solid var(--Stroke-COZ-stroke-plus, rgba(68, 83, 130, 25%));
+  border-radius: var(--Radius-Default, 6px);
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    box-sizing: border-box;
+    width: 100%;
+    height: 36px;
+    padding: 12px 8px;
+
+    border-bottom: 1px solid var(--Stroke-COZ-stroke-primary, rgba(82, 100, 154, 13%));
+
+    .drag-btn {
+      color: var(--coz-fg-dim);
+
+      &:hover {
+        color: var(--coz-fg-secondary);
+      }
+    }
+  }
+
+  &-error {
+    border: 1px solid var(--Red-COZ-red-500, #F54A45);
+  }
+
+  .prompt-editor-btn-group {
+    display: none;
+    transition: all 0.2s ease-in-out;
+  }
+
+  input::placeholder {
+    font-family: JetBrainsMonoBold !important;
+    font-size: 13px !important;
+    line-height: 22px !important;
+  }
+
+  :global {
+    .cm-line{
+      font-size: 13px !important;
+      line-height: 22px !important;
+    }
+    .cm-scroller {
+      scrollbar-gutter: stable;
+
+      &::-webkit-scrollbar-thumb {
+        visibility: hidden;
+      }
+    }
+
+    .coz-input.semi-input-wrapper:hover{
+      background: transparent;
+    }
+  }
+
+  &-active {
+    border: 1px solid rgba(var(--coze-up-brand-9), 1);
+
+    :global {
+      .cm-scroller {
+        &::-webkit-scrollbar-thumb {
+          visibility: visible;
+        }
+      }
+    }
+  }
+
+  &-disabled {
+    background: var(--coz-bg-primary, #F7F7FC);
+  }
+
+  &:hover {
+    .prompt-editor-btn-group {
+      display: flex;
+    }
+
+    :global {
+      .cm-scroller {
+        &::-webkit-scrollbar-thumb {
+          visibility: visible;
+        }
+      }
+    }
+  }
+}
+
+.role-display {
+  color: var(--Fg-COZ-fg-dim, rgba(55, 67, 106, 38%)) !important;
+}
+
+.full-screen {
+  position: fixed !important;
+  z-index: 1000;
+  inset: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  background-color: var(--semi-color-bg-0);
+
+}

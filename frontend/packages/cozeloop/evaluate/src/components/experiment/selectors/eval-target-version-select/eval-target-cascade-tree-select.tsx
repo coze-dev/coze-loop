@@ -56,7 +56,7 @@ export default function EvalTargetCascadeTreeSelect({
     <div className="flex items-center gap-1">
       <Select
         className="!w-24 shrink-0"
-        placeholder={I18n.t('evaluation_object_type')}
+        placeholder={I18n.t('evaluate_target_type')}
         value={evalTargetType}
         showArrow={false}
         onChange={val => {
@@ -70,6 +70,7 @@ export default function EvalTargetCascadeTreeSelect({
           { label: I18n.t('coze_agent'), value: EvalTargetType.CozeBot },
         ]}
       />
+
       <div className="grow">{evalTargetSelect}</div>
     </div>
   );

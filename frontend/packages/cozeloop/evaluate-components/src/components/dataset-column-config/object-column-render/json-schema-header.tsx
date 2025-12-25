@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import { I18n } from '@cozeloop/i18n-adapter';
 interface JSONSchemaHeaderProps {
-  disabelChangeDatasetType: boolean;
+  disableChangeDatasetType: boolean;
   showAdditional: boolean;
 }
 
 export const JSONSchemaHeader = ({
-  disabelChangeDatasetType,
+  disableChangeDatasetType,
   showAdditional,
 }: JSONSchemaHeaderProps) => (
   <div className="flex gap-3">
@@ -33,6 +33,6 @@ export const JSONSchemaHeader = ({
         </div>
       </label>
     ) : null}
-    {!disabelChangeDatasetType ? <div className="w-[46px]"></div> : null}
+    {!disableChangeDatasetType ? <div className="w-[46px]"></div> : null}
   </div>
 );

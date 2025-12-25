@@ -1,24 +1,25 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable complexity */
 import { useRef } from 'react';
 
+import cls from 'classnames';
 import { useSize } from 'ahooks';
 import { type TableProps } from '@coze-arch/coze-design';
 
-import LoopTableSortIcon from './sort-icon';
+import { useI18n } from '@/provider';
+
+import { createLoopTableSortIcon } from './sort-icon';
 import { LoopTable } from './index';
 
-export const PAGE_SIZE_OPTIONS = [10, 20, 50];
-export const DEFAULT_PAGE_SIZE = 10;
-// eslint-disable-next-line complexity
-export function TableWithoutPagination(
-  props: TableProps & {
-    heightFull?: boolean;
-    pageSizeOpts?: number[];
-    header?: React.ReactNode;
-  },
-) {
-  const { header, heightFull = false } = props;
+export type TableWithoutPaginationProps = TableProps & {
+  heightFull?: boolean;
+  header?: React.ReactNode;
+};
+
+export function TableWithoutPagination(props: TableWithoutPaginationProps) {
+  const { header, heightFull = false, className } = props;
+  const I18n = useI18n();
   const { columns } = props.tableProps ?? {};
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const size = useSize(tableContainerRef.current);
@@ -30,7 +31,9 @@ export function TableWithoutPagination(
 
   return (
     <div
-      className={`${heightFull ? 'h-full flex overflow-hidden' : ''} flex flex-col gap-3`}
+      className={cls('flex flex-col gap-3 w-full', className, {
+        'h-full flex overflow-hidden': heightFull,
+      })}
     >
       {header ? header : null}
       <div
@@ -57,7 +60,7 @@ export function TableWithoutPagination(
               ?.map(column => ({
                 ...column,
                 ...(column.sorter && !column.sortIcon
-                  ? { sortIcon: LoopTableSortIcon }
+                  ? { sortIcon: createLoopTableSortIcon(I18n) }
                   : {}),
               })),
           }}

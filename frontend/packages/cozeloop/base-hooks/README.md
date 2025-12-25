@@ -1,4 +1,4 @@
-# @cozeloop/base-hooks
+# @cozeloop/hooks
 
 Hooks for CozeLoop
 
@@ -15,7 +15,7 @@ Add this package to your `package.json`:
 ```json
 {
   "dependencies": {
-    "@cozeloop/base-hooks": "workspace:*"
+    "@cozeloop/hooks": "workspace:*"
   }
 }
 ```
@@ -29,7 +29,7 @@ rush update
 ### Usage
 
 ```typescript
-import { /* exported functions/components */ } from '@cozeloop/base-hooks';
+import { /* exported functions/components */ } from '@cozeloop/hooks';
 
 // Example usage
 // TODO: Add specific usage examples

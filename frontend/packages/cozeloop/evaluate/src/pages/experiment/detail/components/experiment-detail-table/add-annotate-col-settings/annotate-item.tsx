@@ -4,8 +4,8 @@ import React, { type ReactNode } from 'react';
 
 import classNames from 'classnames';
 import { TAG_TYPE_TO_NAME_MAP } from '@cozeloop/tag-components';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { TypographyText } from '@cozeloop/evaluate-components';
 import { type tag } from '@cozeloop/api-schema/data';
 import {
   CozAvatar,
@@ -74,6 +74,7 @@ const AnnotateItem = ({ data, actions, disabled }: Props) => (
             src={data.base_info?.created_by?.avatar_url}
             className="w-5 h-5"
           />
+
           <Typography.Text
             className={classNames(
               'text-[13px]',

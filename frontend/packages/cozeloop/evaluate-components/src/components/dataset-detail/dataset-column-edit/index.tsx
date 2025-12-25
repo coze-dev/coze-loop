@@ -78,6 +78,8 @@ export const useDatasetColumnEdit = ({
       });
       onRefresh();
       setVisible(false);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -190,7 +192,7 @@ export const useDatasetColumnEdit = ({
                       <Anchor.Link
                         key={index}
                         href={`#column-${index}`}
-                        title={`${item.name || `${I18n.t('column_placeholder', { placeholder1: index + 1 })}`}`}
+                        title={`${item.name || `${I18n.t('column')} ${index + 1}`}`}
                       />
                     ))}
                   </LoopAnchor>
@@ -212,6 +214,7 @@ export const useDatasetColumnEdit = ({
       </ResizeSidesheet>
     </>
   );
+
   return {
     ColumnEditButton,
     ColumnEditModal,

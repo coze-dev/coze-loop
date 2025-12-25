@@ -63,10 +63,8 @@ export default function LogicEditor({
   value?: LogicFilter | undefined;
   popoverProps?: PopoverProps;
   tooltip?: React.ReactNode;
-  /** 是否过滤空条件 */
-  clearEmptyCondition?: boolean;
-  /** 字段选择开启级联模式 */
-  enableCascadeMode?: boolean;
+  /** 是否过滤空条件 */ clearEmptyCondition?: boolean;
+  /** 字段选择开启级联模式 */ enableCascadeMode?: boolean;
   onChange?: (val?: LogicFilter) => void;
   onConfirm?: (val?: LogicFilter) => void;
   onClose?: () => void;
@@ -121,6 +119,7 @@ export default function LogicEditor({
       maxNestingDepth={1}
     />
   );
+
   const hasMultiExpr =
     Array.isArray(logicFilter?.exprs) && logicFilter.exprs.length > 1;
   const popoverContentConatienr = (
@@ -132,7 +131,7 @@ export default function LogicEditor({
       )}
     >
       <div className="flex items-center px-4">
-        <div className="font-medium">{I18n.t('data_filter')}</div>
+        <div className="font-medium">{I18n.t('filter')}</div>
         {tooltip ? (
           <Tooltip theme="dark" content={tooltip}>
             <IconCozInfoCircle className="ml-1 text-[var(--coz-fg-secondary)] hover:text-[var(--coz-fg-primary)]" />
@@ -166,11 +165,12 @@ export default function LogicEditor({
             onClose?.();
           }}
         >
-          {I18n.t('application')}
+          {I18n.t('apply')}
         </Button>
       </div>
     </div>
   );
+
   const count = value?.exprs?.length ?? 0;
   return (
     <Popover
@@ -190,7 +190,7 @@ export default function LogicEditor({
       }}
     >
       <Button icon={<IconCozFilter />} color="primary">
-        {I18n.t('data_filter')}
+        {I18n.t('filter')}
         {count ? (
           <div className="flex items-center justify-center w-5 h-5 rounded-[50%] text-brand-9 bg-brand-4 ml-1 text-[13px]">
             {count}

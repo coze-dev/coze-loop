@@ -4,13 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { get } from 'lodash-es';
 import { type ISpec, type Datum } from '@visactor/vchart/esm/typings';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   Chart,
   ChartCardItemRender,
   ExperimentScoreTypeSelect,
   type CustomTooltipProps,
-  TypographyText,
 } from '@cozeloop/evaluate-components';
 import {
   type AggregateData,
@@ -188,6 +188,7 @@ export default function EvaluatorsScoreChart({
     (renderProps: CustomTooltipProps) => (
       <ComplexTooltipContent {...renderProps} experiment={experiment} />
     ),
+
     [experiment, spaceID],
   );
   return (

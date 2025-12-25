@@ -13,12 +13,16 @@ import { verifyContrastExperiment } from '../../utils/experiment';
 export function ExperimentRowSelectionActions({
   spaceID,
   experiments = [],
+  setSelectedExperiments,
   onCancelSelect,
   onRefresh,
   onReportCompare,
+  defaultContrastRoute = 'evaluation/experiments/contrast',
 }: {
   spaceID: Int64;
   experiments: Experiment[];
+  defaultContrastRoute?: string;
+  setSelectedExperiments?: (experiments: Experiment[]) => void;
   onCancelSelect?: () => void;
   onRefresh?: () => void;
   onReportCompare?: (status: string) => void;
@@ -38,7 +42,7 @@ export function ExperimentRowSelectionActions({
                 onCancelSelect?.();
               }}
             >
-              {I18n.t('cancel_selection')}
+              {I18n.t('unselect')}
             </span>
           </div>
           <Button
@@ -51,12 +55,12 @@ export function ExperimentRowSelectionActions({
               } else {
                 onReportCompare?.('success');
                 navigate(
-                  `evaluation/experiments/contrast?experiment_ids=${experiments.map(experiment => experiment.id).join(',')}`,
+                  `${defaultContrastRoute}?experiment_ids=${experiments.map(experiment => experiment.id).join(',')}`,
                 );
               }
             }}
           >
-            {I18n.t('experimental_comparison')}
+            {I18n.t('experiment_comparison')}
           </Button>
 
           <Guard point={GuardPoint['eval.experiments.batch_delete']}>
@@ -69,9 +73,7 @@ export function ExperimentRowSelectionActions({
                 }
                 Modal.confirm({
                   title: I18n.t('batch_delete_experiment'),
-                  content: I18n.t('confirm_batch_delete_x_experiment', {
-                    num: experiments.length,
-                  }),
+                  content: `${I18n.t('evaluate_confirm_batch_delete_placeholder1_experiments', { placeholder1: experiments.length })}`,
                   okText: I18n.t('delete'),
                   cancelText: I18n.t('cancel'),
                   okButtonColor: 'red',
@@ -82,6 +84,7 @@ export function ExperimentRowSelectionActions({
                       workspace_id: spaceID,
                       expt_ids: experiments.map(item => item.id ?? ''),
                     });
+                    setSelectedExperiments?.([]);
                     onRefresh?.();
                   },
                 });

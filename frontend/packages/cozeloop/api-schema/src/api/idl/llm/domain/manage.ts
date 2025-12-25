@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as common from './common';
 export { common };
 export interface Model {
@@ -25,12 +27,20 @@ export interface Ability {
 export interface AbilityMultiModal {
   image?: boolean,
   ability_image?: AbilityImage,
+  video?: boolean,
+  ability_video?: AbilityVideo,
 }
 export interface AbilityImage {
   url_enabled?: boolean,
   binary_enabled?: boolean,
   max_image_size?: string,
   max_image_count?: string,
+  image_gen_enabled?: boolean,
+}
+export interface AbilityVideo {
+  /** the size limit of single video */
+  max_video_size_in_mb?: number,
+  supported_video_formats?: VideoFormat[],
 }
 export interface ProtocolConfig {
   base_url?: string,
@@ -154,4 +164,21 @@ export enum ParamType {
   param_type_int = "int",
   param_type_boolean = "boolean",
   param_type_string = "string",
+}
+export enum VideoFormat {
+  video_format_undefined = "undefined",
+  video_format_mp4 = "mp4",
+  video_format_avi = "avi",
+  video_format_mov = "mov",
+  video_format_mpg = "mpg",
+  video_format_webm = "webm",
+  video_format_rvmb = "rvmb",
+  video_format_wmv = "wmv",
+  video_format_mkv = "mkv",
+  video_format_t3gp = "t3gp",
+  video_format_flv = "flv",
+  video_format_mpeg = "mpeg",
+  video_format_ts = "ts",
+  video_format_rm = "rm",
+  video_format_m4v = "m4v",
 }

@@ -43,7 +43,7 @@ export const StepControls: React.FC<StepControlsProps> = ({
               extra: (
                 <Tooltip
                   content={I18n.t(
-                    'experiment_supports_concurrent_eval_limitations',
+                    'evaluate_experiment_concurrent_execution_limitations',
                   )}
                   theme="dark"
                 >
@@ -56,6 +56,7 @@ export const StepControls: React.FC<StepControlsProps> = ({
             min={1}
             max={EVAL_EXPERIMENT_CONCUR_COUNT_MAX}
           />
+
           <div className="coz-fg-dim ml-2">
             {I18n.t('max_concurrent_execution_count_limit', {
               EVAL_EXPERIMENT_CONCUR_COUNT_MAX,
@@ -66,7 +67,7 @@ export const StepControls: React.FC<StepControlsProps> = ({
         <div>
           {currentStep > 0 && (
             <Button color="primary" onClick={onPrevious} className="mr-2">
-              {I18n.t('dataset_previous_step')}
+              {I18n.t('prev_step')}
             </Button>
           )}
           {currentStepConfig.optional ? (

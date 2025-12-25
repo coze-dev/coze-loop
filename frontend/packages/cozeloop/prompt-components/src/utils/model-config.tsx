@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { I18n } from '@cozeloop/i18n-adapter';
 import { Tag } from '@coze-arch/coze-design';
 
 import { convertInt64ToNumber } from '@/model-config-editor/model-config-form';
@@ -24,13 +25,13 @@ export const renderModelOfflineTag = (model?: Model) => {
   if (model?.modelStatus === ModelStatus.Offlining) {
     return (
       <Tag color="yellow" className="flex-shrink-0" size="mini">
-        下线中
+        {I18n.t('prompt_being_deprecated')}
       </Tag>
     );
   } else if (model?.modelStatus === ModelStatus.Unavailable) {
     return (
       <Tag color="red" className="flex-shrink-0" size="mini">
-        已下线
+        {I18n.t('deprecated')}
       </Tag>
     );
   }

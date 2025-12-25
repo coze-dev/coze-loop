@@ -47,6 +47,7 @@ export function MetricSelectLocalData({
           <EvaluatorInfo evaluator={e} className="w-full overflow-hidden" />
         </LabelWrapper>
       ),
+
       value: e.evaluator_version_id ?? '',
       evaluator: e,
       type: 'evaluator',
@@ -60,6 +61,7 @@ export function MetricSelectLocalData({
             <AnnotationInfo annotation={a} className="w-full overflow-hidden" />
           </LabelWrapper>
         ),
+
         value: a.tag_key_id ?? '',
         annotation: a,
         type: 'annotation',
@@ -83,7 +85,7 @@ export function MetricSelectLocalData({
   return (
     <Select
       prefix={I18n.t('indicator')}
-      placeholder={I18n.t('please_select', { field: '' })}
+      placeholder={I18n.t('please_select_an_indicator')}
       value={value?.map(v => v.id)}
       onChange={v => {
         const newVal =

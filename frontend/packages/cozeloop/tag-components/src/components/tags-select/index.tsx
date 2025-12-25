@@ -5,6 +5,7 @@ import React, { useState, useRef } from 'react';
 
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
+import { ArrayUtils } from '@cozeloop/toolkit';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { tag } from '@cozeloop/api-schema/data';
@@ -12,7 +13,6 @@ import { DataApi } from '@cozeloop/api-schema';
 import { IconCozRefresh } from '@coze-arch/coze-design/icons';
 import { Select, Spin, type SemiSelect } from '@coze-arch/coze-design';
 
-import { ArrayUtils } from '@/utils/array';
 import { useTagFormModal } from '@/hooks/use-tag-form-modal';
 import { TagsItem } from '@/components/tags-item';
 
@@ -32,7 +32,8 @@ export interface TagsSelectProps {
   clickToHide?: boolean;
   /** 是否指定空间ID，如果指定，则使用指定空间ID，否则使用当前空间ID */
   spaceId?: string;
-  /** 标签更新回调，当标签信息发生变化时触发
+  /**
+   * 标签更新回调，当标签信息发生变化时触发
    *
    * 与 `onChange` 的区别是：
    * `onChange` 只响应选中的 tagKeyID 的变更；

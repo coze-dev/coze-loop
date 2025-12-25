@@ -13,7 +13,6 @@ export const sourceNameRuleValidator: RuleItem['validator'] = (
   if (!pattern.test(value)) {
     // 错误类型细分 [2,5](@ref)
     const firstChar = value.charAt(0);
-    console.log(firstChar);
     if (/^[-_.]/.test(firstChar)) {
       callback(I18n.t('support_letter_number_chinese_start'));
     } else {
