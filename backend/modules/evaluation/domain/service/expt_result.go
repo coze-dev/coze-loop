@@ -13,7 +13,7 @@ import (
 //go:generate  mockgen -destination  ./mocks/expt_result.go  --package mocks . ExptResultService,ExptAggrResultService
 type ExptResultService interface {
 	MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error)
-	// RecordItemRunLogs 将 run_log 表结果同步到 result 表
+	// RecordItemRunLogs sync results from run_log table to result table
 	RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error)
 	GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error)
 
@@ -31,9 +31,10 @@ type ExptResultService interface {
 
 type ExptAggrResultService interface {
 	BatchGetExptAggrResultByExperimentIDs(ctx context.Context, spaceID int64, experimentIDs []int64) ([]*entity.ExptAggregateResult, error)
-	// 实验完成时接收事件计算并持久化聚合结果，注意此时有更新评分场景的时序问题
+	// Calculate and persist aggregate results upon experiment completion.
+	// Note: consider timing issues when updating scores.
 	CreateExptAggrResult(ctx context.Context, spaceID, experimentID int64) error
-	// 修正评分时接收事件计算并更新聚合结果
+	// Update aggregate results upon manual score correction.
 	UpdateExptAggrResult(ctx context.Context, param *entity.UpdateExptAggrResultParam) error
 	CreateAnnotationAggrResult(ctx context.Context, param *entity.CreateSpecificFieldAggrResultParam) error
 	UpdateAnnotationAggrResult(ctx context.Context, param *entity.UpdateExptAggrResultParam) (err error)

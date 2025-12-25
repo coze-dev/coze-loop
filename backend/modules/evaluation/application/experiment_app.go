@@ -1493,7 +1493,7 @@ func (e *experimentApplication) CalculateExperimentAggrResult_(ctx context.Conte
 		return nil, errorx.NewByCode(errno.IncompleteExptCalcAggrResultErrorCode)
 	}
 
-	if err := e.ExptAggrResultService.PublishExptAggrResultEvent(ctx, &entity.AggrCalculateEvent{
+	if err := e.PublishExptAggrResultEvent(ctx, &entity.AggrCalculateEvent{
 		SpaceID:       req.GetWorkspaceID(),
 		ExperimentID:  req.GetExptID(),
 		CalculateMode: entity.CreateAllFields,

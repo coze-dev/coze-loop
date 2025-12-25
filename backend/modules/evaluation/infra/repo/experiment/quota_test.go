@@ -33,7 +33,7 @@ func TestQuotaRepoImpl_CreateOrUpdate(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			name:    "成功创建配额",
+			name:    "Create quota successfully",
 			spaceID: 1,
 			updater: func(q *entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error) {
 				q.ExptID2RunTime = map[int64]int64{1: time.Now().Unix()}
@@ -41,22 +41,25 @@ func TestQuotaRepoImpl_CreateOrUpdate(t *testing.T) {
 			},
 			session: &entity.Session{UserID: "test"},
 			mockSetup: func() {
-				// 模拟获取锁
+				// Mock Lock
 				mockMutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(true, context.Background(), func() {}, nil)
 
-				// 模拟获取现有配额
+				// Mock Get existing quota
 				mockQuotaDAO.EXPECT().GetQuotaSpaceExpt(gomock.Any(), gomock.Any()).
 					Return(nil, nil)
 
-				// 模拟设置新配额
+				// Mock Set new quota
 				mockQuotaDAO.EXPECT().SetQuotaSpaceExpt(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
+
+				// Mock Unlock
+				mockMutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 			},
 			expectedErr: nil,
 		},
 		{
-			name:    "成功更新配额",
+			name:    "Update quota successfully",
 			spaceID: 1,
 			updater: func(q *entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error) {
 				q.ExptID2RunTime[2] = time.Now().Unix()
@@ -64,19 +67,22 @@ func TestQuotaRepoImpl_CreateOrUpdate(t *testing.T) {
 			},
 			session: &entity.Session{UserID: "test"},
 			mockSetup: func() {
-				// 模拟获取锁
+				// Mock Lock
 				mockMutex.EXPECT().LockBackoffWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(true, context.Background(), func() {}, nil)
 
-				// 模拟获取现有配额
+				// Mock Get existing quota
 				mockQuotaDAO.EXPECT().GetQuotaSpaceExpt(gomock.Any(), gomock.Any()).
 					Return(&entity.QuotaSpaceExpt{
 						ExptID2RunTime: map[int64]int64{1: time.Now().Unix()},
 					}, nil)
 
-				// 模拟设置新配额
+				// Mock Set new quota
 				mockQuotaDAO.EXPECT().SetQuotaSpaceExpt(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
+
+				// Mock Unlock
+				mockMutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 			},
 			expectedErr: nil,
 		},

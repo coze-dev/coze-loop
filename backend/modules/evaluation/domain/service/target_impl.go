@@ -88,7 +88,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceI
 	if err != nil {
 		return nil, err
 	}
-	// 包装source info信息
+	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
 			err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{do})
@@ -105,7 +105,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySourceTarget(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	// 包装source info信息
+	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
 			err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{do})
@@ -118,7 +118,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySourceTarget(ctx context.C
 }
 
 func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySource(ctx context.Context, spaceID, targetID int64, sourceVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error) {
-	// 根据spaceID、targetID和sourceVersion查询版本
+	// Query version by spaceID, targetID, and sourceVersion
 	versions, err := e.evalTargetRepo.BatchGetEvalTargetBySource(ctx, &repo.BatchGetEvalTargetBySourceParam{
 		SpaceID:        spaceID,
 		SourceTargetID: []string{strconv.FormatInt(targetID, 10)},
@@ -127,10 +127,10 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySource(ctx context.Context
 		return nil, err
 	}
 
-	// 遍历版本，找到匹配的sourceVersion
+	// Iterate through versions to find matching sourceVersion
 	for _, version := range versions {
 		if version.EvalTargetVersion != nil && version.EvalTargetVersion.SourceTargetVersion == sourceVersion {
-			// 包装source info信息
+			// Wrap source info
 			if needSourceInfo {
 				for _, op := range e.typedOperators {
 					err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{version})
@@ -151,7 +151,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionByTarget(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
-	// 包装source info信息
+	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
 			err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{do})
@@ -176,7 +176,7 @@ func (e *EvalTargetServiceImpl) BatchGetEvalTargetVersion(ctx context.Context, s
 	if err != nil {
 		return nil, err
 	}
-	// 包装source info信息
+	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
 			err = op.PackSourceVersionInfo(ctx, spaceID, versions)
@@ -771,7 +771,7 @@ func Convert2TraceString(input any) string {
 	return str
 }
 
-// GenerateMockOutputData 根据输出schema生成mock数据
+// GenerateMockOutputData generates mock data according to output schema
 func (e *EvalTargetServiceImpl) GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error) {
 	if len(outputSchemas) == 0 {
 		return map[string]string{}, nil
@@ -781,10 +781,10 @@ func (e *EvalTargetServiceImpl) GenerateMockOutputData(outputSchemas []*entity.A
 
 	for _, schema := range outputSchemas {
 		if schema.Key != nil && schema.JsonSchema != nil {
-			// 使用jsonmock为每个schema生成独立的mock数据
+			// Use jsonmock to generate independent mock data for each schema
 			mockData, err := jsonmock.GenerateMockData(*schema.JsonSchema)
 			if err != nil {
-				// 如果生成失败，使用默认值
+				// If generation fails, use default value
 				result[*schema.Key] = "{}"
 			} else {
 				result[*schema.Key] = mockData
@@ -795,7 +795,7 @@ func (e *EvalTargetServiceImpl) GenerateMockOutputData(outputSchemas []*entity.A
 	return result, nil
 }
 
-// buildPage 有的接口没有滚动分页，需要自己用page适配一下
+// buildPageByCursor some interfaces do not have rolling pagination, need to adapt with page manually
 func buildPageByCursor(cursor *string) (page int32, err error) {
 	if cursor == nil {
 		page = 1

@@ -28,7 +28,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-// ExptItemTurnEvaluation 评测执行流程
+// ExptItemTurnEvaluation evaluation execution process
 type ExptItemTurnEvaluation interface {
 	Eval(ctx context.Context, etec *entity.ExptTurnEvalCtx) *entity.ExptTurnRunResult
 }
@@ -395,7 +395,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 	return res, nil
 }
 
-// buildFieldsFromSource 从指定数据源构建字段映射，提取重复的字段处理逻辑
+// buildFieldsFromSource build field mapping from specified data source, extracting common field processing logic
 func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Context, fieldConfs []*entity.FieldConf,
 	sourceFields map[string]*entity.Content,
 ) (map[string]*entity.Content, error) {
@@ -444,7 +444,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 	return result, nil
 }
 
-// getFieldContent 获取字段内容，处理JSON Path逻辑
+// getFieldContent get field content, handling JSON Path logic
 func (e *DefaultExptTurnEvaluationImpl) getFieldContent(
 	fc *entity.FieldConf,
 	sourceFields map[string]*entity.Content,
@@ -455,15 +455,15 @@ func (e *DefaultExptTurnEvaluationImpl) getFieldContent(
 	}
 
 	if firstField == fc.FromField {
-		// 没有下钻字段，直接返回
+		// No drill-down fields, return directly
 		return sourceFields[fc.FromField], nil
 	} else {
-		// 有下钻字段，需要通过JSON Path处理
+		// Has drill-down fields, process via JSON Path
 		return e.getContentByJsonPath(sourceFields[firstField], fc.FromField)
 	}
 }
 
-// 注意此函数有特化逻辑不可直接服用, 删除了jsonpath的第一级
+// Note: This function has specialized logic and cannot be directly reused; it removes the first level of jsonpath.
 func (e *DefaultExptTurnEvaluationImpl) getContentByJsonPath(content *entity.Content, jsonPath string) (*entity.Content, error) {
 	logs.CtxInfo(context.Background(), "getContentByJsonPath, content: %v, jsonPath: %v", json.Jsonify(content), jsonPath)
 	if content == nil {

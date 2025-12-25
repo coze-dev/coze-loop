@@ -338,7 +338,7 @@ func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.
 	}, nil
 }
 
-// RecordEvalMode 任务执行模式
+// RecordEvalMode task execution mode
 type RecordEvalMode interface {
 	PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error
 	PostEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error

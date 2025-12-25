@@ -190,8 +190,8 @@ func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx contex
 }
 
 func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Context, spaceID, experimentID int64,
-	evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup, tmag *targetMtrAggrGroup, existedAggrResults []*entity.ExptAggrResult) error {
-
+	evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup, tmag *targetMtrAggrGroup, existedAggrResults []*entity.ExptAggrResult,
+) error {
 	aggrResKeyFn := func(fieldType int32, fieldKey string) string { return fmt.Sprintf("%d:%s", fieldType, fieldKey) }
 	existedAggrResultsMap := gslice.ToMap(existedAggrResults, func(val *entity.ExptAggrResult) (string, *entity.ExptAggrResult) {
 		return aggrResKeyFn(val.FieldType, val.FieldKey), val
@@ -275,7 +275,7 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 	if param.FieldType != entity.FieldType_EvaluatorScore {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid field type"))
 	}
-	// 如果首次计算尚未完成 返回error mq重试
+	// If initial calculation not finished, return error for MQ retry
 	_, err = e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_EvaluatorScore), param.FieldKey)
 	if err != nil {
 		statusErr, ok := errorx.FromStatusError(err)
@@ -284,7 +284,7 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 			if err != nil {
 				return err
 			}
-			// 如果实验未结束 不进行MQ重试
+			// If experiment not finished, no MQ retry
 			if !entity.IsExptFinished(experiment.Status) {
 				return nil
 			}
@@ -292,7 +292,7 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 		return err
 	}
 
-	// 计算前先更新版本号
+	// Update version number before calculation
 	version, err := e.exptAggrResultRepo.UpdateAndGetLatestVersion(ctx, param.ExperimentID, int32(param.FieldType), param.FieldKey)
 	if err != nil {
 		return err
@@ -398,7 +398,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 	if err != nil {
 		return nil, err
 	}
-	// 去重
+	// Deduplicate
 	evaluatorVersionIDMap := make(map[int64]bool)
 	versionID2evaluatorID := make(map[int64]int64)
 	for _, ref := range evaluatorRef {
@@ -718,7 +718,7 @@ func (e *ExptAggrResultServiceImpl) UpdateAnnotationAggrResult(ctx context.Conte
 	if param.FieldType != entity.FieldType_Annotation {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid field type"))
 	}
-	// 如果首次计算尚未完成 返回error mq重试
+	// If the initial calculation is not yet completed, return an error for MQ retry
 	_, err = e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_Annotation), param.FieldKey)
 	if err != nil {
 		statusErr, ok := errorx.FromStatusError(err)
@@ -727,7 +727,7 @@ func (e *ExptAggrResultServiceImpl) UpdateAnnotationAggrResult(ctx context.Conte
 			if err != nil {
 				return err
 			}
-			// 如果实验未结束 不进行MQ重试
+			// If experiment not finished, no MQ retry
 			if !entity.IsExptFinished(experiment.Status) {
 				return nil
 			}
@@ -735,7 +735,7 @@ func (e *ExptAggrResultServiceImpl) UpdateAnnotationAggrResult(ctx context.Conte
 		return err
 	}
 
-	// 计算前先更新版本号
+	// Update version number before calculation
 	version, err := e.exptAggrResultRepo.UpdateAndGetLatestVersion(ctx, param.ExperimentID, int32(param.FieldType), param.FieldKey)
 	if err != nil {
 		return err
@@ -1017,7 +1017,7 @@ type BasicAggregator struct {
 	Min float64
 	Sum float64
 
-	Count int // 聚合数据个数
+	Count int // Number of aggregated data
 }
 
 func (a *BasicAggregator) Append(score float64) {
@@ -1068,7 +1068,7 @@ func (a *BasicAggregator) Result() map[entity.AggregatorType]*entity.AggregateDa
 	return res
 }
 
-// ScoreDistributionAggregator 分布聚合器.
+// ScoreDistributionAggregator distribution aggregator.
 type ScoreDistributionAggregator struct {
 	Score2Count map[float64]int64
 	Total       int64
@@ -1120,14 +1120,14 @@ type ScoreCount struct {
 	Count int64
 }
 
-// GetTopNScores 获取出现次数最高的前 N 个分数
+// GetTopNScores get top N scores with highest counts
 func GetTopNScores(score2Count map[float64]int64, n int) []ScoreCount {
 	scoreCounts := make([]ScoreCount, 0, len(score2Count))
 	for score, count := range score2Count {
 		scoreCounts = append(scoreCounts, ScoreCount{Score: strconv.FormatFloat(score, 'f', 2, 64), Count: count})
 	}
 
-	// 按照 Count 降序排序
+	// Sort by Count in descending order
 	sort.Slice(scoreCounts, func(i, j int) bool {
 		return scoreCounts[i].Count > scoreCounts[j].Count
 	})
@@ -1136,13 +1136,13 @@ func GetTopNScores(score2Count map[float64]int64, n int) []ScoreCount {
 		return scoreCounts
 	}
 
-	// 取出前 N 个（如果不足 N 个则返回全部）
+	// Take top N (if less than N, return all)
 	if len(scoreCounts) > n {
 		aggregatedCount := int64(0)
 		for i := 5; i < len(scoreCounts); i++ {
 			aggregatedCount += scoreCounts[i].Count
 		}
-		scoreCounts = append(scoreCounts[:n], ScoreCount{Score: "其他", Count: aggregatedCount})
+		scoreCounts = append(scoreCounts[:n], ScoreCount{Score: "Other", Count: aggregatedCount})
 	}
 	return scoreCounts
 }
@@ -1190,13 +1190,13 @@ func NewCategoricalAggregatorGroup() *CategoricalAggregatorGroup {
 	return m
 }
 
-// OptionDistributionAggregator 选项分布聚合器
+// OptionDistributionAggregator option distribution aggregator
 type OptionDistributionAggregator struct {
 	Option2Count map[string]int64 // optionID -> count
 	Total        int64
 }
 
-// Append 向聚合器中添加一个选项
+// Append adds an option to the aggregator
 func (a *OptionDistributionAggregator) Append(option string) {
 	if a.Option2Count == nil {
 		a.Option2Count = make(map[string]int64)
@@ -1211,7 +1211,7 @@ func (a *OptionDistributionAggregator) Append(option string) {
 	a.Total++
 }
 
-// Result 计算并返回选项分布的结果
+// Result calculates and returns the option distribution result
 func (a *OptionDistributionAggregator) Result() map[entity.AggregatorType]*entity.AggregateData {
 	optionCounts := GetTopNOptions(a.Option2Count, -1)
 	data := &entity.AggregateData{
@@ -1235,20 +1235,20 @@ func (a *OptionDistributionAggregator) Result() map[entity.AggregatorType]*entit
 	}
 }
 
-// OptionCount 选项及其计数
+// OptionCount option and its count
 type OptionCount struct {
 	Option string
 	Count  int64
 }
 
-// GetTopNOptions 获取出现次数最高的前 N 个选项
+// GetTopNOptions get top N options with highest counts
 func GetTopNOptions(option2Count map[string]int64, n int) []OptionCount {
 	optionCounts := make([]OptionCount, 0, len(option2Count))
 	for option, count := range option2Count {
 		optionCounts = append(optionCounts, OptionCount{Option: option, Count: count})
 	}
 
-	// 按照 Count 降序排序
+	// Sort by Count in descending order
 	sort.Slice(optionCounts, func(i, j int) bool {
 		return optionCounts[i].Count > optionCounts[j].Count
 	})
@@ -1257,13 +1257,13 @@ func GetTopNOptions(option2Count map[string]int64, n int) []OptionCount {
 		return optionCounts
 	}
 
-	// 取出前 N 个（如果不足 N 个则返回全部）
+	// Take top N (if less than N, return all)
 	if len(optionCounts) > n {
 		aggregatedCount := int64(0)
 		for i := 5; i < len(optionCounts); i++ {
 			aggregatedCount += optionCounts[i].Count
 		}
-		optionCounts = append(optionCounts[:n], OptionCount{Option: "其他", Count: aggregatedCount})
+		optionCounts = append(optionCounts[:n], OptionCount{Option: "Other", Count: aggregatedCount})
 	}
 	return optionCounts
 }
