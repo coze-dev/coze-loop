@@ -495,3 +495,123 @@ func OpenAPIPromptBasicDO2DTO(do *entity.Prompt) *openapi.PromptBasic {
 		}(),
 	}
 }
+
+// OpenAPIBatchToolDTO2DO 将openapi Tool转换为entity Tool
+func OpenAPIBatchToolDTO2DO(dtos []*openapi.Tool) []*entity.Tool {
+	if dtos == nil {
+		return nil
+	}
+	var tools []*entity.Tool
+	for _, dto := range dtos {
+		if dto != nil {
+			tools = append(tools, OpenAPIToolDTO2DO(dto))
+		}
+	}
+	return tools
+}
+
+// OpenAPIToolDTO2DO 将openapi Tool转换为entity Tool
+func OpenAPIToolDTO2DO(dto *openapi.Tool) *entity.Tool {
+	if dto == nil {
+		return nil
+	}
+	return &entity.Tool{
+		Type:     OpenAPIToolTypeDTO2DO(dto.GetType()),
+		Function: OpenAPIFunctionDTO2DO(dto.Function),
+	}
+}
+
+// OpenAPIFunctionDTO2DO 将openapi Function转换为entity Function
+func OpenAPIFunctionDTO2DO(dto *openapi.Function) *entity.Function {
+	if dto == nil {
+		return nil
+	}
+	return &entity.Function{
+		Name:        dto.GetName(),
+		Description: dto.GetDescription(),
+		Parameters:  dto.GetParameters(),
+	}
+}
+
+// OpenAPIToolCallConfigDTO2DO 将openapi ToolCallConfig转换为entity ToolCallConfig
+func OpenAPIToolCallConfigDTO2DO(dto *openapi.ToolCallConfig) *entity.ToolCallConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ToolCallConfig{
+		ToolChoice:              OpenAPIToolChoiceTypeDTO2DO(dto.GetToolChoice()),
+		ToolChoiceSpecification: OpenAPIToolChoiceSpecificationDTO2DO(dto.ToolChoiceSpecification),
+	}
+}
+
+// OpenAPIToolChoiceTypeDTO2DO 将openapi ToolChoiceType转换为entity ToolChoiceType
+func OpenAPIToolChoiceTypeDTO2DO(dto openapi.ToolChoiceType) entity.ToolChoiceType {
+	return entity.ToolChoiceType(dto)
+}
+
+// OpenAPIToolChoiceSpecificationDTO2DO 将openapi ToolChoiceSpecification转换为entity ToolChoiceSpecification
+func OpenAPIToolChoiceSpecificationDTO2DO(dto *openapi.ToolChoiceSpecification) *entity.ToolChoiceSpecification {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ToolChoiceSpecification{
+		Type: OpenAPIToolTypeDTO2DO(dto.GetType()),
+		Name: dto.GetName(),
+	}
+}
+
+// OpenAPIModelConfigDTO2DO 将domain prompt ModelConfig转换为entity ModelConfig
+func OpenAPIModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ModelConfig{
+		ModelID:           dto.GetModelID(),
+		MaxTokens:         dto.MaxTokens,
+		Temperature:       dto.Temperature,
+		TopK:              dto.TopK,
+		TopP:              dto.TopP,
+		PresencePenalty:   dto.PresencePenalty,
+		FrequencyPenalty:  dto.FrequencyPenalty,
+		JSONMode:          dto.JSONMode,
+		Extra:             dto.Extra,
+		ParamConfigValues: OpenAPIBatchParamConfigValueDTO2DO(dto.ParamConfigValues),
+	}
+}
+
+// OpenAPIBatchParamConfigValueDTO2DO 将domain prompt ParamConfigValue转换为entity ParamConfigValue
+func OpenAPIBatchParamConfigValueDTO2DO(dtos []*prompt.ParamConfigValue) []*entity.ParamConfigValue {
+	if dtos == nil {
+		return nil
+	}
+	var params []*entity.ParamConfigValue
+	for _, dto := range dtos {
+		if dto != nil {
+			params = append(params, OpenAPIParamConfigValueDTO2DO(dto))
+		}
+	}
+	return params
+}
+
+// OpenAPIParamConfigValueDTO2DO 将domain prompt ParamConfigValue转换为entity ParamConfigValue
+func OpenAPIParamConfigValueDTO2DO(dto *prompt.ParamConfigValue) *entity.ParamConfigValue {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ParamConfigValue{
+		Name:  dto.GetName(),
+		Label: dto.GetLabel(),
+		Value: OpenAPIParamOptionDTO2DO(dto.Value),
+	}
+}
+
+// OpenAPIParamOptionDTO2DO 将domain prompt ParamOption转换为entity ParamOption
+func OpenAPIParamOptionDTO2DO(dto *prompt.ParamOption) *entity.ParamOption {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ParamOption{
+		Value: dto.GetValue(),
+		Label: dto.GetLabel(),
+	}
+}

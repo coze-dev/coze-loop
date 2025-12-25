@@ -8,6 +8,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/cloudwego/kitex/pkg/streaming"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
 	"strings"
 )
 
@@ -1042,7 +1043,13 @@ type ExecuteRequest struct {
 	VariableVals []*VariableVal `thrift:"variable_vals,10,optional" frugal:"10,optional,list<VariableVal>" form:"variable_vals" json:"variable_vals,omitempty"`
 	// 消息
 	Messages []*Message `thrift:"messages,11,optional" frugal:"11,optional,list<Message>" form:"messages" json:"messages,omitempty"`
-	Base     *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 自定义工具
+	CustomTools []*Tool `thrift:"custom_tools,20,optional" frugal:"20,optional,list<Tool>" form:"custom_tools" json:"custom_tools,omitempty"`
+	// 自定义工具调用配置
+	CustomToolCallConfig *ToolCallConfig `thrift:"custom_tool_call_config,21,optional" frugal:"21,optional,ToolCallConfig" form:"custom_tool_call_config" json:"custom_tool_call_config,omitempty"`
+	// 自定义模型配置
+	CustomModelConfig *prompt.ModelConfig `thrift:"custom_model_config,22,optional" frugal:"22,optional,prompt.ModelConfig" form:"custom_model_config" json:"custom_model_config,omitempty"`
+	Base              *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewExecuteRequest() *ExecuteRequest {
@@ -1100,6 +1107,42 @@ func (p *ExecuteRequest) GetMessages() (v []*Message) {
 	return p.Messages
 }
 
+var ExecuteRequest_CustomTools_DEFAULT []*Tool
+
+func (p *ExecuteRequest) GetCustomTools() (v []*Tool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomTools() {
+		return ExecuteRequest_CustomTools_DEFAULT
+	}
+	return p.CustomTools
+}
+
+var ExecuteRequest_CustomToolCallConfig_DEFAULT *ToolCallConfig
+
+func (p *ExecuteRequest) GetCustomToolCallConfig() (v *ToolCallConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomToolCallConfig() {
+		return ExecuteRequest_CustomToolCallConfig_DEFAULT
+	}
+	return p.CustomToolCallConfig
+}
+
+var ExecuteRequest_CustomModelConfig_DEFAULT *prompt.ModelConfig
+
+func (p *ExecuteRequest) GetCustomModelConfig() (v *prompt.ModelConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomModelConfig() {
+		return ExecuteRequest_CustomModelConfig_DEFAULT
+	}
+	return p.CustomModelConfig
+}
+
 var ExecuteRequest_Base_DEFAULT *base.Base
 
 func (p *ExecuteRequest) GetBase() (v *base.Base) {
@@ -1123,6 +1166,15 @@ func (p *ExecuteRequest) SetVariableVals(val []*VariableVal) {
 func (p *ExecuteRequest) SetMessages(val []*Message) {
 	p.Messages = val
 }
+func (p *ExecuteRequest) SetCustomTools(val []*Tool) {
+	p.CustomTools = val
+}
+func (p *ExecuteRequest) SetCustomToolCallConfig(val *ToolCallConfig) {
+	p.CustomToolCallConfig = val
+}
+func (p *ExecuteRequest) SetCustomModelConfig(val *prompt.ModelConfig) {
+	p.CustomModelConfig = val
+}
 func (p *ExecuteRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -1132,6 +1184,9 @@ var fieldIDToName_ExecuteRequest = map[int16]string{
 	2:   "prompt_identifier",
 	10:  "variable_vals",
 	11:  "messages",
+	20:  "custom_tools",
+	21:  "custom_tool_call_config",
+	22:  "custom_model_config",
 	255: "Base",
 }
 
@@ -1149,6 +1204,18 @@ func (p *ExecuteRequest) IsSetVariableVals() bool {
 
 func (p *ExecuteRequest) IsSetMessages() bool {
 	return p.Messages != nil
+}
+
+func (p *ExecuteRequest) IsSetCustomTools() bool {
+	return p.CustomTools != nil
+}
+
+func (p *ExecuteRequest) IsSetCustomToolCallConfig() bool {
+	return p.CustomToolCallConfig != nil
+}
+
+func (p *ExecuteRequest) IsSetCustomModelConfig() bool {
+	return p.CustomModelConfig != nil
 }
 
 func (p *ExecuteRequest) IsSetBase() bool {
@@ -1200,6 +1267,30 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 22:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField22(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1307,6 +1398,45 @@ func (p *ExecuteRequest) ReadField11(iprot thrift.TProtocol) error {
 	p.Messages = _field
 	return nil
 }
+func (p *ExecuteRequest) ReadField20(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*Tool, 0, size)
+	values := make([]Tool, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.CustomTools = _field
+	return nil
+}
+func (p *ExecuteRequest) ReadField21(iprot thrift.TProtocol) error {
+	_field := NewToolCallConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CustomToolCallConfig = _field
+	return nil
+}
+func (p *ExecuteRequest) ReadField22(iprot thrift.TProtocol) error {
+	_field := prompt.NewModelConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CustomModelConfig = _field
+	return nil
+}
 func (p *ExecuteRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -1336,6 +1466,18 @@ func (p *ExecuteRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField22(oprot); err != nil {
+			fieldId = 22
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -1448,6 +1590,68 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *ExecuteRequest) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomTools() {
+		if err = oprot.WriteFieldBegin("custom_tools", thrift.LIST, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.CustomTools)); err != nil {
+			return err
+		}
+		for _, v := range p.CustomTools {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+func (p *ExecuteRequest) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomToolCallConfig() {
+		if err = oprot.WriteFieldBegin("custom_tool_call_config", thrift.STRUCT, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CustomToolCallConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
+func (p *ExecuteRequest) writeField22(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomModelConfig() {
+		if err = oprot.WriteFieldBegin("custom_model_config", thrift.STRUCT, 22); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CustomModelConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
+}
 func (p *ExecuteRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -1491,6 +1695,15 @@ func (p *ExecuteRequest) DeepEqual(ano *ExecuteRequest) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.Messages) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.CustomTools) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.CustomToolCallConfig) {
+		return false
+	}
+	if !p.Field22DeepEqual(ano.CustomModelConfig) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -1541,6 +1754,33 @@ func (p *ExecuteRequest) Field11DeepEqual(src []*Message) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ExecuteRequest) Field20DeepEqual(src []*Tool) bool {
+
+	if len(p.CustomTools) != len(src) {
+		return false
+	}
+	for i, v := range p.CustomTools {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ExecuteRequest) Field21DeepEqual(src *ToolCallConfig) bool {
+
+	if !p.CustomToolCallConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExecuteRequest) Field22DeepEqual(src *prompt.ModelConfig) bool {
+
+	if !p.CustomModelConfig.DeepEqual(src) {
+		return false
 	}
 	return true
 }

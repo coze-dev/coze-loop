@@ -36,6 +36,10 @@ struct ExecuteRequest {
     10: optional list<VariableVal> variable_vals (api.body="variable_vals") // 变量值
     11: optional list<Message> messages (api.body="messages") // 消息
 
+    20: optional list<Tool> custom_tools (api.body="custom_tools") // 自定义工具
+    21: optional ToolCallConfig custom_tool_call_config (api.body="custom_tool_call_config") // 自定义工具调用配置
+    22: optional prompt.ModelConfig custom_model_config (api.body="custom_model_config") // 自定义模型配置
+
     255: optional base.Base Base
 }
 
