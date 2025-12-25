@@ -303,6 +303,27 @@ func (l *LocalExperimentService) BatchGetExperimentResult_(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalExperimentService) CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest, callOptions ...callopt.Option) (*expt.CalculateExperimentAggrResultResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceCalculateExperimentAggrResultArgs)
+		result := out.(*expt.ExperimentServiceCalculateExperimentAggrResultResult)
+		resp, err := l.impl.CalculateExperimentAggrResult_(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceCalculateExperimentAggrResultArgs{Req: req}
+	result := &expt.ExperimentServiceCalculateExperimentAggrResultResult{}
+	ctx = l.injectRPCInfo(ctx, "CalculateExperimentAggrResult_")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) BatchGetExperimentAggrResult_(ctx context.Context, req *expt.BatchGetExperimentAggrResultRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentAggrResultResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*expt.ExperimentServiceBatchGetExperimentAggrResultArgs)

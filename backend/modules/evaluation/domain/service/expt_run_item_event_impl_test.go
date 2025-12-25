@@ -98,7 +98,7 @@ func TestExptItemEventEvalServiceImpl_Eval(t *testing.T) {
 		benefitService:           mockBenefit,
 	}
 
-	// 构造事件流测试用例
+	// Test case for event stream
 	tests := []struct {
 		name    string
 		prepare func()
@@ -106,9 +106,9 @@ func TestExptItemEventEvalServiceImpl_Eval(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常流程-全部成功",
+			name: "Normal flow - all success",
 			prepare: func() {
-				// 只需mock endpoints链路全部返回nil
+				// Mock all endpoints returning nil
 				service.endpoints = func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 					return nil
 				}
@@ -117,7 +117,7 @@ func TestExptItemEventEvalServiceImpl_Eval(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "链路返回错误",
+			name: "Chain returns error",
 			prepare: func() {
 				service.endpoints = func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 					return errors.New("mock error")
@@ -157,7 +157,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventCheck(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "实验已完成-直接返回nil",
+			name: "Expt finished - return nil",
 			prepare: func() {
 				mockManager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Success)}, nil)
@@ -166,7 +166,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventCheck(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "实验正在终止-直接返回nil",
+			name: "Expt terminating - return nil",
 			prepare: func() {
 				mockManager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Terminating)}, nil)
@@ -175,7 +175,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventCheck(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "实验正在排空-直接返回nil",
+			name: "Expt draining - return nil",
 			prepare: func() {
 				mockManager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Draining)}, nil)
@@ -184,7 +184,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventCheck(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "实验运行中-继续执行",
+			name: "Expt processing - continue",
 			prepare: func() {
 				mockManager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.ExptRunLog{Status: int64(entity.ExptStatus_Processing)}, nil)
@@ -193,7 +193,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventCheck(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "获取运行日志失败",
+			name: "Get run log failed",
 			prepare: func() {
 				mockManager.EXPECT().GetRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("mock error"))
@@ -218,7 +218,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventCheck(t *testing.T) {
 				assert.False(t, nextCalled)
 			} else {
 				assert.NoError(t, err)
-				if tt.name == "实验运行中-继续执行" {
+				if tt.name == "Expt processing - continue" {
 					assert.True(t, nextCalled)
 				} else {
 					assert.False(t, nextCalled)
@@ -252,7 +252,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "执行成功-不重试",
+			name: "Success - no retry",
 			prepare: func() {
 				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.RetryConf{
@@ -267,7 +267,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "执行失败-需要重试",
+			name: "Failed - retry needed",
 			prepare: func() {
 				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.RetryConf{
@@ -283,7 +283,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "执行失败-超过重试次数",
+			name: "Failed - retry limit exceeded",
 			prepare: func() {
 				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.RetryConf{
@@ -298,7 +298,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "执行失败-欠费终止",
+			name: "Failed - in debt termination",
 			prepare: func() {
 				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.RetryConf{
@@ -306,9 +306,9 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr(t *testing.T) {
 						RetryIntervalSecond: 60,
 						IsInDebt:            true,
 					})
-				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7个参数)
+				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7 parameters)
 				mockManager.EXPECT().CompleteRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				// CompleteExpt: ctx, exptID, spaceID, session, WithStatus, WithStatusMessage, WithCID, WithCompleteInterval (8个参数)
+				// CompleteExpt: ctx, exptID, spaceID, session, WithStatus, WithStatusMessage, WithCID, WithCompleteInterval (8 parameters)
 				mockManager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockMetric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 			},
@@ -351,16 +351,17 @@ func TestExptItemEventEvalServiceImpl_HandleEventLock(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "获取锁成功",
+			name: "Acquire lock success",
 			prepare: func() {
 				mockMutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(true, context.Background(), func() {}, nil)
+				mockMutex.EXPECT().Unlock(gomock.Any()).Return(true, nil)
 			},
 			event:   &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3},
 			wantErr: false,
 		},
 		{
-			name: "获取锁失败-已被占用",
+			name: "Acquire lock failed - already occupied",
 			prepare: func() {
 				mockMutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(false, nil, nil, nil)
@@ -369,7 +370,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventLock(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "获取锁失败-错误",
+			name: "Acquire lock failed - error",
 			prepare: func() {
 				mockMutex.EXPECT().LockWithRenew(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(false, nil, nil, errors.New("mock error"))
@@ -394,7 +395,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventLock(t *testing.T) {
 				assert.False(t, nextCalled)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.name == "获取锁成功", nextCalled)
+				assert.Equal(t, tt.name == "Acquire lock success", nextCalled)
 			}
 		})
 	}
@@ -412,7 +413,7 @@ func TestExptItemEventEvalServiceImpl_WithCtx(t *testing.T) {
 		wantLogID string
 	}{
 		{
-			name: "正常流程",
+			name: "Normal flow",
 			eiec: &entity.ExptItemEvalCtx{
 				Event: &entity.ExptItemEvalEvent{
 					ExptID:    1,
@@ -473,7 +474,7 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常流程",
+			name: "Normal flow",
 			prepare: func() {
 				mockManager.EXPECT().GetDetail(gomock.Any(), int64(1), int64(3), gomock.Any()).Return(mockExpt, nil)
 				mockEvalSetItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{mockEvalSetItem}, nil)
@@ -493,7 +494,7 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "获取实验详情失败",
+			name: "Get expt detail failed",
 			prepare: func() {
 				mockManager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
 			},
@@ -504,7 +505,7 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "获取评估项失败",
+			name: "Get eval set item failed",
 			prepare: func() {
 				mockManager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockExpt, nil)
 				mockEvalSetItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
@@ -516,7 +517,7 @@ func TestExptItemEventEvalServiceImpl_BuildExptRecordEvalCtx(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "评估项数量不匹配",
+			name: "Eval set item count mismatch",
 			prepare: func() {
 				mockManager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockExpt, nil)
 				mockEvalSetItemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{}, nil)
@@ -577,7 +578,7 @@ func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult(t *testing.T)
 		wantErr bool
 	}{
 		{
-			name: "正常流程",
+			name: "Normal flow",
 			prepare: func() {
 				mockTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), int64(1), int64(3)).Return(mockTurnRunLogs, nil)
 				mockItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), int64(1), int64(2), int64(1), int64(3)).Return(mockItemRunLog, nil)
@@ -597,7 +598,7 @@ func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult(t *testing.T)
 			wantErr: false,
 		},
 		{
-			name: "获取轮次运行日志失败",
+			name: "Get turn run logs failed",
 			prepare: func() {
 				mockTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
 			},
@@ -610,7 +611,7 @@ func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult(t *testing.T)
 			wantErr: true,
 		},
 		{
-			name: "获取评估项运行日志失败",
+			name: "Get item run log failed",
 			prepare: func() {
 				mockTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTurnRunLogs, nil)
 				mockItemResultRepo.EXPECT().GetItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
@@ -659,7 +660,7 @@ func TestNewRecordEvalMode(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Submit模式",
+			name: "Submit mode",
 			event: &entity.ExptItemEvalEvent{
 				ExptRunMode: entity.EvaluationModeSubmit,
 			},
@@ -667,7 +668,7 @@ func TestNewRecordEvalMode(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Append模式",
+			name: "Append mode",
 			event: &entity.ExptItemEvalEvent{
 				ExptRunMode: entity.EvaluationModeAppend,
 			},
@@ -675,7 +676,7 @@ func TestNewRecordEvalMode(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "FailRetry模式",
+			name: "FailRetry mode",
 			event: &entity.ExptItemEvalEvent{
 				ExptRunMode: entity.EvaluationModeFailRetry,
 			},
@@ -683,7 +684,7 @@ func TestNewRecordEvalMode(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "未知模式",
+			name: "Unknown mode",
 			event: &entity.ExptItemEvalEvent{
 				ExptRunMode: entity.ExptRunMode(999),
 			},
@@ -719,7 +720,7 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常流程",
+			name: "Normal flow",
 			prepare: func(_ *repoMocks.MockIExptItemResultRepo, mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo, _ *idgenmocks.MockIIDGenerator) {
 				// placeholder to satisfy type; real expectations set below per-correct types
 			},
@@ -738,7 +739,7 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "生成ID失败",
+			name: "Generate ID failed",
 			prepare: func(_ *repoMocks.MockIExptItemResultRepo, mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo, mockIdgen *idgenmocks.MockIIDGenerator) {
 				mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
 				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
@@ -753,7 +754,7 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "创建运行日志失败",
+			name: "Create run log failed",
 			prepare: func(_ *repoMocks.MockIExptItemResultRepo, mockExptTurnResultRepo *repoMocks.MockIExptTurnResultRepo, mockIdgen *idgenmocks.MockIIDGenerator) {
 				mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
 				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1}, nil)
@@ -779,8 +780,8 @@ func TestExptRecordEvalModeSubmit_PreEval(t *testing.T) {
 			mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 			mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
 
-			// 每个子用例独立设置期望
-			if tt.name == "正常流程" {
+			// Set expectations for each sub-test
+			if tt.name == "Normal flow" {
 				mockExptTurnResultRepo.EXPECT().GetItemTurnRunLogs(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResultRunLog{}, nil)
 				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1}, nil)
 				mockExptTurnResultRepo.EXPECT().BatchCreateNXRunLog(gomock.Any(), gomock.Any()).Return(nil)
@@ -816,7 +817,7 @@ func TestExptRecordEvalModeSubmit_PostEval(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "正常流程",
+			name:    "Normal flow",
 			eiec:    &entity.ExptItemEvalCtx{},
 			wantErr: false,
 		},
@@ -859,7 +860,7 @@ func TestExptRecordEvalModeFailRetry_PreEval(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常流程",
+			name: "Normal flow",
 			prepare: func() {
 				mockResultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTurnResults, nil)
 				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1}, nil)
@@ -878,7 +879,7 @@ func TestExptRecordEvalModeFailRetry_PreEval(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "获取轮次结果失败",
+			name: "Get turn results failed",
 			prepare: func() {
 				mockResultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
 			},
@@ -891,7 +892,7 @@ func TestExptRecordEvalModeFailRetry_PreEval(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "生成ID失败",
+			name: "Generate ID failed",
 			prepare: func() {
 				mockResultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTurnResults, nil)
 				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
@@ -905,7 +906,7 @@ func TestExptRecordEvalModeFailRetry_PreEval(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "创建运行日志失败",
+			name: "Create run log failed",
 			prepare: func() {
 				mockResultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockTurnResults, nil)
 				mockIdgen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1}, nil)
@@ -946,7 +947,7 @@ func TestExptRecordEvalModeFailRetry_PostEval(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "正常流程",
+			name:    "Normal flow",
 			eiec:    &entity.ExptItemEvalCtx{},
 			wantErr: false,
 		},
@@ -960,6 +961,81 @@ func TestExptRecordEvalModeFailRetry_PostEval(t *testing.T) {
 				return
 			}
 			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestExptItemEventEvalServiceImpl_HandleEventExec(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := svcmocks.NewMockIExptManager(ctrl)
+	mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+	mockConfiger := componentMocks.NewMockIConfiger(ctrl)
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvalTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockEvaluatorRecordSvc := svcmocks.NewMockEvaluatorRecordService(ctrl)
+	mockEvaluatorSvc := svcmocks.NewMockEvaluatorService(ctrl)
+	mockBenefit := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalAsyncRepo := repoMocks.NewMockIEvalAsyncRepo(ctrl)
+	mockResultSvc := svcmocks.NewMockExptResultService(ctrl)
+	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+
+	service := &ExptItemEventEvalServiceImpl{
+		manager:                  mockManager,
+		evaluationSetItemService: mockEvalSetItemSvc,
+		exptTurnResultRepo:       mockExptTurnResultRepo,
+		exptItemResultRepo:       mockExptItemResultRepo,
+		configer:                 mockConfiger,
+		metric:                   mockMetric,
+		evaTargetService:         mockEvalTargetSvc,
+		evaluatorRecordService:   mockEvaluatorRecordSvc,
+		evaluatorService:         mockEvaluatorSvc,
+		benefitService:           mockBenefit,
+		evalAsyncRepo:            mockEvalAsyncRepo,
+		resultSvc:                mockResultSvc,
+		idgen:                    mockIdgen,
+		experimentRepo:           mockExperimentRepo,
+		exptStatsRepo:            mockExptStatsRepo,
+	}
+
+	tests := []struct {
+		name    string
+		prepare func()
+		event   *entity.ExptItemEvalEvent
+		wantErr bool
+	}{
+		{
+			name: "Eval error",
+			prepare: func() {
+				mockManager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("mock error"))
+			},
+			event:   &entity.ExptItemEvalEvent{ExptID: 1, SpaceID: 3, EvalSetItemID: 1},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.prepare()
+			nextCalled := false
+			next := func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
+				nextCalled = true
+				return nil
+			}
+			handler := service.HandleEventExec(next)
+			err := handler(context.Background(), tt.event)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.False(t, nextCalled)
+			} else {
+				assert.NoError(t, err)
+				assert.True(t, nextCalled)
+			}
 		})
 	}
 }

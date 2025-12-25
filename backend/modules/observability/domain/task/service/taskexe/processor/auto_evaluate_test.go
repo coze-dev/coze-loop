@@ -18,6 +18,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/cloudwego/kitex/client/callopt"
+
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
@@ -178,6 +179,11 @@ func makeSchemaJSON(t *testing.T, fieldName string, contentType common.ContentTy
 type fakeExperimentClient struct {
 	invokeResp *expt.InvokeExperimentResponse
 	invokeErr  error
+}
+
+func (f *fakeExperimentClient) CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest, callOptions ...callopt.Option) (r *expt.CalculateExperimentAggrResultResponse, err error) {
+	// TODO implement me
+	panic("implement me")
 }
 
 func (f *fakeExperimentClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error) {

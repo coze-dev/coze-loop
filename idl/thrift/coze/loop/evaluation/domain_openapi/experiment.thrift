@@ -84,6 +84,16 @@ struct EvaluatorAggregateResult {
     20: optional list<AggregatorResult> aggregator_results
 }
 
+struct EvalTargetAggregateResult {
+    1: optional i64 target_id (api.js_conv = 'true')
+    2: optional i64 target_version_id (api.js_conv = 'true')
+
+    5: optional list<AggregatorResult> latency
+    6: optional list<AggregatorResult> input_tokens
+    7: optional list<AggregatorResult> output_tokens
+    8: optional list<AggregatorResult> total_tokens
+}
+
 // 一种聚合器类型的聚合结果
 struct  AggregatorResult {
     1: optional AggregatorType aggregator_type

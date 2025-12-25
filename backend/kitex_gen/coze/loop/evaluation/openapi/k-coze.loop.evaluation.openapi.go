@@ -14742,6 +14742,20 @@ func (p *GetExperimentAggrResultOpenAPIData) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -14785,6 +14799,18 @@ func (p *GetExperimentAggrResultOpenAPIData) FastReadField1(buf []byte) (int, er
 	return offset, nil
 }
 
+func (p *GetExperimentAggrResultOpenAPIData) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+	_field := experiment.NewEvalTargetAggregateResult_()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.EvalTargetAggrResult_ = _field
+	return offset, nil
+}
+
 func (p *GetExperimentAggrResultOpenAPIData) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -14793,6 +14819,7 @@ func (p *GetExperimentAggrResultOpenAPIData) FastWriteNocopy(buf []byte, w thrif
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -14802,6 +14829,7 @@ func (p *GetExperimentAggrResultOpenAPIData) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -14823,6 +14851,15 @@ func (p *GetExperimentAggrResultOpenAPIData) fastWriteField1(buf []byte, w thrif
 	return offset
 }
 
+func (p *GetExperimentAggrResultOpenAPIData) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalTargetAggrResult_() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
+		offset += p.EvalTargetAggrResult_.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *GetExperimentAggrResultOpenAPIData) field1Length() int {
 	l := 0
 	if p.IsSetEvaluatorResults() {
@@ -14832,6 +14869,15 @@ func (p *GetExperimentAggrResultOpenAPIData) field1Length() int {
 			_ = v
 			l += v.BLength()
 		}
+	}
+	return l
+}
+
+func (p *GetExperimentAggrResultOpenAPIData) field2Length() int {
+	l := 0
+	if p.IsSetEvalTargetAggrResult_() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.EvalTargetAggrResult_.BLength()
 	}
 	return l
 }
@@ -14856,6 +14902,15 @@ func (p *GetExperimentAggrResultOpenAPIData) DeepCopy(s interface{}) error {
 			p.EvaluatorResults = append(p.EvaluatorResults, _elem)
 		}
 	}
+
+	var _evalTargetAggrResult_ *experiment.EvalTargetAggregateResult_
+	if src.EvalTargetAggrResult_ != nil {
+		_evalTargetAggrResult_ = &experiment.EvalTargetAggregateResult_{}
+		if err := _evalTargetAggrResult_.DeepCopy(src.EvalTargetAggrResult_); err != nil {
+			return err
+		}
+	}
+	p.EvalTargetAggrResult_ = _evalTargetAggrResult_
 
 	return nil
 }

@@ -253,6 +253,18 @@ struct BatchGetExperimentAggrResultResponse {
     255: base.BaseResp BaseResp
 }
 
+struct CalculateExperimentAggrResultRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true')
+    2: required i64 expt_id (api.path = 'expt_id', api.json_conv = 'true')
+
+    255: optional base.Base Base
+}
+
+struct CalculateExperimentAggrResultResponse {
+
+    255: base.BaseResp BaseResp
+}
+
 struct CheckExperimentNameRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional string name (api.body='name')
@@ -599,6 +611,7 @@ service ExperimentService {
     // MGetExperimentResult 获取实验结果
     BatchGetExperimentResultResponse BatchGetExperimentResult(1: BatchGetExperimentResultRequest req) (api.post = "/api/evaluation/v1/experiments/results/batch_get")
 
+    CalculateExperimentAggrResultResponse CalculateExperimentAggrResult(1: CalculateExperimentAggrResultRequest req) (api.post = "/api/evaluation/v1/experiments/:expt_id/aggr_results")
     BatchGetExperimentAggrResultResponse BatchGetExperimentAggrResult(1: BatchGetExperimentAggrResultRequest req) (api.post = "/api/evaluation/v1/experiments/aggr_results/batch_get")
 
     // 在线实验

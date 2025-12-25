@@ -20701,7 +20701,8 @@ func (p *GetExperimentAggrResultOApiResponse) Field255DeepEqual(src *base.BaseRe
 }
 
 type GetExperimentAggrResultOpenAPIData struct {
-	EvaluatorResults []*experiment.EvaluatorAggregateResult_ `thrift:"evaluator_results,1,optional" frugal:"1,optional,list<experiment.EvaluatorAggregateResult_>" json:"evaluator_results" form:"evaluator_results" query:"evaluator_results"`
+	EvaluatorResults      []*experiment.EvaluatorAggregateResult_ `thrift:"evaluator_results,1,optional" frugal:"1,optional,list<experiment.EvaluatorAggregateResult_>" json:"evaluator_results" form:"evaluator_results" query:"evaluator_results"`
+	EvalTargetAggrResult_ *experiment.EvalTargetAggregateResult_  `thrift:"eval_target_aggr_result,2,optional" frugal:"2,optional,experiment.EvalTargetAggregateResult_" form:"eval_target_aggr_result" json:"eval_target_aggr_result,omitempty" query:"eval_target_aggr_result"`
 }
 
 func NewGetExperimentAggrResultOpenAPIData() *GetExperimentAggrResultOpenAPIData {
@@ -20722,16 +20723,36 @@ func (p *GetExperimentAggrResultOpenAPIData) GetEvaluatorResults() (v []*experim
 	}
 	return p.EvaluatorResults
 }
+
+var GetExperimentAggrResultOpenAPIData_EvalTargetAggrResult__DEFAULT *experiment.EvalTargetAggregateResult_
+
+func (p *GetExperimentAggrResultOpenAPIData) GetEvalTargetAggrResult_() (v *experiment.EvalTargetAggregateResult_) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalTargetAggrResult_() {
+		return GetExperimentAggrResultOpenAPIData_EvalTargetAggrResult__DEFAULT
+	}
+	return p.EvalTargetAggrResult_
+}
 func (p *GetExperimentAggrResultOpenAPIData) SetEvaluatorResults(val []*experiment.EvaluatorAggregateResult_) {
 	p.EvaluatorResults = val
+}
+func (p *GetExperimentAggrResultOpenAPIData) SetEvalTargetAggrResult_(val *experiment.EvalTargetAggregateResult_) {
+	p.EvalTargetAggrResult_ = val
 }
 
 var fieldIDToName_GetExperimentAggrResultOpenAPIData = map[int16]string{
 	1: "evaluator_results",
+	2: "eval_target_aggr_result",
 }
 
 func (p *GetExperimentAggrResultOpenAPIData) IsSetEvaluatorResults() bool {
 	return p.EvaluatorResults != nil
+}
+
+func (p *GetExperimentAggrResultOpenAPIData) IsSetEvalTargetAggrResult_() bool {
+	return p.EvalTargetAggrResult_ != nil
 }
 
 func (p *GetExperimentAggrResultOpenAPIData) Read(iprot thrift.TProtocol) (err error) {
@@ -20755,6 +20776,14 @@ func (p *GetExperimentAggrResultOpenAPIData) Read(iprot thrift.TProtocol) (err e
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -20812,6 +20841,14 @@ func (p *GetExperimentAggrResultOpenAPIData) ReadField1(iprot thrift.TProtocol) 
 	p.EvaluatorResults = _field
 	return nil
 }
+func (p *GetExperimentAggrResultOpenAPIData) ReadField2(iprot thrift.TProtocol) error {
+	_field := experiment.NewEvalTargetAggregateResult_()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvalTargetAggrResult_ = _field
+	return nil
+}
 
 func (p *GetExperimentAggrResultOpenAPIData) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -20821,6 +20858,10 @@ func (p *GetExperimentAggrResultOpenAPIData) Write(oprot thrift.TProtocol) (err 
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -20867,6 +20908,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *GetExperimentAggrResultOpenAPIData) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalTargetAggrResult_() {
+		if err = oprot.WriteFieldBegin("eval_target_aggr_result", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvalTargetAggrResult_.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 
 func (p *GetExperimentAggrResultOpenAPIData) String() string {
 	if p == nil {
@@ -20885,6 +20944,9 @@ func (p *GetExperimentAggrResultOpenAPIData) DeepEqual(ano *GetExperimentAggrRes
 	if !p.Field1DeepEqual(ano.EvaluatorResults) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.EvalTargetAggrResult_) {
+		return false
+	}
 	return true
 }
 
@@ -20898,6 +20960,13 @@ func (p *GetExperimentAggrResultOpenAPIData) Field1DeepEqual(src []*experiment.E
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *GetExperimentAggrResultOpenAPIData) Field2DeepEqual(src *experiment.EvalTargetAggregateResult_) bool {
+
+	if !p.EvalTargetAggrResult_.DeepEqual(src) {
+		return false
 	}
 	return true
 }

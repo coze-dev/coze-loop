@@ -16,21 +16,16 @@ import (
 )
 
 func TestIFileProvider_MGetFileURL(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockProvider := mocks.NewMockIFileProvider(ctrl)
-
 	tests := []struct {
 		name      string
-		setupMock func()
+		setupMock func(*mocks.MockIFileProvider)
 		keys      []string
 		wantUrls  map[string]string
 		wantErr   bool
 	}{
 		{
 			name: "success - single key",
-			setupMock: func() {
+			setupMock: func(mockProvider *mocks.MockIFileProvider) {
 				mockProvider.EXPECT().
 					MGetFileURL(gomock.Any(), []string{"key1"}).
 					Return(map[string]string{"key1": "https://example.com/file1"}, nil).
@@ -42,7 +37,7 @@ func TestIFileProvider_MGetFileURL(t *testing.T) {
 		},
 		{
 			name: "success - multiple keys",
-			setupMock: func() {
+			setupMock: func(mockProvider *mocks.MockIFileProvider) {
 				mockProvider.EXPECT().
 					MGetFileURL(gomock.Any(), []string{"key1", "key2"}).
 					Return(map[string]string{
@@ -60,7 +55,7 @@ func TestIFileProvider_MGetFileURL(t *testing.T) {
 		},
 		{
 			name: "success - empty keys",
-			setupMock: func() {
+			setupMock: func(mockProvider *mocks.MockIFileProvider) {
 				mockProvider.EXPECT().
 					MGetFileURL(gomock.Any(), []string{}).
 					Return(map[string]string{}, nil).
@@ -72,7 +67,7 @@ func TestIFileProvider_MGetFileURL(t *testing.T) {
 		},
 		{
 			name: "error - provider returns error",
-			setupMock: func() {
+			setupMock: func(mockProvider *mocks.MockIFileProvider) {
 				mockProvider.EXPECT().
 					MGetFileURL(gomock.Any(), []string{"key1"}).
 					Return(nil, errors.New("provider error")).
@@ -84,7 +79,7 @@ func TestIFileProvider_MGetFileURL(t *testing.T) {
 		},
 		{
 			name: "success - nil input handled",
-			setupMock: func() {
+			setupMock: func(mockProvider *mocks.MockIFileProvider) {
 				mockProvider.EXPECT().
 					MGetFileURL(gomock.Any(), nil).
 					Return(nil, nil).
@@ -100,7 +95,11 @@ func TestIFileProvider_MGetFileURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			tt.setupMock()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockProvider := mocks.NewMockIFileProvider(ctrl)
+			tt.setupMock(mockProvider)
 
 			urls, err := mockProvider.MGetFileURL(context.Background(), tt.keys)
 

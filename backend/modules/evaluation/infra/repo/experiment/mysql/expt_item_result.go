@@ -10,6 +10,7 @@ import (
 
 	"gorm.io/gen"
 	"gorm.io/gorm/clause"
+	"gorm.io/hints"
 	"gorm.io/plugin/dbresolver"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -273,6 +274,7 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 	}
 
 	query := q.WithContext(ctx).
+		Clauses(hints.ForceIndex("uk_expt_run_item_turn")).
 		Where(conds...).
 		Order(q.ID.Asc())
 	if limit > 0 {

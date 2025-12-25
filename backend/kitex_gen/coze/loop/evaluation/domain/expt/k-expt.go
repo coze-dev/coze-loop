@@ -9320,6 +9320,34 @@ func (p *ExptAggregateResult_) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9440,6 +9468,32 @@ func (p *ExptAggregateResult_) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExptAggregateResult_) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+	_field := NewEvalTargetAggregateResult_()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.EvalTargetAggrResult_ = _field
+	return offset, nil
+}
+
+func (p *ExptAggregateResult_) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.UpdateTime = _field
+	return offset, nil
+}
+
 func (p *ExptAggregateResult_) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -9448,9 +9502,11 @@ func (p *ExptAggregateResult_) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -9463,6 +9519,8 @@ func (p *ExptAggregateResult_) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -9518,6 +9576,24 @@ func (p *ExptAggregateResult_) fastWriteField4(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
+func (p *ExptAggregateResult_) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalTargetAggrResult_() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
+		offset += p.EvalTargetAggrResult_.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ExptAggregateResult_) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetUpdateTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 6)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.UpdateTime)
+	}
+	return offset
+}
+
 func (p *ExptAggregateResult_) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -9560,6 +9636,24 @@ func (p *ExptAggregateResult_) field4Length() int {
 			l += thrift.Binary.I64Length()
 			l += v.BLength()
 		}
+	}
+	return l
+}
+
+func (p *ExptAggregateResult_) field5Length() int {
+	l := 0
+	if p.IsSetEvalTargetAggrResult_() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.EvalTargetAggrResult_.BLength()
+	}
+	return l
+}
+
+func (p *ExptAggregateResult_) field6Length() int {
+	l := 0
+	if p.IsSetUpdateTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
 	}
 	return l
 }
@@ -9613,6 +9707,20 @@ func (p *ExptAggregateResult_) DeepCopy(s interface{}) error {
 		}
 	}
 
+	var _evalTargetAggrResult_ *EvalTargetAggregateResult_
+	if src.EvalTargetAggrResult_ != nil {
+		_evalTargetAggrResult_ = &EvalTargetAggregateResult_{}
+		if err := _evalTargetAggrResult_.DeepCopy(src.EvalTargetAggrResult_); err != nil {
+			return err
+		}
+	}
+	p.EvalTargetAggrResult_ = _evalTargetAggrResult_
+
+	if src.UpdateTime != nil {
+		tmp := *src.UpdateTime
+		p.UpdateTime = &tmp
+	}
+
 	return nil
 }
 
@@ -9623,7 +9731,6 @@ func (p *EvalTargetAggregateResult_) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetTargetID bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -9641,7 +9748,6 @@ func (p *EvalTargetAggregateResult_) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetTargetID = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -9650,7 +9756,7 @@ func (p *EvalTargetAggregateResult_) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
@@ -9663,9 +9769,51 @@ func (p *EvalTargetAggregateResult_) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 3:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField3(buf[offset:])
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField8(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -9686,10 +9834,6 @@ func (p *EvalTargetAggregateResult_) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetTargetID {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -9697,25 +9841,37 @@ ReadFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvalTargetAggregateResult_[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_EvalTargetAggregateResult_[fieldId]))
 }
 
 func (p *EvalTargetAggregateResult_) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.TargetID = _field
 	return offset, nil
 }
 
 func (p *EvalTargetAggregateResult_) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TargetVersionID = _field
+	return offset, nil
+}
+
+func (p *EvalTargetAggregateResult_) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -9736,21 +9892,82 @@ func (p *EvalTargetAggregateResult_) FastReadField2(buf []byte) (int, error) {
 
 		_field = append(_field, _elem)
 	}
-	p.AggregatorResults = _field
+	p.Latency = _field
 	return offset, nil
 }
 
-func (p *EvalTargetAggregateResult_) FastReadField3(buf []byte) (int, error) {
+func (p *EvalTargetAggregateResult_) FastReadField6(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
 		return offset, err
-	} else {
-		offset += l
-		_field = &v
 	}
-	p.Name = _field
+	_field := make([]*AggregatorResult_, 0, size)
+	values := make([]AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.InputTokens = _field
+	return offset, nil
+}
+
+func (p *EvalTargetAggregateResult_) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*AggregatorResult_, 0, size)
+	values := make([]AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.OutputTokens = _field
+	return offset, nil
+}
+
+func (p *EvalTargetAggregateResult_) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*AggregatorResult_, 0, size)
+	values := make([]AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.TotalTokens = _field
 	return offset, nil
 }
 
@@ -9763,7 +9980,10 @@ func (p *EvalTargetAggregateResult_) FastWriteNocopy(buf []byte, w thrift.Nocopy
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
-		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -9774,7 +9994,10 @@ func (p *EvalTargetAggregateResult_) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
-		l += p.field3Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+		l += p.field8Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -9782,19 +10005,30 @@ func (p *EvalTargetAggregateResult_) BLength() int {
 
 func (p *EvalTargetAggregateResult_) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.TargetID)
+	if p.IsSetTargetID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.TargetID)
+	}
 	return offset
 }
 
 func (p *EvalTargetAggregateResult_) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetAggregatorResults() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
+	if p.IsSetTargetVersionID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.TargetVersionID)
+	}
+	return offset
+}
+
+func (p *EvalTargetAggregateResult_) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLatency() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 5)
 		listBeginOffset := offset
 		offset += thrift.Binary.ListBeginLength()
 		var length int
-		for _, v := range p.AggregatorResults {
+		for _, v := range p.Latency {
 			length++
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
@@ -9803,28 +10037,78 @@ func (p *EvalTargetAggregateResult_) fastWriteField2(buf []byte, w thrift.Nocopy
 	return offset
 }
 
-func (p *EvalTargetAggregateResult_) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvalTargetAggregateResult_) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetName() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Name)
+	if p.IsSetInputTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 6)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.InputTokens {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *EvalTargetAggregateResult_) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOutputTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 7)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.OutputTokens {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *EvalTargetAggregateResult_) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTotalTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 8)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.TotalTokens {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
 
 func (p *EvalTargetAggregateResult_) field1Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetTargetID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
 func (p *EvalTargetAggregateResult_) field2Length() int {
 	l := 0
-	if p.IsSetAggregatorResults() {
+	if p.IsSetTargetVersionID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *EvalTargetAggregateResult_) field5Length() int {
+	l := 0
+	if p.IsSetLatency() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.AggregatorResults {
+		for _, v := range p.Latency {
 			_ = v
 			l += v.BLength()
 		}
@@ -9832,11 +10116,41 @@ func (p *EvalTargetAggregateResult_) field2Length() int {
 	return l
 }
 
-func (p *EvalTargetAggregateResult_) field3Length() int {
+func (p *EvalTargetAggregateResult_) field6Length() int {
 	l := 0
-	if p.IsSetName() {
+	if p.IsSetInputTokens() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.Name)
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.InputTokens {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *EvalTargetAggregateResult_) field7Length() int {
+	l := 0
+	if p.IsSetOutputTokens() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.OutputTokens {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *EvalTargetAggregateResult_) field8Length() int {
+	l := 0
+	if p.IsSetTotalTokens() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.TotalTokens {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -9847,11 +10161,19 @@ func (p *EvalTargetAggregateResult_) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	p.TargetID = src.TargetID
+	if src.TargetID != nil {
+		tmp := *src.TargetID
+		p.TargetID = &tmp
+	}
 
-	if src.AggregatorResults != nil {
-		p.AggregatorResults = make([]*AggregatorResult_, 0, len(src.AggregatorResults))
-		for _, elem := range src.AggregatorResults {
+	if src.TargetVersionID != nil {
+		tmp := *src.TargetVersionID
+		p.TargetVersionID = &tmp
+	}
+
+	if src.Latency != nil {
+		p.Latency = make([]*AggregatorResult_, 0, len(src.Latency))
+		for _, elem := range src.Latency {
 			var _elem *AggregatorResult_
 			if elem != nil {
 				_elem = &AggregatorResult_{}
@@ -9860,16 +10182,53 @@ func (p *EvalTargetAggregateResult_) DeepCopy(s interface{}) error {
 				}
 			}
 
-			p.AggregatorResults = append(p.AggregatorResults, _elem)
+			p.Latency = append(p.Latency, _elem)
 		}
 	}
 
-	if src.Name != nil {
-		var tmp string
-		if *src.Name != "" {
-			tmp = kutils.StringDeepCopy(*src.Name)
+	if src.InputTokens != nil {
+		p.InputTokens = make([]*AggregatorResult_, 0, len(src.InputTokens))
+		for _, elem := range src.InputTokens {
+			var _elem *AggregatorResult_
+			if elem != nil {
+				_elem = &AggregatorResult_{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.InputTokens = append(p.InputTokens, _elem)
 		}
-		p.Name = &tmp
+	}
+
+	if src.OutputTokens != nil {
+		p.OutputTokens = make([]*AggregatorResult_, 0, len(src.OutputTokens))
+		for _, elem := range src.OutputTokens {
+			var _elem *AggregatorResult_
+			if elem != nil {
+				_elem = &AggregatorResult_{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.OutputTokens = append(p.OutputTokens, _elem)
+		}
+	}
+
+	if src.TotalTokens != nil {
+		p.TotalTokens = make([]*AggregatorResult_, 0, len(src.TotalTokens))
+		for _, elem := range src.TotalTokens {
+			var _elem *AggregatorResult_
+			if elem != nil {
+				_elem = &AggregatorResult_{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.TotalTokens = append(p.TotalTokens, _elem)
+		}
 	}
 
 	return nil
