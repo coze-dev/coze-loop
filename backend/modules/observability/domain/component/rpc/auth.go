@@ -29,4 +29,15 @@ type IAuthProvider interface {
 	CheckIngestPermission(ctx context.Context, workspaceId string) error
 	CheckQueryPermission(ctx context.Context, workspaceId, platformType string) error
 	CheckTaskPermission(ctx context.Context, action, workspaceId, taskId string) error
+	GetClaim(ctx context.Context) *Claim
+}
+
+type Claim struct {
+	AuthType         string            `json:"auth_type"`
+	ThirdPartyClient *ThirdPartyClient `json:"third_party_client,omitempty"`
+}
+
+type ThirdPartyClient struct {
+	BizScene string `json:"biz_scene"`
+	BizID    string `json:"biz_id"`
 }
