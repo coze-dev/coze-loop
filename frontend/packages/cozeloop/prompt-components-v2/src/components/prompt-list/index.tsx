@@ -16,7 +16,6 @@ import {
   Search,
   Menu,
   Tooltip,
-  Typography,
 } from '@coze-arch/coze-design';
 
 import { PromptTable, type PromptTableProps } from '../prompt-table';
@@ -164,14 +163,7 @@ export function PromptList({
                     {I18n.t('prompt_blank_prompt')}
                   </Menu.Item>
                   <Tooltip
-                    content={
-                      <>
-                        {I18n.t('prompt_prompt_snippet_nesting_support')}
-                        <Typography.Text className="ml-0.5" link>
-                          {I18n.t('prompt_view_documentation')}
-                        </Typography.Text>
-                      </>
-                    }
+                    content={I18n.t('prompt_prompt_snippet_nesting_support')}
                     position="left"
                   >
                     <Menu.Item

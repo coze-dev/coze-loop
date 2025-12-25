@@ -121,19 +121,9 @@ export function PromptTable({
                 className="text-[20px] leading-[28px]"
                 type="secondary"
               >
-                {isSnippet ? (
-                  <>
-                    {I18n.t('prompt_prompt_snippet_reuse_support')}
-                    <Typography.Text
-                      link
-                      className="text-[20px] leading-[28px] ml-1"
-                    >
-                      {I18n.t('prompt_view_documentation')}
-                    </Typography.Text>
-                  </>
-                ) : (
-                  I18n.t('prompt_full_process_prompt_support')
-                )}
+                {isSnippet
+                  ? I18n.t('prompt_prompt_snippet_reuse_support')
+                  : I18n.t('prompt_full_process_prompt_support')}
               </Typography.Text>
               {isSnippet ? emptySnippetCreateBtn : emptyPromptCreateBtn}
             </div>
