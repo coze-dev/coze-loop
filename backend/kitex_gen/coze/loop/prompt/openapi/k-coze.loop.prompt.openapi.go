@@ -791,6 +791,48 @@ func (p *ExecuteRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 20:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField20(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 21:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField21(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 22:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField22(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -899,6 +941,55 @@ func (p *ExecuteRequest) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExecuteRequest) FastReadField20(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*Tool, 0, size)
+	values := make([]Tool, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.CustomTools = _field
+	return offset, nil
+}
+
+func (p *ExecuteRequest) FastReadField21(buf []byte) (int, error) {
+	offset := 0
+	_field := NewToolCallConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.CustomToolCallConfig = _field
+	return offset, nil
+}
+
+func (p *ExecuteRequest) FastReadField22(buf []byte) (int, error) {
+	offset := 0
+	_field := prompt.NewModelConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.CustomModelConfig = _field
+	return offset, nil
+}
+
 func (p *ExecuteRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -922,6 +1013,9 @@ func (p *ExecuteRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
+		offset += p.fastWriteField20(buf[offset:], w)
+		offset += p.fastWriteField21(buf[offset:], w)
+		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -935,6 +1029,9 @@ func (p *ExecuteRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field20Length()
+		l += p.field21Length()
+		l += p.field22Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -991,6 +1088,40 @@ func (p *ExecuteRequest) fastWriteField11(buf []byte, w thrift.NocopyWriter) int
 	return offset
 }
 
+func (p *ExecuteRequest) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCustomTools() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 20)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.CustomTools {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *ExecuteRequest) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCustomToolCallConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 21)
+		offset += p.CustomToolCallConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ExecuteRequest) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCustomModelConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 22)
+		offset += p.CustomModelConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *ExecuteRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
@@ -1040,6 +1171,37 @@ func (p *ExecuteRequest) field11Length() int {
 			_ = v
 			l += v.BLength()
 		}
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field20Length() int {
+	l := 0
+	if p.IsSetCustomTools() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.CustomTools {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field21Length() int {
+	l := 0
+	if p.IsSetCustomToolCallConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.CustomToolCallConfig.BLength()
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field22Length() int {
+	l := 0
+	if p.IsSetCustomModelConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.CustomModelConfig.BLength()
 	}
 	return l
 }
@@ -1102,6 +1264,39 @@ func (p *ExecuteRequest) DeepCopy(s interface{}) error {
 			p.Messages = append(p.Messages, _elem)
 		}
 	}
+
+	if src.CustomTools != nil {
+		p.CustomTools = make([]*Tool, 0, len(src.CustomTools))
+		for _, elem := range src.CustomTools {
+			var _elem *Tool
+			if elem != nil {
+				_elem = &Tool{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.CustomTools = append(p.CustomTools, _elem)
+		}
+	}
+
+	var _customToolCallConfig *ToolCallConfig
+	if src.CustomToolCallConfig != nil {
+		_customToolCallConfig = &ToolCallConfig{}
+		if err := _customToolCallConfig.DeepCopy(src.CustomToolCallConfig); err != nil {
+			return err
+		}
+	}
+	p.CustomToolCallConfig = _customToolCallConfig
+
+	var _customModelConfig *prompt.ModelConfig
+	if src.CustomModelConfig != nil {
+		_customModelConfig = &prompt.ModelConfig{}
+		if err := _customModelConfig.DeepCopy(src.CustomModelConfig); err != nil {
+			return err
+		}
+	}
+	p.CustomModelConfig = _customModelConfig
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -4021,6 +4216,20 @@ func (p *Message) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -4159,6 +4368,20 @@ func (p *Message) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Message) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SkipRender = _field
+	return offset, nil
+}
+
 func (p *Message) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -4198,6 +4421,7 @@ func (p *Message) FastWrite(buf []byte) int {
 func (p *Message) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -4219,6 +4443,7 @@ func (p *Message) BLength() int {
 		l += p.field4Length()
 		l += p.field5Length()
 		l += p.field6Length()
+		l += p.field7Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -4289,6 +4514,15 @@ func (p *Message) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *Message) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSkipRender() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 7)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.SkipRender)
 	}
 	return offset
 }
@@ -4372,6 +4606,15 @@ func (p *Message) field6Length() int {
 	return l
 }
 
+func (p *Message) field7Length() int {
+	l := 0
+	if p.IsSetSkipRender() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *Message) field100Length() int {
 	l := 0
 	if p.IsSetMetadata() {
@@ -4450,6 +4693,11 @@ func (p *Message) DeepCopy(s interface{}) error {
 
 			p.ToolCalls = append(p.ToolCalls, _elem)
 		}
+	}
+
+	if src.SkipRender != nil {
+		tmp := *src.SkipRender
+		p.SkipRender = &tmp
 	}
 
 	if src.Metadata != nil {

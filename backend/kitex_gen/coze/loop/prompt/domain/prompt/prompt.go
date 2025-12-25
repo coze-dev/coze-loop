@@ -6649,13 +6649,15 @@ func (p *ParamOption) Field2DeepEqual(src *string) bool {
 }
 
 type Message struct {
-	Role             *Role             `thrift:"role,1,optional" frugal:"1,optional,string" form:"role" json:"role,omitempty" query:"role"`
-	ReasoningContent *string           `thrift:"reasoning_content,2,optional" frugal:"2,optional,string" form:"reasoning_content" json:"reasoning_content,omitempty" query:"reasoning_content"`
-	Content          *string           `thrift:"content,3,optional" frugal:"3,optional,string" form:"content" json:"content,omitempty" query:"content"`
-	Parts            []*ContentPart    `thrift:"parts,4,optional" frugal:"4,optional,list<ContentPart>" form:"parts" json:"parts,omitempty" query:"parts"`
-	ToolCallID       *string           `thrift:"tool_call_id,5,optional" frugal:"5,optional,string" form:"tool_call_id" json:"tool_call_id,omitempty" query:"tool_call_id"`
-	ToolCalls        []*ToolCall       `thrift:"tool_calls,6,optional" frugal:"6,optional,list<ToolCall>" form:"tool_calls" json:"tool_calls,omitempty" query:"tool_calls"`
-	Metadata         map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
+	Role             *Role          `thrift:"role,1,optional" frugal:"1,optional,string" form:"role" json:"role,omitempty" query:"role"`
+	ReasoningContent *string        `thrift:"reasoning_content,2,optional" frugal:"2,optional,string" form:"reasoning_content" json:"reasoning_content,omitempty" query:"reasoning_content"`
+	Content          *string        `thrift:"content,3,optional" frugal:"3,optional,string" form:"content" json:"content,omitempty" query:"content"`
+	Parts            []*ContentPart `thrift:"parts,4,optional" frugal:"4,optional,list<ContentPart>" form:"parts" json:"parts,omitempty" query:"parts"`
+	ToolCallID       *string        `thrift:"tool_call_id,5,optional" frugal:"5,optional,string" form:"tool_call_id" json:"tool_call_id,omitempty" query:"tool_call_id"`
+	ToolCalls        []*ToolCall    `thrift:"tool_calls,6,optional" frugal:"6,optional,list<ToolCall>" form:"tool_calls" json:"tool_calls,omitempty" query:"tool_calls"`
+	// 是否跳过渲染
+	SkipRender *bool             `thrift:"skip_render,7,optional" frugal:"7,optional,bool" form:"skip_render" json:"skip_render,omitempty" query:"skip_render"`
+	Metadata   map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
 }
 
 func NewMessage() *Message {
@@ -6737,6 +6739,18 @@ func (p *Message) GetToolCalls() (v []*ToolCall) {
 	return p.ToolCalls
 }
 
+var Message_SkipRender_DEFAULT bool
+
+func (p *Message) GetSkipRender() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkipRender() {
+		return Message_SkipRender_DEFAULT
+	}
+	return *p.SkipRender
+}
+
 var Message_Metadata_DEFAULT map[string]string
 
 func (p *Message) GetMetadata() (v map[string]string) {
@@ -6766,6 +6780,9 @@ func (p *Message) SetToolCallID(val *string) {
 func (p *Message) SetToolCalls(val []*ToolCall) {
 	p.ToolCalls = val
 }
+func (p *Message) SetSkipRender(val *bool) {
+	p.SkipRender = val
+}
 func (p *Message) SetMetadata(val map[string]string) {
 	p.Metadata = val
 }
@@ -6777,6 +6794,7 @@ var fieldIDToName_Message = map[int16]string{
 	4:   "parts",
 	5:   "tool_call_id",
 	6:   "tool_calls",
+	7:   "skip_render",
 	100: "metadata",
 }
 
@@ -6802,6 +6820,10 @@ func (p *Message) IsSetToolCallID() bool {
 
 func (p *Message) IsSetToolCalls() bool {
 	return p.ToolCalls != nil
+}
+
+func (p *Message) IsSetSkipRender() bool {
+	return p.SkipRender != nil
 }
 
 func (p *Message) IsSetMetadata() bool {
@@ -6869,6 +6891,14 @@ func (p *Message) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7001,6 +7031,17 @@ func (p *Message) ReadField6(iprot thrift.TProtocol) error {
 	p.ToolCalls = _field
 	return nil
 }
+func (p *Message) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SkipRender = _field
+	return nil
+}
 func (p *Message) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -7059,6 +7100,10 @@ func (p *Message) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -7207,6 +7252,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *Message) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkipRender() {
+		if err = oprot.WriteFieldBegin("skip_render", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.SkipRender); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *Message) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMetadata() {
 		if err = oprot.WriteFieldBegin("metadata", thrift.MAP, 100); err != nil {
@@ -7267,6 +7330,9 @@ func (p *Message) DeepEqual(ano *Message) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.ToolCalls) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.SkipRender) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Metadata) {
@@ -7346,6 +7412,18 @@ func (p *Message) Field6DeepEqual(src []*ToolCall) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *Message) Field7DeepEqual(src *bool) bool {
+
+	if p.SkipRender == src {
+		return true
+	} else if p.SkipRender == nil || src == nil {
+		return false
+	}
+	if *p.SkipRender != *src {
+		return false
 	}
 	return true
 }

@@ -51,6 +51,16 @@ func (p *ExecuteRequest) IsValid() error {
 			return fmt.Errorf("field PromptIdentifier not valid, %w", err)
 		}
 	}
+	if p.CustomToolCallConfig != nil {
+		if err := p.CustomToolCallConfig.IsValid(); err != nil {
+			return fmt.Errorf("field CustomToolCallConfig not valid, %w", err)
+		}
+	}
+	if p.CustomModelConfig != nil {
+		if err := p.CustomModelConfig.IsValid(); err != nil {
+			return fmt.Errorf("field CustomModelConfig not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
