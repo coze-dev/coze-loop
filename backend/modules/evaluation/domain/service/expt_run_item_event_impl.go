@@ -255,7 +255,7 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		return err
 	}
 
-	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo).
+	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evaluationSetItemService).
 		Eval(ctx, eiec); err != nil {
 		return err
 	}
@@ -478,9 +478,14 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		return err
 	}
 
-	eiec.ExistItemEvalResult.TurnResultRunLogs = gslice.ToMap(turnRunLogDOs, func(t *entity.ExptTurnResultRunLog) (int64, *entity.ExptTurnResultRunLog) {
-		return t.TurnID, t
-	})
+	trrls := make(map[int64]*entity.ExptTurnResultRunLog, len(turnRunLogDOs))
+	for _, rl := range turnRunLogDOs {
+		if existed := trrls[rl.TurnID]; existed != nil && existed.UpdatedAt.After(rl.UpdatedAt) {
+			continue
+		}
+		trrls[rl.TurnID] = rl
+	}
+	eiec.ExistItemEvalResult.TurnResultRunLogs = trrls
 
 	return nil
 }

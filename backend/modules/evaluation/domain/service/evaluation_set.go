@@ -12,6 +12,8 @@ import (
 //go:generate mockgen -destination=mocks/evaluation_set.go -package=mocks . IEvaluationSetService
 type IEvaluationSetService interface {
 	CreateEvaluationSet(ctx context.Context, param *entity.CreateEvaluationSetParam) (id int64, err error)
+	CreateEvaluationSetWithImport(ctx context.Context, param *entity.CreateEvaluationSetWithImportParam) (id int64, jobID int64, err error)
+	ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error)
 	UpdateEvaluationSet(ctx context.Context, param *entity.UpdateEvaluationSetParam) (err error)
 	DeleteEvaluationSet(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)

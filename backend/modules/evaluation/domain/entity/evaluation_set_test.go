@@ -149,3 +149,13 @@ func TestFieldStatus_String_FromString_Ptr_Scan_Value(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, val)
 }
+
+func TestSchemaKeyString(t *testing.T) {
+	assert.Equal(t, "String", SchemaKey_String.String())
+	assert.Equal(t, "Integer", SchemaKey_Integer.String())
+	assert.Equal(t, "Float", SchemaKey_Float.String())
+	assert.Equal(t, "Bool", SchemaKey_Bool.String())
+	assert.Equal(t, "Message", SchemaKey_Message.String())
+	assert.Equal(t, "SingleChoice", SchemaKey_SingleChoice.String())
+	assert.Equal(t, "Trajectory", SchemaKey_Trajectory.String())
+}

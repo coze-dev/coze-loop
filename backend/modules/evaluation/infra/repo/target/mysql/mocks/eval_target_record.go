@@ -99,3 +99,17 @@ func (mr *MockEvalTargetRecordDAOMockRecorder) Save(ctx, record any) *gomock.Cal
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).Save), ctx, record)
 }
+
+// Update mocks base method.
+func (m *MockEvalTargetRecordDAO) Update(ctx context.Context, record *model.TargetRecord) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, record)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockEvalTargetRecordDAOMockRecorder) Update(ctx, record any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).Update), ctx, record)
+}

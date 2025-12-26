@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
 )
@@ -250,14 +251,10 @@ func buildAgentSteps(agentSpan *Span, spanMap map[string]*Span) []*Step {
 	childSpans := getDirectChildren(agentSpan, spanMap)
 
 	for _, childSpan := range childSpans {
-		// 深度遍历每个分支收集所有普通子节点，每个分支直到遇到agent节点为止
-		branchSteps := collectOtherSteps(childSpan, spanMap)
-		steps = append(steps, branchSteps...)
-
-		// 对每个直接子节点，向下深度遍历找到每个分支的第一个agent/model/tool节点
-		agentModelToolSteps := findAgentModelToolNode(childSpan, spanMap)
-		if len(agentModelToolSteps) > 0 {
-			steps = append(steps, agentModelToolSteps...)
+		// 深度遍历每个分支收集所有子节点，每个分支直到遇到agent节点为止
+		branchSteps := collectSubSteps(childSpan, spanMap)
+		if len(branchSteps) > 0 {
+			steps = append(steps, branchSteps...)
 		}
 	}
 
@@ -314,34 +311,8 @@ func buildStep(span *Span) *Step {
 	return step
 }
 
-// findAgentModelToolNode 向下深度遍历，找到每个分支的第一个agent/model/tool节点
-func findAgentModelToolNode(startSpan *Span, spanMap map[string]*Span) []*Step {
-	if startSpan == nil {
-		return nil
-	}
-
-	steps := make([]*Step, 0)
-	stepType := getStepType(startSpan)
-
-	// 如果当前节点就是agent/model/tool，直接返回
-	if stepType == StepTypeAgent || stepType == StepTypeModel || stepType == StepTypeTool {
-		steps = append(steps, buildStep(startSpan))
-		return steps
-	}
-
-	// 如果是other节点，继续向下遍历
-	children := getDirectChildren(startSpan, spanMap)
-	for _, child := range children {
-		if result := findAgentModelToolNode(child, spanMap); len(result) > 0 {
-			steps = append(steps, result...)
-		}
-	}
-
-	return steps
-}
-
-// collectOtherSteps 深度遍历分支，收集任意层级的普通子节点，直到遇到agent节点为止
-func collectOtherSteps(startSpan *Span, spanMap map[string]*Span) []*Step {
+// collectSubSteps 深度遍历分支，收集任意层级的普通子节点，直到遇到agent节点为止
+func collectSubSteps(startSpan *Span, spanMap map[string]*Span) []*Step {
 	if startSpan == nil {
 		return nil
 	}
@@ -350,19 +321,15 @@ func collectOtherSteps(startSpan *Span, spanMap map[string]*Span) []*Step {
 	stepType := getStepType(startSpan)
 
 	// 如果当前节点是agent节点，停止遍历
+	steps = append(steps, buildStep(startSpan))
 	if stepType == StepTypeAgent {
 		return steps
-	}
-
-	// 如果是普通节点，添加到结果中，然后继续向下遍历
-	if stepType != StepTypeModel && stepType != StepTypeTool {
-		steps = append(steps, buildStep(startSpan))
 	}
 
 	// 获取当前节点的子节点，继续深度遍历
 	children := getDirectChildren(startSpan, spanMap)
 	for _, child := range children {
-		childSteps := collectOtherSteps(child, spanMap)
+		childSteps := collectSubSteps(child, spanMap)
 		if len(childSteps) > 0 {
 			steps = append(steps, childSteps...)
 		}
@@ -564,20 +531,20 @@ func calculateMetricsInfo(modelSteps, toolSteps []*Step) *MetricsInfo {
 	totalModelSteps := int64(len(modelSteps))
 	if totalModelSteps > 0 {
 		modelErrorRate := float64(modelErrorCount) / float64(totalModelSteps)
-		metricsInfo.ModelErrorRate = &modelErrorRate
+		metricsInfo.ModelErrorRate = ptr.Of(conv.ReduceFloatSignificantDigit(modelErrorRate, 10))
 	}
 
 	totalToolSteps := int64(len(toolSteps))
 	if totalToolSteps > 0 {
 		toolErrorRate := float64(toolErrorCount) / float64(totalToolSteps)
-		metricsInfo.ToolErrorRate = &toolErrorRate
+		metricsInfo.ToolErrorRate = ptr.Of(conv.ReduceFloatSignificantDigit(toolErrorRate, 10))
 	}
 
 	// 计算Tool Step占比
 	totalSteps := totalModelSteps + totalToolSteps
 	if totalSteps > 0 {
 		toolStepProportion := float64(totalToolSteps) / float64(totalSteps)
-		metricsInfo.ToolStepProportion = &toolStepProportion
+		metricsInfo.ToolStepProportion = ptr.Of(conv.ReduceFloatSignificantDigit(toolStepProportion, 10))
 	}
 
 	// 计算输入/输出Token数

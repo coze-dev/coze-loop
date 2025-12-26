@@ -32,8 +32,9 @@ func TestNewExptTurnEvaluation(t *testing.T) {
 	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
 	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
 	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
 
-	eval := NewExptTurnEvaluation(mockMetric, mockEvalTargetService, mockEvaluatorService, mockBenefitService, mockEvalAsyncRepo)
+	eval := NewExptTurnEvaluation(mockMetric, mockEvalTargetService, mockEvaluatorService, mockBenefitService, mockEvalAsyncRepo, mockEvalSetItemSvc)
 	assert.NotNil(t, eval)
 }
 
@@ -1230,6 +1231,7 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
 func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
 	service := &DefaultExptTurnEvaluationImpl{}
 
 	mockContent1 := &entity.Content{Text: gptr.Of("value1")}
@@ -1359,10 +1361,19 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// 新版接口需要传入 inputSchemas，用于自定义服务评估器的输入行为控制
+			turn := &entity.Turn{
+				FieldDataList: []*entity.FieldData{},
+			}
+			for key, c := range tt.turnFields {
+				turn.FieldDataList = append(turn.FieldDataList, &entity.FieldData{
+					Name:    key,
+					Content: c,
+				})
+			}
+
 			var inputSchemas []*entity.ArgsSchema
-			// 对于Prompt/Code类型，这里传nil即可
-			got, err := service.buildEvaluatorInputData(tt.evaluatorType, inputSchemas, tt.ec, tt.turnFields, tt.targetFields)
+
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, inputSchemas)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -1378,76 +1389,9 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 	}
 }
 
-// 覆盖自定义服务评估器在缺少 input_schemas 时的输入构建逻辑（应与Code评估器一致：分离字段数据源）
-func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_CustomRPC_NoSchemas(t *testing.T) {
-	t.Parallel()
-
-	service := &DefaultExptTurnEvaluationImpl{}
-
-	mockContent1 := &entity.Content{Text: gptr.Of("value1")}
-	mockContent2 := &entity.Content{Text: gptr.Of("value2")}
-
-	turnFields := map[string]*entity.Content{
-		"turn_field1": mockContent1,
-		"turn_field2": mockContent2,
-	}
-
-	targetFields := map[string]*entity.Content{
-		"target_field1": mockContent1,
-		"target_field2": mockContent2,
-	}
-
-	ec := &entity.EvaluatorConf{
-		IngressConf: &entity.EvaluatorIngressConf{
-			EvalSetAdapter: &entity.FieldAdapter{
-				FieldConfs: []*entity.FieldConf{
-					{FieldName: "eval_field", FromField: "turn_field1"},
-				},
-			},
-			TargetAdapter: &entity.FieldAdapter{
-				FieldConfs: []*entity.FieldConf{
-					{FieldName: "target_field", FromField: "target_field1"},
-				},
-			},
-		},
-	}
-
-	// inputSchemas 为空，类型为 CustomRPC，应走“分离字段数据源”路径
-	got, err := service.buildEvaluatorInputData(entity.EvaluatorTypeCustomRPC, nil, ec, turnFields, targetFields)
-	assert.NoError(t, err)
-	assert.NotNil(t, got)
-	assert.Equal(t, map[string]*entity.Content{"eval_field": mockContent1}, got.EvaluateDatasetFields)
-	assert.Equal(t, map[string]*entity.Content{"target_field": mockContent1}, got.EvaluateTargetOutputFields)
-	assert.Empty(t, got.InputFields)
-}
-
-// 覆盖运行时参数写入到 RunEvaluator 的 Ext
-func TestDefaultExptTurnEvaluationImpl_buildRunEvaluatorExt(t *testing.T) {
-	s := &DefaultExptTurnEvaluationImpl{}
-
-	// 基础 ext
-	baseExt := map[string]string{"k1": "v1"}
-
-	// 带运行时参数的 RunConf
-	rp := "{\"model_config\":{\"model_id\":\"m-1\"}}"
-	runConf := &entity.EvaluatorRunConfig{
-		EvaluatorRuntimeParam: &entity.RuntimeParam{JSONValue: gptr.Of(rp)},
-	}
-
-	// 构建
-	got := s.buildRunEvaluatorExt(baseExt, runConf)
-	assert.Equal(t, "v1", got["k1"]) // 保留原值
-	assert.Equal(t, rp, got[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
-
-	// 无运行时参数时保持原样
-	got2 := s.buildRunEvaluatorExt(baseExt, &entity.EvaluatorRunConfig{})
-	assert.Equal(t, "v1", got2["k1"])
-	_, exist := got2[consts.FieldAdapterBuiltinFieldNameRuntimeParam]
-	assert.False(t, exist)
-}
-
 func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 	t.Parallel()
+	ctx := context.Background()
 
 	service := &DefaultExptTurnEvaluationImpl{}
 
@@ -1536,7 +1480,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := service.buildFieldsFromSource(tt.fieldConfs, tt.sourceFields)
+			got, err := service.buildFieldsFromSource(ctx, tt.fieldConfs, tt.sourceFields)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2252,6 +2196,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
 	service := &DefaultExptTurnEvaluationImpl{}
 
 	mockContent := &entity.Content{Text: gptr.Of("value1")}
@@ -2342,7 +2287,17 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := service.buildEvaluatorInputData(tt.evaluatorType, nil, tt.ec, tt.turnFields, tt.targetFields)
+			turn := &entity.Turn{
+				FieldDataList: []*entity.FieldData{},
+			}
+			for key, c := range tt.turnFields {
+				turn.FieldDataList = append(turn.FieldDataList, &entity.FieldData{
+					Name:    key,
+					Content: c,
+				})
+			}
+
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, nil)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)

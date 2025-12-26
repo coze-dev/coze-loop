@@ -21,6 +21,10 @@ const (
 	ContentTypeMultiPart = "MultiPart"
 
 	ContentTypeMultiPartVariable = "multi_part_variable"
+
+	ArgSchemaKeyActualOutput = "actual_output"
+
+	ArgSchemaKeyTrajectory = "trajectory"
 )
 
 type Role int64
@@ -69,6 +73,43 @@ func (p *Role) Scan(value interface{}) (err error) {
 }
 
 func (p *Role) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+type ArgSchemaTextType int64
+
+const (
+	ArgSchemaTextType_Trajectory ArgSchemaTextType = 1
+)
+
+func (p ArgSchemaTextType) String() string {
+	switch p {
+	case ArgSchemaTextType_Trajectory:
+		return "Trajectory"
+	}
+	return "<UNSET>"
+}
+
+func ArgSchemaTextTypeFromString(s string) (ArgSchemaTextType, error) {
+	switch s {
+	case "Trajectory":
+		return ArgSchemaTextType_Trajectory, nil
+	}
+	return ArgSchemaTextType(0), fmt.Errorf("not a valid ArgSchemaTextType string")
+}
+
+func ArgSchemaTextTypePtr(v ArgSchemaTextType) *ArgSchemaTextType { return &v }
+func (p *ArgSchemaTextType) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = ArgSchemaTextType(result.Int64)
+	return
+}
+
+func (p *ArgSchemaTextType) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -2446,8 +2487,9 @@ type ArgsSchema struct {
 	Key                 *string       `thrift:"key,1,optional" frugal:"1,optional,string" mapstructure:"key" form:"key" json:"key,omitempty" query:"key"`
 	SupportContentTypes []ContentType `thrift:"support_content_types,2,optional" frugal:"2,optional,list<string>" mapstructure:"support_content_types" form:"support_content_types" json:"support_content_types,omitempty" query:"support_content_types"`
 	// 	序列化后的jsonSchema字符串，例如："{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}, \"age\": {\"type\": \"integer\"}, \"isStudent\": {\"type\": \"boolean\"}}, \"required\": [\"name\", \"age\", \"isStudent\"]}"
-	JSONSchema   *string  `thrift:"json_schema,3,optional" frugal:"3,optional,string" mapstructure:"json_schema" form:"json_schema" json:"json_schema,omitempty" query:"json_schema"`
-	DefaultValue *Content `thrift:"default_value,4,optional" frugal:"4,optional,Content" mapstructure:"default_value" form:"default_value" json:"default_value,omitempty" query:"default_value"`
+	JSONSchema   *string            `thrift:"json_schema,3,optional" frugal:"3,optional,string" mapstructure:"json_schema" form:"json_schema" json:"json_schema,omitempty" query:"json_schema"`
+	DefaultValue *Content           `thrift:"default_value,4,optional" frugal:"4,optional,Content" mapstructure:"default_value" form:"default_value" json:"default_value,omitempty" query:"default_value"`
+	TextType     *ArgSchemaTextType `thrift:"text_type,5,optional" frugal:"5,optional,ArgSchemaTextType" mapstructure:"text_type" form:"text_type" json:"text_type,omitempty" query:"text_type"`
 }
 
 func NewArgsSchema() *ArgsSchema {
@@ -2504,6 +2546,18 @@ func (p *ArgsSchema) GetDefaultValue() (v *Content) {
 	}
 	return p.DefaultValue
 }
+
+var ArgsSchema_TextType_DEFAULT ArgSchemaTextType
+
+func (p *ArgsSchema) GetTextType() (v ArgSchemaTextType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTextType() {
+		return ArgsSchema_TextType_DEFAULT
+	}
+	return *p.TextType
+}
 func (p *ArgsSchema) SetKey(val *string) {
 	p.Key = val
 }
@@ -2516,12 +2570,16 @@ func (p *ArgsSchema) SetJSONSchema(val *string) {
 func (p *ArgsSchema) SetDefaultValue(val *Content) {
 	p.DefaultValue = val
 }
+func (p *ArgsSchema) SetTextType(val *ArgSchemaTextType) {
+	p.TextType = val
+}
 
 var fieldIDToName_ArgsSchema = map[int16]string{
 	1: "key",
 	2: "support_content_types",
 	3: "json_schema",
 	4: "default_value",
+	5: "text_type",
 }
 
 func (p *ArgsSchema) IsSetKey() bool {
@@ -2538,6 +2596,10 @@ func (p *ArgsSchema) IsSetJSONSchema() bool {
 
 func (p *ArgsSchema) IsSetDefaultValue() bool {
 	return p.DefaultValue != nil
+}
+
+func (p *ArgsSchema) IsSetTextType() bool {
+	return p.TextType != nil
 }
 
 func (p *ArgsSchema) Read(iprot thrift.TProtocol) (err error) {
@@ -2585,6 +2647,14 @@ func (p *ArgsSchema) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2672,6 +2742,18 @@ func (p *ArgsSchema) ReadField4(iprot thrift.TProtocol) error {
 	p.DefaultValue = _field
 	return nil
 }
+func (p *ArgsSchema) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *ArgSchemaTextType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := ArgSchemaTextType(v)
+		_field = &tmp
+	}
+	p.TextType = _field
+	return nil
+}
 
 func (p *ArgsSchema) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2693,6 +2775,10 @@ func (p *ArgsSchema) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -2793,6 +2879,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ArgsSchema) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTextType() {
+		if err = oprot.WriteFieldBegin("text_type", thrift.I32, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.TextType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *ArgsSchema) String() string {
 	if p == nil {
@@ -2818,6 +2922,9 @@ func (p *ArgsSchema) DeepEqual(ano *ArgsSchema) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.DefaultValue) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.TextType) {
 		return false
 	}
 	return true
@@ -2863,6 +2970,18 @@ func (p *ArgsSchema) Field3DeepEqual(src *string) bool {
 func (p *ArgsSchema) Field4DeepEqual(src *Content) bool {
 
 	if !p.DefaultValue.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ArgsSchema) Field5DeepEqual(src *ArgSchemaTextType) bool {
+
+	if p.TextType == src {
+		return true
+	} else if p.TextType == nil || src == nil {
+		return false
+	}
+	if *p.TextType != *src {
 		return false
 	}
 	return true

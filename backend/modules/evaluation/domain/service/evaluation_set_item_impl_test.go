@@ -604,3 +604,40 @@ func equalErrorGroups(g1, g2 []*entity.ItemErrorGroup) bool {
 	}
 	return true
 }
+
+// ---------------- 追加：GetEvaluationSetItemField 的单测 ----------------
+func TestEvaluationSetItemServiceImpl_GetEvaluationSetItemField(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	evaluationSetItemServiceOnce = sync.Once{}
+	mockAdapter := mocks.NewMockIDatasetRPCAdapter(ctrl)
+	service := NewEvaluationSetItemServiceImpl(mockAdapter)
+
+	ctx := context.Background()
+
+	t.Run("成功获取字段数据", func(t *testing.T) {
+		param := &entity.GetEvaluationSetItemFieldParam{SpaceID: 1, EvaluationSetID: 100, ItemPK: 999, FieldName: "field1", TurnID: gptr.Of[int64](1)}
+		expected := &entity.FieldData{Key: "field1", Name: "Field 1", Content: &entity.Content{Text: gptr.Of("value")}}
+		mockAdapter.EXPECT().GetDatasetItemField(gomock.Any(), gomock.Any()).Return(expected, nil)
+		res, err := service.GetEvaluationSetItemField(ctx, param)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, res)
+	})
+
+	t.Run("参数为空返回错误", func(t *testing.T) {
+		res, err := service.GetEvaluationSetItemField(ctx, nil)
+		assert.Nil(t, res)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		assert.Equal(t, int32(errno.CommonInternalErrorCode), statusErr.Code())
+	})
+
+	t.Run("RPC返回错误", func(t *testing.T) {
+		param := &entity.GetEvaluationSetItemFieldParam{SpaceID: 1, EvaluationSetID: 100, ItemPK: 999, FieldName: "field1"}
+		mockAdapter.EXPECT().GetDatasetItemField(gomock.Any(), gomock.Any()).Return(nil, errorx.NewByCode(errno.CommonRPCErrorCode))
+		_, err := service.GetEvaluationSetItemField(ctx, param)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		assert.Equal(t, int32(errno.CommonRPCErrorCode), statusErr.Code())
+	})
+}

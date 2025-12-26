@@ -243,7 +243,7 @@ func (e *evaluatorSpan) reportRootSpan(ctx context.Context, reportRootSpanReques
 		e.SetStatusCode(ctx, 0)
 	case entity.EvaluatorRunStatusFail:
 		e.SetStatusCode(ctx, int(entity.EvaluatorRunStatusFail))
-		e.SetError(ctx, reportRootSpanRequest.errInfo)
+		e.SetError(ctx, tracer.SanitizeErrorForTrace(reportRootSpanRequest.errInfo))
 	default:
 		e.SetStatusCode(ctx, 0) // 默认为成功
 	}
@@ -262,7 +262,7 @@ func (e *evaluatorSpan) reportRootSpan(ctx context.Context, reportRootSpanReques
 func (e *evaluatorSpan) reportModelSpan(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, replyItem *entity.ReplyItem, respErr error) {
 	if respErr != nil {
 		e.SetStatusCode(ctx, errno.InvalidOutputFromModelCode)
-		e.SetError(ctx, respErr)
+		e.SetError(ctx, tracer.SanitizeErrorForTrace(respErr))
 	}
 	if evaluatorVersion.ParseType == entity.ParseTypeFunctionCall {
 		if replyItem != nil && len(replyItem.ToolCalls) > 0 {
@@ -275,7 +275,7 @@ func (e *evaluatorSpan) reportModelSpan(ctx context.Context, evaluatorVersion *e
 			}
 		} else {
 			e.SetStatusCode(ctx, errno.InvalidOutputFromModelCode)
-			e.SetError(ctx, errorx.New("LLM response empty"))
+			e.SetError(ctx, tracer.SanitizeErrorForTrace(errorx.New("LLM response empty")))
 		}
 	} else {
 		if replyItem != nil {
@@ -286,7 +286,7 @@ func (e *evaluatorSpan) reportModelSpan(ctx context.Context, evaluatorVersion *e
 			}
 		} else {
 			e.SetStatusCode(ctx, errno.InvalidOutputFromModelCode)
-			e.SetError(ctx, errorx.New("LLM response empty"))
+			e.SetError(ctx, tracer.SanitizeErrorForTrace(errorx.New("LLM response empty")))
 		}
 	}
 	e.SetCallType("Evaluator")
@@ -311,7 +311,7 @@ func (e *evaluatorSpan) reportOutputParserSpan(ctx context.Context, replyItem *e
 	}
 	if errInfo != nil {
 		e.SetStatusCode(ctx, int(entity.EvaluatorRunStatusFail))
-		e.SetError(ctx, errInfo)
+		e.SetError(ctx, tracer.SanitizeErrorForTrace(errInfo))
 	} else {
 		e.SetStatusCode(ctx, 0)
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/samber/lo"
@@ -173,12 +174,14 @@ func (r *TraceExportServiceImpl) ExportTracesToDataset(ctx context.Context, req 
 	resp.SuccessCount = int32(len(successItems))
 	resp.Errors = errorGroups
 
-	if err := r.addSpanAnnotations(ctx, spans, successItems, datasetID, req.Category); err != nil {
-		logs.CtxError(ctx, "Add span annotations failed, err:%v", err)
-		// 忽略add annotations的错误，防止用户重复导入数据集。
-		return resp, nil
-	}
-	logs.CtxInfo(ctx, "Add span annotations success")
+	goroutine.Go(ctx, func() {
+		if err := r.addSpanAnnotations(ctx, spans, successItems, datasetID, req.Category); err != nil {
+			logs.CtxError(ctx, "Add span annotations failed, err:%v", err)
+			// 忽略add annotations的错误，防止用户重复导入数据集。
+			return
+		}
+		logs.CtxInfo(ctx, "Add span annotations success")
+	})
 
 	return resp, nil
 }

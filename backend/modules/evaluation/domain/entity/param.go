@@ -16,6 +16,18 @@ type CreateEvaluationSetParam struct {
 	Session             *Session
 }
 
+type CreateEvaluationSetWithImportParam struct {
+	SpaceID             int64
+	Name                string
+	Description         *string
+	EvaluationSetSchema *EvaluationSetSchema
+	BizCategory         *BizCategory
+	SourceType          *SetSourceType
+	Source              *DatasetIOEndpoint
+	FieldMappings       []*FieldMapping
+	Session             *Session
+}
+
 type UpdateEvaluationSetParam struct {
 	SpaceID         int64
 	EvaluationSetID int64
@@ -53,6 +65,17 @@ type BatchGetEvaluationSetItemsParam struct {
 	PageSize        *int32
 	PageToken       *string
 	OrderBys        []*OrderBy
+}
+
+type GetEvaluationSetItemFieldParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	// item 的主键ID，即 item.ID 这一字段
+	ItemPK int64
+	// 列名
+	FieldName string
+	// 当 item 为多轮时，必须提供
+	TurnID *int64
 }
 
 type BatchCreateEvaluationSetItemsParam struct {

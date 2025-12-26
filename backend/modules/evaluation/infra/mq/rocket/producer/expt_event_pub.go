@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/mohae/deepcopy"
 	"github.com/samber/lo"
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
@@ -114,6 +115,10 @@ func (e *exptEventPublisher) PublishExptScheduleEvent(ctx context.Context, event
 }
 
 func (e *exptEventPublisher) PublishExptRecordEvalEvent(ctx context.Context, event *entity.ExptItemEvalEvent, duration *time.Duration) error {
+	if copied, ok := deepcopy.Copy(event).(*entity.ExptItemEvalEvent); ok {
+		copied.AsyncReportTrigger = true
+		event = copied
+	}
 	return e.batchSend(ctx, rocket.ExptRecordEvalEventRMQKey, []any{event}, duration)
 }
 
@@ -171,9 +176,9 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 	}
 	resp, err := p.p.SendBatch(ctx, msgs)
 	if err != nil {
-		return errorx.Wrapf(err, "send batch message fail, msgs: %v", json.Jsonify(msgs))
+		return errorx.Wrapf(err, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
 	}
 
-	logs.CtxInfo(ctx, "expt event batch send success, message_id: %v, offset: %v", resp.MessageID, resp.Offset)
+	logs.CtxInfo(ctx, "expt event batch send success, producer_key: %v, message_id: %v, offset: %v", pk, resp.MessageID, resp.Offset)
 	return nil
 }

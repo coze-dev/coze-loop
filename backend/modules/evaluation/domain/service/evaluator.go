@@ -98,6 +98,6 @@ type EvaluatorRecordService interface {
 //	ExperimentID       int64                      `json:"experiment_id,omitempty"`
 //	ExperimentRunID    int64                      `json:"experiment_run_id,omitempty"`
 //	ItemID             int64                      `json:"item_id,omitempty"`
-//	TurnID             int64                      `json:"turn_id,omitempty"`
+//	RecordID             int64                      `json:"turn_id,omitempty"`
 //	Ext                map[string]string          `json:"ext,omitempty"`
 //}

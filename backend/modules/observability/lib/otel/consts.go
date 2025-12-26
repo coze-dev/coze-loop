@@ -62,6 +62,17 @@ const (
 	springAIAttributeToolOutput = "spring.ai.tool.call.result"
 )
 
+// litellm span name
+const (
+	liteLlmSpanNameRequest = "litellm_request"
+)
+
+// litellm attribute key
+const (
+	liteLlmAttributeModelInputTools = "llm.request.functions"
+	liteLlmAttributeModelStream     = "llm.is_streaming"
+)
+
 // otel event name
 const (
 	// model

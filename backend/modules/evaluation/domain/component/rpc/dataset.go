@@ -12,6 +12,8 @@ import (
 //go:generate mockgen -destination=mocks/data_provider.go -package=mocks . IDatasetRPCAdapter
 type IDatasetRPCAdapter interface {
 	CreateDataset(ctx context.Context, param *CreateDatasetParam) (id int64, err error)
+	CreateDatasetWithImport(ctx context.Context, param *CreateDatasetWithImportParam) (id int64, jobID int64, err error)
+	ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error)
 	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error)
 	DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
@@ -35,6 +37,18 @@ type IDatasetRPCAdapter interface {
 	BatchGetDatasetItemsByVersion(ctx context.Context, param *BatchGetDatasetItemsParam) (items []*entity.EvaluationSetItem, err error)
 	ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error)
+	GetDatasetItemField(ctx context.Context, param *GetDatasetItemFieldParam) (fieldData *entity.FieldData, err error)
+}
+
+type GetDatasetItemFieldParam struct {
+	SpaceID         int64
+	EvaluationSetID int64
+	// item 的主键ID，即 item.ID 这一字段
+	ItemPK int64
+	// 列名
+	FieldName string
+	// 当 item 为多轮时，必须提供
+	TurnID *int64
 }
 
 type CreateDatasetParam struct {
@@ -44,6 +58,19 @@ type CreateDatasetParam struct {
 	EvaluationSetItems *entity.EvaluationSetSchema
 	BizCategory        *entity.BizCategory
 	Session            *entity.Session
+}
+
+type CreateDatasetWithImportParam struct {
+	SpaceID            int64
+	Name               string
+	Desc               *string
+	EvaluationSetItems *entity.EvaluationSetSchema
+	BizCategory        *entity.BizCategory
+
+	SourceType    *entity.SetSourceType
+	Source        *entity.DatasetIOEndpoint
+	FieldMappings []*entity.FieldMapping
+	Session       *entity.Session
 }
 
 type ListDatasetsParam struct {
