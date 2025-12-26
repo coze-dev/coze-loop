@@ -11,6 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -84,6 +85,11 @@ func TestEvalConfConvert_ConvertEntityToDTO(t *testing.T) {
                             ]
                         },
                         "CustomConf": null
+                    },
+                    "RunConf": {
+                        "evaluator_runtime_param": {
+                            "json_value": "{\"key\":\"val\"}"
+                        }
                     }
                 }
             ]
@@ -95,9 +101,16 @@ func TestEvalConfConvert_ConvertEntityToDTO(t *testing.T) {
 	err := json.Unmarshal([]byte(raw), &conf)
 	assert.Nil(t, err)
 
-	target, evaluators, _, _ := NewEvalConfConvert().ConvertEntityToDTO(conf)
+	target, evaluators, _, evrcs := NewEvalConfConvert().ConvertEntityToDTO(conf)
 	t.Logf("target: %v", json.Jsonify(target))
 	t.Logf("evaluators: %v", json.Jsonify(evaluators))
+
+	assert.NotNil(t, target)
+	assert.Len(t, evaluators, 1)
+	assert.Equal(t, int64(7486074365205823489), evaluators[0].EvaluatorVersionID)
+	assert.NotNil(t, evrcs)
+	assert.Contains(t, evrcs, int64(7486074365205823489))
+	assert.Equal(t, `{"key":"val"}`, *evrcs[7486074365205823489].EvaluatorRuntimeParam.JSONValue)
 }
 
 func TestConvertExptTurnResultFilterAccelerator(t *testing.T) {
@@ -449,9 +462,11 @@ func TestConvertExptTurnResultFilterAccelerator_EvalTargetMetrics(t *testing.T) 
 
 func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 	tests := []struct {
-		name           string
-		request        *expt.CreateExperimentRequest
-		wantCustomConf *entity.FieldAdapter
+		name                       string
+		request                    *expt.CreateExperimentRequest
+		evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig
+		wantCustomConf             *entity.FieldAdapter
+		wantEvaluatorRunConf       map[int64]string
 	}{
 		{
 			name: "正常运行时参数转换",
@@ -481,6 +496,26 @@ func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 						Value:     `{"model_config":{"model_id":"test_model","temperature":0.7}}`,
 					},
 				},
+			},
+		},
+		{
+			name: "包含评估器运行时参数转换",
+			request: &expt.CreateExperimentRequest{
+				EvaluatorFieldMapping: []*domain_expt.EvaluatorFieldMapping{
+					{
+						EvaluatorVersionID: 456,
+					},
+				},
+			},
+			evaluatorVersionRunConfigs: map[int64]*evaluatordto.EvaluatorRunConfig{
+				456: {
+					EvaluatorRuntimeParam: &common.RuntimeParam{
+						JSONValue: gptr.Of(`{"key":"val"}`),
+					},
+				},
+			},
+			wantEvaluatorRunConf: map[int64]string{
+				456: `{"key":"val"}`,
 			},
 		},
 		{
@@ -564,7 +599,7 @@ func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := converter.ConvertToEntity(tt.request, nil)
+			result, err := converter.ConvertToEntity(tt.request, tt.evaluatorVersionRunConfigs)
 			assert.NoError(t, err)
 
 			assert.NotNil(t, result)
@@ -588,6 +623,17 @@ func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 				if len(tt.wantCustomConf.FieldConfs) > 0 {
 					assert.Equal(t, tt.wantCustomConf.FieldConfs[0].FieldName, result.ConnectorConf.TargetConf.IngressConf.CustomConf.FieldConfs[0].FieldName)
 					assert.Equal(t, tt.wantCustomConf.FieldConfs[0].Value, result.ConnectorConf.TargetConf.IngressConf.CustomConf.FieldConfs[0].Value)
+				}
+			}
+
+			// 检查Evaluator RunConf
+			if len(tt.wantEvaluatorRunConf) > 0 {
+				assert.NotNil(t, result.ConnectorConf.EvaluatorsConf)
+				for _, ec := range result.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+					if wantVal, ok := tt.wantEvaluatorRunConf[ec.EvaluatorVersionID]; ok {
+						assert.NotNil(t, ec.RunConf)
+						assert.Equal(t, wantVal, *ec.RunConf.EvaluatorRuntimeParam.JSONValue)
+					}
 				}
 			}
 		})
@@ -712,10 +758,11 @@ func TestEvalConfConvert_ConvertEntityToDTO_RuntimeParam(t *testing.T) {
 
 func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 	tests := []struct {
-		name           string
-		request        *expt.CreateExperimentRequest
-		wantCustomConf *entity.FieldAdapter
-		wantErr        bool
+		name                       string
+		request                    *expt.CreateExperimentRequest
+		evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig
+		wantCustomConf             *entity.FieldAdapter
+		wantErr                    bool
 	}{
 		{
 			name: "包含运行时参数的请求",
@@ -749,6 +796,25 @@ func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 					{
 						FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
 						Value:     `{"model_config":{"model_id":"request_model","max_tokens":200}}`,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "包含评估器运行时参数的请求",
+			request: &expt.CreateExperimentRequest{
+				TargetVersionID: gptr.Of(int64(123)),
+				EvaluatorFieldMapping: []*domain_expt.EvaluatorFieldMapping{
+					{
+						EvaluatorVersionID: 456,
+					},
+				},
+			},
+			evaluatorVersionRunConfigs: map[int64]*evaluatordto.EvaluatorRunConfig{
+				456: {
+					EvaluatorRuntimeParam: &common.RuntimeParam{
+						JSONValue: gptr.Of(`{"key":"val"}`),
 					},
 				},
 			},
@@ -791,7 +857,7 @@ func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := converter.ConvertToEntity(tt.request, nil)
+			result, err := converter.ConvertToEntity(tt.request, tt.evaluatorVersionRunConfigs)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -813,6 +879,16 @@ func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 				if len(tt.wantCustomConf.FieldConfs) > 0 {
 					assert.Equal(t, tt.wantCustomConf.FieldConfs[0].FieldName, result.ConnectorConf.TargetConf.IngressConf.CustomConf.FieldConfs[0].FieldName)
 					assert.Equal(t, tt.wantCustomConf.FieldConfs[0].Value, result.ConnectorConf.TargetConf.IngressConf.CustomConf.FieldConfs[0].Value)
+				}
+			}
+
+			if len(tt.evaluatorVersionRunConfigs) > 0 {
+				assert.NotNil(t, result.ConnectorConf.EvaluatorsConf)
+				for _, ec := range result.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+					if wantConf, ok := tt.evaluatorVersionRunConfigs[ec.EvaluatorVersionID]; ok {
+						assert.NotNil(t, ec.RunConf)
+						assert.Equal(t, *wantConf.EvaluatorRuntimeParam.JSONValue, *ec.RunConf.EvaluatorRuntimeParam.JSONValue)
+					}
 				}
 			}
 		})
