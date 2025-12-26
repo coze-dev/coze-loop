@@ -431,3 +431,8 @@ func (p FileFormat) String() string {
 	}
 	return "<UNSET>"
 }
+
+type RuntimeParam struct {
+	JSONValue *string `json:"json_value,omitempty"`
+	JSONDemo  *string `json:"json_demo,omitempty"`
+}

@@ -1371,7 +1371,9 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields)
+			var inputSchemas []*entity.ArgsSchema
+
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, inputSchemas)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2295,7 +2297,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, nil)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)
