@@ -84,7 +84,7 @@ func TestMetricsService_shouldTraverseMetric(t *testing.T) {
 func TestMetricsService_buildDrillDownFields(t *testing.T) {
 	t.Parallel()
 
-	t.Run("success with all drill down types", func(t *testing.T) {
+    t.Run("非 AVG 聚合：返回单一组合并包含 space_id", func(t *testing.T) {
 		t.Parallel()
 		svc := &MetricsService{
 			pMetrics: &entity.PlatformMetrics{
@@ -113,35 +113,24 @@ func TestMetricsService_buildDrillDownFields(t *testing.T) {
 			DrillDownObjects: []string{"group_obj"},
 		}
 
-		definition := &testMetricDefinition{
-			name: "test_metric",
-			groupBy: []*entity.Dimension{
-				{
-					Field: &loop_span.FilterField{
-						FieldName: "metric_field",
-						FieldType: loop_span.FieldTypeString,
-					},
-					Alias: "metric_alias",
-				},
-			},
-		}
+        // 使用默认 OExpression（Sum），不触发 AVG 组合逻辑
+        definition := &testMetricDefinition{name: "test_metric"}
 
-		result := svc.buildDrillDownFields(platformCfg, groupCfg, definition)
+        // 期望仅一个组合（platform + group + space_id）
+        result := svc.buildDrillDownFields(platformCfg, groupCfg, definition)
+        assert.Len(t, result, 1)
+        combo := result[0]
+        assert.Len(t, combo, 3)
+        names := make([]string, 0, len(combo))
+        for _, f := range combo {
+            names = append(names, f.FieldName)
+        }
+        assert.Contains(t, names, "platform_field")
+        assert.Contains(t, names, "group_field")
+        assert.Contains(t, names, loop_span.SpanFieldSpaceId)
+    })
 
-		assert.Len(t, result, 4) // platform + group + metric + space_id
-
-		fieldNames := make([]string, len(result))
-		for i, field := range result {
-			fieldNames[i] = field.FieldName
-		}
-
-		assert.Contains(t, fieldNames, "platform_field")
-		assert.Contains(t, fieldNames, "group_field")
-		assert.Contains(t, fieldNames, "metric_field")
-		assert.Contains(t, fieldNames, "space_id")
-	})
-
-	t.Run("duplicate fields are deduplicated", func(t *testing.T) {
+    t.Run("非 AVG 聚合：重复字段不去重", func(t *testing.T) {
 		t.Parallel()
 		svc := &MetricsService{
 			pMetrics: &entity.PlatformMetrics{
@@ -162,32 +151,87 @@ func TestMetricsService_buildDrillDownFields(t *testing.T) {
 			DrillDownObjects: []string{"common_obj"}, // 相同的字段
 		}
 
-		definition := &testMetricDefinition{
-			name: "test_metric",
-			groupBy: []*entity.Dimension{
-				{
-					Field: &loop_span.FilterField{
-						FieldName: "common_field", // 相同的字段
-						FieldType: loop_span.FieldTypeString,
-					},
-					Alias: "common_alias",
-				},
-			},
-		}
+        // 使用默认 OExpression（Sum），不触发 AVG 组合逻辑
+        definition := &testMetricDefinition{name: "test_metric"}
 
-		result := svc.buildDrillDownFields(platformCfg, groupCfg, definition)
+        result := svc.buildDrillDownFields(platformCfg, groupCfg, definition)
+        // 期望仅一个组合，且重复字段会保留
+        assert.Len(t, result, 1)
+        combo := result[0]
+        fieldCount := 0
+        names := make([]string, 0, len(combo))
+        for _, field := range combo {
+            names = append(names, field.FieldName)
+            if field.FieldName == "common_field" {
+                fieldCount++
+            }
+        }
+        assert.Equal(t, 2, fieldCount)              // 平台 + 组 都包含同名字段
+        assert.Contains(t, names, loop_span.SpanFieldSpaceId) // 包含 space_id
+        assert.Len(t, combo, 3)
+    })
 
-		// 检查去重效果
-		fieldCount := 0
-		for _, field := range result {
-			if field.FieldName == "common_field" {
-				fieldCount++
-			}
-		}
+    t.Run("AVG 聚合：返回幂集组合并包含 space_id", func(t *testing.T) {
+        t.Parallel()
+        svc := &MetricsService{
+            pMetrics: &entity.PlatformMetrics{
+                DrillDownObjects: map[string]*loop_span.FilterField{
+                    "a": {FieldName: "a", FieldType: loop_span.FieldTypeString},
+                    "b": {FieldName: "b", FieldType: loop_span.FieldTypeString},
+                },
+            },
+        }
 
-		assert.Equal(t, 1, fieldCount) // 同一个字段只应该出现一次
-		assert.Len(t, result, 2)       // common_field + space_id
-	})
+        platformCfg := &entity.PlatformMetricDef{DrillDownObjects: []string{"a"}}
+        groupCfg := &entity.MetricGroup{DrillDownObjects: []string{"b"}}
+
+        // 自定义 AVG 聚合表达式（应返回所有子集的组合）
+        def := &customTestMetricDefinition{
+            name:              "avg_metric",
+            metricType:        entity.MetricTypeSummary,
+            customOExpression: &entity.OExpression{AggrType: entity.MetricOfflineAggrTypeAvg, MetricName: "avg_metric"},
+        }
+
+        result := svc.buildDrillDownFields(platformCfg, groupCfg, def)
+        // 期望幂集：{}, {a}, {b}, {a,b} 四种组合；每种都应追加 space_id
+        assert.Len(t, result, 4)
+
+        // 检查四种情形是否存在
+        var hasOnlySpaceID, hasA, hasB, hasAB bool
+        // 辅助函数：判断切片中是否包含指定元素
+        has := func(ss []string, s string) bool {
+            for _, x := range ss {
+                if x == s {
+                    return true
+                }
+            }
+            return false
+        }
+
+        for _, combo := range result {
+            names := make([]string, 0, len(combo))
+            for _, f := range combo {
+                names = append(names, f.FieldName)
+            }
+            // 所有组合都必须包含 space_id
+            assert.Contains(t, names, loop_span.SpanFieldSpaceId)
+
+            switch {
+            case len(names) == 1 && has(names, loop_span.SpanFieldSpaceId):
+                hasOnlySpaceID = true
+            case has(names, "a") && !has(names, "b"):
+                hasA = true
+            case has(names, "b") && !has(names, "a"):
+                hasB = true
+            case has(names, "a") && has(names, "b"):
+                hasAB = true
+            }
+        }
+        assert.True(t, hasOnlySpaceID)
+        assert.True(t, hasA)
+        assert.True(t, hasB)
+        assert.True(t, hasAB)
+    })
 }
 
 // TestMetricsService_extractMetrics 测试指标提取功能

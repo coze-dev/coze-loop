@@ -5,7 +5,9 @@ package application
 
 import (
 	"context"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	metric2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/metric"
@@ -152,7 +154,6 @@ func (m *MetricApplication) shouldCompareWith(start, end int64, c *entity.Compar
 	}
 }
 
-// 取最近七天内数据
 func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.GetDrillDownValuesRequest) (r *metric.GetDrillDownValuesResponse, err error) {
 	if err := m.validateGetDrillDownValuesReq(ctx, req); err != nil {
 		return nil, err
@@ -179,10 +180,6 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 		EndTime:      req.GetEndTime(),
 		FilterFields: tconv.FilterFieldsDTO2DO(req.Filters),
 	}
-	sevenDayMills := 7 * 24 * time.Hour.Milliseconds()
-	if sReq.EndTime-sReq.StartTime > sevenDayMills {
-		sReq.StartTime = sReq.EndTime - sevenDayMills
-	}
 	sResp, err := m.metricService.QueryMetrics(ctx, sReq)
 	if err != nil {
 		return nil, err
@@ -200,6 +197,21 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 				})
 			}
 		}
+	}
+	sort.Slice(resp.DrillDownValues, func(i, j int) bool {
+		a := resp.DrillDownValues[i].Value
+		b := resp.DrillDownValues[j].Value
+		if len(a) > len(b) {
+			return true
+		} else if len(b) > len(a) {
+			return false
+		} else {
+			return strings.Compare(a, b) > 0
+		}
+	})
+	const maxLength = 1000
+	if len(resp.DrillDownValues) > maxLength {
+		resp.DrillDownValues = resp.DrillDownValues[:maxLength]
 	}
 	return resp, nil
 }
