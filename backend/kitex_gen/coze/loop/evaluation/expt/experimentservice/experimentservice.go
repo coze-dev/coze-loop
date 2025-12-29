@@ -104,6 +104,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CalculateExperimentAggrResult": kitex.NewMethodInfo(
+		calculateExperimentAggrResult_Handler,
+		newExperimentServiceCalculateExperimentAggrResultArgs,
+		newExperimentServiceCalculateExperimentAggrResultResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"BatchGetExperimentAggrResult": kitex.NewMethodInfo(
 		batchGetExperimentAggrResult_Handler,
 		newExperimentServiceBatchGetExperimentAggrResultArgs,
@@ -515,6 +522,25 @@ func newExperimentServiceBatchGetExperimentResultArgs() interface{} {
 
 func newExperimentServiceBatchGetExperimentResultResult() interface{} {
 	return expt.NewExperimentServiceBatchGetExperimentResultResult()
+}
+
+func calculateExperimentAggrResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceCalculateExperimentAggrResultArgs)
+	realResult := result.(*expt.ExperimentServiceCalculateExperimentAggrResultResult)
+	success, err := handler.(expt.ExperimentService).CalculateExperimentAggrResult_(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceCalculateExperimentAggrResultArgs() interface{} {
+	return expt.NewExperimentServiceCalculateExperimentAggrResultArgs()
+}
+
+func newExperimentServiceCalculateExperimentAggrResultResult() interface{} {
+	return expt.NewExperimentServiceCalculateExperimentAggrResultResult()
 }
 
 func batchGetExperimentAggrResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1015,6 +1041,16 @@ func (p *kClient) BatchGetExperimentResult_(ctx context.Context, req *expt.Batch
 	_args.Req = req
 	var _result expt.ExperimentServiceBatchGetExperimentResultResult
 	if err = p.c.Call(ctx, "BatchGetExperimentResult", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest) (r *expt.CalculateExperimentAggrResultResponse, err error) {
+	var _args expt.ExperimentServiceCalculateExperimentAggrResultArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceCalculateExperimentAggrResultResult
+	if err = p.c.Call(ctx, "CalculateExperimentAggrResult", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

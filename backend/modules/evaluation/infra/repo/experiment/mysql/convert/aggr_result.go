@@ -37,6 +37,7 @@ func ExptAggrResultPOToDO(po *model.ExptAggrResult) *entity.ExptAggrResult {
 		AggrResult:   gptr.Indirect(po.AggrResult),
 		Version:      po.Version,
 		Status:       po.Status,
+		UpdateAt:     gptr.Of(po.UpdatedAt),
 	}
 
 	return do

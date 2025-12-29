@@ -1472,3 +1472,34 @@ func (e *experimentApplication) GetAnalysisRecordFeedbackVote(ctx context.Contex
 		BaseResp: base.NewBaseResp(),
 	}, nil
 }
+
+func (e *experimentApplication) CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest) (r *expt.CalculateExperimentAggrResultResponse, err error) {
+	session := entity.NewSession(ctx)
+
+	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	if !entity.IsExptFinished(got.Status) {
+		return nil, errorx.NewByCode(errno.IncompleteExptCalcAggrResultErrorCode)
+	}
+
+	if err := e.PublishExptAggrResultEvent(ctx, &entity.AggrCalculateEvent{
+		SpaceID:       req.GetWorkspaceID(),
+		ExperimentID:  req.GetExptID(),
+		CalculateMode: entity.CreateAllFields,
+	}, gptr.Of(time.Second*3)); err != nil {
+		return nil, err
+	}
+
+	return &expt.CalculateExperimentAggrResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
