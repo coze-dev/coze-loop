@@ -82,13 +82,14 @@ type IMetricsService interface {
 }
 
 type MetricsService struct {
-	metricRepo     repo.IMetricRepo
-	oMetricRepo    repo.IOfflineMetricRepo
-	metricDefMap   map[string]entity.IMetricDefinition
-	buildHelper    trace_service.TraceFilterProcessorBuilder
-	tenantProvider tenant.ITenantProvider
-	traceConfig    config.ITraceConfig
-	pMetrics       *entity.PlatformMetrics
+	metricRepo      repo.IMetricRepo
+	oMetricRepo     repo.IOfflineMetricRepo
+	metricDefMap    map[string]entity.IMetricDefinition
+	metricDrillDown map[string][]string
+	buildHelper     trace_service.TraceFilterProcessorBuilder
+	tenantProvider  tenant.ITenantProvider
+	traceConfig     config.ITraceConfig
+	pMetrics        *entity.PlatformMetrics
 }
 
 func NewMetricsService(
@@ -118,6 +119,7 @@ func NewMetricsService(
 
 func (m *MetricsService) registerMetrics() error {
 	metricDefMap := make(map[string]entity.IMetricDefinition)
+	metricDrillDown := make(map[string][]string)
 	for _, metricGroup := range m.pMetrics.MetricGroups {
 		var groupMetrics []entity.IMetricDefinition
 		for _, def := range metricGroup.MetricDefinitions {
@@ -141,8 +143,16 @@ func (m *MetricsService) registerMetrics() error {
 			groupMetrics = append(groupMetrics, metrics...)
 		}
 		metricGroup.MetricDefinitions = groupMetrics // expand wrapper metrics
+		for _, def := range groupMetrics {
+			name := def.Name()
+			if _, ok := metricDrillDown[name]; ok {
+				return fmt.Errorf("metric name already belongs %s", name)
+			}
+			metricDrillDown[name] = metricGroup.DrillDownObjects
+		}
 	}
 	m.metricDefMap = metricDefMap
+	m.metricDrillDown = metricDrillDown
 	logs.Info("%d metrics registered", len(metricDefMap))
 	return nil
 }
