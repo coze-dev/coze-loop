@@ -1012,6 +1012,12 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 	if err != nil {
 		return nil, err
 	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
+		err = e.authCustomRPCEvaluatorContentWritable(ctx, request.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	userID := session.UserIDInCtxOrEmpty(ctx)
 
@@ -1357,6 +1363,12 @@ func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request 
 	})
 	if err != nil {
 		return nil, err
+	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
+		err = e.authCustomRPCEvaluatorContentWritable(ctx, request.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	userID := session.UserIDInCtxOrEmpty(ctx)
