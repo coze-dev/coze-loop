@@ -53,6 +53,8 @@ func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetri
 		drillDownVals := m.buildDrillDownFields(
 			m.pMetrics.PlatformMetricDefs[metric.platformType],
 			m.pMetrics.MetricGroups[metric.groupName], metric.metricDef)
+		logs.CtxInfo(ctx, "traverse metric %s for %s, drill down combination count: %d",
+			metric.metricDef.Name(), metric.platformType, len(drillDownVals))
 		for _, drillDownVal := range drillDownVals {
 			param := &metricTraverseParam{
 				PlatformType:    metric.platformType,

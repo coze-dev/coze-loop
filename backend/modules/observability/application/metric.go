@@ -187,6 +187,7 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 	resp := &metric.GetDrillDownValuesResponse{}
 	metricVal := sResp.Metrics[metricName]
 	if metricVal != nil {
+		nameCount := make(map[string]string)
 		for k := range metricVal.Pie {
 			mp := make(map[string]string)
 			_ = json.Unmarshal([]byte(k), &mp)
@@ -195,20 +196,21 @@ func (m *MetricApplication) GetDrillDownValues(ctx context.Context, req *metric.
 					Value:       val,
 					DisplayName: ptr.Of(val),
 				})
+				nameCount[val] = metricVal.Pie[k]
 			}
 		}
+		sort.Slice(resp.DrillDownValues, func(i, j int) bool {
+			a := nameCount[resp.DrillDownValues[i].Value]
+			b := nameCount[resp.DrillDownValues[j].Value]
+			if len(a) > len(b) {
+				return true
+			} else if len(b) > len(a) {
+				return false
+			} else {
+				return strings.Compare(a, b) > 0
+			}
+		})
 	}
-	sort.Slice(resp.DrillDownValues, func(i, j int) bool {
-		a := resp.DrillDownValues[i].Value
-		b := resp.DrillDownValues[j].Value
-		if len(a) > len(b) {
-			return true
-		} else if len(b) > len(a) {
-			return false
-		} else {
-			return strings.Compare(a, b) > 0
-		}
-	})
 	const maxLength = 1000
 	if len(resp.DrillDownValues) > maxLength {
 		resp.DrillDownValues = resp.DrillDownValues[:maxLength]
