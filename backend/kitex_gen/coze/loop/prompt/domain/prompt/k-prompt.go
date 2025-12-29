@@ -3817,6 +3817,20 @@ func (p *ModelConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField100(buf[offset:])
@@ -3975,6 +3989,18 @@ func (p *ModelConfig) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ModelConfig) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+	_field := NewThinkingConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Thinking = _field
+	return offset, nil
+}
+
 func (p *ModelConfig) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -4016,6 +4042,7 @@ func (p *ModelConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField9(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -4034,6 +4061,7 @@ func (p *ModelConfig) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -4117,6 +4145,15 @@ func (p *ModelConfig) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetExtra() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 9)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Extra)
+	}
+	return offset
+}
+
+func (p *ModelConfig) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetThinking() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
+		offset += p.Thinking.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -4218,6 +4255,15 @@ func (p *ModelConfig) field9Length() int {
 	return l
 }
 
+func (p *ModelConfig) field10Length() int {
+	l := 0
+	if p.IsSetThinking() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Thinking.BLength()
+	}
+	return l
+}
+
 func (p *ModelConfig) field100Length() int {
 	l := 0
 	if p.IsSetParamConfigValues() {
@@ -4285,6 +4331,15 @@ func (p *ModelConfig) DeepCopy(s interface{}) error {
 		p.Extra = &tmp
 	}
 
+	var _thinking *ThinkingConfig
+	if src.Thinking != nil {
+		_thinking = &ThinkingConfig{}
+		if err := _thinking.DeepCopy(src.Thinking); err != nil {
+			return err
+		}
+	}
+	p.Thinking = _thinking
+
 	if src.ParamConfigValues != nil {
 		p.ParamConfigValues = make([]*ParamConfigValue, 0, len(src.ParamConfigValues))
 		for _, elem := range src.ParamConfigValues {
@@ -4298,6 +4353,233 @@ func (p *ModelConfig) DeepCopy(s interface{}) error {
 
 			p.ParamConfigValues = append(p.ParamConfigValues, _elem)
 		}
+	}
+
+	return nil
+}
+
+func (p *ThinkingConfig) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ThinkingConfig[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *ThinkingConfig) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.BudgetTokens = _field
+	return offset, nil
+}
+
+func (p *ThinkingConfig) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *ThinkingOption
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := ThinkingOption(v)
+		_field = &tmp
+	}
+	p.ThinkingOption = _field
+	return offset, nil
+}
+
+func (p *ThinkingConfig) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *ReasoningEffort
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := ReasoningEffort(v)
+		_field = &tmp
+	}
+	p.ReasoningEffort = _field
+	return offset, nil
+}
+
+func (p *ThinkingConfig) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *ThinkingConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *ThinkingConfig) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *ThinkingConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBudgetTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.BudgetTokens)
+	}
+	return offset
+}
+
+func (p *ThinkingConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetThinkingOption() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 2)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.ThinkingOption))
+	}
+	return offset
+}
+
+func (p *ThinkingConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetReasoningEffort() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 3)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.ReasoningEffort))
+	}
+	return offset
+}
+
+func (p *ThinkingConfig) field1Length() int {
+	l := 0
+	if p.IsSetBudgetTokens() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ThinkingConfig) field2Length() int {
+	l := 0
+	if p.IsSetThinkingOption() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *ThinkingConfig) field3Length() int {
+	l := 0
+	if p.IsSetReasoningEffort() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *ThinkingConfig) DeepCopy(s interface{}) error {
+	src, ok := s.(*ThinkingConfig)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.BudgetTokens != nil {
+		tmp := *src.BudgetTokens
+		p.BudgetTokens = &tmp
+	}
+
+	if src.ThinkingOption != nil {
+		tmp := *src.ThinkingOption
+		p.ThinkingOption = &tmp
+	}
+
+	if src.ReasoningEffort != nil {
+		tmp := *src.ReasoningEffort
+		p.ReasoningEffort = &tmp
 	}
 
 	return nil
