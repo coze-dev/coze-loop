@@ -405,6 +405,141 @@ func (p *ListExperimentStatsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *CreateExperimentTemplateRequest) IsValid() error {
+	if p.TargetFieldMapping != nil {
+		if err := p.TargetFieldMapping.IsValid(); err != nil {
+			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
+		}
+	}
+	if p.TargetRuntimeParam != nil {
+		if err := p.TargetRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
+	if p.CreateEvalTargetParam != nil {
+		if err := p.CreateEvalTargetParam.IsValid(); err != nil {
+			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
+		}
+	}
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateExperimentTemplateResponse) IsValid() error {
+	if p.ExperimentTemplate != nil {
+		if err := p.ExperimentTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field ExperimentTemplate not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetExperimentTemplateRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetExperimentTemplateResponse) IsValid() error {
+	if p.ExperimentTemplate != nil {
+		if err := p.ExperimentTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field ExperimentTemplate not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExperimentTemplateRequest) IsValid() error {
+	if p.TargetFieldMapping != nil {
+		if err := p.TargetFieldMapping.IsValid(); err != nil {
+			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
+		}
+	}
+	if p.TargetRuntimeParam != nil {
+		if err := p.TargetRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
+	if p.CreateEvalTargetParam != nil {
+		if err := p.CreateEvalTargetParam.IsValid(); err != nil {
+			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExperimentTemplateResponse) IsValid() error {
+	if p.ExperimentTemplate != nil {
+		if err := p.ExperimentTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field ExperimentTemplate not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteExperimentTemplateRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteExperimentTemplateResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExperimentTemplatesRequest) IsValid() error {
+	if p.FilterOption != nil {
+		if err := p.FilterOption.IsValid(); err != nil {
+			return fmt.Errorf("field FilterOption not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExperimentTemplatesResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *UpsertExptTurnResultFilterRequest) IsValid() error {
 	return nil
 }

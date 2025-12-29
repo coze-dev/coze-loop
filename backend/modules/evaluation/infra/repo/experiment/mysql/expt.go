@@ -217,6 +217,11 @@ func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.Or
 				return db.Where(fmt.Sprintf("%sexpt_type %s (?)", exptPrefix, scopeComparator), ffields.ExptType)
 			})
 		}
+		if ffields != nil && len(ffields.ExptTemplateIDs) > 0 {
+			conds = append(conds, func(db *gorm.DB) *gorm.DB {
+				return db.Where(fmt.Sprintf("%sexpt_template_id %s (?)", exptPrefix, scopeComparator), ffields.ExptTemplateIDs)
+			})
+		}
 		if ffields != nil && len(ffields.SourceType) > 0 {
 			conds = append(conds, func(db *gorm.DB) *gorm.DB {
 				return db.Where(fmt.Sprintf("%ssource_type %s (?)", exptPrefix, scopeComparator), ffields.SourceType)

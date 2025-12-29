@@ -174,6 +174,15 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 			}
 			sourceIDs := parseStringList(cond.GetValue())
 			ff.SourceID = intersectIgnoreNull(ff.SourceID, sourceIDs)
+			case domain_expt.FieldType_ExperimentTemplateID:
+				if len(cond.GetValue()) == 0 {
+					continue
+				}
+				ids, err := parseIntList(cond.GetValue())
+				if err != nil {
+					return nil, err
+				}
+				ff.ExptTemplateIDs = intersectIgnoreNull(ff.ExptTemplateIDs, ids)
 		default:
 			logs.CtxWarn(ctx, "ConvertFilters with unsupport condition: %v", json.Jsonify(cond))
 		}
@@ -508,4 +517,148 @@ func checkFilterCondition(filterCondition domain_expt.FilterCondition) error {
 		}
 	}
 	return nil
+}
+
+// NewExptTemplateFilterConvertor 创建实验模板筛选器转换器
+func NewExptTemplateFilterConvertor(evalTargetService service.IEvalTargetService) *ExptTemplateFilterConvertor {
+	return &ExptTemplateFilterConvertor{
+		evalTargetService: evalTargetService,
+	}
+}
+
+type ExptTemplateFilterConvertor struct {
+	evalTargetService service.IEvalTargetService
+}
+
+// Convert 转换实验模板筛选选项为实体筛选器
+func (e *ExptTemplateFilterConvertor) Convert(ctx context.Context, etf *domain_expt.ExptTemplateFilter, spaceID int64) (*entity.ExptTemplateListFilter, error) {
+	if etf == nil {
+		return nil, nil
+	}
+
+	filters, err := e.ConvertFilters(ctx, etf.GetFilters(), spaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 处理关键词搜索（如果有）
+	if etf.GetKeywordSearch() != nil {
+		keywordSearch := etf.GetKeywordSearch()
+		keyword := keywordSearch.GetKeyword()
+		if len(keyword) > 0 {
+			// 对于模板，关键词搜索主要用于名称模糊匹配
+			filters.FuzzyName = keyword
+		}
+	}
+
+	return filters, nil
+}
+
+// ConvertFilters 转换筛选条件
+func (e *ExptTemplateFilterConvertor) ConvertFilters(ctx context.Context, filters *domain_expt.Filters, spaceID int64) (*entity.ExptTemplateListFilter, error) {
+	efo := &entity.ExptTemplateListFilter{
+		Includes: &entity.ExptTemplateFilterFields{},
+		Excludes: &entity.ExptTemplateFilterFields{},
+	}
+
+	if filters == nil {
+		return efo, nil
+	}
+
+	if filters.GetLogicOp() != domain_expt.FilterLogicOp_And {
+		return nil, fmt.Errorf("ConvertFilters fail, operator type must be and, got: %v", filters.GetLogicOp())
+	}
+
+	ffieldsFn := func(operatorType domain_expt.FilterOperatorType) *entity.ExptTemplateFilterFields {
+		switch operatorType {
+		case domain_expt.FilterOperatorType_In, domain_expt.FilterOperatorType_Equal:
+			return efo.Includes
+		case domain_expt.FilterOperatorType_NotIn, domain_expt.FilterOperatorType_NotEqual:
+			return efo.Excludes
+		default:
+			return &entity.ExptTemplateFilterFields{}
+		}
+	}
+
+	for _, cond := range filters.GetFilterConditions() {
+		if cond.GetField() == nil {
+			continue
+		}
+		ff := ffieldsFn(cond.GetOperator())
+		switch cond.GetField().GetFieldType() {
+		case domain_expt.FieldType_CreatorBy:
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			ff.CreatedBy = intersectIgnoreNull(ff.CreatedBy, []string{cond.GetValue()})
+		case domain_expt.FieldType_EvalSetID:
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			ids, err := parseIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.EvalSetIDs = intersectIgnoreNull(ff.EvalSetIDs, ids)
+		case domain_expt.FieldType_TargetID:
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			ids, err := parseIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.TargetIDs = intersectIgnoreNull(ff.TargetIDs, ids)
+		case domain_expt.FieldType_EvaluatorID:
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			ids, err := parseIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.EvaluatorIDs = intersectIgnoreNull(ff.EvaluatorIDs, ids)
+		case domain_expt.FieldType_TargetType:
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			ids, err := parseIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.TargetType = intersectIgnoreNull(ff.TargetType, ids)
+		case domain_expt.FieldType_SourceTarget:
+			if cond.GetSourceTarget() == nil || len(cond.GetSourceTarget().GetSourceTargetIds()) == 0 {
+				continue
+			}
+			param := &entity.BatchGetEvalTargetBySourceParam{
+				SpaceID:        spaceID,
+				SourceTargetID: cond.GetSourceTarget().GetSourceTargetIds(),
+				TargetType:     entity.EvalTargetType(cond.GetSourceTarget().GetEvalTargetType()),
+			}
+			targets, err := e.evalTargetService.BatchGetEvalTargetBySource(ctx, param)
+			if err != nil {
+				return nil, err
+			}
+			if len(cond.GetSourceTarget().GetSourceTargetIds()) == 1 && len(targets) == 0 {
+				ff.TargetIDs = append(ff.TargetIDs, -1) // 无效查询，返回空结果
+				break
+			}
+			targetIDs := make([]int64, 0, len(targets))
+			for _, target := range targets {
+				targetIDs = append(targetIDs, target.ID)
+			}
+			ff.TargetIDs = intersectIgnoreNull(ff.TargetIDs, targetIDs)
+		case domain_expt.FieldType_ExptType:
+			types, err := parseIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.ExptType = intersectIgnoreNull(ff.ExptType, types)
+		default:
+			logs.CtxWarn(ctx, "ConvertFilters with unsupport condition: %v", json.Jsonify(cond))
+		}
+	}
+
+	return efo, nil
 }

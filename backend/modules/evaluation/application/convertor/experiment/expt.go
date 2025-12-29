@@ -31,14 +31,17 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest) (*e
 	ec := &entity.EvaluationConfiguration{
 		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
 	}
+
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
 		TargetVersionID: cer.GetTargetVersionID(),
 		IngressConf:     toTargetFieldMappingDO(cer.GetTargetFieldMapping(), cer.GetTargetRuntimeParam()),
 	}
 	if cer.GetEvaluatorFieldMapping() != nil {
 		ec.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
-			EvaluatorConcurNum: ptr.ConvIntPtr[int32, int](cer.EvaluatorsConcurNum),
-			EvaluatorConf:      toEvaluatorFieldMappingDo(cer.GetEvaluatorFieldMapping()),
+			EvaluatorConcurNum:   ptr.ConvIntPtr[int32, int](cer.EvaluatorsConcurNum),
+			EvaluatorConf:        toEvaluatorFieldMappingDo(cer.GetEvaluatorFieldMapping()),
+			EnableWeightedScore:   gptr.Indirect(cer.EnableWeightedScore),
+			EvaluatorScoreWeights: cer.GetEvaluatorScoreWeights(),
 		}
 	}
 	return ec, nil
@@ -221,6 +224,11 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	}
 	if experiment.EvalConf != nil && experiment.EvalConf.ItemConcurNum != nil {
 		res.ItemConcurNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemConcurNum)))
+	}
+
+	// 关联的实验模板（仅在查询时按需填充基础信息）
+	if experiment.ExptTemplate != nil {
+		res.ExptTemplate = ToExptTemplateDTO(experiment.ExptTemplate)
 	}
 
 	res.EvalTarget = target.EvalTargetDO2DTO(experiment.Target)

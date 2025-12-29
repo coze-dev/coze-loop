@@ -222,6 +222,17 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 		})
 	}
 
+	// 追加“加权得分”聚合指标（FieldType_WeightedScore）：
+	// 基于行级 WeightedScore 做聚合（加权评分的聚合），而不是对各评估器聚合结果再加权。
+	experiment, err := e.experimentRepo.GetByID(ctx, experimentID, spaceID)
+	if err == nil && experiment != nil && experiment.EvalConf != nil && experiment.EvalConf.EnableWeightedScore {
+		if weightedAggr, err := e.createWeightedScoreAggrResult(ctx, spaceID, experimentID); err != nil {
+			return err
+		} else if weightedAggr != nil {
+			aggrResults = append(aggrResults, weightedAggr)
+		}
+	}
+
 	targetAggrResults, err := tmag.buildAggrResult(spaceID, experimentID)
 	if err != nil {
 		return err
@@ -264,6 +275,77 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 	}
 
 	return nil
+}
+
+// createWeightedScoreAggrResult 基于行级 WeightedScore 计算聚合指标
+// 只统计成功的轮次（TurnRunState_Success）
+func (e *ExptAggrResultServiceImpl) createWeightedScoreAggrResult(ctx context.Context, spaceID, experimentID int64) (*entity.ExptAggrResult, error) {
+	const (
+		limit  = int64(500)
+		maxTry = 10000
+	)
+
+	aggGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
+	var (
+		cursor  int64
+		hasData bool
+	)
+
+	for i := 0; i < maxTry; i++ {
+		turnResults, nextCursor, err := e.exptTurnResultRepo.ScanTurnResults(
+			ctx,
+			experimentID,
+			[]int32{int32(entity.TurnRunState_Success)},
+			cursor,
+			limit,
+			spaceID,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if len(turnResults) == 0 {
+			break
+		}
+
+		for _, tr := range turnResults {
+			aggGroup.Append(tr.WeightedScore)
+			hasData = true
+		}
+
+		if nextCursor == 0 || nextCursor == cursor {
+			break
+		}
+		cursor = nextCursor
+	}
+
+	if !hasData {
+		return nil, nil
+	}
+
+	aggrResult := aggGroup.Result()
+	var averageScore float64
+	for _, r := range aggrResult.AggregatorResults {
+		if r.AggregatorType == entity.Average {
+			averageScore = r.GetScore()
+			break
+		}
+	}
+
+	aggrBytes, err := json.Marshal(aggrResult)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entity.ExptAggrResult{
+		SpaceID:      spaceID,
+		ExperimentID: experimentID,
+		FieldType:    int32(entity.FieldType_WeightedScore),
+		// 约定 FieldKey 为 experimentID
+		FieldKey:   strconv.FormatInt(experimentID, 10),
+		Score:      averageScore,
+		AggrResult: aggrBytes,
+		Version:    0,
+	}, nil
 }
 
 func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, param *entity.UpdateExptAggrResultParam) (err error) {
@@ -436,6 +518,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 			TargetID:        versionedTargetIDMap[exptID].TargetID,
 			TargetVersionID: versionedTargetIDMap[exptID].VersionID,
 		}
+		var weightedResults []*entity.AggregatorResult
 
 		var latestUpdateAt *time.Time
 		for _, fieldResult := range exptResult {
@@ -470,13 +553,11 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse evaluator version id from field key %s, err: %v", fieldResult.FieldKey, err)
 				}
-
 				aggregateResultDO := entity.AggregateResult{}
 				err = json.Unmarshal(fieldResult.AggrResult, &aggregateResultDO)
 				if err != nil {
 					return nil, fmt.Errorf("json.Unmarshal(%s) failed, err: %v", fieldResult.AggrResult, err)
 				}
-
 				evaluator, ok := versionID2Evaluator[evaluatorVersionID]
 				if !ok {
 					return nil, fmt.Errorf("failed to get evaluator by version_id %d", evaluatorVersionID)
@@ -490,6 +571,12 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 					Version:            gptr.Of(evaluator.GetVersion()),
 				}
 				evaluatorResults[evaluatorVersionID] = &evaluatorAggrResult
+			case int32(entity.FieldType_WeightedScore):
+				aggregateResultDO := entity.AggregateResult{}
+				if err := json.Unmarshal(fieldResult.AggrResult, &aggregateResultDO); err != nil {
+					return nil, fmt.Errorf("json.Unmarshal(%s) failed, err: %v", fieldResult.AggrResult, err)
+				}
+				weightedResults = aggregateResultDO.AggregatorResults
 			case int32(entity.FieldType_TargetLatency):
 				ar := entity.AggregateResult{}
 				if err := json.Unmarshal(fieldResult.AggrResult, &ar); err != nil {
@@ -523,16 +610,84 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 			}
 		}
 
-		results = append(results, &entity.ExptAggregateResult{
+		exptAgg := &entity.ExptAggregateResult{
 			ExperimentID:      exptID,
 			EvaluatorResults:  evaluatorResults,
 			AnnotationResults: annotationResults,
 			TargetResults:     targetResults,
 			UpdateTime:        latestUpdateAt,
-		})
+		}
+		if len(weightedResults) > 0 {
+			exptAgg.WeightedResults = weightedResults
+		}
+		results = append(results, exptAgg)
 	}
 
 	return results, nil
+}
+
+// calculateWeightedAggregateResults 计算所有数值型聚合指标（如 avg、p99 等）的加权结果
+// 约定：对任意 AggregatorType，只要其 Data.Value 为数值类型（Double），则参与加权计算：
+//   weighted_value = Σ(value_i * weight_i) / Σ(weight_i)
+func (e *ExptAggrResultServiceImpl) calculateWeightedAggregateResults(
+	evaluatorResults map[int64]*entity.EvaluatorAggregateResult,
+	weights map[int64]float64,
+) []*entity.AggregatorResult {
+	if len(evaluatorResults) == 0 || len(weights) == 0 {
+		return nil
+	}
+
+	// aggregatorType -> (sum(value_i * w_i), sum(w_i))
+	type aggAcc struct {
+		sumWeighted float64
+		sumWeight   float64
+	}
+	accMap := make(map[entity.AggregatorType]*aggAcc)
+
+	for evaluatorVersionID, result := range evaluatorResults {
+		weight, ok := weights[evaluatorVersionID]
+		if !ok || weight <= 0 {
+			continue
+		}
+
+		for _, aggr := range result.AggregatorResults {
+			if aggr == nil || aggr.Data == nil || aggr.Data.Value == nil {
+				continue
+			}
+
+			v := *aggr.Data.Value
+			if _, ok := accMap[aggr.AggregatorType]; !ok {
+				accMap[aggr.AggregatorType] = &aggAcc{}
+			}
+			acc := accMap[aggr.AggregatorType]
+			acc.sumWeighted += v * weight
+			acc.sumWeight += weight
+		}
+	}
+
+	if len(accMap) == 0 {
+		return nil
+	}
+
+	weightedResults := make([]*entity.AggregatorResult, 0, len(accMap))
+	for aggType, acc := range accMap {
+		if acc.sumWeight <= 0 {
+			continue
+		}
+		value := acc.sumWeighted / acc.sumWeight
+		weightedResults = append(weightedResults, &entity.AggregatorResult{
+			AggregatorType: aggType,
+			Data: &entity.AggregateData{
+				DataType: entity.Double,
+				Value:    &value,
+			},
+		})
+	}
+
+	if len(weightedResults) == 0 {
+		return nil
+	}
+	return weightedResults
 }
 
 func (e *ExptAggrResultServiceImpl) batchGetTagInfoByExperimentIDs(ctx context.Context, spaceID int64, exptIDs []int64) (map[int64]*entity.TagInfo, error) {

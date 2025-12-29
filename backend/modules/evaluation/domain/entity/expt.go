@@ -87,6 +87,8 @@ type Experiment struct {
 	TargetID            int64
 	EvaluatorVersionRef []*ExptEvaluatorVersionRef
 	EvalConf            *EvaluationConfiguration
+	ExptTemplateID      int64         // 实验模板ID，0表示未使用模板
+	ExptTemplate        *ExptTemplate // 关联的实验模板基础信息（仅在查询时按需填充）
 
 	Target     *EvalTarget
 	EvalSet    *EvaluationSet
@@ -191,6 +193,9 @@ type TargetIngressConf struct {
 type EvaluatorsConf struct {
 	EvaluatorConcurNum *int
 	EvaluatorConf      []*EvaluatorConf
+	// 评估器得分加权配置（移动自 EvaluationConfiguration）
+	EnableWeightedScore   bool
+	EvaluatorScoreWeights map[int64]float64
 }
 
 func (e *EvaluatorsConf) Valid(ctx context.Context) error {

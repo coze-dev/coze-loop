@@ -264,6 +264,7 @@ func TurnEvaluatorOutputDO2DTO(from *entity.TurnEvaluatorOutput) *domain_expt.Tu
 	}
 	return &domain_expt.TurnEvaluatorOutput{
 		EvaluatorRecords: evaluatorRecords,
+		WeightedScore:    from.WeightedScore,
 	}
 }
 

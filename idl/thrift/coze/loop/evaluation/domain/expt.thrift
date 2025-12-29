@@ -62,6 +62,46 @@ struct Experiment {
     41: optional i64 max_alive_time
     42: optional SourceType source_type
     43: optional string source_id
+
+    50: optional ExptTemplate expt_template
+    // 评估器得分加权配置
+    51: optional bool enable_weighted_score
+    52: optional map<i64, double> evaluator_score_weights
+}
+
+// 离线实验模板，用于预先配置评测对象、评测集与评估器，并在创建实验时复用
+struct ExptTemplate {
+    1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional string name
+    4: optional string desc
+    5: optional string creator_by
+
+    // 评测对象与评测集配置
+    // 注意：业务上要求模板创建成功后不可修改 eval_set_id / target_id，仅可调整默认版本等配置
+    20: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
+    21: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
+    22: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
+    23: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
+
+    // 评估器配置
+    30: optional list<i64> evaluator_version_ids (api.js_conv='true', go.tag='json:"evaluator_version_ids"')
+
+    // 字段映射 & 运行时参数
+    40: optional TargetFieldMapping target_field_mapping
+    41: optional list<EvaluatorFieldMapping> evaluator_field_mapping
+    42: optional common.RuntimeParam target_runtime_param
+
+    // 评估器得分加权配置
+    50: optional bool enable_weighted_score
+    51: optional map<i64, double> evaluator_score_weights
+
+    // 默认实验运行配置：并发度 / 调度
+    60: optional i32 default_item_concur_num
+    61: optional i32 default_evaluators_concur_num
+
+    90: optional ExptType expt_type   // 模板对应的实验类型，当前主要为 Offline
+    99: optional common.BaseInfo base_info
 }
 
 struct TokenUsage {
@@ -227,6 +267,8 @@ struct TurnTargetOutput {
 
 struct TurnEvaluatorOutput {
     1: map<i64, evaluator.EvaluatorRecord> evaluator_records (go.tag = 'json:"evaluator_records"')
+
+    11: optional double weighted_score (api.js_conv = 'true', go.tag = 'json:"weighted_score"') // 加权汇总得分
 }
 
 struct TurnAnnotateResult {
@@ -272,6 +314,12 @@ struct KeywordSearch {
 }
 
 struct ExperimentFilter {
+    1: optional Filters filters
+    2: optional KeywordSearch keyword_search
+}
+
+// 实验模板筛选器，字段设计复用实验的 Filters / KeywordSearch 能力
+struct ExperimentTemplateFilter {
     1: optional Filters filters
     2: optional KeywordSearch keyword_search
 }
@@ -328,6 +376,8 @@ enum FieldType {
     InputTokens = 61 // 目前使用固定key：input_tokens
     OutputTokens = 62 // 目前使用固定key：output_tokens
     TotalTokens = 63 // 目前使用固定key：total_tokens
+
+    ExperimentTemplateID = 70
 }
 
 // 字段过滤器
@@ -377,6 +427,8 @@ struct ExptAggregateResult {
     4: optional map<i64, AnnotationAggregateResult> annotation_results (go.tag = 'json:"annotation_results"')    // tag_key_id -> result
     5: optional EvalTargetAggregateResult eval_target_aggr_result
     6: optional i64 update_time // timestamp in seconds
+
+    10: optional list<AggregatorResult> weighted_results (go.tag = 'json:"weighted_results"')
 }
 
 struct EvalTargetAggregateResult {

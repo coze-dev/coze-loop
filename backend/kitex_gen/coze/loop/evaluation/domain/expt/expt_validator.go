@@ -52,6 +52,29 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.ExptTemplate != nil {
+		if err := p.ExptTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field ExptTemplate not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExptTemplate) IsValid() error {
+	if p.TargetFieldMapping != nil {
+		if err := p.TargetFieldMapping.IsValid(); err != nil {
+			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
+		}
+	}
+	if p.TargetRuntimeParam != nil {
+		if err := p.TargetRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *TokenUsage) IsValid() error {
@@ -208,6 +231,19 @@ func (p *KeywordSearch) IsValid() error {
 	return nil
 }
 func (p *ExperimentFilter) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	if p.KeywordSearch != nil {
+		if err := p.KeywordSearch.IsValid(); err != nil {
+			return fmt.Errorf("field KeywordSearch not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExperimentTemplateFilter) IsValid() error {
 	if p.Filters != nil {
 		if err := p.Filters.IsValid(); err != nil {
 			return fmt.Errorf("field Filters not valid, %w", err)

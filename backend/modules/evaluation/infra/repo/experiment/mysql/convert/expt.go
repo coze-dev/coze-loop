@@ -37,6 +37,7 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		StartAt:          experiment.StartAt,
 		EndAt:            experiment.EndAt,
 		LatestRunID:      experiment.LatestRunID,
+		ExptTemplateID:   experiment.ExptTemplateID,
 		CreditCost:       int32(experiment.CreditCost),
 		SourceType:       int32(experiment.SourceType),
 		SourceID:         experiment.SourceID,
@@ -99,5 +100,6 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		SourceID:            expt.SourceID,
 		ExptType:            entity.ExptType(expt.ExptType),
 		MaxAliveTime:        gptr.Indirect(expt.MaxAliveTime),
+		ExptTemplateID:      expt.ExptTemplateID,
 	}, nil
 }
