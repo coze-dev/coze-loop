@@ -40,9 +40,10 @@ struct Video {
 }
 
 struct Audio {
-    1: optional string name,
+    1: optional string format,
     2: optional string url,
-    3: optional string uri,
+    3: optional string name,
+    4: optional string uri,
 
     10: optional dataset.StorageProvider storage_provider (vt.defined_only = "true") // 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri
 }
