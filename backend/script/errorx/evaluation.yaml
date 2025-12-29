@@ -100,6 +100,18 @@ error_code:
     description: experiment status is not allowed to invoke, only Processing or Pending status can invoke
     no_affect_stability: true
 
+  - name: IncompleteExptCalcAggrResultError
+    code: 4013
+    message: aggregated result cannot be generated for incomplete experiments
+    description: aggregated result cannot be generated for incomplete experiments
+    no_affect_stability: true
+
+  - name: DuplicateCalcExptAggrResultError
+    code: 4014
+    message: aggregated result calculation is already in progress
+    description: aggregated result calculation is already in progress
+    no_affect_stability: true
+
   - name: ContentTypeNotSupported
     code: 5000
     message: content type is not supported

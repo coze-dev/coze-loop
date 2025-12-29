@@ -214,6 +214,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_experiments.POST("/check_name", append(_checkexperimentnameMw(handler), apis.CheckExperimentName)...)
 					_experiments.DELETE("/:expt_id", append(_expt_idMw(handler), apis.DeleteExperiment)...)
 					_expt_id := _experiments.Group("/:expt_id", _expt_idMw(handler)...)
+					_expt_id.POST("/aggr_results", append(_calculateexperimentaggrresultMw(handler), apis.CalculateExperimentAggrResult)...)
 					_expt_id.POST("/associate_tag", append(_associateannotationtagMw(handler), apis.AssociateAnnotationTag)...)
 					_expt_id.POST("/clone", append(_cloneexperimentMw(handler), apis.CloneExperiment)...)
 					_expt_id.DELETE("/delete_tag", append(_deleteannotationtagMw(handler), apis.DeleteAnnotationTag)...)
