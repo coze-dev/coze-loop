@@ -118,8 +118,28 @@ struct ModelConfig {
     7: optional double frequency_penalty
     8: optional bool json_mode
     9: optional string extra
+    10: optional ThinkingConfig thinking
 
     100: optional list<ParamConfigValue> param_config_values
+}
+
+struct ThinkingConfig {
+     1: optional i64 budget_tokens (agw.key="budget_tokens") // thinking内容的最大输出token
+     2: optional ThinkingOption thinking_option (agw.key="thinking_option")
+     3: optional ReasoningEffort reasoning_effort (agw.key="reasoning_effort") // 思考长度
+}
+
+enum ReasoningEffort {
+    Minimal = 1
+    Low = 2
+    Medium = 3
+    High = 4
+}
+
+enum ThinkingOption {
+    Disabled = 1
+    Enabled = 2
+    Auto = 3
 }
 
 struct ParamConfigValue {

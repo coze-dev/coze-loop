@@ -196,8 +196,35 @@ type ModelConfig struct {
 	FrequencyPenalty  *float64            `json:"frequency_penalty,omitempty"`
 	JSONMode          *bool               `json:"json_mode,omitempty"`
 	Extra             *string             `json:"extra,omitempty"`
+	Thinking          *ThinkingConfig     `json:"thinking,omitempty"`
 	ParamConfigValues []*ParamConfigValue `json:"param_config_values,omitempty"`
 }
+
+// ThinkingConfig 配置thinking/reasoning相关参数
+type ThinkingConfig struct {
+	BudgetTokens    *int64           `json:"budget_tokens,omitempty"`    // thinking内容的最大输出token
+	ThinkingOption  *ThinkingOption  `json:"thinking_option,omitempty"`  // thinking开关选项
+	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"` // 思考长度
+}
+
+// ThinkingOption thinking开关选项
+type ThinkingOption int64
+
+const (
+	ThinkingOptionDisabled ThinkingOption = 1
+	ThinkingOptionEnabled  ThinkingOption = 2
+	ThinkingOptionAuto     ThinkingOption = 3
+)
+
+// ReasoningEffort 思考长度
+type ReasoningEffort int64
+
+const (
+	ReasoningEffortMinimal ReasoningEffort = 1
+	ReasoningEffortLow     ReasoningEffort = 2
+	ReasoningEffortMedium  ReasoningEffort = 3
+	ReasoningEffortHigh    ReasoningEffort = 4
+)
 
 type ParamConfigValue struct {
 	Name  string       `json:"name"`

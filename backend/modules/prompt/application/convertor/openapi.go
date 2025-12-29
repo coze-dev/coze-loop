@@ -575,8 +575,39 @@ func OpenAPIModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
 		FrequencyPenalty:  dto.FrequencyPenalty,
 		JSONMode:          dto.JSONMode,
 		Extra:             dto.Extra,
+		Thinking:          OpenAPIThinkingConfigDTO2DO(dto.Thinking),
 		ParamConfigValues: OpenAPIBatchParamConfigValueDTO2DO(dto.ParamConfigValues),
 	}
+}
+
+// OpenAPIThinkingConfigDTO2DO 将domain prompt ThinkingConfig转换为entity ThinkingConfig
+func OpenAPIThinkingConfigDTO2DO(dto *prompt.ThinkingConfig) *entity.ThinkingConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ThinkingConfig{
+		BudgetTokens:    dto.BudgetTokens,
+		ThinkingOption:  OpenAPIThinkingOptionDTO2DO(dto.ThinkingOption),
+		ReasoningEffort: OpenAPIReasoningEffortDTO2DO(dto.ReasoningEffort),
+	}
+}
+
+// OpenAPIThinkingOptionDTO2DO 将domain prompt ThinkingOption转换为entity ThinkingOption
+func OpenAPIThinkingOptionDTO2DO(dto *prompt.ThinkingOption) *entity.ThinkingOption {
+	if dto == nil {
+		return nil
+	}
+	result := entity.ThinkingOption(*dto)
+	return &result
+}
+
+// OpenAPIReasoningEffortDTO2DO 将domain prompt ReasoningEffort转换为entity ReasoningEffort
+func OpenAPIReasoningEffortDTO2DO(dto *prompt.ReasoningEffort) *entity.ReasoningEffort {
+	if dto == nil {
+		return nil
+	}
+	result := entity.ReasoningEffort(*dto)
+	return &result
 }
 
 // OpenAPIBatchParamConfigValueDTO2DO 将domain prompt ParamConfigValue转换为entity ParamConfigValue
