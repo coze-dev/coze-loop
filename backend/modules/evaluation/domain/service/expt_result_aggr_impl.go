@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -143,10 +144,10 @@ func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx contex
 	const queryInterval = time.Millisecond * 30
 
 	mtrAggrGroup := &targetMtrAggrGroup{
-		latency:      NewAggregatorGroup(WithBucketScoreDistributionAggregator(30)),
-		inputTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(30)),
-		outputTokens: NewAggregatorGroup(WithBucketScoreDistributionAggregator(30)),
-		totalTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(30)),
+		latency:      NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		inputTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		outputTokens: NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		totalTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
 	}
 
 	var targetResultIDs []int64
@@ -1121,29 +1122,29 @@ func (a *ScoreDistributionAggregator) Result() map[entity.AggregatorType]*entity
 // Uses configurable number of buckets to distribute scores between min and max values.
 // This is more memory-efficient for large datasets compared to ScoreDistributionAggregator.
 type BucketScoreDistributionAggregator struct {
-	BucketCounts []int64 // Bucket counts, size is numBuckets
-	Min          float64 // Minimum score value
-	Max          float64 // Maximum score value
-	Total        int64   // Total number of scores
-	Initialized  bool    // Whether min/max have been initialized
-	NumBuckets   int     // Number of buckets
+	Scores     []float64 // Store all scores for bucket calculation in Result()
+	Min        float64   // Minimum score value
+	Max        float64   // Maximum score value
+	Total      int64     // Total number of scores
+	NumBuckets int       // Number of buckets
 }
 
 func NewBucketScoreDistributionAggregator(numBuckets int) *BucketScoreDistributionAggregator {
 	if numBuckets <= 0 {
-		numBuckets = 30
+		numBuckets = 20
 	}
 	return &BucketScoreDistributionAggregator{
-		BucketCounts: make([]int64, numBuckets),
-		NumBuckets:   numBuckets,
+		Scores:     make([]float64, 0),
+		NumBuckets: numBuckets,
 	}
 }
 
 func (a *BucketScoreDistributionAggregator) Append(score float64) {
-	if !a.Initialized {
+	a.Scores = append(a.Scores, score)
+
+	if len(a.Scores) == 1 {
 		a.Min = score
 		a.Max = score
-		a.Initialized = true
 	} else {
 		if score < a.Min {
 			a.Min = score
@@ -1153,14 +1154,15 @@ func (a *BucketScoreDistributionAggregator) Append(score float64) {
 		}
 	}
 
-	bucketIndex := a.getBucketIndex(score)
-	a.BucketCounts[bucketIndex]++
 	a.Total++
 }
 
 // getBucketIndex calculates which bucket (0 to numBuckets-1) a score belongs to
+// Uses left-closed right-open intervals [start, end) to handle boundary values correctly
+// For bucket i: [Min + i*width, Min + (i+1)*width)
+// Boundary values (equal to bucket end) belong to the next bucket
 func (a *BucketScoreDistributionAggregator) getBucketIndex(score float64) int {
-	if !a.Initialized {
+	if len(a.Scores) == 0 {
 		return 0
 	}
 
@@ -1168,9 +1170,23 @@ func (a *BucketScoreDistributionAggregator) getBucketIndex(score float64) int {
 		return 0
 	}
 
-	ratio := (score - a.Min) / (a.Max - a.Min)
-	bucketIndex := int(ratio * float64(a.NumBuckets))
+	// Handle boundary cases
+	if score <= a.Min {
+		return 0
+	}
+	if score >= a.Max {
+		return a.NumBuckets - 1
+	}
 
+	// Calculate bucket index using floor to ensure left-closed right-open intervals
+	// bucketWidth = (Max - Min) / NumBuckets
+	// For score in [Min + i*width, Min + (i+1)*width), it belongs to bucket i
+	// Using floor ensures that boundary values (equal to bucket end) go to next bucket
+	bucketWidth := (a.Max - a.Min) / float64(a.NumBuckets)
+	offset := score - a.Min
+	bucketIndex := int(math.Floor(offset / bucketWidth))
+
+	// Ensure bucket index is within valid range [0, NumBuckets-1]
 	if bucketIndex < 0 {
 		bucketIndex = 0
 	} else if bucketIndex >= a.NumBuckets {
@@ -1181,17 +1197,17 @@ func (a *BucketScoreDistributionAggregator) getBucketIndex(score float64) int {
 }
 
 // getBucketRange returns the score range for a given bucket index
-func (a *BucketScoreDistributionAggregator) getBucketRange(bucketIndex int) (start, end float64) {
-	if !a.Initialized || a.Max == a.Min {
+// bucketWidth is pre-calculated to avoid repeated computation
+func (a *BucketScoreDistributionAggregator) getBucketRange(bucketIndex int, bucketWidth float64) (start, end float64) {
+	if len(a.Scores) == 0 || a.Max == a.Min {
 		return a.Min, a.Max
 	}
 
-	bucketWidth := (a.Max - a.Min) / float64(a.NumBuckets)
 	start = a.Min + float64(bucketIndex)*bucketWidth
-	end = a.Min + float64(bucketIndex+1)*bucketWidth
-
 	if bucketIndex == a.NumBuckets-1 {
 		end = a.Max
+	} else {
+		end = a.Min + float64(bucketIndex+1)*bucketWidth
 	}
 
 	return start, end
@@ -1205,15 +1221,30 @@ func (a *BucketScoreDistributionAggregator) Result() map[entity.AggregatorType]*
 		},
 	}
 
-	// Generate distribution items for all buckets
-	for i := 0; i < a.NumBuckets; i++ {
-		count := a.BucketCounts[i]
-		if count == 0 {
-			continue
-		}
+	// Calculate bucket counts based on final min/max
+	bucketCounts := make([]int64, a.NumBuckets)
+	for _, score := range a.Scores {
+		bucketIndex := a.getBucketIndex(score)
+		bucketCounts[bucketIndex]++
+	}
 
-		start, end := a.getBucketRange(i)
-		scoreRange := fmt.Sprintf("%.2f-%.2f", start, end)
+	// Calculate bucket width once for all buckets
+	var bucketWidth float64
+	if len(a.Scores) > 0 && a.Max != a.Min {
+		bucketWidth = (a.Max - a.Min) / float64(a.NumBuckets)
+	}
+
+	// Generate distribution items for all buckets (including empty buckets)
+	for i := 0; i < a.NumBuckets; i++ {
+		count := bucketCounts[i]
+
+		start, end := a.getBucketRange(i, bucketWidth)
+		displayEnd := end
+		if i < a.NumBuckets-1 {
+			displayEnd = end - 0.01
+			displayEnd = math.Floor(displayEnd*100) / 100
+		}
+		scoreRange := fmt.Sprintf("%.2f-%.2f", start, displayEnd)
 
 		percentage := 0.0
 		if a.Total > 0 {
@@ -1227,11 +1258,6 @@ func (a *BucketScoreDistributionAggregator) Result() map[entity.AggregatorType]*
 		}
 		data.ScoreDistribution.ScoreDistributionItems = append(data.ScoreDistribution.ScoreDistributionItems, scoreDistributionItem)
 	}
-
-	// Sort by score range (already sorted by bucket index, but ensure consistency)
-	gslice.SortBy(data.ScoreDistribution.ScoreDistributionItems, func(l *entity.ScoreDistributionItem, r *entity.ScoreDistributionItem) bool {
-		return l.Score < r.Score
-	})
 
 	return map[entity.AggregatorType]*entity.AggregateData{
 		entity.Distribution: data,
