@@ -35,7 +35,7 @@ require (
 	github.com/cloudwego/kitex v0.15.2
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
-	github.com/coze-dev/cozeloop-go/spec v0.1.6
+	github.com/coze-dev/cozeloop-go/spec v0.1.8-0.20251230075410-959169a15cd0
 	github.com/deatil/go-encoding v1.0.3003
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/dolthub/go-mysql-server v0.18.0
@@ -260,7 +260,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/sqlite v1.5.5 // indirect
-	gorm.io/hints v1.1.2 // indirect
+	gorm.io/hints v1.1.2
 	gorm.io/rawsql v1.0.3-0.20250401110442-7e49778bc820
 	stathat.com/c/consistent v1.0.0 // indirect
 )
