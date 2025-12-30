@@ -1208,7 +1208,7 @@ func (a *BucketScoreDistributionAggregator) Result() map[entity.AggregatorType]*
 	// Generate distribution items for all buckets
 	for i := 0; i < a.NumBuckets; i++ {
 		count := a.BucketCounts[i]
-		if count == 0 && a.Total > 0 {
+		if count == 0 {
 			continue
 		}
 
