@@ -339,6 +339,7 @@ const (
 	DatasetErrorType_InternalError  int64 = 100
 )
 
+// TODO
 func GetContentInfo(ctx context.Context, contentType ContentType, value string) (*Content, int64) {
 	var content *Content
 	switch contentType {
