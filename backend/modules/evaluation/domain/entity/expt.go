@@ -215,7 +215,8 @@ func (e *EvaluatorsConf) GetEvaluatorConf(evalVerID int64) *EvaluatorConf {
 }
 
 func (e *EvaluatorsConf) GetEvaluatorConcurNum() int {
-	const defaultConcurNum = 3
+	// TODO dsf 评估器并发数默认值为1，测试使用待调整！！！
+	const defaultConcurNum = 1
 	if e.EvaluatorConcurNum != nil && *e.EvaluatorConcurNum > 0 {
 		return *e.EvaluatorConcurNum
 	}
