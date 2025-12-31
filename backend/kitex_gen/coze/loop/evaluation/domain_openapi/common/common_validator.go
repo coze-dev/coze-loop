@@ -40,6 +40,9 @@ func (p *ObjectStorage) IsValid() error {
 func (p *Image) IsValid() error {
 	return nil
 }
+func (p *Video) IsValid() error {
+	return nil
+}
 func (p *Audio) IsValid() error {
 	return nil
 }

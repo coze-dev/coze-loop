@@ -32,10 +32,20 @@ struct Image {
     3: optional string thumb_url
 }
 
-// 音频结构  
+// 视频结构
+struct Video {
+    1: optional string name
+    2: optional string url
+    3: optional string uri
+    4: optional string thumb_url
+}
+
+// 音频结构
 struct Audio {
     1: optional string format
     2: optional string url
+    3: optional string name
+    4: optional string uri
 }
 
 // 用户信息
