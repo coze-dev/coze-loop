@@ -514,7 +514,7 @@ const (
 	// 目前使用固定key：total_tokens
 	FieldType_TotalTokens            FieldType = 63
 	FieldType_ExperimentTemplateID   FieldType = 70
-	FieldType_EvaluatorScoreWeighted FieldType = 71
+	FieldType_EvaluatorWeightedScore FieldType = 71
 )
 
 func (p FieldType) String() string {
@@ -583,8 +583,8 @@ func (p FieldType) String() string {
 		return "TotalTokens"
 	case FieldType_ExperimentTemplateID:
 		return "ExperimentTemplateID"
-	case FieldType_EvaluatorScoreWeighted:
-		return "EvaluatorScoreWeighted"
+	case FieldType_EvaluatorWeightedScore:
+		return "EvaluatorWeightedScore"
 	}
 	return "<UNSET>"
 }
@@ -655,8 +655,8 @@ func FieldTypeFromString(s string) (FieldType, error) {
 		return FieldType_TotalTokens, nil
 	case "ExperimentTemplateID":
 		return FieldType_ExperimentTemplateID, nil
-	case "EvaluatorScoreWeighted":
-		return FieldType_EvaluatorScoreWeighted, nil
+	case "EvaluatorWeightedScore":
+		return FieldType_EvaluatorWeightedScore, nil
 	}
 	return FieldType(0), fmt.Errorf("not a valid FieldType string")
 }

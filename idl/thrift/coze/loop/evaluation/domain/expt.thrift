@@ -388,7 +388,7 @@ enum FieldType {
     TotalTokens = 63 // 目前使用固定key：total_tokens
 
     ExperimentTemplateID = 70
-    EvaluatorScoreWeighted = 71
+    EvaluatorWeightedScore = 71
 }
 
 // 字段过滤器
