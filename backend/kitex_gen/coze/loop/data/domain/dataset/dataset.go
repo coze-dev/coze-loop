@@ -6806,8 +6806,10 @@ type MultiModalSpec struct {
 	SupportedFormats []string `thrift:"supported_formats,3,optional" frugal:"3,optional,list<string>" form:"supported_formats" json:"supported_formats,omitempty" query:"supported_formats"`
 	// 多模态节点总数上限
 	MaxPartCount *int32 `thrift:"max_part_count,4,optional" frugal:"4,optional,i32" form:"max_part_count" json:"max_part_count,omitempty" query:"max_part_count"`
-	// 按照类型区分的文件大小
-	MaxFileSizeByType map[ContentType][]string `thrift:"max_file_size_by_type,5,optional" frugal:"5,optional,map<ContentType:list<string>>" form:"max_file_size_by_type" json:"max_file_size_by_type,omitempty" query:"max_file_size_by_type"`
+	// 按照类型区分的文件类型
+	SupportedFormatsByType map[ContentType][]string `thrift:"supported_formats_by_type,5,optional" frugal:"5,optional,map<ContentType:list<string>>" form:"supported_formats_by_type" json:"supported_formats_by_type,omitempty" query:"supported_formats_by_type"`
+	// 按照类型区分的文件类型
+	MaxFileSizeByType map[ContentType]int64 `thrift:"max_file_size_by_type,6,optional" frugal:"6,optional,map<ContentType:i64>" json:"max_file_size_by_type" form:"max_file_size_by_type" query:"max_file_size_by_type"`
 }
 
 func NewMultiModalSpec() *MultiModalSpec {
@@ -6865,9 +6867,21 @@ func (p *MultiModalSpec) GetMaxPartCount() (v int32) {
 	return *p.MaxPartCount
 }
 
-var MultiModalSpec_MaxFileSizeByType_DEFAULT map[ContentType][]string
+var MultiModalSpec_SupportedFormatsByType_DEFAULT map[ContentType][]string
 
-func (p *MultiModalSpec) GetMaxFileSizeByType() (v map[ContentType][]string) {
+func (p *MultiModalSpec) GetSupportedFormatsByType() (v map[ContentType][]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSupportedFormatsByType() {
+		return MultiModalSpec_SupportedFormatsByType_DEFAULT
+	}
+	return p.SupportedFormatsByType
+}
+
+var MultiModalSpec_MaxFileSizeByType_DEFAULT map[ContentType]int64
+
+func (p *MultiModalSpec) GetMaxFileSizeByType() (v map[ContentType]int64) {
 	if p == nil {
 		return
 	}
@@ -6888,7 +6902,10 @@ func (p *MultiModalSpec) SetSupportedFormats(val []string) {
 func (p *MultiModalSpec) SetMaxPartCount(val *int32) {
 	p.MaxPartCount = val
 }
-func (p *MultiModalSpec) SetMaxFileSizeByType(val map[ContentType][]string) {
+func (p *MultiModalSpec) SetSupportedFormatsByType(val map[ContentType][]string) {
+	p.SupportedFormatsByType = val
+}
+func (p *MultiModalSpec) SetMaxFileSizeByType(val map[ContentType]int64) {
 	p.MaxFileSizeByType = val
 }
 
@@ -6897,7 +6914,8 @@ var fieldIDToName_MultiModalSpec = map[int16]string{
 	2: "max_file_size",
 	3: "supported_formats",
 	4: "max_part_count",
-	5: "max_file_size_by_type",
+	5: "supported_formats_by_type",
+	6: "max_file_size_by_type",
 }
 
 func (p *MultiModalSpec) IsSetMaxFileCount() bool {
@@ -6914,6 +6932,10 @@ func (p *MultiModalSpec) IsSetSupportedFormats() bool {
 
 func (p *MultiModalSpec) IsSetMaxPartCount() bool {
 	return p.MaxPartCount != nil
+}
+
+func (p *MultiModalSpec) IsSetSupportedFormatsByType() bool {
+	return p.SupportedFormatsByType != nil
 }
 
 func (p *MultiModalSpec) IsSetMaxFileSizeByType() bool {
@@ -6973,6 +6995,14 @@ func (p *MultiModalSpec) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7101,6 +7131,35 @@ func (p *MultiModalSpec) ReadField5(iprot thrift.TProtocol) error {
 	if err := iprot.ReadMapEnd(); err != nil {
 		return err
 	}
+	p.SupportedFormatsByType = _field
+	return nil
+}
+func (p *MultiModalSpec) ReadField6(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[ContentType]int64, size)
+	for i := 0; i < size; i++ {
+		var _key ContentType
+		if v, err := iprot.ReadI32(); err != nil {
+			return err
+		} else {
+			_key = ContentType(v)
+		}
+
+		var _val int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
 	p.MaxFileSizeByType = _field
 	return nil
 }
@@ -7129,6 +7188,10 @@ func (p *MultiModalSpec) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -7230,14 +7293,14 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *MultiModalSpec) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetMaxFileSizeByType() {
-		if err = oprot.WriteFieldBegin("max_file_size_by_type", thrift.MAP, 5); err != nil {
+	if p.IsSetSupportedFormatsByType() {
+		if err = oprot.WriteFieldBegin("supported_formats_by_type", thrift.MAP, 5); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.I32, thrift.LIST, len(p.MaxFileSizeByType)); err != nil {
+		if err := oprot.WriteMapBegin(thrift.I32, thrift.LIST, len(p.SupportedFormatsByType)); err != nil {
 			return err
 		}
-		for k, v := range p.MaxFileSizeByType {
+		for k, v := range p.SupportedFormatsByType {
 			if err := oprot.WriteI32(int32(k)); err != nil {
 				return err
 			}
@@ -7266,6 +7329,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *MultiModalSpec) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMaxFileSizeByType() {
+		if err = oprot.WriteFieldBegin("max_file_size_by_type", thrift.MAP, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.I32, thrift.I64, len(p.MaxFileSizeByType)); err != nil {
+			return err
+		}
+		for k, v := range p.MaxFileSizeByType {
+			if err := oprot.WriteI32(int32(k)); err != nil {
+				return err
+			}
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *MultiModalSpec) String() string {
 	if p == nil {
@@ -7293,7 +7385,10 @@ func (p *MultiModalSpec) DeepEqual(ano *MultiModalSpec) bool {
 	if !p.Field4DeepEqual(ano.MaxPartCount) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.MaxFileSizeByType) {
+	if !p.Field5DeepEqual(ano.SupportedFormatsByType) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.MaxFileSizeByType) {
 		return false
 	}
 	return true
@@ -7350,10 +7445,10 @@ func (p *MultiModalSpec) Field4DeepEqual(src *int32) bool {
 }
 func (p *MultiModalSpec) Field5DeepEqual(src map[ContentType][]string) bool {
 
-	if len(p.MaxFileSizeByType) != len(src) {
+	if len(p.SupportedFormatsByType) != len(src) {
 		return false
 	}
-	for k, v := range p.MaxFileSizeByType {
+	for k, v := range p.SupportedFormatsByType {
 		_src := src[k]
 		if len(v) != len(_src) {
 			return false
@@ -7363,6 +7458,19 @@ func (p *MultiModalSpec) Field5DeepEqual(src map[ContentType][]string) bool {
 			if strings.Compare(v, _src1) != 0 {
 				return false
 			}
+		}
+	}
+	return true
+}
+func (p *MultiModalSpec) Field6DeepEqual(src map[ContentType]int64) bool {
+
+	if len(p.MaxFileSizeByType) != len(src) {
+		return false
+	}
+	for k, v := range p.MaxFileSizeByType {
+		_src := src[k]
+		if v != _src {
+			return false
 		}
 	}
 	return true
