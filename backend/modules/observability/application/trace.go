@@ -44,6 +44,7 @@ const (
 	QueryLimitDefault     = 100
 )
 
+//go:generate mockgen -destination=mocks/trace_application.go -package=mocks . ITraceApplication
 type ITraceApplication interface {
 	trace.TraceService
 	GetDisplayInfo(context.Context, *GetDisplayInfoRequest) GetDisplayInfoResponse

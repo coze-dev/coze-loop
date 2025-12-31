@@ -435,9 +435,8 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 		return nil, err
 	}
 	logs.CtxInfo(ctx, "get annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
-	workspaceIDStr := strconv.FormatInt(param.WorkspaceId, 10)
 	annotations = lo.Filter(annotations, func(item *dao.Annotation, _ int) bool {
-		return item.TraceID == param.TraceID && item.SpaceID == workspaceIDStr
+		return item.TraceID == param.TraceID
 	})
 	return converter.AnnotationListPO2DO(annotations).Uniq(), nil
 }

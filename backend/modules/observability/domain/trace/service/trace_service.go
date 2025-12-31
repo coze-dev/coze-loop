@@ -1096,7 +1096,7 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 }
 
 func (r *TraceServiceImpl) ListAnnotations(ctx context.Context, req *ListAnnotationsReq) (*ListAnnotationsResp, error) {
-	tenants, err := r.getTenants(ctx, req.PlatformType)
+	tenants, err := r.getTenants(ctx, req.PlatformType, tenant.WithWorkspaceID(req.WorkspaceID))
 	if err != nil {
 		return nil, err
 	}

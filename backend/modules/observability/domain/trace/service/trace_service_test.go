@@ -521,7 +521,7 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 				}}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
@@ -555,7 +555,7 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 				repoMock.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
@@ -581,7 +581,7 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("config error")).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("config error")).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
