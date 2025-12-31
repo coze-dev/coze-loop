@@ -4343,6 +4343,20 @@ func (p *MultiModalSpec) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4427,6 +4441,49 @@ func (p *MultiModalSpec) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *MultiModalSpec) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[ContentType][]string, size)
+	for i := 0; i < size; i++ {
+		var _key ContentType
+		if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_key = ContentType(v)
+		}
+
+		_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			return offset, err
+		}
+		_val := make([]string, 0, size)
+		for i := 0; i < size; i++ {
+			var _elem string
+			if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+				return offset, err
+			} else {
+				offset += l
+				_elem = v
+			}
+
+			_val = append(_val, _elem)
+		}
+
+		_field[_key] = _val
+	}
+	p.MaxFileSizeByType = _field
+	return offset, nil
+}
+
 func (p *MultiModalSpec) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -4438,6 +4495,7 @@ func (p *MultiModalSpec) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -4450,6 +4508,7 @@ func (p *MultiModalSpec) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -4498,6 +4557,30 @@ func (p *MultiModalSpec) fastWriteField4(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *MultiModalSpec) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMaxFileSizeByType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 5)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.MaxFileSizeByType {
+			length++
+			offset += thrift.Binary.WriteI32(buf[offset:], int32(k))
+			listBeginOffset := offset
+			offset += thrift.Binary.ListBeginLength()
+			var length int
+			for _, v := range v {
+				length++
+				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			}
+			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.I32, thrift.LIST, length)
+	}
+	return offset
+}
+
 func (p *MultiModalSpec) field1Length() int {
 	l := 0
 	if p.IsSetMaxFileCount() {
@@ -4538,6 +4621,25 @@ func (p *MultiModalSpec) field4Length() int {
 	return l
 }
 
+func (p *MultiModalSpec) field5Length() int {
+	l := 0
+	if p.IsSetMaxFileSizeByType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.MaxFileSizeByType {
+			_, _ = k, v
+
+			l += thrift.Binary.I32Length()
+			l += thrift.Binary.ListBeginLength()
+			for _, v := range v {
+				_ = v
+				l += thrift.Binary.StringLengthNocopy(v)
+			}
+		}
+	}
+	return l
+}
+
 func (p *MultiModalSpec) DeepCopy(s interface{}) error {
 	src, ok := s.(*MultiModalSpec)
 	if !ok {
@@ -4568,6 +4670,28 @@ func (p *MultiModalSpec) DeepCopy(s interface{}) error {
 	if src.MaxPartCount != nil {
 		tmp := *src.MaxPartCount
 		p.MaxPartCount = &tmp
+	}
+
+	if src.MaxFileSizeByType != nil {
+		p.MaxFileSizeByType = make(map[ContentType][]string, len(src.MaxFileSizeByType))
+		for key, val := range src.MaxFileSizeByType {
+			var _key ContentType
+			_key = key
+
+			var _val []string
+			if val != nil {
+				_val = make([]string, 0, len(val))
+				for _, elem := range val {
+					var _elem string
+					if elem != "" {
+						_elem = kutils.StringDeepCopy(elem)
+					}
+					_val = append(_val, _elem)
+				}
+			}
+
+			p.MaxFileSizeByType[_key] = _val
+		}
 	}
 
 	return nil
