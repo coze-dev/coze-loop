@@ -50,36 +50,40 @@ func (m *MetricsService) TraverseMetrics(ctx context.Context, req *TraverseMetri
 			logs.CtxWarn(ctx, "skip metric compound metric %s", metric.metricDef.Name())
 			continue
 		}
-		drillDownVal := m.buildDrillDownFields(
+		drillDownVals := m.buildDrillDownFields(
 			m.pMetrics.PlatformMetricDefs[metric.platformType],
 			m.pMetrics.MetricGroups[metric.groupName], metric.metricDef)
-		param := &metricTraverseParam{
-			PlatformType:    metric.platformType,
-			MetricDef:       metric.metricDef,
-			WorkspaceID:     req.WorkspaceID,
-			DrillDownValues: drillDownVal,
-			StartDate:       req.StartDate,
-			StartAt:         startAt,
-			EndAt:           endAt,
-			QueryTimeout:    req.QueryTimeout,
-		}
-		st := time.Now()
-		resp.Statistic.Total++
-		if err := m.traverseMetric(ctx, param); err != nil {
-			logs.CtxError(ctx, "fail to traverse metric %s at %s, %v",
-				metric.metricDef.Name(), metric.platformType, err)
-			resp.Statistic.Failure++
-			resp.Failures = append(resp.Failures, &TraverseMetricDetail{
-				PlatformType: metric.platformType,
-				MetricName:   metric.metricDef.Name(),
-				Error:        err,
-				TimeCost:     time.Since(st),
-			})
-			time.Sleep(20 * time.Second)
-		} else {
-			logs.CtxInfo(ctx, "traverse metric %s at %s successfully, cost %s",
-				metric.metricDef.Name(), metric.platformType, time.Since(st))
-			resp.Statistic.Success++
+		logs.CtxInfo(ctx, "traverse metric %s for %s, drill down combination count: %d",
+			metric.metricDef.Name(), metric.platformType, len(drillDownVals))
+		for _, drillDownVal := range drillDownVals {
+			param := &metricTraverseParam{
+				PlatformType:    metric.platformType,
+				MetricDef:       metric.metricDef,
+				WorkspaceID:     req.WorkspaceID,
+				DrillDownValues: drillDownVal,
+				StartDate:       req.StartDate,
+				StartAt:         startAt,
+				EndAt:           endAt,
+				QueryTimeout:    req.QueryTimeout,
+			}
+			st := time.Now()
+			resp.Statistic.Total++
+			if err := m.traverseMetric(ctx, param); err != nil {
+				logs.CtxError(ctx, "fail to traverse metric %s at %s, %v",
+					metric.metricDef.Name(), metric.platformType, err)
+				resp.Statistic.Failure++
+				resp.Failures = append(resp.Failures, &TraverseMetricDetail{
+					PlatformType: metric.platformType,
+					MetricName:   metric.metricDef.Name(),
+					Error:        err,
+					TimeCost:     time.Since(st),
+				})
+				time.Sleep(20 * time.Second)
+			} else {
+				logs.CtxInfo(ctx, "traverse metric %s at %s successfully, cost %s",
+					metric.metricDef.Name(), metric.platformType, time.Since(st))
+				resp.Statistic.Success++
+			}
 		}
 	}
 	return resp, nil
@@ -208,29 +212,47 @@ func (m *MetricsService) buildDrillDownFields(
 	platformCfg *entity.PlatformMetricDef,
 	groupCfg *entity.MetricGroup,
 	definition entity.IMetricDefinition,
-) []*loop_span.FilterField {
-	var ret []*loop_span.FilterField
+) [][]*loop_span.FilterField {
+	var fields []*loop_span.FilterField
 	// platform drill down
 	for _, obj := range platformCfg.DrillDownObjects {
-		ret = append(ret, m.pMetrics.DrillDownObjects[obj])
+		fields = append(fields, m.pMetrics.DrillDownObjects[obj])
 	}
 	// group drill down
 	for _, obj := range groupCfg.DrillDownObjects {
-		ret = append(ret, m.pMetrics.DrillDownObjects[obj])
+		fields = append(fields, m.pMetrics.DrillDownObjects[obj])
 	}
-	// metric drill down
-	for _, obj := range definition.GroupBy() {
-		ret = append(ret, obj.Field)
+	ret := make([][]*loop_span.FilterField, 0)
+	if definition.OExpression().AggrType == entity.MetricOfflineAggrTypeAvg {
+		// 对于AVG类型而言的计算都是不准确的, 需要准确就需要完全地下钻
+		ret = allDrillDownFields(fields)
+	} else {
+		ret = append(ret, fields)
 	}
-	// unique
-	ret = lo.UniqBy(ret, func(item *loop_span.FilterField) string {
-		return item.FieldName
-	})
-	ret = append(ret, &loop_span.FilterField{
-		FieldName: loop_span.SpanFieldSpaceId,
-		FieldType: loop_span.FieldTypeString,
-	})
+	for index := range ret {
+		ret[index] = append(ret[index], &loop_span.FilterField{
+			FieldName: loop_span.SpanFieldSpaceId,
+			FieldType: loop_span.FieldTypeString,
+		})
+	}
 	return ret
+}
+
+func allDrillDownFields(fields []*loop_span.FilterField) [][]*loop_span.FilterField {
+	var dfs func(int) [][]*loop_span.FilterField
+	dfs = func(idx int) [][]*loop_span.FilterField {
+		if idx >= len(fields) {
+			return [][]*loop_span.FilterField{{}}
+		}
+		ret := make([][]*loop_span.FilterField, 0)
+		rest := dfs(idx + 1)
+		for _, r := range rest {
+			ret = append(ret, r)
+			ret = append(ret, append(r, fields[idx]))
+		}
+		return ret
+	}
+	return dfs(0)
 }
 
 func (m *MetricsService) extractMetrics(metricName string, metric *entity.Metric) []*entity.MetricEvent {
@@ -351,33 +373,37 @@ func (m *MetricsService) buildOfflineMetricQuery(ctx context.Context, req *Query
 	if mBuilder.mInfo.mType == entity.MetricTypeTimeSeries {
 		param.Granularity = entity.MetricGranularity1Day
 	}
+	subFilters := &loop_span.FilterFields{
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldSpaceId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{strconv.FormatInt(req.WorkspaceID, 10)},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			},
+			{
+				FieldName: "platform_type",
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{string(req.PlatformType)},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			},
+			{
+				FieldName: "metric_name",
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{oExpression.MetricName},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			},
+		},
+	}
+	extraFilters := m.buildExtraFilter(req, mDef)
+	if len(extraFilters) > 0 {
+		subFilters.FilterFields = append(subFilters.FilterFields, extraFilters...)
+	}
 	param.Filters = &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
 		FilterFields: []*loop_span.FilterField{
 			{
-				QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-				SubFilter: &loop_span.FilterFields{
-					FilterFields: []*loop_span.FilterField{
-						{
-							FieldName: loop_span.SpanFieldSpaceId,
-							FieldType: loop_span.FieldTypeString,
-							Values:    []string{strconv.FormatInt(req.WorkspaceID, 10)},
-							QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-						},
-						{
-							FieldName: "platform_type",
-							FieldType: loop_span.FieldTypeString,
-							Values:    []string{string(req.PlatformType)},
-							QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-						},
-						{
-							FieldName: "metric_name",
-							FieldType: loop_span.FieldTypeString,
-							Values:    []string{oExpression.MetricName},
-							QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
-						},
-					},
-				},
+				SubFilter: subFilters,
 			},
 			{
 				SubFilter: req.FilterFields,
@@ -386,4 +412,38 @@ func (m *MetricsService) buildOfflineMetricQuery(ctx context.Context, req *Query
 	}
 	mBuilder.mRepoReq = param
 	return mBuilder, nil
+}
+
+func (m *MetricsService) buildExtraFilter(req *QueryMetricsReq, mDef entity.IMetricDefinition) []*loop_span.FilterField {
+	if mDef.OExpression().AggrType != entity.MetricOfflineAggrTypeAvg {
+		return nil
+	} else if m.pMetrics.PlatformMetricDefs[req.PlatformType] == nil {
+		// not expected to be here
+		return nil
+	}
+	requestFieldName := make(map[string]bool)
+	_ = req.FilterFields.Traverse(func(f *loop_span.FilterField) error {
+		if f.FieldName != "" {
+			requestFieldName[f.FieldName] = true
+		}
+		return nil
+	})
+	drillDownKeys := make([]string, 0)
+	drillDownKeys = append(drillDownKeys, m.pMetrics.PlatformMetricDefs[req.PlatformType].DrillDownObjects...)
+	drillDownKeys = append(drillDownKeys, m.metricDrillDown[mDef.Name()]...)
+	ret := make([]*loop_span.FilterField, 0)
+	for _, key := range drillDownKeys {
+		field := m.pMetrics.DrillDownObjects[key]
+		if field == nil {
+			continue
+		} else if requestFieldName[field.FieldName] {
+			continue
+		}
+		ret = append(ret, &loop_span.FilterField{
+			FieldName: field.FieldName,
+			FieldType: field.FieldType,
+			QueryType: ptr.Of(loop_span.QueryTypeEnumNotExist),
+		})
+	}
+	return ret
 }

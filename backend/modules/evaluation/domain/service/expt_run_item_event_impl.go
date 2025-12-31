@@ -204,7 +204,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		lockKey := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", event.ExptID, event.EvalSetItemID)
-		locked, ctx, unlock, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*20, time.Second*60*60*10)
+		locked, ctx, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*20, time.Second*60*60*10)
 		if err != nil {
 			return err
 		}
@@ -214,7 +214,12 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) 
 			return nil
 		}
 
-		defer unlock()
+		defer func() {
+			cancel()
+			if _, err := e.mutex.Unlock(lockKey); err != nil {
+				logs.CtxWarn(ctx, "failed to unlock key: %v, err: %v", lockKey, err)
+			}
+		}()
 
 		return next(ctx, event)
 	}
@@ -333,7 +338,7 @@ func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.
 	}, nil
 }
 
-// RecordEvalMode 任务执行模式
+// RecordEvalMode task execution mode
 type RecordEvalMode interface {
 	PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error
 	PostEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error

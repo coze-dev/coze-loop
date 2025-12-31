@@ -36,6 +36,9 @@ func (p *TokenUsage) IsValid() error {
 func (p *EvaluatorAggregateResult_) IsValid() error {
 	return nil
 }
+func (p *EvalTargetAggregateResult_) IsValid() error {
+	return nil
+}
 func (p *AggregatorResult_) IsValid() error {
 	if p.Data != nil {
 		if err := p.Data.IsValid(); err != nil {

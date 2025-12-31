@@ -47,7 +47,7 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		status = int32(entity.EvalTargetRunStatusUnknown)
 	}
 
-	return &model.TargetRecord{
+	tr := &model.TargetRecord{
 		ID:              e.ID,
 		SpaceID:         e.SpaceID,
 		TargetID:        e.TargetID,
@@ -60,9 +60,12 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		InputData:       &inputData,
 		OutputData:      &outputData,
 		Status:          status,
-		CreatedAt:       time.UnixMilli(gptr.Indirect(e.BaseInfo.CreatedAt)),
-		UpdatedAt:       time.UnixMilli(gptr.Indirect(e.BaseInfo.UpdatedAt)),
-	}, nil
+	}
+	if e.BaseInfo != nil {
+		tr.CreatedAt = time.UnixMilli(gptr.Indirect(e.BaseInfo.CreatedAt))
+		tr.UpdatedAt = time.UnixMilli(gptr.Indirect(e.BaseInfo.UpdatedAt))
+	}
+	return tr, nil
 }
 
 func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, error) {

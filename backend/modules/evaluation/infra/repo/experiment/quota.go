@@ -40,7 +40,7 @@ func (q *QuotaRepoImpl) CreateOrUpdate(ctx context.Context, spaceID int64, updat
 
 func (q *QuotaRepoImpl) createOrUpdate(ctx context.Context, spaceID int64, updater func(*entity.QuotaSpaceExpt) (*entity.QuotaSpaceExpt, bool, error), session *entity.Session) error {
 	key := fmt.Sprintf("lock:quota_space_expt:%d", spaceID)
-	locked, ctx, unlock, err := q.mutex.LockBackoffWithRenew(ctx, key, time.Second, time.Second*3)
+	locked, ctx, cancel, err := q.mutex.LockBackoffWithRenew(ctx, key, time.Second, time.Second*3)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,12 @@ func (q *QuotaRepoImpl) createOrUpdate(ctx context.Context, spaceID int64, updat
 		return errorx.New("quota lock already exist, key: %v", key)
 	}
 
-	defer unlock()
+	defer func() {
+		cancel()
+		if _, err := q.mutex.Unlock(key); err != nil {
+			logs.CtxWarn(ctx, "failed to unlock key: %v, err: %v", key, err)
+		}
+	}()
 
 	oldVal, err := q.quotaDAO.GetQuotaSpaceExpt(ctx, spaceID)
 	if err != nil {

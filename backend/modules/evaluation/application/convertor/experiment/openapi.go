@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	evalsetopenapi "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-
-	"github.com/bytedance/gg/gptr"
 
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
@@ -1109,4 +1109,32 @@ func openAPIScoreDistributionDO2DTO(data *entity.ScoreDistributionData) *openapi
 		return nil
 	}
 	return &openapiExperiment.ScoreDistribution{ScoreDistributionItems: items}
+}
+
+func OpenTargetAggrResultDO2DTO(result *entity.EvalTargetMtrAggrResult) *openapiExperiment.EvalTargetAggregateResult_ {
+	if result == nil {
+		return nil
+	}
+	return &openapiExperiment.EvalTargetAggregateResult_{
+		TargetID:        gptr.Of(result.TargetID),
+		TargetVersionID: gptr.Of(result.TargetVersionID),
+		Latency:         OpenAPIAggregatorResultsDO2DTOs(result.LatencyAggrResults),
+		InputTokens:     OpenAPIAggregatorResultsDO2DTOs(result.InputTokensAggrResults),
+		OutputTokens:    OpenAPIAggregatorResultsDO2DTOs(result.OutputTokensAggrResults),
+		TotalTokens:     OpenAPIAggregatorResultsDO2DTOs(result.TotalTokensAggrResults),
+	}
+}
+
+func TargetAggrResultDO2DTO(result *entity.EvalTargetMtrAggrResult) *domainExpt.EvalTargetAggregateResult_ {
+	if result == nil {
+		return nil
+	}
+	return &domainExpt.EvalTargetAggregateResult_{
+		TargetID:        gptr.Of(result.TargetID),
+		TargetVersionID: gptr.Of(result.TargetVersionID),
+		Latency:         AggregatorResultDOsToDTOs(result.LatencyAggrResults),
+		InputTokens:     AggregatorResultDOsToDTOs(result.InputTokensAggrResults),
+		OutputTokens:    AggregatorResultDOsToDTOs(result.OutputTokensAggrResults),
+		TotalTokens:     AggregatorResultDOsToDTOs(result.TotalTokensAggrResults),
+	}
 }

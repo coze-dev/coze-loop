@@ -1257,7 +1257,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 		wantErr       bool
 	}{
 		{
-			name:          "Code评估器 - 分离字段数据源",
+			name:          "Code evaluator - separated field data sources",
 			evaluatorType: entity.EvaluatorTypeCode,
 			ec: &entity.EvaluatorConf{
 				IngressConf: &entity.EvaluatorIngressConf{
@@ -1284,7 +1284,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:          "Prompt评估器 - 合并所有字段",
+			name:          "Prompt evaluator - merged all fields",
 			evaluatorType: entity.EvaluatorTypePrompt,
 			ec: &entity.EvaluatorConf{
 				IngressConf: &entity.EvaluatorIngressConf{
@@ -1312,7 +1312,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:          "Code评估器 - 空字段配置",
+			name:          "Code evaluator - empty field configs",
 			evaluatorType: entity.EvaluatorTypeCode,
 			ec: &entity.EvaluatorConf{
 				IngressConf: &entity.EvaluatorIngressConf{
@@ -1335,7 +1335,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:          "Prompt评估器 - 空字段配置",
+			name:          "Prompt evaluator - empty field configs",
 			evaluatorType: entity.EvaluatorTypePrompt,
 			ec: &entity.EvaluatorConf{
 				IngressConf: &entity.EvaluatorIngressConf{
@@ -1416,7 +1416,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 		wantErr      bool
 	}{
 		{
-			name: "正常字段映射",
+			name: "Normal field mapping",
 			fieldConfs: []*entity.FieldConf{
 				{FieldName: "output1", FromField: "field1"},
 				{FieldName: "output2", FromField: "field2"},
@@ -1429,7 +1429,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "JSON Path字段映射",
+			name: "JSON Path field mapping",
 			fieldConfs: []*entity.FieldConf{
 				{FieldName: "nested_output", FromField: "json_field.key"},
 			},
@@ -1443,7 +1443,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "不存在的字段",
+			name: "Non-existent field",
 			fieldConfs: []*entity.FieldConf{
 				{FieldName: "output", FromField: "non_existent_field"},
 			},
@@ -1454,7 +1454,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "不存在的JSON字段",
+			name: "Non-existent JSON field",
 			fieldConfs: []*entity.FieldConf{
 				{FieldName: "output", FromField: "json_field.non_existent"},
 			},
@@ -1468,7 +1468,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:         "空字段配置",
+			name:         "Empty field configuration",
 			fieldConfs:   []*entity.FieldConf{},
 			sourceFields: sourceFields,
 			wantResult:   map[string]*entity.Content{},
@@ -1488,8 +1488,8 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			if tt.name == "JSON Path字段映射" {
-				// 特殊处理JSON字段的比较
+			if tt.name == "JSON Path field mapping" {
+				// Special handling for JSON field comparison
 				assert.Equal(t, len(tt.wantResult), len(got))
 				for key, expectedContent := range tt.wantResult {
 					actualContent := got[key]
@@ -1530,7 +1530,7 @@ func TestDefaultExptTurnEvaluationImpl_getFieldContent(t *testing.T) {
 		wantErr      bool
 	}{
 		{
-			name: "简单字段直接映射",
+			name: "Simple field direct mapping",
 			fc: &entity.FieldConf{
 				FieldName: "output",
 				FromField: "simple_field",
@@ -1540,7 +1540,7 @@ func TestDefaultExptTurnEvaluationImpl_getFieldContent(t *testing.T) {
 			wantErr:      false,
 		},
 		{
-			name: "JSON Path字段映射",
+			name: "JSON Path field mapping",
 			fc: &entity.FieldConf{
 				FieldName: "output",
 				FromField: "json_field.nested.key",
@@ -1553,7 +1553,7 @@ func TestDefaultExptTurnEvaluationImpl_getFieldContent(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "不存在的字段",
+			name: "Non-existent field",
 			fc: &entity.FieldConf{
 				FieldName: "output",
 				FromField: "non_existent",
@@ -1563,7 +1563,7 @@ func TestDefaultExptTurnEvaluationImpl_getFieldContent(t *testing.T) {
 			wantErr:      false,
 		},
 		{
-			name: "不存在的JSON字段",
+			name: "Non-existent JSON field",
 			fc: &entity.FieldConf{
 				FieldName: "output",
 				FromField: "json_field.non_existent",
@@ -1589,8 +1589,8 @@ func TestDefaultExptTurnEvaluationImpl_getFieldContent(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			if tt.name == "JSON Path字段映射" && tt.wantContent != nil && got != nil {
-				// 特殊处理JSON字段的比较
+			if tt.name == "JSON Path field mapping" && tt.wantContent != nil && got != nil {
+				// Special handling for JSON field comparison
 				assert.Equal(t, tt.wantContent.ContentType, got.ContentType)
 				if tt.wantContent.Text != nil && got.Text != nil {
 					assert.Equal(t, *tt.wantContent.Text, *got.Text)
@@ -1613,7 +1613,7 @@ func TestDefaultExptTurnEvaluationImpl_skipTargetNode(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "无目标版本ID - 跳过",
+			name: "No target version ID - skip",
 			expt: &entity.Experiment{
 				TargetVersionID: 0,
 				ExptType:        entity.ExptType_Offline,
@@ -1621,7 +1621,7 @@ func TestDefaultExptTurnEvaluationImpl_skipTargetNode(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "在线实验 - 跳过",
+			name: "Online experiment - skip",
 			expt: &entity.Experiment{
 				TargetVersionID: 1,
 				ExptType:        entity.ExptType_Online,
@@ -1629,7 +1629,7 @@ func TestDefaultExptTurnEvaluationImpl_skipTargetNode(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "离线实验且有目标版本ID - 不跳过",
+			name: "Offline experiment with target version ID - do not skip",
 			expt: &entity.Experiment{
 				TargetVersionID: 1,
 				ExptType:        entity.ExptType_Offline,
@@ -1659,7 +1659,7 @@ func TestDefaultExptTurnEvaluationImpl_skipEvaluatorNode(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "无评估器配置 - 跳过",
+			name: "No evaluator configuration - skip",
 			expt: &entity.Experiment{
 				EvalConf: &entity.EvaluationConfiguration{
 					ConnectorConf: entity.Connector{
@@ -1670,7 +1670,7 @@ func TestDefaultExptTurnEvaluationImpl_skipEvaluatorNode(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "有评估器配置 - 不跳过",
+			name: "With evaluator configuration - do not skip",
 			expt: &entity.Experiment{
 				EvalConf: &entity.EvaluationConfiguration{
 					ConnectorConf: entity.Connector{
@@ -1725,9 +1725,9 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_EdgeCases(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "已存在成功的评估器结果 - 跳过执行",
+			name: "Successful evaluator result already exists - skip execution",
 			prepare: func() {
-				// 不需要mock任何调用，因为会直接返回已存在的结果
+				// No need to mock any calls as it will directly return the existing result
 			},
 			etec: &entity.ExptTurnEvalCtx{
 				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
@@ -1758,7 +1758,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_EdgeCases(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Code评估器构建输入数据",
+			name: "Code evaluator builds input data",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 1, Status: entity.EvaluatorRunStatusSuccess}, nil)
@@ -2162,7 +2162,7 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			tt.prepare()
-			// 检查targetResult是否为nil，避免panic
+			// Check if targetResult is nil to avoid panic
 			if tt.target != nil && tt.target.EvalTargetOutputData == nil {
 				tt.target.EvalTargetOutputData = &entity.EvalTargetOutputData{
 					OutputFields: make(map[string]*entity.Content),
