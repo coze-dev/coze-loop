@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 )
 
@@ -17,7 +18,7 @@ func NewWorkspaceProvider() workspace.IWorkSpaceProvider {
 
 type WorkspaceProviderImpl struct{}
 
-func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan) string {
+func (t *WorkspaceProviderImpl) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, claim *rpc.Claim) string {
 	if len(spans) == 0 {
 		return ""
 	}

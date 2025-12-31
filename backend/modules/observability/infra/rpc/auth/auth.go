@@ -172,6 +172,10 @@ func (a *AuthProviderImpl) CheckTaskPermission(ctx context.Context, action, work
 	return nil
 }
 
+func (a *AuthProviderImpl) GetClaim(ctx context.Context) *rpc.Claim {
+	return nil
+}
+
 func NewAuthProvider(cli authservice.Client) rpc.IAuthProvider {
 	return &AuthProviderImpl{
 		cli: cli,
