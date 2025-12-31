@@ -11,6 +11,7 @@ interface UserSelectProps {
   onChange?: (value?: string[]) => void;
   placeholder?: string;
   className?: string;
+  labelProps?: string;
   valueProps?: 'user_id' | 'email_prefix';
 }
 
@@ -20,6 +21,7 @@ export const UserSelect = ({
   placeholder,
   className = '',
   valueProps = 'user_id',
+  labelProps = 'screen_name',
   ...rest
 }: UserSelectProps & Omit<SelectProps, 'value' | 'onChange'>) => {
   const userInfo = useUserInfo();
@@ -29,13 +31,13 @@ export const UserSelect = ({
         <UserProfile
           className="ml-[6px]"
           avatarUrl={userInfo?.avatar_url}
-          name={userInfo?.name}
+          name={userInfo?.[labelProps]}
         />
       ),
 
       value: userInfo?.user_id_str || '',
       data: {
-        user_name: userInfo?.name,
+        user_name: userInfo?.[labelProps],
         avatar_url: userInfo?.avatar_url,
       },
     },
