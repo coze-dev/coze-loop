@@ -222,3 +222,83 @@ func GetAnalysisRecordFeedbackVote(ctx context.Context, c *app.RequestContext) {
 func CalculateExperimentAggrResult(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localExptSvc.CalculateExperimentAggrResult_)
 }
+
+// CreateExperimentTemplate .
+// @router /api/evaluation/v1/experiment_templates/create [POST]
+func CreateExperimentTemplate(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.CreateExperimentTemplateRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.CreateExperimentTemplateResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetExperimentTemplate .
+// @router /api/evaluation/v1/experiment_templates/:template_id [POST]
+func GetExperimentTemplate(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.GetExperimentTemplateRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.GetExperimentTemplateResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// UpdateExperimentTemplate .
+// @router /api/evaluation/v1/experiment_templates/:template_id [PATCH]
+func UpdateExperimentTemplate(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.UpdateExperimentTemplateRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.UpdateExperimentTemplateResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// DeleteExperimentTemplate .
+// @router /api/evaluation/v1/experiment_templates/:template_id [DELETE]
+func DeleteExperimentTemplate(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.DeleteExperimentTemplateRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.DeleteExperimentTemplateResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ListExperimentTemplates .
+// @router /api/evaluation/v1/experiment_templates/list [POST]
+func ListExperimentTemplates(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.ListExperimentTemplatesRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.ListExperimentTemplatesResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
