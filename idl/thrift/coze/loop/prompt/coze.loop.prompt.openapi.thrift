@@ -36,6 +36,10 @@ struct ExecuteRequest {
     10: optional list<VariableVal> variable_vals (api.body="variable_vals") // 变量值
     11: optional list<Message> messages (api.body="messages") // 消息
 
+    20: optional list<Tool> custom_tools (api.body="custom_tools") // 自定义工具
+    21: optional ToolCallConfig custom_tool_call_config (api.body="custom_tool_call_config") // 自定义工具调用配置
+    22: optional prompt.ModelConfig custom_model_config (api.body="custom_model_config") // 自定义模型配置
+
     255: optional base.Base Base
 }
 
@@ -128,6 +132,7 @@ struct Message {
     4: optional string reasoning_content // 推理思考内容
     5: optional string tool_call_id // tool调用ID（role为tool时有效）
     6: optional list<ToolCall> tool_calls // tool调用（role为assistant时有效）
+    7: optional bool skip_render // 是否跳过需要渲染
 
     100: optional map<string, string> metadata // 消息元信息
 }
