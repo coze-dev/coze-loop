@@ -412,16 +412,15 @@ body,
     background: var(--semi-color-fill-1);
   }
 
-  .styled-scrollbar::-webkit-scrollbar-thumb {
-    visibility: hidden;
-  }
-
-  .styled-scrollbar:hover::-webkit-scrollbar-thumb {
-    visibility: visible;
-  }
   .styled-scrollbar {
     scrollbar-gutter: stable;
+    overflow: hidden;
   }
+
+  .styled-scrollbar:hover {
+    overflow: auto;
+  }
+
 }
 
 .api-error-toast {
