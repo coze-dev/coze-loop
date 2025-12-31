@@ -144,19 +144,102 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 
 	// 构建模板实体
 	template := &entity.ExptTemplate{
-		ID:                 templateID,
-		SpaceID:            param.SpaceID,
-		CreatedBy:          session.UserID,
-		Name:               param.Name,
-		Description:        param.Description,
-		EvalSetID:          param.EvalSetID,
-		EvalSetVersionID:   param.EvalSetVersionID,
-		TargetID:           finalTargetID,
-		TargetType:         targetType,
-		TargetVersionID:    finalTargetVersionID,
+		Meta: &entity.ExptTemplateMeta{
+			ID:          templateID,
+			WorkspaceID: param.SpaceID,
+			CreatorBy:   session.UserID,
+			Name:        param.Name,
+			Desc:        param.Description,
+			ExptType:    param.ExptType,
+		},
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvalSetID:           param.EvalSetID,
+			EvalSetVersionID:    param.EvalSetVersionID,
+			TargetID:            finalTargetID,
+			TargetVersionID:     finalTargetVersionID,
+			TargetType:          targetType,
+			EvaluatorVersionIds: param.EvaluatorVersionIDs,
+		},
 		EvaluatorVersionRef: evaluatorVersionRefs,
-		TemplateConf:       param.TemplateConf,
-		ExptType:            param.ExptType,
+		TemplateConf:        param.TemplateConf,
+	}
+
+	// 从 TemplateConf 构建 FieldMappingConfig 和 ScoreWeightConfig
+	if param.TemplateConf != nil {
+		// 构建 FieldMappingConfig
+		fieldMappingConfig := &entity.ExptFieldMapping{
+			ItemConcurNum: param.TemplateConf.ItemConcurNum,
+		}
+
+		// 从 ConnectorConf 转换字段映射
+		if param.TemplateConf.ConnectorConf.TargetConf != nil && param.TemplateConf.ConnectorConf.TargetConf.IngressConf != nil {
+			ingressConf := param.TemplateConf.ConnectorConf.TargetConf.IngressConf
+			targetMapping := &entity.TargetFieldMapping{}
+			if ingressConf.EvalSetAdapter != nil {
+				for _, fc := range ingressConf.EvalSetAdapter.FieldConfs {
+					targetMapping.FromEvalSet = append(targetMapping.FromEvalSet, &entity.ExptTemplateFieldMapping{
+						FieldName:     fc.FieldName,
+						FromFieldName: fc.FromField,
+						ConstValue:    fc.Value,
+					})
+				}
+			}
+			fieldMappingConfig.TargetFieldMapping = targetMapping
+
+			// 提取运行时参数
+			if ingressConf.CustomConf != nil {
+				for _, fc := range ingressConf.CustomConf.FieldConfs {
+					if fc.FieldName == "builtin_runtime_param" {
+						fieldMappingConfig.TargetRuntimeParam = &entity.RuntimeParam{
+							JSONValue: fc.Value,
+						}
+						break
+					}
+				}
+			}
+		}
+
+		if param.TemplateConf.ConnectorConf.EvaluatorsConf != nil {
+			evaluatorMappings := make([]*entity.EvaluatorFieldMapping, 0, len(param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf))
+			for _, ec := range param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+				if ec.IngressConf == nil {
+					continue
+				}
+				em := &entity.EvaluatorFieldMapping{
+					EvaluatorVersionID: ec.EvaluatorVersionID,
+				}
+				if ec.IngressConf.EvalSetAdapter != nil {
+					for _, fc := range ec.IngressConf.EvalSetAdapter.FieldConfs {
+						em.FromEvalSet = append(em.FromEvalSet, &entity.ExptTemplateFieldMapping{
+							FieldName:     fc.FieldName,
+							FromFieldName: fc.FromField,
+							ConstValue:    fc.Value,
+						})
+					}
+				}
+				if ec.IngressConf.TargetAdapter != nil {
+					for _, fc := range ec.IngressConf.TargetAdapter.FieldConfs {
+						em.FromTarget = append(em.FromTarget, &entity.ExptTemplateFieldMapping{
+							FieldName:     fc.FieldName,
+							FromFieldName: fc.FromField,
+							ConstValue:    fc.Value,
+						})
+					}
+				}
+				evaluatorMappings = append(evaluatorMappings, em)
+			}
+			fieldMappingConfig.EvaluatorFieldMapping = evaluatorMappings
+
+			// 构建 ScoreWeightConfig
+			if param.TemplateConf.ConnectorConf.EvaluatorsConf.EnableWeightedScore || len(param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorScoreWeights) > 0 {
+				template.ScoreWeightConfig = &entity.ExptScoreWeight{
+					EnableWeightedScore:   param.TemplateConf.ConnectorConf.EvaluatorsConf.EnableWeightedScore,
+					EvaluatorScoreWeights: param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorScoreWeights,
+				}
+			}
+		}
+
+		template.FieldMappingConfig = fieldMappingConfig
 	}
 
 	// 如果创建了评测对象，更新 TemplateConf 中的 TargetVersionID
@@ -203,7 +286,7 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	}
 
 	// 如果名称改变，检查新名称是否可用
-	if param.Name != "" && param.Name != existingTemplate.Name {
+	if param.Name != "" && param.Name != existingTemplate.GetName() {
 		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, session)
 		if !pass {
 			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
@@ -360,12 +443,12 @@ func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32
 		evaluatorIDMap  = make(map[int64]bool)
 	)
 
-	for _, template := range templates {
-		if template.EvalSetID > 0 {
-			evalSetIDs = append(evalSetIDs, template.EvalSetID)
+		for _, template := range templates {
+		if template.GetEvalSetID() > 0 {
+			evalSetIDs = append(evalSetIDs, template.GetEvalSetID())
 		}
-		if template.TargetID > 0 {
-			targetIDs = append(targetIDs, template.TargetID)
+		if template.GetTargetID() > 0 {
+			targetIDs = append(targetIDs, template.GetTargetID())
 		}
 		for _, ref := range template.EvaluatorVersionRef {
 			if ref.EvaluatorID > 0 && !evaluatorIDMap[ref.EvaluatorID] {
@@ -442,13 +525,13 @@ func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32
 
 	// 填充关联数据
 	for _, template := range templates {
-		if template.EvalSetID > 0 {
-			if es, ok := res.evalSets[template.EvalSetID]; ok {
+		if template.GetEvalSetID() > 0 {
+			if es, ok := res.evalSets[template.GetEvalSetID()]; ok {
 				template.EvalSet = es
 			}
 		}
-		if template.TargetID > 0 {
-			if t, ok := res.targets[template.TargetID]; ok {
+		if template.GetTargetID() > 0 {
+			if t, ok := res.targets[template.GetTargetID()]; ok {
 				template.Target = t
 			}
 		}

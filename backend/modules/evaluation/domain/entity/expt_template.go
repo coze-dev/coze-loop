@@ -15,25 +15,78 @@ import (
 // ExptTemplate 实验模板实体
 // 用于预先配置评测对象、评测集与评估器，并在创建实验时复用
 type ExptTemplate struct {
-	ID          int64
-	SpaceID     int64
-	CreatedBy   string
-	Name        string
-	Description string
+	Meta               *ExptTemplateMeta
+	TripleConfig       *ExptTemplateTuple
+	FieldMappingConfig *ExptFieldMapping
+	ScoreWeightConfig  *ExptScoreWeight
 
-	EvalSetVersionID    int64
-	EvalSetID           int64
-	TargetType          EvalTargetType
-	TargetVersionID     int64
-	TargetID            int64
-	EvaluatorVersionRef []*ExptTemplateEvaluatorVersionRef
-	TemplateConf        *ExptTemplateConfiguration
-
+	// 关联数据（用于内部使用，不存储在数据库中）
 	Target     *EvalTarget
 	EvalSet    *EvaluationSet
 	Evaluators []*Evaluator
 
-	ExptType ExptType
+	// 内部使用的评估器版本引用（从 TripleConfig.EvaluatorVersionIds 派生）
+	EvaluatorVersionRef []*ExptTemplateEvaluatorVersionRef
+	// 内部使用的模板配置（从 FieldMappingConfig 和 ScoreWeightConfig 派生，用于存储到数据库）
+	TemplateConf *ExptTemplateConfiguration
+}
+
+// ExptTemplateMeta 实验模板基础信息
+type ExptTemplateMeta struct {
+	ID          int64
+	WorkspaceID int64
+	Name        string
+	Desc        string
+	CreatorBy   string
+	ExptType    ExptType
+}
+
+// ExptTemplateTuple 实验模板三元组配置
+type ExptTemplateTuple struct {
+	EvalSetID           int64
+	EvalSetVersionID    int64
+	TargetID            int64
+	TargetVersionID     int64
+	TargetType           EvalTargetType
+	EvaluatorVersionIds []int64
+}
+
+// ExptFieldMapping 实验字段映射和运行时参数配置
+type ExptFieldMapping struct {
+	TargetFieldMapping    *TargetFieldMapping
+	EvaluatorFieldMapping []*EvaluatorFieldMapping
+	TargetRuntimeParam    *RuntimeParam
+	ItemConcurNum         *int
+}
+
+// TargetFieldMapping 目标字段映射
+type TargetFieldMapping struct {
+	FromEvalSet []*ExptTemplateFieldMapping
+}
+
+// EvaluatorFieldMapping 评估器字段映射
+type EvaluatorFieldMapping struct {
+	EvaluatorVersionID int64
+	FromEvalSet         []*ExptTemplateFieldMapping
+	FromTarget          []*ExptTemplateFieldMapping
+}
+
+// ExptTemplateFieldMapping 实验模板字段映射
+type ExptTemplateFieldMapping struct {
+	FieldName     string
+	ConstValue    string
+	FromFieldName string
+}
+
+// ExptScoreWeight 实验评估器得分加权配置
+type ExptScoreWeight struct {
+	EnableWeightedScore   bool
+	EvaluatorScoreWeights map[int64]float64
+}
+
+// RuntimeParam 运行时参数
+type RuntimeParam struct {
+	JSONValue string
 }
 
 // ExptTemplateEvaluatorVersionRef 实验模板评估器版本引用
@@ -67,8 +120,8 @@ func (e *ExptTemplate) ToEvaluatorRefDO() []*ExptTemplateEvaluatorRef {
 	refs := make([]*ExptTemplateEvaluatorRef, 0, cnt)
 	for _, evr := range e.EvaluatorVersionRef {
 		refs = append(refs, &ExptTemplateEvaluatorRef{
-			SpaceID:            e.SpaceID,
-			ExptTemplateID:     e.ID,
+			SpaceID:            e.GetSpaceID(),
+			ExptTemplateID:     e.GetID(),
 			EvaluatorID:        evr.EvaluatorID,
 			EvaluatorVersionID: evr.EvaluatorVersionID,
 		})
@@ -78,7 +131,103 @@ func (e *ExptTemplate) ToEvaluatorRefDO() []*ExptTemplateEvaluatorRef {
 
 // ContainsEvalTarget 是否包含评估对象
 func (e *ExptTemplate) ContainsEvalTarget() bool {
-	return e != nil && e.TargetVersionID > 0
+	return e != nil && e.GetTargetVersionID() > 0
+}
+
+// GetID 获取模板ID
+func (e *ExptTemplate) GetID() int64 {
+	if e == nil || e.Meta == nil {
+		return 0
+	}
+	return e.Meta.ID
+}
+
+// GetSpaceID 获取空间ID
+func (e *ExptTemplate) GetSpaceID() int64 {
+	if e == nil || e.Meta == nil {
+		return 0
+	}
+	return e.Meta.WorkspaceID
+}
+
+// GetName 获取模板名称
+func (e *ExptTemplate) GetName() string {
+	if e == nil || e.Meta == nil {
+		return ""
+	}
+	return e.Meta.Name
+}
+
+// GetDescription 获取模板描述
+func (e *ExptTemplate) GetDescription() string {
+	if e == nil || e.Meta == nil {
+		return ""
+	}
+	return e.Meta.Desc
+}
+
+// GetCreatedBy 获取创建者
+func (e *ExptTemplate) GetCreatedBy() string {
+	if e == nil || e.Meta == nil {
+		return ""
+	}
+	return e.Meta.CreatorBy
+}
+
+// GetExptType 获取实验类型
+func (e *ExptTemplate) GetExptType() ExptType {
+	if e == nil || e.Meta == nil {
+		return 0
+	}
+	return e.Meta.ExptType
+}
+
+// GetEvalSetID 获取评测集ID
+func (e *ExptTemplate) GetEvalSetID() int64 {
+	if e == nil || e.TripleConfig == nil {
+		return 0
+	}
+	return e.TripleConfig.EvalSetID
+}
+
+// GetEvalSetVersionID 获取评测集版本ID
+func (e *ExptTemplate) GetEvalSetVersionID() int64 {
+	if e == nil || e.TripleConfig == nil {
+		return 0
+	}
+	return e.TripleConfig.EvalSetVersionID
+}
+
+// GetTargetID 获取评估对象ID
+func (e *ExptTemplate) GetTargetID() int64 {
+	if e == nil || e.TripleConfig == nil {
+		return 0
+	}
+	return e.TripleConfig.TargetID
+}
+
+// GetTargetVersionID 获取评估对象版本ID
+func (e *ExptTemplate) GetTargetVersionID() int64 {
+	if e == nil || e.TripleConfig == nil {
+		return 0
+	}
+	return e.TripleConfig.TargetVersionID
+}
+
+// GetTargetType 获取评估对象类型
+func (e *ExptTemplate) GetTargetType() EvalTargetType {
+	if e == nil || e.TripleConfig == nil {
+		return 0
+	}
+	return e.TripleConfig.TargetType
+}
+
+// GetEvaluatorVersionIds 获取评估器版本ID列表
+func (e *ExptTemplate) GetEvaluatorVersionIds() []int64 {
+	if e == nil || e.TripleConfig == nil {
+		return nil
+	}
+	return e.TripleConfig.EvaluatorVersionIds
 }
 
 // ExptTemplateEvaluatorRef 实验模板评估器引用DO

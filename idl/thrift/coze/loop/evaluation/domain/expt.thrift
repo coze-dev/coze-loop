@@ -63,45 +63,55 @@ struct Experiment {
     42: optional SourceType source_type
     43: optional string source_id
 
-    50: optional ExptTemplate expt_template
+    50: optional ExptTemplateMeta expt_template_meta
     // 评估器得分加权配置
-    51: optional bool enable_weighted_score
-    52: optional map<i64, double> evaluator_score_weights
+    51: optional ExptScoreWeight score_weight_config
 }
 
-// 离线实验模板，用于预先配置评测对象、评测集与评估器，并在创建实验时复用
-struct ExptTemplate {
+// 实验模板基础信息
+struct ExptTemplateMeta {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
     2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
     3: optional string name
     4: optional string desc
     5: optional string creator_by
+    6: optional ExptType expt_type   // 模板对应的实验类型，当前主要为 Offline
 
-    // 评测对象与评测集配置
-    // 注意：业务上要求模板创建成功后不可修改 eval_set_id / target_id，仅可调整默认版本等配置
-    20: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
-    21: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
-    22: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
-    23: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
+}
 
-    // 评估器配置
-    30: optional list<i64> evaluator_version_ids (api.js_conv='true', go.tag='json:"evaluator_version_ids"')
+// 实验三元组配置
+struct ExptTuple {
+    1: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
+    2: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
+    3: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
+    4: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
+    5: optional list<i64> evaluator_version_ids (api.js_conv='true', go.tag='json:"evaluator_version_ids"')
+    6: optional eval_set.EvaluationSet eval_set
+    7: optional eval_target.EvalTarget eval_target
+    8: optional list<evaluator.Evaluator> evaluators
+}
 
-    // 字段映射 & 运行时参数
-    40: optional TargetFieldMapping target_field_mapping
-    41: optional list<EvaluatorFieldMapping> evaluator_field_mapping
-    42: optional common.RuntimeParam target_runtime_param
+// 实验字段映射和运行时参数配置
+struct ExptFieldMapping {
+    1: optional TargetFieldMapping target_field_mapping
+    2: optional list<EvaluatorFieldMapping> evaluator_field_mapping
+    3: optional common.RuntimeParam target_runtime_param
+    4: optional i32 item_concur_num
+}
 
-    // 评估器得分加权配置
-    50: optional bool enable_weighted_score
-    51: optional map<i64, double> evaluator_score_weights
+// 实验评估器得分加权配置
+struct ExptScoreWeight {
+    1: optional bool enable_weighted_score
+    2: optional map<i64, double> evaluator_score_weights
+}
 
-    // 默认实验运行配置：并发度 / 调度
-    60: optional i32 default_item_concur_num
-    61: optional i32 default_evaluators_concur_num
+struct ExptTemplate {
+    1: optional ExptTemplateMeta meta
+    2: optional ExptTuple triple_config
+    3: optional ExptFieldMapping field_mapping_config
+    4: optional ExptScoreWeight score_weight_config
 
-    90: optional ExptType expt_type   // 模板对应的实验类型，当前主要为 Offline
-    99: optional common.BaseInfo base_info
+    255: optional common.BaseInfo base_info
 }
 
 struct TokenUsage {
@@ -378,6 +388,7 @@ enum FieldType {
     TotalTokens = 63 // 目前使用固定key：total_tokens
 
     ExperimentTemplateID = 70
+    EvaluatorScoreWeighted = 71
 }
 
 // 字段过滤器

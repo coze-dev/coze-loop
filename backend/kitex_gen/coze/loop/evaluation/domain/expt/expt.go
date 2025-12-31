@@ -512,8 +512,9 @@ const (
 	// 目前使用固定key：output_tokens
 	FieldType_OutputTokens FieldType = 62
 	// 目前使用固定key：total_tokens
-	FieldType_TotalTokens          FieldType = 63
-	FieldType_ExperimentTemplateID FieldType = 70
+	FieldType_TotalTokens            FieldType = 63
+	FieldType_ExperimentTemplateID   FieldType = 70
+	FieldType_EvaluatorScoreWeighted FieldType = 71
 )
 
 func (p FieldType) String() string {
@@ -582,6 +583,8 @@ func (p FieldType) String() string {
 		return "TotalTokens"
 	case FieldType_ExperimentTemplateID:
 		return "ExperimentTemplateID"
+	case FieldType_EvaluatorScoreWeighted:
+		return "EvaluatorScoreWeighted"
 	}
 	return "<UNSET>"
 }
@@ -652,6 +655,8 @@ func FieldTypeFromString(s string) (FieldType, error) {
 		return FieldType_TotalTokens, nil
 	case "ExperimentTemplateID":
 		return FieldType_ExperimentTemplateID, nil
+	case "EvaluatorScoreWeighted":
+		return FieldType_EvaluatorScoreWeighted, nil
 	}
 	return FieldType(0), fmt.Errorf("not a valid FieldType string")
 }
@@ -978,10 +983,9 @@ type Experiment struct {
 	MaxAliveTime          *int64                   `thrift:"max_alive_time,41,optional" frugal:"41,optional,i64" form:"max_alive_time" json:"max_alive_time,omitempty" query:"max_alive_time"`
 	SourceType            *SourceType              `thrift:"source_type,42,optional" frugal:"42,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
 	SourceID              *string                  `thrift:"source_id,43,optional" frugal:"43,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
-	ExptTemplate          *ExptTemplate            `thrift:"expt_template,50,optional" frugal:"50,optional,ExptTemplate" form:"expt_template" json:"expt_template,omitempty" query:"expt_template"`
+	ExptTemplateMeta      *ExptTemplateMeta        `thrift:"expt_template_meta,50,optional" frugal:"50,optional,ExptTemplateMeta" form:"expt_template_meta" json:"expt_template_meta,omitempty" query:"expt_template_meta"`
 	// 评估器得分加权配置
-	EnableWeightedScore   *bool             `thrift:"enable_weighted_score,51,optional" frugal:"51,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
-	EvaluatorScoreWeights map[int64]float64 `thrift:"evaluator_score_weights,52,optional" frugal:"52,optional,map<i64:double>" form:"evaluator_score_weights" json:"evaluator_score_weights,omitempty" query:"evaluator_score_weights"`
+	ScoreWeightConfig *ExptScoreWeight `thrift:"score_weight_config,51,optional" frugal:"51,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
 }
 
 func NewExperiment() *Experiment {
@@ -1303,40 +1307,28 @@ func (p *Experiment) GetSourceID() (v string) {
 	return *p.SourceID
 }
 
-var Experiment_ExptTemplate_DEFAULT *ExptTemplate
+var Experiment_ExptTemplateMeta_DEFAULT *ExptTemplateMeta
 
-func (p *Experiment) GetExptTemplate() (v *ExptTemplate) {
+func (p *Experiment) GetExptTemplateMeta() (v *ExptTemplateMeta) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetExptTemplate() {
-		return Experiment_ExptTemplate_DEFAULT
+	if !p.IsSetExptTemplateMeta() {
+		return Experiment_ExptTemplateMeta_DEFAULT
 	}
-	return p.ExptTemplate
+	return p.ExptTemplateMeta
 }
 
-var Experiment_EnableWeightedScore_DEFAULT bool
+var Experiment_ScoreWeightConfig_DEFAULT *ExptScoreWeight
 
-func (p *Experiment) GetEnableWeightedScore() (v bool) {
+func (p *Experiment) GetScoreWeightConfig() (v *ExptScoreWeight) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetEnableWeightedScore() {
-		return Experiment_EnableWeightedScore_DEFAULT
+	if !p.IsSetScoreWeightConfig() {
+		return Experiment_ScoreWeightConfig_DEFAULT
 	}
-	return *p.EnableWeightedScore
-}
-
-var Experiment_EvaluatorScoreWeights_DEFAULT map[int64]float64
-
-func (p *Experiment) GetEvaluatorScoreWeights() (v map[int64]float64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEvaluatorScoreWeights() {
-		return Experiment_EvaluatorScoreWeights_DEFAULT
-	}
-	return p.EvaluatorScoreWeights
+	return p.ScoreWeightConfig
 }
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
@@ -1416,14 +1408,11 @@ func (p *Experiment) SetSourceType(val *SourceType) {
 func (p *Experiment) SetSourceID(val *string) {
 	p.SourceID = val
 }
-func (p *Experiment) SetExptTemplate(val *ExptTemplate) {
-	p.ExptTemplate = val
+func (p *Experiment) SetExptTemplateMeta(val *ExptTemplateMeta) {
+	p.ExptTemplateMeta = val
 }
-func (p *Experiment) SetEnableWeightedScore(val *bool) {
-	p.EnableWeightedScore = val
-}
-func (p *Experiment) SetEvaluatorScoreWeights(val map[int64]float64) {
-	p.EvaluatorScoreWeights = val
+func (p *Experiment) SetScoreWeightConfig(val *ExptScoreWeight) {
+	p.ScoreWeightConfig = val
 }
 
 var fieldIDToName_Experiment = map[int16]string{
@@ -1453,9 +1442,8 @@ var fieldIDToName_Experiment = map[int16]string{
 	41: "max_alive_time",
 	42: "source_type",
 	43: "source_id",
-	50: "expt_template",
-	51: "enable_weighted_score",
-	52: "evaluator_score_weights",
+	50: "expt_template_meta",
+	51: "score_weight_config",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1562,16 +1550,12 @@ func (p *Experiment) IsSetSourceID() bool {
 	return p.SourceID != nil
 }
 
-func (p *Experiment) IsSetExptTemplate() bool {
-	return p.ExptTemplate != nil
+func (p *Experiment) IsSetExptTemplateMeta() bool {
+	return p.ExptTemplateMeta != nil
 }
 
-func (p *Experiment) IsSetEnableWeightedScore() bool {
-	return p.EnableWeightedScore != nil
-}
-
-func (p *Experiment) IsSetEvaluatorScoreWeights() bool {
-	return p.EvaluatorScoreWeights != nil
+func (p *Experiment) IsSetScoreWeightConfig() bool {
+	return p.ScoreWeightConfig != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -1809,16 +1793,8 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 51:
-			if fieldTypeId == thrift.BOOL {
+			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField51(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 52:
-			if fieldTypeId == thrift.MAP {
-				if err = p.ReadField52(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2161,51 +2137,19 @@ func (p *Experiment) ReadField43(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *Experiment) ReadField50(iprot thrift.TProtocol) error {
-	_field := NewExptTemplate()
+	_field := NewExptTemplateMeta()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.ExptTemplate = _field
+	p.ExptTemplateMeta = _field
 	return nil
 }
 func (p *Experiment) ReadField51(iprot thrift.TProtocol) error {
-
-	var _field *bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.EnableWeightedScore = _field
-	return nil
-}
-func (p *Experiment) ReadField52(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
-	if err != nil {
+	_field := NewExptScoreWeight()
+	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	_field := make(map[int64]float64, size)
-	for i := 0; i < size; i++ {
-		var _key int64
-		if v, err := iprot.ReadI64(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
-
-		var _val float64
-		if v, err := iprot.ReadDouble(); err != nil {
-			return err
-		} else {
-			_val = v
-		}
-
-		_field[_key] = _val
-	}
-	if err := iprot.ReadMapEnd(); err != nil {
-		return err
-	}
-	p.EvaluatorScoreWeights = _field
+	p.ScoreWeightConfig = _field
 	return nil
 }
 
@@ -2325,10 +2269,6 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField51(oprot); err != nil {
 			fieldId = 51
-			goto WriteFieldError
-		}
-		if err = p.writeField52(oprot); err != nil {
-			fieldId = 52
 			goto WriteFieldError
 		}
 	}
@@ -2842,11 +2782,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 43 end error: ", p), err)
 }
 func (p *Experiment) writeField50(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExptTemplate() {
-		if err = oprot.WriteFieldBegin("expt_template", thrift.STRUCT, 50); err != nil {
+	if p.IsSetExptTemplateMeta() {
+		if err = oprot.WriteFieldBegin("expt_template_meta", thrift.STRUCT, 50); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.ExptTemplate.Write(oprot); err != nil {
+		if err := p.ExptTemplateMeta.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2860,11 +2800,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
 }
 func (p *Experiment) writeField51(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEnableWeightedScore() {
-		if err = oprot.WriteFieldBegin("enable_weighted_score", thrift.BOOL, 51); err != nil {
+	if p.IsSetScoreWeightConfig() {
+		if err = oprot.WriteFieldBegin("score_weight_config", thrift.STRUCT, 51); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.EnableWeightedScore); err != nil {
+		if err := p.ScoreWeightConfig.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2876,35 +2816,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
-}
-func (p *Experiment) writeField52(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvaluatorScoreWeights() {
-		if err = oprot.WriteFieldBegin("evaluator_score_weights", thrift.MAP, 52); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteMapBegin(thrift.I64, thrift.DOUBLE, len(p.EvaluatorScoreWeights)); err != nil {
-			return err
-		}
-		for k, v := range p.EvaluatorScoreWeights {
-			if err := oprot.WriteI64(k); err != nil {
-				return err
-			}
-			if err := oprot.WriteDouble(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteMapEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 52 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 52 end error: ", p), err)
 }
 
 func (p *Experiment) String() string {
@@ -2999,13 +2910,10 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 	if !p.Field43DeepEqual(ano.SourceID) {
 		return false
 	}
-	if !p.Field50DeepEqual(ano.ExptTemplate) {
+	if !p.Field50DeepEqual(ano.ExptTemplateMeta) {
 		return false
 	}
-	if !p.Field51DeepEqual(ano.EnableWeightedScore) {
-		return false
-	}
-	if !p.Field52DeepEqual(ano.EvaluatorScoreWeights) {
+	if !p.Field51DeepEqual(ano.ScoreWeightConfig) {
 		return false
 	}
 	return true
@@ -3296,460 +3204,163 @@ func (p *Experiment) Field43DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *Experiment) Field50DeepEqual(src *ExptTemplate) bool {
+func (p *Experiment) Field50DeepEqual(src *ExptTemplateMeta) bool {
 
-	if !p.ExptTemplate.DeepEqual(src) {
+	if !p.ExptTemplateMeta.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *Experiment) Field51DeepEqual(src *bool) bool {
+func (p *Experiment) Field51DeepEqual(src *ExptScoreWeight) bool {
 
-	if p.EnableWeightedScore == src {
-		return true
-	} else if p.EnableWeightedScore == nil || src == nil {
-		return false
-	}
-	if *p.EnableWeightedScore != *src {
+	if !p.ScoreWeightConfig.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *Experiment) Field52DeepEqual(src map[int64]float64) bool {
 
-	if len(p.EvaluatorScoreWeights) != len(src) {
-		return false
-	}
-	for k, v := range p.EvaluatorScoreWeights {
-		_src := src[k]
-		if v != _src {
-			return false
-		}
-	}
-	return true
-}
-
-// 离线实验模板，用于预先配置评测对象、评测集与评估器，并在创建实验时复用
-type ExptTemplate struct {
+// 实验模板基础信息
+type ExptTemplateMeta struct {
 	ID          *int64  `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
 	WorkspaceID *int64  `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	Name        *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Desc        *string `thrift:"desc,4,optional" frugal:"4,optional,string" form:"desc" json:"desc,omitempty" query:"desc"`
 	CreatorBy   *string `thrift:"creator_by,5,optional" frugal:"5,optional,string" form:"creator_by" json:"creator_by,omitempty" query:"creator_by"`
-	// 评测对象与评测集配置
-	// 注意：业务上要求模板创建成功后不可修改 eval_set_id / target_id，仅可调整默认版本等配置
-	EvalSetID        *int64 `thrift:"eval_set_id,20,optional" frugal:"20,optional,i64" json:"eval_set_id" form:"eval_set_id" query:"eval_set_id"`
-	EvalSetVersionID *int64 `thrift:"eval_set_version_id,21,optional" frugal:"21,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" query:"eval_set_version_id"`
-	TargetID         *int64 `thrift:"target_id,22,optional" frugal:"22,optional,i64" json:"target_id" form:"target_id" query:"target_id"`
-	TargetVersionID  *int64 `thrift:"target_version_id,23,optional" frugal:"23,optional,i64" json:"target_version_id" form:"target_version_id" query:"target_version_id"`
-	// 评估器配置
-	EvaluatorVersionIds []int64 `thrift:"evaluator_version_ids,30,optional" frugal:"30,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" query:"evaluator_version_ids"`
-	// 字段映射 & 运行时参数
-	TargetFieldMapping    *TargetFieldMapping      `thrift:"target_field_mapping,40,optional" frugal:"40,optional,TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty" query:"target_field_mapping"`
-	EvaluatorFieldMapping []*EvaluatorFieldMapping `thrift:"evaluator_field_mapping,41,optional" frugal:"41,optional,list<EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty" query:"evaluator_field_mapping"`
-	TargetRuntimeParam    *common.RuntimeParam     `thrift:"target_runtime_param,42,optional" frugal:"42,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty" query:"target_runtime_param"`
-	// 评估器得分加权配置
-	EnableWeightedScore   *bool             `thrift:"enable_weighted_score,50,optional" frugal:"50,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
-	EvaluatorScoreWeights map[int64]float64 `thrift:"evaluator_score_weights,51,optional" frugal:"51,optional,map<i64:double>" form:"evaluator_score_weights" json:"evaluator_score_weights,omitempty" query:"evaluator_score_weights"`
-	// 默认实验运行配置：并发度 / 调度
-	DefaultItemConcurNum       *int32 `thrift:"default_item_concur_num,60,optional" frugal:"60,optional,i32" form:"default_item_concur_num" json:"default_item_concur_num,omitempty" query:"default_item_concur_num"`
-	DefaultEvaluatorsConcurNum *int32 `thrift:"default_evaluators_concur_num,61,optional" frugal:"61,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty" query:"default_evaluators_concur_num"`
 	// 模板对应的实验类型，当前主要为 Offline
-	ExptType *ExptType        `thrift:"expt_type,90,optional" frugal:"90,optional,ExptType" form:"expt_type" json:"expt_type,omitempty" query:"expt_type"`
-	BaseInfo *common.BaseInfo `thrift:"base_info,99,optional" frugal:"99,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	ExptType *ExptType `thrift:"expt_type,6,optional" frugal:"6,optional,ExptType" form:"expt_type" json:"expt_type,omitempty" query:"expt_type"`
 }
 
-func NewExptTemplate() *ExptTemplate {
-	return &ExptTemplate{}
+func NewExptTemplateMeta() *ExptTemplateMeta {
+	return &ExptTemplateMeta{}
 }
 
-func (p *ExptTemplate) InitDefault() {
+func (p *ExptTemplateMeta) InitDefault() {
 }
 
-var ExptTemplate_ID_DEFAULT int64
+var ExptTemplateMeta_ID_DEFAULT int64
 
-func (p *ExptTemplate) GetID() (v int64) {
+func (p *ExptTemplateMeta) GetID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetID() {
-		return ExptTemplate_ID_DEFAULT
+		return ExptTemplateMeta_ID_DEFAULT
 	}
 	return *p.ID
 }
 
-var ExptTemplate_WorkspaceID_DEFAULT int64
+var ExptTemplateMeta_WorkspaceID_DEFAULT int64
 
-func (p *ExptTemplate) GetWorkspaceID() (v int64) {
+func (p *ExptTemplateMeta) GetWorkspaceID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetWorkspaceID() {
-		return ExptTemplate_WorkspaceID_DEFAULT
+		return ExptTemplateMeta_WorkspaceID_DEFAULT
 	}
 	return *p.WorkspaceID
 }
 
-var ExptTemplate_Name_DEFAULT string
+var ExptTemplateMeta_Name_DEFAULT string
 
-func (p *ExptTemplate) GetName() (v string) {
+func (p *ExptTemplateMeta) GetName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetName() {
-		return ExptTemplate_Name_DEFAULT
+		return ExptTemplateMeta_Name_DEFAULT
 	}
 	return *p.Name
 }
 
-var ExptTemplate_Desc_DEFAULT string
+var ExptTemplateMeta_Desc_DEFAULT string
 
-func (p *ExptTemplate) GetDesc() (v string) {
+func (p *ExptTemplateMeta) GetDesc() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDesc() {
-		return ExptTemplate_Desc_DEFAULT
+		return ExptTemplateMeta_Desc_DEFAULT
 	}
 	return *p.Desc
 }
 
-var ExptTemplate_CreatorBy_DEFAULT string
+var ExptTemplateMeta_CreatorBy_DEFAULT string
 
-func (p *ExptTemplate) GetCreatorBy() (v string) {
+func (p *ExptTemplateMeta) GetCreatorBy() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCreatorBy() {
-		return ExptTemplate_CreatorBy_DEFAULT
+		return ExptTemplateMeta_CreatorBy_DEFAULT
 	}
 	return *p.CreatorBy
 }
 
-var ExptTemplate_EvalSetID_DEFAULT int64
+var ExptTemplateMeta_ExptType_DEFAULT ExptType
 
-func (p *ExptTemplate) GetEvalSetID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEvalSetID() {
-		return ExptTemplate_EvalSetID_DEFAULT
-	}
-	return *p.EvalSetID
-}
-
-var ExptTemplate_EvalSetVersionID_DEFAULT int64
-
-func (p *ExptTemplate) GetEvalSetVersionID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEvalSetVersionID() {
-		return ExptTemplate_EvalSetVersionID_DEFAULT
-	}
-	return *p.EvalSetVersionID
-}
-
-var ExptTemplate_TargetID_DEFAULT int64
-
-func (p *ExptTemplate) GetTargetID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTargetID() {
-		return ExptTemplate_TargetID_DEFAULT
-	}
-	return *p.TargetID
-}
-
-var ExptTemplate_TargetVersionID_DEFAULT int64
-
-func (p *ExptTemplate) GetTargetVersionID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTargetVersionID() {
-		return ExptTemplate_TargetVersionID_DEFAULT
-	}
-	return *p.TargetVersionID
-}
-
-var ExptTemplate_EvaluatorVersionIds_DEFAULT []int64
-
-func (p *ExptTemplate) GetEvaluatorVersionIds() (v []int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEvaluatorVersionIds() {
-		return ExptTemplate_EvaluatorVersionIds_DEFAULT
-	}
-	return p.EvaluatorVersionIds
-}
-
-var ExptTemplate_TargetFieldMapping_DEFAULT *TargetFieldMapping
-
-func (p *ExptTemplate) GetTargetFieldMapping() (v *TargetFieldMapping) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTargetFieldMapping() {
-		return ExptTemplate_TargetFieldMapping_DEFAULT
-	}
-	return p.TargetFieldMapping
-}
-
-var ExptTemplate_EvaluatorFieldMapping_DEFAULT []*EvaluatorFieldMapping
-
-func (p *ExptTemplate) GetEvaluatorFieldMapping() (v []*EvaluatorFieldMapping) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEvaluatorFieldMapping() {
-		return ExptTemplate_EvaluatorFieldMapping_DEFAULT
-	}
-	return p.EvaluatorFieldMapping
-}
-
-var ExptTemplate_TargetRuntimeParam_DEFAULT *common.RuntimeParam
-
-func (p *ExptTemplate) GetTargetRuntimeParam() (v *common.RuntimeParam) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTargetRuntimeParam() {
-		return ExptTemplate_TargetRuntimeParam_DEFAULT
-	}
-	return p.TargetRuntimeParam
-}
-
-var ExptTemplate_EnableWeightedScore_DEFAULT bool
-
-func (p *ExptTemplate) GetEnableWeightedScore() (v bool) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEnableWeightedScore() {
-		return ExptTemplate_EnableWeightedScore_DEFAULT
-	}
-	return *p.EnableWeightedScore
-}
-
-var ExptTemplate_EvaluatorScoreWeights_DEFAULT map[int64]float64
-
-func (p *ExptTemplate) GetEvaluatorScoreWeights() (v map[int64]float64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEvaluatorScoreWeights() {
-		return ExptTemplate_EvaluatorScoreWeights_DEFAULT
-	}
-	return p.EvaluatorScoreWeights
-}
-
-var ExptTemplate_DefaultItemConcurNum_DEFAULT int32
-
-func (p *ExptTemplate) GetDefaultItemConcurNum() (v int32) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetDefaultItemConcurNum() {
-		return ExptTemplate_DefaultItemConcurNum_DEFAULT
-	}
-	return *p.DefaultItemConcurNum
-}
-
-var ExptTemplate_DefaultEvaluatorsConcurNum_DEFAULT int32
-
-func (p *ExptTemplate) GetDefaultEvaluatorsConcurNum() (v int32) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetDefaultEvaluatorsConcurNum() {
-		return ExptTemplate_DefaultEvaluatorsConcurNum_DEFAULT
-	}
-	return *p.DefaultEvaluatorsConcurNum
-}
-
-var ExptTemplate_ExptType_DEFAULT ExptType
-
-func (p *ExptTemplate) GetExptType() (v ExptType) {
+func (p *ExptTemplateMeta) GetExptType() (v ExptType) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetExptType() {
-		return ExptTemplate_ExptType_DEFAULT
+		return ExptTemplateMeta_ExptType_DEFAULT
 	}
 	return *p.ExptType
 }
-
-var ExptTemplate_BaseInfo_DEFAULT *common.BaseInfo
-
-func (p *ExptTemplate) GetBaseInfo() (v *common.BaseInfo) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetBaseInfo() {
-		return ExptTemplate_BaseInfo_DEFAULT
-	}
-	return p.BaseInfo
-}
-func (p *ExptTemplate) SetID(val *int64) {
+func (p *ExptTemplateMeta) SetID(val *int64) {
 	p.ID = val
 }
-func (p *ExptTemplate) SetWorkspaceID(val *int64) {
+func (p *ExptTemplateMeta) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
-func (p *ExptTemplate) SetName(val *string) {
+func (p *ExptTemplateMeta) SetName(val *string) {
 	p.Name = val
 }
-func (p *ExptTemplate) SetDesc(val *string) {
+func (p *ExptTemplateMeta) SetDesc(val *string) {
 	p.Desc = val
 }
-func (p *ExptTemplate) SetCreatorBy(val *string) {
+func (p *ExptTemplateMeta) SetCreatorBy(val *string) {
 	p.CreatorBy = val
 }
-func (p *ExptTemplate) SetEvalSetID(val *int64) {
-	p.EvalSetID = val
-}
-func (p *ExptTemplate) SetEvalSetVersionID(val *int64) {
-	p.EvalSetVersionID = val
-}
-func (p *ExptTemplate) SetTargetID(val *int64) {
-	p.TargetID = val
-}
-func (p *ExptTemplate) SetTargetVersionID(val *int64) {
-	p.TargetVersionID = val
-}
-func (p *ExptTemplate) SetEvaluatorVersionIds(val []int64) {
-	p.EvaluatorVersionIds = val
-}
-func (p *ExptTemplate) SetTargetFieldMapping(val *TargetFieldMapping) {
-	p.TargetFieldMapping = val
-}
-func (p *ExptTemplate) SetEvaluatorFieldMapping(val []*EvaluatorFieldMapping) {
-	p.EvaluatorFieldMapping = val
-}
-func (p *ExptTemplate) SetTargetRuntimeParam(val *common.RuntimeParam) {
-	p.TargetRuntimeParam = val
-}
-func (p *ExptTemplate) SetEnableWeightedScore(val *bool) {
-	p.EnableWeightedScore = val
-}
-func (p *ExptTemplate) SetEvaluatorScoreWeights(val map[int64]float64) {
-	p.EvaluatorScoreWeights = val
-}
-func (p *ExptTemplate) SetDefaultItemConcurNum(val *int32) {
-	p.DefaultItemConcurNum = val
-}
-func (p *ExptTemplate) SetDefaultEvaluatorsConcurNum(val *int32) {
-	p.DefaultEvaluatorsConcurNum = val
-}
-func (p *ExptTemplate) SetExptType(val *ExptType) {
+func (p *ExptTemplateMeta) SetExptType(val *ExptType) {
 	p.ExptType = val
 }
-func (p *ExptTemplate) SetBaseInfo(val *common.BaseInfo) {
-	p.BaseInfo = val
+
+var fieldIDToName_ExptTemplateMeta = map[int16]string{
+	1: "id",
+	2: "workspace_id",
+	3: "name",
+	4: "desc",
+	5: "creator_by",
+	6: "expt_type",
 }
 
-var fieldIDToName_ExptTemplate = map[int16]string{
-	1:  "id",
-	2:  "workspace_id",
-	3:  "name",
-	4:  "desc",
-	5:  "creator_by",
-	20: "eval_set_id",
-	21: "eval_set_version_id",
-	22: "target_id",
-	23: "target_version_id",
-	30: "evaluator_version_ids",
-	40: "target_field_mapping",
-	41: "evaluator_field_mapping",
-	42: "target_runtime_param",
-	50: "enable_weighted_score",
-	51: "evaluator_score_weights",
-	60: "default_item_concur_num",
-	61: "default_evaluators_concur_num",
-	90: "expt_type",
-	99: "base_info",
-}
-
-func (p *ExptTemplate) IsSetID() bool {
+func (p *ExptTemplateMeta) IsSetID() bool {
 	return p.ID != nil
 }
 
-func (p *ExptTemplate) IsSetWorkspaceID() bool {
+func (p *ExptTemplateMeta) IsSetWorkspaceID() bool {
 	return p.WorkspaceID != nil
 }
 
-func (p *ExptTemplate) IsSetName() bool {
+func (p *ExptTemplateMeta) IsSetName() bool {
 	return p.Name != nil
 }
 
-func (p *ExptTemplate) IsSetDesc() bool {
+func (p *ExptTemplateMeta) IsSetDesc() bool {
 	return p.Desc != nil
 }
 
-func (p *ExptTemplate) IsSetCreatorBy() bool {
+func (p *ExptTemplateMeta) IsSetCreatorBy() bool {
 	return p.CreatorBy != nil
 }
 
-func (p *ExptTemplate) IsSetEvalSetID() bool {
-	return p.EvalSetID != nil
-}
-
-func (p *ExptTemplate) IsSetEvalSetVersionID() bool {
-	return p.EvalSetVersionID != nil
-}
-
-func (p *ExptTemplate) IsSetTargetID() bool {
-	return p.TargetID != nil
-}
-
-func (p *ExptTemplate) IsSetTargetVersionID() bool {
-	return p.TargetVersionID != nil
-}
-
-func (p *ExptTemplate) IsSetEvaluatorVersionIds() bool {
-	return p.EvaluatorVersionIds != nil
-}
-
-func (p *ExptTemplate) IsSetTargetFieldMapping() bool {
-	return p.TargetFieldMapping != nil
-}
-
-func (p *ExptTemplate) IsSetEvaluatorFieldMapping() bool {
-	return p.EvaluatorFieldMapping != nil
-}
-
-func (p *ExptTemplate) IsSetTargetRuntimeParam() bool {
-	return p.TargetRuntimeParam != nil
-}
-
-func (p *ExptTemplate) IsSetEnableWeightedScore() bool {
-	return p.EnableWeightedScore != nil
-}
-
-func (p *ExptTemplate) IsSetEvaluatorScoreWeights() bool {
-	return p.EvaluatorScoreWeights != nil
-}
-
-func (p *ExptTemplate) IsSetDefaultItemConcurNum() bool {
-	return p.DefaultItemConcurNum != nil
-}
-
-func (p *ExptTemplate) IsSetDefaultEvaluatorsConcurNum() bool {
-	return p.DefaultEvaluatorsConcurNum != nil
-}
-
-func (p *ExptTemplate) IsSetExptType() bool {
+func (p *ExptTemplateMeta) IsSetExptType() bool {
 	return p.ExptType != nil
 }
 
-func (p *ExptTemplate) IsSetBaseInfo() bool {
-	return p.BaseInfo != nil
-}
-
-func (p *ExptTemplate) Read(iprot thrift.TProtocol) (err error) {
+func (p *ExptTemplateMeta) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -3807,113 +3418,2001 @@ func (p *ExptTemplate) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 20:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField20(iprot); err != nil {
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 21:
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptTemplateMeta[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExptTemplateMeta) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ID = _field
+	return nil
+}
+func (p *ExptTemplateMeta) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ExptTemplateMeta) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *ExptTemplateMeta) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Desc = _field
+	return nil
+}
+func (p *ExptTemplateMeta) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CreatorBy = _field
+	return nil
+}
+func (p *ExptTemplateMeta) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *ExptType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := ExptType(v)
+		_field = &tmp
+	}
+	p.ExptType = _field
+	return nil
+}
+
+func (p *ExptTemplateMeta) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExptTemplateMeta"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExptTemplateMeta) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetID() {
+		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ExptTemplateMeta) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ExptTemplateMeta) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ExptTemplateMeta) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDesc() {
+		if err = oprot.WriteFieldBegin("desc", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Desc); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ExptTemplateMeta) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCreatorBy() {
+		if err = oprot.WriteFieldBegin("creator_by", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.CreatorBy); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ExptTemplateMeta) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptType() {
+		if err = oprot.WriteFieldBegin("expt_type", thrift.I32, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.ExptType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *ExptTemplateMeta) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExptTemplateMeta(%+v)", *p)
+
+}
+
+func (p *ExptTemplateMeta) DeepEqual(ano *ExptTemplateMeta) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Desc) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.CreatorBy) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.ExptType) {
+		return false
+	}
+	return true
+}
+
+func (p *ExptTemplateMeta) Field1DeepEqual(src *int64) bool {
+
+	if p.ID == src {
+		return true
+	} else if p.ID == nil || src == nil {
+		return false
+	}
+	if *p.ID != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplateMeta) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplateMeta) Field3DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplateMeta) Field4DeepEqual(src *string) bool {
+
+	if p.Desc == src {
+		return true
+	} else if p.Desc == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Desc, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplateMeta) Field5DeepEqual(src *string) bool {
+
+	if p.CreatorBy == src {
+		return true
+	} else if p.CreatorBy == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.CreatorBy, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplateMeta) Field6DeepEqual(src *ExptType) bool {
+
+	if p.ExptType == src {
+		return true
+	} else if p.ExptType == nil || src == nil {
+		return false
+	}
+	if *p.ExptType != *src {
+		return false
+	}
+	return true
+}
+
+// 实验三元组配置
+type ExptTuple struct {
+	EvalSetID           *int64                  `thrift:"eval_set_id,1,optional" frugal:"1,optional,i64" json:"eval_set_id" form:"eval_set_id" query:"eval_set_id"`
+	EvalSetVersionID    *int64                  `thrift:"eval_set_version_id,2,optional" frugal:"2,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" query:"eval_set_version_id"`
+	TargetID            *int64                  `thrift:"target_id,3,optional" frugal:"3,optional,i64" json:"target_id" form:"target_id" query:"target_id"`
+	TargetVersionID     *int64                  `thrift:"target_version_id,4,optional" frugal:"4,optional,i64" json:"target_version_id" form:"target_version_id" query:"target_version_id"`
+	EvaluatorVersionIds []int64                 `thrift:"evaluator_version_ids,5,optional" frugal:"5,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" query:"evaluator_version_ids"`
+	EvalSet             *eval_set.EvaluationSet `thrift:"eval_set,6,optional" frugal:"6,optional,eval_set.EvaluationSet" form:"eval_set" json:"eval_set,omitempty" query:"eval_set"`
+	EvalTarget          *eval_target.EvalTarget `thrift:"eval_target,7,optional" frugal:"7,optional,eval_target.EvalTarget" form:"eval_target" json:"eval_target,omitempty" query:"eval_target"`
+	Evaluators          []*evaluator.Evaluator  `thrift:"evaluators,8,optional" frugal:"8,optional,list<evaluator.Evaluator>" form:"evaluators" json:"evaluators,omitempty" query:"evaluators"`
+}
+
+func NewExptTuple() *ExptTuple {
+	return &ExptTuple{}
+}
+
+func (p *ExptTuple) InitDefault() {
+}
+
+var ExptTuple_EvalSetID_DEFAULT int64
+
+func (p *ExptTuple) GetEvalSetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSetID() {
+		return ExptTuple_EvalSetID_DEFAULT
+	}
+	return *p.EvalSetID
+}
+
+var ExptTuple_EvalSetVersionID_DEFAULT int64
+
+func (p *ExptTuple) GetEvalSetVersionID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSetVersionID() {
+		return ExptTuple_EvalSetVersionID_DEFAULT
+	}
+	return *p.EvalSetVersionID
+}
+
+var ExptTuple_TargetID_DEFAULT int64
+
+func (p *ExptTuple) GetTargetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetID() {
+		return ExptTuple_TargetID_DEFAULT
+	}
+	return *p.TargetID
+}
+
+var ExptTuple_TargetVersionID_DEFAULT int64
+
+func (p *ExptTuple) GetTargetVersionID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetVersionID() {
+		return ExptTuple_TargetVersionID_DEFAULT
+	}
+	return *p.TargetVersionID
+}
+
+var ExptTuple_EvaluatorVersionIds_DEFAULT []int64
+
+func (p *ExptTuple) GetEvaluatorVersionIds() (v []int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorVersionIds() {
+		return ExptTuple_EvaluatorVersionIds_DEFAULT
+	}
+	return p.EvaluatorVersionIds
+}
+
+var ExptTuple_EvalSet_DEFAULT *eval_set.EvaluationSet
+
+func (p *ExptTuple) GetEvalSet() (v *eval_set.EvaluationSet) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSet() {
+		return ExptTuple_EvalSet_DEFAULT
+	}
+	return p.EvalSet
+}
+
+var ExptTuple_EvalTarget_DEFAULT *eval_target.EvalTarget
+
+func (p *ExptTuple) GetEvalTarget() (v *eval_target.EvalTarget) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalTarget() {
+		return ExptTuple_EvalTarget_DEFAULT
+	}
+	return p.EvalTarget
+}
+
+var ExptTuple_Evaluators_DEFAULT []*evaluator.Evaluator
+
+func (p *ExptTuple) GetEvaluators() (v []*evaluator.Evaluator) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluators() {
+		return ExptTuple_Evaluators_DEFAULT
+	}
+	return p.Evaluators
+}
+func (p *ExptTuple) SetEvalSetID(val *int64) {
+	p.EvalSetID = val
+}
+func (p *ExptTuple) SetEvalSetVersionID(val *int64) {
+	p.EvalSetVersionID = val
+}
+func (p *ExptTuple) SetTargetID(val *int64) {
+	p.TargetID = val
+}
+func (p *ExptTuple) SetTargetVersionID(val *int64) {
+	p.TargetVersionID = val
+}
+func (p *ExptTuple) SetEvaluatorVersionIds(val []int64) {
+	p.EvaluatorVersionIds = val
+}
+func (p *ExptTuple) SetEvalSet(val *eval_set.EvaluationSet) {
+	p.EvalSet = val
+}
+func (p *ExptTuple) SetEvalTarget(val *eval_target.EvalTarget) {
+	p.EvalTarget = val
+}
+func (p *ExptTuple) SetEvaluators(val []*evaluator.Evaluator) {
+	p.Evaluators = val
+}
+
+var fieldIDToName_ExptTuple = map[int16]string{
+	1: "eval_set_id",
+	2: "eval_set_version_id",
+	3: "target_id",
+	4: "target_version_id",
+	5: "evaluator_version_ids",
+	6: "eval_set",
+	7: "eval_target",
+	8: "evaluators",
+}
+
+func (p *ExptTuple) IsSetEvalSetID() bool {
+	return p.EvalSetID != nil
+}
+
+func (p *ExptTuple) IsSetEvalSetVersionID() bool {
+	return p.EvalSetVersionID != nil
+}
+
+func (p *ExptTuple) IsSetTargetID() bool {
+	return p.TargetID != nil
+}
+
+func (p *ExptTuple) IsSetTargetVersionID() bool {
+	return p.TargetVersionID != nil
+}
+
+func (p *ExptTuple) IsSetEvaluatorVersionIds() bool {
+	return p.EvaluatorVersionIds != nil
+}
+
+func (p *ExptTuple) IsSetEvalSet() bool {
+	return p.EvalSet != nil
+}
+
+func (p *ExptTuple) IsSetEvalTarget() bool {
+	return p.EvalTarget != nil
+}
+
+func (p *ExptTuple) IsSetEvaluators() bool {
+	return p.Evaluators != nil
+}
+
+func (p *ExptTuple) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
 			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField21(iprot); err != nil {
+				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 22:
+		case 2:
 			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField22(iprot); err != nil {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 23:
+		case 3:
 			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField23(iprot); err != nil {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 30:
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
 			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField30(iprot); err != nil {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 40:
+		case 6:
 			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField40(iprot); err != nil {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 41:
+		case 7:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
 			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField41(iprot); err != nil {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 42:
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptTuple[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExptTuple) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EvalSetID = _field
+	return nil
+}
+func (p *ExptTuple) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EvalSetVersionID = _field
+	return nil
+}
+func (p *ExptTuple) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TargetID = _field
+	return nil
+}
+func (p *ExptTuple) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TargetVersionID = _field
+	return nil
+}
+func (p *ExptTuple) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvaluatorVersionIds = _field
+	return nil
+}
+func (p *ExptTuple) ReadField6(iprot thrift.TProtocol) error {
+	_field := eval_set.NewEvaluationSet()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvalSet = _field
+	return nil
+}
+func (p *ExptTuple) ReadField7(iprot thrift.TProtocol) error {
+	_field := eval_target.NewEvalTarget()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvalTarget = _field
+	return nil
+}
+func (p *ExptTuple) ReadField8(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*evaluator.Evaluator, 0, size)
+	values := make([]evaluator.Evaluator, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Evaluators = _field
+	return nil
+}
+
+func (p *ExptTuple) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExptTuple"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExptTuple) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSetID() {
+		if err = oprot.WriteFieldBegin("eval_set_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EvalSetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ExptTuple) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSetVersionID() {
+		if err = oprot.WriteFieldBegin("eval_set_version_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EvalSetVersionID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ExptTuple) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetID() {
+		if err = oprot.WriteFieldBegin("target_id", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TargetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ExptTuple) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetVersionID() {
+		if err = oprot.WriteFieldBegin("target_version_id", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TargetVersionID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ExptTuple) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorVersionIds() {
+		if err = oprot.WriteFieldBegin("evaluator_version_ids", thrift.LIST, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.EvaluatorVersionIds)); err != nil {
+			return err
+		}
+		for _, v := range p.EvaluatorVersionIds {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ExptTuple) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSet() {
+		if err = oprot.WriteFieldBegin("eval_set", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvalSet.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *ExptTuple) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalTarget() {
+		if err = oprot.WriteFieldBegin("eval_target", thrift.STRUCT, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvalTarget.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *ExptTuple) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluators() {
+		if err = oprot.WriteFieldBegin("evaluators", thrift.LIST, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Evaluators)); err != nil {
+			return err
+		}
+		for _, v := range p.Evaluators {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+
+func (p *ExptTuple) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExptTuple(%+v)", *p)
+
+}
+
+func (p *ExptTuple) DeepEqual(ano *ExptTuple) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.EvalSetID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvalSetVersionID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.TargetID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.TargetVersionID) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.EvaluatorVersionIds) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.EvalSet) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.EvalTarget) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.Evaluators) {
+		return false
+	}
+	return true
+}
+
+func (p *ExptTuple) Field1DeepEqual(src *int64) bool {
+
+	if p.EvalSetID == src {
+		return true
+	} else if p.EvalSetID == nil || src == nil {
+		return false
+	}
+	if *p.EvalSetID != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptTuple) Field2DeepEqual(src *int64) bool {
+
+	if p.EvalSetVersionID == src {
+		return true
+	} else if p.EvalSetVersionID == nil || src == nil {
+		return false
+	}
+	if *p.EvalSetVersionID != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptTuple) Field3DeepEqual(src *int64) bool {
+
+	if p.TargetID == src {
+		return true
+	} else if p.TargetID == nil || src == nil {
+		return false
+	}
+	if *p.TargetID != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptTuple) Field4DeepEqual(src *int64) bool {
+
+	if p.TargetVersionID == src {
+		return true
+	} else if p.TargetVersionID == nil || src == nil {
+		return false
+	}
+	if *p.TargetVersionID != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptTuple) Field5DeepEqual(src []int64) bool {
+
+	if len(p.EvaluatorVersionIds) != len(src) {
+		return false
+	}
+	for i, v := range p.EvaluatorVersionIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *ExptTuple) Field6DeepEqual(src *eval_set.EvaluationSet) bool {
+
+	if !p.EvalSet.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptTuple) Field7DeepEqual(src *eval_target.EvalTarget) bool {
+
+	if !p.EvalTarget.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptTuple) Field8DeepEqual(src []*evaluator.Evaluator) bool {
+
+	if len(p.Evaluators) != len(src) {
+		return false
+	}
+	for i, v := range p.Evaluators {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
+// 实验字段映射和运行时参数配置
+type ExptFieldMapping struct {
+	TargetFieldMapping    *TargetFieldMapping      `thrift:"target_field_mapping,1,optional" frugal:"1,optional,TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty" query:"target_field_mapping"`
+	EvaluatorFieldMapping []*EvaluatorFieldMapping `thrift:"evaluator_field_mapping,2,optional" frugal:"2,optional,list<EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty" query:"evaluator_field_mapping"`
+	TargetRuntimeParam    *common.RuntimeParam     `thrift:"target_runtime_param,3,optional" frugal:"3,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty" query:"target_runtime_param"`
+	ItemConcurNum         *int32                   `thrift:"item_concur_num,4,optional" frugal:"4,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
+}
+
+func NewExptFieldMapping() *ExptFieldMapping {
+	return &ExptFieldMapping{}
+}
+
+func (p *ExptFieldMapping) InitDefault() {
+}
+
+var ExptFieldMapping_TargetFieldMapping_DEFAULT *TargetFieldMapping
+
+func (p *ExptFieldMapping) GetTargetFieldMapping() (v *TargetFieldMapping) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetFieldMapping() {
+		return ExptFieldMapping_TargetFieldMapping_DEFAULT
+	}
+	return p.TargetFieldMapping
+}
+
+var ExptFieldMapping_EvaluatorFieldMapping_DEFAULT []*EvaluatorFieldMapping
+
+func (p *ExptFieldMapping) GetEvaluatorFieldMapping() (v []*EvaluatorFieldMapping) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorFieldMapping() {
+		return ExptFieldMapping_EvaluatorFieldMapping_DEFAULT
+	}
+	return p.EvaluatorFieldMapping
+}
+
+var ExptFieldMapping_TargetRuntimeParam_DEFAULT *common.RuntimeParam
+
+func (p *ExptFieldMapping) GetTargetRuntimeParam() (v *common.RuntimeParam) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetRuntimeParam() {
+		return ExptFieldMapping_TargetRuntimeParam_DEFAULT
+	}
+	return p.TargetRuntimeParam
+}
+
+var ExptFieldMapping_ItemConcurNum_DEFAULT int32
+
+func (p *ExptFieldMapping) GetItemConcurNum() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemConcurNum() {
+		return ExptFieldMapping_ItemConcurNum_DEFAULT
+	}
+	return *p.ItemConcurNum
+}
+func (p *ExptFieldMapping) SetTargetFieldMapping(val *TargetFieldMapping) {
+	p.TargetFieldMapping = val
+}
+func (p *ExptFieldMapping) SetEvaluatorFieldMapping(val []*EvaluatorFieldMapping) {
+	p.EvaluatorFieldMapping = val
+}
+func (p *ExptFieldMapping) SetTargetRuntimeParam(val *common.RuntimeParam) {
+	p.TargetRuntimeParam = val
+}
+func (p *ExptFieldMapping) SetItemConcurNum(val *int32) {
+	p.ItemConcurNum = val
+}
+
+var fieldIDToName_ExptFieldMapping = map[int16]string{
+	1: "target_field_mapping",
+	2: "evaluator_field_mapping",
+	3: "target_runtime_param",
+	4: "item_concur_num",
+}
+
+func (p *ExptFieldMapping) IsSetTargetFieldMapping() bool {
+	return p.TargetFieldMapping != nil
+}
+
+func (p *ExptFieldMapping) IsSetEvaluatorFieldMapping() bool {
+	return p.EvaluatorFieldMapping != nil
+}
+
+func (p *ExptFieldMapping) IsSetTargetRuntimeParam() bool {
+	return p.TargetRuntimeParam != nil
+}
+
+func (p *ExptFieldMapping) IsSetItemConcurNum() bool {
+	return p.ItemConcurNum != nil
+}
+
+func (p *ExptFieldMapping) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
 			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField42(iprot); err != nil {
+				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 50:
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptFieldMapping[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExptFieldMapping) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewTargetFieldMapping()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TargetFieldMapping = _field
+	return nil
+}
+func (p *ExptFieldMapping) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*EvaluatorFieldMapping, 0, size)
+	values := make([]EvaluatorFieldMapping, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvaluatorFieldMapping = _field
+	return nil
+}
+func (p *ExptFieldMapping) ReadField3(iprot thrift.TProtocol) error {
+	_field := common.NewRuntimeParam()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TargetRuntimeParam = _field
+	return nil
+}
+func (p *ExptFieldMapping) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemConcurNum = _field
+	return nil
+}
+
+func (p *ExptFieldMapping) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExptFieldMapping"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExptFieldMapping) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetFieldMapping() {
+		if err = oprot.WriteFieldBegin("target_field_mapping", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TargetFieldMapping.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ExptFieldMapping) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorFieldMapping() {
+		if err = oprot.WriteFieldBegin("evaluator_field_mapping", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.EvaluatorFieldMapping)); err != nil {
+			return err
+		}
+		for _, v := range p.EvaluatorFieldMapping {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ExptFieldMapping) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetRuntimeParam() {
+		if err = oprot.WriteFieldBegin("target_runtime_param", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TargetRuntimeParam.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ExptFieldMapping) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemConcurNum() {
+		if err = oprot.WriteFieldBegin("item_concur_num", thrift.I32, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ItemConcurNum); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *ExptFieldMapping) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExptFieldMapping(%+v)", *p)
+
+}
+
+func (p *ExptFieldMapping) DeepEqual(ano *ExptFieldMapping) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TargetFieldMapping) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvaluatorFieldMapping) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.TargetRuntimeParam) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ItemConcurNum) {
+		return false
+	}
+	return true
+}
+
+func (p *ExptFieldMapping) Field1DeepEqual(src *TargetFieldMapping) bool {
+
+	if !p.TargetFieldMapping.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptFieldMapping) Field2DeepEqual(src []*EvaluatorFieldMapping) bool {
+
+	if len(p.EvaluatorFieldMapping) != len(src) {
+		return false
+	}
+	for i, v := range p.EvaluatorFieldMapping {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ExptFieldMapping) Field3DeepEqual(src *common.RuntimeParam) bool {
+
+	if !p.TargetRuntimeParam.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptFieldMapping) Field4DeepEqual(src *int32) bool {
+
+	if p.ItemConcurNum == src {
+		return true
+	} else if p.ItemConcurNum == nil || src == nil {
+		return false
+	}
+	if *p.ItemConcurNum != *src {
+		return false
+	}
+	return true
+}
+
+// 实验评估器得分加权配置
+type ExptScoreWeight struct {
+	EnableWeightedScore   *bool             `thrift:"enable_weighted_score,1,optional" frugal:"1,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
+	EvaluatorScoreWeights map[int64]float64 `thrift:"evaluator_score_weights,2,optional" frugal:"2,optional,map<i64:double>" form:"evaluator_score_weights" json:"evaluator_score_weights,omitempty" query:"evaluator_score_weights"`
+}
+
+func NewExptScoreWeight() *ExptScoreWeight {
+	return &ExptScoreWeight{}
+}
+
+func (p *ExptScoreWeight) InitDefault() {
+}
+
+var ExptScoreWeight_EnableWeightedScore_DEFAULT bool
+
+func (p *ExptScoreWeight) GetEnableWeightedScore() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnableWeightedScore() {
+		return ExptScoreWeight_EnableWeightedScore_DEFAULT
+	}
+	return *p.EnableWeightedScore
+}
+
+var ExptScoreWeight_EvaluatorScoreWeights_DEFAULT map[int64]float64
+
+func (p *ExptScoreWeight) GetEvaluatorScoreWeights() (v map[int64]float64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorScoreWeights() {
+		return ExptScoreWeight_EvaluatorScoreWeights_DEFAULT
+	}
+	return p.EvaluatorScoreWeights
+}
+func (p *ExptScoreWeight) SetEnableWeightedScore(val *bool) {
+	p.EnableWeightedScore = val
+}
+func (p *ExptScoreWeight) SetEvaluatorScoreWeights(val map[int64]float64) {
+	p.EvaluatorScoreWeights = val
+}
+
+var fieldIDToName_ExptScoreWeight = map[int16]string{
+	1: "enable_weighted_score",
+	2: "evaluator_score_weights",
+}
+
+func (p *ExptScoreWeight) IsSetEnableWeightedScore() bool {
+	return p.EnableWeightedScore != nil
+}
+
+func (p *ExptScoreWeight) IsSetEvaluatorScoreWeights() bool {
+	return p.EvaluatorScoreWeights != nil
+}
+
+func (p *ExptScoreWeight) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
 			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField50(iprot); err != nil {
+				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 51:
+		case 2:
 			if fieldTypeId == thrift.MAP {
-				if err = p.ReadField51(iprot); err != nil {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 60:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField60(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 61:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField61(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptScoreWeight[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExptScoreWeight) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EnableWeightedScore = _field
+	return nil
+}
+func (p *ExptScoreWeight) ReadField2(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[int64]float64, size)
+	for i := 0; i < size; i++ {
+		var _key int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val float64
+		if v, err := iprot.ReadDouble(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.EvaluatorScoreWeights = _field
+	return nil
+}
+
+func (p *ExptScoreWeight) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExptScoreWeight"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExptScoreWeight) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableWeightedScore() {
+		if err = oprot.WriteFieldBegin("enable_weighted_score", thrift.BOOL, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableWeightedScore); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ExptScoreWeight) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorScoreWeights() {
+		if err = oprot.WriteFieldBegin("evaluator_score_weights", thrift.MAP, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.I64, thrift.DOUBLE, len(p.EvaluatorScoreWeights)); err != nil {
+			return err
+		}
+		for k, v := range p.EvaluatorScoreWeights {
+			if err := oprot.WriteI64(k); err != nil {
+				return err
 			}
-		case 90:
-			if fieldTypeId == thrift.I32 {
-				if err = p.ReadField90(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
+			if err := oprot.WriteDouble(v); err != nil {
+				return err
 			}
-		case 99:
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ExptScoreWeight) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExptScoreWeight(%+v)", *p)
+
+}
+
+func (p *ExptScoreWeight) DeepEqual(ano *ExptScoreWeight) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.EnableWeightedScore) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvaluatorScoreWeights) {
+		return false
+	}
+	return true
+}
+
+func (p *ExptScoreWeight) Field1DeepEqual(src *bool) bool {
+
+	if p.EnableWeightedScore == src {
+		return true
+	} else if p.EnableWeightedScore == nil || src == nil {
+		return false
+	}
+	if *p.EnableWeightedScore != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptScoreWeight) Field2DeepEqual(src map[int64]float64) bool {
+
+	if len(p.EvaluatorScoreWeights) != len(src) {
+		return false
+	}
+	for k, v := range p.EvaluatorScoreWeights {
+		_src := src[k]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+
+type ExptTemplate struct {
+	Meta               *ExptTemplateMeta `thrift:"meta,1,optional" frugal:"1,optional,ExptTemplateMeta" form:"meta" json:"meta,omitempty" query:"meta"`
+	TripleConfig       *ExptTuple        `thrift:"triple_config,2,optional" frugal:"2,optional,ExptTuple" form:"triple_config" json:"triple_config,omitempty" query:"triple_config"`
+	FieldMappingConfig *ExptFieldMapping `thrift:"field_mapping_config,3,optional" frugal:"3,optional,ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty" query:"field_mapping_config"`
+	ScoreWeightConfig  *ExptScoreWeight  `thrift:"score_weight_config,4,optional" frugal:"4,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
+	BaseInfo           *common.BaseInfo  `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+}
+
+func NewExptTemplate() *ExptTemplate {
+	return &ExptTemplate{}
+}
+
+func (p *ExptTemplate) InitDefault() {
+}
+
+var ExptTemplate_Meta_DEFAULT *ExptTemplateMeta
+
+func (p *ExptTemplate) GetMeta() (v *ExptTemplateMeta) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMeta() {
+		return ExptTemplate_Meta_DEFAULT
+	}
+	return p.Meta
+}
+
+var ExptTemplate_TripleConfig_DEFAULT *ExptTuple
+
+func (p *ExptTemplate) GetTripleConfig() (v *ExptTuple) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTripleConfig() {
+		return ExptTemplate_TripleConfig_DEFAULT
+	}
+	return p.TripleConfig
+}
+
+var ExptTemplate_FieldMappingConfig_DEFAULT *ExptFieldMapping
+
+func (p *ExptTemplate) GetFieldMappingConfig() (v *ExptFieldMapping) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldMappingConfig() {
+		return ExptTemplate_FieldMappingConfig_DEFAULT
+	}
+	return p.FieldMappingConfig
+}
+
+var ExptTemplate_ScoreWeightConfig_DEFAULT *ExptScoreWeight
+
+func (p *ExptTemplate) GetScoreWeightConfig() (v *ExptScoreWeight) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScoreWeightConfig() {
+		return ExptTemplate_ScoreWeightConfig_DEFAULT
+	}
+	return p.ScoreWeightConfig
+}
+
+var ExptTemplate_BaseInfo_DEFAULT *common.BaseInfo
+
+func (p *ExptTemplate) GetBaseInfo() (v *common.BaseInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseInfo() {
+		return ExptTemplate_BaseInfo_DEFAULT
+	}
+	return p.BaseInfo
+}
+func (p *ExptTemplate) SetMeta(val *ExptTemplateMeta) {
+	p.Meta = val
+}
+func (p *ExptTemplate) SetTripleConfig(val *ExptTuple) {
+	p.TripleConfig = val
+}
+func (p *ExptTemplate) SetFieldMappingConfig(val *ExptFieldMapping) {
+	p.FieldMappingConfig = val
+}
+func (p *ExptTemplate) SetScoreWeightConfig(val *ExptScoreWeight) {
+	p.ScoreWeightConfig = val
+}
+func (p *ExptTemplate) SetBaseInfo(val *common.BaseInfo) {
+	p.BaseInfo = val
+}
+
+var fieldIDToName_ExptTemplate = map[int16]string{
+	1:   "meta",
+	2:   "triple_config",
+	3:   "field_mapping_config",
+	4:   "score_weight_config",
+	255: "base_info",
+}
+
+func (p *ExptTemplate) IsSetMeta() bool {
+	return p.Meta != nil
+}
+
+func (p *ExptTemplate) IsSetTripleConfig() bool {
+	return p.TripleConfig != nil
+}
+
+func (p *ExptTemplate) IsSetFieldMappingConfig() bool {
+	return p.FieldMappingConfig != nil
+}
+
+func (p *ExptTemplate) IsSetScoreWeightConfig() bool {
+	return p.ScoreWeightConfig != nil
+}
+
+func (p *ExptTemplate) IsSetBaseInfo() bool {
+	return p.BaseInfo != nil
+}
+
+func (p *ExptTemplate) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
 			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField99(iprot); err != nil {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3949,241 +5448,38 @@ ReadStructEndError:
 }
 
 func (p *ExptTemplate) ReadField1(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
+	_field := NewExptTemplateMeta()
+	if err := _field.Read(iprot); err != nil {
 		return err
-	} else {
-		_field = &v
 	}
-	p.ID = _field
+	p.Meta = _field
 	return nil
 }
 func (p *ExptTemplate) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
+	_field := NewExptTuple()
+	if err := _field.Read(iprot); err != nil {
 		return err
-	} else {
-		_field = &v
 	}
-	p.WorkspaceID = _field
+	p.TripleConfig = _field
 	return nil
 }
 func (p *ExptTemplate) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
+	_field := NewExptFieldMapping()
+	if err := _field.Read(iprot); err != nil {
 		return err
-	} else {
-		_field = &v
 	}
-	p.Name = _field
+	p.FieldMappingConfig = _field
 	return nil
 }
 func (p *ExptTemplate) ReadField4(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.Desc = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField5(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.CreatorBy = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField20(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.EvalSetID = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField21(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.EvalSetVersionID = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField22(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.TargetID = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField23(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.TargetVersionID = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField30(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]int64, 0, size)
-	for i := 0; i < size; i++ {
-
-		var _elem int64
-		if v, err := iprot.ReadI64(); err != nil {
-			return err
-		} else {
-			_elem = v
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	p.EvaluatorVersionIds = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField40(iprot thrift.TProtocol) error {
-	_field := NewTargetFieldMapping()
+	_field := NewExptScoreWeight()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.TargetFieldMapping = _field
+	p.ScoreWeightConfig = _field
 	return nil
 }
-func (p *ExptTemplate) ReadField41(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]*EvaluatorFieldMapping, 0, size)
-	values := make([]EvaluatorFieldMapping, size)
-	for i := 0; i < size; i++ {
-		_elem := &values[i]
-		_elem.InitDefault()
-
-		if err := _elem.Read(iprot); err != nil {
-			return err
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	p.EvaluatorFieldMapping = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField42(iprot thrift.TProtocol) error {
-	_field := common.NewRuntimeParam()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.TargetRuntimeParam = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField50(iprot thrift.TProtocol) error {
-
-	var _field *bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.EnableWeightedScore = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField51(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
-	if err != nil {
-		return err
-	}
-	_field := make(map[int64]float64, size)
-	for i := 0; i < size; i++ {
-		var _key int64
-		if v, err := iprot.ReadI64(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
-
-		var _val float64
-		if v, err := iprot.ReadDouble(); err != nil {
-			return err
-		} else {
-			_val = v
-		}
-
-		_field[_key] = _val
-	}
-	if err := iprot.ReadMapEnd(); err != nil {
-		return err
-	}
-	p.EvaluatorScoreWeights = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField60(iprot thrift.TProtocol) error {
-
-	var _field *int32
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.DefaultItemConcurNum = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField61(iprot thrift.TProtocol) error {
-
-	var _field *int32
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.DefaultEvaluatorsConcurNum = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField90(iprot thrift.TProtocol) error {
-
-	var _field *ExptType
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		tmp := ExptType(v)
-		_field = &tmp
-	}
-	p.ExptType = _field
-	return nil
-}
-func (p *ExptTemplate) ReadField99(iprot thrift.TProtocol) error {
+func (p *ExptTemplate) ReadField255(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -4214,64 +5510,8 @@ func (p *ExptTemplate) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 4
 			goto WriteFieldError
 		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
-			goto WriteFieldError
-		}
-		if err = p.writeField20(oprot); err != nil {
-			fieldId = 20
-			goto WriteFieldError
-		}
-		if err = p.writeField21(oprot); err != nil {
-			fieldId = 21
-			goto WriteFieldError
-		}
-		if err = p.writeField22(oprot); err != nil {
-			fieldId = 22
-			goto WriteFieldError
-		}
-		if err = p.writeField23(oprot); err != nil {
-			fieldId = 23
-			goto WriteFieldError
-		}
-		if err = p.writeField30(oprot); err != nil {
-			fieldId = 30
-			goto WriteFieldError
-		}
-		if err = p.writeField40(oprot); err != nil {
-			fieldId = 40
-			goto WriteFieldError
-		}
-		if err = p.writeField41(oprot); err != nil {
-			fieldId = 41
-			goto WriteFieldError
-		}
-		if err = p.writeField42(oprot); err != nil {
-			fieldId = 42
-			goto WriteFieldError
-		}
-		if err = p.writeField50(oprot); err != nil {
-			fieldId = 50
-			goto WriteFieldError
-		}
-		if err = p.writeField51(oprot); err != nil {
-			fieldId = 51
-			goto WriteFieldError
-		}
-		if err = p.writeField60(oprot); err != nil {
-			fieldId = 60
-			goto WriteFieldError
-		}
-		if err = p.writeField61(oprot); err != nil {
-			fieldId = 61
-			goto WriteFieldError
-		}
-		if err = p.writeField90(oprot); err != nil {
-			fieldId = 90
-			goto WriteFieldError
-		}
-		if err = p.writeField99(oprot); err != nil {
-			fieldId = 99
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
 			goto WriteFieldError
 		}
 	}
@@ -4293,11 +5533,11 @@ WriteStructEndError:
 }
 
 func (p *ExptTemplate) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetID() {
-		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
+	if p.IsSetMeta() {
+		if err = oprot.WriteFieldBegin("meta", thrift.STRUCT, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.ID); err != nil {
+		if err := p.Meta.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -4311,11 +5551,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *ExptTemplate) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetWorkspaceID() {
-		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+	if p.IsSetTripleConfig() {
+		if err = oprot.WriteFieldBegin("triple_config", thrift.STRUCT, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+		if err := p.TripleConfig.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -4329,11 +5569,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *ExptTemplate) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetName() {
-		if err = oprot.WriteFieldBegin("name", thrift.STRING, 3); err != nil {
+	if p.IsSetFieldMappingConfig() {
+		if err = oprot.WriteFieldBegin("field_mapping_config", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.Name); err != nil {
+		if err := p.FieldMappingConfig.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -4347,11 +5587,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *ExptTemplate) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDesc() {
-		if err = oprot.WriteFieldBegin("desc", thrift.STRING, 4); err != nil {
+	if p.IsSetScoreWeightConfig() {
+		if err = oprot.WriteFieldBegin("score_weight_config", thrift.STRUCT, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.Desc); err != nil {
+		if err := p.ScoreWeightConfig.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -4364,288 +5604,9 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *ExptTemplate) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCreatorBy() {
-		if err = oprot.WriteFieldBegin("creator_by", thrift.STRING, 5); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.CreatorBy); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField20(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvalSetID() {
-		if err = oprot.WriteFieldBegin("eval_set_id", thrift.I64, 20); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.EvalSetID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField21(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvalSetVersionID() {
-		if err = oprot.WriteFieldBegin("eval_set_version_id", thrift.I64, 21); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.EvalSetVersionID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField22(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTargetID() {
-		if err = oprot.WriteFieldBegin("target_id", thrift.I64, 22); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.TargetID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField23(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTargetVersionID() {
-		if err = oprot.WriteFieldBegin("target_version_id", thrift.I64, 23); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.TargetVersionID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField30(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvaluatorVersionIds() {
-		if err = oprot.WriteFieldBegin("evaluator_version_ids", thrift.LIST, 30); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteListBegin(thrift.I64, len(p.EvaluatorVersionIds)); err != nil {
-			return err
-		}
-		for _, v := range p.EvaluatorVersionIds {
-			if err := oprot.WriteI64(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 30 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField40(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTargetFieldMapping() {
-		if err = oprot.WriteFieldBegin("target_field_mapping", thrift.STRUCT, 40); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.TargetFieldMapping.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField41(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvaluatorFieldMapping() {
-		if err = oprot.WriteFieldBegin("evaluator_field_mapping", thrift.LIST, 41); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.EvaluatorFieldMapping)); err != nil {
-			return err
-		}
-		for _, v := range p.EvaluatorFieldMapping {
-			if err := v.Write(oprot); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 41 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField42(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTargetRuntimeParam() {
-		if err = oprot.WriteFieldBegin("target_runtime_param", thrift.STRUCT, 42); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.TargetRuntimeParam.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 42 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 42 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField50(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEnableWeightedScore() {
-		if err = oprot.WriteFieldBegin("enable_weighted_score", thrift.BOOL, 50); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteBool(*p.EnableWeightedScore); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 50 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField51(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvaluatorScoreWeights() {
-		if err = oprot.WriteFieldBegin("evaluator_score_weights", thrift.MAP, 51); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteMapBegin(thrift.I64, thrift.DOUBLE, len(p.EvaluatorScoreWeights)); err != nil {
-			return err
-		}
-		for k, v := range p.EvaluatorScoreWeights {
-			if err := oprot.WriteI64(k); err != nil {
-				return err
-			}
-			if err := oprot.WriteDouble(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteMapEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField60(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDefaultItemConcurNum() {
-		if err = oprot.WriteFieldBegin("default_item_concur_num", thrift.I32, 60); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI32(*p.DefaultItemConcurNum); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 60 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 60 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField61(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDefaultEvaluatorsConcurNum() {
-		if err = oprot.WriteFieldBegin("default_evaluators_concur_num", thrift.I32, 61); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI32(*p.DefaultEvaluatorsConcurNum); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 61 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 61 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField90(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExptType() {
-		if err = oprot.WriteFieldBegin("expt_type", thrift.I32, 90); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI32(int32(*p.ExptType)); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 90 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 90 end error: ", p), err)
-}
-func (p *ExptTemplate) writeField99(oprot thrift.TProtocol) (err error) {
+func (p *ExptTemplate) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
-		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 99); err != nil {
+		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := p.BaseInfo.Write(oprot); err != nil {
@@ -4657,9 +5618,9 @@ func (p *ExptTemplate) writeField99(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 99 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 99 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
 func (p *ExptTemplate) String() string {
@@ -4676,276 +5637,53 @@ func (p *ExptTemplate) DeepEqual(ano *ExptTemplate) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.ID) {
+	if !p.Field1DeepEqual(ano.Meta) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.WorkspaceID) {
+	if !p.Field2DeepEqual(ano.TripleConfig) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.Name) {
+	if !p.Field3DeepEqual(ano.FieldMappingConfig) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.Desc) {
+	if !p.Field4DeepEqual(ano.ScoreWeightConfig) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.CreatorBy) {
-		return false
-	}
-	if !p.Field20DeepEqual(ano.EvalSetID) {
-		return false
-	}
-	if !p.Field21DeepEqual(ano.EvalSetVersionID) {
-		return false
-	}
-	if !p.Field22DeepEqual(ano.TargetID) {
-		return false
-	}
-	if !p.Field23DeepEqual(ano.TargetVersionID) {
-		return false
-	}
-	if !p.Field30DeepEqual(ano.EvaluatorVersionIds) {
-		return false
-	}
-	if !p.Field40DeepEqual(ano.TargetFieldMapping) {
-		return false
-	}
-	if !p.Field41DeepEqual(ano.EvaluatorFieldMapping) {
-		return false
-	}
-	if !p.Field42DeepEqual(ano.TargetRuntimeParam) {
-		return false
-	}
-	if !p.Field50DeepEqual(ano.EnableWeightedScore) {
-		return false
-	}
-	if !p.Field51DeepEqual(ano.EvaluatorScoreWeights) {
-		return false
-	}
-	if !p.Field60DeepEqual(ano.DefaultItemConcurNum) {
-		return false
-	}
-	if !p.Field61DeepEqual(ano.DefaultEvaluatorsConcurNum) {
-		return false
-	}
-	if !p.Field90DeepEqual(ano.ExptType) {
-		return false
-	}
-	if !p.Field99DeepEqual(ano.BaseInfo) {
+	if !p.Field255DeepEqual(ano.BaseInfo) {
 		return false
 	}
 	return true
 }
 
-func (p *ExptTemplate) Field1DeepEqual(src *int64) bool {
+func (p *ExptTemplate) Field1DeepEqual(src *ExptTemplateMeta) bool {
 
-	if p.ID == src {
-		return true
-	} else if p.ID == nil || src == nil {
-		return false
-	}
-	if *p.ID != *src {
+	if !p.Meta.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ExptTemplate) Field2DeepEqual(src *int64) bool {
+func (p *ExptTemplate) Field2DeepEqual(src *ExptTuple) bool {
 
-	if p.WorkspaceID == src {
-		return true
-	} else if p.WorkspaceID == nil || src == nil {
-		return false
-	}
-	if *p.WorkspaceID != *src {
+	if !p.TripleConfig.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ExptTemplate) Field3DeepEqual(src *string) bool {
+func (p *ExptTemplate) Field3DeepEqual(src *ExptFieldMapping) bool {
 
-	if p.Name == src {
-		return true
-	} else if p.Name == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.Name, *src) != 0 {
+	if !p.FieldMappingConfig.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ExptTemplate) Field4DeepEqual(src *string) bool {
+func (p *ExptTemplate) Field4DeepEqual(src *ExptScoreWeight) bool {
 
-	if p.Desc == src {
-		return true
-	} else if p.Desc == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.Desc, *src) != 0 {
+	if !p.ScoreWeightConfig.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ExptTemplate) Field5DeepEqual(src *string) bool {
-
-	if p.CreatorBy == src {
-		return true
-	} else if p.CreatorBy == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.CreatorBy, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field20DeepEqual(src *int64) bool {
-
-	if p.EvalSetID == src {
-		return true
-	} else if p.EvalSetID == nil || src == nil {
-		return false
-	}
-	if *p.EvalSetID != *src {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field21DeepEqual(src *int64) bool {
-
-	if p.EvalSetVersionID == src {
-		return true
-	} else if p.EvalSetVersionID == nil || src == nil {
-		return false
-	}
-	if *p.EvalSetVersionID != *src {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field22DeepEqual(src *int64) bool {
-
-	if p.TargetID == src {
-		return true
-	} else if p.TargetID == nil || src == nil {
-		return false
-	}
-	if *p.TargetID != *src {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field23DeepEqual(src *int64) bool {
-
-	if p.TargetVersionID == src {
-		return true
-	} else if p.TargetVersionID == nil || src == nil {
-		return false
-	}
-	if *p.TargetVersionID != *src {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field30DeepEqual(src []int64) bool {
-
-	if len(p.EvaluatorVersionIds) != len(src) {
-		return false
-	}
-	for i, v := range p.EvaluatorVersionIds {
-		_src := src[i]
-		if v != _src {
-			return false
-		}
-	}
-	return true
-}
-func (p *ExptTemplate) Field40DeepEqual(src *TargetFieldMapping) bool {
-
-	if !p.TargetFieldMapping.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field41DeepEqual(src []*EvaluatorFieldMapping) bool {
-
-	if len(p.EvaluatorFieldMapping) != len(src) {
-		return false
-	}
-	for i, v := range p.EvaluatorFieldMapping {
-		_src := src[i]
-		if !v.DeepEqual(_src) {
-			return false
-		}
-	}
-	return true
-}
-func (p *ExptTemplate) Field42DeepEqual(src *common.RuntimeParam) bool {
-
-	if !p.TargetRuntimeParam.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field50DeepEqual(src *bool) bool {
-
-	if p.EnableWeightedScore == src {
-		return true
-	} else if p.EnableWeightedScore == nil || src == nil {
-		return false
-	}
-	if *p.EnableWeightedScore != *src {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field51DeepEqual(src map[int64]float64) bool {
-
-	if len(p.EvaluatorScoreWeights) != len(src) {
-		return false
-	}
-	for k, v := range p.EvaluatorScoreWeights {
-		_src := src[k]
-		if v != _src {
-			return false
-		}
-	}
-	return true
-}
-func (p *ExptTemplate) Field60DeepEqual(src *int32) bool {
-
-	if p.DefaultItemConcurNum == src {
-		return true
-	} else if p.DefaultItemConcurNum == nil || src == nil {
-		return false
-	}
-	if *p.DefaultItemConcurNum != *src {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field61DeepEqual(src *int32) bool {
-
-	if p.DefaultEvaluatorsConcurNum == src {
-		return true
-	} else if p.DefaultEvaluatorsConcurNum == nil || src == nil {
-		return false
-	}
-	if *p.DefaultEvaluatorsConcurNum != *src {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field90DeepEqual(src *ExptType) bool {
-
-	if p.ExptType == src {
-		return true
-	} else if p.ExptType == nil || src == nil {
-		return false
-	}
-	if *p.ExptType != *src {
-		return false
-	}
-	return true
-}
-func (p *ExptTemplate) Field99DeepEqual(src *common.BaseInfo) bool {
+func (p *ExptTemplate) Field255DeepEqual(src *common.BaseInfo) bool {
 
 	if !p.BaseInfo.DeepEqual(src) {
 		return false

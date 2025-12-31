@@ -34,7 +34,7 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 	targetFieldMapping := toTargetFieldMappingDOForTemplate(req.TargetFieldMapping, req.TargetRuntimeParam)
 	evaluatorFieldMapping := toEvaluatorFieldMappingDoForTemplate(req.EvaluatorFieldMapping)
 
-	// 转换模板配置
+	// 转换模板配置（用于数据库存储）
 	templateConf := &entity.ExptTemplateConfiguration{
 		ItemConcurNum:       ptr.ConvIntPtr[int32, int](req.DefaultItemConcurNum),
 		EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
@@ -130,38 +130,111 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 		return nil
 	}
 
-	evaluatorVersionIDs := make([]int64, 0, len(template.EvaluatorVersionRef))
-	for _, ref := range template.EvaluatorVersionRef {
-		evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
-	}
+	dto := &domain_expt.ExptTemplate{}
 
-	dto := &domain_expt.ExptTemplate{
-		ID:          gptr.Of(template.ID),
-		WorkspaceID: gptr.Of(template.SpaceID),
-		Name:        gptr.Of(template.Name),
-		Desc:        gptr.Of(template.Description),
-		CreatorBy:   gptr.Of(template.CreatedBy),
-		EvalSetID:   gptr.Of(template.EvalSetID),
-		EvalSetVersionID: gptr.Of(template.EvalSetVersionID),
-		TargetID:    gptr.Of(template.TargetID),
-		TargetVersionID: gptr.Of(template.TargetVersionID),
-		EvaluatorVersionIds: evaluatorVersionIDs,
-		ExptType:    gptr.Of(domain_expt.ExptType(template.ExptType)),
-	}
-
-	// 转换模板配置
-	if template.TemplateConf != nil {
-		tm, ems, trtp := convertTemplateConfToDTO(template.TemplateConf)
-		dto.TargetFieldMapping = tm
-		dto.EvaluatorFieldMapping = ems
-		dto.TargetRuntimeParam = trtp
-		// 加权配置已移动到 ConnectorConf.EvaluatorsConf
-		if template.TemplateConf.ConnectorConf.EvaluatorsConf != nil {
-			dto.EnableWeightedScore = gptr.Of(template.TemplateConf.ConnectorConf.EvaluatorsConf.EnableWeightedScore)
-			dto.EvaluatorScoreWeights = template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorScoreWeights
+	// 转换 Meta
+	if template.Meta != nil {
+		dto.Meta = &domain_expt.ExptTemplateMeta{
+			ID:          gptr.Of(template.Meta.ID),
+			WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
+			Name:        gptr.Of(template.Meta.Name),
+			Desc:        gptr.Of(template.Meta.Desc),
+			CreatorBy:   gptr.Of(template.Meta.CreatorBy),
+			ExptType:    gptr.Of(domain_expt.ExptType(template.Meta.ExptType)),
 		}
-		dto.DefaultItemConcurNum = ptr.ConvIntPtr[int, int32](template.TemplateConf.ItemConcurNum)
-		dto.DefaultEvaluatorsConcurNum = ptr.ConvIntPtr[int, int32](template.TemplateConf.EvaluatorsConcurNum)
+	}
+
+	// 转换 TripleConfig
+	if template.TripleConfig != nil {
+		evaluatorVersionIDs := template.TripleConfig.EvaluatorVersionIds
+		if len(template.EvaluatorVersionRef) > 0 && len(evaluatorVersionIDs) == 0 {
+			// 如果没有从 TripleConfig 获取，则从 EvaluatorVersionRef 获取
+			evaluatorVersionIDs = make([]int64, 0, len(template.EvaluatorVersionRef))
+			for _, ref := range template.EvaluatorVersionRef {
+				evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
+			}
+		}
+
+		dto.TripleConfig = &domain_expt.ExptTuple{
+			EvalSetID:           gptr.Of(template.TripleConfig.EvalSetID),
+			EvalSetVersionID:    gptr.Of(template.TripleConfig.EvalSetVersionID),
+			TargetID:            gptr.Of(template.TripleConfig.TargetID),
+			TargetVersionID:     gptr.Of(template.TripleConfig.TargetVersionID),
+			EvaluatorVersionIds: evaluatorVersionIDs,
+		}
+		// 填充关联数据
+		if template.EvalSet != nil {
+			// 需要转换 EvalSet，这里暂时留空，由调用方填充
+		}
+		if template.Target != nil {
+			// 需要转换 Target，这里暂时留空，由调用方填充
+		}
+		if len(template.Evaluators) > 0 {
+			// 需要转换 Evaluators，这里暂时留空，由调用方填充
+		}
+	}
+
+	// 转换 FieldMappingConfig
+	if template.FieldMappingConfig != nil {
+		fieldMapping := &domain_expt.ExptFieldMapping{
+			ItemConcurNum: ptr.ConvIntPtr[int, int32](template.FieldMappingConfig.ItemConcurNum),
+		}
+
+		// 转换 TargetFieldMapping
+		if template.FieldMappingConfig.TargetFieldMapping != nil {
+			targetMapping := &domain_expt.TargetFieldMapping{}
+			for _, fm := range template.FieldMappingConfig.TargetFieldMapping.FromEvalSet {
+				targetMapping.FromEvalSet = append(targetMapping.FromEvalSet, &domain_expt.FieldMapping{
+					FieldName:     gptr.Of(fm.FieldName),
+					FromFieldName: gptr.Of(fm.FromFieldName),
+					ConstValue:    gptr.Of(fm.ConstValue),
+				})
+			}
+			fieldMapping.TargetFieldMapping = targetMapping
+		}
+
+		// 转换 EvaluatorFieldMapping
+		if len(template.FieldMappingConfig.EvaluatorFieldMapping) > 0 {
+			evaluatorMappings := make([]*domain_expt.EvaluatorFieldMapping, 0, len(template.FieldMappingConfig.EvaluatorFieldMapping))
+			for _, em := range template.FieldMappingConfig.EvaluatorFieldMapping {
+				m := &domain_expt.EvaluatorFieldMapping{
+					EvaluatorVersionID: em.EvaluatorVersionID,
+				}
+				for _, fm := range em.FromEvalSet {
+					m.FromEvalSet = append(m.FromEvalSet, &domain_expt.FieldMapping{
+						FieldName:     gptr.Of(fm.FieldName),
+						FromFieldName: gptr.Of(fm.FromFieldName),
+						ConstValue:    gptr.Of(fm.ConstValue),
+					})
+				}
+				for _, fm := range em.FromTarget {
+					m.FromTarget = append(m.FromTarget, &domain_expt.FieldMapping{
+						FieldName:     gptr.Of(fm.FieldName),
+						FromFieldName: gptr.Of(fm.FromFieldName),
+						ConstValue:    gptr.Of(fm.ConstValue),
+					})
+				}
+				evaluatorMappings = append(evaluatorMappings, m)
+			}
+			fieldMapping.EvaluatorFieldMapping = evaluatorMappings
+		}
+
+		// 转换 TargetRuntimeParam
+		if template.FieldMappingConfig.TargetRuntimeParam != nil {
+			fieldMapping.TargetRuntimeParam = &common.RuntimeParam{
+				JSONValue: gptr.Of(template.FieldMappingConfig.TargetRuntimeParam.JSONValue),
+			}
+		}
+
+		dto.FieldMappingConfig = fieldMapping
+	}
+
+	// 转换 ScoreWeightConfig
+	if template.ScoreWeightConfig != nil {
+		dto.ScoreWeightConfig = &domain_expt.ExptScoreWeight{
+			EnableWeightedScore:   gptr.Of(template.ScoreWeightConfig.EnableWeightedScore),
+			EvaluatorScoreWeights: template.ScoreWeightConfig.EvaluatorScoreWeights,
+		}
 	}
 
 	return dto
