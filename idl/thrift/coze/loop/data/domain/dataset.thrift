@@ -194,7 +194,8 @@ struct MultiModalSpec {
     2: optional i64 max_file_size (api.js_conv="true", go.tag='json:"max_file_size"')                // 文件大小上限，用于兜底，优先级低于 max_file_size_by_type
     3: optional list<string> supported_formats // 文件格式
     4: optional i32 max_part_count // 多模态节点总数上限
-    5: optional map<ContentType, list<string>> max_file_size_by_type // 按照类型区分的文件大小
+    5: optional map<ContentType, list<string>> supported_formats_by_type // 按照类型区分的文件类型
+    6: optional map<ContentType, i64> max_file_size_by_type (api.js_conv="true", go.tag='json:"max_file_size_by_type"') // 按照类型区分的文件类型
 }
 
 // DatasetItem 数据内容
