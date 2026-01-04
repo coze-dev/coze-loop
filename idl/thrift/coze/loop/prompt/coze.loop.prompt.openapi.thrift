@@ -38,7 +38,7 @@ struct ExecuteRequest {
 
     20: optional list<Tool> custom_tools (api.body="custom_tools") // 自定义工具
     21: optional ToolCallConfig custom_tool_call_config (api.body="custom_tool_call_config") // 自定义工具调用配置
-    22: optional prompt.ModelConfig custom_model_config (api.body="custom_model_config") // 自定义模型配置
+    22: optional ModelConfig custom_model_config (api.body="custom_model_config") // 自定义模型配置
 
     255: optional base.Base Base
 }
@@ -93,7 +93,21 @@ struct Prompt {
     5: optional list<Tool> tools // tool定义
     6: optional ToolCallConfig tool_call_config // tool调用配置
     7: optional LLMConfig llm_config // 模型配置
+    8: optional i64 id (api.js_conv='true', go.tag='json:"id"') // promptId
+    9: optional string display_name // Prompt名称
+    10: optional string description // Prompt描述
+    11: optional PromptType prompt_type // Prompt类型
+    12: optional string created_by
+    14: optional i64 created_at (api.js_conv="true", go.tag='json:"created_at"')
+    15: optional i64 updated_at (api.js_conv="true", go.tag='json:"updated_at"')
+    16: optional PublishStatus status // 发布状态
+    17: optional PromptPublishInfo PublishInfo // 发布信息
+    18: optional SecurityLevel security_level // 密级标签
 }
+
+typedef string PromptType (ts.enum="true")
+const PromptType PromptType_Normal = "normal"
+const PromptType PromptType_Snippet = "snippet"
 
 struct PromptTemplate {
     1: optional TemplateType template_type // 模板类型
@@ -133,6 +147,7 @@ struct Message {
     5: optional string tool_call_id // tool调用ID（role为tool时有效）
     6: optional list<ToolCall> tool_calls // tool调用（role为assistant时有效）
     7: optional bool skip_render // 是否跳过需要渲染
+    8: optional string signature // gemini的签名
 
     100: optional map<string, string> metadata // 消息元信息
 }
@@ -144,10 +159,14 @@ struct ContentPart {
     4: optional string base64_data
     5: optional string video_url
     6: optional MediaConfig config
+    7: optional string signature
+    8: optional string image_uri
+    9: optional string video_uri
 }
 
 struct MediaConfig {
     1: optional double fps (vt.ge="0.2", vt.le="5")
+    2: optional string image_resolution
 }
 
 typedef string ContentType (ts.enum="true")
@@ -187,6 +206,7 @@ const Role Role_Placeholder = "placeholder"
 struct Tool {
     1: optional ToolType type
     2: optional Function function
+    3: optional bool disable // 时候禁用
 }
 
 typedef string ToolType (ts.enum="true")
@@ -204,6 +224,8 @@ struct ToolCall {
     2: optional string id
     3: optional ToolType type
     4: optional FunctionCall function_call
+    5: optional string output_id
+    6: optional string signature
 }
 
 struct FunctionCall {
@@ -219,6 +241,10 @@ struct LLMConfig {
     5: optional double presence_penalty
     6: optional double frequency_penalty
     7: optional bool json_mode
+    8: optional i64 id (api.js_conv='true', go.tag='json:"id"')
+    9: optional string name
+    10: optional ThinkingConfig thinking
+    11: optional string extra
 }
 
 struct VariableVal {
@@ -239,6 +265,7 @@ struct ListPromptBasicRequest {
     3: optional i32 page_size (api.body="page_size", vt.gt = "0", vt.le = "200")
     4: optional string key_word (api.body="key_word") // name/key前缀匹配
     5: optional string creator (api.body="creator") // 创建人
+    6: optional map<string, string> extra (api.body="extra") // 额外查询条件
 
     255: optional base.Base Base
 }
@@ -268,4 +295,69 @@ struct PromptBasic {
 struct ListPromptBasicData {
     1: optional list<PromptBasic> prompts // Prompt列表
     2: optional i32 total
+}
+
+struct PromptPublishInfo {
+    1: string publisher // 发布者
+    2: string publish_description // 发布描述
+    3: optional i64 publish_at // 发布时间
+}
+
+enum PublishStatus {
+    Undefined = 0
+    UnPublish // 未发布
+    Published // 已发布
+}
+
+enum SecurityLevel {
+    Undefined = 0
+    L1 = 1
+    L2 = 2
+    L3 = 3
+    L4 = 4
+}
+
+struct ThinkingConfig {
+     1: optional i64 budget_tokens (agw.key="budget_tokens") // thinking内容的最大输出token
+     2: optional ThinkingOption thinking_option (agw.key="thinking_option")
+     3: optional ReasoningEffort reasoning_effort (agw.key="reasoning_effort") // 思考长度
+}
+
+enum ReasoningEffort {
+    Minimal = 1
+    Low = 2
+    Medium = 3
+    High = 4
+}
+
+enum ThinkingOption {
+    Disabled = 1
+    Enabled = 2
+    Auto = 3
+}
+
+struct ModelConfig {
+    1: optional i64 model_id (api.js_conv="true", go.tag='json:"model_id"')
+    2: optional i32 max_tokens
+    3: optional double temperature
+    4: optional i32 top_k
+    5: optional double top_p
+    6: optional double presence_penalty
+    7: optional double frequency_penalty
+    8: optional bool json_mode
+    9: optional string extra
+    10: optional ThinkingConfig thinking
+
+    100: optional list<ParamConfigValue> param_config_values
+}
+
+struct ParamConfigValue {
+    1: optional string name // 传给下游模型的key，与ParamSchema.name对齐
+    2: optional string label // 展示名称
+    3: optional ParamOption value // 传给下游模型的value，与ParamSchema.options对齐
+}
+
+struct ParamOption {
+    1: optional string value // 实际值
+    2: optional string label // 展示值
 }
