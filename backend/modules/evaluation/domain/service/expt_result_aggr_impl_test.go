@@ -6,6 +6,8 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -99,6 +101,16 @@ func TestExptAggrResultServiceImpl_CreateExptAggrResult(t *testing.T) {
 				mockExptTurnResultRepo.EXPECT().
 					GetTurnEvaluatorResultRefByExptID(gomock.Any(), int64(100), int64(1)).
 					Return([]*entity.ExptTurnEvaluatorResultRef{}, nil)
+
+				// Mock ScanTurnResults
+				mockExptTurnResultRepo.EXPECT().
+					ScanTurnResults(gomock.Any(), int64(1), gomock.Any(), int64(0), int64(50), int64(100)).
+					Return([]*entity.ExptTurnResult{}, int64(0), nil)
+
+				// Mock BatchCreateExptAggrResult for target metrics
+				mockExptAggrResultRepo.EXPECT().
+					BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
+					Return(nil)
 
 				// Mock EmitCalculateExptAggrResult
 				mockMetric.EXPECT().
@@ -1600,4 +1612,1000 @@ func TestExptAggrResultServiceImpl_MakeCalcExptAggrResultLockKey(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestNewBucketScoreDistributionAggregator(t *testing.T) {
+	tests := []struct {
+		name       string
+		numBuckets int
+		want       int
+	}{
+		{
+			name:       "Valid number of buckets",
+			numBuckets: 50,
+			want:       50,
+		},
+		{
+			name:       "Zero buckets defaults to 20",
+			numBuckets: 0,
+			want:       20,
+		},
+		{
+			name:       "Negative buckets defaults to 20",
+			numBuckets: -1,
+			want:       20,
+		},
+		{
+			name:       "Single bucket",
+			numBuckets: 1,
+			want:       1,
+		},
+		{
+			name:       "Large number of buckets",
+			numBuckets: 1000,
+			want:       1000,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agg := NewBucketScoreDistributionAggregator(tt.numBuckets)
+			assert.NotNil(t, agg)
+			assert.Equal(t, tt.want, agg.NumBuckets)
+			assert.NotNil(t, agg.Scores)
+			assert.Len(t, agg.Scores, 0)
+			assert.Equal(t, int64(0), agg.Total)
+		})
+	}
+}
+
+func TestBucketScoreDistributionAggregator_Append(t *testing.T) {
+	tests := []struct {
+		name       string
+		numBuckets int
+		scores     []float64
+		checkFunc  func(t *testing.T, agg *BucketScoreDistributionAggregator)
+	}{
+		{
+			name:       "Append first score initializes min and max",
+			numBuckets: 10,
+			scores:     []float64{5.0},
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator) {
+				assert.Equal(t, 5.0, agg.Min)
+				assert.Equal(t, 5.0, agg.Max)
+				assert.Equal(t, int64(1), agg.Total)
+				assert.Len(t, agg.Scores, 1)
+				assert.Equal(t, 5.0, agg.Scores[0])
+			},
+		},
+		{
+			name:       "Append multiple scores updates min and max",
+			numBuckets: 10,
+			scores:     []float64{1.0, 5.0, 3.0, 9.0, 2.0},
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator) {
+				assert.Equal(t, 1.0, agg.Min)
+				assert.Equal(t, 9.0, agg.Max)
+				assert.Equal(t, int64(5), agg.Total)
+				assert.Len(t, agg.Scores, 5)
+			},
+		},
+		{
+			name:       "Append scores updates min",
+			numBuckets: 10,
+			scores:     []float64{5.0, 3.0, 1.0},
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator) {
+				assert.Equal(t, 1.0, agg.Min)
+				assert.Equal(t, 5.0, agg.Max)
+				assert.Equal(t, int64(3), agg.Total)
+			},
+		},
+		{
+			name:       "Append scores updates max",
+			numBuckets: 10,
+			scores:     []float64{1.0, 3.0, 5.0},
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator) {
+				assert.Equal(t, 1.0, agg.Min)
+				assert.Equal(t, 5.0, agg.Max)
+				assert.Equal(t, int64(3), agg.Total)
+			},
+		},
+		{
+			name:       "All scores are the same",
+			numBuckets: 10,
+			scores:     []float64{5.0, 5.0, 5.0, 5.0},
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator) {
+				assert.Equal(t, 5.0, agg.Min)
+				assert.Equal(t, 5.0, agg.Max)
+				assert.Equal(t, int64(4), agg.Total)
+				assert.Len(t, agg.Scores, 4)
+			},
+		},
+		{
+			name:       "Scores distributed across buckets",
+			numBuckets: 5,
+			scores:     []float64{0.0, 0.5, 1.0, 1.5, 2.0},
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator) {
+				assert.Equal(t, 0.0, agg.Min)
+				assert.Equal(t, 2.0, agg.Max)
+				assert.Equal(t, int64(5), agg.Total)
+			},
+		},
+		{
+			name:       "Negative scores",
+			numBuckets: 10,
+			scores:     []float64{-10.0, -5.0, 0.0, 5.0, 10.0},
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator) {
+				assert.Equal(t, -10.0, agg.Min)
+				assert.Equal(t, 10.0, agg.Max)
+				assert.Equal(t, int64(5), agg.Total)
+			},
+		},
+		{
+			name:       "Large number of scores",
+			numBuckets: 50,
+			scores:     make([]float64, 1000),
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator) {
+				assert.Equal(t, int64(1000), agg.Total)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agg := NewBucketScoreDistributionAggregator(tt.numBuckets)
+			if len(tt.scores) > 0 && tt.scores[0] == 0.0 && len(tt.scores) == 1000 {
+				for i := range tt.scores {
+					tt.scores[i] = float64(i%100) * 0.1
+				}
+			}
+			for _, score := range tt.scores {
+				agg.Append(score)
+			}
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, agg)
+			}
+		})
+	}
+}
+
+func TestBucketScoreDistributionAggregator_Result(t *testing.T) {
+	tests := []struct {
+		name       string
+		numBuckets int
+		scores     []float64
+		checkFunc  func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData)
+	}{
+		{
+			name:       "Empty aggregator returns all buckets with zero count",
+			numBuckets: 10,
+			scores:     []float64{},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				assert.NotNil(t, result)
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				assert.Equal(t, entity.ScoreDistribution, data.DataType)
+				assert.NotNil(t, data.ScoreDistribution)
+				// All buckets should be included, even when empty
+				assert.Equal(t, 10, len(data.ScoreDistribution.ScoreDistributionItems))
+				// All buckets should have count 0
+				for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+					assert.Equal(t, int64(0), item.Count)
+					assert.Equal(t, 0.0, item.Percentage)
+				}
+			},
+		},
+		{
+			name:       "Single score returns all buckets with one non-empty",
+			numBuckets: 10,
+			scores:     []float64{5.0},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				// All buckets should be included
+				assert.Equal(t, 10, len(data.ScoreDistribution.ScoreDistributionItems))
+				// One bucket should have count 1, others should have count 0
+				nonEmptyCount := 0
+				totalCount := int64(0)
+				for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+					totalCount += item.Count
+					if item.Count > 0 {
+						nonEmptyCount++
+						assert.Equal(t, int64(1), item.Count)
+						assert.Equal(t, 1.0, item.Percentage)
+					} else {
+						assert.Equal(t, int64(0), item.Count)
+						assert.Equal(t, 0.0, item.Percentage)
+					}
+				}
+				assert.Equal(t, 1, nonEmptyCount, "Should have exactly one non-empty bucket")
+				assert.Equal(t, int64(1), totalCount, "Total count should be 1")
+			},
+		},
+		{
+			name:       "Multiple scores distributed across buckets",
+			numBuckets: 5,
+			scores:     []float64{0.0, 1.0, 2.0, 3.0, 4.0},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				assert.GreaterOrEqual(t, len(data.ScoreDistribution.ScoreDistributionItems), 1)
+				totalCount := int64(0)
+				for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+					totalCount += item.Count
+				}
+				assert.Equal(t, int64(5), totalCount)
+			},
+		},
+		{
+			name:       "Empty buckets are included",
+			numBuckets: 10,
+			scores:     []float64{0.0, 10.0},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				// All buckets should be included, even empty ones
+				assert.Equal(t, 10, len(data.ScoreDistribution.ScoreDistributionItems))
+				// Verify that empty buckets have count 0
+				emptyBucketCount := 0
+				nonEmptyBucketCount := 0
+				for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+					if item.Count == 0 {
+						emptyBucketCount++
+						assert.Equal(t, 0.0, item.Percentage, "Empty bucket should have 0 percentage")
+					} else {
+						nonEmptyBucketCount++
+						assert.Greater(t, item.Count, int64(0))
+					}
+				}
+				assert.Greater(t, emptyBucketCount, 0, "Should have at least one empty bucket")
+				assert.Greater(t, nonEmptyBucketCount, 0, "Should have at least one non-empty bucket")
+			},
+		},
+		{
+			name:       "Result items are in bucket index order",
+			numBuckets: 5,
+			scores:     []float64{4.0, 1.0, 3.0, 2.0, 0.0},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				items := data.ScoreDistribution.ScoreDistributionItems
+				// Verify that items are returned (order is by bucket index, not sorted by score)
+				assert.Greater(t, len(items), 0, "Should have at least one item")
+				// Verify all items have valid counts
+				for _, item := range items {
+					assert.Greater(t, item.Count, int64(0), "Item should have positive count")
+					assert.GreaterOrEqual(t, item.Percentage, 0.0, "Percentage should be >= 0")
+					assert.LessOrEqual(t, item.Percentage, 1.0, "Percentage should be <= 1")
+				}
+			},
+		},
+		{
+			name:       "Percentages sum to 1.0",
+			numBuckets: 10,
+			scores:     []float64{1.0, 2.0, 3.0, 4.0, 5.0},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				totalPercentage := 0.0
+				for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+					totalPercentage += item.Percentage
+				}
+				assert.InDelta(t, 1.0, totalPercentage, 0.0001)
+			},
+		},
+		{
+			name:       "All scores same value",
+			numBuckets: 10,
+			scores:     []float64{5.0, 5.0, 5.0, 5.0, 5.0},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				// All buckets should be included
+				assert.Equal(t, 10, len(data.ScoreDistribution.ScoreDistributionItems))
+				// One bucket should have count 5, others should have count 0
+				nonEmptyCount := 0
+				totalCount := int64(0)
+				for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+					totalCount += item.Count
+					if item.Count > 0 {
+						nonEmptyCount++
+						assert.Equal(t, int64(5), item.Count)
+						assert.Equal(t, 1.0, item.Percentage)
+					} else {
+						assert.Equal(t, int64(0), item.Count)
+						assert.Equal(t, 0.0, item.Percentage)
+					}
+				}
+				assert.Equal(t, 1, nonEmptyCount, "Should have exactly one non-empty bucket")
+				assert.Equal(t, int64(5), totalCount, "Total count should be 5")
+			},
+		},
+		{
+			name:       "Min and max values in correct buckets",
+			numBuckets: 10,
+			scores:     []float64{0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				items := data.ScoreDistribution.ScoreDistributionItems
+				assert.Greater(t, len(items), 0)
+				firstItem := items[0]
+				assert.Contains(t, firstItem.Score, "0.00")
+				lastItem := items[len(items)-1]
+				assert.Contains(t, lastItem.Score, "10.00")
+			},
+		},
+		{
+			name:       "Large number of buckets",
+			numBuckets: 100,
+			scores:     []float64{0.0, 50.0, 100.0},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				assert.LessOrEqual(t, len(data.ScoreDistribution.ScoreDistributionItems), 100)
+			},
+		},
+		{
+			name:       "Negative scores handled correctly",
+			numBuckets: 10,
+			scores:     []float64{-10.0, -5.0, 0.0, 5.0, 10.0},
+			checkFunc: func(t *testing.T, result map[entity.AggregatorType]*entity.AggregateData) {
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				totalCount := int64(0)
+				for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+					totalCount += item.Count
+				}
+				assert.Equal(t, int64(5), totalCount)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agg := NewBucketScoreDistributionAggregator(tt.numBuckets)
+			for _, score := range tt.scores {
+				agg.Append(score)
+			}
+			result := agg.Result()
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, result)
+			}
+		})
+	}
+}
+
+func TestBucketScoreDistributionAggregator_getBucketIndex(t *testing.T) {
+	tests := []struct {
+		name       string
+		numBuckets int
+		scores     []float64
+		testScore  float64
+		want       int
+	}{
+		{
+			name:       "Score at minimum goes to first bucket",
+			numBuckets: 10,
+			scores:     []float64{0.0, 10.0},
+			testScore:  0.0,
+			want:       0,
+		},
+		{
+			name:       "Score at maximum goes to last bucket",
+			numBuckets: 10,
+			scores:     []float64{0.0, 10.0},
+			testScore:  10.0,
+			want:       9,
+		},
+		{
+			name:       "Score below minimum clamped to first bucket",
+			numBuckets: 10,
+			scores:     []float64{5.0, 10.0},
+			testScore:  0.0,
+			want:       0,
+		},
+		{
+			name:       "Score above maximum clamped to last bucket",
+			numBuckets: 10,
+			scores:     []float64{0.0, 10.0},
+			testScore:  20.0,
+			want:       9,
+		},
+		{
+			name:       "Score in middle goes to middle bucket",
+			numBuckets: 10,
+			scores:     []float64{0.0, 10.0},
+			testScore:  5.0,
+			want:       5,
+		},
+		{
+			name:       "All scores same returns bucket 0",
+			numBuckets: 10,
+			scores:     []float64{5.0},
+			testScore:  5.0,
+			want:       0,
+		},
+		{
+			name:       "Single bucket always returns 0",
+			numBuckets: 1,
+			scores:     []float64{0.0, 10.0},
+			testScore:  5.0,
+			want:       0,
+		},
+		{
+			name:       "Uninitialized aggregator returns 0",
+			numBuckets: 10,
+			scores:     []float64{},
+			testScore:  5.0,
+			want:       0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agg := NewBucketScoreDistributionAggregator(tt.numBuckets)
+			for _, score := range tt.scores {
+				agg.Append(score)
+			}
+			bucketIndex := agg.getBucketIndex(tt.testScore)
+			assert.Equal(t, tt.want, bucketIndex)
+		})
+	}
+}
+
+func TestBucketScoreDistributionAggregator_getBucketRange(t *testing.T) {
+	tests := []struct {
+		name        string
+		numBuckets  int
+		scores      []float64
+		bucketIndex int
+		checkFunc   func(t *testing.T, start, end float64)
+	}{
+		{
+			name:        "First bucket range",
+			numBuckets:  10,
+			scores:      []float64{0.0, 10.0},
+			bucketIndex: 0,
+			checkFunc: func(t *testing.T, start, end float64) {
+				assert.Equal(t, 0.0, start)
+				assert.Greater(t, end, start)
+			},
+		},
+		{
+			name:        "Last bucket includes max value",
+			numBuckets:  10,
+			scores:      []float64{0.0, 10.0},
+			bucketIndex: 9,
+			checkFunc: func(t *testing.T, start, end float64) {
+				assert.Equal(t, 10.0, end)
+				assert.Less(t, start, end)
+			},
+		},
+		{
+			name:        "Middle bucket range",
+			numBuckets:  10,
+			scores:      []float64{0.0, 10.0},
+			bucketIndex: 5,
+			checkFunc: func(t *testing.T, start, end float64) {
+				assert.GreaterOrEqual(t, start, 0.0)
+				assert.LessOrEqual(t, end, 10.0)
+				assert.Greater(t, end, start)
+			},
+		},
+		{
+			name:        "All scores same returns min and max",
+			numBuckets:  10,
+			scores:      []float64{5.0, 5.0},
+			bucketIndex: 0,
+			checkFunc: func(t *testing.T, start, end float64) {
+				assert.Equal(t, 5.0, start)
+				assert.Equal(t, 5.0, end)
+			},
+		},
+		{
+			name:        "Single bucket returns full range",
+			numBuckets:  1,
+			scores:      []float64{0.0, 10.0},
+			bucketIndex: 0,
+			checkFunc: func(t *testing.T, start, end float64) {
+				assert.Equal(t, 0.0, start)
+				assert.Equal(t, 10.0, end)
+			},
+		},
+		{
+			name:        "Negative scores handled correctly",
+			numBuckets:  10,
+			scores:      []float64{-10.0, 10.0},
+			bucketIndex: 0,
+			checkFunc: func(t *testing.T, start, end float64) {
+				assert.Equal(t, -10.0, start)
+				assert.Greater(t, end, start)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agg := NewBucketScoreDistributionAggregator(tt.numBuckets)
+			for _, score := range tt.scores {
+				agg.Append(score)
+			}
+			var bucketWidth float64
+			if len(agg.Scores) > 0 && agg.Max != agg.Min {
+				bucketWidth = (agg.Max - agg.Min) / float64(agg.NumBuckets)
+			}
+			start, end := agg.getBucketRange(tt.bucketIndex, bucketWidth)
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, start, end)
+			}
+		})
+	}
+}
+
+func TestWithBucketScoreDistributionAggregator(t *testing.T) {
+	tests := []struct {
+		name       string
+		numBuckets int
+		checkFunc  func(t *testing.T, ag *AggregatorGroup)
+	}{
+		{
+			name:       "Add bucket aggregator to group",
+			numBuckets: 50,
+			checkFunc: func(t *testing.T, ag *AggregatorGroup) {
+				assert.NotNil(t, ag)
+				assert.Greater(t, len(ag.Aggregators), 1)
+				found := false
+				for _, agg := range ag.Aggregators {
+					if bucketAgg, ok := agg.(*BucketScoreDistributionAggregator); ok {
+						found = true
+						assert.Equal(t, 50, bucketAgg.NumBuckets)
+					}
+				}
+				assert.True(t, found)
+			},
+		},
+		{
+			name:       "Invalid buckets defaults to 20",
+			numBuckets: 0,
+			checkFunc: func(t *testing.T, ag *AggregatorGroup) {
+				assert.NotNil(t, ag)
+				found := false
+				for _, agg := range ag.Aggregators {
+					if bucketAgg, ok := agg.(*BucketScoreDistributionAggregator); ok {
+						found = true
+						assert.Equal(t, 20, bucketAgg.NumBuckets)
+					}
+				}
+				assert.True(t, found)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ag := NewAggregatorGroup(WithBucketScoreDistributionAggregator(tt.numBuckets))
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, ag)
+			}
+		})
+	}
+}
+
+func TestBucketScoreDistributionAggregator_Integration(t *testing.T) {
+	tests := []struct {
+		name       string
+		numBuckets int
+		scores     []float64
+		checkFunc  func(t *testing.T, agg *BucketScoreDistributionAggregator, result map[entity.AggregatorType]*entity.AggregateData)
+	}{
+		{
+			name:       "Full integration test with various scores",
+			numBuckets: 20,
+			scores:     []float64{0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0},
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator, result map[entity.AggregatorType]*entity.AggregateData) {
+				assert.Equal(t, 0.0, agg.Min)
+				assert.Equal(t, 5.0, agg.Max)
+				assert.Equal(t, int64(11), agg.Total)
+
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				// All buckets should be included
+				assert.Equal(t, 20, len(data.ScoreDistribution.ScoreDistributionItems))
+
+				totalCount := int64(0)
+				nonEmptyCount := 0
+				for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+					totalCount += item.Count
+					assert.GreaterOrEqual(t, item.Count, int64(0), "Bucket count should be >= 0")
+					assert.GreaterOrEqual(t, item.Percentage, 0.0)
+					assert.LessOrEqual(t, item.Percentage, 1.0)
+					if item.Count > 0 {
+						nonEmptyCount++
+					}
+				}
+				assert.Equal(t, int64(11), totalCount, "Total count should match number of scores")
+				assert.Greater(t, nonEmptyCount, 0, "Should have at least one non-empty bucket")
+			},
+		},
+		{
+			name:       "Integration test with empty aggregator",
+			numBuckets: 10,
+			scores:     []float64{},
+			checkFunc: func(t *testing.T, agg *BucketScoreDistributionAggregator, result map[entity.AggregatorType]*entity.AggregateData) {
+				assert.Equal(t, int64(0), agg.Total)
+				assert.Len(t, agg.Scores, 0)
+
+				data := result[entity.Distribution]
+				assert.NotNil(t, data)
+				// All buckets should be included, even when empty
+				assert.Equal(t, 10, len(data.ScoreDistribution.ScoreDistributionItems))
+				// All buckets should have count 0
+				for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+					assert.Equal(t, int64(0), item.Count)
+					assert.Equal(t, 0.0, item.Percentage)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agg := NewBucketScoreDistributionAggregator(tt.numBuckets)
+			for _, score := range tt.scores {
+				agg.Append(score)
+			}
+			result := agg.Result()
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, agg, result)
+			}
+		})
+	}
+}
+
+func TestBucketScoreDistributionAggregator_CompleteFlow_1To157_20Buckets(t *testing.T) {
+	const numBuckets = 20
+	const minScore = 1.0
+	const maxScore = 157.0
+	const totalScores = 157
+
+	// Setup: create aggregator and append scores
+	agg := NewBucketScoreDistributionAggregator(numBuckets)
+	for i := 1; i <= totalScores; i++ {
+		agg.Append(float64(i))
+	}
+
+	// Get result
+	result := agg.Result()
+	data := result[entity.Distribution]
+
+	// Calculate expected bucket distribution
+	bucketCounts := make([]int64, numBuckets)
+	for _, score := range agg.Scores {
+		bucketIndex := agg.getBucketIndex(score)
+		bucketCounts[bucketIndex]++
+	}
+
+	// Calculate bucket width
+	var bucketWidth float64
+	if len(agg.Scores) > 0 && agg.Max != agg.Min {
+		bucketWidth = (agg.Max - agg.Min) / float64(agg.NumBuckets)
+	}
+
+	// Build a map of bucket index to result item for verification
+	bucketIndexToItem := make(map[int]*entity.ScoreDistributionItem)
+	for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+		var start, end float64
+		n, err := fmt.Sscanf(item.Score, "%f-%f", &start, &end)
+		assert.NoError(t, err, "Failed to parse score range: %s", item.Score)
+		assert.Equal(t, 2, n, "Should parse two values from range: %s", item.Score)
+
+		// Find which bucket index this range corresponds to
+		bucketIndex := -1
+		for i := 0; i < numBuckets; i++ {
+			expectedStart := minScore + float64(i)*bucketWidth
+			if start >= expectedStart-0.1 && start <= expectedStart+0.1 {
+				bucketIndex = i
+				break
+			}
+		}
+		assert.GreaterOrEqual(t, bucketIndex, 0, "Could not determine bucket index for range %s", item.Score)
+		bucketIndexToItem[bucketIndex] = item
+	}
+
+	// Table-driven tests for basic properties
+	t.Run("BasicProperties", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			actual   interface{}
+			expected interface{}
+			msg      string
+		}{
+			{"Total", agg.Total, int64(totalScores), "Total should match total scores"},
+			{"Min", agg.Min, minScore, "Min should match minScore"},
+			{"Max", agg.Max, maxScore, "Max should match maxScore"},
+			{"ScoresLength", len(agg.Scores), totalScores, "Scores length should match total scores"},
+			{"ResultNotNull", result != nil, true, "Result should not be nil"},
+			{"DataNotNull", data != nil, true, "Data should not be nil"},
+			{"DataType", data.DataType, entity.ScoreDistribution, "DataType should be ScoreDistribution"},
+			{"ScoreDistributionNotNull", data.ScoreDistribution != nil, true, "ScoreDistribution should not be nil"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				assert.Equal(t, tt.expected, tt.actual, tt.msg)
+			})
+		}
+
+		// Verify all scores are stored correctly
+		for i := 0; i < totalScores; i++ {
+			assert.Equal(t, float64(i+1), agg.Scores[i], "Score at index %d should be %d", i, i+1)
+		}
+	})
+
+	// Table-driven tests for bucket width calculation
+	t.Run("BucketWidth", func(t *testing.T) {
+		expectedBucketWidth := (maxScore - minScore) / float64(numBuckets) // 156.0 / 20.0 = 7.8
+		assert.InDelta(t, expectedBucketWidth, bucketWidth, 0.0001, "Bucket width should be 7.8")
+	})
+
+	// Table-driven tests for bucket distribution
+	t.Run("BucketDistribution", func(t *testing.T) {
+		// Verify total count matches
+		totalCount := int64(0)
+		for _, count := range bucketCounts {
+			totalCount += count
+		}
+		assert.Equal(t, int64(totalScores), totalCount, "Total count should match total scores")
+
+		// Verify bucket indices are valid
+		for _, score := range agg.Scores {
+			bucketIndex := agg.getBucketIndex(score)
+			assert.GreaterOrEqual(t, bucketIndex, 0, "Bucket index should be >= 0 for score %f", score)
+			assert.Less(t, bucketIndex, numBuckets, "Bucket index should be < %d for score %f", numBuckets, score)
+		}
+	})
+
+	// Table-driven tests for bucket items verification
+	t.Run("BucketItems", func(t *testing.T) {
+		totalPercentage := 0.0
+
+		for i := 0; i < numBuckets; i++ {
+			item, exists := bucketIndexToItem[i]
+			assert.True(t, exists, "Bucket %d should have a result item", i)
+
+			// Parse score range
+			var start, end float64
+			n, err := fmt.Sscanf(item.Score, "%f-%f", &start, &end)
+			assert.NoError(t, err, "Failed to parse score range: %s", item.Score)
+			assert.Equal(t, 2, n, "Should parse two values from range: %s", item.Score)
+
+			// Verify display range is valid
+			assert.LessOrEqual(t, start, end, "Start should be <= end for range %s", item.Score)
+			assert.GreaterOrEqual(t, start, minScore, "Start should be >= minScore for range %s", item.Score)
+			assert.LessOrEqual(t, end, maxScore, "End should be <= maxScore for range %s", item.Score)
+
+			// Verify display ranges don't overlap
+			if i > 0 {
+				for j := i - 1; j >= 0; j-- {
+					if bucketCounts[j] > 0 {
+						prevItem := bucketIndexToItem[j]
+						var prevStart, prevEndVal float64
+						n, err := fmt.Sscanf(prevItem.Score, "%f-%f", &prevStart, &prevEndVal)
+						assert.NoError(t, err, "Failed to parse previous score range: %s", prevItem.Score)
+						assert.Equal(t, 2, n, "Should parse two values from previous range: %s", prevItem.Score)
+						assert.Less(t, prevEndVal, start, "Display ranges should not overlap: bucket %d end %f should be < bucket %d start %f", j, prevEndVal, i, start)
+						break
+					}
+				}
+			} else {
+				assert.InDelta(t, minScore, start, 0.01, "First bucket should start at minScore")
+			}
+
+			// Verify actual bucket range
+			var actualBucketWidth float64
+			if len(agg.Scores) > 0 && agg.Max != agg.Min {
+				actualBucketWidth = (agg.Max - agg.Min) / float64(agg.NumBuckets)
+			}
+			actualStart, actualEnd := agg.getBucketRange(i, actualBucketWidth)
+			assert.InDelta(t, actualStart, start, 0.01, "Display start should match actual start for bucket %d", i)
+			if i < numBuckets-1 {
+				expectedDisplayEnd := math.Floor((actualEnd-0.01)*100) / 100
+				assert.InDelta(t, expectedDisplayEnd, end, 0.01, "Display end should be actualEnd - 0.01 for bucket %d", i)
+			} else {
+				assert.InDelta(t, actualEnd, end, 0.01, "Last bucket display end should match actual end")
+			}
+
+			// Verify count and percentage
+			assert.Equal(t, bucketCounts[i], item.Count, "Count mismatch for bucket %d, range %s", i, item.Score)
+			assert.GreaterOrEqual(t, item.Count, int64(0), "Bucket count should be >= 0 for range %s", item.Score)
+			expectedPercentage := 0.0
+			if totalScores > 0 {
+				expectedPercentage = float64(item.Count) / float64(totalScores)
+			}
+			assert.InDelta(t, expectedPercentage, item.Percentage, 0.0001, "Percentage mismatch for range %s", item.Score)
+
+			totalPercentage += item.Percentage
+		}
+
+		// Verify total percentage
+		assert.InDelta(t, 1.0, totalPercentage, 0.0001, "Total percentage should be 1.0, got %f", totalPercentage)
+	})
+
+	// Table-driven tests for boundary cases
+	t.Run("BoundaryCases", func(t *testing.T) {
+		tests := []struct {
+			name           string
+			score          float64
+			expectedBucket int
+			expectedRange  struct {
+				min int
+				max int
+			}
+		}{
+			{"Score1", 1.0, 0, struct{ min, max int }{0, 0}},
+			{"Score157", 157.0, numBuckets - 1, struct{ min, max int }{numBuckets - 1, numBuckets - 1}},
+			{"MiddleScore", (minScore + maxScore) / 2.0, -1, struct{ min, max int }{9, 11}}, // 79.0, should be around bucket 10
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bucketIndex := agg.getBucketIndex(tt.score)
+				if tt.expectedBucket >= 0 {
+					assert.Equal(t, tt.expectedBucket, bucketIndex, "Score %f should be in bucket %d", tt.score, tt.expectedBucket)
+				} else {
+					assert.GreaterOrEqual(t, bucketIndex, tt.expectedRange.min, "Score %f bucket index should be >= %d", tt.score, tt.expectedRange.min)
+					assert.LessOrEqual(t, bucketIndex, tt.expectedRange.max, "Score %f bucket index should be <= %d", tt.score, tt.expectedRange.max)
+				}
+				assert.GreaterOrEqual(t, bucketIndex, 0, "Bucket index should be >= 0")
+				assert.Less(t, bucketIndex, numBuckets, "Bucket index should be < %d", numBuckets)
+			})
+		}
+	})
+
+	// Table-driven tests for last bucket
+	t.Run("LastBucket", func(t *testing.T) {
+		lastBucketIndex := numBuckets - 1
+		if bucketCounts[lastBucketIndex] > 0 {
+			lastItem := bucketIndexToItem[lastBucketIndex]
+			var lastStart, lastEnd float64
+			n, err := fmt.Sscanf(lastItem.Score, "%f-%f", &lastStart, &lastEnd)
+			assert.NoError(t, err, "Failed to parse last bucket score range: %s", lastItem.Score)
+			assert.Equal(t, 2, n, "Should parse two values from last bucket range: %s", lastItem.Score)
+			assert.InDelta(t, maxScore, lastEnd, 0.01, "Last bucket should end at maxScore")
+		}
+	})
+
+	// Table-driven tests for distribution evenness
+	t.Run("DistributionEvenness", func(t *testing.T) {
+		expectedAvgCount := float64(totalScores) / float64(numBuckets)
+		nonEmptyBuckets := 0
+		for i := 0; i < numBuckets; i++ {
+			if bucketCounts[i] > 0 {
+				nonEmptyBuckets++
+				assert.GreaterOrEqual(t, bucketCounts[i], int64(expectedAvgCount-2), "Bucket %d count %d too low (expected ~%f)", i, bucketCounts[i], expectedAvgCount)
+				assert.LessOrEqual(t, bucketCounts[i], int64(expectedAvgCount+2), "Bucket %d count %d too high (expected ~%f)", i, bucketCounts[i], expectedAvgCount)
+			}
+		}
+		assert.GreaterOrEqual(t, nonEmptyBuckets, 15, "Should have at least 15 non-empty buckets out of 20")
+	})
+
+	// Verify result items count
+	t.Run("ResultItemsCount", func(t *testing.T) {
+		assert.Greater(t, len(data.ScoreDistribution.ScoreDistributionItems), 0, "Should have at least one bucket")
+	})
+}
+
+func TestBucketScoreDistributionAggregator_BoundaryValueHandling(t *testing.T) {
+	const numBuckets = 20
+	const minScore = 1.0
+	const maxScore = 157.0
+
+	// Setup: create aggregator and establish range
+	agg := NewBucketScoreDistributionAggregator(numBuckets)
+	agg.Append(minScore)
+	agg.Append(maxScore)
+
+	// Calculate bucket width
+	bucketWidth := (maxScore - minScore) / float64(numBuckets) // 7.8
+
+	// Table-driven tests for boundary values
+	t.Run("BoundaryScores", func(t *testing.T) {
+		tests := []struct {
+			name           string
+			score          float64
+			expectedBucket int
+			description    string
+		}{
+			{
+				name:           "Score equals first bucket end",
+				score:          minScore + bucketWidth, // 1.0 + 7.8 = 8.8
+				expectedBucket: 1,
+				description:    "Score 8.8 equals bucket 0 end, should belong to bucket 1",
+			},
+			{
+				name:           "Score slightly less than bucket end",
+				score:          minScore + bucketWidth - 0.0001, // 8.7999
+				expectedBucket: 0,
+				description:    "Score 8.7999 is in bucket 0 [1.0, 8.8)",
+			},
+			{
+				name:           "Score slightly greater than bucket start",
+				score:          minScore + bucketWidth + 0.0001, // 8.8001
+				expectedBucket: 1,
+				description:    "Score 8.8001 is in bucket 1 [8.8, 16.6)",
+			},
+			{
+				name:           "Score equals middle bucket end",
+				score:          minScore + 10*bucketWidth, // 1.0 + 78.0 = 79.0
+				expectedBucket: 10,
+				description:    "Score 79.0 equals bucket 9 end, should belong to bucket 10",
+			},
+			{
+				name:           "Score equals last bucket start",
+				score:          minScore + 19*bucketWidth, // 1.0 + 148.2 = 149.2
+				expectedBucket: 19,
+				description:    "Score 149.2 equals bucket 18 end, should belong to bucket 19",
+			},
+			{
+				name:           "Score equals max",
+				score:          maxScore, // 157.0
+				expectedBucket: 19,
+				description:    "Score 157.0 equals max, should belong to last bucket",
+			},
+			{
+				name:           "Score equals min",
+				score:          minScore, // 1.0
+				expectedBucket: 0,
+				description:    "Score 1.0 equals min, should belong to first bucket",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				bucketIndex := agg.getBucketIndex(tt.score)
+				assert.Equal(t, tt.expectedBucket, bucketIndex, "%s: score %f should be in bucket %d, got %d", tt.description, tt.score, tt.expectedBucket, bucketIndex)
+
+				// Verify the bucket range includes this score correctly
+				var bucketWidth float64
+				if len(agg.Scores) > 0 && agg.Max != agg.Min {
+					bucketWidth = (agg.Max - agg.Min) / float64(agg.NumBuckets)
+				}
+				start, end := agg.getBucketRange(bucketIndex, bucketWidth)
+
+				// For left-closed right-open intervals [start, end)
+				// Score should be >= start and < end (or == end only for last bucket's max)
+				if bucketIndex == agg.NumBuckets-1 {
+					assert.GreaterOrEqual(t, tt.score, start, "Score should be >= bucket start")
+					assert.LessOrEqual(t, tt.score, end, "Score should be <= bucket end (last bucket includes max)")
+				} else {
+					assert.GreaterOrEqual(t, tt.score, start, "Score should be >= bucket start")
+					assert.Less(t, tt.score, end, "Score should be < bucket end (left-closed right-open)")
+				}
+			})
+		}
+	})
+
+	// Table-driven test for all boundary values distribution
+	t.Run("AllBoundaryValuesDistribution", func(t *testing.T) {
+		agg2 := NewBucketScoreDistributionAggregator(numBuckets)
+		for i := 0; i < numBuckets; i++ {
+			boundaryScore := minScore + float64(i+1)*bucketWidth
+			if i == numBuckets-1 {
+				boundaryScore = maxScore
+			}
+			agg2.Append(boundaryScore)
+		}
+
+		// Verify all boundary scores are distributed correctly
+		result := agg2.Result()
+		data := result[entity.Distribution]
+		assert.NotNil(t, data, "Result data should not be nil")
+
+		// Verify that boundary scores don't cause duplicate counts
+		totalCount := int64(0)
+		for _, item := range data.ScoreDistribution.ScoreDistributionItems {
+			totalCount += item.Count
+		}
+		assert.Equal(t, int64(numBuckets), totalCount, "Total count should equal number of boundary scores")
+	})
 }
