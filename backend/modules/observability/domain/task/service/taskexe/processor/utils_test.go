@@ -5,9 +5,10 @@ package processor
 
 import (
 	"context"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
 	"testing"
 	"time"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
