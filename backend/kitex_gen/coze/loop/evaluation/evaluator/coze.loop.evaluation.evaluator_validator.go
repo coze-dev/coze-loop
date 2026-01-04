@@ -300,6 +300,11 @@ func (p *RunEvaluatorRequest) IsValid() error {
 			return fmt.Errorf("field InputData not valid, %w", err)
 		}
 	}
+	if p.EvaluatorRunConf != nil {
+		if err := p.EvaluatorRunConf.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -331,6 +336,11 @@ func (p *DebugEvaluatorRequest) IsValid() error {
 			return fmt.Errorf("field InputData not valid, %w", err)
 		}
 	}
+	if p.EvaluatorRunConf != nil {
+		if err := p.EvaluatorRunConf.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -355,6 +365,11 @@ func (p *BatchDebugEvaluatorRequest) IsValid() error {
 	if p.EvaluatorContent != nil {
 		if err := p.EvaluatorContent.IsValid(); err != nil {
 			return fmt.Errorf("field EvaluatorContent not valid, %w", err)
+		}
+	}
+	if p.EvaluatorRunConf != nil {
+		if err := p.EvaluatorRunConf.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
 		}
 	}
 	if p.Base != nil {

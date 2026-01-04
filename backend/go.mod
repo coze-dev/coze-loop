@@ -260,7 +260,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/sqlite v1.5.5 // indirect
-	gorm.io/hints v1.1.2 // indirect
+	gorm.io/hints v1.1.2
 	gorm.io/rawsql v1.0.3-0.20250401110442-7e49778bc820
 	stathat.com/c/consistent v1.0.0 // indirect
 )
