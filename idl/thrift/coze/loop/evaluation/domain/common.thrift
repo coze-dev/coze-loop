@@ -18,6 +18,7 @@ struct Content {
     11: optional Image image (go.tag='mapstructure:"image"'),
     12: optional list<Content> multi_part (go.tag='mapstructure:"multi_part"'),
     13: optional Audio audio (go.tag='mapstructure:"audio"'),
+    14: optional Video video (go.tag='mapstructure:"video"'),
 
     // 超大文本相关字段
     30: optional bool content_omitted       // 当前列的数据是否省略, 如果此处返回 true, 需要通过 GetDatasetItemField 获取当前列的具体内容, 或者是通过 omittedDataStorage.url 下载
@@ -29,9 +30,22 @@ struct AudioContent {
     1: optional list<Audio> audios,
 }
 
+struct Video {
+    1: optional string name,
+    2: optional string url,
+    3: optional string uri,
+    4: optional string thumb_url,
+
+    10: optional dataset.StorageProvider storage_provider (vt.defined_only = "true") // 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri
+}
+
 struct Audio {
     1: optional string format,
     2: optional string url,
+    3: optional string name,
+    4: optional string uri,
+
+    10: optional dataset.StorageProvider storage_provider (vt.defined_only = "true") // 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri
 }
 
 struct Image {
