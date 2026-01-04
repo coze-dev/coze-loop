@@ -88,7 +88,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersion(ctx context.Context, spaceI
 	if err != nil {
 		return nil, err
 	}
-	// 包装source info信息
+	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
 			err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{do})
@@ -105,7 +105,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySourceTarget(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	// 包装source info信息
+	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
 			err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{do})
@@ -118,7 +118,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySourceTarget(ctx context.C
 }
 
 func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySource(ctx context.Context, spaceID, targetID int64, sourceVersion string, needSourceInfo bool) (do *entity.EvalTarget, err error) {
-	// 根据spaceID、targetID和sourceVersion查询版本
+	// Query version by spaceID, targetID, and sourceVersion
 	versions, err := e.evalTargetRepo.BatchGetEvalTargetBySource(ctx, &repo.BatchGetEvalTargetBySourceParam{
 		SpaceID:        spaceID,
 		SourceTargetID: []string{strconv.FormatInt(targetID, 10)},
@@ -127,10 +127,10 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionBySource(ctx context.Context
 		return nil, err
 	}
 
-	// 遍历版本，找到匹配的sourceVersion
+	// Iterate through versions to find matching sourceVersion
 	for _, version := range versions {
 		if version.EvalTargetVersion != nil && version.EvalTargetVersion.SourceTargetVersion == sourceVersion {
-			// 包装source info信息
+			// Wrap source info
 			if needSourceInfo {
 				for _, op := range e.typedOperators {
 					err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{version})
@@ -151,7 +151,7 @@ func (e *EvalTargetServiceImpl) GetEvalTargetVersionByTarget(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
-	// 包装source info信息
+	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
 			err = op.PackSourceVersionInfo(ctx, spaceID, []*entity.EvalTarget{do})
@@ -176,7 +176,7 @@ func (e *EvalTargetServiceImpl) BatchGetEvalTargetVersion(ctx context.Context, s
 	if err != nil {
 		return nil, err
 	}
-	// 包装source info信息
+	// Wrap source info
 	if needSourceInfo {
 		for _, op := range e.typedOperators {
 			err = op.PackSourceVersionInfo(ctx, spaceID, versions)
@@ -370,6 +370,9 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 }
 
 func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error) {
+	if len(traceID) == 0 {
+		return nil, errorx.New("ExtractTrajectory with null traceID")
+	}
 	trajectories, err := e.trajectoryAdapter.ListTrajectory(ctx, spaceID, []string{traceID}, startTimeMS)
 	if err != nil {
 		return nil, err
@@ -420,6 +423,10 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		TimeConsumingMS: gptr.Of(int64(0)),
 	}
 
+	ctx, span := looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+	span.SetCallType("EvalTarget")
+	ctx = looptracer.GetTracer().Inject(ctx)
+
 	invokeID, callee, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
@@ -463,6 +470,10 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 		},
 	}
+
+	traceID, _ := e.emitTargetTrace(ctx, span, record, &entity.Session{UserID: userID})
+	record.TraceID = traceID
+
 	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record); err != nil {
 		return nil, callee, err
 	}
@@ -583,10 +594,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		return err
 	}
 
-	if err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session); err != nil {
-		logs.CtxError(ctx, "emitTargetTrace fail, target_id: %v, target_version_id: %v, record_id: %v, err: %v",
-			record.TargetID, record.TargetVersionID, record.ID, err)
-	}
+	//traceID, err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session)
+	//if err != nil {
+	//	logs.CtxError(ctx, "emitTargetTrace fail, target_id: %v, target_version_id: %v, record_id: %v, err: %v",
+	//		record.TargetID, record.TargetVersionID, record.ID, err)
+	//}
 
 	recordTrajectory := func() error {
 		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, nil)
@@ -597,9 +609,16 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		if !ok {
 			return errorx.New("EvalTargetOutputData deepcopy fail")
 		}
+		if od == nil {
+			od = &entity.EvalTargetOutputData{}
+		}
+		if od.OutputFields == nil {
+			od.OutputFields = map[string]*entity.Content{}
+		}
 		od.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
 		return e.evalTargetRepo.UpdateEvalTargetRecord(ctx, &entity.EvalTargetRecord{
 			ID:                   record.ID,
+			TraceID:              record.TraceID,
 			EvalTargetOutputData: od,
 		})
 	}
@@ -614,15 +633,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	return nil
 }
 
-func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, record *entity.EvalTargetRecord, session *entity.Session) error {
+func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, span looptracer.Span, record *entity.EvalTargetRecord, session *entity.Session) (string, error) {
 	if record.EvalTargetOutputData == nil {
 		logs.CtxInfo(ctx, "emitTargetTrace with null data")
-		return nil
+		return "", nil
 	}
-
-	ctx, span := looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(record.SpaceID, 10)))
-	span.SetCallType("EvalTarget")
-	ctx = looptracer.GetTracer().Inject(ctx)
 
 	spanParam := &targetSpanTagsParams{
 		Error:         nil,
@@ -636,7 +651,7 @@ func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, record *ent
 	if record.TargetVersionID > 0 {
 		evalTargetDO, err := e.GetEvalTargetVersion(ctx, record.SpaceID, record.TargetVersionID, false)
 		if err != nil {
-			return err
+			return "", err
 		}
 		spanParam.TargetType = evalTargetDO.EvalTargetType.String()
 	}
@@ -656,7 +671,7 @@ func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, record *ent
 	})
 	span.Finish(ctx)
 
-	return nil
+	return span.GetTraceID(), nil
 }
 
 func (e *EvalTargetServiceImpl) ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error {
@@ -756,7 +771,7 @@ func Convert2TraceString(input any) string {
 	return str
 }
 
-// GenerateMockOutputData 根据输出schema生成mock数据
+// GenerateMockOutputData generates mock data according to output schema
 func (e *EvalTargetServiceImpl) GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error) {
 	if len(outputSchemas) == 0 {
 		return map[string]string{}, nil
@@ -766,10 +781,10 @@ func (e *EvalTargetServiceImpl) GenerateMockOutputData(outputSchemas []*entity.A
 
 	for _, schema := range outputSchemas {
 		if schema.Key != nil && schema.JsonSchema != nil {
-			// 使用jsonmock为每个schema生成独立的mock数据
+			// Use jsonmock to generate independent mock data for each schema
 			mockData, err := jsonmock.GenerateMockData(*schema.JsonSchema)
 			if err != nil {
-				// 如果生成失败，使用默认值
+				// If generation fails, use default value
 				result[*schema.Key] = "{}"
 			} else {
 				result[*schema.Key] = mockData
@@ -780,7 +795,7 @@ func (e *EvalTargetServiceImpl) GenerateMockOutputData(outputSchemas []*entity.A
 	return result, nil
 }
 
-// buildPage 有的接口没有滚动分页，需要自己用page适配一下
+// buildPageByCursor some interfaces do not have rolling pagination, need to adapt with page manually
 func buildPageByCursor(cursor *string) (page int32, err error) {
 	if cursor == nil {
 		page = 1

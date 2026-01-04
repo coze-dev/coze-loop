@@ -447,9 +447,9 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 						StartAt:  gptr.Of(time.Now()),
 					}, nil)
 
-				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
 					EXPECT().
-					PublishExptAggrCalculateEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
@@ -1245,7 +1245,7 @@ func TestExptMangerImpl_CheckConnector(t *testing.T) {
 												{FromField: "field1"},
 											},
 										},
-										TargetAdapter: &entity.FieldAdapter{ // 添加必要的TargetAdapter
+										TargetAdapter: &entity.FieldAdapter{ // Add necessary TargetAdapter
 											FieldConfs: []*entity.FieldConf{},
 										},
 									},
@@ -1395,10 +1395,10 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					CreateOrUpdate(ctx, int64(789), gomock.Any(), session).
 					Return(nil)
 
-				// Mock aggregate calculation event
-				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+				// Mock aggregate calculation result event
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
 					EXPECT().
-					PublishExptAggrCalculateEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				// Mock metrics emission
@@ -1486,10 +1486,10 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					CreateOrUpdate(ctx, int64(789), gomock.Any(), session).
 					Return(nil)
 
-				// Mock aggregate calculation event
-				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+				// Mock aggregate calculation result event
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
 					EXPECT().
-					PublishExptAggrCalculateEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				// Mock metrics emission
@@ -1625,10 +1625,10 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					CreateOrUpdate(ctx, int64(789), gomock.Any(), session).
 					Return(nil)
 
-				// Mock aggregate calculation event
-				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+				// Mock aggregate calculation result event
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
 					EXPECT().
-					PublishExptAggrCalculateEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				// Mock metrics emission
@@ -1699,10 +1699,10 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					CreateOrUpdate(ctx, int64(789), gomock.Any(), session).
 					Return(nil)
 
-				// Mock aggregate calculation event
-				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+				// Mock aggregate calculation result event
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
 					EXPECT().
-					PublishExptAggrCalculateEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				// Mock metrics emission
@@ -1875,7 +1875,7 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 		errMsg  string
 	}{
 		{
-			name: "Online实验_EvalSet为nil",
+			name: "Online_expt_EvalSet_nil",
 			expt: &entity.Experiment{
 				ID:        1,
 				SpaceID:   100,
@@ -1887,7 +1887,7 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 			errMsg:  "with empty EvalSet: 10",
 		},
 		{
-			name: "Online实验_EvalSet不为nil_成功",
+			name: "Online_expt_EvalSet_not_nil_success",
 			expt: &entity.Experiment{
 				ID:        1,
 				SpaceID:   100,
@@ -1898,7 +1898,7 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "default类型_EvalSetVersionID为0",
+			name: "default_type_EvalSetVersionID_0",
 			expt: &entity.Experiment{
 				ID:               1,
 				SpaceID:          100,
@@ -1910,7 +1910,7 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 			errMsg:  "with invalid EvalSetVersion 0",
 		},
 		{
-			name: "default类型_EvalSet为nil",
+			name: "default_type_EvalSet_nil",
 			expt: &entity.Experiment{
 				ID:               1,
 				SpaceID:          100,
@@ -1922,7 +1922,7 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 			errMsg:  "with invalid EvalSetVersion 10",
 		},
 		{
-			name: "default类型_EvaluationSetVersion为nil",
+			name: "default_type_EvaluationSetVersion_nil",
 			expt: &entity.Experiment{
 				ID:               1,
 				SpaceID:          100,
@@ -1937,7 +1937,7 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 			errMsg:  "with invalid EvalSetVersion 10",
 		},
 		{
-			name: "default类型_ItemCount为0",
+			name: "default_type_ItemCount_0",
 			expt: &entity.Experiment{
 				ID:               1,
 				SpaceID:          100,
@@ -1955,7 +1955,7 @@ func TestExptMangerImpl_CheckEvalSet_OnlineAndDefault(t *testing.T) {
 			errMsg:  "with empty EvalSetVersion 10",
 		},
 		{
-			name: "default类型_成功",
+			name: "default_type_success",
 			expt: &entity.Experiment{
 				ID:               1,
 				SpaceID:          100,
@@ -2002,7 +2002,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name: "Ext字段正确设置",
+			name: "Ext_field_set_correctly",
 			invokeReq: &entity.InvokeExptReq{
 				ExptID:  1,
 				RunID:   2,
@@ -2115,7 +2115,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Ext字段为空map",
+			name: "Ext_field_empty_map",
 			invokeReq: &entity.InvokeExptReq{
 				ExptID:  1,
 				RunID:   2,
