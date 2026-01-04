@@ -5,6 +5,7 @@ package trace
 
 import (
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	eval_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -151,14 +152,14 @@ func convertDatasetConfigDTO2DO(config *trace.DatasetConfig) service.DatasetConf
 		result.DatasetName = config.DatasetName
 	}
 	if config.IsSetDatasetSchema() {
-		result.DatasetSchema = convertDatasetSchemaDTO2DO(config.GetDatasetSchema())
+		result.DatasetSchema = ConvertDatasetSchemaDTO2DO(config.GetDatasetSchema())
 	}
 
 	return result
 }
 
-// convertDatasetSchemaDTO2DO 转换数据集模式
-func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSchema {
+// ConvertDatasetSchemaDTO2DO 转换数据集模式
+func ConvertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSchema {
 	if schema == nil {
 		return entity.DatasetSchema{}
 	}
@@ -177,7 +178,7 @@ func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSc
 				Key:         &key,
 				Name:        name,
 				Description: description,
-				ContentType: convertContentTypeDTO2DO(fs.GetContentType()),
+				ContentType: tracer.ConvertContentTypeDTO2DO(fs.GetContentType()),
 				TextSchema:  textSchema,
 				SchemaKey:   entity.SchemaKey(fs.GetSchemaKey()),
 			}
@@ -200,7 +201,7 @@ func ConvertFieldMappingsDTO2DO(mappings []*dataset0.FieldMapping) []entity.Fiel
 				Key:         mapping.GetFieldSchema().Key,
 				Name:        mapping.GetFieldSchema().GetName(),
 				Description: mapping.GetFieldSchema().GetDescription(),
-				ContentType: convertContentTypeDTO2DO(mapping.GetFieldSchema().GetContentType()),
+				ContentType: tracer.ConvertContentTypeDTO2DO(mapping.GetFieldSchema().GetContentType()),
 				SchemaKey:   entity.SchemaKey(mapping.GetFieldSchema().GetSchemaKey()),
 				TextSchema:  mapping.GetFieldSchema().GetTextSchema(),
 			},
@@ -351,6 +352,7 @@ func convertSpanIdsDTO2DO(spanIDs []*trace.SpanID) []service.SpanID {
 	return result
 }
 
+// Deprecated: use tracer.ConvertContentTypeDTO2DO instead
 // convertContentTypeDTO2DO 转换内容类型
 func convertContentTypeDTO2DO(contentType eval_common.ContentType) entity.ContentType {
 	switch contentType {
@@ -360,6 +362,8 @@ func convertContentTypeDTO2DO(contentType eval_common.ContentType) entity.Conten
 		return entity.ContentType_Image
 	case eval_common.ContentTypeAudio:
 		return entity.ContentType_Audio
+	case eval_common.ContentTypeVideo:
+		return entity.ContentType_Video
 	case eval_common.ContentTypeMultiPart:
 		return entity.ContentType_MultiPart
 	default:

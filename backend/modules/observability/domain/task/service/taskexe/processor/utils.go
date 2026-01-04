@@ -7,6 +7,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -15,6 +18,7 @@ import (
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -100,33 +104,21 @@ func getBasicEvaluationSetSchema(basicColumns []string) (*dataset0.DatasetSchema
 	return evaluationSetSchema, fromEvalSet
 }
 
-// todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 // convertDatasetSchemaDTO2DO 转换数据集模式
 func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSchema {
 	if schema == nil {
 		return entity.DatasetSchema{}
 	}
-
-	result := entity.DatasetSchema{}
-
+	result := trace.ConvertDatasetSchemaDTO2DO(schema)
 	if schema.IsSetFieldSchemas() {
 		fieldSchemas := schema.GetFieldSchemas()
-		result.FieldSchemas = make([]entity.FieldSchema, len(fieldSchemas))
+		// result.FieldSchemas = make([]entity.FieldSchema, len(fieldSchemas))
 		for i, fs := range fieldSchemas {
 			key := fs.GetKey()
 			if key == "" {
 				key = fs.GetName()
 			}
-			name := fs.GetName()
-			description := fs.GetDescription()
-			textSchema := fs.GetTextSchema()
-			result.FieldSchemas[i] = entity.FieldSchema{
-				Key:         &key,
-				Name:        name,
-				Description: description,
-				ContentType: convertContentTypeDTO2DO(fs.GetContentType()),
-				TextSchema:  textSchema,
-			}
+			result.FieldSchemas[i].Key = &key
 		}
 	}
 
@@ -143,6 +135,8 @@ func convertContentTypeDTO2DO(contentType common.ContentType) entity.ContentType
 		return entity.ContentType_Image
 	case common.ContentTypeAudio:
 		return entity.ContentType_Audio
+	case common.ContentTypeVideo:
+		return entity.ContentType_Video
 	case common.ContentTypeMultiPart:
 		return entity.ContentType_MultiPart
 	default:
@@ -224,15 +218,15 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 					logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
 					continue
 				}
-				content, err := GetContentInfo(ctx, fieldSchema.ContentType, value)
-				if err != nil {
-					logs.CtxInfo(ctx, "GetContentInfo failed, err:%v", err)
+				content, errCode := entity.GetContentInfo(ctx, fieldSchema.ContentType, value)
+				if errCode == entity.DatasetErrorType_MismatchSchema {
+					logs.CtxInfo(ctx, "GetContentInfo failed")
 					return nil
 				}
 				fieldDatas = append(fieldDatas, &eval_set.FieldData{
 					Key:     key,
 					Name:    gptr.Of(fieldSchema.Name),
-					Content: content,
+					Content: tracer.ConvertContentDO2DTO(content),
 				})
 			}
 		}
@@ -240,7 +234,8 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 	return fieldDatas
 }
 
-// todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
+// Deprecated: use common function entity.GetContentInfo instead
+// GetContentInfo todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 func GetContentInfo(ctx context.Context, contentType entity.ContentType, value string) (*common.Content, error) {
 	var content *common.Content
 	switch contentType {

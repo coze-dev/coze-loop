@@ -312,10 +312,10 @@ func TestGetContentInfo(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	content, err := GetContentInfo(ctx, common.ContentTypeText, "plain-text")
-	assert.NoError(t, err)
-	assert.Equal(t, common.ContentTypeText, content.GetContentType())
-	assert.Equal(t, "plain-text", content.GetText())
+	c, code := entity.GetContentInfo(ctx, entity.ContentType_Text, "plain-text")
+	assert.Equal(t, int64(0), code)
+	assert.Equal(t, entity.ContentType_Text, c.ContentType)
+	assert.Equal(t, "plain-text", c.Text)
 
 	parts := []tracespec.ModelMessagePart{
 		{
@@ -337,21 +337,20 @@ func TestGetContentInfo(t *testing.T) {
 	payload, err := json.Marshal(parts)
 	assert.NoError(t, err)
 
-	content, err = GetContentInfo(ctx, common.ContentTypeMultiPart, string(payload))
-	assert.NoError(t, err)
-	assert.Equal(t, common.ContentTypeMultiPart, content.GetContentType())
-	assert.Len(t, content.GetMultiPart(), 3)
-	assert.Equal(t, common.ContentTypeImage, content.GetMultiPart()[0].GetContentType())
-	assert.Equal(t, common.ContentTypeText, content.GetMultiPart()[1].GetContentType())
+	c, code = entity.GetContentInfo(ctx, entity.ContentType_MultiPart, string(payload))
+	assert.Equal(t, int64(0), code)
+	assert.Equal(t, entity.ContentType_MultiPart, c.ContentType)
+	assert.Len(t, c.MultiPart, 3)
+	assert.Equal(t, entity.ContentType_Image, c.MultiPart[0].ContentType)
+	assert.Equal(t, entity.ContentType_Text, c.MultiPart[1].ContentType)
 
-	_, err = GetContentInfo(ctx, common.ContentTypeMultiPart, "invalid json")
-	assert.Error(t, err)
+	_, code = entity.GetContentInfo(ctx, entity.ContentType_MultiPart, "invalid json")
+	assert.Equal(t, entity.DatasetErrorType_MismatchSchema, code)
 
-	// unsupported part type should return nil content without error
 	parts = []tracespec.ModelMessagePart{{Type: "unsupported"}}
 	payload, err = json.Marshal(parts)
 	assert.NoError(t, err)
-	content, err = GetContentInfo(ctx, common.ContentTypeMultiPart, string(payload))
-	assert.NoError(t, err)
-	assert.Nil(t, content)
+	c, code = entity.GetContentInfo(ctx, entity.ContentType_MultiPart, string(payload))
+	assert.Equal(t, entity.DatasetErrorType_MismatchSchema, code)
+	assert.Nil(t, c)
 }

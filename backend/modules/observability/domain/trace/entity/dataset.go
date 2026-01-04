@@ -247,6 +247,38 @@ func (i *Image) GetUrl() string {
 	return i.Url
 }
 
+// GetName returns the name of the audio
+func (a *Audio) GetName() string {
+	if a == nil {
+		return ""
+	}
+	return a.Name
+}
+
+// GetUrl returns the URL of the audio
+func (a *Audio) GetUrl() string {
+	if a == nil {
+		return ""
+	}
+	return a.Url
+}
+
+// GetName returns the name of the video
+func (v *Video) GetName() string {
+	if v == nil {
+		return ""
+	}
+	return v.Name
+}
+
+// GetUrl returns the URL of the video
+func (v *Video) GetUrl() string {
+	if v == nil {
+		return ""
+	}
+	return v.Url
+}
+
 // GetContentType returns the content type of the content
 func (c *Content) GetContentType() ContentType {
 	if c == nil {
@@ -269,6 +301,22 @@ func (c *Content) GetImage() *Image {
 		return nil
 	}
 	return c.Image
+}
+
+// GetAudio returns the audio content
+func (c *Content) GetAudio() *Audio {
+	if c == nil {
+		return nil
+	}
+	return c.Audio
+}
+
+// GetVideo returns the video content
+func (c *Content) GetVideo() *Video {
+	if c == nil {
+		return nil
+	}
+	return c.Video
 }
 
 // GetMultiPart returns the multi-part content
@@ -352,7 +400,6 @@ const (
 	DatasetErrorType_InternalError  int64 = 100
 )
 
-// TODO
 func GetContentInfo(ctx context.Context, contentType ContentType, value string) (*Content, int64) {
 	var content *Content
 	switch contentType {
@@ -431,8 +478,8 @@ func CommonContentTypeDO2DTO(contentType ContentType) *common.ContentType {
 		return gptr.Of(common.ContentTypeImage)
 	case ContentType_Audio:
 		return gptr.Of(common.ContentTypeAudio)
-		// TODO add video
 	case ContentType_Video:
+		return gptr.Of(common.ContentTypeVideo)
 	case ContentType_MultiPart:
 		return gptr.Of(common.ContentTypeMultiPart)
 	default:
