@@ -18,6 +18,8 @@ const (
 
 	ContentTypeAudio = "Audio"
 
+	ContentTypeVideo = "Video"
+
 	ContentTypeMultiPart = "MultiPart"
 
 	ContentTypeMultiPartVariable = "multi_part_variable"
