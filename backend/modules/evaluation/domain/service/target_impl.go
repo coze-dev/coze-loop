@@ -425,6 +425,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	}
 
 	invokeID, callee, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+		ExptID:              gptr.Indirect(param.ExperimentID),
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
 		SourceTargetID:      target.SourceTargetID,
