@@ -37,6 +37,8 @@
   "fornax_analytics_minute": "分",
   "fornax_analytics_hour": "时",
   "fornax_analytics_day": "日",
+  "fornax_components_logic_expr_and": "且",
+  "fornax_components_logic_expr_or": "或",
   "fornax_analytics_week": "周",
   "model_all_models": "全部模型",
   "observation_all_tools": "全部工具",

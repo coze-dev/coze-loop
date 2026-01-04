@@ -39,6 +39,8 @@
   "fornax_analytics_day": "day",
   "fornax_analytics_week": "week",
   "model_all_models": "All models",
+  "fornax_components_logic_expr_and": "And",
+  "fornax_components_logic_expr_or": "Or",
   "observation_all_tools": "All Tools",
   "observation_model_qps_qpm": "Model QPS | QPM",
   "observation_model_span_total_per_sec_min": "Total Model Spans received per second/minute",

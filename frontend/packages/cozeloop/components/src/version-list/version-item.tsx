@@ -23,7 +23,7 @@ export default function VersionItem({
         />
       </div>
       <div
-        className={`grow px-2 pt-2 rounded-m ${active ? 'bg-gray-100' : ''} group-hover:bg-gray-100`}
+        className={`grow min-w-0 overflow-hidden px-2 pt-2 rounded-m ${active ? 'bg-gray-100' : ''} group-hover:bg-gray-100`}
       >
         <VersionDescriptions version={version} />
       </div>
