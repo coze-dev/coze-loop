@@ -8,7 +8,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
-	eval_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
@@ -350,23 +349,4 @@ func convertSpanIdsDTO2DO(spanIDs []*trace.SpanID) []service.SpanID {
 		})
 	}
 	return result
-}
-
-// Deprecated: use tracer.ConvertContentTypeDTO2DO instead
-// convertContentTypeDTO2DO 转换内容类型
-func convertContentTypeDTO2DO(contentType eval_common.ContentType) entity.ContentType {
-	switch contentType {
-	case eval_common.ContentTypeText:
-		return entity.ContentType_Text
-	case eval_common.ContentTypeImage:
-		return entity.ContentType_Image
-	case eval_common.ContentTypeAudio:
-		return entity.ContentType_Audio
-	case eval_common.ContentTypeVideo:
-		return entity.ContentType_Video
-	case eval_common.ContentTypeMultiPart:
-		return entity.ContentType_MultiPart
-	default:
-		return entity.ContentType_Text
-	}
 }

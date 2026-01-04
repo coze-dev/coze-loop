@@ -126,25 +126,6 @@ func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSc
 }
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-// convertContentTypeDTO2DO 转换内容类型
-func convertContentTypeDTO2DO(contentType common.ContentType) entity.ContentType {
-	switch contentType {
-	case common.ContentTypeText:
-		return entity.ContentType_Text
-	case common.ContentTypeImage:
-		return entity.ContentType_Image
-	case common.ContentTypeAudio:
-		return entity.ContentType_Audio
-	case common.ContentTypeVideo:
-		return entity.ContentType_Video
-	case common.ContentTypeMultiPart:
-		return entity.ContentType_MultiPart
-	default:
-		return entity.ContentType_Text
-	}
-}
-
-// todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
 func buildItems(ctx context.Context, spans []*loop_span.Span, fieldMappings []*task_entity.EvaluateFieldMapping,
 	evaluationSetSchema string, taskRunID string,
 ) (turns []*eval_set.Turn) {

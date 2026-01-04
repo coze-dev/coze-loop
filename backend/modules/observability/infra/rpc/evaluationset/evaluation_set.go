@@ -398,30 +398,6 @@ func fieldSchemaDTO2DO(fs *eval_set_domain.FieldSchema) entity.FieldSchema {
 	return fieldSchema
 }
 
-// Deprecated: use tracer.ConvertContentDO2DTO instead
-func convertContentDO2DTO(content *entity.Content) *common.Content {
-	var result *common.Content
-	if content == nil {
-		return result
-	}
-	var multiPart []*common.Content
-	if content.MultiPart != nil {
-		for _, part := range content.MultiPart {
-			multiPart = append(multiPart, convertContentDO2DTO(part))
-		}
-	}
-	result = &common.Content{
-		ContentType: entity.CommonContentTypeDO2DTO(content.GetContentType()),
-		Text:        gptr.Of(content.GetText()),
-		Image: &common.Image{
-			Name: gptr.Of(content.GetImage().GetName()),
-			URL:  gptr.Of(content.GetImage().GetUrl()),
-		},
-		MultiPart: multiPart,
-	}
-	return result
-}
-
 // datasetItemsDO2DTO 转换DatasetItem到EvaluationSetItem
 func datasetItemsDO2DTO(items []*entity.DatasetItem) []*eval_set_domain.EvaluationSetItem {
 	evalSetItems := make([]*eval_set_domain.EvaluationSetItem, 0, len(items))

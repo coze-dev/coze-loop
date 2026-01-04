@@ -5,6 +5,7 @@ package processor
 
 import (
 	"context"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
 	"testing"
 	"time"
 
@@ -187,6 +188,7 @@ func TestConvertContentTypeDTO2DO(t *testing.T) {
 		{common.ContentTypeImage, entity.ContentType_Image},
 		{common.ContentTypeAudio, entity.ContentType_Audio},
 		{common.ContentTypeMultiPart, entity.ContentType_MultiPart},
+		{common.ContentTypeVideo, entity.ContentType_Video},
 		{"unknown", entity.ContentType_Text},
 	}
 
@@ -194,7 +196,7 @@ func TestConvertContentTypeDTO2DO(t *testing.T) {
 		tt := tt
 		t.Run(tt.input, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.expected, convertContentTypeDTO2DO(tt.input))
+			assert.Equal(t, tt.expected, tracer.ConvertContentTypeDTO2DO(tt.input))
 		})
 	}
 }
