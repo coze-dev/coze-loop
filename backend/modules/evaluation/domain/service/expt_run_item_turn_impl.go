@@ -220,6 +220,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 
 	var targetRecord *entity.EvalTargetRecord
 	etc := &entity.ExecuteTargetCtx{
+		ExperimentID:    gptr.Of(etec.Event.ExptID),
 		ExperimentRunID: gptr.Of(etec.Event.ExptRunID),
 		ItemID:          etec.EvalSetItem.ItemID,
 		TurnID:          etec.Turn.ID,

@@ -342,6 +342,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		return nil, err
 	}
 	outputData, runStatus, err = e.typedOperators[evalTargetDO.EvalTargetType].Execute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+		ExptID:              gptr.Indirect(param.ExperimentID),
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
 		SourceTargetID:      evalTargetDO.SourceTargetID,
@@ -590,11 +591,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		return err
 	}
 
-	//traceID, err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session)
-	//if err != nil {
+	// traceID, err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session)
+	// if err != nil {
 	//	logs.CtxError(ctx, "emitTargetTrace fail, target_id: %v, target_version_id: %v, record_id: %v, err: %v",
 	//		record.TargetID, record.TargetVersionID, record.ID, err)
-	//}
+	// }
 
 	recordTrajectory := func() error {
 		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, nil)
