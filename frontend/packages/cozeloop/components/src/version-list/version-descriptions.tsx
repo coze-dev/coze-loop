@@ -69,6 +69,7 @@ export default function VersionDescriptions({
         >
           <UserProfile
             name={submitter?.name}
+            userNameClassName="!max-w-[130px]"
             avatarUrl={submitter?.avatar_url}
           />
         </Descriptions.Item>

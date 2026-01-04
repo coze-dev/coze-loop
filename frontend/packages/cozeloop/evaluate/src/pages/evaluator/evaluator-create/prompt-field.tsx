@@ -24,6 +24,7 @@ import {
   ContentType,
   type common,
   type EvaluatorTemplate,
+  type ModelConfig,
 } from '@cozeloop/api-schema/evaluation';
 import { StoneEvaluationApi } from '@cozeloop/api-schema';
 import {
@@ -114,17 +115,20 @@ export function PromptField({
     [promptEvaluator?.message_list?.[1]?.content],
   );
 
-  const afterTemplateSelect = (
-    payload: PromptEvaluator,
-    templateId?: string,
-    templateName?: string,
-  ) => {
+  const afterTemplateSelect = (params: {
+    payload: PromptEvaluator;
+    templateId?: string;
+    templateName?: string;
+    modelConfig?: ModelConfig;
+  }) => {
+    const { payload, templateId, templateName, modelConfig } = params;
     promptEvaluatorFieldApi.setValue({
       ...promptEvaluator,
       message_list: payload.message_list,
       prompt_source_type: PromptSourceType.BuiltinTemplate,
       prompt_template_key: templateId,
       prompt_template_name: templateName,
+      model_config: modelConfig,
     });
     if (!formValues?.name) {
       formApi.setValue('name', templateName);
@@ -147,12 +151,15 @@ export function PromptField({
         evaluator_template_id: templateKey,
       })
         .then(res => {
-          if (res.evaluator_template?.evaluator_content?.prompt_evaluator) {
-            afterTemplateSelect(
-              res.evaluator_template.evaluator_content.prompt_evaluator,
-              templateKey,
-              res.evaluator_template.name,
-            );
+          const template = res.evaluator_template;
+          if (template?.evaluator_content?.prompt_evaluator) {
+            afterTemplateSelect({
+              payload: template.evaluator_content.prompt_evaluator,
+              templateId: templateKey,
+              templateName: template.name,
+              modelConfig:
+                template.evaluator_content.prompt_evaluator.model_config,
+            });
             setRefreshEditorKey2(pre => pre + 1);
           }
         })
@@ -171,7 +178,10 @@ export function PromptField({
       searchParams.set('templateKey', templateKey);
 
       if (templatePromptEvaluator) {
-        afterTemplateSelect(templatePromptEvaluator, templateKey);
+        afterTemplateSelect({
+          payload: templatePromptEvaluator,
+          templateId: templateKey,
+        });
       }
 
       // 更新URL而不导航
