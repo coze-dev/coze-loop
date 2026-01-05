@@ -252,11 +252,11 @@ export const getBizConfig = (customParams: Record<string, any>) => ({
     platformTypeOptions: [
       {
         value: PlatformType.Cozeloop,
-        label: 'Cozeloop',
+        label: i18nService.t('sdk_reporting'),
       },
       {
         value: PlatformType.Prompt,
-        label: 'Prompt',
+        label: i18nService.t('prompt_development'),
       },
     ] as OptionProps[],
   },
