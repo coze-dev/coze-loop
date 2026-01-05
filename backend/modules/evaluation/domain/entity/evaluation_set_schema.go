@@ -36,10 +36,12 @@ type FieldSchema struct {
 }
 
 type MultiModalSpec struct {
-	MaxFileCount     int64    `json:"max_file_count,omitempty"`
-	MaxFileSize      int64    `json:"max_file_size,omitempty"`
-	SupportedFormats []string `json:"supported_formats,omitempty"`
-	MaxPartCount     int32    `json:"max_part_count,omitempty"`
+	MaxFileCount           int64                    `json:"max_file_count,omitempty"`
+	MaxFileSize            int64                    `json:"max_file_size,omitempty"`
+	SupportedFormats       []string                 `json:"supported_formats,omitempty"`
+	MaxPartCount           int32                    `json:"max_part_count,omitempty"`
+	SupportedFormatsByType map[ContentType][]string `json:"supported_formats_by_type,omitempty"`
+	MaxFileSizeByType      map[ContentType]int64    `json:"max_file_size_by_type,omitempty"`
 }
 
 type SchemaKey int64
