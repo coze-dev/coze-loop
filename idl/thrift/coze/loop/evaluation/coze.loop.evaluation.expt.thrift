@@ -581,38 +581,42 @@ struct GetAnalysisRecordFeedbackVoteResponse {
 
 service ExperimentService {
 
-    CheckExperimentNameResponse CheckExperimentName(1: CheckExperimentNameRequest req) (api.post = '/api/evaluation/v1/experiments/check_name')
+    CheckExperimentNameResponse CheckExperimentName(1: CheckExperimentNameRequest req) (api.post = '/api/evaluation/v1/experiments/check_name', api.tag = 'volc-agentkit')
 
     // CreateExperiment 只创建，不提交运行
     CreateExperimentResponse CreateExperiment(1: CreateExperimentRequest req)
 
     // SubmitExperiment 创建并提交运行
-    SubmitExperimentResponse SubmitExperiment(1: SubmitExperimentRequest req) (api.post = '/api/evaluation/v1/experiments/submit')
+    SubmitExperimentResponse SubmitExperiment(1: SubmitExperimentRequest req) (
+        api.post = '/api/evaluation/v1/experiments/submit',
+        api.category = 'experiment', api.tag = 'volc-agentkit',
+        api.top_operation_type = 'create', api.top_is_auth = 'true', api.top_timeout = '3000',
+    )
 
-    BatchGetExperimentsResponse BatchGetExperiments(1: BatchGetExperimentsRequest req) (api.post = '/api/evaluation/v1/experiments/batch_get')
+    BatchGetExperimentsResponse BatchGetExperiments(1: BatchGetExperimentsRequest req) (api.post = '/api/evaluation/v1/experiments/batch_get', api.tag = 'volc-agentkit')
 
-    ListExperimentsResponse ListExperiments(1: ListExperimentsRequest req) (api.post = '/api/evaluation/v1/experiments/list')
+    ListExperimentsResponse ListExperiments(1: ListExperimentsRequest req) (api.post = '/api/evaluation/v1/experiments/list', api.tag = 'volc-agentkit')
 
-    UpdateExperimentResponse UpdateExperiment(1: UpdateExperimentRequest req) (api.patch = '/api/evaluation/v1/experiments/:expt_id')
+    UpdateExperimentResponse UpdateExperiment(1: UpdateExperimentRequest req) (api.patch = '/api/evaluation/v1/experiments/:expt_id', api.tag = 'volc-agentkit')
 
-    DeleteExperimentResponse DeleteExperiment(1: DeleteExperimentRequest req) (api.delete = '/api/evaluation/v1/experiments/:expt_id')
+    DeleteExperimentResponse DeleteExperiment(1: DeleteExperimentRequest req) (api.delete = '/api/evaluation/v1/experiments/:expt_id', api.tag = 'volc-agentkit')
 
-    BatchDeleteExperimentsResponse BatchDeleteExperiments(1: BatchDeleteExperimentsRequest req) (api.delete = '/api/evaluation/v1/experiments/batch_delete')
+    BatchDeleteExperimentsResponse BatchDeleteExperiments(1: BatchDeleteExperimentsRequest req) (api.delete = '/api/evaluation/v1/experiments/batch_delete', api.tag = 'volc-agentkit')
 
-    CloneExperimentResponse CloneExperiment(1: CloneExperimentRequest req) (api.post = '/api/evaluation/v1/experiments/:expt_id/clone')
+    CloneExperimentResponse CloneExperiment(1: CloneExperimentRequest req) (api.post = '/api/evaluation/v1/experiments/:expt_id/clone', api.tag = 'volc-agentkit')
 
     // RunExperiment 运行已创建的实验
     RunExperimentResponse RunExperiment(1: RunExperimentRequest req)
 
-    RetryExperimentResponse RetryExperiment(1: RetryExperimentRequest req) (api.post = '/api/evaluation/v1/experiments/:expt_id/retry')
+    RetryExperimentResponse RetryExperiment(1: RetryExperimentRequest req) (api.post = '/api/evaluation/v1/experiments/:expt_id/retry', api.tag = 'volc-agentkit')
 
-    KillExperimentResponse KillExperiment(1: KillExperimentRequest req) (api.post = '/api/evaluation/v1/experiments/:expt_id/kill')
+    KillExperimentResponse KillExperiment(1: KillExperimentRequest req) (api.post = '/api/evaluation/v1/experiments/:expt_id/kill', api.tag = 'volc-agentkit')
 
     // MGetExperimentResult 获取实验结果
-    BatchGetExperimentResultResponse BatchGetExperimentResult(1: BatchGetExperimentResultRequest req) (api.post = "/api/evaluation/v1/experiments/results/batch_get")
+    BatchGetExperimentResultResponse BatchGetExperimentResult(1: BatchGetExperimentResultRequest req) (api.post = "/api/evaluation/v1/experiments/results/batch_get", api.tag = 'volc-agentkit')
 
-    CalculateExperimentAggrResultResponse CalculateExperimentAggrResult(1: CalculateExperimentAggrResultRequest req) (api.post = "/api/evaluation/v1/experiments/:expt_id/aggr_results")
-    BatchGetExperimentAggrResultResponse BatchGetExperimentAggrResult(1: BatchGetExperimentAggrResultRequest req) (api.post = "/api/evaluation/v1/experiments/aggr_results/batch_get")
+    CalculateExperimentAggrResultResponse CalculateExperimentAggrResult(1: CalculateExperimentAggrResultRequest req) (api.post = "/api/evaluation/v1/experiments/:expt_id/aggr_results", api.tag = 'volc-agentkit')
+    BatchGetExperimentAggrResultResponse BatchGetExperimentAggrResult(1: BatchGetExperimentAggrResultRequest req) (api.post = "/api/evaluation/v1/experiments/aggr_results/batch_get", api.tag = 'volc-agentkit')
 
     // 在线实验
     InvokeExperimentResponse InvokeExperiment(1: InvokeExperimentRequest req)
@@ -631,9 +635,9 @@ service ExperimentService {
     UpdateAnnotateRecordResp UpdateAnnotateRecord(1: UpdateAnnotateRecordReq req) (api.post = "/api/evaluation/v1/experiments/:expt_id/annotate_record/update")
 
     // 报告下载
-    ExportExptResultResponse ExportExptResult(1: ExportExptResultRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/results/export")
-    ListExptResultExportRecordResponse ListExptResultExportRecord(1: ListExptResultExportRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/export_records/list")
-    GetExptResultExportRecordResponse GetExptResultExportRecord(1: GetExptResultExportRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/export_records/:export_id")
+    ExportExptResultResponse ExportExptResult(1: ExportExptResultRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/results/export", api.tag = 'volc-agentkit')
+    ListExptResultExportRecordResponse ListExptResultExportRecord(1: ListExptResultExportRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/export_records/list", api.tag = 'volc-agentkit')
+    GetExptResultExportRecordResponse GetExptResultExportRecord(1: GetExptResultExportRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/export_records/:export_id", api.tag = 'volc-agentkit')
 
     // 报告分析
     InsightAnalysisExperimentResponse InsightAnalysisExperiment(1: InsightAnalysisExperimentRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis")
