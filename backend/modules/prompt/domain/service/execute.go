@@ -6,7 +6,6 @@ package service
 import (
 	"context"
 	"errors"
-	"slices"
 	"strconv"
 	"time"
 
@@ -31,8 +30,8 @@ import (
 )
 
 const (
-	maxIterations = 8
-	maxDuration   = 8 * time.Minute
+	maxIterations = 50
+	maxDuration   = 30 * time.Minute
 )
 
 type ExecuteParam struct {
@@ -100,7 +99,13 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 		}
 		debugStep++
 		// 多轮执行需要重新编排上下文
-		param.Messages, err = reorganizeContexts(param.Messages, param.MockTools, aggregatedReply)
+		param.Messages, err = p.contextReorganizer.ReorganizeContexts(ctx, ReorganizeContextParam{
+			Prompt:       param.Prompt,
+			Messages:     param.Messages,
+			MockTools:    param.MockTools,
+			Reply:        aggregatedReply,
+			ResultStream: param.ResultStream,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +149,12 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 		}
 		debugStep++
 		// 多轮执行需要重新编排上下文
-		param.Messages, err = reorganizeContexts(param.Messages, param.MockTools, reply)
+		param.Messages, err = p.contextReorganizer.ReorganizeContexts(ctx, ReorganizeContextParam{
+			Prompt:    param.Prompt,
+			Messages:  param.Messages,
+			MockTools: param.MockTools,
+			Reply:     reply,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -309,33 +319,6 @@ func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.P
 	}
 }
 
-func reorganizeContexts(contexts []*entity.Message, mockTools []*entity.MockTool, reply *entity.Reply) ([]*entity.Message, error) {
-	newContexts := slices.Clone(contexts)
-	if reply == nil || reply.Item == nil || reply.Item.Message == nil {
-		return newContexts, nil
-	}
-	newContexts = append(newContexts, reply.Item.Message)
-	if len(reply.Item.Message.ToolCalls) > 0 {
-		// 如果有工具调用，则需要mock response
-		mockToolResponseMap := loopslices.ToMap(mockTools, func(m *entity.MockTool) (string, string) {
-			if m == nil {
-				return "", ""
-			}
-			return m.Name, m.MockResponse
-		})
-		for _, toolCall := range reply.Item.Message.ToolCalls {
-			if toolCall.FunctionCall != nil {
-				newContexts = append(newContexts, &entity.Message{
-					Role:       entity.RoleTool,
-					ToolCallID: ptr.Of(toolCall.ID),
-					Content:    ptr.Of(mockToolResponseMap[toolCall.FunctionCall.Name]),
-				})
-			}
-		}
-	}
-	return newContexts, nil
-}
-
 func (p *PromptServiceImpl) startSequenceSpan(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (context.Context, cozeloop.Span) {
 	if prompt == nil {
 		return ctx, nil
@@ -384,28 +367,13 @@ func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param Execu
 	if err != nil {
 		return rpc.LLMCallParam{}, err
 	}
-	// call llm
-	promptDetail := param.Prompt.GetPromptDetail()
-	var tools []*entity.Tool
-	var toolCallConfig *entity.ToolCallConfig
-	if promptDetail != nil {
-		if promptDetail.ToolCallConfig != nil && promptDetail.ToolCallConfig.ToolChoice != entity.ToolChoiceTypeNone {
-			tools = promptDetail.Tools
-			toolCallConfig = promptDetail.ToolCallConfig
-		}
-	}
-	// Validate tool choice specification
-	if toolCallConfig != nil && toolCallConfig.ToolChoice == entity.ToolChoiceTypeSpecific {
-		// When tool choice is specific, must be in single step mode
-		if !param.SingleStep {
-			return rpc.LLMCallParam{}, errorx.New("tool choice specific must be used with single step mode to avoid infinite loops")
-		}
-		// ToolChoiceSpecification must not be empty
-		if toolCallConfig.ToolChoiceSpecification == nil {
-			return rpc.LLMCallParam{}, errorx.New("tool_choice_specification must not be empty when tool choice is specific")
-		}
+	// get tool configuration using the tool config provider interface
+	tools, toolCallConfig, err := p.toolConfigProvider.GetToolConfig(ctx, param.Prompt, param.SingleStep)
+	if err != nil {
+		return rpc.LLMCallParam{}, err
 	}
 	var modelConfig *entity.ModelConfig
+	promptDetail := param.Prompt.GetPromptDetail()
 	if promptDetail != nil {
 		modelConfig = promptDetail.ModelConfig
 	}

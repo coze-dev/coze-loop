@@ -37,6 +37,8 @@ import (
 var (
 	promptDomainSet = wire.NewSet(
 		service.NewPromptFormatter,
+		service.NewToolConfigProvider,
+		service.NewContextReorganizer,
 		service.NewPromptService,
 		repo.NewManageRepo,
 		repo.NewLabelRepo,
