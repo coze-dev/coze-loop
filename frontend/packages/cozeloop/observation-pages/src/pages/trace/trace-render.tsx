@@ -50,6 +50,7 @@ export const TracesRender = () => {
   return (
     <CozeloopTraceListWithDetailPanel
       columnsConfig={columnsConfig}
+      enableTraceSearch
       filterOptions={{
         platformTypeConfig: {
           visibility: true,
@@ -86,6 +87,22 @@ export const TracesRender = () => {
           platform_type: platform_type as unknown as PlatformType,
           start_time,
           end_time,
+          workspace_id: spaceID,
+        });
+        return {
+          spans: result.spans as unknown as span.OutputSpan[],
+          traces_advance_info: result.traces_advance_info,
+        };
+      }}
+      getTraceSpanDetailData={async params => {
+        const { trace_id, platform_type, start_time, end_time, span_ids } =
+          params;
+        const result = await observabilityTrace.GetTrace({
+          trace_id,
+          platform_type,
+          start_time,
+          end_time,
+          span_ids,
           workspace_id: spaceID,
         });
         return {
