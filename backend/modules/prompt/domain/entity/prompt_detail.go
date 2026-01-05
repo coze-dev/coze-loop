@@ -30,6 +30,7 @@ type PromptDetail struct {
 	Tools          []*Tool           `json:"tools,omitempty"`
 	ToolCallConfig *ToolCallConfig   `json:"tool_call_config,omitempty"`
 	ModelConfig    *ModelConfig      `json:"model_config,omitempty"`
+	McpConfig      *McpConfig        `json:"mcp_config,omitempty"`
 	ExtInfos       map[string]string `json:"ext_infos,omitempty"`
 }
 
@@ -235,6 +236,19 @@ type ParamConfigValue struct {
 type ParamOption struct {
 	Value string `json:"value"`
 	Label string `json:"label"`
+}
+
+type McpConfig struct {
+	IsMcpCallAutoRetry *bool               `json:"is_mcp_call_auto_retry,omitempty"`
+	McpServers         []*McpServerCombine `json:"mcp_servers,omitempty"`
+}
+
+type McpServerCombine struct {
+	McpServerID    *int64   `json:"mcp_server_id,omitempty"`
+	AccessPointID  *int64   `json:"access_point_id,omitempty"`
+	DisabledTools  []string `json:"disabled_tools,omitempty"`
+	EnabledTools   []string `json:"enabled_tools,omitempty"`
+	IsEnabledTools *bool    `json:"is_enabled_tools,omitempty"`
 }
 
 func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*VariableVal) ([]*Message, error) {
