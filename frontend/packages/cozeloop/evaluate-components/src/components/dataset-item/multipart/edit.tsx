@@ -9,6 +9,7 @@ import Sortable from 'sortablejs';
 import { nanoid } from 'nanoid';
 import cs from 'classnames';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { EVALUATE_MULTIPART_DATA_ABILITY_CONFIG } from '@cozeloop/evaluate-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
 import { uploadFile } from '@cozeloop/biz-components-adapter';
 import {
@@ -273,27 +274,33 @@ export const MultipartDatasetItemEdit: React.FC<DatasetItemProps> = ({
 
   const dropdownMenu = (
     <Dropdown.Menu>
-      <Dropdown.Item
-        onClick={handleAddText}
-        className="!pl-2"
-        disabled={items?.length >= maxPartCount}
-      >
-        {I18n.t('text')}
-      </Dropdown.Item>
-      <Dropdown.Item
-        onClick={handleAddImageFile}
-        className="!pl-2"
-        disabled={imageCount >= maxFileCount}
-      >
-        {I18n.t('image_source_file')}
-      </Dropdown.Item>
-      <Dropdown.Item
-        className="!pl-2"
-        onClick={handleAddImageUrl}
-        disabled={imageCount >= maxFileCount}
-      >
-        {I18n.t('image_external_link')}
-      </Dropdown.Item>
+      {EVALUATE_MULTIPART_DATA_ABILITY_CONFIG.textEnabled ? (
+        <Dropdown.Item
+          onClick={handleAddText}
+          className="!pl-2"
+          disabled={items?.length >= maxPartCount}
+        >
+          {I18n.t('text')}
+        </Dropdown.Item>
+      ) : null}
+      {EVALUATE_MULTIPART_DATA_ABILITY_CONFIG.imageFileEnabled ? (
+        <Dropdown.Item
+          onClick={handleAddImageFile}
+          className="!pl-2"
+          disabled={imageCount >= maxFileCount}
+        >
+          {I18n.t('image_source_file')}
+        </Dropdown.Item>
+      ) : null}
+      {EVALUATE_MULTIPART_DATA_ABILITY_CONFIG.imageUrlEnabled ? (
+        <Dropdown.Item
+          className="!pl-2"
+          onClick={handleAddImageUrl}
+          disabled={imageCount >= maxFileCount}
+        >
+          {I18n.t('image_external_link')}
+        </Dropdown.Item>
+      ) : null}
     </Dropdown.Menu>
   );
 
