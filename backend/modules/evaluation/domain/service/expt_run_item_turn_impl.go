@@ -328,7 +328,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas())
+		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext)
 		if err != nil {
 			return nil, err
 		}
@@ -346,7 +346,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 				ExperimentRunID:    etec.Event.ExptRunID,
 				ItemID:             item.ItemID,
 				TurnID:             turn.ID,
-				Ext:                e.buildRunEvaluatorExt(etec.Ext, ec.RunConf),
+				Ext:                etec.Ext,
 				EvaluatorRunConf:   ec.RunConf,
 			})
 			if err != nil {
@@ -370,7 +370,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 }
 
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, spaceID int64, evaluatorType entity.EvaluatorType,
-	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content, inputSchemas []*entity.ArgsSchema,
+	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content, inputSchemas []*entity.ArgsSchema, ext map[string]string,
 ) (*entity.EvaluatorInputData, error) {
 	fromEvalSet, err := e.buildEvalSetFields(ctx, spaceID, ec.IngressConf.EvalSetAdapter.FieldConfs, evalSetTurn)
 	if err != nil {
@@ -387,10 +387,10 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 		res.EvaluateDatasetFields = fromEvalSet
 		res.EvaluateTargetOutputFields = fromTarget
 	case entity.EvaluatorTypeCustomRPC:
-		if  len(inputSchemas) == 0 {    // 无input_schemas的自定义服务评估器
+		if len(inputSchemas) == 0 { // 无input_schemas的自定义服务评估器
 			res.EvaluateDatasetFields = fromEvalSet
 			res.EvaluateTargetOutputFields = fromTarget
-		} else {    // 有input_schemas的自定义服务评估器
+		} else { // 有input_schemas的自定义服务评估器
 			for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
 				for key, content := range fieldCnt {
 					res.InputFields[key] = content
@@ -404,6 +404,9 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 			}
 		}
 	}
+
+	res.Ext = e.buildEvaluatorInputDataExt(ext, ec.RunConf)
+
 	return res, nil
 }
 
@@ -500,7 +503,7 @@ func (e *DefaultExptTurnEvaluationImpl) getContentByJsonPath(content *entity.Con
 	}, nil
 }
 
-func (e *DefaultExptTurnEvaluationImpl) buildRunEvaluatorExt(ext map[string]string, runConf *entity.EvaluatorRunConfig) map[string]string {
+func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[string]string, runConf *entity.EvaluatorRunConfig) map[string]string {
 	builtExt := gmap.Clone(ext)
 	if builtExt == nil {
 		builtExt = make(map[string]string)
