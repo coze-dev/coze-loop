@@ -197,6 +197,7 @@ func ConvertContentDO2DTO(content *commonentity.Content) *commondto.Content {
 		Image:            ConvertImageDO2DTO(content.Image),
 		MultiPart:        multiPart,
 		Audio:            ConvertAudioDO2DTO(content.Audio),
+		Video:            ConvertVideoDO2DTO(content.Video),
 		ContentOmitted:   content.ContentOmitted,
 		FullContent:      ConvertObjectStorageDO2DTO(content.FullContent),
 		FullContentBytes: content.FullContentBytes,
