@@ -71,7 +71,7 @@ func (r *ExptAggrResultRepoImpl) CreateExptAggrResult(ctx context.Context, exptA
 	}
 	exptAggrResult.ID = id
 
-	exptAggrResultPO := convert.ExptAggrResultDOToPO(exptAggrResult)
+	exptAggrResultPO := convert.ExptAggrResultDOToPO(ctx, exptAggrResult)
 
 	return r.exptAggrResultDAO.CreateExptAggrResult(ctx, exptAggrResultPO)
 }
@@ -87,7 +87,7 @@ func (r *ExptAggrResultRepoImpl) BatchCreateExptAggrResult(ctx context.Context, 
 
 	exptAggrResultsPO := make([]*model.ExptAggrResult, 0)
 	for _, exptAggrResult := range exptAggrResults {
-		exptAggrResultPO := convert.ExptAggrResultDOToPO(exptAggrResult)
+		exptAggrResultPO := convert.ExptAggrResultDOToPO(ctx, exptAggrResult)
 		exptAggrResultsPO = append(exptAggrResultsPO, exptAggrResultPO)
 	}
 
@@ -95,7 +95,7 @@ func (r *ExptAggrResultRepoImpl) BatchCreateExptAggrResult(ctx context.Context, 
 }
 
 func (r *ExptAggrResultRepoImpl) UpdateExptAggrResultByVersion(ctx context.Context, exptAggrResult *entity.ExptAggrResult, taskVersion int64) error {
-	exptAggrResultPO := convert.ExptAggrResultDOToPO(exptAggrResult)
+	exptAggrResultPO := convert.ExptAggrResultDOToPO(ctx, exptAggrResult)
 	return r.exptAggrResultDAO.UpdateExptAggrResultByVersion(ctx, exptAggrResultPO, taskVersion)
 }
 
@@ -105,6 +105,6 @@ func (r *ExptAggrResultRepoImpl) UpdateAndGetLatestVersion(ctx context.Context, 
 }
 
 func (r *ExptAggrResultRepoImpl) DeleteExptAggrResult(ctx context.Context, exptAggrResult *entity.ExptAggrResult, opts ...db.Option) error {
-	exptAggrResultPO := convert.ExptAggrResultDOToPO(exptAggrResult)
+	exptAggrResultPO := convert.ExptAggrResultDOToPO(ctx, exptAggrResult)
 	return r.exptAggrResultDAO.DeleteExptAggrResult(ctx, exptAggrResultPO, opts...)
 }

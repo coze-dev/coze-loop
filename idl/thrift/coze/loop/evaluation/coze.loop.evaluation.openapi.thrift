@@ -449,6 +449,7 @@ struct GetExperimentAggrResultOApiResponse {
 
 struct GetExperimentAggrResultOpenAPIData {
     1: optional list<experiment.EvaluatorAggregateResult> evaluator_results (go.tag = 'json:"evaluator_results"')
+    2: optional experiment.EvalTargetAggregateResult eval_target_aggr_result
 }
 
 

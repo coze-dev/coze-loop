@@ -62,12 +62,13 @@ type ListSpansResp struct {
 }
 
 type ListPreSpanReq struct {
-	WorkspaceID        int64
-	StartTime          int64 // ms
-	TraceID            string
-	SpanID             string
-	PreviousResponseID string
-	PlatformType       loop_span.PlatformType
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	StartTime             int64 // ms
+	TraceID               string
+	SpanID                string
+	PreviousResponseID    string
+	PlatformType          loop_span.PlatformType
 }
 
 type ListPreSpanResp struct {
@@ -128,6 +129,21 @@ type ListSpansOApiResp struct {
 	Spans         loop_span.SpanList
 	NextPageToken string
 	HasMore       bool
+}
+
+type ListPreSpanOApiReq struct {
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	Tenants               []string
+	StartTime             int64 // ms
+	TraceID               string
+	SpanID                string
+	PreviousResponseID    string
+	PlatformType          loop_span.PlatformType
+}
+
+type ListPreSpanOApiResp struct {
+	Spans loop_span.SpanList
 }
 
 type TraceQueryParam struct {
@@ -345,6 +361,7 @@ type ITraceService interface {
 	GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error)
 	SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error)
 	ListSpansOApi(ctx context.Context, req *ListSpansOApiReq) (*ListSpansOApiResp, error)
+	ListPreSpanOApi(ctx context.Context, req *ListPreSpanOApiReq) (*ListPreSpanOApiResp, error)
 	GetTracesAdvanceInfo(ctx context.Context, req *GetTracesAdvanceInfoReq) (*GetTracesAdvanceInfoResp, error)
 	IngestTraces(ctx context.Context, req *IngestTracesReq) error
 	GetTracesMetaInfo(ctx context.Context, req *GetTracesMetaInfoReq) (*GetTracesMetaInfoResp, error)
@@ -507,6 +524,11 @@ func (r *TraceServiceImpl) checkGetPreSpanAuth(ctx context.Context, req *ListPre
 	// 2. check pre span: if one span of preSpan in this workspace, pass
 	// 3. check span of current trace: if one span of trace in this workspace, pass
 
+	realSpaceID := strconv.FormatInt(req.WorkspaceID, 10)
+	if req.ThirdPartyWorkspaceID != "" {
+		realSpaceID = req.ThirdPartyWorkspaceID
+	}
+
 	isAuthPass := false
 	var currentSpan *loop_span.Span
 	for _, span := range preAndCurrentSpans {
@@ -521,13 +543,13 @@ func (r *TraceServiceImpl) checkGetPreSpanAuth(ctx context.Context, req *ListPre
 	if preRespID, ok := currentSpan.SystemTagsString[keyPreviousResponseID]; !ok || preRespID != req.PreviousResponseID {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg(fmt.Sprintf("req previous_response_id is not current span's[%s]", preRespID)))
 	}
-	if currentSpan.WorkspaceID == strconv.FormatInt(req.WorkspaceID, 10) {
+	if currentSpan.WorkspaceID == realSpaceID {
 		isAuthPass = true
 	}
 
 	if !isAuthPass {
 		for _, span := range preAndCurrentSpans {
-			if span.WorkspaceID == strconv.FormatInt(req.WorkspaceID, 10) {
+			if span.WorkspaceID == realSpaceID {
 				isAuthPass = true
 				break
 			}
@@ -549,7 +571,7 @@ func (r *TraceServiceImpl) checkGetPreSpanAuth(ctx context.Context, req *ListPre
 					{
 						FieldName: loop_span.SpanFieldSpaceId,
 						FieldType: loop_span.FieldTypeString,
-						Values:    []string{strconv.FormatInt(req.WorkspaceID, 10)},
+						Values:    []string{realSpaceID},
 						QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 					},
 				},
@@ -862,6 +884,62 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 		Spans:         spans,
 		NextPageToken: tRes.PageToken,
 		HasMore:       tRes.HasMore,
+	}, nil
+}
+
+func (r *TraceServiceImpl) ListPreSpanOApi(ctx context.Context, req *ListPreSpanOApiReq) (*ListPreSpanOApiResp, error) {
+	// get pre span ids from redis
+	preAndCurrentSpanIDs, respIDByOrder, err := r.traceRepo.GetPreSpanIDs(ctx, &repo.GetPreSpanIDsParam{
+		PreRespID: req.PreviousResponseID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	preAndCurrentSpanIDs = append(preAndCurrentSpanIDs, req.SpanID) // for select current span together
+
+	// batch select from ck
+	preAndCurrentSpans, err := r.batchGetPreSpan(ctx, preAndCurrentSpanIDs, req.Tenants, req.StartTime)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+
+	// span processors
+	processors, err := r.buildHelper.BuildSearchTraceOApiProcessors(ctx, span_processor.Settings{
+		WorkspaceId:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+		PlatformType:          req.PlatformType,
+		QueryStartTime:        req.StartTime - timeutil.Day2MillSec(30), // past 30 days
+		QueryEndTime:          req.StartTime,
+		QueryTenants:          req.Tenants,
+	})
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	for _, p := range processors {
+		preAndCurrentSpans, err = p.Transform(ctx, preAndCurrentSpans)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// auth check
+	if err := r.checkGetPreSpanAuth(ctx, &ListPreSpanReq{
+		WorkspaceID:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+		StartTime:             req.StartTime,
+		TraceID:               req.TraceID,
+		SpanID:                req.SpanID,
+		PreviousResponseID:    req.PreviousResponseID,
+		PlatformType:          req.PlatformType,
+	}, req.Tenants, preAndCurrentSpans); err != nil {
+		return nil, err
+	}
+
+	// order SpanList: remove duplicate span_id, and remove current span
+	orderSpans := r.orderPreSpans(preAndCurrentSpans, respIDByOrder)
+
+	return &ListPreSpanOApiResp{
+		Spans: orderSpans,
 	}, nil
 }
 
@@ -1705,6 +1783,13 @@ func (r *TraceServiceImpl) ExtractSpanInfo(ctx context.Context, req *ExtractSpan
 }
 
 func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
+	traceIDs = lo.Filter(traceIDs, func(item string, _ int) bool {
+		return item != ""
+	})
+	if len(traceIDs) == 0 {
+		return map[string]*loop_span.Trajectory{}, nil
+	}
+
 	tenant, err := r.tenantProvider.GetTenantsByPlatformType(ctx, platformType)
 	if err != nil {
 		return nil, err
@@ -1818,8 +1903,11 @@ func (r *TraceServiceImpl) getSelectFilters(traceIDs []string, trajectoryConfig 
 			},
 		},
 	}
+
+	realTrajectoryConfig := trajectoryConfig.GetFiltersWithDefaultFilter()
+	_ = realTrajectoryConfig.Traverse(processSpecificFilter)
 	tempSpanFilters.FilterFields = append(tempSpanFilters.FilterFields, &loop_span.FilterField{
-		SubFilter: trajectoryConfig.GetFiltersWithDefaultFilter(),
+		SubFilter: realTrajectoryConfig,
 	})
 
 	result := &loop_span.FilterFields{

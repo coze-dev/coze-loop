@@ -84,7 +84,7 @@ func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment,
 		ReqID:     encoding.Encode(ctx, data),
 	})
 	if err != nil {
-		logs.CtxError(ctx, "audit: failed to audit, err=%v", err) // 审核服务不可用，默认通过
+		logs.CtxError(ctx, "audit: failed to audit, err=%v", err) // Audit service unavailable, pass by default
 	}
 	if record.AuditStatus == audit.AuditStatus_Rejected {
 		return errorx.NewByCode(errno.RiskContentDetectedCode)
@@ -541,12 +541,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 	}
 
 	if !opt.NoAggrCalculate {
-		if err = e.publisher.PublishExptAggrCalculateEvent(ctx, []*entity.AggrCalculateEvent{
-			{
-				ExperimentID:  exptID,
-				SpaceID:       spaceID,
-				CalculateMode: entity.CreateAllFields,
-			},
+		if err = e.exptAggrResultService.PublishExptAggrResultEvent(ctx, &entity.AggrCalculateEvent{
+			ExperimentID:  exptID,
+			SpaceID:       spaceID,
+			CalculateMode: entity.CreateAllFields,
 		}, gptr.Of(time.Second*3)); err != nil {
 			logs.CtxError(ctx, "PublishExptAggrCalculateEvent fail, expt_id: %v, err: %v", exptID, err)
 		}
@@ -663,7 +661,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		}
 	}
 
-	// 创建result
+	// Create result
 	if err := e.createItemTurnResults(ctx, eirs, etrs); err != nil {
 		return err
 	}
@@ -672,7 +670,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 
 	logs.CtxInfo(ctx, "ExptAppendExec.Append ListEvaluationSetItem done, expt_id: %v, itemCnt: %v, total: %v", invokeExptReq.ExptID, itemCnt, total)
 
-	// 更新stats
+	// Update stats
 	if err = e.statsRepo.ArithOperateCount(ctx, invokeExptReq.ExptID, invokeExptReq.SpaceID, &entity.StatsCntArithOp{
 		OpStatusCnt: map[entity.ItemRunState]int{
 			entity.ItemRunState_Queueing: itemCnt,

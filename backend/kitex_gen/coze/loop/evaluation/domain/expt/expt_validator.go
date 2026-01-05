@@ -243,6 +243,11 @@ func (p *SourceTarget) IsValid() error {
 	return nil
 }
 func (p *ExptAggregateResult_) IsValid() error {
+	if p.EvalTargetAggrResult_ != nil {
+		if err := p.EvalTargetAggrResult_.IsValid(); err != nil {
+			return fmt.Errorf("field EvalTargetAggrResult_ not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *EvalTargetAggregateResult_) IsValid() error {

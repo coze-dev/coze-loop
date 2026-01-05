@@ -24,6 +24,13 @@ type ProducerConfig struct {
 	Compression CompressionCodec
 	// Producer group name
 	ProducerGroup *string
+
+	// The maximum permitted size of a message
+	MaxMessageBytes int
+	// The best-effort frequency of flushes
+	FlushFrequency time.Duration
+	// How long to wait for the cluster to settle between retries
+	RetryBackoff time.Duration
 }
 
 type ConsumerConfig struct {
@@ -52,4 +59,6 @@ const (
 	CompressionNone CompressionCodec = iota
 	// CompressionZSTD compression using ZSTD
 	CompressionZSTD
+	// CompressionSnappy compression using Snappy
+	CompressionSnappy
 )

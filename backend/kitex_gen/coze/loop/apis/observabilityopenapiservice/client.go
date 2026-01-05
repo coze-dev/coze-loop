@@ -16,6 +16,7 @@ type Client interface {
 	SearchTraceOApi(ctx context.Context, req *openapi.SearchTraceOApiRequest, callOptions ...callopt.Option) (r *openapi.SearchTraceOApiResponse, err error)
 	SearchTraceTreeOApi(ctx context.Context, req *openapi.SearchTraceTreeOApiRequest, callOptions ...callopt.Option) (r *openapi.SearchTraceTreeOApiResponse, err error)
 	ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (r *openapi.ListSpansOApiResponse, err error)
+	ListPreSpanOApi(ctx context.Context, req *openapi.ListPreSpanOApiRequest, callOptions ...callopt.Option) (r *openapi.ListPreSpanOApiResponse, err error)
 	ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTracesOApiResponse, err error)
 	CreateAnnotation(ctx context.Context, req *openapi.CreateAnnotationRequest, callOptions ...callopt.Option) (r *openapi.CreateAnnotationResponse, err error)
 	DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnotationRequest, callOptions ...callopt.Option) (r *openapi.DeleteAnnotationResponse, err error)
@@ -73,6 +74,11 @@ func (p *kObservabilityOpenAPIServiceClient) SearchTraceTreeOApi(ctx context.Con
 func (p *kObservabilityOpenAPIServiceClient) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest, callOptions ...callopt.Option) (r *openapi.ListSpansOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListSpansOApi(ctx, req)
+}
+
+func (p *kObservabilityOpenAPIServiceClient) ListPreSpanOApi(ctx context.Context, req *openapi.ListPreSpanOApiRequest, callOptions ...callopt.Option) (r *openapi.ListPreSpanOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListPreSpanOApi(ctx, req)
 }
 
 func (p *kObservabilityOpenAPIServiceClient) ListTracesOApi(ctx context.Context, req *openapi.ListTracesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListTracesOApiResponse, err error) {

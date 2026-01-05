@@ -1790,16 +1790,35 @@ func TestManageRepoImpl_SaveDraft(t *testing.T) {
 				mockIDGen.EXPECT().GenMultiIDs(gomock.Any(), 2).Return([]int64{4001, 4002}, nil)
 				mockRelationDAO.EXPECT().BatchCreate(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, relations []*model.PromptRelation, opts ...db.Option) error {
 					assert.Len(t, relations, 2)
+
+					// 验证共同属性
 					for _, relation := range relations {
 						assert.Equal(t, int64(1), relation.MainPromptID)
 						assert.Equal(t, "", relation.MainPromptVersion)
 						assert.Equal(t, "test_user", relation.MainDraftUserID)
 						assert.Equal(t, int64(100), relation.SpaceID)
 					}
-					assert.Equal(t, int64(200), relations[0].SubPromptID)
-					assert.Equal(t, "v1", relations[0].SubPromptVersion)
-					assert.Equal(t, int64(201), relations[1].SubPromptID)
-					assert.Equal(t, "", relations[1].SubPromptVersion)
+
+					// 创建map来验证具体的子prompt关系，避免顺序依赖
+					relationMap := make(map[int64]*model.PromptRelation)
+					for _, relation := range relations {
+						relationMap[relation.SubPromptID] = relation
+					}
+
+					// 验证ID为200的relation
+					relation200, exists := relationMap[200]
+					assert.True(t, exists, "Should have relation for SubPromptID 200")
+					if exists {
+						assert.Equal(t, "v1", relation200.SubPromptVersion)
+					}
+
+					// 验证ID为201的relation
+					relation201, exists := relationMap[201]
+					assert.True(t, exists, "Should have relation for SubPromptID 201")
+					if exists {
+						assert.Equal(t, "", relation201.SubPromptVersion)
+					}
+
 					return nil
 				})
 

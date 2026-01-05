@@ -56,18 +56,34 @@ func (r *EvaluatorRecordRepoImpl) GetEvaluatorRecord(ctx context.Context, evalua
 }
 
 func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool) ([]*entity.EvaluatorRecord, error) {
-	pos, err := r.evaluatorRecordDao.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted)
-	if err != nil {
-		return nil, err
+	const batchSize = 50
+	totalIDs := len(evaluatorRecordIDs)
+	if totalIDs == 0 {
+		return []*entity.EvaluatorRecord{}, nil
 	}
 
-	evaluatorRecords := make([]*entity.EvaluatorRecord, 0, len(pos))
-	for _, po := range pos {
-		evaluatorRecord, err := convertor.ConvertEvaluatorRecordPO2DO(po)
+	evaluatorRecords := make([]*entity.EvaluatorRecord, 0, totalIDs)
+
+	for start := 0; start < totalIDs; start += batchSize {
+		end := start + batchSize
+		if end > totalIDs {
+			end = totalIDs
+		}
+
+		batchIDs := evaluatorRecordIDs[start:end]
+		pos, err := r.evaluatorRecordDao.BatchGetEvaluatorRecord(ctx, batchIDs, includeDeleted)
 		if err != nil {
 			return nil, err
 		}
-		evaluatorRecords = append(evaluatorRecords, evaluatorRecord)
+
+		for _, po := range pos {
+			evaluatorRecord, err := convertor.ConvertEvaluatorRecordPO2DO(po)
+			if err != nil {
+				return nil, err
+			}
+			evaluatorRecords = append(evaluatorRecords, evaluatorRecord)
+		}
 	}
+
 	return evaluatorRecords, nil
 }

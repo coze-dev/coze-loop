@@ -375,12 +375,18 @@ struct ExptAggregateResult {
     2: optional map<i64, EvaluatorAggregateResult> evaluator_results (go.tag = 'json:"evaluator_results"')
     3: optional ExptAggregateCalculateStatus status
     4: optional map<i64, AnnotationAggregateResult> annotation_results (go.tag = 'json:"annotation_results"')    // tag_key_id -> result
+    5: optional EvalTargetAggregateResult eval_target_aggr_result
+    6: optional i64 update_time // timestamp in seconds
 }
 
 struct EvalTargetAggregateResult {
-    1: required i64 target_id (api.js_conv = 'true', go.tag = 'json:"target_id"')
-    2: optional list<AggregatorResult> aggregator_results
-    3: optional string name
+    1: optional i64 target_id (api.js_conv = 'true')
+    2: optional i64 target_version_id (api.js_conv = 'true')
+
+    5: optional list<AggregatorResult> latency
+    6: optional list<AggregatorResult> input_tokens
+    7: optional list<AggregatorResult> output_tokens
+    8: optional list<AggregatorResult> total_tokens
 }
 
 // 评估器版本粒度聚合结果
