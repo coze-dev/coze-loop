@@ -1261,6 +1261,11 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 		return nil, err
 	}
 
+	// 验证 expt_id 是否属于请求的 workspace_id，防止权限绕过
+	if got.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("experiment %d does not belong to workspace %d", req.GetExptID(), req.GetWorkspaceID())))
+	}
+
 	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
 		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
 		SpaceID:         req.GetWorkspaceID(),
@@ -1387,6 +1392,20 @@ func (e *experimentApplication) FeedbackExptInsightAnalysisReport(ctx context.Co
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
+	}
+
+	// 验证 expt_id 是否属于请求的 workspace_id，防止权限绕过
+	if got.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("experiment %d does not belong to workspace %d", req.GetExptID(), req.GetWorkspaceID())))
+	}
+
+	// 验证 insight_analysis_record_id 是否属于该 expt_id 和 workspace_id，防止水平越权
+	record, err := e.GetAnalysisRecordByID(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
+	if err != nil {
+		return nil, err
+	}
+	if record == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("insight analysis record %d not found for experiment %d in workspace %d", req.GetInsightAnalysisRecordID(), req.GetExptID(), req.GetWorkspaceID())))
 	}
 
 	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
