@@ -853,7 +853,7 @@ func TestTemplateTypeDTO2DO(t *testing.T) {
 		{
 			name: "custom template m type",
 			dto:  prompt.TemplateTypeCustomTemplateM,
-			want: entity.TemplateTYpeCustomTemplateM,
+			want: entity.TemplateTypeCustomTemplateM,
 		},
 		{
 			name: "unknown template type defaults to normal",
@@ -954,7 +954,7 @@ func TestPromptTemplateWithDifferentTypes(t *testing.T) {
 				},
 			},
 			want: &entity.PromptTemplate{
-				TemplateType: entity.TemplateTYpeCustomTemplateM,
+				TemplateType: entity.TemplateTypeCustomTemplateM,
 				Messages: []*entity.Message{
 					{
 						Role:    entity.RoleUser,

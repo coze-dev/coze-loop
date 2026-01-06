@@ -142,7 +142,7 @@ func TemplateTypeDTO2DO(dto prompt.TemplateType) entity.TemplateType {
 	case prompt.TemplateTypeGoTemplate:
 		return entity.TemplateTypeGoTemplate
 	case prompt.TemplateTypeCustomTemplateM:
-		return entity.TemplateTYpeCustomTemplateM
+		return entity.TemplateTypeCustomTemplateM
 	default:
 		return entity.TemplateTypeNormal
 	}

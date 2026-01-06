@@ -50,7 +50,7 @@ const (
 	TemplateTypeNormal          TemplateType = "normal"
 	TemplateTypeJinja2          TemplateType = "jinja2"
 	TemplateTypeGoTemplate      TemplateType = "go_template"
-	TemplateTYpeCustomTemplateM TemplateType = "custom_template_m"
+	TemplateTypeCustomTemplateM TemplateType = "custom_template_m"
 )
 
 type Message struct {
