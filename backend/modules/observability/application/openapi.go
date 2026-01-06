@@ -159,8 +159,9 @@ func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.Inpu
 		return nil
 	}
 	spansMap := make(map[string][]*span.InputSpan)
+	claim := o.auth.GetClaim(ctx)
 	for i := range spans {
-		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]})
+		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]}, claim)
 		if workspaceID == "" {
 			continue
 		}

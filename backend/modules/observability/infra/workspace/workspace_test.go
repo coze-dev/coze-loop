@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 )
 
@@ -17,6 +18,7 @@ func TestWorkspaceProviderImpl_GetIngestWorkSpaceID(t *testing.T) {
 	type args struct {
 		ctx   context.Context
 		spans []*span.InputSpan
+		claim *rpc.Claim
 	}
 	tests := []struct {
 		name string
@@ -47,6 +49,7 @@ func TestWorkspaceProviderImpl_GetIngestWorkSpaceID(t *testing.T) {
 					{WorkspaceID: "workspace1"},
 					{WorkspaceID: "workspace2"},
 				},
+				claim: &rpc.Claim{AuthType: "test"},
 			},
 			want: "workspace1",
 		},
@@ -68,6 +71,7 @@ func TestWorkspaceProviderImpl_GetIngestWorkSpaceID(t *testing.T) {
 				spans: []*span.InputSpan{
 					{WorkspaceID: "single_workspace"},
 				},
+				claim: &rpc.Claim{AuthType: "single"},
 			},
 			want: "single_workspace",
 		},
@@ -75,7 +79,7 @@ func TestWorkspaceProviderImpl_GetIngestWorkSpaceID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &WorkspaceProviderImpl{}
-			got := w.GetIngestWorkSpaceID(tt.args.ctx, tt.args.spans)
+			got := w.GetIngestWorkSpaceID(tt.args.ctx, tt.args.spans, tt.args.claim)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -173,7 +177,7 @@ func TestWorkspaceProviderImpl_Interface(t *testing.T) {
 	assert.Equal(t, "123", workspaceID)
 
 	spans := []*span.InputSpan{{WorkspaceID: "test"}}
-	ingestID := provider.GetIngestWorkSpaceID(context.Background(), spans)
+	ingestID := provider.GetIngestWorkSpaceID(context.Background(), spans, &rpc.Claim{AuthType: "interface"})
 	assert.Equal(t, "test", ingestID)
 }
 
@@ -187,12 +191,12 @@ func TestWorkspaceProviderImpl_EdgeCases(t *testing.T) {
 
 	// Test with nil context for GetIngestWorkSpaceID
 	spans := []*span.InputSpan{{WorkspaceID: "test_nil_ctx"}}
-	ingestID := provider.GetIngestWorkSpaceID(ctx, spans)
+	ingestID := provider.GetIngestWorkSpaceID(ctx, spans, &rpc.Claim{AuthType: "edge"})
 	assert.Equal(t, "test_nil_ctx", ingestID)
 
 	// Test with nil spans element - this would cause panic in the actual code
 	// So we test the actual behavior which is to return empty string for empty array
 	emptySpans := []*span.InputSpan{}
-	emptyID := provider.GetIngestWorkSpaceID(ctx, emptySpans)
+	emptyID := provider.GetIngestWorkSpaceID(ctx, emptySpans, nil)
 	assert.Equal(t, "", emptyID)
 }
