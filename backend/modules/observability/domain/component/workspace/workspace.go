@@ -7,10 +7,11 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 )
 
 //go:generate mockgen -destination=mocks/workspace_provider.go -package=mocks . IWorkSpaceProvider
 type IWorkSpaceProvider interface {
-	GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan) string
+	GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, claim *rpc.Claim) string
 	GetThirdPartyQueryWorkSpaceID(ctx context.Context, requestWorkspaceID int64) string
 }

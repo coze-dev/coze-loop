@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	rpc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -69,17 +70,17 @@ func (mr *MockIAuthProviderMockRecorder) CheckQueryPermission(ctx, workspaceId, 
 }
 
 // CheckTaskPermission mocks base method.
-func (m *MockIAuthProvider) CheckTaskPermission(arg0 context.Context, arg1, arg2, arg3 string) error {
+func (m *MockIAuthProvider) CheckTaskPermission(ctx context.Context, action, workspaceId, taskId string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckTaskPermission", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "CheckTaskPermission", ctx, action, workspaceId, taskId)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CheckTaskPermission indicates an expected call of CheckTaskPermission.
-func (mr *MockIAuthProviderMockRecorder) CheckTaskPermission(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockIAuthProviderMockRecorder) CheckTaskPermission(ctx, action, workspaceId, taskId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckTaskPermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckTaskPermission), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckTaskPermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckTaskPermission), ctx, action, workspaceId, taskId)
 }
 
 // CheckViewPermission mocks base method.
@@ -108,4 +109,18 @@ func (m *MockIAuthProvider) CheckWorkspacePermission(ctx context.Context, action
 func (mr *MockIAuthProviderMockRecorder) CheckWorkspacePermission(ctx, action, workspaceId, isOpi any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckWorkspacePermission", reflect.TypeOf((*MockIAuthProvider)(nil).CheckWorkspacePermission), ctx, action, workspaceId, isOpi)
+}
+
+// GetClaim mocks base method.
+func (m *MockIAuthProvider) GetClaim(ctx context.Context) *rpc.Claim {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClaim", ctx)
+	ret0, _ := ret[0].(*rpc.Claim)
+	return ret0
+}
+
+// GetClaim indicates an expected call of GetClaim.
+func (mr *MockIAuthProviderMockRecorder) GetClaim(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClaim", reflect.TypeOf((*MockIAuthProvider)(nil).GetClaim), ctx)
 }
