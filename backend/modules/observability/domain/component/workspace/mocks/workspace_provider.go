@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	span "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
+	rpc "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,17 +43,17 @@ func (m *MockIWorkSpaceProvider) EXPECT() *MockIWorkSpaceProviderMockRecorder {
 }
 
 // GetIngestWorkSpaceID mocks base method.
-func (m *MockIWorkSpaceProvider) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan) string {
+func (m *MockIWorkSpaceProvider) GetIngestWorkSpaceID(ctx context.Context, spans []*span.InputSpan, claim *rpc.Claim) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIngestWorkSpaceID", ctx, spans)
+	ret := m.ctrl.Call(m, "GetIngestWorkSpaceID", ctx, spans, claim)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // GetIngestWorkSpaceID indicates an expected call of GetIngestWorkSpaceID.
-func (mr *MockIWorkSpaceProviderMockRecorder) GetIngestWorkSpaceID(ctx, spans any) *gomock.Call {
+func (mr *MockIWorkSpaceProviderMockRecorder) GetIngestWorkSpaceID(ctx, spans, claim any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIngestWorkSpaceID", reflect.TypeOf((*MockIWorkSpaceProvider)(nil).GetIngestWorkSpaceID), ctx, spans)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIngestWorkSpaceID", reflect.TypeOf((*MockIWorkSpaceProvider)(nil).GetIngestWorkSpaceID), ctx, spans, claim)
 }
 
 // GetThirdPartyQueryWorkSpaceID mocks base method.
