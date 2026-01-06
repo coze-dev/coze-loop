@@ -560,8 +560,8 @@ func OpenAPIToolChoiceSpecificationDTO2DO(dto *openapi.ToolChoiceSpecification) 
 	}
 }
 
-// OpenAPIModelConfigDTO2DO 将domain prompt ModelConfig转换为entity ModelConfig
-func OpenAPIModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
+// OpenAPIModelConfigDTO2DO 将openapi ModelConfig转换为entity ModelConfig
+func OpenAPIModelConfigDTO2DO(dto *openapi.ModelConfig) *entity.ModelConfig {
 	if dto == nil {
 		return nil
 	}
@@ -580,8 +580,8 @@ func OpenAPIModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
 	}
 }
 
-// OpenAPIThinkingConfigDTO2DO 将domain prompt ThinkingConfig转换为entity ThinkingConfig
-func OpenAPIThinkingConfigDTO2DO(dto *prompt.ThinkingConfig) *entity.ThinkingConfig {
+// OpenAPIThinkingConfigDTO2DO 将openapi ThinkingConfig转换为entity ThinkingConfig
+func OpenAPIThinkingConfigDTO2DO(dto *openapi.ThinkingConfig) *entity.ThinkingConfig {
 	if dto == nil {
 		return nil
 	}
@@ -592,8 +592,8 @@ func OpenAPIThinkingConfigDTO2DO(dto *prompt.ThinkingConfig) *entity.ThinkingCon
 	}
 }
 
-// OpenAPIThinkingOptionDTO2DO 将domain prompt ThinkingOption转换为entity ThinkingOption
-func OpenAPIThinkingOptionDTO2DO(dto *prompt.ThinkingOption) *entity.ThinkingOption {
+// OpenAPIThinkingOptionDTO2DO 将openapi ThinkingOption转换为entity ThinkingOption
+func OpenAPIThinkingOptionDTO2DO(dto *openapi.ThinkingOption) *entity.ThinkingOption {
 	if dto == nil {
 		return nil
 	}
@@ -601,8 +601,8 @@ func OpenAPIThinkingOptionDTO2DO(dto *prompt.ThinkingOption) *entity.ThinkingOpt
 	return &result
 }
 
-// OpenAPIReasoningEffortDTO2DO 将domain prompt ReasoningEffort转换为entity ReasoningEffort
-func OpenAPIReasoningEffortDTO2DO(dto *prompt.ReasoningEffort) *entity.ReasoningEffort {
+// OpenAPIReasoningEffortDTO2DO 将openapi ReasoningEffort转换为entity ReasoningEffort
+func OpenAPIReasoningEffortDTO2DO(dto *openapi.ReasoningEffort) *entity.ReasoningEffort {
 	if dto == nil {
 		return nil
 	}
@@ -610,8 +610,8 @@ func OpenAPIReasoningEffortDTO2DO(dto *prompt.ReasoningEffort) *entity.Reasoning
 	return &result
 }
 
-// OpenAPIBatchParamConfigValueDTO2DO 将domain prompt ParamConfigValue转换为entity ParamConfigValue
-func OpenAPIBatchParamConfigValueDTO2DO(dtos []*prompt.ParamConfigValue) []*entity.ParamConfigValue {
+// OpenAPIBatchParamConfigValueDTO2DO 将openapi ParamConfigValue转换为entity ParamConfigValue
+func OpenAPIBatchParamConfigValueDTO2DO(dtos []*openapi.ParamConfigValue) []*entity.ParamConfigValue {
 	if dtos == nil {
 		return nil
 	}
@@ -624,8 +624,8 @@ func OpenAPIBatchParamConfigValueDTO2DO(dtos []*prompt.ParamConfigValue) []*enti
 	return params
 }
 
-// OpenAPIParamConfigValueDTO2DO 将domain prompt ParamConfigValue转换为entity ParamConfigValue
-func OpenAPIParamConfigValueDTO2DO(dto *prompt.ParamConfigValue) *entity.ParamConfigValue {
+// OpenAPIParamConfigValueDTO2DO 将openapi ParamConfigValue转换为entity ParamConfigValue
+func OpenAPIParamConfigValueDTO2DO(dto *openapi.ParamConfigValue) *entity.ParamConfigValue {
 	if dto == nil {
 		return nil
 	}
@@ -636,8 +636,8 @@ func OpenAPIParamConfigValueDTO2DO(dto *prompt.ParamConfigValue) *entity.ParamCo
 	}
 }
 
-// OpenAPIParamOptionDTO2DO 将domain prompt ParamOption转换为entity ParamOption
-func OpenAPIParamOptionDTO2DO(dto *prompt.ParamOption) *entity.ParamOption {
+// OpenAPIParamOptionDTO2DO 将openapi ParamOption转换为entity ParamOption
+func OpenAPIParamOptionDTO2DO(dto *openapi.ParamOption) *entity.ParamOption {
 	if dto == nil {
 		return nil
 	}

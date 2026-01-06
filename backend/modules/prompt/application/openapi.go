@@ -21,7 +21,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
@@ -845,7 +844,7 @@ func (p *PromptOpenAPIApplicationImpl) applyCustomOverrides(promptDO *entity.Pro
 }
 
 // validateAndApplyCustomModelConfig 验证并应用自定义模型配置（全量覆盖）
-func (p *PromptOpenAPIApplicationImpl) validateAndApplyCustomModelConfig(promptDO *entity.Prompt, customModelConfig *prompt.ModelConfig) error {
+func (p *PromptOpenAPIApplicationImpl) validateAndApplyCustomModelConfig(promptDO *entity.Prompt, customModelConfig *openapi.ModelConfig) error {
 	if customModelConfig == nil {
 		return nil
 	}
