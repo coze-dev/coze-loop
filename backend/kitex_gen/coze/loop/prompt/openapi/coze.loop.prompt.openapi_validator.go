@@ -152,6 +152,11 @@ func (p *Prompt) IsValid() error {
 			return fmt.Errorf("field LlmConfig not valid, %w", err)
 		}
 	}
+	if p.PublishInfo != nil {
+		if err := p.PublishInfo.IsValid(); err != nil {
+			return fmt.Errorf("field PublishInfo not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *PromptTemplate) IsValid() error {
@@ -216,6 +221,11 @@ func (p *FunctionCall) IsValid() error {
 	return nil
 }
 func (p *LLMConfig) IsValid() error {
+	if p.Thinking != nil {
+		if err := p.Thinking.IsValid(); err != nil {
+			return fmt.Errorf("field Thinking not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *VariableVal) IsValid() error {
@@ -262,5 +272,30 @@ func (p *PromptBasic) IsValid() error {
 	return nil
 }
 func (p *ListPromptBasicData) IsValid() error {
+	return nil
+}
+func (p *PromptPublishInfo) IsValid() error {
+	return nil
+}
+func (p *ThinkingConfig) IsValid() error {
+	return nil
+}
+func (p *ModelConfig) IsValid() error {
+	if p.Thinking != nil {
+		if err := p.Thinking.IsValid(); err != nil {
+			return fmt.Errorf("field Thinking not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ParamConfigValue) IsValid() error {
+	if p.Value != nil {
+		if err := p.Value.IsValid(); err != nil {
+			return fmt.Errorf("field Value not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ParamOption) IsValid() error {
 	return nil
 }

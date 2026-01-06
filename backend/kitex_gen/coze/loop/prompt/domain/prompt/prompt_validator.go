@@ -90,6 +90,17 @@ func (p *PromptDetail) IsValid() error {
 			return fmt.Errorf("field ModelConfig not valid, %w", err)
 		}
 	}
+	if p.McpConfig != nil {
+		if err := p.McpConfig.IsValid(); err != nil {
+			return fmt.Errorf("field McpConfig not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *McpConfig) IsValid() error {
+	return nil
+}
+func (p *McpServerCombine) IsValid() error {
 	return nil
 }
 func (p *PromptTemplate) IsValid() error {

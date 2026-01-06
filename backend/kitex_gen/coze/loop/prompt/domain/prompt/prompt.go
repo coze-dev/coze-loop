@@ -3001,6 +3001,7 @@ type PromptDetail struct {
 	Tools          []*Tool           `thrift:"tools,2,optional" frugal:"2,optional,list<Tool>" form:"tools" json:"tools,omitempty" query:"tools"`
 	ToolCallConfig *ToolCallConfig   `thrift:"tool_call_config,3,optional" frugal:"3,optional,ToolCallConfig" form:"tool_call_config" json:"tool_call_config,omitempty" query:"tool_call_config"`
 	ModelConfig    *ModelConfig      `thrift:"model_config,4,optional" frugal:"4,optional,ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
+	McpConfig      *McpConfig        `thrift:"mcp_config,5,optional" frugal:"5,optional,McpConfig" form:"mcp_config" json:"mcp_config,omitempty" query:"mcp_config"`
 	ExtInfos       map[string]string `thrift:"ext_infos,255,optional" frugal:"255,optional,map<string:string>" form:"ext_infos" json:"ext_infos,omitempty" query:"ext_infos"`
 }
 
@@ -3059,6 +3060,18 @@ func (p *PromptDetail) GetModelConfig() (v *ModelConfig) {
 	return p.ModelConfig
 }
 
+var PromptDetail_McpConfig_DEFAULT *McpConfig
+
+func (p *PromptDetail) GetMcpConfig() (v *McpConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMcpConfig() {
+		return PromptDetail_McpConfig_DEFAULT
+	}
+	return p.McpConfig
+}
+
 var PromptDetail_ExtInfos_DEFAULT map[string]string
 
 func (p *PromptDetail) GetExtInfos() (v map[string]string) {
@@ -3082,6 +3095,9 @@ func (p *PromptDetail) SetToolCallConfig(val *ToolCallConfig) {
 func (p *PromptDetail) SetModelConfig(val *ModelConfig) {
 	p.ModelConfig = val
 }
+func (p *PromptDetail) SetMcpConfig(val *McpConfig) {
+	p.McpConfig = val
+}
 func (p *PromptDetail) SetExtInfos(val map[string]string) {
 	p.ExtInfos = val
 }
@@ -3091,6 +3107,7 @@ var fieldIDToName_PromptDetail = map[int16]string{
 	2:   "tools",
 	3:   "tool_call_config",
 	4:   "model_config",
+	5:   "mcp_config",
 	255: "ext_infos",
 }
 
@@ -3108,6 +3125,10 @@ func (p *PromptDetail) IsSetToolCallConfig() bool {
 
 func (p *PromptDetail) IsSetModelConfig() bool {
 	return p.ModelConfig != nil
+}
+
+func (p *PromptDetail) IsSetMcpConfig() bool {
+	return p.McpConfig != nil
 }
 
 func (p *PromptDetail) IsSetExtInfos() bool {
@@ -3159,6 +3180,14 @@ func (p *PromptDetail) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3248,6 +3277,14 @@ func (p *PromptDetail) ReadField4(iprot thrift.TProtocol) error {
 	p.ModelConfig = _field
 	return nil
 }
+func (p *PromptDetail) ReadField5(iprot thrift.TProtocol) error {
+	_field := NewMcpConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.McpConfig = _field
+	return nil
+}
 func (p *PromptDetail) ReadField255(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -3298,6 +3335,10 @@ func (p *PromptDetail) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -3402,6 +3443,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *PromptDetail) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMcpConfig() {
+		if err = oprot.WriteFieldBegin("mcp_config", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.McpConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *PromptDetail) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtInfos() {
 		if err = oprot.WriteFieldBegin("ext_infos", thrift.MAP, 255); err != nil {
@@ -3458,6 +3517,9 @@ func (p *PromptDetail) DeepEqual(ano *PromptDetail) bool {
 	if !p.Field4DeepEqual(ano.ModelConfig) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.McpConfig) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.ExtInfos) {
 		return false
 	}
@@ -3498,6 +3560,13 @@ func (p *PromptDetail) Field4DeepEqual(src *ModelConfig) bool {
 	}
 	return true
 }
+func (p *PromptDetail) Field5DeepEqual(src *McpConfig) bool {
+
+	if !p.McpConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *PromptDetail) Field255DeepEqual(src map[string]string) bool {
 
 	if len(p.ExtInfos) != len(src) {
@@ -3508,6 +3577,816 @@ func (p *PromptDetail) Field255DeepEqual(src map[string]string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+
+type McpConfig struct {
+	IsMcpCallAutoRetry *bool               `thrift:"is_mcp_call_auto_retry,1,optional" frugal:"1,optional,bool" form:"is_mcp_call_auto_retry" json:"is_mcp_call_auto_retry,omitempty" query:"is_mcp_call_auto_retry"`
+	McpServers         []*McpServerCombine `thrift:"mcp_servers,2,optional" frugal:"2,optional,list<McpServerCombine>" form:"mcp_servers" json:"mcp_servers,omitempty" query:"mcp_servers"`
+}
+
+func NewMcpConfig() *McpConfig {
+	return &McpConfig{}
+}
+
+func (p *McpConfig) InitDefault() {
+}
+
+var McpConfig_IsMcpCallAutoRetry_DEFAULT bool
+
+func (p *McpConfig) GetIsMcpCallAutoRetry() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsMcpCallAutoRetry() {
+		return McpConfig_IsMcpCallAutoRetry_DEFAULT
+	}
+	return *p.IsMcpCallAutoRetry
+}
+
+var McpConfig_McpServers_DEFAULT []*McpServerCombine
+
+func (p *McpConfig) GetMcpServers() (v []*McpServerCombine) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMcpServers() {
+		return McpConfig_McpServers_DEFAULT
+	}
+	return p.McpServers
+}
+func (p *McpConfig) SetIsMcpCallAutoRetry(val *bool) {
+	p.IsMcpCallAutoRetry = val
+}
+func (p *McpConfig) SetMcpServers(val []*McpServerCombine) {
+	p.McpServers = val
+}
+
+var fieldIDToName_McpConfig = map[int16]string{
+	1: "is_mcp_call_auto_retry",
+	2: "mcp_servers",
+}
+
+func (p *McpConfig) IsSetIsMcpCallAutoRetry() bool {
+	return p.IsMcpCallAutoRetry != nil
+}
+
+func (p *McpConfig) IsSetMcpServers() bool {
+	return p.McpServers != nil
+}
+
+func (p *McpConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_McpConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *McpConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsMcpCallAutoRetry = _field
+	return nil
+}
+func (p *McpConfig) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*McpServerCombine, 0, size)
+	values := make([]McpServerCombine, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.McpServers = _field
+	return nil
+}
+
+func (p *McpConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("McpConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *McpConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsMcpCallAutoRetry() {
+		if err = oprot.WriteFieldBegin("is_mcp_call_auto_retry", thrift.BOOL, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsMcpCallAutoRetry); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *McpConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMcpServers() {
+		if err = oprot.WriteFieldBegin("mcp_servers", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.McpServers)); err != nil {
+			return err
+		}
+		for _, v := range p.McpServers {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *McpConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("McpConfig(%+v)", *p)
+
+}
+
+func (p *McpConfig) DeepEqual(ano *McpConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.IsMcpCallAutoRetry) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.McpServers) {
+		return false
+	}
+	return true
+}
+
+func (p *McpConfig) Field1DeepEqual(src *bool) bool {
+
+	if p.IsMcpCallAutoRetry == src {
+		return true
+	} else if p.IsMcpCallAutoRetry == nil || src == nil {
+		return false
+	}
+	if *p.IsMcpCallAutoRetry != *src {
+		return false
+	}
+	return true
+}
+func (p *McpConfig) Field2DeepEqual(src []*McpServerCombine) bool {
+
+	if len(p.McpServers) != len(src) {
+		return false
+	}
+	for i, v := range p.McpServers {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
+type McpServerCombine struct {
+	McpServerID    *int64   `thrift:"mcp_server_id,1,optional" frugal:"1,optional,i64" form:"mcp_server_id" json:"mcp_server_id,omitempty" query:"mcp_server_id"`
+	AccessPointID  *int64   `thrift:"access_point_id,2,optional" frugal:"2,optional,i64" form:"access_point_id" json:"access_point_id,omitempty" query:"access_point_id"`
+	DisabledTools  []string `thrift:"disabled_tools,3,optional" frugal:"3,optional,list<string>" form:"disabled_tools" json:"disabled_tools,omitempty" query:"disabled_tools"`
+	EnabledTools   []string `thrift:"enabled_tools,4,optional" frugal:"4,optional,list<string>" form:"enabled_tools" json:"enabled_tools,omitempty" query:"enabled_tools"`
+	IsEnabledTools *bool    `thrift:"is_enabled_tools,5,optional" frugal:"5,optional,bool" form:"is_enabled_tools" json:"is_enabled_tools,omitempty" query:"is_enabled_tools"`
+}
+
+func NewMcpServerCombine() *McpServerCombine {
+	return &McpServerCombine{}
+}
+
+func (p *McpServerCombine) InitDefault() {
+}
+
+var McpServerCombine_McpServerID_DEFAULT int64
+
+func (p *McpServerCombine) GetMcpServerID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMcpServerID() {
+		return McpServerCombine_McpServerID_DEFAULT
+	}
+	return *p.McpServerID
+}
+
+var McpServerCombine_AccessPointID_DEFAULT int64
+
+func (p *McpServerCombine) GetAccessPointID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAccessPointID() {
+		return McpServerCombine_AccessPointID_DEFAULT
+	}
+	return *p.AccessPointID
+}
+
+var McpServerCombine_DisabledTools_DEFAULT []string
+
+func (p *McpServerCombine) GetDisabledTools() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDisabledTools() {
+		return McpServerCombine_DisabledTools_DEFAULT
+	}
+	return p.DisabledTools
+}
+
+var McpServerCombine_EnabledTools_DEFAULT []string
+
+func (p *McpServerCombine) GetEnabledTools() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnabledTools() {
+		return McpServerCombine_EnabledTools_DEFAULT
+	}
+	return p.EnabledTools
+}
+
+var McpServerCombine_IsEnabledTools_DEFAULT bool
+
+func (p *McpServerCombine) GetIsEnabledTools() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsEnabledTools() {
+		return McpServerCombine_IsEnabledTools_DEFAULT
+	}
+	return *p.IsEnabledTools
+}
+func (p *McpServerCombine) SetMcpServerID(val *int64) {
+	p.McpServerID = val
+}
+func (p *McpServerCombine) SetAccessPointID(val *int64) {
+	p.AccessPointID = val
+}
+func (p *McpServerCombine) SetDisabledTools(val []string) {
+	p.DisabledTools = val
+}
+func (p *McpServerCombine) SetEnabledTools(val []string) {
+	p.EnabledTools = val
+}
+func (p *McpServerCombine) SetIsEnabledTools(val *bool) {
+	p.IsEnabledTools = val
+}
+
+var fieldIDToName_McpServerCombine = map[int16]string{
+	1: "mcp_server_id",
+	2: "access_point_id",
+	3: "disabled_tools",
+	4: "enabled_tools",
+	5: "is_enabled_tools",
+}
+
+func (p *McpServerCombine) IsSetMcpServerID() bool {
+	return p.McpServerID != nil
+}
+
+func (p *McpServerCombine) IsSetAccessPointID() bool {
+	return p.AccessPointID != nil
+}
+
+func (p *McpServerCombine) IsSetDisabledTools() bool {
+	return p.DisabledTools != nil
+}
+
+func (p *McpServerCombine) IsSetEnabledTools() bool {
+	return p.EnabledTools != nil
+}
+
+func (p *McpServerCombine) IsSetIsEnabledTools() bool {
+	return p.IsEnabledTools != nil
+}
+
+func (p *McpServerCombine) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_McpServerCombine[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *McpServerCombine) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.McpServerID = _field
+	return nil
+}
+func (p *McpServerCombine) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AccessPointID = _field
+	return nil
+}
+func (p *McpServerCombine) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.DisabledTools = _field
+	return nil
+}
+func (p *McpServerCombine) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EnabledTools = _field
+	return nil
+}
+func (p *McpServerCombine) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsEnabledTools = _field
+	return nil
+}
+
+func (p *McpServerCombine) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("McpServerCombine"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *McpServerCombine) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMcpServerID() {
+		if err = oprot.WriteFieldBegin("mcp_server_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.McpServerID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *McpServerCombine) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAccessPointID() {
+		if err = oprot.WriteFieldBegin("access_point_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.AccessPointID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *McpServerCombine) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDisabledTools() {
+		if err = oprot.WriteFieldBegin("disabled_tools", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.DisabledTools)); err != nil {
+			return err
+		}
+		for _, v := range p.DisabledTools {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *McpServerCombine) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnabledTools() {
+		if err = oprot.WriteFieldBegin("enabled_tools", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.EnabledTools)); err != nil {
+			return err
+		}
+		for _, v := range p.EnabledTools {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *McpServerCombine) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsEnabledTools() {
+		if err = oprot.WriteFieldBegin("is_enabled_tools", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsEnabledTools); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *McpServerCombine) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("McpServerCombine(%+v)", *p)
+
+}
+
+func (p *McpServerCombine) DeepEqual(ano *McpServerCombine) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.McpServerID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.AccessPointID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.DisabledTools) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EnabledTools) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.IsEnabledTools) {
+		return false
+	}
+	return true
+}
+
+func (p *McpServerCombine) Field1DeepEqual(src *int64) bool {
+
+	if p.McpServerID == src {
+		return true
+	} else if p.McpServerID == nil || src == nil {
+		return false
+	}
+	if *p.McpServerID != *src {
+		return false
+	}
+	return true
+}
+func (p *McpServerCombine) Field2DeepEqual(src *int64) bool {
+
+	if p.AccessPointID == src {
+		return true
+	} else if p.AccessPointID == nil || src == nil {
+		return false
+	}
+	if *p.AccessPointID != *src {
+		return false
+	}
+	return true
+}
+func (p *McpServerCombine) Field3DeepEqual(src []string) bool {
+
+	if len(p.DisabledTools) != len(src) {
+		return false
+	}
+	for i, v := range p.DisabledTools {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *McpServerCombine) Field4DeepEqual(src []string) bool {
+
+	if len(p.EnabledTools) != len(src) {
+		return false
+	}
+	for i, v := range p.EnabledTools {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *McpServerCombine) Field5DeepEqual(src *bool) bool {
+
+	if p.IsEnabledTools == src {
+		return true
+	} else if p.IsEnabledTools == nil || src == nil {
+		return false
+	}
+	if *p.IsEnabledTools != *src {
+		return false
 	}
 	return true
 }

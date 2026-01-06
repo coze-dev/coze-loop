@@ -114,7 +114,45 @@ func PromptDetailDTO2DO(dto *prompt.PromptDetail) *entity.PromptDetail {
 		Tools:          BatchToolDTO2DO(dto.Tools),
 		ToolCallConfig: ToolCallConfigDTO2DO(dto.ToolCallConfig),
 		ModelConfig:    ModelConfigDTO2DO(dto.ModelConfig),
+		McpConfig:      McpConfigDTO2DO(dto.McpConfig),
 		ExtInfos:       dto.ExtInfos,
+	}
+}
+
+func McpConfigDTO2DO(dto *prompt.McpConfig) *entity.McpConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.McpConfig{
+		IsMcpCallAutoRetry: dto.IsMcpCallAutoRetry,
+		McpServers:         BatchMcpServerCombineDTO2DO(dto.McpServers),
+	}
+}
+
+func BatchMcpServerCombineDTO2DO(dtos []*prompt.McpServerCombine) []*entity.McpServerCombine {
+	if dtos == nil {
+		return nil
+	}
+	servers := make([]*entity.McpServerCombine, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		servers = append(servers, McpServerCombineDTO2DO(dto))
+	}
+	return servers
+}
+
+func McpServerCombineDTO2DO(dto *prompt.McpServerCombine) *entity.McpServerCombine {
+	if dto == nil {
+		return nil
+	}
+	return &entity.McpServerCombine{
+		McpServerID:    dto.McpServerID,
+		AccessPointID:  dto.AccessPointID,
+		DisabledTools:  dto.DisabledTools,
+		EnabledTools:   dto.EnabledTools,
+		IsEnabledTools: dto.IsEnabledTools,
 	}
 }
 

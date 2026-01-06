@@ -58,8 +58,22 @@ struct PromptDetail {
     2: optional list<Tool> tools
     3: optional ToolCallConfig tool_call_config
     4: optional ModelConfig model_config
+    5: optional McpConfig mcp_config
 
     255: optional map<string, string> ext_infos
+}
+
+struct McpConfig {
+    1: optional bool is_mcp_call_auto_retry
+    2: optional list<McpServerCombine> mcp_servers
+}
+
+struct McpServerCombine {
+    1: optional i64 mcp_server_id
+    2: optional i64 access_point_id
+    3: optional list<string> disabled_tools
+    4: optional list<string> enabled_tools
+    5: optional bool is_enabled_tools
 }
 
 struct PromptTemplate {
