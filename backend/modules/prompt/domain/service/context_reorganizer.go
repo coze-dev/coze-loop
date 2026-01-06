@@ -14,11 +14,12 @@ import (
 
 // ReorganizeContextParam defines the parameters for reorganizing contexts
 type ReorganizeContextParam struct {
-	Prompt       *entity.Prompt
-	Messages     []*entity.Message
-	MockTools    []*entity.MockTool
-	Reply        *entity.Reply
-	ResultStream chan<- *entity.Reply // only used in streaming mode
+	Prompt           *entity.Prompt
+	Messages         []*entity.Message
+	MockTools        []*entity.MockTool
+	Reply            *entity.Reply
+	ResultStream     chan<- *entity.Reply                    // only used in streaming mode
+	ReplyItemWrapper func(v *entity.ReplyItem) *entity.Reply // only used in streaming mode
 }
 
 // IContextReorganizer defines the interface for reorganizing contexts after each iteration

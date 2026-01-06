@@ -100,11 +100,12 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 		debugStep++
 		// 多轮执行需要重新编排上下文
 		param.Messages, err = p.contextReorganizer.ReorganizeContexts(ctx, ReorganizeContextParam{
-			Prompt:       param.Prompt,
-			Messages:     param.Messages,
-			MockTools:    param.MockTools,
-			Reply:        aggregatedReply,
-			ResultStream: param.ResultStream,
+			Prompt:           param.Prompt,
+			Messages:         param.Messages,
+			MockTools:        param.MockTools,
+			Reply:            aggregatedReply,
+			ResultStream:     param.ResultStream,
+			ReplyItemWrapper: replyItemWrapper,
 		})
 		if err != nil {
 			return nil, err
