@@ -358,6 +358,88 @@ func TestPromptTemplate_formatMessages(t *testing.T) {
 	}
 }
 
+func TestPromptTemplate_formatMessages_SkipRender(t *testing.T) {
+	template := &PromptTemplate{
+		TemplateType: TemplateTypeNormal,
+		Messages: []*Message{
+			{
+				Role:    RoleAssistant,
+				Content: ptr.Of("template {{name}}"),
+			},
+		},
+		VariableDefs: []*VariableDef{
+			{
+				Key:  "name",
+				Desc: "name",
+				Type: VariableTypeString,
+			},
+		},
+	}
+	messages := []*Message{
+		{
+			Role:       RoleSystem,
+			Content:    ptr.Of("system {{name}}"),
+			SkipRender: ptr.Of(true),
+		},
+		{
+			Role:    RoleUser,
+			Content: ptr.Of("user {{name}}"),
+		},
+		{
+			Role:    RoleAssistant,
+			Content: ptr.Of("assistant {{name}}"),
+		},
+		{
+			Role:       RoleAssistant,
+			Content:    ptr.Of("assistant forced {{name}}"),
+			SkipRender: ptr.Of(false),
+		},
+		{
+			Role:    RoleTool,
+			Content: ptr.Of("tool {{name}}"),
+		},
+	}
+	variableVals := []*VariableVal{
+		{
+			Key:   "name",
+			Value: ptr.Of("bob"),
+		},
+	}
+	expectedMsgs := []*Message{
+		{
+			Role:       RoleAssistant,
+			Content:    ptr.Of("template bob"),
+			SkipRender: ptr.Of(false),
+		},
+		{
+			Role:       RoleSystem,
+			Content:    ptr.Of("system {{name}}"),
+			SkipRender: ptr.Of(true),
+		},
+		{
+			Role:    RoleUser,
+			Content: ptr.Of("user bob"),
+		},
+		{
+			Role:    RoleAssistant,
+			Content: ptr.Of("assistant {{name}}"),
+		},
+		{
+			Role:       RoleAssistant,
+			Content:    ptr.Of("assistant forced bob"),
+			SkipRender: ptr.Of(false),
+		},
+		{
+			Role:    RoleTool,
+			Content: ptr.Of("tool {{name}}"),
+		},
+	}
+
+	formattedMsgs, err := template.formatMessages(messages, variableVals)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedMsgs, formattedMsgs)
+}
+
 func TestCmpEqual(t *testing.T) {
 	var pd1 *PromptDetail
 	var pd2 *PromptDetail
