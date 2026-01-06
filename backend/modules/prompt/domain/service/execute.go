@@ -96,15 +96,16 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 		// Execute iteration with tracing and tool result processing
 		var toolResultMap map[string]string
 		executeIterationWithTracing := func() (reply *entity.Reply, err error) {
+			iterCtx := ctx
 			var span cozeloop.Span
 			if !param.DisableTracing {
-				ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
+				iterCtx, span = p.startSequenceSpan(iterCtx, param.Prompt, param.Messages, param.VariableVals)
 				defer func() {
-					p.finishSequenceSpan(ctx, span, reply, err)
+					p.finishSequenceSpan(iterCtx, span, reply, err)
 				}()
 			}
 
-			reply, err = p.doStreamingIteration(ctx, param, replyItemWrapper)
+			reply, err = p.doStreamingIteration(iterCtx, param, replyItemWrapper)
 			if err != nil {
 				return nil, err
 			}
@@ -113,7 +114,7 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 				tokenUsage.OutputTokens += reply.Item.TokenUsage.OutputTokens
 			}
 
-			toolResultMap, err = p.toolResultsProcessor.ProcessToolResults(ctx, ProcessToolResultsParam{
+			toolResultMap, err = p.toolResultsProcessor.ProcessToolResults(iterCtx, ProcessToolResultsParam{
 				Prompt:           param.Prompt,
 				MockTools:        param.MockTools,
 				Reply:            reply,
@@ -124,7 +125,7 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 				return nil, err
 			}
 			if !param.DisableTracing && reply != nil && reply.Item != nil {
-				p.reportToolSpan(ctx, param.Prompt, toolResultMap, reply.Item)
+				p.reportToolSpan(iterCtx, param.Prompt, toolResultMap, reply.Item)
 			}
 
 			return reply, nil
@@ -178,15 +179,16 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 		// Execute iteration with tracing and tool result processing
 		var toolResultMap map[string]string
 		executeIterationWithTracing := func() (iterReply *entity.Reply, err error) {
+			iterCtx := ctx
 			var span cozeloop.Span
 			if !param.DisableTracing {
-				ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
+				iterCtx, span = p.startSequenceSpan(iterCtx, param.Prompt, param.Messages, param.VariableVals)
 				defer func() {
-					p.finishSequenceSpan(ctx, span, iterReply, err)
+					p.finishSequenceSpan(iterCtx, span, iterReply, err)
 				}()
 			}
 
-			iterReply, err = p.doIteration(ctx, param, replyItemWrapper)
+			iterReply, err = p.doIteration(iterCtx, param, replyItemWrapper)
 			if err != nil {
 				return nil, err
 			}
@@ -196,7 +198,7 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 			}
 
 			// Process tool results and get tool result map
-			toolResultMap, err = p.toolResultsProcessor.ProcessToolResults(ctx, ProcessToolResultsParam{
+			toolResultMap, err = p.toolResultsProcessor.ProcessToolResults(iterCtx, ProcessToolResultsParam{
 				Prompt:    param.Prompt,
 				MockTools: param.MockTools,
 				Reply:     iterReply,
@@ -207,7 +209,7 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 
 			// Report tool trace
 			if !param.DisableTracing && iterReply != nil && iterReply.Item != nil {
-				p.reportToolSpan(ctx, param.Prompt, toolResultMap, iterReply.Item)
+				p.reportToolSpan(iterCtx, param.Prompt, toolResultMap, iterReply.Item)
 			}
 
 			return iterReply, nil
