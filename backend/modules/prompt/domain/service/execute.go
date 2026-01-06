@@ -92,27 +92,47 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 		if err != nil {
 			return nil, err
 		}
-		aggregatedReply, err = p.doStreamingIteration(ctx, param, replyItemWrapper)
-		if err != nil {
-			return nil, err
-		}
-		if aggregatedReply != nil && aggregatedReply.Item != nil && aggregatedReply.Item.TokenUsage != nil {
-			tokenUsage.InputTokens += aggregatedReply.Item.TokenUsage.InputTokens
-			tokenUsage.OutputTokens += aggregatedReply.Item.TokenUsage.OutputTokens
+
+		// Execute iteration with tracing and tool result processing
+		var toolResultMap map[string]string
+		executeIterationWithTracing := func() (reply *entity.Reply, err error) {
+			var span cozeloop.Span
+			if !param.DisableTracing {
+				ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
+				defer func() {
+					p.finishSequenceSpan(ctx, span, reply, err)
+				}()
+			}
+
+			reply, err = p.doStreamingIteration(ctx, param, replyItemWrapper)
+			if err != nil {
+				return nil, err
+			}
+			if reply != nil && reply.Item != nil && reply.Item.TokenUsage != nil {
+				tokenUsage.InputTokens += reply.Item.TokenUsage.InputTokens
+				tokenUsage.OutputTokens += reply.Item.TokenUsage.OutputTokens
+			}
+
+			toolResultMap, err = p.toolResultsProcessor.ProcessToolResults(ctx, ProcessToolResultsParam{
+				Prompt:           param.Prompt,
+				MockTools:        param.MockTools,
+				Reply:            reply,
+				ResultStream:     param.ResultStream,
+				ReplyItemWrapper: replyItemWrapper,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if !param.DisableTracing && reply != nil && reply.Item != nil {
+				p.reportToolSpan(ctx, param.Prompt, toolResultMap, reply.Item)
+			}
+
+			return reply, nil
 		}
 
-		toolResultMap, err := p.toolResultsProcessor.ProcessToolResults(ctx, ProcessToolResultsParam{
-			Prompt:           param.Prompt,
-			MockTools:        param.MockTools,
-			Reply:            aggregatedReply,
-			ResultStream:     param.ResultStream,
-			ReplyItemWrapper: replyItemWrapper,
-		})
+		aggregatedReply, err = executeIterationWithTracing()
 		if err != nil {
 			return nil, err
-		}
-		if !param.DisableTracing && aggregatedReply != nil && aggregatedReply.Item != nil {
-			p.reportToolSpan(ctx, param.Prompt, toolResultMap, aggregatedReply.Item)
 		}
 
 		if !shouldContinue(param.SingleStep, startTime, debugStep, aggregatedReply) {
@@ -154,28 +174,48 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 		if err != nil {
 			return nil, err
 		}
-		reply, err = p.doIteration(ctx, param, replyItemWrapper)
-		if err != nil {
-			return nil, err
-		}
-		if reply != nil && reply.Item != nil && reply.Item.TokenUsage != nil {
-			tokenUsage.InputTokens += reply.Item.TokenUsage.InputTokens
-			tokenUsage.OutputTokens += reply.Item.TokenUsage.OutputTokens
+
+		// Execute iteration with tracing and tool result processing
+		var toolResultMap map[string]string
+		executeIterationWithTracing := func() (iterReply *entity.Reply, err error) {
+			var span cozeloop.Span
+			if !param.DisableTracing {
+				ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
+				defer func() {
+					p.finishSequenceSpan(ctx, span, iterReply, err)
+				}()
+			}
+
+			iterReply, err = p.doIteration(ctx, param, replyItemWrapper)
+			if err != nil {
+				return nil, err
+			}
+			if iterReply != nil && iterReply.Item != nil && iterReply.Item.TokenUsage != nil {
+				tokenUsage.InputTokens += iterReply.Item.TokenUsage.InputTokens
+				tokenUsage.OutputTokens += iterReply.Item.TokenUsage.OutputTokens
+			}
+
+			// Process tool results and get tool result map
+			toolResultMap, err = p.toolResultsProcessor.ProcessToolResults(ctx, ProcessToolResultsParam{
+				Prompt:    param.Prompt,
+				MockTools: param.MockTools,
+				Reply:     iterReply,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			// Report tool trace
+			if !param.DisableTracing && iterReply != nil && iterReply.Item != nil {
+				p.reportToolSpan(ctx, param.Prompt, toolResultMap, iterReply.Item)
+			}
+
+			return iterReply, nil
 		}
 
-		// Process tool results and get tool result map
-		toolResultMap, err := p.toolResultsProcessor.ProcessToolResults(ctx, ProcessToolResultsParam{
-			Prompt:    param.Prompt,
-			MockTools: param.MockTools,
-			Reply:     reply,
-		})
+		reply, err = executeIterationWithTracing()
 		if err != nil {
 			return nil, err
-		}
-
-		// Report tool trace
-		if !param.DisableTracing && reply != nil && reply.Item != nil {
-			p.reportToolSpan(ctx, param.Prompt, toolResultMap, reply.Item)
 		}
 
 		if !shouldContinue(param.SingleStep, startTime, debugStep, reply) {
@@ -199,13 +239,6 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 }
 
 func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param ExecuteStreamingParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (aggregatedReply *entity.Reply, err error) {
-	var span cozeloop.Span
-	if !param.DisableTracing {
-		ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
-		defer func() {
-			p.finishSequenceSpan(ctx, span, aggregatedReply, err)
-		}()
-	}
 	var llmCallParam rpc.LLMCallParam
 	llmCallParam, err = p.prepareLLMCallParam(ctx, param.ExecuteParam)
 	if err != nil {
@@ -251,13 +284,6 @@ func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param Exec
 }
 
 func (p *PromptServiceImpl) doIteration(ctx context.Context, param ExecuteParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (aggregatedReply *entity.Reply, err error) {
-	var span cozeloop.Span
-	if !param.DisableTracing {
-		ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
-		defer func() {
-			p.finishSequenceSpan(ctx, span, aggregatedReply, err)
-		}()
-	}
 	var llmCallParam rpc.LLMCallParam
 	llmCallParam, err = p.prepareLLMCallParam(ctx, param)
 	if err != nil {
