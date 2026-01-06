@@ -3,21 +3,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/naming-convention */
 import dayjs from 'dayjs';
-import { AnnotationPanel } from '@cozeloop/tag-components';
 import zhCH from '@cozeloop/observation-components/zh-CN';
 import enUS from '@cozeloop/observation-components/en-US';
 import {
   CozeloopTraceDetailPanel as TraceDetailPanelInner,
   type CozeloopTraceDetailPanelProps,
   type TraceDetailContext,
-  tabs,
   CozeloopTraceDetail as TraceDetailInner,
   type CozeloopTraceDetailProps,
   ConfigProvider,
 } from '@cozeloop/observation-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { useSpace } from '@cozeloop/biz-hooks-adapter';
-import { type PlatformType, type span } from '@cozeloop/api-schema/observation';
+import { type PlatformType } from '@cozeloop/api-schema/observation';
 import { observabilityTrace } from '@cozeloop/api-schema';
 import { type TraceDetailExtraProps } from '@cozeloop/adapter-interfaces';
 
@@ -66,18 +64,10 @@ export const TraceDetailWrapper = <
 
     const traceDetailOpenPanelProps = forceOverwrite
       ? {
-          extraSpanDetailTabs: tabs,
-          spanDetailHeaderSlot: (span: span.OutputSpan) => (
-            <AnnotationPanel span={span} platformType={props.platformType} />
-          ),
           ...props,
         }
       : {
           ...props,
-          extraSpanDetailTabs: tabs,
-          spanDetailHeaderSlot: (span: span.OutputSpan) => (
-            <AnnotationPanel span={span} platformType={props.platformType} />
-          ),
         };
 
     return (
