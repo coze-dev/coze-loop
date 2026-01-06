@@ -25,7 +25,7 @@ func TestNewPromptService(t *testing.T) {
 		// Create mock dependencies
 		mockFormatter := service.NewPromptFormatter()
 		mockToolConfigProvider := servicemocks.NewMockIToolConfigProvider(ctrl)
-		mockContextReorganizer := servicemocks.NewMockIContextReorganizer(ctrl)
+		mockToolResultsProcessor := servicemocks.NewMockIToolResultsProcessor(ctrl)
 		mockIDGen := mocks.NewMockIIDGenerator(ctrl)
 		mockDebugLogRepo := repomocks.NewMockIDebugLogRepo(ctrl)
 		mockDebugContextRepo := repomocks.NewMockIDebugContextRepo(ctrl)
@@ -39,7 +39,7 @@ func TestNewPromptService(t *testing.T) {
 		svc := service.NewPromptService(
 			mockFormatter,
 			mockToolConfigProvider,
-			mockContextReorganizer,
+			mockToolResultsProcessor,
 			mockIDGen,
 			mockDebugLogRepo,
 			mockDebugContextRepo,
@@ -65,7 +65,7 @@ func TestNewPromptService(t *testing.T) {
 
 		mockFormatter := service.NewPromptFormatter()
 		mockToolConfigProvider := servicemocks.NewMockIToolConfigProvider(ctrl)
-		mockContextReorganizer := servicemocks.NewMockIContextReorganizer(ctrl)
+		mockToolResultsProcessor := servicemocks.NewMockIToolResultsProcessor(ctrl)
 		mockIDGen := mocks.NewMockIIDGenerator(ctrl)
 		mockDebugLogRepo := repomocks.NewMockIDebugLogRepo(ctrl)
 		mockDebugContextRepo := repomocks.NewMockIDebugContextRepo(ctrl)
@@ -78,7 +78,7 @@ func TestNewPromptService(t *testing.T) {
 		svc := service.NewPromptService(
 			mockFormatter,
 			mockToolConfigProvider,
-			mockContextReorganizer,
+			mockToolResultsProcessor,
 			mockIDGen,
 			mockDebugLogRepo,
 			mockDebugContextRepo,

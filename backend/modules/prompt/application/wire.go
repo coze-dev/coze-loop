@@ -38,7 +38,7 @@ var (
 	promptDomainSet = wire.NewSet(
 		service.NewPromptFormatter,
 		service.NewToolConfigProvider,
-		service.NewContextReorganizer,
+		service.NewToolResultsProcessor,
 		service.NewPromptService,
 		repo.NewManageRepo,
 		repo.NewLabelRepo,

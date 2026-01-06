@@ -227,14 +227,16 @@ func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			p := &PromptServiceImpl{
-				formatter:        NewPromptFormatter(),
-				idgen:            ttFields.idgen,
-				debugLogRepo:     ttFields.debugLogRepo,
-				debugContextRepo: ttFields.debugContextRepo,
-				manageRepo:       ttFields.manageRepo,
-				configProvider:   ttFields.configProvider,
-				llm:              ttFields.llm,
-				file:             ttFields.file,
+				formatter:            NewPromptFormatter(),
+				toolConfigProvider:   NewToolConfigProvider(),
+				toolResultsProcessor: NewToolResultsProcessor(),
+				idgen:                ttFields.idgen,
+				debugLogRepo:         ttFields.debugLogRepo,
+				debugContextRepo:     ttFields.debugContextRepo,
+				manageRepo:           ttFields.manageRepo,
+				configProvider:       ttFields.configProvider,
+				llm:                  ttFields.llm,
+				file:                 ttFields.file,
 			}
 			gotFormattedMessages, err := p.FormatPrompt(tt.args.ctx, tt.args.prompt, tt.args.messages, tt.args.variableVals)
 
@@ -261,7 +263,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		t.Parallel()
 
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsProcessor: NewToolResultsProcessor(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -277,7 +281,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		t.Parallel()
 
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsProcessor: NewToolResultsProcessor(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -343,9 +349,11 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 1,
 		}
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
-			idgen:     mockIDGen,
-			llm:       mockLLM,
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsProcessor: NewToolResultsProcessor(),
+			idgen:                mockIDGen,
+			llm:                  mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -544,9 +552,11 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 2,
 		}
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
-			idgen:     mockIDGen,
-			llm:       mockLLM,
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsProcessor: NewToolResultsProcessor(),
+			idgen:                mockIDGen,
+			llm:                  mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -932,14 +942,16 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 
 			ttFields := tt.fieldsGetter(ctrl)
 			p := &PromptServiceImpl{
-				formatter:        NewPromptFormatter(),
-				idgen:            ttFields.idgen,
-				debugLogRepo:     ttFields.debugLogRepo,
-				debugContextRepo: ttFields.debugContextRepo,
-				manageRepo:       ttFields.manageRepo,
-				configProvider:   ttFields.configProvider,
-				llm:              ttFields.llm,
-				file:             ttFields.file,
+				formatter:            NewPromptFormatter(),
+				toolConfigProvider:   NewToolConfigProvider(),
+				toolResultsProcessor: NewToolResultsProcessor(),
+				idgen:                ttFields.idgen,
+				debugLogRepo:         ttFields.debugLogRepo,
+				debugContextRepo:     ttFields.debugContextRepo,
+				manageRepo:           ttFields.manageRepo,
+				configProvider:       ttFields.configProvider,
+				llm:                  ttFields.llm,
+				file:                 ttFields.file,
 			}
 
 			gotReply, err := p.Execute(tt.args.ctx, tt.args.param)
@@ -984,7 +996,9 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 		},
 	}
 	svc := &PromptServiceImpl{
-		formatter: NewPromptFormatter(),
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsProcessor: NewToolResultsProcessor(),
 	}
 	param := ExecuteParam{
 		Prompt: prompt,
@@ -1008,7 +1022,9 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
 	t.Parallel()
 	svc := &PromptServiceImpl{
-		formatter: NewPromptFormatter(),
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsProcessor: NewToolResultsProcessor(),
 	}
 
 	tests := []struct {

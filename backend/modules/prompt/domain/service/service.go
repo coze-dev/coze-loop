@@ -75,18 +75,18 @@ type PromptLabelQuery struct {
 }
 
 type PromptServiceImpl struct {
-	formatter          IPromptFormatter
-	toolConfigProvider IToolConfigProvider
-	contextReorganizer IContextReorganizer
-	idgen              idgen.IIDGenerator
-	debugLogRepo       repo.IDebugLogRepo
-	debugContextRepo   repo.IDebugContextRepo
-	manageRepo         repo.IManageRepo
-	labelRepo          repo.ILabelRepo
-	configProvider     conf.IConfigProvider
-	llm                rpc.ILLMProvider
-	file               rpc.IFileProvider
-	snippetParser      SnippetParser
+	formatter            IPromptFormatter
+	toolConfigProvider   IToolConfigProvider
+	toolResultsProcessor IToolResultsProcessor
+	idgen                idgen.IIDGenerator
+	debugLogRepo         repo.IDebugLogRepo
+	debugContextRepo     repo.IDebugContextRepo
+	manageRepo           repo.IManageRepo
+	labelRepo            repo.ILabelRepo
+	configProvider       conf.IConfigProvider
+	llm                  rpc.ILLMProvider
+	file                 rpc.IFileProvider
+	snippetParser        SnippetParser
 }
 
 type GetPromptParam struct {
@@ -103,7 +103,7 @@ type GetPromptParam struct {
 func NewPromptService(
 	formatter IPromptFormatter,
 	toolConfigProvider IToolConfigProvider,
-	contextReorganizer IContextReorganizer,
+	toolResultsProcessor IToolResultsProcessor,
 	idgen idgen.IIDGenerator,
 	debugLogRepo repo.IDebugLogRepo,
 	debugContextRepo repo.IDebugContextRepo,
@@ -115,17 +115,17 @@ func NewPromptService(
 	snippetParser SnippetParser,
 ) IPromptService {
 	return &PromptServiceImpl{
-		formatter:          formatter,
-		toolConfigProvider: toolConfigProvider,
-		contextReorganizer: contextReorganizer,
-		idgen:              idgen,
-		debugLogRepo:       debugLogRepo,
-		debugContextRepo:   debugContextRepo,
-		manageRepo:         promptManageRepo,
-		labelRepo:          labelRepo,
-		configProvider:     configProvider,
-		llm:                llm,
-		file:               file,
-		snippetParser:      snippetParser,
+		formatter:            formatter,
+		toolConfigProvider:   toolConfigProvider,
+		toolResultsProcessor: toolResultsProcessor,
+		idgen:                idgen,
+		debugLogRepo:         debugLogRepo,
+		debugContextRepo:     debugContextRepo,
+		manageRepo:           promptManageRepo,
+		labelRepo:            labelRepo,
+		configProvider:       configProvider,
+		llm:                  llm,
+		file:                 file,
+		snippetParser:        snippetParser,
 	}
 }

@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"errors"
+	"slices"
 	"strconv"
 	"time"
 
@@ -24,7 +25,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	loopslices "github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/coze-loop/backend/pkg/traceutil"
 )
@@ -50,6 +50,13 @@ type ExecuteParam struct {
 type ExecuteStreamingParam struct {
 	ExecuteParam
 	ResultStream chan<- *entity.Reply
+}
+
+// ReorganizeContextParam defines the parameters for reorganizing contexts
+type ReorganizeContextParam struct {
+	Messages      []*entity.Message
+	ToolResultMap map[string]string // map from tool name to tool result
+	Reply         *entity.Reply
 }
 
 func (p *PromptServiceImpl) FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (formattedMessages []*entity.Message, err error) {
@@ -94,18 +101,29 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 			tokenUsage.OutputTokens += aggregatedReply.Item.TokenUsage.OutputTokens
 		}
 
+		toolResultMap, err := p.toolResultsProcessor.ProcessToolResults(ctx, ProcessToolResultsParam{
+			Prompt:           param.Prompt,
+			MockTools:        param.MockTools,
+			Reply:            aggregatedReply,
+			ResultStream:     param.ResultStream,
+			ReplyItemWrapper: replyItemWrapper,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if !param.DisableTracing && aggregatedReply != nil && aggregatedReply.Item != nil {
+			p.reportToolSpan(ctx, param.Prompt, toolResultMap, aggregatedReply.Item)
+		}
+
 		if !shouldContinue(param.SingleStep, startTime, debugStep, aggregatedReply) {
 			break
 		}
 		debugStep++
 		// 多轮执行需要重新编排上下文
-		param.Messages, err = p.contextReorganizer.ReorganizeContexts(ctx, ReorganizeContextParam{
-			Prompt:           param.Prompt,
-			Messages:         param.Messages,
-			MockTools:        param.MockTools,
-			Reply:            aggregatedReply,
-			ResultStream:     param.ResultStream,
-			ReplyItemWrapper: replyItemWrapper,
+		param.Messages, err = p.reorganizeContexts(ctx, ReorganizeContextParam{
+			Messages:      param.Messages,
+			ToolResultMap: toolResultMap,
+			Reply:         aggregatedReply,
 		})
 		if err != nil {
 			return nil, err
@@ -145,16 +163,30 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 			tokenUsage.OutputTokens += reply.Item.TokenUsage.OutputTokens
 		}
 
+		// Process tool results and get tool result map
+		toolResultMap, err := p.toolResultsProcessor.ProcessToolResults(ctx, ProcessToolResultsParam{
+			Prompt:    param.Prompt,
+			MockTools: param.MockTools,
+			Reply:     reply,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// Report tool trace
+		if !param.DisableTracing && reply != nil && reply.Item != nil {
+			p.reportToolSpan(ctx, param.Prompt, toolResultMap, reply.Item)
+		}
+
 		if !shouldContinue(param.SingleStep, startTime, debugStep, reply) {
 			break
 		}
 		debugStep++
 		// 多轮执行需要重新编排上下文
-		param.Messages, err = p.contextReorganizer.ReorganizeContexts(ctx, ReorganizeContextParam{
-			Prompt:    param.Prompt,
-			Messages:  param.Messages,
-			MockTools: param.MockTools,
-			Reply:     reply,
+		param.Messages, err = p.reorganizeContexts(ctx, ReorganizeContextParam{
+			Messages:      param.Messages,
+			ToolResultMap: toolResultMap,
+			Reply:         reply,
 		})
 		if err != nil {
 			return nil, err
@@ -215,10 +247,6 @@ func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param Exec
 		}
 	}
 
-	if !param.DisableTracing {
-		// report tool call span
-		p.reportToolSpan(ctx, param.Prompt, param.MockTools, aggregatedResult)
-	}
 	return replyItemWrapper(aggregatedResult), nil
 }
 
@@ -239,10 +267,6 @@ func (p *PromptServiceImpl) doIteration(ctx context.Context, param ExecuteParam,
 	aggregatedResult, err = p.llm.Call(ctx, llmCallParam)
 	if err != nil {
 		return nil, err
-	}
-	if !param.DisableTracing {
-		// tool call处理
-		p.reportToolSpan(ctx, param.Prompt, param.MockTools, aggregatedResult)
 	}
 	return replyItemWrapper(aggregatedResult), nil
 }
@@ -289,7 +313,7 @@ func (p *PromptServiceImpl) getDebugIDAndStep(ctx context.Context, singleStepDeb
 	return traceID, traceStep, nil
 }
 
-func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.Prompt, mockTools []*entity.MockTool, result *entity.ReplyItem) {
+func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.Prompt, toolResultMap map[string]string, result *entity.ReplyItem) {
 	if result == nil || result.Message == nil || len(result.Message.ToolCalls) == 0 {
 		return
 	}
@@ -300,12 +324,6 @@ func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.P
 		promptKey = prompt.PromptKey
 		version = prompt.GetVersion()
 	}
-	mockToolResponseMap := loopslices.ToMap(mockTools, func(m *entity.MockTool) (string, string) {
-		if m == nil {
-			return "", ""
-		}
-		return m.Name, m.MockResponse
-	})
 	for _, toolCall := range result.Message.ToolCalls {
 		if toolCall != nil && toolCall.FunctionCall != nil {
 			var span looptracer.Span
@@ -313,7 +331,7 @@ func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.P
 			if span != nil {
 				span.SetPrompt(ctx, loopentity.Prompt{PromptKey: promptKey, Version: version})
 				span.SetInput(ctx, toolCall.FunctionCall.Arguments)
-				span.SetOutput(ctx, mockToolResponseMap[toolCall.FunctionCall.Name])
+				span.SetOutput(ctx, toolResultMap[toolCall.FunctionCall.Name])
 				span.Finish(ctx)
 			}
 		}
@@ -436,4 +454,27 @@ func shouldContinue(singleStep bool, startTime time.Time, currentStep int32, las
 		return false
 	}
 	return len(lastStepAggregatedReply.Item.Message.ToolCalls) > 0
+}
+
+// reorganizeContexts reorganizes the message contexts after each iteration
+func (p *PromptServiceImpl) reorganizeContexts(ctx context.Context, param ReorganizeContextParam) ([]*entity.Message, error) {
+	newContexts := slices.Clone(param.Messages)
+	if param.Reply == nil || param.Reply.Item == nil || param.Reply.Item.Message == nil {
+		return newContexts, nil
+	}
+	newContexts = append(newContexts, param.Reply.Item.Message)
+	if len(param.Reply.Item.Message.ToolCalls) > 0 {
+		// 如果有工具调用，则使用 ToolResultMap 填充 tool response
+		for _, toolCall := range param.Reply.Item.Message.ToolCalls {
+			if toolCall.FunctionCall != nil {
+				toolResult := param.ToolResultMap[toolCall.FunctionCall.Name]
+				newContexts = append(newContexts, &entity.Message{
+					Role:       entity.RoleTool,
+					ToolCallID: ptr.Of(toolCall.ID),
+					Content:    ptr.Of(toolResult),
+				})
+			}
+		}
+	}
+	return newContexts, nil
 }
