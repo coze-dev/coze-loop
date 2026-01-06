@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	gomock "go.uber.org/mock/gomock"
@@ -281,6 +282,20 @@ func (m *MockExptAggrResultService) CreateExptAggrResult(ctx context.Context, sp
 func (mr *MockExptAggrResultServiceMockRecorder) CreateExptAggrResult(ctx, spaceID, experimentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExptAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).CreateExptAggrResult), ctx, spaceID, experimentID)
+}
+
+// PublishExptAggrResultEvent mocks base method.
+func (m *MockExptAggrResultService) PublishExptAggrResultEvent(ctx context.Context, event *entity.AggrCalculateEvent, duration *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishExptAggrResultEvent", ctx, event, duration)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishExptAggrResultEvent indicates an expected call of PublishExptAggrResultEvent.
+func (mr *MockExptAggrResultServiceMockRecorder) PublishExptAggrResultEvent(ctx, event, duration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptAggrResultEvent", reflect.TypeOf((*MockExptAggrResultService)(nil).PublishExptAggrResultEvent), ctx, event, duration)
 }
 
 // UpdateAnnotationAggrResult mocks base method.

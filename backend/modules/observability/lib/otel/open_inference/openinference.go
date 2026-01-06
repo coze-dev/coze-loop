@@ -91,8 +91,10 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 					part["text"] = text
 				case string(ImageLiteral):
 					part["type"] = string(ModelMessagePartTypeImage)
-					part["image_url"] = map[string]interface{}{
-						"url": image.(map[string]interface{})["url"],
+					imageMap, ok := image.(map[string]interface{})
+					if ok {
+						url, _ := imageMap["url"]
+						part["image_url"] = map[string]interface{}{"url": url}
 					}
 				default:
 				}

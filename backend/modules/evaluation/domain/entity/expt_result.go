@@ -4,6 +4,7 @@
 package entity
 
 import (
+	"bytes"
 	"context"
 	"strconv"
 	"time"
@@ -33,6 +34,18 @@ const (
 
 	// 标注项, FieldKey为TagKeyID
 	FieldType_Annotation FieldType = 23
+
+	FieldType_TargetLatency      FieldType = 50
+	FieldType_TargetInputTokens  FieldType = 51
+	FieldType_TargetOutputTokens FieldType = 52
+	FieldType_TargetTotalTokens  FieldType = 53
+)
+
+const (
+	AggrResultFieldKey_TargetLatency      string = "_target_latency"
+	AggrResultFieldKey_TargetInputTokens  string = "_target_input_tokens"
+	AggrResultFieldKey_TargetOutputTokens string = "_target_output_tokens"
+	AggrResultFieldKey_TargetTotalTokens  string = "_target_total_tokens"
 )
 
 // aggregate result
@@ -135,6 +148,29 @@ type ExptAggrResult struct {
 	AggrResult   []byte
 	Version      int64
 	Status       int32
+	UpdateAt     *time.Time
+}
+
+func (e *ExptAggrResult) AggrResEqual(other *ExptAggrResult) bool {
+	if e == nil && other == nil {
+		return true
+	}
+	if e == nil || other == nil {
+		return false
+	}
+	if e.SpaceID != other.SpaceID || e.ExperimentID != other.ExperimentID {
+		return false
+	}
+	if e.FieldType != other.FieldType || e.FieldKey != other.FieldKey {
+		return false
+	}
+	if e.Score != other.Score {
+		return false
+	}
+	if !bytes.Equal(e.AggrResult, other.AggrResult) {
+		return false
+	}
+	return true
 }
 
 type ExptAggregateResult struct {
@@ -142,6 +178,8 @@ type ExptAggregateResult struct {
 	EvaluatorResults  map[int64]*EvaluatorAggregateResult
 	Status            int64
 	AnnotationResults map[int64]*AnnotationAggregateResult
+	TargetResults     *EvalTargetMtrAggrResult
+	UpdateTime        *time.Time
 }
 
 type EvaluatorAggregateResult struct {
@@ -157,6 +195,15 @@ type AnnotationAggregateResult struct {
 	TagKeyID          int64
 	AggregatorResults []*AggregatorResult
 	Name              *string
+}
+
+type EvalTargetMtrAggrResult struct {
+	TargetID                int64
+	TargetVersionID         int64
+	LatencyAggrResults      []*AggregatorResult
+	InputTokensAggrResults  []*AggregatorResult
+	OutputTokensAggrResults []*AggregatorResult
+	TotalTokensAggrResults  []*AggregatorResult
 }
 
 // item result

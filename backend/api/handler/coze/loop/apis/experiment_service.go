@@ -216,3 +216,9 @@ func ListExptInsightAnalysisComment(ctx context.Context, c *app.RequestContext) 
 func GetAnalysisRecordFeedbackVote(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localExptSvc.GetAnalysisRecordFeedbackVote)
 }
+
+// CalculateExperimentAggrResult .
+// @router /api/evaluation/v1/experiments/:expt_id/aggr_results [POST]
+func CalculateExperimentAggrResult(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.CalculateExperimentAggrResult_)
+}
