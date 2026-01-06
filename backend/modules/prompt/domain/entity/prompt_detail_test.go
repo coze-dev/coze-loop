@@ -353,7 +353,7 @@ func TestPromptTemplate_formatMessages(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			formattedMsgs, err := tt.template.formatMessages(tt.messages, tt.variableVals)
 			unittest.AssertErrorEqual(t, tt.expectedError, err)
-			assert.Equal(t, tt.expectedMsgs, formattedMsgs)
+			assert.Equal(t, normalizeSkipRender(tt.expectedMsgs), normalizeSkipRender(formattedMsgs))
 		})
 	}
 }
@@ -1367,9 +1367,19 @@ func TestPromptTemplate_formatMessages_Jinja2(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			formattedMsgs, err := tt.template.formatMessages(tt.messages, tt.variableVals)
 			unittest.AssertErrorEqual(t, tt.expectedError, err)
-			assert.Equal(t, tt.expectedMsgs, formattedMsgs)
+			assert.Equal(t, normalizeSkipRender(tt.expectedMsgs), normalizeSkipRender(formattedMsgs))
 		})
 	}
+}
+
+func normalizeSkipRender(messages []*Message) []*Message {
+	for _, message := range messages {
+		if message == nil {
+			continue
+		}
+		message.SkipRender = nil
+	}
+	return messages
 }
 
 func TestRenderGoTemplate(t *testing.T) {

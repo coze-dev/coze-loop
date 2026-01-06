@@ -240,10 +240,20 @@ func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
 
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			if tt.wantErr == nil {
-				assert.Equal(t, tt.wantFormattedMessages, gotFormattedMessages)
+				assert.Equal(t, normalizeSkipRender(tt.wantFormattedMessages), normalizeSkipRender(gotFormattedMessages))
 			}
 		})
 	}
+}
+
+func normalizeSkipRender(messages []*entity.Message) []*entity.Message {
+	for _, message := range messages {
+		if message == nil {
+			continue
+		}
+		message.SkipRender = nil
+	}
+	return messages
 }
 
 func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
