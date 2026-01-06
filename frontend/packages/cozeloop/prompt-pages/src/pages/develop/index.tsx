@@ -72,6 +72,9 @@ export default function PromptDevelopPage() {
           copyButton: {
             onSuccess: ({ prompt }) => openBlank(`pe/prompts/${prompt?.id}`),
           },
+          deleteButton: {
+            onSuccess: () => navigate('/pe/prompts'),
+          },
         }}
         onSubmitSuccess={() => {
           showSubmitSuccess(
