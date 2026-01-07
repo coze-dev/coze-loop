@@ -19,6 +19,7 @@ type CollectToolResultsParam struct {
 }
 
 // IToolResultsCollector defines the interface for processing tool results
+//
 //go:generate mockgen -destination=mocks/tool_results_collector.go -package=mocks . IToolResultsCollector
 type IToolResultsCollector interface {
 	CollectToolResults(ctx context.Context, param CollectToolResultsParam) (map[string]string, error)
