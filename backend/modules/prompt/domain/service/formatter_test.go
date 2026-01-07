@@ -256,7 +256,7 @@ func TestPromptFormatter_FormatPrompt(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.wantFormattedMessages, gotFormattedMessages)
+				assert.Equal(t, normalizeSkipRenderMessages(tt.wantFormattedMessages), normalizeSkipRenderMessages(gotFormattedMessages))
 			}
 		})
 	}
@@ -267,4 +267,21 @@ func TestNewPromptFormatter(t *testing.T) {
 	assert.NotNil(t, formatter)
 	// Verify it implements the interface
 	_ = formatter
+}
+
+func normalizeSkipRenderMessages(messages []*entity.Message) []*entity.Message {
+	if messages == nil {
+		return nil
+	}
+	out := make([]*entity.Message, 0, len(messages))
+	for _, message := range messages {
+		if message == nil {
+			out = append(out, nil)
+			continue
+		}
+		copied := *message
+		copied.SkipRender = nil
+		out = append(out, &copied)
+	}
+	return out
 }

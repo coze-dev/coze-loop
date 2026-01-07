@@ -5,11 +5,13 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 func TestToolConfigProvider_GetToolConfig(t *testing.T) {
@@ -120,7 +122,8 @@ func TestToolConfigProvider_GetToolConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotTools, gotConfig, err := provider.GetToolConfig(context.Background(), tt.prompt, tt.singleStep)
 			if tt.wantErr != "" {
-				assert.EqualError(t, err, tt.wantErr)
+				assert.Error(t, err)
+				assert.Equal(t, tt.wantErr, strings.TrimSpace(errorx.ErrorWithoutStack(err)))
 				return
 			}
 			assert.NoError(t, err)

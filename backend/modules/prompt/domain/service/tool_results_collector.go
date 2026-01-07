@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
-	loopslices "github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 )
 
 // CollectToolResultsParam defines the parameters for processing tool results
@@ -34,11 +33,12 @@ func NewToolResultsCollector() IToolResultsCollector {
 
 // CollectToolResults ProcessToolResults implements the IToolResultsCollector interface
 func (t *ToolResultsCollector) CollectToolResults(ctx context.Context, param CollectToolResultsParam) (map[string]string, error) {
-	toolResultMap := loopslices.ToMap(param.MockTools, func(m *entity.MockTool) (string, string) {
-		if m == nil {
-			return "", ""
+	toolResultMap := make(map[string]string, len(param.MockTools))
+	for _, mockTool := range param.MockTools {
+		if mockTool == nil || mockTool.Name == "" {
+			continue
 		}
-		return m.Name, m.MockResponse
-	})
+		toolResultMap[mockTool.Name] = mockTool.MockResponse
+	}
 	return toolResultMap, nil
 }
