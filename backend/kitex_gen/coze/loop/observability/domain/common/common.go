@@ -51,6 +51,8 @@ const (
 
 	ContentTypeAudio = "Audio"
 
+	ContentTypeVideo = "Video"
+
 	ContentTypeMultiPart = "MultiPart"
 )
 
