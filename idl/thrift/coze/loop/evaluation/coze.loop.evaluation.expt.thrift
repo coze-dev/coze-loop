@@ -255,7 +255,7 @@ struct BatchGetExperimentAggrResultResponse {
 
 struct CalculateExperimentAggrResultRequest {
     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true')
-    2: required i64 expt_id (api.path = 'expt_id', api.json_conv = 'true')
+    2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true')
 
     255: optional base.Base Base
 }

@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -91,47 +92,43 @@ func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, sp
 		return err
 	}
 
-	if len(turnEvaluatorResultRefs) == 0 {
-		logs.CtxInfo(ctx, "no evaluator result found, skip create expt aggr result")
-		return nil
-	}
-
-	evaluatorResultIDs := make([]int64, 0)
-	evaluatorVersionID2ResultIDs := make(map[int64][]int64)
-	for _, turnEvaluatorResultRef := range turnEvaluatorResultRefs {
-		evaluatorResultIDs = append(evaluatorResultIDs, turnEvaluatorResultRef.EvaluatorResultID)
-		if _, ok := evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID]; !ok {
-			evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = make([]int64, 0)
-		}
-		evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = append(evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID], turnEvaluatorResultRef.EvaluatorResultID)
-	}
-
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
-	// evalResults, err := e.evalCall.BatchGetEvaluatorRecord(ctx, spaceID, evaluatorResultIDs)
-	if err != nil {
-		return err
-	}
-	recordMap := make(map[int64]*entity.EvaluatorRecord)
-	for _, record := range evaluatorRecords {
-		recordMap[record.ID] = record
-	}
-
 	evaluatorVersionID2AggregatorGroup := make(map[int64]*AggregatorGroup)
-	for evaluatorVersionID, resultIDs := range evaluatorVersionID2ResultIDs {
-		aggregatorGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
-		evaluatorVersionID2AggregatorGroup[evaluatorVersionID] = aggregatorGroup
-		for _, resultID := range resultIDs {
-			evalResult, ok := recordMap[resultID]
-			if !ok || evalResult == nil {
-				continue
+	if len(turnEvaluatorResultRefs) > 0 {
+		evaluatorResultIDs := make([]int64, 0)
+		evaluatorVersionID2ResultIDs := make(map[int64][]int64)
+		for _, turnEvaluatorResultRef := range turnEvaluatorResultRefs {
+			evaluatorResultIDs = append(evaluatorResultIDs, turnEvaluatorResultRef.EvaluatorResultID)
+			if _, ok := evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID]; !ok {
+				evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = make([]int64, 0)
 			}
-			if evalResult.EvaluatorOutputData == nil ||
-				evalResult.EvaluatorOutputData.EvaluatorResult == nil ||
-				evalResult.EvaluatorOutputData.EvaluatorResult.Score == nil {
-				continue
-			}
+			evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = append(evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID], turnEvaluatorResultRef.EvaluatorResultID)
+		}
 
-			aggregatorGroup.Append(gptr.Indirect(evalResult.EvaluatorOutputData.EvaluatorResult.Score))
+		evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+		if err != nil {
+			return err
+		}
+		recordMap := make(map[int64]*entity.EvaluatorRecord)
+		for _, record := range evaluatorRecords {
+			recordMap[record.ID] = record
+		}
+
+		for evaluatorVersionID, resultIDs := range evaluatorVersionID2ResultIDs {
+			aggregatorGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
+			evaluatorVersionID2AggregatorGroup[evaluatorVersionID] = aggregatorGroup
+			for _, resultID := range resultIDs {
+				evalResult, ok := recordMap[resultID]
+				if !ok || evalResult == nil {
+					continue
+				}
+				if evalResult.EvaluatorOutputData == nil ||
+					evalResult.EvaluatorOutputData.EvaluatorResult == nil ||
+					evalResult.EvaluatorOutputData.EvaluatorResult.Score == nil {
+					continue
+				}
+
+				aggregatorGroup.Append(gptr.Indirect(evalResult.EvaluatorOutputData.EvaluatorResult.Score))
+			}
 		}
 	}
 
@@ -147,10 +144,10 @@ func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx contex
 	const queryInterval = time.Millisecond * 30
 
 	mtrAggrGroup := &targetMtrAggrGroup{
-		latency:      NewAggregatorGroup(WithScoreDistributionAggregator()),
-		inputTokens:  NewAggregatorGroup(WithScoreDistributionAggregator()),
-		outputTokens: NewAggregatorGroup(WithScoreDistributionAggregator()),
-		totalTokens:  NewAggregatorGroup(WithScoreDistributionAggregator()),
+		latency:      NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		inputTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		outputTokens: NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		totalTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
 	}
 
 	var targetResultIDs []int64
@@ -982,6 +979,12 @@ func WithScoreDistributionAggregator() NewAggregatorGroupOption {
 	}
 }
 
+func WithBucketScoreDistributionAggregator(numBuckets int) NewAggregatorGroupOption {
+	return func(aggregatorGroup *AggregatorGroup) {
+		aggregatorGroup.Aggregators = append(aggregatorGroup.Aggregators, NewBucketScoreDistributionAggregator(numBuckets))
+	}
+}
+
 func (a *AggregatorGroup) Append(score float64) {
 	for _, aggregator := range a.Aggregators {
 		aggregator.Append(score)
@@ -1109,6 +1112,152 @@ func (a *ScoreDistributionAggregator) Result() map[entity.AggregatorType]*entity
 	gslice.SortBy(data.ScoreDistribution.ScoreDistributionItems, func(l *entity.ScoreDistributionItem, r *entity.ScoreDistributionItem) bool {
 		return l.Score < r.Score
 	})
+
+	return map[entity.AggregatorType]*entity.AggregateData{
+		entity.Distribution: data,
+	}
+}
+
+// BucketScoreDistributionAggregator distribution aggregator using buckets.
+// Uses configurable number of buckets to distribute scores between min and max values.
+// This is more memory-efficient for large datasets compared to ScoreDistributionAggregator.
+type BucketScoreDistributionAggregator struct {
+	Scores     []float64 // Store all scores for bucket calculation in Result()
+	Min        float64   // Minimum score value
+	Max        float64   // Maximum score value
+	Total      int64     // Total number of scores
+	NumBuckets int       // Number of buckets
+}
+
+func NewBucketScoreDistributionAggregator(numBuckets int) *BucketScoreDistributionAggregator {
+	if numBuckets <= 0 {
+		numBuckets = 20
+	}
+	return &BucketScoreDistributionAggregator{
+		Scores:     make([]float64, 0),
+		NumBuckets: numBuckets,
+	}
+}
+
+func (a *BucketScoreDistributionAggregator) Append(score float64) {
+	a.Scores = append(a.Scores, score)
+
+	if len(a.Scores) == 1 {
+		a.Min = score
+		a.Max = score
+	} else {
+		if score < a.Min {
+			a.Min = score
+		}
+		if score > a.Max {
+			a.Max = score
+		}
+	}
+
+	a.Total++
+}
+
+// getBucketIndex calculates which bucket (0 to numBuckets-1) a score belongs to
+// Uses left-closed right-open intervals [start, end) to handle boundary values correctly
+// For bucket i: [Min + i*width, Min + (i+1)*width)
+// Boundary values (equal to bucket end) belong to the next bucket
+func (a *BucketScoreDistributionAggregator) getBucketIndex(score float64) int {
+	if len(a.Scores) == 0 {
+		return 0
+	}
+
+	if a.Max == a.Min {
+		return 0
+	}
+
+	// Handle boundary cases
+	if score <= a.Min {
+		return 0
+	}
+	if score >= a.Max {
+		return a.NumBuckets - 1
+	}
+
+	// Calculate bucket index using floor to ensure left-closed right-open intervals
+	// bucketWidth = (Max - Min) / NumBuckets
+	// For score in [Min + i*width, Min + (i+1)*width), it belongs to bucket i
+	// Using floor ensures that boundary values (equal to bucket end) go to next bucket
+	bucketWidth := (a.Max - a.Min) / float64(a.NumBuckets)
+	offset := score - a.Min
+	bucketIndex := int(math.Floor(offset / bucketWidth))
+
+	// Ensure bucket index is within valid range [0, NumBuckets-1]
+	if bucketIndex < 0 {
+		bucketIndex = 0
+	} else if bucketIndex >= a.NumBuckets {
+		bucketIndex = a.NumBuckets - 1
+	}
+
+	return bucketIndex
+}
+
+// getBucketRange returns the score range for a given bucket index
+// bucketWidth is pre-calculated to avoid repeated computation
+func (a *BucketScoreDistributionAggregator) getBucketRange(bucketIndex int, bucketWidth float64) (start, end float64) {
+	if len(a.Scores) == 0 || a.Max == a.Min {
+		return a.Min, a.Max
+	}
+
+	start = a.Min + float64(bucketIndex)*bucketWidth
+	if bucketIndex == a.NumBuckets-1 {
+		end = a.Max
+	} else {
+		end = a.Min + float64(bucketIndex+1)*bucketWidth
+	}
+
+	return start, end
+}
+
+func (a *BucketScoreDistributionAggregator) Result() map[entity.AggregatorType]*entity.AggregateData {
+	data := &entity.AggregateData{
+		DataType: entity.ScoreDistribution,
+		ScoreDistribution: &entity.ScoreDistributionData{
+			ScoreDistributionItems: make([]*entity.ScoreDistributionItem, 0, a.NumBuckets),
+		},
+	}
+
+	// Calculate bucket counts based on final min/max
+	bucketCounts := make([]int64, a.NumBuckets)
+	for _, score := range a.Scores {
+		bucketIndex := a.getBucketIndex(score)
+		bucketCounts[bucketIndex]++
+	}
+
+	// Calculate bucket width once for all buckets
+	var bucketWidth float64
+	if len(a.Scores) > 0 && a.Max != a.Min {
+		bucketWidth = (a.Max - a.Min) / float64(a.NumBuckets)
+	}
+
+	// Generate distribution items for all buckets (including empty buckets)
+	for i := 0; i < a.NumBuckets; i++ {
+		count := bucketCounts[i]
+
+		start, end := a.getBucketRange(i, bucketWidth)
+		displayEnd := end
+		if i < a.NumBuckets-1 {
+			displayEnd = end - 0.01
+			displayEnd = math.Floor(displayEnd*100) / 100
+		}
+		scoreRange := fmt.Sprintf("%.2f-%.2f", start, displayEnd)
+
+		percentage := 0.0
+		if a.Total > 0 {
+			percentage = float64(count) / float64(a.Total)
+		}
+
+		scoreDistributionItem := &entity.ScoreDistributionItem{
+			Score:      scoreRange,
+			Count:      count,
+			Percentage: percentage,
+		}
+		data.ScoreDistribution.ScoreDistributionItems = append(data.ScoreDistribution.ScoreDistributionItems, scoreDistributionItem)
+	}
 
 	return map[entity.AggregatorType]*entity.AggregateData{
 		entity.Distribution: data,

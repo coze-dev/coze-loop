@@ -424,6 +424,10 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		TimeConsumingMS: gptr.Of(int64(0)),
 	}
 
+	ctx, span := looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+	span.SetCallType("EvalTarget")
+	ctx = looptracer.GetTracer().Inject(ctx)
+
 	invokeID, callee, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		ExptID:              gptr.Indirect(param.ExperimentID),
 		TargetID:            targetID,
@@ -469,7 +473,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		},
 	}
 
-	traceID, _ := e.emitTargetTrace(ctx, record, &entity.Session{UserID: userID})
+	traceID, _ := e.emitTargetTrace(ctx, span, record, &entity.Session{UserID: userID})
 	record.TraceID = traceID
 
 	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record); err != nil {
@@ -631,15 +635,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	return nil
 }
 
-func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, record *entity.EvalTargetRecord, session *entity.Session) (string, error) {
+func (e *EvalTargetServiceImpl) emitTargetTrace(ctx context.Context, span looptracer.Span, record *entity.EvalTargetRecord, session *entity.Session) (string, error) {
 	if record.EvalTargetOutputData == nil {
 		logs.CtxInfo(ctx, "emitTargetTrace with null data")
 		return "", nil
 	}
-
-	ctx, span := looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(record.SpaceID, 10)))
-	span.SetCallType("EvalTarget")
-	ctx = looptracer.GetTracer().Inject(ctx)
 
 	spanParam := &targetSpanTagsParams{
 		Error:         nil,

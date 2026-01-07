@@ -6,6 +6,7 @@ package logs
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
@@ -18,6 +19,8 @@ import (
 const (
 	extraKeyAffectStability = "biz_err_affect_stability"
 )
+
+var simplifyMethods = []string{"IngestTraces", "OtelIngestTraces"}
 
 func LogTrafficMW(next endpoint.Endpoint) endpoint.Endpoint {
 	disabled := func() bool {
@@ -55,14 +58,21 @@ func LogTrafficMW(next endpoint.Endpoint) endpoint.Endpoint {
 			logs.CtxError(ctx, "RPC %s failed, req=%s, err=%v", to, json.Jsonify(req), err)
 
 		case bizErr != nil:
+			reqStr, respStr := "-", "-"
+			if !slices.Contains(simplifyMethods, to) {
+				reqStr = json.Jsonify(req)
+				respStr = json.Jsonify(resp)
+			}
 			if v := bizErr.BizExtra()[extraKeyAffectStability]; v == "1" {
-				logs.CtxError(ctx, "RPC %s failed, req=%s, biz_err=%+v, resp=%s", to, json.Jsonify(req), bizErr, json.Jsonify(resp))
+				logs.CtxError(ctx, "RPC %s failed, req=%s, biz_err=%+v, resp=%s", to, reqStr, bizErr, respStr)
 			} else {
-				logs.CtxWarn(ctx, "RPC %s failed, req=%s, biz_err=%+v, resp=%s", to, json.Jsonify(req), bizErr, json.Jsonify(resp))
+				logs.CtxWarn(ctx, "RPC %s failed, req=%s, biz_err=%+v, resp=%s", to, reqStr, bizErr, respStr)
 			}
 
 		default:
-			logs.CtxDebug(ctx, "RPC %s succeeded, req=%s, resp=%s", to, json.Jsonify(req), json.Jsonify(resp))
+			if logs.DefaultLogger().GetLevel() <= logs.DebugLevel {
+				logs.CtxDebug(ctx, "RPC %s succeeded, req=%s, resp=%s", to, json.Jsonify(req), json.Jsonify(resp))
+			}
 		}
 
 		return err
