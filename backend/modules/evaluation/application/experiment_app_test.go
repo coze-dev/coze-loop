@@ -3903,6 +3903,8 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 	t.Run("成功创建洞察分析", func(t *testing.T) {
 		// Mock the manager.Get call
 		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			ID:        req.GetExptID(),
+			SpaceID:   req.GetWorkspaceID(),
 			CreatedBy: "test-user",
 			StartAt:   &[]time.Time{time.Now()}[0],
 			EndAt:     &[]time.Time{time.Now()}[0],
@@ -3925,7 +3927,11 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 	})
 
 	t.Run("权限验证失败", func(t *testing.T) {
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			ID:        req.GetExptID(),
+			SpaceID:   req.GetWorkspaceID(),
+			CreatedBy: "test-user",
+		}, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
 
 		_, err := app.InsightAnalysisExperiment(ctx, req)
@@ -3935,6 +3941,8 @@ func TestInsightAnalysisExperiment(t *testing.T) {
 
 	t.Run("创建分析记录失败", func(t *testing.T) {
 		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			ID:        req.GetExptID(),
+			SpaceID:   req.GetWorkspaceID(),
 			CreatedBy: "test-user",
 			StartAt:   &[]time.Time{time.Now()}[0],
 			EndAt:     &[]time.Time{time.Now()}[0],
@@ -4104,7 +4112,23 @@ func TestFeedbackExptInsightAnalysisReport(t *testing.T) {
 
 	t.Run("成功反馈洞察分析报告", func(t *testing.T) {
 		// Mock the manager.Get call
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			ID:        req.GetExptID(),
+			SpaceID:   req.GetWorkspaceID(),
+			CreatedBy: "test-user",
+		}, nil)
+		// Mock GetAnalysisRecordByID 校验记录归属
+		mockInsightService.EXPECT().GetAnalysisRecordByID(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+		).Return(&entity.ExptInsightAnalysisRecord{
+			ID:      req.GetInsightAnalysisRecordID(),
+			ExptID:  req.GetExptID(),
+			SpaceID: req.GetWorkspaceID(),
+		}, nil)
 		// Mock the auth.AuthorizationWithoutSPI call
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		mockInsightService.EXPECT().FeedbackExptInsightAnalysis(gomock.Any(), gomock.Any()).Return(nil)
@@ -4122,7 +4146,23 @@ func TestFeedbackExptInsightAnalysisReport(t *testing.T) {
 	})
 
 	t.Run("权限验证失败", func(t *testing.T) {
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			ID:        req.GetExptID(),
+			SpaceID:   req.GetWorkspaceID(),
+			CreatedBy: "test-user",
+		}, nil)
+		// 仍需通过记录归属校验
+		mockInsightService.EXPECT().GetAnalysisRecordByID(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+		).Return(&entity.ExptInsightAnalysisRecord{
+			ID:      req.GetInsightAnalysisRecordID(),
+			ExptID:  req.GetExptID(),
+			SpaceID: req.GetWorkspaceID(),
+		}, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("authorization error"))
 
 		_, err := app.FeedbackExptInsightAnalysisReport(ctx, req)
@@ -4131,7 +4171,23 @@ func TestFeedbackExptInsightAnalysisReport(t *testing.T) {
 	})
 
 	t.Run("反馈操作失败", func(t *testing.T) {
-		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{CreatedBy: "test-user"}, nil)
+		mockManager.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+			ID:        req.GetExptID(),
+			SpaceID:   req.GetWorkspaceID(),
+			CreatedBy: "test-user",
+		}, nil)
+		// 仍需通过记录归属校验
+		mockInsightService.EXPECT().GetAnalysisRecordByID(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+		).Return(&entity.ExptInsightAnalysisRecord{
+			ID:      req.GetInsightAnalysisRecordID(),
+			ExptID:  req.GetExptID(),
+			SpaceID: req.GetWorkspaceID(),
+		}, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		mockInsightService.EXPECT().FeedbackExptInsightAnalysis(gomock.Any(), gomock.Any()).Return(errors.New("feedback error"))
 
