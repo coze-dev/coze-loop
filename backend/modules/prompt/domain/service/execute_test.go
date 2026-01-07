@@ -1432,6 +1432,7 @@ func (s *recordingSpan) SetModelCallOptions(ctx context.Context, callOptions int
 func (s *recordingSpan) SetInputTokens(ctx context.Context, inputTokens int) {}
 func (s *recordingSpan) SetOutputTokens(ctx context.Context, outputTokens int) {
 }
+
 func (s *recordingSpan) SetStartTimeFirstResp(ctx context.Context, startTimeFirstResp int64) {
 }
 func (s *recordingSpan) SetRuntime(ctx context.Context, runtime tracespec.Runtime) {}
