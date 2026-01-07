@@ -172,6 +172,7 @@ export const TagsDetail = ({
             </div>
           ) : null}
         </div>
+        <div className="w-full h-14"></div>
       </div>
     </Layout.Content>
   );

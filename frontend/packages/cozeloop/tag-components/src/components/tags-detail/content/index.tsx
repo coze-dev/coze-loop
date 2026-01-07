@@ -36,7 +36,7 @@ export const TagDetailContent = forwardRef<
   }));
 
   return (
-    <div className="h-full max-h-full overflow-auto styled-scroll pb-14 flex-1">
+    <div className="h-full max-h-full overflow-auto styled-scroll flex-1">
       <div className="max-w-[800px] flex justify-center w-full pt-6 pb-14 mx-auto">
         <TagsForm
           maxTags={tagSpec?.max_total}
