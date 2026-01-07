@@ -671,6 +671,35 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 				VideoURL: ptr.Of("https://example.com/video.mp4"),
 			},
 		},
+		{
+			name: "video url empty string keeps nil in dto",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "",
+				},
+				MediaConfig: &entity.MediaConfig{},
+			},
+			want: &openapi.ContentPart{
+				Type: ptr.Of(openapi.ContentTypeVideoURL),
+			},
+		},
+		{
+			name: "media config with nil fps keeps nil config",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "https://example.com/video.mp4",
+				},
+				MediaConfig: &entity.MediaConfig{
+					Fps: nil,
+				},
+			},
+			want: &openapi.ContentPart{
+				Type:     ptr.Of(openapi.ContentTypeVideoURL),
+				VideoURL: ptr.Of("https://example.com/video.mp4"),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1415,6 +1444,33 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 					MediaConfig: &entity.MediaConfig{
 						Fps: ptr.Of(1.8),
 					},
+				},
+			},
+		},
+		{
+			name: "video url empty string and nil config handling",
+			dtos: []*openapi.ContentPart{
+				{
+					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of(""),
+				},
+				{
+					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of("https://example.com/video.mp4"),
+					Config:   nil,
+				},
+			},
+			want: []*entity.ContentPart{
+				{
+					Type:     entity.ContentTypeVideoURL,
+					VideoURL: nil,
+				},
+				{
+					Type: entity.ContentTypeVideoURL,
+					VideoURL: &entity.VideoURL{
+						URL: "https://example.com/video.mp4",
+					},
+					MediaConfig: nil,
 				},
 			},
 		},

@@ -448,6 +448,34 @@ func TestCmpEqual(t *testing.T) {
 	fmt.Printf("!nil cmp nil = %t\n", cmp.Equal(&PromptDetail{}, pd2)) // false
 }
 
+func TestPromptTemplate_getTemplateMessages_SkipRenderHandling(t *testing.T) {
+	t.Parallel()
+
+	templateMsg := &Message{
+		Role:    RoleUser,
+		Content: ptr.Of("pt {{name}}"),
+	}
+	inputMsg := &Message{
+		Role:       RoleSystem,
+		Content:    ptr.Of("in {{name}}"),
+		SkipRender: ptr.Of(true),
+	}
+	pt := &PromptTemplate{
+		TemplateType: TemplateTypeNormal,
+		Messages: []*Message{
+			nil,
+			templateMsg,
+		},
+	}
+
+	got := pt.getTemplateMessages([]*Message{inputMsg})
+	assert.Len(t, got, 2)
+	assert.Same(t, templateMsg, got[0])
+	assert.Equal(t, ptr.Of(false), got[0].SkipRender)
+	assert.Same(t, inputMsg, got[1])
+	assert.Equal(t, ptr.Of(true), got[1].SkipRender)
+}
+
 func TestConvertVariablesToMap(t *testing.T) {
 	tests := []struct {
 		name          string
