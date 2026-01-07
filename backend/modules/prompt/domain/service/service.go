@@ -77,7 +77,7 @@ type PromptLabelQuery struct {
 type PromptServiceImpl struct {
 	formatter            IPromptFormatter
 	toolConfigProvider   IToolConfigProvider
-	toolResultsProcessor IToolResultsProcessor
+	toolResultsCollector IToolResultsCollector
 	idgen                idgen.IIDGenerator
 	debugLogRepo         repo.IDebugLogRepo
 	debugContextRepo     repo.IDebugContextRepo
@@ -103,7 +103,7 @@ type GetPromptParam struct {
 func NewPromptService(
 	formatter IPromptFormatter,
 	toolConfigProvider IToolConfigProvider,
-	toolResultsProcessor IToolResultsProcessor,
+	toolResultsProcessor IToolResultsCollector,
 	idgen idgen.IIDGenerator,
 	debugLogRepo repo.IDebugLogRepo,
 	debugContextRepo repo.IDebugContextRepo,
@@ -117,7 +117,7 @@ func NewPromptService(
 	return &PromptServiceImpl{
 		formatter:            formatter,
 		toolConfigProvider:   toolConfigProvider,
-		toolResultsProcessor: toolResultsProcessor,
+		toolResultsCollector: toolResultsProcessor,
 		idgen:                idgen,
 		debugLogRepo:         debugLogRepo,
 		debugContextRepo:     debugContextRepo,

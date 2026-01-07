@@ -229,7 +229,7 @@ func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
 			p := &PromptServiceImpl{
 				formatter:            NewPromptFormatter(),
 				toolConfigProvider:   NewToolConfigProvider(),
-				toolResultsProcessor: NewToolResultsProcessor(),
+				toolResultsCollector: NewToolResultsCollector(),
 				idgen:                ttFields.idgen,
 				debugLogRepo:         ttFields.debugLogRepo,
 				debugContextRepo:     ttFields.debugContextRepo,
@@ -265,7 +265,7 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		p := &PromptServiceImpl{
 			formatter:            NewPromptFormatter(),
 			toolConfigProvider:   NewToolConfigProvider(),
-			toolResultsProcessor: NewToolResultsProcessor(),
+			toolResultsCollector: NewToolResultsCollector(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -283,7 +283,7 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		p := &PromptServiceImpl{
 			formatter:            NewPromptFormatter(),
 			toolConfigProvider:   NewToolConfigProvider(),
-			toolResultsProcessor: NewToolResultsProcessor(),
+			toolResultsCollector: NewToolResultsCollector(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -351,7 +351,7 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		p := &PromptServiceImpl{
 			formatter:            NewPromptFormatter(),
 			toolConfigProvider:   NewToolConfigProvider(),
-			toolResultsProcessor: NewToolResultsProcessor(),
+			toolResultsCollector: NewToolResultsCollector(),
 			idgen:                mockIDGen,
 			llm:                  mockLLM,
 		}
@@ -554,7 +554,7 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		p := &PromptServiceImpl{
 			formatter:            NewPromptFormatter(),
 			toolConfigProvider:   NewToolConfigProvider(),
-			toolResultsProcessor: NewToolResultsProcessor(),
+			toolResultsCollector: NewToolResultsCollector(),
 			idgen:                mockIDGen,
 			llm:                  mockLLM,
 		}
@@ -944,7 +944,7 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 			p := &PromptServiceImpl{
 				formatter:            NewPromptFormatter(),
 				toolConfigProvider:   NewToolConfigProvider(),
-				toolResultsProcessor: NewToolResultsProcessor(),
+				toolResultsCollector: NewToolResultsCollector(),
 				idgen:                ttFields.idgen,
 				debugLogRepo:         ttFields.debugLogRepo,
 				debugContextRepo:     ttFields.debugContextRepo,
@@ -998,7 +998,7 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 	svc := &PromptServiceImpl{
 		formatter:            NewPromptFormatter(),
 		toolConfigProvider:   NewToolConfigProvider(),
-		toolResultsProcessor: NewToolResultsProcessor(),
+		toolResultsCollector: NewToolResultsCollector(),
 	}
 	param := ExecuteParam{
 		Prompt: prompt,
@@ -1024,7 +1024,7 @@ func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
 	svc := &PromptServiceImpl{
 		formatter:            NewPromptFormatter(),
 		toolConfigProvider:   NewToolConfigProvider(),
-		toolResultsProcessor: NewToolResultsProcessor(),
+		toolResultsCollector: NewToolResultsCollector(),
 	}
 
 	tests := []struct {

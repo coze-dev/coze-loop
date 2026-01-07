@@ -52,13 +52,6 @@ type ExecuteStreamingParam struct {
 	ResultStream chan<- *entity.Reply
 }
 
-// ReorganizeContextParam defines the parameters for reorganizing contexts
-type ReorganizeContextParam struct {
-	Messages      []*entity.Message
-	ToolResultMap map[string]string // map from tool name to tool result
-	Reply         *entity.Reply
-}
-
 func (p *PromptServiceImpl) FormatPrompt(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (formattedMessages []*entity.Message, err error) {
 	// Delegate to the formatter interface
 	return p.formatter.FormatPrompt(ctx, prompt, messages, variableVals)
@@ -95,7 +88,7 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 
 		// Execute iteration with tracing and tool result processing
 		var toolResultMap map[string]string
-		executeIterationWithTracing := func() (reply *entity.Reply, err error) {
+		runAgentStep := func() (reply *entity.Reply, err error) {
 			iterCtx := ctx
 			var span cozeloop.Span
 			if !param.DisableTracing {
@@ -114,7 +107,7 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 				tokenUsage.OutputTokens += reply.Item.TokenUsage.OutputTokens
 			}
 
-			toolResultMap, err = p.toolResultsProcessor.ProcessToolResults(iterCtx, ProcessToolResultsParam{
+			toolResultMap, err = p.toolResultsCollector.CollectToolResults(iterCtx, CollectToolResultsParam{
 				Prompt:           param.Prompt,
 				MockTools:        param.MockTools,
 				Reply:            reply,
@@ -131,7 +124,7 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 			return reply, nil
 		}
 
-		aggregatedReply, err = executeIterationWithTracing()
+		aggregatedReply, err = runAgentStep()
 		if err != nil {
 			return nil, err
 		}
@@ -141,11 +134,7 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 		}
 		debugStep++
 		// 多轮执行需要重新编排上下文
-		param.Messages, err = p.reorganizeContexts(ctx, ReorganizeContextParam{
-			Messages:      param.Messages,
-			ToolResultMap: toolResultMap,
-			Reply:         aggregatedReply,
-		})
+		param.Messages, err = p.reorganizeContexts(param.Messages, toolResultMap, aggregatedReply)
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +167,7 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 
 		// Execute iteration with tracing and tool result processing
 		var toolResultMap map[string]string
-		executeIterationWithTracing := func() (iterReply *entity.Reply, err error) {
+		runAgentStep := func() (iterReply *entity.Reply, err error) {
 			iterCtx := ctx
 			var span cozeloop.Span
 			if !param.DisableTracing {
@@ -198,7 +187,7 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 			}
 
 			// Process tool results and get tool result map
-			toolResultMap, err = p.toolResultsProcessor.ProcessToolResults(iterCtx, ProcessToolResultsParam{
+			toolResultMap, err = p.toolResultsCollector.CollectToolResults(iterCtx, CollectToolResultsParam{
 				Prompt:    param.Prompt,
 				MockTools: param.MockTools,
 				Reply:     iterReply,
@@ -215,7 +204,7 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 			return iterReply, nil
 		}
 
-		reply, err = executeIterationWithTracing()
+		reply, err = runAgentStep()
 		if err != nil {
 			return nil, err
 		}
@@ -225,11 +214,7 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 		}
 		debugStep++
 		// 多轮执行需要重新编排上下文
-		param.Messages, err = p.reorganizeContexts(ctx, ReorganizeContextParam{
-			Messages:      param.Messages,
-			ToolResultMap: toolResultMap,
-			Reply:         reply,
-		})
+		param.Messages, err = p.reorganizeContexts(param.Messages, toolResultMap, reply)
 		if err != nil {
 			return nil, err
 		}
@@ -485,17 +470,17 @@ func shouldContinue(singleStep bool, startTime time.Time, currentStep int32, las
 }
 
 // reorganizeContexts reorganizes the message contexts after each iteration
-func (p *PromptServiceImpl) reorganizeContexts(ctx context.Context, param ReorganizeContextParam) ([]*entity.Message, error) {
-	newContexts := slices.Clone(param.Messages)
-	if param.Reply == nil || param.Reply.Item == nil || param.Reply.Item.Message == nil {
+func (p *PromptServiceImpl) reorganizeContexts(messages []*entity.Message, toolResultMap map[string]string, reply *entity.Reply) ([]*entity.Message, error) {
+	newContexts := slices.Clone(messages)
+	if reply == nil || reply.Item == nil || reply.Item.Message == nil {
 		return newContexts, nil
 	}
-	newContexts = append(newContexts, param.Reply.Item.Message)
-	if len(param.Reply.Item.Message.ToolCalls) > 0 {
+	newContexts = append(newContexts, reply.Item.Message)
+	if len(reply.Item.Message.ToolCalls) > 0 {
 		// 如果有工具调用，则使用 ToolResultMap 填充 tool response
-		for _, toolCall := range param.Reply.Item.Message.ToolCalls {
+		for _, toolCall := range reply.Item.Message.ToolCalls {
 			if toolCall.FunctionCall != nil {
-				toolResult := param.ToolResultMap[toolCall.FunctionCall.Name]
+				toolResult := toolResultMap[toolCall.FunctionCall.Name]
 				newContexts = append(newContexts, &entity.Message{
 					Role:       entity.RoleTool,
 					ToolCallID: ptr.Of(toolCall.ID),
