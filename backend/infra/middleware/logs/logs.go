@@ -70,7 +70,9 @@ func LogTrafficMW(next endpoint.Endpoint) endpoint.Endpoint {
 			}
 
 		default:
-			logs.CtxDebug(ctx, "RPC %s succeeded, req=%s, resp=%s", to, json.Jsonify(req), json.Jsonify(resp))
+			if logs.DefaultLogger().GetLevel() <= logs.DebugLevel {
+				logs.CtxDebug(ctx, "RPC %s succeeded, req=%s, resp=%s", to, json.Jsonify(req), json.Jsonify(resp))
+			}
 		}
 
 		return err
