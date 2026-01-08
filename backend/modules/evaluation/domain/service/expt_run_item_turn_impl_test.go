@@ -1473,7 +1473,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:         "Empty field configuration",
+			name:          "Empty field configuration",
 			fieldConfs:    []*entity.FieldConf{},
 			sourceFields:  sourceFields,
 			evaluatorType: entity.EvaluatorTypePrompt,
