@@ -1276,10 +1276,11 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			turnFields:   turnFields,
 			targetFields: targetFields,
 			wantInputData: &entity.EvaluatorInputData{
-				HistoryMessages:            nil,
-				InputFields:                make(map[string]*entity.Content),
-				EvaluateDatasetFields:      map[string]*entity.Content{"eval_field": mockContent1},
-				EvaluateTargetOutputFields: map[string]*entity.Content{"target_field": mockContent1},
+				HistoryMessages:       nil,
+				InputFields:           make(map[string]*entity.Content),
+				EvaluateDatasetFields: map[string]*entity.Content{"eval_field": mockContent1},
+				// Code 类型评估器下，目标字段应直接透传原始 targetFields
+				EvaluateTargetOutputFields: targetFields,
 			},
 			wantErr: false,
 		},
@@ -1327,10 +1328,11 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			turnFields:   turnFields,
 			targetFields: targetFields,
 			wantInputData: &entity.EvaluatorInputData{
-				HistoryMessages:            nil,
-				InputFields:                make(map[string]*entity.Content),
-				EvaluateDatasetFields:      map[string]*entity.Content{},
-				EvaluateTargetOutputFields: map[string]*entity.Content{},
+				HistoryMessages:       nil,
+				InputFields:           make(map[string]*entity.Content),
+				EvaluateDatasetFields: map[string]*entity.Content{},
+				// Code 类型评估器下，即使没有配置 FieldConfs，也应透传原始 targetFields
+				EvaluateTargetOutputFields: targetFields,
 			},
 			wantErr: false,
 		},
@@ -1407,11 +1409,12 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		fieldConfs   []*entity.FieldConf
-		sourceFields map[string]*entity.Content
-		wantResult   map[string]*entity.Content
-		wantErr      bool
+		name          string
+		fieldConfs    []*entity.FieldConf
+		sourceFields  map[string]*entity.Content
+		evaluatorType entity.EvaluatorType
+		wantResult    map[string]*entity.Content
+		wantErr       bool
 	}{
 		{
 			name: "Normal field mapping",
@@ -1419,7 +1422,8 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 				{FieldName: "output1", FromField: "field1"},
 				{FieldName: "output2", FromField: "field2"},
 			},
-			sourceFields: sourceFields,
+			sourceFields:  sourceFields,
+			evaluatorType: entity.EvaluatorTypePrompt,
 			wantResult: map[string]*entity.Content{
 				"output1": mockContent1,
 				"output2": mockContent2,
@@ -1431,7 +1435,8 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			fieldConfs: []*entity.FieldConf{
 				{FieldName: "nested_output", FromField: "json_field.key"},
 			},
-			sourceFields: sourceFields,
+			sourceFields:  sourceFields,
+			evaluatorType: entity.EvaluatorTypePrompt,
 			wantResult: map[string]*entity.Content{
 				"nested_output": {
 					ContentType: gptr.Of(entity.ContentTypeText),
@@ -1445,7 +1450,8 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			fieldConfs: []*entity.FieldConf{
 				{FieldName: "output", FromField: "non_existent_field"},
 			},
-			sourceFields: sourceFields,
+			sourceFields:  sourceFields,
+			evaluatorType: entity.EvaluatorTypePrompt,
 			wantResult: map[string]*entity.Content{
 				"output": nil,
 			},
@@ -1456,7 +1462,8 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			fieldConfs: []*entity.FieldConf{
 				{FieldName: "output", FromField: "json_field.non_existent"},
 			},
-			sourceFields: sourceFields,
+			sourceFields:  sourceFields,
+			evaluatorType: entity.EvaluatorTypePrompt,
 			wantResult: map[string]*entity.Content{
 				"output": {
 					ContentType: gptr.Of(entity.ContentTypeText),
@@ -1466,11 +1473,23 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:         "Empty field configuration",
-			fieldConfs:   []*entity.FieldConf{},
-			sourceFields: sourceFields,
-			wantResult:   map[string]*entity.Content{},
-			wantErr:      false,
+			name:          "Empty field configuration",
+			fieldConfs:    []*entity.FieldConf{},
+			sourceFields:  sourceFields,
+			evaluatorType: entity.EvaluatorTypePrompt,
+			wantResult:    map[string]*entity.Content{},
+			wantErr:       false,
+		},
+		{
+			name: "Code evaluator returns source fields directly",
+			fieldConfs: []*entity.FieldConf{
+				{FieldName: "output1", FromField: "field1"},
+			},
+			sourceFields:  sourceFields,
+			evaluatorType: entity.EvaluatorTypeCode,
+			// 对于 Code 类型评估器，应直接返回 sourceFields
+			wantResult: sourceFields,
+			wantErr:    false,
 		},
 	}
 
@@ -1478,7 +1497,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := service.buildFieldsFromSource(ctx, tt.fieldConfs, tt.sourceFields)
+			got, err := service.buildFieldsFromSource(ctx, tt.fieldConfs, tt.sourceFields, tt.evaluatorType)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2259,8 +2278,9 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 			validateResult: func(t *testing.T, result *entity.EvaluatorInputData) {
 				assert.NotNil(t, result.EvaluateDatasetFields)
 				assert.NotNil(t, result.EvaluateTargetOutputFields)
+				// Code 类型评估器下，即使 FieldConfs 为空，buildFieldsFromSource 也会直接返回 sourceFields
 				assert.Empty(t, result.EvaluateDatasetFields)
-				assert.Empty(t, result.EvaluateTargetOutputFields)
+				assert.Equal(t, targetFields, result.EvaluateTargetOutputFields)
 			},
 		},
 		{

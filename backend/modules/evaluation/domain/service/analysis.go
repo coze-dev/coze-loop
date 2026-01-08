@@ -11,7 +11,7 @@ import (
 
 //go:generate mockgen -destination=mocks/evaluation_analysis.go -package=mocks . IEvaluationAnalysisService
 type IEvaluationAnalysisService interface {
-	GetAnalysisRecord(ctx context.Context, id int64) (record *entity.AnalysisRecord, err error)
+	GetAnalysisRecord(ctx context.Context, id, spaceID int64) (record *entity.AnalysisRecord, err error)
 	BatchGetAnalysisRecordByUniqueKeys(ctx context.Context, uniqueKey []string) (record map[string]*entity.AnalysisRecord, err error) // 批量获取
 	TrajectoryAnalysis(ctx context.Context, param TrajectoryAnalysisParam) (recordID int64, err error)
 }
