@@ -75,7 +75,6 @@ struct SubmitExperimentRequest {
 struct SubmitExperimentResponse {
     1: optional expt.Experiment experiment
     2: optional i64 run_id (api.js_conv = 'true')
-    3: optional i64 expt_id (api.js_conv = 'true')
 
     255: base.BaseResp BaseResp
 }
