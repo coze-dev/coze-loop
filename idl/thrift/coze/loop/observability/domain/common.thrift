@@ -16,6 +16,7 @@ const PlatformType PlatformType_InnerCozeloop = "inner_cozeloop"
 const PlatformType PlatformType_InnerDoubao = "inner_doubao"
 const PlatformType PlatformType_InnerPrompt = "inner_prompt"
 const PlatformType PlatformType_InnerCozeBot = "inner_coze_bot"
+const PlatformType PlatformType_TraceDetail = "trace_detail"
 
 typedef string SpanListType (ts.enum="true")
 const SpanListType SpanListType_RootSpan = "root_span"
