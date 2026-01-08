@@ -12322,7 +12322,7 @@ func (p *BatchGetExperimentAggrResultResponse) Field255DeepEqual(src *base.BaseR
 
 type CalculateExperimentAggrResultRequest struct {
 	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" form:"workspace_id,required" json:"workspace_id,string,required"`
-	ExptID      int64      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id,required" path:"expt_id,required"`
+	ExptID      int64      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id,string,required" path:"expt_id,required"`
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
