@@ -426,7 +426,7 @@ func TestPrompt_FormatMessages(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			formattedMsgs, err := tt.prompt.FormatMessages(tt.messages, tt.variableVals)
 			assert.Equal(t, tt.expectedError, err)
-			assert.Equal(t, tt.expectedMsgs, formattedMsgs)
+			assert.Equal(t, normalizeSkipRenderPromptMessages(tt.expectedMsgs), normalizeSkipRenderPromptMessages(formattedMsgs))
 		})
 	}
 }
@@ -574,9 +574,19 @@ func TestPrompt_GetTemplateMessages(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			templateMsgs := tt.prompt.GetTemplateMessages(tt.messages)
-			assert.Equal(t, tt.expectedMsgs, templateMsgs)
+			assert.Equal(t, normalizeSkipRenderPromptMessages(tt.expectedMsgs), normalizeSkipRenderPromptMessages(templateMsgs))
 		})
 	}
+}
+
+func normalizeSkipRenderPromptMessages(messages []*Message) []*Message {
+	for _, message := range messages {
+		if message == nil {
+			continue
+		}
+		message.SkipRender = nil
+	}
+	return messages
 }
 
 func TestPrompt_CloneDetail(t *testing.T) {

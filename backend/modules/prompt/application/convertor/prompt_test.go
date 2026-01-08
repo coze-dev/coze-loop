@@ -853,7 +853,7 @@ func TestTemplateTypeDTO2DO(t *testing.T) {
 		{
 			name: "custom template m type",
 			dto:  prompt.TemplateTypeCustomTemplateM,
-			want: entity.TemplateTYpeCustomTemplateM,
+			want: entity.TemplateTypeCustomTemplateM,
 		},
 		{
 			name: "unknown template type defaults to normal",
@@ -867,6 +867,54 @@ func TestTemplateTypeDTO2DO(t *testing.T) {
 			t.Parallel()
 			got := TemplateTypeDTO2DO(tt.dto)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMcpConfigDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *prompt.McpConfig
+		want *entity.McpConfig
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "mcp config with servers",
+			dto: &prompt.McpConfig{
+				IsMcpCallAutoRetry: ptr.Of(true),
+				McpServers: []*prompt.McpServerCombine{
+					{
+						McpServerID:    ptr.Of(int64(1)),
+						AccessPointID:  ptr.Of(int64(2)),
+						DisabledTools:  []string{"tool_x"},
+						EnabledTools:   []string{"tool_y"},
+						IsEnabledTools: ptr.Of(true),
+					},
+					nil,
+				},
+			},
+			want: &entity.McpConfig{
+				IsMcpCallAutoRetry: ptr.Of(true),
+				McpServers: []*entity.McpServerCombine{
+					{
+						McpServerID:    ptr.Of(int64(1)),
+						AccessPointID:  ptr.Of(int64(2)),
+						DisabledTools:  []string{"tool_x"},
+						EnabledTools:   []string{"tool_y"},
+						IsEnabledTools: ptr.Of(true),
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, McpConfigDTO2DO(tt.dto))
 		})
 	}
 }
@@ -954,7 +1002,7 @@ func TestPromptTemplateWithDifferentTypes(t *testing.T) {
 				},
 			},
 			want: &entity.PromptTemplate{
-				TemplateType: entity.TemplateTYpeCustomTemplateM,
+				TemplateType: entity.TemplateTypeCustomTemplateM,
 				Messages: []*entity.Message{
 					{
 						Role:    entity.RoleUser,
