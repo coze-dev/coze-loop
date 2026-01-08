@@ -30,6 +30,7 @@ const (
 	ContentType_Text  ContentType = "Text"
 	ContentType_Image ContentType = "Image"
 	ContentType_Audio ContentType = "Audio"
+	ContentType_Video ContentType = "Video"
 	// 图文混排
 	ContentType_MultiPart ContentType = "MultiPart"
 )
@@ -211,9 +212,21 @@ type Content struct {
 	ContentType ContentType
 	Text        string
 	Image       *Image
+	Audio       *Audio
+	Video       *Video
 	MultiPart   []*Content
 }
 type Image struct {
+	Name string
+	Url  string
+}
+
+type Audio struct {
+	Name string
+	Url  string
+}
+
+type Video struct {
 	Name string
 	Url  string
 }
@@ -232,6 +245,38 @@ func (i *Image) GetUrl() string {
 		return ""
 	}
 	return i.Url
+}
+
+// GetName returns the name of the audio
+func (a *Audio) GetName() string {
+	if a == nil {
+		return ""
+	}
+	return a.Name
+}
+
+// GetUrl returns the URL of the audio
+func (a *Audio) GetUrl() string {
+	if a == nil {
+		return ""
+	}
+	return a.Url
+}
+
+// GetName returns the name of the video
+func (v *Video) GetName() string {
+	if v == nil {
+		return ""
+	}
+	return v.Name
+}
+
+// GetUrl returns the URL of the video
+func (v *Video) GetUrl() string {
+	if v == nil {
+		return ""
+	}
+	return v.Url
 }
 
 // GetContentType returns the content type of the content
@@ -256,6 +301,22 @@ func (c *Content) GetImage() *Image {
 		return nil
 	}
 	return c.Image
+}
+
+// GetAudio returns the audio content
+func (c *Content) GetAudio() *Audio {
+	if c == nil {
+		return nil
+	}
+	return c.Audio
+}
+
+// GetVideo returns the video content
+func (c *Content) GetVideo() *Video {
+	if c == nil {
+		return nil
+	}
+	return c.Video
 }
 
 // GetMultiPart returns the multi-part content
@@ -364,6 +425,28 @@ func GetContentInfo(ctx context.Context, contentType ContentType, value string) 
 						Url:  part.ImageURL.URL,
 					},
 				})
+			case tracespec.ModelMessagePartTypeAudio:
+				if part.AudioURL == nil {
+					continue
+				}
+				multiPart = append(multiPart, &Content{
+					ContentType: ContentType_Audio,
+					Audio: &Audio{
+						Name: part.AudioURL.Name,
+						Url:  part.AudioURL.URL,
+					},
+				})
+			case tracespec.ModelMessagePartTypeVideo:
+				if part.VideoURL == nil {
+					continue
+				}
+				multiPart = append(multiPart, &Content{
+					ContentType: ContentType_Video,
+					Video: &Video{
+						Name: part.VideoURL.Name,
+						Url:  part.VideoURL.URL,
+					},
+				})
 			case tracespec.ModelMessagePartTypeText, tracespec.ModelMessagePartTypeFile:
 				multiPart = append(multiPart, &Content{
 					ContentType: ContentType_Text,
@@ -395,6 +478,8 @@ func CommonContentTypeDO2DTO(contentType ContentType) *common.ContentType {
 		return gptr.Of(common.ContentTypeImage)
 	case ContentType_Audio:
 		return gptr.Of(common.ContentTypeAudio)
+	case ContentType_Video:
+		return gptr.Of(common.ContentTypeVideo)
 	case ContentType_MultiPart:
 		return gptr.Of(common.ContentTypeMultiPart)
 	default:

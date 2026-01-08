@@ -7,8 +7,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -45,6 +45,15 @@ func convert2DatasetMultiModalSpec(ctx context.Context, multiModalSpec *entity.M
 		MaxFileCount:     &multiModalSpec.MaxFileCount,
 		MaxFileSize:      &multiModalSpec.MaxFileSize,
 		SupportedFormats: multiModalSpec.SupportedFormats,
+		MaxPartCount:     &multiModalSpec.MaxPartCount,
+		MaxFileSizeByType: gmap.Map(multiModalSpec.MaxFileSizeByType, func(k entity.ContentType, v int64) (dataset.ContentType, int64) {
+			convRes, _ := dataset.ContentTypeFromString(common.ConvertContentTypeDO2DTO(k))
+			return convRes, v
+		}),
+		SupportedFormatsByType: gmap.Map(multiModalSpec.SupportedFormatsByType, func(k entity.ContentType, v []string) (dataset.ContentType, []string) {
+			convRes, _ := dataset.ContentTypeFromString(common.ConvertContentTypeDO2DTO(k))
+			return convRes, v
+		}),
 	}
 }
 
@@ -200,6 +209,13 @@ func convert2EvaluationSetMultiModalSpec(ctx context.Context, multiModalSpec *da
 		MaxFileCount:     gptr.Indirect(multiModalSpec.MaxFileCount),
 		MaxFileSize:      gptr.Indirect(multiModalSpec.MaxFileSize),
 		SupportedFormats: multiModalSpec.SupportedFormats,
+		MaxPartCount:     gptr.Indirect(multiModalSpec.MaxPartCount),
+		MaxFileSizeByType: gmap.Map(multiModalSpec.MaxFileSizeByType, func(k dataset.ContentType, v int64) (entity.ContentType, int64) {
+			return common.ConvertContentTypeDTO2DO(k.String()), v
+		}),
+		SupportedFormatsByType: gmap.Map(multiModalSpec.SupportedFormatsByType, func(k dataset.ContentType, v []string) (entity.ContentType, []string) {
+			return common.ConvertContentTypeDTO2DO(k.String()), v
+		}),
 	}
 }
 
@@ -388,6 +404,7 @@ func convert2EvaluationSetFieldData(ctx context.Context, fieldData *dataset.Fiel
 				Text:        part.Content,
 				Image:       convertObjectStorageToImage(ctx, part.Attachments),
 				Audio:       convertObjectStorageToAudio(ctx, part.Attachments),
+				Video:       convertObjectStorageToVideo(ctx, part.Attachments),
 			}
 
 			// 如果 part 还有嵌套的 Parts，递归处理
@@ -415,6 +432,7 @@ func convert2EvaluationSetFieldData(ctx context.Context, fieldData *dataset.Fiel
 			Text:        fieldData.Content,
 			Image:       convertObjectStorageToImage(ctx, fieldData.Attachments),
 			Audio:       convertObjectStorageToAudio(ctx, fieldData.Attachments),
+			Video:       convertObjectStorageToVideo(ctx, fieldData.Attachments),
 			MultiPart:   multiPart,
 		},
 	}
@@ -463,8 +481,38 @@ func convertObjectStorageToAudio(ctx context.Context, attachments []*dataset.Obj
 		// 根据文件名或其他信息判断是否为音频
 		if isAudioAttachment(attachment) {
 			return &entity.Audio{
-				Format: getAudioFormat(attachment),
-				URL:    attachment.URL,
+				Format:          getAudioFormat(attachment),
+				URL:             attachment.URL,
+				Name:            attachment.Name,
+				URI:             attachment.URI,
+				StorageProvider: convertStorageProvider(attachment.Provider),
+			}
+		}
+	}
+
+	return nil
+}
+
+// convertObjectStorageToVideo 从 ObjectStorage 列表中提取视频信息并转换为 entity.Video
+func convertObjectStorageToVideo(ctx context.Context, attachments []*dataset.ObjectStorage) *entity.Video {
+	if len(attachments) == 0 {
+		return nil
+	}
+
+	// 查找第一个音频类型的 attachment
+	for _, attachment := range attachments {
+		if attachment == nil {
+			continue
+		}
+
+		// 根据文件名或其他信息判断是否为音频
+		if isVideoAttachment(attachment) {
+			return &entity.Video{
+				Name:            attachment.Name,
+				URL:             attachment.URL,
+				URI:             attachment.URI,
+				ThumbURL:        attachment.ThumbURL,
+				StorageProvider: convertStorageProvider(attachment.Provider),
 			}
 		}
 	}
@@ -507,6 +555,31 @@ func isAudioAttachment(attachment *dataset.ObjectStorage) bool {
 	// 根据文件扩展名判断是否为音频
 	audioExtensions := []string{".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus", ".amr"}
 	for _, ext := range audioExtensions {
+		if len(name) >= len(ext) && name[len(name)-len(ext):] == ext {
+			return true
+		}
+		// 也检查大写版本
+		if len(name) >= len(ext) {
+			nameExt := name[len(name)-len(ext):]
+			if nameExt == strings.ToUpper(ext) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// isVideoAttachment 判断 ObjectStorage 是否为音频类型
+func isVideoAttachment(attachment *dataset.ObjectStorage) bool {
+	if attachment == nil || attachment.Name == nil {
+		return false
+	}
+
+	name := *attachment.Name
+	// 根据文件扩展名判断是否为音频
+	videoExtensions := []string{".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".webm"}
+	for _, ext := range videoExtensions {
 		if len(name) >= len(ext) && name[len(name)-len(ext):] == ext {
 			return true
 		}

@@ -291,12 +291,12 @@ func TestDatasetItemsDO2DTO(t *testing.T) {
 						{
 							Key:     gptr.Of("input"),
 							Name:    gptr.Of("Input"),
-							Content: gptr.Of(`{"ContentType":"Text","Text":"test input 0","Image":null,"MultiPart":null}`),
+							Content: gptr.Of(`{"ContentType":"Text","Text":"test input 0","Image":null,"Audio":null,"Video":null,"MultiPart":null}`),
 						},
 						{
 							Key:     gptr.Of("output"),
 							Name:    gptr.Of("Output"),
-							Content: gptr.Of(`{"ContentType":"Text","Text":"test output 0","Image":null,"MultiPart":null}`),
+							Content: gptr.Of(`{"ContentType":"Text","Text":"test output 0","Image":null,"Audio":null,"Video":null,"MultiPart":null}`),
 						},
 					},
 				},
@@ -309,12 +309,12 @@ func TestDatasetItemsDO2DTO(t *testing.T) {
 						{
 							Key:     gptr.Of("input"),
 							Name:    gptr.Of("Input"),
-							Content: gptr.Of(`{"ContentType":"Text","Text":"test input 1","Image":null,"MultiPart":null}`),
+							Content: gptr.Of(`{"ContentType":"Text","Text":"test input 1","Image":null,"Audio":null,"Video":null,"MultiPart":null}`),
 						},
 						{
 							Key:     gptr.Of("output"),
 							Name:    gptr.Of("Output"),
-							Content: gptr.Of(`{"ContentType":"Text","Text":"test output 1","Image":null,"MultiPart":null}`),
+							Content: gptr.Of(`{"ContentType":"Text","Text":"test output 1","Image":null,"Audio":null,"Video":null,"MultiPart":null}`),
 						},
 					},
 				},
@@ -353,12 +353,12 @@ func TestDatasetItemDO2DTO(t *testing.T) {
 					{
 						Key:     gptr.Of("input"),
 						Name:    gptr.Of("Input"),
-						Content: gptr.Of(`{"ContentType":"Text","Text":"test input 0","Image":null,"MultiPart":null}`),
+						Content: gptr.Of(`{"ContentType":"Text","Text":"test input 0","Image":null,"Audio":null,"Video":null,"MultiPart":null}`),
 					},
 					{
 						Key:     gptr.Of("output"),
 						Name:    gptr.Of("Output"),
-						Content: gptr.Of(`{"ContentType":"Text","Text":"test output 0","Image":null,"MultiPart":null}`),
+						Content: gptr.Of(`{"ContentType":"Text","Text":"test output 0","Image":null,"Audio":null,"Video":null,"MultiPart":null}`),
 					},
 				},
 			},
@@ -422,7 +422,7 @@ func TestFieldDataListDO2DTO(t *testing.T) {
 				{
 					Key:     gptr.Of("test-key"),
 					Name:    gptr.Of("Test Name"),
-					Content: gptr.Of(`{"ContentType":"Text","Text":"test content","Image":null,"MultiPart":null}`),
+					Content: gptr.Of(`{"ContentType":"Text","Text":"test content","Image":null,"Audio":null,"Video":null,"MultiPart":null}`),
 				},
 			},
 		},
@@ -460,7 +460,7 @@ func TestFieldDataDO2DTO(t *testing.T) {
 			want: &dataset_domain.FieldData{
 				Key:     gptr.Of("test-key"),
 				Name:    gptr.Of("Test Name"),
-				Content: gptr.Of(`{"ContentType":"Text","Text":"test content","Image":null,"MultiPart":null}`),
+				Content: gptr.Of(`{"ContentType":"Text","Text":"test content","Image":null,"Audio":null,"Video":null,"MultiPart":null}`),
 			},
 		},
 		{
@@ -485,7 +485,7 @@ func TestFieldDataDO2DTO(t *testing.T) {
 			want: &dataset_domain.FieldData{
 				Key:     gptr.Of("multipart-key"),
 				Name:    gptr.Of("MultiPart Content"),
-				Content: gptr.Of(`{"ContentType":"MultiPart","Text":"","Image":null,"MultiPart":[{"ContentType":"Text","Text":"part1","Image":null,"MultiPart":null},{"ContentType":"Image","Text":"","Image":{"Name":"","Url":"http://example.com/image.jpg"},"MultiPart":null}]}`),
+				Content: gptr.Of(`{"ContentType":"MultiPart","Text":"","Image":null,"Audio":null,"Video":null,"MultiPart":[{"ContentType":"Text","Text":"part1","Image":null,"Audio":null,"Video":null,"MultiPart":null},{"ContentType":"Image","Text":"","Image":{"Name":"","Url":"http://example.com/image.jpg"},"Audio":null,"Video":null,"MultiPart":null}]}`),
 			},
 		},
 	}
