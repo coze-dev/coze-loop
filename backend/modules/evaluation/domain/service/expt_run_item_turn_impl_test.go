@@ -1276,10 +1276,11 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			turnFields:   turnFields,
 			targetFields: targetFields,
 			wantInputData: &entity.EvaluatorInputData{
-				HistoryMessages:            nil,
-				InputFields:                make(map[string]*entity.Content),
-				EvaluateDatasetFields:      map[string]*entity.Content{"eval_field": mockContent1},
-				EvaluateTargetOutputFields: map[string]*entity.Content{"target_field": mockContent1},
+				HistoryMessages:       nil,
+				InputFields:           make(map[string]*entity.Content),
+				EvaluateDatasetFields: map[string]*entity.Content{"eval_field": mockContent1},
+				// Code 类型评估器下，目标字段应直接透传原始 targetFields
+				EvaluateTargetOutputFields: targetFields,
 			},
 			wantErr: false,
 		},
@@ -1327,10 +1328,11 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			turnFields:   turnFields,
 			targetFields: targetFields,
 			wantInputData: &entity.EvaluatorInputData{
-				HistoryMessages:            nil,
-				InputFields:                make(map[string]*entity.Content),
-				EvaluateDatasetFields:      map[string]*entity.Content{},
-				EvaluateTargetOutputFields: map[string]*entity.Content{},
+				HistoryMessages:       nil,
+				InputFields:           make(map[string]*entity.Content),
+				EvaluateDatasetFields: map[string]*entity.Content{},
+				// Code 类型评估器下，即使没有配置 FieldConfs，也应透传原始 targetFields
+				EvaluateTargetOutputFields: targetFields,
 			},
 			wantErr: false,
 		},
@@ -2276,8 +2278,9 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 			validateResult: func(t *testing.T, result *entity.EvaluatorInputData) {
 				assert.NotNil(t, result.EvaluateDatasetFields)
 				assert.NotNil(t, result.EvaluateTargetOutputFields)
+				// Code 类型评估器下，即使 FieldConfs 为空，buildFieldsFromSource 也会直接返回 sourceFields
 				assert.Empty(t, result.EvaluateDatasetFields)
-				assert.Empty(t, result.EvaluateTargetOutputFields)
+				assert.Equal(t, targetFields, result.EvaluateTargetOutputFields)
 			},
 		},
 		{
