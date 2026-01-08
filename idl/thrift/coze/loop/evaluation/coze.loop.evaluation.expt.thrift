@@ -73,8 +73,9 @@ struct SubmitExperimentRequest {
 }
 
 struct SubmitExperimentResponse {
-    1: optional expt.Experiment experiment (api.body = 'experiment')
-    2: optional i64 run_id (api.body = 'run_id', api.js_conv = 'true', go.tag = 'json:"run_id"')
+    1: optional expt.Experiment experiment
+    2: optional i64 run_id (api.js_conv = 'true')
+    3: optional i64 expt_id (api.js_conv = 'true')
 
     255: base.BaseResp BaseResp
 }
@@ -111,23 +112,23 @@ struct BatchGetExperimentsResponse {
 }
 
 struct UpdateExperimentRequest {
-    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
-    2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
-    3: optional string name (api.body='name')
-    4: optional string desc (api.body='desc')
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required i64 expt_id (api.js_conv='true', go.tag='json:"expt_id"')
+    3: optional string name
+    4: optional string desc
 
     255: optional base.Base Base
 }
 
 struct UpdateExperimentResponse {
-    1: optional expt.Experiment experiment (api.body = 'experiment')
+    1: optional expt.Experiment experiment
 
     255: base.BaseResp BaseResp
 }
 
 struct DeleteExperimentRequest {
-    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
-    2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
+    1: required i64 workspace_id (api.js_conv='true')
+    2: required i64 expt_id (api.js_conv='true')
 
     255: optional base.Base Base
 }
