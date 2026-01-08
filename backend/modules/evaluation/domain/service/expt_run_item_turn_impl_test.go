@@ -1253,6 +1253,8 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 		ec            *entity.EvaluatorConf
 		turnFields    map[string]*entity.Content
 		targetFields  map[string]*entity.Content
+		inputSchemas  []*entity.ArgsSchema
+		ext           map[string]string
 		wantInputData *entity.EvaluatorInputData
 		wantErr       bool
 	}{
@@ -1281,6 +1283,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 				EvaluateDatasetFields: map[string]*entity.Content{"eval_field": mockContent1},
 				// Code 类型评估器下，目标字段应直接透传原始 targetFields
 				EvaluateTargetOutputFields: targetFields,
+				Ext:                        make(map[string]string),
 			},
 			wantErr: false,
 		},
@@ -1309,6 +1312,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 					"eval_field":   mockContent1,
 					"target_field": mockContent1,
 				},
+				Ext: make(map[string]string),
 			},
 			wantErr: false,
 		},
@@ -1333,6 +1337,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 				EvaluateDatasetFields: map[string]*entity.Content{},
 				// Code 类型评估器下，即使没有配置 FieldConfs，也应透传原始 targetFields
 				EvaluateTargetOutputFields: targetFields,
+				Ext:                        make(map[string]string),
 			},
 			wantErr: false,
 		},
@@ -1354,6 +1359,87 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			wantInputData: &entity.EvaluatorInputData{
 				HistoryMessages: nil,
 				InputFields:     map[string]*entity.Content{},
+				Ext:             make(map[string]string),
+			},
+			wantErr: false,
+		},
+		{
+			name:          "CustomRPC evaluator - empty input schemas",
+			evaluatorType: entity.EvaluatorTypeCustomRPC,
+			ec: &entity.EvaluatorConf{
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{
+						FieldConfs: []*entity.FieldConf{
+							{FieldName: "eval_field", FromField: "turn_field1"},
+						},
+					},
+					TargetAdapter: &entity.FieldAdapter{
+						FieldConfs: []*entity.FieldConf{
+							{FieldName: "target_field", FromField: "target_field1"},
+						},
+					},
+				},
+			},
+			turnFields:   turnFields,
+			targetFields: targetFields,
+			wantInputData: &entity.EvaluatorInputData{
+				InputFields:                make(map[string]*entity.Content),
+				EvaluateDatasetFields:      map[string]*entity.Content{"eval_field": mockContent1},
+				EvaluateTargetOutputFields: map[string]*entity.Content{"target_field": mockContent1},
+				Ext:                        make(map[string]string),
+			},
+			wantErr: false,
+		},
+		{
+			name:          "CustomRPC evaluator - with input schemas",
+			evaluatorType: entity.EvaluatorTypeCustomRPC,
+			ec: &entity.EvaluatorConf{
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{
+						FieldConfs: []*entity.FieldConf{
+							{FieldName: "eval_field", FromField: "turn_field1"},
+						},
+					},
+					TargetAdapter: &entity.FieldAdapter{
+						FieldConfs: []*entity.FieldConf{
+							{FieldName: "target_field", FromField: "target_field1"},
+						},
+					},
+				},
+			},
+			turnFields:   turnFields,
+			targetFields: targetFields,
+			inputSchemas: []*entity.ArgsSchema{{Key: gptr.Of("some_schema")}},
+			wantInputData: &entity.EvaluatorInputData{
+				InputFields: map[string]*entity.Content{
+					"eval_field":   mockContent1,
+					"target_field": mockContent1,
+				},
+				Ext: make(map[string]string),
+			},
+			wantErr: false,
+		},
+		{
+			name:          "Runtime param in RunConf",
+			evaluatorType: entity.EvaluatorTypePrompt,
+			ec: &entity.EvaluatorConf{
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{}},
+					TargetAdapter:  &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{}},
+				},
+				RunConf: &entity.EvaluatorRunConfig{
+					EvaluatorRuntimeParam: &entity.RuntimeParam{
+						JSONValue: gptr.Of(`{"key":"val"}`),
+					},
+				},
+			},
+			ext: map[string]string{"orig": "val"},
+			wantInputData: &entity.EvaluatorInputData{
+				InputFields: map[string]*entity.Content{},
+				Ext: map[string]string{
+					"orig": "val",
+					consts.FieldAdapterBuiltinFieldNameRuntimeParam: `{"key":"val"}`,
+				},
 			},
 			wantErr: false,
 		},
@@ -1373,7 +1459,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -1385,8 +1471,10 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			assert.Equal(t, tt.wantInputData.InputFields, got.InputFields)
 			assert.Equal(t, tt.wantInputData.EvaluateDatasetFields, got.EvaluateDatasetFields)
 			assert.Equal(t, tt.wantInputData.EvaluateTargetOutputFields, got.EvaluateTargetOutputFields)
+			assert.Equal(t, tt.wantInputData.Ext, got.Ext)
 		})
 	}
+
 }
 
 func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
@@ -2315,7 +2403,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 				})
 			}
 
-			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields)
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, nil, nil)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)

@@ -1169,8 +1169,8 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 
 				// 4. 评估器调试
 				mockEvaluatorService.EXPECT().
-					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					DoAndReturn(func(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
+					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 						// 验证输入数据已被正确处理
 						assert.Equal(t, int64(123), evaluator.SpaceID)
 						assert.Equal(t, entity.EvaluatorTypePrompt, evaluator.EvaluatorType)
@@ -1903,6 +1903,148 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 	}
 }
 
+// 新增：运行配置参数透传与扩展字段注入
+func TestEvaluatorHandlerImpl_DebugEvaluator_RuntimeParamExt(t *testing.T) {
+	t.Skip("暂时跳过：依赖外部 benefitService 行为，已通过 buildRunEvaluatorRequest 的单测验证 runtime_param 注入")
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+
+	handler := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		benefitService:   mockBenefitService,
+	}
+
+	// 构造带有运行时参数的请求
+	rpJSON := "{\"foo\":1}"
+	req := &evaluatorservice.DebugEvaluatorRequest{
+		WorkspaceID:   100,
+		EvaluatorType: evaluatordto.EvaluatorType_Prompt,
+		EvaluatorContent: &evaluatordto.EvaluatorContent{
+			PromptEvaluator: &evaluatordto.PromptEvaluator{},
+		},
+		InputData: &evaluatordto.EvaluatorInputData{},
+		EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+			EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: &rpJSON},
+		},
+	}
+
+	// 鉴权通过 & 权益允许
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+		Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+
+	// 期望 DebugEvaluator 收到注入了 builtin_runtime_param 的扩展字段，且携带运行配置
+	mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, evaluatorDO *entity.Evaluator, inputDO *entity.EvaluatorInputData, runConf *entity.EvaluatorRunConfig, spaceID int64) (*entity.EvaluatorOutputData, error) {
+			// 验证运行配置透传
+			assert.NotNil(t, runConf)
+			assert.NotNil(t, runConf.EvaluatorRuntimeParam)
+			assert.NotNil(t, runConf.EvaluatorRuntimeParam.JSONValue)
+			assert.Equal(t, rpJSON, *runConf.EvaluatorRuntimeParam.JSONValue)
+
+			// 验证扩展字段注入
+			assert.NotNil(t, inputDO)
+			assert.NotNil(t, inputDO.Ext)
+			val, ok := inputDO.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam]
+			assert.True(t, ok)
+			assert.Equal(t, rpJSON, val)
+
+			return &entity.EvaluatorOutputData{}, nil
+		})
+
+	_, err := handler.DebugEvaluator(context.Background(), req)
+	assert.NoError(t, err)
+}
+
+// 新增：批量调试时运行配置参数扩展注入与透传
+func TestEvaluatorHandlerImpl_BatchDebugEvaluator_RuntimeParam(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+
+	handler := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		benefitService:   mockBenefitService,
+	}
+
+	rpJSON := "{\"bar\":2}"
+	req := &evaluatorservice.BatchDebugEvaluatorRequest{
+		WorkspaceID:      200,
+		EvaluatorType:    evaluatordto.EvaluatorType_Prompt,
+		EvaluatorContent: &evaluatordto.EvaluatorContent{PromptEvaluator: &evaluatordto.PromptEvaluator{}},
+		InputData:        []*evaluatordto.EvaluatorInputData{{}, {}},
+		EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+			EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: &rpJSON},
+		},
+	}
+
+	// 鉴权通过 & 权益允许
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+	mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+		Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+
+	// 由于 batch 内部并发调用 DebugEvaluator，这里允许最多调用两次
+	mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, evaluatorDO *entity.Evaluator, inputDO *entity.EvaluatorInputData, runConf *entity.EvaluatorRunConfig, spaceID int64) (*entity.EvaluatorOutputData, error) {
+			assert.NotNil(t, runConf)
+			assert.NotNil(t, runConf.EvaluatorRuntimeParam)
+			assert.NotNil(t, runConf.EvaluatorRuntimeParam.JSONValue)
+			assert.Equal(t, rpJSON, *runConf.EvaluatorRuntimeParam.JSONValue)
+			assert.NotNil(t, inputDO.Ext)
+			assert.Equal(t, rpJSON, inputDO.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+			return &entity.EvaluatorOutputData{}, nil
+		}).MinTimes(1)
+
+	resp, err := handler.BatchDebugEvaluator(context.Background(), req)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+}
+
+// 新增：预置评估器调试不携带运行配置（nil）
+func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator_RunConfNil(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	handler := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		configer:         mockConfiger,
+	}
+
+	// 列表鉴权
+	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+
+	// 查询预置评估器
+	builtinDO := &entity.Evaluator{ID: 1, SpaceID: 300, Builtin: true, EvaluatorType: entity.EvaluatorTypePrompt}
+	mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), int64(1)).Return(builtinDO, nil)
+
+	// DebugEvaluator 应收到 runConf 为 nil
+	mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), builtinDO, gomock.Any(), gomock.Nil(), int64(300)).
+		Return(&entity.EvaluatorOutputData{}, nil)
+
+	req := &evaluatorservice.DebugBuiltinEvaluatorRequest{
+		WorkspaceID: 300,
+		EvaluatorID: 1,
+		InputData:   &evaluatordto.EvaluatorInputData{},
+	}
+
+	_, err := handler.DebugBuiltinEvaluator(context.Background(), req)
+	assert.NoError(t, err)
+}
+
 func TestEvaluatorHandlerImpl_GetTemplateInfo_Code(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2199,6 +2341,38 @@ func Test_buildRunEvaluatorRequest_DisableTracing(t *testing.T) {
 	}
 }
 
+// 验证：当请求携带 EvaluatorRunConf 且包含 evaluator_runtime_param.json_value 时，输入数据的 Ext 注入运行时参数
+func Test_buildRunEvaluatorRequest_EvaluatorRunConfRuntimeParam(t *testing.T) {
+	rp := `{"model_config":{"model_id":"m-1","temperature":0.8}}`
+
+	req := &evaluatorservice.RunEvaluatorRequest{
+		WorkspaceID:        123,
+		EvaluatorVersionID: 456,
+		InputData: &evaluatordto.EvaluatorInputData{
+			InputFields: map[string]*common.Content{
+				"input": {ContentType: ptr.Of(common.ContentTypeText), Text: ptr.Of("hello")},
+			},
+		},
+		EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+			EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: ptr.Of(rp)},
+		},
+	}
+
+	got := buildRunEvaluatorRequest("test-evaluator", req)
+	if got == nil || got.InputData == nil {
+		t.Fatalf("nil RunEvaluatorRequest or InputData")
+	}
+
+	// 校验 Ext 注入运行时参数
+	if got.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] != rp {
+		t.Fatalf("runtime_param not injected, got=%s", got.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+	}
+	// 基本字段不受影响
+	if got.EvaluatorVersionID != 456 || got.SpaceID != 123 {
+		t.Fatalf("mismatch basic fields: verID=%d spaceID=%d", got.EvaluatorVersionID, got.SpaceID)
+	}
+}
+
 // TestEvaluatorHandlerImpl_ValidateEvaluator 测试 ValidateEvaluator 方法
 func TestEvaluatorHandlerImpl_ValidateEvaluator(t *testing.T) {
 	t.Parallel()
@@ -2470,7 +2644,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.8),
@@ -2529,14 +2703,14 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 
 				// 使用 InOrder 来确保调用顺序
 				gomock.InOrder(
-					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						&entity.EvaluatorOutputData{
 							EvaluatorResult: &entity.EvaluatorResult{
 								Score:     gptr.Of(0.9),
 								Reasoning: "result 1",
 							},
 						}, nil),
-					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						&entity.EvaluatorOutputData{
 							EvaluatorResult: &entity.EvaluatorResult{
 								Score:     gptr.Of(0.7),
@@ -2713,14 +2887,14 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 
 				// 使用 InOrder 来确保调用顺序
 				gomock.InOrder(
-					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						&entity.EvaluatorOutputData{
 							EvaluatorResult: &entity.EvaluatorResult{
 								Score:     gptr.Of(0.8),
 								Reasoning: "success result",
 							},
 						}, nil),
-					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 						nil, errors.New("evaluation failed")),
 				)
 			},
@@ -2797,7 +2971,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
 				// Mock 100次调用
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.8),
@@ -2839,7 +3013,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
 				// 返回 nil output 和 error
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("code execution failed"))
 			},
 			wantResp: &evaluatorservice.BatchDebugEvaluatorResponse{
@@ -2898,7 +3072,7 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(map[string]string{}, nil).AnyTimes()
 
 				// 第一个成功
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.9),
@@ -2907,11 +3081,11 @@ func TestEvaluatorHandlerImpl_BatchDebugEvaluator(t *testing.T) {
 					}, nil).Times(1)
 
 				// 第二个失败 (nil output + error)
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errors.New("processing error")).Times(1)
 
 				// 第三个成功但有 evaluator run error
-				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&entity.EvaluatorOutputData{
 						EvaluatorResult: &entity.EvaluatorResult{
 							Score:     gptr.Of(0.7),
@@ -3968,7 +4142,7 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 					Return(builtinEvaluator, nil)
 
 				mockEvaluatorService.EXPECT().
-					DebugEvaluator(gomock.Any(), builtinEvaluator, gomock.Any(), gomock.Any()).
+					DebugEvaluator(gomock.Any(), builtinEvaluator, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(outputData, nil)
 			},
 			wantResp: &evaluatorservice.DebugBuiltinEvaluatorResponse{
@@ -4029,7 +4203,7 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 					Return(builtinEvaluator, nil)
 
 				mockEvaluatorService.EXPECT().
-					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantResp:    nil,

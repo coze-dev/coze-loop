@@ -310,6 +310,20 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 40:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField40(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 200:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField200(buf[offset:])
@@ -633,6 +647,31 @@ func (p *CreateExperimentRequest) FastReadField33(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateExperimentRequest) FastReadField40(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*evaluator.EvaluatorIDVersionItem, 0, size)
+	values := make([]evaluator.EvaluatorIDVersionItem, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.EvaluatorIDVersionList = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentRequest) FastReadField200(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewSession()
@@ -682,6 +721,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField30(buf[offset:], w)
 		offset += p.fastWriteField32(buf[offset:], w)
 		offset += p.fastWriteField33(buf[offset:], w)
+		offset += p.fastWriteField40(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -710,6 +750,7 @@ func (p *CreateExperimentRequest) BLength() int {
 		l += p.field31Length()
 		l += p.field32Length()
 		l += p.field33Length()
+		l += p.field40Length()
 		l += p.field200Length()
 		l += p.field255Length()
 	}
@@ -887,6 +928,22 @@ func (p *CreateExperimentRequest) fastWriteField33(buf []byte, w thrift.NocopyWr
 	if p.IsSetSourceID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 33)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceID)
+	}
+	return offset
+}
+
+func (p *CreateExperimentRequest) fastWriteField40(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvaluatorIDVersionList() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 40)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.EvaluatorIDVersionList {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -1075,6 +1132,19 @@ func (p *CreateExperimentRequest) field33Length() int {
 	return l
 }
 
+func (p *CreateExperimentRequest) field40Length() int {
+	l := 0
+	if p.IsSetEvaluatorIDVersionList() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.EvaluatorIDVersionList {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
 func (p *CreateExperimentRequest) field200Length() int {
 	l := 0
 	if p.IsSetSession() {
@@ -1219,6 +1289,21 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.SourceID)
 		}
 		p.SourceID = &tmp
+	}
+
+	if src.EvaluatorIDVersionList != nil {
+		p.EvaluatorIDVersionList = make([]*evaluator.EvaluatorIDVersionItem, 0, len(src.EvaluatorIDVersionList))
+		for _, elem := range src.EvaluatorIDVersionList {
+			var _elem *evaluator.EvaluatorIDVersionItem
+			if elem != nil {
+				_elem = &evaluator.EvaluatorIDVersionItem{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.EvaluatorIDVersionList = append(p.EvaluatorIDVersionList, _elem)
+		}
 	}
 
 	var _session *common.Session
