@@ -15,7 +15,7 @@ func NewEvaluationAnalysisService() IEvaluationAnalysisService {
 
 type evaluationAnalysisServiceImpl struct{}
 
-func (e evaluationAnalysisServiceImpl) GetAnalysisRecord(ctx context.Context, id int64) (record *entity.AnalysisRecord, err error) {
+func (e evaluationAnalysisServiceImpl) GetAnalysisRecord(ctx context.Context, id, spaceID int64) (record *entity.AnalysisRecord, err error) {
 	return nil, err
 }
 
