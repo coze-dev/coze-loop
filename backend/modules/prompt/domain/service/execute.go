@@ -98,7 +98,7 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 				}()
 			}
 
-			reply, err = p.doStreamingIteration(iterCtx, param, replyItemWrapper)
+			iterCtx, reply, err = p.doStreamingIteration(iterCtx, param, replyItemWrapper)
 			if err != nil {
 				return nil, err
 			}
@@ -177,7 +177,7 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 				}()
 			}
 
-			iterReply, err = p.doIteration(iterCtx, param, replyItemWrapper)
+			iterCtx, iterReply, err = p.doIteration(iterCtx, param, replyItemWrapper)
 			if err != nil {
 				return nil, err
 			}
@@ -225,11 +225,11 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 	return reply, nil
 }
 
-func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param ExecuteStreamingParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (aggregatedReply *entity.Reply, err error) {
+func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param ExecuteStreamingParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (newCtx context.Context, aggregatedReply *entity.Reply, err error) {
 	var llmCallParam rpc.LLMCallParam
-	llmCallParam, err = p.prepareLLMCallParam(ctx, param.ExecuteParam)
+	newCtx, llmCallParam, err = p.prepareLLMCallParam(ctx, param.ExecuteParam)
 	if err != nil {
-		return nil, err
+		return newCtx, nil, err
 	}
 	var aggregatedResult *entity.ReplyItem
 
@@ -263,25 +263,25 @@ func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param Exec
 	select { //nolint:staticcheck
 	case err = <-errChan:
 		if err != nil {
-			return nil, err
+			return newCtx, nil, err
 		}
 	}
 
-	return replyItemWrapper(aggregatedResult), nil
+	return newCtx, replyItemWrapper(aggregatedResult), nil
 }
 
-func (p *PromptServiceImpl) doIteration(ctx context.Context, param ExecuteParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (aggregatedReply *entity.Reply, err error) {
+func (p *PromptServiceImpl) doIteration(ctx context.Context, param ExecuteParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (newCtx context.Context, aggregatedReply *entity.Reply, err error) {
 	var llmCallParam rpc.LLMCallParam
-	llmCallParam, err = p.prepareLLMCallParam(ctx, param)
+	newCtx, llmCallParam, err = p.prepareLLMCallParam(ctx, param)
 	if err != nil {
-		return nil, err
+		return newCtx, nil, err
 	}
 	var aggregatedResult *entity.ReplyItem
 	aggregatedResult, err = p.llm.Call(ctx, llmCallParam)
 	if err != nil {
-		return nil, err
+		return newCtx, nil, err
 	}
-	return replyItemWrapper(aggregatedResult), nil
+	return newCtx, replyItemWrapper(aggregatedResult), nil
 }
 
 func getReplyItemWrapper(debugID int64, debugStep int32) (func(v *entity.ReplyItem) *entity.Reply, error) {
@@ -393,16 +393,16 @@ func (p *PromptServiceImpl) finishSequenceSpan(ctx context.Context, span cozeloo
 	span.Finish(ctx)
 }
 
-func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param ExecuteParam) (rpc.LLMCallParam, error) {
+func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param ExecuteParam) (context.Context, rpc.LLMCallParam, error) {
 	// format messages using the formatter interface
 	messages, err := p.formatter.FormatPrompt(ctx, param.Prompt, param.Messages, param.VariableVals)
 	if err != nil {
-		return rpc.LLMCallParam{}, err
+		return ctx, rpc.LLMCallParam{}, err
 	}
 	// get tool configuration using the tool config provider interface
-	tools, toolCallConfig, err := p.toolConfigProvider.GetToolConfig(ctx, param.Prompt, param.SingleStep)
+	ctx, tools, toolCallConfig, err := p.toolConfigProvider.GetToolConfig(ctx, param.Prompt, param.SingleStep)
 	if err != nil {
-		return rpc.LLMCallParam{}, err
+		return ctx, rpc.LLMCallParam{}, err
 	}
 	var modelConfig *entity.ModelConfig
 	promptDetail := param.Prompt.GetPromptDetail()
@@ -413,7 +413,7 @@ func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param Execu
 	if userIDStr, ok := session.UserIDInCtx(ctx); ok {
 		userID = ptr.Of(userIDStr)
 	}
-	return rpc.LLMCallParam{
+	return ctx, rpc.LLMCallParam{
 		SpaceID:        param.Prompt.SpaceID,
 		PromptID:       param.Prompt.ID,
 		PromptKey:      param.Prompt.PromptKey,

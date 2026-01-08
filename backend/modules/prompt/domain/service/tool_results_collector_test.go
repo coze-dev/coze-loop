@@ -79,7 +79,9 @@ func TestPromptServiceImpl_Execute_UsesToolResultsCollector(t *testing.T) {
 	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(123456789), nil)
 	mockToolConfigProvider.EXPECT().
 		GetToolConfig(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil, nil, nil)
+		DoAndReturn(func(ctx context.Context, prompt *entity.Prompt, singleStep bool) (context.Context, []*entity.Tool, *entity.ToolCallConfig, error) {
+			return ctx, nil, nil, nil
+		})
 	mockLLM.EXPECT().
 		Call(gomock.Any(), gomock.Any()).
 		Return(&entity.ReplyItem{

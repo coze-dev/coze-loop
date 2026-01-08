@@ -42,13 +42,14 @@ func (m *MockIToolConfigProvider) EXPECT() *MockIToolConfigProviderMockRecorder 
 }
 
 // GetToolConfig mocks base method.
-func (m *MockIToolConfigProvider) GetToolConfig(ctx context.Context, prompt *entity.Prompt, singleStep bool) ([]*entity.Tool, *entity.ToolCallConfig, error) {
+func (m *MockIToolConfigProvider) GetToolConfig(ctx context.Context, prompt *entity.Prompt, singleStep bool) (context.Context, []*entity.Tool, *entity.ToolCallConfig, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetToolConfig", ctx, prompt, singleStep)
-	ret0, _ := ret[0].([]*entity.Tool)
-	ret1, _ := ret[1].(*entity.ToolCallConfig)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret0, _ := ret[0].(context.Context)
+	ret1, _ := ret[1].([]*entity.Tool)
+	ret2, _ := ret[2].(*entity.ToolCallConfig)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // GetToolConfig indicates an expected call of GetToolConfig.

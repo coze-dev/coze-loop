@@ -1015,7 +1015,7 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 		VariableVals: nil,
 		Scenario:     entity.ScenarioPromptDebug,
 	}
-	got, err := svc.prepareLLMCallParam(context.Background(), param)
+	_, got, err := svc.prepareLLMCallParam(context.Background(), param)
 	assert.NoError(t, err)
 	if assert.NotNil(t, got.ModelConfig) {
 		assert.Equal(t, extra, got.ModelConfig.Extra)
@@ -1282,7 +1282,7 @@ func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := svc.prepareLLMCallParam(context.Background(), tt.param)
+			_, got, err := svc.prepareLLMCallParam(context.Background(), tt.param)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errContains != "" {

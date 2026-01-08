@@ -12,7 +12,7 @@ import (
 
 // IToolConfigProvider defines the interface for extracting tool definitions and configuration
 type IToolConfigProvider interface {
-	GetToolConfig(ctx context.Context, prompt *entity.Prompt, singleStep bool) (tools []*entity.Tool, toolCallConfig *entity.ToolCallConfig, err error)
+	GetToolConfig(ctx context.Context, prompt *entity.Prompt, singleStep bool) (newCtx context.Context, tools []*entity.Tool, toolCallConfig *entity.ToolCallConfig, err error)
 }
 
 // ToolConfigProvider provides the default implementation of IToolConfigProvider
@@ -24,7 +24,9 @@ func NewToolConfigProvider() IToolConfigProvider {
 }
 
 // GetToolConfig implements the IToolConfigProvider interface
-func (t *ToolConfigProvider) GetToolConfig(ctx context.Context, prompt *entity.Prompt, singleStep bool) (tools []*entity.Tool, toolCallConfig *entity.ToolCallConfig, err error) {
+func (t *ToolConfigProvider) GetToolConfig(ctx context.Context, prompt *entity.Prompt, singleStep bool) (newCtx context.Context, tools []*entity.Tool, toolCallConfig *entity.ToolCallConfig, err error) {
+	newCtx = ctx
+
 	promptDetail := prompt.GetPromptDetail()
 	if promptDetail != nil {
 		if promptDetail.ToolCallConfig != nil && promptDetail.ToolCallConfig.ToolChoice != entity.ToolChoiceTypeNone {
@@ -37,13 +39,13 @@ func (t *ToolConfigProvider) GetToolConfig(ctx context.Context, prompt *entity.P
 	if toolCallConfig != nil && toolCallConfig.ToolChoice == entity.ToolChoiceTypeSpecific {
 		// When tool choice is specific, must be in single step mode
 		if !singleStep {
-			return nil, nil, errorx.New("tool choice specific must be used with single step mode to avoid infinite loops")
+			return newCtx, nil, nil, errorx.New("tool choice specific must be used with single step mode to avoid infinite loops")
 		}
 		// ToolChoiceSpecification must not be empty
 		if toolCallConfig.ToolChoiceSpecification == nil {
-			return nil, nil, errorx.New("tool_choice_specification must not be empty when tool choice is specific")
+			return newCtx, nil, nil, errorx.New("tool_choice_specification must not be empty when tool choice is specific")
 		}
 	}
 
-	return tools, toolCallConfig, nil
+	return newCtx, tools, toolCallConfig, nil
 }
