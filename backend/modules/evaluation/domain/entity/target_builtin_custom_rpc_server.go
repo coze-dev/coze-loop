@@ -42,7 +42,7 @@ type CustomRPCServer struct {
 type CustomFieldSchema struct {
 	Name        string
 	ContentType ContentType
-	SchemaKey   *SchemaKey
+	SchemaKey   *SchemaKey // 非必须
 	TextSchema  string
 }
 
