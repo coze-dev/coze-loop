@@ -57,6 +57,7 @@ func NewExptManager(
 	evaluatorService EvaluatorService,
 	benefitService benefit.IBenefitService,
 	exptAggrResultService ExptAggrResultService,
+	templateRepo repo.IExptTemplateRepo,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -81,6 +82,7 @@ func NewExptManager(
 		evaluatorService:            evaluatorService,
 		benefitService:              benefitService,
 		exptAggrResultService:       exptAggrResultService,
+		templateRepo:                templateRepo,
 	}
 }
 
@@ -107,6 +109,7 @@ type ExptMangerImpl struct {
 	evalTargetService           IEvalTargetService
 	evaluatorService            EvaluatorService
 	benefitService              benefit.IBenefitService
+	templateRepo                repo.IExptTemplateRepo
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -137,6 +140,11 @@ func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceI
 func (e *ExptMangerImpl) GetDetail(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.GetExptTupleOptionFn) (*entity.Experiment, error) {
 	expt, err := e.Get(ctx, exptID, spaceID, session)
 	if err != nil {
+		return nil, err
+	}
+
+	// 填充 ExptTemplateMeta
+	if err := e.fillExptTemplates(ctx, []*entity.Experiment{expt}, spaceID); err != nil {
 		return nil, err
 	}
 
@@ -186,7 +194,62 @@ func (e *ExptMangerImpl) packExperimentResult(ctx context.Context, expts []*enti
 		}
 	}
 
+	// 填充关联的实验模板基础信息
+	if err := e.fillExptTemplates(ctx, expts, spaceID); err != nil {
+		return nil, err
+	}
+
 	return expts, nil
+}
+
+// fillExptTemplates 为实验列表按需补充关联模板的基础信息（名称、描述等）
+func (e *ExptMangerImpl) fillExptTemplates(ctx context.Context, expts []*entity.Experiment, spaceID int64) error {
+	if len(expts) == 0 || e.templateRepo == nil {
+		return nil
+	}
+
+	idSet := make(map[int64]struct{})
+	for _, ex := range expts {
+		if ex == nil || ex.ExptTemplateMeta == nil || ex.ExptTemplateMeta.ID == 0 {
+			continue
+		}
+		idSet[ex.ExptTemplateMeta.ID] = struct{}{}
+	}
+	if len(idSet) == 0 {
+		return nil
+	}
+
+	templateIDs := make([]int64, 0, len(idSet))
+	for id := range idSet {
+		templateIDs = append(templateIDs, id)
+	}
+
+	templates, err := e.templateRepo.MGetByID(ctx, templateIDs, spaceID)
+	if err != nil {
+		return err
+	}
+	if len(templates) == 0 {
+		return nil
+	}
+
+	templateMap := gslice.ToMap(templates, func(t *entity.ExptTemplate) (int64, *entity.ExptTemplate) {
+		if t == nil {
+			return 0, nil
+		}
+		return t.GetID(), t
+	})
+
+	for _, ex := range expts {
+		if ex == nil || ex.ExptTemplateMeta == nil || ex.ExptTemplateMeta.ID == 0 {
+			continue
+		}
+		if tpl, ok := templateMap[ex.ExptTemplateMeta.ID]; ok {
+			// 只回填模板的 Meta 到 Experiment.ExptTemplateMeta，避免在 Experiment 上挂完整模板对象
+			ex.ExptTemplateMeta = tpl.Meta
+		}
+	}
+
+	return nil
 }
 
 func (e *ExptMangerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (pass bool, err error) {
@@ -558,6 +621,23 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
+	}
+
+	// 如果提供了模板 ID，设置 ExptTemplateMeta
+	if req.ExptTemplateID > 0 {
+		do.ExptTemplateMeta = &entity.ExptTemplateMeta{
+			ID: req.ExptTemplateID,
+		}
+	}
+
+	// 根据 EvaluatorConf.ScoreWeight 设置实验是否启用分数权重
+	if do.EvalConf != nil && do.EvalConf.ConnectorConf.EvaluatorsConf != nil {
+		for _, ec := range do.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+				do.EnableScoreWeight = true
+				break
+			}
+		}
 	}
 
 	if !req.CreateEvalTargetParam.IsNull() {

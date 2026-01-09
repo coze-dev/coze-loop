@@ -25,6 +25,7 @@ type ExptTurnResultFilter struct {
 	AnnotationString        map[string]string  `gorm:"column:annotation_string;type:Map(String, String);not null" json:"annotation_string"`
 	EvalTargetMetrics       map[string]int64   `gorm:"column:eval_target_metrics;type:Map(String, Int64);not null" json:"eval_target_metrics"`
 	EvaluatorScoreCorrected int32              `gorm:"column:evaluator_score_corrected;type:Int32;not null" json:"evaluator_score_corrected"`
+	EvaluatorWeightedScore  float64            `gorm:"column:evaluator_weighted_score;type:Float64;not null" json:"evaluator_weighted_score"`
 	EvalSetVersionID        string             `gorm:"column:eval_set_version_id;type:String;not null" json:"eval_set_version_id"`
 	CreatedDate             time.Time          `gorm:"column:created_date;type:Date;not null" json:"created_date"`
 	UpdatedAt               time.Time          `gorm:"column:updated_at;type:DateTime;not null" json:"updated_at"`

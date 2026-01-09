@@ -182,6 +182,11 @@ func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.Or
 				return db.Where(fmt.Sprintf("%screated_by %s (?)", exptPrefix, scopeComparator), ffields.CreatedBy)
 			})
 		}
+		if ffields != nil && len(ffields.UpdatedBy) > 0 {
+			conds = append(conds, func(db *gorm.DB) *gorm.DB {
+				return db.Where(fmt.Sprintf("%supdated_by %s (?)", exptPrefix, scopeComparator), ffields.UpdatedBy)
+			})
+		}
 		if ffields != nil && len(ffields.TargetIDs) > 0 {
 			conds = append(conds, func(db *gorm.DB) *gorm.DB {
 				return db.Where(fmt.Sprintf("%starget_id %s (?)", exptPrefix, scopeComparator), ffields.TargetIDs)
@@ -215,6 +220,11 @@ func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.Or
 		if ffields != nil && len(ffields.ExptType) > 0 {
 			conds = append(conds, func(db *gorm.DB) *gorm.DB {
 				return db.Where(fmt.Sprintf("%sexpt_type %s (?)", exptPrefix, scopeComparator), ffields.ExptType)
+			})
+		}
+		if ffields != nil && len(ffields.ExptTemplateIDs) > 0 {
+			conds = append(conds, func(db *gorm.DB) *gorm.DB {
+				return db.Where(fmt.Sprintf("%sexpt_template_id %s (?)", exptPrefix, scopeComparator), ffields.ExptTemplateIDs)
 			})
 		}
 		if ffields != nil && len(ffields.SourceType) > 0 {
