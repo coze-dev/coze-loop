@@ -179,6 +179,9 @@ struct ColumnEvalTarget {
     1: optional string name
     2: optional string description
     3: optional string label
+    4: optional common.ContentType content_type
+    5: optional string text_schema
+    6: optional eval_set.SchemaKey schema_key
 }
 
 // 目标输出结果
