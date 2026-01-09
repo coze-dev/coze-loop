@@ -30,11 +30,20 @@ type CustomRPCServer struct {
 	IsAsync *bool
 	// 额外信息
 	Ext map[string]string
+	// 自定义输出结果
+	CustomFieldSchemas []*CustomFieldSchema
 
 	ExecRegion   Region  // 执行区域
 	ExecEnv      *string // 执行环境
 	Timeout      *int64  // 执行超时，单位ms
 	AsyncTimeout *int64  // 执行超时，单位ms
+}
+
+type CustomFieldSchema struct {
+	Name        string
+	ContentType ContentType
+	SchemaKey   SchemaKey
+	TextSchema  string
 }
 
 type HTTPInfo struct {
