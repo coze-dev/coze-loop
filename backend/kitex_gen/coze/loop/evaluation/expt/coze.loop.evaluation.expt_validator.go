@@ -467,6 +467,32 @@ func (p *BatchGetExperimentTemplateResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *UpdateExperimentTemplateMetaRequest) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExperimentTemplateMetaResponse) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *UpdateExperimentTemplateRequest) IsValid() error {
 	if p.Meta != nil {
 		if err := p.Meta.IsValid(); err != nil {

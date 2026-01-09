@@ -402,6 +402,71 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	return updatedTemplate, nil
 }
 
+func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.UpdateExptTemplateMetaParam, session *entity.Session) (*entity.ExptTemplate, error) {
+	// 获取现有模板
+	existingTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, param.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if existingTemplate == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("template %d not found", param.TemplateID)))
+	}
+
+	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）
+	if param.Name != "" && param.Name != existingTemplate.GetName() {
+		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, session)
+		if !pass {
+			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 构建更新字段
+	ufields := make(map[string]any)
+	if param.Name != "" {
+		ufields["name"] = param.Name
+	}
+	if param.Description != "" {
+		ufields["description"] = param.Description
+	}
+	if param.ExptType > 0 {
+		ufields["expt_type"] = int32(param.ExptType)
+	}
+
+	// 更新 updated_at
+	now := time.Now()
+	ufields["updated_at"] = now
+
+	// 更新数据库
+	if len(ufields) > 0 {
+		if err := e.templateRepo.UpdateFields(ctx, param.TemplateID, ufields); err != nil {
+		return nil, err
+		}
+	}
+
+	// 重新获取更新后的模板
+	updatedTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, param.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+	if updatedTemplate == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("template %d not found after update", param.TemplateID)))
+	}
+
+	// 更新 BaseInfo
+	if updatedTemplate.BaseInfo == nil {
+		updatedTemplate.BaseInfo = &entity.BaseInfo{}
+	}
+	updatedTemplate.BaseInfo.UpdatedAt = gptr.Of(now.UnixMilli())
+	if session != nil && session.UserID != "" {
+		updatedTemplate.BaseInfo.UpdatedBy = &entity.UserInfo{UserID: gptr.Of(session.UserID)}
+	}
+
+	return updatedTemplate, nil
+}
+
 func (e *ExptTemplateManagerImpl) Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error {
 	return e.templateRepo.Delete(ctx, templateID, spaceID)
 }

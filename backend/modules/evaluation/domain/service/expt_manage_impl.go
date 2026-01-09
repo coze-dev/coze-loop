@@ -143,6 +143,11 @@ func (e *ExptMangerImpl) GetDetail(ctx context.Context, exptID, spaceID int64, s
 		return nil, err
 	}
 
+	// 填充 ExptTemplateMeta
+	if err := e.fillExptTemplates(ctx, []*entity.Experiment{expt}, spaceID); err != nil {
+		return nil, err
+	}
+
 	tuple, err := e.getTupleByExpt(ctx, expt, spaceID, session, opts...)
 	if err != nil {
 		return nil, err
@@ -616,6 +621,13 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
+	}
+
+	// 如果提供了模板 ID，设置 ExptTemplateMeta
+	if req.ExptTemplateID > 0 {
+		do.ExptTemplateMeta = &entity.ExptTemplateMeta{
+			ID: req.ExptTemplateID,
+		}
 	}
 
 	// 根据 EvaluatorConf.ScoreWeight 设置实验是否启用分数权重

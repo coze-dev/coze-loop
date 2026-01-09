@@ -356,3 +356,12 @@ type UpdateExptTemplateParam struct {
 	ExptType                ExptType
 	CreateEvalTargetParam   *CreateEvalTargetParam
 }
+
+// UpdateExptTemplateMetaParam 更新实验模板 Meta 参数
+type UpdateExptTemplateMetaParam struct {
+	TemplateID  int64
+	SpaceID     int64
+	Name        string
+	Description string
+	ExptType    ExptType
+}

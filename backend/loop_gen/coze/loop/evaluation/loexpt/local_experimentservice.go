@@ -777,6 +777,27 @@ func (l *LocalExperimentService) BatchGetExperimentTemplate(ctx context.Context,
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalExperimentService) UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest, callOptions ...callopt.Option) (*expt.UpdateExperimentTemplateMetaResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceUpdateExperimentTemplateMetaArgs)
+		result := out.(*expt.ExperimentServiceUpdateExperimentTemplateMetaResult)
+		resp, err := l.impl.UpdateExperimentTemplateMeta(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceUpdateExperimentTemplateMetaArgs{Req: req}
+	result := &expt.ExperimentServiceUpdateExperimentTemplateMetaResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateExperimentTemplateMeta")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.UpdateExperimentTemplateResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*expt.ExperimentServiceUpdateExperimentTemplateArgs)

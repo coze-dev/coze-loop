@@ -33,6 +33,7 @@ struct CreateExperimentRequest {
     // 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重）
     40: optional bool enable_weighted_score (api.body = 'enable_weighted_score', go.tag='json:"enable_weighted_score"')
     41: optional map<i64, double> evaluator_score_weights (api.body = 'evaluator_score_weights', go.tag='json:"evaluator_score_weights"')
+    42: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
 
     200: optional common.Session session
 
@@ -70,6 +71,7 @@ struct SubmitExperimentRequest {
     40: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list (api.body = 'evaluator_id_version_list') // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
     // 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重）
     41: optional bool enable_weighted_score (api.body = 'enable_weighted_score', go.tag='json:"enable_weighted_score"')
+    42: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
 
     100: optional map<string, string> ext (api.body = 'ext')
 
@@ -389,6 +391,22 @@ struct BatchGetExperimentTemplateResponse {
 
     255: base.BaseResp BaseResp
 }
+
+struct UpdateExperimentTemplateMetaRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required i64 template_id (api.path='template_id', api.js_conv='true', go.tag='json:"template_id"')
+
+    10: optional expt.ExptTemplateMeta meta (api.body = 'meta')
+
+    255: optional base.Base Base
+}
+
+struct UpdateExperimentTemplateMetaResponse {
+    1: optional expt.ExptTemplateMeta meta
+
+    255: base.BaseResp BaseResp
+}
+
 
 struct UpdateExperimentTemplateRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
@@ -752,6 +770,7 @@ service ExperimentService {
     // 实验模板
     CreateExperimentTemplateResponse CreateExperimentTemplate(1: CreateExperimentTemplateRequest req) (api.post = '/api/evaluation/v1/experiment_templates')
     BatchGetExperimentTemplateResponse BatchGetExperimentTemplate(1: BatchGetExperimentTemplateRequest req) (api.post = '/api/evaluation/v1/experiment_templates/batch_get')
+    UpdateExperimentTemplateMetaResponse UpdateExperimentTemplateMeta(1: UpdateExperimentTemplateMetaRequest req) (api.post = '/api/evaluation/v1/experiment_templates/update_meta')
     UpdateExperimentTemplateResponse UpdateExperimentTemplate(1: UpdateExperimentTemplateRequest req) (api.patch = '/api/evaluation/v1/experiment_templates/:template_id') // 更新实验模板（不允许修改关联的评测对象 / 评测集，仅允许修改默认版本、映射、评估器与配置）
     DeleteExperimentTemplateResponse DeleteExperimentTemplate(1: DeleteExperimentTemplateRequest req) (api.delete = '/api/evaluation/v1/experiment_templates/:template_id')
     ListExperimentTemplatesResponse ListExperimentTemplates(1: ListExperimentTemplatesRequest req) (api.post = '/api/evaluation/v1/experiment_templates/list')

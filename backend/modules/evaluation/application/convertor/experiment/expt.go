@@ -410,5 +410,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest) (param *entity.CreateEx
 	}
 	param.ExptConf = evaluationConfiguration
 
+	if cer.IsSetExptTemplateID() {
+		param.ExptTemplateID = cer.GetExptTemplateID()
+	}
+
 	return param, nil
 }

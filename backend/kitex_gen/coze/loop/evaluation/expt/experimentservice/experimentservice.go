@@ -258,6 +258,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UpdateExperimentTemplateMeta": kitex.NewMethodInfo(
+		updateExperimentTemplateMetaHandler,
+		newExperimentServiceUpdateExperimentTemplateMetaArgs,
+		newExperimentServiceUpdateExperimentTemplateMetaResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"UpdateExperimentTemplate": kitex.NewMethodInfo(
 		updateExperimentTemplateHandler,
 		newExperimentServiceUpdateExperimentTemplateArgs,
@@ -977,6 +984,25 @@ func newExperimentServiceBatchGetExperimentTemplateResult() interface{} {
 	return expt.NewExperimentServiceBatchGetExperimentTemplateResult()
 }
 
+func updateExperimentTemplateMetaHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceUpdateExperimentTemplateMetaArgs)
+	realResult := result.(*expt.ExperimentServiceUpdateExperimentTemplateMetaResult)
+	success, err := handler.(expt.ExperimentService).UpdateExperimentTemplateMeta(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceUpdateExperimentTemplateMetaArgs() interface{} {
+	return expt.NewExperimentServiceUpdateExperimentTemplateMetaArgs()
+}
+
+func newExperimentServiceUpdateExperimentTemplateMetaResult() interface{} {
+	return expt.NewExperimentServiceUpdateExperimentTemplateMetaResult()
+}
+
 func updateExperimentTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*expt.ExperimentServiceUpdateExperimentTemplateArgs)
 	realResult := result.(*expt.ExperimentServiceUpdateExperimentTemplateResult)
@@ -1391,6 +1417,16 @@ func (p *kClient) BatchGetExperimentTemplate(ctx context.Context, req *expt.Batc
 	_args.Req = req
 	var _result expt.ExperimentServiceBatchGetExperimentTemplateResult
 	if err = p.c.Call(ctx, "BatchGetExperimentTemplate", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest) (r *expt.UpdateExperimentTemplateMetaResponse, err error) {
+	var _args expt.ExperimentServiceUpdateExperimentTemplateMetaArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceUpdateExperimentTemplateMetaResult
+	if err = p.c.Call(ctx, "UpdateExperimentTemplateMeta", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

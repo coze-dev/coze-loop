@@ -1839,3 +1839,8 @@ func _batchgetexperimenttemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _updateexperimenttemplatemetaMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

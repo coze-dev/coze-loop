@@ -156,8 +156,12 @@ func (e *experimentApplication) CreateExperimentTemplate(ctx context.Context, re
 		return nil, err
 	}
 
+	dto := experiment.ToExptTemplateDTO(createTemplate)
+	// 填充完整的用户信息
+	e.mPackExptTemplateUserInfo(ctx, []*domain_expt.ExptTemplate{dto})
+
 	return &expt.CreateExperimentTemplateResponse{
-		ExperimentTemplate: experiment.ToExptTemplateDTO(createTemplate),
+		ExperimentTemplate: dto,
 		BaseResp:           base.NewBaseResp(),
 	}, nil
 }
@@ -190,8 +194,12 @@ func (e *experimentApplication) BatchGetExperimentTemplate(ctx context.Context, 
 		return nil, err
 	}
 
+	dtos := experiment.ToExptTemplateDTOs(templates)
+	// 填充完整的用户信息
+	e.mPackExptTemplateUserInfo(ctx, dtos)
+
 	return &expt.BatchGetExperimentTemplateResponse{
-		ExperimentTemplates: experiment.ToExptTemplateDTOs(templates),
+		ExperimentTemplates: dtos,
 		BaseResp:            base.NewBaseResp(),
 	}, nil
 }
@@ -227,9 +235,62 @@ func (e *experimentApplication) UpdateExperimentTemplate(ctx context.Context, re
 		return nil, err
 	}
 
+	dto := experiment.ToExptTemplateDTO(updatedTemplate)
+	// 填充完整的用户信息
+	e.mPackExptTemplateUserInfo(ctx, []*domain_expt.ExptTemplate{dto})
+
 	return &expt.UpdateExperimentTemplateResponse{
-		ExperimentTemplate: experiment.ToExptTemplateDTO(updatedTemplate),
+		ExperimentTemplate: dto,
 		BaseResp:           base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest) (r *expt.UpdateExperimentTemplateMetaResponse, err error) {
+	session := entity.NewSession(ctx)
+
+	templateID := req.GetTemplateID()
+	workspaceID := req.GetWorkspaceID()
+	if templateID == 0 || workspaceID == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template_id and workspace_id are required"))
+	}
+
+	logs.CtxInfo(ctx, "UpdateExperimentTemplateMeta template_id: %d, workspace_id: %d", templateID, workspaceID)
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(workspaceID, 10),
+		SpaceID:       workspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	// 转换请求参数
+	param, err := experiment.ConvertUpdateExptTemplateMetaReq(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 更新模板 meta
+	updatedTemplate, err := e.templateManager.UpdateMeta(ctx, param, session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换为 Meta DTO
+	var metaDTO *domain_expt.ExptTemplateMeta
+	if updatedTemplate.Meta != nil {
+		metaDTO = &domain_expt.ExptTemplateMeta{
+			ID:          gptr.Of(updatedTemplate.Meta.ID),
+			WorkspaceID: gptr.Of(updatedTemplate.Meta.WorkspaceID),
+			Name:        gptr.Of(updatedTemplate.Meta.Name),
+			Desc:        gptr.Of(updatedTemplate.Meta.Desc),
+			CreatorBy:   gptr.Of(updatedTemplate.Meta.CreatorBy),
+			ExptType:    gptr.Of(domain_expt.ExptType(updatedTemplate.Meta.ExptType)),
+		}
+	}
+
+	return &expt.UpdateExperimentTemplateMetaResponse{
+		Meta:     metaDTO,
+		BaseResp: base.NewBaseResp(),
 	}, nil
 }
 
@@ -291,6 +352,8 @@ func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req
 	}
 
 	dtos := experiment.ToExptTemplateDTOs(templates)
+	// 填充完整的用户信息
+	e.mPackExptTemplateUserInfo(ctx, dtos)
 
 	return &expt.ListExperimentTemplatesResponse{
 		ExperimentTemplates: dtos,
@@ -333,7 +396,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		evalVersionIDs = uniq
 	}
 
-	cresp, err := e.CreateExperiment(ctx, &expt.CreateExperimentRequest{
+	createReq := &expt.CreateExperimentRequest{
 		WorkspaceID:           req.GetWorkspaceID(),
 		EvalSetVersionID:      req.EvalSetVersionID,
 		EvalSetID:             req.EvalSetID,
@@ -353,7 +416,11 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		Session:               req.Session,
 		EnableWeightedScore:   req.EnableWeightedScore,
 		EvaluatorScoreWeights: evaluatorScoreWeights,
-	})
+	}
+	if req.IsSetExptTemplateID() {
+		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
+	}
+	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err
 	}
@@ -981,6 +1048,23 @@ func (e *experimentApplication) mPackUserInfo(ctx context.Context, expts []*doma
 	e.userInfoService.PackUserInfo(ctx, userCarriers)
 
 	return expts, nil
+}
+
+func (e *experimentApplication) mPackExptTemplateUserInfo(ctx context.Context, templates []*domain_expt.ExptTemplate) {
+	if len(templates) == 0 {
+		return
+	}
+
+	userCarriers := make([]userinfo.UserInfoCarrier, 0, len(templates))
+	for _, template := range templates {
+		if template != nil && template.GetBaseInfo() != nil {
+			userCarriers = append(userCarriers, template)
+		}
+	}
+
+	if len(userCarriers) > 0 {
+		e.userInfoService.PackUserInfo(ctx, userCarriers)
+	}
 }
 
 func (e *experimentApplication) AuthReadExperiments(ctx context.Context, dos []*entity.Experiment, spaceID int64) error {

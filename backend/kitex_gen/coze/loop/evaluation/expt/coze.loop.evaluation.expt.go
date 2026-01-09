@@ -48,6 +48,7 @@ type CreateExperimentRequest struct {
 	// 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重）
 	EnableWeightedScore   *bool             `thrift:"enable_weighted_score,40,optional" frugal:"40,optional,bool" json:"enable_weighted_score" form:"enable_weighted_score" `
 	EvaluatorScoreWeights map[int64]float64 `thrift:"evaluator_score_weights,41,optional" frugal:"41,optional,map<i64:double>" json:"evaluator_score_weights" form:"evaluator_score_weights" `
+	ExptTemplateID        *int64            `thrift:"expt_template_id,42,optional" frugal:"42,optional,i64" json:"expt_template_id" form:"expt_template_id" `
 	Session               *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base                  *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -294,6 +295,18 @@ func (p *CreateExperimentRequest) GetEvaluatorScoreWeights() (v map[int64]float6
 	return p.EvaluatorScoreWeights
 }
 
+var CreateExperimentRequest_ExptTemplateID_DEFAULT int64
+
+func (p *CreateExperimentRequest) GetExptTemplateID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptTemplateID() {
+		return CreateExperimentRequest_ExptTemplateID_DEFAULT
+	}
+	return *p.ExptTemplateID
+}
+
 var CreateExperimentRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentRequest) GetSession() (v *common.Session) {
@@ -377,6 +390,9 @@ func (p *CreateExperimentRequest) SetEnableWeightedScore(val *bool) {
 func (p *CreateExperimentRequest) SetEvaluatorScoreWeights(val map[int64]float64) {
 	p.EvaluatorScoreWeights = val
 }
+func (p *CreateExperimentRequest) SetExptTemplateID(val *int64) {
+	p.ExptTemplateID = val
+}
 func (p *CreateExperimentRequest) SetSession(val *common.Session) {
 	p.Session = val
 }
@@ -405,6 +421,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	33:  "source_id",
 	40:  "enable_weighted_score",
 	41:  "evaluator_score_weights",
+	42:  "expt_template_id",
 	200: "session",
 	255: "Base",
 }
@@ -483,6 +500,10 @@ func (p *CreateExperimentRequest) IsSetEnableWeightedScore() bool {
 
 func (p *CreateExperimentRequest) IsSetEvaluatorScoreWeights() bool {
 	return p.EvaluatorScoreWeights != nil
+}
+
+func (p *CreateExperimentRequest) IsSetExptTemplateID() bool {
+	return p.ExptTemplateID != nil
 }
 
 func (p *CreateExperimentRequest) IsSetSession() bool {
@@ -668,6 +689,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 41:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField41(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 42:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField42(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -979,6 +1008,17 @@ func (p *CreateExperimentRequest) ReadField41(iprot thrift.TProtocol) error {
 	p.EvaluatorScoreWeights = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField42(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExptTemplateID = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -1080,6 +1120,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField41(oprot); err != nil {
 			fieldId = 41
+			goto WriteFieldError
+		}
+		if err = p.writeField42(oprot); err != nil {
+			fieldId = 42
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -1493,6 +1537,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField42(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptTemplateID() {
+		if err = oprot.WriteFieldBegin("expt_template_id", thrift.I64, 42); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExptTemplateID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 42 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 42 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -1602,6 +1664,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field41DeepEqual(ano.EvaluatorScoreWeights) {
+		return false
+	}
+	if !p.Field42DeepEqual(ano.ExptTemplateID) {
 		return false
 	}
 	if !p.Field200DeepEqual(ano.Session) {
@@ -1833,6 +1898,18 @@ func (p *CreateExperimentRequest) Field41DeepEqual(src map[int64]float64) bool {
 		if v != _src {
 			return false
 		}
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field42DeepEqual(src *int64) bool {
+
+	if p.ExptTemplateID == src {
+		return true
+	} else if p.ExptTemplateID == nil || src == nil {
+		return false
+	}
+	if *p.ExptTemplateID != *src {
+		return false
 	}
 	return true
 }
@@ -2114,6 +2191,7 @@ type SubmitExperimentRequest struct {
 	EvaluatorIDVersionList []*evaluator.EvaluatorIDVersionItem `thrift:"evaluator_id_version_list,40,optional" frugal:"40,optional,list<evaluator.EvaluatorIDVersionItem>" form:"evaluator_id_version_list" json:"evaluator_id_version_list,omitempty"`
 	// 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重）
 	EnableWeightedScore *bool             `thrift:"enable_weighted_score,41,optional" frugal:"41,optional,bool" json:"enable_weighted_score" form:"enable_weighted_score" `
+	ExptTemplateID      *int64            `thrift:"expt_template_id,42,optional" frugal:"42,optional,i64" json:"expt_template_id" form:"expt_template_id" `
 	Ext                 map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Session             *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base                *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -2361,6 +2439,18 @@ func (p *SubmitExperimentRequest) GetEnableWeightedScore() (v bool) {
 	return *p.EnableWeightedScore
 }
 
+var SubmitExperimentRequest_ExptTemplateID_DEFAULT int64
+
+func (p *SubmitExperimentRequest) GetExptTemplateID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptTemplateID() {
+		return SubmitExperimentRequest_ExptTemplateID_DEFAULT
+	}
+	return *p.ExptTemplateID
+}
+
 var SubmitExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
@@ -2456,6 +2546,9 @@ func (p *SubmitExperimentRequest) SetEvaluatorIDVersionList(val []*evaluator.Eva
 func (p *SubmitExperimentRequest) SetEnableWeightedScore(val *bool) {
 	p.EnableWeightedScore = val
 }
+func (p *SubmitExperimentRequest) SetExptTemplateID(val *int64) {
+	p.ExptTemplateID = val
+}
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -2487,6 +2580,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	33:  "source_id",
 	40:  "evaluator_id_version_list",
 	41:  "enable_weighted_score",
+	42:  "expt_template_id",
 	100: "ext",
 	200: "session",
 	255: "Base",
@@ -2566,6 +2660,10 @@ func (p *SubmitExperimentRequest) IsSetEvaluatorIDVersionList() bool {
 
 func (p *SubmitExperimentRequest) IsSetEnableWeightedScore() bool {
 	return p.EnableWeightedScore != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetExptTemplateID() bool {
+	return p.ExptTemplateID != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
@@ -2755,6 +2853,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 41:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField41(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 42:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField42(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3068,6 +3174,17 @@ func (p *SubmitExperimentRequest) ReadField41(iprot thrift.TProtocol) error {
 	p.EnableWeightedScore = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField42(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExptTemplateID = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -3198,6 +3315,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField41(oprot); err != nil {
 			fieldId = 41
+			goto WriteFieldError
+		}
+		if err = p.writeField42(oprot); err != nil {
+			fieldId = 42
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -3612,6 +3733,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 41 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField42(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptTemplateID() {
+		if err = oprot.WriteFieldBegin("expt_template_id", thrift.I64, 42); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExptTemplateID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 42 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 42 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -3750,6 +3889,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field41DeepEqual(ano.EnableWeightedScore) {
+		return false
+	}
+	if !p.Field42DeepEqual(ano.ExptTemplateID) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -3983,6 +4125,18 @@ func (p *SubmitExperimentRequest) Field41DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableWeightedScore != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field42DeepEqual(src *int64) bool {
+
+	if p.ExptTemplateID == src {
+		return true
+	} else if p.ExptTemplateID == nil || src == nil {
+		return false
+	}
+	if *p.ExptTemplateID != *src {
 		return false
 	}
 	return true
@@ -18271,6 +18425,625 @@ func (p *BatchGetExperimentTemplateResponse) Field255DeepEqual(src *base.BaseRes
 	return true
 }
 
+type UpdateExperimentTemplateMetaRequest struct {
+	WorkspaceID int64                  `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	TemplateID  int64                  `thrift:"template_id,2,required" frugal:"2,required,i64" json:"template_id" path:"template_id,required" `
+	Meta        *expt.ExptTemplateMeta `thrift:"meta,10,optional" frugal:"10,optional,expt.ExptTemplateMeta" form:"meta" json:"meta,omitempty"`
+	Base        *base.Base             `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewUpdateExperimentTemplateMetaRequest() *UpdateExperimentTemplateMetaRequest {
+	return &UpdateExperimentTemplateMetaRequest{}
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) InitDefault() {
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) GetTemplateID() (v int64) {
+	if p != nil {
+		return p.TemplateID
+	}
+	return
+}
+
+var UpdateExperimentTemplateMetaRequest_Meta_DEFAULT *expt.ExptTemplateMeta
+
+func (p *UpdateExperimentTemplateMetaRequest) GetMeta() (v *expt.ExptTemplateMeta) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMeta() {
+		return UpdateExperimentTemplateMetaRequest_Meta_DEFAULT
+	}
+	return p.Meta
+}
+
+var UpdateExperimentTemplateMetaRequest_Base_DEFAULT *base.Base
+
+func (p *UpdateExperimentTemplateMetaRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return UpdateExperimentTemplateMetaRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *UpdateExperimentTemplateMetaRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *UpdateExperimentTemplateMetaRequest) SetTemplateID(val int64) {
+	p.TemplateID = val
+}
+func (p *UpdateExperimentTemplateMetaRequest) SetMeta(val *expt.ExptTemplateMeta) {
+	p.Meta = val
+}
+func (p *UpdateExperimentTemplateMetaRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_UpdateExperimentTemplateMetaRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "template_id",
+	10:  "meta",
+	255: "Base",
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) IsSetMeta() bool {
+	return p.Meta != nil
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetTemplateID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetTemplateID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetTemplateID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_UpdateExperimentTemplateMetaRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_UpdateExperimentTemplateMetaRequest[fieldId]))
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *UpdateExperimentTemplateMetaRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.TemplateID = _field
+	return nil
+}
+func (p *UpdateExperimentTemplateMetaRequest) ReadField10(iprot thrift.TProtocol) error {
+	_field := expt.NewExptTemplateMeta()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Meta = _field
+	return nil
+}
+func (p *UpdateExperimentTemplateMetaRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpdateExperimentTemplateMetaRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *UpdateExperimentTemplateMetaRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("template_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.TemplateID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *UpdateExperimentTemplateMetaRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMeta() {
+		if err = oprot.WriteFieldBegin("meta", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Meta.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *UpdateExperimentTemplateMetaRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpdateExperimentTemplateMetaRequest(%+v)", *p)
+
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) DeepEqual(ano *UpdateExperimentTemplateMetaRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TemplateID) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Meta) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *UpdateExperimentTemplateMetaRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExperimentTemplateMetaRequest) Field2DeepEqual(src int64) bool {
+
+	if p.TemplateID != src {
+		return false
+	}
+	return true
+}
+func (p *UpdateExperimentTemplateMetaRequest) Field10DeepEqual(src *expt.ExptTemplateMeta) bool {
+
+	if !p.Meta.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *UpdateExperimentTemplateMetaRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type UpdateExperimentTemplateMetaResponse struct {
+	Meta     *expt.ExptTemplateMeta `thrift:"meta,1,optional" frugal:"1,optional,expt.ExptTemplateMeta" form:"meta" json:"meta,omitempty" query:"meta"`
+	BaseResp *base.BaseResp         `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewUpdateExperimentTemplateMetaResponse() *UpdateExperimentTemplateMetaResponse {
+	return &UpdateExperimentTemplateMetaResponse{}
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) InitDefault() {
+}
+
+var UpdateExperimentTemplateMetaResponse_Meta_DEFAULT *expt.ExptTemplateMeta
+
+func (p *UpdateExperimentTemplateMetaResponse) GetMeta() (v *expt.ExptTemplateMeta) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMeta() {
+		return UpdateExperimentTemplateMetaResponse_Meta_DEFAULT
+	}
+	return p.Meta
+}
+
+var UpdateExperimentTemplateMetaResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *UpdateExperimentTemplateMetaResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return UpdateExperimentTemplateMetaResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *UpdateExperimentTemplateMetaResponse) SetMeta(val *expt.ExptTemplateMeta) {
+	p.Meta = val
+}
+func (p *UpdateExperimentTemplateMetaResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_UpdateExperimentTemplateMetaResponse = map[int16]string{
+	1:   "meta",
+	255: "BaseResp",
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) IsSetMeta() bool {
+	return p.Meta != nil
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_UpdateExperimentTemplateMetaResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) ReadField1(iprot thrift.TProtocol) error {
+	_field := expt.NewExptTemplateMeta()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Meta = _field
+	return nil
+}
+func (p *UpdateExperimentTemplateMetaResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpdateExperimentTemplateMetaResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMeta() {
+		if err = oprot.WriteFieldBegin("meta", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Meta.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *UpdateExperimentTemplateMetaResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpdateExperimentTemplateMetaResponse(%+v)", *p)
+
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) DeepEqual(ano *UpdateExperimentTemplateMetaResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Meta) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *UpdateExperimentTemplateMetaResponse) Field1DeepEqual(src *expt.ExptTemplateMeta) bool {
+
+	if !p.Meta.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *UpdateExperimentTemplateMetaResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type UpdateExperimentTemplateRequest struct {
 	WorkspaceID int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	TemplateID  int64 `thrift:"template_id,2,required" frugal:"2,required,i64" json:"template_id" path:"template_id,required" `
@@ -31866,6 +32639,8 @@ type ExperimentService interface {
 
 	BatchGetExperimentTemplate(ctx context.Context, req *BatchGetExperimentTemplateRequest) (r *BatchGetExperimentTemplateResponse, err error)
 
+	UpdateExperimentTemplateMeta(ctx context.Context, req *UpdateExperimentTemplateMetaRequest) (r *UpdateExperimentTemplateMetaResponse, err error)
+
 	UpdateExperimentTemplate(ctx context.Context, req *UpdateExperimentTemplateRequest) (r *UpdateExperimentTemplateResponse, err error)
 
 	DeleteExperimentTemplate(ctx context.Context, req *DeleteExperimentTemplateRequest) (r *DeleteExperimentTemplateResponse, err error)
@@ -32214,6 +32989,15 @@ func (p *ExperimentServiceClient) BatchGetExperimentTemplate(ctx context.Context
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *ExperimentServiceClient) UpdateExperimentTemplateMeta(ctx context.Context, req *UpdateExperimentTemplateMetaRequest) (r *UpdateExperimentTemplateMetaResponse, err error) {
+	var _args ExperimentServiceUpdateExperimentTemplateMetaArgs
+	_args.Req = req
+	var _result ExperimentServiceUpdateExperimentTemplateMetaResult
+	if err = p.Client_().Call(ctx, "UpdateExperimentTemplateMeta", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *ExperimentServiceClient) UpdateExperimentTemplate(ctx context.Context, req *UpdateExperimentTemplateRequest) (r *UpdateExperimentTemplateResponse, err error) {
 	var _args ExperimentServiceUpdateExperimentTemplateArgs
 	_args.Req = req
@@ -32297,6 +33081,7 @@ func NewExperimentServiceProcessor(handler ExperimentService) *ExperimentService
 	self.AddToProcessorMap("GetAnalysisRecordFeedbackVote", &experimentServiceProcessorGetAnalysisRecordFeedbackVote{handler: handler})
 	self.AddToProcessorMap("CreateExperimentTemplate", &experimentServiceProcessorCreateExperimentTemplate{handler: handler})
 	self.AddToProcessorMap("BatchGetExperimentTemplate", &experimentServiceProcessorBatchGetExperimentTemplate{handler: handler})
+	self.AddToProcessorMap("UpdateExperimentTemplateMeta", &experimentServiceProcessorUpdateExperimentTemplateMeta{handler: handler})
 	self.AddToProcessorMap("UpdateExperimentTemplate", &experimentServiceProcessorUpdateExperimentTemplate{handler: handler})
 	self.AddToProcessorMap("DeleteExperimentTemplate", &experimentServiceProcessorDeleteExperimentTemplate{handler: handler})
 	self.AddToProcessorMap("ListExperimentTemplates", &experimentServiceProcessorListExperimentTemplates{handler: handler})
@@ -33983,6 +34768,54 @@ func (p *experimentServiceProcessorBatchGetExperimentTemplate) Process(ctx conte
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("BatchGetExperimentTemplate", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorUpdateExperimentTemplateMeta struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorUpdateExperimentTemplateMeta) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceUpdateExperimentTemplateMetaArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("UpdateExperimentTemplateMeta", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceUpdateExperimentTemplateMetaResult{}
+	var retval *UpdateExperimentTemplateMetaResponse
+	if retval, err2 = p.handler.UpdateExperimentTemplateMeta(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing UpdateExperimentTemplateMeta: "+err2.Error())
+		oprot.WriteMessageBegin("UpdateExperimentTemplateMeta", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("UpdateExperimentTemplateMeta", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -46177,6 +47010,350 @@ func (p *ExperimentServiceBatchGetExperimentTemplateResult) DeepEqual(ano *Exper
 }
 
 func (p *ExperimentServiceBatchGetExperimentTemplateResult) Field0DeepEqual(src *BatchGetExperimentTemplateResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceUpdateExperimentTemplateMetaArgs struct {
+	Req *UpdateExperimentTemplateMetaRequest `thrift:"req,1" frugal:"1,default,UpdateExperimentTemplateMetaRequest"`
+}
+
+func NewExperimentServiceUpdateExperimentTemplateMetaArgs() *ExperimentServiceUpdateExperimentTemplateMetaArgs {
+	return &ExperimentServiceUpdateExperimentTemplateMetaArgs{}
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) InitDefault() {
+}
+
+var ExperimentServiceUpdateExperimentTemplateMetaArgs_Req_DEFAULT *UpdateExperimentTemplateMetaRequest
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) GetReq() (v *UpdateExperimentTemplateMetaRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceUpdateExperimentTemplateMetaArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) SetReq(val *UpdateExperimentTemplateMetaRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceUpdateExperimentTemplateMetaArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceUpdateExperimentTemplateMetaArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewUpdateExperimentTemplateMetaRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpdateExperimentTemplateMeta_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceUpdateExperimentTemplateMetaArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) DeepEqual(ano *ExperimentServiceUpdateExperimentTemplateMetaArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaArgs) Field1DeepEqual(src *UpdateExperimentTemplateMetaRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceUpdateExperimentTemplateMetaResult struct {
+	Success *UpdateExperimentTemplateMetaResponse `thrift:"success,0,optional" frugal:"0,optional,UpdateExperimentTemplateMetaResponse"`
+}
+
+func NewExperimentServiceUpdateExperimentTemplateMetaResult() *ExperimentServiceUpdateExperimentTemplateMetaResult {
+	return &ExperimentServiceUpdateExperimentTemplateMetaResult{}
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) InitDefault() {
+}
+
+var ExperimentServiceUpdateExperimentTemplateMetaResult_Success_DEFAULT *UpdateExperimentTemplateMetaResponse
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) GetSuccess() (v *UpdateExperimentTemplateMetaResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceUpdateExperimentTemplateMetaResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) SetSuccess(x interface{}) {
+	p.Success = x.(*UpdateExperimentTemplateMetaResponse)
+}
+
+var fieldIDToName_ExperimentServiceUpdateExperimentTemplateMetaResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceUpdateExperimentTemplateMetaResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewUpdateExperimentTemplateMetaResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpdateExperimentTemplateMeta_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceUpdateExperimentTemplateMetaResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) DeepEqual(ano *ExperimentServiceUpdateExperimentTemplateMetaResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceUpdateExperimentTemplateMetaResult) Field0DeepEqual(src *UpdateExperimentTemplateMetaResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

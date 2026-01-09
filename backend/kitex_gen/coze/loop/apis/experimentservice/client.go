@@ -46,6 +46,7 @@ type Client interface {
 	GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error)
 	CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.CreateExperimentTemplateResponse, err error)
 	BatchGetExperimentTemplate(ctx context.Context, req *expt.BatchGetExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentTemplateResponse, err error)
+	UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentTemplateMetaResponse, err error)
 	UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentTemplateResponse, err error)
 	DeleteExperimentTemplate(ctx context.Context, req *expt.DeleteExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.DeleteExperimentTemplateResponse, err error)
 	ListExperimentTemplates(ctx context.Context, req *expt.ListExperimentTemplatesRequest, callOptions ...callopt.Option) (r *expt.ListExperimentTemplatesResponse, err error)
@@ -253,6 +254,11 @@ func (p *kExperimentServiceClient) CreateExperimentTemplate(ctx context.Context,
 func (p *kExperimentServiceClient) BatchGetExperimentTemplate(ctx context.Context, req *expt.BatchGetExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentTemplateResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetExperimentTemplate(ctx, req)
+}
+
+func (p *kExperimentServiceClient) UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentTemplateMetaResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpdateExperimentTemplateMeta(ctx, req)
 }
 
 func (p *kExperimentServiceClient) UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.UpdateExperimentTemplateResponse, err error) {

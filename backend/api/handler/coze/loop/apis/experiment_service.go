@@ -302,3 +302,19 @@ func BatchGetExperimentTemplate(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// UpdateExperimentTemplateMeta .
+// @router /api/evaluation/v1/experiment_templates/update_meta [POST]
+func UpdateExperimentTemplateMeta(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req expt.UpdateExperimentTemplateMetaRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(expt.UpdateExperimentTemplateMetaResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
