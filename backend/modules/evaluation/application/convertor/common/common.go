@@ -68,9 +68,16 @@ func ConvertAudioDO2DTO(audio *commonentity.Audio) *commondto.Audio {
 	if audio == nil {
 		return nil
 	}
+	var storageProvider *dataset.StorageProvider = nil
+	if audio.StorageProvider != nil {
+		storageProvider = gptr.Of(dataset.StorageProvider(*audio.StorageProvider))
+	}
 	return &commondto.Audio{
-		Format: audio.Format,
-		URL:    audio.URL,
+		Format:          audio.Format,
+		URL:             audio.URL,
+		Name:            audio.Name,
+		URI:             audio.URI,
+		StorageProvider: storageProvider,
 	}
 }
 
@@ -79,9 +86,53 @@ func ConvertAudioDTO2DO(audio *commondto.Audio) *commonentity.Audio {
 	if audio == nil {
 		return nil
 	}
+	var storageProvider *commonentity.StorageProvider = nil
+	if audio.StorageProvider != nil {
+		storageProvider = gptr.Of(commonentity.StorageProvider(*audio.StorageProvider))
+	}
+
 	return &commonentity.Audio{
-		Format: audio.Format,
-		URL:    audio.URL,
+		Format:          audio.Format,
+		URL:             audio.URL,
+		Name:            audio.Name,
+		URI:             audio.URI,
+		StorageProvider: storageProvider,
+	}
+}
+
+// ConvertVideoDTO2DO 将 DTO 转换为 Image 结构体
+func ConvertVideoDTO2DO(video *commondto.Video) *commonentity.Video {
+	if video == nil {
+		return nil
+	}
+	var storageProvider *commonentity.StorageProvider = nil
+	if video.StorageProvider != nil {
+		storageProvider = gptr.Of(commonentity.StorageProvider(*video.StorageProvider))
+	}
+	return &commonentity.Video{
+		Name:            video.Name,
+		URL:             video.URL,
+		URI:             video.URI,
+		ThumbURL:        video.ThumbURL,
+		StorageProvider: storageProvider,
+	}
+}
+
+// ConvertVideoDO2DTO 将 Video 结构体转换为 DTO
+func ConvertVideoDO2DTO(video *commonentity.Video) *commondto.Video {
+	if video == nil {
+		return nil
+	}
+	var storageProvider *dataset.StorageProvider = nil
+	if video.StorageProvider != nil {
+		storageProvider = gptr.Of(dataset.StorageProvider(*video.StorageProvider))
+	}
+	return &commondto.Video{
+		Name:            video.Name,
+		URL:             video.URL,
+		URI:             video.URI,
+		ThumbURL:        video.ThumbURL,
+		StorageProvider: storageProvider,
 	}
 }
 
@@ -108,10 +159,12 @@ func ConvertContentDTO2DO(content *commondto.Content) *commonentity.Content {
 		}
 	}
 	return &commonentity.Content{
-		ContentType:      contentType,
-		Format:           format,
-		Text:             content.Text,
-		Image:            ConvertImageDTO2DO(content.Image),
+		ContentType: contentType,
+		Format:      format,
+		Text:        content.Text,
+		Image:       ConvertImageDTO2DO(content.Image),
+		Video:       ConvertVideoDTO2DO(content.Video),
+
 		MultiPart:        multiPart,
 		Audio:            ConvertAudioDTO2DO(content.Audio),
 		ContentOmitted:   content.ContentOmitted,
@@ -144,6 +197,7 @@ func ConvertContentDO2DTO(content *commonentity.Content) *commondto.Content {
 		Image:            ConvertImageDO2DTO(content.Image),
 		MultiPart:        multiPart,
 		Audio:            ConvertAudioDO2DTO(content.Audio),
+		Video:            ConvertVideoDO2DTO(content.Video),
 		ContentOmitted:   content.ContentOmitted,
 		FullContent:      ConvertObjectStorageDO2DTO(content.FullContent),
 		FullContentBytes: content.FullContentBytes,
