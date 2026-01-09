@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/samber/lo"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -610,14 +611,13 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version version not found"))
 	}
 	evaluatorDO := evaluatorDOList[0]
-	// TODO: temp remove evaluator space auth for testing
-	//// 如果是预置评估器（Builtin），直接执行后续流程
-	//// 如果不是预置评估器，则根据 space_id 判断是否当前空间的 Evaluator
-	//if !evaluatorDO.Builtin {
-	//	if evaluatorDO.SpaceID != request.SpaceID {
-	//		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version not found in current space"))
-	//	}
-	//}
+	// 如果是预置评估器（Builtin），直接执行后续流程
+	// 如果不是预置评估器，则根据 space_id 判断是否当前空间的 Evaluator
+	if !evaluatorDO.Builtin {
+		if evaluatorDO.SpaceID != request.SpaceID && lo.IsEmpty(evaluatorDO.BuiltinVisibleVersion) { // 历史预置评估器允许在途实验使用
+			return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version not found in current space"))
+		}
+	}
 	if allow := e.limiter.AllowInvoke(ctx, request.SpaceID); !allow {
 		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
 	}
