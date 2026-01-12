@@ -299,7 +299,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, sortedExpts)
+	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, spaceID, sortedExpts)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +551,20 @@ var (
 	}
 )
 
-func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, expts []*entity.Experiment) ([]*entity.ExptColumnEvalTarget, error) {
+func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spaceID int64, expts []*entity.Experiment) ([]*entity.ExptColumnEvalTarget, error) {
+	// 查询评估对象信息
+	versionIDs := make([]int64, 0)
+	for _, expt := range expts {
+		versionIDs = append(versionIDs, expt.TargetVersionID)
+	}
+	targetInfos, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs, false)
+	if err != nil {
+		return nil, err
+	}
+	versionID2TargetInfo := make(map[int64]*entity.EvalTarget)
+	for _, info := range targetInfos {
+		versionID2TargetInfo[info.ID] = info
+	}
 	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
 	for _, expt := range expts {
 		if !expt.ContainsEvalTarget() {
@@ -562,6 +575,24 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, exp
 			columns = append(columns, columnEvalTargetTrajectory)
 		}
 		columns = append(columns, columnsEvalTargetMtr...)
+		if info, ok := versionID2TargetInfo[expt.TargetVersionID]; ok {
+			if info.EvalTargetVersion != nil {
+				for _, s := range info.EvalTargetVersion.OutputSchema {
+					c := &entity.ColumnEvalTarget{
+						Name:       gptr.Indirect(s.Key),
+						TextSchema: s.JsonSchema,
+					}
+					if gptr.Indirect(s.Key) == consts.ReportColumnNameEvalTargetActualOutput {
+						c.Label = gptr.Of(consts.ReportColumnNameEvalTargetActualOutput)
+					}
+					if len(s.SupportContentTypes) > 0 {
+						// 评测对象字段类型就一个，所以这里取第一个就可以
+						c.ContentType = gptr.Of(s.SupportContentTypes[0])
+					}
+					columns = append(columns, c)
+				}
+			}
+		}
 		res = append(res, &entity.ExptColumnEvalTarget{
 			ExptID:  expt.ID,
 			Columns: columns,

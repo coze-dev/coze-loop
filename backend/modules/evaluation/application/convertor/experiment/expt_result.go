@@ -69,11 +69,19 @@ func ExptColumnEvalTargetDO2DTOs(columns []*entity.ExptColumnEvalTarget) []*doma
 func ColumnEvalTargetDO2DTOs(from []*entity.ColumnEvalTarget) []*domain_expt.ColumnEvalTarget {
 	evaluators := make([]*domain_expt.ColumnEvalTarget, 0, len(from))
 	for _, f := range from {
-		evaluators = append(evaluators, &domain_expt.ColumnEvalTarget{
+		d := &domain_expt.ColumnEvalTarget{
 			Name:        gptr.Of(f.Name),
 			Description: gptr.Of(f.Desc),
 			Label:       f.Label,
-		})
+			TextSchema:  f.TextSchema,
+		}
+		if f.ContentType != nil {
+			d.ContentType = gptr.Of(common.ConvertContentTypeDO2DTO(*f.ContentType))
+		}
+		if f.SchemaKey != nil {
+			d.SchemaKey = gptr.Of(dataset.SchemaKey(gptr.Indirect(f.SchemaKey)))
+		}
+		evaluators = append(evaluators, d)
 	}
 	return evaluators
 }
