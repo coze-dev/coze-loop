@@ -1083,7 +1083,7 @@ func (d *ManageRepoImpl) ListParentPrompt(ctx context.Context, param repo.ListPa
 	return result, nil
 }
 
-func (d *ManageRepoImpl) BatchGetPrompt(ctx context.Context, promptIDs []int64) (promptDOMap map[int64]*entity.Prompt, err error) {
+func (d *ManageRepoImpl) BatchGetPromptBasic(ctx context.Context, promptIDs []int64) (promptDOMap map[int64]*entity.Prompt, err error) {
 	if len(promptIDs) == 0 {
 		return make(map[int64]*entity.Prompt), nil
 	}
@@ -1091,8 +1091,8 @@ func (d *ManageRepoImpl) BatchGetPrompt(ctx context.Context, promptIDs []int64) 
 	for _, promptID := range promptIDs {
 		getParam := repo.GetPromptParam{
 			PromptID:   promptID,
-			WithCommit: true,
-			WithDraft:  true,
+			WithCommit: false,
+			WithDraft:  false,
 		}
 		promptParams = append(promptParams, getParam)
 	}

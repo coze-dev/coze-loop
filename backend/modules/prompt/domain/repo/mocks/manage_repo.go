@@ -42,19 +42,19 @@ func (m *MockIManageRepo) EXPECT() *MockIManageRepoMockRecorder {
 	return m.recorder
 }
 
-// BatchGetPrompt mocks base method.
-func (m *MockIManageRepo) BatchGetPrompt(ctx context.Context, promptIDs []int64) (map[int64]*entity.Prompt, error) {
+// BatchGetPromptBasic mocks base method.
+func (m *MockIManageRepo) BatchGetPromptBasic(ctx context.Context, promptIDs []int64) (map[int64]*entity.Prompt, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetPrompt", ctx, promptIDs)
+	ret := m.ctrl.Call(m, "BatchGetPromptBasic", ctx, promptIDs)
 	ret0, _ := ret[0].(map[int64]*entity.Prompt)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// BatchGetPrompt indicates an expected call of BatchGetPrompt.
-func (mr *MockIManageRepoMockRecorder) BatchGetPrompt(ctx, promptIDs any) *gomock.Call {
+// BatchGetPromptBasic indicates an expected call of BatchGetPromptBasic.
+func (mr *MockIManageRepoMockRecorder) BatchGetPromptBasic(ctx, promptIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPrompt", reflect.TypeOf((*MockIManageRepo)(nil).BatchGetPrompt), ctx, promptIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPromptBasic", reflect.TypeOf((*MockIManageRepo)(nil).BatchGetPromptBasic), ctx, promptIDs)
 }
 
 // CommitDraft mocks base method.
