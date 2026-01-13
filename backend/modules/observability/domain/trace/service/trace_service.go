@@ -53,6 +53,7 @@ type ListSpansReq struct {
 	PageToken             string
 	PlatformType          loop_span.PlatformType
 	SpanListType          loop_span.SpanListType
+	Source                span_filter.SourceType
 }
 
 type ListSpansResp struct {
@@ -1507,6 +1508,7 @@ func (r *TraceServiceImpl) buildBuiltinFilters(ctx context.Context, f span_filte
 	env := &span_filter.SpanEnv{
 		WorkspaceID:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+		Source:                req.Source,
 	}
 	basicFilter, forceQuery, err := f.BuildBasicSpanFilter(ctx, env)
 	if err != nil {
