@@ -377,7 +377,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 	if err != nil {
 		return nil, err
 	}
-	fromTarget, err := e.buildFieldsFromSource(ctx, ec.IngressConf.TargetAdapter.FieldConfs, targetFields, evaluatorType)
+	fromTarget, err := e.buildFieldsFromSource(ctx, ec.IngressConf.TargetAdapter.FieldConfs, targetFields, evaluatorType, inputSchemas)
 	if err != nil {
 		return nil, err
 	}
@@ -413,9 +413,9 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 
 // buildFieldsFromSource build field mapping from specified data source, extracting common field processing logic
 func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Context, fieldConfs []*entity.FieldConf,
-	sourceFields map[string]*entity.Content, evaluatorType entity.EvaluatorType,
+	sourceFields map[string]*entity.Content, evaluatorType entity.EvaluatorType, inputSchemas []*entity.ArgsSchema,
 ) (map[string]*entity.Content, error) {
-	if evaluatorType == entity.EvaluatorTypeCode {
+	if evaluatorType == entity.EvaluatorTypeCode || (evaluatorType == entity.EvaluatorTypeCustomRPC && len(inputSchemas) == 0) {
 		return sourceFields, nil
 	}
 	result := make(map[string]*entity.Content)

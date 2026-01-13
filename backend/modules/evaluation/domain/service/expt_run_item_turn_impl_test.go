@@ -1503,6 +1503,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 		evaluatorType entity.EvaluatorType
 		wantResult    map[string]*entity.Content
 		wantErr       bool
+		inputSchemas  []*entity.ArgsSchema
 	}{
 		{
 			name: "Normal field mapping",
@@ -1585,7 +1586,7 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := service.buildFieldsFromSource(ctx, tt.fieldConfs, tt.sourceFields, tt.evaluatorType)
+			got, err := service.buildFieldsFromSource(ctx, tt.fieldConfs, tt.sourceFields, tt.evaluatorType, tt.inputSchemas)
 
 			if tt.wantErr {
 				assert.Error(t, err)
