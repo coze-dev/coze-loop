@@ -43,6 +43,7 @@ type QueryMetricsReq struct {
 	StartTime       int64
 	EndTime         int64
 	GroupBySpaceID  bool
+	Source          string
 }
 
 type QueryMetricsResp struct {
@@ -383,9 +384,12 @@ func (m *MetricsService) buildOnlineMetricQuery(ctx context.Context, req *QueryM
 		EndAt:       req.EndTime,
 	}
 	mBuilder := &metricQueryBuilder{
-		metricNames:   req.MetricsNames,
-		filter:        filter,
-		spanEnv:       &span_filter.SpanEnv{WorkspaceID: req.WorkspaceID},
+		metricNames: req.MetricsNames,
+		filter:      filter,
+		spanEnv: &span_filter.SpanEnv{
+			WorkspaceID: req.WorkspaceID,
+			Source:      span_filter.SourceType(req.Source),
+		},
 		requestFilter: req.FilterFields,
 		granularity:   req.Granularity,
 	}
