@@ -678,3 +678,15 @@ func OpenAPIParamOptionDTO2DO(dto *openapi.ParamOption) *entity.ParamOption {
 		Label: dto.GetLabel(),
 	}
 }
+
+// OpenAPIResponseAPIConfigDTO2DO 将openapi ResponseAPIConfig转换为entity ResponseAPIConfig
+func OpenAPIResponseAPIConfigDTO2DO(dto *openapi.ResponseAPIConfig) *entity.ResponseAPIConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ResponseAPIConfig{
+		PreviousResponseID: dto.PreviousResponseID,
+		EnableCaching:      dto.EnableCaching,
+		SessionID:          dto.SessionID,
+	}
+}

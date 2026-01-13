@@ -410,11 +410,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 
 	// 执行prompt
 	reply, err = p.promptService.Execute(ctx, service.ExecuteParam{
-		Prompt:       promptDO,
-		Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
-		VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
-		SingleStep:   true,                 // PTaaS不支持非单步模式
-		Scenario:     entity.ScenarioPTaaS, // PTaaS场景
+		Prompt:            promptDO,
+		Messages:          convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+		VariableVals:      convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+		ResponseAPIConfig: convertor.OpenAPIResponseAPIConfigDTO2DO(req.ResponseAPIConfig),
+		SingleStep:        true,                 // PTaaS不支持非单步模式
+		Scenario:          entity.ScenarioPTaaS, // PTaaS场景
 	})
 	if err != nil {
 		return promptDO, nil, err
@@ -541,11 +542,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 
 		localAggregatedReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
 			ExecuteParam: service.ExecuteParam{
-				Prompt:       promptDO,
-				Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
-				VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
-				SingleStep:   true,                 // PTaaS不支持非单步模式
-				Scenario:     entity.ScenarioPTaaS, // PTaaS场景
+				Prompt:            promptDO,
+				Messages:          convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+				VariableVals:      convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+				ResponseAPIConfig: convertor.OpenAPIResponseAPIConfigDTO2DO(req.ResponseAPIConfig),
+				SingleStep:        true,                 // PTaaS不支持非单步模式
+				Scenario:          entity.ScenarioPTaaS, // PTaaS场景
 			},
 			ResultStream: resultStream,
 		})

@@ -39,9 +39,10 @@ type ExecuteParam struct {
 	Messages     []*entity.Message
 	VariableVals []*entity.VariableVal
 
-	MockTools     []*entity.MockTool
-	SingleStep    bool
-	DebugTraceKey string
+	MockTools         []*entity.MockTool
+	SingleStep        bool
+	DebugTraceKey     string
+	ResponseAPIConfig *entity.ResponseAPIConfig
 
 	Scenario       entity.Scenario
 	DisableTracing bool
@@ -414,16 +415,17 @@ func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param Execu
 		userID = ptr.Of(userIDStr)
 	}
 	return ctx, rpc.LLMCallParam{
-		SpaceID:        param.Prompt.SpaceID,
-		PromptID:       param.Prompt.ID,
-		PromptKey:      param.Prompt.PromptKey,
-		PromptVersion:  param.Prompt.GetVersion(),
-		Scenario:       param.Scenario,
-		UserID:         userID,
-		Messages:       messages,
-		Tools:          tools,
-		ToolCallConfig: toolCallConfig,
-		ModelConfig:    modelConfig,
+		SpaceID:           param.Prompt.SpaceID,
+		PromptID:          param.Prompt.ID,
+		PromptKey:         param.Prompt.PromptKey,
+		PromptVersion:     param.Prompt.GetVersion(),
+		Scenario:          param.Scenario,
+		UserID:            userID,
+		Messages:          messages,
+		Tools:             tools,
+		ToolCallConfig:    toolCallConfig,
+		ModelConfig:       modelConfig,
+		ResponseAPIConfig: param.ResponseAPIConfig,
 	}, nil
 }
 
