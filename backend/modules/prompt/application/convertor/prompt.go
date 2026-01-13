@@ -513,8 +513,36 @@ func ModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
 		FrequencyPenalty:  dto.FrequencyPenalty,
 		JSONMode:          dto.JSONMode,
 		Extra:             dto.Extra,
+		Thinking:          ThinkingConfigDTO2DO(dto.Thinking),
 		ParamConfigValues: BatchParamConfigValueDTO2DO(dto.ParamConfigValues),
 	}
+}
+
+func ThinkingConfigDTO2DO(dto *prompt.ThinkingConfig) *entity.ThinkingConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ThinkingConfig{
+		BudgetTokens:    dto.BudgetTokens,
+		ThinkingOption:  ThinkingOptionDTO2DO(dto.ThinkingOption),
+		ReasoningEffort: ReasoningEffortDTO2DO(dto.ReasoningEffort),
+	}
+}
+
+func ThinkingOptionDTO2DO(dto *prompt.ThinkingOption) *entity.ThinkingOption {
+	if dto == nil {
+		return nil
+	}
+	result := entity.ThinkingOption(*dto)
+	return &result
+}
+
+func ReasoningEffortDTO2DO(dto *prompt.ReasoningEffort) *entity.ReasoningEffort {
+	if dto == nil {
+		return nil
+	}
+	result := entity.ReasoningEffort(*dto)
+	return &result
 }
 
 func BatchParamConfigValueDTO2DO(dtos []*prompt.ParamConfigValue) []*entity.ParamConfigValue {
@@ -983,8 +1011,36 @@ func ModelConfigDO2DTO(do *entity.ModelConfig) *prompt.ModelConfig {
 		FrequencyPenalty:  do.FrequencyPenalty,
 		JSONMode:          do.JSONMode,
 		Extra:             do.Extra,
+		Thinking:          ThinkingConfigDO2DTO(do.Thinking),
 		ParamConfigValues: BatchParamConfigValueDO2DTO(do.ParamConfigValues),
 	}
+}
+
+func ThinkingConfigDO2DTO(do *entity.ThinkingConfig) *prompt.ThinkingConfig {
+	if do == nil {
+		return nil
+	}
+	return &prompt.ThinkingConfig{
+		BudgetTokens:    do.BudgetTokens,
+		ThinkingOption:  ThinkingOptionDO2DTO(do.ThinkingOption),
+		ReasoningEffort: ReasoningEffortDO2DTO(do.ReasoningEffort),
+	}
+}
+
+func ThinkingOptionDO2DTO(do *entity.ThinkingOption) *prompt.ThinkingOption {
+	if do == nil {
+		return nil
+	}
+	result := prompt.ThinkingOption(*do)
+	return &result
+}
+
+func ReasoningEffortDO2DTO(do *entity.ReasoningEffort) *prompt.ReasoningEffort {
+	if do == nil {
+		return nil
+	}
+	result := prompt.ReasoningEffort(*do)
+	return &result
 }
 
 func BatchParamConfigValueDO2DTO(dos []*entity.ParamConfigValue) []*prompt.ParamConfigValue {

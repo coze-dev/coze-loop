@@ -166,6 +166,8 @@ func OpenAPIModelConfigDO2DTO(do *entity.ModelConfig) *openapi.LLMConfig {
 		PresencePenalty:  do.PresencePenalty,
 		FrequencyPenalty: do.FrequencyPenalty,
 		JSONMode:         do.JSONMode,
+		Thinking:         OpenAPIThinkingConfigDO2DTO(do.Thinking),
+		Extra:            do.Extra,
 	}
 }
 
@@ -607,6 +609,36 @@ func OpenAPIReasoningEffortDTO2DO(dto *openapi.ReasoningEffort) *entity.Reasonin
 		return nil
 	}
 	result := entity.ReasoningEffort(*dto)
+	return &result
+}
+
+// OpenAPIThinkingConfigDO2DTO 将entity ThinkingConfig转换为openapi ThinkingConfig
+func OpenAPIThinkingConfigDO2DTO(do *entity.ThinkingConfig) *openapi.ThinkingConfig {
+	if do == nil {
+		return nil
+	}
+	return &openapi.ThinkingConfig{
+		BudgetTokens:    do.BudgetTokens,
+		ThinkingOption:  OpenAPIThinkingOptionDO2DTO(do.ThinkingOption),
+		ReasoningEffort: OpenAPIReasoningEffortDO2DTO(do.ReasoningEffort),
+	}
+}
+
+// OpenAPIThinkingOptionDO2DTO 将entity ThinkingOption转换为openapi ThinkingOption
+func OpenAPIThinkingOptionDO2DTO(do *entity.ThinkingOption) *openapi.ThinkingOption {
+	if do == nil {
+		return nil
+	}
+	result := openapi.ThinkingOption(*do)
+	return &result
+}
+
+// OpenAPIReasoningEffortDO2DTO 将entity ReasoningEffort转换为openapi ReasoningEffort
+func OpenAPIReasoningEffortDO2DTO(do *entity.ReasoningEffort) *openapi.ReasoningEffort {
+	if do == nil {
+		return nil
+	}
+	result := openapi.ReasoningEffort(*do)
 	return &result
 }
 
