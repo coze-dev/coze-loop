@@ -973,6 +973,11 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 	t.Parallel()
 	extra := ptr.Of(`{"foo":"bar"}`)
+	responseAPIConfig := &entity.ResponseAPIConfig{
+		PreviousResponseID: ptr.Of("prev-id"),
+		EnableCaching:      ptr.Of(true),
+		SessionID:          ptr.Of("session-123"),
+	}
 	prompt := &entity.Prompt{
 		ID:        1,
 		SpaceID:   42,
@@ -1012,8 +1017,9 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 				Content: ptr.Of("Hi"),
 			},
 		},
-		VariableVals: nil,
-		Scenario:     entity.ScenarioPromptDebug,
+		VariableVals:      nil,
+		Scenario:          entity.ScenarioPromptDebug,
+		ResponseAPIConfig: responseAPIConfig,
 	}
 	_, got, err := svc.prepareLLMCallParam(context.Background(), param)
 	assert.NoError(t, err)
@@ -1021,6 +1027,7 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 		assert.Equal(t, extra, got.ModelConfig.Extra)
 		assert.Equal(t, prompt.PromptCommit.PromptDetail.ModelConfig.Extra, got.ModelConfig.Extra)
 	}
+	assert.Equal(t, responseAPIConfig, got.ResponseAPIConfig)
 }
 
 func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {

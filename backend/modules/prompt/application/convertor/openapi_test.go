@@ -490,6 +490,30 @@ func TestOpenAPIModelConfigDO2DTO(t *testing.T) {
 				JSONMode:         ptr.Of(true),
 			},
 		},
+		{
+			name: "model config with thinking and extra",
+			do: &entity.ModelConfig{
+				ModelID:     456,
+				MaxTokens:   ptr.Of(int32(512)),
+				Temperature: ptr.Of(0.3),
+				Extra:       ptr.Of(`{"trace":"on"}`),
+				Thinking: &entity.ThinkingConfig{
+					BudgetTokens:    ptr.Of(int64(128)),
+					ThinkingOption:  ptr.Of(entity.ThinkingOptionEnabled),
+					ReasoningEffort: ptr.Of(entity.ReasoningEffortLow),
+				},
+			},
+			want: &openapi.LLMConfig{
+				MaxTokens:   ptr.Of(int32(512)),
+				Temperature: ptr.Of(0.3),
+				Extra:       ptr.Of(`{"trace":"on"}`),
+				Thinking: &openapi.ThinkingConfig{
+					BudgetTokens:    ptr.Of(int64(128)),
+					ThinkingOption:  ptr.Of(openapi.ThinkingOption_Enabled),
+					ReasoningEffort: ptr.Of(openapi.ReasoningEffort_Low),
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2447,4 +2471,38 @@ func TestOpenAPIModelConfigDTO2DO(t *testing.T) {
 	}
 
 	assert.Equal(t, want, OpenAPIModelConfigDTO2DO(dto))
+}
+
+func TestOpenAPIResponseAPIConfigDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *openapi.ResponseAPIConfig
+		want *entity.ResponseAPIConfig
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "response api config with values",
+			dto: &openapi.ResponseAPIConfig{
+				PreviousResponseID: ptr.Of("prev-id"),
+				EnableCaching:      ptr.Of(true),
+				SessionID:          ptr.Of("session-123"),
+			},
+			want: &entity.ResponseAPIConfig{
+				PreviousResponseID: ptr.Of("prev-id"),
+				EnableCaching:      ptr.Of(true),
+				SessionID:          ptr.Of("session-123"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIResponseAPIConfigDTO2DO(tt.dto))
+		})
+	}
 }

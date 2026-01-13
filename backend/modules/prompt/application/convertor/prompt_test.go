@@ -829,6 +829,55 @@ func TestModelConfigExtraConversion(t *testing.T) {
 	assert.Equal(t, extra, dtoBack.Extra)
 }
 
+func TestThinkingConfigConversion(t *testing.T) {
+	tests := []struct {
+		name      string
+		dto       *prompt.ThinkingConfig
+		do        *entity.ThinkingConfig
+		expectDTO *prompt.ThinkingConfig
+		expectDO  *entity.ThinkingConfig
+	}{
+		{
+			name:      "nil input",
+			dto:       nil,
+			do:        nil,
+			expectDTO: nil,
+			expectDO:  nil,
+		},
+		{
+			name: "thinking config with values",
+			dto: &prompt.ThinkingConfig{
+				BudgetTokens:    ptr.Of(int64(256)),
+				ThinkingOption:  ptr.Of(prompt.ThinkingOption_Enabled),
+				ReasoningEffort: ptr.Of(prompt.ReasoningEffort_High),
+			},
+			do: &entity.ThinkingConfig{
+				BudgetTokens:    ptr.Of(int64(256)),
+				ThinkingOption:  ptr.Of(entity.ThinkingOptionEnabled),
+				ReasoningEffort: ptr.Of(entity.ReasoningEffortHigh),
+			},
+			expectDTO: &prompt.ThinkingConfig{
+				BudgetTokens:    ptr.Of(int64(256)),
+				ThinkingOption:  ptr.Of(prompt.ThinkingOption_Enabled),
+				ReasoningEffort: ptr.Of(prompt.ReasoningEffort_High),
+			},
+			expectDO: &entity.ThinkingConfig{
+				BudgetTokens:    ptr.Of(int64(256)),
+				ThinkingOption:  ptr.Of(entity.ThinkingOptionEnabled),
+				ReasoningEffort: ptr.Of(entity.ReasoningEffortHigh),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expectDO, ThinkingConfigDTO2DO(tt.dto))
+			assert.Equal(t, tt.expectDTO, ThinkingConfigDO2DTO(tt.do))
+		})
+	}
+}
+
 func TestTemplateTypeDTO2DO(t *testing.T) {
 	tests := []struct {
 		name string
