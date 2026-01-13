@@ -61,6 +61,11 @@ func (p *ExecuteRequest) IsValid() error {
 			return fmt.Errorf("field CustomModelConfig not valid, %w", err)
 		}
 	}
+	if p.ResponseAPIConfig != nil {
+		if err := p.ResponseAPIConfig.IsValid(); err != nil {
+			return fmt.Errorf("field ResponseAPIConfig not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -286,6 +291,9 @@ func (p *ModelConfig) IsValid() error {
 			return fmt.Errorf("field Thinking not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *ResponseAPIConfig) IsValid() error {
 	return nil
 }
 func (p *ParamConfigValue) IsValid() error {

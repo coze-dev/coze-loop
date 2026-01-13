@@ -1261,7 +1261,9 @@ type ExecuteRequest struct {
 	CustomToolCallConfig *ToolCallConfig `thrift:"custom_tool_call_config,21,optional" frugal:"21,optional,ToolCallConfig" form:"custom_tool_call_config" json:"custom_tool_call_config,omitempty"`
 	// 自定义模型配置
 	CustomModelConfig *ModelConfig `thrift:"custom_model_config,22,optional" frugal:"22,optional,ModelConfig" form:"custom_model_config" json:"custom_model_config,omitempty"`
-	Base              *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// response api 配置
+	ResponseAPIConfig *ResponseAPIConfig `thrift:"response_api_config,23,optional" frugal:"23,optional,ResponseAPIConfig" form:"response_api_config" json:"response_api_config,omitempty"`
+	Base              *base.Base         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewExecuteRequest() *ExecuteRequest {
@@ -1355,6 +1357,18 @@ func (p *ExecuteRequest) GetCustomModelConfig() (v *ModelConfig) {
 	return p.CustomModelConfig
 }
 
+var ExecuteRequest_ResponseAPIConfig_DEFAULT *ResponseAPIConfig
+
+func (p *ExecuteRequest) GetResponseAPIConfig() (v *ResponseAPIConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetResponseAPIConfig() {
+		return ExecuteRequest_ResponseAPIConfig_DEFAULT
+	}
+	return p.ResponseAPIConfig
+}
+
 var ExecuteRequest_Base_DEFAULT *base.Base
 
 func (p *ExecuteRequest) GetBase() (v *base.Base) {
@@ -1387,6 +1401,9 @@ func (p *ExecuteRequest) SetCustomToolCallConfig(val *ToolCallConfig) {
 func (p *ExecuteRequest) SetCustomModelConfig(val *ModelConfig) {
 	p.CustomModelConfig = val
 }
+func (p *ExecuteRequest) SetResponseAPIConfig(val *ResponseAPIConfig) {
+	p.ResponseAPIConfig = val
+}
 func (p *ExecuteRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -1399,6 +1416,7 @@ var fieldIDToName_ExecuteRequest = map[int16]string{
 	20:  "custom_tools",
 	21:  "custom_tool_call_config",
 	22:  "custom_model_config",
+	23:  "response_api_config",
 	255: "Base",
 }
 
@@ -1428,6 +1446,10 @@ func (p *ExecuteRequest) IsSetCustomToolCallConfig() bool {
 
 func (p *ExecuteRequest) IsSetCustomModelConfig() bool {
 	return p.CustomModelConfig != nil
+}
+
+func (p *ExecuteRequest) IsSetResponseAPIConfig() bool {
+	return p.ResponseAPIConfig != nil
 }
 
 func (p *ExecuteRequest) IsSetBase() bool {
@@ -1503,6 +1525,14 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 22:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField23(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1649,6 +1679,14 @@ func (p *ExecuteRequest) ReadField22(iprot thrift.TProtocol) error {
 	p.CustomModelConfig = _field
 	return nil
 }
+func (p *ExecuteRequest) ReadField23(iprot thrift.TProtocol) error {
+	_field := NewResponseAPIConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ResponseAPIConfig = _field
+	return nil
+}
 func (p *ExecuteRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -1690,6 +1728,10 @@ func (p *ExecuteRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -1864,6 +1906,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *ExecuteRequest) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetResponseAPIConfig() {
+		if err = oprot.WriteFieldBegin("response_api_config", thrift.STRUCT, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ResponseAPIConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
 func (p *ExecuteRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -1916,6 +1976,9 @@ func (p *ExecuteRequest) DeepEqual(ano *ExecuteRequest) bool {
 		return false
 	}
 	if !p.Field22DeepEqual(ano.CustomModelConfig) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.ResponseAPIConfig) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -1992,6 +2055,13 @@ func (p *ExecuteRequest) Field21DeepEqual(src *ToolCallConfig) bool {
 func (p *ExecuteRequest) Field22DeepEqual(src *ModelConfig) bool {
 
 	if !p.CustomModelConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExecuteRequest) Field23DeepEqual(src *ResponseAPIConfig) bool {
+
+	if !p.ResponseAPIConfig.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -15979,6 +16049,344 @@ func (p *ModelConfig) Field100DeepEqual(src []*ParamConfigValue) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+
+type ResponseAPIConfig struct {
+	// 上一次响应的ID
+	PreviousResponseID *string `thrift:"previous_response_id,1,optional" frugal:"1,optional,string" form:"previous_response_id" json:"previous_response_id,omitempty" query:"previous_response_id"`
+	// 是否开启缓存
+	EnableCaching *bool `thrift:"enable_caching,2,optional" frugal:"2,optional,bool" form:"enable_caching" json:"enable_caching,omitempty" query:"enable_caching"`
+	// 一轮会话的唯一标识
+	SessionID *string `thrift:"session_id,3,optional" frugal:"3,optional,string" form:"session_id" json:"session_id,omitempty" query:"session_id"`
+}
+
+func NewResponseAPIConfig() *ResponseAPIConfig {
+	return &ResponseAPIConfig{}
+}
+
+func (p *ResponseAPIConfig) InitDefault() {
+}
+
+var ResponseAPIConfig_PreviousResponseID_DEFAULT string
+
+func (p *ResponseAPIConfig) GetPreviousResponseID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPreviousResponseID() {
+		return ResponseAPIConfig_PreviousResponseID_DEFAULT
+	}
+	return *p.PreviousResponseID
+}
+
+var ResponseAPIConfig_EnableCaching_DEFAULT bool
+
+func (p *ResponseAPIConfig) GetEnableCaching() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnableCaching() {
+		return ResponseAPIConfig_EnableCaching_DEFAULT
+	}
+	return *p.EnableCaching
+}
+
+var ResponseAPIConfig_SessionID_DEFAULT string
+
+func (p *ResponseAPIConfig) GetSessionID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSessionID() {
+		return ResponseAPIConfig_SessionID_DEFAULT
+	}
+	return *p.SessionID
+}
+func (p *ResponseAPIConfig) SetPreviousResponseID(val *string) {
+	p.PreviousResponseID = val
+}
+func (p *ResponseAPIConfig) SetEnableCaching(val *bool) {
+	p.EnableCaching = val
+}
+func (p *ResponseAPIConfig) SetSessionID(val *string) {
+	p.SessionID = val
+}
+
+var fieldIDToName_ResponseAPIConfig = map[int16]string{
+	1: "previous_response_id",
+	2: "enable_caching",
+	3: "session_id",
+}
+
+func (p *ResponseAPIConfig) IsSetPreviousResponseID() bool {
+	return p.PreviousResponseID != nil
+}
+
+func (p *ResponseAPIConfig) IsSetEnableCaching() bool {
+	return p.EnableCaching != nil
+}
+
+func (p *ResponseAPIConfig) IsSetSessionID() bool {
+	return p.SessionID != nil
+}
+
+func (p *ResponseAPIConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ResponseAPIConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ResponseAPIConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PreviousResponseID = _field
+	return nil
+}
+func (p *ResponseAPIConfig) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EnableCaching = _field
+	return nil
+}
+func (p *ResponseAPIConfig) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SessionID = _field
+	return nil
+}
+
+func (p *ResponseAPIConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ResponseAPIConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ResponseAPIConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPreviousResponseID() {
+		if err = oprot.WriteFieldBegin("previous_response_id", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PreviousResponseID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ResponseAPIConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableCaching() {
+		if err = oprot.WriteFieldBegin("enable_caching", thrift.BOOL, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableCaching); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ResponseAPIConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSessionID() {
+		if err = oprot.WriteFieldBegin("session_id", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SessionID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *ResponseAPIConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ResponseAPIConfig(%+v)", *p)
+
+}
+
+func (p *ResponseAPIConfig) DeepEqual(ano *ResponseAPIConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.PreviousResponseID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EnableCaching) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SessionID) {
+		return false
+	}
+	return true
+}
+
+func (p *ResponseAPIConfig) Field1DeepEqual(src *string) bool {
+
+	if p.PreviousResponseID == src {
+		return true
+	} else if p.PreviousResponseID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PreviousResponseID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ResponseAPIConfig) Field2DeepEqual(src *bool) bool {
+
+	if p.EnableCaching == src {
+		return true
+	} else if p.EnableCaching == nil || src == nil {
+		return false
+	}
+	if *p.EnableCaching != *src {
+		return false
+	}
+	return true
+}
+func (p *ResponseAPIConfig) Field3DeepEqual(src *string) bool {
+
+	if p.SessionID == src {
+		return true
+	} else if p.SessionID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SessionID, *src) != 0 {
+		return false
 	}
 	return true
 }

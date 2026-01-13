@@ -833,6 +833,20 @@ func (p *ExecuteRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 23:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField23(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -990,6 +1004,18 @@ func (p *ExecuteRequest) FastReadField22(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExecuteRequest) FastReadField23(buf []byte) (int, error) {
+	offset := 0
+	_field := NewResponseAPIConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ResponseAPIConfig = _field
+	return offset, nil
+}
+
 func (p *ExecuteRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -1016,6 +1042,7 @@ func (p *ExecuteRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
+		offset += p.fastWriteField23(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -1032,6 +1059,7 @@ func (p *ExecuteRequest) BLength() int {
 		l += p.field20Length()
 		l += p.field21Length()
 		l += p.field22Length()
+		l += p.field23Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -1122,6 +1150,15 @@ func (p *ExecuteRequest) fastWriteField22(buf []byte, w thrift.NocopyWriter) int
 	return offset
 }
 
+func (p *ExecuteRequest) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetResponseAPIConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 23)
+		offset += p.ResponseAPIConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *ExecuteRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
@@ -1202,6 +1239,15 @@ func (p *ExecuteRequest) field22Length() int {
 	if p.IsSetCustomModelConfig() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.CustomModelConfig.BLength()
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field23Length() int {
+	l := 0
+	if p.IsSetResponseAPIConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ResponseAPIConfig.BLength()
 	}
 	return l
 }
@@ -1297,6 +1343,15 @@ func (p *ExecuteRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.CustomModelConfig = _customModelConfig
+
+	var _responseAPIConfig *ResponseAPIConfig
+	if src.ResponseAPIConfig != nil {
+		_responseAPIConfig = &ResponseAPIConfig{}
+		if err := _responseAPIConfig.DeepCopy(src.ResponseAPIConfig); err != nil {
+			return err
+		}
+	}
+	p.ResponseAPIConfig = _responseAPIConfig
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -11240,6 +11295,235 @@ func (p *ModelConfig) DeepCopy(s interface{}) error {
 
 			p.ParamConfigValues = append(p.ParamConfigValues, _elem)
 		}
+	}
+
+	return nil
+}
+
+func (p *ResponseAPIConfig) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ResponseAPIConfig[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *ResponseAPIConfig) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PreviousResponseID = _field
+	return offset, nil
+}
+
+func (p *ResponseAPIConfig) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EnableCaching = _field
+	return offset, nil
+}
+
+func (p *ResponseAPIConfig) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SessionID = _field
+	return offset, nil
+}
+
+func (p *ResponseAPIConfig) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *ResponseAPIConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *ResponseAPIConfig) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *ResponseAPIConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPreviousResponseID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PreviousResponseID)
+	}
+	return offset
+}
+
+func (p *ResponseAPIConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnableCaching() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 2)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableCaching)
+	}
+	return offset
+}
+
+func (p *ResponseAPIConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSessionID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SessionID)
+	}
+	return offset
+}
+
+func (p *ResponseAPIConfig) field1Length() int {
+	l := 0
+	if p.IsSetPreviousResponseID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.PreviousResponseID)
+	}
+	return l
+}
+
+func (p *ResponseAPIConfig) field2Length() int {
+	l := 0
+	if p.IsSetEnableCaching() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *ResponseAPIConfig) field3Length() int {
+	l := 0
+	if p.IsSetSessionID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SessionID)
+	}
+	return l
+}
+
+func (p *ResponseAPIConfig) DeepCopy(s interface{}) error {
+	src, ok := s.(*ResponseAPIConfig)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.PreviousResponseID != nil {
+		var tmp string
+		if *src.PreviousResponseID != "" {
+			tmp = kutils.StringDeepCopy(*src.PreviousResponseID)
+		}
+		p.PreviousResponseID = &tmp
+	}
+
+	if src.EnableCaching != nil {
+		tmp := *src.EnableCaching
+		p.EnableCaching = &tmp
+	}
+
+	if src.SessionID != nil {
+		var tmp string
+		if *src.SessionID != "" {
+			tmp = kutils.StringDeepCopy(*src.SessionID)
+		}
+		p.SessionID = &tmp
 	}
 
 	return nil

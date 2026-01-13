@@ -39,6 +39,7 @@ struct ExecuteRequest {
     20: optional list<Tool> custom_tools (api.body="custom_tools") // 自定义工具
     21: optional ToolCallConfig custom_tool_call_config (api.body="custom_tool_call_config") // 自定义工具调用配置
     22: optional ModelConfig custom_model_config (api.body="custom_model_config") // 自定义模型配置
+    23: optional ResponseAPIConfig response_api_config (api.body="response_api_config") // response api 配置
 
     255: optional base.Base Base
 }
@@ -349,6 +350,12 @@ struct ModelConfig {
     10: optional ThinkingConfig thinking
 
     100: optional list<ParamConfigValue> param_config_values
+}
+
+struct ResponseAPIConfig {
+    1: optional string previous_response_id // 上一次响应的ID
+    2: optional bool enable_caching // 是否开启缓存
+    3: optional string session_id // 一轮会话的唯一标识
 }
 
 struct ParamConfigValue {
