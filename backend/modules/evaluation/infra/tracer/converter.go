@@ -185,8 +185,8 @@ func ContentToSpanParts(parts []*commonentity.Content) []*tracespec.ModelMessage
 			partSpan.Type = tracespec.ModelMessagePartTypeVideo
 			if part.Video != nil {
 				partSpan.VideoURL = &tracespec.ModelVideoURL{
-					URL:  gptr.Indirect(part.Image.URL),
-					Name: gptr.Indirect(part.Image.Name),
+					URL:  gptr.Indirect(part.Video.URL),
+					Name: gptr.Indirect(part.Video.Name),
 				}
 			}
 		}
