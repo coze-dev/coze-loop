@@ -59,12 +59,15 @@ type fakeSpanFilter struct {
 func (f *fakeSpanFilter) BuildBasicSpanFilter(ctx context.Context, env *span_filter.SpanEnv) ([]*loop_span.FilterField, bool, error) {
 	return f.basic, f.force, nil
 }
+
 func (f *fakeSpanFilter) BuildRootSpanFilter(ctx context.Context, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	return f.root, nil
 }
+
 func (f *fakeSpanFilter) BuildLLMSpanFilter(ctx context.Context, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	return f.llm, nil
 }
+
 func (f *fakeSpanFilter) BuildALLSpanFilter(ctx context.Context, env *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
 	return f.all, nil
 }
@@ -74,21 +77,27 @@ type fakeBuilder struct{ f span_filter.Filter }
 func (b *fakeBuilder) BuildPlatformRelatedFilter(ctx context.Context, pt loop_span.PlatformType) (span_filter.Filter, error) {
 	return b.f, nil
 }
+
 func (b *fakeBuilder) BuildGetTraceProcessors(ctx context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
 	return nil, nil
 }
+
 func (b *fakeBuilder) BuildListSpansProcessors(ctx context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
 	return nil, nil
 }
+
 func (b *fakeBuilder) BuildAdvanceInfoProcessors(ctx context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
 	return nil, nil
 }
+
 func (b *fakeBuilder) BuildIngestTraceProcessors(ctx context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
 	return nil, nil
 }
+
 func (b *fakeBuilder) BuildSearchTraceOApiProcessors(ctx context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
 	return nil, nil
 }
+
 func (b *fakeBuilder) BuildListSpansOApiProcessors(ctx context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
 	return nil, nil
 }

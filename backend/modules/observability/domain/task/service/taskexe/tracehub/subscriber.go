@@ -102,8 +102,8 @@ func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskDO *entity.Ob
 	filters = combineFilters(builtinFilter, &taskDO.SpanFilter.Filters, tenantFilter)
 
 	return filters
-
 }
+
 func buildTenantFilter(tenants []string) *loop_span.FilterFields {
 	return &loop_span.FilterFields{
 		FilterFields: []*loop_span.FilterField{
@@ -117,6 +117,7 @@ func buildTenantFilter(tenants []string) *loop_span.FilterFields {
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
 	}
 }
+
 func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
 	filters := make([]*loop_span.FilterField, 0)
 	env := &span_filter.SpanEnv{
