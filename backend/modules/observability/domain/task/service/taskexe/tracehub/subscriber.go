@@ -112,6 +112,7 @@ func buildTenantFilter(tenants []string) *loop_span.FilterFields {
 				FieldType: loop_span.FieldTypeString,
 				Values:    tenants,
 				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+				IsSystem:  true,
 			},
 		},
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),

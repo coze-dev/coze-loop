@@ -143,7 +143,7 @@ func TestSpanSubscriber_Match_PlatformAndTenant_Positive(t *testing.T) {
 			FieldName: loop_span.SpanFieldPSM,
 			FieldType: loop_span.FieldTypeString,
 			Values:    []string{"coze-loop"},
-			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
 	}
 	f := &fakeSpanFilter{basic: basic, root: nil, force: true}
@@ -186,7 +186,7 @@ func TestSpanSubscriber_Match_NegativePSM(t *testing.T) {
 			FieldName: loop_span.SpanFieldPSM,
 			FieldType: loop_span.FieldTypeString,
 			Values:    []string{"coze-loop"},
-			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
 	}
 	f := &fakeSpanFilter{basic: basic, root: nil, force: true}
@@ -229,7 +229,7 @@ func TestSpanSubscriber_Match_NegativeTenant(t *testing.T) {
 			FieldName: loop_span.SpanFieldPSM,
 			FieldType: loop_span.FieldTypeString,
 			Values:    []string{"coze-loop"},
-			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 		},
 	}
 	f := &fakeSpanFilter{basic: basic, root: nil, force: true}
