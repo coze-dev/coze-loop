@@ -338,7 +338,7 @@ func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.
 	}, nil
 }
 
-// RecordEvalMode task execution mode
+// RecordEvalMode 任务执行模式
 type RecordEvalMode interface {
 	PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error
 	PostEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error
@@ -460,10 +460,6 @@ type ExptRecordEvalModeFailRetry struct {
 }
 
 func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
-	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
-		return nil
-	}
-
 	itemTurnResults, err := e.resultSvc.GetExptItemTurnResults(ctx, eiec.Event.ExptID, eiec.Event.EvalSetItemID, eiec.Event.SpaceID, eiec.Event.Session)
 	if err != nil {
 		return err
@@ -480,7 +476,6 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.ID = ids[idx]
 		runLog.Status = entity.TurnRunState_Processing
 		runLog.ExptRunID = eiec.Event.ExptRunID
-		runLog.ErrMsg = ""
 		turnRunLogDOs = append(turnRunLogDOs, runLog)
 	}
 
