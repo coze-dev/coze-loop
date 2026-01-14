@@ -1387,7 +1387,8 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 				EvaluateDatasetFields: map[string]*entity.Content{"eval_field": mockContent1},
 				EvaluateTargetOutputFields: map[string]*entity.Content{
 					"target_field1": mockContent1,
-					"target_field2": mockContent2},
+					"target_field2": mockContent2,
+				},
 				Ext: make(map[string]string),
 			},
 			wantErr: false,
