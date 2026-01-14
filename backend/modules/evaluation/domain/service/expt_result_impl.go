@@ -299,7 +299,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, sortedExpts)
+	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, sortedExpts, param.WithTrajectory)
 	if err != nil {
 		return nil, err
 	}
@@ -551,14 +551,15 @@ var (
 	}
 )
 
-func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, expts []*entity.Experiment) ([]*entity.ExptColumnEvalTarget, error) {
+func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, expts []*entity.Experiment, withTrajectory bool) ([]*entity.ExptColumnEvalTarget, error) {
 	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
 	for _, expt := range expts {
 		if !expt.ContainsEvalTarget() {
 			continue
 		}
 		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
-		if expt.TargetType.SupptTrajectory() {
+		// 当 withTrajectory=true 且 TargetType 支持 trajectory 时，额外返回 trajectory 列
+		if withTrajectory && expt.TargetType.SupptTrajectory() {
 			columns = append(columns, columnEvalTargetTrajectory)
 		}
 		columns = append(columns, columnsEvalTargetMtr...)
@@ -760,6 +761,9 @@ type PayloadBuilder struct {
 	AnalysisService                             IEvaluationAnalysisService
 	ExptTurnResultFilterKeyMappingEvaluatorMap  map[string]*entity.ExptTurnResultFilterKeyMapping
 	ExptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping
+
+	// 控制是否在构建 eval_target_result 时保留 trajectory 字段
+	WithTrajectory bool
 }
 
 func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultParam, baselineExptID int64, baselineTurnResults []*entity.ExptTurnResult,
@@ -789,6 +793,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		ExptTurnResultFilterKeyMappingEvaluatorMap:  exptTurnResultFilterKeyMappingEvaluatorMap,
 		ExptTurnResultFilterKeyMappingAnnotationMap: exptTurnResultFilterKeyMappingAnnotationMap,
 		ExptAnnotateRepo: exptAnnotateRepo,
+		WithTrajectory:   param.WithTrajectory,
 	}
 
 	builder.ItemResults = make([]*entity.ItemResult, 0)
@@ -907,6 +912,9 @@ type ExptResultBuilder struct {
 	evalTargetService        IEvalTargetService
 	evaluatorRecordService   EvaluatorRecordService
 	analysisService          IEvaluationAnalysisService
+
+	// 控制是否保留 trajectory 字段
+	WithTrajectory bool
 }
 
 // 1.确定当前分页下数据范围
@@ -929,6 +937,7 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 			evaluationSetItemService: b.EvaluationSetItemService,
 			ExptAnnotateRepo:         b.ExptAnnotateRepo,
 			analysisService:          b.AnalysisService,
+			WithTrajectory:           b.WithTrajectory,
 		}
 
 		if exptID == b.BaselineExptID {
@@ -1004,6 +1013,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 		evaluationSetItemService: b.EvaluationSetItemService,
 		turnResultDO:             b.BaseExptTurnResultDO,
 		ExptAnnotateRepo:         b.ExptAnnotateRepo,
+		WithTrajectory:           b.WithTrajectory,
 	}
 
 	exptDO, err := exptResultBuilder.ExperimentRepo.GetByID(ctx, exptResultBuilder.ExptID, exptResultBuilder.SpaceID)
@@ -1505,6 +1515,13 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 		turnResultID, ok := targetResultID2turnResultID[targetRecord.ID]
 		if !ok {
 			continue
+		}
+
+		// 如果不需要轨迹，则从 EvalTargetOutputData.OutputFields 中移除 trajectory 字段
+		if !e.WithTrajectory &&
+			targetRecord.EvalTargetOutputData != nil &&
+			targetRecord.EvalTargetOutputData.OutputFields != nil {
+			delete(targetRecord.EvalTargetOutputData.OutputFields, consts.EvalTargetOutputFieldKeyTrajectory)
 		}
 
 		turnResultID2TargetOutput[turnResultID] = &entity.TurnTargetOutput{

@@ -319,7 +319,7 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 			},
 		}
 
-		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts)
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts, false)
 		assert.NoError(t, err)
 		assert.Len(t, got, 0)
 	})
@@ -334,7 +334,7 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 			},
 		}
 
-		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts)
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts, false)
 		assert.NoError(t, err)
 		if assert.Len(t, got, 1) {
 			assert.Equal(t, int64(2), got[0].ExptID)
@@ -359,14 +359,16 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 			},
 		}
 
-		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts)
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts, true)
 		assert.NoError(t, err)
 		if assert.Len(t, got, 1) {
 			assert.Equal(t, int64(3), got[0].ExptID)
-			// actual_output + trajectory + 4 metrics
-			assert.Len(t, got[0].Columns, 2+len(columnsEvalTargetMtr))
+			// actual_output + 4 metrics（即使支持 trajectory 也不再返回 trajectory 列）
+			assert.Len(t, got[0].Columns, 1+len(columnsEvalTargetMtr))
 			assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Columns[0].Name)
-			assert.Equal(t, consts.ReportColumnNameEvalTargetTrajectory, got[0].Columns[1].Name)
+			for _, c := range got[0].Columns {
+				assert.NotEqual(t, consts.ReportColumnNameEvalTargetTrajectory, c.Name)
+			}
 		}
 	})
 }

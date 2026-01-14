@@ -742,6 +742,7 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 		BaseExptID:     req.BaselineExperimentID,
 		Page:           page,
 		UseAccelerator: req.GetUseAccelerator(),
+		WithTrajectory: req.GetWithTrajectory(),
 	}
 	if err = buildExptTurnResultFilter(req, param); err != nil {
 		return nil, err
