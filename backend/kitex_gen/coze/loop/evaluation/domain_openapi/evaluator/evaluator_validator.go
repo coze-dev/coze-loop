@@ -114,3 +114,11 @@ func (p *EvaluatorRecord) IsValid() error {
 	}
 	return nil
 }
+func (p *EvaluatorRunConfig) IsValid() error {
+	if p.EvaluatorRuntimeParam != nil {
+		if err := p.EvaluatorRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRuntimeParam not valid, %w", err)
+		}
+	}
+	return nil
+}

@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 )
@@ -24,6 +25,7 @@ var (
 	_ = common.KitexUnusedProtection
 	_ = eval_set.KitexUnusedProtection
 	_ = eval_target.KitexUnusedProtection
+	_ = evaluator.KitexUnusedProtection
 	_ = experiment.KitexUnusedProtection
 	_ = spi.KitexUnusedProtection
 )
@@ -11438,6 +11440,20 @@ func (p *SubmitExperimentEvaluatorParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -11484,6 +11500,18 @@ func (p *SubmitExperimentEvaluatorParam) FastReadField2(buf []byte) (int, error)
 	return offset, nil
 }
 
+func (p *SubmitExperimentEvaluatorParam) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+	_field := evaluator.NewEvaluatorRunConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RunConfig = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentEvaluatorParam) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -11493,6 +11521,7 @@ func (p *SubmitExperimentEvaluatorParam) FastWriteNocopy(buf []byte, w thrift.No
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -11503,6 +11532,7 @@ func (p *SubmitExperimentEvaluatorParam) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -11526,6 +11556,15 @@ func (p *SubmitExperimentEvaluatorParam) fastWriteField2(buf []byte, w thrift.No
 	return offset
 }
 
+func (p *SubmitExperimentEvaluatorParam) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRunConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
+		offset += p.RunConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *SubmitExperimentEvaluatorParam) field1Length() int {
 	l := 0
 	if p.IsSetEvaluatorID() {
@@ -11540,6 +11579,15 @@ func (p *SubmitExperimentEvaluatorParam) field2Length() int {
 	if p.IsSetVersion() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.Version)
+	}
+	return l
+}
+
+func (p *SubmitExperimentEvaluatorParam) field3Length() int {
+	l := 0
+	if p.IsSetRunConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RunConfig.BLength()
 	}
 	return l
 }
@@ -11562,6 +11610,15 @@ func (p *SubmitExperimentEvaluatorParam) DeepCopy(s interface{}) error {
 		}
 		p.Version = &tmp
 	}
+
+	var _runConfig *evaluator.EvaluatorRunConfig
+	if src.RunConfig != nil {
+		_runConfig = &evaluator.EvaluatorRunConfig{}
+		if err := _runConfig.DeepCopy(src.RunConfig); err != nil {
+			return err
+		}
+	}
+	p.RunConfig = _runConfig
 
 	return nil
 }

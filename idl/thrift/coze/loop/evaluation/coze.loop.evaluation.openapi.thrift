@@ -6,6 +6,7 @@ include "domain_openapi/eval_set.thrift"
 include "coze.loop.evaluation.spi.thrift"
 include "domain_openapi/experiment.thrift"
 include "domain_openapi/eval_target.thrift"
+include "domain_openapi/evaluator.thrift"
 
 // ===============================
 // 评测集相关接口 (9个接口)
@@ -356,6 +357,7 @@ struct SubmitExperimentEvalSetParam {
 struct SubmitExperimentEvaluatorParam {
     1: optional i64 evaluator_id (api.js_conv="true", go.tag='json:"evaluator_id"')
     2: optional string version
+    3: optional evaluator.EvaluatorRunConfig run_config
 }
 
 struct SubmitExperimentEvalTargetParam {

@@ -1409,3 +1409,79 @@ func TestConvertCustomRPCEvaluatorVersionDO2DTO(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertEvaluatorHTTPInfoDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	// nil 输入
+	assert.Nil(t, ConvertEvaluatorHTTPInfoDTO2DO(nil))
+
+	// 正常输入
+	method := evaluatordto.EvaluatorHTTPMethod("post")
+	path := gptr.Of("/v1/eval")
+	dto := &evaluatordto.EvaluatorHTTPInfo{Method: &method, Path: path}
+
+	do := ConvertEvaluatorHTTPInfoDTO2DO(dto)
+	if assert.NotNil(t, do) {
+		assert.Equal(t, method, gptr.Indirect(do.Method))
+		assert.Equal(t, "/v1/eval", gptr.Indirect(do.Path))
+	}
+}
+
+func TestConvertEvaluatorHTTPInfoDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	// nil 输入
+	assert.Nil(t, ConvertEvaluatorHTTPInfoDO2DTO(nil))
+
+	// 正常输入
+	method := evaluatordo.EvaluatorHTTPMethod("get")
+	path := gptr.Of("/ping")
+	do := &evaluatordo.EvaluatorHTTPInfo{Method: &method, Path: path}
+
+	dto := ConvertEvaluatorHTTPInfoDO2DTO(do)
+	if assert.NotNil(t, dto) {
+		assert.Equal(t, method, gptr.Indirect(dto.Method))
+		assert.Equal(t, "/ping", gptr.Indirect(dto.Path))
+	}
+}
+
+func TestConvertEvaluatorRunConfDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	// nil 输入
+	assert.Nil(t, ConvertEvaluatorRunConfDTO2DO(nil))
+
+	// 正常输入：包含 Env 与 RuntimeParam.JSONValue
+	env := gptr.Of("prod")
+	rp := &commondto.RuntimeParam{JSONValue: gptr.Of(`{"model_config":{"model_id":"m-1"}}`)}
+	dto := &evaluatordto.EvaluatorRunConfig{Env: env, EvaluatorRuntimeParam: rp}
+
+	do := ConvertEvaluatorRunConfDTO2DO(dto)
+	if assert.NotNil(t, do) {
+		assert.Equal(t, "prod", gptr.Indirect(do.Env))
+		if assert.NotNil(t, do.EvaluatorRuntimeParam) {
+			assert.Equal(t, `{"model_config":{"model_id":"m-1"}}`, gptr.Indirect(do.EvaluatorRuntimeParam.JSONValue))
+		}
+	}
+}
+
+func TestConvertEvaluatorRunConfDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	// nil 输入
+	assert.Nil(t, ConvertEvaluatorRunConfDO2DTO(nil))
+
+	// 正常输入：包含 Env 与 RuntimeParam.JSONValue
+	env := gptr.Of("staging")
+	rp := &evaluatordo.RuntimeParam{JSONValue: gptr.Of(`{"model_config":{"temperature":0.5}}`)}
+	do := &evaluatordo.EvaluatorRunConfig{Env: env, EvaluatorRuntimeParam: rp}
+
+	dto := ConvertEvaluatorRunConfDO2DTO(do)
+	if assert.NotNil(t, dto) {
+		assert.Equal(t, "staging", gptr.Indirect(dto.Env))
+		if assert.NotNil(t, dto.EvaluatorRuntimeParam) {
+			assert.Equal(t, `{"model_config":{"temperature":0.5}}`, gptr.Indirect(dto.EvaluatorRuntimeParam.JSONValue))
+		}
+	}
+}
