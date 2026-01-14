@@ -175,6 +175,7 @@ struct Message {
     5: optional string tool_call_id
     6: optional list<ToolCall> tool_calls
     7: optional bool skip_render // 是否跳过渲染
+    8: optional string signature // gemini3 thought_signature
 
     100: optional map<string, string> metadata
 }
@@ -192,6 +193,7 @@ struct ContentPart {
     3: optional ImageURL image_url
     4: optional VideoURL video_url
     5: optional MediaConfig media_config
+    6: optional string signature // gemini3 thought_signature
 }
 
 typedef string ContentType (ts.enum="true")
@@ -219,6 +221,7 @@ struct ToolCall {
     2: optional string id
     3: optional ToolType type
     4: optional FunctionCall function_call
+    5: optional string signature // gemini3 thought_signature
 }
 
 struct FunctionCall {
@@ -292,6 +295,7 @@ struct DebugMessage {
     4: optional list<ContentPart> parts
     5: optional string tool_call_id
     6: optional list<DebugToolCall> tool_calls
+    7: optional string signature // gemini3 thought_signature
 
     101: optional string debug_id
     102: optional i64 input_tokens (api.js_conv="true", go.tag='json:"input_tokens"')

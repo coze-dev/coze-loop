@@ -61,6 +61,7 @@ type Message struct {
 	ToolCallID       *string        `json:"tool_call_id,omitempty"`
 	ToolCalls        []*ToolCall    `json:"tool_calls,omitempty"`
 	SkipRender       *bool          `json:"skip_render,omitempty"`
+	Signature        *string        `json:"signature,omitempty"` // gemini3 thought_signature
 
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
@@ -82,6 +83,7 @@ type ContentPart struct {
 	VideoURL    *VideoURL    `json:"video_url,omitempty"`
 	Base64Data  *string      `json:"base64_data,omitempty"`
 	MediaConfig *MediaConfig `json:"media_config,omitempty"`
+	Signature   *string      `json:"signature,omitempty"` // gemini3 thought_signature
 }
 
 type ContentType string
@@ -180,6 +182,7 @@ type ToolCall struct {
 	ID           string        `json:"id"`
 	Type         ToolType      `json:"type"`
 	FunctionCall *FunctionCall `json:"function_call,omitempty"`
+	Signature    *string       `json:"signature,omitempty"` // gemini3 thought_signature
 }
 
 type FunctionCall struct {

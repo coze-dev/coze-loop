@@ -24,6 +24,7 @@ type DebugMessage struct {
 	Parts            []*ContentPart   `json:"parts,omitempty"`
 	ToolCallID       *string          `json:"tool_call_id,omitempty"`
 	ToolCalls        []*DebugToolCall `json:"tool_calls,omitempty"`
+	Signature        *string          `json:"signature,omitempty"` // gemini3 thought_signature
 	DebugID          *string          `json:"debug_id,omitempty"`
 	InputTokens      *int64           `json:"input_tokens,omitempty"`
 	OutputTokens     *int64           `json:"output_tokens,omitempty"`

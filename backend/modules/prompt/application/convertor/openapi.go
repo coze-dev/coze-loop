@@ -73,6 +73,7 @@ func OpenAPIMessageDO2DTO(do *entity.Message) *openapi.Message {
 		ToolCallID:       do.ToolCallID,
 		ToolCalls:        OpenAPIBatchToolCallDO2DTO(do.ToolCalls),
 		SkipRender:       do.SkipRender,
+		Signature:        do.Signature,
 		Metadata:         do.Metadata,
 	}
 }
@@ -213,6 +214,7 @@ func OpenAPIContentPartDO2DTO(do *entity.ContentPart) *openapi.ContentPart {
 		VideoURL:   videoURL,
 		Base64Data: do.Base64Data,
 		Config:     config,
+		Signature:  do.Signature,
 	}
 }
 
@@ -261,6 +263,7 @@ func OpenAPIMessageDTO2DO(dto *openapi.Message) *entity.Message {
 		ToolCallID:       dto.ToolCallID,
 		ToolCalls:        OpenAPIBatchToolCallDTO2DO(dto.ToolCalls),
 		SkipRender:       dto.SkipRender,
+		Signature:        dto.Signature,
 		Metadata:         dto.Metadata,
 	}
 }
@@ -311,6 +314,7 @@ func OpenAPIContentPartDTO2DO(dto *openapi.ContentPart) *entity.ContentPart {
 		VideoURL:    videoURL,
 		Base64Data:  dto.Base64Data,
 		MediaConfig: mediaConfig,
+		Signature:   dto.Signature,
 	}
 }
 
@@ -396,6 +400,7 @@ func OpenAPIToolCallDO2DTO(do *entity.ToolCall) *openapi.ToolCall {
 		ID:           ptr.Of(do.ID),
 		Type:         ptr.Of(OpenAPIToolTypeDO2DTO(do.Type)),
 		FunctionCall: OpenAPIFunctionCallDO2DTO(do.FunctionCall),
+		Signature:    do.Signature,
 	}
 }
 
@@ -447,6 +452,7 @@ func OpenAPIToolCallDTO2DO(dto *openapi.ToolCall) *entity.ToolCall {
 		ID:           dto.GetID(),
 		Type:         OpenAPIToolTypeDTO2DO(dto.GetType()),
 		FunctionCall: OpenAPIFunctionCallDTO2DO(dto.FunctionCall),
+		Signature:    dto.Signature,
 	}
 }
 

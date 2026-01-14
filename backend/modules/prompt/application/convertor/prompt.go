@@ -223,6 +223,8 @@ func MessageDTO2DO(dto *prompt.Message) *entity.Message {
 		Parts:            BatchContentPartDTO2DO(dto.Parts),
 		ToolCallID:       dto.ToolCallID,
 		ToolCalls:        BatchToolCallDTO2DO(dto.ToolCalls),
+		SkipRender:       dto.SkipRender,
+		Signature:        dto.Signature,
 		Metadata:         dto.Metadata,
 	}
 }
@@ -269,6 +271,7 @@ func ContentPartDTO2DO(dto *prompt.ContentPart) *entity.ContentPart {
 		ImageURL:    ImageURLDTO2DO(dto.ImageURL),
 		VideoURL:    VideoURLDTO2DO(dto.VideoURL),
 		MediaConfig: MediaConfigDTO2DO(dto.MediaConfig),
+		Signature:   dto.Signature,
 	}
 }
 
@@ -438,6 +441,7 @@ func ToolCallDTO2DO(dto *prompt.ToolCall) *entity.ToolCall {
 		ID:           dto.GetID(),
 		Type:         ToolTypeDTO2DO(dto.GetType()),
 		FunctionCall: FunctionCallDTO2DO(dto.FunctionCall),
+		Signature:    dto.Signature,
 	}
 }
 
@@ -657,6 +661,7 @@ func ToolCallDO2DTO(do *entity.ToolCall) *prompt.ToolCall {
 		ID:           ptr.Of(do.ID),
 		Type:         ptr.Of(ToolTypeDO2DTO(do.Type)),
 		FunctionCall: FunctionCallDO2DTO(do.FunctionCall),
+		Signature:    do.Signature,
 	}
 }
 
@@ -715,6 +720,7 @@ func ContentPartDO2DTO(do *entity.ContentPart) *prompt.ContentPart {
 		ImageURL:    ImageURLDO2DTO(do.ImageURL),
 		VideoURL:    VideoURLDO2DTO(do.VideoURL),
 		MediaConfig: MediaConfigDO2DTO(do.MediaConfig),
+		Signature:   do.Signature,
 	}
 }
 
@@ -838,6 +844,8 @@ func MessageDO2DTO(do *entity.Message) *prompt.Message {
 		Parts:            BatchContentPartDO2DTO(do.Parts),
 		ToolCallID:       do.ToolCallID,
 		ToolCalls:        BatchToolCallDO2DTO(do.ToolCalls),
+		SkipRender:       do.SkipRender,
+		Signature:        do.Signature,
 		Metadata:         do.Metadata,
 	}
 }

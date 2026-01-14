@@ -8044,8 +8044,10 @@ type Message struct {
 	ToolCallID       *string        `thrift:"tool_call_id,5,optional" frugal:"5,optional,string" form:"tool_call_id" json:"tool_call_id,omitempty" query:"tool_call_id"`
 	ToolCalls        []*ToolCall    `thrift:"tool_calls,6,optional" frugal:"6,optional,list<ToolCall>" form:"tool_calls" json:"tool_calls,omitempty" query:"tool_calls"`
 	// 是否跳过渲染
-	SkipRender *bool             `thrift:"skip_render,7,optional" frugal:"7,optional,bool" form:"skip_render" json:"skip_render,omitempty" query:"skip_render"`
-	Metadata   map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
+	SkipRender *bool `thrift:"skip_render,7,optional" frugal:"7,optional,bool" form:"skip_render" json:"skip_render,omitempty" query:"skip_render"`
+	// gemini3 thought_signature
+	Signature *string           `thrift:"signature,8,optional" frugal:"8,optional,string" form:"signature" json:"signature,omitempty" query:"signature"`
+	Metadata  map[string]string `thrift:"metadata,100,optional" frugal:"100,optional,map<string:string>" form:"metadata" json:"metadata,omitempty" query:"metadata"`
 }
 
 func NewMessage() *Message {
@@ -8139,6 +8141,18 @@ func (p *Message) GetSkipRender() (v bool) {
 	return *p.SkipRender
 }
 
+var Message_Signature_DEFAULT string
+
+func (p *Message) GetSignature() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSignature() {
+		return Message_Signature_DEFAULT
+	}
+	return *p.Signature
+}
+
 var Message_Metadata_DEFAULT map[string]string
 
 func (p *Message) GetMetadata() (v map[string]string) {
@@ -8171,6 +8185,9 @@ func (p *Message) SetToolCalls(val []*ToolCall) {
 func (p *Message) SetSkipRender(val *bool) {
 	p.SkipRender = val
 }
+func (p *Message) SetSignature(val *string) {
+	p.Signature = val
+}
 func (p *Message) SetMetadata(val map[string]string) {
 	p.Metadata = val
 }
@@ -8183,6 +8200,7 @@ var fieldIDToName_Message = map[int16]string{
 	5:   "tool_call_id",
 	6:   "tool_calls",
 	7:   "skip_render",
+	8:   "signature",
 	100: "metadata",
 }
 
@@ -8212,6 +8230,10 @@ func (p *Message) IsSetToolCalls() bool {
 
 func (p *Message) IsSetSkipRender() bool {
 	return p.SkipRender != nil
+}
+
+func (p *Message) IsSetSignature() bool {
+	return p.Signature != nil
 }
 
 func (p *Message) IsSetMetadata() bool {
@@ -8287,6 +8309,14 @@ func (p *Message) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8430,6 +8460,17 @@ func (p *Message) ReadField7(iprot thrift.TProtocol) error {
 	p.SkipRender = _field
 	return nil
 }
+func (p *Message) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Signature = _field
+	return nil
+}
 func (p *Message) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -8492,6 +8533,10 @@ func (p *Message) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -8658,6 +8703,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *Message) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSignature() {
+		if err = oprot.WriteFieldBegin("signature", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Signature); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 func (p *Message) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMetadata() {
 		if err = oprot.WriteFieldBegin("metadata", thrift.MAP, 100); err != nil {
@@ -8721,6 +8784,9 @@ func (p *Message) DeepEqual(ano *Message) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.SkipRender) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.Signature) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Metadata) {
@@ -8815,6 +8881,18 @@ func (p *Message) Field7DeepEqual(src *bool) bool {
 	}
 	return true
 }
+func (p *Message) Field8DeepEqual(src *string) bool {
+
+	if p.Signature == src {
+		return true
+	} else if p.Signature == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Signature, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *Message) Field100DeepEqual(src map[string]string) bool {
 
 	if len(p.Metadata) != len(src) {
@@ -8835,6 +8913,8 @@ type ContentPart struct {
 	ImageURL    *ImageURL    `thrift:"image_url,3,optional" frugal:"3,optional,ImageURL" form:"image_url" json:"image_url,omitempty" query:"image_url"`
 	VideoURL    *VideoURL    `thrift:"video_url,4,optional" frugal:"4,optional,VideoURL" form:"video_url" json:"video_url,omitempty" query:"video_url"`
 	MediaConfig *MediaConfig `thrift:"media_config,5,optional" frugal:"5,optional,MediaConfig" form:"media_config" json:"media_config,omitempty" query:"media_config"`
+	// gemini3 thought_signature
+	Signature *string `thrift:"signature,6,optional" frugal:"6,optional,string" form:"signature" json:"signature,omitempty" query:"signature"`
 }
 
 func NewContentPart() *ContentPart {
@@ -8903,6 +8983,18 @@ func (p *ContentPart) GetMediaConfig() (v *MediaConfig) {
 	}
 	return p.MediaConfig
 }
+
+var ContentPart_Signature_DEFAULT string
+
+func (p *ContentPart) GetSignature() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSignature() {
+		return ContentPart_Signature_DEFAULT
+	}
+	return *p.Signature
+}
 func (p *ContentPart) SetType(val *ContentType) {
 	p.Type = val
 }
@@ -8918,6 +9010,9 @@ func (p *ContentPart) SetVideoURL(val *VideoURL) {
 func (p *ContentPart) SetMediaConfig(val *MediaConfig) {
 	p.MediaConfig = val
 }
+func (p *ContentPart) SetSignature(val *string) {
+	p.Signature = val
+}
 
 var fieldIDToName_ContentPart = map[int16]string{
 	1: "type",
@@ -8925,6 +9020,7 @@ var fieldIDToName_ContentPart = map[int16]string{
 	3: "image_url",
 	4: "video_url",
 	5: "media_config",
+	6: "signature",
 }
 
 func (p *ContentPart) IsSetType() bool {
@@ -8945,6 +9041,10 @@ func (p *ContentPart) IsSetVideoURL() bool {
 
 func (p *ContentPart) IsSetMediaConfig() bool {
 	return p.MediaConfig != nil
+}
+
+func (p *ContentPart) IsSetSignature() bool {
+	return p.Signature != nil
 }
 
 func (p *ContentPart) Read(iprot thrift.TProtocol) (err error) {
@@ -9000,6 +9100,14 @@ func (p *ContentPart) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9080,6 +9188,17 @@ func (p *ContentPart) ReadField5(iprot thrift.TProtocol) error {
 	p.MediaConfig = _field
 	return nil
 }
+func (p *ContentPart) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Signature = _field
+	return nil
+}
 
 func (p *ContentPart) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -9105,6 +9224,10 @@ func (p *ContentPart) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -9215,6 +9338,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ContentPart) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSignature() {
+		if err = oprot.WriteFieldBegin("signature", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Signature); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *ContentPart) String() string {
 	if p == nil {
@@ -9243,6 +9384,9 @@ func (p *ContentPart) DeepEqual(ano *ContentPart) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.MediaConfig) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Signature) {
 		return false
 	}
 	return true
@@ -9289,6 +9433,18 @@ func (p *ContentPart) Field4DeepEqual(src *VideoURL) bool {
 func (p *ContentPart) Field5DeepEqual(src *MediaConfig) bool {
 
 	if !p.MediaConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ContentPart) Field6DeepEqual(src *string) bool {
+
+	if p.Signature == src {
+		return true
+	} else if p.Signature == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Signature, *src) != 0 {
 		return false
 	}
 	return true
@@ -9996,6 +10152,8 @@ type ToolCall struct {
 	ID           *string       `thrift:"id,2,optional" frugal:"2,optional,string" form:"id" json:"id,omitempty" query:"id"`
 	Type         *ToolType     `thrift:"type,3,optional" frugal:"3,optional,string" form:"type" json:"type,omitempty" query:"type"`
 	FunctionCall *FunctionCall `thrift:"function_call,4,optional" frugal:"4,optional,FunctionCall" form:"function_call" json:"function_call,omitempty" query:"function_call"`
+	// gemini3 thought_signature
+	Signature *string `thrift:"signature,5,optional" frugal:"5,optional,string" form:"signature" json:"signature,omitempty" query:"signature"`
 }
 
 func NewToolCall() *ToolCall {
@@ -10052,6 +10210,18 @@ func (p *ToolCall) GetFunctionCall() (v *FunctionCall) {
 	}
 	return p.FunctionCall
 }
+
+var ToolCall_Signature_DEFAULT string
+
+func (p *ToolCall) GetSignature() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSignature() {
+		return ToolCall_Signature_DEFAULT
+	}
+	return *p.Signature
+}
 func (p *ToolCall) SetIndex(val *int64) {
 	p.Index = val
 }
@@ -10064,12 +10234,16 @@ func (p *ToolCall) SetType(val *ToolType) {
 func (p *ToolCall) SetFunctionCall(val *FunctionCall) {
 	p.FunctionCall = val
 }
+func (p *ToolCall) SetSignature(val *string) {
+	p.Signature = val
+}
 
 var fieldIDToName_ToolCall = map[int16]string{
 	1: "index",
 	2: "id",
 	3: "type",
 	4: "function_call",
+	5: "signature",
 }
 
 func (p *ToolCall) IsSetIndex() bool {
@@ -10086,6 +10260,10 @@ func (p *ToolCall) IsSetType() bool {
 
 func (p *ToolCall) IsSetFunctionCall() bool {
 	return p.FunctionCall != nil
+}
+
+func (p *ToolCall) IsSetSignature() bool {
+	return p.Signature != nil
 }
 
 func (p *ToolCall) Read(iprot thrift.TProtocol) (err error) {
@@ -10133,6 +10311,14 @@ func (p *ToolCall) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10208,6 +10394,17 @@ func (p *ToolCall) ReadField4(iprot thrift.TProtocol) error {
 	p.FunctionCall = _field
 	return nil
 }
+func (p *ToolCall) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Signature = _field
+	return nil
+}
 
 func (p *ToolCall) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -10229,6 +10426,10 @@ func (p *ToolCall) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -10321,6 +10522,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ToolCall) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSignature() {
+		if err = oprot.WriteFieldBegin("signature", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Signature); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *ToolCall) String() string {
 	if p == nil {
@@ -10346,6 +10565,9 @@ func (p *ToolCall) DeepEqual(ano *ToolCall) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.FunctionCall) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Signature) {
 		return false
 	}
 	return true
@@ -10390,6 +10612,18 @@ func (p *ToolCall) Field3DeepEqual(src *ToolType) bool {
 func (p *ToolCall) Field4DeepEqual(src *FunctionCall) bool {
 
 	if !p.FunctionCall.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ToolCall) Field5DeepEqual(src *string) bool {
+
+	if p.Signature == src {
+		return true
+	} else if p.Signature == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Signature, *src) != 0 {
 		return false
 	}
 	return true
@@ -13139,10 +13373,12 @@ type DebugMessage struct {
 	Parts            []*ContentPart   `thrift:"parts,4,optional" frugal:"4,optional,list<ContentPart>" form:"parts" json:"parts,omitempty" query:"parts"`
 	ToolCallID       *string          `thrift:"tool_call_id,5,optional" frugal:"5,optional,string" form:"tool_call_id" json:"tool_call_id,omitempty" query:"tool_call_id"`
 	ToolCalls        []*DebugToolCall `thrift:"tool_calls,6,optional" frugal:"6,optional,list<DebugToolCall>" form:"tool_calls" json:"tool_calls,omitempty" query:"tool_calls"`
-	DebugID          *string          `thrift:"debug_id,101,optional" frugal:"101,optional,string" form:"debug_id" json:"debug_id,omitempty" query:"debug_id"`
-	InputTokens      *int64           `thrift:"input_tokens,102,optional" frugal:"102,optional,i64" json:"input_tokens" form:"input_tokens" query:"input_tokens"`
-	OutputTokens     *int64           `thrift:"output_tokens,103,optional" frugal:"103,optional,i64" json:"output_tokens" form:"output_tokens" query:"output_tokens"`
-	CostMs           *int64           `thrift:"cost_ms,104,optional" frugal:"104,optional,i64" json:"cost_ms" form:"cost_ms" query:"cost_ms"`
+	// gemini3 thought_signature
+	Signature    *string `thrift:"signature,7,optional" frugal:"7,optional,string" form:"signature" json:"signature,omitempty" query:"signature"`
+	DebugID      *string `thrift:"debug_id,101,optional" frugal:"101,optional,string" form:"debug_id" json:"debug_id,omitempty" query:"debug_id"`
+	InputTokens  *int64  `thrift:"input_tokens,102,optional" frugal:"102,optional,i64" json:"input_tokens" form:"input_tokens" query:"input_tokens"`
+	OutputTokens *int64  `thrift:"output_tokens,103,optional" frugal:"103,optional,i64" json:"output_tokens" form:"output_tokens" query:"output_tokens"`
+	CostMs       *int64  `thrift:"cost_ms,104,optional" frugal:"104,optional,i64" json:"cost_ms" form:"cost_ms" query:"cost_ms"`
 }
 
 func NewDebugMessage() *DebugMessage {
@@ -13224,6 +13460,18 @@ func (p *DebugMessage) GetToolCalls() (v []*DebugToolCall) {
 	return p.ToolCalls
 }
 
+var DebugMessage_Signature_DEFAULT string
+
+func (p *DebugMessage) GetSignature() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSignature() {
+		return DebugMessage_Signature_DEFAULT
+	}
+	return *p.Signature
+}
+
 var DebugMessage_DebugID_DEFAULT string
 
 func (p *DebugMessage) GetDebugID() (v string) {
@@ -13289,6 +13537,9 @@ func (p *DebugMessage) SetToolCallID(val *string) {
 func (p *DebugMessage) SetToolCalls(val []*DebugToolCall) {
 	p.ToolCalls = val
 }
+func (p *DebugMessage) SetSignature(val *string) {
+	p.Signature = val
+}
 func (p *DebugMessage) SetDebugID(val *string) {
 	p.DebugID = val
 }
@@ -13309,6 +13560,7 @@ var fieldIDToName_DebugMessage = map[int16]string{
 	4:   "parts",
 	5:   "tool_call_id",
 	6:   "tool_calls",
+	7:   "signature",
 	101: "debug_id",
 	102: "input_tokens",
 	103: "output_tokens",
@@ -13337,6 +13589,10 @@ func (p *DebugMessage) IsSetToolCallID() bool {
 
 func (p *DebugMessage) IsSetToolCalls() bool {
 	return p.ToolCalls != nil
+}
+
+func (p *DebugMessage) IsSetSignature() bool {
+	return p.Signature != nil
 }
 
 func (p *DebugMessage) IsSetDebugID() bool {
@@ -13416,6 +13672,14 @@ func (p *DebugMessage) Read(iprot thrift.TProtocol) (err error) {
 		case 6:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13572,6 +13836,17 @@ func (p *DebugMessage) ReadField6(iprot thrift.TProtocol) error {
 	p.ToolCalls = _field
 	return nil
 }
+func (p *DebugMessage) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Signature = _field
+	return nil
+}
 func (p *DebugMessage) ReadField101(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -13645,6 +13920,10 @@ func (p *DebugMessage) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField101(oprot); err != nil {
@@ -13805,6 +14084,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *DebugMessage) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSignature() {
+		if err = oprot.WriteFieldBegin("signature", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Signature); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *DebugMessage) writeField101(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDebugID() {
 		if err = oprot.WriteFieldBegin("debug_id", thrift.STRING, 101); err != nil {
@@ -13910,6 +14207,9 @@ func (p *DebugMessage) DeepEqual(ano *DebugMessage) bool {
 	if !p.Field6DeepEqual(ano.ToolCalls) {
 		return false
 	}
+	if !p.Field7DeepEqual(ano.Signature) {
+		return false
+	}
 	if !p.Field101DeepEqual(ano.DebugID) {
 		return false
 	}
@@ -13996,6 +14296,18 @@ func (p *DebugMessage) Field6DeepEqual(src []*DebugToolCall) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *DebugMessage) Field7DeepEqual(src *string) bool {
+
+	if p.Signature == src {
+		return true
+	} else if p.Signature == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Signature, *src) != 0 {
+		return false
 	}
 	return true
 }
