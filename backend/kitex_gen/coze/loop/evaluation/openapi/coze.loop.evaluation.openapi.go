@@ -10,6 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	"strings"
@@ -16024,8 +16025,9 @@ func (p *SubmitExperimentEvalSetParam) Field2DeepEqual(src *string) bool {
 }
 
 type SubmitExperimentEvaluatorParam struct {
-	EvaluatorID *int64  `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
-	Version     *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	EvaluatorID *int64                        `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
+	Version     *string                       `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	RunConfig   *evaluator.EvaluatorRunConfig `thrift:"run_config,3,optional" frugal:"3,optional,evaluator.EvaluatorRunConfig" form:"run_config" json:"run_config,omitempty" query:"run_config"`
 }
 
 func NewSubmitExperimentEvaluatorParam() *SubmitExperimentEvaluatorParam {
@@ -16058,16 +16060,32 @@ func (p *SubmitExperimentEvaluatorParam) GetVersion() (v string) {
 	}
 	return *p.Version
 }
+
+var SubmitExperimentEvaluatorParam_RunConfig_DEFAULT *evaluator.EvaluatorRunConfig
+
+func (p *SubmitExperimentEvaluatorParam) GetRunConfig() (v *evaluator.EvaluatorRunConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRunConfig() {
+		return SubmitExperimentEvaluatorParam_RunConfig_DEFAULT
+	}
+	return p.RunConfig
+}
 func (p *SubmitExperimentEvaluatorParam) SetEvaluatorID(val *int64) {
 	p.EvaluatorID = val
 }
 func (p *SubmitExperimentEvaluatorParam) SetVersion(val *string) {
 	p.Version = val
 }
+func (p *SubmitExperimentEvaluatorParam) SetRunConfig(val *evaluator.EvaluatorRunConfig) {
+	p.RunConfig = val
+}
 
 var fieldIDToName_SubmitExperimentEvaluatorParam = map[int16]string{
 	1: "evaluator_id",
 	2: "version",
+	3: "run_config",
 }
 
 func (p *SubmitExperimentEvaluatorParam) IsSetEvaluatorID() bool {
@@ -16076,6 +16094,10 @@ func (p *SubmitExperimentEvaluatorParam) IsSetEvaluatorID() bool {
 
 func (p *SubmitExperimentEvaluatorParam) IsSetVersion() bool {
 	return p.Version != nil
+}
+
+func (p *SubmitExperimentEvaluatorParam) IsSetRunConfig() bool {
+	return p.RunConfig != nil
 }
 
 func (p *SubmitExperimentEvaluatorParam) Read(iprot thrift.TProtocol) (err error) {
@@ -16107,6 +16129,14 @@ func (p *SubmitExperimentEvaluatorParam) Read(iprot thrift.TProtocol) (err error
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16163,6 +16193,14 @@ func (p *SubmitExperimentEvaluatorParam) ReadField2(iprot thrift.TProtocol) erro
 	p.Version = _field
 	return nil
 }
+func (p *SubmitExperimentEvaluatorParam) ReadField3(iprot thrift.TProtocol) error {
+	_field := evaluator.NewEvaluatorRunConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RunConfig = _field
+	return nil
+}
 
 func (p *SubmitExperimentEvaluatorParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -16176,6 +16214,10 @@ func (p *SubmitExperimentEvaluatorParam) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -16232,6 +16274,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *SubmitExperimentEvaluatorParam) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRunConfig() {
+		if err = oprot.WriteFieldBegin("run_config", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RunConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *SubmitExperimentEvaluatorParam) String() string {
 	if p == nil {
@@ -16251,6 +16311,9 @@ func (p *SubmitExperimentEvaluatorParam) DeepEqual(ano *SubmitExperimentEvaluato
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.RunConfig) {
 		return false
 	}
 	return true
@@ -16276,6 +16339,13 @@ func (p *SubmitExperimentEvaluatorParam) Field2DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvaluatorParam) Field3DeepEqual(src *evaluator.EvaluatorRunConfig) bool {
+
+	if !p.RunConfig.DeepEqual(src) {
 		return false
 	}
 	return true

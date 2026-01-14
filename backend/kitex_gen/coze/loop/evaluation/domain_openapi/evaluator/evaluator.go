@@ -4424,3 +4424,253 @@ func (p *EvaluatorRecord) Field100DeepEqual(src *common.BaseInfo) bool {
 	}
 	return true
 }
+
+type EvaluatorRunConfig struct {
+	Env                   *string              `thrift:"env,1,optional" frugal:"1,optional,string" form:"env" json:"env,omitempty" query:"env"`
+	EvaluatorRuntimeParam *common.RuntimeParam `thrift:"evaluator_runtime_param,2,optional" frugal:"2,optional,common.RuntimeParam" form:"evaluator_runtime_param" json:"evaluator_runtime_param,omitempty" query:"evaluator_runtime_param"`
+}
+
+func NewEvaluatorRunConfig() *EvaluatorRunConfig {
+	return &EvaluatorRunConfig{}
+}
+
+func (p *EvaluatorRunConfig) InitDefault() {
+}
+
+var EvaluatorRunConfig_Env_DEFAULT string
+
+func (p *EvaluatorRunConfig) GetEnv() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnv() {
+		return EvaluatorRunConfig_Env_DEFAULT
+	}
+	return *p.Env
+}
+
+var EvaluatorRunConfig_EvaluatorRuntimeParam_DEFAULT *common.RuntimeParam
+
+func (p *EvaluatorRunConfig) GetEvaluatorRuntimeParam() (v *common.RuntimeParam) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorRuntimeParam() {
+		return EvaluatorRunConfig_EvaluatorRuntimeParam_DEFAULT
+	}
+	return p.EvaluatorRuntimeParam
+}
+func (p *EvaluatorRunConfig) SetEnv(val *string) {
+	p.Env = val
+}
+func (p *EvaluatorRunConfig) SetEvaluatorRuntimeParam(val *common.RuntimeParam) {
+	p.EvaluatorRuntimeParam = val
+}
+
+var fieldIDToName_EvaluatorRunConfig = map[int16]string{
+	1: "env",
+	2: "evaluator_runtime_param",
+}
+
+func (p *EvaluatorRunConfig) IsSetEnv() bool {
+	return p.Env != nil
+}
+
+func (p *EvaluatorRunConfig) IsSetEvaluatorRuntimeParam() bool {
+	return p.EvaluatorRuntimeParam != nil
+}
+
+func (p *EvaluatorRunConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorRunConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorRunConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Env = _field
+	return nil
+}
+func (p *EvaluatorRunConfig) ReadField2(iprot thrift.TProtocol) error {
+	_field := common.NewRuntimeParam()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvaluatorRuntimeParam = _field
+	return nil
+}
+
+func (p *EvaluatorRunConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvaluatorRunConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorRunConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnv() {
+		if err = oprot.WriteFieldBegin("env", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Env); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvaluatorRunConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorRuntimeParam() {
+		if err = oprot.WriteFieldBegin("evaluator_runtime_param", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvaluatorRuntimeParam.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *EvaluatorRunConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorRunConfig(%+v)", *p)
+
+}
+
+func (p *EvaluatorRunConfig) DeepEqual(ano *EvaluatorRunConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Env) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvaluatorRuntimeParam) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorRunConfig) Field1DeepEqual(src *string) bool {
+
+	if p.Env == src {
+		return true
+	} else if p.Env == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Env, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorRunConfig) Field2DeepEqual(src *common.RuntimeParam) bool {
+
+	if !p.EvaluatorRuntimeParam.DeepEqual(src) {
+		return false
+	}
+	return true
+}

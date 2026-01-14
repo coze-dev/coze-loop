@@ -62,6 +62,8 @@ struct Experiment {
     41: optional i64 max_alive_time
     42: optional SourceType source_type
     43: optional string source_id
+
+    51: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
 }
 
 struct TokenUsage {
