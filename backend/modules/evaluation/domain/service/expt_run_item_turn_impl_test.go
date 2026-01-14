@@ -1474,7 +1474,6 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			assert.Equal(t, tt.wantInputData.Ext, got.Ext)
 		})
 	}
-
 }
 
 func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {

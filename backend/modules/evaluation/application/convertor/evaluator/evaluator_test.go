@@ -1441,7 +1441,7 @@ func TestConvertEvaluatorHTTPInfoDO2DTO(t *testing.T) {
 
 	dto := ConvertEvaluatorHTTPInfoDO2DTO(do)
 	if assert.NotNil(t, dto) {
-		assert.Equal(t, string(method), string(gptr.Indirect(dto.Method)))
+		assert.Equal(t, method, gptr.Indirect(dto.Method))
 		assert.Equal(t, "/ping", gptr.Indirect(dto.Path))
 	}
 }
