@@ -1208,14 +1208,24 @@ func (e *EvaluatorHandlerImpl) transformURIsToURLs(ctx context.Context, inputFie
 	// 收集所有需要转换的URI
 	uriToContentMap := make(map[string][]*evaluatorcommon.Image)
 	e.collectURIs(inputFields, uriToContentMap)
+	uriToContentAudioMap := make(map[string][]*evaluatorcommon.Audio)
+	e.collectAudioURIs(inputFields, uriToContentAudioMap)
+	uriToContentVideoMap := make(map[string][]*evaluatorcommon.Video)
+	e.collectVideoURIs(inputFields, uriToContentVideoMap)
 
 	if len(uriToContentMap) == 0 {
 		return nil
 	}
 
 	// 批量获取URL
-	uris := make([]string, 0, len(uriToContentMap))
+	uris := make([]string, 0)
 	for uri := range uriToContentMap {
+		uris = append(uris, uri)
+	}
+	for uri := range uriToContentAudioMap {
+		uris = append(uris, uri)
+	}
+	for uri := range uriToContentVideoMap {
 		uris = append(uris, uri)
 	}
 
@@ -1226,6 +1236,8 @@ func (e *EvaluatorHandlerImpl) transformURIsToURLs(ctx context.Context, inputFie
 
 	// 回填URL到原始数据
 	e.fillURLs(uriToContentMap, urlMap)
+	e.fillAudioURLs(uriToContentAudioMap, urlMap)
+	e.fillVideoURLs(uriToContentVideoMap, urlMap)
 
 	return nil
 }
@@ -1256,12 +1268,78 @@ func (e *EvaluatorHandlerImpl) collectURIsFromContent(content *evaluatorcommon.C
 	}
 }
 
+func (e *EvaluatorHandlerImpl) collectAudioURIs(inputFields map[string]*evaluatorcommon.Content, uriToContentMap map[string][]*evaluatorcommon.Audio) {
+	for _, content := range inputFields {
+		e.collectAudioURIsFromContent(content, uriToContentMap)
+	}
+}
+
+func (e *EvaluatorHandlerImpl) collectAudioURIsFromContent(content *evaluatorcommon.Content, uriToContentMap map[string][]*evaluatorcommon.Audio) {
+	if content == nil {
+		return
+	}
+
+	switch content.GetContentType() {
+	case evaluatorcommon.ContentTypeAudio:
+		if content.Audio != nil && content.Audio.URI != nil && *content.Audio.URI != "" {
+			uri := *content.Audio.URI
+			uriToContentMap[uri] = append(uriToContentMap[uri], content.Audio)
+		}
+	case evaluatorcommon.ContentTypeMultiPart:
+		for _, subContent := range content.MultiPart {
+			e.collectAudioURIsFromContent(subContent, uriToContentMap)
+		}
+	}
+}
+
+func (e *EvaluatorHandlerImpl) collectVideoURIs(inputFields map[string]*evaluatorcommon.Content, uriToContentMap map[string][]*evaluatorcommon.Video) {
+	for _, content := range inputFields {
+		e.collectVideoURIsFromContent(content, uriToContentMap)
+	}
+}
+
+func (e *EvaluatorHandlerImpl) collectVideoURIsFromContent(content *evaluatorcommon.Content, uriToContentMap map[string][]*evaluatorcommon.Video) {
+	if content == nil {
+		return
+	}
+
+	switch content.GetContentType() {
+	case evaluatorcommon.ContentTypeVideo:
+		if content.Video != nil && content.Video.URI != nil && *content.Video.URI != "" {
+			uri := *content.Video.URI
+			uriToContentMap[uri] = append(uriToContentMap[uri], content.Video)
+		}
+	case evaluatorcommon.ContentTypeMultiPart:
+		for _, subContent := range content.MultiPart {
+			e.collectVideoURIsFromContent(subContent, uriToContentMap)
+		}
+	}
+}
+
 // fillURLs 将转换后的URL填充回原始数据
 func (e *EvaluatorHandlerImpl) fillURLs(uriToContentMap map[string][]*evaluatorcommon.Image, urlMap map[string]string) {
 	for uri, images := range uriToContentMap {
 		if url, exists := urlMap[uri]; exists {
 			for _, image := range images {
 				image.URL = &url
+			}
+		}
+	}
+}
+func (e *EvaluatorHandlerImpl) fillAudioURLs(uriToContentMap map[string][]*evaluatorcommon.Audio, urlMap map[string]string) {
+	for uri, content := range uriToContentMap {
+		if url, exists := urlMap[uri]; exists {
+			for _, c := range content {
+				c.URL = &url
+			}
+		}
+	}
+}
+func (e *EvaluatorHandlerImpl) fillVideoURLs(uriToContentMap map[string][]*evaluatorcommon.Video, urlMap map[string]string) {
+	for uri, content := range uriToContentMap {
+		if url, exists := urlMap[uri]; exists {
+			for _, c := range content {
+				c.URL = &url
 			}
 		}
 	}
