@@ -148,7 +148,12 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	// 而 LoopSpan 在 systemTagsString 中
 	// 这里是为了方便转化为 loopSpan 对象后统一使用 getTenant 方法
 	if _, ok := systemTagsString["tenant"]; !ok {
-		systemTagsString["tenant"] = tagsString["tenant"]
+		tenant, exists := tagsString["tenant"]
+		// tag 不存在 tenant 默认 fornax
+		if !exists {
+			tenant = "fornax"
+		}
+		systemTagsString["tenant"] = tenant
 	}
 	result := &loop_span.Span{
 		StartTime:        s.StartTimeInUs,
