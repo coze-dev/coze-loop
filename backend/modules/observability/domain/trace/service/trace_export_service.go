@@ -304,7 +304,9 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 		},
 		StartAt: startTime,
 		EndAt:   endTime,
-		Limit:   int32(len(sids)),
+		// May have duplicate Spans
+		// wider limit to avoid emit
+		Limit: int32(len(sids)) * 2,
 	})
 	if err != nil {
 		return nil, err
