@@ -144,7 +144,14 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	spaceID := tagsString["fornax_space_id"]
 	callType := tagsString["call_type"]
 	spanType := tagsString["span_type"]
-
+	// RawSpan 中的 tenant 一般在 Tags 字段里
+	// 而 LoopSpan 在 systemTagsString 中
+	// 这里是为了方便转化为 loopSpan 对象后统一使用 getTenant 方法
+	if _, ok := systemTagsString["tenant"]; !ok {
+		if tenant, valid := getString(s.Tags, "tenant"); valid {
+			systemTagsString["tenant"] = tenant
+		}
+	}
 	result := &loop_span.Span{
 		StartTime:        s.StartTimeInUs,
 		SpanID:           s.SpanID,
@@ -176,6 +183,15 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	}
 
 	return result
+}
+
+func getString(m map[string]any, key string) (string, bool) {
+	v, ok := m[key]
+	if !ok {
+		return "", false
+	}
+	s, ok := v.(string)
+	return s, ok
 }
 
 type AutoEvalEvent struct {
