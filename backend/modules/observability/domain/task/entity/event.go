@@ -148,9 +148,7 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	// 而 LoopSpan 在 systemTagsString 中
 	// 这里是为了方便转化为 loopSpan 对象后统一使用 getTenant 方法
 	if _, ok := systemTagsString["tenant"]; !ok {
-		if tenant, valid := getString(s.Tags, "tenant"); valid {
-			systemTagsString["tenant"] = tenant
-		}
+		systemTagsString["tenant"] = tagsString["tenant"]
 	}
 	result := &loop_span.Span{
 		StartTime:        s.StartTimeInUs,
@@ -183,15 +181,6 @@ func (s *RawSpan) RawSpanConvertToLoopSpan() *loop_span.Span {
 	}
 
 	return result
-}
-
-func getString(m map[string]any, key string) (string, bool) {
-	v, ok := m[key]
-	if !ok {
-		return "", false
-	}
-	s, ok := v.(string)
-	return s, ok
 }
 
 type AutoEvalEvent struct {
