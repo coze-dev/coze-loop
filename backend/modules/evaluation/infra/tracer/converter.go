@@ -7,6 +7,8 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
 	"github.com/bytedance/sonic"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 
 	commonentity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -160,4 +162,52 @@ func ContentToSpanParts(parts []*commonentity.Content) []*tracespec.ModelMessage
 		spanParts = append(spanParts, partSpan)
 	}
 	return spanParts
+}
+
+func ConvertContentDO2DTO(content *entity.Content) *common.Content {
+	var result *common.Content
+	if content == nil {
+		return result
+	}
+	var multiPart []*common.Content
+	if content.MultiPart != nil {
+		for _, part := range content.MultiPart {
+			multiPart = append(multiPart, ConvertContentDO2DTO(part))
+		}
+	}
+	result = &common.Content{
+		ContentType: entity.CommonContentTypeDO2DTO(content.GetContentType()),
+		Text:        gptr.Of(content.GetText()),
+		Image: &common.Image{
+			Name: gptr.Of(content.GetImage().GetName()),
+			URL:  gptr.Of(content.GetImage().GetUrl()),
+		},
+		Audio: &common.Audio{
+			Name: gptr.Of(content.GetAudio().GetName()),
+			URL:  gptr.Of(content.GetAudio().GetUrl()),
+		},
+		Video: &common.Video{
+			Name: gptr.Of(content.GetVideo().GetName()),
+			URL:  gptr.Of(content.GetVideo().GetUrl()),
+		},
+		MultiPart: multiPart,
+	}
+	return result
+}
+
+func ConvertContentTypeDTO2DO(contentType common.ContentType) entity.ContentType {
+	switch contentType {
+	case common.ContentTypeText:
+		return entity.ContentType_Text
+	case common.ContentTypeImage:
+		return entity.ContentType_Image
+	case common.ContentTypeAudio:
+		return entity.ContentType_Audio
+	case common.ContentTypeVideo:
+		return entity.ContentType_Video
+	case common.ContentTypeMultiPart:
+		return entity.ContentType_MultiPart
+	default:
+		return entity.ContentType_Text
+	}
 }

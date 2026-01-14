@@ -215,7 +215,10 @@ func (s *JSONSchema) getTypes() []string {
 }
 
 type MultiModalSpec struct {
-	MaxFileCount     int64    `json:"max_file_count,omitempty"`    // 文件数量上限
-	MaxFileSize      int64    `json:"max_file_size,omitempty"`     // 文件大小上限
-	SupportedFormats []string `json:"supported_formats,omitempty"` // 文件格式
+	MaxFileCount           int64                    `json:"max_file_count,omitempty"`            // 文件数量上限
+	MaxFileSize            int64                    `json:"max_file_size,omitempty"`             // 文件大小上限
+	SupportedFormats       []string                 `json:"supported_formats,omitempty"`         // 文件格式
+	MaxPartCount           int64                    `json:"max_part_count,omitempty"`            // 多文件数量上限
+	SupportedFormatsByType map[ContentType][]string `json:"supported_formats_by_type,omitempty"` // 文件格式, 按内容类型分类
+	MaxFileSizeByType      map[ContentType]int64    `json:"max_file_size_by_type,omitempty"`     // 文件大小上限, 按内容类型分类
 }

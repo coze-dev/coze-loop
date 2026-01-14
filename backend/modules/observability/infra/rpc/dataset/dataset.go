@@ -251,6 +251,8 @@ func ContentTypeDO2DTO(contentType entity.ContentType) *dataset_domain.ContentTy
 		return dataset_domain.ContentTypePtr(dataset_domain.ContentType_Image)
 	case entity.ContentType_Audio:
 		return dataset_domain.ContentTypePtr(dataset_domain.ContentType_Audio)
+	case entity.ContentType_Video:
+		return dataset_domain.ContentTypePtr(dataset_domain.ContentType_Video)
 	case entity.ContentType_MultiPart:
 		return dataset_domain.ContentTypePtr(dataset_domain.ContentType_MultiPart)
 	default:

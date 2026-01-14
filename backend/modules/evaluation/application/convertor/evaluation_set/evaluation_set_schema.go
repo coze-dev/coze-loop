@@ -4,6 +4,7 @@
 package evaluation_set
 
 import (
+	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
@@ -48,6 +49,12 @@ func FieldSchemaDTO2DO(dto *eval_set.FieldSchema) *entity.FieldSchema {
 			MaxFileSize:      gptr.Indirect(dto.MultiModelSpec.MaxFileSize),
 			SupportedFormats: dto.MultiModelSpec.SupportedFormats,
 			MaxPartCount:     gptr.Indirect(dto.MultiModelSpec.MaxPartCount),
+			MaxFileSizeByType: gmap.Map(dto.MultiModelSpec.MaxFileSizeByType, func(k dataset.ContentType, v int64) (entity.ContentType, int64) {
+				return common.ConvertContentTypeDTO2DO(k.String()), v
+			}),
+			SupportedFormatsByType: gmap.Map(dto.MultiModelSpec.SupportedFormatsByType, func(k dataset.ContentType, v []string) (entity.ContentType, []string) {
+				return common.ConvertContentTypeDTO2DO(k.String()), v
+			}),
 		}
 	}
 	return &entity.FieldSchema{
@@ -100,6 +107,14 @@ func MultiModalSpecDO2DTO(do *entity.MultiModalSpec) *dataset.MultiModalSpec {
 		MaxFileSize:      gptr.Of(do.MaxFileSize),
 		SupportedFormats: do.SupportedFormats,
 		MaxPartCount:     gptr.Of(do.MaxPartCount),
+		MaxFileSizeByType: gmap.Map(do.MaxFileSizeByType, func(k entity.ContentType, v int64) (dataset.ContentType, int64) {
+			convRes, _ := dataset.ContentTypeFromString(common.ConvertContentTypeDO2DTO(k))
+			return convRes, v
+		}),
+		SupportedFormatsByType: gmap.Map(do.SupportedFormatsByType, func(k entity.ContentType, v []string) (dataset.ContentType, []string) {
+			convRes, _ := dataset.ContentTypeFromString(common.ConvertContentTypeDO2DTO(k))
+			return convRes, v
+		}),
 	}
 }
 

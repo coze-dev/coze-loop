@@ -627,6 +627,52 @@ func TestGetContentInfo(t *testing.T) {
 			wantContent: nil,
 			wantError:   DatasetErrorType_MismatchSchema,
 		},
+		{
+			name: "multipart content with audio",
+			args: args{
+				ctx:         ctx,
+				contentType: ContentType_MultiPart,
+				value: `[
+				  {
+				    "type": "audio_url",
+				    "audio_url": {"name": "aud", "url": "http://a"}
+				  }
+				]`,
+			},
+			wantContent: &Content{
+				ContentType: ContentType_MultiPart,
+				MultiPart: []*Content{
+					{
+						ContentType: ContentType_Audio,
+						Audio:       &Audio{Name: "aud", Url: "http://a"},
+					},
+				},
+			},
+			wantError: 0,
+		},
+		{
+			name: "multipart content with video",
+			args: args{
+				ctx:         ctx,
+				contentType: ContentType_MultiPart,
+				value: `[
+				  {
+				    "type": "video_url",
+				    "video_url": {"name": "vid", "url": "http://v"}
+				  }
+				]`,
+			},
+			wantContent: &Content{
+				ContentType: ContentType_MultiPart,
+				MultiPart: []*Content{
+					{
+						ContentType: ContentType_Video,
+						Video:       &Video{Name: "vid", Url: "http://v"},
+					},
+				},
+			},
+			wantError: 0,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
