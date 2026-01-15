@@ -150,13 +150,12 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		LogID:         "log",
 		StartTimeInUs: now.UnixMicro(),
 		Tags: map[string]any{
-			"fornax_space_id": "space-1",
-			"call_type":       "",
-			"bot_id":          "bot-1",
-		},
-		SystemTags: map[string]any{
+			"fornax_space_id":         "space-1",
+			"call_type":               "",
+			"bot_id":                  "bot-1",
 			loop_span.SpanFieldTenant: "tenant",
 		},
+		SystemTags:    map[string]any{},
 		SensitiveTags: &entity.SensitiveTags{},
 		ServerEnv:     &entity.ServerInRawSpan{},
 	}
