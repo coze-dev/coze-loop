@@ -811,7 +811,14 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 					UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
 					Return(nil)
 
-				mockMetric.EXPECT().EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).Return()
+				// CreateAnnotationAggrResult 本身的埋点（CreateAnnotationFields）
+				mockMetric.EXPECT().
+					EmitCalculateExptAggrResult(int64(100), int64(entity.CreateAnnotationFields), false, gomock.Any()).
+					Return()
+				// UpdateAnnotationAggrResult 的埋点（UpdateSpecificField）
+				mockMetric.EXPECT().
+					EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
+					Return()
 			},
 			wantErr: false,
 		},
