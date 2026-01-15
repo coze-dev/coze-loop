@@ -101,10 +101,17 @@ func buildTemplateFieldMappingsForCreate(
 		return targetFieldMapping, evaluatorFieldMapping, itemConcurNum
 	}
 
-		fieldMappingConfig := req.FieldMappingConfig
-	targetFieldMapping = toTargetFieldMappingDOForTemplate(fieldMappingConfig.TargetFieldMapping, fieldMappingConfig.TargetRuntimeParam)
-		evaluatorFieldMapping = toEvaluatorFieldMappingDoForTemplate(fieldMappingConfig.EvaluatorFieldMapping, param)
-		itemConcurNum = fieldMappingConfig.ItemConcurNum
+	fieldMappingConfig := req.FieldMappingConfig
+	// 将 common.RuntimeParam 转换为 entity.RuntimeParam
+	var entityRuntimeParam *entity.RuntimeParam
+	if fieldMappingConfig.TargetRuntimeParam != nil {
+		entityRuntimeParam = &entity.RuntimeParam{
+			JSONValue: fieldMappingConfig.TargetRuntimeParam.JSONValue,
+		}
+	}
+	targetFieldMapping = toTargetFieldMappingDOForTemplate(fieldMappingConfig.TargetFieldMapping, entityRuntimeParam)
+	evaluatorFieldMapping = toEvaluatorFieldMappingDoForTemplate(fieldMappingConfig.EvaluatorFieldMapping, param)
+	itemConcurNum = fieldMappingConfig.ItemConcurNum
 
 	return targetFieldMapping, evaluatorFieldMapping, itemConcurNum
 }
@@ -245,7 +252,7 @@ func buildTemplateConfForCreate(
 }
 
 // toTargetFieldMappingDOForTemplate 转换目标字段映射（用于模板）
-func toTargetFieldMappingDOForTemplate(mapping *domain_expt.TargetFieldMapping, rtp *common.RuntimeParam) *entity.TargetIngressConf {
+func toTargetFieldMappingDOForTemplate(mapping *domain_expt.TargetFieldMapping, rtp *entity.RuntimeParam) *entity.TargetIngressConf {
 	tic := &entity.TargetIngressConf{EvalSetAdapter: &entity.FieldAdapter{}}
 
 	if mapping != nil {
@@ -260,11 +267,11 @@ func toTargetFieldMappingDOForTemplate(mapping *domain_expt.TargetFieldMapping, 
 		tic.EvalSetAdapter.FieldConfs = fc
 	}
 
-	if rtp != nil && len(rtp.GetJSONValue()) > 0 {
+	if rtp != nil && rtp.JSONValue != nil && len(*rtp.JSONValue) > 0 {
 		tic.CustomConf = &entity.FieldAdapter{
 			FieldConfs: []*entity.FieldConf{{
 				FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
-				Value:     rtp.GetJSONValue(),
+				Value:     *rtp.JSONValue,
 			}},
 		}
 	}
@@ -602,7 +609,7 @@ func buildTemplateFieldMappingDTO(template *entity.ExptTemplate) *domain_expt.Ex
 
 		if template.FieldMappingConfig.TargetRuntimeParam != nil {
 			fieldMapping.TargetRuntimeParam = &common.RuntimeParam{
-				JSONValue: gptr.Of(template.FieldMappingConfig.TargetRuntimeParam.JSONValue),
+				JSONValue: template.FieldMappingConfig.TargetRuntimeParam.JSONValue,
 			}
 		}
 
@@ -835,7 +842,14 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	var itemConcurNum *int32
 	if req.GetFieldMappingConfig() != nil {
 		fieldMappingConfig := req.GetFieldMappingConfig()
-		targetFieldMapping = toTargetFieldMappingDOForTemplate(fieldMappingConfig.TargetFieldMapping, fieldMappingConfig.TargetRuntimeParam)
+		// 将 common.RuntimeParam 转换为 entity.RuntimeParam
+		var entityRuntimeParam *entity.RuntimeParam
+		if fieldMappingConfig.TargetRuntimeParam != nil {
+			entityRuntimeParam = &entity.RuntimeParam{
+				JSONValue: fieldMappingConfig.TargetRuntimeParam.JSONValue,
+			}
+		}
+		targetFieldMapping = toTargetFieldMappingDOForTemplate(fieldMappingConfig.TargetFieldMapping, entityRuntimeParam)
 		evaluatorFieldMapping = toEvaluatorFieldMappingDoForTemplate(fieldMappingConfig.EvaluatorFieldMapping, param)
 		itemConcurNum = fieldMappingConfig.ItemConcurNum
 	}

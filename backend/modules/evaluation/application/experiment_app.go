@@ -123,8 +123,8 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
 
-	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
-	evalVersionIDs, evaluatorVersionRunConfigs, err := e.resolveEvaluatorVersionIDs(ctx, req)
+	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）、runconfig 和 score weight
+	evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, err := e.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -143,6 +143,11 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 		evalVersionIDs = uniq
 	}
 	req.EvaluatorVersionIds = evalVersionIDs
+
+	// 将解析出的权重配置合并到请求中（如果请求中没有显式设置）
+	if len(evaluatorScoreWeights) > 0 && (req.EvaluatorScoreWeights == nil || len(req.EvaluatorScoreWeights) == 0) {
+		req.EvaluatorScoreWeights = evaluatorScoreWeights
+	}
 
 	param, err := experiment.ConvertCreateReq(req, evaluatorVersionRunConfigs)
 	if err != nil {
@@ -408,47 +413,28 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）和权重配置
-	evalVersionIDs, evaluatorScoreWeights, err := e.resolveEvaluatorVersionIDs(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	// 去重
-	if len(evalVersionIDs) > 1 {
-		seen := map[int64]struct{}{}
-		uniq := make([]int64, 0, len(evalVersionIDs))
-		for _, id := range evalVersionIDs {
-			if _, ok := seen[id]; ok {
-				continue
-			}
-			seen[id] = struct{}{}
-			uniq = append(uniq, id)
-		}
-		evalVersionIDs = uniq
-	}
-
+	// 构建 CreateExperimentRequest，resolveEvaluatorVersionIDs 流程已在 CreateExperiment 中完成
 	createReq := &expt.CreateExperimentRequest{
-		WorkspaceID:           req.GetWorkspaceID(),
-		EvalSetVersionID:      req.EvalSetVersionID,
-		EvalSetID:             req.EvalSetID,
-		EvaluatorVersionIds:   evalVersionIDs,
-		Name:                  req.Name,
-		Desc:                  req.Desc,
-		TargetFieldMapping:    req.TargetFieldMapping,
-		EvaluatorFieldMapping: req.EvaluatorFieldMapping,
-		ItemConcurNum:         req.ItemConcurNum,
-		EvaluatorsConcurNum:   req.EvaluatorsConcurNum,
-		CreateEvalTargetParam: req.CreateEvalTargetParam,
-		ExptType:              req.ExptType,
-		MaxAliveTime:          req.MaxAliveTime,
-		SourceType:            req.SourceType,
-		SourceID:              req.SourceID,
-		TargetRuntimeParam:    req.TargetRuntimeParam,
+		WorkspaceID:            req.GetWorkspaceID(),
+		EvalSetVersionID:       req.EvalSetVersionID,
+		EvalSetID:              req.EvalSetID,
+		EvaluatorVersionIds:    req.EvaluatorVersionIds,
+		Name:                   req.Name,
+		Desc:                   req.Desc,
+		TargetFieldMapping:     req.TargetFieldMapping,
+		EvaluatorFieldMapping:  req.EvaluatorFieldMapping,
+		ItemConcurNum:          req.ItemConcurNum,
+		EvaluatorsConcurNum:    req.EvaluatorsConcurNum,
+		CreateEvalTargetParam:  req.CreateEvalTargetParam,
+		ExptType:               req.ExptType,
+		MaxAliveTime:           req.MaxAliveTime,
+		SourceType:             req.SourceType,
+		SourceID:               req.SourceID,
+		TargetRuntimeParam:     req.TargetRuntimeParam,
 		EvaluatorIDVersionList: req.EvaluatorIDVersionList,
-		Session:               req.Session,
-		EnableWeightedScore:   req.EnableWeightedScore,
-		EvaluatorScoreWeights: evaluatorScoreWeights,
+		Session:                req.Session,
+		EnableWeightedScore:    req.EnableWeightedScore,
+		// EvaluatorScoreWeights 会在 CreateExperiment 的 resolveEvaluatorVersionIDsFromCreateReq 中解析
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -487,16 +473,25 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	}, nil
 }
 
-// resolveEvaluatorVersionIDs 汇总 evaluator_version_ids 和权重配置：
+// resolveEvaluatorVersionIDsFromCreateReq 汇总 evaluator_version_ids、runconfig 和权重配置：
 // 1) 先取请求中的 EvaluatorVersionIds
 // 2) 从有序 EvaluatorIDVersionList 中批量解析并按输入顺序回填版本ID
-// 3) 从 EvaluatorIDVersionList 中提取权重配置，构建 evaluator_version_id 到权重的映射
-func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, req *expt.SubmitExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
+// 3) 从 EvaluatorIDVersionList 中提取 runconfig 和权重配置，构建 evaluator_version_id 到 runconfig/权重的映射
+// 注意：runconfig 用于评估器运行时配置，score weight 用于加权分数计算
+func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
 	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
 	evalVersionIDs = append(evalVersionIDs, req.EvaluatorVersionIds...)
 
-	// 权重映射：key 为 evaluator_version_id，value 为权重
+	// 权重映射：key 为 evaluator_version_id，value 为权重（用于加权分数计算）
 	evaluatorScoreWeights := make(map[int64]float64)
+	// 如果请求中已经显式设置了权重，优先使用
+	if req.EvaluatorScoreWeights != nil && len(req.EvaluatorScoreWeights) > 0 {
+		for k, v := range req.EvaluatorScoreWeights {
+			if v > 0 {
+				evaluatorScoreWeights[k] = v
+			}
+		}
+	}
 
 	// 解析有序列表并批量查询：将 BuiltinVisible 与普通版本分离，分别批量查，最后按输入顺序回填版本ID
 	items := req.GetEvaluatorIDVersionList()
@@ -523,7 +518,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	if len(builtinIDs) > 0 {
 		evs, err := e.evaluatorService.BatchGetBuiltinEvaluator(ctx, builtinIDs)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		for _, ev := range evs {
 			if ev != nil {
@@ -536,7 +531,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	if len(normalPairs) > 0 {
 		evs, err := e.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, normalPairs)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		for _, ev := range evs {
 			if ev == nil {
@@ -547,7 +542,9 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 		}
 	}
 
-	// 按输入顺序回填版本ID，同时提取权重配置
+	// 按输入顺序回填版本ID，同时提取 runconfig 和权重配置
+	// runconfig: 用于评估器运行时配置（如超时、重试等）
+	// score weight: 用于加权分数计算
 	evaluatorVersionRunConfigs := make(map[int64]*evaluatordto.EvaluatorRunConfig)
 	for _, it := range items {
 		if it == nil {
@@ -570,15 +567,19 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 		}
 		if verID := ev.GetEvaluatorVersionID(); verID != 0 {
 			evalVersionIDs = append(evalVersionIDs, verID)
-			// 提取权重配置（如果存在）
+			// 提取 runconfig（如果存在）- 用于评估器运行时配置
+			if it.RunConfig != nil {
+				evaluatorVersionRunConfigs[verID] = it.RunConfig
+			}
+			// 提取权重配置（如果存在且请求中未显式设置）- 用于加权分数计算
 			if it.ScoreWeight != nil {
 				weight := *it.ScoreWeight
 				if weight > 0 {
-					evaluatorScoreWeights[verID] = weight
+					// 如果请求中已经显式设置了权重，则不覆盖
+					if _, exists := evaluatorScoreWeights[verID]; !exists {
+						evaluatorScoreWeights[verID] = weight
+					}
 				}
-			}
-			if it.RunConfig != nil {
-				evaluatorVersionRunConfigs[verID] = it.RunConfig
 			}
 		}
 	}

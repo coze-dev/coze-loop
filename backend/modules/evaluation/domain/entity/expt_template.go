@@ -111,11 +111,6 @@ type ExptScoreWeight struct {
 	EvaluatorScoreWeights map[int64]float64
 }
 
-// RuntimeParam 运行时参数
-type RuntimeParam struct {
-	JSONValue string
-}
-
 // ExptTemplateEvaluatorVersionRef 实验模板评估器版本引用
 type ExptTemplateEvaluatorVersionRef struct {
 	EvaluatorID        int64

@@ -837,7 +837,7 @@ func (e *ExptTemplateManagerImpl) buildFieldMappingConfigAndEnableScoreWeight(te
 			for _, fc := range ingressConf.CustomConf.FieldConfs {
 				if fc.FieldName == "builtin_runtime_param" {
 					fieldMappingConfig.TargetRuntimeParam = &entity.RuntimeParam{
-						JSONValue: fc.Value,
+						JSONValue: gptr.Of(fc.Value),
 					}
 					break
 				}
