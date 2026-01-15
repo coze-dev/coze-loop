@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	mysqlconv "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/convertor"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/pkg/mcache/byted"
 )
 
 type stubIDGenerator struct {
@@ -272,6 +273,7 @@ func TestTaskRepoImpl_CreateTask(t *testing.T) {
 				TaskRedisDao:    redisDao,
 				TaskRunRedisDao: stubTaskRunRedisDao{},
 				idGenerator:     tt.generator,
+				cache:           byted.NewLRUCache(1024),
 			}
 
 			var addCalled, setCalled bool
@@ -339,6 +341,7 @@ func TestTaskRepoImpl_UpdateTask(t *testing.T) {
 				TaskRunDao:      stubTaskRunDao{},
 				TaskRedisDao:    redisDao,
 				TaskRunRedisDao: stubTaskRunRedisDao{},
+				cache:           byted.NewLRUCache(1024),
 			}
 
 			var setCalled bool
@@ -393,6 +396,7 @@ func TestTaskRepoImpl_DeleteTask(t *testing.T) {
 				TaskRunDao:      stubTaskRunDao{},
 				TaskRedisDao:    redisDao,
 				TaskRunRedisDao: stubTaskRunRedisDao{},
+				cache:           byted.NewLRUCache(1024),
 			}
 
 			var removeCalled bool
@@ -441,6 +445,7 @@ func TestTaskRepoImpl_NonFinalTaskWrappers(t *testing.T) {
 		TaskRunDao:      stubTaskRunDao{},
 		TaskRedisDao:    redisDao,
 		TaskRunRedisDao: stubTaskRunRedisDao{},
+		cache:           byted.NewLRUCache(1024),
 	}
 
 	list, err := repo.ListNonFinalTaskBySpaceID(context.Background(), "space")
@@ -540,6 +545,7 @@ func TestTaskRepoImpl_GetTaskByRedis(t *testing.T) {
 				TaskRunDao:      stubTaskRunDao{},
 				TaskRedisDao:    redisDao,
 				TaskRunRedisDao: stubTaskRunRedisDao{},
+				cache:           byted.NewLRUCache(1024),
 			}
 
 			var mysqlCalled, setCalled bool
