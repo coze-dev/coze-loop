@@ -342,10 +342,14 @@ func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.P
 		if toolCall != nil && toolCall.FunctionCall != nil {
 			var span looptracer.Span
 			ctx, span = looptracer.GetTracer().StartSpan(ctx, toolCall.FunctionCall.Name, tracespec.VToolSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+			toolCallId := toolCall.ID
+			name := toolCall.FunctionCall.Name
+			signature := toolCall.Signature
+			toolResultKey := toolCallId + name + ptr.From(signature)
 			if span != nil {
 				span.SetPrompt(ctx, loopentity.Prompt{PromptKey: promptKey, Version: version})
 				span.SetInput(ctx, toolCall.FunctionCall.Arguments)
-				span.SetOutput(ctx, toolResultMap[toolCall.FunctionCall.Name])
+				span.SetOutput(ctx, toolResultMap[toolResultKey])
 				span.Finish(ctx)
 			}
 		}
@@ -482,7 +486,11 @@ func (p *PromptServiceImpl) reorganizeContexts(messages []*entity.Message, toolR
 		// 如果有工具调用，则使用 ToolResultMap 填充 tool response
 		for _, toolCall := range reply.Item.Message.ToolCalls {
 			if toolCall.FunctionCall != nil {
-				toolResult := toolResultMap[toolCall.FunctionCall.Name]
+				toolCallId := toolCall.ID
+				name := toolCall.FunctionCall.Name
+				signature := toolCall.Signature
+				toolResultKey := toolCallId + name + ptr.From(signature)
+				toolResult := toolResultMap[toolResultKey]
 				newContexts = append(newContexts, &entity.Message{
 					Role:       entity.RoleTool,
 					ToolCallID: ptr.Of(toolCall.ID),
