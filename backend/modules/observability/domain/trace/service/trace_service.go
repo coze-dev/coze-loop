@@ -1789,9 +1789,6 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 	if len(traceIDs) == 0 {
 		return map[string]*loop_span.Trajectory{}, nil
 	}
-	// 前端传入的是当前span时间，需要向前向后一段时间
-	startTime = startTime - 24*time.Hour.Milliseconds()
-	endTime = endTime + 24*time.Hour.Milliseconds()
 
 	tenant, err := r.tenantProvider.GetTenantsByPlatformType(ctx, platformType)
 	if err != nil {
