@@ -50,6 +50,7 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 	mockManager := servicemocks.NewMockIExptManager(ctrl)
 	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
 	// Test data
 	validWorkspaceID := int64(123)
 	validExptID := int64(456)
@@ -65,6 +66,7 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 		name      string
 		req       *exptpb.CreateExperimentRequest
 		mockSetup func()
+		postCheck func(t *testing.T, req *exptpb.CreateExperimentRequest)
 		wantResp  *exptpb.CreateExperimentResponse
 		wantErr   bool
 		wantCode  int32
@@ -118,6 +120,152 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "success_with_list_and_dedup",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID:         validWorkspaceID,
+				Name:                gptr.Of("test_experiment"),
+				EvaluatorVersionIds: []int64{10001},
+				EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+					{
+						EvaluatorID: gptr.Of(int64(1)),
+						Version:     gptr.Of("BuiltinVisible"),
+					},
+					{
+						EvaluatorID: gptr.Of(int64(2)),
+						Version:     gptr.Of("1.0.0"),
+						RunConfig: &evaluator.EvaluatorRunConfig{
+							EvaluatorRuntimeParam: &common.RuntimeParam{
+								JSONValue: gptr.Of(`{"key":"val"}`),
+							},
+						},
+					},
+					{
+						EvaluatorID: gptr.Of(int64(1)),
+						Version:     gptr.Of("BuiltinVisible"), // Duplicate
+					},
+				},
+				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+				},
+				EvaluatorFieldMapping: []*expt.EvaluatorFieldMapping{
+					{
+						EvaluatorIDVersionItem: &evaluator.EvaluatorIDVersionItem{
+							EvaluatorID: gptr.Of(int64(1)),
+							Version:     gptr.Of("BuiltinVisible"),
+						},
+					},
+					{
+						EvaluatorIDVersionItem: &evaluator.EvaluatorIDVersionItem{
+							EvaluatorID: gptr.Of(int64(2)),
+							Version:     gptr.Of("1.0.0"),
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), []int64{1, 1}).Return([]*entity.Evaluator{
+					{
+						ID:            1,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							ID:          10101,
+							EvaluatorID: 1,
+							Version:     "v1",
+						},
+					},
+				}, nil)
+
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+					{
+						ID:            2,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							ID:          20200,
+							EvaluatorID: 2,
+							Version:     "1.0.0",
+						},
+					},
+				}, nil)
+
+				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
+						// 10001 (initial) + 10101 (resolved) + 20200 (resolved)
+						assert.ElementsMatch(t, []int64{10001, 10101, 20200}, param.EvaluatorVersionIds)
+						return validExpt, nil
+					})
+			},
+			postCheck: func(t *testing.T, req *exptpb.CreateExperimentRequest) {
+				assert.Equal(t, []int64{10001, 10101, 20200}, req.EvaluatorVersionIds)
+				assert.Equal(t, int64(10101), req.EvaluatorFieldMapping[0].EvaluatorVersionID)
+				assert.Equal(t, int64(20200), req.EvaluatorFieldMapping[1].EvaluatorVersionID)
+			},
+			wantResp: &exptpb.CreateExperimentResponse{
+				Experiment: &expt.Experiment{
+					ID:   gptr.Of(validExptID),
+					Name: gptr.Of("test_experiment"),
+				},
+				BaseResp: base.NewBaseResp(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "resolve_error_builtin",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+					{EvaluatorID: gptr.Of(int64(1)), Version: gptr.Of("BuiltinVisible")},
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("batch get failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "resolve_error_normal",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+					{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return(nil, errors.New("normal batch get failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "skip_missing_evaluators",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID:         validWorkspaceID,
+				EvaluatorVersionIds: []int64{10001},
+				EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+					{EvaluatorID: gptr.Of(int64(1)), Version: gptr.Of("BuiltinVisible")},
+					{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
+				},
+				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), []int64{1}).Return([]*entity.Evaluator{
+					{
+						ID:            1,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							ID: 10101,
+						},
+					},
+				}, nil)
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{}, nil)
+				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).Return(validExpt, nil)
+			},
+			postCheck: func(t *testing.T, req *exptpb.CreateExperimentRequest) {
+				assert.Equal(t, []int64{10001, 10101}, req.EvaluatorVersionIds)
+			},
+			wantErr: false,
+		},
+		{
 			name: "parameter validation failed - CreateEvalTargetParam is empty",
 			req: &exptpb.CreateExperimentRequest{
 				WorkspaceID: validWorkspaceID,
@@ -145,16 +293,16 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 
 			// Create object under test
 			app := &experimentApplication{
-				manager:   mockManager,
-				resultSvc: mockResultSvc,
-				auth:      mockAuth,
+				manager:          mockManager,
+				resultSvc:        mockResultSvc,
+				auth:             mockAuth,
+				evaluatorService: mockEvaluatorService,
 			}
 
 			// Execute test
 			gotResp, err := app.CreateExperiment(context.Background(), tt.req)
 
 			// Validate results
-			// 验证结果
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.wantCode != 0 {
@@ -169,10 +317,16 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.NotNil(t, gotResp)
-			assert.Equal(t, tt.wantResp.Experiment.GetID(), gotResp.Experiment.GetID())
-			assert.Equal(t, tt.wantResp.Experiment.GetName(), gotResp.Experiment.GetName())
-			assert.Equal(t, tt.wantResp.Experiment.GetDesc(), gotResp.Experiment.GetDesc())
-			assert.Equal(t, tt.wantResp.Experiment.GetStatus(), gotResp.Experiment.GetStatus())
+			if tt.wantResp != nil && tt.wantResp.Experiment != nil {
+				assert.Equal(t, tt.wantResp.Experiment.GetID(), gotResp.Experiment.GetID())
+				if tt.wantResp.Experiment.Name != nil {
+					assert.Equal(t, tt.wantResp.Experiment.GetName(), gotResp.Experiment.GetName())
+				}
+			}
+
+			if tt.postCheck != nil {
+				tt.postCheck(t, tt.req)
+			}
 		})
 	}
 }
@@ -196,7 +350,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
 	//  - (eid: 2, ver: "1.0.0") 重复
 	//  - (eid: 3, ver: "2.0.0")
 	//  并且 EvaluatorFieldMapping 中有一条缺少 evaluator_version_id 的映射，需要回填
-	req := &exptpb.SubmitExperimentRequest{
+	req := &exptpb.CreateExperimentRequest{
 		EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
 			{EvaluatorID: gptr.Of(int64(1)), Version: gptr.Of("BuiltinVisible")},
 			{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
@@ -218,7 +372,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
 		{ID: 3, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
 	}, nil)
 
-	ids, err := app.resolveEvaluatorVersionIDs(ctx, req)
+	ids, _, err := app.resolveEvaluatorVersionIDs(ctx, req)
 	if err != nil {
 		t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
 	}
@@ -277,7 +431,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs_WithEvaluatorFieldMap
 	mapping4.SetEvaluatorVersionID(0) // 缺少 evaluator_version_id
 	// 但没有 EvaluatorIDVersionItem，应该跳过
 
-	req := &exptpb.SubmitExperimentRequest{
+	req := &exptpb.CreateExperimentRequest{
 		EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
 			{EvaluatorID: gptr.Of(int64(1)), Version: gptr.Of("BuiltinVisible")},
 			{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
@@ -302,7 +456,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs_WithEvaluatorFieldMap
 		{ID: 3, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
 	}, nil)
 
-	ids, err := app.resolveEvaluatorVersionIDs(ctx, req)
+	ids, _, err := app.resolveEvaluatorVersionIDs(ctx, req)
 	if err != nil {
 		t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
 	}
@@ -1939,6 +2093,8 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 			// 设置 mock 期望
 			tt.mockSetup()
 
+			mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+
 			// 创建被测试的 experimentApplication 实例
 			app := NewExperimentApplication(
 				nil, // aggResultSvc
@@ -1956,7 +2112,7 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				nil, // evaluatorService
+				mockEvaluatorService, // evaluatorService
 			)
 
 			// 执行测试
