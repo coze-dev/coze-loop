@@ -31,7 +31,7 @@ struct CreateEvalTargetResponse {
 }
 
 struct GetEvalTargetVersionRequest {
-    1: required i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: optional i64 eval_target_version_id (api.path ='eval_target_version_id', api.js_conv="true", go.tag = 'json:"eval_target_version_id"')
 
     255: optional base.Base Base
@@ -115,7 +115,7 @@ struct ListEvalTargetRecordResponse {
 }
 
 struct GetEvalTargetRecordRequest {
-    1: required i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: required i64 eval_target_record_id  (api.path = 'eval_target_record_id', api.js_conv="true", go.tag = 'json:"eval_target_record_id"')
 
     255: optional base.Base Base
@@ -271,31 +271,49 @@ struct MockEvalTargetOutputResponse {
 
 service EvalTargetService {
     // 创建评测对象
-    CreateEvalTargetResponse CreateEvalTarget(1: CreateEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets")
+    CreateEvalTargetResponse CreateEvalTarget(1: CreateEvalTargetRequest request) (
+        api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets", api.op_type = 'create', api.tag = 'volc-agentkit'
+    )
     // 根据source target获取评测对象信息
-    BatchGetEvalTargetsBySourceResponse BatchGetEvalTargetsBySource(1: BatchGetEvalTargetsBySourceRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/batch_get_by_source")
+    BatchGetEvalTargetsBySourceResponse BatchGetEvalTargetsBySource(1: BatchGetEvalTargetsBySourceRequest request) (
+        api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/batch_get_by_source", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
     // 获取评测对象+版本
-    GetEvalTargetVersionResponse GetEvalTargetVersion(1: GetEvalTargetVersionRequest request) (api.category="eval_target", api.get = "/api/evaluation/v1/eval_target_versions/:eval_target_version_id")
+    GetEvalTargetVersionResponse GetEvalTargetVersion(1: GetEvalTargetVersionRequest request) (
+        api.category="eval_target", api.get = "/api/evaluation/v1/eval_target_versions/:eval_target_version_id", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
     // 批量获取+版本
-    BatchGetEvalTargetVersionsResponse BatchGetEvalTargetVersions(1: BatchGetEvalTargetVersionsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_target_versions/batch_get")
+    BatchGetEvalTargetVersionsResponse BatchGetEvalTargetVersions(1: BatchGetEvalTargetVersionsRequest request) (
+        api.category="eval_target", api.post = "/api/evaluation/v1/eval_target_versions/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
     // Source评测对象列表
-    ListSourceEvalTargetsResponse ListSourceEvalTargets(1: ListSourceEvalTargetsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/list_source")
+    ListSourceEvalTargetsResponse ListSourceEvalTargets(1: ListSourceEvalTargetsRequest request) (
+        api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/list_source", api.op_type = 'list', api.tag = 'volc-agentkit'
+    )
     // Source评测对象版本列表
-    ListSourceEvalTargetVersionsResponse ListSourceEvalTargetVersions(1: ListSourceEvalTargetVersionsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/list_source_version")
-    BatchGetSourceEvalTargetsResponse BatchGetSourceEvalTargets (1: BatchGetSourceEvalTargetsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/batch_get_source")
+    ListSourceEvalTargetVersionsResponse ListSourceEvalTargetVersions(1: ListSourceEvalTargetVersionsRequest request) (
+        api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/list_source_version", api.op_type = 'list', api.tag = 'volc-agentkit'
+    )
+    BatchGetSourceEvalTargetsResponse BatchGetSourceEvalTargets (1: BatchGetSourceEvalTargetsRequest request) (
+        api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/batch_get_source", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
     // 搜索自定义评测对象
     SearchCustomEvalTargetResponse SearchCustomEvalTarget(1: SearchCustomEvalTargetRequest req) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/search_custom")
 
     // 执行
     ExecuteEvalTargetResponse ExecuteEvalTarget(1: ExecuteEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/:eval_target_id/versions/:eval_target_version_id/execute")
     AsyncExecuteEvalTargetResponse AsyncExecuteEvalTarget(1: AsyncExecuteEvalTargetRequest request)
-    GetEvalTargetRecordResponse GetEvalTargetRecord(1: GetEvalTargetRecordRequest request) (api.category="eval_target", api.get = "/api/evaluation/v1/eval_target_records/:eval_target_record_id")
-    BatchGetEvalTargetRecordsResponse BatchGetEvalTargetRecords(1: BatchGetEvalTargetRecordsRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_target_records/batch_get")
+    GetEvalTargetRecordResponse GetEvalTargetRecord(1: GetEvalTargetRecordRequest request) (
+        api.category="eval_target", api.get = "/api/evaluation/v1/eval_target_records/:eval_target_record_id", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
+    BatchGetEvalTargetRecordsResponse BatchGetEvalTargetRecords(1: BatchGetEvalTargetRecordsRequest request) (
+        api.category="eval_target", api.post = "/api/evaluation/v1/eval_target_records/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
 
     // debug
     DebugEvalTargetResponse DebugEvalTarget(1: DebugEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/debug")
     AsyncDebugEvalTargetResponse AsyncDebugEvalTarget(1: AsyncDebugEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/async_debug")
 
     // mock输出数据
-        MockEvalTargetOutputResponse MockEvalTargetOutput(1: MockEvalTargetOutputRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/mock_output")
-} (api.js_conv="true" )
+    MockEvalTargetOutputResponse MockEvalTargetOutput(1: MockEvalTargetOutputRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/mock_output")
+}
