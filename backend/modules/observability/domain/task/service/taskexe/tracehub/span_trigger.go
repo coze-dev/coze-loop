@@ -66,7 +66,6 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 		logs.CtxError(ctx, "Failed to get consumer listening config, err: %v", err)
 		return nil, err
 	}
-
 	var subscribers []*spanSubscriber
 	taskDOs, err := h.listNonFinalTaskByRedis(ctx, span.WorkspaceID)
 	if err != nil {
@@ -86,6 +85,11 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 		}
 
 		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
+		tenants, err := h.getTenants(ctx, taskDO.GetPlatformType())
+		if err != nil {
+			logs.CtxError(ctx, "Failed to get tenants, err: %v", err)
+			return nil, err
+		}
 		subscribers = append(subscribers, &spanSubscriber{
 			taskID:      taskDO.ID,
 			t:           taskDO,
@@ -93,6 +97,7 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 			taskRepo:    h.taskRepo,
 			runType:     entity.TaskRunTypeNewData,
 			buildHelper: h.buildHelper,
+			tenants:     tenants,
 		})
 	}
 

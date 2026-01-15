@@ -16,6 +16,7 @@ import (
 	taskconvertor "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	componentconfig "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	config_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
+	tenant_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
@@ -60,6 +61,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	mockBuilder := trace_service_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
 	mockFilter := span_filter_mocks.NewMockFilter(ctrl)
 	configLoader := config_mocks.NewMockITraceConfig(ctrl)
+	tenantProvider := tenant_mocks.NewMockITenantProvider(ctrl)
 
 	now := time.Now()
 	workspaceID := int64(1)
@@ -112,6 +114,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	mockFilter.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, false, nil).AnyTimes()
 	mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
+	tenantProvider.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformDefault, gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 
 	spanRun := &entity.TaskRun{
 		ID:          201,
@@ -132,11 +135,12 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	taskProcessor.Register(entity.TaskTypeAutoEval, procMock)
 
 	impl := &TraceHubServiceImpl{
-		taskRepo:      mockRepo,
-		buildHelper:   mockBuilder,
-		taskProcessor: taskProcessor,
-		localCache:    NewLocalCache(),
-		config:        configLoader,
+		taskRepo:       mockRepo,
+		buildHelper:    mockBuilder,
+		taskProcessor:  taskProcessor,
+		localCache:     NewLocalCache(),
+		config:         configLoader,
+		tenantProvider: tenantProvider,
 	}
 	impl.localCache.taskCache.Store("ObjListWithTask", TaskCacheInfo{WorkspaceIDs: []string{"space-1"}, Tasks: []*entity.ObservabilityTask{taskDO}})
 
@@ -146,13 +150,12 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		LogID:         "log",
 		StartTimeInUs: now.UnixMicro(),
 		Tags: map[string]any{
-			"fornax_space_id": "space-1",
-			"call_type":       "",
-			"bot_id":          "bot-1",
-		},
-		SystemTags: map[string]any{
+			"fornax_space_id":         "space-1",
+			"call_type":               "",
+			"bot_id":                  "bot-1",
 			loop_span.SpanFieldTenant: "tenant",
 		},
+		SystemTags:    map[string]any{},
 		SensitiveTags: &entity.SensitiveTags{},
 		ServerEnv:     &entity.ServerInRawSpan{},
 	}
