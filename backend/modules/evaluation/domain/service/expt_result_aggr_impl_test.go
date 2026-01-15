@@ -825,11 +825,13 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 			mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 			mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
 			mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 
 			svc := &ExptAggrResultServiceImpl{
 				exptAnnotateRepo:   mockExptAnnotateRepo,
 				exptAggrResultRepo: mockExptAggrResultRepo,
 				metric:             mockMetric,
+				experimentRepo:     mockExperimentRepo,
 			}
 
 			tt.setup(mockExptAnnotateRepo, mockExptAggrResultRepo, mockMetric)
