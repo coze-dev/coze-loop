@@ -563,7 +563,10 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spa
 	}
 	versionID2TargetInfo := make(map[int64]*entity.EvalTarget)
 	for _, info := range targetInfos {
-		versionID2TargetInfo[info.ID] = info
+		if info.EvalTargetVersion == nil {
+			continue
+		}
+		versionID2TargetInfo[info.EvalTargetVersion.ID] = info
 	}
 	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
 	for _, expt := range expts {
@@ -581,9 +584,7 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spa
 					c := &entity.ColumnEvalTarget{
 						Name:       gptr.Indirect(s.Key),
 						TextSchema: s.JsonSchema,
-					}
-					if gptr.Indirect(s.Key) == consts.ReportColumnNameEvalTargetActualOutput {
-						c.Label = gptr.Of(consts.ReportColumnNameEvalTargetActualOutput)
+						Label:      gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
 					}
 					if len(s.SupportContentTypes) > 0 {
 						// 评测对象字段类型就一个，所以这里取第一个就可以
