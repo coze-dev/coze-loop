@@ -82,6 +82,7 @@ export default function PromptDevelopPage() {
             () => navigate('evaluation/datasets'),
           );
         }}
+        hideSnippet={true}
       />
       <TraceTab
         displayType="drawer"
