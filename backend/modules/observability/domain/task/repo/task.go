@@ -54,7 +54,7 @@ type ITaskRepo interface {
 	GetTaskRunFailCount(ctx context.Context, taskID, taskRunID int64) (int64, error)
 	IncrTaskRunFailCount(ctx context.Context, taskID, taskRunID int64, ttl int64) error
 
-	// 非终态task列表by spaceID
+	// 非终态task列表by spaceID，有2s内存缓存
 	ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) ([]int64, error)
 	AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error
 	RemoveNonFinalTask(ctx context.Context, spaceID string, taskID int64) error

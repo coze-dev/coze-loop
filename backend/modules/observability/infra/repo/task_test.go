@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	mysqlconv "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/convertor"
 	mysqlmodel "github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/pkg/mcache/byted"
 )
 
 type stubIDGenerator struct {
@@ -272,6 +273,7 @@ func TestTaskRepoImpl_CreateTask(t *testing.T) {
 				TaskRedisDao:    redisDao,
 				TaskRunRedisDao: stubTaskRunRedisDao{},
 				idGenerator:     tt.generator,
+				cache:           byted.NewLRUCache(1024),
 			}
 
 			var addCalled, setCalled bool
@@ -339,6 +341,7 @@ func TestTaskRepoImpl_UpdateTask(t *testing.T) {
 				TaskRunDao:      stubTaskRunDao{},
 				TaskRedisDao:    redisDao,
 				TaskRunRedisDao: stubTaskRunRedisDao{},
+				cache:           byted.NewLRUCache(1024),
 			}
 
 			var setCalled bool
@@ -393,6 +396,7 @@ func TestTaskRepoImpl_DeleteTask(t *testing.T) {
 				TaskRunDao:      stubTaskRunDao{},
 				TaskRedisDao:    redisDao,
 				TaskRunRedisDao: stubTaskRunRedisDao{},
+				cache:           byted.NewLRUCache(1024),
 			}
 
 			var removeCalled bool
@@ -413,6 +417,47 @@ func TestTaskRepoImpl_DeleteTask(t *testing.T) {
 			assert.Equal(t, tt.expectRemove, removeCalled)
 		})
 	}
+}
+
+func TestTaskRepoImpl_ListNonFinalTaskBySpaceID_Cache(t *testing.T) {
+	expected := []int64{1, 2, 3}
+	spaceID := "test_space"
+	callCount := 0
+
+	redisDao := &stubTaskRedisDao{}
+	redisDao.listNonFinalTaskFunc = func(ctx context.Context, sID string) ([]int64, error) {
+		callCount++
+		assert.Equal(t, spaceID, sID)
+		return expected, nil
+	}
+
+	repo := &TaskRepoImpl{
+		TaskRedisDao: redisDao,
+		cache:        byted.NewLRUCache(1024 * 1024),
+	}
+
+	// 1. First call - Cache miss, should call Redis
+	list1, err := repo.ListNonFinalTaskBySpaceID(context.Background(), spaceID)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, list1)
+	assert.Equal(t, 1, callCount)
+
+	// 2. Second call - Cache hit, should NOT call Redis
+	list2, err := repo.ListNonFinalTaskBySpaceID(context.Background(), spaceID)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, list2)
+	assert.Equal(t, 1, callCount) // callCount stays 1
+
+	// 3. Different spaceID - Cache miss
+	anotherSpaceID := "other_space"
+	redisDao.listNonFinalTaskFunc = func(ctx context.Context, sID string) ([]int64, error) {
+		callCount++
+		return []int64{4, 5}, nil
+	}
+	list3, err := repo.ListNonFinalTaskBySpaceID(context.Background(), anotherSpaceID)
+	assert.NoError(t, err)
+	assert.Equal(t, []int64{4, 5}, list3)
+	assert.Equal(t, 2, callCount)
 }
 
 func TestTaskRepoImpl_NonFinalTaskWrappers(t *testing.T) {
@@ -441,6 +486,7 @@ func TestTaskRepoImpl_NonFinalTaskWrappers(t *testing.T) {
 		TaskRunDao:      stubTaskRunDao{},
 		TaskRedisDao:    redisDao,
 		TaskRunRedisDao: stubTaskRunRedisDao{},
+		cache:           byted.NewLRUCache(1024),
 	}
 
 	list, err := repo.ListNonFinalTaskBySpaceID(context.Background(), "space")
@@ -540,6 +586,7 @@ func TestTaskRepoImpl_GetTaskByRedis(t *testing.T) {
 				TaskRunDao:      stubTaskRunDao{},
 				TaskRedisDao:    redisDao,
 				TaskRunRedisDao: stubTaskRunRedisDao{},
+				cache:           byted.NewLRUCache(1024),
 			}
 
 			var mysqlCalled, setCalled bool

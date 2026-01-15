@@ -14,8 +14,11 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/redis"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	"github.com/coze-dev/coze-loop/backend/pkg/mcache"
+	"github.com/coze-dev/coze-loop/backend/pkg/mcache/byted"
 )
 
 func NewTaskRepoImpl(TaskDao mysql.ITaskDao, idGenerator idgen.IIDGenerator, taskRedisDao redis.ITaskDAO, taskRunDao mysql.ITaskRunDao, taskRunRedisDao redis.ITaskRunDAO) repo.ITaskRepo {
@@ -25,6 +28,7 @@ func NewTaskRepoImpl(TaskDao mysql.ITaskDao, idGenerator idgen.IIDGenerator, tas
 		TaskRedisDao:    taskRedisDao,
 		TaskRunDao:      taskRunDao,
 		TaskRunRedisDao: taskRunRedisDao,
+		cache:           byted.NewLRUCache(5 * 1024 * 1024),
 	}
 }
 
@@ -34,6 +38,7 @@ type TaskRepoImpl struct {
 	TaskRedisDao    redis.ITaskDAO
 	TaskRunRedisDao redis.ITaskRunDAO
 	idGenerator     idgen.IIDGenerator
+	cache           mcache.IByteCache
 }
 
 func (v *TaskRepoImpl) GetTask(ctx context.Context, id int64, workspaceID *int64, userID *string) (*entity.ObservabilityTask, error) {
@@ -316,7 +321,24 @@ func (v *TaskRepoImpl) IncrTaskRunFailCount(ctx context.Context, taskID, taskRun
 }
 
 func (v *TaskRepoImpl) ListNonFinalTaskBySpaceID(ctx context.Context, spaceID string) ([]int64, error) {
-	return v.TaskRedisDao.ListNonFinalTask(ctx, spaceID)
+	cacheKey := "non_final_tasks_" + spaceID
+	if val, err := v.cache.Get([]byte(cacheKey)); err == nil {
+		var tasks []int64
+		if err := json.Unmarshal(val, &tasks); err == nil {
+			return tasks, nil
+		}
+	}
+
+	tasks, err := v.TaskRedisDao.ListNonFinalTask(ctx, spaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	if val, err := json.Marshal(tasks); err == nil {
+		_ = v.cache.Set([]byte(cacheKey), val, 2*time.Second)
+	}
+
+	return tasks, nil
 }
 
 func (v *TaskRepoImpl) AddNonFinalTask(ctx context.Context, spaceID string, taskID int64) error {
