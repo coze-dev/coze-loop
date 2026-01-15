@@ -810,6 +810,7 @@ func TestNewExptManager(t *testing.T) {
 	mockEvaluatorService := svcMocks.NewMockEvaluatorService(ctrl)
 	mockBenefitService := benefitMocks.NewMockIBenefitService(ctrl)
 	mockExptAggrResultService := svcMocks.NewMockExptAggrResultService(ctrl)
+	mockTemplateRepo := repoMocks.NewMockIExptTemplateRepo(ctrl)
 
 	mgr := NewExptManager(
 		mockExptResultService,
@@ -833,6 +834,7 @@ func TestNewExptManager(t *testing.T) {
 		mockEvaluatorService,
 		mockBenefitService,
 		mockExptAggrResultService,
+		mockTemplateRepo,
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)

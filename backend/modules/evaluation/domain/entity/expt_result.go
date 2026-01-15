@@ -35,6 +35,9 @@ const (
 	// 标注项, FieldKey为TagKeyID
 	FieldType_Annotation FieldType = 23
 
+	// 加权得分, FieldKey为expt_id
+	FieldType_WeightedScore FieldType = 24
+
 	FieldType_TargetLatency      FieldType = 50
 	FieldType_TargetInputTokens  FieldType = 51
 	FieldType_TargetOutputTokens FieldType = 52
@@ -139,8 +142,8 @@ func (a AggregatorResult) GetScore() float64 {
 }
 
 type ExptAggrResult struct {
-	ID           int64
-	SpaceID      int64
+	ID            int64
+	SpaceID       int64
 	ExperimentID int64
 	FieldType    int32
 	FieldKey     string
@@ -149,6 +152,7 @@ type ExptAggrResult struct {
 	Version      int64
 	Status       int32
 	UpdateAt     *time.Time
+	WeightedScore float64
 }
 
 func (e *ExptAggrResult) AggrResEqual(other *ExptAggrResult) bool {
@@ -180,6 +184,8 @@ type ExptAggregateResult struct {
 	AnnotationResults map[int64]*AnnotationAggregateResult
 	TargetResults     *EvalTargetMtrAggrResult
 	UpdateTime        *time.Time
+	// WeightedResults 加权聚合结果列表，对每种聚合指标（Average、p99 等）给出加权后的结果
+	WeightedResults []*AggregatorResult
 }
 
 type EvaluatorAggregateResult struct {
@@ -288,6 +294,8 @@ type ExptTurnResult struct {
 	EvaluatorResults *EvaluatorResults
 	ErrMsg           string
 	TurnIdx          int32
+
+	WeightedScore *float64 // 使用指针类型，nil 表示未计算，非 nil 表示已计算（可能为 0）
 }
 
 func (tr *ExptTurnResult) ToRunLogDO() *ExptTurnResultRunLog {
@@ -385,22 +393,61 @@ type ExptListFilter struct {
 }
 
 type ExptFilterFields struct {
-	CreatedBy    []string
-	Status       []int64
-	EvalSetIDs   []int64
-	TargetIDs    []int64
-	EvaluatorIDs []int64
-	TargetType   []int64
-	ExptType     []int64
-	SourceType   []int64
-	SourceID     []string
+	CreatedBy       []string
+	UpdatedBy       []string
+	Status          []int64
+	EvalSetIDs      []int64
+	TargetIDs       []int64
+	EvaluatorIDs    []int64
+	TargetType      []int64
+	ExptType        []int64
+	SourceType      []int64
+	SourceID        []string
+	ExptTemplateIDs []int64
 }
 
 func (e *ExptFilterFields) IsValid() bool {
 	if e == nil {
 		return true
 	}
-	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType} {
+	for _, slice := range [][]int64{e.Status, e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptTemplateIDs} {
+		for _, item := range slice {
+			if item < 0 {
+				return false
+			}
+		}
+	}
+	for _, item := range e.CreatedBy {
+		if len(item) <= 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// ExptTemplateListFilter 实验模板列表筛选器
+type ExptTemplateListFilter struct {
+	FuzzyName string
+	Includes  *ExptTemplateFilterFields
+	Excludes  *ExptTemplateFilterFields
+}
+
+// ExptTemplateFilterFields 实验模板筛选字段
+type ExptTemplateFilterFields struct {
+	CreatedBy    []string
+	UpdatedBy    []string
+	EvalSetIDs   []int64
+	TargetIDs    []int64
+	EvaluatorIDs []int64
+	TargetType   []int64
+	ExptType     []int64
+}
+
+func (e *ExptTemplateFilterFields) IsValid() bool {
+	if e == nil {
+		return true
+	}
+	for _, slice := range [][]int64{e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptType} {
 		for _, item := range slice {
 			if item < 0 {
 				return false
@@ -481,12 +528,13 @@ func NewSession(ctx context.Context) *Session {
 }
 
 type ExptTurnResultFilterMapCond struct {
-	EvalTargetDataFilters    []*FieldFilter
-	EvaluatorScoreFilters    []*FieldFilter
-	AnnotationFloatFilters   []*FieldFilter
-	AnnotationBoolFilters    []*FieldFilter
-	AnnotationStringFilters  []*FieldFilter
-	EvalTargetMetricsFilters []*FieldFilter
+	EvalTargetDataFilters        []*FieldFilter
+	EvaluatorScoreFilters        []*FieldFilter
+	EvaluatorWeightedScoreFilter *FieldFilter
+	AnnotationFloatFilters       []*FieldFilter
+	AnnotationBoolFilters        []*FieldFilter
+	AnnotationStringFilters      []*FieldFilter
+	EvalTargetMetricsFilters     []*FieldFilter
 }
 
 type FieldFilter struct {
@@ -543,6 +591,7 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 		len(e.TurnRunStatus) > 0
 	hasFilters = hasFilters || (e.MapCond != nil && (len(e.MapCond.EvalTargetDataFilters) > 0 ||
 		len(e.MapCond.EvaluatorScoreFilters) > 0 ||
+		e.MapCond.EvaluatorWeightedScoreFilter != nil ||
 		len(e.MapCond.AnnotationFloatFilters) > 0 ||
 		len(e.MapCond.AnnotationBoolFilters) > 0 ||
 		len(e.MapCond.AnnotationStringFilters) > 0 ||
@@ -601,6 +650,7 @@ type TurnTargetOutput struct {
 
 type TurnEvaluatorOutput struct {
 	EvaluatorRecords map[int64]*EvaluatorRecord
+	WeightedScore    *float64 // 加权汇总得分
 }
 
 type TurnAnnotateResult struct {
@@ -701,6 +751,7 @@ type ExptTurnResultFilterEntity struct {
 	Status                  ItemRunState       `json:"status"`
 	EvalTargetData          map[string]string  `json:"eval_target_data"`
 	EvaluatorScore          map[string]float64 `json:"evaluator_score"`
+	EvaluatorWeightedScore  *float64           `json:"evaluator_weighted_score"`
 	AnnotationFloat         map[string]float64 `json:"annotation_float"`
 	AnnotationBool          map[string]bool    `json:"annotation_bool"`
 	AnnotationString        map[string]string  `json:"annotation_string"`

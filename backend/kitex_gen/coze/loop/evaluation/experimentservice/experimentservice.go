@@ -245,6 +245,48 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CreateExperimentTemplate": kitex.NewMethodInfo(
+		createExperimentTemplateHandler,
+		newExperimentServiceCreateExperimentTemplateArgs,
+		newExperimentServiceCreateExperimentTemplateResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"BatchGetExperimentTemplate": kitex.NewMethodInfo(
+		batchGetExperimentTemplateHandler,
+		newExperimentServiceBatchGetExperimentTemplateArgs,
+		newExperimentServiceBatchGetExperimentTemplateResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateExperimentTemplateMeta": kitex.NewMethodInfo(
+		updateExperimentTemplateMetaHandler,
+		newExperimentServiceUpdateExperimentTemplateMetaArgs,
+		newExperimentServiceUpdateExperimentTemplateMetaResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateExperimentTemplate": kitex.NewMethodInfo(
+		updateExperimentTemplateHandler,
+		newExperimentServiceUpdateExperimentTemplateArgs,
+		newExperimentServiceUpdateExperimentTemplateResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteExperimentTemplate": kitex.NewMethodInfo(
+		deleteExperimentTemplateHandler,
+		newExperimentServiceDeleteExperimentTemplateArgs,
+		newExperimentServiceDeleteExperimentTemplateResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListExperimentTemplates": kitex.NewMethodInfo(
+		listExperimentTemplatesHandler,
+		newExperimentServiceListExperimentTemplatesArgs,
+		newExperimentServiceListExperimentTemplatesResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -905,6 +947,120 @@ func newExperimentServiceGetAnalysisRecordFeedbackVoteResult() interface{} {
 	return expt.NewExperimentServiceGetAnalysisRecordFeedbackVoteResult()
 }
 
+func createExperimentTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceCreateExperimentTemplateArgs)
+	realResult := result.(*expt.ExperimentServiceCreateExperimentTemplateResult)
+	success, err := handler.(expt.ExperimentService).CreateExperimentTemplate(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceCreateExperimentTemplateArgs() interface{} {
+	return expt.NewExperimentServiceCreateExperimentTemplateArgs()
+}
+
+func newExperimentServiceCreateExperimentTemplateResult() interface{} {
+	return expt.NewExperimentServiceCreateExperimentTemplateResult()
+}
+
+func batchGetExperimentTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceBatchGetExperimentTemplateArgs)
+	realResult := result.(*expt.ExperimentServiceBatchGetExperimentTemplateResult)
+	success, err := handler.(expt.ExperimentService).BatchGetExperimentTemplate(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceBatchGetExperimentTemplateArgs() interface{} {
+	return expt.NewExperimentServiceBatchGetExperimentTemplateArgs()
+}
+
+func newExperimentServiceBatchGetExperimentTemplateResult() interface{} {
+	return expt.NewExperimentServiceBatchGetExperimentTemplateResult()
+}
+
+func updateExperimentTemplateMetaHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceUpdateExperimentTemplateMetaArgs)
+	realResult := result.(*expt.ExperimentServiceUpdateExperimentTemplateMetaResult)
+	success, err := handler.(expt.ExperimentService).UpdateExperimentTemplateMeta(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceUpdateExperimentTemplateMetaArgs() interface{} {
+	return expt.NewExperimentServiceUpdateExperimentTemplateMetaArgs()
+}
+
+func newExperimentServiceUpdateExperimentTemplateMetaResult() interface{} {
+	return expt.NewExperimentServiceUpdateExperimentTemplateMetaResult()
+}
+
+func updateExperimentTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceUpdateExperimentTemplateArgs)
+	realResult := result.(*expt.ExperimentServiceUpdateExperimentTemplateResult)
+	success, err := handler.(expt.ExperimentService).UpdateExperimentTemplate(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceUpdateExperimentTemplateArgs() interface{} {
+	return expt.NewExperimentServiceUpdateExperimentTemplateArgs()
+}
+
+func newExperimentServiceUpdateExperimentTemplateResult() interface{} {
+	return expt.NewExperimentServiceUpdateExperimentTemplateResult()
+}
+
+func deleteExperimentTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceDeleteExperimentTemplateArgs)
+	realResult := result.(*expt.ExperimentServiceDeleteExperimentTemplateResult)
+	success, err := handler.(expt.ExperimentService).DeleteExperimentTemplate(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceDeleteExperimentTemplateArgs() interface{} {
+	return expt.NewExperimentServiceDeleteExperimentTemplateArgs()
+}
+
+func newExperimentServiceDeleteExperimentTemplateResult() interface{} {
+	return expt.NewExperimentServiceDeleteExperimentTemplateResult()
+}
+
+func listExperimentTemplatesHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceListExperimentTemplatesArgs)
+	realResult := result.(*expt.ExperimentServiceListExperimentTemplatesResult)
+	success, err := handler.(expt.ExperimentService).ListExperimentTemplates(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceListExperimentTemplatesArgs() interface{} {
+	return expt.NewExperimentServiceListExperimentTemplatesArgs()
+}
+
+func newExperimentServiceListExperimentTemplatesResult() interface{} {
+	return expt.NewExperimentServiceListExperimentTemplatesResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -1242,6 +1398,66 @@ func (p *kClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.G
 	_args.Req = req
 	var _result expt.ExperimentServiceGetAnalysisRecordFeedbackVoteResult
 	if err = p.c.Call(ctx, "GetAnalysisRecordFeedbackVote", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest) (r *expt.CreateExperimentTemplateResponse, err error) {
+	var _args expt.ExperimentServiceCreateExperimentTemplateArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceCreateExperimentTemplateResult
+	if err = p.c.Call(ctx, "CreateExperimentTemplate", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchGetExperimentTemplate(ctx context.Context, req *expt.BatchGetExperimentTemplateRequest) (r *expt.BatchGetExperimentTemplateResponse, err error) {
+	var _args expt.ExperimentServiceBatchGetExperimentTemplateArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceBatchGetExperimentTemplateResult
+	if err = p.c.Call(ctx, "BatchGetExperimentTemplate", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest) (r *expt.UpdateExperimentTemplateMetaResponse, err error) {
+	var _args expt.ExperimentServiceUpdateExperimentTemplateMetaArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceUpdateExperimentTemplateMetaResult
+	if err = p.c.Call(ctx, "UpdateExperimentTemplateMeta", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest) (r *expt.UpdateExperimentTemplateResponse, err error) {
+	var _args expt.ExperimentServiceUpdateExperimentTemplateArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceUpdateExperimentTemplateResult
+	if err = p.c.Call(ctx, "UpdateExperimentTemplate", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteExperimentTemplate(ctx context.Context, req *expt.DeleteExperimentTemplateRequest) (r *expt.DeleteExperimentTemplateResponse, err error) {
+	var _args expt.ExperimentServiceDeleteExperimentTemplateArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceDeleteExperimentTemplateResult
+	if err = p.c.Call(ctx, "DeleteExperimentTemplate", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListExperimentTemplates(ctx context.Context, req *expt.ListExperimentTemplatesRequest) (r *expt.ListExperimentTemplatesResponse, err error) {
+	var _args expt.ExperimentServiceListExperimentTemplatesArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceListExperimentTemplatesResult
+	if err = p.c.Call(ctx, "ListExperimentTemplates", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

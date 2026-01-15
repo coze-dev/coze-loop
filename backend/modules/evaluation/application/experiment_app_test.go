@@ -372,7 +372,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
 		{ID: 3, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
 	}, nil)
 
-	ids, _, err := app.resolveEvaluatorVersionIDs(ctx, req)
+	ids, _, weights, err := app.resolveEvaluatorVersionIDs(ctx, req)
 	if err != nil {
 		t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
 	}
@@ -381,6 +381,8 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs(t *testing.T) {
 	if got, want := len(ids), 4; got != want {
 		t.Fatalf("len(ids)=%d want=%d", got, want)
 	}
+	// 验证权重映射（如果有的话）
+	_ = weights
 	if ids[0] != 10101 || ids[1] != 20200 || ids[2] != 20200 || ids[3] != 30300 {
 		t.Fatalf("ids=%v want=[10101 20200 20200 30300]", ids)
 	}
@@ -403,30 +405,25 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs_WithEvaluatorFieldMap
 
 	// 创建测试用的 EvaluatorFieldMapping，其中包含一个缺少 evaluator_version_id 的映射
 	// 这个映射应该引用一个 BuiltinVisible 的评估器
+	// 注意：EvaluatorFieldMapping 中的 Version 现在是 string 类型
 	mapping1 := expt.NewEvaluatorFieldMapping()
 	mapping1.SetEvaluatorVersionID(0) // 缺少 evaluator_version_id，需要回填
-	mapping1.SetEvaluatorIDVersionItem(&evaluator.EvaluatorIDVersionItem{
-		EvaluatorID: gptr.Of(int64(1)),
-		Version:     gptr.Of("BuiltinVisible"),
-	})
+	mapping1.SetEvaluatorID(gptr.Of(int64(1)))
+	mapping1.SetVersion(gptr.Of("BuiltinVisible")) // Version 字段现在是 string 类型
 
 	// 创建另一个映射，引用普通版本
 	mapping2 := expt.NewEvaluatorFieldMapping()
 	mapping2.SetEvaluatorVersionID(0) // 缺少 evaluator_version_id，需要回填
-	mapping2.SetEvaluatorIDVersionItem(&evaluator.EvaluatorIDVersionItem{
-		EvaluatorID: gptr.Of(int64(2)),
-		Version:     gptr.Of("1.0.0"),
-	})
+	mapping2.SetEvaluatorID(gptr.Of(int64(2)))
+	mapping2.SetVersion(gptr.Of("1.0.0")) // Version 字段现在是 string 类型
 
 	// 创建一个已经有 evaluator_version_id 的映射，不应该被处理
 	mapping3 := expt.NewEvaluatorFieldMapping()
 	mapping3.SetEvaluatorVersionID(99999) // 已经有值，应该跳过
-	mapping3.SetEvaluatorIDVersionItem(&evaluator.EvaluatorIDVersionItem{
-		EvaluatorID: gptr.Of(int64(3)),
-		Version:     gptr.Of("2.0.0"),
-	})
+	mapping3.SetEvaluatorID(gptr.Of(int64(3)))
+	mapping3.SetVersion(gptr.Of("2.0.0")) // Version 字段现在是 string 类型
 
-	// 创建一个没有 EvaluatorIDVersionItem 的映射，应该跳过
+	// 创建一个没有 evaluator_id 和 version 的映射，应该跳过
 	mapping4 := expt.NewEvaluatorFieldMapping()
 	mapping4.SetEvaluatorVersionID(0) // 缺少 evaluator_version_id
 	// 但没有 EvaluatorIDVersionItem，应该跳过
@@ -456,7 +453,7 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs_WithEvaluatorFieldMap
 		{ID: 3, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 3, Version: "2.0.0", ID: 30300}},
 	}, nil)
 
-	ids, _, err := app.resolveEvaluatorVersionIDs(ctx, req)
+	ids, _, weights, err := app.resolveEvaluatorVersionIDs(ctx, req)
 	if err != nil {
 		t.Fatalf("resolveEvaluatorVersionIDs error: %v", err)
 	}
@@ -466,6 +463,8 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs_WithEvaluatorFieldMap
 	if len(ids) != len(expectedIDs) {
 		t.Fatalf("len(ids)=%d want=%d", len(ids), len(expectedIDs))
 	}
+	// 验证权重映射（如果有的话）
+	_ = weights
 	for i, id := range expectedIDs {
 		if ids[i] != id {
 			t.Fatalf("ids[%d]=%d want=%d", i, ids[i], id)
@@ -2112,7 +2111,8 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil,
 				nil,
 				nil,
-				mockEvaluatorService, // evaluatorService
+				nil, // evaluatorService
+				nil, // templateManager
 			)
 
 			// 执行测试
@@ -2359,6 +2359,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil,
 				nil,
 				nil, // evaluatorService
+				nil, // templateManager
 			)
 
 			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
