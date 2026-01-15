@@ -120,12 +120,14 @@ func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSc
 			name := fs.GetName()
 			description := fs.GetDescription()
 			textSchema := fs.GetTextSchema()
+			schemaKey := fs.GetSchemaKey()
 			result.FieldSchemas[i] = entity.FieldSchema{
 				Key:         &key,
 				Name:        name,
 				Description: description,
 				ContentType: convertContentTypeDTO2DO(fs.GetContentType()),
 				TextSchema:  textSchema,
+				SchemaKey:   entity.SchemaKey(schemaKey),
 			}
 		}
 	}
