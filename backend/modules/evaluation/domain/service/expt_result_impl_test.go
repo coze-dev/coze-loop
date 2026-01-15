@@ -385,13 +385,10 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 		assert.NoError(t, err)
 		if assert.Len(t, got, 1) {
 			assert.Equal(t, int64(4), got[0].ExptID)
-			// actual_output + 4 metrics（fullTrajectory=false 时不返回 trajectory 列）
-			assert.Len(t, got[0].Columns, 1+len(columnsEvalTargetMtr))
+			// actual_output + trajectory + 4 metrics（只要 SupptTrajectory=true 就会返回 trajectory 列，不受 fullTrajectory 参数影响）
+			assert.Len(t, got[0].Columns, 1+1+len(columnsEvalTargetMtr))
 			assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Columns[0].Name)
-			// should not contain trajectory column
-			for _, c := range got[0].Columns {
-				assert.NotEqual(t, consts.ReportColumnNameEvalTargetTrajectory, c.Name)
-			}
+			assert.Equal(t, consts.ReportColumnNameEvalTargetTrajectory, got[0].Columns[1].Name)
 		}
 	})
 }
