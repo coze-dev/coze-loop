@@ -213,6 +213,8 @@ struct RunEvaluatorRequest {
     6: optional i64 item_id (api.body='item_id', api.js_conv='true', go.tag='json:"item_id"')
     7: optional i64 turn_id (api.body='turn_id', api.js_conv='true', go.tag='json:"turn_id"')
 
+    11: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body='evaluator_run_conf')    // 评估器运行配置参数
+
     100: optional map<string, string> ext (api.body='ext')
 
     255: optional base.Base Base
@@ -230,6 +232,8 @@ struct DebugEvaluatorRequest {
     3: required evaluator.EvaluatorInputData input_data (api.body='input_data')         // 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace
     4: required evaluator.EvaluatorType evaluator_type (api.body='evaluator_type', go.tag='json:"evaluator_type"')
 
+    11: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body='evaluator_run_conf')    // 评估器运行配置参数
+
     255: optional base.Base Base
 }
 
@@ -244,6 +248,8 @@ struct BatchDebugEvaluatorRequest {
     2: required evaluator.EvaluatorContent evaluator_content (api.body='evaluator_content')                     // 待调试评估器内容
     3: required list<evaluator.EvaluatorInputData> input_data (api.body='input_data')         // 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace
     4: required evaluator.EvaluatorType evaluator_type (api.body='evaluator_type', go.tag='json:"evaluator_type"')
+
+    11: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body='evaluator_run_conf')   // 评估器运行配置参数
 
     255: optional base.Base Base
 }

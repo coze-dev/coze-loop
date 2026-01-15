@@ -253,26 +253,24 @@ func TestCustomRPCEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 			description: "nil evaluator应该返回错误",
 		},
 		{
-			name: "失败 - 空的ProviderEvaluatorCode",
+			name: "成功 - 空的ProviderEvaluatorCode（允许为空）",
 			evaluator: &CustomRPCEvaluatorVersion{
 				ProviderEvaluatorCode: gptr.Of(""),
 				AccessProtocol:        EvaluatorAccessProtocol("rpc"),
 				ServiceName:           gptr.Of("test_service"),
 			},
-			wantErr:     true,
-			errCode:     errno.InvalidProviderEvaluatorCodeCode,
-			description: "空的ProviderEvaluatorCode应该返回错误",
+			wantErr:     false,
+			description: "ProviderEvaluatorCode 变更为可选字段，允许为空",
 		},
 		{
-			name: "失败 - nil ProviderEvaluatorCode",
+			name: "成功 - nil ProviderEvaluatorCode（允许为nil）",
 			evaluator: &CustomRPCEvaluatorVersion{
 				ProviderEvaluatorCode: nil,
 				AccessProtocol:        EvaluatorAccessProtocol("rpc"),
 				ServiceName:           gptr.Of("test_service"),
 			},
-			wantErr:     true,
-			errCode:     errno.InvalidProviderEvaluatorCodeCode,
-			description: "nil ProviderEvaluatorCode应该返回错误",
+			wantErr:     false,
+			description: "ProviderEvaluatorCode 变更为可选字段，允许为 nil",
 		},
 		{
 			name: "失败 - 空的AccessProtocol",

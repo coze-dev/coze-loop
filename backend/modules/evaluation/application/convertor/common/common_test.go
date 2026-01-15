@@ -1662,3 +1662,95 @@ func TestConvertRateLimitDTO2DO(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertRuntimeParamDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *commondto.RuntimeParam
+		expected *commonentity.RuntimeParam
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "json value and demo",
+			input: &commondto.RuntimeParam{
+				JSONValue: gptr.Of(`{"model_config":{"model_id":"m-1"}}`),
+				JSONDemo:  gptr.Of(`{"model_config":{"model_id":"demo"}}`),
+			},
+			expected: &commonentity.RuntimeParam{
+				JSONValue: gptr.Of(`{"model_config":{"model_id":"m-1"}}`),
+				JSONDemo:  gptr.Of(`{"model_config":{"model_id":"demo"}}`),
+			},
+		},
+		{
+			name: "empty fields",
+			input: &commondto.RuntimeParam{
+				JSONValue: nil,
+				JSONDemo:  nil,
+			},
+			expected: &commonentity.RuntimeParam{
+				JSONValue: nil,
+				JSONDemo:  nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := ConvertRuntimeParamDTO2DO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestConvertRuntimeParamDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *commonentity.RuntimeParam
+		expected *commondto.RuntimeParam
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "json value and demo",
+			input: &commonentity.RuntimeParam{
+				JSONValue: gptr.Of(`{"model_config":{"temperature":0.8}}`),
+				JSONDemo:  gptr.Of(`{"model_config":{"temperature":0.5}}`),
+			},
+			expected: &commondto.RuntimeParam{
+				JSONValue: gptr.Of(`{"model_config":{"temperature":0.8}}`),
+				JSONDemo:  gptr.Of(`{"model_config":{"temperature":0.5}}`),
+			},
+		},
+		{
+			name: "empty fields",
+			input: &commonentity.RuntimeParam{
+				JSONValue: nil,
+				JSONDemo:  nil,
+			},
+			expected: &commondto.RuntimeParam{
+				JSONValue: nil,
+				JSONDemo:  nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := ConvertRuntimeParamDO2DTO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
