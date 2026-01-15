@@ -573,11 +573,7 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spa
 		if !expt.ContainsEvalTarget() {
 			continue
 		}
-		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
-		if expt.TargetType.SupptTrajectory() {
-			columns = append(columns, columnEvalTargetTrajectory)
-		}
-		columns = append(columns, columnsEvalTargetMtr...)
+		columns := make([]*entity.ColumnEvalTarget, 0)
 		if info, ok := versionID2TargetInfo[expt.TargetVersionID]; ok {
 			if info.EvalTargetVersion != nil {
 				for _, s := range info.EvalTargetVersion.OutputSchema {
@@ -594,6 +590,10 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spa
 				}
 			}
 		}
+		if expt.TargetType.SupptTrajectory() {
+			columns = append(columns, columnEvalTargetTrajectory)
+		}
+		columns = append(columns, columnsEvalTargetMtr...)
 		res = append(res, &entity.ExptColumnEvalTarget{
 			ExptID:  expt.ID,
 			Columns: columns,
