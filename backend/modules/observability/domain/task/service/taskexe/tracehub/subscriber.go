@@ -96,8 +96,6 @@ func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskDO *entity.Ob
 	var tenantFilter *loop_span.FilterFields = nil
 	if len(span.GetTenant()) > 0 {
 		tenantFilter = buildTenantFilter(s.tenants)
-	} else {
-		logs.CtxWarn(ctx, "Span tenant info is empty, task_id=%d", taskDO.ID)
 	}
 	filters = combineFilters(builtinFilter, &taskDO.SpanFilter.Filters, tenantFilter)
 

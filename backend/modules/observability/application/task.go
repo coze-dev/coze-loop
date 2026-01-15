@@ -299,7 +299,6 @@ func (t *TaskApplication) GetTask(ctx context.Context, req *task.GetTaskRequest)
 
 func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSpan, loopSpan *loop_span.Span) error {
 	if rawSpan != nil {
-		logs.CtxInfo(ctx, "SpanTrigger raw span tags %v sys %v", rawSpan.Tags, rawSpan.SystemTags)
 		span := rawSpan.RawSpanConvertToLoopSpan()
 		if span != nil {
 			if err := t.tracehubSvc.SpanTrigger(ctx, span); err != nil {
@@ -310,7 +309,6 @@ func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSp
 		}
 	}
 	if loopSpan != nil {
-		logs.CtxInfo(ctx, "SpanTrigger loop span sys tag %v", loopSpan.SystemTagsString)
 		workspaceID, err := strconv.ParseInt(loopSpan.WorkspaceID, 10, 64)
 		if err != nil {
 			return errno.InternalErr(err, "convert %s to int64", loopSpan.WorkspaceID)
