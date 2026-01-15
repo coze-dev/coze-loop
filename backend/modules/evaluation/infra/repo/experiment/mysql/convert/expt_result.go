@@ -84,19 +84,22 @@ type ExptTurnResultConvertor struct{}
 
 func (ExptTurnResultConvertor) PO2DO(tr *model.ExptTurnResult, evaluatorResults *entity.EvaluatorResults) *entity.ExptTurnResult {
 	return &entity.ExptTurnResult{
-		ID:               tr.ID,
-		SpaceID:          tr.SpaceID,
-		ExptID:           tr.ExptID,
-		ExptRunID:        tr.ExptRunID,
-		ItemID:           tr.ItemID,
-		TurnID:           tr.TurnID,
-		Status:           tr.Status,
-		TraceID:          tr.TraceID,
-		TargetResultID:   tr.TargetResultID,
-		LogID:            tr.LogID,
-		ErrMsg:           conv.UnsafeBytesToString(gptr.Indirect(tr.ErrMsg)),
+		ID:             tr.ID,
+		SpaceID:        tr.SpaceID,
+		ExptID:         tr.ExptID,
+		ExptRunID:      tr.ExptRunID,
+		ItemID:         tr.ItemID,
+		TurnID:         tr.TurnID,
+		Status:         tr.Status,
+		TraceID:        tr.TraceID,
+		TargetResultID: tr.TargetResultID,
+		LogID:          tr.LogID,
+		ErrMsg:         conv.UnsafeBytesToString(gptr.Indirect(tr.ErrMsg)),
+		TurnIdx:        gptr.Indirect(tr.TurnIdx),
+
+		// 运行期补充字段
 		EvaluatorResults: evaluatorResults,
-		TurnIdx:          gptr.Indirect(tr.TurnIdx),
+		WeightedScore:    tr.WeightedScore,
 	}
 }
 
@@ -114,5 +117,7 @@ func (ExptTurnResultConvertor) DO2PO(tr *entity.ExptTurnResult) *model.ExptTurnR
 		LogID:          tr.LogID,
 		ErrMsg:         gptr.Of(conv.UnsafeStringToBytes(tr.ErrMsg)),
 		TurnIdx:        gptr.Of(tr.TurnIdx),
+
+		WeightedScore: tr.WeightedScore,
 	}
 }

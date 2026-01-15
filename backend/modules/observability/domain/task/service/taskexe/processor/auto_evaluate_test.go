@@ -199,6 +199,26 @@ func (f *fakeExperimentClient) CreateExperiment(ctx context.Context, req *expt.C
 	return nil, nil
 }
 
+func (f *fakeExperimentClient) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.CreateExperimentTemplateResponse, error) {
+	return nil, nil
+}
+
+func (f *fakeExperimentClient) UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.UpdateExperimentTemplateResponse, error) {
+	return nil, nil
+}
+
+func (f *fakeExperimentClient) DeleteExperimentTemplate(ctx context.Context, req *expt.DeleteExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.DeleteExperimentTemplateResponse, error) {
+	return nil, nil
+}
+
+func (f *fakeExperimentClient) ListExperimentTemplates(ctx context.Context, req *expt.ListExperimentTemplatesRequest, callOptions ...callopt.Option) (*expt.ListExperimentTemplatesResponse, error) {
+	return nil, nil
+}
+
+func (f *fakeExperimentClient) BatchGetExperimentTemplate(ctx context.Context, req *expt.BatchGetExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.BatchGetExperimentTemplateResponse, error) {
+	return nil, nil
+}
+
 func (f *fakeExperimentClient) SubmitExperiment(ctx context.Context, req *expt.SubmitExperimentRequest, callOptions ...callopt.Option) (*expt.SubmitExperimentResponse, error) {
 	return nil, nil
 }

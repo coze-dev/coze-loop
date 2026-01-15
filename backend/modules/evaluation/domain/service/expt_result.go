@@ -27,6 +27,8 @@ type ExptResultService interface {
 	UpsertExptTurnResultFilter(ctx context.Context, spaceID, exptID int64, itemID []int64) error
 	InsertExptTurnResultFilterKeyMappings(ctx context.Context, mappings []*entity.ExptTurnResultFilterKeyMapping) error
 	CompareExptTurnResultFilters(ctx context.Context, spaceID, exptID int64, itemIDs []int64, retryTimes int32) error
+	// RecalculateWeightedScore 重新计算指定轮次的加权得分并更新到 expt_turn_result
+	RecalculateWeightedScore(ctx context.Context, spaceID, exptID, itemID, turnID int64) error
 }
 
 type ExptAggrResultService interface {

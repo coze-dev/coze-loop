@@ -405,6 +405,172 @@ func (p *ListExperimentStatsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *CreateExperimentTemplateRequest) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.TripleConfig != nil {
+		if err := p.TripleConfig.IsValid(); err != nil {
+			return fmt.Errorf("field TripleConfig not valid, %w", err)
+		}
+	}
+	if p.FieldMappingConfig != nil {
+		if err := p.FieldMappingConfig.IsValid(); err != nil {
+			return fmt.Errorf("field FieldMappingConfig not valid, %w", err)
+		}
+	}
+	if p.CreateEvalTargetParam != nil {
+		if err := p.CreateEvalTargetParam.IsValid(); err != nil {
+			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
+		}
+	}
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateExperimentTemplateResponse) IsValid() error {
+	if p.ExperimentTemplate != nil {
+		if err := p.ExperimentTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field ExperimentTemplate not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetExperimentTemplateRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetExperimentTemplateResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExperimentTemplateMetaRequest) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExperimentTemplateMetaResponse) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExperimentTemplateRequest) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.TripleConfig != nil {
+		if err := p.TripleConfig.IsValid(); err != nil {
+			return fmt.Errorf("field TripleConfig not valid, %w", err)
+		}
+	}
+	if p.FieldMappingConfig != nil {
+		if err := p.FieldMappingConfig.IsValid(); err != nil {
+			return fmt.Errorf("field FieldMappingConfig not valid, %w", err)
+		}
+	}
+	if p.CreateEvalTargetParam != nil {
+		if err := p.CreateEvalTargetParam.IsValid(); err != nil {
+			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExperimentTemplateResponse) IsValid() error {
+	if p.ExperimentTemplate != nil {
+		if err := p.ExperimentTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field ExperimentTemplate not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteExperimentTemplateRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteExperimentTemplateResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExperimentTemplatesRequest) IsValid() error {
+	if p.FilterOption != nil {
+		if err := p.FilterOption.IsValid(); err != nil {
+			return fmt.Errorf("field FilterOption not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExperimentTemplatesResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *UpsertExptTurnResultFilterRequest) IsValid() error {
 	return nil
 }

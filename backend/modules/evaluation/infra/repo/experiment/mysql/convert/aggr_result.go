@@ -15,22 +15,22 @@ import (
 )
 
 const (
-	decimal10_4Min       = -999999.9999
-	decimal10_4Max       = 999999.9999
-	decimal10_4Precision = 4
+	decimal10_2Min       = -999999.99
+	decimal10_2Max       = 999999.99
+	decimal10_2Precision = 2
 )
 
-func clampScoreToDecimal10_4(ctx context.Context, score float64) float64 {
-	multiplier := math.Pow10(decimal10_4Precision)
+func clampScoreToDecimal10_2(ctx context.Context, score float64) float64 {
+	multiplier := math.Pow10(decimal10_2Precision)
 	rounded := math.Round(score*multiplier) / multiplier
 
-	if rounded < decimal10_4Min {
-		logs.CtxWarn(ctx, "Score value %f (rounded from %f) exceeds decimal(10,4) minimum limit for experiment_id: %d, clamping to %f", rounded, score, decimal10_4Min)
-		return decimal10_4Min
+	if rounded < decimal10_2Min {
+		logs.CtxWarn(ctx, "Score value %f (rounded from %f) exceeds decimal(10,2) minimum limit for experiment_id: %d, clamping to %f", rounded, score, decimal10_2Min)
+		return decimal10_2Min
 	}
-	if rounded > decimal10_4Max {
-		logs.CtxWarn(ctx, "Score value %f (rounded from %f) exceeds decimal(10,4) maximum limit for experiment_id: %d, clamping to %f", rounded, score, decimal10_4Max)
-		return decimal10_4Max
+	if rounded > decimal10_2Max {
+		logs.CtxWarn(ctx, "Score value %f (rounded from %f) exceeds decimal(10,2) maximum limit for experiment_id: %d, clamping to %f", rounded, score, decimal10_2Max)
+		return decimal10_2Max
 	}
 
 	return rounded
@@ -43,7 +43,7 @@ func ExptAggrResultDOToPO(ctx context.Context, do *entity.ExptAggrResult) *model
 		ExperimentID: do.ExperimentID,
 		FieldType:    gptr.Of(do.FieldType),
 		FieldKey:     do.FieldKey,
-		Score:        gptr.Of(clampScoreToDecimal10_4(ctx, do.Score)),
+		Score:        gptr.Of(clampScoreToDecimal10_2(ctx, do.Score)),
 		AggrResult:   gptr.Of(do.AggrResult),
 		Version:      do.Version,
 		Status:       do.Status,

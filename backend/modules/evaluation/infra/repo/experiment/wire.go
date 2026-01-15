@@ -24,6 +24,7 @@ var ExperimentRepoSet = wire.NewSet(
 	NewExptAnnotateRepo,
 	NewExptResultExportRecordRepo,
 	NewExptInsightAnalysisRecordRepo,
+	NewExptTemplateRepo,
 	NewQuotaService,
 	NewEvalAsyncRepo,
 	idem.NewIdempotentService,
