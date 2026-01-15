@@ -135,7 +135,7 @@ type Expression struct {
 // offline expression
 type OExpression struct {
 	AggrType   MetricOExpressionType
-	MetricName string // 如果需要需要使用其他指标进行聚合
+	MetricName string // 如果需要需要使用其他指标进行聚合, 使用的时候需要注意一些匹配性
 }
 
 type IMetricDefinition interface {

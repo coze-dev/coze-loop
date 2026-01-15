@@ -41,6 +41,21 @@ func (m *MockIMetricsService) EXPECT() *MockIMetricsServiceMockRecorder {
 	return m.recorder
 }
 
+// GetMetricGroupBy mocks base method.
+func (m *MockIMetricsService) GetMetricGroupBy(metricName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetricGroupBy", metricName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMetricGroupBy indicates an expected call of GetMetricGroupBy.
+func (mr *MockIMetricsServiceMockRecorder) GetMetricGroupBy(metricName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricGroupBy", reflect.TypeOf((*MockIMetricsService)(nil).GetMetricGroupBy), metricName)
+}
+
 // QueryMetrics mocks base method.
 func (m *MockIMetricsService) QueryMetrics(ctx context.Context, req *service.QueryMetricsReq) (*service.QueryMetricsResp, error) {
 	m.ctrl.T.Helper()
