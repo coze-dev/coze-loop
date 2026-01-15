@@ -47,6 +47,7 @@ export default function PromptPlaygroundPage() {
           imageSupported: true,
           intranetUrlValidator: url => url.includes('localhost'),
         }}
+        hideSnippet={true}
       />
       <TraceTab
         displayType="drawer"

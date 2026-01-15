@@ -124,6 +124,7 @@ export default function PromptListPage() {
         onTableRow={(record: Prompt) => ({
           onClick: e => onItemClick(record, e),
         })}
+        hideSnippet={true}
       />
 
       <PromptCreateModal
