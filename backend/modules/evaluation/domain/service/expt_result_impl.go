@@ -560,7 +560,7 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, exp
 		}
 		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
 		// 当 fullTrajectory=true 且 TargetType 支持 trajectory 时，额外返回 trajectory 列
-		if fullTrajectory && expt.TargetType.SupptTrajectory() {
+		if expt.TargetType.SupptTrajectory() {
 			columns = append(columns, columnEvalTargetTrajectory)
 		}
 		columns = append(columns, columnsEvalTargetMtr...)

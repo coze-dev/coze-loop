@@ -145,7 +145,7 @@ func TestSummarizeValue(t *testing.T) {
 		{
 			name:     "long string with quotes",
 			value:    `"abcdef"`,
-			expected: `"..."` ,
+			expected: `"..."`,
 		},
 		{
 			name:     "object value",
@@ -224,4 +224,3 @@ func TestGenerateTextPreview(t *testing.T) {
 		})
 	}
 }
-

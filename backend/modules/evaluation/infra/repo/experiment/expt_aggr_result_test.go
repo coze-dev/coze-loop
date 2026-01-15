@@ -392,4 +392,3 @@ func TestExptAggrResultRepoImpl_UpdateAndGetLatestVersion(t *testing.T) {
 		})
 	}
 }
-
