@@ -7790,7 +7790,7 @@ func (p *BatchGetExperimentResultRequest) FastReadField40(buf []byte) (int, erro
 		offset += l
 		_field = &v
 	}
-	p.WithTrajectory = _field
+	p.FullTrajectory = _field
 	return offset, nil
 }
 
@@ -7920,9 +7920,9 @@ func (p *BatchGetExperimentResultRequest) fastWriteField30(buf []byte, w thrift.
 
 func (p *BatchGetExperimentResultRequest) fastWriteField40(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetWithTrajectory() {
+	if p.IsSetFullTrajectory() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 40)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithTrajectory)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.FullTrajectory)
 	}
 	return offset
 }
@@ -8005,7 +8005,7 @@ func (p *BatchGetExperimentResultRequest) field30Length() int {
 
 func (p *BatchGetExperimentResultRequest) field40Length() int {
 	l := 0
-	if p.IsSetWithTrajectory() {
+	if p.IsSetFullTrajectory() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
 	}
@@ -8076,9 +8076,9 @@ func (p *BatchGetExperimentResultRequest) DeepCopy(s interface{}) error {
 		p.UseAccelerator = &tmp
 	}
 
-	if src.WithTrajectory != nil {
-		tmp := *src.WithTrajectory
-		p.WithTrajectory = &tmp
+	if src.FullTrajectory != nil {
+		tmp := *src.FullTrajectory
+		p.FullTrajectory = &tmp
 	}
 
 	var _base *base.Base

@@ -221,7 +221,7 @@ struct BatchGetExperimentResultRequest {
 
     30: optional bool use_accelerator (api.query="use_accelerator", go.tag='json:"use_accelerator"')
 
-    40: optional bool with_trajectory (api.query="with_trajectory", go.tag='json:"with_trajectory"') // 是否包含轨迹
+    40: optional bool full_trajectory (api.query="full_trajectory", go.tag='json:"full_trajectory"') // 是否包含轨迹
 
     255: optional base.Base Base
 }
