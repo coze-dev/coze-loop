@@ -349,7 +349,7 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 		}
 	})
 
-	t.Run("experiment with eval target and trajectory support", func(t *testing.T) {
+	t.Run("experiment with eval target and trajectory support, withTrajectory=true", func(t *testing.T) {
 		svc := ExptResultServiceImpl{}
 		expts := []*entity.Experiment{
 			{
@@ -363,9 +363,31 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 		assert.NoError(t, err)
 		if assert.Len(t, got, 1) {
 			assert.Equal(t, int64(3), got[0].ExptID)
-			// actual_output + 4 metrics（即使支持 trajectory 也不再返回 trajectory 列）
+			// actual_output + trajectory + 4 metrics
+			assert.Len(t, got[0].Columns, 1+1+len(columnsEvalTargetMtr))
+			assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Columns[0].Name)
+			assert.Equal(t, consts.ReportColumnNameEvalTargetTrajectory, got[0].Columns[1].Name)
+		}
+	})
+
+	t.Run("experiment with eval target and trajectory support, withTrajectory=false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		expts := []*entity.Experiment{
+			{
+				ID:              4,
+				TargetVersionID: 1,                                    // ContainsEvalTarget == true
+				TargetType:      entity.EvalTargetTypeVolcengineAgent, // SupptTrajectory == true
+			},
+		}
+
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts, false)
+		assert.NoError(t, err)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, int64(4), got[0].ExptID)
+			// actual_output + 4 metrics（withTrajectory=false 时不返回 trajectory 列）
 			assert.Len(t, got[0].Columns, 1+len(columnsEvalTargetMtr))
 			assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Columns[0].Name)
+			// should not contain trajectory column
 			for _, c := range got[0].Columns {
 				assert.NotEqual(t, consts.ReportColumnNameEvalTargetTrajectory, c.Name)
 			}
@@ -3886,6 +3908,210 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 				assert.Nil(t, secondItemResult.Ext)
 				// 第二个 ItemResult 的 RunState 应该是 baselineItemResults[1].Status（因为 itemID2ItemRunState 中没有 2）
 				assert.Equal(t, tt.baselineItemResults[1].Status, secondItemResult.SystemInfo.RunState)
+			}
+		})
+	}
+}
+
+func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
+	tests := []struct {
+		name           string
+		exptType       entity.ExptType
+		withTrajectory bool
+		setup          func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService)
+		wantErr        bool
+		checkFunc      func(t *testing.T, builder *ExptResultBuilder)
+	}{
+		{
+			name:           "Online experiment should skip buildTargetOutput",
+			exptType:       entity.ExptType_Online,
+			withTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Online,
+					},
+					SpaceID:          100,
+					turnResultDO:     []*entity.ExptTurnResult{},
+					evalTargetService: mockEvalTargetService,
+					WithTrajectory:    false,
+				}
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.Nil(t, builder.turnResultID2TargetOutput)
+			},
+		},
+		{
+			name:           "WithTrajectory=false should delete trajectory field",
+			exptType:       entity.ExptType_Offline,
+			withTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID:            10,
+							TargetResultID: 1,
+						},
+					},
+					evalTargetService: mockEvalTargetService,
+					WithTrajectory:    false,
+				}
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.EvalTargetRecord{
+						{
+							ID: 1,
+							EvalTargetOutputData: &entity.EvalTargetOutputData{
+								OutputFields: map[string]*entity.Content{
+									"actual_output": {
+										Text: gptr.Of("test output"),
+									},
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of("test trajectory"),
+									},
+								},
+							},
+						},
+					}, nil)
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2TargetOutput)
+				targetOutput, ok := builder.turnResultID2TargetOutput[10]
+				assert.True(t, ok)
+				assert.NotNil(t, targetOutput)
+				assert.NotNil(t, targetOutput.EvalTargetRecord)
+				assert.NotNil(t, targetOutput.EvalTargetRecord.EvalTargetOutputData)
+				// trajectory 字段应该被删除
+				_, hasTrajectory := targetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.False(t, hasTrajectory, "trajectory field should be deleted when WithTrajectory=false")
+				// actual_output 字段应该保留
+				_, hasActualOutput := targetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields["actual_output"]
+				assert.True(t, hasActualOutput, "actual_output field should be preserved")
+			},
+		},
+		{
+			name:           "WithTrajectory=true should preserve trajectory field",
+			exptType:       entity.ExptType_Offline,
+			withTrajectory: true,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID:            10,
+							TargetResultID: 1,
+						},
+					},
+					evalTargetService: mockEvalTargetService,
+					WithTrajectory:    true,
+				}
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.EvalTargetRecord{
+						{
+							ID: 1,
+							EvalTargetOutputData: &entity.EvalTargetOutputData{
+								OutputFields: map[string]*entity.Content{
+									"actual_output": {
+										Text: gptr.Of("test output"),
+									},
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of("test trajectory"),
+									},
+								},
+							},
+						},
+					}, nil)
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2TargetOutput)
+				targetOutput, ok := builder.turnResultID2TargetOutput[10]
+				assert.True(t, ok)
+				assert.NotNil(t, targetOutput)
+				assert.NotNil(t, targetOutput.EvalTargetRecord)
+				assert.NotNil(t, targetOutput.EvalTargetRecord.EvalTargetOutputData)
+				// trajectory 字段应该保留
+				_, hasTrajectory := targetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory, "trajectory field should be preserved when WithTrajectory=true")
+			},
+		},
+		{
+			name:           "WithTrajectory=false, nil OutputFields should not panic",
+			exptType:       entity.ExptType_Offline,
+			withTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID:            10,
+							TargetResultID: 1,
+						},
+					},
+					evalTargetService: mockEvalTargetService,
+					WithTrajectory:    false,
+				}
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.EvalTargetRecord{
+						{
+							ID: 1,
+							EvalTargetOutputData: &entity.EvalTargetOutputData{
+								OutputFields: nil,
+							},
+						},
+					}, nil)
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2TargetOutput)
+				targetOutput, ok := builder.turnResultID2TargetOutput[10]
+				assert.True(t, ok)
+				assert.NotNil(t, targetOutput)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			builder, _ := tt.setup(ctrl)
+			err := builder.buildTargetOutput(context.Background())
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, builder)
+				}
 			}
 		})
 	}
