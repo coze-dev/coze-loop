@@ -169,7 +169,7 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 					// 运行时参数存储在 CustomConf 中，字段名为 runtime_param
 					if fc.FieldName == "runtime_param" {
 						fieldMappingConfig.TargetRuntimeParam = &entity.RuntimeParam{
-							JSONValue: fc.Value,
+							JSONValue: gptr.Of(fc.Value),
 						}
 						break
 					}
