@@ -45,7 +45,7 @@ export function ChartCardBase({
         description={
           type === 'evaluator'
             ? I18n.t('refresh_after_experiment')
-            : I18n.t('refresh_after_all_tag_annotations_completed')
+            : I18n.t('evaluate_complete_label_data_annotation_then_refresh')
         }
       />
     </div>
@@ -148,6 +148,7 @@ const getSpecBar = (categoryMap: Record<string, ChartItemValue>): ISpec => ({
       },
     },
   ],
+
   label: {
     visible: true,
     position: 'top',

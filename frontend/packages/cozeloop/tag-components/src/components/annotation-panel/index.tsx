@@ -101,8 +101,8 @@ export const AnnotationPanel = (props: AnnotationPanelProps) => {
             >
               {editChanged
                 ? saveLoading
-                  ? I18n.t('auto_saving')
-                  : I18n.t('saved_check_feedback')
+                  ? I18n.t('tag_auto_saving')
+                  : I18n.t('tag_saved_please_check_feedback')
                 : null}
             </span>
           </div>

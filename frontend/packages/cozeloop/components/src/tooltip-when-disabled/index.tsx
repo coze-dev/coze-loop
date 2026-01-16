@@ -5,15 +5,21 @@ import { Tooltip } from '@coze-arch/coze-design';
 
 export interface TooltipWhenDisabledProps extends TooltipProps {
   disabled?: boolean;
+  needWrap?: boolean;
 }
 
 export function TooltipWhenDisabled({
   children,
   disabled,
+  needWrap,
   ...rest
 }: TooltipWhenDisabledProps) {
   if (disabled) {
-    return <Tooltip {...rest}>{children}</Tooltip>;
+    return (
+      <Tooltip {...rest}>
+        {needWrap ? <span>{children}</span> : children}
+      </Tooltip>
+    );
   }
   return <>{children}</>;
 }

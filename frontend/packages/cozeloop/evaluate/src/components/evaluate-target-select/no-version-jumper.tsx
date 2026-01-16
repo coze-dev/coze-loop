@@ -17,7 +17,7 @@ const NoVersionJumper = (props: NoVersionJumperProps) => {
         <div className="coz-fg-dim">{I18n.t('draft_version')}</div>
         {isShowTag ? (
           <Tag color="yellow" className="!h-5 !px-2 !py-[2px] rounded-[3px]">
-            {I18n.t('changes_not_submitted')}
+            {I18n.t('unsubmitted_changes')}
           </Tag>
         ) : null}
       </div>

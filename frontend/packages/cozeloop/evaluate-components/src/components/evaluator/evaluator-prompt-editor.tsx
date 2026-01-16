@@ -8,7 +8,7 @@ import {
   type PromptEditorProps,
   getMultimodalVariableText,
 } from '@cozeloop/prompt-components';
-import { IS_DISABLED_MULTI_MODEL_EVAL } from '@cozeloop/biz-hooks-adapter';
+import { IS_DISABLED_MULTI_MODEL_EVAL } from '@cozeloop/biz-config-adapter';
 import {
   ContentType,
   Role,

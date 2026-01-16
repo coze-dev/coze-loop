@@ -191,7 +191,7 @@ export function TreeEditor({
     // 创建新节点数据
     const newNode: NodeData = {
       key: newKey,
-      label: `${I18n.t('cozeloop_open_evaluate_new_node_placeholder1', { placeholder1: Math.floor(Math.random() * 1000) })}`,
+      label: `${I18n.t('new_node')} ${Math.floor(Math.random() * 1000)}`,
       data: {},
       ...defaultNodeData,
     };

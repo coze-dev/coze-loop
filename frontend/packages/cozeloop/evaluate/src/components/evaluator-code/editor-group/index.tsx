@@ -1,7 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// start_aigc
 import React, { useRef, useState, useCallback } from 'react';
 
 import cls from 'classnames';

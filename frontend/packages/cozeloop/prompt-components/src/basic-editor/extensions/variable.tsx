@@ -4,6 +4,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { useEffect, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
   Mention,
   type MentionOpenChangeEvent,
@@ -81,6 +82,7 @@ function Variable({
   return (
     <>
       <Mention
+        search={false}
         trigger={tr => {
           if (tr.docChanged) {
             let context:
@@ -130,7 +132,7 @@ function Variable({
         content={
           <div className="p-1 min-w-[100px] flex flex-col gap-1">
             <Typography.Text type="secondary" strong>
-              插入变量
+              {I18n.t('insert_variable')}
             </Typography.Text>
             <div className="max-h-[200px] overflow-y-auto">
               {variables.map((variable, index) => (
@@ -144,12 +146,12 @@ function Variable({
                 </div>
               ))}
               {/* <div
-                key="new-variable"
-                className={`hover:bg-gray-200 px-2 py-1 rounded ${selectedIndex === variables.length ? 'bg-gray-200' : ''}`}
-                onMouseDown={e => e.preventDefault()}
-                onClick={() => insert('')}
+               key="new-variable"
+               className={`hover:bg-gray-200 px-2 py-1 rounded ${selectedIndex === variables.length ? 'bg-gray-200' : ''}`}
+               onMouseDown={e => e.preventDefault()}
+               onClick={() => insert('')}
               >
-                插入新变量
+               插入新变量
               </div> */}
             </div>
           </div>

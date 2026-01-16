@@ -1,7 +1,5 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// start_aigc
 import { useMemo, useState, useEffect } from 'react';
 
 import { nanoid } from 'nanoid';
@@ -69,11 +67,13 @@ const OpResultItem: React.FC<{
               <IDRender id={result.item_id} useTag={true} enableCopy={false} />
             ) : null}
             {score !== undefined && (
-              <span className="text-sm text-gray-600 w-8">{score} 分</span>
+              <span className="text-sm text-gray-600 w-8">
+                {I18n.t('evaluate_score_points', { score })}
+              </span>
             )}
           </div>
           <div className="text-gray-600 font-normal">
-            {'原因: '}
+            {I18n.t('evaluate_reason_label')}
             {evaluator_result?.reasoning || I18n.t('system_error')}
           </div>
         </div>
@@ -110,7 +110,7 @@ const OpResultItem: React.FC<{
             borderTop: '1px solid var(--coz-stroke-primary)',
           }}
         >
-          暂无运行输出
+          {I18n.t('evaluate_no_run_output')}
         </div>
       )}
     </Collapse.Panel>
@@ -154,8 +154,10 @@ export const OpResultsGroup: React.FC<{ results: EvaluatorOutputData[] }> = ({
   if (results.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500">
-        <p>暂无运行结果</p>
-        <p className="text-sm mt-1">点击试运行按钮开始测试</p>
+        <p>{I18n.t('evaluate_no_run_result')}</p>
+        <p className="text-sm mt-1">
+          {I18n.t('evaluate_click_test_run_to_start')}
+        </p>
       </div>
     );
   }
@@ -164,8 +166,8 @@ export const OpResultsGroup: React.FC<{ results: EvaluatorOutputData[] }> = ({
     <div className={styles.debugResultsGroup}>
       <Collapse
         expandIconPosition="left"
-        expandIcon={<IconCozArrowDown />}
-        collapseIcon={<IconCozArrowRight />}
+        expandIcon={<IconCozArrowRight />}
+        collapseIcon={<IconCozArrowDown />}
         activeKey={activeKeys}
         onChange={keys => {
           if (Array.isArray(keys)) {
@@ -188,7 +190,7 @@ export const OpResultsGroup: React.FC<{ results: EvaluatorOutputData[] }> = ({
 const RunningLoading = () => (
   <div className={styles.runningLoading}>
     <Spin spinning={true} size="small" />
-    <span>试运行中...</span>
+    <span>{I18n.t('evaluate_test_running')}</span>
   </div>
 );
 
@@ -206,7 +208,9 @@ export const TrialOperationResults: React.FC<
     <div className={cls('flex flex-col h-full', className)}>
       {/* Header */}
       <div className="flex items-center border-b border-gray-200 h-[36px]">
-        <h3 className="text-sm font-medium text-gray-900">试运行结果</h3>
+        <h3 className="text-sm font-medium text-gray-900">
+          {I18n.t('evaluate_test_run_result')}
+        </h3>
         <HeaderItemsCount
           totalCount={results.length}
           successCount={successCount}

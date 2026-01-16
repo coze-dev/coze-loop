@@ -24,5 +24,8 @@ export const handleCopy = async (value: string, hideToast?: boolean) => {
   }
 };
 
-export const getBaseUrl = (spaceID?: string) =>
-  `/console/enterprise/personal/space/${spaceID || ''}`;
+export function sleep(timer = 600) {
+  return new Promise<void>(resolve => {
+    setTimeout(() => resolve(), timer);
+  });
+}

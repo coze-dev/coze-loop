@@ -106,7 +106,7 @@ export function PromptDetail(props: {
         className="h-5 flex flex-row items-center cursor-pointer text-sm coz-fg-primary font-semibold"
         onClick={() => setOpen(pre => !pre)}
       >
-        {I18n.t('prompt_details')}
+        {I18n.t('prompt_detail')}
         <IconCozArrowRight
           className={classNames(
             'h-4 w-4 ml-2 coz-fg-plus transition-transform',
@@ -123,9 +123,7 @@ export function PromptDetail(props: {
               icon={<IconCozEmpty className="coz-fg-dim text-32px" />}
               title={I18n.t('no_data')}
               className={emptyStyles['empty-state']}
-              description={I18n.t(
-                'cozeloop_open_evaluate_select_prompt_key_version_before_view',
-              )}
+              description={I18n.t('select_prompt_key_and_version_to_view')}
             />
           </div>
         ) : (

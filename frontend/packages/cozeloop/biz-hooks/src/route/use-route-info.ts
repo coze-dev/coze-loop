@@ -1,6 +1,5 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
 import { useParams } from 'react-router-dom';
 import { useCallback, useMemo } from 'react';
 
@@ -18,8 +17,8 @@ const getBaseURLBase = (params: RouteInfoURLParams) => {
   if (params.enterpriseID) {
     baseURL += `/enterprise/${params.enterpriseID}`;
   }
-  if (params.organizeID) {
-    baseURL += `/organize/${params.organizeID}`;
+  if (params.organizationID) {
+    baseURL += `/organization/${params.organizationID}`;
   }
   if (params.spaceID) {
     baseURL += `/space/${params.spaceID}`;
@@ -29,10 +28,10 @@ const getBaseURLBase = (params: RouteInfoURLParams) => {
 };
 
 export const useRouteInfo: UseRouteInfo = () => {
-  const { enterpriseID, organizeID, spaceID } = useParams<{
+  const { enterpriseID, organizationID, spaceID } = useParams<{
     enterpriseID: string;
     spaceID: string;
-    organizeID: string;
+    organizationID: string;
   }>();
 
   const { pathname } = window.location ?? {};
@@ -40,7 +39,7 @@ export const useRouteInfo: UseRouteInfo = () => {
   const routeInfo = useMemo(() => {
     const baseURL = getBaseURLBase({
       enterpriseID,
-      organizeID,
+      organizationID,
       spaceID,
     });
 
@@ -54,22 +53,22 @@ export const useRouteInfo: UseRouteInfo = () => {
       subModule,
       detail,
     };
-  }, [pathname, enterpriseID, organizeID, spaceID]);
+  }, [pathname, enterpriseID, organizationID, spaceID]);
 
   const getBaseURL: RouteInfo['getBaseURL'] = useCallback(
     params =>
       getBaseURLBase({
         enterpriseID,
-        organizeID,
+        organizationID,
         spaceID,
         ...params,
       }),
-    [enterpriseID, organizeID, spaceID],
+    [enterpriseID, organizationID, spaceID],
   );
 
   return {
     enterpriseID,
-    organizeID,
+    organizationID,
     spaceID,
     getBaseURL,
     ...routeInfo,

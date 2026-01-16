@@ -114,10 +114,11 @@ const ExportTableModal = (props: ExportTableModalProps) => {
         description={
           <div className="flex items-center">
             <IconCozInfoCircleFill className="mr-1.5 text-[#5A4DED]" />
-            <div>{I18n.t('export_files_save_limit_100_days')}</div>
+            <div>{I18n.t('evaluate_export_file_max_100_days')}</div>
           </div>
         }
       />
+
       <div className="mh-[500px]">{table}</div>
     </Modal>
   );

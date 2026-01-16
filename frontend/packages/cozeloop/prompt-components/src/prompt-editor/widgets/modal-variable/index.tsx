@@ -3,7 +3,7 @@
 /* eslint-disable max-params */
 import { useLayoutEffect } from 'react';
 
-import { nanoid } from 'nanoid';
+import { I18n } from '@cozeloop/i18n-adapter';
 import regexpDecorator from '@coze-editor/extension-regexp-decorator';
 import { useEditor, useInjector, useLatest } from '@coze-editor/editor/react';
 import { type EditorAPI } from '@coze-editor/editor/preset-code';
@@ -67,7 +67,6 @@ export default function ModalVariableCompletion({
                 widget: new ModalVariableWidget({
                   dataInfo: {
                     variableKey: matchText,
-                    uuid: nanoid(),
                   },
                   onDelete: () => {
                     editorRef.current?.replaceText({ from, to, text: '' });
@@ -75,7 +74,9 @@ export default function ModalVariableCompletion({
                   readonly: view.state.readOnly,
                   isMultimodal: isMultimodalRef.current,
                   disabled: disabledRef.current || disabledKey,
-                  disabledTip: disabledKey ? '多模态变量名冲突' : undefined,
+                  disabledTip: disabledKey
+                    ? I18n.t('prompt_multi_modal_variable_name_conflict')
+                    : undefined,
                   from,
                   to,
                 }),

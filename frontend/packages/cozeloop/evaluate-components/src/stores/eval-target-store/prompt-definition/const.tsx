@@ -1,6 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { EvalTargetType } from '@cozeloop/api-schema/evaluation';
+import {
+  EvalTargetType,
+  PromptUserQueryFieldKey,
+} from '@cozeloop/api-schema/evaluation';
 
 import {
   type CreateExperimentValues,
@@ -25,6 +28,9 @@ const getEvalTargetValidFields = (values: CreateExperimentValues) => {
     // evalTargetMapping.input
     result.push(`evalTargetMapping.${key}`);
   });
+  // user_query 校验
+  result.push(`evalTargetMapping.${PromptUserQueryFieldKey}`);
+
   return result;
 };
 

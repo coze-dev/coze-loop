@@ -139,9 +139,11 @@ export const TagItem = (props: TagItemProps) => {
       });
       setEditChanged?.(true);
     } else {
-      createManualAnnotation(v).then(annotationId => {
-        onCreateAnnotationSuccess?.(v, annotationId);
-      });
+      createManualAnnotation(v)
+        .then(annotationId => {
+          onCreateAnnotationSuccess?.(v, annotationId);
+        })
+        .catch(err => console.error(err));
       setEditChanged?.(true);
     }
   };
@@ -178,7 +180,7 @@ export const TagItem = (props: TagItemProps) => {
               </Typography.Text>
             ) : (
               <Tooltip
-                content={I18n.t('category_tag_option_disabled_warning')}
+                content={I18n.t('tag_category_tag_disabled_edit_warn')}
                 position="left"
                 theme="dark"
               >
@@ -226,7 +228,7 @@ export const TagItem = (props: TagItemProps) => {
         max={Number.MAX_SAFE_INTEGER}
         formatter={numberInputFormatter}
         className="w-full max-w-full overflow-hidden"
-        placeholder={I18n.t('enter_number')}
+        placeholder={I18n.t('please_enter_a_value')}
         onBlur={debounce(event => {
           handleChange(
             numberInputFormatter(event.target.value),

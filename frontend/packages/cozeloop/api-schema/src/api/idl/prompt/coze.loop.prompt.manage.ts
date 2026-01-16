@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import * as user from './domain/user';
 export { user };
 import * as prompt from './domain/prompt';
@@ -15,7 +17,7 @@ export const CreatePrompt = /*#__PURE__*/createAPI<CreatePromptRequest, CreatePr
   "name": "CreatePrompt",
   "reqType": "CreatePromptRequest",
   "reqMapping": {
-    "body": ["workspace_id", "prompt_name", "prompt_key", "prompt_description", "draft_detail"]
+    "body": ["workspace_id", "prompt_name", "prompt_key", "prompt_description", "prompt_type", "draft_detail"]
   },
   "resType": "CreatePromptResponse",
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
@@ -55,7 +57,7 @@ export const GetPrompt = /*#__PURE__*/createAPI<GetPromptRequest, GetPromptRespo
   "reqType": "GetPromptRequest",
   "reqMapping": {
     "path": ["prompt_id"],
-    "query": ["workspace_id", "with_commit", "commit_version", "with_draft", "with_default_config"]
+    "query": ["workspace_id", "with_commit", "commit_version", "with_draft", "with_default_config", "expand_snippet"]
   },
   "resType": "GetPromptResponse",
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
@@ -67,9 +69,22 @@ export const ListPrompt = /*#__PURE__*/createAPI<ListPromptRequest, ListPromptRe
   "name": "ListPrompt",
   "reqType": "ListPromptRequest",
   "reqMapping": {
-    "body": ["workspace_id", "key_word", "created_bys", "committed_only", "page_num", "page_size", "order_by", "asc"]
+    "body": ["workspace_id", "key_word", "created_bys", "committed_only", "filter_prompt_types", "page_num", "page_size", "order_by", "asc"]
   },
   "resType": "ListPromptResponse",
+  "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
+  "service": "promptManage"
+});
+/** 查询片段的引用记录 */
+export const ListParentPrompt = /*#__PURE__*/createAPI<ListParentPromptRequest, ListParentPromptResponse>({
+  "url": "/api/prompt/v1/prompts/list_parent",
+  "method": "POST",
+  "name": "ListParentPrompt",
+  "reqType": "ListParentPromptRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "prompt_id", "commit_versions"]
+  },
+  "resType": "ListParentPromptResponse",
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
   "service": "promptManage"
 });
@@ -148,6 +163,7 @@ export const ListCommit = /*#__PURE__*/createAPI<ListCommitRequest, ListCommitRe
   "reqType": "ListCommitRequest",
   "reqMapping": {
     "path": ["prompt_id"],
+    "query": ["with_commit_detail"],
     "body": ["page_size", "page_token", "asc"]
   },
   "resType": "ListCommitResponse",
@@ -199,6 +215,7 @@ export interface CreatePromptRequest {
   prompt_name?: string,
   prompt_key?: string,
   prompt_description?: string,
+  prompt_type?: prompt.PromptType,
   draft_detail?: prompt.PromptDetail,
 }
 export interface CreatePromptResponse {
@@ -225,10 +242,14 @@ export interface GetPromptRequest {
   commit_version?: string,
   with_draft?: boolean,
   with_default_config?: boolean,
+  /** 是否展开子片段，true:展开 */
+  expand_snippet?: boolean,
 }
 export interface GetPromptResponse {
   prompt?: prompt.Prompt,
   default_config?: prompt.PromptDetail,
+  /** [片段]被引用的总数 */
+  total_parent_references?: number,
 }
 export interface PromptQuery {
   prompt_id?: string,
@@ -250,6 +271,8 @@ export interface ListPromptRequest {
   key_word?: string,
   created_bys?: string[],
   committed_only?: boolean,
+  /** 向前兼容，如果不传，默认查询normal类型的Prompt */
+  filter_prompt_types?: prompt.PromptType[],
   page_num?: number,
   page_size?: number,
   order_by?: ListPromptOrderBy,
@@ -287,6 +310,8 @@ export interface CommitDraftResponse {}
 /** 搜索Prompt提交版本 */
 export interface ListCommitRequest {
   prompt_id?: string,
+  /** 是否查询详情 */
+  with_commit_detail?: boolean,
   page_size?: number,
   page_token?: string,
   asc?: boolean,
@@ -295,6 +320,14 @@ export interface ListCommitResponse {
   prompt_commit_infos?: prompt.CommitInfo[],
   commit_version_label_mapping?: {
     [key: string | number]: prompt.Label[]
+  },
+  /** key: version, value:被引用数 */
+  parent_references_mapping?: {
+    [key: string | number]: number
+  },
+  /** key:version, value:PromptDetail */
+  prompt_commit_detail_mapping?: {
+    [key: string | number]: prompt.PromptDetail
   },
   users?: user.UserInfoDetail[],
   has_more?: boolean,
@@ -342,3 +375,15 @@ export interface UpdateCommitLabelsRequest {
   label_keys?: string[],
 }
 export interface UpdateCommitLabelsResponse {}
+export interface ListParentPromptRequest {
+  workspace_id?: string,
+  prompt_id?: string,
+  /** 片段版本，不传则表示查询所有版本的引用记录 */
+  commit_versions?: string[],
+}
+export interface ListParentPromptResponse {
+  /** 不同片段版本被引用的父prompt记录 */
+  parent_prompts?: {
+    [key: string | number]: prompt.PromptCommitVersions[]
+  }
+}

@@ -1,8 +1,8 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
 import { useMemo } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { DEFAULT_TEXT_STRING_SCHEMA } from '@cozeloop/evaluate-components';
 import { EvaluatorType } from '@cozeloop/api-schema/evaluation';
 
@@ -10,7 +10,6 @@ import { type EvaluatorPro } from '@/types/experiment/experiment-create';
 import { ReadonlyMappingItem } from '@/components/mapping-item-field/readonly-mapping-item';
 
 import { CodeEvaluatorContent } from './code-evaluator-content';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface EvaluatorContentRendererProps {
   evaluatorPro: EvaluatorPro;

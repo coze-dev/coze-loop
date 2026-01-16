@@ -382,8 +382,8 @@ struct ExptAggregateResult {
 }
 
 struct EvalTargetAggregateResult {
-    1: optional i64 target_id (api.js_conv = 'true')
-    2: optional i64 target_version_id (api.js_conv = 'true')
+    1: optional i64 target_id (api.js_conv = 'true', go.tag = 'json:"target_id"')
+    2: optional i64 target_version_id (api.js_conv = 'true', go.tag = 'json:"target_version_id"')
 
     5: optional list<AggregatorResult> latency
     6: optional list<AggregatorResult> input_tokens

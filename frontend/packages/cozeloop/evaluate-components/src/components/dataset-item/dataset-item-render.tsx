@@ -36,6 +36,7 @@ export const DatasetItem = (props: DatasetItemProps) => {
     isEdit,
     showEmpty,
   } = props;
+  const { containerClassName, ...rest } = props;
 
   const Component =
     ItemContenRenderMap[fieldSchema?.content_type || ContentType.Text] ||
@@ -43,7 +44,13 @@ export const DatasetItem = (props: DatasetItemProps) => {
   const isEmpty =
     fieldContent?.multi_part === undefined && fieldContent?.text === undefined;
   return (
-    <div className={classNames('flex flex-col gap-2', className)}>
+    <div
+      className={classNames(
+        'flex flex-col gap-2',
+        className,
+        containerClassName,
+      )}
+    >
       {showColumnKey ? (
         <div className="flex items-center gap-1">
           <Typography.Text className="text-[14px] !font-medium">
@@ -67,7 +74,7 @@ export const DatasetItem = (props: DatasetItemProps) => {
       {showEmpty && isEmpty && !isEdit ? (
         <EmptyDatasetItem />
       ) : (
-        <Component {...props} />
+        <Component {...rest} />
       )}
     </div>
   );

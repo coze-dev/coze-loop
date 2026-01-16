@@ -1,6 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
+import { I18n } from '@cozeloop/i18n-adapter';
 import { LanguageType } from '@cozeloop/api-schema/evaluation';
 
 /** 前端使用语言类型 */
@@ -34,24 +34,28 @@ export const codeEvaluatorLanguageMapReverse: Record<string, LanguageType> = {
   python: LanguageType.Python,
   // javascript -> JS
   javascript: LanguageType.JS,
+  [LanguageType.Python]: LanguageType.Python,
+  [LanguageType.JS]: LanguageType.JS,
 };
 
-export const defaultJSCode =
-  "function exec_evaluation(turn) {\n  /** 检查turn中某字段是否等于目标值（仅处理Equals规则） */\n  const TARGET_VALUE = \"Text\";\n\n  try {\n    // 直接访问目标字段\n    const current = turn.turn.actual_output.text;\n\n    const isEqual = current === TARGET_VALUE;\n    const score = isEqual ? 1.0 : 0.0;\n    const reason = `字段'turn.actual_output.text'的值为'${current}'，与目标值'${TARGET_VALUE}'${isEqual ? '相等' : '不相等'}`;\n\n    return { score, reason };\n  } catch (e) {\n    if (e instanceof TypeError || e instanceof ReferenceError) {\n      return { score: 0.0, reason: `字段路径不存在：${e.message}` };\n    }\n    return { score: 0.0, reason: `检查出错：${e.message}` };\n  }\n}\n";
+export const defaultJSCode = I18n.t('evaluate_code_evaluator_default_js_code');
 
 export const defaultTestData = [
   {
     evaluate_dataset_fields: {
-      input: { content_type: 'Text', text: '台湾省面积是多少？' },
+      input: {
+        content_type: 'Text',
+        text: I18n.t('evaluate_test_taiwan_area_question'),
+      },
       reference_output: {
         content_type: 'Text',
-        text: '台湾省由中国第一大岛台湾岛与兰屿、绿岛、钓鱼岛等附属岛屿和澎湖列岛等80多个岛屿组成，总面积约3.6万平方千米。其中台湾岛面积约3.58万平方千米。 ',
+        text: I18n.t('evaluate_taiwan_geography_overview'),
       },
     },
     evaluate_target_output_fields: {
       actual_output: {
         content_type: 'Text',
-        text: '台湾省由中国第一大岛台湾岛与兰屿、绿岛、钓鱼岛等附属岛屿和澎湖列岛等80多个岛屿组成，总面积约3.6万平方千米。其中台湾岛面积约3.58万平方千米。 ',
+        text: I18n.t('evaluate_taiwan_geography_overview'),
       },
     },
     ext: {},

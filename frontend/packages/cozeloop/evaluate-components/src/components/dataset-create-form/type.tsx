@@ -30,10 +30,11 @@ export const DEFAULT_COLUMNS = [
     content_type: ContentType.Text,
     type: DataType.String,
     default_display_format: FieldDisplayFormat.PlainText,
-    description: I18n.t('evaluation_set_reference_output_tips'),
+    description: I18n.t('expected_ideal_output'),
     additionalProperties: false,
   },
 ];
+
 export const DEFALUT_COZE_WORKFLOW_COLUMNS = [
   {
     name: 'parameter',
@@ -72,7 +73,7 @@ export const DEFALUT_COZE_WORKFLOW_COLUMNS = [
     content_type: ContentType.Text,
     type: DataType.Object,
     default_display_format: FieldDisplayFormat.JSON,
-    description: I18n.t('evaluation_set_reference_output_tips'),
+    description: I18n.t('expected_ideal_output'),
     additionalProperties: false,
   },
 ];
@@ -113,6 +114,7 @@ export const CREATE_TEMPLATE_LIST = [
         <InfoTooltip content={I18n.t('adjust_the_columns_with_workflow_api')} />
       </div>
     ),
+
     value: CreateTemplate.CozeWorkflow,
     displayText: I18n.t('coze_workflow'),
   },

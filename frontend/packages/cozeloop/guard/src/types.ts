@@ -73,6 +73,7 @@ export enum GuardPoint {
   'eval.experiments.copy' = 'eval.experiments.copy',
   'eval.experiments.delete' = 'eval.experiments.delete',
   'eval.experiments.retry' = 'eval.experiments.retry',
+  'eval.experiments.kill' = 'eval.experiments.kill',
   'eval.experiments.compare' = 'eval.experiments.compare',
   'eval.experiments.batch_delete' = 'eval.experiments.batch_delete',
   'eval.experiment_create.confirm' = 'eval.experiment_create.confirm',
@@ -93,6 +94,9 @@ export enum GuardPoint {
   'eval.experiments.search_by_creator' = 'eval.experiments.search_by_creator',
   'data.label.create' = 'data.label.create',
   'data.label.edit' = 'data.label.edit',
+  'app.register' = 'app.register',
+  'app.delete' = 'app.delete',
+  'app.edit' = 'app.edit',
 }
 
 /**

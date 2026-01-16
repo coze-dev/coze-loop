@@ -80,12 +80,14 @@ export const ImageItemRenderer: React.FC<ImageItemRendererProps> = ({
           visible={visible}
           onVisibleChange={setVisible}
         />
+
         <Image
           src={item?.image?.url}
           className="rounded-[6px]"
           width={80}
           height={80}
         />
+
         {status !== ImageStatus.Loading && (
           <div
             className={`absolute inset-0 flex  items-center rounded-[6px] justify-center bg-[rgba(0,0,0,0.4)] ${isError ? 'visible' : 'invisible'}  group-hover:visible`}

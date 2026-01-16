@@ -70,6 +70,7 @@ export const DatasetAddItemsPanel = ({
               />
             </div>
           ),
+
           onOk: () => {
             onOK();
           },
@@ -77,7 +78,7 @@ export const DatasetAddItemsPanel = ({
         });
       } else {
         Toast.success(
-          `${I18n.t('cozeloop_open_evaluate_successfully_added_data_count', { successCount })}`,
+          `${I18n.t('successfully_added_{successcount}_data', { successCount })}`,
         );
         onOK();
       }
@@ -113,7 +114,7 @@ export const DatasetAddItemsPanel = ({
                 }}
                 disabled={loading}
               >
-                {I18n.t('add')}
+                {I18n.t('space_member_role_type_add_btn')}
               </Button>
             </Guard>
             <Button color="primary" onClick={onCancel}>
@@ -124,9 +125,8 @@ export const DatasetAddItemsPanel = ({
         visible={true}
         title={
           <div className="flex items-center justify-between gap-2">
-            {I18n.t('cozeloop_open_evaluate_add_data_expandnode', {
-              ExpandNode,
-            })}
+            {I18n.t('add_data')}
+            {ExpandNode}
           </div>
         }
       >
@@ -166,7 +166,7 @@ export const DatasetAddItemsPanel = ({
                       <Anchor.Link
                         key={index}
                         href={`#${DATASET_ADD_ITEM_PREFIX}-${index}`}
-                        title={`${I18n.t('cozeloop_open_evaluate_data_item_placeholder1', { placeholder1: index + 1 })}`}
+                        title={`${I18n.t('data_item')} ${index + 1}`}
                       />
                     ))}
                   </LoopAnchor>

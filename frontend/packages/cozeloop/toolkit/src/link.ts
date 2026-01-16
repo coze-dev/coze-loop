@@ -13,7 +13,7 @@ export function openWindow(path: string) {
  * @param path 跳转的pathname，不需要domain
  */
 export function relaunchWindow(path: string) {
-  window.location.href = getFullURL(path);
+  window.open(getFullURL(path), '_self');
 }
 
 export function getFullURL(path: string) {

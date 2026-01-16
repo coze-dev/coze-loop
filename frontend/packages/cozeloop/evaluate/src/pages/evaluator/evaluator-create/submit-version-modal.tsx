@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable complexity */
 import { useEffect, useRef } from 'react';
 
@@ -27,12 +28,14 @@ export function SubmitVersionModal({
   evaluator,
   onCancel,
   onSuccess,
+  onFail,
 }: {
   visible: boolean;
   type: 'create' | 'append';
   evaluator?: Evaluator;
   onCancel: () => void;
   onSuccess?: (evaluatorID?: Int64, newEvaluator?: Evaluator) => void;
+  onFail?: (e: any) => void;
 }) {
   const { spaceID } = useSpace();
   const formRef = useRef<Form>(null);
@@ -44,39 +47,45 @@ export function SubmitVersionModal({
         ?.validate()
         .catch(e => console.warn(e));
       if (values) {
-        if (isAppend) {
-          const { evaluator: newEvaluator } =
-            await StoneEvaluationApi.SubmitEvaluatorVersion({
-              workspace_id: spaceID,
-              evaluator_id: evaluator.evaluator_id || '',
-              version: values.current_version.version,
-              description: values.current_version.description,
+        try {
+          if (isAppend) {
+            const { evaluator: newEvaluator } =
+              await StoneEvaluationApi.SubmitEvaluatorVersion({
+                workspace_id: spaceID,
+                evaluator_id: evaluator.evaluator_id || '',
+                version: values.current_version.version,
+                description: values.current_version.description,
+                cid: nanoid(),
+              });
+            onSuccess?.(newEvaluator?.evaluator_id, newEvaluator);
+          } else {
+            const newEvaluator = merge<Evaluator, Evaluator, Evaluator>(
+              {
+                workspace_id: spaceID,
+              },
+              evaluator,
+              values,
+            );
+            const { evaluator_id } = await StoneEvaluationApi.CreateEvaluator({
+              evaluator: newEvaluator,
               cid: nanoid(),
             });
-          onSuccess?.(newEvaluator?.evaluator_id, newEvaluator);
-        } else {
-          const newEvaluator = merge<Evaluator, Evaluator, Evaluator>(
-            {
-              workspace_id: spaceID,
-            },
-            evaluator,
-            values,
-          );
-          const { evaluator_id } = await StoneEvaluationApi.CreateEvaluator({
-            evaluator: newEvaluator,
-            cid: nanoid(),
-          });
-          if (evaluator_id) {
-            const { prompt_evaluator } =
-              newEvaluator?.current_version?.evaluator_content || {};
-            const { prompt_template_name = '' } = prompt_evaluator || {};
-            // 新建评估器, 是否使用模板, 使用到模板的名称
-            sendEvent(EVENT_NAMES.cozeloop_rule_template, {
-              is_from_template: prompt_template_name ? true : false,
-              template_name: prompt_template_name,
-            });
-            onSuccess?.(evaluator_id);
+            if (evaluator_id) {
+              const { prompt_evaluator } =
+                newEvaluator?.current_version?.evaluator_content || {};
+              const { prompt_template_name = '' } = prompt_evaluator || {};
+              // 新建评估器, 是否使用模板, 使用到模板的名称
+              sendEvent(EVENT_NAMES.cozeloop_rule_template, {
+                is_from_template: prompt_template_name ? true : false,
+                template_name: prompt_template_name,
+              });
+              onSuccess?.(evaluator_id);
+            }
           }
+        } catch (e) {
+          console.warn(e);
+          onFail?.(e);
+          throw e;
         }
       }
     }
@@ -100,9 +109,7 @@ export function SubmitVersionModal({
 
   return (
     <Modal
-      title={
-        isAppend ? I18n.t('submit_new_version') : I18n.t('create_evaluator')
-      }
+      title={isAppend ? I18n.t('submit_new_version') : I18n.t('new_evaluator')}
       visible={visible}
       cancelText={I18n.t('cancel')}
       onCancel={onCancel}

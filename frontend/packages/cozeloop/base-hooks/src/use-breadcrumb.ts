@@ -5,7 +5,9 @@ import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useUIStore, type BreadcrumbItemConfig } from '@cozeloop/stores';
 
-export function useBreadcrumb(config: BreadcrumbItemConfig) {
+export function useBreadcrumb(
+  config: BreadcrumbItemConfig | BreadcrumbItemConfig[],
+) {
   const { pushBreadcrumb, popBreadcrumb } = useUIStore(
     useShallow(store => ({
       pushBreadcrumb: store.pushBreadcrumb,
@@ -14,9 +16,22 @@ export function useBreadcrumb(config: BreadcrumbItemConfig) {
   );
 
   useEffect(() => {
-    pushBreadcrumb(config);
+    if (Array.isArray(config)) {
+      config.forEach(item => {
+        pushBreadcrumb(item);
+      });
+    } else {
+      pushBreadcrumb(config);
+    }
+
     return () => {
-      popBreadcrumb();
+      if (Array.isArray(config)) {
+        config.forEach(() => {
+          popBreadcrumb();
+        });
+      } else {
+        popBreadcrumb();
+      }
     };
   }, [config]);
 }

@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { omit } from 'lodash-es';
-import { type Form } from '@coze-arch/coze-design';
+import { type SentinelFormRef } from '@cozeloop/components';
 
 import type { CreateExperimentValues } from '@/types/experiment/experiment-create';
 
@@ -29,7 +29,7 @@ export const useFormData = ({
     (initialData || {}) as CreateExperimentValues,
   );
 
-  const formRef = useRef<Form<CreateExperimentValues>>(null);
+  const formRef = useRef<SentinelFormRef<CreateExperimentValues>>(null);
 
   const [isDirty, setIsDirty] = useState(false);
 

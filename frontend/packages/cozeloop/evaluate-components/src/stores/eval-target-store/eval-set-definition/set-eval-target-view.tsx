@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { I18n } from '@cozeloop/i18n-adapter';
 import { OpenDetailButton } from '@cozeloop/components';
-import { useBaseURL } from '@cozeloop/biz-hooks-adapter';
+import { useRouteInfo } from '@cozeloop/biz-hooks-adapter';
 import { Tag } from '@coze-arch/coze-design';
 
 import { type CreateExperimentValues } from '../../../types/evaluate-target';
@@ -14,7 +14,7 @@ export const SetEvalTargetView = (props: {
   values: CreateExperimentValues;
 }) => {
   const { values } = props;
-  const { baseURL } = useBaseURL();
+  const { getBaseURL } = useRouteInfo();
 
   const setDetail = values?.evaluationSetDetail;
 
@@ -46,7 +46,7 @@ export const SetEvalTargetView = (props: {
               {versionDetail?.version || '-'}
             </Tag>
             <OpenDetailButton
-              url={`${baseURL}/evaluation/datasets/${setDetail?.id}?version=${versionDetail?.id}`}
+              url={`${getBaseURL()}/evaluation/datasets/${setDetail?.id}?version=${versionDetail?.id}`}
             />
           </div>
         </div>

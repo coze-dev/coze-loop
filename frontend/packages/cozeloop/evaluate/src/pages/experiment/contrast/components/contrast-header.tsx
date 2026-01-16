@@ -1,9 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
-import { TypographyText } from '@cozeloop/evaluate-components';
-import { RouteBackAction } from '@cozeloop/components';
+import { RouteBackAction } from '@cozeloop/base-with-adapter-components';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
 import { IconCozSetting } from '@coze-arch/coze-design/icons';
 import { Select, Toast } from '@coze-arch/coze-design';
@@ -15,18 +15,20 @@ export default function ExperimentContrastHeader({
   experimentCount = 0,
   currentExperiments = [],
   onExperimentIdsChange,
+  defaultModuleRoute = 'evaluation/experiments',
 }: {
   spaceID: string;
   experimentCount: number;
   currentExperiments: Experiment[];
+  defaultModuleRoute?: string;
   onExperimentIdsChange?: (ids: Int64[]) => void;
 }) {
   return (
     <header className="flex items-center h-[56px] px-5 gap-2  text-xs">
-      <RouteBackAction defaultModuleRoute="evaluation/experiments" />
+      <RouteBackAction defaultModuleRoute={defaultModuleRoute} />
       <div className="text-xl font-bold">
-        {I18n.t('compare_x_experiments', {
-          num: currentExperiments?.length,
+        {I18n.t('evaluate_compare_experimentCount_experiments', {
+          experimentCount,
         })}
       </div>
 
@@ -34,7 +36,7 @@ export default function ExperimentContrastHeader({
         <Select
           prefix={I18n.t('benchmark')}
           arrowIcon={<IconCozSetting />}
-          placeholder={I18n.t('please_select', { field: '' })}
+          placeholder={I18n.t('please_select')}
           style={{ minWidth: 170 }}
           value={currentExperiments?.[0]?.id}
           renderSelectedItem={(item: { name?: React.ReactNode }) => (
@@ -48,6 +50,7 @@ export default function ExperimentContrastHeader({
                 {experiment.name}
               </TypographyText>
             ),
+
             name: experiment.name,
             value: experiment.id,
           }))}
@@ -66,6 +69,7 @@ export default function ExperimentContrastHeader({
             Toast.success(I18n.t('benchmark_experiment_switch_success'));
           }}
         />
+
         <AddContrastExperiment
           currentExperiments={currentExperiments}
           onOk={onExperimentIdsChange}

@@ -1,6 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { I18n } from '@cozeloop/i18n-adapter';
+import { type BaseSelectProps } from '@cozeloop/components';
 import {
   type CommonFieldProps,
   type SelectProps,
@@ -12,14 +13,16 @@ import { PromptEvalTargetSelect } from '../../../components/selectors/evaluate-t
 const FormSelectInner = withField(PromptEvalTargetSelect);
 
 const PromptEvalTargetFormSelect: React.FC<
-  SelectProps & CommonFieldProps
+  SelectProps & CommonFieldProps & BaseSelectProps
 > = props => (
   <FormSelectInner
     remote
     onChangeWithObject
     label="Prompt key"
-    rules={[{ required: true, message: I18n.t('please_select_prompt_key') }]}
-    placeholder={I18n.t('please_select_prompt_key')}
+    rules={[
+      { required: true, message: I18n.t('evaluate_please_select_prompt_key') },
+    ]}
+    placeholder={I18n.t('evaluate_please_select_prompt_key')}
     showCreateBtn={true}
     {...props}
   />

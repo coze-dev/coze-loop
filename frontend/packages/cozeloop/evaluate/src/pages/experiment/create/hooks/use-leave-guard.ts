@@ -21,7 +21,7 @@ export const useLeaveGuard = () => {
         content: I18n.t('leave_page_tip'),
         cancelText: I18n.t('cancel'),
         onCancel: blocker.reset,
-        okText: I18n.t('confirm'),
+        okText: I18n.t('global_btn_confirm'),
         onOk: blocker.proceed,
       });
     }

@@ -5,15 +5,21 @@ import { type MouseEvent } from 'react';
 import classNames from 'classnames';
 import { IconCozPencil } from '@coze-arch/coze-design/icons';
 
-interface Props {
+interface Props extends React.HTMLAttributes<SVGElement> {
   className?: string;
   disabled?: boolean;
   onClick?: (e: MouseEvent<SVGElement>) => void;
 }
 
-export function EditIconButton({ disabled, className, onClick }: Props) {
+export function EditIconButton({
+  disabled,
+  className,
+  onClick,
+  ...rest
+}: Props) {
   return (
     <IconCozPencil
+      {...rest}
       fontSize={14}
       className={classNames(
         'text-[var(--coz-fg-dim)]',

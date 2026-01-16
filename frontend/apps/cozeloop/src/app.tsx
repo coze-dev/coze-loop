@@ -3,7 +3,9 @@
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { Suspense } from 'react';
 
-import { PageLoading } from '@cozeloop/components';
+import { sendEvent } from '@cozeloop/tea-adapter';
+import { I18n } from '@cozeloop/i18n-adapter';
+import { CozeLoopProvider, PageLoading } from '@cozeloop/components';
 
 import { routeConfig } from './routes';
 import { useSetupI18n } from './hooks';
@@ -17,10 +19,12 @@ export function App() {
   useSetupI18n();
 
   return (
-    <Suspense fallback={<PageLoading />}>
-      <LocaleProvider>
-        <RouterProvider router={router} />
-      </LocaleProvider>
-    </Suspense>
+    <CozeLoopProvider i18n={I18n} sendEvent={sendEvent}>
+      <Suspense fallback={<PageLoading />}>
+        <LocaleProvider>
+          <RouterProvider router={router} />
+        </LocaleProvider>
+      </Suspense>
+    </CozeLoopProvider>
   );
 }

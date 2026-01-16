@@ -1,20 +1,16 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
-{
-  /* start_aigc */
-}
 import { useEffect, useState } from 'react';
 
+import classNames from 'classnames';
+import { I18n } from '@cozeloop/i18n-adapter';
+import { CodeEditor } from '@cozeloop/components';
 import { type EvaluatorVersion } from '@cozeloop/api-schema/evaluation';
 import { IconCozArrowRight } from '@coze-arch/coze-design/icons';
 import { Loading } from '@coze-arch/coze-design';
 
 import { CodeEvaluatorLanguageFE, codeEvaluatorLanguageMap } from '@/constants';
 import { type BaseFuncExecutorValue } from '@/components/evaluator-code/types';
-import classNames from 'classnames';
-import { CodeEditor } from '@cozeloop/components';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface CodeEvaluatorContentProps {
   versionDetail?: EvaluatorVersion;
@@ -117,7 +113,4 @@ export function CodeEvaluatorContent({
       ) : null}
     </div>
   );
-}
-{
-  /* end_aigc */
 }

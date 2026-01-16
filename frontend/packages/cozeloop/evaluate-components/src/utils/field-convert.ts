@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable complexity */
 import { cloneDeep } from 'lodash-es';
+import { type JSONSchema7 } from 'json-schema';
 import { safeJsonParse } from '@cozeloop/toolkit';
 import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
 
@@ -56,7 +57,7 @@ export const convertSchemaToDataType = (
   const dataType = getDataType(schema);
   if (dataType === DataType.Object || dataType === DataType.ArrayObject) {
     const schemaJSON = safeJsonParse(schema.text_schema);
-    const fieldObj = convertJSONSchemaToFieldObject(schemaJSON);
+    const fieldObj = convertJSONSchemaToFieldObject(schemaJSON as JSONSchema7);
     children = fieldObj?.children || [];
     additionalProperties = fieldObj?.additionalProperties;
   }
@@ -210,7 +211,7 @@ export const validateJsonSchemaV7Strict = (schema, depth = 1) => {
   }
 };
 
-export const resetAdditonalProperty = (fieldSchema: ConvertFieldSchema) => {
+export const resetAdditionalProperty = (fieldSchema: ConvertFieldSchema) => {
   const cloneFieldSchema = cloneDeep(fieldSchema);
   const trans = (schema: ConvertFieldSchema | FieldObjectSchema) => {
     if (!schema) {

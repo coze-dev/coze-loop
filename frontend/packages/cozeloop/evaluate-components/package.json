@@ -15,17 +15,21 @@
   "dependencies": {
     "@coze-arch/bot-md-box-adapter": "workspace:*",
     "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
+    "@cozeloop/adapter-interfaces": "workspace:*",
     "@cozeloop/api-schema": "workspace:*",
-    "@cozeloop/base-hooks": "workspace:*",
+    "@cozeloop/base-with-adapter-components": "workspace:*",
     "@cozeloop/biz-components-adapter": "workspace:*",
+    "@cozeloop/biz-config-adapter": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/components": "workspace:*",
     "@cozeloop/env-adapter": "workspace:*",
     "@cozeloop/evaluate-adapter": "workspace:*",
     "@cozeloop/guard": "workspace:*",
+    "@cozeloop/hooks": "workspace:*",
     "@cozeloop/i18n-adapter": "workspace:*",
-    "@cozeloop/observation-component-adapter": "workspace:*",
+    "@cozeloop/observation-adapter": "workspace:*",
     "@cozeloop/prompt-components": "workspace:*",
+    "@cozeloop/shared-components": "workspace:*",
     "@cozeloop/stores": "workspace:*",
     "@cozeloop/tea-adapter": "workspace:*",
     "@cozeloop/toolkit": "workspace:*",
@@ -34,7 +38,7 @@
     "@dnd-kit/utilities": "^3.2.1",
     "@monaco-editor/react": "^4.5.2",
     "@textea/json-viewer": "^3.0.0",
-    "@visactor/vchart": "1.13.8",
+    "@visactor/vchart": "1.13.11",
     "ahooks": "^3.7.8",
     "ajv": "~8.12.0",
     "classnames": "^2.3.2",
@@ -47,6 +51,7 @@
     "monaco-editor": "^0.45.0",
     "nanoid": "^4.0.2",
     "papaparse": "^5.4.1",
+    "react-resizable-panels": "~2.1.6",
     "sortablejs": "~1.15.2",
     "to-json-schema": "^0.2.5",
     "xlsx": "~0.18.5",
@@ -90,3 +95,4 @@
     "react-router-dom": "^6.22.0"
   }
 }
+

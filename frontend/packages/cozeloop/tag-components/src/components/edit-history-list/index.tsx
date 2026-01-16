@@ -28,7 +28,7 @@ export const EditHistoryList = (props: EditHistoryListProps) => {
     <div className="box-border w-[340px] border-0 border-l border-solid coz-stroke-primary flex flex-col h-full max-h-full min-w-0 overflow-hidden pb-[100px]">
       <div className="h-[48px] px-6 box-border w-full max-w-full min-w-0 flex items-center border-0 border-b border-solid coz-stroke-primary justify-between coz-mg-secondary">
         <div className="text-[14px] font-medium leading-[22px] coz-fg-primary">
-          {I18n.t('change_log')}
+          {I18n.t('tag_change_log')}
         </div>
         <Button
           icon={<IconCozCross />}

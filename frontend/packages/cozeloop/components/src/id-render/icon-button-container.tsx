@@ -4,7 +4,7 @@ import { type DOMAttributes } from 'react';
 
 import cls from 'classnames';
 
-export default function IconButtonContainer({
+export function IconButtonContainer({
   icon,
   className,
   style,

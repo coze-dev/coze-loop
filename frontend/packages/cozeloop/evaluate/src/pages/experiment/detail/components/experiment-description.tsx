@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 
 import classNames from 'classnames';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
   EvaluatorPreview,
   formateTime,
   AutoOverflowList,
-  TypographyText,
   EvaluationSetPreview,
   EvalTargetPreview,
   CozeUser,
@@ -91,12 +91,14 @@ const ExperimentDescription = ({
             <EvaluationSetPreview evalSet={eval_set} enableLinkJump={true} />
           }
         />
+
         <DescriptionItem
-          label={I18n.t('evaluation_object_type')}
+          label={I18n.t('evaluate_target_type')}
           content={
             <EvaluateTargetTypePreview type={eval_target?.eval_target_type} />
           }
         />
+
         <DescriptionItem
           label={I18n.t('evaluation_object')}
           content={
@@ -132,10 +134,12 @@ const ExperimentDescription = ({
             )
           }
         />
+
         <DescriptionItem
           label={I18n.t('creator')}
           content={<CozeUser user={base_info?.created_by} size="small" />}
         />
+
         <DescriptionItem
           label={I18n.t('create_time')}
           content={formateTime(start_time) || '-'}
@@ -146,10 +150,12 @@ const ExperimentDescription = ({
           label={I18n.t('end_time')}
           content={formateTime(end_time) || '-'}
         />
+
         <DescriptionItem
           label={I18n.t('description')}
           content={<TypographyText>{desc || '-'}</TypographyText>}
         />
+
         {target_runtime_param?.json_value &&
         target_runtime_param.json_value !== '{}' ? (
           <DescriptionItem

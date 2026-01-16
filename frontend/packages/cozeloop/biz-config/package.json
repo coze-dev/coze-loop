@@ -10,6 +10,9 @@
     "test": "NODE_OPTIONS='--max_old_space_size=2048' NODE_ENV=test vitest --run --passWithNoTests",
     "test:cov": "npm run test -- --coverage"
   },
+  "dependencies": {
+    "@cozeloop/i18n-adapter": "workspace:*"
+  },
   "devDependencies": {
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",

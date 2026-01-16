@@ -10,7 +10,9 @@ import {
 import { useSize } from 'ahooks';
 import { CozPagination, type TableProps } from '@coze-arch/coze-design';
 
-import LoopTableSortIcon from './sort-icon';
+import { useI18n } from '@/provider';
+
+import { createLoopTableSortIcon } from './sort-icon';
 import { LoopTable } from './index';
 
 /** 获取本地存储的表格分页数量 */
@@ -28,22 +30,23 @@ export function getStoragePageSize(pageSizeStorageKey: string | undefined) {
 export const PAGE_SIZE_OPTIONS = [10, 20, 50];
 export const DEFAULT_PAGE_SIZE = 20;
 
+export type TableWithPaginationProps<RecordItem> = TableProps & {
+  heightFull?: boolean;
+  service: Pick<
+    PaginationResult<{ total: number; list: RecordItem[] }, Params>,
+    'data' | 'pagination' | 'loading'
+  >;
+  pageSizeOpts?: number[];
+  header?: React.ReactNode;
+  /** 该参数将插入到分页器左侧，共同作为 footer 的一部分 */
+  footerWithPagination?: React.ReactNode;
+  pageSizeStorageKey?: string;
+  showSizeChanger?: boolean;
+  footerClassName?: string;
+};
 // eslint-disable-next-line complexity
 export function TableWithPagination<RecordItem>(
-  props: TableProps & {
-    heightFull?: boolean;
-    service: Pick<
-      PaginationResult<{ total: number; list: RecordItem[] }, Params>,
-      'data' | 'pagination' | 'loading'
-    >;
-    pageSizeOpts?: number[];
-    header?: React.ReactNode;
-    /** 该参数将插入到分页器左侧，共同作为 footer 的一部分 */
-    footerWithPagination?: React.ReactNode;
-    pageSizeStorageKey?: string;
-    showSizeChanger?: boolean;
-    footerClassName?: string;
-  },
+  props: TableWithPaginationProps<RecordItem>,
 ) {
   const {
     pageSizeOpts,
@@ -54,10 +57,13 @@ export function TableWithPagination<RecordItem>(
     pageSizeStorageKey,
     showSizeChanger = true,
     footerClassName,
+    className,
   } = props;
   const { columns } = props.tableProps ?? {};
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const size = useSize(tableContainerRef.current);
+  const I18n = useI18n();
+
   const tableHeaderSize = useSize(
     tableContainerRef.current?.querySelector('.semi-table-header'),
   );
@@ -92,7 +98,9 @@ export function TableWithPagination<RecordItem>(
 
   return (
     <div
-      className={`${heightFull ? 'h-full flex overflow-hidden' : ''} flex flex-col gap-3`}
+      className={cls('flex flex-col gap-3 w-full', className, {
+        'h-full flex overflow-hidden': heightFull,
+      })}
     >
       {header ? header : null}
       <div
@@ -120,7 +128,7 @@ export function TableWithPagination<RecordItem>(
               ?.map(column => ({
                 ...column,
                 ...(column.sorter && !column.sortIcon
-                  ? { sortIcon: LoopTableSortIcon }
+                  ? { sortIcon: createLoopTableSortIcon(I18n) }
                   : {}),
               })),
             dataSource: service?.data?.list ?? [],

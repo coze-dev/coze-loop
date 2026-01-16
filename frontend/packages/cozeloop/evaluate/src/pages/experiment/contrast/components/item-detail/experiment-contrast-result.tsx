@@ -81,7 +81,6 @@ export default function ExperimentContrastResult({
             return (
               <div key={item.columnInfo.key} className="max-w-[100%]">
                 <EvaluatorNameScore
-                  key={item.columnInfo.key}
                   evaluator={item.columnInfo.data as ColumnEvaluator}
                   evaluatorResult={evaluatorResult}
                   experiment={experiment}
@@ -100,7 +99,6 @@ export default function ExperimentContrastResult({
           } else if (item.type === 'annotation') {
             return (
               <AnnotationNameScore
-                key={item.columnInfo.key}
                 annotation={item.columnInfo.data as ColumnAnnotation}
                 annotationResult={item.data as AnnotateRecord}
                 enablePopover={true}
@@ -115,6 +113,7 @@ export default function ExperimentContrastResult({
         latencyHidden={true}
         tokenHidden={true}
       />
+
       <Divider />
       <div className="flex items-center justify-between">
         <div className="flex gap-1 items-center">
@@ -144,6 +143,7 @@ export default function ExperimentContrastResult({
           displayFormat={true}
           className="!max-h-[none]"
         />
+
         {targetTraceID ? (
           <div className="flex ml-auto" onClick={e => e.stopPropagation()}>
             <TraceTrigger
