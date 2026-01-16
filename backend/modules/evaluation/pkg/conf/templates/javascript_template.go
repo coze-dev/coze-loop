@@ -44,7 +44,6 @@ function main() {
         result = main();
     } catch (error) {
         console.error(error.constructor.name + ": " + error.message);
-        process.exit(1);
     }
     
     // 输出最终结果

@@ -7596,6 +7596,20 @@ func (p *BatchGetExperimentResultRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 40:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField40(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -7766,6 +7780,20 @@ func (p *BatchGetExperimentResultRequest) FastReadField30(buf []byte) (int, erro
 	return offset, nil
 }
 
+func (p *BatchGetExperimentResultRequest) FastReadField40(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.FullTrajectory = _field
+	return offset, nil
+}
+
 func (p *BatchGetExperimentResultRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -7790,6 +7818,7 @@ func (p *BatchGetExperimentResultRequest) FastWriteNocopy(buf []byte, w thrift.N
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField30(buf[offset:], w)
+		offset += p.fastWriteField40(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -7808,6 +7837,7 @@ func (p *BatchGetExperimentResultRequest) BLength() int {
 		l += p.field20Length()
 		l += p.field21Length()
 		l += p.field30Length()
+		l += p.field40Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -7888,6 +7918,15 @@ func (p *BatchGetExperimentResultRequest) fastWriteField30(buf []byte, w thrift.
 	return offset
 }
 
+func (p *BatchGetExperimentResultRequest) fastWriteField40(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFullTrajectory() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 40)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.FullTrajectory)
+	}
+	return offset
+}
+
 func (p *BatchGetExperimentResultRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
@@ -7964,6 +8003,15 @@ func (p *BatchGetExperimentResultRequest) field30Length() int {
 	return l
 }
 
+func (p *BatchGetExperimentResultRequest) field40Length() int {
+	l := 0
+	if p.IsSetFullTrajectory() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *BatchGetExperimentResultRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -8026,6 +8074,11 @@ func (p *BatchGetExperimentResultRequest) DeepCopy(s interface{}) error {
 	if src.UseAccelerator != nil {
 		tmp := *src.UseAccelerator
 		p.UseAccelerator = &tmp
+	}
+
+	if src.FullTrajectory != nil {
+		tmp := *src.FullTrajectory
+		p.FullTrajectory = &tmp
 	}
 
 	var _base *base.Base
