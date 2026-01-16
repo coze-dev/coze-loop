@@ -326,7 +326,7 @@ func (e *ExptSubmitExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 	return nil
 }
 
-func (e *ExptSubmitExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+func (e *ExptSubmitExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent) error {
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
@@ -517,7 +517,7 @@ func (e *ExptFailRetryExec) ScheduleStart(ctx context.Context, event *entity.Exp
 	return nil
 }
 
-func (e *ExptFailRetryExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+func (e *ExptFailRetryExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent) error {
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
@@ -586,7 +586,6 @@ func (e *ExptAppendExec) ScanEvalItems(ctx context.Context, event *entity.ExptSc
 
 func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
 	if toSubmit == 0 && incomplete == 0 && expt.Status == entity.ExptStatus_Draining {
-		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 		if err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt); err != nil {
 			logs.CtxError(ctx, "[ExptEval] expt daemon end failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
 		}
@@ -642,7 +641,7 @@ func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 	return nil
 }
 
-func (e *ExptAppendExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+func (e *ExptAppendExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent) error {
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	event.CreatedAt = time.Now().Unix()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))

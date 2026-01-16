@@ -85,17 +85,17 @@ func (mr *MockExptSchedulerModeMockRecorder) Mode() *gomock.Call {
 }
 
 // NextTick mocks base method.
-func (m *MockExptSchedulerMode) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+func (m *MockExptSchedulerMode) NextTick(ctx context.Context, event *entity.ExptScheduleEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NextTick", ctx, event, nextTick)
+	ret := m.ctrl.Call(m, "NextTick", ctx, event)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // NextTick indicates an expected call of NextTick.
-func (mr *MockExptSchedulerModeMockRecorder) NextTick(ctx, event, nextTick any) *gomock.Call {
+func (mr *MockExptSchedulerModeMockRecorder) NextTick(ctx, event any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextTick", reflect.TypeOf((*MockExptSchedulerMode)(nil).NextTick), ctx, event, nextTick)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextTick", reflect.TypeOf((*MockExptSchedulerMode)(nil).NextTick), ctx, event)
 }
 
 // PublishResult mocks base method.

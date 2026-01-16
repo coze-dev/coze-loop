@@ -237,13 +237,11 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	err = mode.ExptStart(ctx, event, exptDetail)
-	if err != nil {
+	if err := mode.ExptStart(ctx, event, exptDetail); err != nil {
 		return err
 	}
 
-	err = mode.ScheduleStart(ctx, event, exptDetail)
-	if err != nil {
+	if err := mode.ScheduleStart(ctx, event, exptDetail); err != nil {
 		return err
 	}
 
@@ -258,12 +256,25 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	}
 
 	complete = append(complete, zombies...)
-	if err = e.recordEvalItemRunLogs(ctx, event, complete, mode); err != nil {
+	if err := e.recordEvalItemRunLogs(ctx, event, complete, mode); err != nil {
 		return err
 	}
 
-	err = mode.ScheduleEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete))
-	if err != nil {
+	if err := e.handleToSubmits(ctx, event, toSubmit); err != nil {
+		return err
+	}
+
+	tick := func() error {
+		time.Sleep(time.Second * 3)
+		logs.CtxInfo(ctx, "[ExptEval] expt daemon with next tick, event: %v", json.Jsonify(event))
+		return mode.NextTick(ctx, event)
+	}
+
+	if len(zombies) > 0 {
+		return tick()
+	}
+
+	if err := mode.ScheduleEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete)); err != nil {
 		return err
 	}
 
@@ -272,18 +283,12 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
-	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
-		return err
+	if nextTick {
+		return tick()
 	}
 
-	if !nextTick {
-		return nil
-	}
-
-	logs.CtxInfo(ctx, "[ExptEval] expt daemon with next tick, expt_id: %v, event: %v", event.ExptID, event)
-
-	time.Sleep(time.Second * 3)
-	return mode.NextTick(ctx, event, nextTick)
+	logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+	return nil
 }
 
 func (e *ExptSchedulerImpl) recordEvalItemRunLogs(ctx context.Context, event *entity.ExptScheduleEvent, completeItems []*entity.ExptEvalItem, mode entity.ExptSchedulerMode) error {
