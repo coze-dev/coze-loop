@@ -4,8 +4,8 @@
 package dataset
 
 import (
+	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/data/domain/dataset/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/data/pkg/errno"
@@ -36,6 +36,13 @@ func MultiModalSpecDO2DTO(sp *entity.MultiModalSpec) *dataset.MultiModalSpec {
 		MaxFileCount:     gptr.Of(sp.MaxFileCount),
 		MaxFileSize:      gptr.Of(sp.MaxFileSize),
 		SupportedFormats: sp.SupportedFormats,
+		MaxPartCount:     gptr.Of(int32(sp.MaxPartCount)),
+		SupportedFormatsByType: gmap.Map(sp.SupportedFormatsByType, func(k entity.ContentType, v []string) (dataset.ContentType, []string) {
+			return ContentTypeDO2DTO(k), v
+		}),
+		MaxFileSizeByType: gmap.Map(sp.MaxFileSizeByType, func(k entity.ContentType, v int64) (dataset.ContentType, int64) {
+			return ContentTypeDO2DTO(k), v
+		}),
 	}
 }
 
@@ -182,6 +189,13 @@ func MultiModalSpecDTO2DO(s *dataset.MultiModalSpec) *entity.MultiModalSpec {
 		MaxFileCount:     s.GetMaxFileCount(),
 		MaxFileSize:      s.GetMaxFileSize(),
 		SupportedFormats: s.GetSupportedFormats(),
+		MaxPartCount:     int64(s.GetMaxPartCount()),
+		SupportedFormatsByType: gmap.Map(s.GetSupportedFormatsByType(), func(k dataset.ContentType, v []string) (entity.ContentType, []string) {
+			return ContentTypeDTO2DO(k), v
+		}),
+		MaxFileSizeByType: gmap.Map(s.GetMaxFileSizeByType(), func(k dataset.ContentType, v int64) (entity.ContentType, int64) {
+			return ContentTypeDTO2DO(k), v
+		}),
 	}
 }
 

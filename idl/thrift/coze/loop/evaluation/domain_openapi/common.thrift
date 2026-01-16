@@ -5,6 +5,7 @@ typedef string ContentType(ts.enum="true")
 const ContentType ContentType_Text = "text"
 const ContentType ContentType_Image = "image" 
 const ContentType ContentType_Audio = "audio"
+const ContentType ContentType_Video = "video"
 const ContentType ContentType_MultiPart = "multi_part"
 
 // 内容结构
@@ -12,7 +13,8 @@ struct Content {
     1: optional ContentType content_type
     2: optional string text
     3: optional Image image
-
+    4: optional Video video
+    5: optional Audio audio
     10: optional list<Content> multi_part
 
     // 超大文本相关字段
@@ -32,10 +34,20 @@ struct Image {
     3: optional string thumb_url
 }
 
-// 音频结构  
+// 视频结构
+struct Video {
+    1: optional string name
+    2: optional string url
+    3: optional string uri
+    4: optional string thumb_url
+}
+
+// 音频结构
 struct Audio {
     1: optional string format
     2: optional string url
+    3: optional string name
+    4: optional string uri
 }
 
 // 用户信息
