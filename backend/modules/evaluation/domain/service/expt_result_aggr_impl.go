@@ -563,6 +563,30 @@ func (e *ExptAggrResultServiceImpl) CreateAnnotationAggrResult(ctx context.Conte
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid field type"))
 	}
 
+	// 检查 ExptAggrResult 记录是否已存在，如果存在则走 Update 逻辑
+	exptAggrRes, err := e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_Annotation), param.FieldKey)
+	if err == nil && exptAggrRes != nil {
+		// 记录已存在，转换为 UpdateExptAggrResultParam 并调用 UpdateAnnotationAggrResult
+		logs.CtxInfo(ctx, "create annotation aggr result already exists, updating, experiment_id: %d, field_type: %s, field_key: %s", param.ExperimentID, param.FieldType, param.FieldKey)
+		updateParam := &entity.UpdateExptAggrResultParam{
+			SpaceID:      param.SpaceID,
+			ExperimentID: param.ExperimentID,
+			FieldType:    param.FieldType,
+			FieldKey:     param.FieldKey,
+		}
+		return e.UpdateAnnotationAggrResult(ctx, updateParam)
+	}
+
+	// 如果错误不是 ResourceNotFound，则返回错误
+	statusErr, ok := errorx.FromStatusError(err)
+	if ok && statusErr.Code() == errno.ResourceNotFoundCode {
+		// 记录不存在，继续原有的 create 逻辑
+		logs.CtxInfo(ctx, "create annotation aggr result doesn't exist, experiment_id: %d, field_type: %s, field_key: %s", param.ExperimentID, param.FieldType, param.FieldKey)
+	} else {
+		// 其他错误，直接返回
+		return err
+	}
+
 	tagKeyID, err := strconv.ParseInt(param.FieldKey, 10, 64)
 	if err != nil {
 		return err

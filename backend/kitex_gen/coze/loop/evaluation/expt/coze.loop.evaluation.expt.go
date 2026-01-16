@@ -10234,7 +10234,9 @@ type BatchGetExperimentResultRequest struct {
 	PageNumber     *int32                           `thrift:"page_number,20,optional" frugal:"20,optional,i32" json:"page_number" query:"page_number" `
 	PageSize       *int32                           `thrift:"page_size,21,optional" frugal:"21,optional,i32" json:"page_size" query:"page_size" `
 	UseAccelerator *bool                            `thrift:"use_accelerator,30,optional" frugal:"30,optional,bool" json:"use_accelerator" query:"use_accelerator" `
-	Base           *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 是否包含轨迹
+	FullTrajectory *bool      `thrift:"full_trajectory,40,optional" frugal:"40,optional,bool" json:"full_trajectory" query:"full_trajectory" `
+	Base           *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchGetExperimentResultRequest() *BatchGetExperimentResultRequest {
@@ -10318,6 +10320,18 @@ func (p *BatchGetExperimentResultRequest) GetUseAccelerator() (v bool) {
 	return *p.UseAccelerator
 }
 
+var BatchGetExperimentResultRequest_FullTrajectory_DEFAULT bool
+
+func (p *BatchGetExperimentResultRequest) GetFullTrajectory() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFullTrajectory() {
+		return BatchGetExperimentResultRequest_FullTrajectory_DEFAULT
+	}
+	return *p.FullTrajectory
+}
+
 var BatchGetExperimentResultRequest_Base_DEFAULT *base.Base
 
 func (p *BatchGetExperimentResultRequest) GetBase() (v *base.Base) {
@@ -10350,6 +10364,9 @@ func (p *BatchGetExperimentResultRequest) SetPageSize(val *int32) {
 func (p *BatchGetExperimentResultRequest) SetUseAccelerator(val *bool) {
 	p.UseAccelerator = val
 }
+func (p *BatchGetExperimentResultRequest) SetFullTrajectory(val *bool) {
+	p.FullTrajectory = val
+}
 func (p *BatchGetExperimentResultRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -10362,6 +10379,7 @@ var fieldIDToName_BatchGetExperimentResultRequest = map[int16]string{
 	20:  "page_number",
 	21:  "page_size",
 	30:  "use_accelerator",
+	40:  "full_trajectory",
 	255: "Base",
 }
 
@@ -10383,6 +10401,10 @@ func (p *BatchGetExperimentResultRequest) IsSetPageSize() bool {
 
 func (p *BatchGetExperimentResultRequest) IsSetUseAccelerator() bool {
 	return p.UseAccelerator != nil
+}
+
+func (p *BatchGetExperimentResultRequest) IsSetFullTrajectory() bool {
+	return p.FullTrajectory != nil
 }
 
 func (p *BatchGetExperimentResultRequest) IsSetBase() bool {
@@ -10462,6 +10484,14 @@ func (p *BatchGetExperimentResultRequest) Read(iprot thrift.TProtocol) (err erro
 		case 30:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField30(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 40:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField40(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10622,6 +10652,17 @@ func (p *BatchGetExperimentResultRequest) ReadField30(iprot thrift.TProtocol) er
 	p.UseAccelerator = _field
 	return nil
 }
+func (p *BatchGetExperimentResultRequest) ReadField40(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FullTrajectory = _field
+	return nil
+}
 func (p *BatchGetExperimentResultRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -10663,6 +10704,10 @@ func (p *BatchGetExperimentResultRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField30(oprot); err != nil {
 			fieldId = 30
+			goto WriteFieldError
+		}
+		if err = p.writeField40(oprot); err != nil {
+			fieldId = 40
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -10828,6 +10873,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
+func (p *BatchGetExperimentResultRequest) writeField40(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFullTrajectory() {
+		if err = oprot.WriteFieldBegin("full_trajectory", thrift.BOOL, 40); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.FullTrajectory); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
+}
 func (p *BatchGetExperimentResultRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -10880,6 +10943,9 @@ func (p *BatchGetExperimentResultRequest) DeepEqual(ano *BatchGetExperimentResul
 		return false
 	}
 	if !p.Field30DeepEqual(ano.UseAccelerator) {
+		return false
+	}
+	if !p.Field40DeepEqual(ano.FullTrajectory) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -10965,6 +11031,18 @@ func (p *BatchGetExperimentResultRequest) Field30DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.UseAccelerator != *src {
+		return false
+	}
+	return true
+}
+func (p *BatchGetExperimentResultRequest) Field40DeepEqual(src *bool) bool {
+
+	if p.FullTrajectory == src {
+		return true
+	} else if p.FullTrajectory == nil || src == nil {
+		return false
+	}
+	if *p.FullTrajectory != *src {
 		return false
 	}
 	return true

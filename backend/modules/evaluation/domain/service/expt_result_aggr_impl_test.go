@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"testing"
@@ -619,6 +620,11 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 				FieldKey:     "1",
 			},
 			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				// 先检查是否已有聚合结果，返回 ResourceNotFound 走创建逻辑
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
 				mockExptAnnotateRepo.EXPECT().
 					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
 					Return([]*entity.ExptTurnAnnotateRecordRef{{AnnotateRecordID: 1}}, nil)
@@ -649,6 +655,10 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 				FieldKey:     "1",
 			},
 			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
 				mockExptAnnotateRepo.EXPECT().
 					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
 					Return([]*entity.ExptTurnAnnotateRecordRef{{AnnotateRecordID: 1}}, nil)
@@ -676,6 +686,10 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 				FieldKey:     "1",
 			},
 			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
 				mockExptAnnotateRepo.EXPECT().
 					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
 					Return([]*entity.ExptTurnAnnotateRecordRef{{AnnotateRecordID: 1}}, nil)
@@ -722,10 +736,89 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 				FieldKey:     "1",
 			},
 			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
 				mockExptAnnotateRepo.EXPECT().
 					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
 					Return([]*entity.ExptTurnAnnotateRecordRef{}, nil)
 				mockMetric.EXPECT().EmitCalculateExptAggrResult(int64(100), int64(entity.CreateAnnotationFields), false, gomock.Any()).Return()
+			},
+			wantErr: false,
+		},
+		{
+			name: "GetExptAggrResult returns non-ResourceNotFound error",
+			param: &entity.CreateSpecificFieldAggrResultParam{
+				SpaceID:      100,
+				ExperimentID: 1,
+				FieldType:    entity.FieldType_Annotation,
+				FieldKey:     "1",
+			},
+			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errors.New("repo error"))
+				mockMetric.EXPECT().EmitCalculateExptAggrResult(int64(100), int64(entity.CreateAnnotationFields), true, gomock.Any()).Return()
+			},
+			wantErr: true,
+			checkFunc: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "repo error")
+			},
+		},
+		{
+			name: "CreateAnnotationAggrResult when record already exists should call UpdateAnnotationAggrResult",
+			param: &entity.CreateSpecificFieldAggrResultParam{
+				SpaceID:      100,
+				ExperimentID: 1,
+				FieldType:    entity.FieldType_Annotation,
+				FieldKey:     "1",
+			},
+			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				// Mock GetExptAggrResult to return existing record
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(&entity.ExptAggrResult{
+						ExperimentID: 1,
+						FieldType:    int32(entity.FieldType_Annotation),
+						FieldKey:     "1",
+					}, nil)
+
+				// Mock UpdateAnnotationAggrResult calls
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(&entity.ExptAggrResult{}, nil)
+
+				mockExptAggrResultRepo.EXPECT().
+					UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(int64(1), nil)
+
+				mockExptAnnotateRepo.EXPECT().
+					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
+					Return([]*entity.ExptTurnAnnotateRecordRef{{AnnotateRecordID: 1}}, nil)
+
+				mockExptAnnotateRepo.EXPECT().
+					GetAnnotateRecordsByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.AnnotateRecord{{
+						AnnotateData: &entity.AnnotateData{
+							TagContentType: entity.TagContentTypeContinuousNumber,
+							Score:          gptr.Of(0.8),
+						},
+					}}, nil)
+
+				mockExptAggrResultRepo.EXPECT().
+					UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
+					Return(nil)
+
+				// CreateAnnotationAggrResult 本身的埋点（CreateAnnotationFields）
+				mockMetric.EXPECT().
+					EmitCalculateExptAggrResult(int64(100), int64(entity.CreateAnnotationFields), false, gomock.Any()).
+					Return()
+				// UpdateAnnotationAggrResult 的埋点（UpdateSpecificField）
+				mockMetric.EXPECT().
+					EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
+					Return()
 			},
 			wantErr: false,
 		},
@@ -739,11 +832,13 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 			mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 			mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
 			mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 
 			svc := &ExptAggrResultServiceImpl{
 				exptAnnotateRepo:   mockExptAnnotateRepo,
 				exptAggrResultRepo: mockExptAggrResultRepo,
 				metric:             mockMetric,
+				experimentRepo:     mockExperimentRepo,
 			}
 
 			tt.setup(mockExptAnnotateRepo, mockExptAggrResultRepo, mockMetric)
