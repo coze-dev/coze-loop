@@ -162,17 +162,19 @@ export function PromptList({
                   >
                     {I18n.t('prompt_blank_prompt')}
                   </Menu.Item>
-                  <Tooltip
-                    content={I18n.t('prompt_prompt_snippet_nesting_support')}
-                    position="left"
-                  >
-                    <Menu.Item
-                      itemKey={I18n.t('prompt_prompt_snippet')}
-                      onClick={onCreateSegmentClick}
+                  {onCreateSegmentClick ? (
+                    <Tooltip
+                      content={I18n.t('prompt_prompt_snippet_nesting_support')}
+                      position="left"
                     >
-                      {I18n.t('prompt_prompt_snippet')}
-                    </Menu.Item>
-                  </Tooltip>
+                      <Menu.Item
+                        itemKey={I18n.t('prompt_prompt_snippet')}
+                        onClick={onCreateSegmentClick}
+                      >
+                        {I18n.t('prompt_prompt_snippet')}
+                      </Menu.Item>
+                    </Tooltip>
+                  ) : null}
                 </Menu.SubMenu>
               }
             >

@@ -117,10 +117,6 @@ export default function PromptListPage() {
           />
         }
         onCreatePromptClick={() => createModal.open()}
-        onCreateSegmentClick={() => {
-          createModal.open();
-          setIsSnippet(true);
-        }}
         onTableRow={(record: Prompt) => ({
           onClick: e => onItemClick(record, e),
         })}
