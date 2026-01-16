@@ -14429,8 +14429,8 @@ func (p *ExptAggregateResult_) Field6DeepEqual(src *int64) bool {
 }
 
 type EvalTargetAggregateResult_ struct {
-	TargetID        *int64               `thrift:"target_id,1,optional" frugal:"1,optional,i64" form:"target_id" json:"target_id,string,omitempty" query:"target_id"`
-	TargetVersionID *int64               `thrift:"target_version_id,2,optional" frugal:"2,optional,i64" form:"target_version_id" json:"target_version_id,string,omitempty" query:"target_version_id"`
+	TargetID        *int64               `thrift:"target_id,1,optional" frugal:"1,optional,i64" json:"target_id" form:"target_id" query:"target_id"`
+	TargetVersionID *int64               `thrift:"target_version_id,2,optional" frugal:"2,optional,i64" json:"target_version_id" form:"target_version_id" query:"target_version_id"`
 	Latency         []*AggregatorResult_ `thrift:"latency,5,optional" frugal:"5,optional,list<AggregatorResult_>" form:"latency" json:"latency,omitempty" query:"latency"`
 	InputTokens     []*AggregatorResult_ `thrift:"input_tokens,6,optional" frugal:"6,optional,list<AggregatorResult_>" form:"input_tokens" json:"input_tokens,omitempty" query:"input_tokens"`
 	OutputTokens    []*AggregatorResult_ `thrift:"output_tokens,7,optional" frugal:"7,optional,list<AggregatorResult_>" form:"output_tokens" json:"output_tokens,omitempty" query:"output_tokens"`
