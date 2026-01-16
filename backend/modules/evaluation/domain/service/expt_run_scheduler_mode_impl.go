@@ -42,6 +42,7 @@ func NewSchedulerModeFactory(
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
 	resultSvc ExptResultService,
+	templateManager IExptTemplateManager,
 ) SchedulerModeFactory {
 	return &DefaultSchedulerModeFactory{
 		manager:                  manager,
@@ -56,6 +57,7 @@ func NewSchedulerModeFactory(
 		publisher:                publisher,
 		evaluatorRecordService:   evaluatorRecordService,
 		resultSvc:                resultSvc,
+		templateManager:          templateManager,
 	}
 }
 
@@ -73,6 +75,7 @@ type DefaultSchedulerModeFactory struct {
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
 	resultSvc                ExptResultService
+	templateManager           IExptTemplateManager
 }
 
 func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
@@ -80,11 +83,11 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 ) (entity.ExptSchedulerMode, error) {
 	switch mode {
 	case entity.EvaluationModeSubmit:
-		return NewExptSubmitMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.resultSvc), nil
+		return NewExptSubmitMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.resultSvc, f.templateManager), nil
 	case entity.EvaluationModeFailRetry:
 		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService), nil
 	case entity.EvaluationModeAppend:
-		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService), nil
+		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	default:
 		return nil, fmt.Errorf("NewSchedulerMode with unknown mode: %v", mode)
 	}
@@ -103,6 +106,7 @@ type ExptSubmitExec struct {
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
 	resultSvc                ExptResultService
+	templateManager          IExptTemplateManager
 }
 
 func NewExptSubmitMode(
@@ -118,6 +122,7 @@ func NewExptSubmitMode(
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
 	resultSvc ExptResultService,
+	templateManager IExptTemplateManager,
 ) *ExptSubmitExec {
 	return &ExptSubmitExec{
 		manager:                  manager,
@@ -132,6 +137,7 @@ func NewExptSubmitMode(
 		publisher:                publisher,
 		evaluatorRecordService:   evaluatorRecordService,
 		resultSvc:                resultSvc,
+		templateManager:          templateManager,
 	}
 }
 
@@ -258,6 +264,28 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
+	}
+
+	// 如果实验关联了模板，更新模板的 ExptInfo
+	var templateID int64
+	if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
+		templateID = expt.ExptTemplateMeta.ID
+	} else {
+		// 如果 ExptTemplateMeta 为 nil，尝试从数据库重新获取实验对象
+		updatedExpt, err := e.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
+		if err == nil && updatedExpt != nil && updatedExpt.ExptTemplateMeta != nil && updatedExpt.ExptTemplateMeta.ID > 0 {
+			templateID = updatedExpt.ExptTemplateMeta.ID
+		}
+	}
+	if templateID > 0 && e.templateManager != nil {
+		// 离线实验开始执行，状态变更，数量不变
+		if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0); err != nil {
+			logs.CtxError(ctx, "UpdateExptInfo failed in ExptSubmitExec.ExptStart, template_id: %v, expt_id: %v, err: %v",
+				templateID, event.ExptID, err)
+		} else {
+			logs.CtxInfo(ctx, "UpdateExptInfo succeeded in ExptSubmitExec.ExptStart, template_id: %v, expt_id: %v, status: %v",
+				templateID, event.ExptID, entity.ExptStatus_Processing)
+		}
 	}
 
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
@@ -542,6 +570,7 @@ type ExptAppendExec struct {
 	configer                 component.IConfiger
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
+	templateManager           IExptTemplateManager
 }
 
 func NewExptAppendMode(
@@ -556,6 +585,7 @@ func NewExptAppendMode(
 	configer component.IConfiger,
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
+	templateManager IExptTemplateManager,
 ) *ExptAppendExec {
 	return &ExptAppendExec{
 		manager:                  manager,
@@ -569,6 +599,7 @@ func NewExptAppendMode(
 		configer:                 configer,
 		publisher:                publisher,
 		evaluatorRecordService:   evaluatorRecordService,
+		templateManager:          templateManager,
 	}
 }
 
@@ -621,22 +652,39 @@ func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 	logs.CtxInfo(ctx, "ExptAppendExec.ScheduleStart, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 	deadline := expt.StartAt.Add(time.Duration(expt.MaxAliveTime) * time.Millisecond)
 	if (expt.Status == entity.ExptStatus_Processing || expt.Status == entity.ExptStatus_Pending) && expt.MaxAliveTime > 0 && time.Now().After(deadline) {
-		expt.Status = entity.ExptStatus_Draining
+		newStatus := entity.ExptStatus_Draining
 		logs.CtxInfo(ctx, "expt max alive time exceeded, expt_id: %v, expt_run_id: %v, deadline: %v", event.ExptID, event.ExptRunID, deadline)
 		if err := e.exptRepo.Update(ctx, &entity.Experiment{
 			ID:      event.ExptID,
 			SpaceID: event.SpaceID,
-			Status:  entity.ExptStatus_Draining,
+			Status:  newStatus,
 		}); err != nil {
 			logs.CtxError(ctx, "update expt status failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
+		} else {
+			// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
+			if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
+				if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, newStatus, 0); err != nil {
+					logs.CtxError(ctx, "UpdateExptInfo failed in ScheduleStart (Draining), template_id: %v, expt_id: %v, err: %v",
+						expt.ExptTemplateMeta.ID, event.ExptID, err)
+				}
+			}
 		}
 	} else if expt.Status == entity.ExptStatus_Pending {
+		newStatus := entity.ExptStatus_Processing
 		if err := e.exptRepo.Update(ctx, &entity.Experiment{
 			ID:      event.ExptID,
 			SpaceID: event.SpaceID,
-			Status:  entity.ExptStatus_Processing,
+			Status:  newStatus,
 		}); err != nil {
 			logs.CtxError(ctx, "update expt status failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
+		} else {
+			// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
+			if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
+				if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, newStatus, 0); err != nil {
+					logs.CtxError(ctx, "UpdateExptInfo failed in ScheduleStart, template_id: %v, expt_id: %v, err: %v",
+						expt.ExptTemplateMeta.ID, event.ExptID, err)
+				}
+			}
 		}
 	}
 	return nil

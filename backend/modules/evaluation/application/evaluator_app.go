@@ -34,6 +34,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -54,6 +55,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	benefitService benefit.IBenefitService,
 	fileProvider rpc.IFileProvider,
 	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
+	exptResultService service.ExptResultService,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
 		idgen:                    idgen,
@@ -68,6 +70,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 		benefitService:           benefitService,
 		fileProvider:             fileProvider,
 		evaluatorSourceServices:  evaluatorSourceServices,
+		exptResultService:        exptResultService,
 	}
 	return handler
 }
@@ -86,6 +89,7 @@ type EvaluatorHandlerImpl struct {
 	benefitService           benefit.IBenefitService
 	fileProvider             rpc.IFileProvider
 	evaluatorSourceServices  map[entity.EvaluatorType]service.EvaluatorSourceService
+	exptResultService        service.ExptResultService
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -1129,10 +1133,25 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorRecord(ctx context.Context, reques
 		return nil, errorx.NewByCode(errno.RiskContentDetectedCode)
 	}
 	correctionDO := evaluatorconvertor.ConvertCorrectionDTO2DO(request.GetCorrection())
+	// 对修正分数进行四舍五入到两位小数
+	if correctionDO != nil && correctionDO.Score != nil {
+		roundedScore := utils.RoundScoreToTwoDecimals(*correctionDO.Score)
+		correctionDO.Score = &roundedScore
+	}
 	err = e.evaluatorRecordService.CorrectEvaluatorRecord(ctx, evaluatorRecord, correctionDO)
 	if err != nil {
 		return nil, err
 	}
+
+	// 如果修改了评估器得分，需要重新计算加权得分并更新到 expt_turn_result
+	if correctionDO != nil && correctionDO.Score != nil {
+		if err := e.exptResultService.RecalculateWeightedScore(ctx, evaluatorRecord.SpaceID, evaluatorRecord.ExperimentID, evaluatorRecord.ItemID, evaluatorRecord.TurnID); err != nil {
+			logs.CtxError(ctx, "Failed to recalculate weighted score, expt_id: %v, item_id: %v, turn_id: %v, err: %v",
+				evaluatorRecord.ExperimentID, evaluatorRecord.ItemID, evaluatorRecord.TurnID, err)
+			// 不返回错误，避免影响主流程
+		}
+	}
+
 	return &evaluatorservice.UpdateEvaluatorRecordResponse{
 		Record: evaluatorconvertor.ConvertEvaluatorRecordDO2DTO(evaluatorRecord),
 	}, nil

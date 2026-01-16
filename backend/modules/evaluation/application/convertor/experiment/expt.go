@@ -32,15 +32,28 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 	ec := &entity.EvaluationConfiguration{
 		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
 	}
+
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
 		TargetVersionID: cer.GetTargetVersionID(),
 		IngressConf:     toTargetFieldMappingDO(cer.GetTargetFieldMapping(), cer.GetTargetRuntimeParam()),
 	}
 	if cer.GetEvaluatorFieldMapping() != nil {
-		ec.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
+		evalsConf := &entity.EvaluatorsConf{
 			EvaluatorConcurNum: ptr.ConvIntPtr[int32, int](cer.EvaluatorsConcurNum),
 			EvaluatorConf:      toEvaluatorConfDO(cer.GetEvaluatorFieldMapping(), evaluatorVersionRunConfigs),
 		}
+		// 将请求中的 evaluator_score_weights 下沉到 EvaluatorConf.ScoreWeight
+		if weights := cer.GetEvaluatorScoreWeights(); len(weights) > 0 {
+			for _, conf := range evalsConf.EvaluatorConf {
+				if conf == nil {
+					continue
+				}
+				if w, ok := weights[conf.EvaluatorVersionID]; ok && w > 0 {
+					conf.ScoreWeight = gptr.Of(w)
+				}
+			}
+		}
+		ec.ConnectorConf.EvaluatorsConf = evalsConf
 	}
 	return ec, nil
 }
@@ -93,12 +106,35 @@ func toEvaluatorConfDO(mapping []*domain_expt.EvaluatorFieldMapping, runConfigMa
 				Value:     ft.GetConstValue(),
 			})
 		}
+
+		// 从 EvaluatorIDVersionItem 中提取信息，如果不存在则使用 EvaluatorVersionID
+		var evaluatorID int64
+		var version string
+		var evaluatorVersionID int64 = fm.GetEvaluatorVersionID()
+
+		if fm.IsSetEvaluatorIDVersionItem() {
+			item := fm.GetEvaluatorIDVersionItem()
+			if item != nil {
+				if item.IsSetEvaluatorID() {
+					evaluatorID = item.GetEvaluatorID()
+				}
+				if item.IsSetVersion() {
+					version = item.GetVersion()
+				}
+				if item.IsSetEvaluatorVersionID() {
+					evaluatorVersionID = item.GetEvaluatorVersionID()
+				}
+			}
+		}
+
 		var runConf *evaluatordto.EvaluatorRunConfig = nil
 		if len(runConfigMap) > 0 {
 			runConf = runConfigMap[fm.GetEvaluatorVersionID()]
 		}
 		ec = append(ec, &entity.EvaluatorConf{
-			EvaluatorVersionID: fm.GetEvaluatorVersionID(),
+			EvaluatorVersionID: evaluatorVersionID,
+			EvaluatorID:        evaluatorID,
+			Version:            version,
 			IngressConf: &entity.EvaluatorIngressConf{
 				EvalSetAdapter: &entity.FieldAdapter{FieldConfs: esf},
 				TargetAdapter:  &entity.FieldAdapter{FieldConfs: tf},
@@ -124,6 +160,26 @@ func (e *EvalConfConvert) ConvertEntityToDTO(ec *entity.EvaluationConfiguration)
 			m := &domain_expt.EvaluatorFieldMapping{
 				EvaluatorVersionID: evaluatorConf.EvaluatorVersionID,
 			}
+
+			// 构建 EvaluatorIDVersionItem
+			if evaluatorConf.EvaluatorID > 0 || evaluatorConf.Version != "" || evaluatorConf.EvaluatorVersionID > 0 {
+				item := &evaluatordto.EvaluatorIDVersionItem{}
+				if evaluatorConf.EvaluatorID > 0 {
+					item.SetEvaluatorID(gptr.Of(evaluatorConf.EvaluatorID))
+				}
+				if evaluatorConf.Version != "" {
+					item.SetVersion(gptr.Of(evaluatorConf.Version))
+				}
+				if evaluatorConf.EvaluatorVersionID > 0 {
+					item.SetEvaluatorVersionID(gptr.Of(evaluatorConf.EvaluatorVersionID))
+				}
+				// 如果 EvaluatorConf 中有 ScoreWeight，也填充到 item 中
+				if evaluatorConf.ScoreWeight != nil && *evaluatorConf.ScoreWeight > 0 {
+					item.SetScoreWeight(gptr.Of(*evaluatorConf.ScoreWeight))
+				}
+				m.SetEvaluatorIDVersionItem(item)
+			}
+
 			if evaluatorConf.IngressConf.EvalSetAdapter != nil {
 				for _, fc := range evaluatorConf.IngressConf.EvalSetAdapter.FieldConfs {
 					m.FromEvalSet = append(m.FromEvalSet, &domain_expt.FieldMapping{
@@ -200,6 +256,58 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
 	}
 
+	// 构建 evaluator_version_id -> score_weight 映射（来自 EvaluatorConf.ScoreWeight）
+	evalWeights := make(map[int64]float64)
+	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil {
+		for _, ec := range experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
+				continue
+			}
+			evalWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
+		}
+	}
+
+	// 构建 EvaluatorIDVersionItems 列表
+	evaluatorIDVersionItems := make([]*evaluatordto.EvaluatorIDVersionItem, 0)
+	// 优先从 Evaluators 中获取完整信息（包含 evaluator_id, version, evaluator_version_id）
+	if len(experiment.Evaluators) > 0 {
+		for _, evaluator := range experiment.Evaluators {
+			if evaluator == nil {
+				continue
+			}
+			evaluatorID := evaluator.GetEvaluatorID()
+			version := evaluator.GetVersion()
+			evaluatorVersionID := evaluator.GetEvaluatorVersionID()
+			if evaluatorID > 0 && evaluatorVersionID > 0 {
+				item := &evaluatordto.EvaluatorIDVersionItem{
+					EvaluatorID:        gptr.Of(evaluatorID),
+					Version:            gptr.Of(version),
+					EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+				}
+				// 如果 EvalConf 中有权重配置，则填充
+				if weight, ok := evalWeights[evaluatorVersionID]; ok && weight > 0 {
+					item.ScoreWeight = gptr.Of(weight)
+				}
+				evaluatorIDVersionItems = append(evaluatorIDVersionItems, item)
+			}
+		}
+	} else if len(experiment.EvaluatorVersionRef) > 0 {
+		// 如果没有 Evaluators，则从 EvaluatorVersionRef 构建（只有 evaluator_id 和 evaluator_version_id）
+		for _, ref := range experiment.EvaluatorVersionRef {
+			if ref.EvaluatorID > 0 && ref.EvaluatorVersionID > 0 {
+				item := &evaluatordto.EvaluatorIDVersionItem{
+					EvaluatorID:        gptr.Of(ref.EvaluatorID),
+					EvaluatorVersionID: gptr.Of(ref.EvaluatorVersionID),
+				}
+				// 如果 EvalConf 中有权重配置，则填充
+				if weight, ok := evalWeights[ref.EvaluatorVersionID]; ok && weight > 0 {
+					item.ScoreWeight = gptr.Of(weight)
+				}
+				evaluatorIDVersionItems = append(evaluatorIDVersionItems, item)
+			}
+		}
+	}
+
 	tm, ems, trtp, evrcs := NewEvalConfConvert().ConvertEntityToDTO(experiment.EvalConf)
 
 	evaluatorVersionIDMap := slices.ToMap(experiment.Evaluators, func(evaluator *entity.Evaluator) (int64, *entity.Evaluator) {
@@ -242,6 +350,8 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		EvaluatorIDVersionList: evaluatorIDVersionList,
 	}
 
+	// 注意：Experiment DTO 中没有 TripleConfig 字段，如果需要可以通过其他方式传递
+
 	if experiment.StartAt != nil {
 		res.StartTime = gptr.Of(experiment.StartAt.Unix())
 	}
@@ -250,6 +360,30 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	}
 	if experiment.EvalConf != nil && experiment.EvalConf.ItemConcurNum != nil {
 		res.ItemConcurNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemConcurNum)))
+	}
+
+	// 填充权重配置（score_weight_config 和 enable_weighted_score）
+	enableWeightedScore := len(evalWeights) > 0
+	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil {
+		enableWeightedScore = enableWeightedScore || experiment.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight
+	}
+	if enableWeightedScore {
+		res.EnableWeightedScore = gptr.Of(true)
+		res.ScoreWeightConfig = &domain_expt.ExptScoreWeight{
+			EnableWeightedScore:   gptr.Of(enableWeightedScore),
+			EvaluatorScoreWeights: evalWeights,
+		}
+	}
+
+	// 关联的实验模板（仅在查询时按需填充基础信息）
+	if experiment.ExptTemplateMeta != nil {
+		res.ExptTemplateMeta = &domain_expt.ExptTemplateMeta{
+			ID:          gptr.Of(experiment.ExptTemplateMeta.ID),
+			WorkspaceID: gptr.Of(experiment.ExptTemplateMeta.WorkspaceID),
+			Name:        gptr.Of(experiment.ExptTemplateMeta.Name),
+			Desc:        gptr.Of(experiment.ExptTemplateMeta.Desc),
+			ExptType:    gptr.Of(domain_expt.ExptType(experiment.ExptTemplateMeta.ExptType)),
+		}
 	}
 
 	res.EvalTarget = target.EvalTargetDO2DTO(experiment.Target)
@@ -349,6 +483,10 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		return nil, err
 	}
 	param.ExptConf = evaluationConfiguration
+
+	if cer.IsSetExptTemplateID() {
+		param.ExptTemplateID = cer.GetExptTemplateID()
+	}
 
 	return param, nil
 }

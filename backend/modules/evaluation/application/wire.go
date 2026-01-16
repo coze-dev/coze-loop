@@ -32,6 +32,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/file/fileservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
@@ -45,6 +46,7 @@ import (
 	foundationrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/foundation"
 	notifyrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	tagrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
+	trajectoryrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -78,10 +80,19 @@ var (
 		NewEvaluatorHandlerImpl,
 		// Domain Service Sets
 		domainservice.EvaluatorDomainServiceSet,
+		domainservice.EvaluationSetDomainServiceSet,
+		domainservice.TargetDomainServiceSet,
+		domainservice.NewExptResultService,
+		domainservice.NewEvaluationAnalysisService,
 		// Infrastructure Sets
 		foundationrpc.FoundationRPCSet,
+		tagrpc.TagRPCSet,
+		trajectoryrpc.TrajectoryRPCSet,
 		userinfo.NewUserInfoServiceImpl,
 		experimentrepo.ExperimentRepoSet,
+		experimentmetrics.ExperimentMetricsSet,
+		evaltargetmetrics.EvalTargetMetricsSet,
+		evalconf.NewConfiger,
 		flagSet,
 	)
 
@@ -167,6 +178,12 @@ func InitEvaluatorApplication(
 	limiterFactory limiter.IRateLimiterFactory,
 	fileClient fileservice.Client,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
+	ckDb ck.Provider,
+	tagClient tagservice.Client,
+	promptClient promptmanageservice.Client,
+	pec promptexecuteservice.Client,
+	dataClient datasetservice.Client,
+	tracerFactory func() observabilitytraceservice.Client,
 ) (evaluation.EvaluatorService, error) {
 	wire.Build(
 		evaluatorSet,
