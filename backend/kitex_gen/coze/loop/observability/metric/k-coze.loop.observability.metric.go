@@ -1507,6 +1507,20 @@ func (p *DrillDownValue) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1559,6 +1573,31 @@ func (p *DrillDownValue) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *DrillDownValue) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*DrillDownValue, 0, size)
+	values := make([]DrillDownValue, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.SubDrillDownValues = _field
+	return offset, nil
+}
+
 func (p *DrillDownValue) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1568,6 +1607,7 @@ func (p *DrillDownValue) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1578,6 +1618,7 @@ func (p *DrillDownValue) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1599,6 +1640,22 @@ func (p *DrillDownValue) fastWriteField2(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *DrillDownValue) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSubDrillDownValues() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 3)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.SubDrillDownValues {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
 func (p *DrillDownValue) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -1611,6 +1668,19 @@ func (p *DrillDownValue) field2Length() int {
 	if p.IsSetDisplayName() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.DisplayName)
+	}
+	return l
+}
+
+func (p *DrillDownValue) field3Length() int {
+	l := 0
+	if p.IsSetSubDrillDownValues() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.SubDrillDownValues {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -1631,6 +1701,21 @@ func (p *DrillDownValue) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.DisplayName)
 		}
 		p.DisplayName = &tmp
+	}
+
+	if src.SubDrillDownValues != nil {
+		p.SubDrillDownValues = make([]*DrillDownValue, 0, len(src.SubDrillDownValues))
+		for _, elem := range src.SubDrillDownValues {
+			var _elem *DrillDownValue
+			if elem != nil {
+				_elem = &DrillDownValue{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.SubDrillDownValues = append(p.SubDrillDownValues, _elem)
+		}
 	}
 
 	return nil

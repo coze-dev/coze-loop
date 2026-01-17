@@ -61,7 +61,7 @@ func TestMetricsService_shouldTraverseMetric(t *testing.T) {
 		t.Parallel()
 		svc := &MetricsService{}
 
-		result := svc.shouldTraverseMetric("test_metric", []string{})
+		result := svc.shouldTraverseMetric(&testMetricDefinition{name: "test_metric"}, []string{})
 
 		assert.True(t, result)
 	})
@@ -70,7 +70,7 @@ func TestMetricsService_shouldTraverseMetric(t *testing.T) {
 		t.Parallel()
 		svc := &MetricsService{}
 
-		result := svc.shouldTraverseMetric("test_metric", []string{"test_metric", "other_metric"})
+		result := svc.shouldTraverseMetric(&testMetricDefinition{name: "test_metric"}, []string{"test_metric", "other_metric"})
 
 		assert.True(t, result)
 	})
@@ -79,7 +79,7 @@ func TestMetricsService_shouldTraverseMetric(t *testing.T) {
 		t.Parallel()
 		svc := &MetricsService{}
 
-		result := svc.shouldTraverseMetric("test_metric", []string{"other_metric"})
+		result := svc.shouldTraverseMetric(&testMetricDefinition{name: "test_metric"}, []string{"other_metric"})
 
 		assert.False(t, result)
 	})

@@ -489,6 +489,7 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 						},
 					}, nil
 				}).Times(1)
+				metricMock.EXPECT().GetMetricGroupBy(entity.MetricNameModelTotalCountPie).Return([]string{"name"}, nil).Times(1)
 				return fields{
 					metricSvc: metricMock,
 					auth:      authMock,
@@ -515,6 +516,66 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 						assert.Equal(t, []string{entity.MetricNameModelTotalCountPie}, captured[0].MetricsNames)
 					}
 				}
+				assert.Len(t, got.DrillDownValues, 2)
+				assert.Equal(t, "modelB", got.DrillDownValues[0].Value) // sorted by count desc
+				assert.Equal(t, "modelA", got.DrillDownValues[1].Value)
+			},
+		},
+		{
+			name: "success nested drill down",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				metricMock := metricservicemock.NewMockIMetricsService(ctrl)
+				authMock := rpcmock.NewMockIAuthProvider(ctrl)
+				captured := &safeMetricsRequests{}
+				authMock.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceMetricRead, "6", false).Return(nil)
+				metricMock.EXPECT().QueryMetrics(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *service.QueryMetricsReq) (*service.QueryMetricsResp, error) {
+					captured.add(req)
+					return &service.QueryMetricsResp{
+						Metrics: map[string]*entity.Metric{
+							entity.MetricNameModelTotalCountPie: {
+								Pie: map[string]string{
+									`{"region":"us","zone":"east"}`:  "10",
+									`{"region":"us","zone":"west"}`:  "20",
+									`{"region":"cn","zone":"north"}`: "5",
+								},
+							},
+						},
+					}, nil
+				}).Times(1)
+				metricMock.EXPECT().GetMetricGroupBy(entity.MetricNameModelTotalCountPie).Return([]string{"region", "zone"}, nil).Times(1)
+				return fields{
+					metricSvc: metricMock,
+					auth:      authMock,
+					captured:  captured,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &metricapi.GetDrillDownValuesRequest{
+					WorkspaceID:        6,
+					StartTime:          0,
+					EndTime:            10 * 24 * time.Hour.Milliseconds(),
+					DrillDownValueType: metricpb.DrillDownValueTypeModelName,
+				},
+			},
+			wantErr: false,
+			postCheck: func(t *testing.T, f fields, got *metricapi.GetDrillDownValuesResponse) {
+				assert.NotNil(t, got)
+				assert.Len(t, got.DrillDownValues, 2)
+
+				// 1. region: us (total 30)
+				assert.Equal(t, "us", got.DrillDownValues[0].Value)
+				assert.Len(t, got.DrillDownValues[0].SubDrillDownValues, 2)
+				//    - zone: west (20)
+				assert.Equal(t, "west", got.DrillDownValues[0].SubDrillDownValues[0].Value)
+				//    - zone: east (10)
+				assert.Equal(t, "east", got.DrillDownValues[0].SubDrillDownValues[1].Value)
+
+				// 2. region: cn (total 5)
+				assert.Equal(t, "cn", got.DrillDownValues[1].Value)
+				assert.Len(t, got.DrillDownValues[1].SubDrillDownValues, 1)
+				//    - zone: north (5)
+				assert.Equal(t, "north", got.DrillDownValues[1].SubDrillDownValues[0].Value)
 			},
 		},
 		{

@@ -16,6 +16,8 @@ const (
 	DrillDownValueTypeModelName = "model_name"
 
 	DrillDownValueTypeToolName = "tool_name"
+
+	DrillDownValueTypeInnerModelName = "inner_model_name"
 )
 
 type CompareType = string
