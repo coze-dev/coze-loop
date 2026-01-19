@@ -1523,8 +1523,8 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 			targetRecord.EvalTargetOutputData != nil &&
 			targetRecord.EvalTargetOutputData.OutputFields != nil {
 			if trajectoryContent, ok := targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]; ok && trajectoryContent != nil {
-				logs.CtxInfo(ctx, "len trajectoryContent.Text: %v", len(*trajectoryContent.Text))
 				if trajectoryContent.Text != nil && len(*trajectoryContent.Text) > 0 {
+					logs.CtxInfo(ctx, "len trajectoryContent.Text: %v", len(*trajectoryContent.Text))
 					// 使用 generateJsonObjectPreview 对 trajectory JSON 进行剪裁
 					preview := utils.GenerateJsonObjectPreview([]byte(*trajectoryContent.Text))
 					if preview != "" {
@@ -1533,6 +1533,11 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 				}
 			}
 		}
+		// TODO dsf 删除轨迹数据
+		if targetRecord.EvalTargetOutputData != nil && targetRecord.EvalTargetOutputData.OutputFields != nil && targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] != nil {
+			logs.CtxInfo(ctx, "len trajectoryContent.Text after preview: %v", len(targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory].GetText()))
+		}
+		targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = nil
 
 		turnResultID2TargetOutput[turnResultID] = &entity.TurnTargetOutput{
 			EvalTargetRecord: targetRecord,
