@@ -1,16 +1,5 @@
-// Copyright 2026
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package utils
 
@@ -20,9 +9,9 @@ import (
 
 // countJsonArrayElements 计算 json array 中包含的元素数量
 // notice: 出于性能考虑，直接对字符串计算元素数量. 当 array string 非法时会直接返回 0
-func countJsonArrayElements(jsonBytes []byte) int {
-	jsonStr := strings.TrimSpace(string(jsonBytes))
-	if len(strings.TrimSpace(jsonStr)) <= 2 || !strings.HasPrefix(jsonStr, "[") || !strings.HasSuffix(jsonStr, "]") {
+func countJsonArrayElements(jsonStr string) int {
+	jsonStr = strings.TrimSpace(jsonStr)
+	if len(jsonStr) <= 2 || !strings.HasPrefix(jsonStr, "[") || !strings.HasSuffix(jsonStr, "]") {
 		return 0
 	}
 	var (
@@ -67,8 +56,8 @@ func countJsonArrayElements(jsonBytes []byte) int {
 // notice: 出于性能考虑，直接根据字符串生成.
 // * 对于字符串、数值等简单类型，仅保留前五位作为预览内容
 // * 对于object、array 等复杂类型，不递归解析，直接展示为 "{...}" 或 "[...]"
-func GenerateJsonObjectPreview(jsonBytes []byte) string {
-	jsonStr := strings.TrimSpace(string(jsonBytes))
+func GenerateJsonObjectPreview(jsonStr string) string {
+	jsonStr = strings.TrimSpace(jsonStr)
 	if len(jsonStr) < 2 || jsonStr[0] != '{' || jsonStr[len(jsonStr)-1] != '}' {
 		return ""
 	}
@@ -152,11 +141,11 @@ func summarizeValue(value string) string {
 }
 
 // GenerateTextPreview 生成文本类型的预览内容
-func GenerateTextPreview(content []byte) string {
-	const previewContentLength = 500
-	runes := []rune(string(content))
+func GenerateTextPreview(content string) string {
+	const previewContentLength = 100
+	runes := []rune(content)
 	if len(runes) <= previewContentLength {
-		return string(content)
+		return content
 	}
 	return string(runes[:previewContentLength]) + "..."
 }

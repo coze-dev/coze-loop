@@ -1287,6 +1287,37 @@ func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {
 			logs.CtxWarn(ctx, "turnEvaluatorResultRef not found, evaluatorRecordID: %v, turnResultID: %v", evaluatorRecord.ID, turnResultID)
 			continue
 		}
+
+		// 当 FullTrajectory=false 时，如果评估器输入里的 input_fields / evaluate_target_output_fields 中包含 trajectory，
+		// 同样做一次 JSON 预览剪裁 + 文本长度剪裁，避免评估器输入里携带超长轨迹。
+		if !e.FullTrajectory && evaluatorRecord.EvaluatorInputData != nil {
+			// 1) InputFields 中的 trajectory
+			if evaluatorRecord.EvaluatorInputData.InputFields != nil {
+				if trajectoryContent, ok := evaluatorRecord.EvaluatorInputData.InputFields[consts.EvalTargetOutputFieldKeyTrajectory]; ok && trajectoryContent != nil {
+					if trajectoryContent.Text != nil && len(*trajectoryContent.Text) > 0 {
+						preview := utils.GenerateJsonObjectPreview(*trajectoryContent.Text)
+						if preview != "" {
+							trajectoryContent.Text = gptr.Of(utils.GenerateTextPreview(preview))
+						} else {
+							trajectoryContent.Text = gptr.Of(utils.GenerateTextPreview(*trajectoryContent.Text))
+						}
+					}
+				}
+			}
+			// 2) EvaluateTargetOutputFields 中的 trajectory
+			if evaluatorRecord.EvaluatorInputData.EvaluateTargetOutputFields != nil {
+				if trajectoryContent, ok := evaluatorRecord.EvaluatorInputData.EvaluateTargetOutputFields[consts.EvalTargetOutputFieldKeyTrajectory]; ok && trajectoryContent != nil {
+					if trajectoryContent.Text != nil && len(*trajectoryContent.Text) > 0 {
+						preview := utils.GenerateJsonObjectPreview(*trajectoryContent.Text)
+						if preview != "" {
+							trajectoryContent.Text = gptr.Of(utils.GenerateTextPreview(preview))
+						} else {
+							trajectoryContent.Text = gptr.Of(utils.GenerateTextPreview(*trajectoryContent.Text))
+						}
+					}
+				}
+			}
+		}
 		if _, ok := turnResultID2VersionID2Result[turnResultID]; !ok {
 			turnResultID2VersionID2Result[turnResultID] = make(map[int64]*entity.EvaluatorRecord)
 		}
@@ -1517,7 +1548,6 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 		if !ok {
 			continue
 		}
-
 		// 如果不需要完整轨迹，则使用 generateJsonObjectPreview 对 trajectory 进行剪裁
 		if !e.FullTrajectory &&
 			targetRecord.EvalTargetOutputData != nil &&
@@ -1525,11 +1555,11 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 			if trajectoryContent, ok := targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]; ok && trajectoryContent != nil {
 				if trajectoryContent.Text != nil && len(*trajectoryContent.Text) > 0 {
 					// 使用 generateJsonObjectPreview 对 trajectory JSON 进行剪裁
-					preview := utils.GenerateJsonObjectPreview([]byte(*trajectoryContent.Text))
+					preview := utils.GenerateJsonObjectPreview(*trajectoryContent.Text)
 					if preview != "" {
-						trajectoryContent.Text = gptr.Of(utils.GenerateTextPreview([]byte(preview)))
+						trajectoryContent.Text = gptr.Of(utils.GenerateTextPreview(preview))
 					} else {
-						trajectoryContent.Text = gptr.Of(utils.GenerateTextPreview([]byte(*trajectoryContent.Text)))
+						trajectoryContent.Text = gptr.Of(utils.GenerateTextPreview(*trajectoryContent.Text))
 					}
 				}
 			}

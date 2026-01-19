@@ -74,7 +74,7 @@ func TestCountJsonArrayElements(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := countJsonArrayElements([]byte(tt.input))
+			got := countJsonArrayElements(tt.input)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
@@ -119,7 +119,7 @@ func TestGenerateJsonObjectPreview(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := GenerateJsonObjectPreview([]byte(tt.input))
+			got := GenerateJsonObjectPreview(tt.input)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
@@ -128,20 +128,20 @@ func TestGenerateJsonObjectPreview(t *testing.T) {
 func TestGenerateJsonObjectPreview_LargeJsonFromFile(t *testing.T) {
 	t.Parallel()
 
-	// 该用例使用真实的长 JSON 数据（data (6).txt），复现“剪裁失败”的场景，
+	// 该用例使用真实的长 JSON 数据（testdata_large.json），复现“剪裁失败”的场景，
 	// 方便后续根据业务需要调整 GenerateJsonObjectPreview 的行为。
-	data, err := os.ReadFile("pkg/utils/data (6).txt")
+	data, err := os.ReadFile("testdata_large.json")
 	if err != nil {
 		// 如果路径不对，明确报错，方便排查
 		t.Fatalf("failed to read test data file: %v", err)
 	}
 
-	preview := GenerateJsonObjectPreview(data)
+	preview := GenerateJsonObjectPreview(string(data))
 
-	// 当前实现要求顶层必须是 JSON object（以 '{' 开头、以 '}' 结尾），否则直接返回空串。
-	// data (6).txt 中的内容顶层并不是标准的 JSON object（例如很可能是数组或被包装为字符串），
-	// 因此这里的 preview 会是空串，表现为“剪裁失败”——并不是函数出错，而是输入格式与设计前提不符。
-	assert.Equal(t, "", preview)
+	// 当前实现要求顶层必须是 JSON object（以 '{' 开头、以 '}' 结尾）。
+	// data (6).txt 经过核实后发现是一个标准的 JSON object。
+	assert.NotEmpty(t, preview)
+	assert.Contains(t, preview, "OutputFields")
 }
 
 func TestSummarizeValue(t *testing.T) {
@@ -213,13 +213,13 @@ func TestGenerateTextPreview(t *testing.T) {
 			expected: "hello world",
 		},
 		{
-			name:     "exact 100 runes",
-			input:    string(make([]rune, 100)),
-			expected: string(make([]rune, 100)),
+			name:     "exact 500 runes",
+			input:    string(make([]rune, 500)),
+			expected: string(make([]rune, 500)),
 		},
 		{
 			name:  "long ascii content should be trimmed",
-			input: string(make([]byte, 120)),
+			input: string(make([]byte, 600)),
 		},
 		{
 			name:     "utf8 content shorter than limit should not be trimmed",
@@ -232,12 +232,12 @@ func TestGenerateTextPreview(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := GenerateTextPreview([]byte(tt.input))
+			got := GenerateTextPreview(tt.input)
 
 			switch tt.name {
 			case "long ascii content should be trimmed":
-				assert.Len(t, []rune(got), 103) // 100 chars + "..."
-				assert.Equal(t, "...", got[len(got)-3:])
+				assert.Len(t, []rune(got), 503) // 500 chars + "..."
+				assert.Equal(t, "...", string([]rune(got)[500:]))
 			default:
 				assert.Equal(t, tt.expected, got)
 			}
