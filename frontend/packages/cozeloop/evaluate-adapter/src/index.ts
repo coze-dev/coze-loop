@@ -12,3 +12,5 @@ const evaluateAdapters: EvaluateAdapters = {
 export default evaluateAdapters;
 
 export { EvaluateTargetPromptDynamicParams };
+
+export { EVALUATE_MULTIPART_DATA_ABILITY_CONFIG } from './constants';

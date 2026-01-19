@@ -81,7 +81,7 @@ export function ReadonlyItem({
         {title}
       </div>
       {isRequired ? (
-        <div className="text-[#E53241] text-center text-sm font-medium leading-5 absolute left-[54px]">
+        <div className="text-[#E53241] text-center text-sm font-medium leading-5">
           *
         </div>
       ) : null}

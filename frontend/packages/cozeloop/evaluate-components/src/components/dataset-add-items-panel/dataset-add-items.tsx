@@ -49,7 +49,7 @@ export const DatasetAddItems = ({
   const onDelete = (index: number) => {
     const newItems = evaSetItems?.filter((_, i) => i !== index);
     if (newItems.length === 0) {
-      Toast.error(I18n.t('keep_at_least_one_data_item'));
+      Toast.error(I18n.t('retain_one_data_item'));
       return;
     }
     evalsetItemsField.setValue(newItems);
@@ -72,6 +72,7 @@ export const DatasetAddItems = ({
       cloneDeep(evaSetItems[index]),
       ...evaSetItems.slice(index + 1),
     ];
+
     setActiveKey(
       activeKey
         .map(key => {
@@ -104,7 +105,7 @@ export const DatasetAddItems = ({
                 <div className="flex w-full justify-between items-center">
                   <div className="flex items-center gap-[4px]">
                     <Typography.Text className="!font-semibold">
-                      {I18n.t('data_item')} {index + 1}
+                      {`${I18n.t('data_item')} ${index + 1}`}
                     </Typography.Text>
                     {activeKey.includes(`${index}`) ? (
                       <IconCozArrowDown
@@ -168,6 +169,7 @@ export const DatasetAddItems = ({
                 ...evaSetItems,
                 { ...defaultItem, key: createUuid(8) },
               ];
+
               evalsetItemsField.setValue(newItems);
               setActiveKey([...activeKey, `${evaSetItems?.length}`]);
               elementFocus(`${DATASET_ADD_ITEM_PREFIX}-${evaSetItems?.length}`);

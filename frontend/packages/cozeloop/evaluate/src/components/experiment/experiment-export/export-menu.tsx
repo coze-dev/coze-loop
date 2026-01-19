@@ -82,7 +82,7 @@ const ExportMenu = (props: ExportMenuProps) => {
             disabled={!isFinished}
             content={
               !isFinished
-                ? I18n.t('export_not_supported_incomplete_experiment')
+                ? I18n.t('evaluate_experiment_incomplete_export_not_supported')
                 : undefined
             }
           >

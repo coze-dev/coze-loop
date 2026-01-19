@@ -47,11 +47,8 @@ export function CellContentRender({
       fieldContent={content}
       expand={expand}
       displayFormat={displayFormat}
-      className={classNames(
-        'overflow-hidden',
-        displayFormat ? '!border-0 !p-0' : '',
-        className,
-      )}
+      className={displayFormat ? '!border-0 !p-0' : ''}
+      containerClassName={classNames('overflow-hidden', className)}
     />
   );
 }
@@ -98,6 +95,7 @@ export function getActualOutputColumn(params?: {
         </Tooltip>
       </div>
     ),
+
     displayName: 'actual_output',
     dataIndex: 'actualOutput',
     key: 'actualOutput',

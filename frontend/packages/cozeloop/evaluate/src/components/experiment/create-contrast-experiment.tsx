@@ -15,9 +15,11 @@ export default function CreateContrastExperiment({
   disabled,
   onClick,
   onReportCompare,
+  defaultContrastRoute = 'evaluation/experiments/contrast',
 }: {
   baseExperiment?: Experiment;
   disabled?: boolean;
+  defaultContrastRoute?: string;
   onClick?: () => void;
   onReportCompare?: (status: string) => void;
 }) {
@@ -57,14 +59,13 @@ export default function CreateContrastExperiment({
               ExptStatus.Failed,
               ExptStatus.Terminated,
             ],
+
             eval_set: [contrastExperiments?.[0]?.eval_set?.id ?? ''].filter(
               Boolean,
             ),
           }}
           onOk={ids => {
-            navigate(
-              `evaluation/experiments/contrast?experiment_ids=${ids.join(',')}`,
-            );
+            navigate(`${defaultContrastRoute}?experiment_ids=${ids.join(',')}`);
           }}
           onClose={() => setVisible(false)}
         />

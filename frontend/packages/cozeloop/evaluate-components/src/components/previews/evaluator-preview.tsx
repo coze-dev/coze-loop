@@ -1,9 +1,10 @@
-/* eslint-disable complexity */
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable complexity */
 import { useMemo } from 'react';
 
 import classNames from 'classnames';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { JumpIconButton } from '@cozeloop/components';
 import { useOpenWindow } from '@cozeloop/biz-hooks-adapter';
@@ -11,11 +12,10 @@ import { type Evaluator } from '@cozeloop/api-schema/evaluation';
 import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
 import { Tag, Tooltip, type TagProps } from '@coze-arch/coze-design';
 
-import { TypographyText } from '../text-ellipsis';
-import { getEvaluatorJumpUrl } from '../evaluator/utils';
+import { getEvaluatorJumpUrlV2 } from '../evaluator/utils';
 import EvaluatorIcon from '../evaluator/evaluator-icon';
 
-/** 评测集预览 */
+/** 评估器预览 */
 export function EvaluatorPreview({
   evaluator,
   tagProps = {},
@@ -35,23 +35,16 @@ export function EvaluatorPreview({
   style?: React.CSSProperties;
   nameStyle?: React.CSSProperties;
 }) {
-  const { name, current_version, evaluator_id, evaluator_type } =
+  const { name, current_version, evaluator_id, evaluator_type, builtin } =
     evaluator ?? {};
+
+  const jumpUrl = useMemo(() => getEvaluatorJumpUrlV2(evaluator), [evaluator]);
+
   const { openBlank } = useOpenWindow();
-
-  const jumpUrl = useMemo(
-    () =>
-      getEvaluatorJumpUrl({
-        evaluatorType: evaluator_type,
-        evaluatorId: evaluator_id,
-        evaluatorVersionId: current_version?.id,
-      }),
-    [evaluator_type, evaluator_id, current_version?.id],
-  );
-
   if (!evaluator) {
     return <>-</>;
   }
+
   return (
     <div
       className={`group inline-flex items-center gap-1 cursor-pointer max-w-[100%] ${className}`}
@@ -72,7 +65,7 @@ export function EvaluatorPreview({
           {...tagProps}
           className={classNames('shrink-0 font-normal', tagProps.className)}
         >
-          {current_version?.version}
+          {builtin ? 'latest' : current_version?.version}
         </Tag>
       ) : null}
       {enableLinkJump ? (

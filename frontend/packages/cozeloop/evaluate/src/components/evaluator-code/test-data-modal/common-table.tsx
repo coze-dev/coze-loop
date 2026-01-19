@@ -1,12 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
-{
-  /* start_aigc */
-}
 import { useMemo, useEffect } from 'react';
 
 import { usePagination } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { useBatchSelect } from '@cozeloop/evaluate-components/src/components/dataset-detail/table/use-batch-select';
 import { getFieldColumnConfig } from '@cozeloop/evaluate-components';
 import { TableWithPagination } from '@cozeloop/components';
@@ -87,10 +84,11 @@ const CommonTable: React.FC<CommonTableProps> = ({
     () => (
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Typography.Text size="small">{`选择数据(${batchSelectItems.size}/${maxCount})`}</Typography.Text>
+          <Typography.Text size="small">{`${I18n.t('evaluate_select_data_placeholder1_maxcount', { placeholder1: batchSelectItems.size, maxCount })}`}</Typography.Text>
         </div>
       </div>
     ),
+
     [batchSelectItems.size],
   );
 
@@ -124,6 +122,3 @@ const CommonTable: React.FC<CommonTableProps> = ({
 };
 
 export default CommonTable;
-{
-  /* end_aigc */
-}

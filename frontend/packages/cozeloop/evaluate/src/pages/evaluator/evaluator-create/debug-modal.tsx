@@ -53,10 +53,12 @@ function hasMultipartVar(vars: VariableDef[]) {
 
 export function DebugModal({
   initValue,
+  disableConfig,
   onCancel,
   onSubmit,
 }: {
   initValue?: Evaluator;
+  disableConfig?: boolean;
   onCancel: () => void;
   onSubmit: (newValue: Evaluator) => void;
 }) {
@@ -83,7 +85,9 @@ export function DebugModal({
       setVariables(originVars => {
         // 存在多部分变量，但是新的变量中没有多部分变量，触发一次表单校验校验
         if (hasMultipartVar(originVars) && !hasMultipartVar(newVariables)) {
-          evaluatorFormRef.current?.formApi?.validate();
+          evaluatorFormRef.current?.formApi
+            ?.validate()
+            .catch(e => console.warn(e));
         }
         return newVariables;
       });
@@ -176,7 +180,7 @@ export function DebugModal({
               initValues={initValue}
               onChange={calcVariables.run}
             >
-              <ConfigContent disabled={guard2.data.readonly} />
+              <ConfigContent disabled={guard2.data.readonly || disableConfig} />
             </Form>
           </div>
         </div>

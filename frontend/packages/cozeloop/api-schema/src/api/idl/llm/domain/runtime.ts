@@ -1,3 +1,7 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+import * as manage from './manage';
+export { manage };
 import * as common from './common';
 export { common };
 export interface ModelConfig {
@@ -13,6 +17,16 @@ export interface ModelConfig {
   top_k?: number,
   presence_penalty?: number,
   frequency_penalty?: number,
+  /** 与ParamSchema对应 */
+  param_config_values?: ParamConfigValue[],
+}
+export interface ParamConfigValue {
+  /** 传给下游模型的key，与ParamSchema.name对齐 */
+  name?: string,
+  /** 展示名称 */
+  label?: string,
+  /** 传给下游模型的value，与ParamSchema.options对齐 */
+  value?: manage.ParamOption,
 }
 export interface Message {
   role: Role,
@@ -33,12 +47,20 @@ export interface Message {
 export interface ChatMessagePart {
   type?: ChatMessagePartType,
   text?: string,
+  image_url?: ChatMessageImageURL,
   /**
    * 4: optional ChatMessageAudioURL audio_url 占位,暂不支持
-   * 5: optional ChatMessageVideoURL video_url 占位,暂不支持
    * 6: optional ChatMessageFileURL file_url 占位,暂不支持
   */
-  image_url?: ChatMessageImageURL,
+  video_url?: ChatMessageVideoURL,
+}
+export interface ChatMessageVideoURL {
+  url?: string,
+  detail?: VideoURLDetail,
+  mime_type?: string,
+}
+export interface VideoURLDetail {
+  fps?: number
 }
 export interface ChatMessageImageURL {
   url?: string,
@@ -110,14 +132,16 @@ export enum ToolType {
 export enum ChatMessagePartType {
   chat_message_part_type_text = "text",
   chat_message_part_type_image_url = "image_url",
+  /** const ChatMessagePartType chat_message_part_type_audio_url = "audio_url" */
+  chat_message_part_type_video_url = "video_url",
 }
-/**
- * const ChatMessagePartType chat_message_part_type_audio_url = "audio_url"
- * const ChatMessagePartType chat_message_part_type_video_url = "video_url"
- * const ChatMessagePartType chat_message_part_type_file_url = "file_url"
-*/
+/** const ChatMessagePartType chat_message_part_type_file_url = "file_url" */
 export enum ImageURLDetail {
   image_url_detail_auto = "auto",
   image_url_detail_low = "low",
   image_url_detail_high = "high",
+}
+export enum MimeTypePrefix {
+  mime_prefix_image = "image/",
+  mime_prefix_video = "video/",
 }

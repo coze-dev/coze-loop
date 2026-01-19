@@ -330,6 +330,8 @@ type MGetExperimentResultParam struct {
 	FilterAccelerators map[int64]*ExptTurnResultFilterAccelerator
 	UseAccelerator     bool
 	Page               Page
+	// FullTrajectory 表示在构建 eval_target_result 时是否需要包含轨迹（trajectory）相关信息
+	FullTrajectory bool
 }
 
 type MGetExperimentReportResult struct {

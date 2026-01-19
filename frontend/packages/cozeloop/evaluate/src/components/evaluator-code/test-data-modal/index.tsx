@@ -1,8 +1,8 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-
 import { useCallback, useRef, useState } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type EvaluationSetItemTableData } from '@cozeloop/evaluate-components';
 import {
   type FieldData,
@@ -20,7 +20,6 @@ import StepOneEvaluateSet from './step-one-evaluate-set';
 
 import styles from './index.module.less';
 
-// start_aigc
 /**
  * 转换测试数据格式，将复杂的嵌套结构简化为只包含 content_type 和 text 的格式
  */
@@ -74,12 +73,11 @@ const transformTestDataItem = (item: TestDataItem) => {
     ext: item.ext || {},
   };
 };
-// end_aigc
 
 const steps = [
-  { title: '评测集', guardPoint: '' },
-  { title: '评测对象', guardPoint: '' },
-  { title: '生成模拟输出', guardPoint: '' },
+  { title: I18n.t('evaluation_set'), guardPoint: '' },
+  { title: I18n.t('evaluation_object'), guardPoint: '' },
+  { title: I18n.t('evaluate_generate_mock_output'), guardPoint: '' },
 ];
 
 const TestDataModal: React.FC<TestDataModalProps> = ({
@@ -146,7 +144,7 @@ const TestDataModal: React.FC<TestDataModalProps> = ({
   return (
     <Modal
       className={styles.evalSetTestDataModal}
-      title="构造测试数据"
+      title={I18n.t('construct_test_data')}
       visible={visible}
       onCancel={handleClose}
       hasScroll={false}

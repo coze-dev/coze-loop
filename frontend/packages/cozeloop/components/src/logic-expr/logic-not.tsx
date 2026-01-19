@@ -3,7 +3,8 @@
 import { type CSSProperties } from 'react';
 
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
+
+import { useI18n } from '../provider';
 
 import styles from './index.module.less';
 
@@ -17,6 +18,7 @@ interface LogicNotProps {
 
 export function LogicNot(props: LogicNotProps) {
   const { not, readonly, onChange, className, style } = props;
+  const I18n = useI18n();
   const onClick = () => {
     if (readonly) {
       return;

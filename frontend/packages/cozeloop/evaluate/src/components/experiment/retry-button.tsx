@@ -23,7 +23,7 @@ export default function RetryButton({
 }) {
   const [loading, setLoading] = useState(false);
   // 失败时展示重试
-  if (status === ExptStatus.Failed) {
+  if (status === ExptStatus.Failed || status === ExptStatus.Terminated) {
     const onClick = async () => {
       setLoading(true);
       Toast.info({

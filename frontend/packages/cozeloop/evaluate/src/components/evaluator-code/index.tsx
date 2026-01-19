@@ -1,12 +1,12 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { type CommonFieldProps, withField } from '@coze-arch/coze-design';
 
 import type { CodeEvaluatorConfigProps } from './types';
 import TrialOperationResults from './trial-operation-results';
 import EditorGroup from './editor-group';
-import { useEffect, useMemo, useRef, useState } from 'react';
 
 export const BaseCodeEvaluatorConfig: React.FC<
   CodeEvaluatorConfigProps

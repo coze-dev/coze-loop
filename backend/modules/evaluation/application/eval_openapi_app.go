@@ -855,23 +855,28 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 			if version[0].CodeEvaluatorVersion != nil {
 				versionID = version[0].CodeEvaluatorVersion.ID
 			}
+		case entity.EvaluatorTypeCustomRPC:
+			if version[0].CustomRPCEvaluatorVersion != nil {
+				versionID = version[0].CustomRPCEvaluatorVersion.ID
+			}
 		}
 		evaluatorVersionIDs = append(evaluatorVersionIDs, versionID)
 		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
 	}
 
 	createReq := &exptpb.SubmitExperimentRequest{
-		WorkspaceID:           req.GetWorkspaceID(),
-		EvalSetVersionID:      gptr.Of(versions[0].ID),
-		EvalSetID:             req.GetEvalSetParam().EvalSetID,
-		EvaluatorVersionIds:   evaluatorVersionIDs,
-		Name:                  req.Name,
-		Desc:                  req.Description,
-		TargetFieldMapping:    experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
-		EvaluatorFieldMapping: experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
-		ItemConcurNum:         req.ItemConcurNum,
-		TargetRuntimeParam:    experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
-		CreateEvalTargetParam: experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
+		WorkspaceID:            req.GetWorkspaceID(),
+		EvalSetVersionID:       gptr.Of(versions[0].ID),
+		EvalSetID:              req.GetEvalSetParam().EvalSetID,
+		EvaluatorVersionIds:    evaluatorVersionIDs,
+		Name:                   req.Name,
+		Desc:                   req.Description,
+		TargetFieldMapping:     experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
+		EvaluatorFieldMapping:  experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
+		ItemConcurNum:          req.ItemConcurNum,
+		TargetRuntimeParam:     experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
+		CreateEvalTargetParam:  experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
+		EvaluatorIDVersionList: experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)

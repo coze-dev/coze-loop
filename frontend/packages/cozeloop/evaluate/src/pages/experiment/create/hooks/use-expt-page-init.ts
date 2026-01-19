@@ -5,8 +5,8 @@ import { useEffect, useRef } from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import { useEvalTargetDefinition } from '@cozeloop/evaluate-components';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
 
 import { getCurrentTime } from '../tools';
 

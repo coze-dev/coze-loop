@@ -51,7 +51,6 @@ import { /* exported functions/components */ } from '@cozeloop/biz-hooks-adapter
 - `useOpenWindow`
 - `useRouteInfo`
 - `useCozeLocation`
-- `useApp`
 - `useBenefit, type BenefitConfig`
 - `useFetchUserBenefit`
 - `useDemoSpace`

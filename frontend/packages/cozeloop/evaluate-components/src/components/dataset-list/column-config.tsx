@@ -1,6 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { formatTimestampToString } from '@cozeloop/toolkit';
+import { TextEllipsis } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { type ColumnItem, UserProfile } from '@cozeloop/components';
 import {
@@ -9,7 +10,6 @@ import {
 } from '@cozeloop/api-schema/evaluation';
 import { Tag, type ColumnProps } from '@coze-arch/coze-design';
 
-import { TextEllipsis } from '../text-ellipsis';
 import LoopTableSortIcon from './sort-icon';
 import { ColumnNameListTag } from './column-name-list-tag';
 
@@ -44,7 +44,7 @@ export const DatasetColumnConfig: Record<
             size="small"
             className="!min-w-[70px] !h-[20px] !px-[4px] !font-normal"
           >
-            {I18n.t('changes_not_submitted')}
+            {I18n.t('unsubmitted_changes')}
           </Tag>
         ) : null}
       </div>
@@ -86,8 +86,8 @@ export const DatasetColumnConfig: Record<
     render: text => (text ? <Tag color="primary">{text}</Tag> : '-'),
   },
   updated_by: {
-    title: I18n.t('updated_person'),
-    displayName: I18n.t('updated_person'),
+    title: I18n.t('updater'),
+    displayName: I18n.t('updater'),
     key: 'updated_by',
     dataIndex: 'base_info.updated_by',
     width: 180,
@@ -158,6 +158,7 @@ const DefaultColumnConfig: EvaluationSetKey[] = [
   'created_by',
   'created_at',
 ];
+
 export const getColumnConfigs = (columns?: EvaluationSetKey[]): ColumnItem[] =>
   (columns || DefaultColumnConfig).map(column => ({
     ...DatasetColumnConfig[column],

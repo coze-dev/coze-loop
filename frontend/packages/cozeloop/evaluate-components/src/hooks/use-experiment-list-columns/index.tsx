@@ -12,8 +12,8 @@ import {
   type TableColAction,
 } from '@cozeloop/components';
 import {
-  useCurrentEnterpriseId,
   useNavigateModule,
+  useCurrentEnterpriseId,
 } from '@cozeloop/biz-hooks-adapter';
 import { ExptStatus } from '@cozeloop/api-schema/evaluation';
 import { type Experiment } from '@cozeloop/api-schema/evaluation';
@@ -26,6 +26,7 @@ import {
   getExperimentColumns,
   handleDelete,
   handleRetry,
+  handleKill,
   handleCopy,
   handleExport,
   handleExportRecord,
@@ -43,6 +44,12 @@ function isExperimentFail(status: ExptStatus | undefined) {
   ].includes(status as ExptStatus);
 }
 
+function isExperimentRunning(status: ExptStatus | undefined) {
+  return [ExptStatus.Pending, ExptStatus.Processing].includes(
+    status as ExptStatus,
+  );
+}
+
 export interface UseExperimentListColumnsProps {
   spaceID: Int64;
   /** 开启ID列，默认为true */
@@ -55,6 +62,7 @@ export interface UseExperimentListColumnsProps {
   actionVisibleControl?: {
     copy?: boolean;
     retry?: boolean;
+    terminate?: boolean;
     delete?: boolean;
   };
   /** 详情跳转的来源路径（在实验详情页面点击返回跳转的路径） */
@@ -67,6 +75,8 @@ export interface UseExperimentListColumnsProps {
   onOpenExportModal?: (experiment: Experiment) => void;
   /** 导出来源 */
   source?: string;
+  baseNavgiateUrl?: string;
+  createUrl?: string;
 }
 
 const PERSONAL_ENTERPRISE_ID = 'personal';
@@ -85,12 +95,15 @@ export function useExperimentListColumns({
   onDetailClick,
   onOpenExportModal,
   source,
+  baseNavgiateUrl = 'evaluation/experiments',
+  createUrl = 'evaluation/experiments/create',
 }: UseExperimentListColumnsProps) {
   const guards = useGuards({
     points: [
       GuardPoint['eval.experiments.copy'],
       GuardPoint['eval.experiments.delete'],
       GuardPoint['eval.experiments.retry'],
+      GuardPoint['eval.experiments.kill'],
     ],
   });
 
@@ -104,6 +117,7 @@ export function useExperimentListColumns({
 
   const copyGuardType = guards.data[GuardPoint['eval.experiments.copy']].type;
   const retryGuardType = guards.data[GuardPoint['eval.experiments.retry']].type;
+  const killGuardType = guards.data[GuardPoint['eval.experiments.kill']]?.type;
   const deleteGuardType =
     guards.data[GuardPoint['eval.experiments.delete']].type;
 
@@ -125,10 +139,23 @@ export function useExperimentListColumns({
     }
   };
 
+  const handleKillOnClick = (record: Experiment) => {
+    const action = () => {
+      handleKill({ record, spaceID, onRefresh });
+    };
+    if (killGuardType === GuardActionType.GUARD) {
+      guardsRef.current.data[GuardPoint['eval.experiments.kill']]?.preprocess(
+        action,
+      );
+    } else {
+      action();
+    }
+  };
+
   const handleDetailOnClick = (record: Experiment) => {
     onDetailClick?.(record);
     navigate(
-      `evaluation/experiments/${record.id}`,
+      `${baseNavgiateUrl}/${record.id}`,
       detailJumpSourcePath
         ? { state: { from: detailJumpSourcePath } }
         : undefined,
@@ -140,9 +167,7 @@ export function useExperimentListColumns({
       handleCopy({
         record,
         onOk: () => {
-          navigate(
-            `evaluation/experiments/create?copy_experiment_id=${record.id}`,
-          );
+          navigate(`${createUrl}?copy_experiment_id=${record.id}`);
         },
       });
     };
@@ -158,7 +183,7 @@ export function useExperimentListColumns({
 
   useEffect(() => {
     const actionsColumn: ColumnProps<Experiment> = {
-      title: I18n.t('prompt_prompt_operate'),
+      title: I18n.t('operation'),
       disableColumnManage: true,
       dataIndex: 'action',
       key: 'action',
@@ -169,16 +194,39 @@ export function useExperimentListColumns({
         const hideRun =
           !isExperimentFail(record.status) ||
           actionVisibleControl?.retry === false;
+        const hideKill =
+          !isExperimentRunning(record.status) ||
+          actionVisibleControl?.terminate === false;
         const actions: TableColAction[] = [
           {
             label: (
-              <Tooltip content={I18n.t('re_evaluate_failed_only')} theme="dark">
+              <Tooltip
+                content={I18n.t(
+                  'evaluate_reevaluate_failed_and_unexecuted_only',
+                )}
+                theme="dark"
+              >
                 {I18n.t('retry')}
               </Tooltip>
             ),
+
             hide: hideRun,
-            disabled: retryGuardType === GuardActionType.READONLY,
+            disabled: killGuardType === GuardActionType.READONLY,
             onClick: () => handleRetryOnCLick(record),
+          },
+          {
+            label: (
+              <Tooltip
+                content={I18n.t('evaluate_terminate_running_experiment')}
+                theme="dark"
+              >
+                {I18n.t('terminate')}
+              </Tooltip>
+            ),
+
+            hide: hideKill,
+            disabled: retryGuardType === GuardActionType.READONLY,
+            onClick: () => handleKillOnClick(record),
           },
           {
             label: (
@@ -186,6 +234,7 @@ export function useExperimentListColumns({
                 {I18n.t('detail')}
               </Tooltip>
             ),
+
             onClick: () => handleDetailOnClick(record),
           },
           {
@@ -194,14 +243,16 @@ export function useExperimentListColumns({
                 content={I18n.t('copy_and_create_experiment')}
                 theme="dark"
               >
-                {I18n.t('copy')}
+                <span className="whitespace-nowrap">{I18n.t('copy')}</span>
               </Tooltip>
             ),
+
             hide: actionVisibleControl?.copy === false,
             disabled: copyGuardType === GuardActionType.READONLY,
             onClick: () => handleCopyOnClick(record),
           },
         ];
+
         const isFinalStatus =
           record.status === ExptStatus.Success ||
           record.status === ExptStatus.Failed;
@@ -222,6 +273,7 @@ export function useExperimentListColumns({
                   disabled={!isFinalStatus}
                 />
               ),
+
               disabled: !isFinalStatus,
             }
           : {
@@ -257,13 +309,14 @@ export function useExperimentListColumns({
             },
           },
           {
-            label: I18n.t('space_member_role_type_del_btn'),
+            label: I18n.t('delete'),
             type: 'danger',
             hide: actionVisibleControl?.delete === false,
             disabled: deleteGuardType === GuardActionType.READONLY,
             onClick: () => handleDelete({ record, spaceID, onRefresh }),
           },
         ];
+
         const maxCount = actions.filter(item => !item.hide).length;
         return (
           <TableColActions

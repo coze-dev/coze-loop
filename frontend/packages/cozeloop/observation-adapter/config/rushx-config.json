@@ -1,0 +1,6 @@
+{
+  "$schema": "../../../../rushx-config.schema.json",
+  "dupCheck": {
+    "ignoreGlobPatterns": ["stories/**"]
+  }
+}

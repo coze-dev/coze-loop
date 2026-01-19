@@ -6,6 +6,7 @@ import { type EvalTargetType } from '@cozeloop/api-schema/evaluation';
 import { type EvalTargetDefinition } from '../../../types/evaluate-target';
 import { SetEvalTargetView } from './set-eval-target-view';
 import PluginEvalTargetForm from './eval-target-form-content';
+
 const setTransformEvaluatorEvalTargetSchemas = () => [];
 
 export const evalSetDefinitionPayload: EvalTargetDefinition = {

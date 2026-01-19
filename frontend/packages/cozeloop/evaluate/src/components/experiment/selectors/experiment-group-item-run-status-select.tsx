@@ -17,6 +17,7 @@ function RenderSelectedItem(optionNode: Record<string, unknown>) {
   const content = (
     <ExperimentGroupItemRunStatus status={option.value as ItemRunState} />
   );
+
   return {
     isRenderInTag: false,
     content,
@@ -37,7 +38,7 @@ export function ExprGroupItemRunStatusSelect({
   return (
     <Select
       prefix={I18n.t('status')}
-      placeholder={I18n.t('please_select', { field: '' })}
+      placeholder={I18n.t('please_select')}
       multiple={true}
       showClear={true}
       maxTagCount={2}

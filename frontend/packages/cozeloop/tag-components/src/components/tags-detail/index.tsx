@@ -5,9 +5,9 @@ import { useEffect, useState, useRef } from 'react';
 
 import { isEqual } from 'lodash-es';
 import { I18n } from '@cozeloop/i18n-adapter';
+import { useBreadcrumb } from '@cozeloop/hooks';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
 import { useNavigateModule } from '@cozeloop/biz-hooks-adapter';
-import { useBreadcrumb } from '@cozeloop/base-hooks';
 import { Layout, Modal, Spin, Toast } from '@coze-arch/coze-design';
 
 import { formatTagDetailToFormValues } from '@/utils';
@@ -108,14 +108,16 @@ export const TagsDetail = ({
       onOk: () => {
         setChanged(false);
         setBlockLeave(false);
-        updateTag(values).then(() => {
-          Toast.success(I18n.t('save_success'));
-          setTimeout(() => {
-            navigate(
-              `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
-            );
-          }, 300);
-        });
+        updateTag(values)
+          .then(() => {
+            Toast.success(I18n.t('save_success'));
+            setTimeout(() => {
+              navigate(
+                `${tagListPagePath}${tagListPageQuery ? `?${tagListPageQuery}` : ''}`,
+              );
+            }, 300);
+          })
+          .catch(err => console.error(err));
       },
       okText: I18n.t('save'),
       cancelText: I18n.t('cancel'),
@@ -154,6 +156,7 @@ export const TagsDetail = ({
           tagListPagePath={tagListPagePath}
           tagListPageQuery={tagListPageQuery}
         />
+
         <div className="flex flex-1 h-full overflow-hidden">
           <TagDetailContent
             ref={contentRef}
@@ -162,12 +165,14 @@ export const TagsDetail = ({
             onValueChange={handleValueChange}
             onSubmit={handleSubmit}
           />
+
           {editHistoryVisible ? (
             <div>
               <EditHistoryList onClose={() => setEditHistoryVisible(false)} />
             </div>
           ) : null}
         </div>
+        <div className="w-full h-14"></div>
       </div>
     </Layout.Content>
   );

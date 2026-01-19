@@ -18,7 +18,7 @@ import (
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	openapiExperiment "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
-	openapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 
 	domainCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domaindoEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -1136,5 +1136,41 @@ func TargetAggrResultDO2DTO(result *entity.EvalTargetMtrAggrResult) *domainExpt.
 		InputTokens:     AggregatorResultDOsToDTOs(result.InputTokensAggrResults),
 		OutputTokens:    AggregatorResultDOsToDTOs(result.OutputTokensAggrResults),
 		TotalTokens:     AggregatorResultDOsToDTOs(result.TotalTokensAggrResults),
+	}
+}
+
+func OpenAPIEvaluatorParamsDTO2Domain(dtos []*openapi.SubmitExperimentEvaluatorParam) []*domainEvaluator.EvaluatorIDVersionItem {
+	if len(dtos) == 0 {
+		return nil
+	}
+	dos := make([]*domainEvaluator.EvaluatorIDVersionItem, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		dos = append(dos, OpenAPIEvaluatorParamDTO2Domain(dto))
+	}
+	return dos
+}
+
+func OpenAPIEvaluatorParamDTO2Domain(dto *openapi.SubmitExperimentEvaluatorParam) *domainEvaluator.EvaluatorIDVersionItem {
+	if dto == nil {
+		return nil
+	}
+
+	return &domainEvaluator.EvaluatorIDVersionItem{
+		EvaluatorID: dto.EvaluatorID,
+		Version:     dto.Version,
+		RunConfig:   OpenAPIEvaluatorRunConfigDTO2Domain(dto.RunConfig),
+	}
+}
+
+func OpenAPIEvaluatorRunConfigDTO2Domain(dto *openapiEvaluator.EvaluatorRunConfig) *domainEvaluator.EvaluatorRunConfig {
+	if dto == nil {
+		return nil
+	}
+	return &domainEvaluator.EvaluatorRunConfig{
+		Env:                   dto.Env,
+		EvaluatorRuntimeParam: OpenAPIRuntimeParamDTO2Domain(dto.EvaluatorRuntimeParam),
 	}
 }

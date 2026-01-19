@@ -42,7 +42,7 @@ export default function ExperimentContrastItemDetail({
       closable={false}
       title={
         <div className="flex items-center gap-2">
-          {I18n.t('comparison_experiment_details')}
+          {I18n.t('compare_experiment_detail')}
           <IDRender id={experimentContrastItem?.groupID ?? ''} />
         </div>
       }

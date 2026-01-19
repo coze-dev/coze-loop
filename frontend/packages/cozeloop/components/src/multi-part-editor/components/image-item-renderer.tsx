@@ -4,18 +4,23 @@
 /* eslint-disable complexity */
 import React, { useState } from 'react';
 
+import classNames from 'classnames';
 import { StorageProvider } from '@cozeloop/api-schema/data';
 import {
+  IconCozCross,
   IconCozEye,
   IconCozImageBroken,
   IconCozRefresh,
-  IconCozTrashCan,
 } from '@coze-arch/coze-design/icons';
 import { Image, ImagePreview, Loading } from '@coze-arch/coze-design';
+
+import { useI18n } from '@/provider';
 
 import { ImageStatus, type MultipartItem } from '../type';
 
 interface ImageItemRendererProps {
+  className?: string;
+  style?: React.CSSProperties;
   spaceID?: Int64;
   item: MultipartItem;
   readonly?: boolean;
@@ -25,6 +30,8 @@ interface ImageItemRendererProps {
 }
 
 export const ImageItemRenderer: React.FC<ImageItemRendererProps> = ({
+  className,
+  style,
   spaceID,
   item,
   onRemove,
@@ -32,11 +39,12 @@ export const ImageItemRenderer: React.FC<ImageItemRendererProps> = ({
   uploadFile,
   readonly,
 }) => {
+  const I18n = useI18n();
   const [visible, setVisible] = useState(false);
   const [fileLoadError, setFileLoadError] = useState(false);
   const status = item?.sourceImage?.status;
   const uri = item?.image?.uri;
-  const url = item?.image?.url;
+  const url = item?.image?.thumb_url || item?.image?.url;
   const isError = status === ImageStatus.Error;
   const file = item?.sourceImage?.file as File;
   const retryUpload = async () => {
@@ -77,27 +85,30 @@ export const ImageItemRenderer: React.FC<ImageItemRendererProps> = ({
   };
 
   return (
-    <div className="flex flex-col ">
-      <div className="w-[64px] h-[64px] relative group">
+    <div className="flex flex-col">
+      <div
+        className={classNames('w-[64px] h-[64px] relative group', className)}
+        style={style}
+      >
         <ImagePreview
-          src={item?.image?.url}
+          src={url}
           visible={visible}
           onVisibleChange={setVisible}
         />
+
         <Image
-          src={item?.image?.url}
-          className="rounded-[6px]"
-          width={64}
-          height={64}
-          imgStyle={{ objectFit: 'contain' }}
+          src={url}
+          className="w-full h-full rounded-[6px] border border-solid coz-stroke-plus"
+          imgStyle={{ objectFit: 'contain', width: '100%', height: '100%' }}
           fallback={<IconCozImageBroken className="text-[24px]" />}
           onError={() => setFileLoadError(true)}
         />
+
         {status !== ImageStatus.Loading && (
           <div
-            className={`absolute inset-0 flex gap-3 items-center rounded-[6px] justify-center bg-[rgba(0,0,0,0.4)] ${isError ? 'visible' : 'invisible'}  group-hover:visible`}
+            className={`absolute inset-0 flex gap-3 items-center rounded-[6px] justify-center coz-mg-mask ${isError ? 'visible' : 'invisible'}  group-hover:visible`}
           >
-            {isError && !readonly ? (
+            {isError && !readonly && file ? (
               <IconCozRefresh
                 className="text-white w-[16px] h-[16px] cursor-pointer"
                 onClick={retryUpload}
@@ -110,10 +121,9 @@ export const ImageItemRenderer: React.FC<ImageItemRendererProps> = ({
               />
             ) : null}
             {readonly ? null : (
-              <IconCozTrashCan
-                className="text-white w-[16px] h-[16px] cursor-pointer"
-                onClick={onRemove}
-              />
+              <div className="p-[2px] text-white cursor-pointer absolute right-[-4px] top-[-4px] z-10 bg-[var(--coz-fg-secondary)] rounded-[16px] flex items-end justify-center">
+                <IconCozCross onClick={onRemove} className="text-[12px]" />
+              </div>
             )}
           </div>
         )}
@@ -124,7 +134,7 @@ export const ImageItemRenderer: React.FC<ImageItemRendererProps> = ({
         )}
       </div>
       {status === ImageStatus.Error && (
-        <div className="text-center text-sm text-red-500">上传失败</div>
+        <div className="text-sm text-red-500">{I18n.t('upload_fail')}</div>
       )}
     </div>
   );

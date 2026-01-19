@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
@@ -116,7 +117,28 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
 
-	param, err := experiment.ConvertCreateReq(req)
+	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
+	evalVersionIDs, evaluatorVersionRunConfigs, err := e.resolveEvaluatorVersionIDs(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 去重
+	if len(evalVersionIDs) > 1 {
+		seen := map[int64]struct{}{}
+		uniq := make([]int64, 0, len(evalVersionIDs))
+		for _, id := range evalVersionIDs {
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			uniq = append(uniq, id)
+		}
+		evalVersionIDs = uniq
+	}
+	req.EvaluatorVersionIds = evalVersionIDs
+
+	param, err := experiment.ConvertCreateReq(req, evaluatorVersionRunConfigs)
 	if err != nil {
 		return nil, err
 	}
@@ -145,44 +167,25 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
-	evalVersionIDs, err := e.resolveEvaluatorVersionIDs(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-
-	// 去重
-	if len(evalVersionIDs) > 1 {
-		seen := map[int64]struct{}{}
-		uniq := make([]int64, 0, len(evalVersionIDs))
-		for _, id := range evalVersionIDs {
-			if _, ok := seen[id]; ok {
-				continue
-			}
-			seen[id] = struct{}{}
-			uniq = append(uniq, id)
-		}
-		evalVersionIDs = uniq
-	}
-
 	cresp, err := e.CreateExperiment(ctx, &expt.CreateExperimentRequest{
-		WorkspaceID:           req.GetWorkspaceID(),
-		EvalSetVersionID:      req.EvalSetVersionID,
-		EvalSetID:             req.EvalSetID,
-		EvaluatorVersionIds:   evalVersionIDs,
-		Name:                  req.Name,
-		Desc:                  req.Desc,
-		TargetFieldMapping:    req.TargetFieldMapping,
-		EvaluatorFieldMapping: req.EvaluatorFieldMapping,
-		ItemConcurNum:         req.ItemConcurNum,
-		EvaluatorsConcurNum:   req.EvaluatorsConcurNum,
-		CreateEvalTargetParam: req.CreateEvalTargetParam,
-		ExptType:              req.ExptType,
-		MaxAliveTime:          req.MaxAliveTime,
-		SourceType:            req.SourceType,
-		SourceID:              req.SourceID,
-		TargetRuntimeParam:    req.TargetRuntimeParam,
-		Session:               req.Session,
+		WorkspaceID:            req.GetWorkspaceID(),
+		EvalSetVersionID:       req.EvalSetVersionID,
+		EvalSetID:              req.EvalSetID,
+		EvaluatorVersionIds:    req.EvaluatorVersionIds,
+		Name:                   req.Name,
+		Desc:                   req.Desc,
+		TargetFieldMapping:     req.TargetFieldMapping,
+		EvaluatorFieldMapping:  req.EvaluatorFieldMapping,
+		ItemConcurNum:          req.ItemConcurNum,
+		EvaluatorsConcurNum:    req.EvaluatorsConcurNum,
+		CreateEvalTargetParam:  req.CreateEvalTargetParam,
+		ExptType:               req.ExptType,
+		MaxAliveTime:           req.MaxAliveTime,
+		SourceType:             req.SourceType,
+		SourceID:               req.SourceID,
+		TargetRuntimeParam:     req.TargetRuntimeParam,
+		EvaluatorIDVersionList: req.EvaluatorIDVersionList,
+		Session:                req.Session,
 	})
 	if err != nil {
 		return nil, err
@@ -209,7 +212,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 // resolveEvaluatorVersionIDs 汇总 evaluator_version_ids：
 // 1) 先取请求中的 EvaluatorVersionIds
 // 2) 从有序 EvaluatorIDVersionList 中批量解析并按输入顺序回填版本ID
-func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, req *expt.SubmitExperimentRequest) ([]int64, error) {
+func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, error) {
 	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
 	evalVersionIDs = append(evalVersionIDs, req.EvaluatorVersionIds...)
 
@@ -238,7 +241,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	if len(builtinIDs) > 0 {
 		evs, err := e.evaluatorService.BatchGetBuiltinEvaluator(ctx, builtinIDs)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, ev := range evs {
 			if ev != nil {
@@ -251,7 +254,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	if len(normalPairs) > 0 {
 		evs, err := e.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, normalPairs)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, ev := range evs {
 			if ev == nil {
@@ -263,6 +266,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	}
 
 	// 按输入顺序回填版本ID
+	evaluatorVersionRunConfigs := make(map[int64]*evaluatordto.EvaluatorRunConfig)
 	for _, it := range items {
 		if it == nil {
 			continue
@@ -284,6 +288,9 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 		}
 		if verID := ev.GetEvaluatorVersionID(); verID != 0 {
 			evalVersionIDs = append(evalVersionIDs, verID)
+			if it.RunConfig != nil {
+				evaluatorVersionRunConfigs[verID] = it.RunConfig
+			}
 		}
 	}
 
@@ -315,7 +322,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 		}
 	}
 
-	return evalVersionIDs, nil
+	return evalVersionIDs, evaluatorVersionRunConfigs, nil
 }
 
 func (e *experimentApplication) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest) (r *expt.CheckExperimentNameResponse, err error) {
@@ -735,6 +742,7 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 		BaseExptID:     req.BaselineExperimentID,
 		Page:           page,
 		UseAccelerator: req.GetUseAccelerator(),
+		FullTrajectory: req.GetFullTrajectory(),
 	}
 	if err = buildExptTurnResultFilter(req, param); err != nil {
 		return nil, err

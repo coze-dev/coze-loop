@@ -4,6 +4,7 @@ import { type CSSProperties, useEffect, useRef, useState } from 'react';
 
 import classNames from 'classnames';
 import { useLatest } from 'ahooks';
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type Scenario, type Model } from '@cozeloop/api-schema/llm-manage';
 import {
   Form,
@@ -130,7 +131,7 @@ export function PopoverModelConfigEditor({
           >
             <Space className="py-0 flex">
               <Typography.Title heading={6} style={{ minWidth: 120 }}>
-                模型选择
+                {I18n.t('model_selection')}
               </Typography.Title>
               <ModelSelectWithObject
                 {...modelSelectProps}
@@ -155,7 +156,7 @@ export function PopoverModelConfigEditor({
               heading={6}
               style={{ marginTop: 12, marginBottom: 12 }}
             >
-              参数配置
+              {I18n.t('parameter_config')}
             </Typography.Title>
             <ModelConfigFormCommunity model={selectModel} />
           </Form>

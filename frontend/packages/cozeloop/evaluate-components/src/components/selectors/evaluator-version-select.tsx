@@ -20,8 +20,7 @@ export function EvaluatorVersionSelect({
 }: SelectProps & {
   evaluatorId?: string;
   disabledVersionIds?: string[];
-  /** 是否要求评估器至少有一个变量 */
-  variableRequired?: boolean;
+  /** 是否要求评估器至少有一个变量 */ variableRequired?: boolean;
   showRefreshIcon?: boolean;
 }) {
   const { spaceID } = useSpace();
@@ -76,6 +75,7 @@ export function EvaluatorVersionSelect({
             ) : (
               <>{label}</>
             ),
+
           disabled:
             isSelected || (variableRequired && !hasVariable && isLLMType),
         };

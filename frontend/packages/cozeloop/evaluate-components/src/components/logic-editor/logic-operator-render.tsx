@@ -36,8 +36,6 @@ export default function OperatorRender(
     options = options.filter(item => !disabledOperations.includes(item.value));
   }
 
-  console.log('OperatorRender', expr.operator, options);
-
   return (
     <div className="w-24">
       <Select

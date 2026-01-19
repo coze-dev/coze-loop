@@ -87,7 +87,7 @@ func TestEvalConfConvert_ConvertToEntity_TargetConfAlwaysCreated(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := converter.ConvertToEntity(tt.request)
+			result, err := converter.ConvertToEntity(tt.request, nil)
 
 			assert.NoError(t, err)
 			assert.NotNil(t, result)

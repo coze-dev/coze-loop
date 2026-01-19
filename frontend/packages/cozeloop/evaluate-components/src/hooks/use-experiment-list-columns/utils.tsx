@@ -1,9 +1,11 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable max-lines */
 /* eslint-disable max-params */
 import React from 'react';
 
 import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { UserProfile } from '@cozeloop/components';
 import {
@@ -25,7 +27,6 @@ import {
 } from '@coze-arch/coze-design';
 
 import { formateTime } from '../../utils';
-import { TypographyText } from '../../components/text-ellipsis';
 import { EvaluateTargetTypePreview } from '../../components/previews/evaluate-target-type-preview';
 import { EvalTargetPreview } from '../../components/previews/eval-target-preview';
 import { EvaluationSetPreview } from '../../components/previews/eval-set-preview';
@@ -55,7 +56,7 @@ export function getExperimentColumns({
       render: text => <TypographyText>{text}</TypographyText>,
     },
     {
-      title: I18n.t('evaluation_object_type'),
+      title: I18n.t('evaluate_target_type'),
       dataIndex: 'type',
       key: 'type',
       width: 120,
@@ -183,6 +184,7 @@ export function getExperimentColumns({
       render: val => formateTime(val),
     },
   ];
+
   return columns;
 }
 
@@ -204,6 +206,7 @@ export function handleDelete({
         {I18n.t('this_change_irreversible')}
       </>
     ),
+
     okText: I18n.t('delete'),
     cancelText: I18n.t('cancel'),
     okButtonColor: 'red',
@@ -232,8 +235,8 @@ export function handleRetry({
 }) {
   Modal.confirm({
     title: I18n.t('retry_experiment'),
-    content: I18n.t('only_re_evaluate_failed_part'),
-    okText: I18n.t('confirm'),
+    content: I18n.t('evaluate_reevaluate_failed_and_unexecuted_only_period'),
+    okText: I18n.t('global_btn_confirm'),
     cancelText: I18n.t('cancel'),
     width: 420,
     autoLoading: true,
@@ -242,6 +245,32 @@ export function handleRetry({
         workspace_id: spaceID,
         expt_id: record.id ?? '',
         retry_mode: ExptRetryMode.RetryAll,
+      });
+      onRefresh?.();
+    },
+  });
+}
+
+export function handleKill({
+  record,
+  spaceID,
+  onRefresh,
+}: {
+  record: Experiment;
+  spaceID: Int64;
+  onRefresh?: () => void;
+}) {
+  Modal.confirm({
+    title: I18n.t('evaluate_terminate_experiment'),
+    content: I18n.t('evaluate_confirm_terminate_running_experiment'),
+    okText: I18n.t('global_btn_confirm'),
+    cancelText: I18n.t('cancel'),
+    width: 420,
+    autoLoading: true,
+    async onOk() {
+      await StoneEvaluationApi.KillExperiment({
+        workspace_id: spaceID,
+        expt_id: record.id ?? '',
       });
       onRefresh?.();
     },
@@ -259,12 +288,13 @@ export function handleCopy({
     title: I18n.t('copy_experiment_config'),
     content: (
       <>
-        {I18n.t('evaluate_copy')}
+        {I18n.t('copy')}
         <span className="font-medium px-[2px]">{record.name}</span>
         {I18n.t('cozeloop_open_evaluate_config_and_launch_experiment')}
       </>
     ),
-    okText: I18n.t('confirm'),
+
+    okText: I18n.t('global_btn_confirm'),
     cancelText: I18n.t('cancel'),
     width: 420,
     onOk,
@@ -483,12 +513,12 @@ export function handleExport({
       <div className="pt-4">
         <div className="mb-2">
           <label className="text-sm font-medium">
-            {I18n.t('evaluate_export_format')}
+            {I18n.t('export_format')}
             <span className="text-red-500">*</span>
           </label>
         </div>
         <Select
-          placeholder={I18n.t('please_select', { field: '' })}
+          placeholder={I18n.t('please_select')}
           defaultValue="csv"
           style={{ width: '100%' }}
           onChange={value => {
@@ -500,8 +530,9 @@ export function handleExport({
         </Select>
       </div>
     ),
+
     okText: I18n.t('evaluate_export'),
-    cancelText: I18n.t('global_btn_cancel'),
+    cancelText: I18n.t('cancel'),
     width: 420,
     autoLoading: true,
     onOk() {

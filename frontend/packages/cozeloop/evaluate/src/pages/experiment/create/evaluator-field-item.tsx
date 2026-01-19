@@ -6,14 +6,18 @@ import { useEffect, useMemo, useState } from 'react';
 
 import classNames from 'classnames';
 import { useRequest } from 'ahooks';
+import { EVENT_NAMES, sendEvent } from '@cozeloop/tea-adapter';
 import { I18n } from '@cozeloop/i18n-adapter';
 import {
-  EvaluatorSelect,
+  EvaluatorAggregationSelect,
   EvaluatorVersionSelect,
-  getEvaluatorJumpUrl,
+  getEvaluatorJumpUrlV2,
 } from '@cozeloop/evaluate-components';
 import { useOpenWindow, useSpace } from '@cozeloop/biz-hooks-adapter';
-import { type FieldSchema } from '@cozeloop/api-schema/evaluation';
+import {
+  type Evaluator,
+  type FieldSchema,
+} from '@cozeloop/api-schema/evaluation';
 import {
   IconCozArrowRight,
   IconCozTrashCan,
@@ -21,6 +25,7 @@ import {
 import {
   Button,
   type RuleItem,
+  type SelectProps,
   Tag,
   Tooltip,
   useFieldApi,
@@ -30,12 +35,13 @@ import {
 
 import { type EvaluatorPro } from '@/types/experiment/experiment-create';
 import { getEvaluatorVersion } from '@/request/evaluator';
+import { EvaluatorSource } from '@/pages/evaluator/evaluator-template/types';
 import { ReactComponent as ErrorIcon } from '@/assets/icon-alert.svg';
 
 import { OpenDetailText } from './open-detail-text';
 import { EvaluatorFieldItemSynthe } from './evaluator-field-item-synthe';
 
-const FormEvaluatorSelect = withField(EvaluatorSelect);
+const FormEvaluatorAggregationSelect = withField(EvaluatorAggregationSelect);
 const FormEvaluatorVersionSelect = withField(EvaluatorVersionSelect);
 
 interface EvaluatorFieldItemProps {
@@ -72,6 +78,7 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
   const { evaluator } = evaluatorPro;
 
   const versionId = evaluatorPro?.evaluatorVersion?.id;
+
   const versionDetailService = useRequest(
     async () => {
       if (
@@ -84,6 +91,7 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
       const res = await getEvaluatorVersion({
         workspace_id: spaceID,
         evaluator_version_id: versionId,
+        builtin: evaluator?.builtin,
       });
       const resVersion = res.evaluator?.current_version;
       const currentVersionID = (evaluatorProApi.getValue() as EvaluatorPro)
@@ -91,7 +99,10 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
       if (currentVersionID && currentVersionID === resVersion?.id) {
         evaluatorProApi.setValue({
           ...evaluatorProApi.getValue(),
-          evaluatorVersionDetail: resVersion,
+          evaluatorVersionDetail: {
+            ...resVersion,
+            box_type: res?.evaluator?.box_type,
+          },
         });
       }
     },
@@ -101,19 +112,34 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
     },
   );
 
-  const jumpUrl = useMemo(
-    () =>
-      getEvaluatorJumpUrl({
-        evaluatorType: evaluator?.evaluator_type,
-        evaluatorId: evaluator?.evaluator_id,
-        evaluatorVersionId: evaluatorPro?.evaluatorVersion?.id,
-      }),
-    [
-      evaluator?.evaluator_id,
-      evaluator?.evaluator_type,
-      evaluatorPro?.evaluatorVersion?.id,
-    ],
-  );
+  const jumpUrl = useMemo(() => getEvaluatorJumpUrlV2(evaluator), [evaluator]);
+
+  const handleEvaluatorChange: SelectProps['onChange'] = v => {
+    const item = v as Evaluator;
+
+    sendEvent(EVENT_NAMES.cozeloop_experiment_evaluator_choose, {
+      evaluator_source: item?.builtin
+        ? EvaluatorSource.BUILTIN
+        : EvaluatorSource.CUSTOM,
+    });
+
+    // 预置评估器
+    if (item?.builtin) {
+      evaluatorProApi.setValue({
+        evaluator: item,
+        evaluatorVersion: {
+          ...item?.current_version,
+          label: 'latest',
+          value: 'latest',
+        },
+      });
+    } else {
+      evaluatorProApi.setValue({
+        evaluator: item,
+        evaluatorVersion: undefined,
+      });
+    }
+  };
 
   useEffect(() => {
     if (evaluatorProFieldState.error) {
@@ -131,14 +157,23 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
           <div className="flex flex-row items-center flex-1 text-sm font-semibold coz-fg-plus">
             <span className="truncate max-w-[698px]">
               {evaluatorPro?.evaluator?.name ||
-                `${I18n.t('evaluator_placeholder1', { placeholder1: index + 1 })}`}
+                `${I18n.t('evaluator')} ${index + 1}`}
             </span>
-            {evaluatorPro?.evaluatorVersion?.version ? (
+            {evaluator?.builtin ? (
               <Tag
                 color="primary"
                 className="!h-5 !px-2 !py-[2px] rounded-[3px] ml-1"
               >
-                {evaluatorPro.evaluatorVersion.version}
+                latest
+              </Tag>
+            ) : null}
+
+            {!evaluator?.builtin && evaluatorPro?.evaluatorVersion?.version ? (
+              <Tag
+                color="primary"
+                className="!h-5 !px-2 !py-[2px] rounded-[3px] ml-1"
+              >
+                {evaluatorPro?.evaluatorVersion?.version}
               </Tag>
             ) : null}
 
@@ -171,31 +206,28 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
         <div className={open ? 'px-4' : 'hidden'}>
           <div className="flex flex-row gap-5">
             <div className="flex-1 w-0">
-              <FormEvaluatorSelect
+              <FormEvaluatorAggregationSelect
                 className="w-full"
                 field={`${arrayField.field}.evaluator`}
                 fieldStyle={{ paddingBottom: 16 }}
                 label={I18n.t('name')}
-                placeholder={I18n.t('please_select', { field: '' })}
+                placeholder={I18n.t('please_select_evaluator')}
                 onChangeWithObject
                 rules={[
                   {
                     required: true,
-                    message: I18n.t('please_select', { field: '' }),
+                    message: I18n.t('please_select_evaluator'),
                   },
                 ]}
-                onChange={v => {
-                  evaluatorProApi.setValue({
-                    evaluator: v,
-                    evaluatorVersion: undefined,
-                  });
-                }}
+                onChange={handleEvaluatorChange}
               />
             </div>
             <div className="flex-1 w-0 flex flex-row">
               <div className="flex-1 relative">
                 <FormEvaluatorVersionSelect
                   className="w-full"
+                  // 预置评估器不支持修改版本
+                  disabled={evaluator?.builtin}
                   field={`${arrayField.field}.evaluatorVersion`}
                   onChangeWithObject
                   variableRequired={true}
@@ -214,11 +246,11 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
                       </>
                     ),
                   }}
-                  placeholder={I18n.t('please_select', { field: '' })}
+                  placeholder={I18n.t('please_select_a_version_number')}
                   rules={[
                     {
                       required: true,
-                      message: I18n.t('please_select', { field: '' }),
+                      message: I18n.t('please_select_a_version_number'),
                     },
                   ]}
                   evaluatorId={evaluatorPro?.evaluator?.evaluator_id}
@@ -231,6 +263,7 @@ export function EvaluatorFieldItem(props: EvaluatorFieldItemProps) {
           <EvaluatorFieldItemSynthe
             arrayField={arrayField}
             evaluatorType={evaluator?.evaluator_type}
+            evaluator={evaluatorPro?.evaluator}
             loading={versionDetailService.loading}
             versionDetail={evaluatorPro?.evaluatorVersionDetail}
             evaluationSetSchemas={evaluationSetSchemas}

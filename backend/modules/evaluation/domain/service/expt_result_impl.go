@@ -26,6 +26,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -299,7 +300,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, sortedExpts)
+	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, sortedExpts, param.FullTrajectory)
 	if err != nil {
 		return nil, err
 	}
@@ -551,13 +552,14 @@ var (
 	}
 )
 
-func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, expts []*entity.Experiment) ([]*entity.ExptColumnEvalTarget, error) {
+func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, expts []*entity.Experiment, fullTrajectory bool) ([]*entity.ExptColumnEvalTarget, error) {
 	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
 	for _, expt := range expts {
 		if !expt.ContainsEvalTarget() {
 			continue
 		}
 		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
+		// 当 fullTrajectory=true 且 TargetType 支持 trajectory 时，额外返回 trajectory 列
 		if expt.TargetType.SupptTrajectory() {
 			columns = append(columns, columnEvalTargetTrajectory)
 		}
@@ -760,6 +762,9 @@ type PayloadBuilder struct {
 	AnalysisService                             IEvaluationAnalysisService
 	ExptTurnResultFilterKeyMappingEvaluatorMap  map[string]*entity.ExptTurnResultFilterKeyMapping
 	ExptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping
+
+	// 控制是否在构建 eval_target_result 时保留 trajectory 字段
+	FullTrajectory bool
 }
 
 func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultParam, baselineExptID int64, baselineTurnResults []*entity.ExptTurnResult,
@@ -789,6 +794,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		ExptTurnResultFilterKeyMappingEvaluatorMap:  exptTurnResultFilterKeyMappingEvaluatorMap,
 		ExptTurnResultFilterKeyMappingAnnotationMap: exptTurnResultFilterKeyMappingAnnotationMap,
 		ExptAnnotateRepo: exptAnnotateRepo,
+		FullTrajectory:   param.FullTrajectory,
 	}
 
 	builder.ItemResults = make([]*entity.ItemResult, 0)
@@ -907,6 +913,9 @@ type ExptResultBuilder struct {
 	evalTargetService        IEvalTargetService
 	evaluatorRecordService   EvaluatorRecordService
 	analysisService          IEvaluationAnalysisService
+
+	// 控制是否保留 trajectory 字段
+	FullTrajectory bool
 }
 
 // 1.确定当前分页下数据范围
@@ -929,6 +938,7 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 			evaluationSetItemService: b.EvaluationSetItemService,
 			ExptAnnotateRepo:         b.ExptAnnotateRepo,
 			analysisService:          b.AnalysisService,
+			FullTrajectory:           b.FullTrajectory,
 		}
 
 		if exptID == b.BaselineExptID {
@@ -1004,6 +1014,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 		evaluationSetItemService: b.EvaluationSetItemService,
 		turnResultDO:             b.BaseExptTurnResultDO,
 		ExptAnnotateRepo:         b.ExptAnnotateRepo,
+		FullTrajectory:           b.FullTrajectory,
 	}
 
 	exptDO, err := exptResultBuilder.ExperimentRepo.GetByID(ctx, exptResultBuilder.ExptID, exptResultBuilder.SpaceID)
@@ -1505,6 +1516,21 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 		turnResultID, ok := targetResultID2turnResultID[targetRecord.ID]
 		if !ok {
 			continue
+		}
+
+		// 如果不需要完整轨迹，则使用 generateJsonObjectPreview 对 trajectory 进行剪裁
+		if !e.FullTrajectory &&
+			targetRecord.EvalTargetOutputData != nil &&
+			targetRecord.EvalTargetOutputData.OutputFields != nil {
+			if trajectoryContent, ok := targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]; ok && trajectoryContent != nil {
+				if trajectoryContent.Text != nil && len(*trajectoryContent.Text) > 0 {
+					// 使用 generateJsonObjectPreview 对 trajectory JSON 进行剪裁
+					preview := utils.GenerateJsonObjectPreview([]byte(*trajectoryContent.Text))
+					if preview != "" {
+						trajectoryContent.Text = &preview
+					}
+				}
+			}
 		}
 
 		turnResultID2TargetOutput[turnResultID] = &entity.TurnTargetOutput{

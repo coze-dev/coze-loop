@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@cozeloop/biz-hooks-adapter": "workspace:*",
+    "@cozeloop/i18n-adapter": "workspace:*",
     "classnames": "^2.3.2"
   },
   "devDependencies": {
@@ -38,3 +39,4 @@
     "react-dom": ">=18.2.0"
   }
 }
+

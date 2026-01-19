@@ -62,6 +62,8 @@ struct Experiment {
     41: optional i64 max_alive_time
     42: optional SourceType source_type
     43: optional string source_id
+
+    51: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
 }
 
 struct TokenUsage {
@@ -380,8 +382,8 @@ struct ExptAggregateResult {
 }
 
 struct EvalTargetAggregateResult {
-    1: optional i64 target_id (api.js_conv = 'true')
-    2: optional i64 target_version_id (api.js_conv = 'true')
+    1: optional i64 target_id (api.js_conv = 'true', go.tag = 'json:"target_id"')
+    2: optional i64 target_version_id (api.js_conv = 'true', go.tag = 'json:"target_version_id"')
 
     5: optional list<AggregatorResult> latency
     6: optional list<AggregatorResult> input_tokens

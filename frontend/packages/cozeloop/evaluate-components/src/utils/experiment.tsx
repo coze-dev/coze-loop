@@ -112,5 +112,5 @@ export function getExperimentNameWithIndex(
   index: number,
   showName = true,
 ) {
-  return `${index <= 0 ? I18n.t('benchmark_group') : I18n.t('experimental_group_index', { index })}${showName ? ` - ${experiment?.name}` : ''}`;
+  return `${index <= 0 ? I18n.t('benchmark_group') : `${I18n.t('experimental_group')}${index}`}${showName ? ` - ${experiment?.name}` : ''}`;
 }

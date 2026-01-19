@@ -1,15 +1,21 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable complexity */
 /* eslint-disable @coze-arch/max-line-per-function */
 
 import { useEffect } from 'react';
 
 import cs from 'classnames';
 import { formatTimestampToString } from '@cozeloop/toolkit';
+import { TextEllipsis } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { GuardPoint, useGuard } from '@cozeloop/guard';
-import { type Version } from '@cozeloop/components';
-import { TableColActions, TableWithPagination } from '@cozeloop/components';
+import {
+  type Version,
+  InfoTooltip,
+  TableColActions,
+  TableWithPagination,
+} from '@cozeloop/components';
 import {
   type EvaluationSetItem,
   type EvaluationSet,
@@ -23,8 +29,9 @@ import {
   Typography,
 } from '@coze-arch/coze-design';
 
+import { MAX_PREVIEW_COUNT, MAX_ITEM_COUNT } from '@/const';
+
 import { useVersionManage } from '../version-manage/use-version-manage';
-import { TextEllipsis } from '../../text-ellipsis';
 import { DatasetItemPanel } from '../../dataset-item-panel';
 import {
   convertEvaluationSetItemListToTableData,
@@ -94,7 +101,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
   const handleDeleteItem = (item: EvaluationSetItemTableData) => {
     Modal.error({
       width: 420,
-      title: I18n.t('delete_data_items'),
+      title: I18n.t('delete_data_item'),
       type: 'dialog',
       content: (
         <Typography.Text className="break-all">
@@ -115,17 +122,17 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
         refreshDatasetDetail();
       },
       showCancelButton: true,
-      cancelText: I18n.t('global_btn_cancel'),
-      okText: I18n.t('space_member_role_type_del_btn'),
+      cancelText: I18n.t('cancel'),
+      okText: I18n.t('delete'),
     });
   };
   const columnsItems: ColumnProps[] = [
     ...(batchSelectVisible ? [selectColumn] : []),
     ...(columns?.filter(column => !!column.checked) || []),
     {
-      title: I18n.t('prompt_prompt_update_time'),
+      title: I18n.t('update_time'),
       key: 'updated_at',
-      displayName: I18n.t('prompt_prompt_update_time'),
+      displayName: I18n.t('update_time'),
       sorter: true,
       width: 180,
       dataIndex: 'base_info.updated_at',
@@ -139,9 +146,9 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
         ),
     },
     {
-      title: I18n.t('prompt_prompt_create_time'),
+      title: I18n.t('create_time'),
       key: 'created_at',
-      displayName: I18n.t('prompt_prompt_create_time'),
+      displayName: I18n.t('create_time'),
       width: 180,
       dataIndex: 'base_info.created_at',
       sorter: true,
@@ -169,7 +176,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
               <TableColActions
                 actions={[
                   {
-                    label: I18n.t('space_basic_edit_btn'),
+                    label: I18n.t('edit'),
                     onClick: () => {
                       setSelectedItem({
                         item: row,
@@ -205,6 +212,21 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
         ] as ColumnProps[])
       : []),
   ];
+  const getTotalCount = (
+    <span className="coz-fg-primary text-[14px] leading-[20px] flex items-center gap-1">
+      {I18n.t('data_engine_data_count_text')}
+      <InfoTooltip
+        content={I18n.t('data_engine_max_preview', {
+          maxPreview: MAX_PREVIEW_COUNT,
+        })}
+      />
+      :
+      <span>
+        {service?.data?.total}/
+        {datasetDetail?.spec?.max_item_count || MAX_ITEM_COUNT}
+      </span>
+    </span>
+  );
 
   return (
     <div className="h-full w-full flex overflow-hidden">
@@ -249,9 +271,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
               size="full_screen"
               icon={<IconCozIllusAdd />}
               title={I18n.t('no_data')}
-              description={I18n.t(
-                'cozeloop_open_evaluate_click_top_right_to_add_data',
-              )}
+              description={I18n.t('click_to_add_data')}
             />
           }
           header={
@@ -273,6 +293,7 @@ export const DatasetItemList: React.FC<DatasetItemListProps> = ({
               />
             )
           }
+          footerWithPagination={getTotalCount}
         />
         {selectedItem.item ? (
           <DatasetItemPanel

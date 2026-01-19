@@ -45,7 +45,7 @@ export function ExperimentStatusSelect({
   return (
     <Select
       prefix={I18n.t('status')}
-      placeholder={I18n.t('please_select', { field: '' })}
+      placeholder={I18n.t('please_select')}
       showClear={true}
       maxTagCount={2}
       optionList={statusOptions}

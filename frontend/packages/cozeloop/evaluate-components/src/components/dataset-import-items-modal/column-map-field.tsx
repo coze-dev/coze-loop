@@ -45,7 +45,7 @@ export const ColumnMapField = ({
           ellipsis
           className="!coz-fg-secondary ml-3 !w-fit overflow-hidden"
         >
-          {I18n.t('import_data_columns')}
+          {I18n.t('import_data_column')}
           {value?.fieldSchema?.isRequired ? (
             <span className="text-red ml-[2px]">*</span>
           ) : (
