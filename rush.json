@@ -105,6 +105,11 @@
       "tags": ["level-1"]
     },
     {
+      "packageName": "@coze-arch/subspace-resolve-plugin",
+      "projectFolder": "frontend/infra/plugins/subspace-resolve-plugin",
+      "tags": ["level-1"]
+    },
+    {
       "packageName": "@coze-arch/monorepo-kits",
       "projectFolder": "frontend/infra/utils/monorepo-kits",
       "tags": ["level-1"]
@@ -148,11 +153,6 @@
       "packageName": "@coze-arch/logger",
       "projectFolder": "frontend/packages/arch/logger",
       "tags": ["level-1"]
-    },
-    {
-      "packageName": "@coze-arch/subspace-resolve-plugin",
-      "projectFolder": "frontend/packages/arch/subspace-resolve-plugin",
-      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/account",
