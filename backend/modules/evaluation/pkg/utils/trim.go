@@ -151,9 +151,9 @@ func summarizeValue(value string) string {
 	}
 }
 
-// generateTextPreview 生成文本类型的预览内容
-func generateTextPreview(content []byte) string {
-	const previewContentLength = 100
+// GenerateTextPreview 生成文本类型的预览内容
+func GenerateTextPreview(content []byte) string {
+	const previewContentLength = 500
 	runes := []rune(string(content))
 	if len(runes) <= previewContentLength {
 		return string(content)

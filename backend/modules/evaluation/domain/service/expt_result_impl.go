@@ -1525,7 +1525,7 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 			if trajectoryContent, ok := targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]; ok && trajectoryContent != nil {
 				if trajectoryContent.Text != nil && len(*trajectoryContent.Text) > 0 {
 					// 使用 generateJsonObjectPreview 对 trajectory JSON 进行剪裁
-					preview := utils.GenerateJsonObjectPreview([]byte(*trajectoryContent.Text))
+					preview := utils.GenerateTextPreview([]byte(utils.GenerateJsonObjectPreview([]byte(*trajectoryContent.Text))))
 					if preview != "" {
 						trajectoryContent.Text = &preview
 					}
