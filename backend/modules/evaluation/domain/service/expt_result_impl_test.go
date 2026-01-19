@@ -4000,7 +4000,7 @@ func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
 				assert.NotNil(t, trajectoryContent.Text)
 				// 验证内容已被剪裁（使用 generateJsonObjectPreview）
 				originalJSON := `{"id":"trace-1","root_step":{"step_id":"step-1","type":"tool_call","content":"very long content that should be trimmed"}}`
-				expectedPreview := utils.GenerateJsonObjectPreview([]byte(originalJSON))
+				expectedPreview := utils.GenerateJsonObjectPreview(originalJSON)
 				assert.Equal(t, expectedPreview, *trajectoryContent.Text, "trajectory should be trimmed using generateJsonObjectPreview")
 				// actual_output 字段应该保留
 				_, hasActualOutput := targetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields["actual_output"]
