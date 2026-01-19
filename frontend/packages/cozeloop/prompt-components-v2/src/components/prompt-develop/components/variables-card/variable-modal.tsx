@@ -198,16 +198,16 @@ export function VariableValueInput({
         value={value}
         onChange={v => {
           // 使用正则表达式检查是否为有效数字（不包括科学记数法）
-          const isValidNumber = /^-?\d*\.?\d*$/.test(`${v}`);
+          const isValidNumber = /^-?(?:\d+\.?\d*|\.\d+)$/.test(`${v}`);
           if (!isValidNumber) {
-            formApi?.setError(
+            formApi?.setError?.(
               'value',
               I18n.t(
                 'the_input_does_not_match_the_field_definition_of_the_column',
               ),
             ); // 设置错误信息
           } else {
-            formApi?.setError('value', ''); // 清除错误信息
+            formApi?.setError?.('value', ''); // 清除错误信息
           }
           onChange?.(`${v}`);
         }}
