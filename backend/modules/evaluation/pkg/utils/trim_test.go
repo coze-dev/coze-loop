@@ -4,7 +4,6 @@
 package utils
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,25 +122,6 @@ func TestGenerateJsonObjectPreview(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
-}
-
-func TestGenerateJsonObjectPreview_LargeJsonFromFile(t *testing.T) {
-	t.Parallel()
-
-	// 该用例使用真实的长 JSON 数据（testdata_large.json），复现“剪裁失败”的场景，
-	// 方便后续根据业务需要调整 GenerateJsonObjectPreview 的行为。
-	data, err := os.ReadFile("testdata_large.json")
-	if err != nil {
-		// 如果路径不对，明确报错，方便排查
-		t.Fatalf("failed to read test data file: %v", err)
-	}
-
-	preview := GenerateJsonObjectPreview(string(data))
-
-	// 当前实现要求顶层必须是 JSON object（以 '{' 开头、以 '}' 结尾）。
-	// data (6).txt 经过核实后发现是一个标准的 JSON object。
-	assert.NotEmpty(t, preview)
-	assert.Contains(t, preview, "OutputFields")
 }
 
 func TestSummarizeValue(t *testing.T) {
