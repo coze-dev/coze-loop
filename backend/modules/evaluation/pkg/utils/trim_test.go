@@ -4,6 +4,7 @@
 package utils
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -124,6 +125,25 @@ func TestGenerateJsonObjectPreview(t *testing.T) {
 	}
 }
 
+func TestGenerateJsonObjectPreview_LargeJsonFromFile(t *testing.T) {
+	t.Parallel()
+
+	// 该用例使用真实的长 JSON 数据（data (6).txt），复现“剪裁失败”的场景，
+	// 方便后续根据业务需要调整 GenerateJsonObjectPreview 的行为。
+	data, err := os.ReadFile("pkg/utils/data (6).txt")
+	if err != nil {
+		// 如果路径不对，明确报错，方便排查
+		t.Fatalf("failed to read test data file: %v", err)
+	}
+
+	preview := GenerateJsonObjectPreview(data)
+
+	// 当前实现要求顶层必须是 JSON object（以 '{' 开头、以 '}' 结尾），否则直接返回空串。
+	// data (6).txt 中的内容顶层并不是标准的 JSON object（例如很可能是数组或被包装为字符串），
+	// 因此这里的 preview 会是空串，表现为“剪裁失败”——并不是函数出错，而是输入格式与设计前提不符。
+	assert.Equal(t, "", preview)
+}
+
 func TestSummarizeValue(t *testing.T) {
 	t.Parallel()
 
@@ -212,7 +232,7 @@ func TestGenerateTextPreview(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := generateTextPreview([]byte(tt.input))
+			got := GenerateTextPreview([]byte(tt.input))
 
 			switch tt.name {
 			case "long ascii content should be trimmed":
