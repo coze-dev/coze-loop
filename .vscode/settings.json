@@ -124,6 +124,19 @@
   "stylelint.validate": ["css", "scss", "less"],
   "stylelint.stylelintPath": "frontend/config/stylelint-config/node_modules/stylelint",
   "emmet.triggerExpansionOnTab": true,
+  "svg.preview.background": "white",
+  "git.openRepositoryInParentFolders": "always",
+  "references.preferredLocation": "view",
+  "json.schemas": [
+    {
+      "fileMatch": ["rushx-config.json"],
+      "url": "./.vscode/rushx-config.schema.json"
+    },
+    {
+      "fileMatch": ["rush-project.json"],
+      "url": "https://developer.microsoft.com/json-schemas/rush/v5/rush-project.schema.json"
+    }
+  ],
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
@@ -174,8 +187,5 @@
   },
   "[sql]": {
     "editor.defaultFormatter": "adpyke.vscode-sql-formatter"
-  },
-  "svg.preview.background": "white",
-  "git.openRepositoryInParentFolders": "always",
-  "references.preferredLocation": "view"
+  }
 }
