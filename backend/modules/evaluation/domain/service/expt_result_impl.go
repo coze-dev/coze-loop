@@ -1534,8 +1534,13 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 			}
 		}
 		// TODO dsf 删除轨迹数据
-		if targetRecord.EvalTargetOutputData != nil && targetRecord.EvalTargetOutputData.OutputFields != nil && targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] != nil {
-			logs.CtxInfo(ctx, "len trajectoryContent.Text after preview: %v", len(targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory].GetText()))
+		if targetRecord.EvalTargetOutputData != nil && targetRecord.EvalTargetOutputData.OutputFields != nil {
+			if targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] != nil {
+				logs.CtxInfo(ctx, "len trajectoryContent.Text after preview: %v", len(targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory].GetText()))
+			}
+			if targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyActualOutput] != nil {
+				logs.CtxInfo(ctx, "len actual_output.Text: %v", len(targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyActualOutput].GetText()))
+			}
 		}
 		targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = nil
 
