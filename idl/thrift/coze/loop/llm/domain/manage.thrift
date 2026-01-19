@@ -82,11 +82,6 @@ struct AbilityVideo {
     2: optional list<VideoFormat> supported_video_formats
 }
 
-struct AbilityVideo {
-    1: optional i64 max_video_size (api.js_conv='true', go.tag='json:"max_video_size"') // MB
-    2: optional list<VideoFormat> supported_formats (api.js_conv='true', go.tag='json:"supported_formats"')
-}
-
 struct ProtocolConfig {
     1: optional string base_url
     2: optional string api_key
@@ -276,13 +271,6 @@ typedef string ModelStatus (ts.enum="true")
 const ModelStatus model_status_undefined = "undefined"
 const ModelStatus model_status_available = "available"      //可用
 const ModelStatus model_status_unavailable = "unavailable"    //不可用
-
-typedef string VideoFormat (ts.enum="true")
-const VideoFormat video_format_undefined = "undefined"
-const VideoFormat video_format_mp4  = "mp4"
-const VideoFormat video_format_avi  = "avi"
-const VideoFormat video_format_mov = "mov"
-const VideoFormat video_format_mpg  = "mpg"
 
 typedef string InterfaceCategory (ts.enum="true")
 const InterfaceCategory interface_category_undefined = "undefined"
