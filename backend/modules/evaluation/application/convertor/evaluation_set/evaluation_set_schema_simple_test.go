@@ -112,12 +112,28 @@ func TestMultiModalSpecDO2DTO_Simple(t *testing.T) {
 				MaxFileSize:      1048576,
 				SupportedFormats: []string{"jpg", "png", "mp4"},
 				MaxPartCount:     10,
+				MaxFileSizeByType: map[entity.ContentType]int64{
+					entity.ContentTypeImage: 1024,
+					entity.ContentTypeVideo: 2048,
+				},
+				SupportedFormatsByType: map[entity.ContentType][]string{
+					entity.ContentTypeImage: {"jpg"},
+					entity.ContentTypeVideo: {"mp4", "avi"},
+				},
 			},
 			expected: &dataset.MultiModalSpec{
 				MaxFileCount:     gptr.Of(int64(5)),
 				MaxFileSize:      gptr.Of(int64(1048576)),
 				SupportedFormats: []string{"jpg", "png", "mp4"},
 				MaxPartCount:     gptr.Of(int32(10)),
+				MaxFileSizeByType: map[dataset.ContentType]int64{
+					dataset.ContentType_Image: 1024,
+					dataset.ContentType_Video: 2048,
+				},
+				SupportedFormatsByType: map[dataset.ContentType][]string{
+					dataset.ContentType_Image: {"jpg"},
+					dataset.ContentType_Video: {"mp4", "avi"},
+				},
 			},
 		},
 	}

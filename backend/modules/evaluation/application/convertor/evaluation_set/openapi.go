@@ -24,6 +24,8 @@ func convertOpenAPIContentTypeToDO(contentType *common.ContentType) entity.Conte
 		return entity.ContentTypeImage
 	case common.ContentTypeAudio:
 		return entity.ContentTypeAudio
+	case common.ContentTypeVideo:
+		return entity.ContentTypeVideo
 	case common.ContentTypeMultiPart:
 		return entity.ContentTypeMultipart
 	default:
@@ -46,6 +48,9 @@ func convertDOContentTypeToOpenAPI(contentType entity.ContentType) *common.Conte
 		return &ct
 	case entity.ContentTypeAudio:
 		ct := common.ContentTypeAudio
+		return &ct
+	case entity.ContentTypeVideo:
+		ct := common.ContentTypeVideo
 		return &ct
 	case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
 		ct := common.ContentTypeMultiPart
@@ -453,6 +458,8 @@ func OpenAPIContentDTO2DO(content *common.Content) *entity.Content {
 		ContentType: gptr.Of(convertOpenAPIContentTypeToDO(content.ContentType)),
 		Text:        content.Text,
 		Image:       ConvertImageDTO2DO(content.Image),
+		Audio:       ConvertAudioDTO2DO(content.Audio),
+		Video:       ConvertVideoDTO2DO(content.Video),
 		MultiPart:   multiPart,
 	}
 }
@@ -465,6 +472,29 @@ func ConvertImageDTO2DO(img *common.Image) *entity.Image {
 		Name:     img.Name,
 		URL:      img.URL,
 		ThumbURL: img.ThumbURL,
+	}
+}
+
+func ConvertAudioDTO2DO(audio *common.Audio) *entity.Audio {
+	if audio == nil {
+		return nil
+	}
+	return &entity.Audio{
+		URL:  audio.URL,
+		Name: audio.Name,
+		URI:  audio.URI,
+	}
+}
+
+func ConvertVideoDTO2DO(video *common.Video) *entity.Video {
+	if video == nil {
+		return nil
+	}
+	return &entity.Video{
+		Name:     video.Name,
+		URL:      video.URL,
+		ThumbURL: video.ThumbURL,
+		URI:      video.URI,
 	}
 }
 
@@ -582,6 +612,20 @@ func ConvertAudioDO2DTO(audio *entity.Audio) *common.Audio {
 	return &common.Audio{
 		Format: audio.Format,
 		URL:    audio.URL,
+		Name:   audio.Name,
+		URI:    audio.URI,
+	}
+}
+
+func ConvertVideoDO2DTO(video *entity.Audio) *common.Audio {
+	if video == nil {
+		return nil
+	}
+	return &common.Audio{
+		Format: video.Format,
+		URL:    video.URL,
+		Name:   video.Name,
+		URI:    video.URI,
 	}
 }
 
