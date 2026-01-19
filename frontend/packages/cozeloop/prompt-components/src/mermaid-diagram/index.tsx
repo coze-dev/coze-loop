@@ -9,10 +9,11 @@ import {
   useImperativeHandle,
 } from 'react';
 
-import mermaid from 'mermaid';
+import type { Mermaid } from 'mermaid';
 import { isEmpty, uniqueId } from 'lodash-es';
 import cls from 'classnames';
 
+// 使用懒加载引入 mermaid
 import { exportImage } from './utils';
 import { useSvgPanZoom } from './use-svg-pan-zoom';
 
@@ -54,6 +55,33 @@ const DEFAULT_THEME = {
   },
 } as const;
 
+// 使用懒加载引入 mermaid
+const useMermaid = () => {
+  const [mermaidInstance, setMermaidInstance] = useState<Mermaid | null>(null);
+
+  useEffect(() => {
+    const loadMermaid = async () => {
+      try {
+        const module = await import('mermaid');
+        const mermaid = module.default;
+        mermaid.initialize({
+          ...DEFAULT_THEME,
+          startOnLoad: false,
+          logLevel: 'error',
+          suppressErrorRendering: true,
+        });
+        setMermaidInstance(mermaid);
+      } catch (e) {
+        console.error('Failed to load mermaid:', e);
+      }
+    };
+
+    loadMermaid();
+  }, []);
+
+  return { mermaid: mermaidInstance };
+};
+
 export const MermaidDiagram = /*#__PURE__*/ forwardRef<
   MermaidDiagramRef,
   MermaidDiagramProps
@@ -62,9 +90,10 @@ export const MermaidDiagram = /*#__PURE__*/ forwardRef<
   const id = useRef(`mermaid-diagram-${uniqueId()}`);
   const svgId = `svg-${id.current}`;
   const [preChart, setPreChart] = useState('');
+  const { mermaid } = useMermaid();
 
   const updateChart = async (chartStr: string) => {
-    if (isEmpty(chartStr)) {
+    if (isEmpty(chartStr) || !mermaid) {
       return;
     }
     try {
@@ -95,18 +124,10 @@ export const MermaidDiagram = /*#__PURE__*/ forwardRef<
       }
     }
   };
-  useEffect(() => {
-    mermaid.initialize({
-      ...DEFAULT_THEME,
-      startOnLoad: false,
-      logLevel: 'error',
-      suppressErrorRendering: true,
-    });
-  }, []);
 
   useEffect(() => {
     updateChart(chart);
-  }, [chart]);
+  }, [chart, mermaid]);
 
   const { zoomIn, zoomOut, fit } = useSvgPanZoom({
     svgSelector: `#${svgId}`,

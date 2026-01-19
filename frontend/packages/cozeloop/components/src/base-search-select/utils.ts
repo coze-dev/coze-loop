@@ -4,7 +4,7 @@
 export const transformValueToArray = (
   value: any,
   onChangeWithObject = false,
-) => {
+): string[] | number[] => {
   // 对象传入
   if (onChangeWithObject) {
     // 对象数组

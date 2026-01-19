@@ -74,6 +74,14 @@ func TestExptTurnResultFilterDAOImpl_buildQueryConditions(t *testing.T) {
 						{Key: "5", Op: "NOT LIKE", Values: []any{"5"}},
 						{Key: "6", Op: "NOT IN", Values: []any{"3"}},
 					},
+					EvalTargetMetricsFilters: []*FieldFilter{
+						{Key: "total_latency", Op: "=", Values: []any{"100"}},
+						{Key: "input_tokens", Op: ">", Values: []any{"10"}},
+						{Key: "output_tokens", Op: "<=", Values: []any{"20"}},
+						{Key: "total_tokens", Op: "BETWEEN", Values: []any{"30", "40"}},
+						{Key: "input_tokens", Op: "IN", Values: []any{"50", "60"}},
+						{Key: "output_tokens", Op: "NOT IN", Values: []any{"70", "80"}},
+					},
 				},
 				ItemSnapshotCond: &ItemSnapshotFilter{
 					BoolMapFilters: []*FieldFilter{
@@ -304,6 +312,106 @@ func TestExptTurnResultFilterDAOImpl_parseOutput(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := parseOutput(ctx, tt.args)
 			assert.NotNil(t, got)
+		})
+	}
+}
+
+func TestExptTurnResultFilterDAOImpl_buildMapFieldConditions_EvalTargetMetricsFilters(t *testing.T) {
+	d := &exptTurnResultFilterDAOImpl{}
+
+	tests := []struct {
+		name     string
+		cond     *ExptTurnResultFilterQueryCond
+		wantSQL  string
+		wantArgs int
+	}{
+		{
+			name: "eval_target_metrics_equal",
+			cond: &ExptTurnResultFilterQueryCond{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*FieldFilter{
+						{Key: "total_latency", Op: "=", Values: []any{"100"}},
+					},
+				},
+			},
+			wantSQL:  " AND etrf.eval_target_metrics['total_latency'] = ?",
+			wantArgs: 1,
+		},
+		{
+			name: "eval_target_metrics_comparison_ops",
+			cond: &ExptTurnResultFilterQueryCond{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*FieldFilter{
+						{Key: "input_tokens", Op: ">", Values: []any{"10"}},
+						{Key: "output_tokens", Op: ">=", Values: []any{"20"}},
+						{Key: "total_tokens", Op: "<", Values: []any{"30"}},
+						{Key: "total_latency", Op: "<=", Values: []any{"40"}},
+						{Key: "input_tokens", Op: "!=", Values: []any{"50"}},
+					},
+				},
+			},
+			wantSQL:  " AND etrf.eval_target_metrics['input_tokens'] > ? AND etrf.eval_target_metrics['output_tokens'] >= ? AND etrf.eval_target_metrics['total_tokens'] < ? AND etrf.eval_target_metrics['total_latency'] <= ? AND etrf.eval_target_metrics['input_tokens'] != ?",
+			wantArgs: 5,
+		},
+		{
+			name: "eval_target_metrics_between",
+			cond: &ExptTurnResultFilterQueryCond{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*FieldFilter{
+						{Key: "total_tokens", Op: "BETWEEN", Values: []any{"100", "200"}},
+					},
+				},
+			},
+			wantSQL:  " AND etrf.eval_target_metrics['total_tokens'] BETWEEN ? AND ?",
+			wantArgs: 2,
+		},
+		{
+			name: "eval_target_metrics_in",
+			cond: &ExptTurnResultFilterQueryCond{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*FieldFilter{
+						{Key: "input_tokens", Op: "IN", Values: []any{"10", "20", "30"}},
+					},
+				},
+			},
+			wantSQL:  " AND etrf.eval_target_metrics['input_tokens'] IN ?",
+			wantArgs: 1,
+		},
+		{
+			name: "eval_target_metrics_not_in",
+			cond: &ExptTurnResultFilterQueryCond{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*FieldFilter{
+						{Key: "output_tokens", Op: "NOT IN", Values: []any{"40", "50"}},
+					},
+				},
+			},
+			wantSQL:  " AND etrf.eval_target_metrics['output_tokens'] NOT IN ?",
+			wantArgs: 1,
+		},
+		{
+			name: "eval_target_metrics_invalid_value",
+			cond: &ExptTurnResultFilterQueryCond{
+				MapCond: &ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*FieldFilter{
+						{Key: "total_latency", Op: "=", Values: []any{"invalid"}},
+					},
+				},
+			},
+			wantSQL:  "",
+			wantArgs: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			whereSQL := ""
+			args := []interface{}{}
+			d.buildMapFieldConditions(tt.cond, &whereSQL, &args)
+			if tt.wantSQL != "" {
+				assert.Contains(t, whereSQL, tt.wantSQL)
+			}
+			assert.Equal(t, tt.wantArgs, len(args))
 		})
 	}
 }

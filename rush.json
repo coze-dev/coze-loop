@@ -21,8 +21,6 @@
   },
   "telemetryEnabled": true,
   "allowedProjectTags": [
-    "team-devops",
-    "team-arch",
     "level-1",
     "level-2",
     "level-3",
@@ -34,37 +32,37 @@
     {
       "packageName": "@cozeloop/community-base",
       "projectFolder": "frontend/apps/cozeloop",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@coze-arch/eslint-config",
       "projectFolder": "frontend/config/eslint-config",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/stylelint-config",
       "projectFolder": "frontend/config/stylelint-config",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/tailwind-config",
       "projectFolder": "frontend/config/tailwind-config",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/ts-config",
       "projectFolder": "frontend/config/ts-config",
-      "tags": ["team-arch", "level-1", "core"]
+      "tags": ["level-1", "core"]
     },
     {
       "packageName": "@coze-arch/vitest-config",
       "projectFolder": "frontend/config/vitest-config",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/eslint-plugin",
       "projectFolder": "frontend/infra/eslint-plugin",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/idl-parser",
@@ -99,12 +97,12 @@
     {
       "packageName": "@coze-arch/pkg-root-webpack-plugin",
       "projectFolder": "frontend/infra/plugins/pkg-root-webpack-plugin",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/postcss-plugin",
       "projectFolder": "frontend/infra/plugins/postcss-plugin",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/monorepo-kits",
@@ -114,22 +112,22 @@
     {
       "packageName": "@coze-arch/rush-logger",
       "projectFolder": "frontend/infra/utils/rush-logger",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/bot-env",
       "projectFolder": "frontend/packages/arch/bot-env",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-studio/bot-env-adapter",
       "projectFolder": "frontend/packages/arch/bot-env-adapter",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/bot-flags",
       "projectFolder": "frontend/packages/arch/bot-flags",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/bot-md-box-adapter",
@@ -139,17 +137,17 @@
     {
       "packageName": "@coze-arch/bot-typings",
       "projectFolder": "frontend/packages/arch/bot-typings",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/fetch-stream",
       "projectFolder": "frontend/packages/arch/fetch-stream",
-      "tags": ["team-arch", "level-2"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@coze-arch/logger",
       "projectFolder": "frontend/packages/arch/logger",
-      "tags": ["team-arch", "level-1"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/subspace-resolve-plugin",
@@ -159,57 +157,57 @@
     {
       "packageName": "@cozeloop/account",
       "projectFolder": "frontend/packages/cozeloop/account",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/adapter-interfaces",
       "projectFolder": "frontend/packages/cozeloop/adapter-interfaces",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/api-schema",
       "projectFolder": "frontend/packages/cozeloop/api-schema",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/auth-pages",
       "projectFolder": "frontend/packages/cozeloop/auth-pages",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
-      "packageName": "@cozeloop/base-hooks",
+      "packageName": "@cozeloop/hooks",
       "projectFolder": "frontend/packages/cozeloop/base-hooks",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/biz-components-adapter",
       "projectFolder": "frontend/packages/cozeloop/biz-components",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/biz-config-adapter",
       "projectFolder": "frontend/packages/cozeloop/biz-config",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/biz-hooks-adapter",
       "projectFolder": "frontend/packages/cozeloop/biz-hooks",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/components",
       "projectFolder": "frontend/packages/cozeloop/components",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/env-adapter",
       "projectFolder": "frontend/packages/cozeloop/env",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/evaluate",
       "projectFolder": "frontend/packages/cozeloop/evaluate",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/evaluate-adapter",
@@ -219,12 +217,12 @@
     {
       "packageName": "@cozeloop/evaluate-components",
       "projectFolder": "frontend/packages/cozeloop/evaluate-components",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/evaluate-pages",
       "projectFolder": "frontend/packages/cozeloop/evaluate-pages",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/guard",
@@ -234,7 +232,7 @@
     {
       "packageName": "@cozeloop/i18n-adapter",
       "projectFolder": "frontend/packages/cozeloop/i18n",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/intl",
@@ -242,23 +240,13 @@
       "tags": ["level-3"]
     },
     {
-      "packageName": "@cozeloop/observation-component",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-detail",
-      "tags": ["team-devops", "level-3"]
-    },
-    {
-      "packageName": "@cozeloop/observation-component-adapter",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-detail-open",
-      "tags": ["team-devops", "level-3"]
-    },
-    {
-      "packageName": "@cozeloop/trace-list",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-list",
+      "packageName": "@cozeloop/observation-components",
+      "projectFolder": "frontend/packages/cozeloop/observation-components",
       "tags": ["level-3"]
     },
     {
-      "packageName": "@cozeloop/trace-struct-data",
-      "projectFolder": "frontend/packages/cozeloop/observation/trace-struct-data",
+      "packageName": "@cozeloop/observation-adapter",
+      "projectFolder": "frontend/packages/cozeloop/observation-adapter",
       "tags": ["level-3"]
     },
     {
@@ -269,12 +257,12 @@
     {
       "packageName": "@cozeloop/prompt-components",
       "projectFolder": "frontend/packages/cozeloop/prompt-components",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/prompt-pages",
       "projectFolder": "frontend/packages/cozeloop/prompt-pages",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/loop-lng",
@@ -289,12 +277,12 @@
     {
       "packageName": "@cozeloop/rsbuild-config",
       "projectFolder": "frontend/packages/cozeloop/rsbuild-config",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/stores",
       "projectFolder": "frontend/packages/cozeloop/stores",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/tag-components",
@@ -304,27 +292,45 @@
     {
       "packageName": "@cozeloop/tag-pages",
       "projectFolder": "frontend/packages/cozeloop/tag-pages",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/tailwind-config",
       "projectFolder": "frontend/packages/cozeloop/tailwind-config",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/tailwind-plugin",
       "projectFolder": "frontend/packages/cozeloop/tailwind-plugin",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/tea-adapter",
       "projectFolder": "frontend/packages/cozeloop/tea",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/toolkit",
       "projectFolder": "frontend/packages/cozeloop/toolkit",
-      "tags": ["team-devops", "level-3"]
+      "tags": ["level-3"]
+    },
+    {
+      "packageName": "@cozeloop/base-with-adapter-components",
+      "projectFolder": "frontend/packages/cozeloop/components-with-adapter",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
+    },
+    {
+      "packageName": "@cozeloop/shared-components",
+      "projectFolder": "frontend/packages/cozeloop/shared-components",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
+    },
+    {
+      "packageName": "@cozeloop/prompt-components-v2",
+      "projectFolder": "frontend/packages/cozeloop/prompt-components-v2",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
     }
   ]
 }

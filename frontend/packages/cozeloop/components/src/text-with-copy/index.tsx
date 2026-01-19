@@ -6,6 +6,8 @@ import classNames from 'classnames';
 import { IconCozCopy } from '@coze-arch/coze-design/icons';
 import { IconButton, Tooltip, Typography } from '@coze-arch/coze-design';
 
+import { useI18n } from '@/provider';
+
 import { handleCopy } from '../utils/basic';
 
 interface TextWithCopyProps {
@@ -38,6 +40,7 @@ export function TextWithCopy({
   textType = 'secondary',
   onlyIconCopy,
 }: TextWithCopyProps) {
+  const I18n = useI18n();
   return (
     <div
       className={classNames(
@@ -71,7 +74,10 @@ export function TextWithCopy({
         {displayText || content || ''}
       </Typography.Text>
       {content ? (
-        <Tooltip content={copyTooltipText || '复制内容'} theme="dark">
+        <Tooltip
+          content={copyTooltipText || I18n.t('copy_content')}
+          theme="dark"
+        >
           <IconButton
             size="mini"
             color="secondary"

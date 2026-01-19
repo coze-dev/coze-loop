@@ -34,6 +34,7 @@ export const ImageDatasetItem: React.FC<
         visible={visible}
         onVisibleChange={setVisible}
       />
+
       <Image
         src={image?.url}
         alt={image?.name}
@@ -44,6 +45,7 @@ export const ImageDatasetItem: React.FC<
           objectPosition: 'center',
         }}
       />
+
       <div
         className={
           'invisible absolute inset-0 flex gap-3 items-center rounded-[6px] justify-center bg-[rgba(0,0,0,0.4)]  group-hover:visible'

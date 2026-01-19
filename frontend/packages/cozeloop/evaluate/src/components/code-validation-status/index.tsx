@@ -1,22 +1,6 @@
-/*
- * Copyright 2025 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 
-{
-  /* start_aigc */
-}
 import React, { useMemo } from 'react';
 
 import { I18n } from '@cozeloop/i18n-adapter';
@@ -59,10 +43,12 @@ export function CodeValidationStatus({
               color="var(--coz-fg-dim)"
             />
             <span className="text-sm font-medium text-[16px]">
-              代码校验中...
+              {I18n.t('evaluate_code_validating')}
             </span>
           </div>
-          <div style={contentTextStyle}>代码语法校验通过后，即可提交</div>
+          <div style={contentTextStyle}>
+            {I18n.t('evaluate_submit_after_code_syntax_passed')}
+          </div>
         </>
       );
     }
@@ -76,11 +62,11 @@ export function CodeValidationStatus({
           >
             <IconCozCheckMarkCircleFill className="w-6 h-6 mr-2" />
             <span className="text-sm font-medium text-[16px]">
-              代码检查通过
+              {I18n.t('evaluate_code_check_passed')}
             </span>
           </div>
           <div style={{ ...contentTextStyle, color: 'var(--coz-fg-primary)' }}>
-            代码语法正确，可以提交
+            {I18n.t('evaluate_code_syntax_correct_can_submit')}
           </div>
         </>
       );
@@ -94,7 +80,7 @@ export function CodeValidationStatus({
         >
           <IconCozCrossCircleFill className="w-6 h-6 mr-2" />
           <span className="text-sm font-medium text-[16px]">
-            代码检查失败，请重试
+            {I18n.t('evaluate_code_check_failed_retry')}
           </span>
         </div>
         <div style={contentTextStyle}>
@@ -116,7 +102,4 @@ export function CodeValidationStatus({
       {content}
     </div>
   );
-}
-{
-  /* end_aigc */
 }

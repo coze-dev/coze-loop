@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "codecov": {
+      "$ref": "#/definitions/codecov",
+      "description": "Unit test-related configurations, such as threshold gates and diff directory settings."
+    },
+    "team": {
+      "type": "array",
+      "description": "The associated team.",
+      "items": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "level": {
+      "type": "array",
+      "description": "The classification level of the package.",
+      "items": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "packageAudit": {
+      "$ref": "#/definitions/packageAudit",
+      "description": "Configurations related to the package quality detection tools."
+    },
+    "dupCheck": {
+      "$ref": "#/definitions/dupCheck",
+      "description": "Configurations related to code duplication detection."
+    }
+  },
+  "definitions": {
+    "codecov": {
+      "type": "object",
+      "properties": {
+        "coverage": {
+          "type": "number",
+          "description": "Coverage threshold."
+        },
+        "incrementCoverage": {
+          "type": "number",
+          "description": "Incremental coverage threshold."
+        },
+        "ignoreDiff": {
+          "type": "array",
+          "description": "Configure directories to ignore in incremental coverage calculation; glob pattern matching is supported.",
+          "items": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "level-0": {
+          "$ref": "#/definitions/level"
+        },
+        "level-1": {
+          "$ref": "#/definitions/level"
+        },
+        "level-2": {
+          "$ref": "#/definitions/level"
+        },
+        "level-3": {
+          "$ref": "#/definitions/level"
+        },
+        "level-4": {
+          "$ref": "#/definitions/level"
+        }
+      }
+    },
+    "level": {
+      "type": "object",
+      "properties": {
+        "coverage": {
+          "type": "number",
+          "description": "Coverage threshold."
+        },
+        "incrementCoverage": {
+          "type": "number",
+          "description": "Incremental coverage threshold."
+        }
+      }
+    },
+    "packageAudit": {
+      "type": "object",
+      "description": "Configurations related to scanning rules.",
+      "properties": {
+        "enable": { "type": "boolean" },
+        "rules": {
+          "type": "array",
+          "items": [
+            {
+              "type": "array",
+              "items": [
+                {
+                  "type": "string",
+                  "description": "Rule names; currently supports these three types: owners, rule-project.json, essential-config-file.",
+                  "enum": [
+                    "rule-project.json",
+                    "owners",
+                    "essential-config-file"
+                  ]
+                },
+                { "type": "string", "enum": ["error", "warn"] },
+                {
+                  "type": "object",
+                  "description": "Supplementary configuration for rules; can be of a nullable type."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "dupCheck": {
+      "type": "object",
+      "description": "Configurations related to code duplication detection.",
+      "properties": {
+        "ignoreGlobPatterns": {
+          "title": "Glob patterns to be ignored for detection (relative to the current package directory, not the configuration file directory).",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

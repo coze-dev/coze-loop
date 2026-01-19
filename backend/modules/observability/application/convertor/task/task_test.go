@@ -46,6 +46,13 @@ func TestTaskDOs2DTOs(t *testing.T) {
 				FailedCount:  1,
 				TotalCount:   4,
 			},
+			BackfillDetail: &entity.BackfillDetail{
+				SuccessCount:      3,
+				FailedCount:       1,
+				TotalCount:        4,
+				BackfillStatus:    kitTask.RunStatusRunning,
+				LastSpanPageToken: "abc",
+			},
 			CreatedAt: now,
 			UpdatedAt: now,
 		}

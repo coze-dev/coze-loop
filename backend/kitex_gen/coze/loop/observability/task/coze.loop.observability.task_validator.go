@@ -27,6 +27,11 @@ func (p *CreateTaskRequest) IsValid() error {
 			return fmt.Errorf("field Task not valid, %w", err)
 		}
 	}
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -49,6 +54,11 @@ func (p *UpdateTaskRequest) IsValid() error {
 	if p.EffectiveTime != nil {
 		if err := p.EffectiveTime.IsValid(); err != nil {
 			return fmt.Errorf("field EffectiveTime not valid, %w", err)
+		}
+	}
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
 		}
 	}
 	if p.Base != nil {

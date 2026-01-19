@@ -1989,6 +1989,10 @@ func TestTraceApplication_PreviewExportTracesToDataset(t *testing.T) {
 								Name: ptr.Of("Input"),
 							},
 						},
+						SpanInfo: &dataset0.ExportSpanInfo{
+							TraceID: ptr.Of(""),
+							SpanID:  ptr.Of(""),
+						},
 					},
 				},
 			},

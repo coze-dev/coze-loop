@@ -186,10 +186,11 @@ export default function ExperimentContrastTable({
             actions={[
               {
                 label: (
-                  <Tooltip content={I18n.t('detail')} theme="dark">
+                  <Tooltip content={I18n.t('view_detail')} theme="dark">
                     {I18n.t('detail')}
                   </Tooltip>
                 ),
+
                 onClick: () => {
                   setActiveItem(record);
                 },
@@ -199,6 +200,7 @@ export default function ExperimentContrastTable({
         ),
       },
     ];
+
     setColumns(newColumns);
   }, [
     spaceID,
@@ -261,6 +263,7 @@ export default function ExperimentContrastTable({
           }),
         }}
       />
+
       {activeItem ? (
         <ExperimentContrastItemDetail
           experiments={experiments}

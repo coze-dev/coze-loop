@@ -4,7 +4,7 @@
 
 package model
 
-const TableNameAnnotation = "observability_annotation"
+const TableNameAnnotation = "observability_annotations"
 
 // ObservabilityAnnotation mapped from table <observability_annotation>
 type ObservabilityAnnotation struct {

@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
+	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -174,6 +175,36 @@ func (mr *MockITraceServiceMockRecorder) GetTracesMetaInfo(ctx, req any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTracesMetaInfo", reflect.TypeOf((*MockITraceService)(nil).GetTracesMetaInfo), ctx, req)
 }
 
+// GetTrajectories mocks base method.
+func (m *MockITraceService) GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTrajectories", ctx, workspaceID, traceIDs, startTime, endTime, platformType)
+	ret0, _ := ret[0].(map[string]*loop_span.Trajectory)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTrajectories indicates an expected call of GetTrajectories.
+func (mr *MockITraceServiceMockRecorder) GetTrajectories(ctx, workspaceID, traceIDs, startTime, endTime, platformType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectories", reflect.TypeOf((*MockITraceService)(nil).GetTrajectories), ctx, workspaceID, traceIDs, startTime, endTime, platformType)
+}
+
+// GetTrajectoryConfig mocks base method.
+func (m *MockITraceService) GetTrajectoryConfig(ctx context.Context, req *service.GetTrajectoryConfigRequest) (*service.GetTrajectoryConfigResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTrajectoryConfig", ctx, req)
+	ret0, _ := ret[0].(*service.GetTrajectoryConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTrajectoryConfig indicates an expected call of GetTrajectoryConfig.
+func (mr *MockITraceServiceMockRecorder) GetTrajectoryConfig(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectoryConfig", reflect.TypeOf((*MockITraceService)(nil).GetTrajectoryConfig), ctx, req)
+}
+
 // IngestTraces mocks base method.
 func (m *MockITraceService) IngestTraces(ctx context.Context, req *service.IngestTracesReq) error {
 	m.ctrl.T.Helper()
@@ -233,6 +264,21 @@ func (mr *MockITraceServiceMockRecorder) ListPreSpan(ctx, req any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPreSpan", reflect.TypeOf((*MockITraceService)(nil).ListPreSpan), ctx, req)
 }
 
+// ListPreSpanOApi mocks base method.
+func (m *MockITraceService) ListPreSpanOApi(ctx context.Context, req *service.ListPreSpanOApiReq) (*service.ListPreSpanOApiResp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPreSpanOApi", ctx, req)
+	ret0, _ := ret[0].(*service.ListPreSpanOApiResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPreSpanOApi indicates an expected call of ListPreSpanOApi.
+func (mr *MockITraceServiceMockRecorder) ListPreSpanOApi(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPreSpanOApi", reflect.TypeOf((*MockITraceService)(nil).ListPreSpanOApi), ctx, req)
+}
+
 // ListSpans mocks base method.
 func (m *MockITraceService) ListSpans(ctx context.Context, req *service.ListSpansReq) (*service.ListSpansResp, error) {
 	m.ctrl.T.Helper()
@@ -261,6 +307,21 @@ func (m *MockITraceService) ListSpansOApi(ctx context.Context, req *service.List
 func (mr *MockITraceServiceMockRecorder) ListSpansOApi(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpansOApi", reflect.TypeOf((*MockITraceService)(nil).ListSpansOApi), ctx, req)
+}
+
+// ListTrajectory mocks base method.
+func (m *MockITraceService) ListTrajectory(ctx context.Context, req *service.ListTrajectoryRequest) (*service.ListTrajectoryResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTrajectory", ctx, req)
+	ret0, _ := ret[0].(*service.ListTrajectoryResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTrajectory indicates an expected call of ListTrajectory.
+func (mr *MockITraceServiceMockRecorder) ListTrajectory(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTrajectory", reflect.TypeOf((*MockITraceService)(nil).ListTrajectory), ctx, req)
 }
 
 // SearchTraceOApi mocks base method.
@@ -304,4 +365,18 @@ func (m *MockITraceService) UpdateManualAnnotation(ctx context.Context, req *ser
 func (mr *MockITraceServiceMockRecorder) UpdateManualAnnotation(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateManualAnnotation", reflect.TypeOf((*MockITraceService)(nil).UpdateManualAnnotation), ctx, req)
+}
+
+// UpsertTrajectoryConfig mocks base method.
+func (m *MockITraceService) UpsertTrajectoryConfig(ctx context.Context, req *service.UpsertTrajectoryConfigRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertTrajectoryConfig", ctx, req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpsertTrajectoryConfig indicates an expected call of UpsertTrajectoryConfig.
+func (mr *MockITraceServiceMockRecorder) UpsertTrajectoryConfig(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertTrajectoryConfig", reflect.TypeOf((*MockITraceService)(nil).UpsertTrajectoryConfig), ctx, req)
 }

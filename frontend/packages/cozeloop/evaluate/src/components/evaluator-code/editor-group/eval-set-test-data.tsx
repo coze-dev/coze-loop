@@ -1,22 +1,9 @@
-/*
- * Copyright 2025 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 
-// start_aigc
 import { useCallback, useState, useEffect } from 'react';
 
+import { I18n } from '@cozeloop/i18n-adapter';
 import { type EvaluationSetItemTableData } from '@cozeloop/evaluate-components';
 import { CodeEditor, IDRender } from '@cozeloop/components';
 import {
@@ -50,9 +37,6 @@ const CollapsibleEditorArray: React.FC<{
 
   const originSelectedData = values?.config?.testData?.originSelectedData || [];
 
-  {
-    /* start_aigc */
-  }
   const handleDeleteItem = useCallback(
     (indexToDelete: number, event: React.MouseEvent) => {
       // 阻止事件冒泡，防止触发面板折叠/展开
@@ -69,9 +53,6 @@ const CollapsibleEditorArray: React.FC<{
     },
     [data, onChange],
   );
-  {
-    /* end_aigc */
-  }
 
   const handleItemChange = useCallback(
     (index: number, value: string) => {
@@ -97,9 +78,6 @@ const CollapsibleEditorArray: React.FC<{
       <Collapse expandIconPosition="left" className="flex flex-col gap-1">
         {data.map((item, index) => {
           const key = originSelectedData[index]?.item_id || `item-${index}`;
-          {
-            /* start_aigc */
-          }
           return (
             <Collapse.Panel
               header={
@@ -116,7 +94,6 @@ const CollapsibleEditorArray: React.FC<{
               itemKey={key}
               className={styles.customCollapsePanelWrapper}
             >
-              {/* end_aigc */}
               <div style={{ height: 284 }}>
                 <CodeEditor
                   language="json"
@@ -247,7 +224,7 @@ export const EvalSetTestData: React.FC<EvalSetTestDataProps> = ({
               color="var(--coz-fg-dim, rgba(55, 67, 106, 0.38))"
             />
           }
-          description="暂无测试数据"
+          description={I18n.t('evaluate_no_test_data')}
         >
           <Button
             size="small"
@@ -257,7 +234,7 @@ export const EvalSetTestData: React.FC<EvalSetTestDataProps> = ({
             onClick={handleOpenModal}
             disabled={disabled}
           >
-            构造测试数据
+            {I18n.t('construct_test_data')}
           </Button>
         </Empty>
       </div>
@@ -274,4 +251,3 @@ export const EvalSetTestData: React.FC<EvalSetTestDataProps> = ({
 };
 
 export default EvalSetTestData;
-// end_aigc

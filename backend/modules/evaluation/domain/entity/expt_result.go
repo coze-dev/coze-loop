@@ -4,6 +4,7 @@
 package entity
 
 import (
+	"bytes"
 	"context"
 	"strconv"
 	"time"
@@ -33,6 +34,18 @@ const (
 
 	// 标注项, FieldKey为TagKeyID
 	FieldType_Annotation FieldType = 23
+
+	FieldType_TargetLatency      FieldType = 50
+	FieldType_TargetInputTokens  FieldType = 51
+	FieldType_TargetOutputTokens FieldType = 52
+	FieldType_TargetTotalTokens  FieldType = 53
+)
+
+const (
+	AggrResultFieldKey_TargetLatency      string = "_target_latency"
+	AggrResultFieldKey_TargetInputTokens  string = "_target_input_tokens"
+	AggrResultFieldKey_TargetOutputTokens string = "_target_output_tokens"
+	AggrResultFieldKey_TargetTotalTokens  string = "_target_total_tokens"
 )
 
 // aggregate result
@@ -135,6 +148,29 @@ type ExptAggrResult struct {
 	AggrResult   []byte
 	Version      int64
 	Status       int32
+	UpdateAt     *time.Time
+}
+
+func (e *ExptAggrResult) AggrResEqual(other *ExptAggrResult) bool {
+	if e == nil && other == nil {
+		return true
+	}
+	if e == nil || other == nil {
+		return false
+	}
+	if e.SpaceID != other.SpaceID || e.ExperimentID != other.ExperimentID {
+		return false
+	}
+	if e.FieldType != other.FieldType || e.FieldKey != other.FieldKey {
+		return false
+	}
+	if e.Score != other.Score {
+		return false
+	}
+	if !bytes.Equal(e.AggrResult, other.AggrResult) {
+		return false
+	}
+	return true
 }
 
 type ExptAggregateResult struct {
@@ -142,6 +178,8 @@ type ExptAggregateResult struct {
 	EvaluatorResults  map[int64]*EvaluatorAggregateResult
 	Status            int64
 	AnnotationResults map[int64]*AnnotationAggregateResult
+	TargetResults     *EvalTargetMtrAggrResult
+	UpdateTime        *time.Time
 }
 
 type EvaluatorAggregateResult struct {
@@ -159,6 +197,15 @@ type AnnotationAggregateResult struct {
 	Name              *string
 }
 
+type EvalTargetMtrAggrResult struct {
+	TargetID                int64
+	TargetVersionID         int64
+	LatencyAggrResults      []*AggregatorResult
+	InputTokensAggrResults  []*AggregatorResult
+	OutputTokensAggrResults []*AggregatorResult
+	TotalTokensAggrResults  []*AggregatorResult
+}
+
 // item result
 type ExptItemResult struct {
 	ID        int64
@@ -170,6 +217,7 @@ type ExptItemResult struct {
 	ErrMsg    string
 	ItemIdx   int32
 	LogID     string
+	Ext       map[string]string
 }
 
 type ExptItemResultRunLog struct {
@@ -282,6 +330,18 @@ type MGetExperimentResultParam struct {
 	FilterAccelerators map[int64]*ExptTurnResultFilterAccelerator
 	UseAccelerator     bool
 	Page               Page
+	// FullTrajectory 表示在构建 eval_target_result 时是否需要包含轨迹（trajectory）相关信息
+	FullTrajectory bool
+}
+
+type MGetExperimentReportResult struct {
+	ColumnEvaluators      []*ColumnEvaluator
+	ExptColumnEvaluators  []*ExptColumnEvaluator
+	ColumnEvalSetFields   []*ColumnEvalSetField
+	ExptColumnAnnotations []*ExptColumnAnnotation
+	ItemResults           []*ItemResult
+	ExptColumnsEvalTarget []*ExptColumnEvalTarget
+	Total                 int64
 }
 
 type ExptTurnResultRunLog struct {
@@ -297,6 +357,7 @@ type ExptTurnResultRunLog struct {
 	TargetResultID     int64
 	EvaluatorResultIds *EvaluatorResults
 	ErrMsg             string
+	UpdatedAt          time.Time
 }
 
 type ExptTurnEvaluatorResultRef struct {
@@ -420,11 +481,12 @@ func NewSession(ctx context.Context) *Session {
 }
 
 type ExptTurnResultFilterMapCond struct {
-	EvalTargetDataFilters   []*FieldFilter
-	EvaluatorScoreFilters   []*FieldFilter
-	AnnotationFloatFilters  []*FieldFilter
-	AnnotationBoolFilters   []*FieldFilter
-	AnnotationStringFilters []*FieldFilter
+	EvalTargetDataFilters    []*FieldFilter
+	EvaluatorScoreFilters    []*FieldFilter
+	AnnotationFloatFilters   []*FieldFilter
+	AnnotationBoolFilters    []*FieldFilter
+	AnnotationStringFilters  []*FieldFilter
+	EvalTargetMetricsFilters []*FieldFilter
 }
 
 type FieldFilter struct {
@@ -483,7 +545,8 @@ func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
 		len(e.MapCond.EvaluatorScoreFilters) > 0 ||
 		len(e.MapCond.AnnotationFloatFilters) > 0 ||
 		len(e.MapCond.AnnotationBoolFilters) > 0 ||
-		len(e.MapCond.AnnotationStringFilters) > 0))
+		len(e.MapCond.AnnotationStringFilters) > 0 ||
+		len(e.MapCond.EvalTargetMetricsFilters) > 0))
 	hasFilters = hasFilters || (e.ItemSnapshotCond != nil && (len(e.ItemSnapshotCond.BoolMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.FloatMapFilters) > 0 ||
 		len(e.ItemSnapshotCond.IntMapFilters) > 0 ||
@@ -545,7 +608,9 @@ type TurnAnnotateResult struct {
 }
 
 type TurnEvalSet struct {
-	Turn *Turn
+	Turn      *Turn
+	ItemID    int64
+	EvalSetID int64
 }
 
 type TurnSystemInfo struct {
@@ -572,6 +637,7 @@ type ItemResult struct {
 	TurnResults []*TurnResult
 	SystemInfo  *ItemSystemInfo
 	ItemIndex   *int64
+	Ext         map[string]string
 }
 
 type ExperimentTurnPayload struct {
@@ -586,6 +652,8 @@ type ExperimentTurnPayload struct {
 	SystemInfo *TurnSystemInfo
 	// 标注结果
 	AnnotateResult *TurnAnnotateResult
+	// 分析结果
+	AnalysisRecord *AnalysisRecord
 }
 
 type ExperimentResult struct {
@@ -606,6 +674,7 @@ type ColumnEvalSetField struct {
 	Description *string
 	ContentType ContentType
 	TextSchema  *string
+	SchemaKey   *SchemaKey
 }
 
 type ColumnEvaluator struct {
@@ -635,6 +704,7 @@ type ExptTurnResultFilterEntity struct {
 	AnnotationFloat         map[string]float64 `json:"annotation_float"`
 	AnnotationBool          map[string]bool    `json:"annotation_bool"`
 	AnnotationString        map[string]string  `json:"annotation_string"`
+	EvalTargetMetrics       map[string]int64   `json:"eval_target_metrics"`
 	CreatedDate             time.Time          `json:"created_date"`
 	EvaluatorScoreCorrected bool               `json:"evaluator_score_corrected"`
 	EvalSetVersionID        int64              `json:"eval_set_version_id"`
@@ -676,4 +746,16 @@ type ColumnAnnotation struct {
 type ExptColumnAnnotation struct {
 	ExptID            int64
 	ColumnAnnotations []*ColumnAnnotation
+}
+
+type ExptColumnEvalTarget struct {
+	ExptID  int64
+	Columns []*ColumnEvalTarget
+}
+
+type ColumnEvalTarget struct {
+	Name        string
+	Desc        string
+	Label       *string
+	DisplayName string
 }

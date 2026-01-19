@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	gomock "go.uber.org/mock/gomock"
@@ -144,17 +145,12 @@ func (mr *MockExptResultServiceMockRecorder) InsertExptTurnResultFilterKeyMappin
 }
 
 // MGetExperimentResult mocks base method.
-func (m *MockExptResultService) MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) ([]*entity.ColumnEvaluator, []*entity.ExptColumnEvaluator, []*entity.ColumnEvalSetField, []*entity.ExptColumnAnnotation, []*entity.ItemResult, int64, error) {
+func (m *MockExptResultService) MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MGetExperimentResult", ctx, param)
-	ret0, _ := ret[0].([]*entity.ColumnEvaluator)
-	ret1, _ := ret[1].([]*entity.ExptColumnEvaluator)
-	ret2, _ := ret[2].([]*entity.ColumnEvalSetField)
-	ret3, _ := ret[3].([]*entity.ExptColumnAnnotation)
-	ret4, _ := ret[4].([]*entity.ItemResult)
-	ret5, _ := ret[5].(int64)
-	ret6, _ := ret[6].(error)
-	return ret0, ret1, ret2, ret3, ret4, ret5, ret6
+	ret0, _ := ret[0].(*entity.MGetExperimentReportResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // MGetExperimentResult indicates an expected call of MGetExperimentResult.
@@ -286,6 +282,20 @@ func (m *MockExptAggrResultService) CreateExptAggrResult(ctx context.Context, sp
 func (mr *MockExptAggrResultServiceMockRecorder) CreateExptAggrResult(ctx, spaceID, experimentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateExptAggrResult", reflect.TypeOf((*MockExptAggrResultService)(nil).CreateExptAggrResult), ctx, spaceID, experimentID)
+}
+
+// PublishExptAggrResultEvent mocks base method.
+func (m *MockExptAggrResultService) PublishExptAggrResultEvent(ctx context.Context, event *entity.AggrCalculateEvent, duration *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishExptAggrResultEvent", ctx, event, duration)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishExptAggrResultEvent indicates an expected call of PublishExptAggrResultEvent.
+func (mr *MockExptAggrResultServiceMockRecorder) PublishExptAggrResultEvent(ctx, event, duration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptAggrResultEvent", reflect.TypeOf((*MockExptAggrResultService)(nil).PublishExptAggrResultEvent), ctx, event, duration)
 }
 
 // UpdateAnnotationAggrResult mocks base method.

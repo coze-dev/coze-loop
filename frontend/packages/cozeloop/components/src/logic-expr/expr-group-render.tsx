@@ -5,10 +5,10 @@
 
 import { isNumber } from 'lodash-es';
 import classNames from 'classnames';
-import { I18n } from '@cozeloop/i18n-adapter';
 import { IconCozPlus, IconCozPlusCircle } from '@coze-arch/coze-design/icons';
 import { Button, Divider, type ButtonProps } from '@coze-arch/coze-design';
 
+import { useI18n } from '../provider';
 import type { ExprGroup, ExprGroupRenderProps } from './types';
 import { LogicToggle } from './logic-toggle';
 import { ExprRender } from './expr-render';
@@ -55,6 +55,7 @@ export function ExprGroupRender<L, O, R>({
   onDeleteExprGroup,
   errorMsgRender,
 }: ExprGroupRenderProps<L, O, R>) {
+  const I18n = useI18n();
   const isEdit = !readonly;
 
   const patchExpr = (expr: Partial<ExprGroup<L, O, R>>) => {
@@ -150,6 +151,7 @@ export function ExprGroupRender<L, O, R>({
             onDeleteExpr?.(itemPath, 0);
           }}
         />
+
         {renderTool()}
       </>
     );

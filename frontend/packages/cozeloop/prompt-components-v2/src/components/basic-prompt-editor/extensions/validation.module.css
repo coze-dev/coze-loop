@@ -1,0 +1,9 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+.valid {
+  color: var(--Green-COZColorGreen7, #00A136);
+}
+
+.invalid {
+  color: #0607094D;
+}

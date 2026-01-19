@@ -8,9 +8,11 @@ import { Select, type SelectProps, Tag } from '@coze-arch/coze-design';
 
 interface UserSelectProps {
   value?: string[];
-  onChange?: (value: string[]) => void;
+  onChange?: (value?: string[]) => void;
   placeholder?: string;
   className?: string;
+  labelProps?: string;
+  valueProps?: 'user_id' | 'email_prefix';
 }
 
 export const UserSelect = ({
@@ -18,8 +20,10 @@ export const UserSelect = ({
   onChange,
   placeholder,
   className = '',
+  valueProps = 'user_id',
+  labelProps = 'screen_name',
   ...rest
-}: UserSelectProps & SelectProps) => {
+}: UserSelectProps & Omit<SelectProps, 'value' | 'onChange'>) => {
   const userInfo = useUserInfo();
   const DefaultOption = [
     {
@@ -27,12 +31,13 @@ export const UserSelect = ({
         <UserProfile
           className="ml-[6px]"
           avatarUrl={userInfo?.avatar_url}
-          name={userInfo?.screen_name || userInfo.name}
+          name={userInfo?.[labelProps]}
         />
       ),
+
       value: userInfo?.user_id_str || '',
       data: {
-        user_name: userInfo?.screen_name || userInfo.name,
+        user_name: userInfo?.[labelProps],
         avatar_url: userInfo?.avatar_url,
       },
     },
@@ -53,6 +58,7 @@ export const UserSelect = ({
         />
       </Tag>
     );
+
     return {
       isRenderInTag: false,
       content,

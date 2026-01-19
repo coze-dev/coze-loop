@@ -28,6 +28,7 @@ export interface EvaluateTargetMappingProps {
   prefixField: string;
   evaluationSetSchemas?: FieldSchema[];
   selectProps?: SelectProps;
+  keyTitle?: string;
 }
 
 const EvaluateTargetMappingField: FC<
@@ -39,6 +40,7 @@ const EvaluateTargetMappingField: FC<
     prefixField,
     evaluationSetSchemas,
     selectProps,
+    keyTitle,
   } = props;
 
   const optionGroups = useMemo(
@@ -78,18 +80,20 @@ const EvaluateTargetMappingField: FC<
             noLabel
             field={`${prefixField}.${k.name}`}
             fieldClassName="!pt-0"
-            keyTitle={I18n.t('evaluation_object')}
+            keyTitle={keyTitle ?? I18n.t('evaluation_object')}
             keySchema={k}
             optionGroups={optionGroups}
             selectProps={selectProps}
             rules={[
               {
-                validator: (_rule, v) => {
+                validator: (_rule, v, callback) => {
                   if (!v) {
-                    return new Error(I18n.t('please_select'));
+                    callback(I18n.t('please_select'));
+                    return false;
                   }
                   if (getTypeText(v) !== getSchemaTypeText(k)) {
-                    return new Error(I18n.t('selected_fields_inconsistent'));
+                    callback(I18n.t('selected_fields_inconsistent'));
+                    return false;
                   }
                   return true;
                 },

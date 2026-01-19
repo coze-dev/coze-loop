@@ -84,6 +84,16 @@ struct EvaluatorAggregateResult {
     20: optional list<AggregatorResult> aggregator_results
 }
 
+struct EvalTargetAggregateResult {
+    1: optional i64 target_id (api.js_conv = 'true')
+    2: optional i64 target_version_id (api.js_conv = 'true')
+
+    5: optional list<AggregatorResult> latency
+    6: optional list<AggregatorResult> input_tokens
+    7: optional list<AggregatorResult> output_tokens
+    8: optional list<AggregatorResult> total_tokens
+}
+
 // 一种聚合器类型的聚合结果
 struct  AggregatorResult {
     1: optional AggregatorType aggregator_type
@@ -156,6 +166,19 @@ struct ColumnEvaluator {
     4: optional string name
     5: optional string version
     6: optional string description
+}
+
+const string ColumnEvalTargetName_ActualOutput = "actual_output"
+const string ColumnEvalTargetName_Trajectory = "trajectory"
+const string ColumnEvalTargetName_EvalTargetTotalLatency = "eval_target_total_latency"
+const string ColumnEvalTargetName_EvaluatorInputTokens = "eval_target_input_tokens"
+const string ColumnEvalTargetName_EvaluatorOutputTokens = "eval_target_output_tokens"
+const string ColumnEvalTargetName_EvaluatorTotalTokens = "eval_target_total_tokens"
+
+struct ColumnEvalTarget {
+    1: optional string name
+    2: optional string description
+    3: optional string label
 }
 
 // 目标输出结果

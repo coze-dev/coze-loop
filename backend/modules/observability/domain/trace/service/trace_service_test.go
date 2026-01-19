@@ -521,7 +521,7 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 				}}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
@@ -555,7 +555,7 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 				repoMock.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
@@ -581,7 +581,7 @@ func TestTraceServiceImpl_ListAnnotations(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("config error")).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("config error")).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				return fields{
@@ -2480,7 +2480,7 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 				}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
@@ -2523,7 +2523,7 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 				}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock,
 					[]span_processor.Factory{span_processor.NewCheckProcessorFactory()},
@@ -2566,7 +2566,7 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("bad")).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("bad")).AnyTimes()
 				return fields{
 					traceConfig:    confMock,
 					tenantProvider: tenantProviderMock,
@@ -2588,7 +2588,7 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("failed"))
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any()).Return()
 				return fields{
@@ -2686,7 +2686,9 @@ func TestTraceServiceImpl_Send(t *testing.T) {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
 					Spans: loop_span.SpanList{
-						{},
+						{
+							SpanID: "span1",
+						},
 					},
 				}, nil)
 				repoMock.EXPECT().InsertAnnotations(gomock.Any(), gomock.Any()).Return(fmt.Errorf("insert error"))
@@ -2719,6 +2721,47 @@ func TestTraceServiceImpl_Send(t *testing.T) {
 				},
 			},
 			wantErr: true,
+		},
+		{
+			name: "spanid is blank",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: loop_span.SpanList{
+						{
+							SpanID: "",
+						},
+					},
+				}, nil)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				confMock.EXPECT().GetAnnotationSourceCfg(gomock.Any()).Return(&config.AnnotationSourceConfig{
+					SourceCfg: map[string]config.AnnotationConfig{
+						"caller1": {
+							AnnotationType: "test",
+							Tenants:        []string{"spans"},
+						},
+					},
+				}, nil)
+				return fields{
+					traceRepo:   repoMock,
+					traceConfig: confMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				event: &entity.AnnotationEvent{
+					Annotation: &loop_span.Annotation{
+						SpanID:         "span1",
+						TraceID:        "trace1",
+						WorkspaceID:    "workspace1",
+						AnnotationType: "123",
+						Key:            "12",
+					},
+					Caller:     "caller1",
+					RetryTimes: 2,
+				},
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -2758,6 +2801,7 @@ func TestTraceServiceImpl_SearchTraceOApi(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				repoMock.EXPECT().GetTrace(gomock.Any(), &repo.GetTraceParam{
+					WorkSpaceID:        "123",
 					Tenants:            []string{"tenant1"},
 					TraceID:            "trace-123",
 					LogID:              "",
@@ -3034,7 +3078,7 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
 
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 
 				span := buildSpan(req)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
@@ -3103,7 +3147,7 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
 
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				span := buildSpan(req)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
 				annotation := buildAnnotation(req, span)
@@ -3152,7 +3196,7 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 			name: "get tenants error",
 			fieldsGetter: func(ctrl *gomock.Controller, req *ChangeEvaluatorScoreRequest) fields {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return(nil, fmt.Errorf("tenant err"))
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return(nil, fmt.Errorf("tenant err"))
 				return fields{
 					tenantProvider: tenantMock,
 				}
@@ -3182,7 +3226,7 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("list error"))
 
 				return fields{
@@ -3215,7 +3259,7 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
 
 				return fields{
@@ -3248,7 +3292,7 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				span := buildSpan(req)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
 				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("annotation error"))
@@ -3283,7 +3327,7 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				span := buildSpan(req)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
 				traceRepoMock.EXPECT().GetAnnotation(gomock.Any(), gomock.Any()).Return(nil, nil)
@@ -3318,7 +3362,7 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				span := buildSpan(req)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
 				annotation := buildAnnotation(req, span)
@@ -3355,7 +3399,7 @@ func TestTraceServiceImpl_ChangeEvaluatorScore(t *testing.T) {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
 				evalMock := rpcmocks.NewMockIEvaluatorRPCAdapter(ctrl)
 
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				span := buildSpan(req)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
 				annotation := buildAnnotation(req, span)
@@ -3825,7 +3869,7 @@ func TestTraceServiceImpl_ExtractSpanInfo(t *testing.T) {
 			name: "success",
 			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
 				span := makeSpan(req)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{span}}, nil)
@@ -3860,7 +3904,7 @@ func TestTraceServiceImpl_ExtractSpanInfo(t *testing.T) {
 			name: "tenant error",
 			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return(nil, fmt.Errorf("tenant error"))
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return(nil, fmt.Errorf("tenant error"))
 				return fields{tenantProvider: tenantMock}
 			},
 			args: args{
@@ -3873,7 +3917,7 @@ func TestTraceServiceImpl_ExtractSpanInfo(t *testing.T) {
 			name: "list spans error",
 			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("list error"))
 				return fields{traceRepo: traceRepoMock, tenantProvider: tenantMock}
@@ -3888,7 +3932,7 @@ func TestTraceServiceImpl_ExtractSpanInfo(t *testing.T) {
 			name: "no spans",
 			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
 				traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
 				return fields{traceRepo: traceRepoMock, tenantProvider: tenantMock}
@@ -3903,7 +3947,7 @@ func TestTraceServiceImpl_ExtractSpanInfo(t *testing.T) {
 			name: "build extract info error",
 			fieldsGetter: func(ctrl *gomock.Controller, req *ExtractSpanInfoRequest) fields {
 				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant"}, nil)
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant"}, nil)
 				traceRepoMock := repomocks.NewMockITraceRepo(ctrl)
 				span := makeSpan(req)
 				span.Input = "invalid-json"
@@ -4195,7 +4239,7 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
@@ -4247,7 +4291,7 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error")).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error")).AnyTimes()
 
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
@@ -4275,7 +4319,7 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
@@ -4309,7 +4353,7 @@ func TestTraceServiceImpl_ListPreSpan_Comprehensive(t *testing.T) {
 
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
-				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
 
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)

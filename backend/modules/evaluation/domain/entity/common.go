@@ -6,6 +6,8 @@ package entity
 import (
 	"fmt"
 	"time"
+
+	"github.com/bytedance/gg/gptr"
 )
 
 // ContentType 定义内容类型
@@ -31,12 +33,30 @@ type Image struct {
 
 // Content 内容结构体
 type Content struct {
-	ContentType *ContentType        `json:"content_type,omitempty"`
-	Format      *FieldDisplayFormat `json:"format,omitempty"` // 假设 datasetv2.FieldDisplayFormat 为 interface{}
-	Text        *string             `json:"text,omitempty"`
-	Image       *Image              `json:"image,omitempty"`
-	MultiPart   []*Content          `json:"multi_part,omitempty"`
-	Audio       *Audio              `json:"audio,omitempty"`
+	ContentType      *ContentType        `json:"content_type,omitempty"`
+	Format           *FieldDisplayFormat `json:"format,omitempty"` // 假设 datasetv2.FieldDisplayFormat 为 interface{}
+	Text             *string             `json:"text,omitempty"`
+	Image            *Image              `json:"image,omitempty"`
+	MultiPart        []*Content          `json:"multi_part,omitempty"`
+	Audio            *Audio              `json:"audio,omitempty"`
+	ContentOmitted   *bool               `json:"content_omitted,omitempty"`
+	FullContent      *ObjectStorage      `json:"full_content,omitempty"`       // 被省略数据的完整信息，批量返回时会签发相应的 url，用户可以点击下载. 同时支持通过该字段传入已经上传好的超长数据(dataOmitted 为 true 时生效)
+	FullContentBytes *int32              `json:"full_content_bytes,omitempty"` // 超长数据完整内容的大小，单位 byte
+}
+
+func (c *Content) IsContentOmitted() bool {
+	if c == nil || !gptr.Indirect(c.ContentOmitted) {
+		return false
+	}
+	switch gptr.Indirect(c.ContentType) {
+	case ContentTypeText:
+		if b := int(gptr.Indirect(c.FullContentBytes)); b > 0 && b == len(gptr.Indirect(c.Text)) {
+			return false
+		}
+		return true
+	default:
+		return false
+	}
 }
 
 // GetText 获取内容文本
@@ -52,6 +72,13 @@ func (c *Content) SetText(text string) {
 	if c != nil {
 		c.Text = &text
 	}
+}
+
+func (c *Content) TextBytes() int {
+	if c == nil || c.Text == nil {
+		return 0
+	}
+	return len(*c.Text)
 }
 
 // GetContentType 获取内容类型
@@ -364,8 +391,48 @@ type SystemMaintainerConf struct {
 	UserIDs []string `json:"user_ids" mapstructure:"user_ids"`
 }
 
+type ObjectStorage struct {
+	Provider *StorageProvider `json:"provider,omitempty"`
+	Name     *string          `json:"name,omitempty"`
+	URI      *string          `json:"uri,omitempty"`
+	URL      *string          `json:"url,omitempty"`
+	ThumbURL *string          `json:"thumb_url,omitempty"`
+}
+
 type RateLimit struct {
 	Rate   *int32         `json:"rate,omitempty"`
 	Burst  *int32         `json:"burst,omitempty"`
 	Period *time.Duration `json:"period,omitempty"`
+}
+
+type FileFormat int64
+
+const (
+	FileFormat_JSONL   FileFormat = 1
+	FileFormat_Parquet FileFormat = 2
+	FileFormat_CSV     FileFormat = 3
+	FileFormat_XLSX    FileFormat = 4
+	/*[100, 200) 压缩格式*/
+	FileFormat_ZIP FileFormat = 100
+)
+
+func (p FileFormat) String() string {
+	switch p {
+	case FileFormat_JSONL:
+		return "JSONL"
+	case FileFormat_Parquet:
+		return "Parquet"
+	case FileFormat_CSV:
+		return "CSV"
+	case FileFormat_XLSX:
+		return "XLSX"
+	case FileFormat_ZIP:
+		return "ZIP"
+	}
+	return "<UNSET>"
+}
+
+type RuntimeParam struct {
+	JSONValue *string `json:"json_value,omitempty"`
+	JSONDemo  *string `json:"json_demo,omitempty"`
 }

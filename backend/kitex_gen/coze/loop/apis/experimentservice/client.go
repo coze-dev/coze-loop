@@ -24,6 +24,7 @@ type Client interface {
 	RetryExperiment(ctx context.Context, req *expt.RetryExperimentRequest, callOptions ...callopt.Option) (r *expt.RetryExperimentResponse, err error)
 	KillExperiment(ctx context.Context, req *expt.KillExperimentRequest, callOptions ...callopt.Option) (r *expt.KillExperimentResponse, err error)
 	BatchGetExperimentResult_(ctx context.Context, req *expt.BatchGetExperimentResultRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentResultResponse, err error)
+	CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest, callOptions ...callopt.Option) (r *expt.CalculateExperimentAggrResultResponse, err error)
 	BatchGetExperimentAggrResult_(ctx context.Context, req *expt.BatchGetExperimentAggrResultRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentAggrResultResponse, err error)
 	InvokeExperiment(ctx context.Context, req *expt.InvokeExperimentRequest, callOptions ...callopt.Option) (r *expt.InvokeExperimentResponse, err error)
 	FinishExperiment(ctx context.Context, req *expt.FinishExperimentRequest, callOptions ...callopt.Option) (r *expt.FinishExperimentResponse, err error)
@@ -42,6 +43,7 @@ type Client interface {
 	GetExptInsightAnalysisRecord(ctx context.Context, req *expt.GetExptInsightAnalysisRecordRequest, callOptions ...callopt.Option) (r *expt.GetExptInsightAnalysisRecordResponse, err error)
 	FeedbackExptInsightAnalysisReport(ctx context.Context, req *expt.FeedbackExptInsightAnalysisReportRequest, callOptions ...callopt.Option) (r *expt.FeedbackExptInsightAnalysisReportResponse, err error)
 	ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisCommentResponse, err error)
+	GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -138,6 +140,11 @@ func (p *kExperimentServiceClient) BatchGetExperimentResult_(ctx context.Context
 	return p.kClient.BatchGetExperimentResult_(ctx, req)
 }
 
+func (p *kExperimentServiceClient) CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest, callOptions ...callopt.Option) (r *expt.CalculateExperimentAggrResultResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CalculateExperimentAggrResult_(ctx, req)
+}
+
 func (p *kExperimentServiceClient) BatchGetExperimentAggrResult_(ctx context.Context, req *expt.BatchGetExperimentAggrResultRequest, callOptions ...callopt.Option) (r *expt.BatchGetExperimentAggrResultResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetExperimentAggrResult_(ctx, req)
@@ -226,4 +233,9 @@ func (p *kExperimentServiceClient) FeedbackExptInsightAnalysisReport(ctx context
 func (p *kExperimentServiceClient) ListExptInsightAnalysisComment(ctx context.Context, req *expt.ListExptInsightAnalysisCommentRequest, callOptions ...callopt.Option) (r *expt.ListExptInsightAnalysisCommentResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListExptInsightAnalysisComment(ctx, req)
+}
+
+func (p *kExperimentServiceClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest, callOptions ...callopt.Option) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetAnalysisRecordFeedbackVote(ctx, req)
 }

@@ -20,6 +20,7 @@ import (
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
+	configermocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -1531,13 +1532,13 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 	tests := []struct {
 		name    string
 		req     *openapi.ReportEvalTargetInvokeResultRequest
-		setup   func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher)
+		setup   func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, configer *configermocks.MockIConfiger)
 		wantErr bool
 	}{
 		{
 			name: "repo returns error",
 			req:  repoErrorReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockIEvalTargetService, _ *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockIEvalTargetService, _ *eventmocks.MockExptEventPublisher, _ *configermocks.MockIConfiger) {
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(repoErrorReq.GetInvokeID(), 10)).Return(nil, errors.New("repo error"))
 			},
 			wantErr: true,
@@ -1545,7 +1546,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 		{
 			name: "report invoke records returns error",
 			req:  reportErrorReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, _ *configermocks.MockIConfiger) {
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-200 * time.Millisecond).UnixMilli()}
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(reportErrorReq.GetInvokeID(), 10)).Return(actx, nil)
 				targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.AssignableToTypeOf(&entity.ReportTargetRecordParam{})).DoAndReturn(func(_ context.Context, param *entity.ReportTargetRecordParam) error {
@@ -1569,7 +1570,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 		{
 			name: "publisher returns error",
 			req:  publisherErrorReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, configer *configermocks.MockIConfiger) {
 				session := &entity.Session{UserID: "user"}
 				event := &entity.ExptItemEvalEvent{}
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-150 * time.Millisecond).UnixMilli(), Event: event, Session: session}
@@ -1578,10 +1579,12 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 					assert.Equal(t, session, param.Session)
 					return nil
 				})
+				conf := &entity.TargetTrajectoryConf{}
+				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
-						assert.Equal(t, 3*time.Second, *duration)
+						assert.Equal(t, 18*time.Second, *duration)
 					}
 					return errors.New("publish error")
 				})
@@ -1591,7 +1594,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 		{
 			name: "success without event",
 			req:  successReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, _ *configermocks.MockIConfiger) {
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-100 * time.Millisecond).UnixMilli()}
 				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(successReq.GetInvokeID(), 10)).Return(actx, nil)
 				targetSvc.EXPECT().ReportInvokeRecords(gomock.Any(), gomock.AssignableToTypeOf(&entity.ReportTargetRecordParam{})).DoAndReturn(func(_ context.Context, param *entity.ReportTargetRecordParam) error {
@@ -1605,7 +1608,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 		{
 			name: "success with event on failure status",
 			req:  failedReq,
-			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher) {
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, configer *configermocks.MockIConfiger) {
 				session := &entity.Session{UserID: "owner"}
 				event := &entity.ExptItemEvalEvent{}
 				actx := &entity.EvalAsyncCtx{AsyncUnixMS: time.Now().Add(-120 * time.Millisecond).UnixMilli(), Event: event, Session: session}
@@ -1621,10 +1624,12 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 					assert.Equal(t, session, param.Session)
 					return nil
 				})
+				conf := &entity.TargetTrajectoryConf{}
+				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
 				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
-						assert.Equal(t, 3*time.Second, *duration)
+						assert.Equal(t, 18*time.Second, *duration)
 					}
 					return nil
 				})
@@ -1644,14 +1649,16 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 			targetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
 			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
+			configer := configermocks.NewMockIConfiger(ctrl)
 
 			app := &EvalOpenAPIApplication{
 				targetSvc: targetSvc,
 				asyncRepo: asyncRepo,
 				publisher: publisher,
+				configer:  configer,
 			}
 
-			caseData.setup(t, asyncRepo, targetSvc, publisher)
+			caseData.setup(t, asyncRepo, targetSvc, publisher, configer)
 
 			resp, err := app.ReportEvalTargetInvokeResult_(context.Background(), caseData.req)
 			if caseData.wantErr {
@@ -1995,7 +2002,8 @@ func TestEvalOpenAPIApplication_ListExperimentResultOApi(t *testing.T) {
 			name: "service error",
 			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
-				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.AssignableToTypeOf(&entity.MGetExperimentResultParam{})).Return(nil, nil, nil, nil, nil, int64(0), errors.New("result error"))
+				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.AssignableToTypeOf(&entity.MGetExperimentResultParam{})).
+					Return(nil, errors.New("result error"))
 			},
 			wantErr: -1,
 		},
@@ -2006,7 +2014,13 @@ func TestEvalOpenAPIApplication_ListExperimentResultOApi(t *testing.T) {
 				columnEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1}}
 				columnFields := []*entity.ColumnEvalSetField{{Key: gptr.Of("field"), Name: gptr.Of("Field"), ContentType: entity.ContentTypeText}}
 				itemResults := []*entity.ItemResult{{ItemID: 10}}
-				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.AssignableToTypeOf(&entity.MGetExperimentResultParam{})).Return(columnEvaluators, nil, columnFields, nil, itemResults, int64(3), nil)
+				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.AssignableToTypeOf(&entity.MGetExperimentResultParam{})).
+					Return(&entity.MGetExperimentReportResult{
+						ColumnEvaluators:    columnEvaluators,
+						ColumnEvalSetFields: columnFields,
+						ItemResults:         itemResults,
+						Total:               int64(3),
+					}, nil)
 			},
 		},
 	}
@@ -2233,7 +2247,171 @@ func newFailedInvokeResultReq(workspaceID, invokeID int64, errorMessage string) 
 	}
 }
 
-func TestNewEvalOpenAPIApplication(t *testing.T) {
-	app := NewEvalOpenAPIApplication(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
-	assert.NotNil(t, app)
+func TestEvalOpenAPIApplication_GetEvaluationItemFieldOApi(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(61001)
+	evalSetID := int64(61002)
+	itemID := int64(9001)
+	versionID := int64(8001)
+	turnID := int64(7001)
+	fieldName := "question"
+
+	buildReq := func() *openapi.GetEvaluationItemFieldOApiRequest {
+		return &openapi.GetEvaluationItemFieldOApiRequest{
+			WorkspaceID:     gptr.Of(workspaceID),
+			EvaluationSetID: gptr.Of(evalSetID),
+			VersionID:       gptr.Of(versionID),
+			ItemID:          gptr.Of(itemID),
+			FieldName:       gptr.Of(fieldName),
+			TurnID:          gptr.Of(turnID),
+		}
+	}
+
+	tests := []struct {
+		name    string
+		req     *openapi.GetEvaluationItemFieldOApiRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService)
+		wantErr int32
+		check   func(t *testing.T, resp *openapi.GetEvaluationItemFieldOApiResponse)
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockEvaluationSetItemService) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "set not found",
+			req:  buildReq(),
+			setup: func(_ *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockEvaluationSetItemService) {
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(nil, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "auth failed",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, _ *servicemocks.MockEvaluationSetItemService) {
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "batch get items error",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService) {
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				itemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.BatchGetEvaluationSetItemsParam{})).Return(nil, errors.New("batch error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "item not found",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService) {
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				itemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.BatchGetEvaluationSetItemsParam{})).Return([]*entity.EvaluationSetItem{}, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "get field error",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService) {
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				itemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.BatchGetEvaluationSetItemsParam{})).Return([]*entity.EvaluationSetItem{{ID: itemID}}, nil)
+				itemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.AssignableToTypeOf(&entity.GetEvaluationSetItemFieldParam{})).Return(nil, errors.New("field error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "success",
+			req:  buildReq(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService, itemSvc *servicemocks.MockEvaluationSetItemService) {
+				owner := gptr.Of("owner")
+				set := &entity.EvaluationSet{ID: evalSetID, SpaceID: workspaceID, BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: owner}}}
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evalSetID, gomock.AssignableToTypeOf(gptr.Of(true))).Return(set, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationWithoutSPIParam) error {
+					assert.Equal(t, strconv.FormatInt(evalSetID, 10), param.ObjectID)
+					assert.Equal(t, workspaceID, param.SpaceID)
+					return nil
+				})
+				itemSvc.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.BatchGetEvaluationSetItemsParam{})).Return([]*entity.EvaluationSetItem{{ID: itemID}}, nil)
+				fd := &entity.FieldData{Name: fieldName}
+				itemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.AssignableToTypeOf(&entity.GetEvaluationSetItemFieldParam{})).DoAndReturn(func(_ context.Context, param *entity.GetEvaluationSetItemFieldParam) (*entity.FieldData, error) {
+					assert.Equal(t, workspaceID, param.SpaceID)
+					assert.Equal(t, evalSetID, param.EvaluationSetID)
+					assert.Equal(t, itemID, param.ItemPK)
+					assert.Equal(t, fieldName, param.FieldName)
+					assert.Equal(t, turnID, gptr.Indirect(param.TurnID))
+					return fd, nil
+				})
+			},
+			check: func(t *testing.T, resp *openapi.GetEvaluationItemFieldOApiResponse) {
+				if assert.NotNil(t, resp) {
+					assert.NotNil(t, resp.FieldData)
+					assert.Equal(t, fieldName, resp.FieldData.GetName())
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		caseData := tt
+		t.Run(caseData.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			evalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+			itemSvc := servicemocks.NewMockEvaluationSetItemService(ctrl)
+			metric := &fakeOpenAPIMetric{}
+
+			app := &EvalOpenAPIApplication{
+				auth:                     auth,
+				evaluationSetService:     evalSetSvc,
+				evaluationSetItemService: itemSvc,
+				metric:                   metric,
+			}
+
+			if caseData.setup != nil {
+				caseData.setup(auth, evalSetSvc, itemSvc)
+			}
+
+			resp, err := app.GetEvaluationItemFieldOApi(context.Background(), caseData.req)
+
+			if caseData.wantErr != 0 {
+				assert.Error(t, err)
+				if caseData.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, caseData.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if caseData.check != nil {
+					caseData.check(t, resp)
+				}
+			}
+
+			if caseData.req != nil {
+				assert.True(t, metric.called)
+				assert.Equal(t, caseData.req.GetWorkspaceID(), metric.spaceID)
+				assert.Equal(t, caseData.req.GetEvaluationSetID(), metric.evaluationSetID)
+			}
+		})
+	}
 }

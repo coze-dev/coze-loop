@@ -48,6 +48,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CreateEvaluationSetWithImport": kitex.NewMethodInfo(
+		createEvaluationSetWithImportHandler,
+		newEvaluationSetServiceCreateEvaluationSetWithImportArgs,
+		newEvaluationSetServiceCreateEvaluationSetWithImportResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ParseImportSourceFile": kitex.NewMethodInfo(
+		parseImportSourceFileHandler,
+		newEvaluationSetServiceParseImportSourceFileArgs,
+		newEvaluationSetServiceParseImportSourceFileResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateEvaluationSetVersion": kitex.NewMethodInfo(
 		createEvaluationSetVersionHandler,
 		newEvaluationSetServiceCreateEvaluationSetVersionArgs,
@@ -122,6 +136,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		clearEvaluationSetDraftItemHandler,
 		newEvaluationSetServiceClearEvaluationSetDraftItemArgs,
 		newEvaluationSetServiceClearEvaluationSetDraftItemResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetEvaluationSetItemField": kitex.NewMethodInfo(
+		getEvaluationSetItemFieldHandler,
+		newEvaluationSetServiceGetEvaluationSetItemFieldArgs,
+		newEvaluationSetServiceGetEvaluationSetItemFieldResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -251,6 +272,44 @@ func newEvaluationSetServiceListEvaluationSetsArgs() interface{} {
 
 func newEvaluationSetServiceListEvaluationSetsResult() interface{} {
 	return eval_set.NewEvaluationSetServiceListEvaluationSetsResult()
+}
+
+func createEvaluationSetWithImportHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceCreateEvaluationSetWithImportArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceCreateEvaluationSetWithImportResult)
+	success, err := handler.(eval_set.EvaluationSetService).CreateEvaluationSetWithImport(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceCreateEvaluationSetWithImportArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceCreateEvaluationSetWithImportArgs()
+}
+
+func newEvaluationSetServiceCreateEvaluationSetWithImportResult() interface{} {
+	return eval_set.NewEvaluationSetServiceCreateEvaluationSetWithImportResult()
+}
+
+func parseImportSourceFileHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceParseImportSourceFileArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceParseImportSourceFileResult)
+	success, err := handler.(eval_set.EvaluationSetService).ParseImportSourceFile(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceParseImportSourceFileArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceParseImportSourceFileArgs()
+}
+
+func newEvaluationSetServiceParseImportSourceFileResult() interface{} {
+	return eval_set.NewEvaluationSetServiceParseImportSourceFileResult()
 }
 
 func createEvaluationSetVersionHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -462,6 +521,25 @@ func newEvaluationSetServiceClearEvaluationSetDraftItemResult() interface{} {
 	return eval_set.NewEvaluationSetServiceClearEvaluationSetDraftItemResult()
 }
 
+func getEvaluationSetItemFieldHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceGetEvaluationSetItemFieldArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult)
+	success, err := handler.(eval_set.EvaluationSetService).GetEvaluationSetItemField(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceGetEvaluationSetItemFieldArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemFieldArgs()
+}
+
+func newEvaluationSetServiceGetEvaluationSetItemFieldResult() interface{} {
+	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemFieldResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -519,6 +597,26 @@ func (p *kClient) ListEvaluationSets(ctx context.Context, req *eval_set.ListEval
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceListEvaluationSetsResult
 	if err = p.c.Call(ctx, "ListEvaluationSets", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest) (r *eval_set.CreateEvaluationSetWithImportResponse, err error) {
+	var _args eval_set.EvaluationSetServiceCreateEvaluationSetWithImportArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceCreateEvaluationSetWithImportResult
+	if err = p.c.Call(ctx, "CreateEvaluationSetWithImport", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest) (r *eval_set.ParseImportSourceFileResponse, err error) {
+	var _args eval_set.EvaluationSetServiceParseImportSourceFileArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceParseImportSourceFileResult
+	if err = p.c.Call(ctx, "ParseImportSourceFile", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -629,6 +727,16 @@ func (p *kClient) ClearEvaluationSetDraftItem(ctx context.Context, req *eval_set
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceClearEvaluationSetDraftItemResult
 	if err = p.c.Call(ctx, "ClearEvaluationSetDraftItem", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvaluationSetItemField(ctx context.Context, req *eval_set.GetEvaluationSetItemFieldRequest) (r *eval_set.GetEvaluationSetItemFieldResponse, err error) {
+	var _args eval_set.EvaluationSetServiceGetEvaluationSetItemFieldArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult
+	if err = p.c.Call(ctx, "GetEvaluationSetItemField", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

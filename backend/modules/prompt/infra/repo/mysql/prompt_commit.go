@@ -27,6 +27,7 @@ type IPromptCommitDAO interface {
 	Get(ctx context.Context, promptID int64, commitVersion string, opts ...db.Option) (promptCommitPO *model.PromptCommit, err error)
 	MGet(ctx context.Context, pairs []PromptIDCommitVersionPair, opts ...db.Option) (pairCommitPOMap map[PromptIDCommitVersionPair]*model.PromptCommit, err error)
 	List(ctx context.Context, param ListCommitParam, opts ...db.Option) (commitPOs []*model.PromptCommit, err error)
+	MGetVersionsByPromptID(ctx context.Context, promptID int64, opts ...db.Option) (versions []string, err error)
 }
 
 type ListCommitParam struct {
@@ -64,7 +65,7 @@ func (d *PromptCommitDAOImpl) Create(ctx context.Context, promptCommitPO *model.
 	err = q.PromptCommit.Create(promptCommitPO)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return errorx.WrapByCode(err, prompterr.CommonResourceDuplicatedCode)
+			return errorx.WrapByCode(err, prompterr.PromptSubmitVersionExistCode)
 		}
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
@@ -133,15 +134,15 @@ func (d *PromptCommitDAOImpl) List(ctx context.Context, param ListCommitParam, o
 	tx = tx.Where(q.PromptCommit.PromptID.Eq(param.PromptID))
 	if param.Cursor == nil {
 		if param.Asc {
-			tx = tx.Order(q.PromptCommit.ID.Asc())
+			tx = tx.Order(q.PromptCommit.CreatedAt.Asc())
 		} else {
-			tx = tx.Order(q.PromptCommit.ID.Desc())
+			tx = tx.Order(q.PromptCommit.CreatedAt.Desc())
 		}
 	} else {
 		if param.Asc {
-			tx = tx.Where(q.PromptCommit.ID.Gte(*param.Cursor)).Order(q.PromptCommit.ID.Asc())
+			tx = tx.Where(q.PromptCommit.CreatedAt.Gte(time.Unix(*param.Cursor, 0))).Order(q.PromptCommit.CreatedAt.Asc())
 		} else {
-			tx = tx.Where(q.PromptCommit.ID.Lte(*param.Cursor)).Order(q.PromptCommit.ID.Desc())
+			tx = tx.Where(q.PromptCommit.CreatedAt.Lte(time.Unix(*param.Cursor, 0))).Order(q.PromptCommit.CreatedAt.Desc())
 		}
 	}
 	tx = tx.Limit(param.Limit)
@@ -153,4 +154,33 @@ func (d *PromptCommitDAOImpl) List(ctx context.Context, param ListCommitParam, o
 		return nil, nil
 	}
 	return commitPOs, nil
+}
+
+func (d *PromptCommitDAOImpl) MGetVersionsByPromptID(ctx context.Context, promptID int64, opts ...db.Option) (versions []string, err error) {
+	if promptID <= 0 {
+		return nil, errorx.New("promptID is invalid, promptID = %d", promptID)
+	}
+	if d.writeTracker.CheckWriteFlagByID(ctx, platestwrite.ResourceTypePromptCommit, promptID) {
+		opts = append(opts, db.WithMaster())
+	}
+
+	q := query.Use(d.db.NewSession(ctx, opts...))
+	tx := q.WithContext(ctx).PromptCommit
+	tx = tx.Select(q.PromptCommit.Version)
+	tx = tx.Where(q.PromptCommit.PromptID.Eq(promptID))
+	commitPOs, err := tx.Find()
+	if err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
+	}
+	if len(commitPOs) == 0 {
+		return nil, nil
+	}
+	versions = make([]string, 0, len(commitPOs))
+	for _, po := range commitPOs {
+		if po == nil || po.Version == "" {
+			continue
+		}
+		versions = append(versions, po.Version)
+	}
+	return versions, nil
 }

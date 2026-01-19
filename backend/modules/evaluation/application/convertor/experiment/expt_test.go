@@ -11,7 +11,10 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	domain_eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
+	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -84,6 +87,11 @@ func TestEvalConfConvert_ConvertEntityToDTO(t *testing.T) {
                             ]
                         },
                         "CustomConf": null
+                    },
+                    "RunConf": {
+                        "evaluator_runtime_param": {
+                            "json_value": "{\"key\":\"val\"}"
+                        }
                     }
                 }
             ]
@@ -95,9 +103,16 @@ func TestEvalConfConvert_ConvertEntityToDTO(t *testing.T) {
 	err := json.Unmarshal([]byte(raw), &conf)
 	assert.Nil(t, err)
 
-	target, evaluators, _ := NewEvalConfConvert().ConvertEntityToDTO(conf)
+	target, evaluators, _, evrcs := NewEvalConfConvert().ConvertEntityToDTO(conf)
 	t.Logf("target: %v", json.Jsonify(target))
 	t.Logf("evaluators: %v", json.Jsonify(evaluators))
+
+	assert.NotNil(t, target)
+	assert.Len(t, evaluators, 1)
+	assert.Equal(t, int64(7486074365205823489), evaluators[0].EvaluatorVersionID)
+	assert.NotNil(t, evrcs)
+	assert.Contains(t, evrcs, int64(7486074365205823489))
+	assert.Equal(t, `{"key":"val"}`, *evrcs[7486074365205823489].EvaluatorRuntimeParam.JSONValue)
 }
 
 func TestConvertExptTurnResultFilterAccelerator(t *testing.T) {
@@ -202,11 +217,12 @@ func TestConvertExptTurnResultFilterAccelerator(t *testing.T) {
 				ItemRunStatus: []*entity.FieldFilter{},
 				TurnRunStatus: []*entity.FieldFilter{},
 				MapCond: &entity.ExptTurnResultFilterMapCond{
-					EvalTargetDataFilters:   []*entity.FieldFilter{},
-					EvaluatorScoreFilters:   []*entity.FieldFilter{},
-					AnnotationFloatFilters:  []*entity.FieldFilter{},
-					AnnotationBoolFilters:   []*entity.FieldFilter{},
-					AnnotationStringFilters: []*entity.FieldFilter{},
+					EvalTargetDataFilters:    []*entity.FieldFilter{},
+					EvaluatorScoreFilters:    []*entity.FieldFilter{},
+					AnnotationFloatFilters:   []*entity.FieldFilter{},
+					AnnotationBoolFilters:    []*entity.FieldFilter{},
+					AnnotationStringFilters:  []*entity.FieldFilter{},
+					EvalTargetMetricsFilters: []*entity.FieldFilter{},
 				},
 				ItemSnapshotCond: &entity.ItemSnapshotFilter{
 					BoolMapFilters:   []*entity.FieldFilter{},
@@ -250,11 +266,209 @@ func TestConvertExptTurnResultFilterAccelerator(t *testing.T) {
 	}
 }
 
+func TestConvertExptTurnResultFilterAccelerator_EvalTargetMetrics(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *domain_expt.ExperimentFilter
+		want    *entity.ExptTurnResultFilterAccelerator
+		wantErr bool
+	}{
+		{
+			name: "TotalLatency filter",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_TotalLatency,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Equal,
+							Value:    "100",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "total_latency",
+							Op:     "=",
+							Values: []any{"100"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "InputTokens filter",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_InputTokens,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Greater,
+							Value:    "10",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "input_tokens",
+							Op:     ">",
+							Values: []any{"10"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "OutputTokens filter",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_OutputTokens,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Less,
+							Value:    "20",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "output_tokens",
+							Op:     "<",
+							Values: []any{"20"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "TotalTokens filter",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_TotalTokens,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_In,
+							Value:    "30,40,50",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "total_tokens",
+							Op:     "IN",
+							Values: []any{"30", "40", "50"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "multiple EvalTargetMetrics filters",
+			input: &domain_expt.ExperimentFilter{
+				Filters: &domain_expt.Filters{
+					LogicOp: ptr.Of(domain_expt.FilterLogicOp_And),
+					FilterConditions: []*domain_expt.FilterCondition{
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_TotalLatency,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Equal,
+							Value:    "100",
+						},
+						{
+							Field: &domain_expt.FilterField{
+								FieldType: domain_expt.FieldType_InputTokens,
+								FieldKey:  ptr.Of("test_key"),
+							},
+							Operator: domain_expt.FilterOperatorType_Greater,
+							Value:    "10",
+						},
+					},
+				},
+			},
+			want: &entity.ExptTurnResultFilterAccelerator{
+				MapCond: &entity.ExptTurnResultFilterMapCond{
+					EvalTargetMetricsFilters: []*entity.FieldFilter{
+						{
+							Key:    "total_latency",
+							Op:     "=",
+							Values: []any{"100"},
+						},
+						{
+							Key:    "input_tokens",
+							Op:     ">",
+							Values: []any{"10"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ConvertExptTurnResultFilterAccelerator(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertExptTurnResultFilterAccelerator() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr {
+				if tt.want.MapCond != nil {
+					assert.Equal(t, len(tt.want.MapCond.EvalTargetMetricsFilters), len(got.MapCond.EvalTargetMetricsFilters))
+					for i, wantFilter := range tt.want.MapCond.EvalTargetMetricsFilters {
+						if i < len(got.MapCond.EvalTargetMetricsFilters) {
+							gotFilter := got.MapCond.EvalTargetMetricsFilters[i]
+							assert.Equal(t, wantFilter.Key, gotFilter.Key)
+							assert.Equal(t, wantFilter.Op, gotFilter.Op)
+							assert.Equal(t, wantFilter.Values, gotFilter.Values)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 	tests := []struct {
-		name           string
-		request        *expt.CreateExperimentRequest
-		wantCustomConf *entity.FieldAdapter
+		name                       string
+		request                    *expt.CreateExperimentRequest
+		evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig
+		wantCustomConf             *entity.FieldAdapter
+		wantEvaluatorRunConf       map[int64]string
 	}{
 		{
 			name: "正常运行时参数转换",
@@ -284,6 +498,26 @@ func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 						Value:     `{"model_config":{"model_id":"test_model","temperature":0.7}}`,
 					},
 				},
+			},
+		},
+		{
+			name: "包含评估器运行时参数转换",
+			request: &expt.CreateExperimentRequest{
+				EvaluatorFieldMapping: []*domain_expt.EvaluatorFieldMapping{
+					{
+						EvaluatorVersionID: 456,
+					},
+				},
+			},
+			evaluatorVersionRunConfigs: map[int64]*evaluatordto.EvaluatorRunConfig{
+				456: {
+					EvaluatorRuntimeParam: &common.RuntimeParam{
+						JSONValue: gptr.Of(`{"key":"val"}`),
+					},
+				},
+			},
+			wantEvaluatorRunConf: map[int64]string{
+				456: `{"key":"val"}`,
 			},
 		},
 		{
@@ -367,7 +601,7 @@ func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := converter.ConvertToEntity(tt.request)
+			result, err := converter.ConvertToEntity(tt.request, tt.evaluatorVersionRunConfigs)
 			assert.NoError(t, err)
 
 			assert.NotNil(t, result)
@@ -391,6 +625,17 @@ func TestToTargetFieldMappingDO_RuntimeParam(t *testing.T) {
 				if len(tt.wantCustomConf.FieldConfs) > 0 {
 					assert.Equal(t, tt.wantCustomConf.FieldConfs[0].FieldName, result.ConnectorConf.TargetConf.IngressConf.CustomConf.FieldConfs[0].FieldName)
 					assert.Equal(t, tt.wantCustomConf.FieldConfs[0].Value, result.ConnectorConf.TargetConf.IngressConf.CustomConf.FieldConfs[0].Value)
+				}
+			}
+
+			// 检查Evaluator RunConf
+			if len(tt.wantEvaluatorRunConf) > 0 {
+				assert.NotNil(t, result.ConnectorConf.EvaluatorsConf)
+				for _, ec := range result.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+					if wantVal, ok := tt.wantEvaluatorRunConf[ec.EvaluatorVersionID]; ok {
+						assert.NotNil(t, ec.RunConf)
+						assert.Equal(t, wantVal, *ec.RunConf.EvaluatorRuntimeParam.JSONValue)
+					}
 				}
 			}
 		})
@@ -496,7 +741,7 @@ func TestEvalConfConvert_ConvertEntityToDTO_RuntimeParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, runtimeParam := converter.ConvertEntityToDTO(tt.ec)
+			_, _, runtimeParam, _ := converter.ConvertEntityToDTO(tt.ec)
 
 			if tt.wantRuntimeParam == nil {
 				assert.Nil(t, runtimeParam)
@@ -515,10 +760,11 @@ func TestEvalConfConvert_ConvertEntityToDTO_RuntimeParam(t *testing.T) {
 
 func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 	tests := []struct {
-		name           string
-		request        *expt.CreateExperimentRequest
-		wantCustomConf *entity.FieldAdapter
-		wantErr        bool
+		name                       string
+		request                    *expt.CreateExperimentRequest
+		evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig
+		wantCustomConf             *entity.FieldAdapter
+		wantErr                    bool
 	}{
 		{
 			name: "包含运行时参数的请求",
@@ -552,6 +798,25 @@ func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 					{
 						FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
 						Value:     `{"model_config":{"model_id":"request_model","max_tokens":200}}`,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "包含评估器运行时参数的请求",
+			request: &expt.CreateExperimentRequest{
+				TargetVersionID: gptr.Of(int64(123)),
+				EvaluatorFieldMapping: []*domain_expt.EvaluatorFieldMapping{
+					{
+						EvaluatorVersionID: 456,
+					},
+				},
+			},
+			evaluatorVersionRunConfigs: map[int64]*evaluatordto.EvaluatorRunConfig{
+				456: {
+					EvaluatorRuntimeParam: &common.RuntimeParam{
+						JSONValue: gptr.Of(`{"key":"val"}`),
 					},
 				},
 			},
@@ -594,7 +859,7 @@ func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := converter.ConvertToEntity(tt.request)
+			result, err := converter.ConvertToEntity(tt.request, tt.evaluatorVersionRunConfigs)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -618,16 +883,27 @@ func TestEvalConfConvert_ConvertToEntity_RuntimeParam(t *testing.T) {
 					assert.Equal(t, tt.wantCustomConf.FieldConfs[0].Value, result.ConnectorConf.TargetConf.IngressConf.CustomConf.FieldConfs[0].Value)
 				}
 			}
+
+			if len(tt.evaluatorVersionRunConfigs) > 0 {
+				assert.NotNil(t, result.ConnectorConf.EvaluatorsConf)
+				for _, ec := range result.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+					if wantConf, ok := tt.evaluatorVersionRunConfigs[ec.EvaluatorVersionID]; ok {
+						assert.NotNil(t, ec.RunConf)
+						assert.Equal(t, *wantConf.EvaluatorRuntimeParam.JSONValue, *ec.RunConf.EvaluatorRuntimeParam.JSONValue)
+					}
+				}
+			}
 		})
 	}
 }
 
 func TestToExptDTO_RuntimeParam(t *testing.T) {
 	tests := []struct {
-		name             string
-		experiment       *entity.Experiment
-		wantRuntimeParam bool
-		wantJSONValue    string
+		name                       string
+		experiment                 *entity.Experiment
+		wantRuntimeParam           bool
+		wantJSONValue              string
+		wantEvaluatorIDVersionList bool
 	}{
 		{
 			name: "包含运行时参数的实验",
@@ -691,6 +967,55 @@ func TestToExptDTO_RuntimeParam(t *testing.T) {
 			},
 			wantRuntimeParam: false,
 		},
+		{
+			name: "包含评估器版本列表的实验",
+			experiment: &entity.Experiment{
+				ID:       123,
+				SourceID: "test_source",
+				EvaluatorVersionRef: []*entity.ExptEvaluatorVersionRef{
+					{EvaluatorID: 1, EvaluatorVersionID: 101},
+					{EvaluatorID: 2, EvaluatorVersionID: 102},
+				},
+				Evaluators: []*entity.Evaluator{
+					{
+						ID:            1,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							ID:          101,
+							EvaluatorID: 1,
+							Version:     "v1",
+						},
+					},
+					{
+						ID:            2,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							ID:          102,
+							EvaluatorID: 2,
+							Version:     "v2",
+						},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EvaluatorConf: []*entity.EvaluatorConf{
+								{
+									EvaluatorVersionID: 101,
+									IngressConf:        &entity.EvaluatorIngressConf{},
+									RunConf: &entity.EvaluatorRunConfig{
+										EvaluatorRuntimeParam: &entity.RuntimeParam{
+											JSONValue: gptr.Of(`{"key":"val"}`),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantEvaluatorIDVersionList: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -705,10 +1030,131 @@ func TestToExptDTO_RuntimeParam(t *testing.T) {
 				assert.NotNil(t, result.TargetRuntimeParam)
 				assert.NotNil(t, result.TargetRuntimeParam.JSONValue)
 				assert.Equal(t, tt.wantJSONValue, gptr.Indirect(result.TargetRuntimeParam.JSONValue))
-			} else {
+			} else if tt.name != "包含评估器版本列表的实验" {
 				// 当没有运行时参数时，应该返回空的RuntimeParam对象而不是nil
 				assert.NotNil(t, result.TargetRuntimeParam)
 				assert.Nil(t, result.TargetRuntimeParam.JSONValue)
+			}
+
+			if tt.wantEvaluatorIDVersionList {
+				assert.Len(t, result.EvaluatorIDVersionList, 2)
+				assert.Equal(t, int64(1), *result.EvaluatorIDVersionList[0].EvaluatorID)
+				assert.Equal(t, "v1", *result.EvaluatorIDVersionList[0].Version)
+				assert.NotNil(t, result.EvaluatorIDVersionList[0].RunConfig)
+				assert.Equal(t, `{"key":"val"}`, *result.EvaluatorIDVersionList[0].RunConfig.EvaluatorRuntimeParam.JSONValue)
+
+				assert.Equal(t, int64(2), *result.EvaluatorIDVersionList[1].EvaluatorID)
+				assert.Equal(t, "v2", *result.EvaluatorIDVersionList[1].Version)
+				assert.Nil(t, result.EvaluatorIDVersionList[1].RunConfig)
+			}
+		})
+	}
+}
+
+func TestConvertCreateReq(t *testing.T) {
+	tests := []struct {
+		name                       string
+		cer                        *expt.CreateExperimentRequest
+		evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig
+		want                       *entity.CreateExptParam
+		wantErr                    bool
+	}{
+		{
+			name: "normal conversion",
+			cer: &expt.CreateExperimentRequest{
+				WorkspaceID:         1,
+				EvalSetVersionID:    gptr.Of(int64(10)),
+				TargetVersionID:     gptr.Of(int64(20)),
+				EvaluatorVersionIds: []int64{30, 40},
+				Name:                gptr.Of("test-expt"),
+				Desc:                gptr.Of("test-desc"),
+				EvalSetID:           gptr.Of(int64(100)),
+				TargetID:            gptr.Of(int64(200)),
+				ExptType:            gptr.Of(domain_expt.ExptType_Offline),
+				MaxAliveTime:        gptr.Of(int64(3600)),
+				SourceType:          gptr.Of(domain_expt.SourceType_Evaluation),
+				SourceID:            gptr.Of("source-id"),
+				ItemConcurNum:       gptr.Of(int32(5)),
+				TargetFieldMapping: &domain_expt.TargetFieldMapping{
+					FromEvalSet: []*domain_expt.FieldMapping{
+						{
+							FieldName:     gptr.Of("f1"),
+							FromFieldName: gptr.Of("from_f1"),
+						},
+					},
+				},
+			},
+			evaluatorVersionRunConfigs: map[int64]*evaluatordto.EvaluatorRunConfig{
+				30: {
+					EvaluatorRuntimeParam: &common.RuntimeParam{
+						JSONValue: gptr.Of(`{"k":"v"}`),
+					},
+				},
+			},
+			want: &entity.CreateExptParam{
+				WorkspaceID:         1,
+				EvalSetVersionID:    10,
+				TargetVersionID:     20,
+				EvaluatorVersionIds: []int64{30, 40},
+				Name:                "test-expt",
+				Desc:                "test-desc",
+				EvalSetID:           100,
+				TargetID:            gptr.Of(int64(200)),
+				ExptType:            entity.ExptType_Offline,
+				MaxAliveTime:        3600,
+				SourceType:          entity.SourceType_Evaluation,
+				SourceID:            "source-id",
+			},
+			wantErr: false,
+		},
+		{
+			name: "with CreateEvalTargetParam",
+			cer: &expt.CreateExperimentRequest{
+				WorkspaceID: 1,
+				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+					SourceTargetID:      gptr.Of("200"),
+					SourceTargetVersion: gptr.Of("20"),
+					EvalTargetType:      ptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+				},
+			},
+			want: &entity.CreateExptParam{
+				WorkspaceID: 1,
+				CreateEvalTargetParam: &entity.CreateEvalTargetParam{
+					SourceTargetID:      gptr.Of("200"),
+					SourceTargetVersion: gptr.Of("20"),
+					EvalTargetType:      gptr.Of(entity.EvalTargetTypeCozeBot),
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ConvertCreateReq(tt.cer, tt.evaluatorVersionRunConfigs)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, got)
+
+			// Check basic fields
+			assert.Equal(t, tt.want.WorkspaceID, got.WorkspaceID)
+			assert.Equal(t, tt.want.Name, got.Name)
+			assert.Equal(t, tt.want.EvalSetVersionID, got.EvalSetVersionID)
+			assert.Equal(t, tt.want.TargetVersionID, got.TargetVersionID)
+			assert.Equal(t, tt.want.EvaluatorVersionIds, got.EvaluatorVersionIds)
+
+			if tt.want.CreateEvalTargetParam != nil {
+				assert.NotNil(t, got.CreateEvalTargetParam)
+				assert.Equal(t, tt.want.CreateEvalTargetParam.SourceTargetID, got.CreateEvalTargetParam.SourceTargetID)
+				assert.Equal(t, tt.want.CreateEvalTargetParam.EvalTargetType, got.CreateEvalTargetParam.EvalTargetType)
+			}
+
+			if got.ExptConf != nil {
+				// Verify ExptConf conversion happened (delegated to ConvertToEntity)
+				assert.Equal(t, ptr.ConvIntPtr[int32, int](tt.cer.ItemConcurNum), got.ExptConf.ItemConcurNum)
 			}
 		})
 	}

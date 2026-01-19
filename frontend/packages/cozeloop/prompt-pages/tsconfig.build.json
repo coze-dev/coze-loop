@@ -21,13 +21,7 @@
       "path": "../api-schema/tsconfig.build.json"
     },
     {
-      "path": "../../arch/bot-md-box-adapter/tsconfig.build.json"
-    },
-    {
       "path": "../../arch/bot-typings/tsconfig.build.json"
-    },
-    {
-      "path": "../../arch/fetch-stream/tsconfig.build.json"
     },
     {
       "path": "../base-hooks/tsconfig.build.json"
@@ -51,19 +45,19 @@
       "path": "../../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../guard/tsconfig.build.json"
+      "path": "../i18n/tsconfig.build.json"
     },
     {
-      "path": "../observation/trace-detail-open/tsconfig.build.json"
+      "path": "../observation-adapter/tsconfig.build.json"
     },
     {
-      "path": "../prompt-components/tsconfig.build.json"
+      "path": "../observation-components/tsconfig.build.json"
+    },
+    {
+      "path": "../prompt-components-v2/tsconfig.build.json"
     },
     {
       "path": "../tailwind-config/tsconfig.build.json"
-    },
-    {
-      "path": "../tea/tsconfig.build.json"
     },
     {
       "path": "../toolkit/tsconfig.build.json"

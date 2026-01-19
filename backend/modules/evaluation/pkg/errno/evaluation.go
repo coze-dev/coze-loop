@@ -112,6 +112,18 @@ const (
 	terminateNonRunningExperimentErrorMessage           = "cannot terminate an non-running experiment, please try again later"
 	terminateNonRunningExperimentErrorNoAffectStability = true
 
+	ExperimentStatusNotAllowedToInvokeCode              = 601204012 // experiment status is not allowed to invoke, only Processing or Pending status can invoke
+	experimentStatusNotAllowedToInvokeMessage           = "experiment status is not allowed to invoke"
+	experimentStatusNotAllowedToInvokeNoAffectStability = true
+
+	IncompleteExptCalcAggrResultErrorCode              = 601204013 // aggregated result cannot be generated for incomplete experiments
+	incompleteExptCalcAggrResultErrorMessage           = "aggregated result cannot be generated for incomplete experiments"
+	incompleteExptCalcAggrResultErrorNoAffectStability = true
+
+	DuplicateCalcExptAggrResultErrorCode              = 601204014 // aggregated result calculation is already in progress
+	duplicateCalcExptAggrResultErrorMessage           = "aggregated result calculation is already in progress"
+	duplicateCalcExptAggrResultErrorNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -501,6 +513,24 @@ func init() {
 		TerminateNonRunningExperimentErrorCode,
 		terminateNonRunningExperimentErrorMessage,
 		code.WithAffectStability(!terminateNonRunningExperimentErrorNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentStatusNotAllowedToInvokeCode,
+		experimentStatusNotAllowedToInvokeMessage,
+		code.WithAffectStability(!experimentStatusNotAllowedToInvokeNoAffectStability),
+	)
+
+	code.Register(
+		IncompleteExptCalcAggrResultErrorCode,
+		incompleteExptCalcAggrResultErrorMessage,
+		code.WithAffectStability(!incompleteExptCalcAggrResultErrorNoAffectStability),
+	)
+
+	code.Register(
+		DuplicateCalcExptAggrResultErrorCode,
+		duplicateCalcExptAggrResultErrorMessage,
+		code.WithAffectStability(!duplicateCalcExptAggrResultErrorNoAffectStability),
 	)
 
 	code.Register(

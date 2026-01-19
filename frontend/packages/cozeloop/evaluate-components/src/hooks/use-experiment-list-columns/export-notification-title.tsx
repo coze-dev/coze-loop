@@ -31,18 +31,21 @@ const ExportNotificationTitle: React.FC<ExportNotificationTitleProps> = ({
             style={{ marginRight: '8px' }}
           />
         );
+
       case CSVExportStatus.Success:
         return (
           <IconCozCheckMarkCircleFill
             style={{ color: '#52c41a', marginRight: '8px' }}
           />
         );
+
       case CSVExportStatus.Failed:
         return (
           <IconCozCrossCircleFill
             style={{ color: '#D0292F', marginRight: '8px' }}
           />
         );
+
       default:
         return (
           <IconCozLoading style={{ color: '#1890ff', marginRight: '8px' }} />

@@ -9,12 +9,12 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gopkg/util/logger"
 
@@ -28,10 +28,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
-	"github.com/coze-dev/coze-loop/backend/pkg/localos"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -45,6 +43,8 @@ type ExptResultExportService struct {
 	fileClient         fileserver.ObjectStorage
 	configer           component.IConfiger
 	benefitService     benefit.IBenefitService
+	urlProcessor       component.IURLProcessor
+	evalSetItemSvc     EvaluationSetItemService
 }
 
 func NewExptResultExportService(
@@ -57,6 +57,8 @@ func NewExptResultExportService(
 	fileClient fileserver.ObjectStorage,
 	configer component.IConfiger,
 	benefitService benefit.IBenefitService,
+	urlProcessor component.IURLProcessor,
+	esis EvaluationSetItemService,
 ) IExptResultExportService {
 	return &ExptResultExportService{
 		repo:               repo,
@@ -68,6 +70,8 @@ func NewExptResultExportService(
 		fileClient:         fileClient,
 		configer:           configer,
 		benefitService:     benefitService,
+		urlProcessor:       urlProcessor,
+		evalSetItemSvc:     esis,
 	}
 }
 
@@ -148,22 +152,9 @@ func (e ExptResultExportService) GetExptExportRecord(ctx context.Context, spaceI
 		if err != nil {
 			return nil, err
 		}
-
-		unescaped, err := url.QueryUnescape(conv.UnescapeUnicode(signURL))
-		if err != nil {
-			logs.CtxWarn(ctx, "QueryUnescape fail, raw: %v", signURL)
-		} else {
-			signURL = unescaped
-		}
-
-		parsedURL, err := url.Parse(signURL)
-		if err == nil {
-			if parsedURL.Host == localos.GetLocalOSHost() {
-				signURL = fmt.Sprintf("%s?%s", parsedURL.Path, parsedURL.RawQuery)
-			}
-		}
-
+		signURL = e.urlProcessor.ProcessSignURL(ctx, signURL)
 		exportRecord.URL = ptr.Of(signURL)
+		logs.CtxInfo(ctx, "get export record sign url final: %v", signURL)
 	}
 
 	exportRecord.Expired = isExportRecordExpired(exportRecord.StartAt)
@@ -265,10 +256,11 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 		// total    int64
 		maxPage = 500
 
-		colEvaluators    []*entity.ColumnEvaluator
-		colEvalSetFields []*entity.ColumnEvalSetField
-		colAnnotation    []*entity.ColumnAnnotation
-		allItemResults   []*entity.ItemResult
+		colEvaluators     []*entity.ColumnEvaluator
+		colEvalSetFields  []*entity.ColumnEvalSetField
+		colAnnotation     []*entity.ColumnAnnotation
+		allItemResults    []*entity.ItemResult
+		columnsEvalTarget []*entity.ColumnEvalTarget
 	)
 
 	for {
@@ -279,21 +271,24 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 			BaseExptID: ptr.Of(exptID),
 			Page:       page,
 		}
-		columnEvaluators, _, columnEvalSetFields, exptColumnAnnotation, itemResults, total, err := e.exptResultService.MGetExperimentResult(ctx, param)
+		result, err := e.exptResultService.MGetExperimentResult(ctx, param)
 		if err != nil {
 			return err
 		}
 
-		colEvaluators = columnEvaluators
-		colEvalSetFields = columnEvalSetFields
-		for _, columnAnnotation := range exptColumnAnnotation {
+		colEvaluators = result.ColumnEvaluators
+		colEvalSetFields = result.ColumnEvalSetFields
+		if len(result.ExptColumnsEvalTarget) > 0 {
+			columnsEvalTarget = result.ExptColumnsEvalTarget[0].Columns
+		}
+		for _, columnAnnotation := range result.ExptColumnAnnotations {
 			if columnAnnotation.ExptID == exptID {
 				colAnnotation = columnAnnotation.ColumnAnnotations
 			}
 		}
-		allItemResults = append(allItemResults, itemResults...)
+		allItemResults = append(allItemResults, result.ItemResults...)
 
-		if pageNum*pageSize >= int(total) {
+		if pageNum*pageSize >= int(result.Total) {
 			break
 		}
 
@@ -315,10 +310,12 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 		fileClient:         e.fileClient,
 		fileName:           fileName,
 
-		colEvaluators:    colEvaluators,
-		colAnnotations:   colAnnotation,
-		colEvalSetFields: colEvalSetFields,
-		allItemResults:   allItemResults,
+		colEvaluators:     colEvaluators,
+		colAnnotations:    colAnnotation,
+		colEvalSetFields:  colEvalSetFields,
+		allItemResults:    allItemResults,
+		columnsEvalTarget: columnsEvalTarget,
+		evalSetItemSvc:    e.evalSetItemSvc,
 	}
 
 	err = exportHelper.exportCSV(ctx)
@@ -335,16 +332,18 @@ type exportCSVHelper struct {
 	fileName  string
 	withLogID bool
 
-	colEvaluators    []*entity.ColumnEvaluator
-	colEvalSetFields []*entity.ColumnEvalSetField
-	colAnnotations   []*entity.ColumnAnnotation
-	allItemResults   []*entity.ItemResult
+	colEvaluators     []*entity.ColumnEvaluator
+	colEvalSetFields  []*entity.ColumnEvalSetField
+	colAnnotations    []*entity.ColumnAnnotation
+	allItemResults    []*entity.ItemResult
+	columnsEvalTarget []*entity.ColumnEvalTarget
 
 	exptRepo           repo.IExperimentRepo
 	exptTurnResultRepo repo.IExptTurnResultRepo
 	exptPublisher      events.ExptEventPublisher
 	exptResultService  ExptResultService
 	fileClient         fileserver.ObjectStorage
+	evalSetItemSvc     EvaluationSetItemService
 }
 
 func (e *exportCSVHelper) exportCSV(ctx context.Context) error {
@@ -393,8 +392,9 @@ func (e exportCSVHelper) buildColumns(ctx context.Context) ([]string, error) {
 		columns = append(columns, ptr.From(colEvalSetField.Name))
 	}
 
-	// 实际输出
-	columns = append(columns, consts.OutputSchemaKey)
+	for _, col := range e.columnsEvalTarget {
+		columns = append(columns, gcond.If(len(col.DisplayName) > 0, col.DisplayName, col.Name))
+	}
 
 	// colEvaluators
 	for _, colEvaluator := range e.colEvaluators {
@@ -433,6 +433,24 @@ func getColumnNameEvaluatorReason(evaluatorName, version string) string {
 	return fmt.Sprintf("%s<%s>_reason", evaluatorName, version)
 }
 
+func (e *exportCSVHelper) buildColumnEvalTargetContent(ctx context.Context, columnName string, data *entity.EvalTargetOutputData) (string, error) {
+	if data == nil {
+		return "", nil
+	}
+	switch columnName {
+	case consts.ReportColumnNameEvalTargetTotalLatency:
+		return strconv.FormatInt(gptr.Indirect(data.TimeConsumingMS), 10), nil
+	case consts.ReportColumnNameEvalTargetInputTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.GetInputTokens(), 10), nil
+	case consts.ReportColumnNameEvalTargetOutputTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.GetOutputTokens(), 10), nil
+	case consts.ReportColumnNameEvalTargetTotalTokens:
+		return strconv.FormatInt(data.EvalTargetUsage.GetTotalTokens(), 10), nil
+	default:
+		return e.toContentStr(ctx, data.OutputFields[columnName])
+	}
+}
+
 func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 	rows := make([][]string, 0)
 	for _, itemResult := range e.allItemResults {
@@ -466,20 +484,25 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 				payload.EvalSet.Turn.FieldDataList == nil {
 				return nil, fmt.Errorf("FieldDataList is nil")
 			}
-			datasetFields := getDatasetFields(e.colEvalSetFields, payload.EvalSet.Turn.FieldDataList)
+			datasetFields, err := e.getDatasetFields(ctx, e.colEvalSetFields, payload.EvalSet)
+			if err != nil {
+				return nil, err
+			}
 			rowData = append(rowData, datasetFields...)
 
-			// 实际输出
-			var actualOutput string
-			if payload.TargetOutput == nil ||
-				payload.TargetOutput.EvalTargetRecord == nil ||
-				payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData == nil ||
-				payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields == nil {
-				actualOutput = ""
-			} else {
-				actualOutput = geDatasetCellOrActualOutputData(payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[consts.OutputSchemaKey])
+			for _, col := range e.columnsEvalTarget {
+				if payload.TargetOutput != nil &&
+					payload.TargetOutput.EvalTargetRecord != nil &&
+					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
+					cont, err := e.buildColumnEvalTargetContent(ctx, col.Name, payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData)
+					if err != nil {
+						return nil, err
+					}
+					rowData = append(rowData, cont)
+				} else {
+					rowData = append(rowData, "")
+				}
 			}
-			rowData = append(rowData, actualOutput)
 
 			// 评估器结果，按ColumnEvaluators的顺序排序
 			evaluatorRecords := make(map[int64]*entity.EvaluatorRecord)
@@ -554,42 +577,63 @@ func itemRunStateToString(itemRunState entity.ItemRunState) string {
 }
 
 // getDatasetFields 按顺序获取数据集字段
-func getDatasetFields(colEvalSetFields []*entity.ColumnEvalSetField, fieldDataList []*entity.FieldData) []string {
-	fieldDataMap := slices.ToMap(fieldDataList, func(t *entity.FieldData) (string, *entity.FieldData) {
-		return t.Key, t
-	})
-	fields := make([]string, 0, len(colEvalSetFields))
+func (e *exportCSVHelper) getDatasetFields(ctx context.Context, colEvalSetFields []*entity.ColumnEvalSetField, tes *entity.TurnEvalSet) (fields []string, err error) {
+	fdl := tes.Turn.FieldDataList
+	fdm := slices.ToMap(fdl, func(t *entity.FieldData) (string, *entity.FieldData) { return t.Key, t })
+	fields = make([]string, 0, len(colEvalSetFields))
+
 	for _, colEvalSetField := range colEvalSetFields {
 		if colEvalSetField == nil {
 			continue
 		}
 
-		fieldData, ok := fieldDataMap[ptr.From(colEvalSetField.Key)]
+		fieldData, ok := fdm[ptr.From(colEvalSetField.Key)]
 		if !ok {
 			fields = append(fields, "")
 			continue
 		}
 
-		fields = append(fields, geDatasetCellOrActualOutputData(fieldData.Content))
+		if fieldData.Content == nil {
+			continue
+		}
+
+		if fieldData.Content.IsContentOmitted() {
+			if fieldData, err = e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+				SpaceID:         e.spaceID,
+				EvaluationSetID: tes.EvalSetID,
+				ItemPK:          tes.ItemID,
+				FieldName:       gptr.Indirect(colEvalSetField.Name),
+				TurnID:          gptr.Of(tes.Turn.ID),
+			}); err != nil {
+				return nil, err
+			}
+		}
+
+		data, err := e.toContentStr(ctx, fieldData.Content)
+		if err != nil {
+			return nil, err
+		}
+
+		fields = append(fields, data)
 	}
 
-	return fields
+	return fields, nil
 }
 
-func geDatasetCellOrActualOutputData(data *entity.Content) string {
+func (e *exportCSVHelper) toContentStr(ctx context.Context, data *entity.Content) (string, error) {
 	if data == nil {
-		return ""
+		return "", nil
 	}
 
 	switch data.GetContentType() {
 	case entity.ContentTypeText:
-		return data.GetText()
+		return data.GetText(), nil
 	case entity.ContentTypeImage, entity.ContentTypeAudio:
-		return ""
+		return "", nil
 	case entity.ContentTypeMultipart:
-		return formatMultiPartData(data)
+		return formatMultiPartData(data), nil
 	default:
-		return ""
+		return "", nil
 	}
 }
 

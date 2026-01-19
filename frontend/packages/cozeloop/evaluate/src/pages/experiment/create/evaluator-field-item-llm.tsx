@@ -1,21 +1,14 @@
-/*
- * Copyright 2025 
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 
-import { EvaluatorVersionDetail } from '@cozeloop/evaluate-components';
+import { I18n } from '@cozeloop/i18n-adapter';
 import {
+  EvaluatorVersionDetail,
+  PresetLLMBlackDetail,
+} from '@cozeloop/evaluate-components';
+import {
+  EvaluatorBoxType,
+  type Evaluator,
   type EvaluatorVersion,
   type FieldSchema,
 } from '@cozeloop/api-schema/evaluation';
@@ -23,12 +16,12 @@ import { IconCozInfoCircle } from '@coze-arch/coze-design/icons';
 import { type RuleItem, Tooltip } from '@coze-arch/coze-design';
 
 import { EvaluatorMappingField } from './evaluator-mapping-field';
-import { I18n } from '@cozeloop/i18n-adapter';
 
 interface EvaluatorFieldItemLLMProps {
   arrayField: {
     field: string;
   };
+  evaluator?: Evaluator;
   loading: boolean;
   versionDetail: EvaluatorVersion;
   evaluationSetSchemas?: FieldSchema[];
@@ -40,6 +33,7 @@ export function EvaluatorFieldItemLLM(props: EvaluatorFieldItemLLMProps) {
   const {
     arrayField,
     loading,
+    evaluator,
     versionDetail,
     evaluationSetSchemas,
     evaluateTargetSchemas,
@@ -54,9 +48,22 @@ export function EvaluatorFieldItemLLM(props: EvaluatorFieldItemLLMProps) {
     }),
   );
 
+  // ux尚未统一, 统一后合并详情
   return (
     <>
-      <EvaluatorVersionDetail loading={loading} versionDetail={versionDetail} />
+      {evaluator?.box_type === EvaluatorBoxType.White && (
+        <EvaluatorVersionDetail
+          loading={loading}
+          versionDetail={versionDetail}
+        />
+      )}
+      {evaluator?.box_type === EvaluatorBoxType.Black && (
+        <PresetLLMBlackDetail
+          evaluator={evaluator as Evaluator}
+          enableCollapse={true}
+          defaultOpen={false}
+        />
+      )}
       <EvaluatorMappingField
         field={`${arrayField.field}.evaluatorMapping`}
         prefixField={`${arrayField.field}.evaluatorMapping`}
@@ -81,9 +88,7 @@ export function EvaluatorFieldItemLLM(props: EvaluatorFieldItemLLMProps) {
             required: true,
             validator: (_, value) => {
               if (loading && !value) {
-                return new Error(
-                  I18n.t('evaluate_please_configure_field_mapping'),
-                );
+                return new Error(I18n.t('please_configure_field_mapping'));
               }
               return true;
             },

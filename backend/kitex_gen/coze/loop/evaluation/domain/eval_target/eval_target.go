@@ -9570,6 +9570,7 @@ func (p *EvalTargetOutputData) Field4DeepEqual(src *int64) bool {
 type EvalTargetUsage struct {
 	InputTokens  int64 `thrift:"input_tokens,1" frugal:"1,default,i64" json:"input_tokens" form:"input_tokens" query:"input_tokens"`
 	OutputTokens int64 `thrift:"output_tokens,2" frugal:"2,default,i64" json:"output_tokens" form:"output_tokens" query:"output_tokens"`
+	TotalTokens  int64 `thrift:"total_tokens,3" frugal:"3,default,i64" json:"total_tokens" form:"total_tokens" query:"total_tokens"`
 }
 
 func NewEvalTargetUsage() *EvalTargetUsage {
@@ -9592,16 +9593,27 @@ func (p *EvalTargetUsage) GetOutputTokens() (v int64) {
 	}
 	return
 }
+
+func (p *EvalTargetUsage) GetTotalTokens() (v int64) {
+	if p != nil {
+		return p.TotalTokens
+	}
+	return
+}
 func (p *EvalTargetUsage) SetInputTokens(val int64) {
 	p.InputTokens = val
 }
 func (p *EvalTargetUsage) SetOutputTokens(val int64) {
 	p.OutputTokens = val
 }
+func (p *EvalTargetUsage) SetTotalTokens(val int64) {
+	p.TotalTokens = val
+}
 
 var fieldIDToName_EvalTargetUsage = map[int16]string{
 	1: "input_tokens",
 	2: "output_tokens",
+	3: "total_tokens",
 }
 
 func (p *EvalTargetUsage) Read(iprot thrift.TProtocol) (err error) {
@@ -9633,6 +9645,14 @@ func (p *EvalTargetUsage) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9689,6 +9709,17 @@ func (p *EvalTargetUsage) ReadField2(iprot thrift.TProtocol) error {
 	p.OutputTokens = _field
 	return nil
 }
+func (p *EvalTargetUsage) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.TotalTokens = _field
+	return nil
+}
 
 func (p *EvalTargetUsage) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -9702,6 +9733,10 @@ func (p *EvalTargetUsage) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -9754,6 +9789,22 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *EvalTargetUsage) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("total_tokens", thrift.I64, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.TotalTokens); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *EvalTargetUsage) String() string {
 	if p == nil {
@@ -9775,6 +9826,9 @@ func (p *EvalTargetUsage) DeepEqual(ano *EvalTargetUsage) bool {
 	if !p.Field2DeepEqual(ano.OutputTokens) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.TotalTokens) {
+		return false
+	}
 	return true
 }
 
@@ -9788,6 +9842,13 @@ func (p *EvalTargetUsage) Field1DeepEqual(src int64) bool {
 func (p *EvalTargetUsage) Field2DeepEqual(src int64) bool {
 
 	if p.OutputTokens != src {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetUsage) Field3DeepEqual(src int64) bool {
+
+	if p.TotalTokens != src {
 		return false
 	}
 	return true

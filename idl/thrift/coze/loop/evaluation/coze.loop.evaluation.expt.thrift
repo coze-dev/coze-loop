@@ -30,6 +30,8 @@ struct CreateExperimentRequest {
     32: optional expt.SourceType source_type (api.body = 'source_type')
     33: optional string source_id (api.body = 'source_id')
 
+    40: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list (api.body = 'evaluator_id_version_list') // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -219,6 +221,8 @@ struct BatchGetExperimentResultRequest {
 
     30: optional bool use_accelerator (api.query="use_accelerator", go.tag='json:"use_accelerator"')
 
+    40: optional bool full_trajectory (api.query="full_trajectory", go.tag='json:"full_trajectory"') // 是否包含轨迹
+
     255: optional base.Base Base
 }
 
@@ -230,6 +234,7 @@ struct BatchGetExperimentResultResponse {
     3: optional list<expt.ExptColumnEvaluator> expt_column_evaluators (api.body = "expt_column_evaluators")
     // 人工标注标签表头信息
     4: optional list<expt.ExptColumnAnnotation> expt_column_annotations (api.body = "expt_column_annotations")
+    5: optional list<expt.ExptColumnEvalTarget> expt_column_eval_target (api.body = "expt_column_eval_target")
 
     // item粒度实验结果详情
     10: optional list<expt.ItemResult> item_results (api.body = "item_results")
@@ -248,6 +253,18 @@ struct BatchGetExperimentAggrResultRequest {
 
 struct BatchGetExperimentAggrResultResponse {
     1: optional list<expt.ExptAggregateResult> expt_aggregate_results (api.body = 'expt_aggregate_result')
+
+    255: base.BaseResp BaseResp
+}
+
+struct CalculateExperimentAggrResultRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true')
+    2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true')
+
+    255: optional base.Base Base
+}
+
+struct CalculateExperimentAggrResultResponse {
 
     255: base.BaseResp BaseResp
 }
@@ -552,6 +569,20 @@ struct ListExptInsightAnalysisCommentResponse {
     255: base.BaseResp BaseResp
 }
 
+struct GetAnalysisRecordFeedbackVoteRequest {
+    1: optional i64 workspace_id (api.query = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: optional i64 expt_id (api.query = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: optional i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct GetAnalysisRecordFeedbackVoteResponse {
+    1: optional expt.ExptInsightAnalysisFeedbackVote vote
+    255: base.BaseResp BaseResp
+}
+
 service ExperimentService {
 
     CheckExperimentNameResponse CheckExperimentName(1: CheckExperimentNameRequest req) (api.post = '/api/evaluation/v1/experiments/check_name')
@@ -584,6 +615,7 @@ service ExperimentService {
     // MGetExperimentResult 获取实验结果
     BatchGetExperimentResultResponse BatchGetExperimentResult(1: BatchGetExperimentResultRequest req) (api.post = "/api/evaluation/v1/experiments/results/batch_get")
 
+    CalculateExperimentAggrResultResponse CalculateExperimentAggrResult(1: CalculateExperimentAggrResultRequest req) (api.post = "/api/evaluation/v1/experiments/:expt_id/aggr_results")
     BatchGetExperimentAggrResultResponse BatchGetExperimentAggrResult(1: BatchGetExperimentAggrResultRequest req) (api.post = "/api/evaluation/v1/experiments/aggr_results/batch_get")
 
     // 在线实验
@@ -614,5 +646,6 @@ service ExperimentService {
     GetExptInsightAnalysisRecordResponse GetExptInsightAnalysisRecord(1: GetExptInsightAnalysisRecordRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id")
     FeedbackExptInsightAnalysisReportResponse FeedbackExptInsightAnalysisReport(1: FeedbackExptInsightAnalysisReportRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/feedback")
     ListExptInsightAnalysisCommentResponse ListExptInsightAnalysisComment(1: ListExptInsightAnalysisCommentRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/comments/list")
+    GetAnalysisRecordFeedbackVoteResponse GetAnalysisRecordFeedbackVote(1: GetAnalysisRecordFeedbackVoteRequest req) (api.get="/api/evaluation/v1/experiments/insight_analysis_records/:insight_analysis_record_id/feedback_vote")
 }
 

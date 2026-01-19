@@ -1,11 +1,8 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
-import {
-  TypographyText,
-  TagInput,
-  TagDetailLink,
-} from '@cozeloop/evaluate-components';
+import { TagInput, TagDetailLink } from '@cozeloop/evaluate-components';
 import { InfoTooltip, TooltipWhenDisabled } from '@cozeloop/components';
 import { tag, type ColumnAnnotation } from '@cozeloop/api-schema/evaluation';
 

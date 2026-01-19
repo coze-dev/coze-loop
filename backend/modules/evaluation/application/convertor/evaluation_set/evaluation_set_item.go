@@ -35,29 +35,31 @@ func ItemDTO2DO(dto *eval_set.EvaluationSetItem) *entity.EvaluationSetItem {
 		SchemaID:        gptr.Indirect(dto.SchemaID),
 		ItemID:          gptr.Indirect(dto.ItemID),
 		ItemKey:         gptr.Indirect(dto.ItemKey),
-		Turns:           TurnDTO2DOs(dto.Turns),
+		Turns:           TurnDTO2DOs(gptr.Indirect(dto.EvaluationSetID), gptr.Indirect(dto.ItemID), dto.Turns),
 		BaseInfo:        common.ConvertBaseInfoDTO2DO(dto.BaseInfo),
 	}
 }
 
-func TurnDTO2DOs(dtos []*eval_set.Turn) []*entity.Turn {
+func TurnDTO2DOs(evalSetID, itemID int64, dtos []*eval_set.Turn) []*entity.Turn {
 	if dtos == nil {
 		return nil
 	}
 	result := make([]*entity.Turn, 0)
 	for _, dto := range dtos {
-		result = append(result, TurnDTO2DO(dto))
+		result = append(result, TurnDTO2DO(evalSetID, itemID, dto))
 	}
 	return result
 }
 
-func TurnDTO2DO(dto *eval_set.Turn) *entity.Turn {
+func TurnDTO2DO(evalSetID, itemID int64, dto *eval_set.Turn) *entity.Turn {
 	if dto == nil {
 		return nil
 	}
 	return &entity.Turn{
 		ID:            gptr.Indirect(dto.ID),
 		FieldDataList: FieldDataDTO2DOs(dto.FieldDataList),
+		ItemID:        itemID,
+		EvalSetID:     evalSetID,
 	}
 }
 

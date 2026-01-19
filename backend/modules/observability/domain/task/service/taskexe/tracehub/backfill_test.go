@@ -301,6 +301,66 @@ func TestTraceHubServiceImpl_ListAndSendSpans_GetTenantsError(t *testing.T) {
 	require.ErrorIs(t, err, tenantErr)
 }
 
+func TestTraceHubServiceImpl_ListAndSendSpans_WithoutLastSpanPageToken(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockTraceRepo := trepo_mocks.NewMockITraceRepo(ctrl)
+	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
+	mockBuilder := builder_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
+	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+
+	impl := &TraceHubServiceImpl{
+		taskRepo:       mockTaskRepo,
+		traceRepo:      mockTraceRepo,
+		tenantProvider: mockTenant,
+		buildHelper:    mockBuilder,
+	}
+
+	now := time.Now()
+	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
+	domainRun := newDomainBackfillTaskRun(now)
+	span := newTestSpan(now)
+
+	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).
+		Return(filterMock, nil)
+	filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, true, nil)
+	filterMock.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil)
+	mockBuilder.EXPECT().BuildGetTraceProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).Times(2)
+	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).Return([]string{"tenant"}, nil)
+
+	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+		switch param.PageToken {
+		case "":
+			return &repo.ListSpansResult{
+				Spans:     loop_span.SpanList{span},
+				PageToken: "next",
+				HasMore:   true,
+			}, nil
+		case "next":
+			return &repo.ListSpansResult{
+				Spans:     loop_span.SpanList{span},
+				PageToken: "",
+				HasMore:   false,
+			}, nil
+		default:
+			return nil, errors.New("invalid token")
+		}
+	}).Times(2)
+
+	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil).Times(2)
+	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil).Times(2)
+	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil).Times(2)
+
+	err := impl.listAndSendSpans(context.Background(), sub)
+	require.NoError(t, err)
+	require.True(t, proc.invokeCalled)
+	require.NotNil(t, sub.tr.BackfillDetail)
+	require.NotNil(t, sub.tr.BackfillDetail.LastSpanPageToken)
+	require.Equal(t, "next", sub.tr.BackfillDetail.LastSpanPageToken)
+}
+
 func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
@@ -320,7 +380,7 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 
 	now := time.Now()
 	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
-	sub.tr.BackfillDetail = &entity.BackfillDetail{LastSpanPageToken: ptr.Of("prev")}
+	sub.tr.BackfillDetail = &entity.BackfillDetail{LastSpanPageToken: "prev"}
 	domainRun := newDomainBackfillTaskRun(now)
 	span := newTestSpan(now)
 
@@ -350,7 +410,7 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	require.True(t, proc.invokeCalled)
 	require.NotNil(t, sub.tr.BackfillDetail)
 	require.NotNil(t, sub.tr.BackfillDetail.LastSpanPageToken)
-	require.Equal(t, "prev", ptr.From(sub.tr.BackfillDetail.LastSpanPageToken))
+	require.Equal(t, "prev", sub.tr.BackfillDetail.LastSpanPageToken)
 }
 
 func TestTraceHubServiceImpl_ListAndSendSpans_ListError(t *testing.T) {
@@ -405,28 +465,6 @@ func TestTraceHubServiceImpl_FlushSpans_ContextCanceled(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestTraceHubServiceImpl_DoFlush_UpdateTaskRunError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-
-	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	impl := &TraceHubServiceImpl{taskRepo: mockTaskRepo}
-
-	now := time.Now()
-	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
-	span := newTestSpan(now)
-	domainRun := newDomainBackfillTaskRun(now)
-
-	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
-	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(errors.New("update fail"))
-
-	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "update fail")
-	require.True(t, proc.invokeCalled)
-}
-
 func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
@@ -442,7 +480,6 @@ func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
 	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
-	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil)
 
 	// 调用flushSpans，然后手动调用OnTaskFinished来触发finish错误
 	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
@@ -622,7 +659,7 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 			},
 		}
 
-		err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub)
+		err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub, &entity.BackFillEvent{SpaceID: sub.t.WorkspaceID, TaskID: sub.t.ID})
 		require.NoError(t, err)
 
 		select {
@@ -652,7 +689,7 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 			},
 		}
 
-		err := impl.onHandleDone(context.Background(), nil, sub)
+		err := impl.onHandleDone(context.Background(), nil, sub, &entity.BackFillEvent{SpaceID: sub.t.WorkspaceID, TaskID: sub.t.ID})
 		require.NoError(t, err)
 
 		select {
@@ -661,6 +698,76 @@ func TestTraceHubServiceImpl_OnHandleDone(t *testing.T) {
 		case <-time.After(100 * time.Millisecond):
 		}
 	})
+}
+
+func TestTraceHubServiceImpl_OnHandleDone_RetryCountIncrement(t *testing.T) {
+	t.Parallel()
+	ch := make(chan *entity.BackFillEvent, 1)
+	now := time.Now()
+	impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
+	sub := &spanSubscriber{
+		t: &entity.ObservabilityTask{ID: 10, WorkspaceID: 20},
+		tr: &entity.TaskRun{
+			ID:          1,
+			WorkspaceID: 20,
+			TaskID:      10,
+			TaskType:    entity.TaskRunTypeBackFill,
+			RunStatus:   entity.TaskRunStatusRunning,
+			RunStartAt:  now.Add(-time.Hour),
+			RunEndAt:    now.Add(time.Hour),
+		},
+	}
+
+	prev := &entity.BackFillEvent{SpaceID: sub.t.WorkspaceID, TaskID: sub.t.ID, Retry: 2}
+	err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub, prev)
+	require.NoError(t, err)
+
+	select {
+	case msg := <-ch:
+		require.Equal(t, int32(3), msg.Retry)
+		require.Equal(t, int64(20), msg.SpaceID)
+		require.Equal(t, int64(10), msg.TaskID)
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("expected backfill message")
+	}
+}
+
+func TestTraceHubServiceImpl_OnHandleDone_RetryCountExceededNoSend(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	ch := make(chan *entity.BackFillEvent, 1)
+	now := time.Now()
+	impl := &TraceHubServiceImpl{backfillProducer: &stubBackfillProducer{ch: ch}}
+	sub := &spanSubscriber{
+		t: &entity.ObservabilityTask{ID: 10, WorkspaceID: 20},
+		tr: &entity.TaskRun{
+			ID:          1,
+			WorkspaceID: 20,
+			TaskID:      10,
+			TaskType:    entity.TaskRunTypeBackFill,
+			RunStatus:   entity.TaskRunStatusRunning,
+			RunStartAt:  now.Add(-time.Hour),
+			RunEndAt:    now.Add(time.Hour),
+		},
+	}
+
+	// prev Retry at max (5) → next retry=6, exceeds max, do not send
+	prev := &entity.BackFillEvent{SpaceID: sub.t.WorkspaceID, TaskID: sub.t.ID, Retry: backfillMaxRetryTimes}
+	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	impl.taskRepo = mockRepo
+	mockRepo.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(nil)
+	err := impl.onHandleDone(context.Background(), errors.New("flush err"), sub, prev)
+	require.NoError(t, err)
+
+	select {
+	case <-ch:
+		t.Fatal("did not expect backfill message when retry exceeded")
+	case <-time.After(200 * time.Millisecond):
+		// ok, no message sent
+	}
+	mockRepo.EXPECT().UpdateTaskRun(gomock.Any(), gomock.Any()).Return(errors.New("test"))
+	err = impl.onHandleDone(context.Background(), errors.New("flush err"), sub, prev)
+	require.Error(t, err)
 }
 
 func TestTraceHubServiceImpl_SendBackfillMessage(t *testing.T) {

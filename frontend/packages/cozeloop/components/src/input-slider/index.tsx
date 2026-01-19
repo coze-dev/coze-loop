@@ -149,7 +149,9 @@ export const InputSlider: React.FC<InputSliderProps> = ({
         className={styles['input-number']}
         value={value}
         disabled={disabled}
-        formatter={inputValue => formateDecimalPlacesString(inputValue, value)}
+        formatter={inputValue =>
+          formateDecimalPlacesString(inputValue, value, decimalPlaces)
+        }
         onNumberChange={onNumberChange}
         max={max}
         min={min}

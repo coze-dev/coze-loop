@@ -162,17 +162,25 @@ func (e *ExptSchedulerImpl) makeExptRunExecLockKey(exptID, exptRunID int64) stri
 
 func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
-		locked, ctx, unlock, err := e.Mutex.LockWithRenew(ctx, e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID), time.Second*20, time.Second*60*5)
+		key := e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID)
+		locked, ctx, cancel, err := e.Mutex.LockWithRenew(ctx, key, time.Second*20, time.Second*60*5)
 		if err != nil {
 			return err
 		}
-		logs.CtxInfo(ctx, "ExptSchedulerConsumer.HandleEventLock locked expt eval event: %v", json.Jsonify(event))
+
+		logs.CtxInfo(ctx, "ExptSchedulerConsumer.HandleEventLock locked expt eval event: %v, key: %v", json.Jsonify(event), key)
+
 		if !locked {
 			logs.CtxWarn(ctx, "ExptSchedulerConsumer.HandleEventLock found locked expt eval event: %v. Abort event, err: %v", json.Jsonify(event), err)
 			return nil
 		}
 
-		defer unlock()
+		defer func() {
+			cancel()
+			if _, err := e.Mutex.Unlock(key); err != nil {
+				logs.CtxWarn(ctx, "failed to unlock key: %v, err: %v", key, err)
+			}
+		}()
 
 		return next(ctx, event)
 	}

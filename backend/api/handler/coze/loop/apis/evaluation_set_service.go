@@ -110,3 +110,27 @@ func BatchGetEvaluationSetItems(ctx context.Context, c *app.RequestContext) {
 func ClearEvaluationSetDraftItem(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalSetSvc.ClearEvaluationSetDraftItem)
 }
+
+// GetEvaluationSetItemField .
+// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_pk/field [GET]
+func GetEvaluationSetItemField(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.GetEvaluationSetItemField)
+}
+
+// CreateEvaluationSetWithImport .
+// @router /api/evaluation/v1/evaluation_sets/create_with_import [POST]
+func CreateEvaluationSetWithImport(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.CreateEvaluationSetWithImport)
+}
+
+// ParseImportSourceFile .
+// @router /api/evaluation/v1/evaluation_sets/parse_import_source_file [POST]
+func ParseImportSourceFile(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.ParseImportSourceFile)
+}
+
+// GetEvaluationItemField .
+// @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/field [GET]
+func GetEvaluationItemField(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.GetEvaluationSetItemField)
+}

@@ -108,12 +108,15 @@ func ConvertContentDTO2DO(content *commondto.Content) *commonentity.Content {
 		}
 	}
 	return &commonentity.Content{
-		ContentType: contentType,
-		Format:      format,
-		Text:        content.Text,
-		Image:       ConvertImageDTO2DO(content.Image),
-		MultiPart:   multiPart,
-		Audio:       ConvertAudioDTO2DO(content.Audio),
+		ContentType:      contentType,
+		Format:           format,
+		Text:             content.Text,
+		Image:            ConvertImageDTO2DO(content.Image),
+		MultiPart:        multiPart,
+		Audio:            ConvertAudioDTO2DO(content.Audio),
+		ContentOmitted:   content.ContentOmitted,
+		FullContent:      ConvertObjectStorageDTO2DO(content.FullContent),
+		FullContentBytes: content.FullContentBytes,
 	}
 }
 
@@ -135,12 +138,41 @@ func ConvertContentDO2DTO(content *commonentity.Content) *commondto.Content {
 		}
 	}
 	return &commondto.Content{
-		ContentType: contentTypeStr,
-		Format:      (*dataset.FieldDisplayFormat)(content.Format),
-		Text:        content.Text,
-		Image:       ConvertImageDO2DTO(content.Image),
-		MultiPart:   multiPart,
-		Audio:       ConvertAudioDO2DTO(content.Audio),
+		ContentType:      contentTypeStr,
+		Format:           (*dataset.FieldDisplayFormat)(content.Format),
+		Text:             content.Text,
+		Image:            ConvertImageDO2DTO(content.Image),
+		MultiPart:        multiPart,
+		Audio:            ConvertAudioDO2DTO(content.Audio),
+		ContentOmitted:   content.ContentOmitted,
+		FullContent:      ConvertObjectStorageDO2DTO(content.FullContent),
+		FullContentBytes: content.FullContentBytes,
+	}
+}
+
+func ConvertObjectStorageDTO2DO(os *dataset.ObjectStorage) *commonentity.ObjectStorage {
+	if os == nil {
+		return nil
+	}
+	return &commonentity.ObjectStorage{
+		Provider: gptr.Of(commonentity.StorageProvider(gptr.Indirect(os.Provider))),
+		Name:     os.Name,
+		URI:      os.URI,
+		URL:      os.URL,
+		ThumbURL: os.ThumbURL,
+	}
+}
+
+func ConvertObjectStorageDO2DTO(os *commonentity.ObjectStorage) *dataset.ObjectStorage {
+	if os == nil {
+		return nil
+	}
+	return &dataset.ObjectStorage{
+		Provider: gptr.Of(dataset.StorageProvider(gptr.Indirect(os.Provider))),
+		Name:     os.Name,
+		URI:      os.URI,
+		URL:      os.URL,
+		ThumbURL: os.ThumbURL,
 	}
 }
 
@@ -421,4 +453,24 @@ func ConvertRateLimitDTO2DO(limit *commondto.RateLimit) (*commonentity.RateLimit
 		Burst:  limit.Burst,
 		Period: period,
 	}, nil
+}
+
+func ConvertRuntimeParamDTO2DO(dto *commondto.RuntimeParam) *commonentity.RuntimeParam {
+	if dto == nil {
+		return nil
+	}
+	return &commonentity.RuntimeParam{
+		JSONValue: dto.JSONValue,
+		JSONDemo:  dto.JSONDemo,
+	}
+}
+
+func ConvertRuntimeParamDO2DTO(do *commonentity.RuntimeParam) *commondto.RuntimeParam {
+	if do == nil {
+		return nil
+	}
+	return &commondto.RuntimeParam{
+		JSONValue: do.JSONValue,
+		JSONDemo:  do.JSONDemo,
+	}
 }

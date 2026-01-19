@@ -68,7 +68,7 @@ func generateForPrompt(db *gorm.DB) {
 			})))
 	}
 
-	for _, table := range []string{"prompt_commit"} {
+	for _, table := range []string{"prompt_commit", "prompt_relation"} {
 		models = append(models, g.GenerateModel(table,
 			gen.FieldGORMTag("*", func(tag field.GormTag) field.GormTag {
 				return tag.Set("charset=utf8mb4")
@@ -252,10 +252,12 @@ func generateForObservability(db *gorm.DB) {
 	observabilityView := g.GenerateModelAs("observability_view", "ObservabilityView")
 	observabilityTask := g.GenerateModelAs("task", "ObservabilityTask")
 	observabilityTaskRun := g.GenerateModelAs("auto_task_run", "ObservabilityTaskRun")
+	observabilityTrajectoryConfig := g.GenerateModelAs("observability_trajectory_config", "ObservabilityTrajectoryConfig")
 
 	g.ApplyBasic(observabilityView)
 	g.ApplyBasic(observabilityTask)
 	g.ApplyBasic(observabilityTaskRun)
+	g.ApplyBasic(observabilityTrajectoryConfig)
 	g.Execute()
 }
 

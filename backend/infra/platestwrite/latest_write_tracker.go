@@ -130,10 +130,14 @@ const (
 	ResourceTypePromptLabel              ResourceType = "prompt_label"
 	ResourceTypePromptCommitLabelMapping ResourceType = "prompt_commit_label_mapping"
 	ResourceTypeCozeloopOptimizeTask     ResourceType = "cozeloop_optimize_task" // 外场智能优化
+	ResourceTypePromptRelation           ResourceType = "prompt_relation"
 
 	ResourceTypeExperiment    ResourceType = "experiment"
 	ResourceTypeEvalSet       ResourceType = "eval_set"
 	ResourceTypeTarget        ResourceType = "eval_target"
 	ResourceTypeTargetVersion ResourceType = "eval_target_version"
 	ResourceTypeEvaluator     ResourceType = "evaluator"
+
+	ResourceTypeExptInsightAnalysisRecord   ResourceType = "expt_insight_analysis_record"
+	ResourceTypeExptInsightAnalysisFeedback ResourceType = "expt_insight_analysis_feedback"
 )

@@ -129,6 +129,48 @@ func (l *LocalEvaluationSetService) ListEvaluationSets(ctx context.Context, req 
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationSetService) CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest, callOptions ...callopt.Option) (*eval_set.CreateEvaluationSetWithImportResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceCreateEvaluationSetWithImportArgs)
+		result := out.(*eval_set.EvaluationSetServiceCreateEvaluationSetWithImportResult)
+		resp, err := l.impl.CreateEvaluationSetWithImport(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceCreateEvaluationSetWithImportArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceCreateEvaluationSetWithImportResult{}
+	ctx = l.injectRPCInfo(ctx, "CreateEvaluationSetWithImport")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationSetService) ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest, callOptions ...callopt.Option) (*eval_set.ParseImportSourceFileResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceParseImportSourceFileArgs)
+		result := out.(*eval_set.EvaluationSetServiceParseImportSourceFileResult)
+		resp, err := l.impl.ParseImportSourceFile(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceParseImportSourceFileArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceParseImportSourceFileResult{}
+	ctx = l.injectRPCInfo(ctx, "ParseImportSourceFile")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // CreateEvaluationSetVersion
 // 版本管理
 func (l *LocalEvaluationSetService) CreateEvaluationSetVersion(ctx context.Context, req *eval_set.CreateEvaluationSetVersionRequest, callOptions ...callopt.Option) (*eval_set.CreateEvaluationSetVersionResponse, error) {
@@ -360,6 +402,27 @@ func (l *LocalEvaluationSetService) ClearEvaluationSetDraftItem(ctx context.Cont
 	arg := &eval_set.EvaluationSetServiceClearEvaluationSetDraftItemArgs{Req: req}
 	result := &eval_set.EvaluationSetServiceClearEvaluationSetDraftItemResult{}
 	ctx = l.injectRPCInfo(ctx, "ClearEvaluationSetDraftItem")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationSetService) GetEvaluationSetItemField(ctx context.Context, req *eval_set.GetEvaluationSetItemFieldRequest, callOptions ...callopt.Option) (*eval_set.GetEvaluationSetItemFieldResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceGetEvaluationSetItemFieldArgs)
+		result := out.(*eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult)
+		resp, err := l.impl.GetEvaluationSetItemField(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceGetEvaluationSetItemFieldArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult{}
+	ctx = l.injectRPCInfo(ctx, "GetEvaluationSetItemField")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

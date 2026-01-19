@@ -166,3 +166,17 @@ func (mr *MockIConfigerMockRecorder) GetSchedulerAbortCtrl(ctx any) *gomock.Call
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSchedulerAbortCtrl", reflect.TypeOf((*MockIConfiger)(nil).GetSchedulerAbortCtrl), ctx)
 }
+
+// GetTargetTrajectoryConf mocks base method.
+func (m *MockIConfiger) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTargetTrajectoryConf", ctx)
+	ret0, _ := ret[0].(*entity.TargetTrajectoryConf)
+	return ret0
+}
+
+// GetTargetTrajectoryConf indicates an expected call of GetTargetTrajectoryConf.
+func (mr *MockIConfigerMockRecorder) GetTargetTrajectoryConf(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTargetTrajectoryConf", reflect.TypeOf((*MockIConfiger)(nil).GetTargetTrajectoryConf), ctx)
+}

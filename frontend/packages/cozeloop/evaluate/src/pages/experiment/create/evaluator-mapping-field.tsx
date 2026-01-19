@@ -167,7 +167,7 @@ export const EvaluatorMappingField: FC<
           icon={<IconCozEmpty className="coz-fg-dim text-32px" />}
           title={I18n.t('no_data')}
           className={emptyStyles['empty-state']}
-          // description={I18n.t('select_evaluator_and_version_number_to_view')}
+          // description="请选择评估器和版本号后再查看"
         />
       </div>
     );
@@ -190,19 +190,17 @@ export const EvaluatorMappingField: FC<
               : [
                   {
                     // v 为 wf 字段, k 为 评测集列字段
-                    validator: (_rule, v) => {
+                    validator: (_rule, v, callback) => {
                       if (!v) {
-                        return new Error(
-                          I18n.t('please_select', { field: '' }),
-                        );
+                        callback(I18n.t('please_select'));
+                        return false;
                       }
                       if (
                         getTypeText(v) !== getTypeText(k) &&
                         getInputTypeText(v) !== getTypeText(k)
                       ) {
-                        return new Error(
-                          I18n.t('selected_fields_inconsistent'),
-                        );
+                        callback(I18n.t('selected_fields_inconsistent'));
+                        return false;
                       }
                       return true;
                     },

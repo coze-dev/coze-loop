@@ -18,6 +18,9 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
+      "path": "../adapter-interfaces/tsconfig.build.json"
+    },
+    {
       "path": "../api-schema/tsconfig.build.json"
     },
     {
@@ -33,7 +36,13 @@
       "path": "../biz-components/tsconfig.build.json"
     },
     {
+      "path": "../biz-config/tsconfig.build.json"
+    },
+    {
       "path": "../biz-hooks/tsconfig.build.json"
+    },
+    {
+      "path": "../components-with-adapter/tsconfig.build.json"
     },
     {
       "path": "../components/tsconfig.build.json"
@@ -63,10 +72,13 @@
       "path": "../i18n/tsconfig.build.json"
     },
     {
-      "path": "../observation/trace-detail-open/tsconfig.build.json"
+      "path": "../observation-adapter/tsconfig.build.json"
     },
     {
       "path": "../prompt-components/tsconfig.build.json"
+    },
+    {
+      "path": "../shared-components/tsconfig.build.json"
     },
     {
       "path": "../stores/tsconfig.build.json"

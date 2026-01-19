@@ -18,6 +18,8 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
 
@@ -28,17 +30,15 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/otel"
-
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
@@ -159,8 +159,9 @@ func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.Inpu
 		return nil
 	}
 	spansMap := make(map[string][]*span.InputSpan)
+	claim := o.auth.GetClaim(ctx)
 	for i := range spans {
-		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]})
+		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]}, claim)
 		if workspaceID == "" {
 			continue
 		}
@@ -269,7 +270,7 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 
 		spans := otel.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans)
 
-		tenantSpanMap := o.unpackTenant(ctx, spans)
+		tenantSpanMap := o.unpackTenant(ctx, tconv.OtelSpans2LoopSpans(spans))
 		for ingestTenant := range tenantSpanMap {
 			if e = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
 				Tenant:           ingestTenant,
@@ -795,6 +796,101 @@ func (o *OpenAPIApplication) buildListSpansOApiReq(ctx context.Context, req *ope
 		return nil, errorx.WrapByCode(errors.New("fail to get platform tenants"), obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	ret.Tenants = tenants
+	return ret, nil
+}
+
+func (o *OpenAPIApplication) ListPreSpanOApi(ctx context.Context, req *openapi.ListPreSpanOApiRequest) (*openapi.ListPreSpanOApiResponse, error) {
+	var err error
+	st := time.Now()
+	errCode := 0
+	defer func() {
+		o.metrics.EmitTraceOapi("ListPreSpanOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
+		o.collector.CollectTraceOpenAPIEvent(ctx, "ListPreSpanOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
+	}()
+
+	if err = o.validateListPreSpanOApiReq(ctx, req); err != nil {
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, err
+	}
+	if err = o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
+		errCode = obErrorx.CommonNoPermissionCode
+		return nil, err
+	}
+
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowByKey(ctx, limitKey) {
+		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		errCode = obErrorx.CommonRequestRateLimitCode
+		return nil, err
+	}
+
+	logs.CtxInfo(ctx, "ListPreSpanOApi request: %+v", req)
+	sReq, err := o.buildListPreSpanOApiReq(ctx, req)
+	if err != nil {
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("list spans req is invalid"))
+	}
+	sResp, err := o.traceService.ListPreSpanOApi(ctx, sReq)
+	if err != nil {
+		errCode = obErrorx.CommonInternalErrorCode
+		return nil, err
+	}
+	return &openapi.ListPreSpanOApiResponse{
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, false),
+	}, nil
+}
+
+func (o *OpenAPIApplication) validateListPreSpanOApiReq(ctx context.Context, req *openapi.ListPreSpanOApiRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if req.GetTraceID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+	} else if req.GetPreviousResponseID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid previous_response_id"))
+	} else if req.GetSpanID() == "" {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid span_id"))
+	}
+
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          time.Now().UnixMilli(),
+		EarliestDays: 365,
+	}
+	newStartTime, newEndTime, err := v.CorrectDate()
+	logs.CtxInfo(ctx, "newStartTime: %d, newEndTime: %d", newStartTime, newEndTime)
+	if err != nil {
+		return err
+	}
+	req.SetStartTime(newStartTime)
+	return nil
+}
+
+func (o *OpenAPIApplication) buildListPreSpanOApiReq(ctx context.Context, req *openapi.ListPreSpanOApiRequest) (*service.ListPreSpanOApiReq, error) {
+	ret := &service.ListPreSpanOApiReq{
+		WorkspaceID:           req.GetWorkspaceID(),
+		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.WorkspaceID),
+		StartTime:             req.GetStartTime(),
+		TraceID:               req.GetTraceID(),
+		SpanID:                req.GetSpanID(),
+		PreviousResponseID:    req.GetPreviousResponseID(),
+		PlatformType:          loop_span.PlatformType(req.GetPlatformType()),
+	}
+
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		req.PlatformType = ptr.Of(common.PlatformType(loop_span.PlatformCozeLoop))
+	}
+	ret.PlatformType = platformType
+
+	tenants := o.tenant.GetOAPIQueryTenants(ctx, platformType)
+	if len(tenants) == 0 {
+		logs.CtxError(ctx, "fail to get platform tenants")
+		return nil, errorx.WrapByCode(errors.New("fail to get platform tenants"), obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	ret.Tenants = tenants
+
 	return ret, nil
 }
 

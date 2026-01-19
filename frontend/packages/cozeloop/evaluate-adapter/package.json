@@ -5,7 +5,22 @@
   "license": "Apache-2.0",
   "author": "wangziqiang.carl@bytedance.com",
   "maintainers": [],
+  "exports": {
+    ".": "./src/index.ts",
+    "./detail-page-tab": "./src/detail-page-tab/index.tsx",
+    "./add-data-dropdown": "./src/add-data-dropdown/index.tsx"
+  },
   "main": "src/index.ts",
+  "typesVersions": {
+    "*": {
+      "detail-page-tab": [
+        "./src/detail-page-tab/index.tsx"
+      ],
+      "add-data-dropdown": [
+        "./src/add-data-dropdown/index.tsx"
+      ]
+    }
+  },
   "scripts": {
     "build": "exit 0",
     "lint": "eslint ./ --cache",
@@ -18,6 +33,7 @@
     "@cozeloop/api-schema": "workspace:*",
     "@cozeloop/biz-hooks-adapter": "workspace:*",
     "@cozeloop/components": "workspace:*",
+    "@cozeloop/i18n-adapter": "workspace:*",
     "@cozeloop/prompt-components": "workspace:*"
   },
   "devDependencies": {
@@ -43,3 +59,4 @@
     "react": ">=18.2.0"
   }
 }
+

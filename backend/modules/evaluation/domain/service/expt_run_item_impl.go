@@ -40,6 +40,7 @@ func NewExptItemEvaluation(
 	evaluatorService EvaluatorService,
 	benefitService benefit.IBenefitService,
 	evalAsyncRepo repo.IEvalAsyncRepo,
+	evalSetItemSvc EvaluationSetItemService,
 ) ExptItemEvaluation {
 	return &ExptItemEvalCtxExecutor{
 		TurnResultRepo:         turnResultRepo,
@@ -51,6 +52,7 @@ func NewExptItemEvaluation(
 		evaluatorService:       evaluatorService,
 		benefitService:         benefitService,
 		evalAsyncRepo:          evalAsyncRepo,
+		evalSetItemSvc:         evalSetItemSvc,
 	}
 }
 
@@ -64,6 +66,7 @@ type ExptItemEvalCtxExecutor struct {
 	evaluatorRecordService EvaluatorRecordService
 	benefitService         benefit.IBenefitService
 	evalAsyncRepo          repo.IEvalAsyncRepo
+	evalSetItemSvc         EvaluationSetItemService
 }
 
 func (e *ExptItemEvalCtxExecutor) Eval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
@@ -100,7 +103,7 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 
 		ctx = context.WithValue(ctx, consts.CtxKeyLogID, etec.GetTurnEvalLogID(ctx, turn.ID)) //nolint:staticcheck
 
-		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService, e.evalAsyncRepo).Eval(ctx, etec)
+		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evalSetItemSvc).Eval(ctx, etec)
 
 		if err := e.storeTurnRunResult(ctx, etec, turnRunRes); err != nil {
 			return false, err
@@ -143,7 +146,7 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	var evalErr error
 
 	clone.ExptRunID = etec.Event.ExptRunID
-	if result.TargetResult != nil {
+	if result.TargetResult != nil && result.TargetResult.ID > 0 {
 		clone.TargetResultID = result.TargetResult.ID
 	}
 
@@ -214,6 +217,13 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 	etec.Ext = make(map[string]string)
 	for k, v := range eiec.Event.Ext {
 		etec.Ext[k] = v
+	}
+	// 从 ExptItemResult 中获取 Ext 字段并合并到 etec.Ext
+	itemResults, err := e.ItemResultRepo.BatchGet(ctx, spaceID, eiec.Event.ExptID, []int64{eiec.Event.EvalSetItemID})
+	if err == nil && len(itemResults) > 0 && itemResults[0].Ext != nil {
+		for k, v := range itemResults[0].Ext {
+			etec.Ext[k] = v
+		}
 	}
 	for _, fieldData := range eiec.EvalSetItem.Turns[0].FieldDataList {
 		if fieldData.Name == "span_id" {

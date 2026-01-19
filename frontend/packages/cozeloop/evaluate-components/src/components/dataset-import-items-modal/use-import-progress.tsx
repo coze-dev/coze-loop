@@ -87,6 +87,7 @@ export const useDatasetImportProgress = (onImportSuccess: () => void) => {
       )}
     </Modal>
   );
+
   return {
     node,
     startProgressTask,

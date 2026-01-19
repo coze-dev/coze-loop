@@ -47,7 +47,7 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		status = int32(entity.EvalTargetRunStatusUnknown)
 	}
 
-	return &model.TargetRecord{
+	tr := &model.TargetRecord{
 		ID:              e.ID,
 		SpaceID:         e.SpaceID,
 		TargetID:        e.TargetID,
@@ -60,9 +60,12 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		InputData:       &inputData,
 		OutputData:      &outputData,
 		Status:          status,
-		CreatedAt:       time.UnixMilli(gptr.Indirect(e.BaseInfo.CreatedAt)),
-		UpdatedAt:       time.UnixMilli(gptr.Indirect(e.BaseInfo.UpdatedAt)),
-	}, nil
+	}
+	if e.BaseInfo != nil {
+		tr.CreatedAt = time.UnixMilli(gptr.Indirect(e.BaseInfo.CreatedAt))
+		tr.UpdatedAt = time.UnixMilli(gptr.Indirect(e.BaseInfo.UpdatedAt))
+	}
+	return tr, nil
 }
 
 func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, error) {
@@ -71,23 +74,26 @@ func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, err
 	}
 
 	// 处理输入数据反序列化
-	var evaluatorInputData *entity.EvalTargetInputData
+	var targetInputData *entity.EvalTargetInputData
 	if m.InputData != nil && len(*m.InputData) > 0 {
 		var input entity.EvalTargetInputData
 		if err := json.Unmarshal(*m.InputData, &input); err != nil {
 			return nil, fmt.Errorf("unmarshal InputData failed: %w", err)
 		}
-		evaluatorInputData = &input
+		targetInputData = &input
 	}
 
 	// 处理输出数据反序列化
-	var evaluatorOutputData *entity.EvalTargetOutputData
+	var targetOutputData *entity.EvalTargetOutputData
 	if m.OutputData != nil && len(*m.OutputData) > 0 {
 		var output entity.EvalTargetOutputData
 		if err := json.Unmarshal(*m.OutputData, &output); err != nil {
 			return nil, fmt.Errorf("unmarshal OutputData failed: %w", err)
 		}
-		evaluatorOutputData = &output
+		targetOutputData = &output
+		if targetOutputData != nil && targetOutputData.EvalTargetUsage != nil && targetOutputData.EvalTargetUsage.TotalTokens == 0 {
+			targetOutputData.EvalTargetUsage.TotalTokens = targetOutputData.EvalTargetUsage.InputTokens + targetOutputData.EvalTargetUsage.OutputTokens
+		}
 	}
 
 	// 状态类型转换
@@ -103,8 +109,8 @@ func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, err
 		TurnID:               m.TurnID,
 		LogID:                m.LogID,
 		TraceID:              m.TraceID,
-		EvalTargetInputData:  evaluatorInputData,
-		EvalTargetOutputData: evaluatorOutputData,
+		EvalTargetInputData:  targetInputData,
+		EvalTargetOutputData: targetOutputData,
 		Status:               &status,
 		BaseInfo: &entity.BaseInfo{
 			CreatedAt: gptr.Of(m.CreatedAt.UnixMilli()),

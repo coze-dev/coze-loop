@@ -74,6 +74,12 @@ struct AbilityImage {
     2: optional bool binary_enabled
     3: optional i64 max_image_size (api.js_conv='true', go.tag='json:"max_image_size"')
     4: optional i64 max_image_count (api.js_conv='true', go.tag='json:"max_image_count"')
+    5: optional bool image_gen_enabled
+}
+
+struct AbilityVideo {
+    1: optional i32 max_video_size_in_mb // the size limit of single video
+    2: optional list<VideoFormat> supported_video_formats
 }
 
 struct AbilityVideo {
@@ -289,3 +295,21 @@ const AbilityEnum ability_json_mode = "json_mode"
 const AbilityEnum ability_function_call = "function_call"
 const AbilityEnum ability_multi_modal = "multi_modal"
 
+
+
+typedef string VideoFormat (ts.enum="true")
+const VideoFormat video_format_undefined = "undefined"
+const    VideoFormat video_format_mp4 = "mp4"
+const    VideoFormat video_format_avi = "avi"
+const    VideoFormat video_format_mov = "mov"
+const    VideoFormat video_format_mpg = "mpg"
+const    VideoFormat video_format_webm = "webm"
+const   VideoFormat video_format_rvmb = "rvmb"
+const    VideoFormat video_format_wmv = "wmv"
+const    VideoFormat video_format_mkv = "mkv"
+const    VideoFormat video_format_t3gp = "t3gp"
+const    VideoFormat video_format_flv = "flv"
+const    VideoFormat video_format_mpeg = "mpeg"
+const    VideoFormat video_format_ts = "ts"
+const    VideoFormat video_format_rm = "rm"
+const    VideoFormat video_format_m4v = "m4v"

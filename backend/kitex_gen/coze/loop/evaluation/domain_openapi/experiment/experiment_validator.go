@@ -36,6 +36,9 @@ func (p *TokenUsage) IsValid() error {
 func (p *EvaluatorAggregateResult_) IsValid() error {
 	return nil
 }
+func (p *EvalTargetAggregateResult_) IsValid() error {
+	return nil
+}
 func (p *AggregatorResult_) IsValid() error {
 	if p.Data != nil {
 		if err := p.Data.IsValid(); err != nil {
@@ -88,6 +91,9 @@ func (p *ColumnEvalSetField) IsValid() error {
 	return nil
 }
 func (p *ColumnEvaluator) IsValid() error {
+	return nil
+}
+func (p *ColumnEvalTarget) IsValid() error {
 	return nil
 }
 func (p *TargetOutput) IsValid() error {

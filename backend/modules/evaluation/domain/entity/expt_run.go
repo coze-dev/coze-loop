@@ -93,7 +93,7 @@ const (
 
 const (
 	defaultDaemonInterval        = 20 * time.Second
-	defaultZombieIntervalSecond  = 60 * 60 * 24
+	defaultZombieIntervalSecond  = 60 * 60 * 36
 	defaultItemEvalConcurNum     = 3
 	defaultItemEvalInterval      = 20 * time.Second
 	defaultSpaceExptConcurLimit  = 200
@@ -398,14 +398,15 @@ func (e *ExptItemEvalCtx) GetRecordEvalLogID(ctx context.Context) (logID string)
 func (e *ExptItemEvalCtx) GetTurnEvalLogID(ctx context.Context, turnID int64) (logID string) {
 	turnRunLog := e.GetExistTurnResultRunLog(turnID)
 
-	defer func() {
-		logs.CtxInfo(ctx, "GetTurnEvalLogID with log_id: %v", logID)
-	}()
+	defer func() { logs.CtxInfo(ctx, "GetTurnEvalLogID with log_id: %v", logID) }()
 
-	if turnRunLog == nil || len(turnRunLog.LogID) == 0 {
+	if turnRunLog == nil {
 		return logs.NewLogID()
 	}
 
+	if len(turnRunLog.LogID) == 0 {
+		turnRunLog.LogID = logs.NewLogID()
+	}
 	return turnRunLog.LogID
 }
 
@@ -511,7 +512,7 @@ type CKDBConfig struct {
 
 type EvalAsyncCtx struct {
 	Event       *ExptItemEvalEvent
-	TurnID      int64
+	RecordID    int64
 	AsyncUnixMS int64 // async call time with unix ms ts
 	Session     *Session
 	Callee      string

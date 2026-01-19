@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import { I18n } from '@cozeloop/i18n-adapter';
 import { OpenDetailButton } from '@cozeloop/components';
-import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
+import {
+  useResourcePageJump,
+  useOpenWindow,
+} from '@cozeloop/biz-hooks-adapter';
 import { Tag } from '@coze-arch/coze-design';
 
 import { type CreateExperimentValues } from '../../../types/evaluate-target';
@@ -16,6 +19,7 @@ export const PromptEvalTargetView = (props: {
 }) => {
   const { formValues } = props;
   const { getPromptDetailURL } = useResourcePageJump();
+  const { getURL } = useOpenWindow();
 
   // prompt id
   const promptId = formValues.evalTarget || '';
@@ -57,7 +61,7 @@ export const PromptEvalTargetView = (props: {
               {promptVersion}
             </Tag>
             <OpenDetailButton
-              url={getPromptDetailURL(promptId, promptVersion)}
+              url={getURL(getPromptDetailURL(promptId, promptVersion))}
             />
           </div>
         </div>

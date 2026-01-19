@@ -199,7 +199,7 @@ func (c *EvaluatorSourceCodeServiceImpl) EvaluatorType() entity.EvaluatorType {
 }
 
 // Run 执行Code评估器
-func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
+func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
 	var err error
 	var code string
 	startTime := time.Now()
@@ -458,9 +458,9 @@ func (c *EvaluatorSourceCodeServiceImpl) createErrorOutputFromError(err error, s
 }
 
 // Debug 调试Code评估器
-func (c *EvaluatorSourceCodeServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error) {
+func (c *EvaluatorSourceCodeServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error) {
 	// 调试模式下直接调用Run方法
-	output, runStatus, _ := c.Run(ctx, evaluator, input, exptSpaceID, true)
+	output, runStatus, _ := c.Run(ctx, evaluator, input, evaluatorRunConf, exptSpaceID, true)
 	if runStatus == entity.EvaluatorRunStatusFail {
 		if output.EvaluatorRunError != nil {
 			return output, errorx.NewByCode(errno.CodeExecutionFailedCode, errorx.WithExtraMsg(output.EvaluatorRunError.Message))
@@ -1366,7 +1366,7 @@ func (e *codeEvaluatorSpan) reportCodeRootSpan(ctx context.Context, request *Rep
 		e.SetStatusCode(ctx, 0)
 	case entity.EvaluatorRunStatusFail:
 		e.SetStatusCode(ctx, int(entity.EvaluatorRunStatusFail))
-		e.SetError(ctx, request.errInfo)
+		e.SetError(ctx, tracer.SanitizeErrorForTrace(request.errInfo))
 	default:
 		e.SetStatusCode(ctx, 0) // 默认为成功
 	}

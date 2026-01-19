@@ -20,6 +20,7 @@ func ExptInsightAnalysisRecordDO2DTO(do *entity.ExptInsightAnalysisRecord) *doma
 		AnalysisStatus:              InsightAnalysisStatus2DTO(do.Status),
 		AnalysisReportID:            do.AnalysisReportID,
 		AnalysisReportContent:       ptr.Of(do.AnalysisReportContent),
+		AnalysisReportIndex:         AnalysisReportIndex2DTO(do.AnalysisReportIndex),
 		ExptInsightAnalysisFeedback: ExptInsightAnalysisFeedbackDO2DTO(do.ExptInsightAnalysisFeedback),
 		BaseInfo: &domain_common.BaseInfo{
 			CreatedBy: &domain_common.UserInfo{
@@ -32,6 +33,20 @@ func ExptInsightAnalysisRecordDO2DTO(do *entity.ExptInsightAnalysisRecord) *doma
 	return dto
 }
 
+func AnalysisReportIndex2DTO(index []*entity.InsightAnalysisReportIndex) []*domain_expt.ExptInsightAnalysisIndex {
+	if len(index) == 0 {
+		return nil
+	}
+	dto := make([]*domain_expt.ExptInsightAnalysisIndex, 0, len(index))
+	for _, item := range index {
+		dto = append(dto, &domain_expt.ExptInsightAnalysisIndex{
+			ID:    ptr.Of(item.ID),
+			Title: ptr.Of(item.Title),
+		})
+	}
+	return dto
+}
+
 func ExptInsightAnalysisFeedbackDO2DTO(do entity.ExptInsightAnalysisFeedback) *domain_expt.ExptInsightAnalysisFeedback {
 	dto := &domain_expt.ExptInsightAnalysisFeedback{
 		UpvoteCnt:           ptr.Of(int32(do.UpvoteCount)),
@@ -39,6 +54,27 @@ func ExptInsightAnalysisFeedbackDO2DTO(do entity.ExptInsightAnalysisFeedback) *d
 		CurrentUserVoteType: ptr.Of(InsightAnalysisReportVoteType2DTO(do.CurrentUserVoteType)),
 	}
 	return dto
+}
+
+func ExptInsightAnalysisFeedbackVoteDO2DTO(do *entity.ExptInsightAnalysisFeedbackVote) *domain_expt.ExptInsightAnalysisFeedbackVote {
+	if do == nil {
+		return nil
+	}
+
+	var action domain_expt.FeedbackActionType
+	switch do.VoteType {
+	case entity.Upvote:
+		action = domain_expt.FeedbackActionTypeUpvote
+	case entity.Downvote:
+		action = domain_expt.FeedbackActionTypeDownvote
+	default:
+		return nil
+	}
+
+	return &domain_expt.ExptInsightAnalysisFeedbackVote{
+		ID:                 ptr.Of(do.ID),
+		FeedbackActionType: ptr.Of(action),
+	}
 }
 
 func InsightAnalysisStatus2DTO(status entity.InsightAnalysisStatus) domain_expt.InsightAnalysisStatus {

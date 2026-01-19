@@ -1,9 +1,13 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import classNames from 'classnames';
+import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { JumpIconButton } from '@cozeloop/components';
-import { useResourcePageJump } from '@cozeloop/biz-hooks-adapter';
+import {
+  useResourcePageJump,
+  useOpenWindow,
+} from '@cozeloop/biz-hooks-adapter';
 import {
   type ColumnAnnotation,
   type AnnotateRecord,
@@ -11,7 +15,6 @@ import {
 import { Divider, Popover, Tooltip } from '@coze-arch/coze-design';
 
 import { TagRender } from './tag/tag-render';
-import { TypographyText } from '../text-ellipsis';
 
 interface NameScoreTagProps {
   name?: string;
@@ -33,6 +36,7 @@ export function AnnotationNameScoreTag({
   border = true,
 }: NameScoreTagProps) {
   const { getTagDetailURL } = useResourcePageJump();
+  const { openBlank } = useOpenWindow();
 
   const borderClass = border
     ? 'border border-solid border-[var(--coz-stroke-primary)] cursor-pointer hover:bg-[var(--coz-mg-primary)] hover:border-[var(--coz-stroke-plus)]'
@@ -59,7 +63,7 @@ export function AnnotationNameScoreTag({
               <JumpIconButton
                 className={defaultShowAction ? '' : 'hidden group-hover:flex'}
                 onClick={() => {
-                  window.open(getTagDetailURL(tagID || ''));
+                  openBlank(getTagDetailURL(tagID || ''));
                 }}
               />
             </div>

@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	tenant "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	loop_span "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -55,6 +56,21 @@ func (mr *MockITenantProviderMockRecorder) GetIngestTenant(ctx, spans any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIngestTenant", reflect.TypeOf((*MockITenantProvider)(nil).GetIngestTenant), ctx, spans)
 }
 
+// GetMetricTenantsByPlatformType mocks base method.
+func (m *MockITenantProvider) GetMetricTenantsByPlatformType(ctx context.Context, platformType loop_span.PlatformType) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetricTenantsByPlatformType", ctx, platformType)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMetricTenantsByPlatformType indicates an expected call of GetMetricTenantsByPlatformType.
+func (mr *MockITenantProviderMockRecorder) GetMetricTenantsByPlatformType(ctx, platformType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricTenantsByPlatformType", reflect.TypeOf((*MockITenantProvider)(nil).GetMetricTenantsByPlatformType), ctx, platformType)
+}
+
 // GetOAPIQueryTenants mocks base method.
 func (m *MockITenantProvider) GetOAPIQueryTenants(ctx context.Context, platformType loop_span.PlatformType) []string {
 	m.ctrl.T.Helper()
@@ -70,16 +86,21 @@ func (mr *MockITenantProviderMockRecorder) GetOAPIQueryTenants(ctx, platformType
 }
 
 // GetTenantsByPlatformType mocks base method.
-func (m *MockITenantProvider) GetTenantsByPlatformType(ctx context.Context, platformType loop_span.PlatformType) ([]string, error) {
+func (m *MockITenantProvider) GetTenantsByPlatformType(ctx context.Context, platformType loop_span.PlatformType, opts ...tenant.OptFn) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTenantsByPlatformType", ctx, platformType)
+	varargs := []any{ctx, platformType}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetTenantsByPlatformType", varargs...)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTenantsByPlatformType indicates an expected call of GetTenantsByPlatformType.
-func (mr *MockITenantProviderMockRecorder) GetTenantsByPlatformType(ctx, platformType any) *gomock.Call {
+func (mr *MockITenantProviderMockRecorder) GetTenantsByPlatformType(ctx, platformType any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTenantsByPlatformType", reflect.TypeOf((*MockITenantProvider)(nil).GetTenantsByPlatformType), ctx, platformType)
+	varargs := append([]any{ctx, platformType}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTenantsByPlatformType", reflect.TypeOf((*MockITenantProvider)(nil).GetTenantsByPlatformType), varargs...)
 }

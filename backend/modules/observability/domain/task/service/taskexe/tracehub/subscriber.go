@@ -21,11 +21,11 @@ import (
 )
 
 type spanSubscriber struct {
-	taskID    int64
-	t         *entity.ObservabilityTask
-	tr        *entity.TaskRun
-	processor taskexe.Processor
-
+	taskID      int64
+	t           *entity.ObservabilityTask
+	tr          *entity.TaskRun
+	processor   taskexe.Processor
+	tenants     []string
 	taskRepo    repo.ITaskRepo
 	runType     entity.TaskRunType
 	buildHelper service.TraceFilterProcessorBuilder
@@ -66,7 +66,7 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 		return false, nil
 	}
 
-	filters := s.buildSpanFilters(ctx, task)
+	filters := s.buildSpanFilters(ctx, task, span)
 	if !filters.Satisfied(span) {
 		return false, nil
 	}
@@ -74,7 +74,7 @@ func (s *spanSubscriber) Match(ctx context.Context, span *loop_span.Span) (bool,
 	return true, nil
 }
 
-func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskDO *entity.ObservabilityTask) *loop_span.FilterFields {
+func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskDO *entity.ObservabilityTask, span *loop_span.Span) *loop_span.FilterFields {
 	// Additional filters can be constructed based on task configuration if needed.
 	// Simplified handling here: returning nil means no extra filters are applied.
 	filters := &loop_span.FilterFields{}
@@ -89,9 +89,32 @@ func (s *spanSubscriber) buildSpanFilters(ctx context.Context, taskDO *entity.Ob
 	if err != nil {
 		return filters
 	}
-	filters = combineFilters(builtinFilter, &taskDO.SpanFilter.Filters)
+	if err = taskDO.SpanFilter.Filters.Traverse(processSpecificFilter); err != nil {
+		logs.CtxError(ctx, "traverse filter fields failed, task_id=%d, err=%v", taskDO.ID, err)
+		return filters
+	}
+	var tenantFilter *loop_span.FilterFields = nil
+	if len(span.GetTenant()) > 0 {
+		tenantFilter = buildTenantFilter(s.tenants)
+	}
+	filters = combineFilters(builtinFilter, &taskDO.SpanFilter.Filters, tenantFilter)
 
 	return filters
+}
+
+func buildTenantFilter(tenants []string) *loop_span.FilterFields {
+	return &loop_span.FilterFields{
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldTenant,
+				FieldType: loop_span.FieldTypeString,
+				Values:    tenants,
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+				IsSystem:  true,
+			},
+		},
+		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+	}
 }
 
 func buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
@@ -171,6 +194,11 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 		logs.CtxWarn(ctx, "no taskRunConfig：%v", taskRunConfig)
 		return nil
 	}
+	// 仅允许处于 running 状态的 TaskRun 继续触发处理器，避免已结束 run 仍被触发
+	if taskRunConfig.RunStatus != entity.TaskRunStatusRunning {
+		logs.CtxInfo(ctx, "skip non-running task run: task_id=%d, run_id=%d, status=%s, span_id=%s", s.t.ID, taskRunConfig.ID, taskRunConfig.RunStatus, span.SpanID)
+		return nil
+	}
 
 	if taskRunConfig.RunEndAt.UnixMilli() < time.Now().UnixMilli() || taskRunConfig.RunStartAt.UnixMilli() > time.Now().UnixMilli() {
 		return nil
@@ -180,7 +208,7 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 		return nil
 	}
 	trigger := &taskexe.Trigger{Task: s.t, Span: span, TaskRun: taskRunConfig}
-	logs.CtxInfo(ctx, "invoke processor, trigger: %v", trigger)
+	logs.CtxDebug(ctx, "invoke processor, trigger: %v", trigger)
 	err = s.processor.Invoke(ctx, trigger)
 	if err != nil {
 		logs.CtxWarn(ctx, "invoke processor failed, trace_id=%s, span_id=%s, err: %v", span.TraceID, span.SpanID, err)

@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useMemo } from 'react';
 
+import { type CustomSubmitManualScore } from '@cozeloop/shared-components';
 import {
   AggregatorType,
   type Evaluator,
   type EvaluatorAggregateResult,
 } from '@cozeloop/api-schema/evaluation';
 import { Popover } from '@coze-arch/coze-design';
-
-import { type CustomSubmitManualScore } from '@/components/experiments/evaluator-manual-score';
 
 import { EvaluatorNameScoreTag } from '../../components/experiments/evaluator-name-score';
 import { AutoOverflowList } from '../../components/common';
@@ -57,6 +56,7 @@ function ExperimentEvaluatorAggregatorScore({
           return (
             <EvaluatorNameScoreTag
               name={name}
+              isBuiltin={evaluator.builtin}
               type={evaluator.evaluator_type}
               evaluatorResult={evaluatorResult}
               version={version}
@@ -78,6 +78,7 @@ function ExperimentEvaluatorAggregatorScore({
               <div className="p-1" style={{ color: 'var(--coz-fg-secondary)' }}>
                 <EvaluatorNameScoreTag
                   name={name}
+                  isBuiltin={evaluator.builtin}
                   type={evaluator.evaluator_type}
                   evaluatorResult={evaluatorResult}
                   version={version}
@@ -95,6 +96,7 @@ function ExperimentEvaluatorAggregatorScore({
             <div onClick={e => e.stopPropagation()}>
               <EvaluatorNameScoreTag
                 name={name}
+                isBuiltin={evaluator.builtin}
                 type={evaluator.evaluator_type}
                 evaluatorResult={evaluatorResult}
                 version={version}

@@ -22,6 +22,7 @@ type Client interface {
 	BatchUpdateEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchUpdateEvaluationSetItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchUpdateEvaluationSetItemsOApiResponse, err error)
 	BatchDeleteEvaluationSetItemsOApi(ctx context.Context, req *openapi.BatchDeleteEvaluationSetItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchDeleteEvaluationSetItemsOApiResponse, err error)
 	ListEvaluationSetVersionItemsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetVersionItemsOApiResponse, err error)
+	GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvaluationItemFieldOApiResponse, err error)
 	UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error)
 	ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetInvokeResultResponse, err error)
 	SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.SubmitExperimentOApiResponse, err error)
@@ -112,6 +113,11 @@ func (p *kEvalOpenAPIServiceClient) BatchDeleteEvaluationSetItemsOApi(ctx contex
 func (p *kEvalOpenAPIServiceClient) ListEvaluationSetVersionItemsOApi(ctx context.Context, req *openapi.ListEvaluationSetVersionItemsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluationSetVersionItemsOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListEvaluationSetVersionItemsOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.GetEvaluationItemFieldOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvaluationItemFieldOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetEvaluationItemFieldOApi(ctx, req)
 }
 
 func (p *kEvalOpenAPIServiceClient) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error) {

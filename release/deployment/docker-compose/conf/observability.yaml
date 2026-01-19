@@ -25,6 +25,22 @@ annotation_mq_consumer_config:
   consumer_group: "trace_annotation_event_cg"
   worker_num: 4
 
+span_with_annotation_mq_producer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 200
+  retry_times: 3
+  topic: "observability_span_queue"
+  producer_group: "observability_span_queue_pg"
+
+span_with_annotation_mq_consumer_config:
+  addr:
+    - "cozeloop-namesrv:9876"
+  timeout: 180000
+  topic: "observability_span_queue"
+  consumer_group: "observability_span_queue_cg"
+  worker_num: 4
+
 trace_system_view_cfg:
   - id: -1
     view_name: "Exceptions"
@@ -45,6 +61,16 @@ trace_platform_tenants:
     evaluation_target:
       - "cozeloop"
 
+metric_platform_tenants:
+  config:
+    cozeloop:
+      - "cozeloop"
+    prompt:
+      - "cozeloop"
+
+metric_query_config:
+  support_offline: false
+
 trace_max_duration_day:
   default: 180
   cozeloop: 180
@@ -61,9 +87,10 @@ trace_tenant_cfg:
     cozeloop:
       365d:
         span_table: "observability_spans"
+        anno_table: "observability_annotations"
   default_ingest_tenant: "cozeloop"
   tenants_support_annotation:
-    cozeloop: false
+    cozeloop: true
 
 trace_field_meta_info:
   available_fields:
@@ -176,6 +203,8 @@ trace_field_meta_info:
         - "not_in"
         - "exist"
         - "not_exist"
+      support_custom: true
+    feedback_manual:
       support_custom: true
   field_metas:
     default:
@@ -381,3 +410,10 @@ task_mq_consumer_config:
   topic: "trace_to_task"
   consumer_group: "trace_to_task_cg"
   worker_num: 4
+
+
+annotation_source_cfg:
+  source_cfg:
+    default:
+      tenant: ["cozeloop"]
+      "annotation_type": "openapi_feedback"

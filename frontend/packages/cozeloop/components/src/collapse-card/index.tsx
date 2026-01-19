@@ -1,6 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type HTMLAttributes } from 'react';
 
 import cn from 'classnames';
 import { IconCozArrowDown } from '@coze-arch/coze-design/icons';
@@ -8,7 +8,8 @@ import { Collapse } from '@coze-arch/coze-design';
 
 import styles from './index.module.less';
 
-interface CollapseCardProps {
+interface CollapseCardProps
+  extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   className?: string;
   title: React.ReactNode;
   children: React.ReactNode;
@@ -30,6 +31,7 @@ export const CollapseCard = ({
   visible,
   onVisibleChange,
   disableCollapse,
+  ...props
 }: CollapseCardProps) => {
   const [activeKey, setActiveKey] = useState(defaultVisible ? ['1'] : []);
 
@@ -72,7 +74,11 @@ export const CollapseCard = ({
   }
 
   return (
-    <Collapse activeKey={activeKey} onChange={v => handleChange(v as string[])}>
+    <Collapse
+      {...props}
+      activeKey={activeKey}
+      onChange={v => handleChange(v as string[])}
+    >
       <Collapse.Panel
         className={cn(styles['coze-up-panel'], styles['coze-up-panel-hidden'], {
           className,

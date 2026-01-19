@@ -91,9 +91,13 @@ func (mr *MockIExptInsightAnalysisRecordDAOMockRecorder) GetByID(arg0, arg1, arg
 }
 
 // List mocks base method.
-func (m *MockIExptInsightAnalysisRecordDAO) List(arg0 context.Context, arg1, arg2 int64, arg3 entity.Page) ([]*model.ExptInsightAnalysisRecord, int64, error) {
+func (m *MockIExptInsightAnalysisRecordDAO) List(arg0 context.Context, arg1, arg2 int64, arg3 entity.Page, arg4 ...db.Option) ([]*model.ExptInsightAnalysisRecord, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
+	varargs := []interface{}{arg0, arg1, arg2, arg3}
+	for _, a := range arg4 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
 	ret0, _ := ret[0].([]*model.ExptInsightAnalysisRecord)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -101,9 +105,10 @@ func (m *MockIExptInsightAnalysisRecordDAO) List(arg0 context.Context, arg1, arg
 }
 
 // List indicates an expected call of List.
-func (mr *MockIExptInsightAnalysisRecordDAOMockRecorder) List(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockIExptInsightAnalysisRecordDAOMockRecorder) List(arg0, arg1, arg2, arg3 interface{}, arg4 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptInsightAnalysisRecordDAO)(nil).List), arg0, arg1, arg2, arg3)
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3}, arg4...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockIExptInsightAnalysisRecordDAO)(nil).List), varargs...)
 }
 
 // Update mocks base method.

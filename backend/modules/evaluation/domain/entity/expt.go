@@ -142,6 +142,10 @@ func (e *Experiment) AsyncCallEvaluators() bool {
 	return false
 }
 
+func (e *Experiment) ContainsEvalTarget() bool {
+	return e != nil && e.TargetVersionID > 0
+}
+
 type ExptEvaluatorVersionRef struct {
 	EvaluatorID        int64
 	EvaluatorVersionID int64
@@ -221,6 +225,7 @@ func (e *EvaluatorsConf) GetEvaluatorConcurNum() int {
 type EvaluatorConf struct {
 	EvaluatorVersionID int64
 	IngressConf        *EvaluatorIngressConf
+	RunConf            *EvaluatorRunConfig
 }
 
 func (e *EvaluatorConf) Valid(ctx context.Context) error {

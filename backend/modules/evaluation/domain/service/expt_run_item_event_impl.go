@@ -204,7 +204,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		lockKey := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", event.ExptID, event.EvalSetItemID)
-		locked, ctx, unlock, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*20, time.Second*60*30)
+		locked, ctx, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*20, time.Second*60*60)
 		if err != nil {
 			return err
 		}
@@ -214,7 +214,12 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) 
 			return nil
 		}
 
-		defer unlock()
+		defer func() {
+			cancel()
+			if _, err := e.mutex.Unlock(lockKey); err != nil {
+				logs.CtxWarn(ctx, "failed to unlock key: %v, err: %v", lockKey, err)
+			}
+		}()
 
 		return next(ctx, event)
 	}
@@ -255,7 +260,7 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		return err
 	}
 
-	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo).
+	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evaluationSetItemService).
 		Eval(ctx, eiec); err != nil {
 		return err
 	}
@@ -333,7 +338,7 @@ func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.
 	}, nil
 }
 
-// RecordEvalMode 任务执行模式
+// RecordEvalMode task execution mode
 type RecordEvalMode interface {
 	PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error
 	PostEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error
@@ -455,6 +460,10 @@ type ExptRecordEvalModeFailRetry struct {
 }
 
 func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
+		return nil
+	}
+
 	itemTurnResults, err := e.resultSvc.GetExptItemTurnResults(ctx, eiec.Event.ExptID, eiec.Event.EvalSetItemID, eiec.Event.SpaceID, eiec.Event.Session)
 	if err != nil {
 		return err
@@ -471,6 +480,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.ID = ids[idx]
 		runLog.Status = entity.TurnRunState_Processing
 		runLog.ExptRunID = eiec.Event.ExptRunID
+		runLog.ErrMsg = ""
 		turnRunLogDOs = append(turnRunLogDOs, runLog)
 	}
 
@@ -478,9 +488,14 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		return err
 	}
 
-	eiec.ExistItemEvalResult.TurnResultRunLogs = gslice.ToMap(turnRunLogDOs, func(t *entity.ExptTurnResultRunLog) (int64, *entity.ExptTurnResultRunLog) {
-		return t.TurnID, t
-	})
+	trrls := make(map[int64]*entity.ExptTurnResultRunLog, len(turnRunLogDOs))
+	for _, rl := range turnRunLogDOs {
+		if existed := trrls[rl.TurnID]; existed != nil && existed.UpdatedAt.After(rl.UpdatedAt) {
+			continue
+		}
+		trrls[rl.TurnID] = rl
+	}
+	eiec.ExistItemEvalResult.TurnResultRunLogs = trrls
 
 	return nil
 }

@@ -16,31 +16,36 @@ export const UserProfile = ({
   className,
   avatarClassName,
   userNameClassName,
-}: UserInfoProps) => (
-  <div className={cn('flex items-center gap-[6px] w-full', className)}>
-    <CozAvatar
-      className={cn('!w-[20px] !h-[20px]', avatarClassName)}
-      src={avatarUrl}
-    >
-      {name}
-    </CozAvatar>
-    <Typography.Text
-      className={cn('flex-1 overflow-hidden !text-[13px]', userNameClassName)}
-      style={{
-        fontSize: 'inherit',
-        color: 'inherit',
-        fontWeight: 'inherit',
-        lineHeight: 'inherit',
-      }}
-      ellipsis={{
-        showTooltip: {
-          opts: {
-            theme: 'dark',
+}: UserInfoProps) => {
+  if (!avatarUrl && !name) {
+    return null;
+  }
+  return (
+    <div className={cn('flex items-center gap-[6px] w-full', className)}>
+      <CozAvatar
+        className={cn('!w-[20px] !h-[20px]', avatarClassName)}
+        src={avatarUrl}
+      >
+        {name}
+      </CozAvatar>
+      <Typography.Text
+        className={cn('flex-1 overflow-hidden !text-[13px]', userNameClassName)}
+        style={{
+          fontSize: 'inherit',
+          color: 'inherit',
+          fontWeight: 'inherit',
+          lineHeight: 'inherit',
+        }}
+        ellipsis={{
+          showTooltip: {
+            opts: {
+              theme: 'dark',
+            },
           },
-        },
-      }}
-    >
-      {name}
-    </Typography.Text>
-  </div>
-);
+        }}
+      >
+        {name}
+      </Typography.Text>
+    </div>
+  );
+};

@@ -386,6 +386,8 @@ func TestBaseInfoAndUserInfoConversions(t *testing.T) {
 func TestOpenAPIItemConversions(t *testing.T) {
 	t.Parallel()
 
+	evalSetID := int64(1)
+
 	imageName := "image"
 	imageURL := "url"
 	thumbURL := "thumb"
@@ -422,7 +424,7 @@ func TestOpenAPIItemConversions(t *testing.T) {
 		Turns:   []*openapi_eval_set.Turn{turnDTO},
 	}
 
-	do := OpenAPIItemDTO2DO(itemDTO)
+	do := OpenAPIItemDTO2DO(evalSetID, itemDTO)
 	expectedContent := &entity.Content{
 		ContentType: ptr(entity.ContentTypeMultipart),
 		Text:        &text,
@@ -451,18 +453,20 @@ func TestOpenAPIItemConversions(t *testing.T) {
 						Content: expectedContent,
 					},
 				},
+				ItemID:    2,
+				EvalSetID: evalSetID,
 			},
 		},
 	}
 	assert.Equal(t, expectedDO, do)
-	assert.Nil(t, OpenAPIItemDTO2DO(nil))
-	assert.Nil(t, OpenAPIItemDTO2DOs(nil))
-	assert.Equal(t, []*entity.EvaluationSetItem{expectedDO}, OpenAPIItemDTO2DOs([]*openapi_eval_set.EvaluationSetItem{itemDTO}))
+	assert.Nil(t, OpenAPIItemDTO2DO(0, nil))
+	assert.Nil(t, OpenAPIItemDTO2DOs(0, nil))
+	assert.Equal(t, []*entity.EvaluationSetItem{expectedDO}, OpenAPIItemDTO2DOs(evalSetID, []*openapi_eval_set.EvaluationSetItem{itemDTO}))
 
-	assert.Equal(t, expectedDO.Turns[0], OpenAPITurnDTO2DO(turnDTO))
-	assert.Nil(t, OpenAPITurnDTO2DO(nil))
-	assert.Equal(t, []*entity.Turn{expectedDO.Turns[0]}, OpenAPITurnDTO2DOs([]*openapi_eval_set.Turn{turnDTO}))
-	assert.Nil(t, OpenAPITurnDTO2DOs(nil))
+	assert.Equal(t, expectedDO.Turns[0], OpenAPITurnDTO2DO(evalSetID, expectedDO.ItemID, turnDTO))
+	assert.Nil(t, OpenAPITurnDTO2DO(0, 0, nil))
+	assert.Equal(t, []*entity.Turn{expectedDO.Turns[0]}, OpenAPITurnDTO2DOs(evalSetID, expectedDO.ItemID, []*openapi_eval_set.Turn{turnDTO}))
+	assert.Nil(t, OpenAPITurnDTO2DOs(0, 0, nil))
 
 	assert.Equal(t, expectedDO.Turns[0].FieldDataList[0], OpenAPIFieldDataDTO2DO(turnDTO.FieldDatas[0]))
 	assert.Nil(t, OpenAPIFieldDataDTO2DO(nil))
@@ -655,4 +659,31 @@ func TestDatasetItemOutputConversions(t *testing.T) {
 	assert.Nil(t, OpenAPIDatasetItemOutputDO2DTO(nil))
 	assert.Equal(t, []*openapi_eval_set.DatasetItemOutput{expected}, OpenAPIDatasetItemOutputDO2DTOs([]*entity.DatasetItemOutput{do}))
 	assert.Nil(t, OpenAPIDatasetItemOutputDO2DTOs(nil))
+}
+
+func TestConvertDOSchemaKeyToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *entity.SchemaKey
+		expected *openapi_eval_set.SchemaKey
+	}{
+		{"nil input", nil, nil},
+		{"string", ptr(entity.SchemaKey_String), ptr(openapi_eval_set.SchemaKeyString)},
+		{"integer", ptr(entity.SchemaKey_Integer), ptr(openapi_eval_set.SchemaKeyInteger)},
+		{"float", ptr(entity.SchemaKey_Float), ptr(openapi_eval_set.SchemaKeyFloat)},
+		{"bool", ptr(entity.SchemaKey_Bool), ptr(openapi_eval_set.SchemaKeyBool)},
+		{"trajectory", ptr(entity.SchemaKey_Trajectory), ptr(openapi_eval_set.SchemaKeyTrajectory)},
+		{"message (unknown mapping)", ptr(entity.SchemaKey_Message), nil},
+		{"single choice (unknown mapping)", ptr(entity.SchemaKey_SingleChoice), nil},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expected, convertDOSchemaKeyToOpenAPI(tt.input))
+		})
+	}
 }

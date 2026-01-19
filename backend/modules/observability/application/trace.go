@@ -8,12 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
-
-	"github.com/samber/lo"
-	"golang.org/x/sync/errgroup"
-
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
@@ -21,11 +15,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/view"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	commdo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -35,6 +31,9 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
+	timeutil "github.com/coze-dev/coze-loop/backend/pkg/time"
+	"github.com/samber/lo"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -45,8 +44,10 @@ const (
 	QueryLimitDefault     = 100
 )
 
+//go:generate mockgen -destination=mocks/trace_application.go -package=mocks . ITraceApplication
 type ITraceApplication interface {
 	trace.TraceService
+	GetDisplayInfo(context.Context, *GetDisplayInfoRequest) GetDisplayInfoResponse
 }
 
 func NewTraceApplication(
@@ -162,13 +163,13 @@ func (t *TraceApplication) ListSpans(ctx context.Context, req *trace.ListSpansRe
 		return nil, err
 	}
 	logs.CtxInfo(ctx, "List spans successfully, spans count: %d", len(sResp.Spans))
-	userMap, evalMap, tagMap := t.getAnnoDisplayInfo(ctx,
-		req.GetWorkspaceID(),
-		nil,
-		sResp.Spans.GetEvaluatorVersionIDs(),
-		sResp.Spans.GetAnnotationTagIDs())
+	dResp := t.GetDisplayInfo(ctx, &GetDisplayInfoRequest{
+		WorkspaceID:  req.GetWorkspaceID(),
+		EvaluatorIDs: sResp.Spans.GetEvaluatorVersionIDs(),
+		TagKeyIDs:    sResp.Spans.GetAnnotationTagIDs(),
+	})
 	return &trace.ListSpansResponse{
-		Spans:         tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap, false),
+		Spans:         tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, false),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}, nil
@@ -256,13 +257,14 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	logs.CtxInfo(ctx, "Get trace successfully, spans count %d", len(sResp.Spans))
-	userMap, evalMap, tagMap := t.getAnnoDisplayInfo(ctx,
-		req.GetWorkspaceID(),
-		sResp.Spans.GetUserIDs(),
-		sResp.Spans.GetEvaluatorVersionIDs(),
-		sResp.Spans.GetAnnotationTagIDs())
+	dResp := t.GetDisplayInfo(ctx, &GetDisplayInfoRequest{
+		WorkspaceID:  req.GetWorkspaceID(),
+		UserIDs:      sResp.Spans.GetUserIDs(),
+		EvaluatorIDs: sResp.Spans.GetEvaluatorVersionIDs(),
+		TagKeyIDs:    sResp.Spans.GetAnnotationTagIDs(),
+	})
 	return &trace.GetTraceResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap, false),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, false),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{
@@ -334,13 +336,14 @@ func (t *TraceApplication) SearchTraceTree(ctx context.Context, req *trace.Searc
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
 	logs.CtxInfo(ctx, "SearchTraceTree successfully, spans count %d", len(sResp.Spans))
-	userMap, evalMap, tagMap := t.getAnnoDisplayInfo(ctx,
-		req.GetWorkspaceID(),
-		sResp.Spans.GetUserIDs(),
-		sResp.Spans.GetEvaluatorVersionIDs(),
-		sResp.Spans.GetAnnotationTagIDs())
+	dResp := t.GetDisplayInfo(ctx, &GetDisplayInfoRequest{
+		WorkspaceID:  req.GetWorkspaceID(),
+		UserIDs:      sResp.Spans.GetUserIDs(),
+		EvaluatorIDs: sResp.Spans.GetEvaluatorVersionIDs(),
+		TagKeyIDs:    sResp.Spans.GetAnnotationTagIDs(),
+	})
 	return &trace.SearchTraceTreeResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, userMap, evalMap, tagMap, false),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, false),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{
@@ -860,42 +863,15 @@ func (t *TraceApplication) ListAnnotations(ctx context.Context, req *trace.ListA
 	if err != nil {
 		return nil, err
 	}
-	userMap, evalMap, tagMap := t.getAnnoDisplayInfo(ctx,
-		req.GetWorkspaceID(),
-		resp.Annotations.GetUserIDs(),
-		resp.Annotations.GetEvaluatorVersionIDs(),
-		resp.Annotations.GetAnnotationTagIDs())
+	dResp := t.GetDisplayInfo(ctx, &GetDisplayInfoRequest{
+		WorkspaceID:  req.GetWorkspaceID(),
+		UserIDs:      resp.Annotations.GetUserIDs(),
+		EvaluatorIDs: resp.Annotations.GetEvaluatorVersionIDs(),
+		TagKeyIDs:    resp.Annotations.GetAnnotationTagIDs(),
+	})
 	return &trace.ListAnnotationsResponse{
-		Annotations: tconv.AnnotationListDO2DTO(resp.Annotations, userMap, evalMap, tagMap),
+		Annotations: tconv.AnnotationListDO2DTO(resp.Annotations, dResp.UserMap, dResp.EvalMap, dResp.TagMap),
 	}, nil
-}
-
-func (t *TraceApplication) getAnnoDisplayInfo(ctx context.Context, workspaceId int64, userIds []string, evalIds []int64, tagKeyIds []string,
-) (userMap map[string]*commdo.UserInfo, evalMap map[int64]*rpc.Evaluator, tagMap map[int64]*rpc.TagInfo) {
-	if len(userIds) == 0 && len(tagKeyIds) == 0 && len(evalIds) == 0 {
-		return userMap, evalMap, tagMap
-	}
-	g := errgroup.Group{}
-	g.Go(func() error {
-		defer goroutine.Recovery(ctx)
-		_, userMap, _ = t.userSvc.GetUserInfo(ctx, userIds)
-		return nil
-	})
-	g.Go(func() error {
-		defer goroutine.Recovery(ctx)
-		_, evalMap, _ = t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
-			WorkspaceID:         workspaceId,
-			EvaluatorVersionIds: evalIds,
-		})
-		return nil
-	})
-	g.Go(func() error {
-		defer goroutine.Recovery(ctx)
-		tagMap, _ = t.tagSvc.BatchGetTagInfo(ctx, workspaceId, tagKeyIds)
-		return nil
-	})
-	_ = g.Wait()
-	return userMap, evalMap, tagMap
 }
 
 func (t *TraceApplication) ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest) (
@@ -1084,4 +1060,143 @@ func (t *TraceApplication) validateExtractSpanInfoReq(ctx context.Context, req *
 		req.SetEndTime(lo.ToPtr(newEndTime + time.Minute.Milliseconds()))
 	}
 	return nil
+}
+
+func (t *TraceApplication) UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest) (r *trace.UpsertTrajectoryConfigResponse, err error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	if userID == "" {
+		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+
+	if err := t.traceService.UpsertTrajectoryConfig(ctx, &service.UpsertTrajectoryConfigRequest{
+		WorkspaceID: req.WorkspaceID,
+		Filters:     tconv.FilterFieldsDTO2DO(req.Filters),
+		UserID:      userID,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &trace.UpsertTrajectoryConfigResponse{}, nil
+}
+
+func (t *TraceApplication) GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest) (r *trace.GetTrajectoryConfigResponse, err error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	confResp, err := t.traceService.GetTrajectoryConfig(ctx, &service.GetTrajectoryConfigRequest{
+		WorkspaceID: req.WorkspaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if confResp == nil {
+		return &trace.GetTrajectoryConfigResponse{}, nil
+	}
+
+	return &trace.GetTrajectoryConfigResponse{
+		Filters: tconv.FilterFieldsDO2DTO(confResp.Filters),
+	}, nil
+}
+
+func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest) (r *trace.ListTrajectoryResponse, err error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+	if req.StartTime == nil {
+		userID := session.UserIDInCtxOrEmpty(ctx)
+		if userID == "" {
+			return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+		}
+		finalStartTime := t.traceConfig.GetTraceDataMaxDurationDay(ctx, &req.PlatformType)
+		benefitRes, err := t.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+			ConnectorUID: userID,
+			SpaceID:      req.GetWorkspaceID(),
+		})
+		if err == nil && benefitRes != nil {
+			finalStartTime = time.Now().UnixMilli() - timeutil.Day2MillSec(int(benefitRes.StorageDuration))
+		}
+
+		req.SetStartTime(ptr.Of(finalStartTime))
+	}
+
+	resp, err := t.traceService.ListTrajectory(ctx, &service.ListTrajectoryRequest{
+		PlatformType: loop_span.PlatformType(req.PlatformType),
+		WorkspaceID:  req.WorkspaceID,
+		TraceIds:     req.TraceIds,
+		StartTime:    req.StartTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return &trace.ListTrajectoryResponse{}, nil
+	}
+
+	return &trace.ListTrajectoryResponse{
+		Trajectories: tconv.TrajectoriesDO2DTO(resp.Trajectories),
+	}, nil
+}
+
+// inner usage
+type GetDisplayInfoRequest struct {
+	WorkspaceID  int64
+	UserIDs      []string
+	EvaluatorIDs []int64
+	TagKeyIDs    []string
+}
+
+type GetDisplayInfoResponse struct {
+	UserMap map[string]*commdo.UserInfo
+	EvalMap map[int64]*rpc.Evaluator
+	TagMap  map[int64]*rpc.TagInfo
+}
+
+func (t *TraceApplication) GetDisplayInfo(ctx context.Context, req *GetDisplayInfoRequest) GetDisplayInfoResponse {
+	if len(req.UserIDs) == 0 && len(req.EvaluatorIDs) == 0 && len(req.TagKeyIDs) == 0 {
+		return GetDisplayInfoResponse{}
+	}
+	var (
+		g       errgroup.Group
+		userMap map[string]*commdo.UserInfo
+		evalMap map[int64]*rpc.Evaluator
+		tagMap  map[int64]*rpc.TagInfo
+	)
+	g.Go(func() error {
+		defer goroutine.Recovery(ctx)
+		_, userMap, _ = t.userSvc.GetUserInfo(ctx, req.UserIDs)
+		return nil
+	})
+	g.Go(func() error {
+		defer goroutine.Recovery(ctx)
+		_, evalMap, _ = t.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
+			WorkspaceID:         req.WorkspaceID,
+			EvaluatorVersionIds: req.EvaluatorIDs,
+		})
+		return nil
+	})
+	g.Go(func() error {
+		defer goroutine.Recovery(ctx)
+		tagMap, _ = t.tagSvc.BatchGetTagInfo(ctx, req.WorkspaceID, req.TagKeyIDs)
+		return nil
+	})
+	_ = g.Wait()
+	return GetDisplayInfoResponse{
+		UserMap: userMap,
+		EvalMap: evalMap,
+		TagMap:  tagMap,
+	}
 }

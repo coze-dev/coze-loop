@@ -61,17 +61,18 @@ export default function ExperimentInfoEditFormModal({
       <FormInput
         field="name"
         label={I18n.t('experiment_name')}
-        placeholder={I18n.t('please_input', { field: '' })}
+        placeholder={I18n.t('please_enter')}
         maxLength={50}
         rules={[
           { required: true, message: I18n.t('the_field_required') },
           { validator: sourceNameRuleValidator },
         ]}
       />
+
       <FormTextArea
         field="desc"
         label={I18n.t('experiment_description')}
-        placeholder={I18n.t('please_input', { field: '' })}
+        placeholder={I18n.t('please_enter')}
         maxCount={200}
         maxLength={200}
       />

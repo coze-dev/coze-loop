@@ -7,18 +7,18 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	evalsetopenapi "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 
-	"github.com/bytedance/gg/gptr"
-
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	openapiExperiment "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
-	openapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 
 	domainCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domaindoEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -615,6 +615,24 @@ func OpenAPIColumnEvaluatorsDO2DTOs(from []*entity.ColumnEvaluator) []*openapiEx
 	return result
 }
 
+func OpenAPIColumnEvalTargetDO2DTOs(columns []*entity.ColumnEvalTarget) []*openapiExperiment.ColumnEvalTarget {
+	if len(columns) == 0 {
+		return nil
+	}
+	result := make([]*openapiExperiment.ColumnEvalTarget, 0, len(columns))
+	for _, column := range columns {
+		if column == nil {
+			continue
+		}
+		result = append(result, &openapiExperiment.ColumnEvalTarget{
+			Name:        gptr.Of(column.Name),
+			Description: gptr.Of(column.Desc),
+			Label:       column.Label,
+		})
+	}
+	return result
+}
+
 func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.ItemResult_ {
 	if len(from) == 0 {
 		return nil
@@ -1091,4 +1109,68 @@ func openAPIScoreDistributionDO2DTO(data *entity.ScoreDistributionData) *openapi
 		return nil
 	}
 	return &openapiExperiment.ScoreDistribution{ScoreDistributionItems: items}
+}
+
+func OpenTargetAggrResultDO2DTO(result *entity.EvalTargetMtrAggrResult) *openapiExperiment.EvalTargetAggregateResult_ {
+	if result == nil {
+		return nil
+	}
+	return &openapiExperiment.EvalTargetAggregateResult_{
+		TargetID:        gptr.Of(result.TargetID),
+		TargetVersionID: gptr.Of(result.TargetVersionID),
+		Latency:         OpenAPIAggregatorResultsDO2DTOs(result.LatencyAggrResults),
+		InputTokens:     OpenAPIAggregatorResultsDO2DTOs(result.InputTokensAggrResults),
+		OutputTokens:    OpenAPIAggregatorResultsDO2DTOs(result.OutputTokensAggrResults),
+		TotalTokens:     OpenAPIAggregatorResultsDO2DTOs(result.TotalTokensAggrResults),
+	}
+}
+
+func TargetAggrResultDO2DTO(result *entity.EvalTargetMtrAggrResult) *domainExpt.EvalTargetAggregateResult_ {
+	if result == nil {
+		return nil
+	}
+	return &domainExpt.EvalTargetAggregateResult_{
+		TargetID:        gptr.Of(result.TargetID),
+		TargetVersionID: gptr.Of(result.TargetVersionID),
+		Latency:         AggregatorResultDOsToDTOs(result.LatencyAggrResults),
+		InputTokens:     AggregatorResultDOsToDTOs(result.InputTokensAggrResults),
+		OutputTokens:    AggregatorResultDOsToDTOs(result.OutputTokensAggrResults),
+		TotalTokens:     AggregatorResultDOsToDTOs(result.TotalTokensAggrResults),
+	}
+}
+
+func OpenAPIEvaluatorParamsDTO2Domain(dtos []*openapi.SubmitExperimentEvaluatorParam) []*domainEvaluator.EvaluatorIDVersionItem {
+	if len(dtos) == 0 {
+		return nil
+	}
+	dos := make([]*domainEvaluator.EvaluatorIDVersionItem, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		dos = append(dos, OpenAPIEvaluatorParamDTO2Domain(dto))
+	}
+	return dos
+}
+
+func OpenAPIEvaluatorParamDTO2Domain(dto *openapi.SubmitExperimentEvaluatorParam) *domainEvaluator.EvaluatorIDVersionItem {
+	if dto == nil {
+		return nil
+	}
+
+	return &domainEvaluator.EvaluatorIDVersionItem{
+		EvaluatorID: dto.EvaluatorID,
+		Version:     dto.Version,
+		RunConfig:   OpenAPIEvaluatorRunConfigDTO2Domain(dto.RunConfig),
+	}
+}
+
+func OpenAPIEvaluatorRunConfigDTO2Domain(dto *openapiEvaluator.EvaluatorRunConfig) *domainEvaluator.EvaluatorRunConfig {
+	if dto == nil {
+		return nil
+	}
+	return &domainEvaluator.EvaluatorRunConfig{
+		Env:                   dto.Env,
+		EvaluatorRuntimeParam: OpenAPIRuntimeParamDTO2Domain(dto.EvaluatorRuntimeParam),
+	}
 }

@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -13,9 +14,11 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
 
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -35,6 +38,10 @@ type ExptAggrResultServiceImpl struct {
 	evaluatorService       EvaluatorService
 	evaluatorRecordService EvaluatorRecordService
 	tagRPCAdapter          rpc.ITagRPCAdapter
+	evalTargetSvc          IEvalTargetService
+
+	publisher events.ExptEventPublisher
+	locker    lock.ILocker
 }
 
 func NewExptAggrResultService(
@@ -45,6 +52,9 @@ func NewExptAggrResultService(
 	evaluatorRecordService EvaluatorRecordService,
 	tagRPCAdapter rpc.ITagRPCAdapter,
 	exptAnnotateRepo repo.IExptAnnotateRepo,
+	ets IEvalTargetService,
+	pub events.ExptEventPublisher,
+	locker lock.ILocker,
 ) ExptAggrResultService {
 	return &ExptAggrResultServiceImpl{
 		exptTurnResultRepo:     exptTurnResultRepo,
@@ -55,70 +65,136 @@ func NewExptAggrResultService(
 		evaluatorRecordService: evaluatorRecordService,
 		tagRPCAdapter:          tagRPCAdapter,
 		exptAnnotateRepo:       exptAnnotateRepo,
+		evalTargetSvc:          ets,
+		publisher:              pub,
+		locker:                 locker,
 	}
 }
 
 func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, spaceID, experimentID int64) (err error) {
 	now := time.Now().Unix()
+	defer func() { e.metric.EmitCalculateExptAggrResult(spaceID, int64(entity.CreateAllFields), err != nil, now) }()
 	defer func() {
-		e.metric.EmitCalculateExptAggrResult(spaceID, int64(entity.CreateAllFields), err != nil, now)
+		if err == nil {
+			if _, unlockErr := e.locker.Unlock(e.MakeCalcExptAggrResultLockKey(experimentID)); unlockErr != nil {
+				logs.CtxWarn(ctx, "CreateExptAggrResult unlock fail, expt_id: %v, err: %v", experimentID, unlockErr)
+			}
+		}
 	}()
+
+	existed, err := e.exptAggrResultRepo.GetExptAggrResultByExperimentID(ctx, experimentID)
+	if err != nil {
+		return err
+	}
 
 	turnEvaluatorResultRefs, err := e.exptTurnResultRepo.GetTurnEvaluatorResultRefByExptID(ctx, spaceID, experimentID)
 	if err != nil {
 		return err
 	}
 
-	if len(turnEvaluatorResultRefs) == 0 {
-		logs.CtxInfo(ctx, "no evaluator result found, skip create expt aggr result")
-		return nil
-	}
-
-	evaluatorResultIDs := make([]int64, 0)
-	evaluatorVersionID2ResultIDs := make(map[int64][]int64)
-	for _, turnEvaluatorResultRef := range turnEvaluatorResultRefs {
-		evaluatorResultIDs = append(evaluatorResultIDs, turnEvaluatorResultRef.EvaluatorResultID)
-		if _, ok := evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID]; !ok {
-			evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = make([]int64, 0)
+	evaluatorVersionID2AggregatorGroup := make(map[int64]*AggregatorGroup)
+	if len(turnEvaluatorResultRefs) > 0 {
+		evaluatorResultIDs := make([]int64, 0)
+		evaluatorVersionID2ResultIDs := make(map[int64][]int64)
+		for _, turnEvaluatorResultRef := range turnEvaluatorResultRefs {
+			evaluatorResultIDs = append(evaluatorResultIDs, turnEvaluatorResultRef.EvaluatorResultID)
+			if _, ok := evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID]; !ok {
+				evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = make([]int64, 0)
+			}
+			evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = append(evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID], turnEvaluatorResultRef.EvaluatorResultID)
 		}
-		evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = append(evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID], turnEvaluatorResultRef.EvaluatorResultID)
+
+		evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+		if err != nil {
+			return err
+		}
+		recordMap := make(map[int64]*entity.EvaluatorRecord)
+		for _, record := range evaluatorRecords {
+			recordMap[record.ID] = record
+		}
+
+		for evaluatorVersionID, resultIDs := range evaluatorVersionID2ResultIDs {
+			aggregatorGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
+			evaluatorVersionID2AggregatorGroup[evaluatorVersionID] = aggregatorGroup
+			for _, resultID := range resultIDs {
+				evalResult, ok := recordMap[resultID]
+				if !ok || evalResult == nil {
+					continue
+				}
+				if evalResult.EvaluatorOutputData == nil ||
+					evalResult.EvaluatorOutputData.EvaluatorResult == nil ||
+					evalResult.EvaluatorOutputData.EvaluatorResult.Score == nil {
+					continue
+				}
+
+				aggregatorGroup.Append(gptr.Indirect(evalResult.EvaluatorOutputData.EvaluatorResult.Score))
+			}
+		}
 	}
 
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
-	// evalResults, err := e.evalCall.BatchGetEvaluatorRecord(ctx, spaceID, evaluatorResultIDs)
+	tmag, err := e.buildExptTargetMtrAggregatorGroup(ctx, spaceID, experimentID)
 	if err != nil {
 		return err
 	}
-	recordMap := make(map[int64]*entity.EvaluatorRecord)
-	for _, record := range evaluatorRecords {
-		recordMap[record.ID] = record
-	}
 
-	evaluatorVersionID2AggregatorGroup := make(map[int64]*AggregatorGroup)
-	for evaluatorVersionID, resultIDs := range evaluatorVersionID2ResultIDs {
-		aggregatorGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
-		evaluatorVersionID2AggregatorGroup[evaluatorVersionID] = aggregatorGroup
-		for _, resultID := range resultIDs {
-			evalResult, ok := recordMap[resultID]
-			if !ok || evalResult == nil {
-				continue
-			}
-			if evalResult.EvaluatorOutputData == nil ||
-				evalResult.EvaluatorOutputData.EvaluatorResult == nil ||
-				evalResult.EvaluatorOutputData.EvaluatorResult.Score == nil {
-				continue
-			}
-
-			aggregatorGroup.Append(gptr.Indirect(evalResult.EvaluatorOutputData.EvaluatorResult.Score))
-		}
-
-	}
-
-	return e.createExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup)
+	return e.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existed)
 }
 
-func (e *ExptAggrResultServiceImpl) createExptAggrResult(ctx context.Context, spaceID, experimentID int64, evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup) error {
-	exptAggrResults := make([]*entity.ExptAggrResult, 0)
+func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx context.Context, spaceID, exptID int64) (*targetMtrAggrGroup, error) {
+	const queryInterval = time.Millisecond * 30
+
+	mtrAggrGroup := &targetMtrAggrGroup{
+		latency:      NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		inputTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		outputTokens: NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		totalTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+	}
+
+	var targetResultIDs []int64
+	maxLoop, cursor, limit := 10000, int64(0), int64(50)
+
+	for i := 0; i < maxLoop; i++ {
+		logs.CtxInfo(ctx, "buildExptTargetMtrAggregatorGroup scan item result, expt_id: %v, cursor: %v, limit: %v", exptID, cursor, limit)
+
+		trs, ncursor, err := e.exptTurnResultRepo.ScanTurnResults(ctx, exptID, nil, cursor, limit, spaceID)
+		if err != nil {
+			return nil, err
+		}
+
+		cursor = ncursor
+
+		if len(trs) == 0 {
+			break
+		}
+
+		for _, tr := range trs {
+			targetResultIDs = append(targetResultIDs, tr.TargetResultID)
+		}
+
+		time.Sleep(queryInterval)
+	}
+
+	for _, resIDs := range gslice.Chunk(targetResultIDs, 50) {
+		records, err := e.evalTargetSvc.BatchGetRecordByIDs(ctx, spaceID, resIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		mtrAggrGroup.calcRecord(records)
+	}
+
+	return mtrAggrGroup, nil
+}
+
+func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Context, spaceID, experimentID int64,
+	evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup, tmag *targetMtrAggrGroup, existedAggrResults []*entity.ExptAggrResult,
+) error {
+	aggrResKeyFn := func(fieldType int32, fieldKey string) string { return fmt.Sprintf("%d:%s", fieldType, fieldKey) }
+	existedAggrResultsMap := gslice.ToMap(existedAggrResults, func(val *entity.ExptAggrResult) (string, *entity.ExptAggrResult) {
+		return aggrResKeyFn(val.FieldType, val.FieldKey), val
+	})
+
+	aggrResults := make([]*entity.ExptAggrResult, 0)
 	for evaluatorVersionID, aggregatorGroup := range evaluatorVersionID2AggregatorGroup {
 		aggrResult := aggregatorGroup.Result()
 		var averageScore float64
@@ -132,7 +208,7 @@ func (e *ExptAggrResultServiceImpl) createExptAggrResult(ctx context.Context, sp
 		if err != nil {
 			return err
 		}
-		exptAggrResults = append(exptAggrResults, &entity.ExptAggrResult{
+		aggrResults = append(aggrResults, &entity.ExptAggrResult{
 			SpaceID:      spaceID,
 			ExperimentID: experimentID,
 			FieldType:    int32(entity.FieldType_EvaluatorScore),
@@ -143,12 +219,46 @@ func (e *ExptAggrResultServiceImpl) createExptAggrResult(ctx context.Context, sp
 		})
 	}
 
-	err := e.exptAggrResultRepo.BatchCreateExptAggrResult(ctx, exptAggrResults)
+	targetAggrResults, err := tmag.buildAggrResult(spaceID, experimentID)
 	if err != nil {
 		return err
 	}
 
-	logs.CtxInfo(ctx, "create expt aggr result success, exptID: %d", experimentID)
+	aggrResults = append(aggrResults, targetAggrResults...)
+
+	var tocreated []*entity.ExptAggrResult
+	var toupdated []*entity.ExptAggrResult
+	for _, ar := range aggrResults {
+		if existed, ok := existedAggrResultsMap[aggrResKeyFn(ar.FieldType, ar.FieldKey)]; ok {
+			if existed.AggrResEqual(ar) {
+				continue
+			}
+			version, err := e.exptAggrResultRepo.UpdateAndGetLatestVersion(ctx, experimentID, ar.FieldType, ar.FieldKey)
+			if err != nil {
+				return errorx.Wrapf(err, "UpdateAndGetLatestVersion failed, expt_id: %d, field_type: %d, field_key: %s", experimentID, ar.FieldType, ar.FieldKey)
+			}
+			ar.Version = version
+			toupdated = append(toupdated, ar)
+		} else {
+			tocreated = append(tocreated, ar)
+		}
+	}
+
+	if len(tocreated) > 0 {
+		if err := e.exptAggrResultRepo.BatchCreateExptAggrResult(ctx, tocreated); err != nil {
+			return errorx.Wrapf(err, "BatchCreateExptAggrResult failed, expt_id: %d", experimentID)
+		}
+		logs.CtxInfo(ctx, "create expt aggr result success, expt_id: %d, created: %v", experimentID, json.Jsonify(tocreated))
+	}
+
+	if len(toupdated) > 0 {
+		for _, ar := range toupdated {
+			if err := e.exptAggrResultRepo.UpdateExptAggrResultByVersion(ctx, ar, ar.Version); err != nil {
+				return errorx.Wrapf(err, "UpdateExptAggrResultByVersion failed, experimentID: %d, fieldType: %d, fieldKey: %s, version: %d", experimentID, ar.FieldType, ar.FieldKey, ar.Version)
+			}
+		}
+		logs.CtxInfo(ctx, "update expt aggr result success, exptID: %d, updated: %v", experimentID, json.Jsonify(toupdated))
+	}
 
 	return nil
 }
@@ -162,7 +272,7 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 	if param.FieldType != entity.FieldType_EvaluatorScore {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid field type"))
 	}
-	// 如果首次计算尚未完成 返回error mq重试
+	// If initial calculation not finished, return error for MQ retry
 	_, err = e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_EvaluatorScore), param.FieldKey)
 	if err != nil {
 		statusErr, ok := errorx.FromStatusError(err)
@@ -171,7 +281,7 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 			if err != nil {
 				return err
 			}
-			// 如果实验未结束 不进行MQ重试
+			// If experiment not finished, no MQ retry
 			if !entity.IsExptFinished(experiment.Status) {
 				return nil
 			}
@@ -179,7 +289,7 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 		return err
 	}
 
-	// 计算前先更新版本号
+	// Update version number before calculation
 	version, err := e.exptAggrResultRepo.UpdateAndGetLatestVersion(ctx, param.ExperimentID, int32(param.FieldType), param.FieldKey)
 	if err != nil {
 		return err
@@ -255,6 +365,18 @@ func (e *ExptAggrResultServiceImpl) updateExptAggrResult(ctx context.Context, pa
 }
 
 func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx context.Context, spaceID int64, exptIDs []int64) ([]*entity.ExptAggregateResult, error) {
+	expts, err := e.experimentRepo.MGetBasicByID(ctx, exptIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	versionedTargetIDMap := gslice.ToMap(expts, func(t *entity.Experiment) (int64, entity.VersionedTargetID) {
+		return t.ID, entity.VersionedTargetID{
+			TargetID:  t.TargetID,
+			VersionID: t.TargetVersionID,
+		}
+	})
+
 	aggrResults, err := e.exptAggrResultRepo.BatchGetExptAggrResultByExperimentIDs(ctx, exptIDs)
 	if err != nil {
 		return nil, err
@@ -273,7 +395,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 	if err != nil {
 		return nil, err
 	}
-	// 去重
+	// Deduplicate
 	evaluatorVersionIDMap := make(map[int64]bool)
 	versionID2evaluatorID := make(map[int64]int64)
 	for _, ref := range evaluatorRef {
@@ -307,9 +429,19 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 	for exptID, exptResult := range expt2AggrResults {
 		evaluatorResults := make(map[int64]*entity.EvaluatorAggregateResult)
 		annotationResults := make(map[int64]*entity.AnnotationAggregateResult)
+		targetResults := &entity.EvalTargetMtrAggrResult{
+			TargetID:        versionedTargetIDMap[exptID].TargetID,
+			TargetVersionID: versionedTargetIDMap[exptID].VersionID,
+		}
 
+		var latestUpdateAt *time.Time
 		for _, fieldResult := range exptResult {
-			if fieldResult.FieldType == int32(entity.FieldType_Annotation) {
+			if gptr.Indirect(fieldResult.UpdateAt).After(gptr.Indirect(latestUpdateAt)) {
+				latestUpdateAt = fieldResult.UpdateAt
+			}
+
+			switch fieldResult.FieldType {
+			case int32(entity.FieldType_Annotation):
 				tagKeyID, err := strconv.ParseInt(fieldResult.FieldKey, 10, 64)
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse tag key id from field key %s, err: %v", fieldResult.FieldKey, err)
@@ -330,42 +462,70 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 					Name:              ptr.Of(tagInfo.TagKeyName),
 				}
 				annotationResults[tagKeyID] = annotationResult
-			}
+			case int32(entity.FieldType_EvaluatorScore):
+				evaluatorVersionID, err := strconv.ParseInt(fieldResult.FieldKey, 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse evaluator version id from field key %s, err: %v", fieldResult.FieldKey, err)
+				}
 
-			if fieldResult.FieldType != int32(entity.FieldType_EvaluatorScore) {
-				continue
-			}
+				aggregateResultDO := entity.AggregateResult{}
+				err = json.Unmarshal(fieldResult.AggrResult, &aggregateResultDO)
+				if err != nil {
+					return nil, fmt.Errorf("json.Unmarshal(%s) failed, err: %v", fieldResult.AggrResult, err)
+				}
 
-			evaluatorVersionID, err := strconv.ParseInt(fieldResult.FieldKey, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse evaluator version id from field key %s, err: %v", fieldResult.FieldKey, err)
-			}
+				evaluator, ok := versionID2Evaluator[evaluatorVersionID]
+				if !ok {
+					return nil, fmt.Errorf("failed to get evaluator by version_id %d", evaluatorVersionID)
+				}
 
-			aggregateResultDO := entity.AggregateResult{}
-			err = json.Unmarshal(fieldResult.AggrResult, &aggregateResultDO)
-			if err != nil {
-				return nil, fmt.Errorf("json.Unmarshal(%s) failed, err: %v", fieldResult.AggrResult, err)
-			}
+				evaluatorAggrResult := entity.EvaluatorAggregateResult{
+					EvaluatorID:        evaluator.ID,
+					EvaluatorVersionID: evaluatorVersionID,
+					AggregatorResults:  aggregateResultDO.AggregatorResults,
+					Name:               gptr.Of(evaluator.Name),
+					Version:            gptr.Of(evaluator.GetVersion()),
+				}
+				evaluatorResults[evaluatorVersionID] = &evaluatorAggrResult
+			case int32(entity.FieldType_TargetLatency):
+				ar := entity.AggregateResult{}
+				if err := json.Unmarshal(fieldResult.AggrResult, &ar); err != nil {
+					return nil, errorx.Wrapf(err, "AggregateResult json.Unmarshal failed, raw: %v", string(fieldResult.AggrResult))
+				}
+				targetResults.LatencyAggrResults = gslice.Clone(ar.AggregatorResults)
 
-			evaluator, ok := versionID2Evaluator[evaluatorVersionID]
-			if !ok {
-				return nil, fmt.Errorf("failed to get evaluator by version_id %d", evaluatorVersionID)
-			}
+			case int32(entity.FieldType_TargetInputTokens):
+				ar := entity.AggregateResult{}
+				if err := json.Unmarshal(fieldResult.AggrResult, &ar); err != nil {
+					return nil, errorx.Wrapf(err, "AggregateResult json.Unmarshal failed, raw: %v", string(fieldResult.AggrResult))
+				}
+				targetResults.InputTokensAggrResults = gslice.Clone(ar.AggregatorResults)
 
-			evaluatorAggrResult := entity.EvaluatorAggregateResult{
-				EvaluatorID:        evaluator.ID,
-				EvaluatorVersionID: evaluatorVersionID,
-				AggregatorResults:  aggregateResultDO.AggregatorResults,
-				Name:               gptr.Of(evaluator.Name),
-				Version:            gptr.Of(evaluator.GetVersion()),
-			}
-			evaluatorResults[evaluatorVersionID] = &evaluatorAggrResult
+			case int32(entity.FieldType_TargetOutputTokens):
+				ar := entity.AggregateResult{}
+				if err := json.Unmarshal(fieldResult.AggrResult, &ar); err != nil {
+					return nil, errorx.Wrapf(err, "AggregateResult json.Unmarshal failed, raw: %v", string(fieldResult.AggrResult))
+				}
+				targetResults.OutputTokensAggrResults = gslice.Clone(ar.AggregatorResults)
 
+			case int32(entity.FieldType_TargetTotalTokens):
+				ar := entity.AggregateResult{}
+				if err := json.Unmarshal(fieldResult.AggrResult, &ar); err != nil {
+					return nil, errorx.Wrapf(err, "AggregateResult json.Unmarshal failed, raw: %v", string(fieldResult.AggrResult))
+				}
+				targetResults.TotalTokensAggrResults = gslice.Clone(ar.AggregatorResults)
+
+			default:
+
+			}
 		}
+
 		results = append(results, &entity.ExptAggregateResult{
 			ExperimentID:      exptID,
 			EvaluatorResults:  evaluatorResults,
 			AnnotationResults: annotationResults,
+			TargetResults:     targetResults,
+			UpdateTime:        latestUpdateAt,
 		})
 	}
 
@@ -396,11 +556,35 @@ func (e *ExptAggrResultServiceImpl) batchGetTagInfoByExperimentIDs(ctx context.C
 func (e *ExptAggrResultServiceImpl) CreateAnnotationAggrResult(ctx context.Context, param *entity.CreateSpecificFieldAggrResultParam) (err error) {
 	now := time.Now().Unix()
 	defer func() {
-		e.metric.EmitCalculateExptAggrResult(param.SpaceID, int64(entity.CreateAllFields), err != nil, now)
+		e.metric.EmitCalculateExptAggrResult(param.SpaceID, int64(entity.CreateAnnotationFields), err != nil, now)
 	}()
 
 	if param.FieldType != entity.FieldType_Annotation {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid field type"))
+	}
+
+	// 检查 ExptAggrResult 记录是否已存在，如果存在则走 Update 逻辑
+	exptAggrRes, err := e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_Annotation), param.FieldKey)
+	if err == nil && exptAggrRes != nil {
+		// 记录已存在，转换为 UpdateExptAggrResultParam 并调用 UpdateAnnotationAggrResult
+		logs.CtxInfo(ctx, "create annotation aggr result already exists, updating, experiment_id: %d, field_type: %s, field_key: %s", param.ExperimentID, param.FieldType, param.FieldKey)
+		updateParam := &entity.UpdateExptAggrResultParam{
+			SpaceID:      param.SpaceID,
+			ExperimentID: param.ExperimentID,
+			FieldType:    param.FieldType,
+			FieldKey:     param.FieldKey,
+		}
+		return e.UpdateAnnotationAggrResult(ctx, updateParam)
+	}
+
+	// 如果错误不是 ResourceNotFound，则返回错误
+	statusErr, ok := errorx.FromStatusError(err)
+	if ok && statusErr.Code() == errno.ResourceNotFoundCode {
+		// 记录不存在，继续原有的 create 逻辑
+		logs.CtxInfo(ctx, "create annotation aggr result doesn't exist, experiment_id: %d, field_type: %s, field_key: %s", param.ExperimentID, param.FieldType, param.FieldKey)
+	} else {
+		// 其他错误，直接返回
+		return err
 	}
 
 	tagKeyID, err := strconv.ParseInt(param.FieldKey, 10, 64)
@@ -555,7 +739,7 @@ func (e *ExptAggrResultServiceImpl) UpdateAnnotationAggrResult(ctx context.Conte
 	if param.FieldType != entity.FieldType_Annotation {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid field type"))
 	}
-	// 如果首次计算尚未完成 返回error mq重试
+	// If the initial calculation is not yet completed, return an error for MQ retry
 	_, err = e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_Annotation), param.FieldKey)
 	if err != nil {
 		statusErr, ok := errorx.FromStatusError(err)
@@ -564,7 +748,7 @@ func (e *ExptAggrResultServiceImpl) UpdateAnnotationAggrResult(ctx context.Conte
 			if err != nil {
 				return err
 			}
-			// 如果实验未结束 不进行MQ重试
+			// If experiment not finished, no MQ retry
 			if !entity.IsExptFinished(experiment.Status) {
 				return nil
 			}
@@ -572,7 +756,7 @@ func (e *ExptAggrResultServiceImpl) UpdateAnnotationAggrResult(ctx context.Conte
 		return err
 	}
 
-	// 计算前先更新版本号
+	// Update version number before calculation
 	version, err := e.exptAggrResultRepo.UpdateAndGetLatestVersion(ctx, param.ExperimentID, int32(param.FieldType), param.FieldKey)
 	if err != nil {
 		return err
@@ -718,9 +902,82 @@ func (e *ExptAggrResultServiceImpl) updateBooleanExptAggrResult(ctx context.Cont
 	return nil
 }
 
+type targetMtrAggrGroup struct {
+	latency      *AggregatorGroup
+	inputTokens  *AggregatorGroup
+	outputTokens *AggregatorGroup
+	totalTokens  *AggregatorGroup
+}
+
+func (t *targetMtrAggrGroup) calcRecord(records []*entity.EvalTargetRecord) {
+	for _, record := range records {
+		if record == nil || record.EvalTargetOutputData == nil {
+			continue
+		}
+
+		t.latency.Append(float64(gptr.Indirect(record.EvalTargetOutputData.TimeConsumingMS)))
+		if record.EvalTargetOutputData.EvalTargetUsage != nil {
+			t.inputTokens.Append(float64(record.EvalTargetOutputData.EvalTargetUsage.InputTokens))
+			t.outputTokens.Append(float64(record.EvalTargetOutputData.EvalTargetUsage.OutputTokens))
+			t.totalTokens.Append(float64(record.EvalTargetOutputData.EvalTargetUsage.TotalTokens))
+		}
+	}
+}
+
+func (t *targetMtrAggrGroup) buildAggrResult(spaceID, exptID int64) ([]*entity.ExptAggrResult, error) {
+	var res []*entity.ExptAggrResult
+
+	builder := func(fieldType entity.FieldType, fieldKey string, aggr *AggregatorGroup) error {
+		if aggr == nil {
+			return nil
+		}
+
+		agRes := aggr.Result()
+
+		var averageScore float64
+		for _, aggregatorResult := range agRes.AggregatorResults {
+			if aggregatorResult.AggregatorType == entity.Average {
+				averageScore = aggregatorResult.GetScore()
+				break
+			}
+		}
+
+		aggrResultBytes, err := json.Marshal(agRes)
+		if err != nil {
+			return errorx.Wrapf(err, "AggregateResult json marshal fail")
+		}
+
+		res = append(res, &entity.ExptAggrResult{
+			SpaceID:      spaceID,
+			ExperimentID: exptID,
+			FieldType:    int32(fieldType),
+			FieldKey:     fieldKey,
+			Score:        averageScore,
+			AggrResult:   aggrResultBytes,
+		})
+		return nil
+	}
+
+	for _, cfg := range []struct {
+		fieldType entity.FieldType
+		fieldKey  string
+		aggr      *AggregatorGroup
+	}{
+		{entity.FieldType_TargetLatency, entity.AggrResultFieldKey_TargetLatency, t.latency},
+		{entity.FieldType_TargetInputTokens, entity.AggrResultFieldKey_TargetInputTokens, t.inputTokens},
+		{entity.FieldType_TargetOutputTokens, entity.AggrResultFieldKey_TargetOutputTokens, t.outputTokens},
+		{entity.FieldType_TargetTotalTokens, entity.AggrResultFieldKey_TargetTotalTokens, t.totalTokens},
+	} {
+		if err := builder(cfg.fieldType, cfg.fieldKey, cfg.aggr); err != nil {
+			return nil, err
+		}
+	}
+
+	return res, nil
+}
+
 type AggregatorGroup struct {
-	Aggregators         []Aggregator
-	AggregatorResultMap map[entity.AggregatorType]*entity.AggregateData
+	Aggregators []Aggregator
 }
 
 type NewAggregatorGroupOption func(aggregatorGroup *AggregatorGroup)
@@ -746,6 +1003,12 @@ func WithScoreDistributionAggregator() NewAggregatorGroupOption {
 	}
 }
 
+func WithBucketScoreDistributionAggregator(numBuckets int) NewAggregatorGroupOption {
+	return func(aggregatorGroup *AggregatorGroup) {
+		aggregatorGroup.Aggregators = append(aggregatorGroup.Aggregators, NewBucketScoreDistributionAggregator(numBuckets))
+	}
+}
+
 func (a *AggregatorGroup) Append(score float64) {
 	for _, aggregator := range a.Aggregators {
 		aggregator.Append(score)
@@ -763,7 +1026,9 @@ func (a *AggregatorGroup) Result() *entity.AggregateResult {
 			aggregatorResults = append(aggregatorResults, &aggregatorResult)
 		}
 	}
-
+	gslice.SortBy(aggregatorResults, func(l *entity.AggregatorResult, r *entity.AggregatorResult) bool {
+		return l.AggregatorType < r.AggregatorType
+	})
 	return &entity.AggregateResult{
 		AggregatorResults: aggregatorResults,
 	}
@@ -779,7 +1044,7 @@ type BasicAggregator struct {
 	Min float64
 	Sum float64
 
-	Count int // 聚合数据个数
+	Count int // Number of aggregated data
 }
 
 func (a *BasicAggregator) Append(score float64) {
@@ -830,7 +1095,7 @@ func (a *BasicAggregator) Result() map[entity.AggregatorType]*entity.AggregateDa
 	return res
 }
 
-// ScoreDistributionAggregator 分布聚合器.
+// ScoreDistributionAggregator distribution aggregator.
 type ScoreDistributionAggregator struct {
 	Score2Count map[float64]int64
 	Total       int64
@@ -856,7 +1121,7 @@ func (a *ScoreDistributionAggregator) Result() map[entity.AggregatorType]*entity
 	data := &entity.AggregateData{
 		DataType: entity.ScoreDistribution,
 		ScoreDistribution: &entity.ScoreDistributionData{
-			ScoreDistributionItems: make([]*entity.ScoreDistributionItem, len(scoreCounts)),
+			ScoreDistributionItems: make([]*entity.ScoreDistributionItem, 0, len(scoreCounts)),
 		},
 	}
 
@@ -865,6 +1130,155 @@ func (a *ScoreDistributionAggregator) Result() map[entity.AggregatorType]*entity
 			Score:      scoreCount.Score,
 			Count:      scoreCount.Count,
 			Percentage: float64(scoreCount.Count) / float64(a.Total),
+		}
+		data.ScoreDistribution.ScoreDistributionItems = append(data.ScoreDistribution.ScoreDistributionItems, scoreDistributionItem)
+	}
+	gslice.SortBy(data.ScoreDistribution.ScoreDistributionItems, func(l *entity.ScoreDistributionItem, r *entity.ScoreDistributionItem) bool {
+		return l.Score < r.Score
+	})
+
+	return map[entity.AggregatorType]*entity.AggregateData{
+		entity.Distribution: data,
+	}
+}
+
+// BucketScoreDistributionAggregator distribution aggregator using buckets.
+// Uses configurable number of buckets to distribute scores between min and max values.
+// This is more memory-efficient for large datasets compared to ScoreDistributionAggregator.
+type BucketScoreDistributionAggregator struct {
+	Scores     []float64 // Store all scores for bucket calculation in Result()
+	Min        float64   // Minimum score value
+	Max        float64   // Maximum score value
+	Total      int64     // Total number of scores
+	NumBuckets int       // Number of buckets
+}
+
+func NewBucketScoreDistributionAggregator(numBuckets int) *BucketScoreDistributionAggregator {
+	if numBuckets <= 0 {
+		numBuckets = 20
+	}
+	return &BucketScoreDistributionAggregator{
+		Scores:     make([]float64, 0),
+		NumBuckets: numBuckets,
+	}
+}
+
+func (a *BucketScoreDistributionAggregator) Append(score float64) {
+	a.Scores = append(a.Scores, score)
+
+	if len(a.Scores) == 1 {
+		a.Min = score
+		a.Max = score
+	} else {
+		if score < a.Min {
+			a.Min = score
+		}
+		if score > a.Max {
+			a.Max = score
+		}
+	}
+
+	a.Total++
+}
+
+// getBucketIndex calculates which bucket (0 to numBuckets-1) a score belongs to
+// Uses left-closed right-open intervals [start, end) to handle boundary values correctly
+// For bucket i: [Min + i*width, Min + (i+1)*width)
+// Boundary values (equal to bucket end) belong to the next bucket
+func (a *BucketScoreDistributionAggregator) getBucketIndex(score float64) int {
+	if len(a.Scores) == 0 {
+		return 0
+	}
+
+	if a.Max == a.Min {
+		return 0
+	}
+
+	// Handle boundary cases
+	if score <= a.Min {
+		return 0
+	}
+	if score >= a.Max {
+		return a.NumBuckets - 1
+	}
+
+	// Calculate bucket index using floor to ensure left-closed right-open intervals
+	// bucketWidth = (Max - Min) / NumBuckets
+	// For score in [Min + i*width, Min + (i+1)*width), it belongs to bucket i
+	// Using floor ensures that boundary values (equal to bucket end) go to next bucket
+	bucketWidth := (a.Max - a.Min) / float64(a.NumBuckets)
+	offset := score - a.Min
+	bucketIndex := int(math.Floor(offset / bucketWidth))
+
+	// Ensure bucket index is within valid range [0, NumBuckets-1]
+	if bucketIndex < 0 {
+		bucketIndex = 0
+	} else if bucketIndex >= a.NumBuckets {
+		bucketIndex = a.NumBuckets - 1
+	}
+
+	return bucketIndex
+}
+
+// getBucketRange returns the score range for a given bucket index
+// bucketWidth is pre-calculated to avoid repeated computation
+func (a *BucketScoreDistributionAggregator) getBucketRange(bucketIndex int, bucketWidth float64) (start, end float64) {
+	if len(a.Scores) == 0 || a.Max == a.Min {
+		return a.Min, a.Max
+	}
+
+	start = a.Min + float64(bucketIndex)*bucketWidth
+	if bucketIndex == a.NumBuckets-1 {
+		end = a.Max
+	} else {
+		end = a.Min + float64(bucketIndex+1)*bucketWidth
+	}
+
+	return start, end
+}
+
+func (a *BucketScoreDistributionAggregator) Result() map[entity.AggregatorType]*entity.AggregateData {
+	data := &entity.AggregateData{
+		DataType: entity.ScoreDistribution,
+		ScoreDistribution: &entity.ScoreDistributionData{
+			ScoreDistributionItems: make([]*entity.ScoreDistributionItem, 0, a.NumBuckets),
+		},
+	}
+
+	// Calculate bucket counts based on final min/max
+	bucketCounts := make([]int64, a.NumBuckets)
+	for _, score := range a.Scores {
+		bucketIndex := a.getBucketIndex(score)
+		bucketCounts[bucketIndex]++
+	}
+
+	// Calculate bucket width once for all buckets
+	var bucketWidth float64
+	if len(a.Scores) > 0 && a.Max != a.Min {
+		bucketWidth = (a.Max - a.Min) / float64(a.NumBuckets)
+	}
+
+	// Generate distribution items for all buckets (including empty buckets)
+	for i := 0; i < a.NumBuckets; i++ {
+		count := bucketCounts[i]
+
+		start, end := a.getBucketRange(i, bucketWidth)
+		displayEnd := end
+		if i < a.NumBuckets-1 {
+			displayEnd = end - 0.01
+			displayEnd = math.Floor(displayEnd*100) / 100
+		}
+		scoreRange := fmt.Sprintf("%.2f-%.2f", start, displayEnd)
+
+		percentage := 0.0
+		if a.Total > 0 {
+			percentage = float64(count) / float64(a.Total)
+		}
+
+		scoreDistributionItem := &entity.ScoreDistributionItem{
+			Score:      scoreRange,
+			Count:      count,
+			Percentage: percentage,
 		}
 		data.ScoreDistribution.ScoreDistributionItems = append(data.ScoreDistribution.ScoreDistributionItems, scoreDistributionItem)
 	}
@@ -879,14 +1293,14 @@ type ScoreCount struct {
 	Count int64
 }
 
-// GetTopNScores 获取出现次数最高的前 N 个分数
+// GetTopNScores get top N scores with highest counts
 func GetTopNScores(score2Count map[float64]int64, n int) []ScoreCount {
 	scoreCounts := make([]ScoreCount, 0, len(score2Count))
 	for score, count := range score2Count {
 		scoreCounts = append(scoreCounts, ScoreCount{Score: strconv.FormatFloat(score, 'f', 2, 64), Count: count})
 	}
 
-	// 按照 Count 降序排序
+	// Sort by Count in descending order
 	sort.Slice(scoreCounts, func(i, j int) bool {
 		return scoreCounts[i].Count > scoreCounts[j].Count
 	})
@@ -895,13 +1309,13 @@ func GetTopNScores(score2Count map[float64]int64, n int) []ScoreCount {
 		return scoreCounts
 	}
 
-	// 取出前 N 个（如果不足 N 个则返回全部）
+	// Take top N (if less than N, return all)
 	if len(scoreCounts) > n {
 		aggregatedCount := int64(0)
 		for i := 5; i < len(scoreCounts); i++ {
 			aggregatedCount += scoreCounts[i].Count
 		}
-		scoreCounts = append(scoreCounts[:n], ScoreCount{Score: "其他", Count: aggregatedCount})
+		scoreCounts = append(scoreCounts[:n], ScoreCount{Score: "Other", Count: aggregatedCount})
 	}
 	return scoreCounts
 }
@@ -949,13 +1363,13 @@ func NewCategoricalAggregatorGroup() *CategoricalAggregatorGroup {
 	return m
 }
 
-// OptionDistributionAggregator 选项分布聚合器
+// OptionDistributionAggregator option distribution aggregator
 type OptionDistributionAggregator struct {
 	Option2Count map[string]int64 // optionID -> count
 	Total        int64
 }
 
-// Append 向聚合器中添加一个选项
+// Append adds an option to the aggregator
 func (a *OptionDistributionAggregator) Append(option string) {
 	if a.Option2Count == nil {
 		a.Option2Count = make(map[string]int64)
@@ -970,7 +1384,7 @@ func (a *OptionDistributionAggregator) Append(option string) {
 	a.Total++
 }
 
-// Result 计算并返回选项分布的结果
+// Result calculates and returns the option distribution result
 func (a *OptionDistributionAggregator) Result() map[entity.AggregatorType]*entity.AggregateData {
 	optionCounts := GetTopNOptions(a.Option2Count, -1)
 	data := &entity.AggregateData{
@@ -994,20 +1408,20 @@ func (a *OptionDistributionAggregator) Result() map[entity.AggregatorType]*entit
 	}
 }
 
-// OptionCount 选项及其计数
+// OptionCount option and its count
 type OptionCount struct {
 	Option string
 	Count  int64
 }
 
-// GetTopNOptions 获取出现次数最高的前 N 个选项
+// GetTopNOptions get top N options with highest counts
 func GetTopNOptions(option2Count map[string]int64, n int) []OptionCount {
 	optionCounts := make([]OptionCount, 0, len(option2Count))
 	for option, count := range option2Count {
 		optionCounts = append(optionCounts, OptionCount{Option: option, Count: count})
 	}
 
-	// 按照 Count 降序排序
+	// Sort by Count in descending order
 	sort.Slice(optionCounts, func(i, j int) bool {
 		return optionCounts[i].Count > optionCounts[j].Count
 	})
@@ -1016,13 +1430,30 @@ func GetTopNOptions(option2Count map[string]int64, n int) []OptionCount {
 		return optionCounts
 	}
 
-	// 取出前 N 个（如果不足 N 个则返回全部）
+	// Take top N (if less than N, return all)
 	if len(optionCounts) > n {
 		aggregatedCount := int64(0)
 		for i := 5; i < len(optionCounts); i++ {
 			aggregatedCount += optionCounts[i].Count
 		}
-		optionCounts = append(optionCounts[:n], OptionCount{Option: "其他", Count: aggregatedCount})
+		optionCounts = append(optionCounts[:n], OptionCount{Option: "Other", Count: aggregatedCount})
 	}
 	return optionCounts
+}
+
+func (e *ExptAggrResultServiceImpl) MakeCalcExptAggrResultLockKey(exptID int64) string {
+	return fmt.Sprintf("calc_expt_result_aggr:%d", exptID)
+}
+
+func (e *ExptAggrResultServiceImpl) PublishExptAggrResultEvent(ctx context.Context, event *entity.AggrCalculateEvent, duration *time.Duration) error {
+	locked, err := e.locker.Lock(ctx, e.MakeCalcExptAggrResultLockKey(event.ExperimentID), time.Minute*10)
+	if err != nil {
+		return err
+	}
+
+	if !locked {
+		return errorx.NewByCode(errno.DuplicateCalcExptAggrResultErrorCode)
+	}
+
+	return e.publisher.PublishExptAggrCalculateEvent(ctx, []*entity.AggrCalculateEvent{event}, duration)
 }

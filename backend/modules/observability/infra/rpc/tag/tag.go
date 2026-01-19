@@ -63,6 +63,7 @@ func (t *TagRPCAdapter) BatchGetTagInfo(ctx context.Context, workspaceID int64, 
 		TagKeyIds:   ids,
 	})
 	if err != nil {
+		logs.CtxWarn(ctx, "failed to batch get tags: %v", err)
 		return nil, err
 	} else if len(res.TagInfoList) == 0 {
 		return nil, fmt.Errorf("tag info not found")

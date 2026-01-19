@@ -11,6 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	time_util "github.com/coze-dev/coze-loop/backend/pkg/time"
@@ -210,6 +211,7 @@ func FilterFieldDTO2DO(field *filter.FilterField) *loop_span.FilterField {
 		FieldName: fieldName,
 		Values:    field.Values,
 		FieldType: fieldTypeDTO2DO(field.FieldType),
+		ExtraInfo: field.ExtraInfo,
 	}
 	if field.QueryAndOr != nil {
 		fField.QueryAndOr = ptr.Of(loop_span.QueryAndOrEnum(*field.QueryAndOr))
@@ -242,4 +244,100 @@ func fieldTypeDTO2DO(fieldType *filter.FieldType) loop_span.FieldType {
 		return loop_span.FieldTypeString
 	}
 	return loop_span.FieldType(*fieldType)
+}
+
+func OtelSpans2LoopSpans(spans []*otel.LoopSpan) []*loop_span.Span {
+	result := make([]*loop_span.Span, 0)
+	for i := range spans {
+		result = append(result, OtelSpan2LoopSpan(spans[i]))
+	}
+	return result
+}
+
+func OtelSpan2LoopSpan(span *otel.LoopSpan) *loop_span.Span {
+	return &loop_span.Span{
+		StartTime:        span.StartTime,
+		SpanID:           span.SpanID,
+		ParentID:         span.ParentID,
+		TraceID:          span.TraceID,
+		DurationMicros:   span.DurationMicros,
+		CallType:         span.CallType,
+		PSM:              span.PSM,
+		LogID:            span.LogID,
+		WorkspaceID:      span.WorkspaceID,
+		SpanName:         span.SpanName,
+		SpanType:         span.SpanType,
+		Method:           span.Method,
+		StatusCode:       span.StatusCode,
+		Input:            span.Input,
+		Output:           span.Output,
+		ObjectStorage:    span.ObjectStorage,
+		SystemTagsString: span.SystemTagsString,
+		SystemTagsLong:   span.SystemTagsLong,
+		SystemTagsDouble: span.SystemTagsDouble,
+		TagsString:       span.TagsString,
+		TagsLong:         span.TagsLong,
+		TagsDouble:       span.TagsDouble,
+		TagsBool:         span.TagsBool,
+		TagsByte:         span.TagsByte,
+	}
+}
+
+func FilterFieldsDO2DTO(f *loop_span.FilterFields) *filter.FilterFields {
+	if f == nil {
+		return nil
+	}
+	ret := &filter.FilterFields{}
+	if f.QueryAndOr != nil {
+		ret.QueryAndOr = ptr.Of(filter.QueryRelation(*f.QueryAndOr))
+	}
+	ret.FilterFields = FilterFieldListDO2DTO(f.FilterFields)
+	return ret
+}
+
+func FilterFieldListDO2DTO(fields []*loop_span.FilterField) []*filter.FilterField {
+	ret := make([]*filter.FilterField, 0)
+	for _, field := range fields {
+		if field == nil {
+			continue
+		}
+		ret = append(ret, FilterFieldDO2DTO(field))
+	}
+	return ret
+}
+
+func FilterFieldDO2DTO(field *loop_span.FilterField) *filter.FilterField {
+	if field == nil {
+		return nil
+	}
+	fieldName := ""
+	if field.FieldName != "" {
+		fieldName = field.FieldName
+	}
+	fField := &filter.FilterField{
+		FieldName: ptr.Of(fieldName),
+		Values:    field.Values,
+		FieldType: fieldTypeDO2DTO(field.FieldType),
+		ExtraInfo: field.ExtraInfo,
+	}
+	if field.QueryAndOr != nil {
+		fField.QueryAndOr = ptr.Of(filter.QueryRelation(*field.QueryAndOr))
+	}
+	if field.QueryType != nil {
+		fField.QueryType = ptr.Of(filter.QueryType(*field.QueryType))
+	}
+	if field.SubFilter != nil {
+		fField.SubFilter = FilterFieldsDO2DTO(field.SubFilter)
+	}
+	if field.IsCustom {
+		fField.IsCustom = ptr.Of(field.IsCustom)
+	}
+	return fField
+}
+
+func fieldTypeDO2DTO(fieldType loop_span.FieldType) *filter.FieldType {
+	if fieldType == "" {
+		return ptr.Of(filter.FieldTypeString)
+	}
+	return ptr.Of(filter.FieldType(fieldType))
 }

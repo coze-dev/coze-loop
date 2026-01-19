@@ -26,20 +26,21 @@ func ExptTurnResultFilterEntity2PO(filterEntity *entity.ExptTurnResultFilterEnti
 	}
 
 	exptTurnResultFilter := &model.ExptTurnResultFilter{
-		SpaceID:          strconv.FormatInt(filterEntity.SpaceID, 10),
-		ExptID:           strconv.FormatInt(filterEntity.ExptID, 10),
-		ItemID:           strconv.FormatInt(filterEntity.ItemID, 10),
-		ItemIdx:          filterEntity.ItemIdx,
-		TurnID:           strconv.FormatInt(filterEntity.TurnID, 10),
-		Status:           int32(filterEntity.Status),
-		EvalTargetData:   filterEntity.EvalTargetData,
-		EvaluatorScore:   filterEntity.EvaluatorScore,
-		AnnotationFloat:  filterEntity.AnnotationFloat,
-		AnnotationBool:   annotationBool,
-		AnnotationString: filterEntity.AnnotationString,
-		CreatedDate:      filterEntity.CreatedDate,
-		EvalSetVersionID: strconv.FormatInt(filterEntity.EvalSetVersionID, 10),
-		UpdatedAt:        filterEntity.UpdatedAt,
+		SpaceID:           strconv.FormatInt(filterEntity.SpaceID, 10),
+		ExptID:            strconv.FormatInt(filterEntity.ExptID, 10),
+		ItemID:            strconv.FormatInt(filterEntity.ItemID, 10),
+		ItemIdx:           filterEntity.ItemIdx,
+		TurnID:            strconv.FormatInt(filterEntity.TurnID, 10),
+		Status:            int32(filterEntity.Status),
+		EvalTargetData:    filterEntity.EvalTargetData,
+		EvaluatorScore:    filterEntity.EvaluatorScore,
+		AnnotationFloat:   filterEntity.AnnotationFloat,
+		AnnotationBool:    annotationBool,
+		AnnotationString:  filterEntity.AnnotationString,
+		EvalTargetMetrics: filterEntity.EvalTargetMetrics,
+		CreatedDate:       filterEntity.CreatedDate,
+		EvalSetVersionID:  strconv.FormatInt(filterEntity.EvalSetVersionID, 10),
+		UpdatedAt:         filterEntity.UpdatedAt,
 	}
 	if filterEntity.EvaluatorScoreCorrected {
 		exptTurnResultFilter.EvaluatorScoreCorrected = 1
@@ -60,19 +61,20 @@ func ExptTurnResultFilterPO2Entity(filterPO *model.ExptTurnResultFilter) *entity
 	}
 
 	exptTurnResultFilterEntity := &entity.ExptTurnResultFilterEntity{
-		SpaceID:          ParseStringToInt64(filterPO.SpaceID),
-		ExptID:           ParseStringToInt64(filterPO.ExptID),
-		ItemID:           ParseStringToInt64(filterPO.ItemID),
-		ItemIdx:          filterPO.ItemIdx,
-		TurnID:           ParseStringToInt64(filterPO.TurnID),
-		Status:           entity.ItemRunState(filterPO.Status),
-		EvalTargetData:   filterPO.EvalTargetData,
-		EvaluatorScore:   filterPO.EvaluatorScore,
-		AnnotationFloat:  filterPO.AnnotationFloat,
-		AnnotationBool:   annotationBool,
-		AnnotationString: filterPO.AnnotationString,
-		CreatedDate:      filterPO.CreatedDate,
-		EvalSetVersionID: ParseStringToInt64(filterPO.EvalSetVersionID),
+		SpaceID:           ParseStringToInt64(filterPO.SpaceID),
+		ExptID:            ParseStringToInt64(filterPO.ExptID),
+		ItemID:            ParseStringToInt64(filterPO.ItemID),
+		ItemIdx:           filterPO.ItemIdx,
+		TurnID:            ParseStringToInt64(filterPO.TurnID),
+		Status:            entity.ItemRunState(filterPO.Status),
+		EvalTargetData:    filterPO.EvalTargetData,
+		EvaluatorScore:    filterPO.EvaluatorScore,
+		AnnotationFloat:   filterPO.AnnotationFloat,
+		AnnotationBool:    annotationBool,
+		AnnotationString:  filterPO.AnnotationString,
+		EvalTargetMetrics: filterPO.EvalTargetMetrics,
+		CreatedDate:       filterPO.CreatedDate,
+		EvalSetVersionID:  ParseStringToInt64(filterPO.EvalSetVersionID),
 	}
 	if filterPO.EvaluatorScoreCorrected > 0 {
 		exptTurnResultFilterEntity.EvaluatorScoreCorrected = true

@@ -1,0 +1,32 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable declaration-no-important */
+/* stylelint-disable font-family-no-missing-generic-family-keyword */
+/* stylelint-disable order/properties-order */
+.black-schema-editor {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+
+  .header {
+    display: flex;
+    flex-direction: row;
+    height: 40px;
+    align-items: center;
+    background: var(--coz-bg-secondary, #F0F0F7);
+
+    .title {
+      padding-left: 12px;
+      color: var(--coz-fg-dim, #37436a61);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: JetBrainsMonoBold !important;
+    }
+  }
+
+  .editor-container {
+    flex-grow: 1;
+    height: 500px;
+  }
+}

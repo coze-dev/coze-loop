@@ -10,20 +10,14 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
 
 func NewConsumerWorkers(
-	cfgFactory conf.IConfigLoaderFactory,
+	loader conf.IConfigLoader,
 	exptApp application.IExperimentApplication,
 ) ([]mq.IConsumerWorker, error) {
-	loader, err := cfgFactory.NewConfigLoader(consts.EvaluationConfigFileName)
-	if err != nil {
-		return nil, err
-	}
-
 	return []mq.IConsumerWorker{
 		newExptSchedulerEventConsumer(newExptSchedulerConsumer(exptApp), loader),
 		newExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),

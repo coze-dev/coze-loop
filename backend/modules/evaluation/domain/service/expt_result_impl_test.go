@@ -19,12 +19,14 @@ import (
 	idgenMocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -306,6 +308,89 @@ func TestExptResultServiceImpl_CreateStats(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
+	t.Run("skip experiments without eval target", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		expts := []*entity.Experiment{
+			{
+				ID:              1,
+				TargetVersionID: 0, // ContainsEvalTarget == false
+			},
+		}
+
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts, false)
+		assert.NoError(t, err)
+		assert.Len(t, got, 0)
+	})
+
+	t.Run("experiment with eval target but without trajectory support", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		expts := []*entity.Experiment{
+			{
+				ID:              2,
+				TargetVersionID: 1,                            // ContainsEvalTarget == true
+				TargetType:      entity.EvalTargetTypeCozeBot, // SupptTrajectory == false
+			},
+		}
+
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts, false)
+		assert.NoError(t, err)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, int64(2), got[0].ExptID)
+			// actual_output + 4 metrics
+			assert.Len(t, got[0].Columns, 1+len(columnsEvalTargetMtr))
+			assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Columns[0].Name)
+
+			// should not contain trajectory column
+			for _, c := range got[0].Columns {
+				assert.NotEqual(t, consts.ReportColumnNameEvalTargetTrajectory, c.Name)
+			}
+		}
+	})
+
+	t.Run("experiment with eval target and trajectory support, fullTrajectory=true", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		expts := []*entity.Experiment{
+			{
+				ID:              3,
+				TargetVersionID: 1,                                    // ContainsEvalTarget == true
+				TargetType:      entity.EvalTargetTypeVolcengineAgent, // SupptTrajectory == true
+			},
+		}
+
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts, true)
+		assert.NoError(t, err)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, int64(3), got[0].ExptID)
+			// actual_output + trajectory + 4 metrics
+			assert.Len(t, got[0].Columns, 1+1+len(columnsEvalTargetMtr))
+			assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Columns[0].Name)
+			assert.Equal(t, consts.ReportColumnNameEvalTargetTrajectory, got[0].Columns[1].Name)
+		}
+	})
+
+	t.Run("experiment with eval target and trajectory support, fullTrajectory=false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		expts := []*entity.Experiment{
+			{
+				ID:              4,
+				TargetVersionID: 1,                                    // ContainsEvalTarget == true
+				TargetType:      entity.EvalTargetTypeVolcengineAgent, // SupptTrajectory == true
+			},
+		}
+
+		got, err := svc.getExptColumnsEvalTarget(context.Background(), expts, false)
+		assert.NoError(t, err)
+		if assert.Len(t, got, 1) {
+			assert.Equal(t, int64(4), got[0].ExptID)
+			// actual_output + trajectory + 4 metrics（只要 SupptTrajectory=true 就会返回 trajectory 列，不受 fullTrajectory 参数影响）
+			assert.Len(t, got[0].Columns, 1+1+len(columnsEvalTargetMtr))
+			assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Columns[0].Name)
+			assert.Equal(t, consts.ReportColumnNameEvalTargetTrajectory, got[0].Columns[1].Name)
+		}
+	})
 }
 
 func TestExptResultServiceImpl_GetExptItemTurnResults(t *testing.T) {
@@ -767,7 +852,7 @@ func TestExptResultServiceImpl_GetIncompleteTurns(t *testing.T) {
 						continue
 					}
 					if got[i].TurnID != wantTurn.TurnID || got[i].ItemID != wantTurn.ItemID {
-						t.Errorf("GetIncompleteTurns() got[%d] = {TurnID: %v, ItemID: %v}, want {TurnID: %v, ItemID: %v}",
+						t.Errorf("GetIncompleteTurns() got[%d] = {RecordID: %v, ItemID: %v}, want {RecordID: %v, ItemID: %v}",
 							i, got[i].TurnID, got[i].ItemID, wantTurn.TurnID, wantTurn.ItemID)
 					}
 				}
@@ -807,6 +892,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
+					EvalSetID:        1,
+					EvalSetVersionID: 1,
+					ExptType:         entity.ExptType_Offline,
+				}}, nil).AnyTimes()
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{EvalSetVersionID: 1}, nil).AnyTimes()
 				mockExptTurnResultRepo.EXPECT().ListTurnResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTurnResult{{ID: 1, ItemID: 1}}, int64(1), nil)
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
@@ -931,6 +1022,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
+					EvalSetID:        1,
+					EvalSetVersionID: 1,
+					ExptType:         entity.ExptType_Offline,
+				}}, nil).AnyTimes()
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					EvalSetVersionID: 1,
 					EvalSetID:        1,
@@ -1035,7 +1132,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockLWT := lwtMocks.NewMockILatestWriteTracker(ctrl)
 				mockEvaluationSetService := svcMocks.NewMockIEvaluationSetService(ctrl)
 
-				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("get experiment error"))
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return(nil, fmt.Errorf("get experiment error"))
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 
@@ -1066,10 +1163,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
-				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
 					EvalSetVersionID: 1,
 					EvalSetID:        1,
-				}, nil)
+					ExptType:         entity.ExptType_Offline,
+				}}, nil)
 				mockExptTurnResultRepo.EXPECT().ListTurnResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), fmt.Errorf("list turn result error"))
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
@@ -1117,8 +1216,9 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 		{
 			name: "在线实验对比场景",
 			param: &entity.MGetExperimentResultParam{
-				SpaceID: 100,
-				ExptIDs: []int64{1, 2},
+				SpaceID:    100,
+				ExptIDs:    []int64{1, 2},
+				BaseExptID: ptr.Of(int64(1)),
 			},
 			setup: func(ctrl *gomock.Controller) ExptResultServiceImpl {
 				mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
@@ -1130,10 +1230,19 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
-				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
-					ExptType:         entity.ExptType_Online,
-					EvalSetVersionID: 1,
-					EvalSetID:        1,
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1, 2}, int64(100)).Return([]*entity.Experiment{
+					{
+						ID:               1,
+						ExptType:         entity.ExptType_Online,
+						EvalSetVersionID: 1,
+						EvalSetID:        1,
+					},
+					{
+						ID:               2,
+						ExptType:         entity.ExptType_Online,
+						EvalSetVersionID: 1,
+						EvalSetID:        1,
+					},
 				}, nil)
 				mockMetric.EXPECT().EmitGetExptResult(gomock.Any(), gomock.Any()).AnyTimes()
 				mockLWT.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
@@ -1275,6 +1384,12 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 				mockTagRPCAdapter := rpcMocks.NewMockITagRPCAdapter(ctrl)
 
+				mockExperimentRepo.EXPECT().MGetByID(gomock.Any(), []int64{1}, int64(100)).Return([]*entity.Experiment{{
+					ID:               1,
+					EvalSetVersionID: 1,
+					EvalSetID:        1,
+					ExptType:         entity.ExptType_Offline,
+				}}, nil).AnyTimes()
 				mockExperimentRepo.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.Experiment{
 					EvalSetVersionID: 1,
 					EvalSetID:        1,
@@ -1401,13 +1516,13 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 			defer ctrl.Finish()
 
 			svc := tt.setup(ctrl)
-			got, _, _, _, _, _, err := svc.MGetExperimentResult(context.Background(), tt.param)
+			got, err := svc.MGetExperimentResult(context.Background(), tt.param)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MGetExperimentResult() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MGetExperimentResult() got = %v, want %v", got, tt.want)
+			if !tt.wantErr && !reflect.DeepEqual(got.ColumnEvaluators, tt.want) {
+				t.Errorf("MGetExperimentResult() got = %v, want %v", got.ColumnEvaluators, tt.want)
 			}
 		})
 	}
@@ -1908,6 +2023,7 @@ func TestNewExptResultService(t *testing.T) {
 		mockEvaluationSetItemService,
 		mockPublisher,
 		mockTagAdapter,
+		nil,
 	)
 
 	impl, ok := svc.(ExptResultServiceImpl)
@@ -3565,7 +3681,550 @@ func TestParseTurnKey(t *testing.T) {
 					t.Errorf("ParseTurnKey() got.ItemID = %v, want %v", got.ItemID, tt.want.ItemID)
 				}
 				if got.TurnID != tt.want.TurnID {
-					t.Errorf("ParseTurnKey() got.TurnID = %v, want %v", got.TurnID, tt.want.TurnID)
+					t.Errorf("ParseTurnKey() got.RecordID = %v, want %v", got.TurnID, tt.want.TurnID)
+				}
+			}
+		})
+	}
+}
+
+func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
+	tests := []struct {
+		name                string
+		baselineItemResults []*entity.ExptItemResult
+		baselineTurnResults []*entity.ExptTurnResult
+		itemID2ItemRunState map[int64]entity.ItemRunState
+		wantExt             map[string]string
+		wantRunState        entity.ItemRunState
+	}{
+		{
+			name: "Ext字段有值且itemID2ItemRunState存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext: map[string]string{
+						"key1": "value1",
+						"key2": "value2",
+					},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{
+				1: entity.ItemRunState_Processing,
+			},
+			wantExt: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+			},
+			wantRunState: entity.ItemRunState_Processing,
+		},
+		{
+			name: "Ext字段为空map且itemID2ItemRunState不存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext:     map[string]string{},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{},
+			wantExt:             nil,
+			wantRunState:        entity.ItemRunState_Success,
+		},
+		{
+			name: "Ext字段为nil且itemID2ItemRunState不存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Fail,
+					Ext:     nil,
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{},
+			wantExt:             nil,
+			wantRunState:        entity.ItemRunState_Fail,
+		},
+		{
+			name: "Ext字段有值且itemID2ItemRunState不存在",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext: map[string]string{
+						"span_id": "span-123",
+					},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{},
+			wantExt: map[string]string{
+				"span_id": "span-123",
+			},
+			wantRunState: entity.ItemRunState_Success,
+		},
+		{
+			name: "多个ItemResult，Ext字段和itemID2ItemRunState混合",
+			baselineItemResults: []*entity.ExptItemResult{
+				{
+					ItemID:  1,
+					ItemIdx: 0,
+					Status:  entity.ItemRunState_Success,
+					Ext: map[string]string{
+						"key1": "value1",
+					},
+				},
+				{
+					ItemID:  2,
+					ItemIdx: 1,
+					Status:  entity.ItemRunState_Fail,
+					Ext:     map[string]string{},
+				},
+			},
+			baselineTurnResults: []*entity.ExptTurnResult{
+				{
+					ID:      1,
+					ItemID:  1,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+				{
+					ID:      2,
+					ItemID:  2,
+					TurnID:  0,
+					TurnIdx: 0,
+				},
+			},
+			itemID2ItemRunState: map[int64]entity.ItemRunState{
+				1: entity.ItemRunState_Processing,
+			},
+			wantExt: map[string]string{
+				"key1": "value1",
+			},
+			wantRunState: entity.ItemRunState_Processing,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// 创建必要的 mocks
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+			mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+			mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
+			mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+			mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+			mockEvaluationSetItemService := svcMocks.NewMockEvaluationSetItemService(ctrl)
+
+			// 创建参数
+			param := &entity.MGetExperimentResultParam{
+				SpaceID: 100,
+				ExptIDs: []int64{1},
+			}
+
+			// 调用 NewPayloadBuilder
+			builder := NewPayloadBuilder(
+				context.Background(),
+				param,
+				1,
+				tt.baselineTurnResults,
+				tt.baselineItemResults,
+				mockExperimentRepo,
+				mockExptTurnResultRepo,
+				mockExptAnnotateRepo,
+				mockEvalTargetService,
+				mockEvaluatorRecordService,
+				mockEvaluationSetItemService,
+				nil,
+				nil,
+				nil,
+				tt.itemID2ItemRunState,
+			)
+
+			// 验证结果
+			assert.NotNil(t, builder)
+			assert.NotNil(t, builder.ItemResults)
+
+			// 验证第一个 ItemResult 的 Ext 字段和 RunState
+			if len(builder.ItemResults) > 0 {
+				firstItemResult := builder.ItemResults[0]
+				assert.NotNil(t, firstItemResult.SystemInfo)
+
+				// 验证 Ext 字段
+				if tt.wantExt == nil {
+					assert.Nil(t, firstItemResult.Ext)
+				} else {
+					assert.NotNil(t, firstItemResult.Ext)
+					assert.Equal(t, tt.wantExt, firstItemResult.Ext)
+				}
+
+				// 验证 RunState
+				assert.Equal(t, tt.wantRunState, firstItemResult.SystemInfo.RunState)
+			}
+
+			// 如果有多个 ItemResult，验证第二个
+			if len(builder.ItemResults) > 1 && len(tt.baselineItemResults) > 1 {
+				secondItemResult := builder.ItemResults[1]
+				assert.NotNil(t, secondItemResult.SystemInfo)
+				// 第二个 ItemResult 的 Ext 应该是空的（因为 baselineItemResults[1].Ext 是空 map）
+				assert.Nil(t, secondItemResult.Ext)
+				// 第二个 ItemResult 的 RunState 应该是 baselineItemResults[1].Status（因为 itemID2ItemRunState 中没有 2）
+				assert.Equal(t, tt.baselineItemResults[1].Status, secondItemResult.SystemInfo.RunState)
+			}
+		})
+	}
+}
+
+func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
+	tests := []struct {
+		name           string
+		exptType       entity.ExptType
+		fullTrajectory bool
+		setup          func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService)
+		wantErr        bool
+		checkFunc      func(t *testing.T, builder *ExptResultBuilder)
+	}{
+		{
+			name:           "Online experiment should skip buildTargetOutput",
+			exptType:       entity.ExptType_Online,
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Online,
+					},
+					SpaceID:           100,
+					turnResultDO:      []*entity.ExptTurnResult{},
+					evalTargetService: mockEvalTargetService,
+					FullTrajectory:    false,
+				}
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.Nil(t, builder.turnResultID2TargetOutput)
+			},
+		},
+		{
+			name:           "FullTrajectory=false should trim trajectory field",
+			exptType:       entity.ExptType_Offline,
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID:             10,
+							TargetResultID: 1,
+						},
+					},
+					evalTargetService: mockEvalTargetService,
+					FullTrajectory:    false,
+				}
+				// 创建一个有效的 JSON 对象作为 trajectory
+				fullTrajectoryJSON := `{"id":"trace-1","root_step":{"step_id":"step-1","type":"tool_call","content":"very long content that should be trimmed"}}`
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.EvalTargetRecord{
+						{
+							ID: 1,
+							EvalTargetOutputData: &entity.EvalTargetOutputData{
+								OutputFields: map[string]*entity.Content{
+									"actual_output": {
+										Text: gptr.Of("test output"),
+									},
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of(fullTrajectoryJSON),
+									},
+								},
+							},
+						},
+					}, nil)
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2TargetOutput)
+				targetOutput, ok := builder.turnResultID2TargetOutput[10]
+				assert.True(t, ok)
+				assert.NotNil(t, targetOutput)
+				assert.NotNil(t, targetOutput.EvalTargetRecord)
+				assert.NotNil(t, targetOutput.EvalTargetRecord.EvalTargetOutputData)
+				// trajectory 字段应该被剪裁而不是删除
+				trajectoryContent, hasTrajectory := targetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory, "trajectory field should exist when FullTrajectory=false, but should be trimmed")
+				assert.NotNil(t, trajectoryContent)
+				assert.NotNil(t, trajectoryContent.Text)
+				// 验证内容已被剪裁（使用 generateJsonObjectPreview）
+				originalJSON := `{"id":"trace-1","root_step":{"step_id":"step-1","type":"tool_call","content":"very long content that should be trimmed"}}`
+				expectedPreview := utils.GenerateJsonObjectPreview([]byte(originalJSON))
+				assert.Equal(t, expectedPreview, *trajectoryContent.Text, "trajectory should be trimmed using generateJsonObjectPreview")
+				// actual_output 字段应该保留
+				_, hasActualOutput := targetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields["actual_output"]
+				assert.True(t, hasActualOutput, "actual_output field should be preserved")
+			},
+		},
+		{
+			name:           "FullTrajectory=true should preserve trajectory field",
+			exptType:       entity.ExptType_Offline,
+			fullTrajectory: true,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID:             10,
+							TargetResultID: 1,
+						},
+					},
+					evalTargetService: mockEvalTargetService,
+					FullTrajectory:    true,
+				}
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.EvalTargetRecord{
+						{
+							ID: 1,
+							EvalTargetOutputData: &entity.EvalTargetOutputData{
+								OutputFields: map[string]*entity.Content{
+									"actual_output": {
+										Text: gptr.Of("test output"),
+									},
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of("test trajectory"),
+									},
+								},
+							},
+						},
+					}, nil)
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2TargetOutput)
+				targetOutput, ok := builder.turnResultID2TargetOutput[10]
+				assert.True(t, ok)
+				assert.NotNil(t, targetOutput)
+				assert.NotNil(t, targetOutput.EvalTargetRecord)
+				assert.NotNil(t, targetOutput.EvalTargetRecord.EvalTargetOutputData)
+				// trajectory 字段应该保留
+				_, hasTrajectory := targetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory, "trajectory field should be preserved when FullTrajectory=true")
+			},
+		},
+		{
+			name:           "FullTrajectory=false, nil OutputFields should not panic",
+			exptType:       entity.ExptType_Offline,
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID:             10,
+							TargetResultID: 1,
+						},
+					},
+					evalTargetService: mockEvalTargetService,
+					FullTrajectory:    false,
+				}
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.EvalTargetRecord{
+						{
+							ID: 1,
+							EvalTargetOutputData: &entity.EvalTargetOutputData{
+								OutputFields: nil,
+							},
+						},
+					}, nil)
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2TargetOutput)
+				targetOutput, ok := builder.turnResultID2TargetOutput[10]
+				assert.True(t, ok)
+				assert.NotNil(t, targetOutput)
+			},
+		},
+		{
+			name:           "FullTrajectory=false, invalid JSON should not be modified",
+			exptType:       entity.ExptType_Offline,
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID:             10,
+							TargetResultID: 1,
+						},
+					},
+					evalTargetService: mockEvalTargetService,
+					FullTrajectory:    false,
+				}
+				// 创建一个无效的 JSON（不是对象格式）
+				invalidJSON := `"not a json object"`
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.EvalTargetRecord{
+						{
+							ID: 1,
+							EvalTargetOutputData: &entity.EvalTargetOutputData{
+								OutputFields: map[string]*entity.Content{
+									"actual_output": {
+										Text: gptr.Of("test output"),
+									},
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of(invalidJSON),
+									},
+								},
+							},
+						},
+					}, nil)
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2TargetOutput)
+				targetOutput, ok := builder.turnResultID2TargetOutput[10]
+				assert.True(t, ok)
+				assert.NotNil(t, targetOutput)
+				assert.NotNil(t, targetOutput.EvalTargetRecord)
+				assert.NotNil(t, targetOutput.EvalTargetRecord.EvalTargetOutputData)
+				// trajectory 字段应该存在，但内容不变（因为不是有效的 JSON 对象）
+				trajectoryContent, hasTrajectory := targetOutput.EvalTargetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory, "trajectory field should exist")
+				assert.NotNil(t, trajectoryContent)
+				assert.NotNil(t, trajectoryContent.Text)
+				// 内容应该保持不变（因为 generateJsonObjectPreview 对无效 JSON 返回空字符串）
+				assert.Equal(t, `"not a json object"`, *trajectoryContent.Text, "invalid JSON should not be modified")
+			},
+		},
+		{
+			name:           "FullTrajectory=false, empty Text should not panic",
+			exptType:       entity.ExptType_Offline,
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID:             10,
+							TargetResultID: 1,
+						},
+					},
+					evalTargetService: mockEvalTargetService,
+					FullTrajectory:    false,
+				}
+				emptyText := ""
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.EvalTargetRecord{
+						{
+							ID: 1,
+							EvalTargetOutputData: &entity.EvalTargetOutputData{
+								OutputFields: map[string]*entity.Content{
+									"actual_output": {
+										Text: gptr.Of("test output"),
+									},
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: &emptyText,
+									},
+								},
+							},
+						},
+					}, nil)
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2TargetOutput)
+				targetOutput, ok := builder.turnResultID2TargetOutput[10]
+				assert.True(t, ok)
+				assert.NotNil(t, targetOutput)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			builder, _ := tt.setup(ctrl)
+			err := builder.buildTargetOutput(context.Background())
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, builder)
 				}
 			}
 		})

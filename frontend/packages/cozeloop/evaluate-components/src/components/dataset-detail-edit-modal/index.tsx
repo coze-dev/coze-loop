@@ -44,7 +44,7 @@ export const DatasetDetailEditModal = ({
       evaluation_set_id: datasetDetail?.id as string,
       workspace_id: spaceID,
     });
-    Toast.success(I18n.t('prompt_block_update_success'));
+    Toast.success(I18n.t('update_success'));
     onSuccess();
     setVisible(false);
   };
@@ -95,6 +95,7 @@ export const DatasetDetailEditModal = ({
               },
             ]}
           />
+
           <FormTextArea
             field="description"
             label={I18n.t('evaluation_set_description')}

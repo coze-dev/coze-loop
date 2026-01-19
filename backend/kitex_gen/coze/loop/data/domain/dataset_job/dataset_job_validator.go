@@ -31,6 +31,14 @@ func (p *DatasetIOFile) IsValid() error {
 	if len(p.Path) < int(1) {
 		return fmt.Errorf("field Path min_len rule failed, current value: %d", len(p.Path))
 	}
+	if p.ProviderAuth != nil {
+		if err := p.ProviderAuth.IsValid(); err != nil {
+			return fmt.Errorf("field ProviderAuth not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ProviderAuth) IsValid() error {
 	return nil
 }
 func (p *DatasetIODataset) IsValid() error {

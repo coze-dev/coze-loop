@@ -58,6 +58,7 @@ export const DatasetList = () => {
           {I18n.t('this_change_irreversible')}
         </Typography.Text>
       ),
+
       autoLoading: true,
       onOk: async () => {
         await StoneEvaluationApi.DeleteEvaluationSet({
@@ -67,8 +68,8 @@ export const DatasetList = () => {
         service.refresh();
       },
       showCancelButton: true,
-      cancelText: I18n.t('global_btn_cancel'),
-      okText: I18n.t('space_member_role_type_del_btn'),
+      cancelText: I18n.t('cancel'),
+      okText: I18n.t('delete'),
     });
   };
 
@@ -125,6 +126,7 @@ export const DatasetList = () => {
               defaultColumns={defaultColumns}
               onChange={setColumns}
             />
+
             <Button
               color="hgltplus"
               icon={<IconCozPlus />}
@@ -132,7 +134,7 @@ export const DatasetList = () => {
                 navigate('evaluation/datasets/create');
               }}
             >
-              {I18n.t('create_evaluation_set')}
+              {I18n.t('new_evaluation_set')}
             </Button>
           </div>
         </div>
@@ -170,7 +172,7 @@ export const DatasetList = () => {
             <EmptyState
               size="full_screen"
               icon={<IconCozIllusNone />}
-              title={I18n.t('failed_to_find_related_results')}
+              title={I18n.t('no_results_found')}
               description={I18n.t('try_other_keywords')}
             />
           ) : (
@@ -178,11 +180,12 @@ export const DatasetList = () => {
               size="full_screen"
               icon={<IconCozIllusAdd />}
               title={I18n.t('no_evaluation_dataset')}
-              description={I18n.t('evaluation_set_click_the_button_to_create')}
+              description={I18n.t('click_to_create_evaluation_set')}
             />
           )
         }
       />
+
       {selectedDataset ? (
         <DatasetDetailEditModal
           datasetDetail={selectedDataset}

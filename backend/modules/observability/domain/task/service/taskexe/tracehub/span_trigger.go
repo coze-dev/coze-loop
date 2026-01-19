@@ -19,14 +19,13 @@ import (
 
 func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, span *loop_span.Span) error {
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
-	logs.CtxInfo(ctx, "auto_task start, %s", logSuffix)
 
 	// 1. perform initial filtering based on space_id
 	// 1.1 Filter out spans that do not belong to any space or bot
 	cacheInfo := h.localCache.LoadTaskCache(ctx)
 	spaceIDs, botIDs := cacheInfo.WorkspaceIDs, cacheInfo.BotIDs
 	if !gslice.Contains(spaceIDs, span.WorkspaceID) && !gslice.Contains(botIDs, span.TagsString["bot_id"]) {
-		logs.CtxInfo(ctx, "no space or bot found for span, space_id=%s, bot_id=%s, %s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
+		logs.CtxDebug(ctx, "no space or bot found for span, space_id=%s, bot_id=%s, %s", span.WorkspaceID, span.TagsString["bot_id"], logSuffix)
 		return nil
 	}
 	// 1.2 Filter out spans of type Evaluator
@@ -67,7 +66,6 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 		logs.CtxError(ctx, "Failed to get consumer listening config, err: %v", err)
 		return nil, err
 	}
-
 	var subscribers []*spanSubscriber
 	taskDOs, err := h.listNonFinalTaskByRedis(ctx, span.WorkspaceID)
 	if err != nil {
@@ -87,6 +85,11 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 		}
 
 		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
+		tenants, err := h.getTenants(ctx, taskDO.GetPlatformType())
+		if err != nil {
+			logs.CtxError(ctx, "Failed to get tenants, err: %v", err)
+			return nil, err
+		}
 		subscribers = append(subscribers, &spanSubscriber{
 			taskID:      taskDO.ID,
 			t:           taskDO,
@@ -94,6 +97,7 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 			taskRepo:    h.taskRepo,
 			runType:     entity.TaskRunTypeNewData,
 			buildHelper: h.buildHelper,
+			tenants:     tenants,
 		})
 	}
 
@@ -253,7 +257,6 @@ func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span
 		if sub.t.TaskStatus != entity.TaskStatusRunning {
 			continue
 		}
-		logs.CtxInfo(ctx, " sub.AddSpan: %v", sub)
 		if err := sub.AddSpan(ctx, span); err != nil {
 			merr = multierror.Append(merr, errors.WithMessagef(err, "add span to subscriber, log_id=%s, trace_id=%s, span_id=%s, task_id=%d",
 				span.LogID, span.TraceID, span.SpanID, sub.taskID))

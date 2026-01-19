@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 /* eslint-disable
   max-lines,
+  prettier/prettier,
   @typescript-eslint/naming-convention,
   @typescript-eslint/unified-signatures
 -- skip */
@@ -11,66 +12,53 @@ import { type ReactNode } from 'react';
 import { type intlClient } from '@cozeloop/intl';
 
 interface I18nTranslateFn {
-  /** 账户 */
-  (key: 'account', fallbackText?: string): string;
-  /** 操作 */
-  (key: 'actions', fallbackText?: string): string;
-  /** 新增 */
-  (key: 'add', fallbackText?: string): string;
-  /** 应用 */
-  (key: 'apply', fallbackText?: string): string;
-  /** 返回 */
-  (key: 'back', fallbackText?: string): string;
-  /** 取消 */
-  (key: 'cancel', fallbackText?: string): string;
-  /** 取消 */
-  (key: 'Cancel', fallbackText?: string): string;
-  /** 清空 */
-  (key: 'clear', fallbackText?: string): string;
-  /** 代码 */
-  (key: 'code', fallbackText?: string): string;
-  /** 收起 */
-  (key: 'collapse', fallbackText?: string): string;
-  /** 确认 */
-  (key: 'confirm', fallbackText?: string): string;
-  /** 确认 */
-  (key: 'Confirm', fallbackText?: string): string;
-  /** 内容 */
-  (key: 'Content', fallbackText?: string): string;
-  /** 复制 */
-  (key: 'Copy', fallbackText?: string): string;
-  /** 复制 */
-  (key: 'copy', fallbackText?: string): string;
-  /** 调试 */
-  (key: 'debug', fallbackText?: string): string;
-  /** 删除 */
-  (key: 'delete', fallbackText?: string): string;
-  /** 删除 */
-  (key: 'Delete', fallbackText?: string): string;
-  /** Demo 空间 */
-  (key: 'demo_space', fallbackText?: string): string;
-  /** 描述 */
-  (key: 'description', fallbackText?: string): string;
-  /** 详情 */
-  (key: 'detail', fallbackText?: string): string;
-  /** 编辑 */
-  (key: 'Edit', fallbackText?: string): string;
-  /** 邮箱 */
-  (key: 'email', fallbackText?: string): string;
-  /** 展开 */
-  (key: 'expand', fallbackText?: string): string;
-  /** 实验 */
-  (key: 'experiment', fallbackText?: string): string;
-  /** 失败 */
-  (key: 'failure', fallbackText?: string): string;
-  /** {field}已存在 */
+  /** 兜底 */
+  (key: string, fallbackText?: string): string;
   (
-    key: 'field_exists',
-    options?: {
-      /** string */ field: ReactNode;
-    },
+    key: string,
+    options?: Record<string, ReactNode>,
     fallbackText?: string,
   ): string;
+  /** 轨迹 */
+  (key: 'trajectory', fallbackText?: string): string;
+  /** 我知道了 */
+  (key: 'acknowledged', fallbackText?: string): string;
+  /** 使用 */
+  (key: 'use', fallbackText?: string): string;
+  /** 统计 */
+  (key: 'statistics', fallbackText?: string): string;
+  /** 从 */
+  (key: 'from', fallbackText?: string): string;
+  /** 场景 */
+  (key: 'scene', fallbackText?: string): string;
+  /** 视频 */
+  (key: 'video', fallbackText?: string): string;
+  /** 终止中 */
+  (key: 'terminating', fallbackText?: string): string;
+  /** 终止 */
+  (key: 'terminate', fallbackText?: string): string;
+  /** 必填 */
+  (key: 'required', fallbackText?: string): string;
+  /** 已下线 */
+  (key: 'deprecated', fallbackText?: string): string;
+  /** 查找 */
+  (key: 'find', fallbackText?: string): string;
+  /** 正则表达式 */
+  (key: 'regex', fallbackText?: string): string;
+  /** 替换 */
+  (key: 'replace', fallbackText?: string): string;
+  /** 采纳 */
+  (key: 'accept', fallbackText?: string): string;
+  /** 变更 */
+  (key: 'change', fallbackText?: string): string;
+  /** 每 */
+  (key: 'every', fallbackText?: string): string;
+  /** 完成 */
+  (key: 'complete', fallbackText?: string): string;
+  /** 变量 */
+  (key: 'variable', fallbackText?: string): string;
+  /** 选择 */
+  (key: 'select', fallbackText?: string): string;
   /** {field}必填 */
   (
     key: 'field_is_required',
@@ -87,56 +75,138 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 字段 */
-  (key: 'field', fallbackText?: string): string;
-  /** 导入 */
-  (key: 'import', fallbackText?: string): string;
-  /** 输入 */
-  (key: 'input', fallbackText?: string): string;
-  /** 输入 */
-  (key: 'Input', fallbackText?: string): string;
-  /** 语言 */
-  (key: 'language', fallbackText?: string): string;
-  /** 登录 */
-  (key: 'login', fallbackText?: string): string;
-  /** 退出登录 */
-  (key: 'logout', fallbackText?: string): string;
-  /** 名称 */
-  (key: 'name', fallbackText?: string): string;
-  /** 网络错误 */
-  (key: 'network_error', fallbackText?: string): string;
-  /** 下一步 */
-  (key: 'next', fallbackText?: string): string;
-  /** 否 */
-  (key: 'no', fallbackText?: string): string;
+  /** {field}已存在 */
+  (
+    key: 'field_exists',
+    options?: {
+      /** string */ field: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** Prompt */
+  (key: 'prompt', fallbackText?: string): string;
+  /** Tokens */
+  (key: 'tokens', fallbackText?: string): string;
+  /** 版本 */
+  (key: 'version', fallbackText?: string): string;
+  /** 包含 */
+  (key: 'contain', fallbackText?: string): string;
+  /** 保存 */
+  (key: 'save', fallbackText?: string): string;
+  /** 编辑 */
+  (key: 'edit', fallbackText?: string): string;
+  /** 编排 */
+  (key: 'orchestration', fallbackText?: string): string;
+  /** 标签 */
+  (key: 'tag', fallbackText?: string): string;
+  /** 布尔值 */
+  (key: 'boolean', fallbackText?: string): string;
+  /** 操作 */
+  (key: 'actions', fallbackText?: string): string;
   /** 操作 */
   (key: 'operation', fallbackText?: string): string;
+  /** 操作符 */
+  (key: 'operator', fallbackText?: string): string;
+  /** 草稿 */
+  (key: 'draft', fallbackText?: string): string;
+  /** 测试 */
+  (key: 'test', fallbackText?: string): string;
+  /** 查看 */
+  (key: 'view', fallbackText?: string): string;
+  /** 成功 */
+  (key: 'success', fallbackText?: string): string;
+  /** 创建 */
+  (key: 'create', fallbackText?: string): string;
+  /** 创建人 */
+  (key: 'creator', fallbackText?: string): string;
+  /** 创建时间 */
+  (key: 'create_time', fallbackText?: string): string;
+  /** 代码 */
+  (key: 'code', fallbackText?: string): string;
+  /** 导入 */
+  (key: 'import', fallbackText?: string): string;
+  /** 得分 */
+  (key: 'score', fallbackText?: string): string;
+  /** 登录 */
+  (key: 'login', fallbackText?: string): string;
+  /** 多模态 */
+  (key: 'multimodal', fallbackText?: string): string;
+  /** 返回 */
+  (key: 'back', fallbackText?: string): string;
+  /** 分类 */
+  (key: 'category', fallbackText?: string): string;
+  /** 否 */
+  (key: 'no', fallbackText?: string): string;
+  /** 复制 */
+  (key: 'copy', fallbackText?: string): string;
+  /** 更新 */
+  (key: 'update', fallbackText?: string): string;
+  /** 更新人 */
+  (key: 'updater', fallbackText?: string): string;
+  /** 更新人： */
+  (key: 'updated_by', fallbackText?: string): string;
+  /** 更新时间 */
+  (key: 'update_time', fallbackText?: string): string;
+  /** 关闭 */
+  (key: 'close', fallbackText?: string): string;
+  /** 观测 */
+  (key: 'observation', fallbackText?: string): string;
+  /** 过滤器 */
+  (key: 'filter', fallbackText?: string): string;
+  /** 还原 */
+  (key: 'restore', fallbackText?: string): string;
+  /** 函数 */
+  (key: 'function', fallbackText?: string): string;
+  /** 活跃 */
+  (key: 'active', fallbackText?: string): string;
   /** 或 */
   (key: 'or', fallbackText?: string): string;
-  /** 输出 */
-  (key: 'output', fallbackText?: string): string;
-  /** 输出 */
-  (key: 'Output', fallbackText?: string): string;
+  /** 基础信息 */
+  (key: 'basic_info', fallbackText?: string): string;
+  /** 基准 */
+  (key: 'benchmark', fallbackText?: string): string;
+  /** 继续 */
+  (key: 'continue', fallbackText?: string): string;
+  /** 正在加载 */
+  (key: 'loading', fallbackText?: string): string;
+  /** 今天 */
+  (key: 'today', fallbackText?: string): string;
+  /** 禁用 */
+  (key: 'disable', fallbackText?: string): string;
+  /** 可选 */
+  (key: 'optional', fallbackText?: string): string;
+  /** 来源 */
+  (key: 'source', fallbackText?: string): string;
+  /** 类型 */
+  (key: 'type', fallbackText?: string): string;
+  /** 列 */
+  (key: 'column', fallbackText?: string): string;
+  /** 令牌 */
+  (key: 'token', fallbackText?: string): string;
   /** 密码 */
   (key: 'password', fallbackText?: string): string;
-  /** 永久 */
-  (key: 'permanent', fallbackText?: string): string;
-  /** 请添加{field} */
-  (
-    key: 'please_add',
-    options?: {
-      /** string */ field: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 请同意{field} */
-  (
-    key: 'please_agree',
-    options?: {
-      /** string */ field: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
+  /** 描述 */
+  (key: 'description', fallbackText?: string): string;
+  /** 名称 */
+  (key: 'name', fallbackText?: string): string;
+  /** 明天 */
+  (key: 'tomorrow', fallbackText?: string): string;
+  /** 模板 */
+  (key: 'template', fallbackText?: string): string;
+  /** 模型 */
+  (key: 'model', fallbackText?: string): string;
+  /** 默认 */
+  (key: 'default', fallbackText?: string): string;
+  /** 评测 */
+  (key: 'evaluation', fallbackText?: string): string;
+  /** 评分 */
+  (key: 'rating', fallbackText?: string): string;
+  /** 评估器 */
+  (key: 'evaluator', fallbackText?: string): string;
+  /** 启用 */
+  (key: 'enable', fallbackText?: string): string;
+  /** 清空 */
+  (key: 'clear', fallbackText?: string): string;
   /** 请配置{field} */
   (
     key: 'please_configure',
@@ -153,122 +223,334 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 请选择{field} */
+  /** 请添加{field} */
   (
-    key: 'please_select',
+    key: 'please_add',
     options?: {
       /** string */ field: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 预览 */
-  (key: 'preview', fallbackText?: string): string;
+  /** 请同意{field} */
+  (
+    key: 'please_agree',
+    options?: {
+      /** string */ field: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 取消 */
+  (key: 'cancel', fallbackText?: string): string;
+  /** 取消选择 */
+  (key: 'unselect', fallbackText?: string): string;
+  /** 确定 */
+  (key: 'confirm', fallbackText?: string): string;
+  /** 删除 */
+  (key: 'delete', fallbackText?: string): string;
+  /** 上传 */
+  (key: 'upload', fallbackText?: string): string;
+  /** 上传中 */
+  (key: 'uploading', fallbackText?: string): string;
+  /** 生成随机性 */
+  (key: 'temperature', fallbackText?: string): string;
+  /** 失败 */
+  (key: 'failure', fallbackText?: string): string;
+  /** 实验 */
+  (key: 'experiment', fallbackText?: string): string;
+  /** 是 */
+  (key: 'yes', fallbackText?: string): string;
+  /** 收起 */
+  (key: 'collapse', fallbackText?: string): string;
+  /** 输出 */
+  (key: 'output', fallbackText?: string): string;
+  /** 输入 */
+  (key: 'input', fallbackText?: string): string;
+  /** 数字 */
+  (key: 'number', fallbackText?: string): string;
   /** 刷新 */
   (key: 'refresh', fallbackText?: string): string;
-  /** 注册 */
-  (key: 'register', fallbackText?: string): string;
-  /** 移除 */
-  (key: 'remove', fallbackText?: string): string;
-  /** 重试 */
-  (key: 'retry', fallbackText?: string): string;
-  /** 重试中 */
-  (key: 'retrying', fallbackText?: string): string;
-  /** 运行 */
-  (key: 'run', fallbackText?: string): string;
-  /** 保存 */
-  (key: 'save', fallbackText?: string): string;
-  /** 搜索 */
-  (key: 'Search', fallbackText?: string): string;
   /** 提交 */
   (key: 'submit', fallbackText?: string): string;
-  /** 成功 */
-  (key: 'success', fallbackText?: string): string;
-  /** 文本 */
-  (key: 'text', fallbackText?: string): string;
-  /** 今天 */
-  (key: 'today', fallbackText?: string): string;
-  /** 明天 */
-  (key: 'tomorrow', fallbackText?: string): string;
+  /** 提交人 */
+  (key: 'submit_user', fallbackText?: string): string;
+  /** 提交人： */
+  (key: 'submitter', fallbackText?: string): string;
+  /** 提交时间 */
+  (key: 'submit_time', fallbackText?: string): string;
+  /** 条 */
+  (key: 'tiao', fallbackText?: string): string;
+  /** 调试 */
+  (key: 'debug', fallbackText?: string): string;
+  /** 跳过 */
+  (key: 'skip', fallbackText?: string): string;
+  /** 图片 */
+  (key: 'image', fallbackText?: string): string;
+  /** 退出 */
+  (key: 'exit', fallbackText?: string): string;
+  /** 退出登录 */
+  (key: 'logout', fallbackText?: string): string;
+  /** 网络错误 */
+  (key: 'network_error', fallbackText?: string): string;
   /** 未定义 */
   (key: 'undefined', fallbackText?: string): string;
   /** 未知问题 */
   (key: 'unknown_error', fallbackText?: string): string;
-  /** 更新 */
-  (key: 'update', fallbackText?: string): string;
+  /** 文本 */
+  (key: 'text', fallbackText?: string): string;
+  /** 文档 */
+  (key: 'document', fallbackText?: string): string;
+  /** 下一步 */
+  (key: 'next', fallbackText?: string): string;
+  /** 下载 */
+  (key: 'download', fallbackText?: string): string;
+  /** 详情 */
+  (key: 'detail', fallbackText?: string): string;
+  /** 新增 */
+  (key: 'add', fallbackText?: string): string;
+  /** 移除 */
+  (key: 'remove', fallbackText?: string): string;
+  /** 已过期 */
+  (key: 'expired', fallbackText?: string): string;
+  /** 已提交 */
+  (key: 'submitted', fallbackText?: string): string;
+  /** 已选 */
+  (key: 'selected', fallbackText?: string): string;
+  /** 已知晓 */
+  (key: 'known', fallbackText?: string): string;
+  /** 应用 */
+  (key: 'apply', fallbackText?: string): string;
+  /** 永久 */
+  (key: 'permanent', fallbackText?: string): string;
+  /** 用户名 */
+  (key: 'username', fallbackText?: string): string;
   /** 用户协议 */
   (key: 'user_agreement', fallbackText?: string): string;
-  /** 版本 */
-  (key: 'version', fallbackText?: string): string;
-  /** 查看 */
-  (key: 'view', fallbackText?: string): string;
-  /** 是 */
-  (key: 'yes', fallbackText?: string): string;
-  /** 昨天 */
-  (key: 'yesterday', fallbackText?: string): string;
-  /** 创建 */
-  (key: 'create', fallbackText?: string): string;
-  /** 创建时间 */
-  (key: 'create_time', fallbackText?: string): string;
-  /** 更新时间 */
-  (key: 'update_time', fallbackText?: string): string;
-  /** 创建人 */
-  (key: 'creator', fallbackText?: string): string;
-  /** 类型 */
-  (key: 'type', fallbackText?: string): string;
-  /** 数字 */
-  (key: 'number', fallbackText?: string): string;
-  /** 分类 */
-  (key: 'category', fallbackText?: string): string;
-  /** 布尔值 */
-  (key: 'boolean', fallbackText?: string): string;
+  /** 邮箱 */
+  (key: 'email', fallbackText?: string): string;
+  /** 语言 */
+  (key: 'language', fallbackText?: string): string;
+  /** 预览 */
+  (key: 'preview', fallbackText?: string): string;
+  /** 原因 */
+  (key: 'reason', fallbackText?: string): string;
+  /** 运行 */
+  (key: 'run', fallbackText?: string): string;
+  /** 展开 */
+  (key: 'expand', fallbackText?: string): string;
+  /** 账户 */
+  (key: 'account', fallbackText?: string): string;
+  /** 折叠 */
+  (key: 'fold', fallbackText?: string): string;
+  /** 整数 */
+  (key: 'integer', fallbackText?: string): string;
+  /** 指标 */
+  (key: 'indicator', fallbackText?: string): string;
+  /** 中止 */
+  (key: 'abort', fallbackText?: string): string;
+  /** 重试 */
+  (key: 'retry', fallbackText?: string): string;
+  /** 重试中 */
+  (key: 'retrying', fallbackText?: string): string;
+  /** 重新运行 */
+  (key: 'rerun', fallbackText?: string): string;
+  /** 注册 */
+  (key: 'register', fallbackText?: string): string;
   /** 状态 */
   (key: 'status', fallbackText?: string): string;
-  /** 启用 */
-  (key: 'enable', fallbackText?: string): string;
-  /** 禁用 */
-  (key: 'disable', fallbackText?: string): string;
-  /** 提交时间 */
-  (key: 'submit_time', fallbackText?: string): string;
-  /** 提交人 */
-  (key: 'submit_user', fallbackText?: string): string;
-  /** 基础信息 */
-  (key: 'basic_info', fallbackText?: string): string;
-  /** 搜索创建人 */
-  (key: 'search_creator', fallbackText?: string): string;
+  /** 自定义 */
+  (key: 'customize', fallbackText?: string): string;
+  /** 字段 */
+  (key: 'field', fallbackText?: string): string;
+  /** 字符串 */
+  (key: 'string', fallbackText?: string): string;
+  /** 总览 */
+  (key: 'overview', fallbackText?: string): string;
+  /** 总数 */
+  (key: 'total', fallbackText?: string): string;
+  /** 昨天 */
+  (key: 'yesterday', fallbackText?: string): string;
+  /** 什么是轨迹 */
+  (key: 'what_is_trajectory', fallbackText?: string): string;
+  /** 单选 */
+  (key: 'single_choice', fallbackText?: string): string;
+  /** 数据集列 */
+  (key: 'data_engine_dataset_columns', fallbackText?: string): string;
+  /** 加载失败 */
+  (key: 'load_failed', fallbackText?: string): string;
+  /** 当前版本 */
+  (key: 'current_version', fallbackText?: string): string;
+  /** 更新为 */
+  (key: 'update_to', fallbackText?: string): string;
+  /** 新节点 */
+  (key: 'new_node', fallbackText?: string): string;
+  /** 对照组 */
+  (key: 'control_group', fallbackText?: string): string;
+  /** 图片大小不能超过{maxImageSize}MB */
+  (
+    key: 'image_size_exceed_max',
+    options?: {
+      /** string */ maxImageSize: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 最多上传{maxFileCount}张图片 */
+  (
+    key: 'max_upload_images_limit',
+    options?: {
+      /** string */ maxFileCount: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 视频大小不能超过{maxVideoSize}MB */
+  (
+    key: 'video_size_exceed_max',
+    options?: {
+      /** string */ maxVideoSize: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 最多上传{maxFileCount}个视频 */
+  (
+    key: 'max_upload_videos_limit',
+    options?: {
+      /** string */ maxFileCount: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 图片上传 */
+  (key: 'image_upload', fallbackText?: string): string;
+  /** 视频上传 */
+  (key: 'video_upload', fallbackText?: string): string;
+  /** 自建评估器 */
+  (key: 'self_built_evaluator', fallbackText?: string): string;
+  /** 多模态图片已达上限，当前仅支持上传{canUseFileLimit}个文件 */
+  (
+    key: 'multi_modal_image_limit_reached',
+    options?: {
+      /** string */ canUseFileLimit: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 该模型不支持多模态图片 */
+  (key: 'model_not_support_multi_modal_image', fallbackText?: string): string;
+  /** 多模态视频已达上限，当前仅支持上传{canUseFileLimit}个文件 */
+  (
+    key: 'multi_modal_video_limit_reached',
+    options?: {
+      /** string */ canUseFileLimit: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 该模型不支持多模态视频 */
+  (key: 'model_not_support_multi_modal_video', fallbackText?: string): string;
+  /** 该模型不支持多模态 */
+  (key: 'model_not_support_multi_modal', fallbackText?: string): string;
+  /** 视频-源文件 */
+  (key: 'video_source_file', fallbackText?: string): string;
+  /** 视频-外链 */
+  (key: 'video_external_link', fallbackText?: string): string;
+  /** 图片数量不能超过20张或节点数量不能超过50个 */
+  (key: 'image_or_node_quantity_limit', fallbackText?: string): string;
+  /** 列配置 */
+  (key: 'column_configuration', fallbackText?: string): string;
+  /** 显示更多 */
+  (key: 'show_more', fallbackText?: string): string;
+  /** 请输入文本信息 */
+  (key: 'please_input_text', fallbackText?: string): string;
+  /** 请输入{placeholder1}链接，请使用公网域名 */
+  (
+    key: 'please_input_placeholder1_link_public',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 请输入{placeholder1}链接 */
+  (
+    key: 'please_input_placeholder1_link',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 请使用公网域名 */
+  (key: 'please_use_public_domain', fallbackText?: string): string;
+  /** 添加{placeholder1}链接 */
+  (
+    key: 'add_placeholder1_link',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 视频预览 */
+  (key: 'video_preview', fallbackText?: string): string;
+  /** 请输入版本说明 */
+  (key: 'please_input_version_description', fallbackText?: string): string;
+  /** 所选模型不支持多模态,请调整变量类型或更换模型 */
+  (key: 'model_not_support_multi_modal_adjust_or_change', fallbackText?: string): string;
+  /** 权限不足 */
+  (key: 'insufficient_permissions', fallbackText?: string): string;
+  /** 您没有访问该页面的权限 */
+  (key: 'no_access_permission_page', fallbackText?: string): string;
+  /** 所选模型不支持多模态，请调整变量类型或更换模型 */
+  (key: 'selected_model_not_support_multi_modal', fallbackText?: string): string;
+  /** 确认离开？ */
+  (key: 'form_leave_title', fallbackText?: string): string;
+  /** 您的输入尚未保存，离开后将丢失 */
+  (key: 'form_leave_desc', fallbackText?: string): string;
+  /** 该字段是必填的 */
+  (key: 'fornax_base_required_error', fallbackText?: string): string;
+  /** 离开后将丢失未保存的内容，确定吗？ */
+  (key: 'unsave_leave_confirm_warning', fallbackText?: string): string;
+  /** Demo 空间 */
+  (key: 'demo_space', fallbackText?: string): string;
+  /** 版本记录 */
+  (key: 'version_record', fallbackText?: string): string;
+  /** 版本说明 */
+  (key: 'version_description', fallbackText?: string): string;
+  /** 保存成功 */
+  (key: 'save_success', fallbackText?: string): string;
+  /** 保存时间 */
+  (key: 'save_time', fallbackText?: string): string;
+  /** 标签列表 */
+  (key: 'tag_list', fallbackText?: string): string;
+  /** 查看详情 */
+  (key: 'view_detail', fallbackText?: string): string;
+  /** 创建成功 */
+  (key: 'create_success', fallbackText?: string): string;
+  /** 当前草稿 */
+  (key: 'current_draft', fallbackText?: string): string;
   /** 当前用户 */
   (key: 'current_user', fallbackText?: string): string;
-  /** 重置为默认 */
-  (key: 'reset_to_default', fallbackText?: string): string;
-  /** 拖动排序 */
-  (key: 'drag_to_sort', fallbackText?: string): string;
-  /** 列管理 */
-  (key: 'column_management', fallbackText?: string): string;
+  /** 点击恢复默认排序 */
+  (key: 'restore_default_sort', fallbackText?: string): string;
+  /** 点击降序 */
+  (key: 'click_descending', fallbackText?: string): string;
+  /** 点击升序 */
+  (key: 'click_ascending', fallbackText?: string): string;
   /** 复制 ID */
   (key: 'copy_id', fallbackText?: string): string;
   /** 复制成功 */
   (key: 'copy_success', fallbackText?: string): string;
-  /** 复制失败 */
-  (key: 'copy_failed', fallbackText?: string): string;
-  /** 查看详情 */
-  (key: 'view_detail', fallbackText?: string): string;
-  /** 页面丢失了 */
-  (key: 'page_not_found', fallbackText?: string): string;
-  /** 页面加载失败 */
-  (key: 'page_load_failed', fallbackText?: string): string;
-  /** 暂无权限 */
-  (key: 'no_permission', fallbackText?: string): string;
-  /** 点击升序 */
-  (key: 'click_ascending', fallbackText?: string): string;
-  /** 点击降序 */
-  (key: 'click_descending', fallbackText?: string): string;
-  /** 点击恢复默认排序 */
-  (key: 'restore_default_sort', fallbackText?: string): string;
   /** 复制内容 */
   (key: 'copy_content', fallbackText?: string): string;
-  /** 保存时间 */
-  (key: 'save_time', fallbackText?: string): string;
-  /** 当前草稿 */
-  (key: 'current_draft', fallbackText?: string): string;
+  /** 复制失败 */
+  (key: 'copy_failed', fallbackText?: string): string;
+  /** 列管理 */
+  (key: 'column_management', fallbackText?: string): string;
+  /** 列名 */
+  (key: 'column_name', fallbackText?: string): string;
+  /** 评测集 */
+  (key: 'evaluation_set', fallbackText?: string): string;
+  /** 请输入数字 */
+  (key: 'enter_number', fallbackText?: string): string;
+  /** 请选择 */
+  (key: 'please_select', fallbackText?: string): string;
+  /** 搜索创建人 */
+  (key: 'search_creator', fallbackText?: string): string;
+  /** 拖动排序 */
+  (key: 'drag_to_sort', fallbackText?: string): string;
   /** 选择{field} */
   (
     key: 'select_x',
@@ -277,100 +559,36 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 版本说明 */
-  (key: 'version_description', fallbackText?: string): string;
-  /** 版本记录 */
-  (key: 'version_record', fallbackText?: string): string;
-  /** 扣子罗盘 */
-  (key: 'platform_name', fallbackText?: string): string;
-  /** 空间不存在 */
-  (key: 'space_not_exists', fallbackText?: string): string;
-  /** 点击重试 */
-  (key: 'click_retry', fallbackText?: string): string;
-  /** 文档 */
-  (key: 'document', fallbackText?: string): string;
-  /** 飞书群 */
-  (key: 'lark_group', fallbackText?: string): string;
+  /** 页面丢失了 */
+  (key: 'page_not_found', fallbackText?: string): string;
+  /** 页面加载失败 */
+  (key: 'page_load_failed', fallbackText?: string): string;
+  /** 暂无权限 */
+  (key: 'no_permission', fallbackText?: string): string;
+  /** 只读 */
+  (key: 'read_only', fallbackText?: string): string;
+  /** 重置为默认 */
+  (key: 'reset_to_default', fallbackText?: string): string;
   /** Prompt 工程 */
   (key: 'prompt_engineering', fallbackText?: string): string;
   /** Prompt 开发 */
   (key: 'prompt_development', fallbackText?: string): string;
-  /** 评测 */
-  (key: 'evaluation', fallbackText?: string): string;
-  /** 评测集 */
-  (key: 'evaluation_set', fallbackText?: string): string;
-  /** 评估器 */
-  (key: 'evaluator', fallbackText?: string): string;
-  /** 观测 */
-  (key: 'observation', fallbackText?: string): string;
-  /** 确认要退出登录吗？ */
-  (key: 'confirm_logout', fallbackText?: string): string;
-  /** 账户设置 */
-  (key: 'account_settings', fallbackText?: string): string;
-  /** 暂无空间 */
-  (key: 'no_space', fallbackText?: string): string;
+  /** 点击重试 */
+  (key: 'click_retry', fallbackText?: string): string;
+  /** 飞书群 */
+  (key: 'lark_group', fallbackText?: string): string;
+  /** 空间不存在 */
+  (key: 'space_not_exists', fallbackText?: string): string;
+  /** 扣子罗盘 */
+  (key: 'platform_name', fallbackText?: string): string;
   /** 你未加入任何空间 */
   (key: 'not_join_space', fallbackText?: string): string;
-  /** API 授权 */
-  (key: 'api_authorization', fallbackText?: string): string;
-  /** 欢迎使用扣子罗盘-开源版 */
-  (key: 'welcome_to_cozeloop', fallbackText?: string): string;
-  /** 请输入邮箱 */
-  (key: 'please_input_email', fallbackText?: string): string;
-  /** 请输入密码 */
-  (key: 'please_input_password', fallbackText?: string): string;
-  /** 请先同意{agreement} */
-  (
-    key: 'please_agree_first',
-    options?: {
-      /** string */ agreement: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 此令牌仅显示一次。请将此密钥保存在安全且可获取的地方。不要与他人共享，也不要在浏览器或其他客户端代码中暴露它。 */
-  (key: 'token_show_only_once', fallbackText?: string): string;
-  /** 过期时间 */
-  (key: 'expiration_time', fallbackText?: string): string;
-  /** 令牌 */
-  (key: 'token', fallbackText?: string): string;
-  /** 删除令牌 */
-  (key: 'delete_token', fallbackText?: string): string;
-  /** 移除后会影响所有正在使用 API 个人访问令牌的应用 */
-  (key: 'remove_will_affect_all_in_use', fallbackText?: string): string;
-  /** {num}天 */
-  (
-    key: 'x_days',
-    options?: {
-      /** number */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 注册/登录失败，请检查邮箱或密码 */
-  (key: 'register_or_login_failed', fallbackText?: string): string;
-  /** 最近使用 */
-  (key: 'last_used', fallbackText?: string): string;
-  /** 活跃 */
-  (key: 'active', fallbackText?: string): string;
-  /** 已过期 */
-  (key: 'expired', fallbackText?: string): string;
-  /** 新的个人访问令牌 */
-  (key: 'new_pat', fallbackText?: string): string;
-  /** 个人访问令牌 */
-  (key: 'auth_tab_pat', fallbackText?: string): string;
-  /** 添加新令牌 */
-  (key: 'add_token', fallbackText?: string): string;
-  /** 添加个人访问令牌 */
-  (key: 'add_pat', fallbackText?: string): string;
-  /** 编辑个人访问令牌 */
-  (key: 'edit_pat', fallbackText?: string): string;
-  /** 用于其他应用程序和平台的个人访问令牌。详细说明请查看： */
-  (key: 'pat_introduction', fallbackText?: string): string;
-  /** API 使用说明 */
-  (key: 'api_instruction', fallbackText?: string): string;
-  /** 不要与他人共享您的个人访问令牌，也不要在浏览器或其他客户端代码中暴露它，以保护您账户的安全。若在公开场合发现任何泄露的个人访问令牌，该令牌可能会被自动禁用。 */
-  (key: 'pat_reminder', fallbackText?: string): string;
-  /** 请谨慎选择过期时间，个人访问令牌生成后，将不支持修改 */
-  (key: 'expired_time_tip', fallbackText?: string): string;
+  /** 确认要退出登录吗？ */
+  (key: 'confirm_logout', fallbackText?: string): string;
+  /** 暂无空间 */
+  (key: 'no_space', fallbackText?: string): string;
+  /** 账户设置 */
+  (key: 'account_settings', fallbackText?: string): string;
   /** {num, plural, other {{num}天（{date}）}} */
   (
     key: 'expired_time_days',
@@ -380,305 +598,1295 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 暂无个人访问令牌 */
-  (key: 'no_pat', fallbackText?: string): string;
+  /** {num}天 */
+  (
+    key: 'x_days',
+    options?: {
+      /** number */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** API 使用说明 */
+  (key: 'api_instruction', fallbackText?: string): string;
+  /** API 授权 */
+  (key: 'api_authorization', fallbackText?: string): string;
+  /** 编辑个人访问令牌 */
+  (key: 'edit_pat', fallbackText?: string): string;
+  /** 不要与他人共享您的个人访问令牌，也不要在浏览器或其他客户端代码中暴露它，以保护您账户的安全。若在公开场合发现任何泄露的个人访问令牌，该令牌可能会被自动禁用。 */
+  (key: 'pat_reminder', fallbackText?: string): string;
+  /** 此令牌仅显示一次。请将此密钥保存在安全且可获取的地方。不要与他人共享，也不要在浏览器或其他客户端代码中暴露它。 */
+  (key: 'token_show_only_once', fallbackText?: string): string;
   /** 点击切换语言，将刷新页面。 */
   (key: 'toggle_lng_tip', fallbackText?: string): string;
+  /** 个人访问令牌 */
+  (key: 'auth_tab_pat', fallbackText?: string): string;
+  /** 过期时间 */
+  (key: 'expiration_time', fallbackText?: string): string;
+  /** 欢迎使用扣子罗盘-开源版 */
+  (key: 'welcome_to_cozeloop', fallbackText?: string): string;
   /** 基于开源代码部署 */
   (key: 'deploy_info', fallbackText?: string): string;
-  /** 用户名 */
-  (key: 'username', fallbackText?: string): string;
+  /** 请谨慎选择过期时间，个人访问令牌生成后，将不支持修改 */
+  (key: 'expired_time_tip', fallbackText?: string): string;
+  /** 请输入密码 */
+  (key: 'please_input_password', fallbackText?: string): string;
+  /** 请输入邮箱 */
+  (key: 'please_input_email', fallbackText?: string): string;
+  /** 请先同意{agreement} */
+  (
+    key: 'please_agree_first',
+    options?: {
+      /** string */ agreement: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 删除令牌 */
+  (key: 'delete_token', fallbackText?: string): string;
+  /** 添加个人访问令牌 */
+  (key: 'add_pat', fallbackText?: string): string;
+  /** 添加新令牌 */
+  (key: 'add_token', fallbackText?: string): string;
+  /** 新的个人访问令牌 */
+  (key: 'new_pat', fallbackText?: string): string;
+  /** 移除后会影响所有正在使用 API 个人访问令牌的应用 */
+  (key: 'remove_will_affect_all_in_use', fallbackText?: string): string;
   /** 用户昵称 */
   (key: 'user_custom_name', fallbackText?: string): string;
-  /** Prompt */
-  (key: 'prompt', fallbackText?: string): string;
-  /** 请输入内容，支持按此格式书写变量：'{{USER_NAME}} */
-  (key: 'please_input_with_vars', fallbackText?: string): string;
-  /** 生成随机性 */
-  (key: 'temperature', fallbackText?: string): string;
-  /** 最大回复长度 */
-  (key: 'max_tokens', fallbackText?: string): string;
-  /** Top P */
-  (key: 'top_p', fallbackText?: string): string;
-  /** Top K */
-  (key: 'top_k', fallbackText?: string): string;
-  /** 存在惩罚 */
-  (key: 'presence_penalty', fallbackText?: string): string;
-  /** 频率惩罚 */
-  (key: 'frequency_penalty', fallbackText?: string): string;
-  /** 编辑 Prompt */
-  (key: 'edit_prompt', fallbackText?: string): string;
-  /** 创建副本 */
-  (key: 'create_copy', fallbackText?: string): string;
-  /** 创建 Prompt */
-  (key: 'create_prompt', fallbackText?: string): string;
-  /** Prompt key */
-  (key: 'prompt_key', fallbackText?: string): string;
-  /** 仅支持英文字母、数字、“_”、“.”，且仅支持英文字母开头 */
-  (key: 'prompt_key_format', fallbackText?: string): string;
-  /** Prompt 名称 */
-  (key: 'prompt_name', fallbackText?: string): string;
-  /** 仅支持英文字母、数字、中文，“-”，“_”，“.”，且仅支持英文字母、数字、中文开头 */
-  (key: 'prompt_name_format', fallbackText?: string): string;
-  /** Prompt 描述 */
-  (key: 'prompt_description', fallbackText?: string): string;
-  /** 支持输入英文字母和下划线，且首字母必须是字母 */
-  (key: 'prompt_var_format', fallbackText?: string): string;
-  /** Placeholder 变量名 */
-  (key: 'placeholder_var_name', fallbackText?: string): string;
-  /** 只允许输入英文、数字及下划线且首字母需为英文 */
-  (key: 'placeholder_format', fallbackText?: string): string;
-  /** 文本变量名称已存在，请修改 Placeholder 变量名 */
-  (key: 'placeholder_name_exists', fallbackText?: string): string;
-  /** Placeholder 变量不存在或命名错误 */
-  (key: 'placeholder_var_error', fallbackText?: string): string;
-  /** 历史数据有空内容 */
-  (key: 'historical_data_has_empty_content', fallbackText?: string): string;
-  /** 请添加 Prompt 模板或输入提问内容 */
-  (key: 'add_prompt_tpl_or_input_question', fallbackText?: string): string;
-  /** 设置为基准组 */
-  (key: 'set_to_reference_group', fallbackText?: string): string;
-  /** 删除对照组 */
-  (key: 'delete_control_group', fallbackText?: string): string;
+  /** 用于其他应用程序和平台的个人访问令牌。详细说明请查看： */
+  (key: 'pat_introduction', fallbackText?: string): string;
+  /** 暂无个人访问令牌 */
+  (key: 'no_pat', fallbackText?: string): string;
+  /** 注册/登录失败，请检查邮箱或密码 */
+  (key: 'register_or_login_failed', fallbackText?: string): string;
+  /** 最近使用 */
+  (key: 'last_used', fallbackText?: string): string;
+  /** 点击后前往空间管理页面获取 */
+  (key: 'prompt_ak_ak_get_tip', fallbackText?: string): string;
+  /** 获取 AK/SK */
+  (key: 'prompt_ak_ak_get_label', fallbackText?: string): string;
+  /** 调用配置 */
+  (key: 'prompt_usage_call_title', fallbackText?: string): string;
+  /** 查看详细说明 */
+  (key: 'prompt_view_detailed_instructions', fallbackText?: string): string;
+  /** 选择语言 */
+  (key: 'prompt_choose_language', fallbackText?: string): string;
+  /** 安装 SDK */
+  (key: 'prompt_install_sdk', fallbackText?: string): string;
+  /** 获取 Prompt 配置 */
+  (key: 'prompt_obtain_prompt_config', fallbackText?: string): string;
+  /** 同步调用 */
+  (key: 'prompt_synchronous_call', fallbackText?: string): string;
+  /** 流式调用 */
+  (key: 'prompt_streaming_call', fallbackText?: string): string;
+  /** 新版本已发布成功，可以继续使用以下功能： */
+  (key: 'prompt_new_version_released_features', fallbackText?: string): string;
+  /** 效果评估 */
+  (key: 'prompt_performance_evaluation', fallbackText?: string): string;
+  /** 评估 Prompt 效果，提升应用表现 */
+  (key: 'prompt_evaluate_prompt_improve_performance', fallbackText?: string): string;
+  /** 点击查看 */
+  (key: 'prompt_click_to_view', fallbackText?: string): string;
+  /** Prompt 调用 */
+  (key: 'prompt_prompt_invocation', fallbackText?: string): string;
+  /** PTaaS（Prompt As a Service） 即将托管的 Prompt 发布为可调用的接口，通过集成 CozeLoop SDK 在业务流程中直接且快速地调用该接口，实现 Prompt 的独立迭代与调优。PTaaS暂时不支持为业务方独立部署服务，由CozeLoop 服务提供的模型调用能力。 */
+  (key: 'prompt_ptaas_overview_and_limitations', fallbackText?: string): string;
+  /** PromptHub：业务方能够通过集成 CozeLoop SDK 在业务服务中拉取于 CozeLoop 平台托管的 Prompt，获取 Prompt Template 详细内容，并在业务服务中自行调用模型进行推理或者与Eino等Agent框架进行集成。 */
+  (key: 'prompt_prompthub_features_and_integration', fallbackText?: string): string;
+  /** 集成 LLM 能力 */
+  (key: 'prompt_integrate_llm_capabilities', fallbackText?: string): string;
+  /** 数据观测 */
+  (key: 'prompt_data_observation', fallbackText?: string): string;
+  /** 接入 SDK 上报数据，进行数据观测 */
+  (key: 'prompt_sdk_data_reporting_and_observation', fallbackText?: string): string;
+  /** 发布成功 */
+  (key: 'prompt_release_successful', fallbackText?: string): string;
+  /** 工单链接 */
+  (key: 'prompt_ticket_link', fallbackText?: string): string;
+  /** go get github.com/coze-dev/cozeloop-go */
+  (key: 'prompt_service_install_eg', fallbackText?: string): string;
+  /** npm i @cozeloop/ai */
+  (key: 'prompt_use_js_installation', fallbackText?: string): string;
+  /** pip install CozeLoop */
+  (key: 'prompt_use_python_installation', fallbackText?: string): string;
+  /** package main
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+
+    "github.com/coze-dev/cozeloop-go"
+    "github.com/coze-dev/cozeloop-go/entity"
+)
+
+func main() {
+    // 1.Create a prompt on the platform
+    // You can create a Prompt on the platform's Prompt development page (set Prompt Key to 'prompt_hub_demo'), add the following messages to the template, and submit a version.
+    // System: You are a helpful bot, the conversation topic is {{var1}}.
+    // Placeholder: placeholder1
+    // User: My question is {{var2}}
+    // Placeholder: placeholder2
+
+    ctx := context.Background()
+
+    // Set the following environment variables first.
+    // COZELOOP_WORKSPACE_ID=your workspace id
+    // COZELOOP_API_TOKEN=your token
+    // 2.New loop client
+    client, err := cozeloop.NewClient(
+       // Set whether to report a trace span when get or format prompt.
+       // Default value is false.
+       cozeloop.WithPromptTrace(true))
+    if err != nil {
+       panic(err)
+    }
+
+    llmRunner := llmRunner{
+       client: client,
+    }
+
+    // 1. start root span
+    ctx, span := llmRunner.client.StartSpan(ctx, "root_span", "main_span", nil)
+
+    // 2. Get the prompt
+    prompt, err := llmRunner.client.GetPrompt(ctx, cozeloop.GetPromptParam{
+       PromptKey: "prompt_hub_demo",
+       // If version is not specified, the latest version of the corresponding prompt will be obtained
+       Version: "0.0.1",
+    })
+    if err != nil {
+       fmt.Printf("get prompt failed: %v\n", err)
+       return
+    }
+    if prompt != nil {
+       // Get messages of the prompt
+       if prompt.PromptTemplate != nil {
+          messages, err := json.Marshal(prompt.PromptTemplate.Messages)
+          if err != nil {
+             fmt.Printf("json marshal failed: %v\n", err)
+             return
+          }
+          fmt.Printf("prompt messages=%s\n", string(messages))
+       }
+       // Get llm config of the prompt
+       if prompt.LLMConfig != nil {
+          llmConfig, err := json.Marshal(prompt.LLMConfig)
+          if err != nil {
+             fmt.Printf("json marshal failed: %v\n", err)
+          }
+          fmt.Printf("prompt llm config=%s\n", llmConfig)
+       }
+
+       // 3. Format messages of the prompt
+       userMessageContent := "Hello!"
+       assistantMessageContent := "Hello!"
+       messages, err := llmRunner.client.PromptFormat(ctx, prompt, map[string]any{
+          // Normal variable type should be string
+          "var1": "artificial intelligence",
+          // Placeholder variable type should be entity.Message/*entity.Message/[]entity.Message/[]*entity.Message
+          "placeholder1": []*entity.Message{
+             {
+                Role:    entity.RoleUser,
+                Content: &userMessageContent,
+             },
+             {
+                Role:    entity.RoleAssistant,
+                Content: &assistantMessageContent,
+             },
+          },
+          // Other variables in the prompt template that are not provided with corresponding values will be considered as empty values
+       })
+       if err != nil {
+          fmt.Printf("prompt format failed: %v\n", err)
+          return
+       }
+       data, err := json.Marshal(messages)
+       if err != nil {
+          fmt.Printf("json marshal failed: %v\n", err)
+          return
+       }
+       fmt.Printf("formatted messages=%s\n", string(data))
+
+       if err != nil {
+          return
+       }
+    }
+
+    // 4. span finish
+    span.Finish(ctx)
+
+    // 5. (optional) flush or close
+    // -- force flush, report all traces in the queue
+    // Warning! In general, this method is not needed to be call, as spans will be automatically reported in batches.
+    // Note that flush will block and wait for the report to complete, and it may cause frequent reporting,
+    // affecting performance.
+    llmRunner.client.Flush(ctx)
+}
+
+type llmRunner struct {
+    client cozeloop.Client
+} */
+  (key: 'prompt_service_config_eg', fallbackText?: string): string;
+  (key: 'prompt_use_js_configuration', fallbackText?: string): string;
+  /** if __name__ == '__main__':
+    # 1.Create a prompt on the platform
+    # You can create a Prompt on the platform's Prompt development page (set Prompt Key to 'prompt_hub_demo'),
+    # add the following messages to the template, and submit a version.
+    # System: You are a helpful bot, the conversation topic is {{var1}}.
+    # Placeholder: placeholder1
+    # User: My question is {{var2}}
+    # Placeholder: placeholder2
+
+    # Set the following environment variables first.
+    # COZELOOP_WORKSPACE_ID=your workspace id
+    # COZELOOP_API_TOKEN=your token
+    # 2.New loop client
+    client = cozeloop.new_client(
+        # Set whether to report a trace span when get or format prompt.
+        # Default value is false.
+        prompt_trace=True)
+
+    # 3. new root span
+    rootSpan = client.start_span("root_span", "main_span")
+
+    # 4. Get the prompt
+    # If no specific version is specified, the latest version of the corresponding prompt will be obtained
+    prompt = client.get_prompt(prompt_key="prompt_hub_demo", version="0.0.1")
+    if prompt is not None:
+        # Get messages of the prompt
+        if prompt.prompt_template is not None:
+            messages = prompt.prompt_template.messages
+            print(
+                f"prompt messages: {json.dumps([message.model_dump(exclude_none=True) for message in messages], ensure_ascii=False)}")
+        # Get llm config of the prompt
+        if prompt.llm_config is not None:
+            llm_config = prompt.llm_config
+            print(f"prompt llm_config: {llm_config.model_dump_json(exclude_none=True)}")
+
+        # 5.Format messages of the prompt
+        formatted_messages = client.prompt_format(prompt, {
+            # Normal variable type should be string
+            "var1": "artificial intelligence",
+            # Placeholder variable type should be Message/List[Message]
+            "placeholder1": [Message(role=Role.USER, content="Hello!"),
+                             Message(role=Role.ASSISTANT, content="Hello!")]
+            # Other variables in the prompt template that are not provided with corresponding values will be
+            # considered as empty values.
+        })
+        print(
+            f"formatted_messages: {json.dumps([message.model_dump(exclude_none=True) for message in formatted_messages], ensure_ascii=False)}")
+
+    rootSpan.finish()
+    # 6. (optional) flush or close
+    # -- force flush, report all traces in the queue
+    # Warning! In general, this method is not needed to be call, as spans will be automatically reported in batches.
+    # Note that flush will block and wait for the report to complete, and it may cause frequent reporting,
+    # affecting performance.
+    client.flush() */
+  (key: 'prompt_use_python_configuration', fallbackText?: string): string;
+  /** package main
+
+import (
+    "context"
+    "fmt"
+    "io"
+
+    "github.com/coze-dev/cozeloop-go"
+    "github.com/coze-dev/cozeloop-go/entity"
+    "github.com/coze-dev/cozeloop-go/internal/util"
+)
+
+func main() {
+    // 1.Create a prompt on the platform
+    // Create a Prompt on the platform's Prompt development page (set Prompt Key to 'ptaas_demo'),
+    // add the following messages to the template, submit a version.
+    // System: You are a helpful assistant for {{topic}}.
+    // User: Please help me with {{user_request}}
+    ctx := context.Background()
+
+    // Set the following environment variables first.
+    // COZELOOP_WORKSPACE_ID=your workspace id
+    // COZELOOP_API_TOKEN=your token
+    // 2.New loop client
+    client, err := cozeloop.NewClient()
+    if err != nil {
+       panic(err)
+    }
+    defer client.Close(ctx)
+
+    ctx, span := client.StartSpan(ctx, "root_span", "custom")
+    defer span.Finish(ctx)
+
+    // 3. Execute prompt
+    executeRequest := &entity.ExecuteParam{
+       PromptKey: "CozeLoop_Oncall_Master",
+       Version:   "0.0.1",
+       VariableVals: map[string]any{
+          "topic":        "artificial intelligence",
+          "user_request": "explain what is machine learning",
+       },
+       // You can also append messages to the prompt.
+       Messages: []*entity.Message{
+          {
+             Role:    entity.RoleUser,
+             Content: util.Ptr("Keep the answer brief."),
+          },
+       },
+    }
+    // 3.2 stream
+    stream(ctx, client, executeRequest)
+    client.Flush(ctx)
+}
+
+func stream(ctx context.Context, client cozeloop.Client, executeRequest *entity.ExecuteParam) {
+    streamReader, err := client.ExecuteStreaming(ctx, executeRequest)
+    if err != nil {
+       panic(err)
+    }
+    for {
+       result, err := streamReader.Recv()
+       if err != nil {
+          if err == io.EOF {
+             fmt.Println("\nStream finished.")
+             break
+          }
+          panic(err)
+       }
+       printExecuteResult(result)
+    }
+}
+
+func printExecuteResult(result entity.ExecuteResult) {
+    if result.Message != nil {
+       fmt.Printf("Message: %s\n", util.ToJSON(result.Message))
+    }
+    if util.PtrValue(result.FinishReason) != "" {
+       fmt.Printf("FinishReason: %s\n", util.PtrValue(result.FinishReason))
+    }
+    if result.Usage != nil {
+       fmt.Printf("Usage: %s\n", util.ToJSON(result.Usage))
+    }
+} */
+  (key: 'prompt_call_stream', fallbackText?: string): string;
+  /** import { ApiClient, PromptAsAService } from '@cozeloop/ai'; 
+ 
+const apiClient = new ApiClient({ 
+  token: 'pat_xxx', 
+}); 
+ 
+const model = new PromptAsAService({ 
+  // or set it as process.env.COZELOOP_WORKSPACE_ID, 
+  workspaceId: 'your_workspace_id', 
+  // prompt to invoke as a service 
+  prompt: { 
+    prompt_key: 'ptaas_demo', 
+    version: '0.0.1', 
+  }, 
+  apiClient, 
+}); 
+ 
+const replyStream = await model.stream({ 
+  messages: [{ role: 'user', content: 'Keep the answer brief.' }], 
+  variables: { 
+    topic: 'artificial intelligence', 
+    user_request: 'explain what is machine learning', 
+  }, 
+}); 
+ 
+for await (const chunk of replyStream) { 
+ console.info(chunk); 
+} */
+  (key: 'prompt_use_js_streaming_call', fallbackText?: string): string;
+  /** import asyncio
+import os
+
+from anyio import sleep
+
+from cozeloop import new_client, Client
+from cozeloop.entities.prompt import Message, Role, ExecuteResult
+
+
+def setup_client() -> Client:
+    """
+    Unified client setup function
+    
+    Environment variables:
+    - COZELOOP_WORKSPACE_ID: workspace ID
+    - COZELOOP_API_TOKEN: API token
+    """
+    # Set the following environment variables first.
+    # COZELOOP_WORKSPACE_ID=your workspace id
+    # COZELOOP_API_TOKEN=your token
+    client = new_client(
+        api_base_url=os.getenv("COZELOOP_API_BASE_URL"),
+        workspace_id=os.getenv("COZELOOP_WORKSPACE_ID"),
+        api_token=os.getenv("COZELOOP_API_TOKEN"),
+    )
+    return client
+
+
+def print_execute_result(result: ExecuteResult) -> None:
+    """Unified result printing function, consistent with Go version format"""
+    if result.message:
+        print(f"Message: {result.message}")
+    if result.finish_reason:
+        print(f"FinishReason: {result.finish_reason}")
+    if result.usage:
+        print(f"Usage: {result.usage}")
+
+
+def sync_stream_example(client: Client) -> None:
+    """Sync stream call example"""
+    print("=== Sync Stream Example ===")
+    
+    stream_reader = client.execute_prompt(
+        prompt_key="ptaas_demo",
+        version="0.0.1",
+        variable_vals={
+            "topic": "artificial intelligence",
+            "user_request": "explain what is machine learning"
+        },
+        messages=[
+            Message(role=Role.USER, content="Keep the answer brief.")
+        ],
+        stream=True
+    )
+    
+    for result in stream_reader:
+        print_execute_result(result)
+    
+    print("\nStream finished.")
+
+
+async def async_stream_example(client: Client) -> None:
+    """Async stream call example"""
+    print("=== Async Stream Example ===")
+    
+    stream_reader = await client.aexecute_prompt(
+        prompt_key="ptaas_demo",
+        version="0.0.1",
+        variable_vals={
+            "topic": "artificial intelligence",
+            "user_request": "explain what is machine learning"
+        },
+        messages=[
+            Message(role=Role.USER, content="Keep the answer brief.")
+        ],
+        stream=True
+    )
+    
+    async for result in stream_reader:
+        print_execute_result(result)
+    
+    print("\nStream finished.")
+
+
+async def main():
+    """Main function"""
+    client = setup_client()
+
+    root_span = client.start_span("root", "custom")
+    try:
+        # Sync stream call
+        sync_stream_example(client)
+
+        # Async stream call
+        await async_stream_example(client)
+        
+    finally:
+        # Close client
+        root_span.finish()
+        if hasattr(client, 'close'):
+            client.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(main()) */
+  (key: 'prompt_use_python_streaming_call', fallbackText?: string): string;
+  /** package main
+
+import (
+    "context"
+    "fmt"
+
+    "github.com/coze-dev/cozeloop-go"
+    "github.com/coze-dev/cozeloop-go/entity"
+    "github.com/coze-dev/cozeloop-go/internal/util"
+)
+
+func main() {
+    // 1.Create a prompt on the platform
+    // Create a Prompt on the platform's Prompt development page (set Prompt Key to 'ptaas_demo'),
+    // add the following messages to the template, submit a version.
+    // System: You are a helpful assistant for {{topic}}.
+    // User: Please help me with {{user_request}}
+    ctx := context.Background()
+
+    // Set the following environment variables first.
+    // COZELOOP_WORKSPACE_ID=your workspace id
+    // COZELOOP_API_TOKEN=your token
+    // 2.New loop client
+    client, err := cozeloop.NewClient()
+    if err != nil {
+       panic(err)
+    }
+    defer client.Close(ctx)
+
+    ctx, span := client.StartSpan(ctx, "root_span", "custom")
+    defer span.Finish(ctx)
+
+    // 3. Execute prompt
+    executeRequest := &entity.ExecuteParam{
+       PromptKey: "CozeLoop_Oncall_Master",
+       Version:   "0.0.1",
+       VariableVals: map[string]any{
+          "topic":        "artificial intelligence",
+          "user_request": "explain what is machine learning",
+       },
+       // You can also append messages to the prompt.
+       Messages: []*entity.Message{
+          {
+             Role:    entity.RoleUser,
+             Content: util.Ptr("Keep the answer brief."),
+          },
+       },
+    }
+    // 3.1 non stream
+    nonStream(ctx, client, executeRequest)
+    client.Flush(ctx)
+}
+
+func nonStream(ctx context.Context, client cozeloop.Client, executeRequest *entity.ExecuteParam) {
+    result, err := client.Execute(ctx, executeRequest)
+    if err != nil {
+       panic(err)
+    }
+    printExecuteResult(result)
+}
+
+func printExecuteResult(result entity.ExecuteResult) {
+    if result.Message != nil {
+       fmt.Printf("Message: %s\n", util.ToJSON(result.Message))
+    }
+    if util.PtrValue(result.FinishReason) != "" {
+       fmt.Printf("FinishReason: %s\n", util.PtrValue(result.FinishReason))
+    }
+    if result.Usage != nil {
+       fmt.Printf("Usage: %s\n", util.ToJSON(result.Usage))
+    }
+} */
+  (key: 'prompt_service_call_sync', fallbackText?: string): string;
+  /** import { ApiClient, PromptAsAService } from '@cozeloop/ai'; 
+ 
+const apiClient = new ApiClient({ 
+  token: 'pat_xxx', 
+}); 
+ 
+const model = new PromptAsAService({ 
+  // or set it as process.env.COZELOOP_WORKSPACE_ID, 
+  workspaceId: 'your_workspace_id', 
+  // prompt to invoke as a service 
+  prompt: { 
+    prompt_key: 'ptaas_demo', 
+    version: '0.0.1', 
+  }, 
+  apiClient, 
+}); 
+ 
+const reply = await model.invoke({ 
+  messages: [{ role: 'user', content: 'Keep the answer brief.' }], 
+  variables: { 
+    topic: 'artificial intelligence', 
+    user_request: 'explain what is machine learning', 
+  }, 
+}); 
+ 
+console.info(reply); */
+  (key: 'prompt_use_js_synchronous_call', fallbackText?: string): string;
+  /** import asyncio
+import os
+
+from anyio import sleep
+
+from cozeloop import new_client, Client
+from cozeloop.entities.prompt import Message, Role, ExecuteResult
+
+
+def setup_client() -> Client:
+    """
+    Unified client setup function
+    
+    Environment variables:
+    - COZELOOP_WORKSPACE_ID: workspace ID
+    - COZELOOP_API_TOKEN: API token
+    """
+    # Set the following environment variables first.
+    # COZELOOP_WORKSPACE_ID=your workspace id
+    # COZELOOP_API_TOKEN=your token
+    client = new_client(
+        api_base_url=os.getenv("COZELOOP_API_BASE_URL"),
+        workspace_id=os.getenv("COZELOOP_WORKSPACE_ID"),
+        api_token=os.getenv("COZELOOP_API_TOKEN"),
+    )
+    return client
+
+
+def print_execute_result(result: ExecuteResult) -> None:
+    """Unified result printing function, consistent with Go version format"""
+    if result.message:
+        print(f"Message: {result.message}")
+    if result.finish_reason:
+        print(f"FinishReason: {result.finish_reason}")
+    if result.usage:
+        print(f"Usage: {result.usage}")
+
+
+def sync_non_stream_example(client: Client) -> None:
+    """Sync non-stream call example"""
+    print("=== Sync Non-Stream Example ===")
+    
+    # 1. Create a prompt on the platform
+    # Create a Prompt on the platform's Prompt development page (set Prompt Key to 'ptaas_demo'),
+    # add the following messages to the template, submit a version.
+    # System: You are a helpful assistant for {{topic}}.
+    # User: Please help me with {{user_request}}
+    
+    result = client.execute_prompt(
+        prompt_key="ptaas_demo",
+        version="0.0.1",
+        variable_vals={
+            "topic": "artificial intelligence",
+            "user_request": "explain what is machine learning"
+        },
+        # You can also append messages to the prompt.
+        messages=[
+            Message(role=Role.USER, content="Keep the answer brief.")
+        ],
+        stream=False
+    )
+    print_execute_result(result)
+
+
+async def async_non_stream_example(client: Client) -> None:
+    """Async non-stream call example"""
+    print("=== Async Non-Stream Example ===")
+    
+    result = await client.aexecute_prompt(
+        prompt_key="ptaas_demo",
+        version="0.0.1",
+        variable_vals={
+            "topic": "artificial intelligence",
+            "user_request": "explain what is machine learning"
+        },
+        messages=[
+            Message(role=Role.USER, content="Keep the answer brief.")
+        ],
+        stream=False
+    )
+    print_execute_result(result)
+
+
+async def main():
+    """Main function"""
+    client = setup_client()
+
+    root_span = client.start_span("root", "custom")
+    try:
+        # Sync non-stream call
+        sync_non_stream_example(client)
+
+        # Async non-stream call
+        await async_non_stream_example(client)
+
+    finally:
+        # Close client
+        root_span.finish()
+        if hasattr(client, 'close'):
+            client.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(main()) */
+  (key: 'prompt_use_python_simultaneous_call', fallbackText?: string): string;
+  /** 手动配置视频变量采样参数，详见 */
+  (key: 'fornax_prompt_manual_config_video_sample_params', fallbackText?: string): string;
+  /** 说明文档 */
+  (key: 'fornax_prompt_documentation', fallbackText?: string): string;
+  /** 抽帧配置 */
+  (key: 'fornax_prompt_frame_extraction_config', fallbackText?: string): string;
+  /** FPS 越高，视频理解越精细，Token用量越大 */
+  (key: 'fornax_prompt_fps_influence_on_video_understanding_and_token_usage', fallbackText?: string): string;
+  /** 请输入抽帧配置 */
+  (key: 'fornax_prompt_please_enter_frame_extraction_config', fallbackText?: string): string;
+  /** 视频采样配置 */
+  (key: 'fornax_prompt_video_sampling_config', fallbackText?: string): string;
+  /** 视频支持手动配置为按时间均匀采样，即固定时间间隔抽帧设置每秒处理的帧数（FPS）。详见 */
+  (key: 'fornax_prompt_video_manual_uniform_sampling_support', fallbackText?: string): string;
+  /** 复制Prompt */
+  (key: 'prompt_copy_prompt', fallbackText?: string): string;
+  /** 名称查询 */
+  (key: 'prompt_name_query', fallbackText?: string): string;
+  /** # 角色
+你是一个专业的旅游规划助手，能够根据用户的具体需求和偏好，迅速且精准地为用户生成全面、详细且个性化的旅游规划文档。
+
+## 技能：制定旅游规划方案
+为用户量身制定合理且舒适的行程安排和贴心的旅行指引。对于不同主题，需要能够体现对应主题的特色、需求或注意事项等。如亲子游，需要体现带小孩旅行途中要注意的内容，用户的预算和偏好等。 
+回复使用以下格式（内容可以合理使用 emoji 表情，让内容更生动）：
+
+## 输出格式
+#### 基本信息
+- 🛫 出发地：{{departure}}  <如未提供，则不展示此信息>
+- 🎯 目的地：{{destination}}
+- 🫂 人数：{{people_num}}人
+- 📅 天数：{{days_num}}天
+- 🎨 主题：{{travel_theme}} 
+##### <目的地>简介
+<介目的地的基本信息，约100字>
+<描述天气状况、穿衣指南，约100字>
+<描述当地特色饮食、风俗习惯等，约100字>
+#### Checklist
+- 手机、充电器
+<需要携带的物品或准备事项，按需求生成>
+#### 行程安排
+<根据用户期望天数（{{days_num}}天）安排每日行程>
+##### 第一天、地点1 - 地点2 - ...
+###### 行程1：地点1
+<地点的景点简介，约100字>
+<地点的交通方式，提供合理的交通方式及使用时间信息>
+<地点的游玩方式，提供推荐游玩时长、游玩方式、注意事项、预定信息等，约100字>
+<如果 {{days_num}}超过1天，则继续按照第一天格式生成>
+#### 注意事项
+<根据以上日程安排信息，提供一些目的地旅行的注意事项>
+
+
+## 限制:
+- 所输出的内容必须按照给定的格式进行组织，不能偏离框架要求。 */
+  (key: 'prompt_playground_mock_system', fallbackText?: string): string;
+  /** ## 用户需求
+- 出发地：{{departure}}  
+- 目的地：{{destination}}
+- 人数：{{people_num}}
+- 天数：{{days_num}}
+- 主题：{{travel_theme}}  */
+  (key: 'prompt_playground_mock_user', fallbackText?: string): string;
+  /** Normal 模版在Prompt 中输入 {{}}即可创建变量，其他模版请手动创建变量 */
+  (key: 'prompt_normal_template_var_intro', fallbackText?: string): string;
+  /** 额外配置 */
+  (key: 'prompt_additional_configuration', fallbackText?: string): string;
+  /** 深度思考开关 */
+  (key: 'prompt_deep_thinking_switch', fallbackText?: string): string;
+  /** 深度思考长度 */
+  (key: 'prompt_deep_thinking_length', fallbackText?: string): string;
+  /** 深度思考程度 */
+  (key: 'prompt_deep_thinking_degree', fallbackText?: string): string;
+  /** 深度思考 */
+  (key: 'prompt_deep_thinking', fallbackText?: string): string;
+  /** 开启后，模型会根据输入的问题，进行深度思考，生成更准确的回答。 */
+  (key: 'prompt_deep_thinking_description', fallbackText?: string): string;
+  /** 编辑 Prompt 片段 */
+  (key: 'prompt_edit_prompt_snippet', fallbackText?: string): string;
+  /** 复制 Prompt 片段 */
+  (key: 'prompt_copy_prompt_snippet', fallbackText?: string): string;
+  /** 创建 Prompt 片段 */
+  (key: 'prompt_create_prompt_snippet', fallbackText?: string): string;
+  /** Prompt 片段名称 */
+  (key: 'prompt_prompt_snippet_name', fallbackText?: string): string;
+  /** Prompt 片段描述 */
+  (key: 'prompt_prompt_snippet_description', fallbackText?: string): string;
+  /** Prompt Key 长度不能超过 100 个字符 */
+  (key: 'prompt_prompt_key_length_limit', fallbackText?: string): string;
+  /** {promptNameLabel}长度不能超过 100 个字符 */
+  (
+    key: 'prompt_prompt_name_length_limit',
+    options?: {
+      /** string */ promptNameLabel: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** {modalTitle}-确认 */
+  (
+    key: 'prompt_modal_title_confirm',
+    options?: {
+      /** string */ modalTitle: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 确定删除 */
+  (key: 'prompt_confirm_delete', fallbackText?: string): string;
+  /** 暂无变更信息 */
+  (key: 'prompt_no_change_info', fallbackText?: string): string;
+  /** 模型ID */
+  (key: 'prompt_model_id', fallbackText?: string): string;
+  /** 模板类型 */
+  (key: 'prompt_template_type', fallbackText?: string): string;
+  /** 源版本 */
+  (key: 'prompt_source_version', fallbackText?: string): string;
+  /** Prompt 配置 */
+  (key: 'prompt_prompt_configuration', fallbackText?: string): string;
+  /** Prompt 变更 ({promptTypeDiffCount}) */
+  (
+    key: 'prompt_prompt_change_count',
+    options?: {
+      /** string */ promptTypeDiffCount: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 配置变更 ({configTypeDiffCount}) */
+  (
+    key: 'prompt_config_change_count',
+    options?: {
+      /** string */ configTypeDiffCount: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 退出全屏 */
+  (key: 'prompt_exit_fullscreen', fallbackText?: string): string;
+  /** 展开嵌套内容 */
+  (key: 'prompt_expand_nested_content', fallbackText?: string): string;
+  /** Prompt Diff变更信息 */
+  (key: 'prompt_prompt_diff_change_info', fallbackText?: string): string;
+  /** 上一个 Diff */
+  (key: 'prompt_previous_diff', fallbackText?: string): string;
+  /** 下一个 Diff */
+  (key: 'prompt_next_diff', fallbackText?: string): string;
+  /** 可对比版本 */
+  (key: 'prompt_comparable_versions', fallbackText?: string): string;
+  /** 现行版本 */
+  (key: 'prompt_current_version', fallbackText?: string): string;
+  /** 进入全屏 */
+  (key: 'prompt_enter_fullscreen', fallbackText?: string): string;
+  /** 删除Prompt */
+  (key: 'prompt_delete_prompt', fallbackText?: string): string;
+  /** 最近提交人 */
+  (key: 'prompt_latest_committer', fallbackText?: string): string;
+  /** Prompt 片段 */
+  (key: 'prompt_prompt_snippet', fallbackText?: string): string;
+  /** 空白 Prompt */
+  (key: 'prompt_blank_prompt', fallbackText?: string): string;
+  /** Prompt片段支持被嵌套在不同的Prompt Template里复用 */
+  (key: 'prompt_prompt_snippet_nesting_support', fallbackText?: string): string;
+  /** 查看文档 */
+  (key: 'prompt_view_documentation', fallbackText?: string): string;
+  /** 本次提交草稿版本 */
+  (key: 'prompt_current_submission_draft', fallbackText?: string): string;
+  /** 本次提交无版本差异，确定要提交么 */
+  (key: 'prompt_submit_no_version_diff_confirm', fallbackText?: string): string;
+  /** Prompt 提交 */
+  (key: 'prompt_prompt_submit', fallbackText?: string): string;
+  /** 暂无 Prompt 片段 */
+  (key: 'prompt_no_prompt_snippet', fallbackText?: string): string;
+  /** Prompt 片段支持在不同的 Prompt Template 里复用 */
+  (key: 'prompt_prompt_snippet_reuse_support', fallbackText?: string): string;
+  /** 提供从编写、调试、优化到版本管理的提示词全流程支持，点击即可创建 */
+  (key: 'prompt_full_process_prompt_support', fallbackText?: string): string;
+  /** 片段版本 */
+  (key: 'prompt_snippet_version', fallbackText?: string): string;
+  /** 引用此片段Prompt 版本 */
+  (key: 'prompt_reference_snippet_prompt_version', fallbackText?: string): string;
+  /** 片段被引用记录 */
+  (key: 'prompt_snippet_reference_records', fallbackText?: string): string;
+  /** 共 {totalReferenceCount} 个项目 */
+  (
+    key: 'prompt_total_reference_projects',
+    options?: {
+      /** string */ totalReferenceCount: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 只能删除 Prompt 里面的变量，片段中的变量无法被删除 */
+  (key: 'prompt_cannot_delete_snippet_variables', fallbackText?: string): string;
+  /** 片段里的变量不支持删除 */
+  (key: 'prompt_snippet_variables_no_delete', fallbackText?: string): string;
+  /** {placeholder1}个片段 */
+  (
+    key: 'prompt_number_of_snippets',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 此变量在{snippetNames}片段中被引用 */
+  (
+    key: 'prompt_variable_referenced_in_snippets',
+    options?: {
+      /** string */ snippetNames: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 引用项目 */
+  (key: 'prompt_reference_project', fallbackText?: string): string;
+  /** 多轮对话 */
+  (key: 'prompt_multi_turn_conversation', fallbackText?: string): string;
+  /** 单轮对话 */
+  (key: 'prompt_single_turn_conversation', fallbackText?: string): string;
+  /** 新增消息 */
+  (key: 'prompt_new_message', fallbackText?: string): string;
+  /** 常用配置 */
+  (key: 'prompt_common_configuration', fallbackText?: string): string;
+  /** 对比版本 */
+  (key: 'prompt_compare_versions', fallbackText?: string): string;
+  /** 正在编辑的版本 */
+  (key: 'prompt_currently_editing_version', fallbackText?: string): string;
+  /** 退出 Diff */
+  (key: 'prompt_exit_diff', fallbackText?: string): string;
+  /** 进入 Diff */
+  (key: 'prompt_enter_diff', fallbackText?: string): string;
+  /** 暂无已提交版本，不支持进行对比 */
+  (key: 'prompt_no_submitted_versions_no_compare', fallbackText?: string): string;
+  /** GoTemplate 模板引擎 */
+  (key: 'prompt_gotemplate_engine', fallbackText?: string): string;
+  /** Prompt 中包含不匹配模板类型的片段 */
+  (key: 'prompt_prompt_contains_mismatched_snippet', fallbackText?: string): string;
+  /** 对比模式 */
+  (key: 'prompt_compare_mode', fallbackText?: string): string;
+  /** 进入对比模式 */
+  (key: 'prompt_enter_compare_mode', fallbackText?: string): string;
+  /** 打开版本记录 */
+  (key: 'prompt_open_version_history', fallbackText?: string): string;
+  /** 提交新版 */
+  (key: 'prompt_submit_new_version', fallbackText?: string): string;
+  /** {placeholder1} 个项目引用中 */
+  (
+    key: 'prompt_number_of_projects_referencing',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 退出对比模式 */
+  (key: 'prompt_exit_compare_mode', fallbackText?: string): string;
+  /** 当前模型不支持上传多模态图片 */
+  (key: 'prompt_model_not_support_multimodal_image', fallbackText?: string): string;
+  /** 当前模型不支持上传多模态视频 */
+  (key: 'prompt_model_not_support_multimodal_video', fallbackText?: string): string;
+  /** 当前模型不支持上传该视频类型 */
+  (key: 'prompt_model_not_support_this_video_type', fallbackText?: string): string;
+  /** 停止全部响应 */
+  (key: 'prompt_stop_all_responses', fallbackText?: string): string;
+  /** 插入片段 */
+  (key: 'prompt_insert_snippet', fallbackText?: string): string;
+  /** 此版本与当前Prompt模版类型不一致 */
+  (key: 'prompt_version_inconsistent_with_prompt_template', fallbackText?: string): string;
+  /** 此版本已包含一级嵌套 */
+  (key: 'prompt_version_contains_first_level_nesting', fallbackText?: string): string;
+  /** 暂无内容 */
+  (key: 'prompt_no_content', fallbackText?: string): string;
+  /** 确定删除该段吗？ */
+  (key: 'prompt_confirm_delete_section', fallbackText?: string): string;
+  /** TextMd切换 */
+  (key: 'prompt_text_md_toggle', fallbackText?: string): string;
+  /** 暂不支持复制草稿版本，请先提交版本 */
+  (key: 'prompt_copy_draft_not_supported', fallbackText?: string): string;
+  /** 暂无已提交版本 */
+  (key: 'prompt_version_empty_submitted', fallbackText?: string): string;
+  /** 提示 */
+  (key: 'task_delete_title', fallbackText?: string): string;
+  /** 开启google搜索后，模型的函数能力将被禁用 */
+  (key: 'fornax_prompt_disable_model_func_google_on', fallbackText?: string): string;
+  /** 模型内置方法 */
+  (key: 'fornax_prompt_model_built_in_methods', fallbackText?: string): string;
+  /** 当前状态： */
+  (key: 'fornax_prompt_current_status', fallbackText?: string): string;
+  /** 开启 */
+  (key: 'fornax_prompt_enable', fallbackText?: string): string;
+  /** 请输入内容，支持按此格式书写变量：{{USER_NAME}} */
+  (key: 'prompt_please_input_content_variable_format', fallbackText?: string): string;
+  /** - **max_tokens**: 控制模型输出的 Tokens 长度上限。通常 100 Tokens 约等于 150 个中文汉字。 */
+  (key: 'prompt_max_tokens_description', fallbackText?: string): string;
+  /** 由{placeholder1}提供 */
+  (
+    key: 'prompt_provided_by_placeholder1',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 请输入 Prompt key */
+  (key: 'prompt_please_input_prompt_key', fallbackText?: string): string;
+  /** 请输入 Prompt Key */
+  (key: 'prompt_please_input_prompt_key_caps', fallbackText?: string): string;
+  /** 请输入 Prompt 名称 */
+  (key: 'prompt_please_input_prompt_name', fallbackText?: string): string;
+  /** 请输入 Prompt 描述 */
+  (key: 'prompt_please_input_prompt_description', fallbackText?: string): string;
+  /** 添加多模态变量 */
+  (key: 'prompt_add_multi_modal_variable', fallbackText?: string): string;
+  /** 输入多模态变量名称 */
+  (key: 'prompt_input_multi_modal_variable_name', fallbackText?: string): string;
+  /** 只能包含字母、数字或下划线，并且以字母开头 */
+  (key: 'prompt_variable_name_rule_letters_numbers_underscore', fallbackText?: string): string;
+  /** 变量名重复 */
+  (key: 'prompt_variable_name_duplicate', fallbackText?: string): string;
+  /** 新增多模态变量 */
+  (key: 'prompt_add_new_multi_modal_variable', fallbackText?: string): string;
+  /** 通过变量在提示词中支持多模态信息 */
+  (key: 'prompt_support_multi_modal_in_prompt_via_variable', fallbackText?: string): string;
+  /** 下线中 */
+  (key: 'prompt_being_deprecated', fallbackText?: string): string;
+  /** Placeholder 变量名不能为空 */
+  (key: 'prompt_placeholder_variable_name_not_empty', fallbackText?: string): string;
+  /** Placeholder 变量名不能与其他类型变量名重复，请修改 Placeholder 变量名 */
+  (key: 'prompt_placeholder_variable_name_duplication', fallbackText?: string): string;
+  /** 区分大小写 */
+  (key: 'prompt_case_sensitive', fallbackText?: string): string;
+  /** 全词匹配 */
+  (key: 'prompt_whole_word_match', fallbackText?: string): string;
+  /** 上一个匹配 */
+  (key: 'prompt_previous_match', fallbackText?: string): string;
+  /** 下一个匹配 */
+  (key: 'prompt_next_match', fallbackText?: string): string;
+  /** 替换所有 */
+  (key: 'prompt_replace_all', fallbackText?: string): string;
+  /** 多模态变量名冲突 */
+  (key: 'prompt_multi_modal_variable_name_conflict', fallbackText?: string): string;
+  /** 当前 Message 不支持多模态，请调整变量类型或更换 Message 类型 */
+  (key: 'prompt_current_message_not_support_multi_modal', fallbackText?: string): string;
+  /** 无结果 */
+  (key: 'prompt_no_results', fallbackText?: string): string;
+  /** 用户输入或者模型返回包含风险内容 */
+  (key: 'prompt_user_or_model_contains_risky_content', fallbackText?: string): string;
+  /** 调用记录 */
+  (key: 'prompt_call_records', fallbackText?: string): string;
+  /** 暂无权限删除 */
+  (key: 'prompt_no_delete_permission', fallbackText?: string): string;
+  /** 所有创建人 */
+  (key: 'prompt_all_creators', fallbackText?: string): string;
+  /** 请先采纳运行建议 */
+  (key: 'prompt_please_accept_run_recommendation', fallbackText?: string): string;
   /** 加载中 */
-  (key: 'loading', fallbackText?: string): string;
-  /** 加载更多 */
-  (key: 'load_more', fallbackText?: string): string;
-  /** 暂无调试记录 */
-  (key: 'no_debug_record', fallbackText?: string): string;
-  /** 调试历史 */
-  (key: 'debug_history', fallbackText?: string): string;
-  /** Prompt 模板 */
-  (key: 'prompt_template', fallbackText?: string): string;
-  /** 删除 Prompt 模板 */
-  (key: 'delete_prompt_template', fallbackText?: string): string;
-  /** 确定删除当前 Prompt 模板？ */
+  (key: 'prompt_loading_status', fallbackText?: string): string;
+  /** 耗时: */
+  (key: 'prompt_time_consumed', fallbackText?: string): string;
+  /** 请求发起时间: */
+  (key: 'prompt_request_start_time', fallbackText?: string): string;
+  /** 请输入模拟值 */
+  (key: 'prompt_please_input_simulated_value', fallbackText?: string): string;
+  /** 耗时: {placeholder1} | Tokens: */
   (
-    key: 'confirm_delete_current_prompt_template',
-    fallbackText?: string,
-  ): string;
-  /** 模拟值 */
-  (key: 'mock_value', fallbackText?: string): string;
-  /** 已深度思考 */
-  (key: 'deeply_thought', fallbackText?: string): string;
-  /** 深度思考中 */
-  (key: 'deep_thinking', fallbackText?: string): string;
-  /** 字数: {num} */
-  (
-    key: 'num_words',
+    key: 'prompt_time_and_tokens_info',
     options?: {
-      /** string */ num: ReactNode;
+      /** string */ placeholder1: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 编辑 */
-  (key: 'edit', fallbackText?: string): string;
-  /** 删除消息 */
-  (key: 'delete_message', fallbackText?: string): string;
-  /** 确认删除该消息吗？ */
-  (key: 'confirm_delete_message', fallbackText?: string): string;
-  /** 重新运行 */
-  (key: 'rerun', fallbackText?: string): string;
-  /** 删除成功 */
-  (key: 'delete_success', fallbackText?: string): string;
-  /** 删除 Prompt */
-  (key: 'delete_prompt', fallbackText?: string): string;
-  /** 复制 Prompt Key */
-  (key: 'copy_prompt_key', fallbackText?: string): string;
-  /** 输入想要删除的Prompt Key： */
-  (key: 'input_prompt_key_to_delete', fallbackText?: string): string;
-  /** 请输入 Prompt Key 再次确认 */
-  (key: 'prompt_key_again_confirm', fallbackText?: string): string;
-  /** 对照组{index} */
+  /** 删除后数据无法恢复 */
+  (key: 'prompt_data_cannot_recover_after_deletion', fallbackText?: string): string;
+  /** 如确认删除，请输入想要删除的 Prompt Key： */
+  (key: 'prompt_confirm_deletion_input_prompt_key', fallbackText?: string): string;
+  /** 历史图片消息1天后过期，可查看 Trace 或前往 Prompt 开发页面调试获取图片信息 */
+  (key: 'prompt_historical_image_message_expires_1day', fallbackText?: string): string;
+  /** 更换模板引擎 */
+  (key: 'prompt_switch_template_engine', fallbackText?: string): string;
+  /** 可能会导致已有变量渲染失败，请谨慎操作。 */
+  (key: 'prompt_may_cause_variable_render_failure', fallbackText?: string): string;
+  /** Normal 模板引擎 */
+  (key: 'prompt_normal_template_engine', fallbackText?: string): string;
+  /** 双大括号 {{{}}} 识别变量 */
+  (key: 'prompt_triple_braces_variable_recognition', fallbackText?: string): string;
+  /** Jinja2 模板引擎 */
+  (key: 'prompt_jinja2_template_engine', fallbackText?: string): string;
+  /** 手动添加和删除变量，支持复杂逻辑 */
+  (key: 'prompt_manual_add_delete_variables_complex_logic', fallbackText?: string): string;
+  /** 用户手册 */
+  (key: 'prompt_user_manual', fallbackText?: string): string;
+  /** 使用 SDK */
+  (key: 'prompt_use_sdk', fallbackText?: string): string;
+  /** 自由对比模式 */
+  (key: 'prompt_free_comparison_mode', fallbackText?: string): string;
+  /** 请选择一个模型 */
+  (key: 'prompt_please_select_a_model', fallbackText?: string): string;
+  /** 回复随机性 */
+  (key: 'prompt_response_randomness', fallbackText?: string): string;
+  /** 重复语句惩罚 */
+  (key: 'prompt_repetition_penalty', fallbackText?: string): string;
+  /** 类型变更 */
+  (key: 'prompt_type_change', fallbackText?: string): string;
+  /** 模型设置 */
+  (key: 'prompt_model_settings', fallbackText?: string): string;
+  /** 模版引擎 */
+  (key: 'prompt_template_engine', fallbackText?: string): string;
+  /** 多次运行 */
+  (key: 'prompt_multiple_runs', fallbackText?: string): string;
+  /** 单次运行 */
+  (key: 'prompt_single_run', fallbackText?: string): string;
+  /** 运行模式 */
+  (key: 'prompt_run_mode', fallbackText?: string): string;
+  /** 模型每次只输出一条回复 */
+  (key: 'prompt_model_output_single_response', fallbackText?: string): string;
+  /** 模型每次同时输出多条回复,便于测试模型回复稳定性 */
+  (key: 'prompt_model_output_multi_response_for_stability_test', fallbackText?: string): string;
+  /** 运行组数 */
+  (key: 'prompt_run_group_count', fallbackText?: string): string;
+  /** 最多上传{MAX_IMAGE_FILE}张图片 */
   (
-    key: 'control_group_index',
+    key: 'prompt_max_upload_MAX_IMAGE_FILE_images',
     options?: {
-      /** string */ index: ReactNode;
+      /** string */ MAX_IMAGE_FILE: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 编排 */
-  (key: 'orchestration', fallbackText?: string): string;
-  /** 收起模型配置与变量区 */
-  (key: 'collapse_model_and_var_area', fallbackText?: string): string;
-  /** 展开模型配置与变量区 */
-  (key: 'expand_model_and_var_area', fallbackText?: string): string;
-  /** 预览与调试 */
-  (key: 'preview_and_debug', fallbackText?: string): string;
-  /** 展开预览与调试 */
-  (key: 'expand_preview_and_debug', fallbackText?: string): string;
-  /** 收起预览与调试 */
-  (key: 'collapse_preview_and_debug', fallbackText?: string): string;
-  /** 当前无草稿变更 */
-  (key: 'no_draft_change', fallbackText?: string): string;
-  /** 已提交 */
-  (key: 'submitted', fallbackText?: string): string;
-  /** Placeholder 变量名不存在或命名错误，无法创建 */
-  (key: 'placeholder_var_create_error', fallbackText?: string): string;
-  /** Placeholder 变量名不存在或命名错误 */
-  (key: 'placeholder_var_execute_error', fallbackText?: string): string;
-  /** 模型 ID */
-  (key: 'model_id', fallbackText?: string): string;
-  /** 模型名称 */
-  (key: 'model_name', fallbackText?: string): string;
-  /** 本次提交无版本差异 */
-  (key: 'submission_no_version_diff', fallbackText?: string): string;
-  /** 打开 启用函数 */
-  (key: 'open_enable_function', fallbackText?: string): string;
-  /** 关闭 启用函数 */
-  (key: 'close_enable_function', fallbackText?: string): string;
-  /** 继续 */
-  (key: 'continue', fallbackText?: string): string;
-  /** 关闭 */
-  (key: 'close', fallbackText?: string): string;
-  /** 请输入版本号，版本号格式为a.b.c, 且每段为0-9999 */
-  (key: 'input_version_number', fallbackText?: string): string;
-  /** 图片上传失败，请稍后重试 */
-  (key: 'image_upload_error', fallbackText?: string): string;
-  /** 最多上传{num}张图片 */
+  /** 图片大小不能超过{MAX_FILE_SIZE_MB}MB */
   (
-    key: 'max_upload_picture_num',
+    key: 'prompt_image_size_max_MAX_FILE_SIZE_MB_MB',
     options?: {
-      /** string */ num: ReactNode;
+      /** string */ MAX_FILE_SIZE_MB: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 图片大小不能超过{num}MB */
+  /** 新增函数 */
+  (key: 'prompt_add_function', fallbackText?: string): string;
+  /** 模拟值: */
+  (key: 'prompt_simulated_value_colon', fallbackText?: string): string;
+  /** Prompt调试数据在路上，请刷新重试 */
+  (key: 'prompt_prompt_debug_data_loading_refresh', fallbackText?: string): string;
+  /** 第{placeholder1}步 */
   (
-    key: 'image_size_not_exceed_num_mb',
+    key: 'prompt_step_placeholder1',
     options?: {
-      /** string */ num: ReactNode;
+      /** string */ placeholder1: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 清空历史消息 */
-  (key: 'clear_history_messages', fallbackText?: string): string;
-  /** 请输入问题测试大模型回复，回车发送，Shift+回车换行 */
-  (key: 'input_question_tip', fallbackText?: string): string;
-  /** 删除函数 */
-  (key: 'delete_function', fallbackText?: string): string;
-  /** 确认删除该函数吗？ */
-  (key: 'confirm_delete_function', fallbackText?: string): string;
-  /** 当前方法已经存在，请重新命名 */
-  (key: 'method_exists', fallbackText?: string): string;
-  /** 新函数 */
-  (key: 'new_function', fallbackText?: string): string;
-  /** 方法名称必须是 a-z、A-Z、0-9，或包含下划线和破折号，长度最长为 64。 */
-  (key: 'method_name_rule', fallbackText?: string): string;
-  /** 在此处输入模拟值以模拟函数的返回值。 */
-  (key: 'input_mock_value_here', fallbackText?: string): string;
-  /** Trace ID */
-  (key: 'trace_id', fallbackText?: string): string;
-  /** 复制 Trace ID */
-  (key: 'copy_trace_id', fallbackText?: string): string;
-  /** 复制变量名 */
-  (key: 'copy_variable_name', fallbackText?: string): string;
-  /** 删除变量 */
-  (key: 'delete_variable', fallbackText?: string): string;
-  /** 将删除 Prompt 模板中的该变量。确认删除吗？ */
-  (key: 'confirm_delete_var_in_tpl', fallbackText?: string): string;
-  /** 参数值 */
-  (key: 'param_value', fallbackText?: string): string;
-  /** 模拟消息组-{key} */
+  /** 新增变量 */
+  (key: 'prompt_add_variable', fallbackText?: string): string;
+  /** 请输入模拟消息 */
+  (key: 'prompt_please_input_simulated_message', fallbackText?: string): string;
+  /** 请输入浮点数，最多保留4位小数 */
+  (key: 'prompt_please_input_float_max_4_decimal', fallbackText?: string): string;
+  /** 请输入变量值 */
+  (key: 'prompt_please_input_variable_value', fallbackText?: string): string;
+  /** 无法新增，请检查表单数据 */
+  (key: 'prompt_cannot_add_check_form_data', fallbackText?: string): string;
+  /** 变量名称 */
+  (key: 'prompt_variable_name', fallbackText?: string): string;
+  /** 请输入变量名称 */
+  (key: 'prompt_please_input_variable_name', fallbackText?: string): string;
+  /** 变量名不能以空格开头 */
+  (key: 'prompt_variable_name_cannot_start_space', fallbackText?: string): string;
+  /** 变量名格式仅支持字母、数字、下划线、中划线，且不能以数字开头 */
+  (key: 'prompt_variable_name_format_rule', fallbackText?: string): string;
+  /** 变量名已存在 */
+  (key: 'prompt_variable_name_exists', fallbackText?: string): string;
+  /** 请选择变量的数据类型 */
+  (key: 'prompt_please_select_variable_data_type', fallbackText?: string): string;
+  /** 变量值 */
+  (key: 'prompt_variable_value', fallbackText?: string): string;
+  /** 编辑变量 */
+  (key: 'prompt_edit_variable', fallbackText?: string): string;
+  /** 修改版本标识 */
+  (key: 'prompt_modify_version_tag', fallbackText?: string): string;
+  /** 创建版本标识成功 */
+  (key: 'prompt_create_version_tag_success', fallbackText?: string): string;
+  /** 请输入版本标识 */
+  (key: 'prompt_please_input_version_tag', fallbackText?: string): string;
+  /** 标识只允许小写字母、数字和下划线 */
+  (key: 'prompt_tag_allows_lowercase_num_underscore', fallbackText?: string): string;
+  /** 标识已存在 */
+  (key: 'prompt_tag_already_exists', fallbackText?: string): string;
+  /** 标识长度不能超过50个字符 */
+  (key: 'prompt_tag_length_max_50_chars', fallbackText?: string): string;
+  /** 当前标识已存在于{promptVersion}版本 */
   (
-    key: 'mock_message_group',
+    key: 'prompt_tag_exists_in_promptVersion',
     options?: {
-      /** string */ key: ReactNode;
+      /** string */ promptVersion: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 模拟消息 */
-  (key: 'mock_message', fallbackText?: string): string;
-  /** System */
-  (key: 'system_role', fallbackText?: string): string;
+  /** 创建自定义标识 */
+  (key: 'prompt_create_custom_tag', fallbackText?: string): string;
+  /** 最多选择{MAX_SELECT_COUNT}个标识 */
+  (
+    key: 'prompt_max_select_MAX_SELECT_COUNT_tags',
+    options?: {
+      /** string */ MAX_SELECT_COUNT: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 版本标识存在重复 */
+  (key: 'prompt_version_tag_duplicates_exist', fallbackText?: string): string;
+  /** 所选标识 */
+  (key: 'prompt_selected_tags', fallbackText?: string): string;
+  /** 已在当前 Prompt 其他版本生效。提交成功后，标识将仅在当前版本生效。 */
+  (key: 'prompt_tag_effect_other_versions_submission_success', fallbackText?: string): string;
+  /** 版本标识 */
+  (key: 'prompt_version_tag', fallbackText?: string): string;
+  /** 标记版本特性，可通过标识在 SDK 拉取 Prompt 特定版本。查看 */
+  (key: 'prompt_mark_version_feature_sdk_fetch', fallbackText?: string): string;
+  /** 扣子罗盘暂不支持技能引用与调试 */
+  (key: 'prompt_kouzi_compass_no_skill_reference_debug', fallbackText?: string): string;
   /** Assistant */
   (key: 'assistant_role', fallbackText?: string): string;
-  /** User */
-  (key: 'user_role', fallbackText?: string): string;
-  /** 回滚成功 */
-  (key: 'rollback_success', fallbackText?: string): string;
-  /** 还原为此版本 */
-  (key: 'restore_to_this_version', fallbackText?: string): string;
-  /** 还原后将覆盖最新编辑的提示词。确认还原为此版本？ */
-  (key: 'restore_version_tip', fallbackText?: string): string;
-  /** 还原 */
-  (key: 'restore', fallbackText?: string): string;
-  /** 模型运行出错 */
-  (key: 'model_run_error', fallbackText?: string): string;
-  /** 模型运行错误 */
-  (key: 'model_runtime_error', fallbackText?: string): string;
+  /** Placeholder 变量不存在或命名错误 */
+  (key: 'placeholder_var_error', fallbackText?: string): string;
+  /** Placeholder 变量名 */
+  (key: 'placeholder_var_name', fallbackText?: string): string;
+  /** Placeholder 变量名不存在或命名错误 */
+  (key: 'placeholder_var_execute_error', fallbackText?: string): string;
+  /** Placeholder 变量名不存在或命名错误，无法创建 */
+  (key: 'placeholder_var_create_error', fallbackText?: string): string;
   /** Prompt ID 不一致 */
   (key: 'prompt_id_inconsistent', fallbackText?: string): string;
-  /** 最近提交时间 */
-  (key: 'recent_submission_time', fallbackText?: string): string;
-  /** 搜索 Prompt Key 或 Prompt 名称 */
-  (key: 'search_prompt_key_or_prompt_name', fallbackText?: string): string;
-  /** 暂无 Prompt */
-  (key: 'no_prompt', fallbackText?: string): string;
-  /** 需要提供 Prompt 版本号 */
-  (key: 'prompt_version_number_needed', fallbackText?: string): string;
+  /** Prompt key */
+  (key: 'prompt_key', fallbackText?: string): string;
+  /** Prompt 变量 */
+  (key: 'prompt_variable', fallbackText?: string): string;
+  /** Prompt 描述 */
+  (key: 'prompt_description', fallbackText?: string): string;
+  /** Prompt 名称 */
+  (key: 'prompt_name', fallbackText?: string): string;
+  /** Prompt 模板 */
+  (key: 'prompt_template', fallbackText?: string): string;
+  /** Prompt 调试数据在路上，请刷新重试 */
+  (key: 'prompt_debug_data_refresh_retry', fallbackText?: string): string;
+  /** System */
+  (key: 'system_role', fallbackText?: string): string;
+  /** Top K */
+  (key: 'top_k', fallbackText?: string): string;
+  /** Top P */
+  (key: 'top_p', fallbackText?: string): string;
+  /** Trace ID */
+  (key: 'trace_id', fallbackText?: string): string;
+  /** User */
+  (key: 'user_role', fallbackText?: string): string;
+  /** 版本号不能小于当前版本 */
+  (key: 'version_number_lt_error', fallbackText?: string): string;
   /** 版本号格式不正确 */
   (key: 'incorrect_version_number', fallbackText?: string): string;
-  /** 停止响应 */
-  (key: 'stop_respond', fallbackText?: string): string;
-  /** 耗时 */
-  (key: 'time_consumed', fallbackText?: string): string;
-  /** Tokens */
-  (key: 'tokens', fallbackText?: string): string;
-  /** 请求发起时间 */
-  (key: 'request_initiation_time', fallbackText?: string): string;
-  /** 函数调用 */
-  (key: 'function_call', fallbackText?: string): string;
-  /** 模型配置 */
-  (key: 'model_config', fallbackText?: string): string;
-  /** 添加消息 */
-  (key: 'add_message', fallbackText?: string): string;
-  /** 返回草稿版本 */
-  (key: 'revert_draft_version', fallbackText?: string): string;
-  /** 草稿 */
-  (key: 'draft', fallbackText?: string): string;
+  /** 本次提交无版本差异 */
+  (key: 'submission_no_version_diff', fallbackText?: string): string;
+  /** 编辑 Placeholder */
+  (key: 'edit_placeholder', fallbackText?: string): string;
+  /** 编辑 Prompt */
+  (key: 'edit_prompt', fallbackText?: string): string;
+  /** 变量设置 */
+  (key: 'variable_setting', fallbackText?: string): string;
+  /** 参数配置 */
+  (key: 'parameter_config', fallbackText?: string): string;
+  /** 参数值 */
+  (key: 'param_value', fallbackText?: string): string;
   /** 草稿保存中... */
   (key: 'draft_saving', fallbackText?: string): string;
   /** 草稿已自动保存于 */
   (key: 'draft_auto_saved_in', fallbackText?: string): string;
-  /** 进入自由对比模式 */
-  (key: 'enter_free_comparison_mode', fallbackText?: string): string;
-  /** 退出自由对比模式 */
-  (key: 'exit_free_comparison_mode', fallbackText?: string): string;
-  /** 快捷创建 */
-  (key: 'quick_create', fallbackText?: string): string;
-  /** 增加对照组 */
-  (key: 'add_control_group', fallbackText?: string): string;
-  /** 变量设置 */
-  (key: 'variable_setting', fallbackText?: string): string;
-  /** 函数 */
-  (key: 'function', fallbackText?: string): string;
-  /** 接入 CozeLoop SDK 上报数据，进行数据观测 */
-  (key: 'cozeloop_sdk_data_report_observation', fallbackText?: string): string;
-  /** 立即前往 */
-  (key: 'go_immediately', fallbackText?: string): string;
-  /** 对 Prompt 进行效果评估，提升应用效果 */
-  (key: 'prompt_effect_evaluation', fallbackText?: string): string;
-  /** 确认版本差异 */
-  (key: 'confirm_version_difference', fallbackText?: string): string;
-  /** 确认版本信息 */
-  (key: 'confirm_version_info', fallbackText?: string): string;
-  /** 该模型不支持上传图片 */
-  (key: 'model_not_support_picture', fallbackText?: string): string;
-  /** 模型不支持 */
-  (key: 'model_not_support', fallbackText?: string): string;
-  /** 启用函数 */
-  (key: 'enable_function', fallbackText?: string): string;
-  /** 单步调试 */
-  (key: 'single_step_debugging', fallbackText?: string): string;
+  /** 插入变量 */
+  (key: 'insert_variable', fallbackText?: string): string;
   /** 插入模版 */
   (key: 'insert_template', fallbackText?: string): string;
-  /** 默认模拟值 */
-  (key: 'default_mock_value', fallbackText?: string): string;
-  /** Prompt 调试数据在路上，请刷新重试 */
-  (key: 'prompt_debug_data_refresh_retry', fallbackText?: string): string;
-  /** 编辑 Placeholder */
-  (key: 'edit_placeholder', fallbackText?: string): string;
+  /** 创建 Prompt */
+  (key: 'create_prompt', fallbackText?: string): string;
+  /** 创建副本 */
+  (key: 'create_copy', fallbackText?: string): string;
+  /** 存在惩罚 */
+  (key: 'presence_penalty', fallbackText?: string): string;
+  /** 打开 启用函数 */
+  (key: 'open_enable_function', fallbackText?: string): string;
+  /** 单步调试 */
+  (key: 'single_step_debugging', fallbackText?: string): string;
+  /** 当前方法已经存在，请重新命名 */
+  (key: 'method_exists', fallbackText?: string): string;
+  /** 当前无草稿变更 */
+  (key: 'no_draft_change', fallbackText?: string): string;
   /** 第{num}步 */
   (
     key: 'x_step',
@@ -687,48 +1895,649 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** Prompt 变量 */
-  (key: 'prompt_variable', fallbackText?: string): string;
+  /** 对 Prompt 进行效果评估，提升应用效果 */
+  (key: 'prompt_effect_evaluation', fallbackText?: string): string;
+  /** 返回草稿版本 */
+  (key: 'revert_draft_version', fallbackText?: string): string;
+  /** 方法名称必须是 a-z、A-Z、0-9，或包含下划线和破折号，长度最长为 64。 */
+  (key: 'method_name_rule', fallbackText?: string): string;
+  /** 复制 Prompt Key */
+  (key: 'copy_prompt_key', fallbackText?: string): string;
+  /** 复制 Trace ID */
+  (key: 'copy_trace_id', fallbackText?: string): string;
+  /** 复制变量名 */
+  (key: 'copy_variable_name', fallbackText?: string): string;
+  /** 该模型不支持上传图片 */
+  (key: 'model_not_support_picture', fallbackText?: string): string;
+  /** 关闭 启用函数 */
+  (key: 'close_enable_function', fallbackText?: string): string;
+  /** 还原后将覆盖最新编辑的提示词。确认还原为此版本？ */
+  (key: 'restore_version_tip', fallbackText?: string): string;
+  /** 还原为此版本 */
+  (key: 'restore_to_this_version', fallbackText?: string): string;
+  /** 函数调用 */
+  (key: 'function_call', fallbackText?: string): string;
+  /** 耗时 */
+  (key: 'time_consumed', fallbackText?: string): string;
+  /** 回滚成功 */
+  (key: 'rollback_success', fallbackText?: string): string;
+  /** 加载更多 */
+  (key: 'load_more', fallbackText?: string): string;
+  /** 将删除 Prompt 模板中的该变量。确认删除吗？ */
+  (key: 'confirm_delete_var_in_tpl', fallbackText?: string): string;
+  /** 接入 CozeLoop SDK 上报数据，进行数据观测 */
+  (key: 'cozeloop_sdk_data_report_observation', fallbackText?: string): string;
+  /** 仅支持英文字母、数字、“_”、“.”，且仅支持英文字母开头 */
+  (key: 'prompt_key_format', fallbackText?: string): string;
+  /** 仅支持英文字母、数字、中文，“-”，“_”，“.”，且仅支持英文字母、数字、中文开头 */
+  (key: 'prompt_name_format', fallbackText?: string): string;
+  /** 进入自由对比模式 */
+  (key: 'enter_free_comparison_mode', fallbackText?: string): string;
+  /** 快捷创建 */
+  (key: 'quick_create', fallbackText?: string): string;
+  /** 历史数据有空内容 */
+  (key: 'historical_data_has_empty_content', fallbackText?: string): string;
+  /** 立即前往 */
+  (key: 'go_immediately', fallbackText?: string): string;
+  /** 模拟消息 */
+  (key: 'mock_message', fallbackText?: string): string;
+  /** 模拟消息组-{key} */
+  (
+    key: 'mock_message_group',
+    options?: {
+      /** string */ key: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 模拟值 */
+  (key: 'mock_value', fallbackText?: string): string;
+  /** 模型 ID */
+  (key: 'model_id', fallbackText?: string): string;
+  /** 模型不支持 */
+  (key: 'model_not_support', fallbackText?: string): string;
+  /** 模型名称 */
+  (key: 'model_name', fallbackText?: string): string;
+  /** 模型配置 */
+  (key: 'model_config', fallbackText?: string): string;
+  /** 模型运行出错 */
+  (key: 'model_run_error', fallbackText?: string): string;
+  /** 模型运行错误 */
+  (key: 'model_runtime_error', fallbackText?: string): string;
+  /** 默认模拟值 */
+  (key: 'default_mock_value', fallbackText?: string): string;
+  /** 频率惩罚 */
+  (key: 'frequency_penalty', fallbackText?: string): string;
+  /** 启用函数 */
+  (key: 'enable_function', fallbackText?: string): string;
+  /** 清空历史消息 */
+  (key: 'clear_history_messages', fallbackText?: string): string;
+  /** 请求发起时间 */
+  (key: 'request_initiation_time', fallbackText?: string): string;
+  /** 请输入 Prompt Key 再次确认 */
+  (key: 'prompt_key_again_confirm', fallbackText?: string): string;
+  /** 请输入版本号，版本号格式为a.b.c, 且每段为0-9999 */
+  (key: 'input_version_number', fallbackText?: string): string;
+  /** 请输入内容，支持按此格式书写变量：'{{USER_NAME}} */
+  (key: 'please_input_with_vars', fallbackText?: string): string;
+  /** 请输入问题测试大模型回复，回车发送，Shift+回车换行 */
+  (key: 'input_question_tip', fallbackText?: string): string;
+  /** 请添加 Prompt 模板或输入提问内容 */
+  (key: 'add_prompt_tpl_or_input_question', fallbackText?: string): string;
+  /** 确定删除当前 Prompt 模板？ */
+  (key: 'confirm_delete_current_prompt_template', fallbackText?: string): string;
+  /** 确认版本差异 */
+  (key: 'confirm_version_difference', fallbackText?: string): string;
+  /** 确认版本信息 */
+  (key: 'confirm_version_info', fallbackText?: string): string;
+  /** 确认删除该函数吗？ */
+  (key: 'confirm_delete_function', fallbackText?: string): string;
+  /** 确认删除该消息吗？ */
+  (key: 'confirm_delete_message', fallbackText?: string): string;
+  /** 删除 Prompt */
+  (key: 'delete_prompt', fallbackText?: string): string;
+  /** 删除 Prompt 模板 */
+  (key: 'delete_prompt_template', fallbackText?: string): string;
+  /** 删除变量 */
+  (key: 'delete_variable', fallbackText?: string): string;
+  /** 删除成功 */
+  (key: 'delete_success', fallbackText?: string): string;
+  /** 删除对照组 */
+  (key: 'delete_control_group', fallbackText?: string): string;
+  /** 删除函数 */
+  (key: 'delete_function', fallbackText?: string): string;
+  /** 删除消息 */
+  (key: 'delete_message', fallbackText?: string): string;
+  /** 设置为基准组 */
+  (key: 'set_to_reference_group', fallbackText?: string): string;
+  /** 深度思考中 */
+  (key: 'deep_thinking', fallbackText?: string): string;
+  /** 收起模型配置与变量区 */
+  (key: 'collapse_model_and_var_area', fallbackText?: string): string;
+  /** 收起预览与调试 */
+  (key: 'collapse_preview_and_debug', fallbackText?: string): string;
+  /** 输入想要删除的Prompt Key： */
+  (key: 'input_prompt_key_to_delete', fallbackText?: string): string;
+  /** 搜索 Prompt Key 或 Prompt 名称 */
+  (key: 'search_prompt_key_or_prompt_name', fallbackText?: string): string;
+  /** 所选模型不支持多模态，请调整变量类型或更换模型 */
+  (key: 'model_not_support_multimodal', fallbackText?: string): string;
+  /** 添加消息 */
+  (key: 'add_message', fallbackText?: string): string;
+  /** 调试历史 */
+  (key: 'debug_history', fallbackText?: string): string;
+  /** 停止响应 */
+  (key: 'stop_respond', fallbackText?: string): string;
+  /** 图片大小不能超过{num}MB */
+  (
+    key: 'image_size_not_exceed_num_mb',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 图片上传失败，请稍后重试 */
+  (key: 'image_upload_error', fallbackText?: string): string;
+  /** 退出自由对比模式 */
+  (key: 'exit_free_comparison_mode', fallbackText?: string): string;
+  /** 文本变量名称已存在，请修改 Placeholder 变量名 */
+  (key: 'placeholder_name_exists', fallbackText?: string): string;
+  /** 新函数 */
+  (key: 'new_function', fallbackText?: string): string;
+  /** 需要提供 Prompt 版本号 */
+  (key: 'prompt_version_number_needed', fallbackText?: string): string;
+  /** 已深度思考 */
+  (key: 'deeply_thought', fallbackText?: string): string;
+  /** 预览与调试 */
+  (key: 'preview_and_debug', fallbackText?: string): string;
+  /** 在此处输入模拟值以模拟函数的返回值。 */
+  (key: 'input_mock_value_here', fallbackText?: string): string;
+  /** 暂无 Prompt */
+  (key: 'no_prompt', fallbackText?: string): string;
   /** 暂无变量 */
   (key: 'no_variable', fallbackText?: string): string;
-  /** 插入变量 */
-  (key: 'insert_variable', fallbackText?: string): string;
-  /** 参数配置 */
-  (key: 'parameter_config', fallbackText?: string): string;
-  /** 版本号不能小于当前版本 */
-  (key: 'version_number_lt_error', fallbackText?: string): string;
-  /** 紧凑视图 */
-  (key: 'compact_view', fallbackText?: string): string;
-  /** 宽松视图 */
-  (key: 'loose_view', fallbackText?: string): string;
-  /** 草稿版本 */
-  (key: 'draft_version', fallbackText?: string): string;
-  /** 修改未提交 */
-  (key: 'changes_not_submitted', fallbackText?: string): string;
-  /** 去提交 */
-  (key: 'go_submit', fallbackText?: string): string;
-  /** 选择实验 */
-  (key: 'select_experiment', fallbackText?: string): string;
-  /** 实验对比 */
-  (key: 'experiment_comparison', fallbackText?: string): string;
-  /** 发起实验对比 */
-  (key: 'run_experiment_comparison', fallbackText?: string): string;
-  /** 仅评测集相同且已执行完成的实验可进行对比。 */
-  (key: 'only_experiments_compared_tip', fallbackText?: string): string;
-  /** 已选 */
-  (key: 'selected', fallbackText?: string): string;
-  /** 评测对象类型 */
-  (key: 'evaluation_object_type', fallbackText?: string): string;
-  /** 评测对象 */
-  (key: 'evaluation_object', fallbackText?: string): string;
+  /** 暂无调试记录 */
+  (key: 'no_debug_record', fallbackText?: string): string;
+  /** 增加对照组 */
+  (key: 'add_control_group', fallbackText?: string): string;
+  /** 展开模型配置与变量区 */
+  (key: 'expand_model_and_var_area', fallbackText?: string): string;
+  /** 展开预览与调试 */
+  (key: 'expand_preview_and_debug', fallbackText?: string): string;
+  /** 支持输入英文字母和下划线，且首字母必须是字母 */
+  (key: 'prompt_var_format', fallbackText?: string): string;
+  /** 只允许输入英文、数字及下划线且首字母需为英文 */
+  (key: 'placeholder_format', fallbackText?: string): string;
+  /** 字数: {num} */
+  (
+    key: 'num_words',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 最大回复长度 */
+  (key: 'max_tokens', fallbackText?: string): string;
+  /** 最多上传{num}张图片 */
+  (
+    key: 'max_upload_picture_num',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 最近提交时间 */
+  (key: 'recent_submission_time', fallbackText?: string): string;
+  /** 运行轨迹 */
+  (key: 'evaluate_run_trajectory', fallbackText?: string): string;
+  /** 评测对象的实际输出轨迹 */
+  (key: 'evaluate_evaluated_object_actual_output_traj', fallbackText?: string): string;
+  /** 轨迹可视化 */
+  (key: 'evaluate_trajectory_visualization', fallbackText?: string): string;
+  /** 评测对象输出数据 */
+  (key: 'evaluate_evaluated_object_output_data', fallbackText?: string): string;
+  /** 选择场景一键快速配置 */
+  (key: 'evaluate_select_scenario_one_click_config', fallbackText?: string): string;
+  /** 快速配置 */
+  (key: 'evaluate_quick_configuration', fallbackText?: string): string;
+  /** 理想输出评测集 */
+  (key: 'evaluate_ideal_output_evaluation_set', fallbackText?: string): string;
+  /** 包含输入和理想输出 */
+  (key: 'evaluate_include_input_and_ideal_output', fallbackText?: string): string;
+  /** 超长数据 */
+  (key: 'evaluate_excessively_long_data', fallbackText?: string): string;
+  /** 数据不符合轨迹格式 */
+  (key: 'evaluate_data_not_meet_traj_format', fallbackText?: string): string;
+  /** Agent执行过程数据，需遵循规定数据结构。 */
+  (key: 'evaluate_agent_execution_data_follow_structure', fallbackText?: string): string;
+  /** 你觉得什么让你满意？ */
+  (key: 'evaluate_what_makes_you_satisfied', fallbackText?: string): string;
+  /** 具体说说你满意的体验 */
+  (key: 'evaluate_specifically_satisfied_experience', fallbackText?: string): string;
+  /** 未正确传递数据行 ID */
+  (key: 'evaluate_data_row_id_not_passed_correctly', fallbackText?: string): string;
+  /** 运行时指标 */
+  (key: 'runtime_indicators', fallbackText?: string): string;
+  /** 右侧所选字段类型不兼容，无法直接消费，请重新选择。 */
+  (key: 'eval_field_mapping_error_tips', fallbackText?: string): string;
+  /** 评测对象从请求到完整响应的总耗时 (ms) */
+  (key: 'eval_target_total_latency_tips', fallbackText?: string): string;
+  /** 评测对象执行过程中模型调用输入 Tokens 总消耗量 */
+  (key: 'eval_target_input_tokens_tips', fallbackText?: string): string;
+  /**  */
+  (key: 'eval_target_output_tokens_tips', fallbackText?: string): string;
+  /**  */
+  (key: 'eval_target_total_tokens', fallbackText?: string): string;
+  /** function exec_evaluation(eval_input) {
+  // 在这里编写你的评估逻辑
+  // input: 输入数据
+  // output: 模型输出
+  // expected: 期望输出
+
+  // 返回评估结果对象
+  return {
+    score: 1.0, // 分数 (0-1)
+    description: "评估通过"
+  };
+} */
+  (key: 'evaluate_code_evaluator_default_js_code_list', fallbackText?: string): string;
+  /** def exec_evaluation(eval_input):
+    """
+    在这里编写你的评估逻辑
+    input: 输入数据
+    output: 模型输出
+    expected: 期望输出
+
+    返回评估结果字典
+    """
+    return {
+        "score": 1.0,  # 分数 (0-1)
+        "description": "评估通过"
+    } */
+  (key: 'evaluate_code_evaluator_default_python_code_list', fallbackText?: string): string;
+  (key: 'evaluate_code_evaluator_default_js_code', fallbackText?: string): string;
+  /** 评测-新建LLM评估器 */
+  (key: 'evaluate_evaluation_new_llm_evaluator', fallbackText?: string): string;
+  /** 评测-新建代码评估器 */
+  (key: 'evaluate_evaluation_new_code_evaluator', fallbackText?: string): string;
+  /** 吗？ */
+  (key: 'evaluate_question_particle', fallbackText?: string): string;
+  /** 列，此操作不可逆 */
+  (key: 'evaluate_column_irreversible_action', fallbackText?: string): string;
+  /** 评测-新建评测集 */
+  (key: 'evaluate_evaluation_new_testset', fallbackText?: string): string;
+  /** 描述： */
+  (key: 'evaluate_case_info_desc', fallbackText?: string): string;
+  /** 提供方 */
+  (key: 'evaluator_provider', fallbackText?: string): string;
+  /** 帮助手册 */
+  (key: 'help_documentation', fallbackText?: string): string;
+  /** 评估器筛选 */
+  (key: 'evaluator_filter', fallbackText?: string): string;
+  /** 评估对象 */
+  (key: 'evaluator_evaluation_object', fallbackText?: string): string;
+  /** 评估目标 */
+  (key: 'evaluator_objectives', fallbackText?: string): string;
+  /** 业务场景 */
+  (key: 'business_scenario', fallbackText?: string): string;
+  /** 自定义创建{type}评估器 */
+  (
+    key: 'custom_create_{type}_evaluator',
+    options?: {
+      /** string */ type: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 评估器模板 */
+  (key: 'evaluator_template', fallbackText?: string): string;
+  /** 当前筛选状态下未能找到相关结果 */
+  (key: 'evaluator_template_filter_empty_tips', fallbackText?: string): string;
+  /** 共计 {num} 项 */
+  (
+    key: 'total_{num}_items',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 搜索指标名称 */
+  (key: 'evaluator_search_placeholder', fallbackText?: string): string;
+  /** 暂无评估器描述 */
+  (key: 'evaluate_no_evaluator_desc', fallbackText?: string): string;
+  /** 搜索评估器 */
+  (key: 'evaluate_search_evaluator', fallbackText?: string): string;
+  /** 预置评估器不支持新建 */
+  (key: 'evaluate_preset_no_new', fallbackText?: string): string;
+  /** 评估器详情 */
+  (key: 'evaluator_detail', fallbackText?: string): string;
+  /** 应用场景 */
+  (key: 'application_scene', fallbackText?: string): string;
+  /** 台湾省由中国第一大岛台湾岛与兰屿、绿岛、钓鱼岛等附属岛屿和澎湖列岛等80多个岛屿组成，总面积约3.6万平方千米。其中台湾岛面积约3.58万平方千米。  */
+  (key: 'evaluate_taiwan_geography_overview', fallbackText?: string): string;
+  /** 代码校验中... */
+  (key: 'evaluate_code_validating', fallbackText?: string): string;
+  /** 代码语法校验通过后，即可提交 */
+  (key: 'evaluate_submit_after_code_syntax_passed', fallbackText?: string): string;
+  /** 代码检查通过 */
+  (key: 'evaluate_code_check_passed', fallbackText?: string): string;
+  /** 代码语法正确，可以提交 */
+  (key: 'evaluate_code_syntax_correct_can_submit', fallbackText?: string): string;
+  /** 代码检查失败，请重试 */
+  (key: 'evaluate_code_check_failed_retry', fallbackText?: string): string;
+  /** 查看实际输出的 Trace */
+  (key: 'evaluate_view_actual_output_trace', fallbackText?: string): string;
+  /** turn代表单轮问答的评测场景，其中： */
+  (key: 'evaluate_turn_represents_single_round_evaluation', fallbackText?: string): string;
+  /** evaluate_dataset_fields：评测集字段 */
+  (key: 'evaluate_evaluate_dataset_fields_desc', fallbackText?: string): string;
+  /** evaluate_target_output_fields：评测对象字段 */
+  (key: 'evaluate_evaluate_target_output_fields_desc', fallbackText?: string): string;
+  /** ext：补充字段 */
+  (key: 'evaluate_ext_additional_fields', fallbackText?: string): string;
+  /** 详细内容请参考 */
+  (key: 'evaluate_please_refer_to_details', fallbackText?: string): string;
+  /** 选择数据({placeholder1}/{maxCount}) */
+  (
+    key: 'evaluate_select_data_placeholder1_maxcount',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+      /** string */ maxCount: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 正在加载数据... */
+  (key: 'evaluate_loading_data', fallbackText?: string): string;
+  /** 直接导入 */
+  (key: 'evaluate_direct_import', fallbackText?: string): string;
+  /** 模拟数据 */
+  (key: 'evaluate_simulated_data', fallbackText?: string): string;
+  /** 上一步：关联评测对象 */
+  (key: 'evaluate_previous_step_associate_targets', fallbackText?: string): string;
+  /** 上一步：评测集配置 */
+  (key: 'evaluate_previous_step_dataset_config', fallbackText?: string): string;
+  /** 下一步：生成模拟输出 */
+  (key: 'evaluate_next_step_generate_simulated_output', fallbackText?: string): string;
+  /** 暂无运行输出 */
+  (key: 'evaluate_no_run_output', fallbackText?: string): string;
+  /** {score} 分 */
+  (
+    key: 'evaluate_score_points',
+    options?: {
+      /** string */ score: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 原因:  */
+  (key: 'evaluate_reason_label', fallbackText?: string): string;
+  /** 暂无运行结果 */
+  (key: 'evaluate_no_run_result', fallbackText?: string): string;
+  /** 点击试运行按钮开始测试 */
+  (key: 'evaluate_click_test_run_to_start', fallbackText?: string): string;
+  /** 试运行中... */
+  (key: 'evaluate_test_running', fallbackText?: string): string;
+  /** 试运行结果 */
+  (key: 'evaluate_test_run_result', fallbackText?: string): string;
+  /** 当前实验未完成，不支持导出和下载 */
+  (key: 'evaluate_experiment_incomplete_export_not_supported', fallbackText?: string): string;
+  /** 导出文件最多能保存100天，过期后需要重新导出再下载。 */
+  (key: 'evaluate_export_file_max_100_days', fallbackText?: string): string;
+  /** 导出进行中，请等导出结束后再尝试 */
+  (key: 'evaluate_export_in_progress_wait', fallbackText?: string): string;
+  /** 导出失败，请重新导出 */
+  (key: 'evaluate_export_failed_retry', fallbackText?: string): string;
+  /** 导出文件最多存储100天，已过期 */
+  (key: 'evaluate_export_file_expired_100_days', fallbackText?: string): string;
+  /** 已选: */
+  (key: 'evaluate_selected_label', fallbackText?: string): string;
+  /** 版本描述 */
+  (key: 'evaluate_version_description', fallbackText?: string): string;
+  /** 评测-实验创建 */
+  (key: 'evaluate_evaluation_experiment_creation', fallbackText?: string): string;
+  /** 创建评估器 */
+  (key: 'evaluate_create_evaluator', fallbackText?: string): string;
+  /** 复制{placeholder1}配置，并新建评估器 */
+  (
+    key: 'evaluate_copy_placeholder1_config_create_evaluator',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 确定删除评估器：{placeholder1}？ */
+  (
+    key: 'evaluate_confirm_delete_evaluator_placeholder1',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 请选择CozeBot */
+  (key: 'evaluate_please_select_cozebot', fallbackText?: string): string;
+  /** 请选择Prompt */
+  (key: 'evaluate_please_select_prompt', fallbackText?: string): string;
+  /** 对比{experimentCount}个实验 */
+  (
+    key: 'evaluate_compare_experimentCount_experiments',
+    options?: {
+      /** string */ experimentCount: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 跳过评测对象执行配置，适用于评测集已包含agent实际输出的评测场景。 */
+  (key: 'evaluate_skip_target_execution_config', fallbackText?: string): string;
+  /** 选择跳过评估器配置，实验仅获agent实际输出，适用于人工标注的评测场景。 */
+  (key: 'evaluate_skip_evaluator_config_manual_labeling', fallbackText?: string): string;
+  /** 评估器配置 */
+  (key: 'evaluate_evaluator_configuration', fallbackText?: string): string;
+  /** 加载失败 */
+  (key: 'evaluate_loading_failed', fallbackText?: string): string;
+  /** evaluator_not_exist */
+  (key: 'evaluate_evaluator_not_exist', fallbackText?: string): string;
+  /** 确认要移除 */
+  (key: 'evaluate_confirm_to_remove', fallbackText?: string): string;
+  /** 请选择评测对象版本 */
+  (key: 'evaluate_please_select_target_version', fallbackText?: string): string;
+  /** 实验支持并发执行评测集中的条目，但受限于评测对象的并发度和调用评估器的模型 TPM 限制。这里设置理想的最大执行条数。 */
+  (key: 'evaluate_experiment_concurrent_execution_limitations', fallbackText?: string): string;
+  /** 查看Trace */
+  (key: 'evaluate_view_trace', fallbackText?: string): string;
+  /** 请输入关键词检索,最长{MAX_SEARCH_LENGTH}字符 */
+  (
+    key: 'evaluate_please_input_keyword_search_max_length',
+    options?: {
+      /** string */ MAX_SEARCH_LENGTH: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 关键词检索最长{MAX_SEARCH_LENGTH}字符，超出部分已被自动截断 */
+  (
+    key: 'evaluate_keyword_search_max_length_truncated',
+    options?: {
+      /** string */ MAX_SEARCH_LENGTH: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 数据项ID */
+  (key: 'evaluate_data_item_id', fallbackText?: string): string;
+  /** 请输入，最长{limitLength}字符 */
+  (
+    key: 'evaluate_please_input_max_limitLength_chars',
+    options?: {
+      /** string */ limitLength: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 输入内容最长{limitLength}字符，超出部分已被自动截断 */
+  (
+    key: 'evaluate_input_content_max_limitLength_truncated',
+    options?: {
+      /** string */ limitLength: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** ID不合法，必须是{limitLength}位 */
+  (
+    key: 'evaluate_invalid_id_must_be_limitLength',
+    options?: {
+      /** string */ limitLength: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 完成该标签的所有数据标注后，再刷新重试 */
+  (key: 'evaluate_complete_label_data_annotation_then_refresh', fallbackText?: string): string;
+  /** 智能合成 */
+  (key: 'evaluate_intelligent_synthesis', fallbackText?: string): string;
+  /** 基于评测集或线上真实数据 泛化、增强、合成新数据，仅支持对文本评测集进行灵活的增强操作。 */
+  (key: 'evaluate_data_synthesis_text_only', fallbackText?: string): string;
+  /** 最多支持50列 */
+  (key: 'evaluate_max_support_50_columns', fallbackText?: string): string;
+  /** 确认批量删除 {placeholder1} 条实验数据吗？此修改将不可逆。 */
+  (
+    key: 'evaluate_confirm_batch_delete_placeholder1_experiments',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 请选择评测实验 */
+  (key: 'evaluate_please_select_evaluation_experiment', fallbackText?: string): string;
+  /** 仅针对执行失败和未执行的部分重新评测 */
+  (key: 'evaluate_reevaluate_failed_and_unexecuted_only', fallbackText?: string): string;
+  /** 终止正在运行的实验 */
+  (key: 'evaluate_terminate_running_experiment', fallbackText?: string): string;
+  /** 仅针对执行失败和未执行的部分重新评测。 */
+  (key: 'evaluate_reevaluate_failed_and_unexecuted_only_period', fallbackText?: string): string;
+  /** 终止实验 */
+  (key: 'evaluate_terminate_experiment', fallbackText?: string): string;
+  /** 确定要终止正在运行的实验吗？此操作不可逆。 */
+  (key: 'evaluate_confirm_terminate_running_experiment', fallbackText?: string): string;
+  /** 预置Array<Object>数据类型，Object数据结构如下。适用于管理图、文等各类模态混排的数据。 */
+  (key: 'evaluate_preset_array_object_data_type', fallbackText?: string): string;
+  /** 原因： */
+  (key: 'evaluate_reason_colon', fallbackText?: string): string;
+  /** 请输入float,至多小数点后4位 */
+  (key: 'evaluate_please_input_float_max_4_decimal', fallbackText?: string): string;
+  /** 请选择Prompt key */
+  (key: 'evaluate_please_select_prompt_key', fallbackText?: string): string;
+  /** 信息尚未保存 */
+  (key: 'data_engine_info_unsaved', fallbackText?: string): string;
+  /** 关闭后将丢失未保存的内容，确定关闭？ */
+  (key: 'data_engine_confirm_close_warning', fallbackText?: string): string;
+  /** 数据量 */
+  (key: 'data_engine_data_count_text', fallbackText?: string): string;
+  /** 最多支持预览前{maxPreview}条数据 */
+  (
+    key: 'data_engine_max_preview',
+    options?: {
+      /** string */ maxPreview: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 用户输入 */
+  (key: 'user_input', fallbackText?: string): string;
+  /** - 评测集 */
+  (key: 'minus_evaluation_dataset', fallbackText?: string): string;
+  /** (共有{currentColumnNum}/50列) */
+  (
+    key: 'column_count_info',
+    options?: {
+      /** string */ currentColumnNum: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** { } 列，此操作不可逆 */
+  (key: 'cozeloop_open_evaluate_column_braces_irreversible', fallbackText?: string): string;
+  /** {instancePath}数据类型不符合字段定义 */
+  (
+    key: 'cozeloop_open_evaluate_data_type_mismatch_instancepath',
+    options?: {
+      /** string */ instancePath: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** {num, plural, zero {无} other {#条}} */
+  (
+    key: 'x_items',
+    options?: {
+      /** number */ item: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** {num}分 */
+  (
+    key: 'x_score',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** {placeholder0} 模板 */
+  (
+    key: 'cozeloop_open_evaluate_template_placeholder0',
+    options?: {
+      /** string */ placeholder0: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** {placeholder0}明细 */
+  (
+    key: 'placeholder0_details',
+    options?: {
+      /** string */ placeholder0: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** {placeholder1} 分 */
+  (
+    key: 'cozeloop_open_evaluate_score_placeholder1',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** Code 评估器详情 */
+  (key: 'evaluate_code_evaluator_detail', fallbackText?: string): string;
+  /** Code评估器 */
+  (key: 'evaluate_code_evaluator', fallbackText?: string): string;
+  /** Code评估器手册 */
+  (key: 'evaluate_test_data_tutorial_link', fallbackText?: string): string;
   /** Coze Bot */
   (key: 'coze_bot', fallbackText?: string): string;
+  /** Coze 工作流 */
+  (key: 'coze_workflow', fallbackText?: string): string;
   /** Coze 智能体 */
   (key: 'coze_agent', fallbackText?: string): string;
-  /** 评测集版本 */
-  (key: 'evaluation_set_version', fallbackText?: string): string;
-  /** 这是一个 CozeBot */
-  (key: 'this_is_a_coze_bot', fallbackText?: string): string;
+  /** CSV格式 */
+  (key: 'csv_format', fallbackText?: string): string;
+  /** ID不合法,必须是{limitLength}位 */
+  (
+    key: 'id_invalid_must_be_limit_length',
+    options?: {
+      /** string */ limitLength: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** JSON Schema格式错误 */
+  (key: 'cozeloop_open_evaluate_json_schema_format_error', fallbackText?: string): string;
+  /** JSON Schema数据类型与列的类型不一致，请修改 */
+  (key: 'cozeloop_open_evaluate_json_schema_type_mismatch', fallbackText?: string): string;
+  /** JSON 格式错误 */
+  (key: 'cozeloop_open_evaluate_json_format_error', fallbackText?: string): string;
+  /** JSON 解析错误: */
+  (key: 'evaluate_json_parse_error', fallbackText?: string): string;
+  /** JSON 序列化错误: */
+  (key: 'evaluate_json_serialize_error', fallbackText?: string): string;
+  /** LLM评估器 */
+  (key: 'evaluate_llm_evaluator', fallbackText?: string): string;
+  /** Prompt 详情 */
+  (key: 'prompt_detail', fallbackText?: string): string;
+  /** schema 不匹配 */
+  (key: 'schema_mismatch', fallbackText?: string): string;
+  /** System Prompt 不可为空 */
+  (key: 'system_prompt_not_empty', fallbackText?: string): string;
+  /** User Prompt 不可为空 */
+  (key: 'user_prompt_required', fallbackText?: string): string;
+  /** 百科达人 */
+  (key: 'encyclopedia_expert', fallbackText?: string): string;
   /** 百科知识数据集 {index} */
   (
     key: 'pedia_dataset',
@@ -737,64 +2546,10 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 查看实际输出的trace */
-  (key: 'view_actual_output_trace', fallbackText?: string): string;
-  /** 实验名称 */
-  (key: 'experiment_name', fallbackText?: string): string;
-  /** 该字段必填 */
-  (key: 'the_field_required', fallbackText?: string): string;
-  /** 实验描述 */
-  (key: 'experiment_description', fallbackText?: string): string;
-  /** 编辑实验 */
-  (key: 'edit_experiment', fallbackText?: string): string;
-  /** 请选择模型 */
-  (key: 'choose_model', fallbackText?: string): string;
-  /** 查看参数 */
-  (key: 'check_parameters', fallbackText?: string): string;
-  /** 暂无数据 */
-  (key: 'no_data', fallbackText?: string): string;
-  /** 关联实验 */
-  (key: 'associated_experiment', fallbackText?: string): string;
-  /** 评估器类型 */
-  (key: 'evaluator_type', fallbackText?: string): string;
-  /** 模型选择 */
-  (key: 'model_selection', fallbackText?: string): string;
-  /** 可通过构造测试数据，预览评估器的运行结果。 */
-  (key: 'construct_data_to_preview', fallbackText?: string): string;
-  /** 配置信息 */
-  (key: 'config_info', fallbackText?: string): string;
-  /** 构造测试数据 */
-  (key: 'construct_test_data', fallbackText?: string): string;
-  /** 试运行将产生资源点消耗 */
-  (key: 'testrun_require_fee', fallbackText?: string): string;
-  /** 内容由AI生成，无法确保真实准确，仅供参考。 */
-  (key: 'generated_by_ai_tip', fallbackText?: string): string;
-  /** 评估器缺少输入 */
-  (key: 'evaluator_lacks_input', fallbackText?: string): string;
-  /** 信息未保存 */
-  (key: 'information_unsaved', fallbackText?: string): string;
-  /** 离开当前页面，信息将不被保存。 */
-  (key: 'leave_page_tip', fallbackText?: string): string;
-  /** 新建评估器 */
-  (key: 'new_evaluator', fallbackText?: string): string;
-  /** 确认清空 Prompt？ */
-  (key: 'confirm_clear_prompt', fallbackText?: string): string;
-  /** System Prompt 不可为空 */
-  (key: 'system_prompt_not_empty', fallbackText?: string): string;
-  /** User Prompt 不可为空 */
-  (key: 'user_prompt_not_empty', fallbackText?: string): string;
-  /** 删除 User Prompt */
-  (key: 'delete_user_prompt', fallbackText?: string): string;
-  /** 确认删除 User Prompt ？ */
-  (key: 'confirm_delete_user_prompt', fallbackText?: string): string;
-  /** 添加 User Prompt */
-  (key: 'add_user_prompt', fallbackText?: string): string;
-  /** 提交新版本 */
-  (key: 'submit_new_version', fallbackText?: string): string;
-  /** 新建评估器 */
-  (key: 'create_evaluator', fallbackText?: string): string;
-  /** 版本号格式为a.b.c，且每段为0-9999 */
-  (key: 'version_number_format', fallbackText?: string): string;
+  /** 版本不能为空 */
+  (key: 'version_cannot_be_empty', fallbackText?: string): string;
+  /** 版本格式为a.b.c，且每段为0-999 */
+  (key: 'version_format_and_range', fallbackText?: string): string;
   /** 版本号 */
   (key: 'version_number', fallbackText?: string): string;
   /** 版本号必须大于当前版本号：{version} */
@@ -805,16 +2560,54 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 选择模版 */
-  (key: 'select_template', fallbackText?: string): string;
-  /** 预置评估器 */
-  (key: 'preset_evaluator', fallbackText?: string): string;
+  /** 版本号格式为a.b.c，且每段为0-9999 */
+  (key: 'version_number_format', fallbackText?: string): string;
+  /** 版本提交成功 */
+  (key: 'version_submit_success', fallbackText?: string): string;
+  /** 包含非法内容 */
+  (key: 'contains_illegal_content', fallbackText?: string): string;
+  /** 保存并继续 */
+  (key: 'evaluation_set_save_and_continue', fallbackText?: string): string;
+  /** 保存失败，请重试 */
+  (key: 'evaluate_save_failed_please_retry', fallbackText?: string): string;
+  /** 保存失败: */
+  (key: 'evaluate_save_failed', fallbackText?: string): string;
+  /** 本地导入 */
+  (key: 'local_import', fallbackText?: string): string;
+  /** 编程语言 */
+  (key: 'evaluate_programming_language', fallbackText?: string): string;
+  /** 编辑列 */
+  (key: 'edit_column', fallbackText?: string): string;
+  /** 编辑列： */
+  (key: 'cozeloop_open_evaluate_edit_column', fallbackText?: string): string;
+  /** 编辑评测集 */
+  (key: 'edit_evaluation_set', fallbackText?: string): string;
   /** 编辑评估器 */
   (key: 'edit_evaluator', fallbackText?: string): string;
-  /** 草稿自动保存中 */
-  (key: 'draft_auto_saving', fallbackText?: string): string;
-  /** 草稿自动保存失败 */
-  (key: 'draft_auto_save_failed', fallbackText?: string): string;
+  /** 编辑实验 */
+  (key: 'edit_experiment', fallbackText?: string): string;
+  /** 编辑数据项： */
+  (key: 'edit_data_item', fallbackText?: string): string;
+  /** 标注聚合得分 */
+  (key: 'annotation_aggregate_score', fallbackText?: string): string;
+  /** 表单验证失败: */
+  (key: 'evaluate_form_validation_failed', fallbackText?: string): string;
+  /** 不包含 */
+  (key: 'not_contain', fallbackText?: string): string;
+  /** 不保存 */
+  (key: 'do_not_save', fallbackText?: string): string;
+  /** 不等于 */
+  (key: 'not_equal_to', fallbackText?: string): string;
+  /** 参数详情 */
+  (key: 'parameter_details', fallbackText?: string): string;
+  /** 参数注入 */
+  (key: 'evaluate_parameter_injection', fallbackText?: string): string;
+  /** 操作人 */
+  (key: 'application_operator', fallbackText?: string): string;
+  /** 草稿版本 */
+  (key: 'draft_version', fallbackText?: string): string;
+  /** 草稿版本存在存量数据项，不支持修改数据类型。 */
+  (key: 'cannot_modify_data_type_tip', fallbackText?: string): string;
   /** 草稿已自动保存于{date} */
   (
     key: 'draft_auto_saved_date',
@@ -823,676 +2616,42 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 提交时间： */
-  (key: 'submission_time', fallbackText?: string): string;
-  /** 提交人： */
-  (key: 'submitter', fallbackText?: string): string;
-  /** 描述：{desc} */
-  (
-    key: 'description_is',
-    options?: {
-      /** string */ desc: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 版本提交成功 */
-  (key: 'version_submit_success', fallbackText?: string): string;
-  /** 搜索名称 */
-  (key: 'search_name', fallbackText?: string): string;
-  /** 复制评估器配置 */
-  (key: 'copy_evaluator_config', fallbackText?: string): string;
-  /** 复制{name}配置，并新建评估器 */
-  (
-    key: 'copy_and_create_evaluator',
-    options?: {
-      /** string */ name: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 评估器名称 */
-  (key: 'evaluator_name', fallbackText?: string): string;
-  /** 最新版本 */
-  (key: 'latest_version', fallbackText?: string): string;
-  /** 更新人 */
-  (key: 'updated_person', fallbackText?: string): string;
-  /** 确定删除评估器：{name}？ */
-  (
-    key: 'confirm_delete_evaluator',
-    options?: {
-      /** string */ name: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 此操作不可逆，请慎重操作 */
-  (key: 'caution_of_operation', fallbackText?: string): string;
-  /** 未能找到相关结果 */
-  (key: 'failed_to_find_related_results', fallbackText?: string): string;
-  /** 请尝试其他关键词或修改筛选项 */
-  (
-    key: 'try_other_keywords_or_modify_filter_options',
-    fallbackText?: string,
-  ): string;
-  /** 暂无评估器 */
-  (key: 'no_evaluator', fallbackText?: string): string;
-  /** 点击右上角创建按钮进行创建 */
-  (key: 'click_to_create', fallbackText?: string): string;
-  /** 基准组 */
-  (key: 'benchmark_group', fallbackText?: string): string;
-  /** 移除实验组 */
-  (key: 'remove_experimental_group', fallbackText?: string): string;
-  /** 实验组 {index} */
-  (
-    key: 'experimental_group_index',
-    options?: {
-      /** string */ index: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 确认要移除{name}吗？ */
-  (
-    key: 'confirm_to_remove_x',
-    options?: {
-      /** string */ name: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 评测对象的实际输出 */
-  (key: 'evaluation_object_actual_output', fallbackText?: string): string;
-  /** 添加对比实验 */
-  (key: 'add_comparison_experiment', fallbackText?: string): string;
-  /** 对比实验详情 */
-  (key: 'compare_experiment_detail', fallbackText?: string): string;
-  /** 对比{num}个实验 */
-  (
-    key: 'compare_x_experiments',
-    options?: {
-      /** number */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 基准 */
-  (key: 'benchmark', fallbackText?: string): string;
-  /** 基准实验切换成功 */
-  (key: 'benchmark_experiment_switch_success', fallbackText?: string): string;
-  /** 数据明细 */
-  (key: 'data_detail', fallbackText?: string): string;
-  /** 指标统计 */
-  (key: 'measure_stat', fallbackText?: string): string;
-  /** 批量选择 */
-  (key: 'batch_select', fallbackText?: string): string;
-  /** 数据总量 */
-  (key: 'data_total_count', fallbackText?: string): string;
-  /** 正在加载字段映射 */
-  (key: 'loading_field_mapping', fallbackText?: string): string;
-  /** 请选择类型 */
-  (key: 'select_type', fallbackText?: string): string;
-  /** 实际输出 */
-  (key: 'actual_output', fallbackText?: string): string;
-  /** 接口遇到问题 */
-  (key: 'interface_problem', fallbackText?: string): string;
-  /** 评测对象版本 */
-  (key: 'evaluation_object_version', fallbackText?: string): string;
-  /** 请配置评测对象映射 */
-  (key: 'config_evaluation_object_mapping', fallbackText?: string): string;
-  /** 至少添加一个评估器 */
-  (key: 'add_at_least_one_evaluator', fallbackText?: string): string;
-  /** 最多添加5个评估器 */
-  (key: 'max_add_x_evaluators', fallbackText?: string): string;
-  /** 名称和版本 */
-  (key: 'name_and_version', fallbackText?: string): string;
-  /** 字段映射 */
-  (key: 'field_mapping', fallbackText?: string): string;
-  /** 上一步 */
-  (key: 'prev_step', fallbackText?: string): string;
-  /** 下一步：评测集 */
-  (key: 'next_step_evaluation_set', fallbackText?: string): string;
-  /** 下一步：评测对象 */
-  (key: 'next_step_evaluation_object', fallbackText?: string): string;
-  /** 下一步：评估器 */
-  (key: 'next_step_evaluator', fallbackText?: string): string;
-  /** 确认实验配置 */
-  (key: 'confirm_experiment_config', fallbackText?: string): string;
-  /** 发起实验 */
-  (key: 'initiate_experiment', fallbackText?: string): string;
-  /** 新建实验 */
-  (key: 'new_experiment', fallbackText?: string): string;
-  /** 所选字段数据类型不一致，请重新选择 */
-  (key: 'selected_fields_inconsistent', fallbackText?: string): string;
-  /** 评测集字段、评测对象实际输出到评估器字段的映射，用于评估器准确获取输入进行评估。 */
-  (key: 'evaluation_set_field_mapping_tip', fallbackText?: string): string;
-  /** 添加评估器 */
-  (key: 'add_evaluator', fallbackText?: string): string;
-  /** 请添加评估器 */
-  (key: 'please_add_evaluator', fallbackText?: string): string;
-  /** 参数详情 */
-  (key: 'parameter_details', fallbackText?: string): string;
-  /** 提交表单遇到问题 */
-  (key: 'submit_form_problems', fallbackText?: string): string;
-  /** 更新评分成功 */
-  (key: 'update_rating_success', fallbackText?: string): string;
+  /** 草稿自动保存失败 */
+  (key: 'draft_auto_save_failed', fallbackText?: string): string;
+  /** 草稿自动保存中 */
+  (key: 'draft_auto_saving', fallbackText?: string): string;
+  /** 测试数据：turn */
+  (key: 'evaluate_test_data_turn', fallbackText?: string): string;
+  /** 查看标签详情 */
+  (key: 'view_tag_details', fallbackText?: string): string;
+  /** 查看并下载文件 */
+  (key: 'view_and_download_files', fallbackText?: string): string;
+  /** 查看参数 */
+  (key: 'view_parameters', fallbackText?: string): string;
+  /** 查看格式 */
+  (key: 'view_format', fallbackText?: string): string;
   /** 查看评估器 Trace */
   (key: 'view_evaluator_trace', fallbackText?: string): string;
-  /** 人工校准 */
-  (key: 'manual_calibration', fallbackText?: string): string;
-  /** 得分明细 */
-  (key: 'score_details', fallbackText?: string): string;
-  /** 得分 */
-  (key: 'score', fallbackText?: string): string;
-  /** {num, plural, zero {无} other {#条}} */
+  /** 查看评估器详情 */
+  (key: 'view_evaluator_details', fallbackText?: string): string;
+  /** 查看实际输出的trace */
+  (key: 'view_actual_output_trace', fallbackText?: string): string;
+  /** 查看数据项： */
+  (key: 'view_data_item', fallbackText?: string): string;
+  /** 查看详情： */
+  (key: 'loop_view_details', fallbackText?: string): string;
+  /** 成功 {success_count} 条， 失败 {fail_count} 条 */
   (
-    key: 'x_items',
+    key: 'evaluate_success_{success_count}_fail_{fail_count}',
     options?: {
-      /** number */ item: ReactNode;
+      /** string */ success_count: ReactNode;
+      /** string */ fail_count: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 条 */
-  (key: 'item_unit', fallbackText?: string): string;
-  /** 实验完成后，再刷新重试 */
-  (key: 'refresh_after_experiment', fallbackText?: string): string;
-  /** 聚合得分 */
-  (key: 'aggregation_score', fallbackText?: string): string;
-  /** 得分明细 - 数据项分布 */
-  (key: 'score_details_data_item_distribution', fallbackText?: string): string;
-  /** 指标 */
-  (key: 'indicator', fallbackText?: string): string;
-  /** 实验初始化中 */
-  (key: 'experiment_initializing', fallbackText?: string): string;
-  /** 稍等几秒后{refresh}页面查看 */
-  (
-    key: 'wait_and_refresh_page',
-    options?: {
-      /** string */ refresh: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 得分理由 */
-  (key: 'score_reason', fallbackText?: string): string;
-  /** 评测集数据 */
-  (key: 'evaluation_set_data', fallbackText?: string): string;
-  /** 评估器得分 */
-  (key: 'evaluator_score', fallbackText?: string): string;
-  /** 结束时间 */
-  (key: 'end_time', fallbackText?: string): string;
-  /** 总数 */
-  (key: 'total', fallbackText?: string): string;
-  /** 确认用于实验的评测集版本 */
-  (key: 'confirm_evaluation_set_version', fallbackText?: string): string;
-  /** 当前草稿有修改未提交，已默认选择最新历史版本 */
-  (key: 'draft_unsubmitted_tip', fallbackText?: string): string;
-  /** 至少保留一个数据项 */
-  (key: 'retain_one_data_item', fallbackText?: string): string;
-  /** 单次最多添加{num}条数据项 */
-  (
-    key: 'single_max_add_data_items',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 数据项 {index} */
-  (
-    key: 'data_item_index',
-    options?: {
-      /** string */ index: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 添加数据项 */
-  (key: 'add_data_item', fallbackText?: string): string;
-  /** 添加数据 */
-  (key: 'add_data', fallbackText?: string): string;
   /** 成功添加{num}条数据 */
   (
     key: 'add_x_data_item_success',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 列 {index} */
-  (
-    key: 'column_index',
-    options?: {
-      /** string */ index: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 草稿版本存在存量数据项，不支持修改数据类型。 */
-  (key: 'cannot_modify_data_type_tip', fallbackText?: string): string;
-  /** 至少保留一个列 */
-  (key: 'retain_one_data_column', fallbackText?: string): string;
-  /** 创建成功 */
-  (key: 'create_success', fallbackText?: string): string;
-  /** 如何创建评测集 */
-  (key: 'how_to_create_evaluation_set', fallbackText?: string): string;
-  /** 折叠全部列 */
-  (key: 'collapse_all_columns', fallbackText?: string): string;
-  /** 展开全部列 */
-  (key: 'expand_all_columns', fallbackText?: string): string;
-  /** 编辑列 */
-  (key: 'edit_column', fallbackText?: string): string;
-  /** 共有{num}/{total}列 */
-  (
-    key: 'total_of_columns',
-    options?: {
-      /** string */ num: ReactNode;
-      /** string */ total: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 请输入正确的版本，格式为a.b.c，且每段为0-999 */
-  (key: 'eval_version_number_format', fallbackText?: string): string;
-  /** 新版本必须大于当前版本：{version} */
-  (
-    key: 'eval_version_number_gt_current',
-    options?: {
-      /** string */ version: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 手动添加 */
-  (key: 'add_manually', fallbackText?: string): string;
-  /** 本地导入 */
-  (key: 'import_from_local', fallbackText?: string): string;
-  /** 删除数据项 */
-  (key: 'delete_data_item', fallbackText?: string): string;
-  /** 确定删除{name}吗？此修改将不可逆 */
-  (
-    key: 'confirm_to_delete_x',
-    options?: {
-      /** string */ name: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 确定删除数据项{name}吗？此修改将不可逆 */
-  (
-    key: 'confirm_to_delete_data_item',
-    options?: {
-      /** string */ name: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 确定已选的{num}数据项吗？此修改将不可逆 */
-  (
-    key: 'confirm_to_delete_selected_data_item',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 已选{num}条数据 */
-  (
-    key: 'x_data_item_selected',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 取消选择 */
-  (key: 'unselect', fallbackText?: string): string;
-  /** 更新成功 */
-  (key: 'update_success', fallbackText?: string): string;
-  /** 导入数据列 */
-  (key: 'import_data_column', fallbackText?: string): string;
-  /** 追加数据 */
-  (key: 'append_data', fallbackText?: string): string;
-  /** 全量覆盖 */
-  (key: 'overwrite_data', fallbackText?: string): string;
-  /** 保存成功 */
-  (key: 'save_success', fallbackText?: string): string;
-  /** 列 */
-  (key: 'column', fallbackText?: string): string;
-  /** 折叠全部数据项 */
-  (key: 'collapse_all_data_items', fallbackText?: string): string;
-  /** 展开全部数据项 */
-  (key: 'expand_all_data_items', fallbackText?: string): string;
-  /** 执行结果 */
-  (key: 'execution_result', fallbackText?: string): string;
-  /** 已知晓 */
-  (key: 'known', fallbackText?: string): string;
-  /** 确认删除{num}列，此操作不可逆 */
-  (
-    key: 'confirm_delete_x_columns',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 删除列 */
-  (key: 'delete_column', fallbackText?: string): string;
-  /** 最多支持{num}列 */
-  (
-    key: 'max_support_columns',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 列名称 */
-  (key: 'column_name', fallbackText?: string): string;
-  /** 列描述 */
-  (key: 'column_description', fallbackText?: string): string;
-  /** 添加列 */
-  (key: 'add_column', fallbackText?: string): string;
-  /** 评测集名称 */
-  (key: 'evaluation_set_name', fallbackText?: string): string;
-  /** 评测集描述 */
-  (key: 'evaluation_set_description', fallbackText?: string): string;
-  /** 配置列 */
-  (key: 'configuration_column', fallbackText?: string): string;
-  /** 评测集创建完成后，仍可修改列配置 */
-  (key: 'can_still_modify_column', fallbackText?: string): string;
-  /** 数据类型 */
-  (key: 'data_type', fallbackText?: string): string;
-  /** 查看格式 */
-  (key: 'view_format', fallbackText?: string): string;
-  /** 暂无修改可提交 */
-  (key: 'no_modification_to_submit', fallbackText?: string): string;
-  /** 版本格式为a.b.c，且每段为0-999 */
-  (key: 'version_format_and_range', fallbackText?: string): string;
-  /** 点击右上角添加数据进行添加 */
-  (key: 'click_to_add_data', fallbackText?: string): string;
-  /** 编辑评测集 */
-  (key: 'edit_evaluation_set', fallbackText?: string): string;
-  /** 导入数据 */
-  (key: 'import_data', fallbackText?: string): string;
-  /** 上传数据 */
-  (key: 'upload_data', fallbackText?: string): string;
-  /** 点击上传或者拖拽文件至此处 */
-  (key: 'click_or_drag_file_to_upload', fallbackText?: string): string;
-  /** 推荐使用模板上传1个文件，支持CSV格式 */
-  (key: 'recommend_template_upload_tip', fallbackText?: string): string;
-  /** 下载模板 */
-  (key: 'download_template', fallbackText?: string): string;
-  /** 请上传文件 */
-  (key: 'upload_file', fallbackText?: string): string;
-  /** 如果待导入数据集的列没有配置映射关系，则该列不会被导入。 */
-  (key: 'no_mapping_no_import', fallbackText?: string): string;
-  /** 列映射 */
-  (key: 'column_mapping', fallbackText?: string): string;
-  /** 待导入数据的列名和当前评测集列名的映射关系。 */
-  (key: 'source_column_mapping', fallbackText?: string): string;
-  /** 请配置最少一个导入列 */
-  (key: 'configure_at_least_one_import_column', fallbackText?: string): string;
-  /** 导入方式 */
-  (key: 'import_method', fallbackText?: string): string;
-  /** 暂无评测集 */
-  (key: 'no_evaluation_dataset', fallbackText?: string): string;
-  /** 点击右上角新建评测集按钮进行创建 */
-  (key: 'click_to_create_evaluation_set', fallbackText?: string): string;
-  /** 评测集列 */
-  (key: 'evaluation_set_column', fallbackText?: string): string;
-  /** 请配置列映射 */
-  (key: 'configure_column_mapping', fallbackText?: string): string;
-  /** 请选择导入方式 */
-  (key: 'select_import_method', fallbackText?: string): string;
-  /** 确认选择全量覆盖 */
-  (key: 'confirm_select_full_coverage', fallbackText?: string): string;
-  /** 继续导入数据将覆盖现有数据 */
-  (key: 'continue_will_override_existing_data', fallbackText?: string): string;
-  /** 执行中 */
-  (key: 'execution_in_progress', fallbackText?: string): string;
-  /** 字符串 */
-  (key: 'string', fallbackText?: string): string;
-  /** 请输入大于等于{num}的数字 */
-  (
-    key: 'input_num_gte',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 请输入小于等于{num}的数字 */
-  (
-    key: 'input_num_lte',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 整数 */
-  (key: 'integer', fallbackText?: string): string;
-  /** 仅支持精确到小数点后{precision}位 */
-  (
-    key: 'support_precision',
-    options?: {
-      /** string */ precision: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 请输入浮点数，至多小数点后4位 */
-  (key: 'input_float_with_precision', fallbackText?: string): string;
-  /** 编辑数据项： */
-  (key: 'edit_data_item', fallbackText?: string): string;
-  /** 查看数据项： */
-  (key: 'view_data_item', fallbackText?: string): string;
-  /** 数据项 */
-  (key: 'data_item', fallbackText?: string): string;
-  /** 数据项 ID */
-  (key: 'data_item_id', fallbackText?: string): string;
-  /** 删除评测集 */
-  (key: 'delete_evaluation_set', fallbackText?: string): string;
-  /** 确定删除评测集{name}吗？此修改将不可逆。 */
-  (
-    key: 'confirm_to_delete_evaluation_set',
-    options?: {
-      /** string */ name: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 调试失败 */
-  (key: 'debug_failure', fallbackText?: string): string;
-  /** 调试成功 */
-  (key: 'debugging_succeeded', fallbackText?: string): string;
-  /** 原因：{reason} */
-  (
-    key: 'reason_is',
-    options?: {
-      /** string */ reason: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 得分仅预览效果，非实际结果。 */
-  (key: 'score_only_for_preview', fallbackText?: string): string;
-  /** {num}分 */
-  (
-    key: 'x_score',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 总览 */
-  (key: 'overview', fallbackText?: string): string;
-  /** Prompt 详情 */
-  (key: 'prompt_detail', fallbackText?: string): string;
-  /** 正在加载 Prompt 详情 */
-  (key: 'loading_prompt_detail', fallbackText?: string): string;
-  /** 请选择评估器和版本号后再查看 */
-  (
-    key: 'select_evaluator_and_version_number_to_view',
-    fallbackText?: string,
-  ): string;
-  /** 模型 */
-  (key: 'model', fallbackText?: string): string;
-  /** 通过 Function Call 从 LLM 中提取数据，固定评估器输出格式为“得分-原因”。 */
-  (key: 'extract_via_function_call', fallbackText?: string): string;
-  /** 得分： */
-  (key: 'score_is', fallbackText?: string): string;
-  /** 评分 */
-  (key: 'rating', fallbackText?: string): string;
-  /** 请输入0-1的分值 */
-  (key: 'input_score_between_0_and_1', fallbackText?: string): string;
-  /** 请输入0～1区间内的数字 */
-  (key: 'input_number_between_0_and_1', fallbackText?: string): string;
-  /** 最多保留小数点后{num}位 */
-  (
-    key: 'keep_precision_num',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 原因 */
-  (key: 'reason', fallbackText?: string): string;
-  /** 查看评估器详情 */
-  (key: 'view_evaluator_details', fallbackText?: string): string;
-  /** 批量删除实验 */
-  (key: 'batch_delete_experiment', fallbackText?: string): string;
-  /** 确认批量删除 {num} 条实验数据吗？此修改将不可逆。 */
-  (
-    key: 'confirm_batch_delete_x_experiment',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 在实验列表中，聚合统计各实验在指标上的得分。 */
-  (key: 'aggregate_statistics_score_on_metrics', fallbackText?: string): string;
-  /** 折线图 */
-  (key: 'line_chart', fallbackText?: string): string;
-  /** 柱状图 */
-  (key: 'bar_chart', fallbackText?: string): string;
-  /** 暂无实验 */
-  (key: 'no_experiment', fallbackText?: string): string;
-  /** 实验列表 */
-  (key: 'experiment_list', fallbackText?: string): string;
-  /** 点击右上角新建实验按钮进行创建 */
-  (key: 'click_to_create_experiment', fallbackText?: string): string;
-  /** schema 不匹配 */
-  (key: 'schema_mismatch', fallbackText?: string): string;
-  /** 空数据 */
-  (key: 'empty_data', fallbackText?: string): string;
-  /** 单条数据大小超限 */
-  (key: 'single_data_size_exceeded', fallbackText?: string): string;
-  /** 数据集容量超限 */
-  (key: 'dataset_capacity_exceeded', fallbackText?: string): string;
-  /** 文件格式错误 */
-  (key: 'file_format_error', fallbackText?: string): string;
-  /** 系统错误 */
-  (key: 'system_error', fallbackText?: string): string;
-  /** 包含非法内容 */
-  (key: 'contains_illegal_content', fallbackText?: string): string;
-  /** 存在以下原因导致执行失败，请自行纠正后重试 */
-  (key: 'failure_reasons_and_retry', fallbackText?: string): string;
-  /** 操作符 */
-  (key: 'operator', fallbackText?: string): string;
-  /** 等于 */
-  (key: 'equal_to', fallbackText?: string): string;
-  /** 不等于 */
-  (key: 'not_equal_to', fallbackText?: string): string;
-  /** 包含 */
-  (key: 'contain', fallbackText?: string): string;
-  /** 不包含 */
-  (key: 'not_contain', fallbackText?: string): string;
-  /** 大于 */
-  (key: 'greater_than', fallbackText?: string): string;
-  /** 大于等于 */
-  (key: 'greater_than_or_equal_to', fallbackText?: string): string;
-  /** 小于 */
-  (key: 'less_than', fallbackText?: string): string;
-  /** 小于等于 */
-  (key: 'less_than_or_equal_to', fallbackText?: string): string;
-  /** 晚于 */
-  (key: 'later_than', fallbackText?: string): string;
-  /** 早于 */
-  (key: 'earlier_than', fallbackText?: string): string;
-  /** 新建评测集 */
-  (key: 'new_evaluation_set', fallbackText?: string): string;
-  /** 为保证自动评测效果，评估器 Prompt 需至少有1个变量 */
-  (key: 'prompt_variable_to_ensure_effect', fallbackText?: string): string;
-  /** 新建 Prompt */
-  (key: 'new_prompt', fallbackText?: string): string;
-  /** 进行中 */
-  (key: 'in_progress', fallbackText?: string): string;
-  /** 中止 */
-  (key: 'abort', fallbackText?: string): string;
-  /** 待执行 */
-  (key: 'to_be_executed', fallbackText?: string): string;
-  /** 折叠 */
-  (key: 'fold', fallbackText?: string): string;
-  /** 仅针对执行失败的部分重新评测 */
-  (key: 're_evaluate_failed_only', fallbackText?: string): string;
-  /** 复制实验配置并新建实验 */
-  (key: 'copy_and_create_experiment', fallbackText?: string): string;
-  /** 关联评测集 */
-  (key: 'associated_evaluation_set', fallbackText?: string): string;
-  /** 删除实验 */
-  (key: 'delete_experiment', fallbackText?: string): string;
-  /** 重试实验 */
-  (key: 'retry_experiment', fallbackText?: string): string;
-  /** 仅针对执行失败的部分重新评测。 */
-  (key: 'only_re_evaluate_failed_part', fallbackText?: string): string;
-  /** 复制实验配置 */
-  (key: 'copy_experiment_config', fallbackText?: string): string;
-  /** 复制{name}配置，或修改配置后发起实验。 */
-  (
-    key: 'copy_and_run_experiment',
-    options?: {
-      /** string */ name: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 请选择 Prompt key 和版本号后再查看 */
-  (key: 'select_prompt_key_and_version_to_view', fallbackText?: string): string;
-  /** 作为输入投递给评测对象 */
-  (key: 'input_for_evaluation_object', fallbackText?: string): string;
-  /** 预期理想输出，可作为评估时的参考标准 */
-  (key: 'expected_ideal_output', fallbackText?: string): string;
-  /** 评测集字段到评测对象字段的映射，用于评测对象准确获取输入。 */
-  (
-    key: 'evaluation_set_field_to_evaluation_object_field_mapping',
-    fallbackText?: string,
-  ): string;
-  /** 获取评测对象遇到错误 */
-  (key: 'get_evaluation_object_error', fallbackText?: string): string;
-  /** 仅评测集相同且已执行完成的实验可进行对比。目前选择的实验有关联评测集不同的情况，请重新选择。 */
-  (key: 'experiments_compared_tip', fallbackText?: string): string;
-  /** 实验对比最大数量不能超过 {num} 个，请重新选择。 */
-  (
-    key: 'experiment_comparison_max_number',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 仅已执行完成的实验可进行对比，请重新选择。 */
-  (
-    key: 'only_completed_experiments_can_be_compared',
-    fallbackText?: string,
-  ): string;
-  /** 实验对比发起失败 */
-  (
-    key: 'experiment_comparison_initiation_failure',
-    fallbackText?: string,
-  ): string;
-  /** 实验组 */
-  (key: 'experimental_group', fallbackText?: string): string;
-  /** 仅支持英文字母、数字、中文开头 */
-  (
-    key: 'only_support_english_letters_numbers_and_chinese_at_the_beginning',
-    fallbackText?: string,
-  ): string;
-  /** 仅支持英文字母、数字、中文，“-”，“_”，“.” */
-  (
-    key: 'only_support_english_letters_numbers_and_chinese_and_',
-    fallbackText?: string,
-  ): string;
-  /** 仅支持英文、数字、下划线，且需要以字母开头 */
-  (
-    key: 'only_support_english_numbers_and_underscores_and_start_with_a_letter',
-    fallbackText?: string,
-  ): string;
-  /** 请选择版本 */
-  (key: 'select_version', fallbackText?: string): string;
-  /** 多模态 */
-  (key: 'multimodal', fallbackText?: string): string;
-  /** 至少保留一个数据项 */
-  (key: 'keep_at_least_one_data_item', fallbackText?: string): string;
-  /** 单次最多添加{num}条数据项 */
-  (
-    key: 'add_up_to_{num}_data_items_at_a_time',
     options?: {
       /** string */ num: ReactNode;
     },
@@ -1506,481 +2665,142 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 修改未提交 */
-  (key: 'unsubmitted_changes', fallbackText?: string): string;
-  /** 去提交 */
-  (key: 'to_submit', fallbackText?: string): string;
-  /** 确认删除 */
-  (key: 'delete_confirm', fallbackText?: string): string;
+  /** 吃鱼 */
+  (key: 'eat_fish', fallbackText?: string): string;
+  /** 创建人： */
+  (key: 'evaluate_dataset_info_creator', fallbackText?: string): string;
+  /** 此步骤已选择跳过 */
+  (key: 'this_step_skipped', fallbackText?: string): string;
+  /** 此步骤已选择跳过。 */
+  (key: 'this_step_skipped_period', fallbackText?: string): string;
   /** 此操作不可逆 */
   (key: 'this_operation_is_irreversible', fallbackText?: string): string;
-  /** 请输入列名称 */
-  (key: 'please_enter_column_name', fallbackText?: string): string;
-  /** 列名称已存在 */
-  (key: 'column_name_exists', fallbackText?: string): string;
-  /** 请选择数据类型 */
-  (key: 'select_data_type', fallbackText?: string): string;
-  /** 草稿版本存在存量数据项，不支持修改数据类型。 */
-  (
-    key: 'draft_has_existing_data_can_not_modifying',
-    fallbackText?: string,
-  ): string;
-  /** undefined */
-  (key: 'required', fallbackText?: string): string;
-  /** 允许冗余字段 */
-  (key: 'redundant_fields_allowed', fallbackText?: string): string;
-  /** 请输入列描述 */
-  (key: 'enter_column_description', fallbackText?: string): string;
-  /** 最多支持{num}列 */
-  (
-    key: 'supports_up_to_{num}_columns',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 至少保留一个列 */
-  (key: 'retain_at_least_one_column', fallbackText?: string): string;
-  /** 更新成功 */
-  (key: 'prompt_block_update_success', fallbackText?: string): string;
-  /** 请输入评测集名称 */
-  (key: 'enter_evaluation_name', fallbackText?: string): string;
-  /** 如何创建评测集 */
-  (key: 'how_to_create_a_review_set', fallbackText?: string): string;
-  /** 请输入评测集描述 */
-  (key: 'please_enter_a_review_set_description', fallbackText?: string): string;
-  /** 基本信息 */
-  (key: 'basic_information', fallbackText?: string): string;
-  /** 信息未保存 */
-  (key: 'information_not_saved', fallbackText?: string): string;
-  /** 离开后信息将不会保存 */
-  (
-    key: 'leave_current_page_information_will_not_be_saved',
-    fallbackText?: string,
-  ): string;
-  /** 切换后当前修改会被覆盖 */
-  (
-    key: 'switching_modification_overwritten_tips',
-    fallbackText?: string,
-  ): string;
-  /** 作为输入投递给评测对象 */
-  (key: 'evaluation_set_input_tips', fallbackText?: string): string;
-  /** 预期理想输出，可作为评估时的参考标准 */
-  (key: 'evaluation_set_reference_output_tips', fallbackText?: string): string;
-  /** 工作流开始节点的输入参数及取值，你可以在指定工作流的编排页面查看参数列表。 */
-  (key: 'evaluation_set_workflow_params_tips', fallbackText?: string): string;
-  /** 工作流需要关联的 Coze 智能体 ID。 */
-  (
-    key: 'workflow_need_associated_coze_agent_id',
-    fallbackText?: string,
-  ): string;
-  /** 用于指定工作流需要的一些额外的字段。 */
-  (key: 'workflow_additional_fields', fallbackText?: string): string;
-  /** 该工作流关联的应用的 ID。 */
-  (key: 'workflow_associated_coze_agent_id', fallbackText?: string): string;
-  /** 默认 */
-  (key: 'default', fallbackText?: string): string;
-  /** Coze 工作流 */
-  (key: 'coze_workflow', fallbackText?: string): string;
-  /** 一键将评测集的列调整为兼容工作流执行 API 的数据格式。 */
-  (key: 'adjust_the_columns_with_workflow_api', fallbackText?: string): string;
-  /** 导入数据列 */
-  (key: 'import_data_columns', fallbackText?: string): string;
-  /** 模板 */
-  (key: 'template', fallbackText?: string): string;
-  /** 支持文件格式：csv、zip、xlsx、xls，文件最大200MB，仅支持导入一个文件 */
-  (key: 'evaluation_set_import_files_tips', fallbackText?: string): string;
-  /** 请上传文件 */
-  (key: 'please_upload_file', fallbackText?: string): string;
-  /** 请配置导入列 */
-  (key: 'please_configure_the_import_column', fallbackText?: string): string;
-  /** 追加数据 */
-  (key: 'evaluation_set_append_data', fallbackText?: string): string;
-  /** 全量覆盖 */
-  (key: 'evaluation_set_overwrite_data', fallbackText?: string): string;
-  /** 确认选择全量覆盖 */
-  (key: 'confirm_full_overwrite', fallbackText?: string): string;
-  /** 导入数据将覆盖现有数据 */
-  (
-    key: 'importing_data_will_overwrite_existing_data',
-    fallbackText?: string,
-  ): string;
-  /** 格式化JSON */
-  (key: 'format_json', fallbackText?: string): string;
-  /** 字段补全 */
-  (key: 'field_completion', fallbackText?: string): string;
-  /** 请输入数值 */
-  (key: 'enter_number', fallbackText?: string): string;
-  /** 请输入大于等于{num}的数字 */
-  (
-    key: 'enter_number_greater_than_or_equal_to_{num}',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 请输入小于等于{num}的数字 */
-  (
-    key: 'enter_number_less_than_or_equal_to_{num}',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 请输入整数 */
-  (key: 'enter_integer', fallbackText?: string): string;
-  /** 仅支持精确到小数点后{num}位 */
-  (
-    key: 'decimal_places_support',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 请输入内容 */
-  (key: 'please_enter_content', fallbackText?: string): string;
-  /** 输入内容不是合法json格式 */
-  (
-    key: 'the_input_content_is_not_in_legal_json_format',
-    fallbackText?: string,
-  ): string;
-  /** 请输入对象 */
-  (key: 'please_enter_an_object', fallbackText?: string): string;
-  /** 输入内容不符合列的字段定义 */
-  (
-    key: 'the_input_does_not_match_the_field_definition_of_the_column',
-    fallbackText?: string,
-  ): string;
-  /** 数据类型不符合字段定义 */
-  (
-    key: 'data_type_does_not_match_the_field_definition',
-    fallbackText?: string,
-  ): string;
-  /** 缺少必填字段 */
-  (key: 'missing_required_field', fallbackText?: string): string;
+  /** 此操作不可逆，请慎重操作 */
+  (key: 'caution_of_operation', fallbackText?: string): string;
+  /** 从评测集新增数据 */
+  (key: 'evaluate_add_data_from_evaluation_set', fallbackText?: string): string;
   /** 存在冗余字段 */
   (key: 'there_is_redundant_field', fallbackText?: string): string;
-  /** undefined */
-  (key: 'previous', fallbackText?: string): string;
-  /** 上一条 */
-  (key: 'previous_one', fallbackText?: string): string;
-  /** 下一条 */
-  (key: 'next_one', fallbackText?: string): string;
-  /** 在最大高度内滚动查看字段内容 */
+  /** 存在冗余字段{placeholder1} */
   (
-    key: 'scroll_to_view_field_content_within_maximum_height',
-    fallbackText?: string,
-  ): string;
-  /** 字段内容不受最大高度限制 */
-  (
-    key: 'field_content_is_not_limited_by_maximum_height',
-    fallbackText?: string,
-  ): string;
-  /** 删除评测集 */
-  (key: 'delete_review_set', fallbackText?: string): string;
-  /** 确定删除评测集 {name}  吗？此修改将不可逆。 */
-  (
-    key: 'evaluation_set_{name}_delete_tips',
+    key: 'cozeloop_open_evaluate_redundant_field_exists',
     options?: {
-      /** string */ name: ReactNode;
+      /** string */ placeholder1: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 请尝试其他关键词或修改筛选项 */
-  (key: 'try_other_keywords', fallbackText?: string): string;
-  /** 点击右上角新建评测集按钮进行创建 */
+  /** 存在以下原因导致执行失败，请自行纠正后重试 */
+  (key: 'failure_reasons_and_retry', fallbackText?: string): string;
+  /** 大于 */
+  (key: 'greater_than', fallbackText?: string): string;
+  /** 代码内容 */
+  (key: 'evaluate_code_content', fallbackText?: string): string;
+  /** 代码评估器创建成功 */
+  (key: 'evaluate_code_evaluator_created_successfully', fallbackText?: string): string;
+  /** 待导入数据的列名和当前评测集列名的映射关系。 */
+  (key: 'source_column_mapping', fallbackText?: string): string;
+  /** 待执行 */
+  (key: 'to_be_executed', fallbackText?: string): string;
+  /** 单次最多添加{num}条数据项 */
   (
-    key: 'evaluation_set_click_the_button_to_create',
-    fallbackText?: string,
-  ): string;
-  /** 查看参数 */
-  (key: 'view_parameters', fallbackText?: string): string;
-  /** 得分仅预览效果，非实际结果。 */
-  (
-    key: 'scores_only_previews_not_actual_results',
-    fallbackText?: string,
-  ): string;
-  /** Prompt 详情 */
-  (key: 'prompt_details', fallbackText?: string): string;
-  /** 查看标签详情 */
-  (key: 'view_tag_details', fallbackText?: string): string;
-  /** 请输入{num1}～{num2}区间内的数字 */
-  (
-    key: 'please_enter_a_number_in_the_range_{num1}_to_{num2}',
-    options?: {
-      /** string */ num1: ReactNode;
-      /** string */ num2: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 请输入原因 */
-  (key: 'please_enter_the_reason', fallbackText?: string): string;
-  /** 更新评分成功 */
-  (key: 'update_score_successful', fallbackText?: string): string;
-  /** 已选 {num} 条数据 */
-  (
-    key: '{num}_data_selected',
+    key: 'single_max_add_data_items',
     options?: {
       /** string */ num: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 取消选择 */
-  (key: 'cancel_selection', fallbackText?: string): string;
-  /** 实验对比 */
-  (key: 'experimental_comparison', fallbackText?: string): string;
-  /** 升级「企业团队版套餐」 */
-  (
-    key: 'upgrade_enterprise_team_edition_package',
-    fallbackText?: string,
-  ): string;
-  /** 后可使用此功能 */
-  (key: 'you_can_use_this_function_later', fallbackText?: string): string;
-  /** 成功 {success_count} 条， 失败 {fail_count} 条 */
-  (
-    key: 'evaluate_success_{success_count}_fail_{fail_count}',
-    options?: {
-      /** string */ success_count: ReactNode;
-      /** string */ fail_count: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 过滤器 */
-  (key: 'data_filter', fallbackText?: string): string;
-  /** 清空筛选 */
-  (key: 'clear_filter', fallbackText?: string): string;
-  /** 应用 */
-  (key: 'application', fallbackText?: string): string;
-  /** 请选择评测集 */
-  (key: 'select_evaluation_set', fallbackText?: string): string;
-  /** 新建评测集 */
-  (key: 'create_evaluation_set', fallbackText?: string): string;
-  /** 请选择评测集版本 */
-  (key: 'please_select_evaluation_set_version', fallbackText?: string): string;
-  /** 请选择评估器 */
-  (key: 'please_select_evaluator', fallbackText?: string): string;
-  /** 添加子项 */
-  (key: 'add_child_item', fallbackText?: string): string;
-  /** 数据结构 */
-  (key: 'data_structure', fallbackText?: string): string;
-  /** 数据结构不符合要求，无法导入 */
-  (
-    key: 'evaluation_set_import_error_data_structure_tips',
-    fallbackText?: string,
-  ): string;
-  /** 导入数据类型与列的数据类型不一致，无法导入 */
-  (
-    key: 'evaluation_set_import_error_data_type_tips',
-    fallbackText?: string,
-  ): string;
-  /** 样例数据格式错误 */
-  (key: 'sample_data_format_error', fallbackText?: string): string;
-  /** 导入样例数据 */
-  (key: 'import_sample_data', fallbackText?: string): string;
-  /** 基于样例数据自动提取数据结构 */
-  (
-    key: 'automatic_extraction_of_data_structure_based_on_sample_data',
-    fallbackText?: string,
-  ): string;
-  /** 样例数据 */
-  (key: 'evaluation_set_builtin_example_data', fallbackText?: string): string;
-  /** 提取数据结构 */
-  (key: 'extract_data_structure', fallbackText?: string): string;
-  /** 确认提取数据结构 */
-  (key: 'confirm_the_extracted_data_structure', fallbackText?: string): string;
-  /** 提取数据结构将覆盖原有的字段定义 */
-  (
-    key: 'extracting_the_data_structure_overwrite_tips',
-    fallbackText?: string,
-  ): string;
-  /** 已下钻到最小层级，无法再下钻 */
-  (key: 'drilled_to_minimum_level_tips', fallbackText?: string): string;
-  /** 确认切换 */
-  (key: 'confirm_the_switch', fallbackText?: string): string;
+  /** 单次最多添加10条数据项 */
+  (key: 'cozeloop_open_evaluate_max_10_data_items_per_add', fallbackText?: string): string;
+  /** 单条数据大小超限 */
+  (key: 'single_data_size_exceeded', fallbackText?: string): string;
   /** 当前JSON Schema不合法，切换会导致配置丢失，是否继续切换 */
-  (
-    key: 'evaluation_set_json_schema_invalid_tips',
-    fallbackText?: string,
-  ): string;
-  /** 冗余字段校验 */
-  (key: 'redundant_field_check', fallbackText?: string): string;
-  /** 高级校验规则 */
-  (key: 'advanced_validation_rule', fallbackText?: string): string;
-  /** 数据加工 */
-  (key: 'data_processing_short', fallbackText?: string): string;
-  /** 移除冗余字段 */
-  (key: 'remove_redundant_fields', fallbackText?: string): string;
-  /** 可视化配置 */
-  (key: 'visual_configuration', fallbackText?: string): string;
-  /** 手动添加 */
-  (key: 'app_client_add_env', fallbackText?: string): string;
-  /** 本地导入 */
-  (key: 'local_import', fallbackText?: string): string;
-  /** 删除数据项 */
-  (key: 'delete_data_items', fallbackText?: string): string;
-  /** 确定删除数据项 */
-  (key: 'confirm_delete_data_items', fallbackText?: string): string;
-  /** 提交成功 */
-  (key: 'submitted_successfully', fallbackText?: string): string;
-  /** 版本不能为空 */
-  (key: 'version_cannot_be_empty', fallbackText?: string): string;
-  /** 请输入正确的版本，格式为a.b.c，且每段为0-999 */
-  (key: 'version_number_format_tips', fallbackText?: string): string;
-  /** 新版本必须大于当前版本 */
-  (key: 'new_version_greater_than_current', fallbackText?: string): string;
-  /** 测试 */
-  (key: 'test', fallbackText?: string): string;
-  /** 文本 */
-  (key: 'plaintext', fallbackText?: string): string;
-  /** 图片-源文件 */
-  (key: 'image_source_file', fallbackText?: string): string;
-  /** 图片-外链 */
-  (key: 'image_external_link', fallbackText?: string): string;
-  /** 图片大小不能超过{size}MB */
-  (
-    key: 'the_image_size_cannot_exceed_{size}_mb',
-    options?: {
-      /** string */ size: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 如不保存，已编辑的信息将会丢失。 */
-  (key: 'saved_lost_data_tips', fallbackText?: string): string;
-  /** 保存并继续 */
-  (key: 'evaluation_set_save_and_continue', fallbackText?: string): string;
-  /** 不保存 */
-  (key: 'do_not_save', fallbackText?: string): string;
-  /** 请选择版本号 */
-  (key: 'please_select_a_version_number', fallbackText?: string): string;
-  /** 实验列表 */
-  (key: 'experiments_list', fallbackText?: string): string;
-  /** 请选择指标 */
-  (key: 'please_select_an_indicator', fallbackText?: string): string;
-  /** 请选择评测对象 */
-  (key: 'please_select_evaluate_target', fallbackText?: string): string;
-  /** 评测对象类型 */
-  (key: 'evaluate_target_type', fallbackText?: string): string;
-  /** 暂无导出记录 */
-  (key: 'no_export_record_yet', fallbackText?: string): string;
-  /** 未能找到相关结果 */
-  (key: 'no_results_found', fallbackText?: string): string;
-  /** 暂无实验 */
-  (key: 'no_experiment_yet', fallbackText?: string): string;
-  /** 总条数 */
-  (key: 'total_number', fallbackText?: string): string;
-  /** 成功 */
-  (key: 'status_success', fallbackText?: string): string;
-  /** 失败 */
-  (key: 'status_failed', fallbackText?: string): string;
-  /** 中止 */
-  (key: 'status_abort', fallbackText?: string): string;
-  /** 执行中 */
-  (key: 'status_running', fallbackText?: string): string;
-  /** 待执行 */
-  (key: 'status_pending', fallbackText?: string): string;
-  /** 请选择分类 */
-  (key: 'please_select_a_category', fallbackText?: string): string;
-  /** 请输入数值 */
-  (key: 'please_enter_a_value', fallbackText?: string): string;
-  /** 未找到匹配的选项 */
-  (key: 'no_matching_options_found', fallbackText?: string): string;
-  /** 新建 Prompt */
-  (key: 'create_new_prompt', fallbackText?: string): string;
-  /** 暂无数据 */
-  (key: 'no_data_yet', fallbackText?: string): string;
-  /** 评测对象 */
-  (key: 'evaluation_object_target', fallbackText?: string): string;
-  /** 名称已存在 */
-  (key: 'name_already_exists', fallbackText?: string): string;
-  /** 正在加载字段映射 */
-  (key: 'loading_data_field_mapping', fallbackText?: string): string;
-  /** 请输入整数 */
-  (key: 'please_enter_integer', fallbackText?: string): string;
-  /** 上传失败 */
-  (key: 'upload_fail', fallbackText?: string): string;
-  /** 请至少添加一个图片链接 */
-  (key: 'please_add_at_least_one_image_link', fallbackText?: string): string;
-  /** 上传失败，请重试 */
-  (key: 'upload_failed_please_try_again', fallbackText?: string): string;
-  /** 图片 */
-  (key: 'image', fallbackText?: string): string;
-  /** 请输入图片链接 */
-  (key: 'please_enter_the_picture_link', fallbackText?: string): string;
-  /** 请输入有效的URL */
-  (key: 'please_enter_a_valid_url', fallbackText?: string): string;
-  /** 图片地址 */
-  (key: 'image_address', fallbackText?: string): string;
-  /** 图片预览 */
-  (key: 'image_preview', fallbackText?: string): string;
-  /** 确认要移除{field}吗？ */
-  (
-    key: 'confirm_removal',
-    options?: {
-      /** string */ field: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 上传中 */
-  (key: 'uploading', fallbackText?: string): string;
-  /** 导入已通过图片 */
-  (key: 'import_approved_images', fallbackText?: string): string;
-  /** 上传 */
-  (key: 'upload', fallbackText?: string): string;
-  /** 正在上传图片 */
-  (key: 'uploading_pictures', fallbackText?: string): string;
-  /** 添加图片链接 */
-  (key: 'add_image_link', fallbackText?: string): string;
-  /** 请输入名称 */
-  (key: 'please_input_name', fallbackText?: string): string;
-  /** 请输入描述 */
-  (key: 'please_input_description', fallbackText?: string): string;
-  /** 请输入版本号 */
-  (key: 'please_input_version_number', fallbackText?: string): string;
-  /** 通过 Function Call 从 LLM 中提取数据，固定评估器输出格式为“得分-原因”。 */
-  (key: 'evaluator_output_tips', fallbackText?: string): string;
+  (key: 'evaluation_set_json_schema_invalid_tips', fallbackText?: string): string;
+  /** 当前草稿有修改未提交，已默认选择最新历史版本 */
+  (key: 'draft_unsubmitted_tip', fallbackText?: string): string;
   /** 当前实验未完成,不支持导出和下载 */
-  (
-    key: 'export_not_supported_incomplete_experiment',
-    fallbackText?: string,
-  ): string;
-  /** 导出文件最多能保存100天,过期后需要重新导出再下载。 */
-  (key: 'export_files_save_limit_100_days', fallbackText?: string): string;
-  /** 导出进行中,请等导出结束后再尝试 */
-  (key: 'export_in_progress_wait', fallbackText?: string): string;
-  /** 导出失败,请重新导出 */
-  (key: 'export_failed_retry', fallbackText?: string): string;
-  /** 导出文件最多存储100天,已过期 */
-  (key: 'export_file_expired_100_days_limit', fallbackText?: string): string;
-  /** 导出任务 ID */
-  (key: 'export_task_id', fallbackText?: string): string;
-  /** 导出状态 */
-  (key: 'export_status', fallbackText?: string): string;
+  (key: 'export_not_supported_incomplete_experiment', fallbackText?: string): string;
+  /** 导出 */
+  (key: 'evaluate_export', fallbackText?: string): string;
   /** 导出格式 */
   (key: 'export_format', fallbackText?: string): string;
-  /** 批量选择 */
-  (key: 'bulk_select', fallbackText?: string): string;
-  /** 张三 */
-  (key: 'user_zhangsan', fallbackText?: string): string;
-  /** 李四 */
-  (key: 'user_lisi', fallbackText?: string): string;
-  /** 王五 */
-  (key: 'user_wangwu', fallbackText?: string): string;
-  /** 请选择 Prompt Key */
-  (key: 'please_select_prompt_key', fallbackText?: string): string;
-  /** 百科达人 */
-  (key: 'encyclopedia_expert', fallbackText?: string): string;
-  /** 笑话大王 */
-  (key: 'joke_king', fallbackText?: string): string;
-  /** 查看并下载文件 */
-  (key: 'view_and_download_files', fallbackText?: string): string;
-  /** CSV格式 */
-  (key: 'csv_format', fallbackText?: string): string;
-  /** 可选 */
-  (key: 'optional', fallbackText?: string): string;
-  /** 跳过 */
-  (key: 'skip', fallbackText?: string): string;
-  /** 请配置字段映射 */
-  (key: 'please_configure_field_mapping', fallbackText?: string): string;
+  /** 导出记录 */
+  (key: 'evaluate_export_records', fallbackText?: string): string;
+  /** 导出进行中,请等导出结束后再尝试 */
+  (key: 'export_in_progress_wait', fallbackText?: string): string;
+  /** 导出任务 ID */
+  (key: 'export_task_id', fallbackText?: string): string;
+  /** 导出失败 */
+  (key: 'evaluate_export_failed', fallbackText?: string): string;
+  /** 导出失败,请重新导出 */
+  (key: 'export_failed_retry', fallbackText?: string): string;
+  /** 导出实验明细 */
+  (key: 'cozeloop_open_evaluate_export_experiment_details', fallbackText?: string): string;
+  /** 导出数据 */
+  (key: 'export_data', fallbackText?: string): string;
+  /** 导出文件最多存储100天,已过期 */
+  (key: 'export_file_expired_100_days_limit', fallbackText?: string): string;
+  /** 导出文件最多能保存100天,过期后需要重新导出再下载。 */
+  (key: 'export_files_save_limit_100_days', fallbackText?: string): string;
+  /** 导出中 */
+  (key: 'model_exporting', fallbackText?: string): string;
+  /** 导出中，查看 */
+  (key: 'cozeloop_open_evaluate_export_in_progress_view', fallbackText?: string): string;
+  /** 导出状态 */
+  (key: 'export_status', fallbackText?: string): string;
+  /** 导入方式 */
+  (key: 'import_method', fallbackText?: string): string;
+  /** 导入数据 */
+  (key: 'import_data', fallbackText?: string): string;
+  /** 导入数据将覆盖现有数据 */
+  (key: 'importing_data_will_overwrite_existing_data', fallbackText?: string): string;
+  /** 导入数据类型与列的数据类型不一致，无法导入 */
+  (key: 'evaluation_set_import_error_data_type_tips', fallbackText?: string): string;
+  /** 导入数据列 */
+  (key: 'import_data_column', fallbackText?: string): string;
+  /** 导入数据时，是否移除数据结构定义之外字段 */
+  (key: 'cozeloop_open_evaluate_remove_fields_outside_structure_on_import', fallbackText?: string): string;
+  /** 导入数据时，在完成校验后对数据的加工操作。 */
+  (key: 'cozeloop_open_evaluate_data_processing_after_validation_import', fallbackText?: string): string;
+  /** 导入样例数据 */
+  (key: 'import_sample_data', fallbackText?: string): string;
+  /** 导入已通过图片 */
+  (key: 'import_approved_images', fallbackText?: string): string;
+  /** 得分： */
+  (key: 'score_is', fallbackText?: string): string;
+  /** 得分仅预览效果，非实际结果。 */
+  (key: 'score_only_for_preview', fallbackText?: string): string;
+  /** 得分理由 */
+  (key: 'score_reason', fallbackText?: string): string;
+  /** 得分明细 */
+  (key: 'score_details', fallbackText?: string): string;
+  /** 得分明细 - 数据项分布 */
+  (key: 'score_details_data_item_distribution', fallbackText?: string): string;
+  /** 等于 */
+  (key: 'equal_to', fallbackText?: string): string;
+  /** 点击上传或者拖拽文件至此处 */
+  (key: 'click_or_drag_file_to_upload', fallbackText?: string): string;
+  /** 点击右上角创建按钮进行创建 */
+  (key: 'click_to_create', fallbackText?: string): string;
+  /** 点击右上角导出按钮进行导出 */
+  (key: 'cozeloop_open_evaluate_click_export_button_top_right', fallbackText?: string): string;
+  /** 点击右上角添加数据进行添加 */
+  (key: 'click_to_add_data', fallbackText?: string): string;
+  /** 点击右上角新建评测集按钮进行创建 */
+  (key: 'click_to_create_evaluation_set', fallbackText?: string): string;
+  /** 点击右上角新建实验按钮进行创建 */
+  (key: 'click_to_create_experiment', fallbackText?: string): string;
+  /** 点击自动补全该数据结构内的所有字段 */
+  (key: 'cozeloop_open_evaluate_click_autocomplete_all_fields', fallbackText?: string): string;
+  /** 动态参数 */
+  (key: 'cozeloop_open_evaluate_dynamic_parameters', fallbackText?: string): string;
+  /** 对比{num}个实验 */
+  (
+    key: 'compare_x_experiments',
+    options?: {
+      /** number */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
   /** 对比{placeholder1}个实验 */
   (
     key: 'compare_placeholder1_experiments',
@@ -1989,101 +2809,79 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 评估器 {placeholder1} */
-  (
-    key: 'evaluator_placeholder1',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 跳过评测对象执行配置,适用于评测集已包含agent实际输出的评测场景。 */
-  (key: 'skip_eval_object_execution_config', fallbackText?: string): string;
-  /** 选择跳过评估器配置,实验仅获agent实际输出,适用于人工标注的评测场景。 */
-  (
-    key: 'skip_evaluator_config_agent_output_only',
-    fallbackText?: string,
-  ): string;
-  /** 总条数 {placeholder1}（成功 {success_turn_cnt} */
-  (
-    key: 'total_count_placeholder1_success_count',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-      /** string */ success_turn_cnt: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 失败 {fail_turn_cnt} */
-  (
-    key: 'failure_count_fail_turn_cnt',
-    options?: {
-      /** string */ fail_turn_cnt: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 中止 {terminated_turn_cnt} */
-  (
-    key: 'terminated_count_terminated_turn_cnt',
-    options?: {
-      /** string */ terminated_turn_cnt: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 执行中 {processing_turn_cnt} */
-  (
-    key: 'processing_count_processing_turn_cnt',
-    options?: {
-      /** string */ processing_turn_cnt: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 待执行 {pending_turn_cnt}） */
-  (
-    key: 'pending_count_pending_turn_cnt',
-    options?: {
-      /** string */ pending_turn_cnt: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** - 评测集 */
-  (key: 'minus_evaluation_dataset', fallbackText?: string): string;
   /** 对比实验详情 */
-  (key: 'comparison_experiment_details', fallbackText?: string): string;
-  /** 最大并发执行条数 */
-  (key: 'max_concurrent_execution_count', fallbackText?: string): string;
-  /** 实验支持并发执行评测集中的条目,但受限于评测对象的并发度和调用评估器的模型 TPM 限制。这里设置理想的最大执行条数。 */
+  (key: 'compare_experiment_detail', fallbackText?: string): string;
+  /** 发起实验 */
+  (key: 'initiate_experiment', fallbackText?: string): string;
+  /** 发起实验对比 */
+  (key: 'run_experiment_comparison', fallbackText?: string): string;
+  /** 复制 {idString} */
   (
-    key: 'experiment_supports_concurrent_eval_limitations',
-    fallbackText?: string,
-  ): string;
-  /** 最大并发执行条数最多支持 {EVAL_EXPERIMENT_CONCUR_COUNT_MAX} 条。 */
-  (
-    key: 'max_concurrent_execution_count_limit',
+    key: 'cozeloop_open_evaluate_copy_with_id',
     options?: {
-      /** string */ EVAL_EXPERIMENT_CONCUR_COUNT_MAX: ReactNode;
+      /** string */ idString: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 上一步 */
-  (key: 'dataset_previous_step', fallbackText?: string): string;
-  /** 此步骤已选择跳过 */
-  (key: 'this_step_skipped', fallbackText?: string): string;
-  /** 此步骤已选择跳过。 */
-  (key: 'this_step_skipped_period', fallbackText?: string): string;
-  /** 人工标注 */
-  (key: 'data_engine_manual_annotation', fallbackText?: string): string;
-  /** 删除此标签 */
-  (key: 'delete_this_tag', fallbackText?: string): string;
-  /** 删除此标签将影响已打标的内容 */
-  (key: 'deleting_tag_affects_labeled_content', fallbackText?: string): string;
-  /** 请输入关键词检索，最长{MAX_SEARCH_LENGTH}字符 */
+  /** 复制{name}配置，并新建评估器 */
   (
-    key: 'enter_keyword_search_max_length',
+    key: 'copy_and_create_evaluator',
     options?: {
-      /** string */ MAX_SEARCH_LENGTH: ReactNode;
+      /** string */ name: ReactNode;
     },
     fallbackText?: string,
   ): string;
+  /** 复制{name}配置，或修改配置后发起实验。 */
+  (
+    key: 'copy_and_run_experiment',
+    options?: {
+      /** string */ name: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 复制评估器配置 */
+  (key: 'copy_evaluator_config', fallbackText?: string): string;
+  /** 复制实验配置 */
+  (key: 'copy_experiment_config', fallbackText?: string): string;
+  /** 复制实验配置并新建实验 */
+  (key: 'copy_and_create_experiment', fallbackText?: string): string;
+  /** 覆盖 Prompt 模型配置 */
+  (key: 'dataset_ai_annotation_prompt_config_override', fallbackText?: string): string;
+  /** 该标签选项已禁用，若修改将不再允许被选中 */
+  (key: 'cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable', fallbackText?: string): string;
+  /** 该标签已禁用,不允许修改 */
+  (key: 'evaluate_tag_disabled_no_modification', fallbackText?: string): string;
+  /** 该工作流关联的应用的 ID。 */
+  (key: 'workflow_associated_coze_agent_id', fallbackText?: string): string;
+  /** 该字段必填 */
+  (key: 'the_field_required', fallbackText?: string): string;
+  /** 高级校验规则 */
+  (key: 'advanced_validation_rule', fallbackText?: string): string;
+  /** 告诉我一些这个动物的生活习性 */
+  (key: 'evaluate_living_habits_animal', fallbackText?: string): string;
+  /** 格式化JSON */
+  (key: 'format_json', fallbackText?: string): string;
+  /** 更新成功 */
+  (key: 'update_success', fallbackText?: string): string;
+  /** 更新评分成功 */
+  (key: 'update_rating_success', fallbackText?: string): string;
+  /** 工作流开始节点的输入参数及取值，你可以在指定工作流的编排页面查看参数列表。 */
+  (key: 'evaluation_set_workflow_params_tips', fallbackText?: string): string;
+  /** 工作流需要关联的 Coze 智能体 ID。 */
+  (key: 'workflow_need_associated_coze_agent_id', fallbackText?: string): string;
+  /** 共有{num}/{total}列 */
+  (
+    key: 'total_of_columns',
+    options?: {
+      /** string */ num: ReactNode;
+      /** string */ total: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 构造测试数据 */
+  (key: 'construct_test_data', fallbackText?: string): string;
+  /** 关闭后 冗余字段校验 配置将采用默认配置“否”，确定关闭吗？ */
+  (key: 'cozeloop_open_evaluate_disable_redundant_validation_default_no', fallbackText?: string): string;
   /** 关键词检索最长{MAX_SEARCH_LENGTH}字符,超出部分已被自动截断 */
   (
     key: 'keyword_search_length_limited_truncated',
@@ -2092,27 +2890,219 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 普通模式 */
-  (key: 'prompt_compare_normal', fallbackText?: string): string;
-  /** 快速标注模式 */
-  (key: 'quick_annotation_mode', fallbackText?: string): string;
-  /** 稍等几秒后 */
-  (key: 'wait_a_few_seconds', fallbackText?: string): string;
-  /** 页面查看 */
-  (key: 'page_view', fallbackText?: string): string;
-  /** 是否人工校准得分 */
-  (key: 'manual_score_calibration', fallbackText?: string): string;
-  /** 请输入,最长{limitLength}字符 */
+  /** 关联评测集 */
+  (key: 'associated_evaluation_set', fallbackText?: string): string;
+  /** 关联实验 */
+  (key: 'associated_experiment', fallbackText?: string): string;
+  /** 后可使用此功能 */
+  (key: 'you_can_use_this_function_later', fallbackText?: string): string;
+  /** 获取评测对象遇到错误 */
+  (key: 'get_evaluation_object_error', fallbackText?: string): string;
+  /** 获取评测集数据失败: */
+  (key: 'evaluate_failed_to_get_evaluation_set_data', fallbackText?: string): string;
+  /** 基本信息 */
+  (key: 'basic_information', fallbackText?: string): string;
+  /** 基于评测集 */
+  (key: 'evaluate_based_on_evaluation_set', fallbackText?: string): string;
+  /** 基于样例数据自动提取数据结构 */
+  (key: 'automatic_extraction_of_data_structure_based_on_sample_data', fallbackText?: string): string;
+  /** 基准实验切换成功 */
+  (key: 'benchmark_experiment_switch_success', fallbackText?: string): string;
+  /** 基准组 */
+  (key: 'benchmark_group', fallbackText?: string): string;
+  /** 继续导入数据将覆盖现有数据 */
+  (key: 'continue_will_override_existing_data', fallbackText?: string): string;
+  /** 检查 */
+  (key: 'evaluate_check', fallbackText?: string): string;
+  /** 接口遇到问题 */
+  (key: 'interface_problem', fallbackText?: string): string;
+  /** 结束时间 */
+  (key: 'end_time', fallbackText?: string): string;
+  /** 仅评测集相同且已执行完成的实验可进行对比。 */
+  (key: 'only_experiments_compared_tip', fallbackText?: string): string;
+  /** 仅评测集相同且已执行完成的实验可进行对比。目前选择的实验有关联评测集不同的情况，请重新选择。 */
+  (key: 'experiments_compared_tip', fallbackText?: string): string;
+  /** 仅已执行完成的实验可进行对比，请重新选择。 */
+  (key: 'only_completed_experiments_can_be_compared', fallbackText?: string): string;
+  /** 仅针对执行失败的部分重新评测 */
+  (key: 're_evaluate_failed_only', fallbackText?: string): string;
+  /** 仅针对执行失败的部分重新评测。 */
+  (key: 'only_re_evaluate_failed_part', fallbackText?: string): string;
+  /** 仅支持导出终态(成功或失败)的实验 */
+  (key: 'cozeloop_open_evaluate_export_only_final_state_experiments', fallbackText?: string): string;
+  /** 仅支持精确到小数点后{num}位 */
   (
-    key: 'please_enter_max_limit_length',
+    key: 'decimal_places_support',
     options?: {
-      /** string */ limitLength: ReactNode;
+      /** string */ num: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 输入内容最长{limitLength}字符,超出部分已被自动截断 */
+  /** 仅支持精确到小数点后{placeholder1}位 */
   (
-    key: 'input_content_limited_truncated',
+    key: 'data_engine_decimal_places_support',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 仅支持精确到小数点后{precision}位 */
+  (
+    key: 'support_precision',
+    options?: {
+      /** string */ precision: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 仅支持英文、数字、下划线，且需要以字母开头 */
+  (key: 'support_letter_number_underscore_start_letter', fallbackText?: string): string;
+  /** 仅支持英文字母、数字、中文，“-”，“_”，“.” */
+  (key: 'support_letter_number_chinese_special_char', fallbackText?: string): string;
+  /** 仅支持英文字母、数字、中文开头 */
+  (key: 'support_letter_number_chinese_start', fallbackText?: string): string;
+  /** 紧凑视图 */
+  (key: 'compact_view', fallbackText?: string): string;
+  /** 进行中 */
+  (key: 'in_progress', fallbackText?: string): string;
+  /** 聚合得分 */
+  (key: 'aggregation_score', fallbackText?: string): string;
+  /** 开启后，Object数据类型支持配置校验规则，用于控制数据导入时，如果存在Object数据结构定义之外的字段，该数据是否准入 */
+  (key: 'cozeloop_open_evaluate_enable_object_type_validation_rules', fallbackText?: string): string;
+  /** 开始时间 */
+  (key: 'start_time', fallbackText?: string): string;
+  /** 可视化配置 */
+  (key: 'visual_configuration', fallbackText?: string): string;
+  /** 可通过构造测试数据，预览评估器的运行结果。 */
+  (key: 'construct_data_to_preview', fallbackText?: string): string;
+  /** 空数据 */
+  (key: 'empty_data', fallbackText?: string): string;
+  /** 快速标注模式 */
+  (key: 'quick_annotation_mode', fallbackText?: string): string;
+  /** 宽松视图 */
+  (key: 'loose_view', fallbackText?: string): string;
+  /** 蓝鲸 */
+  (key: 'evaluate_blue_whale', fallbackText?: string): string;
+  /** 离开当前页面，信息将不被保存。 */
+  (key: 'leave_page_tip', fallbackText?: string): string;
+  /** 离开后信息将不会保存 */
+  (key: 'leave_current_page_information_will_not_be_saved', fallbackText?: string): string;
+  /** 李四 */
+  (key: 'user_lisi', fallbackText?: string): string;
+  /** 列 {index} */
+  (
+    key: 'column_index',
+    options?: {
+      /** string */ index: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 列描述 */
+  (key: 'column_description', fallbackText?: string): string;
+  /** 列名称已存在 */
+  (key: 'column_name_exists', fallbackText?: string): string;
+  /** 列映射 */
+  (key: 'column_mapping', fallbackText?: string): string;
+  /** 吗？此修改将不可逆。 */
+  (key: 'this_change_irreversible', fallbackText?: string): string;
+  /** 描述：{desc} */
+  (
+    key: 'description_is',
+    options?: {
+      /** string */ desc: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 名称和版本 */
+  (key: 'name_and_version', fallbackText?: string): string;
+  /** 名称已存在 */
+  (key: 'name_already_exists', fallbackText?: string): string;
+  /** 模型选择 */
+  (key: 'model_selection', fallbackText?: string): string;
+  /** 内容由AI生成，无法确保真实准确，仅供参考。 */
+  (key: 'generated_by_ai_tip', fallbackText?: string): string;
+  /** 你可以直接使用home */
+  (key: 'evaluate_you_can_use_directly', fallbackText?: string): string;
+  /** 配置 */
+  (key: 'evaluate_config', fallbackText?: string): string;
+  /** 配置，直接或修改配置后发起实验。 */
+  (key: 'cozeloop_open_evaluate_config_and_launch_experiment', fallbackText?: string): string;
+  /** 配置列 */
+  (key: 'configuration_column', fallbackText?: string): string;
+  /** 配置信息 */
+  (key: 'config_info', fallbackText?: string): string;
+  /** 批量删除实验 */
+  (key: 'batch_delete_experiment', fallbackText?: string): string;
+  /** 批量选择 */
+  (key: 'bulk_select', fallbackText?: string): string;
+  /** 评测对象 */
+  (key: 'evaluation_object', fallbackText?: string): string;
+  /** 评测对象版本 */
+  (key: 'evaluation_object_version', fallbackText?: string): string;
+  /** 评测对象的实际输出 */
+  (key: 'evaluation_object_actual_output', fallbackText?: string): string;
+  /** 评测对象类型 */
+  (key: 'evaluate_target_type', fallbackText?: string): string;
+  /** 评测集版本 */
+  (key: 'evaluation_set_version', fallbackText?: string): string;
+  /** 评测集创建完成后，仍可修改列配置 */
+  (key: 'can_still_modify_column', fallbackText?: string): string;
+  /** 评测集列 */
+  (key: 'evaluation_set_column', fallbackText?: string): string;
+  /** 评测集描述 */
+  (key: 'evaluation_set_description', fallbackText?: string): string;
+  /** 评测集名称 */
+  (key: 'evaluation_set_name', fallbackText?: string): string;
+  /** 评测集数据 */
+  (key: 'evaluation_set_data', fallbackText?: string): string;
+  /** 评测集字段、评测对象实际输出到评估器字段的映射，用于评估器准确获取输入进行评估。 */
+  (key: 'evaluation_set_field_mapping_tip', fallbackText?: string): string;
+  /** 评测集字段到评测对象字段的映射，用于评测对象准确获取输入。 */
+  (key: 'evaluation_set_field_to_evaluation_object_field_mapping', fallbackText?: string): string;
+  /** 评估器得分 */
+  (key: 'evaluator_score', fallbackText?: string): string;
+  /** 评估器聚合得分 */
+  (key: 'evaluator_aggregate_score', fallbackText?: string): string;
+  /** 评估器类型 */
+  (key: 'evaluator_type', fallbackText?: string): string;
+  /** 评估器名称 */
+  (key: 'evaluator_name', fallbackText?: string): string;
+  /** 评估器缺少输入 */
+  (key: 'evaluator_lacks_input', fallbackText?: string): string;
+  /** 评估通过 */
+  (key: 'evaluate_validation_passed', fallbackText?: string): string;
+  /** 普通模式 */
+  (key: 'prompt_compare_normal', fallbackText?: string): string;
+  /** 其Array<Object>数据样例如下，常见于多模态场景的Model span中。 */
+  (key: 'cozeloop_open_evaluate_array_object_data_sample_multimodal', fallbackText?: string): string;
+  /** 其他 */
+  (key: 'analytics_subtitle_others', fallbackText?: string): string;
+  /** 切换后当前修改会被覆盖 */
+  (key: 'switching_modification_overwritten_tips', fallbackText?: string): string;
+  /** 清空筛选 */
+  (key: 'clear_filter', fallbackText?: string): string;
+  /** 请编写执行函数体 */
+  (key: 'evaluate_please_write_function_body', fallbackText?: string): string;
+  /** 请尝试其他关键词或修改筛选项 */
+  (key: 'try_other_keywords', fallbackText?: string): string;
+  /** 请配置测试数据 */
+  (key: 'evaluate_please_configure_test_data', fallbackText?: string): string;
+  /** 请配置导入列 */
+  (key: 'please_configure_the_import_column', fallbackText?: string): string;
+  /** 请配置列映射 */
+  (key: 'configure_column_mapping', fallbackText?: string): string;
+  /** 请配置评测对象映射 */
+  (key: 'config_evaluation_object_mapping', fallbackText?: string): string;
+  /** 请配置字段映射 */
+  (key: 'please_configure_field_mapping', fallbackText?: string): string;
+  /** 请配置最少一个导入列 */
+  (key: 'configure_at_least_one_import_column', fallbackText?: string): string;
+  /** 请求评测对象时，可注入填写的参数，来拿到评测对象的输出结果。如请求环境的泳道、测试账号的 UID 等。 */
+  (key: 'cozeloop_open_evaluate_inject_parameters_for_evaluation_request', fallbackText?: string): string;
+  /** 请上传文件 */
+  (key: 'upload_file', fallbackText?: string): string;
+  /** 请输入,最长{limitLength}字符 */
+  (
+    key: 'please_enter_max_limit_length',
     options?: {
       /** string */ limitLength: ReactNode;
     },
@@ -2126,281 +3116,25 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** ID不合法,必须是{limitLength}位 */
+  /** 请输入{num1}～{num2}区间内的数字 */
   (
-    key: 'id_invalid_must_be_limit_length',
+    key: 'please_enter_a_number_in_the_range_{num1}_to_{num2}',
     options?: {
-      /** string */ limitLength: ReactNode;
+      /** string */ num1: ReactNode;
+      /** string */ num2: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 查看详情： */
-  (key: 'loop_view_details', fallbackText?: string): string;
-  /** 上一条 */
-  (key: 'data_engine_previous', fallbackText?: string): string;
-  /** 下一条 */
-  (key: 'data_engine_next', fallbackText?: string): string;
-  /** 评测集数据 */
-  (key: 'loop_evaluation_dataset', fallbackText?: string): string;
-  /** 评估器得分 */
-  (key: 'loop_evaluator_score', fallbackText?: string): string;
-  /** 评估器聚合得分 */
-  (key: 'evaluator_aggregate_score', fallbackText?: string): string;
-  /** 标注聚合得分 */
-  (key: 'annotation_aggregate_score', fallbackText?: string): string;
-  /** 完成该标签的所有数据标注后,再刷新重试 */
-  (
-    key: 'refresh_after_all_tag_annotations_completed',
-    fallbackText?: string,
-  ): string;
-  /** 其他 */
-  (key: 'analytics_subtitle_others', fallbackText?: string): string;
-  /** {placeholder0}明细 */
-  (
-    key: 'placeholder0_details',
-    options?: {
-      /** string */ placeholder0: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 条 ({placeholder1}) */
-  (
-    key: 'items_placeholder1',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 标签列表 */
-  (key: 'tag_list', fallbackText?: string): string;
+  /** 请输入0～1区间内的数字 */
+  (key: 'input_number_between_0_and_1', fallbackText?: string): string;
+  /** 请输入0-1的分值 */
+  (key: 'input_score_between_0_and_1', fallbackText?: string): string;
+  /** 请输入integer */
+  (key: 'cozeloop_open_evaluate_enter_integer', fallbackText?: string): string;
+  /** 请输入版本号 */
+  (key: 'please_input_version_number', fallbackText?: string): string;
   /** 请输入标签名称搜索 */
   (key: 'please_enter_tag_name_search', fallbackText?: string): string;
-  /** 添加标签列至数据明细 */
-  (key: 'add_tag_column_to_data_details', fallbackText?: string): string;
-  /** 已添加标签 {placeholder1} */
-  (
-    key: 'tag_added_placeholder1',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 删除标签 */
-  (key: 'delete_tag', fallbackText?: string): string;
-  /** 更新人 */
-  (key: 'updated_by', fallbackText?: string): string;
-  /** 人工标注管理 */
-  (key: 'manual_annotation_management', fallbackText?: string): string;
-  /** 新建标签 */
-  (key: 'create_new_tag', fallbackText?: string): string;
-  /** 添加 */
-  (key: 'space_member_role_type_add_btn', fallbackText?: string): string;
-  /** 该分类标签选项已禁用，若修改将不再展示 */
-  (key: 'tag_disabled_no_modification', fallbackText?: string): string;
-  /** User Prompt 不可为空 */
-  (key: 'user_prompt_required', fallbackText?: string): string;
-  /** 所选模型不支持多模态，请调整变量类型或更换模型 */
-  (key: 'model_not_support_multimodal', fallbackText?: string): string;
-  /** 操作人 */
-  (key: 'application_operator', fallbackText?: string): string;
-  /** 这是一个 CozeBot */
-  (key: 'this_is_a_cozebot', fallbackText?: string): string;
-  /** 开始时间 */
-  (key: 'start_time', fallbackText?: string): string;
-  /** 完成时间 */
-  (key: 'completion_time', fallbackText?: string): string;
-  /** 完成时间 */
-  (key: 'data_annotate_end_time', fallbackText?: string): string;
-  /** 覆盖 Prompt 模型配置 */
-  (
-    key: 'dataset_ai_annotation_prompt_config_override',
-    fallbackText?: string,
-  ): string;
-  /** 复制成功 */
-  (key: 'prompt_example_copy_success', fallbackText?: string): string;
-  /** 复制失败 */
-  (key: 'prompt_example_copy_failed', fallbackText?: string): string;
-  /** 复制 {idString} */
-  (
-    key: 'cozeloop_open_evaluate_copy_with_id',
-    options?: {
-      /** string */ idString: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** Coze 智能体 */
-  (
-    key: 'cozeloop_open_evaluate_coze_intelligent_agent',
-    fallbackText?: string,
-  ): string;
-  /** 数据嵌套层数超限 */
-  (key: 'data_nesting_exceeds_limit', fallbackText?: string): string;
-  /** 数据转换失败 */
-  (key: 'data_conversion_failed', fallbackText?: string): string;
-  /** 图片数量超限 */
-  (key: 'exceed_max_image_count', fallbackText?: string): string;
-  /** 图片大小超限 */
-  (key: 'exceed_max_image_size', fallbackText?: string): string;
-  /** 图片获取失败 */
-  (key: 'get_image_failed', fallbackText?: string): string;
-  /** 文件扩展名不合法 */
-  (key: 'illegal_extension', fallbackText?: string): string;
-  /** 上传图片失败 */
-  (
-    key: 'cozeloop_open_evaluate_image_upload_failed',
-    fallbackText?: string,
-  ): string;
-  /** 世界上最大的动物是什么 */
-  (key: 'evaluate_biggest_animal_world', fallbackText?: string): string;
-  /** 蓝鲸 */
-  (key: 'evaluate_blue_whale', fallbackText?: string): string;
-  /** 告诉我一些这个动物的生活习性 */
-  (key: 'evaluate_living_habits_animal', fallbackText?: string): string;
-  /** 吃鱼 */
-  (key: 'eat_fish', fallbackText?: string): string;
-  /** 导出数据 */
-  (key: 'export_data', fallbackText?: string): string;
-  /** 下载 */
-  (key: 'download', fallbackText?: string): string;
-  /** 实验对比最大数量不能超过 {MAX_EXPERIMENT_CONTRAST_COUNT} 个，请重新选择。 */
-  (
-    key: 'cozeloop_open_evaluate_max_experiment_contrast_limit',
-    options?: {
-      /** string */ MAX_EXPERIMENT_CONTRAST_COUNT: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** JSON Schema格式错误 */
-  (
-    key: 'cozeloop_open_evaluate_json_schema_format_error',
-    fallbackText?: string,
-  ): string;
-  /** JSON Schema数据类型与列的类型不一致，请修改 */
-  (
-    key: 'cozeloop_open_evaluate_json_schema_type_mismatch',
-    fallbackText?: string,
-  ): string;
-  /** JSON 格式错误 */
-  (
-    key: 'cozeloop_open_evaluate_json_format_error',
-    fallbackText?: string,
-  ): string;
-  /** 仅支持英文字母、数字、中文开头 */
-  (key: 'support_letter_number_chinese_start', fallbackText?: string): string;
-  /** 仅支持英文字母、数字、中文，“-”，“_”，“.” */
-  (
-    key: 'support_letter_number_chinese_special_char',
-    fallbackText?: string,
-  ): string;
-  /** 仅支持英文、数字、下划线，且需要以字母开头 */
-  (
-    key: 'support_letter_number_underscore_start_letter',
-    fallbackText?: string,
-  ): string;
-  /** 文件读取失败 */
-  (key: 'knowledge_file_read_fail', fallbackText?: string): string;
-  /** 文件格式错误 */
-  (key: 'data_engine_file_format_error', fallbackText?: string): string;
-  /** 单次最多添加10条数据项 */
-  (
-    key: 'cozeloop_open_evaluate_max_10_data_items_per_add',
-    fallbackText?: string,
-  ): string;
-  /** 成功添加{successCount}条数据 */
-  (
-    key: 'cozeloop_open_evaluate_successfully_added_data_count',
-    options?: {
-      /** string */ successCount: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 数据项{placeholder1} */
-  (
-    key: 'cozeloop_open_evaluate_data_item_placeholder1',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 添加数据             {ExpandNode} */
-  (
-    key: 'cozeloop_open_evaluate_add_data_expandnode',
-    options?: {
-      /** string */ ExpandNode: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 列 {placeholder1} */
-  (
-    key: 'data_engine_column_placeholder',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 列 {placeholder1} */
-  (
-    key: 'column_placeholder',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 确认删除 */
-  (key: 'task_delete_confirm_btn', fallbackText?: string): string;
-  /** { }                 列，此操作不可逆 */
-  (
-    key: 'cozeloop_open_evaluate_column_braces_irreversible',
-    fallbackText?: string,
-  ): string;
-  /** 确认 */
-  (key: 'global_btn_confirm', fallbackText?: string): string;
-  /** 取消 */
-  (key: 'global_btn_cancel', fallbackText?: string): string;
-  /** 只读 */
-  (key: 'read_only', fallbackText?: string): string;
-  /** 导入数据列 */
-  (key: 'data_engine_import_data_columns', fallbackText?: string): string;
-  /** {placeholder0} 模板 */
-  (
-    key: 'cozeloop_open_evaluate_template_placeholder0',
-    options?: {
-      /** string */ placeholder0: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 支持文件格式：csv、zip、xlsx、xls，文件最大200MB,                           仅支持导入一个文件 */
-  (
-    key: 'cozeloop_open_evaluate_supported_file_formats_limit',
-    fallbackText?: string,
-  ): string;
-  /** 下载模板 */
-  (key: 'evaluate_dataset_download_template', fallbackText?: string): string;
-  /** 适用于在同个单元格中管理图、文各类模态混排的数据。 */
-  (
-    key: 'cozeloop_open_evaluate_multi_modal_data_in_cell_usage',
-    fallbackText?: string,
-  ): string;
-  /** 其Array<Object>数据样例如下，常见于多模态场景的Model span中。 */
-  (
-    key: 'cozeloop_open_evaluate_array_object_data_sample_multimodal',
-    fallbackText?: string,
-  ): string;
-  /** 点击自动补全该数据结构内的所有字段 */
-  (
-    key: 'cozeloop_open_evaluate_click_autocomplete_all_fields',
-    fallbackText?: string,
-  ): string;
-  /** 自动补全字段将覆盖原有内容 */
-  (
-    key: 'cozeloop_open_evaluate_autocomplete_overwrites_original',
-    fallbackText?: string,
-  ): string;
-  /** 自动补全数据结构内所有字段将覆盖原有内容。确认覆盖吗？ */
-  (
-    key: 'cozeloop_open_evaluate_autocomplete_confirm_overwrite_all_fields',
-    fallbackText?: string,
-  ): string;
   /** 请输入大于等于{minimum}的数字 */
   (
     key: 'cozeloop_open_evaluate_enter_number_greater_equal_minimum',
@@ -2409,6 +3143,44 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
+  /** 请输入大于等于{num}的数字 */
+  (
+    key: 'input_num_gte',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 请输入对象 */
+  (key: 'please_enter_an_object', fallbackText?: string): string;
+  /** 请输入浮点数，至多小数点后4位 */
+  (key: 'input_float_with_precision', fallbackText?: string): string;
+  /** 请输入关键词检索，最长{MAX_SEARCH_LENGTH}字符 */
+  (
+    key: 'enter_keyword_search_max_length',
+    options?: {
+      /** string */ MAX_SEARCH_LENGTH: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 请输入列描述 */
+  (key: 'enter_column_description', fallbackText?: string): string;
+  /** 请输入列名称 */
+  (key: 'please_enter_column_name', fallbackText?: string): string;
+  /** 请输入名称 */
+  (key: 'please_input_name', fallbackText?: string): string;
+  /** 请输入内容 */
+  (key: 'please_enter_content', fallbackText?: string): string;
+  /** 请输入评测集描述 */
+  (key: 'please_enter_a_review_set_description', fallbackText?: string): string;
+  /** 请输入评测集名称 */
+  (key: 'enter_evaluation_name', fallbackText?: string): string;
+  /** 请输入数值 */
+  (key: 'please_enter_a_value', fallbackText?: string): string;
+  /** 请输入图片链接 */
+  (key: 'please_enter_the_picture_link', fallbackText?: string): string;
+  /** 请输入文本内容 */
+  (key: 'cozeloop_open_evaluate_enter_text_content', fallbackText?: string): string;
   /** 请输入小于等于{maximum}的数字 */
   (
     key: 'cozeloop_open_evaluate_enter_number_less_equal_maximum',
@@ -2417,22 +3189,66 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 仅支持精确到小数点后{placeholder1}位 */
+  /** 请输入小于等于{num}的数字 */
   (
-    key: 'data_engine_decimal_places_support',
+    key: 'input_num_lte',
     options?: {
-      /** string */ placeholder1: ReactNode;
+      /** string */ num: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** {instancePath}数据类型不符合字段定义 */
-  (
-    key: 'cozeloop_open_evaluate_data_type_mismatch_instancepath',
-    options?: {
-      /** string */ instancePath: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
+  /** 请输入有效的URL */
+  (key: 'please_enter_a_valid_url', fallbackText?: string): string;
+  /** 请输入原因 */
+  (key: 'please_enter_the_reason', fallbackText?: string): string;
+  /** 请输入整数 */
+  (key: 'enter_integer', fallbackText?: string): string;
+  /** 请输入正确的版本，格式为a.b.c，且每段为0-999 */
+  (key: 'eval_version_number_format', fallbackText?: string): string;
+  /** 请添加评估器 */
+  (key: 'please_add_evaluator', fallbackText?: string): string;
+  /** 请选择 Prompt Key */
+  (key: 'please_select_prompt_key', fallbackText?: string): string;
+  /** 请选择 Prompt key 和版本号后再查看 */
+  (key: 'select_prompt_key_and_version_to_view', fallbackText?: string): string;
+  /** 请选择版本 */
+  (key: 'select_version', fallbackText?: string): string;
+  /** 请选择版本号 */
+  (key: 'please_select_a_version_number', fallbackText?: string): string;
+  /** 请选择导出格式 */
+  (key: 'cozeloop_open_evaluate_please_select_export_format', fallbackText?: string): string;
+  /** 请选择导入方式 */
+  (key: 'select_import_method', fallbackText?: string): string;
+  /** 请选择类型 */
+  (key: 'select_type', fallbackText?: string): string;
+  /** 请选择模型 */
+  (key: 'choose_model', fallbackText?: string): string;
+  /** 请选择评测对象 */
+  (key: 'please_select_evaluate_target', fallbackText?: string): string;
+  /** 请选择评测对象和版本 */
+  (key: 'evaluate_please_select_target_and_version', fallbackText?: string): string;
+  /** 请选择评测集 */
+  (key: 'select_evaluation_set', fallbackText?: string): string;
+  /** 请选择评测集版本 */
+  (key: 'please_select_evaluation_set_version', fallbackText?: string): string;
+  /** 请选择评估器 */
+  (key: 'please_select_evaluator', fallbackText?: string): string;
+  /** 请选择评估器和版本号后再查看 */
+  (key: 'select_evaluator_and_version_number_to_view', fallbackText?: string): string;
+  /** 请选择数据类型 */
+  (key: 'select_data_type', fallbackText?: string): string;
+  /** 请选择指标 */
+  (key: 'please_select_an_indicator', fallbackText?: string): string;
+  /** 请至少添加一个图片链接 */
+  (key: 'please_add_at_least_one_image_link', fallbackText?: string): string;
+  /** 去提交 */
+  (key: 'go_submit', fallbackText?: string): string;
+  /** 全量覆盖 */
+  (key: 'overwrite_data', fallbackText?: string): string;
+  /** 全屏 */
+  (key: 'evaluate_full_screen', fallbackText?: string): string;
+  /** 缺少必填字段 */
+  (key: 'missing_required_field', fallbackText?: string): string;
   /** 缺少必填字段"{placeholder1}{placeholder2}" */
   (
     key: 'cozeloop_open_evaluate_missing_required_field',
@@ -2442,250 +3258,86 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 存在冗余字段{placeholder1} */
+  /** 确定删除{name}吗？此修改将不可逆 */
   (
-    key: 'cozeloop_open_evaluate_redundant_field_exists',
+    key: 'confirm_to_delete_x',
     options?: {
-      /** string */ placeholder1: ReactNode;
+      /** string */ name: ReactNode;
     },
     fallbackText?: string,
   ): string;
   /** 确定删除评测集 */
+  (key: 'cozeloop_open_evaluate_confirm_delete_evaluation_set', fallbackText?: string): string;
+  /** 确定删除评测集 {name} 吗？此修改将不可逆。 */
   (
-    key: 'cozeloop_open_evaluate_confirm_delete_evaluation_set',
-    fallbackText?: string,
-  ): string;
-  /** 吗？此修改将不可逆。 */
-  (key: 'this_change_irreversible', fallbackText?: string): string;
-  /** 删除 */
-  (key: 'space_member_role_type_del_btn', fallbackText?: string): string;
-  /** {placeholder1} 分 */
-  (
-    key: 'cozeloop_open_evaluate_score_placeholder1',
+    key: 'evaluation_set_{name}_delete_tips',
     options?: {
-      /** string */ placeholder1: ReactNode;
+      /** string */ name: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 条， 失败 */
-  (key: 'cozeloop_open_evaluate_items_failed', fallbackText?: string): string;
-  /** 条 */
-  (key: 'tiao', fallbackText?: string): string;
-  /** 条数据 */
-  (key: 'tiao_items', fallbackText?: string): string;
-  /** 存在以下原因导致执行失败，请自行纠正后重试 */
+  /** 确定删除评测集{name}吗？此修改将不可逆。 */
   (
-    key: 'cozeloop_open_evaluate_execution_failed_reasons',
-    fallbackText?: string,
-  ): string;
-  /** （{placeholder1}条） */
-  (
-    key: 'cozeloop_open_evaluate_placeholder1_items_in_brackets',
+    key: 'confirm_to_delete_evaluation_set',
     options?: {
-      /** string */ placeholder1: ReactNode;
+      /** string */ name: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 该字段必填 */
-  (key: 'evaluate_dataset_input_required', fallbackText?: string): string;
-  /** 请输入0～1区间内的数字 */
+  /** 确定删除评估器：{name}？ */
   (
-    key: 'cozeloop_open_evaluate_enter_number_between_0_1',
-    fallbackText?: string,
-  ): string;
-  /** 最多保留小数点后四位 */
-  (
-    key: 'cozeloop_open_evaluate_max_four_decimal_places',
-    fallbackText?: string,
-  ): string;
-  /** 更新 */
-  (key: 'cozeloop_open_evaluate_update', fallbackText?: string): string;
-  /** 得分 */
-  (key: 'evaluate_task_score', fallbackText?: string): string;
-  /** 已选 {placeholder1} 条数据 */
-  (
-    key: 'cozeloop_open_evaluate_selected_data_count',
+    key: 'confirm_delete_evaluator',
     options?: {
-      /** string */ placeholder1: ReactNode;
+      /** string */ name: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 评测对象 */
-  (key: 'evaluate_case_create_eval_object', fallbackText?: string): string;
-  /** 新节点{placeholder1} */
+  /** 确定删除数据项 */
+  (key: 'confirm_delete_data_items', fallbackText?: string): string;
+  /** 确定删除数据项{name}吗？此修改将不可逆 */
   (
-    key: 'cozeloop_open_evaluate_new_node_placeholder1',
+    key: 'confirm_to_delete_data_item',
     options?: {
-      /** string */ placeholder1: ReactNode;
+      /** string */ name: ReactNode;
     },
-    fallbackText?: string,
-  ): string;
-  /** 导出记录 */
-  (key: 'evaluate_export_records', fallbackText?: string): string;
-  /** 导出中，查看 */
-  (
-    key: 'cozeloop_open_evaluate_export_in_progress_view',
-    fallbackText?: string,
-  ): string;
-  /** 导出失败 */
-  (key: 'evaluate_export_failed', fallbackText?: string): string;
-  /** 下载文件 */
-  (key: 'cozeloop_open_evaluate_download_file', fallbackText?: string): string;
-  /** 导出中 */
-  (key: 'model_exporting', fallbackText?: string): string;
-  /** 实验明细导出中 */
-  (
-    key: 'cozeloop_open_evaluate_experiment_details_exporting',
-    fallbackText?: string,
-  ): string;
-  /** 实验明细导出失败 */
-  (
-    key: 'cozeloop_open_evaluate_experiment_details_export_failed',
-    fallbackText?: string,
-  ): string;
-  /** 实验明细导出成功 */
-  (
-    key: 'cozeloop_open_evaluate_experiment_details_export_success',
-    fallbackText?: string,
-  ): string;
-  /** 操作 */
-  (key: 'prompt_prompt_operate', fallbackText?: string): string;
-  /** 导出 */
-  (key: 'evaluate_export', fallbackText?: string): string;
-  /** 仅支持导出终态(成功或失败)的实验 */
-  (
-    key: 'cozeloop_open_evaluate_export_only_final_state_experiments',
-    fallbackText?: string,
-  ): string;
-  /** 动态参数 */
-  (
-    key: 'cozeloop_open_evaluate_dynamic_parameters',
     fallbackText?: string,
   ): string;
   /** 确定要删除 */
+  (key: 'cozeloop_open_evaluate_confirm_to_delete', fallbackText?: string): string;
+  /** 确定已选的{num}数据项吗？此修改将不可逆 */
   (
-    key: 'cozeloop_open_evaluate_confirm_to_delete',
-    fallbackText?: string,
-  ): string;
-  /** 复制 */
-  (key: 'evaluate_copy', fallbackText?: string): string;
-  /** 配置，直接或修改配置后发起实验。 */
-  (
-    key: 'cozeloop_open_evaluate_config_and_launch_experiment',
-    fallbackText?: string,
-  ): string;
-  /** 导出实验明细 */
-  (
-    key: 'cozeloop_open_evaluate_export_experiment_details',
-    fallbackText?: string,
-  ): string;
-  /** 导出格式 */
-  (key: 'evaluate_export_format', fallbackText?: string): string;
-  /** 请选择导出格式 */
-  (
-    key: 'cozeloop_open_evaluate_please_select_export_format',
-    fallbackText?: string,
-  ): string;
-  /** 请选择 Prompt key 和版本号后再查看 */
-  (
-    key: 'cozeloop_open_evaluate_select_prompt_key_version_before_view',
-    fallbackText?: string,
-  ): string;
-  /** 数据结构 */
-  (key: 'cozeloop_open_evaluate_data_structure', fallbackText?: string): string;
-  /** 预置Arrary<Object>数据类型，Object数据结构如下。适用于管理图、文等各类模态混排的数据。 */
-  (
-    key: 'cozeloop_open_evaluate_preset_array_object_data_type',
-    fallbackText?: string,
-  ): string;
-  /** (共有{currentColumnNum}/50列) */
-  (
-    key: 'data_engine_column_count_info',
+    key: 'confirm_to_delete_selected_data_item',
     options?: {
-      /** string */ currentColumnNum: ReactNode;
+      /** string */ num: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** (共有{currentColumnNum}/50列) */
+  /** 确认 */
+  (key: 'global_btn_confirm', fallbackText?: string): string;
+  /** 确认批量删除 {num} 条实验数据吗？此修改将不可逆。 */
   (
-    key: 'column_count_info',
+    key: 'confirm_batch_delete_x_experiment',
     options?: {
-      /** string */ currentColumnNum: ReactNode;
+      /** string */ num: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 编辑列： */
-  (key: 'cozeloop_open_evaluate_edit_column', fallbackText?: string): string;
+  /** 确认切换 */
+  (key: 'confirm_the_switch', fallbackText?: string): string;
   /** 确认切换？ */
   (key: 'cozeloop_open_evaluate_confirm_switch', fallbackText?: string): string;
-  /** 开启后，Object数据类型支持配置校验规则，用于控制数据导入时，如果存在Object数据结构定义之外的字段，该数据是否准入 */
+  /** 确认清空 Prompt？ */
+  (key: 'confirm_clear_prompt', fallbackText?: string): string;
+  /** 确认删除 */
+  (key: 'delete_confirm', fallbackText?: string): string;
+  /** 确认删除 User Prompt ？ */
+  (key: 'confirm_delete_user_prompt', fallbackText?: string): string;
+  /** 确认删除{num}列，此操作不可逆 */
   (
-    key: 'cozeloop_open_evaluate_enable_object_type_validation_rules',
-    fallbackText?: string,
-  ): string;
-  /** 是否关闭 冗余字段校验 配置项 */
-  (
-    key: 'cozeloop_open_evaluate_confirm_disable_redundant_field_validation',
-    fallbackText?: string,
-  ): string;
-  /** 关闭后 冗余字段校验 配置将采用默认配置“否”，确定关闭吗？ */
-  (
-    key: 'cozeloop_open_evaluate_disable_redundant_validation_default_no',
-    fallbackText?: string,
-  ): string;
-  /** 导入数据时，在完成校验后对数据的加工操作。 */
-  (
-    key: 'cozeloop_open_evaluate_data_processing_after_validation_import',
-    fallbackText?: string,
-  ): string;
-  /** 导入数据时，是否移除数据结构定义之外字段 */
-  (
-    key: 'cozeloop_open_evaluate_remove_fields_outside_structure_on_import',
-    fallbackText?: string,
-  ): string;
-  /** 描述：{placeholder1} */
-  (
-    key: 'description_{placeholder1}',
+    key: 'confirm_delete_x_columns',
     options?: {
-      /** string */ placeholder1: ReactNode;
+      /** string */ num: ReactNode;
     },
-    fallbackText?: string,
-  ): string;
-  /** 更新时间：{placeholder1} */
-  (
-    key: 'cozeloop_open_evaluate_update_time_placeholder1',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 创建时间：{placeholder1} */
-  (
-    key: 'cozeloop_open_evaluate_creation_time_placeholder1',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 创建人： */
-  (key: 'evaluate_dataset_info_creator', fallbackText?: string): string;
-  /** 新版本必须大于当前版本：{placeholder1} */
-  (
-    key: 'data_engine_new_version_greater_than_current',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 更新时间 */
-  (key: 'prompt_prompt_update_time', fallbackText?: string): string;
-  /** 创建时间 */
-  (key: 'prompt_prompt_create_time', fallbackText?: string): string;
-  /** 编辑 */
-  (key: 'space_basic_edit_btn', fallbackText?: string): string;
-  /** 点击右上角添加数据进行添加 */
-  (
-    key: 'cozeloop_open_evaluate_click_top_right_to_add_data',
     fallbackText?: string,
   ): string;
   /** 确认删除已选的{placeholder1}数据项？此操作不可逆 */
@@ -2696,433 +3348,1144 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 条数据 */
-  (key: 'data_engine_items', fallbackText?: string): string;
-  /** 图片大小不能超过20MB */
+  /** 确认实验配置 */
+  (key: 'confirm_experiment_config', fallbackText?: string): string;
+  /** 确认提取数据结构 */
+  (key: 'confirm_the_extracted_data_structure', fallbackText?: string): string;
+  /** 确认选择全量覆盖 */
+  (key: 'confirm_full_overwrite', fallbackText?: string): string;
+  /** 确认要移除{field}吗？ */
   (
-    key: 'cozeloop_open_evaluate_image_size_limit_20mb',
-    fallbackText?: string,
-  ): string;
-  /** 点击右上角导出按钮进行导出 */
-  (
-    key: 'cozeloop_open_evaluate_click_export_button_top_right',
-    fallbackText?: string,
-  ): string;
-  /** 总条数 {placeholder1} */
-  (
-    key: 'cozeloop_open_evaluate_total_count_placeholder1',
+    key: 'confirm_removal',
     options?: {
-      /** string */ placeholder1: ReactNode;
+      /** string */ field: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 成功 {success_turn_cnt} */
+  /** 确认要移除{name}吗？ */
   (
-    key: 'cozeloop_open_evaluate_success_count',
+    key: 'confirm_to_remove_x',
     options?: {
-      /** string */ success_turn_cnt: ReactNode;
+      /** string */ name: ReactNode;
     },
     fallbackText?: string,
   ): string;
+  /** 确认用于实验的评测集版本 */
+  (key: 'confirm_evaluation_set_version', fallbackText?: string): string;
+  /** 人工标注管理 */
+  (key: 'manual_annotation_management', fallbackText?: string): string;
+  /** 人工校准 */
+  (key: 'manual_calibration', fallbackText?: string): string;
+  /** 冗余字段校验 */
+  (key: 'redundant_field_check', fallbackText?: string): string;
+  /** 如不保存，已编辑的信息将会丢失。 */
+  (key: 'saved_lost_data_tips', fallbackText?: string): string;
+  /** 如果待导入数据集的列没有配置映射关系，则该列不会被导入。 */
+  (key: 'no_mapping_no_import', fallbackText?: string): string;
+  /** 如果你的评测集中已经包含评测对象输出，可直接导入你选中的数据 */
+  (key: 'evaluate_import_data_from_eval_set_with_output_tip', fallbackText?: string): string;
+  /** 如何创建评测集 */
+  (key: 'how_to_create_a_review_set', fallbackText?: string): string;
+  /** 删除 User Prompt */
+  (key: 'delete_user_prompt', fallbackText?: string): string;
+  /** 删除标签 */
+  (key: 'delete_tag', fallbackText?: string): string;
+  /** 删除此标签 */
+  (key: 'delete_this_tag', fallbackText?: string): string;
+  /** 删除此标签将影响已打标的内容 */
+  (key: 'deleting_tag_affects_labeled_content', fallbackText?: string): string;
+  /** 删除列 */
+  (key: 'delete_column', fallbackText?: string): string;
+  /** 删除评测集 */
+  (key: 'delete_review_set', fallbackText?: string): string;
+  /** 删除实验 */
+  (key: 'delete_experiment', fallbackText?: string): string;
+  /** 删除数据项 */
+  (key: 'delete_data_item', fallbackText?: string): string;
+  /** 上传失败 */
+  (key: 'upload_fail', fallbackText?: string): string;
+  /** 上传失败，请重试 */
+  (key: 'upload_failed_please_try_again', fallbackText?: string): string;
+  /** 上传数据 */
+  (key: 'upload_data', fallbackText?: string): string;
+  /** 上传图片失败 */
+  (key: 'cozeloop_open_evaluate_image_upload_failed', fallbackText?: string): string;
+  /** 上传中... */
+  (key: 'cozeloop_open_evaluate_uploading', fallbackText?: string): string;
+  /** 上一步 */
+  (key: 'prev_step', fallbackText?: string): string;
+  /** 稍等几秒后 */
+  (key: 'wait_a_few_seconds', fallbackText?: string): string;
+  /** 稍等几秒后{refresh}页面查看 */
+  (
+    key: 'wait_and_refresh_page',
+    options?: {
+      /** string */ refresh: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 升级「企业团队版套餐」 */
+  (key: 'upgrade_enterprise_team_edition_package', fallbackText?: string): string;
+  /** 生成模拟输出 */
+  (key: 'evaluate_generate_mock_output', fallbackText?: string): string;
   /** 失败 {fail_turn_cnt} */
   (
-    key: 'evaluate_failure_count_fail_turn_cnt',
+    key: 'failure_count_fail_turn_cnt',
     options?: {
       /** string */ fail_turn_cnt: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 中止 {terminated_turn_cnt} */
+  /** 实际输出 */
+  (key: 'actual_output', fallbackText?: string): string;
+  /** 实验初始化中 */
+  (key: 'experiment_initializing', fallbackText?: string): string;
+  /** 实验对比 */
+  (key: 'experiment_comparison', fallbackText?: string): string;
+  /** 实验对比发起失败 */
+  (key: 'experiment_comparison_initiation_failure', fallbackText?: string): string;
+  /** 实验对比最大数量不能超过 {MAX_EXPERIMENT_CONTRAST_COUNT} 个，请重新选择。 */
   (
-    key: 'evaluate_terminated_count_terminated_turn_cnt',
+    key: 'cozeloop_open_evaluate_max_experiment_contrast_limit',
     options?: {
-      /** string */ terminated_turn_cnt: ReactNode;
+      /** string */ MAX_EXPERIMENT_CONTRAST_COUNT: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 执行中 {processing_turn_cnt} */
+  /** 实验对比最大数量不能超过 {num} 个，请重新选择。 */
   (
-    key: 'evaluate_processing_count_processing_turn_cnt',
+    key: 'experiment_comparison_max_number',
     options?: {
-      /** string */ processing_turn_cnt: ReactNode;
+      /** string */ num: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 待执行 {pending_turn_cnt} */
+  /** 实验列表 */
+  (key: 'experiment_list', fallbackText?: string): string;
+  /** 实验描述 */
+  (key: 'experiment_description', fallbackText?: string): string;
+  /** 实验名称 */
+  (key: 'experiment_name', fallbackText?: string): string;
+  /** 实验明细导出成功 */
+  (key: 'cozeloop_open_evaluate_experiment_details_export_success', fallbackText?: string): string;
+  /** 实验明细导出失败 */
+  (key: 'cozeloop_open_evaluate_experiment_details_export_failed', fallbackText?: string): string;
+  /** 实验明细导出中 */
+  (key: 'cozeloop_open_evaluate_experiment_details_exporting', fallbackText?: string): string;
+  /** 实验完成后，再刷新重试 */
+  (key: 'refresh_after_experiment', fallbackText?: string): string;
+  /** 实验支持并发执行评测集中的条目,但受限于评测对象的并发度和调用评估器的模型 TPM 限制。这里设置理想的最大执行条数。 */
+  (key: 'experiment_supports_concurrent_eval_limitations', fallbackText?: string): string;
+  /** 实验组 */
+  (key: 'experimental_group', fallbackText?: string): string;
+  /** 使用模板 */
+  (key: 'evaluate_used_template', fallbackText?: string): string;
+  /** 使用自定义创建 */
+  (key: 'evaluate_create_with_custom', fallbackText?: string): string;
+  /** 世界上最大的动物是什么 */
+  (key: 'evaluate_biggest_animal_world', fallbackText?: string): string;
+  /** 试运行 */
+  (key: 'evaluate_trial_run', fallbackText?: string): string;
+  /** 试运行将产生资源点消耗 */
+  (key: 'testrun_require_fee', fallbackText?: string): string;
+  /** 是否关闭 冗余字段校验 配置项 */
+  (key: 'cozeloop_open_evaluate_confirm_disable_redundant_field_validation', fallbackText?: string): string;
+  /** 是否人工校准得分 */
+  (key: 'manual_score_calibration', fallbackText?: string): string;
+  /** 适用于在同个单元格中管理图、文各类模态混排的数据。 */
+  (key: 'cozeloop_open_evaluate_multi_modal_data_in_cell_usage', fallbackText?: string): string;
+  /** 手动添加 */
+  (key: 'add_manually', fallbackText?: string): string;
+  /** 输入内容不符合列的字段定义 */
+  (key: 'the_input_does_not_match_the_field_definition_of_the_column', fallbackText?: string): string;
+  /** 输入内容不是合法json格式 */
+  (key: 'the_input_content_is_not_in_legal_json_format', fallbackText?: string): string;
+  /** 输入内容最长{limitLength}字符,超出部分已被自动截断 */
   (
-    key: 'cozeloop_open_evaluate_pending_count',
+    key: 'input_content_limited_truncated',
     options?: {
-      /** string */ pending_turn_cnt: ReactNode;
+      /** string */ limitLength: ReactNode;
     },
     fallbackText?: string,
   ): string;
+  /** 数据集容量超限 */
+  (key: 'dataset_capacity_exceeded', fallbackText?: string): string;
+  /** 数据加工 */
+  (key: 'data_processing_short', fallbackText?: string): string;
+  /** 数据结构 */
+  (key: 'data_structure', fallbackText?: string): string;
+  /** 数据结构不符合要求，无法导入 */
+  (key: 'evaluation_set_import_error_data_structure_tips', fallbackText?: string): string;
+  /** 数据类型 */
+  (key: 'data_type', fallbackText?: string): string;
+  /** 数据类型不符合字段定义 */
+  (key: 'data_type_does_not_match_the_field_definition', fallbackText?: string): string;
+  /** 数据明细 */
+  (key: 'data_detail', fallbackText?: string): string;
+  /** 数据嵌套层数超限 */
+  (key: 'data_nesting_exceeds_limit', fallbackText?: string): string;
+  /** 数据项 */
+  (key: 'data_item', fallbackText?: string): string;
+  /** 数据项 {index} */
+  (
+    key: 'data_item_index',
+    options?: {
+      /** string */ index: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 数据项 ID */
+  (key: 'data_item_id', fallbackText?: string): string;
+  /** 数据转换失败 */
+  (key: 'data_conversion_failed', fallbackText?: string): string;
+  /** 数据总量 */
+  (key: 'data_total_count', fallbackText?: string): string;
+  /** 搜索名称 */
+  (key: 'search_name', fallbackText?: string): string;
   /** 所选字段数据类型不一致，请重新选择 */
+  (key: 'selected_fields_inconsistent', fallbackText?: string): string;
+  /** 台湾省面积是多少？ */
+  (key: 'evaluate_test_taiwan_area_question', fallbackText?: string): string;
+  /** 台湾省由中国第一大岛台湾岛与兰屿、绿岛、钓鱼岛等附属岛屿和澎湖列岛等80多个岛屿组成，总面积约3.6万平方千米。其中台湾岛面积约3.58万平方千米。 */
+  (key: 'evaluate_test_taiwan_area_answer', fallbackText?: string): string;
+  /** 提交表单遇到问题 */
+  (key: 'submit_form_problems', fallbackText?: string): string;
+  /** 提交成功 */
+  (key: 'submitted_successfully', fallbackText?: string): string;
+  /** 提交前代码检查 */
+  (key: 'evaluate_pre_submit_code_check', fallbackText?: string): string;
+  /** 提交时间： */
+  (key: 'submission_time', fallbackText?: string): string;
+  /** 提交新版本 */
+  (key: 'submit_new_version', fallbackText?: string): string;
+  /** 提取数据结构 */
+  (key: 'extract_data_structure', fallbackText?: string): string;
+  /** 提取数据结构将覆盖原有的字段定义 */
+  (key: 'extracting_the_data_structure_overwrite_tips', fallbackText?: string): string;
+  /** 添加 */
+  (key: 'space_member_role_type_add_btn', fallbackText?: string): string;
+  /** 添加 User Prompt */
+  (key: 'add_user_prompt', fallbackText?: string): string;
+  /** 添加标签列至数据明细 */
+  (key: 'add_tag_column_to_data_details', fallbackText?: string): string;
+  /** 添加对比实验 */
+  (key: 'add_comparison_experiment', fallbackText?: string): string;
+  /** 添加列 */
+  (key: 'add_column', fallbackText?: string): string;
+  /** 添加评估器 */
+  (key: 'add_evaluator', fallbackText?: string): string;
+  /** 添加数据 */
+  (key: 'add_data', fallbackText?: string): string;
+  /** 添加数据项 */
+  (key: 'add_data_item', fallbackText?: string): string;
+  /** 添加图片链接 */
+  (key: 'add_image_link', fallbackText?: string): string;
+  /** 添加子项 */
+  (key: 'add_child_item', fallbackText?: string): string;
+  /** 条， 失败 */
+  (key: 'cozeloop_open_evaluate_items_failed', fallbackText?: string): string;
+  /** 条数据 */
+  (key: 'tiao_items', fallbackText?: string): string;
+  /** 调试成功 */
+  (key: 'debugging_succeeded', fallbackText?: string): string;
+  /** 调试失败 */
+  (key: 'debug_failure', fallbackText?: string): string;
+  /** 调试失败: */
+  (key: 'evaluate_debug_failed', fallbackText?: string): string;
+  /** 调试失败: 未返回结果 */
+  (key: 'evaluate_debug_failed_no_result', fallbackText?: string): string;
+  /** 调试失败: 未返回评估结果 */
+  (key: 'evaluate_debug_failed_no_evaluation_result', fallbackText?: string): string;
+  /** 调试未返回评估结果 */
+  (key: 'evaluate_debug_no_evaluation_result', fallbackText?: string): string;
+  /** 跳过评测对象执行配置,适用于评测集已包含agent实际输出的评测场景。 */
+  (key: 'skip_eval_object_execution_config', fallbackText?: string): string;
+  /** 通过 Function Call 从 LLM 中提取数据，固定评估器输出格式为“得分-原因”。 */
+  (key: 'evaluator_output_tips', fallbackText?: string): string;
+  /** 图片大小不能超过{size}MB */
   (
-    key: 'cozeloop_open_evaluate_selected_field_type_inconsistent',
+    key: 'the_image_size_cannot_exceed_{size}_mb',
+    options?: {
+      /** string */ size: ReactNode;
+    },
     fallbackText?: string,
   ): string;
-  /** 该标签选项已禁用，若修改将不再允许被选中 */
-  (
-    key: 'cozeloop_open_evaluate_tag_option_disabled_no_longer_selectable',
-    fallbackText?: string,
-  ): string;
+  /** 图片大小不能超过20MB */
+  (key: 'cozeloop_open_evaluate_image_size_limit_20mb', fallbackText?: string): string;
+  /** 图片大小超限 */
+  (key: 'exceed_max_image_size', fallbackText?: string): string;
+  /** 图片地址 */
+  (key: 'image_address', fallbackText?: string): string;
+  /** 图片获取失败 */
+  (key: 'get_image_failed', fallbackText?: string): string;
+  /** 图片数量超限 */
+  (key: 'exceed_max_image_count', fallbackText?: string): string;
+  /** 图片-外链 */
+  (key: 'image_external_link', fallbackText?: string): string;
+  /** 图片预览 */
+  (key: 'image_preview', fallbackText?: string): string;
+  /** 图片-源文件 */
+  (key: 'image_source_file', fallbackText?: string): string;
+  /** 推荐使用模板上传1个文件，支持CSV格式 */
+  (key: 'recommend_template_upload_tip', fallbackText?: string): string;
+  /** 完成该标签的所有数据标注后,再刷新重试 */
+  (key: 'refresh_after_all_tag_annotations_completed', fallbackText?: string): string;
+  /** 完成时间 */
+  (key: 'completion_time', fallbackText?: string): string;
+  /** 晚于 */
+  (key: 'later_than', fallbackText?: string): string;
+  /** 王五 */
+  (key: 'user_wangwu', fallbackText?: string): string;
+  /** 为保证自动评测效果，评估器 Prompt 需至少有1个变量 */
+  (key: 'prompt_variable_to_ensure_effect', fallbackText?: string): string;
+  /** 未命名模板 */
+  (key: 'evaluate_unnamed_template', fallbackText?: string): string;
+  /** 未能找到相关结果 */
+  (key: 'no_results_found', fallbackText?: string): string;
+  /** 未找到匹配的选项 */
+  (key: 'no_matching_options_found', fallbackText?: string): string;
+  /** 未知错误 */
+  (key: 'evaluate_unknown_error', fallbackText?: string): string;
+  /** 文件读取失败 */
+  (key: 'knowledge_file_read_fail', fallbackText?: string): string;
+  /** 文件格式错误 */
+  (key: 'file_format_error', fallbackText?: string): string;
+  /** 文件扩展名不合法 */
+  (key: 'illegal_extension', fallbackText?: string): string;
+  /** 系统错误 */
+  (key: 'system_error', fallbackText?: string): string;
+  /** 下一步：评测对象 */
+  (key: 'next_step_evaluation_object', fallbackText?: string): string;
+  /** 下一步：评测集 */
+  (key: 'next_step_evaluation_set', fallbackText?: string): string;
+  /** 下一步：评估器 */
+  (key: 'next_step_evaluator', fallbackText?: string): string;
+  /** 下一条 */
+  (key: 'next_one', fallbackText?: string): string;
+  /** 下载模板 */
+  (key: 'download_template', fallbackText?: string): string;
+  /** 下载文件 */
+  (key: 'cozeloop_open_evaluate_download_file', fallbackText?: string): string;
+  /** 小于 */
+  (key: 'less_than', fallbackText?: string): string;
+  /** 笑话大王 */
+  (key: 'joke_king', fallbackText?: string): string;
+  /** 新版本必须大于当前版本 */
+  (key: 'new_version_greater_than_current', fallbackText?: string): string;
+  /** 新建 Prompt */
+  (key: 'new_prompt', fallbackText?: string): string;
+  /** 新建评测集 */
+  (key: 'new_evaluation_set', fallbackText?: string): string;
+  /** 新建评估器 */
+  (key: 'new_evaluator', fallbackText?: string): string;
+  /** 新建实验 */
+  (key: 'new_experiment', fallbackText?: string): string;
+  /** 信息未保存 */
+  (key: 'information_unsaved', fallbackText?: string): string;
+  /** 修改未提交 */
+  (key: 'unsubmitted_changes', fallbackText?: string): string;
+  /** 选择模板 */
+  (key: 'evaluate_select_template', fallbackText?: string): string;
+  /** 选择模版 */
+  (key: 'select_template', fallbackText?: string): string;
   /** 选择上一步配置的评测集作为评测对象，适用于该评测集已包含agent输出的场景。 */
+  (key: 'cozeloop_open_evaluate_select_previous_eval_set_as_target', fallbackText?: string): string;
+  /** 选择实验 */
+  (key: 'select_experiment', fallbackText?: string): string;
+  /** 选择跳过评估器配置,实验仅获agent实际输出,适用于人工标注的评测场景。 */
+  (key: 'skip_evaluator_config_agent_output_only', fallbackText?: string): string;
+  /** 样例数据 */
+  (key: 'evaluation_set_builtin_example_data', fallbackText?: string): string;
+  /** 样例数据格式错误 */
+  (key: 'sample_data_format_error', fallbackText?: string): string;
+  /** 页面查看 */
+  (key: 'page_view', fallbackText?: string): string;
+  /** 一键将评测集的列调整为兼容工作流执行 API 的数据格式。 */
+  (key: 'adjust_the_columns_with_workflow_api', fallbackText?: string): string;
+  /** 移除冗余字段 */
+  (key: 'remove_redundant_fields', fallbackText?: string): string;
+  /** 移除实验组 */
+  (key: 'remove_experimental_group', fallbackText?: string): string;
+  /** 已添加标签 {placeholder1} */
   (
-    key: 'cozeloop_open_evaluate_select_previous_eval_set_as_target',
-    fallbackText?: string,
-  ): string;
-  /** 请输入integer */
-  (key: 'cozeloop_open_evaluate_enter_integer', fallbackText?: string): string;
-  /** 请输入文本内容 */
-  (
-    key: 'cozeloop_open_evaluate_enter_text_content',
-    fallbackText?: string,
-  ): string;
-  /** 图片{placeholder1} */
-  (
-    key: 'cozeloop_open_evaluate_image_placeholder1',
+    key: 'tag_added_placeholder1',
     options?: {
       /** string */ placeholder1: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 上传中... */
-  (key: 'cozeloop_open_evaluate_uploading', fallbackText?: string): string;
-  /** 正在上传图片... */
+  /** 已下钻到最小层级，无法再下钻 */
+  (key: 'drilled_to_minimum_level_tips', fallbackText?: string): string;
+  /** 已选 {num} 条数据 */
   (
-    key: 'cozeloop_open_evaluate_uploading_image',
+    key: '{num}_data_selected',
+    options?: {
+      /** string */ num: ReactNode;
+    },
     fallbackText?: string,
   ): string;
-  /** 请配置字段映射 */
+  /** 已选 {placeholder1} 条数据 */
   (
-    key: 'evaluate_please_configure_field_mapping',
+    key: 'cozeloop_open_evaluate_selected_data_count',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+    },
     fallbackText?: string,
   ): string;
-  /** 参数注入 */
-  (key: 'evaluate_parameter_injection', fallbackText?: string): string;
-  /** 请求评测对象时，可注入填写的参数，来拿到评测对象的输出结果。如请求环境的泳道、测试账号的 UID 等。 */
+  /** 已选{num}条数据 */
   (
-    key: 'cozeloop_open_evaluate_inject_parameters_for_evaluation_request',
+    key: 'x_data_item_selected',
+    options?: {
+      /** string */ num: ReactNode;
+    },
     fallbackText?: string,
   ): string;
-  /** LLM评估器 */
-  (key: 'evaluate_llm_evaluator', fallbackText?: string): string;
-  /** Code评估器 */
-  (key: 'evaluate_code_evaluator', fallbackText?: string): string;
-  /** Code 评估器详情 */
-  (key: 'evaluate_code_evaluator_detail', fallbackText?: string): string;
-  /** 正在加载 Code 评估器详情 */
-  (
-    key: 'evaluate_loading_code_evaluator_detail',
-    fallbackText?: string,
-  ): string;
-  /** JSON 序列化错误: */
-  (key: 'evaluate_json_serialize_error', fallbackText?: string): string;
-  /** JSON 解析错误: */
-  (key: 'evaluate_json_parse_error', fallbackText?: string): string;
-  /** 基于评测集 */
-  (key: 'evaluate_based_on_evaluation_set', fallbackText?: string): string;
-  /** 自定义 */
-  (key: 'evaluate_custom', fallbackText?: string): string;
-  /** 从评测集新增数据 */
-  (key: 'evaluate_add_data_from_evaluation_set', fallbackText?: string): string;
-  /** 暂无测试数据 */
-  (key: 'evaluate_no_test_data', fallbackText?: string): string;
-  /** 评估通过 */
-  (key: 'evaluate_validation_passed', fallbackText?: string): string;
-  /** 生成模拟输出 */
-  (key: 'evaluate_generate_mock_output', fallbackText?: string): string;
-  /** 版本 */
-  (key: 'evaluate_version', fallbackText?: string): string;
-  /** 获取评测集数据失败: */
-  (
-    key: 'evaluate_failed_to_get_evaluation_set_data',
-    fallbackText?: string,
-  ): string;
-  /** 如果你的评测集中已经包含评测对象输出，可直接导入你选中的数据 */
-  (
-    key: 'evaluate_import_data_from_eval_set_with_output_tip',
-    fallbackText?: string,
-  ): string;
-  /** 请选择评测对象和版本 */
-  (
-    key: 'evaluate_please_select_target_and_version',
-    fallbackText?: string,
-  ): string;
+  /** 用于指定工作流需要的一些额外的字段。 */
+  (key: 'workflow_additional_fields', fallbackText?: string): string;
+  /** 预期理想输出，可作为评估时的参考标准 */
+  (key: 'expected_ideal_output', fallbackText?: string): string;
+  /** 预置Arrary<Object>数据类型，Object数据结构如下。适用于管理图、文等各类模态混排的数据。 */
+  (key: 'cozeloop_open_evaluate_preset_array_object_data_type', fallbackText?: string): string;
+  /** 预置评估器 */
+  (key: 'preset_evaluator', fallbackText?: string): string;
   /** 原因: */
   (key: 'evaluate_reason', fallbackText?: string): string;
-  /** 未知错误 */
-  (key: 'evaluate_unknown_error', fallbackText?: string): string;
-  /** 台湾省面积是多少？ */
-  (key: 'evaluate_test_taiwan_area_question', fallbackText?: string): string;
-  /** 台湾省由中国第一大岛台湾岛与兰屿、绿岛、钓鱼岛等附属岛屿和澎湖列岛等80多个岛屿组成，总面积约3.6万平方千米。其中台湾岛面积约3.58万平方千米。 */
-  (key: 'evaluate_test_taiwan_area_answer', fallbackText?: string): string;
-  /** 选择模板 */
-  (key: 'evaluate_select_template', fallbackText?: string): string;
-  /** 使用自定义创建 */
-  (key: 'evaluate_create_with_custom', fallbackText?: string): string;
-  /** 确定 */
-  (key: 'evaluate_confirm', fallbackText?: string): string;
-  /** 基础信息 */
-  (key: 'evaluate_basic_info', fallbackText?: string): string;
-  /** 名称 */
-  (key: 'evaluate_name', fallbackText?: string): string;
-  /** 配置 */
-  (key: 'evaluate_config', fallbackText?: string): string;
-  /** 请编写执行函数体 */
-  (key: 'evaluate_please_write_function_body', fallbackText?: string): string;
-  /** 请配置测试数据 */
-  (key: 'evaluate_please_configure_test_data', fallbackText?: string): string;
-  /** 调试失败: 未返回结果 */
-  (key: 'evaluate_debug_failed_no_result', fallbackText?: string): string;
-  /** 调试未返回评估结果 */
-  (key: 'evaluate_debug_no_evaluation_result', fallbackText?: string): string;
-  /** 调试失败: */
-  (key: 'evaluate_debug_failed', fallbackText?: string): string;
+  /** 原因：{reason} */
+  (
+    key: 'reason_is',
+    options?: {
+      /** string */ reason: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 允许冗余字段 */
+  (key: 'redundant_fields_allowed', fallbackText?: string): string;
   /** 运行中... */
   (key: 'evaluate_running', fallbackText?: string): string;
-  /** 代码评估器创建成功 */
-  (
-    key: 'evaluate_code_evaluator_created_successfully',
-    fallbackText?: string,
-  ): string;
-  /** 保存失败: */
-  (key: 'evaluate_save_failed', fallbackText?: string): string;
-  /** 保存失败，请重试 */
-  (key: 'evaluate_save_failed_please_retry', fallbackText?: string): string;
-  /** 表单验证失败: */
-  (key: 'evaluate_form_validation_failed', fallbackText?: string): string;
-  /** 未命名模板 */
-  (key: 'evaluate_unnamed_template', fallbackText?: string): string;
-  /** 试运行 */
-  (key: 'evaluate_trial_run', fallbackText?: string): string;
-  /** 提交前代码检查 */
-  (key: 'evaluate_pre_submit_code_check', fallbackText?: string): string;
-  /** 检查 */
-  (key: 'evaluate_check', fallbackText?: string): string;
-  /** 重新检查 */
-  (key: 'evaluate_recheck', fallbackText?: string): string;
-  /** 编程语言 */
-  (key: 'evaluate_programming_language', fallbackText?: string): string;
-  /** 使用模板 */
-  (key: 'evaluate_used_template', fallbackText?: string): string;
-  /** 代码内容 */
-  (key: 'evaluate_code_content', fallbackText?: string): string;
+  /** 在实验列表中，聚合统计各实验在指标上的得分。 */
+  (key: 'aggregate_statistics_score_on_metrics', fallbackText?: string): string;
+  /** 在最大高度内滚动查看字段内容 */
+  (key: 'scroll_to_view_field_content_within_maximum_height', fallbackText?: string): string;
+  /** 暂无测试数据 */
+  (key: 'evaluate_no_test_data', fallbackText?: string): string;
+  /** 暂无导出记录 */
+  (key: 'no_export_record_yet', fallbackText?: string): string;
   /** 暂无配置信息 */
   (key: 'evaluate_no_config_info', fallbackText?: string): string;
-  /** 调试失败: 未返回评估结果 */
-  (
-    key: 'evaluate_debug_failed_no_evaluation_result',
-    fallbackText?: string,
-  ): string;
-  /** 你可以直接使用home */
-  (key: 'evaluate_you_can_use_directly', fallbackText?: string): string;
-  /** 全屏 */
-  (key: 'evaluate_full_screen', fallbackText?: string): string;
-  /** 选择模板 */
-  (key: 'evaluate_template_select', fallbackText?: string): string;
-  /** 执行函数体 */
-  (key: 'evaluate_func_body', fallbackText?: string): string;
-  /** 测试数据：turn */
-  (key: 'evaluate_test_data_turn', fallbackText?: string): string;
+  /** 暂无评测集 */
+  (key: 'no_evaluation_dataset', fallbackText?: string): string;
+  /** 暂无评估器 */
+  (key: 'no_evaluator', fallbackText?: string): string;
+  /** 暂无实验 */
+  (key: 'no_experiment', fallbackText?: string): string;
+  /** 暂无数据 */
+  (key: 'no_data', fallbackText?: string): string;
+  /** 暂无修改可提交 */
+  (key: 'no_modification_to_submit', fallbackText?: string): string;
+  /** 早于 */
+  (key: 'earlier_than', fallbackText?: string): string;
+  /** 展开全部列 */
+  (key: 'expand_all_columns', fallbackText?: string): string;
+  /** 展开全部数据项 */
+  (key: 'expand_all_data_items', fallbackText?: string): string;
+  /** 张三 */
+  (key: 'user_zhangsan', fallbackText?: string): string;
+  /** 折叠全部列 */
+  (key: 'collapse_all_columns', fallbackText?: string): string;
+  /** 折叠全部数据项 */
+  (key: 'collapse_all_data_items', fallbackText?: string): string;
+  /** 折线图 */
+  (key: 'line_chart', fallbackText?: string): string;
+  /** 这是一个 CozeBot */
+  (key: 'this_is_a_cozebot', fallbackText?: string): string;
+  /** 正在加载 Code 评估器详情 */
+  (key: 'evaluate_loading_code_evaluator_detail', fallbackText?: string): string;
+  /** 正在加载 Prompt 详情 */
+  (key: 'loading_prompt_detail', fallbackText?: string): string;
+  /** 正在加载字段映射 */
+  (key: 'loading_field_mapping', fallbackText?: string): string;
+  /** 正在上传图片 */
+  (key: 'uploading_pictures', fallbackText?: string): string;
+  /** 正在上传图片... */
+  (key: 'cozeloop_open_evaluate_uploading_image', fallbackText?: string): string;
   /** 支持 Python / Javascript 内置库，部分三方库。更多使用说明参见 */
   (key: 'evaluate_test_data_tutorial_tip', fallbackText?: string): string;
-  /** Code评估器手册 */
-  (key: 'evaluate_test_data_tutorial_link', fallbackText?: string): string;
-  /** 评估器配置 */
-  (key: 'evaluate_evaluator_config', fallbackText?: string): string;
-  /** 图片不可访问 */
-  (key: 'analytics_image_error', fallbackText?: string): string;
+  /** 支持文件格式：csv、zip、xlsx、xls，文件最大200MB，仅支持导入一个文件 */
+  (key: 'evaluation_set_import_files_tips', fallbackText?: string): string;
+  /** 执行函数体 */
+  (key: 'evaluate_func_body', fallbackText?: string): string;
+  /** 执行结果 */
+  (key: 'execution_result', fallbackText?: string): string;
+  /** 执行中 */
+  (key: 'status_running', fallbackText?: string): string;
+  /** 指标统计 */
+  (key: 'measure_stat', fallbackText?: string): string;
+  /** 至少保留一个列 */
+  (key: 'retain_one_data_column', fallbackText?: string): string;
+  /** 至少保留一个数据项 */
+  (key: 'retain_one_data_item', fallbackText?: string): string;
+  /** 至少添加一个评估器 */
+  (key: 'add_at_least_one_evaluator', fallbackText?: string): string;
+  /** 重试实验 */
+  (key: 'retry_experiment', fallbackText?: string): string;
+  /** 重新检查 */
+  (key: 'evaluate_recheck', fallbackText?: string): string;
+  /** 柱状图 */
+  (key: 'bar_chart', fallbackText?: string): string;
+  /** 追加数据 */
+  (key: 'append_data', fallbackText?: string): string;
+  /** 自动补全数据结构内所有字段将覆盖原有内容。确认覆盖吗？ */
+  (key: 'cozeloop_open_evaluate_autocomplete_confirm_overwrite_all_fields', fallbackText?: string): string;
+  /** 自动补全字段将覆盖原有内容 */
+  (key: 'cozeloop_open_evaluate_autocomplete_overwrites_original', fallbackText?: string): string;
+  /** 字段补全 */
+  (key: 'field_completion', fallbackText?: string): string;
+  /** 字段内容不受最大高度限制 */
+  (key: 'field_content_is_not_limited_by_maximum_height', fallbackText?: string): string;
+  /** 字段映射 */
+  (key: 'field_mapping', fallbackText?: string): string;
+  /** 总条数 */
+  (key: 'total_number', fallbackText?: string): string;
+  /** 总条数 {placeholder1}（成功 {success_turn_cnt} */
+  (
+    key: 'total_count_placeholder1_success_count',
+    options?: {
+      /** string */ placeholder1: ReactNode;
+      /** string */ success_turn_cnt: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 最大并发执行条数 */
+  (key: 'max_concurrent_execution_count', fallbackText?: string): string;
+  /** 最大并发执行条数最多支持 {EVAL_EXPERIMENT_CONCUR_COUNT_MAX} 条。 */
+  (
+    key: 'max_concurrent_execution_count_limit',
+    options?: {
+      /** string */ EVAL_EXPERIMENT_CONCUR_COUNT_MAX: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 最多保留小数点后{num}位 */
+  (
+    key: 'keep_precision_num',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 最多保留小数点后四位 */
+  (key: 'cozeloop_open_evaluate_max_four_decimal_places', fallbackText?: string): string;
+  /** 最多添加5个评估器 */
+  (key: 'max_add_x_evaluators', fallbackText?: string): string;
+  /** 最多支持{num}列 */
+  (
+    key: 'max_support_columns',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 最新版本 */
+  (key: 'latest_version', fallbackText?: string): string;
+  /** 作为输入投递给评测对象 */
+  (key: 'evaluation_set_input_tips', fallbackText?: string): string;
+  /** 轨迹节点的字段类型请选择为 Trajectory */
+  (key: 'observation_trajectory_node_field_type_select_trajectory', fallbackText?: string): string;
+  /** 轨迹节点规则配置 */
+  (key: 'observation_trajectory_node_rule_configuration', fallbackText?: string): string;
+  /** 查看轨迹 */
+  (key: 'observation_view_trajectory', fallbackText?: string): string;
+  /** 轨迹错误 */
+  (key: 'observation_trajectory_error', fallbackText?: string): string;
+  /** 千 Tokens */
+  (key: 'observation_thousand_tokens', fallbackText?: string): string;
+  /** 百万 Tokens */
+  (key: 'observation_million_tokens', fallbackText?: string): string;
+  /** 当前无数据上报，请修改时间范围。 */
+  (key: 'observation_no_data_report_modify_time_range', fallbackText?: string): string;
+  /** 若未接入扣子罗盘 SDK， */
+  (key: 'observation_not_integrated_ko_tool_sdk', fallbackText?: string): string;
+  /** 请查看文档 */
+  (key: 'observation_please_check_documentation', fallbackText?: string): string;
+  /** 查看 Trace */
+  (key: 'observation_view_trace', fallbackText?: string): string;
+  /** Total Token 消耗 */
+  (key: 'observation_total_token_consumption', fallbackText?: string): string;
+  /** {VIEW_TRACE_SVG}查看 Trace */
+  (
+    key: 'observation_view_trace_svg_label',
+    options?: {
+      /** string */ VIEW_TRACE_SVG: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 模型分布 */
+  (key: 'observation_model_distribution', fallbackText?: string): string;
+  /** 按照调用频次或 Token 消耗最大的模型分布 */
+  (key: 'observation_distribution_by_call_frequency_or_token', fallbackText?: string): string;
+  /** 调用频次 */
+  (key: 'observation_call_frequency', fallbackText?: string): string;
+  /** Token 消耗 */
+  (key: 'observation_token_consumption', fallbackText?: string): string;
+  /** 模型调用错误码分布 */
+  (key: 'observation_model_call_error_code_distribution', fallbackText?: string): string;
+  /** Model Span AND Status = "Error"，By 错误码进行聚合，快速分析高频错误原因的分布 */
+  (key: 'observation_error_distribution_by_code_for_model_span', fallbackText?: string): string;
+  /** 工具调用分布 */
+  (key: 'observation_tool_call_distribution', fallbackText?: string): string;
+  /** Span 数量 by Span="Tool" 进行过滤后，按照 Span_Name 展示其分布关系 */
+  (key: 'observation_span_count_by_tool_and_span_name', fallbackText?: string): string;
+  /** 工具调用错误码分布 */
+  (key: 'observation_tool_call_error_code_distribution', fallbackText?: string): string;
+  /** Span_Type = "Tool" And Status = "Error"，By 错误码进行聚合，查看错误码分布 */
+  (key: 'observation_error_code_distribution_for_tool_span_error', fallbackText?: string): string;
+  /** 用户数 */
+  (key: 'observation_number_of_users', fallbackText?: string): string;
+  /** 每日按唯一 User ID 统计用户数后，进行累加 */
+  (key: 'observation_daily_unique_user_count_accumulated', fallbackText?: string): string;
+  /** 消息数 */
+  (key: 'observation_number_of_messages', fallbackText?: string): string;
+  /** 每日按唯一 Message ID 统计消息数后，进行累加 */
+  (key: 'observation_daily_unique_message_count_accumulated', fallbackText?: string): string;
+  /** Agent 平均调用模型次数 */
+  (key: 'observation_agent_average_model_calls', fallbackText?: string): string;
+  /** 模型调用次数 / Trace 总量 */
+  (key: 'observation_model_calls_divided_by_total_traces', fallbackText?: string): string;
+  /** 使用次数 */
+  (key: 'observation_usage_count', fallbackText?: string): string;
+  /** Root Span 总数 */
+  (key: 'observation_total_root_span_count', fallbackText?: string): string;
+  /** 次 */
+  (key: 'observation_times_occurrences', fallbackText?: string): string;
+  /** span_type 为 tool 的 Span 总数 */
+  (key: 'observation_total_span_count_with_tool_type', fallbackText?: string): string;
+  /** 状态错误且 span_type 为 Tool 的 Span 数/所有 span_type 为 Tool 的 span 数 */
+  (key: 'observation_error_span_ratio_tool_type', fallbackText?: string): string;
+  /** 所有 span_type 为 Tool 的 Span 总耗时/ 所有 span_type 为 Tool 的 Span */
+  (key: 'observation_total_duration_per_tool_span', fallbackText?: string): string;
+  /** 过去 {count} 分钟 */
+  (
+    key: 'fornax_analytics_time_last_minutes',
+    options?: {
+      /** string */ Count: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 分 */
+  (key: 'fornax_analytics_minute', fallbackText?: string): string;
+  /** 时 */
+  (key: 'fornax_analytics_hour', fallbackText?: string): string;
+  /** 日 */
+  (key: 'fornax_analytics_day', fallbackText?: string): string;
+  /** 周 */
+  (key: 'fornax_analytics_week', fallbackText?: string): string;
+  /** 全部模型 */
+  (key: 'model_all_models', fallbackText?: string): string;
+  /** 全部工具 */
+  (key: 'observation_all_tools', fallbackText?: string): string;
+  /** 模型 QPS | QPM */
+  (key: 'observation_model_qps_qpm', fallbackText?: string): string;
+  /** 每秒/分钟接收的 Model Span 总量 */
+  (key: 'observation_model_span_total_per_sec_min', fallbackText?: string): string;
+  /** 模型请求成功率 */
+  (key: 'observation_model_request_success_rate', fallbackText?: string): string;
+  /** 状态成功的 Model Span 总数/所有 Model Span 总数 */
+  (key: 'observation_model_span_success_total_ratio', fallbackText?: string): string;
+  /** Model Span 的 Tokens 总量/Model Span 的总耗时 */
+  (key: 'observation_model_span_tokens_to_duration_ratio', fallbackText?: string): string;
+  /** 模型调用总耗时 */
+  (key: 'observation_total_model_call_duration', fallbackText?: string): string;
+  /** Model Span 的总耗时 */
+  (key: 'observation_model_span_total_duration', fallbackText?: string): string;
+  /** 模型生成第一个 Token 的耗时 */
+  (key: 'observation_model_first_token_generation_latency', fallbackText?: string): string;
+  /** （总耗时 - 模型首 Token 耗时）/  Output Tokens 总量 */
+  (key: 'observation_latency_minus_first_token_per_output_token', fallbackText?: string): string;
+  /** 工具调用量 */
+  (key: 'observation_tool_calls_volume', fallbackText?: string): string;
+  /** 工具的调用量统计 */
+  (key: 'observation_tool_call_volume_stats', fallbackText?: string): string;
+  /** 工具调用耗时 */
+  (key: 'observation_tool_call_latency', fallbackText?: string): string;
+  /** 工具的调用耗时统计 */
+  (key: 'observation_tool_call_latency_stats', fallbackText?: string): string;
+  /** 工具调用成功率 */
+  (key: 'observation_tool_call_success_rate', fallbackText?: string): string;
+  /** 工具的调用成功率统计 */
+  (key: 'observation_tool_call_success_rate_stats', fallbackText?: string): string;
+  /** Trace 上报量 */
+  (key: 'observation_trace_reporting_volume', fallbackText?: string): string;
+  /** 按唯一 Trace ID 统计 Trace 总数 */
+  (key: 'observation_trace_total_unique_trace_id', fallbackText?: string): string;
+  /** 服务 QPS | QPM */
+  (key: 'observation_service_qps_qpm', fallbackText?: string): string;
+  /** 每秒/分钟接收的 Root Span 总量 */
+  (key: 'observation_root_span_total_per_sec_min', fallbackText?: string): string;
+  /** 整体耗时 */
+  (key: 'observation_overall_latency', fallbackText?: string): string;
+  /** Root Span的耗时 */
+  (key: 'observation_root_span_latency', fallbackText?: string): string;
+  /** 服务请求成功率 */
+  (key: 'observation_service_request_success_rate', fallbackText?: string): string;
+  /** 状态成功的 Root Span 总数/所有 Root Span 总数 */
+  (key: 'observation_root_span_success_total_ratio', fallbackText?: string): string;
+  /** Agent 平均执行步数 */
+  (key: 'observation_agent_average_execution_steps', fallbackText?: string): string;
+  /** (工具调用次数 + 模型调用次数) / Trace 总量 */
+  (key: 'observation_agent_execution_steps_per_trace', fallbackText?: string): string;
+  /** Agent 平均执行工具数 */
+  (key: 'observation_agent_average_tools_executed', fallbackText?: string): string;
+  /** 工具调用次数 / Trace 总量 */
+  (key: 'observation_tool_calls_per_trace', fallbackText?: string): string;
+  /** 环比 */
+  (key: 'fornax_analytics_day_on_day', fallbackText?: string): string;
+  /** 模型调用错误率 */
+  (key: 'observation_model_call_error_rate', fallbackText?: string): string;
+  /** 状态错误的 Model Span 总数/所有 Model Span 总数 */
+  (key: 'observation_model_span_error_total_ratio', fallbackText?: string): string;
+  /** Span 错误率 */
+  (key: 'observation_span_error_rate', fallbackText?: string): string;
+  /** 状态错误的 Span 总数/所有 Span 总数 */
+  (key: 'observation_span_error_total_ratio', fallbackText?: string): string;
+  /** 模型调用耗时均值 */
+  (key: 'observation_model_call_avg_latency', fallbackText?: string): string;
+  /** 所有 Model Span 总耗时 /Model Span 总数 */
+  (key: 'observation_avg_model_span_duration', fallbackText?: string): string;
+  /** 模型 Tokens 消耗 */
+  (key: 'observation_model_tokens_consumed', fallbackText?: string): string;
+  /** Model Span 数据里 Input 和 Output Tokens 总量 */
+  (key: 'observation_model_span_input_output_tokens_total', fallbackText?: string): string;
+  /** 工具调用次数 */
+  (key: 'observation_tool_call_count', fallbackText?: string): string;
+  /** 次 */
+  (key: 'fornax_prompt_run_times', fallbackText?: string): string;
+  /** 工具调用错误率 */
+  (key: 'observation_tool_call_error_rate', fallbackText?: string): string;
+  /** 工具调用耗时均值 */
+  (key: 'observation_tool_call_avg_latency', fallbackText?: string): string;
+  /** 工具 */
+  (key: 'fornax_mcp_tools', fallbackText?: string): string;
+  /** 上下文统计 */
+  (key: 'observation_context_statistics', fallbackText?: string): string;
+  /** 服务调用 */
+  (key: 'observation_service_calls', fallbackText?: string): string;
+  /** Input Tokens 消耗 */
+  (key: 'fornax_analytics_input_tokens_cost', fallbackText?: string): string;
+  /** Output Tokens 消耗 */
+  (key: 'fornax_analytics_output_tokens_cost', fallbackText?: string): string;
+  /** Total Token 消耗 */
+  (key: 'observation_total_token_consumed', fallbackText?: string): string;
+  /** Tokens 消耗 */
+  (key: 'fornax_analytics_tokens_cost', fallbackText?: string): string;
+  /** Model Span 数据里 Input Tokens 总量 */
+  (key: 'observation_model_span_input_tokens_total', fallbackText?: string): string;
+  /** Model Span 数据里 Output Tokens 总量 */
+  (key: 'observation_model_span_output_tokens_total', fallbackText?: string): string;
+  /** 个 Tokens */
+  (key: 'observation_tokens_count', fallbackText?: string): string;
+  /** 更新选中traces时发生错误: */
+  (key: 'manual_reflow_error_updating_selected_traces', fallbackText?: string): string;
+  /** Traces数据验证失败 */
+  (key: 'manual_reflow_traces_data_validation_failed', fallbackText?: string): string;
+  /** 数据回流任务 */
+  (key: 'data_backflow_task', fallbackText?: string): string;
+  /** 在线评测任务 */
+  (key: 'auto_evaluation_task', fallbackText?: string): string;
+  /** 已完成 */
+  (key: 'data_engine_completed', fallbackText?: string): string;
+  /** 自动化任务 */
+  (key: 'analystics_auto_task', fallbackText?: string): string;
+  /** 继续下一步 */
+  (key: 'task_next_step_empty_sample_span_title', fallbackText?: string): string;
+  /** 当前筛选结果未包含任何已有Trace数据,建议重新调整筛选条件。如果仍需维持当前筛选,可直接点击继续 */
+  (key: 'task_next_step_empty_sample_span_tips', fallbackText?: string): string;
+  /** 任务类型 */
+  (key: 'task_type', fallbackText?: string): string;
+  /** 采样比例 */
+  (key: 'sampling_ratio', fallbackText?: string): string;
+  /** 时间范围 */
+  (key: 'time_range', fallbackText?: string): string;
+  /** 采样数据总上限 */
+  (key: 'sampling_data_max_upper_limit', fallbackText?: string): string;
+  /** _副本 */
+  (key: 'auto_evaluation_task_title_copy', fallbackText?: string): string;
+  /** 重新运行时，将继续数据采集与任务变更，中间未运行的时间段数据，将不参与回溯 */
+  (key: 'task_rerun_action_tips', fallbackText?: string): string;
+  /** 中止后，将停止数据采集与任务运行，之前运行完成的任务结果将不再变更 */
+  (key: 'task_suspend_action_tips', fallbackText?: string): string;
+  /** 已完成与禁用状态下不支持编辑 */
+  (key: 'task_disable_status_edit_tips', fallbackText?: string): string;
+  /** 确认要{action}此任务吗？ */
+  (
+    key: 'task_{action}_confirm_content',
+    options?: {
+      /** string */ action: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 确定要{text}吗？此修改将不可逆。 */
+  (
+    key: 'task_irreversible_action_confirm_content_{text}',
+    options?: {
+      /** string */ text: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 克隆 */
+  (key: 'auto_task_clone', fallbackText?: string): string;
+  /** 只允许禁用未启动或中止状态的任务 */
+  (key: 'task_disable_tips', fallbackText?: string): string;
+  /** 任务进度 */
+  (key: 'evaluate_dataset_task_progress', fallbackText?: string): string;
+  /** 新数据 */
+  (key: 'task_new_data', fallbackText?: string): string;
+  /** 历史数据 */
+  (key: 'task_historical_data', fallbackText?: string): string;
+  /** 查看样本 Span */
+  (key: 'view_sample_span', fallbackText?: string): string;
+  /** 选取历史第一条 Span 作为参考。 */
+  (key: 'sample_span_select_first_tips', fallbackText?: string): string;
+  /** 回流新数据 */
+  (key: 'task_reflow_new_data', fallbackText?: string): string;
+  /** 应用于后续新产生的符合筛选条件的 Trace 数据 */
+  (key: 'task_reflow_new_data_tips', fallbackText?: string): string;
+  /** 重复频率 */
+  (key: 'task_cycle_option', fallbackText?: string): string;
+  /** 回流历史数据 */
+  (key: 'task_historical_data_reflow', fallbackText?: string): string;
+  /** 应用于过去产生的 Trace 数据 */
+  (key: 'task_historical_data_reflow_tips', fallbackText?: string): string;
+  /** {name}字段必填 */
+  (
+    key: 'field_{name}_required',
+    options?: {
+      /** string */ name: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 每 {num} 天 */
+  (
+    key: 'every_{num}_days',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 每 {num} 周 */
+  (
+    key: 'every_{num}_weeks',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 不重复 */
+  (key: 'no_repeat', fallbackText?: string): string;
+  /** 天重复 */
+  (key: 'day_repeat', fallbackText?: string): string;
+  /** 周重复 */
+  (key: 'week_repeat', fallbackText?: string): string;
+  /** 周日 */
+  (key: 'weekday_sunday', fallbackText?: string): string;
+  /** 周一 */
+  (key: 'weekday_monday', fallbackText?: string): string;
+  /** 周二 */
+  (key: 'weekday_tuesday', fallbackText?: string): string;
+  /** 周三 */
+  (key: 'weekday_wednesday', fallbackText?: string): string;
+  /** 周四 */
+  (key: 'weekday_thursday', fallbackText?: string): string;
+  /** 周五 */
+  (key: 'weekday_friday', fallbackText?: string): string;
+  /** 周六 */
+  (key: 'weekday_saturday', fallbackText?: string): string;
+  /** 执行 */
+  (key: 'data_engine_execute', fallbackText?: string): string;
+  /** 单次上限 */
+  (key: 'task_single_time_limit', fallbackText?: string): string;
+  /** 循环次数上限为100,请调整采样时间范围或循环频率后重试 */
+  (
+    key: 'repeat_frequency_max_times_error',
+    options?: {
+      /** string */ max: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 开始时间不能大于结束时间 */
+  (key: 'start_time_cannot_be_greater_than_end_time', fallbackText?: string): string;
+  /** 结束时间不能小于当前时间 */
+  (key: 'end_time_cannot_be_less_than_current_time', fallbackText?: string): string;
+  /** 开始时间不能小于当前时间 */
+  (key: 'start_time_cannot_be_less_than_current_time', fallbackText?: string): string;
+  /** 采样策略 */
+  (key: 'sampling_strategy', fallbackText?: string): string;
+  /** 采样任务将在采样数据量或时间范围任一达到上限时完成 */
+  (key: 'sampling_strategy_tips', fallbackText?: string): string;
+  /** 请输入 {min}-{max} 的整数 */
+  (
+    key: 'sampling_data_max_upper_limit_tips',
+    options?: {
+      /** string */ min: ReactNode;
+      /** string */ max: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 暂不支持 Feedback 值筛选 */
+  (key: 'span_filter_feedback_disabled_tips', fallbackText?: string): string;
+  /** 仅支持评测空间内创建完成的 Coze 智能体 */
+  (key: 'span_filter_coze_bot_same_space_tips', fallbackText?: string): string;
+  /** 配置评估器 */
+  (key: 'config_evaluator', fallbackText?: string): string;
+  /** 获取样本 Span 失败 */
+  (key: 'fetch_sample_trace_error_tips', fallbackText?: string): string;
+  /** 复制在线评测任务 */
+  (key: 'auto_evaluation_task_clone', fallbackText?: string): string;
+  /** 对满足条件的 trace 数据进行评测，评估线上服务的效果 */
+  (key: 'task_type_desc_2', fallbackText?: string): string;
+  /** 文档中心 */
+  (key: 'fornax_test_documentation_center', fallbackText?: string): string;
+  /** 在线评测能实时评估应用表现，将产生资源点消耗。 */
+  (key: 'auto_task_resource_consumption_tips', fallbackText?: string): string;
+  /** 任务信息及采样 */
+  (key: 'task_information_and_sampling', fallbackText?: string): string;
+  /** 自动化任务编辑成功 */
+  (key: 'auto_task_edit_success', fallbackText?: string): string;
+  /** 自动化任务创建成功 */
+  (key: 'auto_task_create_success', fallbackText?: string): string;
+  /** 自动化任务 {name} 创建完成 */
+  (
+    key: 'auto_task_create_tips',
+    options?: {
+      /** string */ name: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 查看任务进度 */
+  (key: 'view_task_progress', fallbackText?: string): string;
+  /** 采样比例不能为{num} */
+  (
+    key: 'sampling_ratio_cannot_be_{num}',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 字段映射配置不完整 */
+  (key: 'field_mapping_config_incomplete', fallbackText?: string): string;
+  /** 添加{prefix} */
+  (
+    key: 'data_engine_add_prefix_placeholder',
+    options?: {
+      /** string */ prefix: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 样本 Span 没有该字段，仍可保存运行 */
+  (key: 'sample_span_empty_field_mapping_tips', fallbackText?: string): string;
+  /** 无法获取Value值 */
+  (key: 'task_can_not_obtain_value_tips', fallbackText?: string): string;
+  /** 字段映射调试 */
+  (key: 'field_mapping_debug', fallbackText?: string): string;
+  /** 字段映射是否准确直接影响评估器效果，确认映射无误后试运行查看结果 */
+  (key: 'test_run_field_mapping_tips', fallbackText?: string): string;
+  /** 目标评测集列 */
+  (key: 'manual_reflow_target_evaluation_column', fallbackText?: string): string;
+  /** 目标数据集列 */
+  (key: 'manual_reflow_target_dataset_column', fallbackText?: string): string;
+  /** 数据集 */
+  (key: 'manual_reflow_dataset', fallbackText?: string): string;
+  /** 目标 */
+  (key: 'manual_reflow_target', fallbackText?: string): string;
+  /** 目标评测集 */
+  (key: 'manual_reflow_target_evaluation_set', fallbackText?: string): string;
+  /** 目标数据集 */
+  (key: 'manual_reflow_target_dataset', fallbackText?: string): string;
+  /** 请选择数据集 */
+  (key: 'manual_reflow_select_dataset', fallbackText?: string): string;
+  /** 请选择目标 */
+  (key: 'manual_reflow_please_select_target', fallbackText?: string): string;
+  /** 目标数据集名称 */
+  (key: 'manual_reflow_target_dataset_name', fallbackText?: string): string;
+  /** 请选择目标数据集 */
+  (key: 'manual_reflow_please_select_target_dataset', fallbackText?: string): string;
+  /** 容量超限 */
+  (key: 'manual_reflow_capacity_exceeded', fallbackText?: string): string;
+  /** 请调整待导入数据规模、数据导入方式或更换目标 */
+  (key: 'manual_reflow_please_adjust_data_scale', fallbackText?: string): string;
+  /** 已有 */
+  (key: 'manual_reflow_existing', fallbackText?: string): string;
+  /** 新建 */
+  (key: 'manual_reflow_create', fallbackText?: string): string;
+  /** 先输入 Trace 字段，再选择数据流入的 */
+  (key: 'manual_reflow_field_mapping_tip_prefix', fallbackText?: string): string;
+  /** Trace 字段 */
+  (key: 'manual_reflow_trace_field', fallbackText?: string): string;
+  /** 请选择 Trace 字段 */
+  (key: 'manual_reflow_please_select_trace_field', fallbackText?: string): string;
+  /** 请输入评测集列名 */
+  (key: 'manual_reflow_please_input_evaluation_set_column_name', fallbackText?: string): string;
+  /** 请输入数据集列名 */
+  (key: 'manual_reflow_please_input_dataset_column_name', fallbackText?: string): string;
+  /** 仅支持英文、数字、下划线，且必须以字母开头 */
+  (key: 'manual_reflow_column_name_format_error', fallbackText?: string): string;
+  /** 该评测集列名重复 */
+  (key: 'manual_reflow_evaluation_set_column_name_duplicate', fallbackText?: string): string;
+  /** 该数据集列名重复 */
+  (key: 'manual_reflow_dataset_column_name_duplicate', fallbackText?: string): string;
+  /** 该评测集列名已存在 */
+  (key: 'manual_reflow_evaluation_set_column_name_exists', fallbackText?: string): string;
+  /** 该数据集列名已存在 */
+  (key: 'manual_reflow_dataset_column_name_exists', fallbackText?: string): string;
+  /** 至少保留一个字段映射 */
+  (key: 'manual_reflow_at_least_one_field_mapping', fallbackText?: string): string;
+  /** 删除字段映射 */
+  (key: 'manual_reflow_delete_field_mapping', fallbackText?: string): string;
+  /** 添加字段映射 */
+  (key: 'manual_reflow_add_field_mapping', fallbackText?: string): string;
+  /** 确认全量覆盖 */
+  (key: 'manual_reflow_confirm_full_overwrite', fallbackText?: string): string;
+  /** 导入数据将覆盖已有数据 */
+  (key: 'manual_reflow_import_will_overwrite', fallbackText?: string): string;
+  /** 添加到评测集 */
+  (key: 'manual_reflow_add_to_evaluation_set', fallbackText?: string): string;
+  /** 添加到数据集 */
+  (key: 'manual_reflow_add_to_dataset', fallbackText?: string): string;
+  /** 开始导入 */
+  (key: 'manual_reflow_start_import', fallbackText?: string): string;
+  /** 校验并预览 */
+  (key: 'manual_reflow_validate_and_preview', fallbackText?: string): string;
+  /** Schema 不匹配 */
+  (key: 'manual_reflow_schema_mismatch', fallbackText?: string): string;
+  /** 数据为空 */
+  (key: 'manual_reflow_empty_data', fallbackText?: string): string;
+  /** 单条数据大小超过 200KB */
+  (key: 'manual_reflow_exceed_max_item_size', fallbackText?: string): string;
+  /** 由于并发操作，导入目标评测集数据条数超过 5000 条 */
+  (key: 'manual_reflow_exceed_max_evaluation_set_count', fallbackText?: string): string;
+  /** 由于并发操作，导入目标数据集数据条数超过限制 */
+  (key: 'manual_reflow_exceed_max_dataset_count', fallbackText?: string): string;
+  /** 包含违规内容 */
+  (key: 'manual_reflow_illegal_content', fallbackText?: string): string;
+  /** 清空数据集失败 */
+  (key: 'manual_reflow_clear_dataset_failed', fallbackText?: string): string;
+  /** 读写文件失败 */
+  (key: 'manual_reflow_rw_file_failed', fallbackText?: string): string;
+  /** 数据嵌套深度超过限制 */
+  (key: 'manual_reflow_exceed_max_nested_depth', fallbackText?: string): string;
+  /** 图片数量超过限制 */
+  (key: 'manual_reflow_exceed_max_image_count', fallbackText?: string): string;
+  /** 图片大小超过限制 */
+  (key: 'manual_reflow_exceed_max_image_size', fallbackText?: string): string;
+  /** 图片上传失败 */
+  (key: 'manual_reflow_upload_image_failed', fallbackText?: string): string;
+  /** 多模态节点数量超过限制 */
+  (key: 'manual_reflow_exceed_max_part_count', fallbackText?: string): string;
+  /** 已选 */
+  (key: 'manual_reflow_selected', fallbackText?: string): string;
+  /** 单次最多支持选择 500 条数据 */
+  (key: 'manual_reflow_max_500_data_selection', fallbackText?: string): string;
+  /** 完成 */
+  (key: 'manual_reflow_completed', fallbackText?: string): string;
+  /** 共 */
+  (key: 'manual_reflow_total', fallbackText?: string): string;
+  /** 条数据全部成功导入 */
+  (key: 'manual_reflow_data_imported_successfully', fallbackText?: string): string;
+  /** 项， */
+  (key: 'manual_reflow_items_comma', fallbackText?: string): string;
+  /** 以下原因导致执行失败，请修正后重试 */
+  (key: 'manual_reflow_execution_failed_reasons', fallbackText?: string): string;
+  /** 修改配置 */
+  (key: 'manual_reflow_modify_config', fallbackText?: string): string;
+  /** 知道了 */
+  (key: 'manual_reflow_acknowledged', fallbackText?: string): string;
+  /** 样本 span */
+  (key: 'manual_reflow_sample_span', fallbackText?: string): string;
+  /** 请选择或直接输入 Trace 字段 */
+  (key: 'manual_reflow_select_trace_field', fallbackText?: string): string;
+  /** 暂不支持 */
+  (key: 'manual_reflow_not_supported_yet', fallbackText?: string): string;
+  /** 校验状态 */
+  (key: 'manual_reflow_validation_status', fallbackText?: string): string;
+  /** 校验结果概要 */
+  (key: 'manual_reflow_validation_result_summary', fallbackText?: string): string;
+  /** 效果预览 */
+  (key: 'manual_reflow_effect_preview', fallbackText?: string): string;
+  /** 数据处理失败 */
+  (key: 'manual_reflow_data_processing_failed', fallbackText?: string): string;
   /** Arguments */
   (key: 'analytics_trace_arguments', fallbackText?: string): string;
+  /** Coze 对话 */
+  (key: 'coze_conversation', fallbackText?: string): string;
   /** Description */
   (key: 'analytics_trace_description', fallbackText?: string): string;
+  /** Feedback-Coze 对话 */
+  (key: 'feedback_coze_conversation', fallbackText?: string): string;
+  /** Feedback-人工标注 */
+  (key: 'feedback_manual_annotation', fallbackText?: string): string;
+  /** Feedback-自动评测 */
+  (key: 'feedback_auto_evaluate', fallbackText?: string): string;
   /** Metadata */
   (key: 'analytics_trace_metadata', fallbackText?: string): string;
   /** Run */
   (key: 'analytics_trace_run', fallbackText?: string): string;
   /** Runtime */
   (key: 'analytics_trace_runtime', fallbackText?: string): string;
+  /** SDK 上报 */
+  (key: 'sdk_reporting', fallbackText?: string): string;
+  /** SpanID */
+  (key: 'observation_query_detail_span_id', fallbackText?: string): string;
+  /** StatusCode */
+  (key: 'observation_status_code', fallbackText?: string): string;
+  /** TOS URL 不存在,请联系 Cozeloop */
+  (key: 'tos_url_not_exist', fallbackText?: string): string;
   /** Type */
   (key: 'analytics_trace_type', fallbackText?: string): string;
+  /** 保存视图 */
+  (key: 'save_view', fallbackText?: string): string;
+  /** 保存至当前视图 */
+  (key: 'save_to_current_view', fallbackText?: string): string;
+  /** 本月截止目前 */
+  (key: 'observation_range_this_month', fallbackText?: string): string;
+  /** 本周截止目前 */
+  (key: 'observation_time_week_so_far', fallbackText?: string): string;
+  /** 不属于 */
+  (key: 'task_filter_not_in', fallbackText?: string): string;
+  /** 不为空 */
+  (key: 'task_filter_not_null', fallbackText?: string): string;
+  /** 不允许为空 */
+  (key: 'not_allowed_to_be_empty', fallbackText?: string): string;
+  /** 查看方式 */
+  (key: 'viewing_method', fallbackText?: string): string;
+  /** 查看方式、数据来源，和外侧的 Trace 列表和 SDK 上报下拉框联动。保存为视图时，需要设置这 2 项过滤条件 */
+  (key: 'viewing_method_data_source_linkage', fallbackText?: string): string;
+  /** 查看全部 */
+  (key: 'view_all', fallbackText?: string): string;
+  /** 查询所有 SpanID，以上报埋点为粒度进行展示 */
+  (key: 'all_span_tip', fallbackText?: string): string;
+  /** 大于等于 */
+  (key: 'task_filter_gte', fallbackText?: string): string;
   /** 当前 Trace 已过期无法查看 */
   (key: 'current_trace_expired_to_view', fallbackText?: string): string;
   /** 当前的角色权限暂时无法查看该 Trace 详情 */
   (key: 'no_permission_to_view_trace', fallbackText?: string): string;
-  /** 无权限查看 */
-  (key: 'no_permission_to_view', fallbackText?: string): string;
-  /** 请查看{manual}或尝试修改更大的时间范围，修改过滤器中的过滤条件 */
-  (
-    key: 'trace_empty_tip',
-    options?: {
-      /** string */ manual: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 扣子罗盘 SDK 接入指南 */
-  (key: 'cozeloop_sdk_manual', fallbackText?: string): string;
-  /** 未找到上报的数据 */
-  (key: 'reported_data_not_found', fallbackText?: string): string;
-  /** 请尝试在SDK数据上报时，写入Input和Output信息 */
-  (key: 'report_in_sdk', fallbackText?: string): string;
-  /** 查询所有 SpanID，以上报埋点为粒度进行展示 */
-  (key: 'all_span_tip', fallbackText?: string): string;
-  /** 根据 TraceID 查询，以调用入口为粒度进行展示 */
-  (key: 'root_span_tip', fallbackText?: string): string;
-  /** 仅查询和模型调用相关的埋点 */
-  (key: 'llm_span_tip', fallbackText?: string): string;
-  /** 确认删除该视图？ */
-  (key: 'confirm_delete_view', fallbackText?: string): string;
-  /** 删除后操作将不可逆 */
-  (key: 'deletion_irreversible', fallbackText?: string): string;
-  /** 最多展示{num}个视图 */
-  (
-    key: 'max_display_view_num',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 默认视图不可编辑 */
-  (key: 'default_view_not_editable', fallbackText?: string): string;
-  /** 默认视图不可删除 */
-  (key: 'default_view_cannot_be_deleted', fallbackText?: string): string;
-  /** 新视图无法展示, 请修改视图展示管理 */
-  (key: 'new_view_cannot_be_displayed', fallbackText?: string): string;
-  /** 查看方式 */
-  (key: 'viewing_method', fallbackText?: string): string;
-  /** 属于 */
-  (key: 'belong_to', fallbackText?: string): string;
-  /** 数据来源 */
-  (key: 'data_source', fallbackText?: string): string;
-  /** 查看方式、数据来源，和外侧的 Trace 列表和 SDK 上报下拉框联动。保存为视图时，需要设置这 2 项过滤条件 */
-  (key: 'viewing_method_data_source_linkage', fallbackText?: string): string;
-  /** 数据到期时间 */
-  (key: 'data_expiration_time', fallbackText?: string): string;
-  /** SDK 上报 */
-  (key: 'sdk_reporting', fallbackText?: string): string;
-  /** 自定义 */
-  (key: 'customize', fallbackText?: string): string;
-  /** 全部时间 */
-  (key: 'all_time', fallbackText?: string): string;
-  /** 不允许为空 */
-  (key: 'not_allowed_to_be_empty', fallbackText?: string): string;
-  /** 名称长度不能超过{num}个字符 */
-  (
-    key: 'name_length_limit',
-    options?: {
-      /** string */ num: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 视图名称 */
-  (key: 'view_name', fallbackText?: string): string;
-  /** TOS URL 不存在,请联系 Cozeloop */
-  (key: 'tos_url_not_exist', fallbackText?: string): string;
   /** 当前内容无法显示 */
   (key: 'current_content_unavailable', fallbackText?: string): string;
-  /** 上一条 */
-  (key: 'prev_item', fallbackText?: string): string;
-  /** 下一条 */
-  (key: 'next_item', fallbackText?: string): string;
-  /** 了解数据是优化您应用的第一步，快点接入{sdk}上报数据吧，我保证这个操作真的很简单 */
-  (
-    key: 'using_cozeloop_sdk_tip',
-    options?: {
-      /** string */ sdk: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 扣子罗盘 SDK */
-  (key: 'cozeloop_sdk', fallbackText?: string): string;
-  /** 保存视图 */
-  (key: 'save_view', fallbackText?: string): string;
-  /** 另存为视图 */
-  (key: 'save_as_view', fallbackText?: string): string;
-  /** 保存至当前视图 */
-  (key: 'save_to_current_view', fallbackText?: string): string;
-  /** 自定义视图 */
-  (key: 'custom_view', fallbackText?: string): string;
-  /** 过滤器 */
-  (key: 'filter', fallbackText?: string): string;
-  /** 过滤项冲突 */
-  (key: 'filter_item_conflict', fallbackText?: string): string;
-  /** 查看全部 */
-  (key: 'view_all', fallbackText?: string): string;
+  /** 点踩 */
+  (key: 'task_filter_thumbs_down', fallbackText?: string): string;
+  /** 点击右上方标注数据按钮进行创建 */
+  (key: 'click_annotation_button_to_create', fallbackText?: string): string;
+  /** 点赞 */
+  (key: 'task_filter_thumbs_up', fallbackText?: string): string;
+  /** 反馈结果 */
+  (key: 'feedback_results', fallbackText?: string): string;
+  /** 非 */
+  (key: 'logic_expr_not', fallbackText?: string): string;
   /** 非法 JSON */
   (key: 'invalid_json', fallbackText?: string): string;
-  /** 图片加载失败 */
-  (key: 'image_load_failed', fallbackText?: string): string;
-  /** 且 */
-  (key: 'observation_and', fallbackText?: string): string;
-  /** 收起 */
-  (key: 'observation_collapse', fallbackText?: string): string;
-  /** 复制失败 */
-  (key: 'observation_copy_fail', fallbackText?: string): string;
-  /** 复制成功 */
-  (key: 'observation_copy_success', fallbackText?: string): string;
-  /** 暂无数据 */
-  (key: 'observation_data_empty', fallbackText?: string): string;
-  /** 数据不存在或异常 */
-  (key: 'observation_empty_data_abnormal', fallbackText?: string): string;
-  /** 未选中节点 */
-  (key: 'observation_empty_node_unselected', fallbackText?: string): string;
-  /** 渲染失败 */
-  (key: 'observation_empty_run_tree_failure', fallbackText?: string): string;
-  /** 请在左侧选中对应的节点查看详情 */
-  (key: 'observation_empty_to_select_node', fallbackText?: string): string;
-  /** 展开 */
-  (key: 'observation_extend', fallbackText?: string): string;
-  /** 获取元数据信息失败：{msg} */
-  (
-    key: 'observation_fetch_meta_error',
-    options?: {
-      /** string */ msg: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 输入Tokens: {count}  */
-  (
-    key: 'observation_input_tokens_count',
-    options?: {
-      /** string */ count: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 输出Tokens: {count} */
-  (
-    key: 'observation_output_tokens_count',
-    options?: {
-      /** string */ count: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** SpanID */
-  (key: 'observation_query_detail_span_id', fallbackText?: string): string;
-  /** 本月截止目前 */
-  (key: 'observation_range_this_month', fallbackText?: string): string;
-  /** 推理Tokens: {count} */
-  (
-    key: 'observation_reasoning_tokens_count',
-    options?: {
-      /** string */ count: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** StatusCode */
-  (key: 'observation_status_code', fallbackText?: string): string;
-  /** 调用树 */
-  (key: 'observation_tab_run_tree', fallbackText?: string): string;
-  /** 开发环境 */
-  (key: 'observation_threads_options_dev', fallbackText?: string): string;
-  /** 失败 */
-  (key: 'observation_threads_options_fail', fallbackText?: string): string;
-  /** 线上环境 */
-  (key: 'observation_threads_options_online', fallbackText?: string): string;
-  /** 成功 */
-  (key: 'observation_threads_options_success', fallbackText?: string): string;
-  /** 前天 */
-  (key: 'observation_time_day_before_yesterday', fallbackText?: string): string;
+  /** 根据 TraceID 查询，以调用入口为粒度进行展示 */
+  (key: 'root_span_tip', fallbackText?: string): string;
+  /** 过滤项冲突 */
+  (key: 'filter_item_conflict', fallbackText?: string): string;
   /** 过去 {count} 天 */
   (
     key: 'observation_time_last_days',
@@ -3149,58 +4512,12 @@ interface I18nTranslateFn {
   ): string;
   /** 过去3月 */
   (key: 'observation_time_past_3_months', fallbackText?: string): string;
+  /** 过去一年 */
+  (key: 'observation_time_past_year', fallbackText?: string): string;
   /** 过去一月 */
   (key: 'observation_time_past_month', fallbackText?: string): string;
   /** 过去一周 */
   (key: 'observation_time_past_week', fallbackText?: string): string;
-  /** 过去一年 */
-  (key: 'observation_time_past_year', fallbackText?: string): string;
-  /** 今天截止目前 */
-  (key: 'observation_time_today_so_far', fallbackText?: string): string;
-  /** 本周截止目前 */
-  (key: 'observation_time_week_so_far', fallbackText?: string): string;
-  /** 昨天 */
-  (key: 'observation_time_yesterday', fallbackText?: string): string;
-  /** 节点详情 */
-  (key: 'observation_title_span_detail', fallbackText?: string): string;
-  /** 添加筛选组条件 */
-  (key: 'logic_expr_add_filter_group', fallbackText?: string): string;
-  /** 添加筛选条件 */
-  (key: 'logic_expr_add_filter', fallbackText?: string): string;
-  /** 且 */
-  (key: 'logic_expr_and', fallbackText?: string): string;
-  /** 删除条件 */
-  (key: 'logic_expr_delete_filter', fallbackText?: string): string;
-  /** 非 */
-  (key: 'logic_expr_not', fallbackText?: string): string;
-  /** 或 */
-  (key: 'logic_expr_or', fallbackText?: string): string;
-  /** 等于 */
-  (key: 'task_filter_eq', fallbackText?: string): string;
-  /** 大于 */
-  (key: 'task_filter_gt', fallbackText?: string): string;
-  /** 大于等于 */
-  (key: 'task_filter_gte', fallbackText?: string): string;
-  /** 属于 */
-  (key: 'task_filter_in', fallbackText?: string): string;
-  /** 为空 */
-  (key: 'task_filter_is_null', fallbackText?: string): string;
-  /** 包含 */
-  (key: 'task_filter_like', fallbackText?: string): string;
-  /** 小于 */
-  (key: 'task_filter_lt', fallbackText?: string): string;
-  /** 小于等于 */
-  (key: 'task_filter_lte', fallbackText?: string): string;
-  /** 不等于 */
-  (key: 'task_filter_not_eq', fallbackText?: string): string;
-  /** 不属于 */
-  (key: 'task_filter_not_in', fallbackText?: string): string;
-  /** 不为空 */
-  (key: 'task_filter_not_null', fallbackText?: string): string;
-  /** 点赞 */
-  (key: 'task_filter_thumbs_up', fallbackText?: string): string;
-  /** 点踩 */
-  (key: 'task_filter_thumbs_down', fallbackText?: string): string;
   /** 获取元数据信息失败：{msg} */
   (
     key: 'analytics_fetch_meta_error',
@@ -3209,81 +4526,203 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 不允许为空 */
-  (key: 'validation_not_allowed_to_be_empty', fallbackText?: string): string;
+  /** 节点详情 */
+  (key: 'observation_title_span_detail', fallbackText?: string): string;
+  /** 今天截止目前 */
+  (key: 'observation_time_today_so_far', fallbackText?: string): string;
+  /** 仅查询和模型调用相关的埋点 */
+  (key: 'llm_span_tip', fallbackText?: string): string;
+  /** 开发环境 */
+  (key: 'observation_threads_options_dev', fallbackText?: string): string;
+  /** 扣子罗盘 SDK */
+  (key: 'cozeloop_sdk', fallbackText?: string): string;
+  /** 扣子罗盘 SDK 接入指南 */
+  (key: 'cozeloop_sdk_manual', fallbackText?: string): string;
+  /** 了解数据是优化您应用的第一步，快点接入{sdk}上报数据吧，我保证这个操作真的很简单 */
+  (
+    key: 'using_cozeloop_sdk_tip',
+    options?: {
+      /** string */ sdk: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 另存为视图 */
+  (key: 'save_as_view', fallbackText?: string): string;
   /** 名称长度不能超过{num}个字符 */
   (
-    key: 'validation_name_length_limit',
+    key: 'name_length_limit',
     options?: {
       /** string */ num: ReactNode;
     },
     fallbackText?: string,
   ): string;
-  /** 视图名称已存在 */
-  (key: 'validation_view_name_exists', fallbackText?: string): string;
+  /** 默认视图不可编辑 */
+  (key: 'default_view_not_editable', fallbackText?: string): string;
+  /** 默认视图不可删除 */
+  (key: 'default_view_cannot_be_deleted', fallbackText?: string): string;
+  /** 前天 */
+  (key: 'observation_time_day_before_yesterday', fallbackText?: string): string;
+  /** 且 */
+  (key: 'logic_expr_and', fallbackText?: string): string;
+  /** 请查看{manual}或尝试修改更大的时间范围，修改过滤器中的过滤条件 */
+  (
+    key: 'trace_empty_tip',
+    options?: {
+      /** string */ manual: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 请尝试在SDK数据上报时，写入Input和Output信息 */
+  (key: 'report_in_sdk', fallbackText?: string): string;
+  /** 请在左侧选中对应的节点查看详情 */
+  (key: 'observation_empty_to_select_node', fallbackText?: string): string;
   /** 全部时间 */
-  (key: 'time_all_time', fallbackText?: string): string;
-  /** Feedback-自动评测 */
-  (key: 'feedback_auto_evaluate', fallbackText?: string): string;
-  /** Feedback-人工标注 */
-  (key: 'feedback_manual_annotation', fallbackText?: string): string;
-  /** Feedback-Coze 对话 */
-  (key: 'feedback_coze_conversation', fallbackText?: string): string;
-  /** 自动评测 */
-  (key: 'auto_evaluate', fallbackText?: string): string;
+  (key: 'all_time', fallbackText?: string): string;
+  /** 确认删除该视图？ */
+  (key: 'confirm_delete_view', fallbackText?: string): string;
   /** 人工标注 */
   (key: 'manual_annotation', fallbackText?: string): string;
-  /** Coze 对话 */
-  (key: 'coze_conversation', fallbackText?: string): string;
-  /** 反馈结果 */
-  (key: 'feedback_results', fallbackText?: string): string;
-  /** 来源 */
-  (key: 'source', fallbackText?: string): string;
-  /** 更新人 */
-  (key: 'updater', fallbackText?: string): string;
+  /** 删除后操作将不可逆 */
+  (key: 'deletion_irreversible', fallbackText?: string): string;
+  /** 删除条件 */
+  (key: 'logic_expr_delete_filter', fallbackText?: string): string;
+  /** 上一条 */
+  (key: 'prev_item', fallbackText?: string): string;
+  /** 视图名称 */
+  (key: 'view_name', fallbackText?: string): string;
+  /** 视图名称已存在 */
+  (key: 'validation_view_name_exists', fallbackText?: string): string;
+  /** 输出Tokens: {count} */
+  (
+    key: 'observation_output_tokens_count',
+    options?: {
+      /** string */ count: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 输入Tokens: {count}  */
+  (
+    key: 'observation_input_tokens_count',
+    options?: {
+      /** string */ count: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 属于 */
+  (key: 'belong_to', fallbackText?: string): string;
+  /** 数据不存在或异常 */
+  (key: 'observation_empty_data_abnormal', fallbackText?: string): string;
+  /** 数据到期时间 */
+  (key: 'data_expiration_time', fallbackText?: string): string;
+  /** 数据来源 */
+  (key: 'data_source', fallbackText?: string): string;
+  /** 添加筛选条件 */
+  (key: 'logic_expr_add_filter', fallbackText?: string): string;
+  /** 添加筛选组条件 */
+  (key: 'logic_expr_add_filter_group', fallbackText?: string): string;
+  /** 调用树 */
+  (key: 'observation_tab_run_tree', fallbackText?: string): string;
+  /** 图片不可访问 */
+  (key: 'analytics_image_error', fallbackText?: string): string;
+  /** 图片加载失败 */
+  (key: 'image_load_failed', fallbackText?: string): string;
+  /** 推理Tokens: {count} */
+  (
+    key: 'observation_reasoning_tokens_count',
+    options?: {
+      /** string */ count: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** 为空 */
+  (key: 'task_filter_is_null', fallbackText?: string): string;
+  /** 未选中节点 */
+  (key: 'observation_empty_node_unselected', fallbackText?: string): string;
+  /** 未找到上报的数据 */
+  (key: 'reported_data_not_found', fallbackText?: string): string;
+  /** 无权限查看 */
+  (key: 'no_permission_to_view', fallbackText?: string): string;
+  /** 线上环境 */
+  (key: 'observation_threads_options_online', fallbackText?: string): string;
+  /** 小于等于 */
+  (key: 'task_filter_lte', fallbackText?: string): string;
+  /** 新视图无法展示, 请修改视图展示管理 */
+  (key: 'new_view_cannot_be_displayed', fallbackText?: string): string;
+  /** 渲染失败 */
+  (key: 'observation_empty_run_tree_failure', fallbackText?: string): string;
   /** 暂无 Feedback */
   (key: 'no_feedback', fallbackText?: string): string;
-  /** 点击右上方标注数据按钮进行创建 */
-  (key: 'click_annotation_button_to_create', fallbackText?: string): string;
-  /** 标签 */
-  (key: 'tag', fallbackText?: string): string;
+  /** 自定义视图 */
+  (key: 'custom_view', fallbackText?: string): string;
+  /** 自动评测 */
+  (key: 'auto_evaluate', fallbackText?: string): string;
+  /** 最多展示{num}个视图 */
+  (
+    key: 'max_display_view_num',
+    options?: {
+      /** string */ num: ReactNode;
+    },
+    fallbackText?: string,
+  ): string;
+  /** zh-CN */
+  (key: 'keys', fallbackText?: string): string;
+  /** 该分类标签选项已禁用，若修改将不再展示 */
+  (key: 'tag_category_tag_disabled_edit_warn', fallbackText?: string): string;
+  /** 标签名字 */
+  (key: 'tag_tag_name', fallbackText?: string): string;
+  /** 自动保存中... */
+  (key: 'tag_auto_saving', fallbackText?: string): string;
+  /** 已保存，请前往 Feedback 查看 */
+  (key: 'tag_saved_please_check_feedback', fallbackText?: string): string;
+  /** 修改记录 */
+  (key: 'tag_change_log', fallbackText?: string): string;
+  /** 修改将会同步至“空间管理-标签管理”。 */
+  (key: 'data_engine_changes_sync_to_space_mgmt', fallbackText?: string): string;
+  /** 编辑标签 */
+  (key: 'edit_tag', fallbackText?: string): string;
+  /** 变更日志 */
+  (key: 'change_log', fallbackText?: string): string;
+  /** 标签创建成功 */
+  (key: 'tag_create_success', fallbackText?: string): string;
+  /** 标签创建失败 */
+  (key: 'tag_create_failure', fallbackText?: string): string;
+  /** 标签更新成功 */
+  (key: 'tag_update_success', fallbackText?: string): string;
+  /** 标签更新失败 */
+  (key: 'tag_update_failure', fallbackText?: string): string;
   /** 标签管理 */
   (key: 'tag_management', fallbackText?: string): string;
-  /** 标签名称 */
-  (key: 'tag_name', fallbackText?: string): string;
-  /** 标签描述 */
-  (key: 'tag_description', fallbackText?: string): string;
   /** 标签类型 */
   (key: 'tag_type', fallbackText?: string): string;
-  /** 标签状态 */
-  (key: 'tag_status', fallbackText?: string): string;
+  /** 标签描述 */
+  (key: 'tag_description', fallbackText?: string): string;
+  /** 标签名称 */
+  (key: 'tag_name', fallbackText?: string): string;
+  /** 标签名称必须为 1～50 字符长度 */
+  (key: 'tag_name_length_limit', fallbackText?: string): string;
+  /** 标签名称仅支持输入中文、英文、数字和下划线 */
+  (key: 'tag_name_valid_chars', fallbackText?: string): string;
+  /** 标签配置 */
+  (key: 'tag_configuration', fallbackText?: string): string;
   /** 标签选项 */
   (key: 'tag_options', fallbackText?: string): string;
   /** 标签选项启用状态 */
   (key: 'tag_option_enable_status', fallbackText?: string): string;
-  /** 选项一 */
-  (key: 'tag_option_one', fallbackText?: string): string;
-  /** 选项二 */
-  (key: 'tag_option_two', fallbackText?: string): string;
+  /** 标签值不能为空 */
+  (key: 'tag_value_not_empty', fallbackText?: string): string;
+  /** 标签值长度不能超过 200 个字符 */
+  (key: 'tag_value_length_limit', fallbackText?: string): string;
+  /** 标签状态 */
+  (key: 'tag_status', fallbackText?: string): string;
+  /** 标注数据 */
+  (key: 'annotation_data', fallbackText?: string): string;
+  /** 查看标签 */
+  (key: 'view_tag', fallbackText?: string): string;
+  /** 该标签已禁用，不允许修改 */
+  (key: 'tag_disabled_no_modification', fallbackText?: string): string;
   /** 共 {placeholder1} 个标签 */
   (
     key: 'tag_number_with_placeholder',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 创建人:@{placeholder1} */
-  (
-    key: 'tag_creator_name',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 创建时间: {placeholder1} */
-  (
-    key: 'tag_creation_time',
     options?: {
       /** string */ placeholder1: ReactNode;
     },
@@ -3297,117 +4736,76 @@ interface I18nTranslateFn {
     },
     fallbackText?: string,
   ): string;
-  /** 从{placeholder1}更新为{placeholder3}。 */
-  (
-    key: 'tag_placeholder_update_end',
-    options?: {
-      /** string */ placeholder1: ReactNode;
-      /** string */ placeholder3: ReactNode;
-    },
-    fallbackText?: string,
-  ): string;
-  /** 修改标签后，存量已打标数据将会自动同步更新。 */
-  (key: 'tag_edit_sync_warning', fallbackText?: string): string;
-  /** 标签名称必须为 1～50 字符长度 */
-  (key: 'tag_name_length_limit', fallbackText?: string): string;
-  /** 标签名称仅支持输入中文、英文、数字和下划线 */
-  (key: 'tag_name_valid_chars', fallbackText?: string): string;
-  /** 标签值不能为空 */
-  (key: 'tag_value_not_empty', fallbackText?: string): string;
-  /** 标签值长度不能超过 200 个字符 */
-  (key: 'tag_value_length_limit', fallbackText?: string): string;
-  /** 同空间内标签名称不允许重复 */
-  (key: 'tag_name_no_duplicate_space', fallbackText?: string): string;
-  /** 一个标签内的标签值不允许重复 */
-  (key: 'tag_value_no_duplicate', fallbackText?: string): string;
-  /** 标签创建成功 */
-  (key: 'tag_create_success', fallbackText?: string): string;
-  /** 标签更新成功 */
-  (key: 'tag_update_success', fallbackText?: string): string;
-  /** 标签创建失败 */
-  (key: 'tag_create_failure', fallbackText?: string): string;
-  /** 标签更新失败 */
-  (key: 'tag_update_failure', fallbackText?: string): string;
-  /** 新建标签 */
-  (key: 'create_tag', fallbackText?: string): string;
-  /** 编辑标签 */
-  (key: 'edit_tag', fallbackText?: string): string;
-  /** 查看标签 */
-  (key: 'view_tag', fallbackText?: string): string;
+  /** 禁用标签 */
+  (key: 'disable_tag', fallbackText?: string): string;
+  /** 禁用后该标签无法被搜索添加 */
+  (key: 'disabled_tag_not_searchable', fallbackText?: string): string;
+  /** 描述不能超过200个字符 */
+  (key: 'description_length_limit', fallbackText?: string): string;
+  /** 启用标签 */
+  (key: 'enable_tag', fallbackText?: string): string;
+  /** 请输入 */
+  (key: 'please_enter', fallbackText?: string): string;
+  /** 请输入标签类型 */
+  (key: 'enter_tag_type', fallbackText?: string): string;
+  /** 请输入标签名称 */
+  (key: 'enter_tag_name', fallbackText?: string): string;
+  /** 请输入创建人 */
+  (key: 'enter_creator', fallbackText?: string): string;
+  /** 请输入描述 */
+  (key: 'enter_description', fallbackText?: string): string;
+  /** 请输入文本 */
+  (key: 'enter_text', fallbackText?: string): string;
+  /** 请输入子标签名称 */
+  (key: 'enter_subtag_name', fallbackText?: string): string;
+  /** 请选择分类 */
+  (key: 'select_category', fallbackText?: string): string;
+  /** 请至少添加一个标签选项 */
+  (key: 'add_at_least_one_option', fallbackText?: string): string;
+  /** 确定启用该标签吗？ */
+  (key: 'confirm_enable_tag', fallbackText?: string): string;
+  /** 确认保存 */
+  (key: 'confirm_save', fallbackText?: string): string;
+  /** 数据引擎编辑 */
+  (key: 'data_engine_edit', fallbackText?: string): string;
+  /** 数据引擎标签已禁用 */
+  (key: 'data_engine_label_disabled', fallbackText?: string): string;
+  /** 数据引擎刷新 */
+  (key: 'data_engine_refresh', fallbackText?: string): string;
+  /** 数据引擎未选择标签 */
+  (key: 'data_engine_no_label_selected', fallbackText?: string): string;
   /** 添加标签 */
   (key: 'add_tag', fallbackText?: string): string;
   /** 添加标签选项 */
   (key: 'add_tag_option', fallbackText?: string): string;
-  /** 启用标签 */
-  (key: 'enable_tag', fallbackText?: string): string;
-  /** 禁用标签 */
-  (key: 'disable_tag', fallbackText?: string): string;
-  /** 该分类标签选项已禁用，若修改将不再展示 */
-  (key: 'category_tag_option_disabled_warning', fallbackText?: string): string;
-  /** 禁用后该标签无法被搜索添加 */
-  (key: 'disabled_tag_not_searchable', fallbackText?: string): string;
-  /** 确定启用该标签吗？ */
-  (key: 'confirm_enable_tag', fallbackText?: string): string;
-  /** 修改将会同步至标签管理。 */
-  (key: 'changes_sync_to_space_tag_management', fallbackText?: string): string;
-  /** 标签配置 */
-  (key: 'tag_configuration', fallbackText?: string): string;
-  /** 请输入标签名称 */
-  (key: 'enter_tag_name', fallbackText?: string): string;
-  /** 请输入描述 */
-  (key: 'enter_description', fallbackText?: string): string;
-  /** 请输入标签类型 */
-  (key: 'enter_tag_type', fallbackText?: string): string;
-  /** 请输入子标签名称 */
-  (key: 'enter_subtag_name', fallbackText?: string): string;
-  /** 请输入文本 */
-  (key: 'enter_text', fallbackText?: string): string;
-  /** 请输入创建人 */
-  (key: 'enter_creator', fallbackText?: string): string;
-  /** 请输入 */
-  (key: 'please_enter', fallbackText?: string): string;
-  /** 请选择分类 */
-  (key: 'select_category', fallbackText?: string): string;
-  /** 描述不能超过200个字符 */
-  (key: 'description_length_limit', fallbackText?: string): string;
-  /** 请至少添加一个标签选项 */
-  (key: 'add_at_least_one_option', fallbackText?: string): string;
-  /** 修改前: */
-  (key: 'before_modification', fallbackText?: string): string;
-  /** 暂无标签描述 */
-  (key: 'no_tag_description', fallbackText?: string): string;
-  /** 暂无标签 */
-  (key: 'no_tags_available', fallbackText?: string): string;
-  /** 点击右上角创建按钮进行创建 */
-  (key: 'click_create_button', fallbackText?: string): string;
-  /** 数据引擎标签已禁用 */
-  (key: 'data_engine_label_disabled', fallbackText?: string): string;
-  /** 数据引擎编辑 */
-  (key: 'data_engine_edit', fallbackText?: string): string;
-  /** 数据引擎未选择标签 */
-  (key: 'data_engine_no_label_selected', fallbackText?: string): string;
-  /** 数据引擎刷新 */
-  (key: 'data_engine_refresh', fallbackText?: string): string;
-  /** 标注数据 */
-  (key: 'annotation_data', fallbackText?: string): string;
-  /** 自动保存中 */
-  (key: 'auto_saving', fallbackText?: string): string;
-  /** 已保存 */
-  (key: 'saved_check_feedback', fallbackText?: string): string;
-  /** 操作 */
-  (key: 'operate', fallbackText?: string): string;
+  /** 同空间内标签名称不允许重复 */
+  (key: 'tag_name_no_duplicate_space', fallbackText?: string): string;
   /** 退出编辑 */
   (key: 'exit_edit', fallbackText?: string): string;
+  /** 新建标签 */
+  (key: 'create_tag', fallbackText?: string): string;
+  /** 修改标签后，存量已打标数据将会自动同步更新。 */
+  (key: 'tag_edit_sync_warning', fallbackText?: string): string;
   /** 修改还未提交，退出后将不会保存此次修改。 */
   (key: 'unsaved_changes_exit_warning', fallbackText?: string): string;
-  /** 退出 */
-  (key: 'exit', fallbackText?: string): string;
-  /** 确认保存 */
-  (key: 'confirm_save', fallbackText?: string): string;
-  /** 变更日志 */
-  (key: 'change_log', fallbackText?: string): string;
-  /** 展开 */
-  (key: 'extend', fallbackText?: string): string;
+  /** 修改将会同步至标签管理。 */
+  (key: 'changes_sync_to_space_tag_management', fallbackText?: string): string;
+  /** 修改前: */
+  (key: 'before_modification', fallbackText?: string): string;
+  /** 选项二 */
+  (key: 'tag_option_two', fallbackText?: string): string;
+  /** 选项一 */
+  (key: 'tag_option_one', fallbackText?: string): string;
+  /** 一个标签内的标签值不允许重复 */
+  (key: 'tag_value_no_duplicate', fallbackText?: string): string;
+  /** 已保存 */
+  (key: 'saved_check_feedback', fallbackText?: string): string;
+  /** 暂无标签 */
+  (key: 'no_tags_available', fallbackText?: string): string;
+  /** 暂无标签描述 */
+  (key: 'no_tag_description', fallbackText?: string): string;
+  /** 自动保存中 */
+  (key: 'auto_saving', fallbackText?: string): string;
 }
 
 /** I18n of Cozeloop */

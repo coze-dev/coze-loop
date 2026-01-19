@@ -6,6 +6,7 @@ include "domain_openapi/eval_set.thrift"
 include "coze.loop.evaluation.spi.thrift"
 include "domain_openapi/experiment.thrift"
 include "domain_openapi/eval_target.thrift"
+include "domain_openapi/evaluator.thrift"
 
 // ===============================
 // 评测集相关接口 (9个接口)
@@ -256,6 +257,23 @@ struct ListEvaluationSetVersionItemsOApiResponse {
     255: base.BaseResp BaseResp
 }
 
+struct GetEvaluationItemFieldOApiRequest {
+    1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
+    2: optional i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
+    3: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"'),
+    4: optional i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
+    5: optional string field_name // 列名
+    6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
+
+    255: optional base.Base Base
+}
+
+struct GetEvaluationItemFieldOApiResponse {
+    1: optional eval_set.FieldData field_data
+
+    255: optional base.BaseResp BaseResp
+}
+
 struct ListEvaluationSetVersionItemsOpenAPIData {
     1: optional list<eval_set.EvaluationSetItem> items
 
@@ -339,6 +357,7 @@ struct SubmitExperimentEvalSetParam {
 struct SubmitExperimentEvaluatorParam {
     1: optional i64 evaluator_id (api.js_conv="true", go.tag='json:"evaluator_id"')
     2: optional string version
+    3: optional evaluator.EvaluatorRunConfig run_config
 }
 
 struct SubmitExperimentEvalTargetParam {
@@ -409,6 +428,7 @@ struct ListExperimentResultOpenAPIData {
     1: optional list<experiment.ColumnEvalSetField> column_eval_set_fields  // 评测集列
     2: optional list<experiment.ColumnEvaluator> column_evaluators  // 评估器列
     3: optional list<experiment.ItemResult> item_results    // 评测行级结果
+    4: optional list<experiment.ColumnEvalTarget> column_eval_targets
 
     100: optional i64 total
 }
@@ -431,6 +451,7 @@ struct GetExperimentAggrResultOApiResponse {
 
 struct GetExperimentAggrResultOpenAPIData {
     1: optional list<experiment.EvaluatorAggregateResult> evaluator_results (go.tag = 'json:"evaluator_results"')
+    2: optional experiment.EvalTargetAggregateResult eval_target_aggr_result
 }
 
 
@@ -462,6 +483,8 @@ service EvaluationOpenAPIService {
     BatchDeleteEvaluationSetItemsOApiResponse BatchDeleteEvaluationSetItemsOApi(1: BatchDeleteEvaluationSetItemsOApiRequest req) (api.tag="openapi", api.delete = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
     // 查询评测集特定版本数据
     ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
+    // 查询评测集某个filed值，用于获取超长文本的内容
+    GetEvaluationItemFieldOApiResponse GetEvaluationItemFieldOApi(1: GetEvaluationItemFieldOApiRequest req) (api.tag="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/field")
     // 更新评测集字段信息
     UpdateEvaluationSetSchemaOApiResponse UpdateEvaluationSetSchemaOApi(1: UpdateEvaluationSetSchemaOApiRequest req) (api.tag="openapi", api.put = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema"),
 

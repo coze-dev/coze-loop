@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
@@ -47,8 +48,7 @@ type IExperimentApplication interface {
 }
 
 type experimentApplication struct {
-	idgen idgen.IIDGenerator
-	// tupleSvc  service.IExptTupleService
+	idgen         idgen.IIDGenerator
 	manager       service.IExptManager
 	resultSvc     service.ExptResultService
 	configer      component.IConfiger
@@ -89,9 +89,8 @@ func NewExperimentApplication(
 	evaluatorService service.EvaluatorService,
 ) IExperimentApplication {
 	return &experimentApplication{
-		resultSvc: resultSvc,
-		manager:   manager,
-		// tupleSvc:                 tupleSvc,
+		resultSvc:                   resultSvc,
+		manager:                     manager,
 		idgen:                       idgen,
 		configer:                    configer,
 		ExptAggrResultService:       aggResultSvc,
@@ -118,7 +117,28 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
 
-	param, err := experiment.ConvertCreateReq(req)
+	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
+	evalVersionIDs, evaluatorVersionRunConfigs, err := e.resolveEvaluatorVersionIDs(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 去重
+	if len(evalVersionIDs) > 1 {
+		seen := map[int64]struct{}{}
+		uniq := make([]int64, 0, len(evalVersionIDs))
+		for _, id := range evalVersionIDs {
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			uniq = append(uniq, id)
+		}
+		evalVersionIDs = uniq
+	}
+	req.EvaluatorVersionIds = evalVersionIDs
+
+	param, err := experiment.ConvertCreateReq(req, evaluatorVersionRunConfigs)
 	if err != nil {
 		return nil, err
 	}
@@ -139,44 +159,33 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
 	}
 
-	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
-	evalVersionIDs, err := e.resolveEvaluatorVersionIDs(ctx, req)
-	if err != nil {
+	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
 		return nil, err
 	}
 
-	// 去重
-	if len(evalVersionIDs) > 1 {
-		seen := map[int64]struct{}{}
-		uniq := make([]int64, 0, len(evalVersionIDs))
-		for _, id := range evalVersionIDs {
-			if _, ok := seen[id]; ok {
-				continue
-			}
-			seen[id] = struct{}{}
-			uniq = append(uniq, id)
-		}
-		evalVersionIDs = uniq
-	}
-
 	cresp, err := e.CreateExperiment(ctx, &expt.CreateExperimentRequest{
-		WorkspaceID:           req.GetWorkspaceID(),
-		EvalSetVersionID:      req.EvalSetVersionID,
-		EvalSetID:             req.EvalSetID,
-		EvaluatorVersionIds:   evalVersionIDs,
-		Name:                  req.Name,
-		Desc:                  req.Desc,
-		TargetFieldMapping:    req.TargetFieldMapping,
-		EvaluatorFieldMapping: req.EvaluatorFieldMapping,
-		ItemConcurNum:         req.ItemConcurNum,
-		EvaluatorsConcurNum:   req.EvaluatorsConcurNum,
-		CreateEvalTargetParam: req.CreateEvalTargetParam,
-		ExptType:              req.ExptType,
-		MaxAliveTime:          req.MaxAliveTime,
-		SourceType:            req.SourceType,
-		SourceID:              req.SourceID,
-		TargetRuntimeParam:    req.TargetRuntimeParam,
-		Session:               req.Session,
+		WorkspaceID:            req.GetWorkspaceID(),
+		EvalSetVersionID:       req.EvalSetVersionID,
+		EvalSetID:              req.EvalSetID,
+		EvaluatorVersionIds:    req.EvaluatorVersionIds,
+		Name:                   req.Name,
+		Desc:                   req.Desc,
+		TargetFieldMapping:     req.TargetFieldMapping,
+		EvaluatorFieldMapping:  req.EvaluatorFieldMapping,
+		ItemConcurNum:          req.ItemConcurNum,
+		EvaluatorsConcurNum:    req.EvaluatorsConcurNum,
+		CreateEvalTargetParam:  req.CreateEvalTargetParam,
+		ExptType:               req.ExptType,
+		MaxAliveTime:           req.MaxAliveTime,
+		SourceType:             req.SourceType,
+		SourceID:               req.SourceID,
+		TargetRuntimeParam:     req.TargetRuntimeParam,
+		EvaluatorIDVersionList: req.EvaluatorIDVersionList,
+		Session:                req.Session,
 	})
 	if err != nil {
 		return nil, err
@@ -203,7 +212,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 // resolveEvaluatorVersionIDs 汇总 evaluator_version_ids：
 // 1) 先取请求中的 EvaluatorVersionIds
 // 2) 从有序 EvaluatorIDVersionList 中批量解析并按输入顺序回填版本ID
-func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, req *expt.SubmitExperimentRequest) ([]int64, error) {
+func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, error) {
 	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
 	evalVersionIDs = append(evalVersionIDs, req.EvaluatorVersionIds...)
 
@@ -232,7 +241,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	if len(builtinIDs) > 0 {
 		evs, err := e.evaluatorService.BatchGetBuiltinEvaluator(ctx, builtinIDs)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, ev := range evs {
 			if ev != nil {
@@ -245,7 +254,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	if len(normalPairs) > 0 {
 		evs, err := e.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, normalPairs)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, ev := range evs {
 			if ev == nil {
@@ -257,6 +266,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	}
 
 	// 按输入顺序回填版本ID
+	evaluatorVersionRunConfigs := make(map[int64]*evaluatordto.EvaluatorRunConfig)
 	for _, it := range items {
 		if it == nil {
 			continue
@@ -278,6 +288,9 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 		}
 		if verID := ev.GetEvaluatorVersionID(); verID != 0 {
 			evalVersionIDs = append(evalVersionIDs, verID)
+			if it.RunConfig != nil {
+				evaluatorVersionRunConfigs[verID] = it.RunConfig
+			}
 		}
 	}
 
@@ -309,7 +322,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 		}
 	}
 
-	return evalVersionIDs, nil
+	return evalVersionIDs, evaluatorVersionRunConfigs, nil
 }
 
 func (e *experimentApplication) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest) (r *expt.CheckExperimentNameResponse, err error) {
@@ -729,22 +742,25 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 		BaseExptID:     req.BaselineExperimentID,
 		Page:           page,
 		UseAccelerator: req.GetUseAccelerator(),
+		FullTrajectory: req.GetFullTrajectory(),
 	}
 	if err = buildExptTurnResultFilter(req, param); err != nil {
 		return nil, err
 	}
-	columnEvaluators, exptColumnEvaluators, columnEvalSetFields, exptColumnAnnotations, itemResults, total, err := e.resultSvc.MGetExperimentResult(ctx, param)
+
+	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err
 	}
 
 	resp := &expt.BatchGetExperimentResultResponse{
-		ColumnEvalSetFields:   experiment.ColumnEvalSetFieldsDO2DTOs(columnEvalSetFields),
-		ColumnEvaluators:      experiment.ColumnEvaluatorsDO2DTOs(columnEvaluators),
-		ExptColumnEvaluators:  experiment.ExptColumnEvaluatorsDO2DTOs(exptColumnEvaluators),
-		ExptColumnAnnotations: experiment.ExptColumnAnnotationDO2DTOs(exptColumnAnnotations),
-		Total:                 gptr.Of(total),
-		ItemResults:           experiment.ItemResultsDO2DTOs(itemResults),
+		ColumnEvalSetFields:   experiment.ColumnEvalSetFieldsDO2DTOs(result.ColumnEvalSetFields),
+		ColumnEvaluators:      experiment.ColumnEvaluatorsDO2DTOs(result.ColumnEvaluators),
+		ExptColumnEvaluators:  experiment.ExptColumnEvaluatorsDO2DTOs(result.ExptColumnEvaluators),
+		ExptColumnAnnotations: experiment.ExptColumnAnnotationDO2DTOs(result.ExptColumnAnnotations),
+		ExptColumnEvalTarget:  experiment.ExptColumnEvalTargetDO2DTOs(result.ExptColumnsEvalTarget),
+		Total:                 gptr.Of(result.Total),
+		ItemResults:           experiment.ItemResultsDO2DTOs(result.ItemResults),
 		BaseResp:              base.NewBaseResp(),
 	}
 
@@ -862,7 +878,7 @@ func (e *experimentApplication) InvokeExperiment(ctx context.Context, req *expt.
 	logs.CtxInfo(ctx, "InvokeExperiment expt: %v", json.Jsonify(got))
 	if got.Status != entity.ExptStatus_Processing && got.Status != entity.ExptStatus_Pending {
 		logs.CtxInfo(ctx, "expt status not allow to invoke, expt_id: %v, status: %v", req.GetExperimentID(), got.Status)
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("expt status not allow to invoke"))
+		return nil, errorx.NewByCode(errno.ExperimentStatusNotAllowedToInvokeCode, errorx.WithExtraMsg(fmt.Sprintf("expt status not allow to invoke, expt_id: %v, status: %v", req.GetExperimentID(), got.Status)))
 	}
 	itemDOS := evaluation_set.ItemDTO2DOs(req.Items)
 	idMap, evalSetErrors, itemOutputs, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
@@ -1253,6 +1269,11 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 		return nil, err
 	}
 
+	// 验证 expt_id 是否属于请求的 workspace_id，防止权限绕过
+	if got.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("experiment %d does not belong to workspace %d", req.GetExptID(), req.GetWorkspaceID())))
+	}
+
 	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
 		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
 		SpaceID:         req.GetWorkspaceID(),
@@ -1263,6 +1284,7 @@ func (e *experimentApplication) InsightAnalysisExperiment(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
+
 	recordID, err := e.CreateAnalysisRecord(ctx, &entity.ExptInsightAnalysisRecord{
 		SpaceID:   req.GetWorkspaceID(),
 		ExptID:    req.GetExptID(),
@@ -1285,7 +1307,6 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
 		}
 	}
-
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,
@@ -1294,6 +1315,9 @@ func (e *experimentApplication) ListExptInsightAnalysisRecord(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
+
+	// First record contains the upvote/downvote count info for display purpose,
+	// Other records' feedback is not necessary for this list api
 	records, total, err := e.ListAnalysisRecord(ctx, req.GetWorkspaceID(), req.GetExptID(), entity.NewPage(int(req.GetPageNumber()), int(req.GetPageSize())), session)
 	if err != nil {
 		return nil, err
@@ -1378,6 +1402,20 @@ func (e *experimentApplication) FeedbackExptInsightAnalysisReport(ctx context.Co
 		return nil, err
 	}
 
+	// 验证 expt_id 是否属于请求的 workspace_id，防止权限绕过
+	if got.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("experiment %d does not belong to workspace %d", req.GetExptID(), req.GetWorkspaceID())))
+	}
+
+	// 验证 insight_analysis_record_id 是否属于该 expt_id 和 workspace_id，防止水平越权
+	record, err := e.GetAnalysisRecordByID(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
+	if err != nil {
+		return nil, err
+	}
+	if record == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("insight analysis record %d not found for experiment %d in workspace %d", req.GetInsightAnalysisRecordID(), req.GetExptID(), req.GetWorkspaceID())))
+	}
+
 	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
 		ObjectID:        strconv.FormatInt(req.GetExptID(), 10),
 		SpaceID:         req.GetWorkspaceID(),
@@ -1432,4 +1470,63 @@ func (e *experimentApplication) ListExptInsightAnalysisComment(ctx context.Conte
 		Total:                               ptr.Of(total),
 		BaseResp:                            base.NewBaseResp(),
 	}, nil
+}
+
+func (e *experimentApplication) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.GetAnalysisRecordFeedbackVoteRequest) (r *expt.GetAnalysisRecordFeedbackVoteResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	vote, err := e.GetAnalysisRecordFeedbackVoteByUser(ctx, req.GetWorkspaceID(), req.GetExptID(), req.GetInsightAnalysisRecordID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.GetAnalysisRecordFeedbackVoteResponse{
+		Vote:     experiment.ExptInsightAnalysisFeedbackVoteDO2DTO(vote),
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) CalculateExperimentAggrResult_(ctx context.Context, req *expt.CalculateExperimentAggrResultRequest) (r *expt.CalculateExperimentAggrResultResponse, err error) {
+	session := entity.NewSession(ctx)
+
+	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	if !entity.IsExptFinished(got.Status) {
+		return nil, errorx.NewByCode(errno.IncompleteExptCalcAggrResultErrorCode)
+	}
+
+	if err := e.PublishExptAggrResultEvent(ctx, &entity.AggrCalculateEvent{
+		SpaceID:       req.GetWorkspaceID(),
+		ExperimentID:  req.GetExptID(),
+		CalculateMode: entity.CreateAllFields,
+	}, gptr.Of(time.Second*3)); err != nil {
+		return nil, err
+	}
+
+	return &expt.CalculateExperimentAggrResultResponse{BaseResp: base.NewBaseResp()}, nil
 }

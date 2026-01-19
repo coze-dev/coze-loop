@@ -78,6 +78,7 @@ type ObservabilityTask struct {
 	UpdatedAt             time.Time         // 更新时间
 	CreatedBy             string            // 创建人
 	UpdatedBy             string            // 更新人
+	TaskSource            *string           // 创建来源
 
 	TaskRuns []*TaskRun
 }
@@ -144,12 +145,13 @@ type TaskRun struct {
 	UpdatedAt      time.Time       // 更新时间
 }
 type BackfillDetail struct {
-	SuccessCount      *int64  `json:"success_count"`
-	FailedCount       *int64  `json:"failed_count"`
-	TotalCount        *int64  `json:"total_count"`
-	BackfillStatus    *string `json:"backfill_status"`
-	LastSpanPageToken *string `json:"last_span_page_token"`
+	SuccessCount      int64  `json:"success_count,omitempty"`
+	FailedCount       int64  `json:"failed_count,omitempty"`
+	TotalCount        int64  `json:"total_count,omitempty"`
+	BackfillStatus    string `json:"backfill_status,omitempty"`
+	LastSpanPageToken string `json:"last_span_page_token,omitempty"`
 }
+
 type TaskRunConfig struct {
 	AutoEvaluateRunConfig *AutoEvaluateRunConfig `json:"auto_evaluate_run_config"`
 	DataReflowRunConfig   *DataReflowRunConfig   `json:"data_reflow_run_config"`
@@ -221,7 +223,7 @@ func (t *ObservabilityTask) GetCurrentTaskRun() *TaskRun {
 	return nil
 }
 
-func (t ObservabilityTask) GetTaskttl() int64 {
+func (t *ObservabilityTask) GetTaskttl() int64 {
 	ttl := 30 * 24 * time.Hour.Milliseconds()
 	if t.EffectiveTime != nil && t.EffectiveTime.EndAt != 0 && t.EffectiveTime.EndAt > time.Now().UnixMilli() {
 		ttl += t.EffectiveTime.EndAt - time.Now().UnixMilli()
@@ -317,4 +319,11 @@ func (t *ObservabilityTask) ShouldTriggerBackfill() bool {
 	return t.BackfillEffectiveTime.StartAt > 0 &&
 		t.BackfillEffectiveTime.EndAt > 0 &&
 		t.BackfillEffectiveTime.StartAt < t.BackfillEffectiveTime.EndAt
+}
+
+func (t *ObservabilityTask) GetPlatformType() loop_span.PlatformType {
+	if t.SpanFilter != nil {
+		return t.SpanFilter.PlatformType
+	}
+	return loop_span.PlatformDefault
 }

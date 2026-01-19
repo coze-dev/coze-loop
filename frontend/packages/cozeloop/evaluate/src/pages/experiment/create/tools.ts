@@ -1,6 +1,6 @@
-/* eslint-disable complexity */
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+/* eslint-disable complexity */
 import { cloneDeep } from 'lodash-es';
 import { DEFAULT_TEXT_STRING_SCHEMA } from '@cozeloop/evaluate-components';
 import {
@@ -13,6 +13,8 @@ import {
   type SubmitExperimentRequest,
   type EvalTargetType,
   EvaluatorType,
+  type EvaluatorIDVersionItem,
+  EvaluatorVersionType,
 } from '@cozeloop/api-schema/evaluation';
 import { DatasetStatus } from '@cozeloop/api-schema/data';
 
@@ -56,6 +58,7 @@ const getEvaluatorSubmitValues = (
 ) => {
   const evaluatorVersionIds: EvaluatorValues['evaluator_version_ids'] = [];
   const evaluatorFieldMapping: EvaluatorValues['evaluator_field_mapping'] = [];
+  const evaluatorIdVersionList: EvaluatorIDVersionItem[] = [];
 
   evaluatorProList?.forEach(evaluatorPro => {
     const versionId = evaluatorPro?.evaluatorVersion?.id;
@@ -68,11 +71,23 @@ const getEvaluatorSubmitValues = (
     if (versionId) {
       evaluatorVersionIds.push(versionId);
 
+      const versionItem = {
+        evaluator_id: evaluatorPro?.evaluator?.evaluator_id,
+        version: evaluatorPro?.evaluator?.builtin
+          ? EvaluatorVersionType.BuiltinVisible
+          : evaluatorPro?.evaluatorVersion?.version,
+      };
+
+      // 2025/11/04适配预置评估器, 预置评估器的version_id为'0'
       const evaluatorFieldMappingItem: Required<EvaluatorFieldMapping> = {
-        evaluator_version_id: versionId,
+        evaluator_version_id: '0',
+        // evaluator_version_id: versionId,
+        evaluator_id_version_item: versionItem,
         from_eval_set: [],
         from_target: [],
       };
+
+      evaluatorIdVersionList.push(versionItem);
 
       // code 评估器, 字段映射固定
       if (evaluatorPro?.evaluator?.evaluator_type === EvaluatorType.Code) {
@@ -116,8 +131,10 @@ const getEvaluatorSubmitValues = (
     }
   });
 
+  // 适配预置评估器
   return {
-    evaluator_version_ids: evaluatorVersionIds,
+    evaluator_version_ids: [],
+    evaluator_id_version_list: evaluatorIdVersionList,
     evaluator_field_mapping: evaluatorFieldMapping,
   };
 };
@@ -236,8 +253,10 @@ function experiment2evaluatorProList(experiment: Experiment) {
       },
       evaluatorVersion: {
         ...(evaluator.current_version ?? {}),
-        label: evaluator.current_version?.version,
-        value: evaluator.current_version?.id,
+        label: evaluator?.builtin
+          ? 'latest'
+          : evaluator.current_version?.version,
+        value: evaluator?.builtin ? 'latest' : evaluator.current_version?.id,
       },
       evaluatorVersionDetail: evaluator.current_version,
       evaluatorMapping,
@@ -326,6 +345,7 @@ export const getSubmitValues = (
   // 服务端参数对齐, 如果选择了评测对象, 则需要设置 create_eval_target_param, 否则不设置
   if (values?.evalTargetType) {
     result.create_eval_target_param = {
+      ...clonedValues?.create_eval_target_param,
       eval_target_type: clonedValues?.evalTargetType as EvalTargetType,
       source_target_id: clonedValues?.evalTarget,
       source_target_version: values?.evalTargetVersion,

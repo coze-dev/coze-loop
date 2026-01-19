@@ -104,6 +104,20 @@ func (p *CreatePromptRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 21:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField21(buf[offset:])
@@ -206,6 +220,20 @@ func (p *CreatePromptRequest) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreatePromptRequest) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *prompt.PromptType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PromptType = _field
+	return offset, nil
+}
+
 func (p *CreatePromptRequest) FastReadField21(buf []byte) (int, error) {
 	offset := 0
 	_field := prompt.NewPromptDetail()
@@ -241,6 +269,7 @@ func (p *CreatePromptRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField13(buf[offset:], w)
+		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -255,6 +284,7 @@ func (p *CreatePromptRequest) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
 		l += p.field21Length()
 		l += p.field255Length()
 	}
@@ -294,6 +324,15 @@ func (p *CreatePromptRequest) fastWriteField13(buf []byte, w thrift.NocopyWriter
 	if p.IsSetPromptDescription() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 13)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PromptDescription)
+	}
+	return offset
+}
+
+func (p *CreatePromptRequest) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPromptType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 14)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PromptType)
 	}
 	return offset
 }
@@ -352,6 +391,15 @@ func (p *CreatePromptRequest) field13Length() int {
 	return l
 }
 
+func (p *CreatePromptRequest) field14Length() int {
+	l := 0
+	if p.IsSetPromptType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.PromptType)
+	}
+	return l
+}
+
 func (p *CreatePromptRequest) field21Length() int {
 	l := 0
 	if p.IsSetDraftDetail() {
@@ -403,6 +451,11 @@ func (p *CreatePromptRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.PromptDescription)
 		}
 		p.PromptDescription = &tmp
+	}
+
+	if src.PromptType != nil {
+		tmp := *src.PromptType
+		p.PromptType = &tmp
 	}
 
 	var _draftDetail *prompt.PromptDetail
@@ -1558,6 +1611,20 @@ func (p *GetPromptRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 32:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField32(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -1674,6 +1741,20 @@ func (p *GetPromptRequest) FastReadField31(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetPromptRequest) FastReadField32(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ExpandSnippet = _field
+	return offset, nil
+}
+
 func (p *GetPromptRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -1698,6 +1779,7 @@ func (p *GetPromptRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField31(buf[offset:], w)
+		offset += p.fastWriteField32(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -1714,6 +1796,7 @@ func (p *GetPromptRequest) BLength() int {
 		l += p.field12Length()
 		l += p.field21Length()
 		l += p.field31Length()
+		l += p.field32Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -1770,6 +1853,15 @@ func (p *GetPromptRequest) fastWriteField31(buf []byte, w thrift.NocopyWriter) i
 	if p.IsSetWithDefaultConfig() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 31)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithDefaultConfig)
+	}
+	return offset
+}
+
+func (p *GetPromptRequest) fastWriteField32(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExpandSnippet() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 32)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.ExpandSnippet)
 	}
 	return offset
 }
@@ -1837,6 +1929,15 @@ func (p *GetPromptRequest) field31Length() int {
 	return l
 }
 
+func (p *GetPromptRequest) field32Length() int {
+	l := 0
+	if p.IsSetExpandSnippet() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *GetPromptRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -1885,6 +1986,11 @@ func (p *GetPromptRequest) DeepCopy(s interface{}) error {
 		p.WithDefaultConfig = &tmp
 	}
 
+	if src.ExpandSnippet != nil {
+		tmp := *src.ExpandSnippet
+		p.ExpandSnippet = &tmp
+	}
+
 	var _base *base.Base
 	if src.Base != nil {
 		_base = &base.Base{}
@@ -1931,6 +2037,20 @@ func (p *GetPromptResponse) FastRead(buf []byte) (int, error) {
 		case 11:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 12:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField12(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -1998,6 +2118,20 @@ func (p *GetPromptResponse) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetPromptResponse) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.TotalParentReferences = _field
+	return offset, nil
+}
+
 func (p *GetPromptResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -2017,6 +2151,7 @@ func (p *GetPromptResponse) FastWrite(buf []byte) int {
 func (p *GetPromptResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -2030,6 +2165,7 @@ func (p *GetPromptResponse) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field11Length()
+		l += p.field12Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -2050,6 +2186,15 @@ func (p *GetPromptResponse) fastWriteField11(buf []byte, w thrift.NocopyWriter) 
 	if p.IsSetDefaultConfig() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
 		offset += p.DefaultConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *GetPromptResponse) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTotalParentReferences() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 12)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.TotalParentReferences)
 	}
 	return offset
 }
@@ -2077,6 +2222,15 @@ func (p *GetPromptResponse) field11Length() int {
 	if p.IsSetDefaultConfig() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.DefaultConfig.BLength()
+	}
+	return l
+}
+
+func (p *GetPromptResponse) field12Length() int {
+	l := 0
+	if p.IsSetTotalParentReferences() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -2113,6 +2267,11 @@ func (p *GetPromptResponse) DeepCopy(s interface{}) error {
 		}
 	}
 	p.DefaultConfig = _defaultConfig
+
+	if src.TotalParentReferences != nil {
+		tmp := *src.TotalParentReferences
+		p.TotalParentReferences = &tmp
+	}
 
 	var _baseResp *base.BaseResp
 	if src.BaseResp != nil {
@@ -3007,6 +3166,20 @@ func (p *ListPromptRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 14:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField14(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 127:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField127(buf[offset:])
@@ -3161,6 +3334,30 @@ func (p *ListPromptRequest) FastReadField13(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListPromptRequest) FastReadField14(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]prompt.PromptType, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem prompt.PromptType
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.FilterPromptTypes = _field
+	return offset, nil
+}
+
 func (p *ListPromptRequest) FastReadField127(buf []byte) (int, error) {
 	offset := 0
 
@@ -3243,6 +3440,7 @@ func (p *ListPromptRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 		offset += p.fastWriteField130(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
+		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField129(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -3257,6 +3455,7 @@ func (p *ListPromptRequest) BLength() int {
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field13Length()
+		l += p.field14Length()
 		l += p.field127Length()
 		l += p.field128Length()
 		l += p.field129Length()
@@ -3306,6 +3505,22 @@ func (p *ListPromptRequest) fastWriteField13(buf []byte, w thrift.NocopyWriter) 
 	if p.IsSetCommittedOnly() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 13)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.CommittedOnly)
+	}
+	return offset
+}
+
+func (p *ListPromptRequest) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilterPromptTypes() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 14)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.FilterPromptTypes {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
 	}
 	return offset
 }
@@ -3395,6 +3610,19 @@ func (p *ListPromptRequest) field13Length() int {
 	return l
 }
 
+func (p *ListPromptRequest) field14Length() int {
+	l := 0
+	if p.IsSetFilterPromptTypes() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.FilterPromptTypes {
+			_ = v
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
 func (p *ListPromptRequest) field127Length() int {
 	l := 0
 	if p.IsSetPageNum() {
@@ -3473,6 +3701,15 @@ func (p *ListPromptRequest) DeepCopy(s interface{}) error {
 	if src.CommittedOnly != nil {
 		tmp := *src.CommittedOnly
 		p.CommittedOnly = &tmp
+	}
+
+	if src.FilterPromptTypes != nil {
+		p.FilterPromptTypes = make([]prompt.PromptType, 0, len(src.FilterPromptTypes))
+		for _, elem := range src.FilterPromptTypes {
+			var _elem prompt.PromptType
+			_elem = elem
+			p.FilterPromptTypes = append(p.FilterPromptTypes, _elem)
+		}
 	}
 
 	if src.PageNum != nil {
@@ -5167,6 +5404,20 @@ func (p *ListCommitRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 127:
 			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField127(buf[offset:])
@@ -5255,6 +5506,20 @@ func (p *ListCommitRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListCommitRequest) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WithCommitDetail = _field
+	return offset, nil
+}
+
 func (p *ListCommitRequest) FastReadField127(buf []byte) (int, error) {
 	offset := 0
 
@@ -5317,6 +5582,7 @@ func (p *ListCommitRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField127(buf[offset:], w)
 		offset += p.fastWriteField129(buf[offset:], w)
 		offset += p.fastWriteField128(buf[offset:], w)
@@ -5330,6 +5596,7 @@ func (p *ListCommitRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field127Length()
 		l += p.field128Length()
 		l += p.field129Length()
@@ -5344,6 +5611,15 @@ func (p *ListCommitRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) i
 	if p.IsSetPromptID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.PromptID)
+	}
+	return offset
+}
+
+func (p *ListCommitRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWithCommitDetail() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 2)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithCommitDetail)
 	}
 	return offset
 }
@@ -5393,6 +5669,15 @@ func (p *ListCommitRequest) field1Length() int {
 	return l
 }
 
+func (p *ListCommitRequest) field2Length() int {
+	l := 0
+	if p.IsSetWithCommitDetail() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ListCommitRequest) field127Length() int {
 	l := 0
 	if p.IsSetPageSize() {
@@ -5438,6 +5723,11 @@ func (p *ListCommitRequest) DeepCopy(s interface{}) error {
 	if src.PromptID != nil {
 		tmp := *src.PromptID
 		p.PromptID = &tmp
+	}
+
+	if src.WithCommitDetail != nil {
+		tmp := *src.WithCommitDetail
+		p.WithCommitDetail = &tmp
 	}
 
 	if src.PageSize != nil {
@@ -5504,6 +5794,34 @@ func (p *ListCommitResponse) FastRead(buf []byte) (int, error) {
 		case 2:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField4(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -5657,6 +5975,71 @@ func (p *ListCommitResponse) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListCommitResponse) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]int32, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		var _val int32
+		if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	p.ParentReferencesMapping = _field
+	return offset, nil
+}
+
+func (p *ListCommitResponse) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]*prompt.PromptDetail, size)
+	values := make([]prompt.PromptDetail, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		_val := &values[i]
+		_val.InitDefault()
+		if l, err := _val.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field[_key] = _val
+	}
+	p.PromptCommitDetailMapping = _field
+	return offset, nil
+}
+
 func (p *ListCommitResponse) FastReadField11(buf []byte) (int, error) {
 	offset := 0
 
@@ -5732,6 +6115,8 @@ func (p *ListCommitResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 		offset += p.fastWriteField127(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField128(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -5745,6 +6130,8 @@ func (p *ListCommitResponse) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
 		l += p.field11Length()
 		l += p.field127Length()
 		l += p.field128Length()
@@ -5790,6 +6177,40 @@ func (p *ListCommitResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) 
 			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 		}
 		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
+	}
+	return offset
+}
+
+func (p *ListCommitResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetParentReferencesMapping() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 3)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.ParentReferencesMapping {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += thrift.Binary.WriteI32(buf[offset:], v)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.I32, length)
+	}
+	return offset
+}
+
+func (p *ListCommitResponse) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPromptCommitDetailMapping() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 4)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.PromptCommitDetailMapping {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -5864,6 +6285,36 @@ func (p *ListCommitResponse) field2Length() int {
 				_ = v
 				l += v.BLength()
 			}
+		}
+	}
+	return l
+}
+
+func (p *ListCommitResponse) field3Length() int {
+	l := 0
+	if p.IsSetParentReferencesMapping() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.ParentReferencesMapping {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.I32Length()
+		}
+	}
+	return l
+}
+
+func (p *ListCommitResponse) field4Length() int {
+	l := 0
+	if p.IsSetPromptCommitDetailMapping() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.PromptCommitDetailMapping {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += v.BLength()
 		}
 	}
 	return l
@@ -5955,6 +6406,41 @@ func (p *ListCommitResponse) DeepCopy(s interface{}) error {
 			}
 
 			p.CommitVersionLabelMapping[_key] = _val
+		}
+	}
+
+	if src.ParentReferencesMapping != nil {
+		p.ParentReferencesMapping = make(map[string]int32, len(src.ParentReferencesMapping))
+		for key, val := range src.ParentReferencesMapping {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val int32
+			_val = val
+
+			p.ParentReferencesMapping[_key] = _val
+		}
+	}
+
+	if src.PromptCommitDetailMapping != nil {
+		p.PromptCommitDetailMapping = make(map[string]*prompt.PromptDetail, len(src.PromptCommitDetailMapping))
+		for key, val := range src.PromptCommitDetailMapping {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val *prompt.PromptDetail
+			if val != nil {
+				_val = &prompt.PromptDetail{}
+				if err := _val.DeepCopy(val); err != nil {
+					return err
+				}
+			}
+
+			p.PromptCommitDetailMapping[_key] = _val
 		}
 	}
 
@@ -8480,6 +8966,560 @@ func (p *UpdateCommitLabelsResponse) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *ListParentPromptRequest) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField255(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListParentPromptRequest[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *ListParentPromptRequest) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return offset, nil
+}
+
+func (p *ListParentPromptRequest) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PromptID = _field
+	return offset, nil
+}
+
+func (p *ListParentPromptRequest) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.CommitVersions = _field
+	return offset, nil
+}
+
+func (p *ListParentPromptRequest) FastReadField255(buf []byte) (int, error) {
+	offset := 0
+	_field := base.NewBase()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Base = _field
+	return offset, nil
+}
+
+func (p *ListParentPromptRequest) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *ListParentPromptRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField255(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *ListParentPromptRequest) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field255Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *ListParentPromptRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWorkspaceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkspaceID)
+	}
+	return offset
+}
+
+func (p *ListParentPromptRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPromptID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.PromptID)
+	}
+	return offset
+}
+
+func (p *ListParentPromptRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCommitVersions() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 3)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.CommitVersions {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+	}
+	return offset
+}
+
+func (p *ListParentPromptRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBase() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
+		offset += p.Base.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ListParentPromptRequest) field1Length() int {
+	l := 0
+	if p.IsSetWorkspaceID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ListParentPromptRequest) field2Length() int {
+	l := 0
+	if p.IsSetPromptID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ListParentPromptRequest) field3Length() int {
+	l := 0
+	if p.IsSetCommitVersions() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.CommitVersions {
+			_ = v
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
+func (p *ListParentPromptRequest) field255Length() int {
+	l := 0
+	if p.IsSetBase() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Base.BLength()
+	}
+	return l
+}
+
+func (p *ListParentPromptRequest) DeepCopy(s interface{}) error {
+	src, ok := s.(*ListParentPromptRequest)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.WorkspaceID != nil {
+		tmp := *src.WorkspaceID
+		p.WorkspaceID = &tmp
+	}
+
+	if src.PromptID != nil {
+		tmp := *src.PromptID
+		p.PromptID = &tmp
+	}
+
+	if src.CommitVersions != nil {
+		p.CommitVersions = make([]string, 0, len(src.CommitVersions))
+		for _, elem := range src.CommitVersions {
+			var _elem string
+			if elem != "" {
+				_elem = kutils.StringDeepCopy(elem)
+			}
+			p.CommitVersions = append(p.CommitVersions, _elem)
+		}
+	}
+
+	var _base *base.Base
+	if src.Base != nil {
+		_base = &base.Base{}
+		if err := _base.DeepCopy(src.Base); err != nil {
+			return err
+		}
+	}
+	p.Base = _base
+
+	return nil
+}
+
+func (p *ListParentPromptResponse) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField255(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListParentPromptResponse[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *ListParentPromptResponse) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string][]*prompt.PromptCommitVersions, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			return offset, err
+		}
+		_val := make([]*prompt.PromptCommitVersions, 0, size)
+		values := make([]prompt.PromptCommitVersions, size)
+		for i := 0; i < size; i++ {
+			_elem := &values[i]
+			_elem.InitDefault()
+			if l, err := _elem.FastRead(buf[offset:]); err != nil {
+				return offset, err
+			} else {
+				offset += l
+			}
+
+			_val = append(_val, _elem)
+		}
+
+		_field[_key] = _val
+	}
+	p.ParentPrompts = _field
+	return offset, nil
+}
+
+func (p *ListParentPromptResponse) FastReadField255(buf []byte) (int, error) {
+	offset := 0
+	_field := base.NewBaseResp()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.BaseResp = _field
+	return offset, nil
+}
+
+func (p *ListParentPromptResponse) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *ListParentPromptResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField255(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *ListParentPromptResponse) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field255Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *ListParentPromptResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetParentPrompts() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 1)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.ParentPrompts {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			listBeginOffset := offset
+			offset += thrift.Binary.ListBeginLength()
+			var length int
+			for _, v := range v {
+				length++
+				offset += v.FastWriteNocopy(buf[offset:], w)
+			}
+			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
+	}
+	return offset
+}
+
+func (p *ListParentPromptResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetBaseResp() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
+		offset += p.BaseResp.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ListParentPromptResponse) field1Length() int {
+	l := 0
+	if p.IsSetParentPrompts() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.ParentPrompts {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.ListBeginLength()
+			for _, v := range v {
+				_ = v
+				l += v.BLength()
+			}
+		}
+	}
+	return l
+}
+
+func (p *ListParentPromptResponse) field255Length() int {
+	l := 0
+	if p.IsSetBaseResp() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.BaseResp.BLength()
+	}
+	return l
+}
+
+func (p *ListParentPromptResponse) DeepCopy(s interface{}) error {
+	src, ok := s.(*ListParentPromptResponse)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.ParentPrompts != nil {
+		p.ParentPrompts = make(map[string][]*prompt.PromptCommitVersions, len(src.ParentPrompts))
+		for key, val := range src.ParentPrompts {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val []*prompt.PromptCommitVersions
+			if val != nil {
+				_val = make([]*prompt.PromptCommitVersions, 0, len(val))
+				for _, elem := range val {
+					var _elem *prompt.PromptCommitVersions
+					if elem != nil {
+						_elem = &prompt.PromptCommitVersions{}
+						if err := _elem.DeepCopy(elem); err != nil {
+							return err
+						}
+					}
+
+					_val = append(_val, _elem)
+				}
+			}
+
+			p.ParentPrompts[_key] = _val
+		}
+	}
+
+	var _baseResp *base.BaseResp
+	if src.BaseResp != nil {
+		_baseResp = &base.BaseResp{}
+		if err := _baseResp.DeepCopy(src.BaseResp); err != nil {
+			return err
+		}
+	}
+	p.BaseResp = _baseResp
+
+	return nil
+}
+
 func (p *PromptManageServiceCreatePromptArgs) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -9875,6 +10915,240 @@ func (p *PromptManageServiceListPromptResult) DeepCopy(s interface{}) error {
 	var _success *ListPromptResponse
 	if src.Success != nil {
 		_success = &ListPromptResponse{}
+		if err := _success.DeepCopy(src.Success); err != nil {
+			return err
+		}
+	}
+	p.Success = _success
+
+	return nil
+}
+
+func (p *PromptManageServiceListParentPromptArgs) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceListParentPromptArgs[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *PromptManageServiceListParentPromptArgs) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+	_field := NewListParentPromptRequest()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Request = _field
+	return offset, nil
+}
+
+func (p *PromptManageServiceListParentPromptArgs) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *PromptManageServiceListParentPromptArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *PromptManageServiceListParentPromptArgs) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *PromptManageServiceListParentPromptArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
+	offset += p.Request.FastWriteNocopy(buf[offset:], w)
+	return offset
+}
+
+func (p *PromptManageServiceListParentPromptArgs) field1Length() int {
+	l := 0
+	l += thrift.Binary.FieldBeginLength()
+	l += p.Request.BLength()
+	return l
+}
+
+func (p *PromptManageServiceListParentPromptArgs) DeepCopy(s interface{}) error {
+	src, ok := s.(*PromptManageServiceListParentPromptArgs)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _request *ListParentPromptRequest
+	if src.Request != nil {
+		_request = &ListParentPromptRequest{}
+		if err := _request.DeepCopy(src.Request); err != nil {
+			return err
+		}
+	}
+	p.Request = _request
+
+	return nil
+}
+
+func (p *PromptManageServiceListParentPromptResult) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField0(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceListParentPromptResult[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *PromptManageServiceListParentPromptResult) FastReadField0(buf []byte) (int, error) {
+	offset := 0
+	_field := NewListParentPromptResponse()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Success = _field
+	return offset, nil
+}
+
+func (p *PromptManageServiceListParentPromptResult) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *PromptManageServiceListParentPromptResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField0(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *PromptManageServiceListParentPromptResult) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field0Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *PromptManageServiceListParentPromptResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuccess() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
+		offset += p.Success.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *PromptManageServiceListParentPromptResult) field0Length() int {
+	l := 0
+	if p.IsSetSuccess() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Success.BLength()
+	}
+	return l
+}
+
+func (p *PromptManageServiceListParentPromptResult) DeepCopy(s interface{}) error {
+	src, ok := s.(*PromptManageServiceListParentPromptResult)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _success *ListParentPromptResponse
+	if src.Success != nil {
+		_success = &ListParentPromptResponse{}
 		if err := _success.DeepCopy(src.Success); err != nil {
 			return err
 		}
@@ -12035,6 +13309,14 @@ func (p *PromptManageServiceListPromptArgs) GetFirstArgument() interface{} {
 }
 
 func (p *PromptManageServiceListPromptResult) GetResult() interface{} {
+	return p.Success
+}
+
+func (p *PromptManageServiceListParentPromptArgs) GetFirstArgument() interface{} {
+	return p.Request
+}
+
+func (p *PromptManageServiceListParentPromptResult) GetResult() interface{} {
 	return p.Success
 }
 

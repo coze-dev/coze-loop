@@ -480,7 +480,7 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 					captured.add(req)
 					return &service.QueryMetricsResp{
 						Metrics: map[string]*entity.Metric{
-							entity.MetricNameModelNamePie: {
+							entity.MetricNameModelTotalCountPie: {
 								Pie: map[string]string{
 									`{"name":"modelA"}`: "1",
 									`{"name":"modelB"}`: "2",
@@ -510,10 +510,9 @@ func TestMetricApplication_GetDrillDownValues(t *testing.T) {
 				if f.captured != nil {
 					captured := f.captured.snapshot()
 					if assert.Len(t, captured, 1) {
-						expectedStart := (10 * 24 * time.Hour.Milliseconds()) - 7*24*time.Hour.Milliseconds()
-						assert.Equal(t, expectedStart, captured[0].StartTime)
+						assert.Equal(t, int64(0), captured[0].StartTime)
 						assert.Equal(t, 10*24*time.Hour.Milliseconds(), captured[0].EndTime)
-						assert.Equal(t, []string{entity.MetricNameModelNamePie}, captured[0].MetricsNames)
+						assert.Equal(t, []string{entity.MetricNameModelTotalCountPie}, captured[0].MetricsNames)
 					}
 				}
 			},

@@ -40,7 +40,7 @@ func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, 
 		e.CheckConnector,
 	}
 
-	if expt.ExptType == entity.ExptType_Offline {
+	if expt.ExptType != entity.ExptType_Online {
 		if opt.CheckBenefit {
 			checkers = append(checkers, e.CheckBenefit)
 		}
@@ -57,20 +57,18 @@ func (e *ExptMangerImpl) CheckRun(ctx context.Context, expt *entity.Experiment, 
 
 func (e *ExptMangerImpl) CheckEvalSet(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
 	switch expt.ExptType {
-	case entity.ExptType_Offline:
+	case entity.ExptType_Online:
+		if expt.EvalSet == nil {
+			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with empty EvalSet: %d", expt.EvalSetID)))
+		}
+	default:
 		if expt.EvalSetVersionID == 0 || expt.EvalSet == nil || expt.EvalSet.EvaluationSetVersion == nil {
 			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with invalid EvalSetVersion %d", expt.EvalSetVersionID)))
 		}
 		if expt.EvalSet.EvaluationSetVersion.ItemCount <= 0 {
 			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with empty EvalSetVersion %d", expt.EvalSetVersionID)))
 		}
-	case entity.ExptType_Online:
-		if expt.EvalSet == nil {
-			return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("with empty EvalSet: %d", expt.EvalSetID)))
-		}
-	default:
 	}
-
 	return nil
 }
 
@@ -86,7 +84,7 @@ func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment,
 		ReqID:     encoding.Encode(ctx, data),
 	})
 	if err != nil {
-		logs.CtxError(ctx, "audit: failed to audit, err=%v", err) // 审核服务不可用，默认通过
+		logs.CtxError(ctx, "audit: failed to audit, err=%v", err) // Audit service unavailable, pass by default
 	}
 	if record.AuditStatus == audit.AuditStatus_Rejected {
 		return errorx.NewByCode(errno.RiskContentDetectedCode)
@@ -120,8 +118,7 @@ func (e *ExptMangerImpl) CheckConnector(ctx context.Context, expt *entity.Experi
 }
 
 func (e *ExptMangerImpl) checkTargetConnector(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
-	if expt.Target == nil ||
-		expt.Target.EvalTargetType == entity.EvalTargetTypeLoopTrace {
+	if expt.Target == nil || expt.ExptType == entity.ExptType_Online {
 		return nil
 	}
 
@@ -256,6 +253,7 @@ func (e *ExptMangerImpl) CheckBenefit(ctx context.Context, expt *entity.Experime
 	}
 
 	if result.IsFreeEvaluate != nil && *result.IsFreeEvaluate {
+		expt.CreditCost = entity.CreditCostFree
 		if err := e.exptRepo.Update(ctx, &entity.Experiment{
 			ID:         expt.ID,
 			SpaceID:    expt.SpaceID,
@@ -543,12 +541,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 	}
 
 	if !opt.NoAggrCalculate {
-		if err = e.publisher.PublishExptAggrCalculateEvent(ctx, []*entity.AggrCalculateEvent{
-			{
-				ExperimentID:  exptID,
-				SpaceID:       spaceID,
-				CalculateMode: entity.CreateAllFields,
-			},
+		if err = e.exptAggrResultService.PublishExptAggrResultEvent(ctx, &entity.AggrCalculateEvent{
+			ExperimentID:  exptID,
+			SpaceID:       spaceID,
+			CalculateMode: entity.CreateAllFields,
 		}, gptr.Of(time.Second*3)); err != nil {
 			logs.CtxError(ctx, "PublishExptAggrCalculateEvent fail, expt_id: %v, err: %v", exptID, err)
 		}
@@ -643,6 +639,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 			ItemID:    item.ItemID,
 			ItemIdx:   itemIdx,
 			Status:    entity.ItemRunState_Queueing,
+			Ext:       invokeExptReq.Ext,
 		}
 		eirs = append(eirs, eir)
 		itemIdx++
@@ -664,7 +661,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		}
 	}
 
-	// 创建result
+	// Create result
 	if err := e.createItemTurnResults(ctx, eirs, etrs); err != nil {
 		return err
 	}
@@ -673,7 +670,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 
 	logs.CtxInfo(ctx, "ExptAppendExec.Append ListEvaluationSetItem done, expt_id: %v, itemCnt: %v, total: %v", invokeExptReq.ExptID, itemCnt, total)
 
-	// 更新stats
+	// Update stats
 	if err = e.statsRepo.ArithOperateCount(ctx, invokeExptReq.ExptID, invokeExptReq.SpaceID, &entity.StatsCntArithOp{
 		OpStatusCnt: map[entity.ItemRunState]int{
 			entity.ItemRunState_Queueing: itemCnt,

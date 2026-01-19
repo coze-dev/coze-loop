@@ -631,7 +631,7 @@ func (e EvalTargetApplicationImpl) AsyncDebugEvalTarget(ctx context.Context, req
 
 		recordID := record.ID
 		if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(recordID, 10), &entity.EvalAsyncCtx{
-			TurnID:      recordID,
+			RecordID:    recordID,
 			AsyncUnixMS: startTime.UnixMilli(),
 			Session:     &entity.Session{UserID: userID},
 			Callee:      callee,

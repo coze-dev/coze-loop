@@ -13,15 +13,18 @@ export function EvaluatorTestRunResult({
   evaluatorResult,
   errorMsg,
   className,
+  containerStyle,
 }: {
   errorMsg?: string;
   evaluatorResult: EvaluatorResult | undefined;
   className?: string;
+  containerStyle?: React.CSSProperties;
 }) {
   const isError = Boolean(errorMsg);
   return (
     <div
       className={classNames('py-6 px-8 rounded-[12px] coz-bg-plus', className)}
+      style={containerStyle}
     >
       <div
         className={classNames(
@@ -42,7 +45,7 @@ export function EvaluatorTestRunResult({
             })}
           </span>
           <span className="coz-fg-dim text-[13px] ml-2">
-            {I18n.t('scores_only_previews_not_actual_results')}
+            {I18n.t('score_only_for_preview')}
           </span>
         </div>
       ) : null}
@@ -54,7 +57,7 @@ export function EvaluatorTestRunResult({
         }}
       >
         {errorMsg ||
-          `${I18n.t('reason')}：${evaluatorResult?.reasoning ?? '-'}`}
+          `${I18n.t('evaluate_reason')}${evaluatorResult?.reasoning ?? '-'}`}
       </Typography.Text>
     </div>
   );
