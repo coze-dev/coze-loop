@@ -14,10 +14,10 @@ include "domain_openapi/evaluator.thrift"
 
 // 1.1 创建评测集
 struct CreateEvaluationSetOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string name (vt.min_size = "1", vt.max_size = "255")
-    3: optional string description (vt.max_size = "2048")
-    4: optional eval_set.EvaluationSetSchema evaluation_set_schema
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional string name (api.body="name", vt.min_size = "1", vt.max_size = "255")
+    3: optional string description (api.body="description", vt.max_size = "2048")
+    4: optional eval_set.EvaluationSetSchema evaluation_set_schema (api.body="evaluation_set_schema")
 
     255: optional base.Base Base
 }
@@ -36,7 +36,7 @@ struct CreateEvaluationSetOpenAPIData {
 
 // 1.2 获取评测集详情
 struct GetEvaluationSetOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
     255: optional base.Base Base
@@ -56,11 +56,11 @@ struct GetEvaluationSetOpenAPIData {
 
 // 更新评测集详情
 struct UpdateEvaluationSetOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
-    3: optional string name (vt.min_size = "1", vt.max_size = "255"),
-    4: optional string description (vt.max_size = "2048"),
+    3: optional string name (api.body="name", vt.min_size = "1", vt.max_size = "255"),
+    4: optional string description (api.body="description", vt.max_size = "2048"),
 
     255: optional base.Base Base
 }
@@ -78,7 +78,7 @@ struct UpdateEvaluationSetOpenAPIData {
 
 // 删除评测集
 struct DeleteEvaluationSetOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
     255: optional base.Base Base
@@ -97,13 +97,13 @@ struct DeleteEvaluationSetOpenAPIData {
 
 // 1.3 查询评测集列表
 struct ListEvaluationSetsOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string name
-    3: optional list<string> creators
-    4: optional list<i64> evaluation_set_ids (api.js_conv="true", go.tag='json:"evaluation_set_ids"'),
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional string name (api.query="name")
+    3: optional list<string> creators (api.query="creators")
+    4: optional list<i64> evaluation_set_ids (api.query="evaluation_set_ids", api.js_conv="true", go.tag='json:"evaluation_set_ids"'),
 
-    100: optional string page_token
-    101: optional i32 page_size (vt.gt = "0", vt.le = "200")
+    100: optional string page_token (api.query="page_token")
+    101: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200")
 
     255: optional base.Base Base
 }
@@ -126,10 +126,10 @@ struct ListEvaluationSetsOpenAPIData {
 
 // 1.4 创建评测集版本
 struct CreateEvaluationSetVersionOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"')
-    3: optional string version (vt.min_size = "1", vt.max_size="50")
-    4: optional string description (vt.max_size = "400")
+    3: optional string version (api.body="version", vt.min_size = "1", vt.max_size="50")
+    4: optional string description (api.body="description", vt.max_size = "400")
 
     255: optional base.Base Base
 }
@@ -147,12 +147,12 @@ struct CreateEvaluationSetVersionOpenAPIData {
 }
 
 struct ListEvaluationSetVersionsOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"'),
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
-    3: optional string version_like // 根据版本号模糊匹配
+    3: optional string version_like (api.query="version_like") // 根据版本号模糊匹配
 
-    100: optional i32 page_size (vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20
-    101: optional string page_token
+    100: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20
+    101: optional string page_token (api.query="page_token")
 
     255: optional base.Base Base
 }
@@ -174,11 +174,11 @@ struct ListEvaluationSetVersionsOpenAPIData {
 
 // 1.5 批量添加评测集数据
 struct BatchCreateEvaluationSetItemsOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv="true", go.tag='json:"evaluation_set_id"')
-    3: optional list<eval_set.EvaluationSetItem> items (vt.min_size='1',vt.max_size='100')
-    4: optional bool is_skip_invalid_items// items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
-    5: optional bool is_allow_partial_add// 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
+    3: optional list<eval_set.EvaluationSetItem> items (api.body="items", vt.min_size='1',vt.max_size='100')
+    4: optional bool is_skip_invalid_items (api.body="is_skip_invalid_items")// items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
+    5: optional bool is_allow_partial_add (api.body="is_allow_partial_add")// 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
 
     255: optional base.Base Base
 }
@@ -199,10 +199,10 @@ struct BatchCreateEvaluationSetItemsOpenAPIData {
 
 // 1.6 批量更新评测集数据
 struct BatchUpdateEvaluationSetItemsOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv="true", go.tag='json:"evaluation_set_id"')
-    3: optional list<eval_set.EvaluationSetItem> items (vt.min_size='1',vt.max_size='100')
-    4: optional bool is_skip_invalid_items
+    3: optional list<eval_set.EvaluationSetItem> items (api.body="items", vt.min_size='1',vt.max_size='100')
+    4: optional bool is_skip_invalid_items (api.body="is_skip_invalid_items")
 
     255: optional base.Base Base
 }
@@ -222,10 +222,10 @@ struct BatchUpdateEvaluationSetItemsOpenAPIData {
 
 // 1.7 批量删除评测集数据
 struct BatchDeleteEvaluationSetItemsOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"')
-    3: optional list<i64> item_ids (api.js_conv="true", go.tag='json:"item_ids"')
-    4: optional bool is_delete_all
+    3: optional list<i64> item_ids (api.body="item_ids", api.js_conv="true", go.tag='json:"item_ids"')
+    4: optional bool is_delete_all (api.body="is_delete_all")
 
     255: optional base.Base Base
 }
@@ -239,12 +239,12 @@ struct BatchDeleteEvaluationSetItemsOApiResponse {
 
 // 1.9 查询评测集特定版本数据
 struct ListEvaluationSetVersionItemsOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"')
-    3: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"')
+    3: optional i64 version_id (api.query="version_id", api.js_conv="true", go.tag='json:"version_id"')
 
-    100: optional string page_token
-    101: optional i32 page_size (vt.gt = "0", vt.le = "200")
+    100: optional string page_token (api.query="page_token")
+    101: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200")
 
     255: optional base.Base Base
 }
@@ -284,13 +284,13 @@ struct ListEvaluationSetVersionItemsOpenAPIData {
 
 
 struct UpdateEvaluationSetSchemaOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
     // fieldSchema.key 为空时：插入新的一列
     // fieldSchema.key 不为空时：更新对应的列
     // 删除（不支持恢复数据）的情况下，不需要写入入参的 field list；
-    10: optional list<eval_set.FieldSchema> fields,
+    10: optional list<eval_set.FieldSchema> fields (api.body="fields"),
 
     255: optional base.Base Base
 }
@@ -330,21 +330,21 @@ struct ReportEvalTargetInvokeResultResponse {
 // 3.1 创建评测实验
 struct SubmitExperimentOApiRequest {
     // 基础信息
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional string name
-    3: optional string description
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional string name (api.body = 'name')
+    3: optional string description (api.body = 'description')
 
     // 三元组信息
-    4: optional SubmitExperimentEvalSetParam eval_set_param
-    5: optional list<SubmitExperimentEvaluatorParam> evaluator_params
-    6: optional SubmitExperimentEvalTargetParam eval_target_param
+    4: optional SubmitExperimentEvalSetParam eval_set_param (api.body = 'eval_set_param')
+    5: optional list<SubmitExperimentEvaluatorParam> evaluator_params (api.body = 'evaluator_params')
+    6: optional SubmitExperimentEvalTargetParam eval_target_param (api.body = 'eval_target_param')
 
-    7: optional experiment.TargetFieldMapping target_field_mapping
-    8: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping
+    7: optional experiment.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
+    8: optional list<experiment.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
 
     // 运行信息
-    20: optional i32 item_concur_num
-    22: optional common.RuntimeParam target_runtime_param
+    20: optional i32 item_concur_num (api.body = 'item_concur_num')
+    22: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
 
     255: optional base.Base Base
 }
@@ -385,7 +385,7 @@ struct SubmitExperimentOpenAPIData {
 
 // 3.2 获取评测实验详情
 struct GetExperimentsOApiRequest {
-    1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.query='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional i64 experiment_id (api.path='experiment_id',api.js_conv='true', go.tag='json:"experiment_id"')
 
     255: optional base.Base Base
@@ -407,11 +407,11 @@ struct GetExperimentsOpenAPIDataData {
 
 // 3.3 获取评测实验结果
 struct ListExperimentResultOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
 
-    100: optional i32 page_num
-    101: optional i32 page_size
+    100: optional i32 page_num (api.body = 'page_num')
+    101: optional i32 page_size (api.body = 'page_size')
 
     255: optional base.Base Base
 }
@@ -435,7 +435,7 @@ struct ListExperimentResultOpenAPIData {
 
 // 3.4 获取聚合结果
 struct GetExperimentAggrResultOApiRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
 
     255: optional base.Base Base

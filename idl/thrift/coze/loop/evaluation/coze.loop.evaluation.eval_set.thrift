@@ -85,7 +85,7 @@ struct UpdateEvaluationSetResponse {
 }
 
 struct DeleteEvaluationSetRequest {
-    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+    1: required i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
     255: optional base.Base Base
@@ -97,9 +97,9 @@ struct DeleteEvaluationSetResponse {
 }
 
 struct GetEvaluationSetRequest {
-    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+    1: required i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
-    3: optional bool deleted_at,
+    3: optional bool deleted_at (api.query='deleted_at'),
 
     255: optional base.Base Base
 }
@@ -151,10 +151,10 @@ struct CreateEvaluationSetVersionResponse {
 }
 
 struct GetEvaluationSetVersionRequest {
-    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
+    1: required i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 version_id (api.path = "version_id", api.js_conv="true", go.tag='json:"version_id"'),
     3: optional i64 evaluation_set_id (api.path='evaluation_set_id', api.js_conv="true", go.tag='json:"evaluation_set_id"'),
-    4: optional bool deleted_at,
+    4: optional bool deleted_at (api.query='deleted_at'),
 
     255: optional base.Base Base
 }

@@ -9,28 +9,28 @@ include "./domain/expt.thrift"
 include "./domain/evaluator.thrift"
 
 struct CreateExperimentRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
-    2: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
-    3: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
-    4: optional list<i64> evaluator_version_ids (api.js_conv='true', go.tag='json:"evaluator_version_ids"')
-    5: optional string name
-    6: optional string desc
-    7: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
-    8: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: optional i64 eval_set_version_id (api.body='eval_set_version_id', api.js_conv='true', go.tag='json:"eval_set_version_id"')
+    3: optional i64 target_version_id (api.body='target_version_id', api.js_conv='true', go.tag='json:"target_version_id"')
+    4: optional list<i64> evaluator_version_ids (api.body='evaluator_version_ids', api.js_conv='true', go.tag='json:"evaluator_version_ids"')
+    5: optional string name (api.body='name')
+    6: optional string desc (api.body='desc')
+    7: optional i64 eval_set_id (api.body='eval_set_id', api.js_conv='true', go.tag='json:"eval_set_id"')
+    8: optional i64 target_id (api.body='target_id', api.js_conv='true', go.tag='json:"target_id"')
 
-    20: optional expt.TargetFieldMapping target_field_mapping
-    21: optional list<expt.EvaluatorFieldMapping> evaluator_field_mapping
-    22: optional i32 item_concur_num
-    23: optional i32 evaluators_concur_num
-    24: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param
-    25: optional common.RuntimeParam target_runtime_param
+    20: optional expt.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
+    21: optional list<expt.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
+    22: optional i32 item_concur_num (api.body = 'item_concur_num')
+    23: optional i32 evaluators_concur_num (api.body = 'evaluators_concur_num')
+    24: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
+    25: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
 
-    30: optional expt.ExptType expt_type
-    31: optional i64 max_alive_time
-    32: optional expt.SourceType source_type
-    33: optional string source_id
+    30: optional expt.ExptType expt_type (api.body = 'expt_type')
+    31: optional i64 max_alive_time (api.body = 'max_alive_time')
+    32: optional expt.SourceType source_type (api.body = 'source_type')
+    33: optional string source_id (api.body = 'source_id')
 
-    40: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
+    40: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list (api.body = 'evaluator_id_version_list') // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
 
     200: optional common.Session session
 
@@ -44,30 +44,30 @@ struct CreateExperimentResponse {
 }
 
 struct SubmitExperimentRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
-    2: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
-    3: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
-    4: optional list<i64> evaluator_version_ids (api.js_conv='true', go.tag='json:"evaluator_version_ids"')
-    5: optional string name
-    6: optional string desc
-    7: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
-    8: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
+    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
+    2: optional i64 eval_set_version_id (api.body='eval_set_version_id',api.js_conv='true', go.tag='json:"eval_set_version_id"')
+    3: optional i64 target_version_id (api.body='target_version_id',api.js_conv='true', go.tag='json:"target_version_id"')
+    4: optional list<i64> evaluator_version_ids (api.body='evaluator_version_ids',api.js_conv='true', go.tag='json:"evaluator_version_ids"')
+    5: optional string name (api.body='name')
+    6: optional string desc (api.body='desc')
+    7: optional i64 eval_set_id (api.body='eval_set_id',api.js_conv='true', go.tag='json:"eval_set_id"')
+    8: optional i64 target_id (api.body='target_id',api.js_conv='true', go.tag='json:"target_id"')
 
-    20: optional expt.TargetFieldMapping target_field_mapping
-    21: optional list<expt.EvaluatorFieldMapping> evaluator_field_mapping
-    22: optional i32 item_concur_num
-    23: optional i32 evaluators_concur_num
-    24: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param
-    25: optional common.RuntimeParam target_runtime_param
+    20: optional expt.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
+    21: optional list<expt.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
+    22: optional i32 item_concur_num (api.body = 'item_concur_num')
+    23: optional i32 evaluators_concur_num (api.body = 'evaluators_concur_num')
+    24: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
+    25: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
 
-    30: optional expt.ExptType expt_type
-    31: optional i64 max_alive_time
-    32: optional expt.SourceType source_type
-    33: optional string source_id
+    30: optional expt.ExptType expt_type (api.body = 'expt_type')
+    31: optional i64 max_alive_time (api.body = 'max_alive_time')
+    32: optional expt.SourceType source_type (api.body = 'source_type')
+    33: optional string source_id (api.body = 'source_id')
 
-    40: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
+    40: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list (api.body = 'evaluator_id_version_list') // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
 
-    100: optional map<string, string> ext
+    100: optional map<string, string> ext (api.body = 'ext')
 
     200: optional common.Session session
 
@@ -75,60 +75,60 @@ struct SubmitExperimentRequest {
 }
 
 struct SubmitExperimentResponse {
-    1: optional expt.Experiment experiment
-    2: optional i64 run_id (api.js_conv = 'true', go.tag = 'json:"run_id"')
+    1: optional expt.Experiment experiment (api.body = 'experiment')
+    2: optional i64 run_id (api.body = 'run_id', api.js_conv = 'true', go.tag = 'json:"run_id"')
 
     255: base.BaseResp BaseResp
 }
 
 struct ListExperimentsRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
-    2: optional i32 page_number
-    3: optional i32 page_size
+    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
+    2: optional i32 page_number (api.body='page_number')
+    3: optional i32 page_size (api.body='page_size')
 
-    20: optional expt.ExptFilterOption filter_option
-    21: optional list<common.OrderBy> order_bys
+    20: optional expt.ExptFilterOption filter_option (api.body = 'filter_option')
+    21: optional list<common.OrderBy> order_bys (api.body = 'order_bys')
 
     255: optional base.Base Base
 }
 
 struct ListExperimentsResponse {
-    1: optional list<expt.Experiment> experiments
-    2: optional i32 total
+    1: optional list<expt.Experiment> experiments (api.body = 'experiments')
+    2: optional i32 total (api.body = 'total')
 
     255: base.BaseResp BaseResp
 }
 
 struct BatchGetExperimentsRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
-    2: required list<i64> expt_ids (api.js_conv='true', go.tag='json:"expt_ids"')
+    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required list<i64> expt_ids (api.body='expt_ids',api.js_conv='true', go.tag='json:"expt_ids"')
 
     255: optional base.Base Base
 }
 
 struct BatchGetExperimentsResponse {
-    1: optional list<expt.Experiment> experiments
+    1: optional list<expt.Experiment> experiments (api.body = 'experiments')
 
     255: base.BaseResp BaseResp
 }
 
 struct UpdateExperimentRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
-    3: optional string name
-    4: optional string desc
+    3: optional string name (api.body='name')
+    4: optional string desc (api.body='desc')
 
     255: optional base.Base Base
 }
 
 struct UpdateExperimentResponse {
-    1: optional expt.Experiment experiment
+    1: optional expt.Experiment experiment (api.body = 'experiment')
 
     255: base.BaseResp BaseResp
 }
 
 struct DeleteExperimentRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
 
     255: optional base.Base Base
@@ -139,8 +139,8 @@ struct DeleteExperimentResponse {
 }
 
 struct BatchDeleteExperimentsRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
-    2: required list<i64> expt_ids (api.js_conv='true', go.tag='json:"expt_ids"')
+    1: required i64 workspace_id (api.body='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required list<i64> expt_ids (api.body='expt_ids',api.js_conv='true', go.tag='json:"expt_ids"')
 
     255: optional base.Base Base
 }
@@ -150,12 +150,12 @@ struct BatchDeleteExperimentsResponse {
 }
 
 struct RunExperimentRequest {
-    1: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    2: optional i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    3: optional list<i64> item_ids (api.js_conv = 'true', go.tag = 'json:"item_ids"')
-    10: optional expt.ExptType expt_type
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: optional i64 expt_id (api.body = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    3: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
+    10: optional expt.ExptType expt_type (api.body = 'expt_type')
 
-    100: optional map<string, string> ext
+    100: optional map<string, string> ext (api.body = 'ext')
 
     200: optional common.Session session
 
@@ -163,31 +163,31 @@ struct RunExperimentRequest {
 }
 
 struct RunExperimentResponse {
-    1: optional i64 run_id (api.js_conv = 'true', go.tag = 'json:"run_id"')
+    1: optional i64 run_id (api.body = 'run_id', api.js_conv = 'true', go.tag = 'json:"run_id"')
 
     255: base.BaseResp BaseResp
 }
 
 struct RetryExperimentRequest {
-    1: optional expt.ExptRetryMode retry_mode
-    2: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: optional expt.ExptRetryMode retry_mode (api.body = 'retry_mode')
+    2: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     3: optional i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    4: optional list<i64> item_ids (api.js_conv = 'true', go.tag = 'json:"item_ids"')
+    4: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
 
-    100: optional map<string, string> ext
+    100: optional map<string, string> ext (api.body = 'ext')
 
     255: optional base.Base Base
 }
 
 struct RetryExperimentResponse {
-    1: optional i64 run_id (api.js_conv = 'true', go.tag = 'json:"run_id"')
+    1: optional i64 run_id (api.body = 'run_id', api.js_conv = 'true', go.tag = 'json:"run_id"')
 
     255: base.BaseResp BaseResp
 }
 
 struct KillExperimentRequest {
     1: optional i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    2: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
 
     255: optional base.Base Base
 }
@@ -198,28 +198,28 @@ struct KillExperimentResponse {
 
 struct CloneExperimentRequest {
     1: optional i64 expt_id (api.path = 'expt_id', api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    2: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
 
     255: optional base.Base Base
 }
 
 struct CloneExperimentResponse {
-    1: optional expt.Experiment experiment
+    1: optional expt.Experiment experiment (api.body = 'experiment')
 
     255: base.BaseResp BaseResp
 }
 
 struct BatchGetExperimentResultRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
-    2: required list<i64> experiment_ids (api.js_conv='true', go.tag='json:"experiment_ids"')
-    3: optional i64 baseline_experiment_id (api.js_conv='true', go.tag='json:"baseline_experiment_id"')  // Baseline experiment ID for experiment comparison
+    1: required i64 workspace_id (api.query='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required list<i64> experiment_ids (api.body='experiment_ids', api.js_conv='true', go.tag='json:"experiment_ids"')
+    3: optional i64 baseline_experiment_id (api.body='baseline_experiment_id', api.js_conv='true', go.tag='json:"baseline_experiment_id"')  // Baseline experiment ID for experiment comparison
 
-    10: optional map<i64, expt.ExperimentFilter> filters (go.tag = 'json:"filters"') // key: experiment_id
+    10: optional map<i64, expt.ExperimentFilter> filters (api.body = 'filters', go.tag = 'json:"filters"') // key: experiment_id
 
-    20: optional i32 page_number (go.tag='json:"page_number"')
-    21: optional i32 page_size (go.tag='json:"page_size"')
+    20: optional i32 page_number (api.query="page_number", go.tag='json:"page_number"')
+    21: optional i32 page_size (api.query="page_size", go.tag='json:"page_size"')
 
-    30: optional bool use_accelerator (go.tag='json:"use_accelerator"')
+    30: optional bool use_accelerator (api.query="use_accelerator", go.tag='json:"use_accelerator"')
 
     40: optional bool full_trajectory (api.query="full_trajectory", go.tag='json:"full_trajectory"') // 是否包含轨迹
 
@@ -228,37 +228,37 @@ struct BatchGetExperimentResultRequest {
 
 struct BatchGetExperimentResultResponse {
     // 数据集表头信息
-    1: required list<expt.ColumnEvalSetField> column_eval_set_fields
+    1: required list<expt.ColumnEvalSetField> column_eval_set_fields (api.body = "column_eval_set_fields")
     // 评估器表头信息
-    2: optional list<expt.ColumnEvaluator> column_evaluators
-    3: optional list<expt.ExptColumnEvaluator> expt_column_evaluators
+    2: optional list<expt.ColumnEvaluator> column_evaluators (api.body = "column_evaluators")
+    3: optional list<expt.ExptColumnEvaluator> expt_column_evaluators (api.body = "expt_column_evaluators")
     // 人工标注标签表头信息
-    4: optional list<expt.ExptColumnAnnotation> expt_column_annotations
-    5: optional list<expt.ExptColumnEvalTarget> expt_column_eval_target
+    4: optional list<expt.ExptColumnAnnotation> expt_column_annotations (api.body = "expt_column_annotations")
+    5: optional list<expt.ExptColumnEvalTarget> expt_column_eval_target (api.body = "expt_column_eval_target")
 
     // item粒度实验结果详情
-    10: optional list<expt.ItemResult> item_results
+    10: optional list<expt.ItemResult> item_results (api.body = "item_results")
 
-    20: optional i64 total (go.tag = 'json:"total"')
+    20: optional i64 total (api.body = "total", go.tag = 'json:"total"')
 
     255: base.BaseResp BaseResp
 }
 
 struct BatchGetExperimentAggrResultRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    2: required list<i64> experiment_ids (api.js_conv = 'true', go.tag = 'json:"experiment_ids"')
+    1: required i64 workspace_id (api.query = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required list<i64> experiment_ids (api.body = 'experiment_ids', api.js_conv = 'true', go.tag = 'json:"experiment_ids"')
 
     255: optional base.Base Base
 }
 
 struct BatchGetExperimentAggrResultResponse {
-    1: optional list<expt.ExptAggregateResult> expt_aggregate_results
+    1: optional list<expt.ExptAggregateResult> expt_aggregate_results (api.body = 'expt_aggregate_result')
 
     255: base.BaseResp BaseResp
 }
 
 struct CalculateExperimentAggrResultRequest {
-    1: required i64 workspace_id (api.js_conv = 'true')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true')
     2: required i64 expt_id (api.path = 'expt_id', api.js_conv = 'true')
 
     255: optional base.Base Base
@@ -270,15 +270,15 @@ struct CalculateExperimentAggrResultResponse {
 }
 
 struct CheckExperimentNameRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
-    2: optional string name
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: optional string name (api.body='name')
 
     255: optional base.Base Base
 }
 
 struct CheckExperimentNameResponse {
-    1: optional bool pass
-    2: optional string message
+    1: optional bool pass (api.body = 'pass')
+    2: optional string message (api.body = 'message')
 
     255: base.BaseResp BaseResp
 }
@@ -364,9 +364,9 @@ struct UpsertExptTurnResultFilterResponse {
 }
 
 struct AssociateAnnotationTagReq {
-     1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
      2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
-     3: optional i64 tag_key_id (api.js_conv = 'true', go.tag = 'json:"tag_key_id"')
+     3: optional i64 tag_key_id (api.body = 'tag_key_id', api.js_conv = 'true', go.tag = 'json:"tag_key_id"')
 
      200: optional common.Session session
      255: optional base.Base Base
@@ -378,9 +378,9 @@ struct AssociateAnnotationTagResp {
 }
 
 struct DeleteAnnotationTagReq {
-     1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
      2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
-     3: optional i64 tag_key_id (api.js_conv = 'true', go.tag = 'json:"tag_key_id"')
+     3: optional i64 tag_key_id (api.body = 'tag_key_id', api.js_conv = 'true', go.tag = 'json:"tag_key_id"')
 
      200: optional common.Session session
      255: optional base.Base Base
@@ -392,28 +392,28 @@ struct DeleteAnnotationTagResp {
 }
 
 struct CreateAnnotateRecordReq {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    3: required expt.AnnotateRecord annotate_record
-    4: required i64 item_id (api.js_conv='true', go.tag='json:"item_id"')
-    5: required i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"')
+    3: required expt.AnnotateRecord annotate_record (api.body = 'annotate_record')
+    4: required i64 item_id (api.body = 'item_id', api.js_conv='true', go.tag='json:"item_id"')
+    5: required i64 turn_id (api.body = 'turn_id', api.js_conv='true', go.tag='json:"turn_id"')
     200: optional common.Session session
     255: optional base.Base Base
 }
 
 struct CreateAnnotateRecordResp {
-    1: required i64 annotate_record_id (api.js_conv = 'true', go.tag = 'json:"annotate_record_id"')
+    1: required i64 annotate_record_id (api.body = "annotate_record_id", api.js_conv = 'true', go.tag = 'json:"annotate_record_id"')
 
     255: base.BaseResp BaseResp
 }
 
 struct UpdateAnnotateRecordReq {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    3: required expt.AnnotateRecord annotate_records
-    4: required i64 annotate_record_id (api.js_conv='true', go.tag='json:"annotate_record_id"')
-    5: required i64 item_id (api.js_conv='true', go.tag='json:"item_id"')
-    6: required i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"')
+    3: required expt.AnnotateRecord annotate_records (api.body = 'annotate_records')
+    4: required i64 annotate_record_id (api.body = 'annotate_record_id', api.js_conv='true', go.tag='json:"annotate_record_id"')
+    5: required i64 item_id (api.body = 'item_id', api.js_conv='true', go.tag='json:"item_id"')
+    6: required i64 turn_id (api.body = 'turn_id', api.js_conv='true', go.tag='json:"turn_id"')
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -426,25 +426,25 @@ struct UpdateAnnotateRecordResp {
 
 
 struct ExportExptResultRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    4: optional expt.ExptResultExportType export_type
+    4: optional expt.ExptResultExportType export_type (api.body = "export_type")
 
     200: optional common.Session session
     255: optional base.Base Base
 }
 
 struct ExportExptResultResponse {
-    1: required i64 export_id (api.js_conv = 'true', go.tag = 'json:"export_id"')
+    1: required i64 export_id (api.body = "export_id", api.js_conv = 'true', go.tag = 'json:"export_id"')
 
     255: base.BaseResp BaseResp
 }
 
 struct ListExptResultExportRecordRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    3: optional i32 page_number
-    4: optional i32 page_size
+    3: optional i32 page_number (api.body='page_number')
+    4: optional i32 page_size (api.body='page_size')
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -452,12 +452,12 @@ struct ListExptResultExportRecordRequest {
 
 struct ListExptResultExportRecordResponse {
     1: required list<expt.ExptResultExportRecord> expt_result_export_records (agw.key = "expt_result_export_records")
-    20: optional i64 total (go.tag = 'json:"total"')
+    20: optional i64 total (api.body = "total", go.tag = 'json:"total"')
     255: base.BaseResp BaseResp
 }
 
 struct GetExptResultExportRecordRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
     4: required i64 export_id (api.path = 'export_id', api.js_conv = 'true', go.tag = 'json:"export_id"')
 
@@ -467,14 +467,14 @@ struct GetExptResultExportRecordRequest {
 }
 
 struct GetExptResultExportRecordResponse {
-    1: optional expt.ExptResultExportRecord expt_result_export_record
+    1: optional expt.ExptResultExportRecord expt_result_export_record (api.body = "expt_result_export_records")
 
     255: base.BaseResp BaseResp
 }
 
 
 struct GetExptInsightAnalysisRecordRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
     3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
 
@@ -490,7 +490,7 @@ struct GetExptInsightAnalysisRecordResponse {
 }
 
 struct InsightAnalysisExperimentRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
 
     200: optional common.Session session
@@ -498,16 +498,16 @@ struct InsightAnalysisExperimentRequest {
 }
 
 struct InsightAnalysisExperimentResponse {
-    1: required i64 insight_analysis_record_id (api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
+    1: required i64 insight_analysis_record_id (api.body = "insight_analysis_record_id", api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
 
     255: base.BaseResp BaseResp
 }
 
 struct ListExptInsightAnalysisRecordRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
-    3: optional i32 page_number
-    4: optional i32 page_size
+    3: optional i32 page_number (api.body='page_number')
+    4: optional i32 page_size (api.body='page_size')
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -515,12 +515,12 @@ struct ListExptInsightAnalysisRecordRequest {
 
 struct ListExptInsightAnalysisRecordResponse {
     1: required list<expt.ExptInsightAnalysisRecord> expt_insight_analysis_records
-    20: optional i64 total (go.tag = 'json:"total"')
+    20: optional i64 total (api.body = "total", go.tag = 'json:"total"')
     255: base.BaseResp BaseResp
 }
 
 struct DeleteExptInsightAnalysisRecordRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
     3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
 
@@ -535,12 +535,12 @@ struct DeleteExptInsightAnalysisRecordResponse {
 }
 
 struct FeedbackExptInsightAnalysisReportRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
     3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
     4: required expt.FeedbackActionType feedback_action_type
     5: optional string comment
-    6: optional i64 comment_id (api.js_conv = 'true', go.tag = 'json:"comment_id"')    // 用于更新comment
+    6: optional i64 comment_id (api.body = 'comment_id', api.js_conv = 'true', go.tag = 'json:"comment_id"')    // 用于更新comment
 
 
     200: optional common.Session session
@@ -553,11 +553,11 @@ struct FeedbackExptInsightAnalysisReportResponse {
 }
 
 struct ListExptInsightAnalysisCommentRequest {
-    1: required i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
     3: required i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
-    4: optional i32 page_number
-    5: optional i32 page_size
+    4: optional i32 page_number (api.body='page_number')
+    5: optional i32 page_size (api.body='page_size')
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -565,13 +565,13 @@ struct ListExptInsightAnalysisCommentRequest {
 
 struct ListExptInsightAnalysisCommentResponse {
     1: required list<expt.ExptInsightAnalysisFeedbackComment> expt_insight_analysis_feedback_comments
-    20: optional i64 total (go.tag = 'json:"total"')
+    20: optional i64 total (api.body = "total", go.tag = 'json:"total"')
     255: base.BaseResp BaseResp
 }
 
 struct GetAnalysisRecordFeedbackVoteRequest {
-    1: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    2: optional i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
+    1: optional i64 workspace_id (api.query = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: optional i64 expt_id (api.query = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
     3: optional i64 insight_analysis_record_id (api.path = 'insight_analysis_record_id', api.js_conv = 'true', go.tag = 'json:"insight_analysis_record_id"')
 
     200: optional common.Session session

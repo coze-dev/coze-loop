@@ -31,7 +31,7 @@ struct CreateEvalTargetResponse {
 }
 
 struct GetEvalTargetVersionRequest {
-    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: optional i64 eval_target_version_id (api.path ='eval_target_version_id', api.js_conv="true", go.tag = 'json:"eval_target_version_id"')
 
     255: optional base.Base Base
@@ -115,7 +115,7 @@ struct ListEvalTargetRecordResponse {
 }
 
 struct GetEvalTargetRecordRequest {
-    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    1: required i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: required i64 eval_target_record_id  (api.path = 'eval_target_record_id', api.js_conv="true", go.tag = 'json:"eval_target_record_id"')
 
     255: optional base.Base Base
