@@ -187,6 +187,13 @@ struct ParamSchema {
     7: optional string default_value
     8: optional list<ParamOption> options
     9: optional list<ParamSchema> properties
+    10: optional Dependency dependency      // 依赖参数
+    11: optional string jsonpath // 赋值路径
+}
+
+struct Dependency {
+    1: optional string key
+    2: optional string condition
 }
 
 struct ParamOption {
