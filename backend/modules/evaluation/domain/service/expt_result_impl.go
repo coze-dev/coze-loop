@@ -1523,6 +1523,7 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 			targetRecord.EvalTargetOutputData != nil &&
 			targetRecord.EvalTargetOutputData.OutputFields != nil {
 			if trajectoryContent, ok := targetRecord.EvalTargetOutputData.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory]; ok && trajectoryContent != nil {
+				logs.CtxInfo(ctx, "len trajectoryContent.Text: %v", len(*trajectoryContent.Text))
 				if trajectoryContent.Text != nil && len(*trajectoryContent.Text) > 0 {
 					// 使用 generateJsonObjectPreview 对 trajectory JSON 进行剪裁
 					preview := utils.GenerateJsonObjectPreview([]byte(*trajectoryContent.Text))
