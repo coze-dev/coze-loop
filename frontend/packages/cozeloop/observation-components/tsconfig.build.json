@@ -25,9 +25,6 @@
       "path": "../../arch/bot-typings/tsconfig.build.json"
     },
     {
-      "path": "../../arch/subspace-resolve-plugin/tsconfig.build.json"
-    },
-    {
       "path": "../components/tsconfig.build.json"
     },
     {
@@ -50,6 +47,9 @@
     },
     {
       "path": "../../../infra/plugins/postcss-plugin/tsconfig.build.json"
+    },
+    {
+      "path": "../../../infra/plugins/subspace-resolve-plugin/tsconfig.build.json"
     },
     {
       "path": "../tailwind-config/tsconfig.build.json"

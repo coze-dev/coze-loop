@@ -15,9 +15,6 @@
       "path": "../../arch/bot-env-adapter/tsconfig.build.json"
     },
     {
-      "path": "../../arch/subspace-resolve-plugin/tsconfig.build.json"
-    },
-    {
       "path": "../../../config/eslint-config/tsconfig.build.json"
     },
     {
@@ -34,6 +31,9 @@
     },
     {
       "path": "../../../infra/plugins/postcss-plugin/tsconfig.build.json"
+    },
+    {
+      "path": "../../../infra/plugins/subspace-resolve-plugin/tsconfig.build.json"
     }
   ],
   "$schema": "https://json.schemastore.org/tsconfig"
