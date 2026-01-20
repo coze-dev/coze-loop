@@ -11,8 +11,9 @@ import (
 type Literal string
 
 const (
-	TextLiteral  Literal = "text"
-	ImageLiteral Literal = "image"
+	TextLiteral     Literal = "text"
+	ImageLiteral    Literal = "image"
+	ImageUrlLiteral Literal = "image_url"
 )
 
 type ModelMessagePartType string
@@ -89,7 +90,7 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 				case string(TextLiteral):
 					part["type"] = string(ModelMessagePartTypeText)
 					part["text"] = text
-				case string(ImageLiteral):
+				case string(ImageLiteral), string(ImageUrlLiteral):
 					part["type"] = string(ModelMessagePartTypeImage)
 					imageMap, ok := image.(map[string]interface{})
 					if ok {
