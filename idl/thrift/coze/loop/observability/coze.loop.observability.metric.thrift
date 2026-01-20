@@ -41,6 +41,7 @@ struct GetDrillDownValuesRequest {
 struct DrillDownValue {
     1: required string value
     2: optional string display_name
+    3: optional list<DrillDownValue> sub_drill_down_values
 }
 
 struct GetDrillDownValuesResponse {
