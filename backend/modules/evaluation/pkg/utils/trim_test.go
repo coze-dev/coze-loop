@@ -73,7 +73,7 @@ func TestCountJsonArrayElements(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := countJsonArrayElements([]byte(tt.input))
+			got := countJsonArrayElements(tt.input)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
@@ -118,7 +118,7 @@ func TestGenerateJsonObjectPreview(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := GenerateJsonObjectPreview([]byte(tt.input))
+			got := GenerateJsonObjectPreview(tt.input)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
@@ -199,7 +199,7 @@ func TestGenerateTextPreview(t *testing.T) {
 		},
 		{
 			name:  "long ascii content should be trimmed",
-			input: string(make([]byte, 120)),
+			input: string(make([]byte, 200)),
 		},
 		{
 			name:     "utf8 content shorter than limit should not be trimmed",
@@ -212,12 +212,12 @@ func TestGenerateTextPreview(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := generateTextPreview([]byte(tt.input))
+			got := GenerateTextPreview(tt.input)
 
 			switch tt.name {
 			case "long ascii content should be trimmed":
 				assert.Len(t, []rune(got), 103) // 100 chars + "..."
-				assert.Equal(t, "...", got[len(got)-3:])
+				assert.Equal(t, "...", string([]rune(got)[100:]))
 			default:
 				assert.Equal(t, tt.expected, got)
 			}
