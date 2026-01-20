@@ -4230,3 +4230,449 @@ func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
 		})
 	}
 }
+
+func TestExptResultBuilder_buildEvaluatorResult(t *testing.T) {
+	tests := []struct {
+		name           string
+		fullTrajectory bool
+		setup          func(ctrl *gomock.Controller) (*ExptResultBuilder, *repoMocks.MockIExptTurnResultRepo, *svcMocks.MockEvaluatorRecordService)
+		wantErr        bool
+		checkFunc      func(t *testing.T, builder *ExptResultBuilder)
+	}{
+		{
+			name:           "FullTrajectory=false should trim trajectory in InputFields",
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *repoMocks.MockIExptTurnResultRepo, *svcMocks.MockEvaluatorRecordService) {
+				mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+				mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+
+				fullTrajectoryJSON := `{"id":"trace-1","root_step":{"step_id":"step-1","type":"tool_call","content":"very long content that should be trimmed"}}`
+
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID: 10,
+						},
+					},
+					ExptTurnResultRepo:     mockExptTurnResultRepo,
+					evaluatorRecordService: mockEvaluatorRecordService,
+					FullTrajectory:         false,
+				}
+
+				mockExptTurnResultRepo.EXPECT().
+					BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(100), []int64{10}).
+					Return([]*entity.ExptTurnEvaluatorResultRef{
+						{ExptTurnResultID: 10, EvaluatorResultID: 1001, EvaluatorVersionID: 201},
+					}, nil)
+
+				mockEvaluatorRecordService.EXPECT().
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					Return([]*entity.EvaluatorRecord{
+						{
+							ID:                 1001,
+							EvaluatorVersionID: 201,
+							EvaluatorInputData: &entity.EvaluatorInputData{
+								InputFields: map[string]*entity.Content{
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of(fullTrajectoryJSON),
+									},
+								},
+							},
+						},
+					}, nil)
+
+				return builder, mockExptTurnResultRepo, mockEvaluatorRecordService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2EvaluatorVersionID2Result)
+				evaluatorRecords, ok := builder.turnResultID2EvaluatorVersionID2Result[10]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecords)
+				evaluatorRecord, ok := evaluatorRecords[201]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecord)
+				assert.NotNil(t, evaluatorRecord.EvaluatorInputData)
+				assert.NotNil(t, evaluatorRecord.EvaluatorInputData.InputFields)
+
+				trajectoryContent, hasTrajectory := evaluatorRecord.EvaluatorInputData.InputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory, "trajectory field should exist")
+				assert.NotNil(t, trajectoryContent)
+				assert.NotNil(t, trajectoryContent.Text)
+
+				// 验证内容已被剪裁
+				originalJSON := `{"id":"trace-1","root_step":{"step_id":"step-1","type":"tool_call","content":"very long content that should be trimmed"}}`
+				expectedPreview := utils.GenerateJsonObjectPreview(originalJSON)
+				expectedTrimmed := utils.GenerateTextPreview(expectedPreview)
+				assert.Equal(t, expectedTrimmed, *trajectoryContent.Text, "trajectory should be trimmed")
+			},
+		},
+		{
+			name:           "FullTrajectory=false should trim trajectory in EvaluateTargetOutputFields",
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *repoMocks.MockIExptTurnResultRepo, *svcMocks.MockEvaluatorRecordService) {
+				mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+				mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+
+				fullTrajectoryJSON := `{"id":"trace-2","root_step":{"step_id":"step-2","type":"message","content":"another very long content"}}`
+
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID: 10,
+						},
+					},
+					ExptTurnResultRepo:     mockExptTurnResultRepo,
+					evaluatorRecordService: mockEvaluatorRecordService,
+					FullTrajectory:         false,
+				}
+
+				mockExptTurnResultRepo.EXPECT().
+					BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(100), []int64{10}).
+					Return([]*entity.ExptTurnEvaluatorResultRef{
+						{ExptTurnResultID: 10, EvaluatorResultID: 1001, EvaluatorVersionID: 201},
+					}, nil)
+
+				mockEvaluatorRecordService.EXPECT().
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					Return([]*entity.EvaluatorRecord{
+						{
+							ID:                 1001,
+							EvaluatorVersionID: 201,
+							EvaluatorInputData: &entity.EvaluatorInputData{
+								EvaluateTargetOutputFields: map[string]*entity.Content{
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of(fullTrajectoryJSON),
+									},
+								},
+							},
+						},
+					}, nil)
+
+				return builder, mockExptTurnResultRepo, mockEvaluatorRecordService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2EvaluatorVersionID2Result)
+				evaluatorRecords, ok := builder.turnResultID2EvaluatorVersionID2Result[10]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecords)
+				evaluatorRecord, ok := evaluatorRecords[201]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecord)
+				assert.NotNil(t, evaluatorRecord.EvaluatorInputData)
+				assert.NotNil(t, evaluatorRecord.EvaluatorInputData.EvaluateTargetOutputFields)
+
+				trajectoryContent, hasTrajectory := evaluatorRecord.EvaluatorInputData.EvaluateTargetOutputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory, "trajectory field should exist")
+				assert.NotNil(t, trajectoryContent)
+				assert.NotNil(t, trajectoryContent.Text)
+
+				// 验证内容已被剪裁
+				originalJSON := `{"id":"trace-2","root_step":{"step_id":"step-2","type":"message","content":"another very long content"}}`
+				expectedPreview := utils.GenerateJsonObjectPreview(originalJSON)
+				expectedTrimmed := utils.GenerateTextPreview(expectedPreview)
+				assert.Equal(t, expectedTrimmed, *trajectoryContent.Text, "trajectory should be trimmed")
+			},
+		},
+		{
+			name:           "FullTrajectory=false should trim trajectory in both InputFields and EvaluateTargetOutputFields",
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *repoMocks.MockIExptTurnResultRepo, *svcMocks.MockEvaluatorRecordService) {
+				mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+				mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+
+				fullTrajectoryJSON1 := `{"id":"trace-1","root_step":{"step_id":"step-1"}}`
+				fullTrajectoryJSON2 := `{"id":"trace-2","root_step":{"step_id":"step-2"}}`
+
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID: 10,
+						},
+					},
+					ExptTurnResultRepo:     mockExptTurnResultRepo,
+					evaluatorRecordService: mockEvaluatorRecordService,
+					FullTrajectory:         false,
+				}
+
+				mockExptTurnResultRepo.EXPECT().
+					BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(100), []int64{10}).
+					Return([]*entity.ExptTurnEvaluatorResultRef{
+						{ExptTurnResultID: 10, EvaluatorResultID: 1001, EvaluatorVersionID: 201},
+					}, nil)
+
+				mockEvaluatorRecordService.EXPECT().
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					Return([]*entity.EvaluatorRecord{
+						{
+							ID:                 1001,
+							EvaluatorVersionID: 201,
+							EvaluatorInputData: &entity.EvaluatorInputData{
+								InputFields: map[string]*entity.Content{
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of(fullTrajectoryJSON1),
+									},
+								},
+								EvaluateTargetOutputFields: map[string]*entity.Content{
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of(fullTrajectoryJSON2),
+									},
+								},
+							},
+						},
+					}, nil)
+
+				return builder, mockExptTurnResultRepo, mockEvaluatorRecordService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2EvaluatorVersionID2Result)
+				evaluatorRecords, ok := builder.turnResultID2EvaluatorVersionID2Result[10]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecords)
+				evaluatorRecord, ok := evaluatorRecords[201]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecord)
+
+				// 验证 InputFields 中的 trajectory 被剪裁
+				trajectoryContent1, hasTrajectory1 := evaluatorRecord.EvaluatorInputData.InputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory1)
+				assert.NotNil(t, trajectoryContent1.Text)
+				expectedPreview1 := utils.GenerateJsonObjectPreview(`{"id":"trace-1","root_step":{"step_id":"step-1"}}`)
+				expectedTrimmed1 := utils.GenerateTextPreview(expectedPreview1)
+				assert.Equal(t, expectedTrimmed1, *trajectoryContent1.Text)
+
+				// 验证 EvaluateTargetOutputFields 中的 trajectory 被剪裁
+				trajectoryContent2, hasTrajectory2 := evaluatorRecord.EvaluatorInputData.EvaluateTargetOutputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory2)
+				assert.NotNil(t, trajectoryContent2.Text)
+				expectedPreview2 := utils.GenerateJsonObjectPreview(`{"id":"trace-2","root_step":{"step_id":"step-2"}}`)
+				expectedTrimmed2 := utils.GenerateTextPreview(expectedPreview2)
+				assert.Equal(t, expectedTrimmed2, *trajectoryContent2.Text)
+			},
+		},
+		{
+			name:           "FullTrajectory=true should preserve trajectory",
+			fullTrajectory: true,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *repoMocks.MockIExptTurnResultRepo, *svcMocks.MockEvaluatorRecordService) {
+				mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+				mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+
+				fullTrajectoryJSON := `{"id":"trace-1","root_step":{"step_id":"step-1"}}`
+
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID: 10,
+						},
+					},
+					ExptTurnResultRepo:     mockExptTurnResultRepo,
+					evaluatorRecordService: mockEvaluatorRecordService,
+					FullTrajectory:         true,
+				}
+
+				mockExptTurnResultRepo.EXPECT().
+					BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(100), []int64{10}).
+					Return([]*entity.ExptTurnEvaluatorResultRef{
+						{ExptTurnResultID: 10, EvaluatorResultID: 1001, EvaluatorVersionID: 201},
+					}, nil)
+
+				mockEvaluatorRecordService.EXPECT().
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					Return([]*entity.EvaluatorRecord{
+						{
+							ID:                 1001,
+							EvaluatorVersionID: 201,
+							EvaluatorInputData: &entity.EvaluatorInputData{
+								InputFields: map[string]*entity.Content{
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of(fullTrajectoryJSON),
+									},
+								},
+							},
+						},
+					}, nil)
+
+				return builder, mockExptTurnResultRepo, mockEvaluatorRecordService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2EvaluatorVersionID2Result)
+				evaluatorRecords, ok := builder.turnResultID2EvaluatorVersionID2Result[10]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecords)
+				evaluatorRecord, ok := evaluatorRecords[201]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecord)
+
+				// 验证 trajectory 未被剪裁（保持原样）
+				trajectoryContent, hasTrajectory := evaluatorRecord.EvaluatorInputData.InputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory)
+				assert.NotNil(t, trajectoryContent)
+				assert.Equal(t, `{"id":"trace-1","root_step":{"step_id":"step-1"}}`, *trajectoryContent.Text, "trajectory should be preserved when FullTrajectory=true")
+			},
+		},
+		{
+			name:           "FullTrajectory=false with invalid JSON should use GenerateTextPreview directly",
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *repoMocks.MockIExptTurnResultRepo, *svcMocks.MockEvaluatorRecordService) {
+				mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+				mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+
+				invalidJSON := `"not a json object"`
+
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID: 10,
+						},
+					},
+					ExptTurnResultRepo:     mockExptTurnResultRepo,
+					evaluatorRecordService: mockEvaluatorRecordService,
+					FullTrajectory:         false,
+				}
+
+				mockExptTurnResultRepo.EXPECT().
+					BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(100), []int64{10}).
+					Return([]*entity.ExptTurnEvaluatorResultRef{
+						{ExptTurnResultID: 10, EvaluatorResultID: 1001, EvaluatorVersionID: 201},
+					}, nil)
+
+				mockEvaluatorRecordService.EXPECT().
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					Return([]*entity.EvaluatorRecord{
+						{
+							ID:                 1001,
+							EvaluatorVersionID: 201,
+							EvaluatorInputData: &entity.EvaluatorInputData{
+								InputFields: map[string]*entity.Content{
+									consts.EvalTargetOutputFieldKeyTrajectory: {
+										Text: gptr.Of(invalidJSON),
+									},
+								},
+							},
+						},
+					}, nil)
+
+				return builder, mockExptTurnResultRepo, mockEvaluatorRecordService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2EvaluatorVersionID2Result)
+				evaluatorRecords, ok := builder.turnResultID2EvaluatorVersionID2Result[10]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecords)
+				evaluatorRecord, ok := evaluatorRecords[201]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecord)
+
+				// 验证无效 JSON 时直接使用 GenerateTextPreview
+				trajectoryContent, hasTrajectory := evaluatorRecord.EvaluatorInputData.InputFields[consts.EvalTargetOutputFieldKeyTrajectory]
+				assert.True(t, hasTrajectory)
+				assert.NotNil(t, trajectoryContent)
+				expectedTrimmed := utils.GenerateTextPreview(`"not a json object"`)
+				assert.Equal(t, expectedTrimmed, *trajectoryContent.Text, "invalid JSON should be trimmed using GenerateTextPreview directly")
+			},
+		},
+		{
+			name:           "FullTrajectory=false with nil InputFields should not panic",
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *repoMocks.MockIExptTurnResultRepo, *svcMocks.MockEvaluatorRecordService) {
+				mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+				mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID: 100,
+					turnResultDO: []*entity.ExptTurnResult{
+						{
+							ID: 10,
+						},
+					},
+					ExptTurnResultRepo:     mockExptTurnResultRepo,
+					evaluatorRecordService: mockEvaluatorRecordService,
+					FullTrajectory:         false,
+				}
+
+				mockExptTurnResultRepo.EXPECT().
+					BatchGetTurnEvaluatorResultRef(gomock.Any(), int64(100), []int64{10}).
+					Return([]*entity.ExptTurnEvaluatorResultRef{
+						{ExptTurnResultID: 10, EvaluatorResultID: 1001, EvaluatorVersionID: 201},
+					}, nil)
+
+				mockEvaluatorRecordService.EXPECT().
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					Return([]*entity.EvaluatorRecord{
+						{
+							ID:                 1001,
+							EvaluatorVersionID: 201,
+							EvaluatorInputData: &entity.EvaluatorInputData{
+								InputFields: nil,
+							},
+						},
+					}, nil)
+
+				return builder, mockExptTurnResultRepo, mockEvaluatorRecordService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2EvaluatorVersionID2Result)
+				evaluatorRecords, ok := builder.turnResultID2EvaluatorVersionID2Result[10]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecords)
+				evaluatorRecord, ok := evaluatorRecords[201]
+				assert.True(t, ok)
+				assert.NotNil(t, evaluatorRecord)
+				assert.Nil(t, evaluatorRecord.EvaluatorInputData.InputFields)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			builder, _, _ := tt.setup(ctrl)
+			err := builder.buildEvaluatorResult(context.Background())
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				if tt.checkFunc != nil {
+					tt.checkFunc(t, builder)
+				}
+			}
+		})
+	}
+}
