@@ -193,13 +193,13 @@ func TestGenerateTextPreview(t *testing.T) {
 			expected: "hello world",
 		},
 		{
-			name:     "exact 500 runes",
-			input:    string(make([]rune, 500)),
-			expected: string(make([]rune, 500)),
+			name:     "exact 100 runes",
+			input:    string(make([]rune, 100)),
+			expected: string(make([]rune, 100)),
 		},
 		{
 			name:  "long ascii content should be trimmed",
-			input: string(make([]byte, 600)),
+			input: string(make([]byte, 200)),
 		},
 		{
 			name:     "utf8 content shorter than limit should not be trimmed",
@@ -216,8 +216,8 @@ func TestGenerateTextPreview(t *testing.T) {
 
 			switch tt.name {
 			case "long ascii content should be trimmed":
-				assert.Len(t, []rune(got), 503) // 500 chars + "..."
-				assert.Equal(t, "...", string([]rune(got)[500:]))
+				assert.Len(t, []rune(got), 103) // 100 chars + "..."
+				assert.Equal(t, "...", string([]rune(got)[100:]))
 			default:
 				assert.Equal(t, tt.expected, got)
 			}
