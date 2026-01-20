@@ -18,12 +18,6 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../../arch/bot-typings/tsconfig.build.json"
-    },
-    {
-      "path": "../biz-hooks/tsconfig.build.json"
-    },
-    {
       "path": "../../../config/eslint-config/tsconfig.build.json"
     },
     {
@@ -36,16 +30,22 @@
       "path": "../../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../evaluate-components/tsconfig.build.json"
+      "path": "../../loop-base/bot-typings/tsconfig.build.json"
     },
     {
-      "path": "../evaluate/tsconfig.build.json"
+      "path": "../../loop-base/i18n/tsconfig.build.json"
     },
     {
-      "path": "../i18n/tsconfig.build.json"
+      "path": "../../loop-base/toolkit/tsconfig.build.json"
     },
     {
-      "path": "../toolkit/tsconfig.build.json"
+      "path": "../../loop-components/biz-hooks/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-components/evaluate-components/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-modules/evaluate/tsconfig.build.json"
     }
   ]
 }

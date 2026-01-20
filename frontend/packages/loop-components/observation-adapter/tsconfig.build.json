@@ -18,12 +18,6 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../adapter-interfaces/tsconfig.build.json"
-    },
-    {
-      "path": "../api-schema/tsconfig.build.json"
-    },
-    {
       "path": "../biz-hooks/tsconfig.build.json"
     },
     {
@@ -39,16 +33,22 @@
       "path": "../../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../i18n/tsconfig.build.json"
+      "path": "../../loop-base/adapter-interfaces/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/api-schema/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/i18n/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-config/tailwind-config/tsconfig.build.json"
     },
     {
       "path": "../observation-components/tsconfig.build.json"
     },
     {
       "path": "../tag-components/tsconfig.build.json"
-    },
-    {
-      "path": "../tailwind-config/tsconfig.build.json"
     }
   ]
 }

@@ -19,15 +19,6 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../api-schema/tsconfig.build.json"
-    },
-    {
-      "path": "../../arch/bot-typings/tsconfig.build.json"
-    },
-    {
-      "path": "../components/tsconfig.build.json"
-    },
-    {
       "path": "../../../config/eslint-config/tsconfig.build.json"
     },
     {
@@ -52,10 +43,19 @@
       "path": "../../../infra/plugins/subspace-resolve-plugin/tsconfig.build.json"
     },
     {
-      "path": "../tailwind-config/tsconfig.build.json"
+      "path": "../../loop-base/api-schema/tsconfig.build.json"
     },
     {
-      "path": "../tailwind-plugin/tsconfig.build.json"
+      "path": "../../loop-base/bot-typings/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/components/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-config/tailwind-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-config/tailwind-plugin/tsconfig.build.json"
     }
   ]
 }

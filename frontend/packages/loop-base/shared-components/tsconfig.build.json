@@ -15,7 +15,7 @@
       "path": "../api-schema/tsconfig.build.json"
     },
     {
-      "path": "../../arch/bot-typings/tsconfig.build.json"
+      "path": "../bot-typings/tsconfig.build.json"
     },
     {
       "path": "../../../config/eslint-config/tsconfig.build.json"

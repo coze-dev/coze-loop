@@ -21,7 +21,7 @@
       "path": "../../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../i18n/tsconfig.build.json"
+      "path": "../../loop-base/i18n/tsconfig.build.json"
     }
   ],
   "$schema": "https://json.schemastore.org/tsconfig"

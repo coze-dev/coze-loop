@@ -16,25 +16,10 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../api-schema/tsconfig.build.json"
-    },
-    {
-      "path": "../../arch/bot-typings/tsconfig.build.json"
-    },
-    {
-      "path": "../../arch/logger/tsconfig.build.json"
-    },
-    {
-      "path": "../base-hooks/tsconfig.build.json"
-    },
-    {
       "path": "../biz-components/tsconfig.build.json"
     },
     {
       "path": "../biz-hooks/tsconfig.build.json"
-    },
-    {
-      "path": "../components/tsconfig.build.json"
     },
     {
       "path": "../../../config/eslint-config/tsconfig.build.json"
@@ -49,19 +34,34 @@
       "path": "../../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../env/tsconfig.build.json"
+      "path": "../../loop-base/api-schema/tsconfig.build.json"
     },
     {
-      "path": "../guard/tsconfig.build.json"
+      "path": "../../loop-base/base-hooks/tsconfig.build.json"
     },
     {
-      "path": "../i18n/tsconfig.build.json"
+      "path": "../../loop-base/bot-typings/tsconfig.build.json"
     },
     {
-      "path": "../tea/tsconfig.build.json"
+      "path": "../../loop-base/components/tsconfig.build.json"
     },
     {
-      "path": "../toolkit/tsconfig.build.json"
+      "path": "../../loop-base/env/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/guard/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/i18n/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/logger/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/tea/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/toolkit/tsconfig.build.json"
     }
   ]
 }

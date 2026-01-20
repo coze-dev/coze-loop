@@ -18,12 +18,6 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../account/tsconfig.build.json"
-    },
-    {
-      "path": "../api-schema/tsconfig.build.json"
-    },
-    {
       "path": "../../../config/eslint-config/tsconfig.build.json"
     },
     {
@@ -33,10 +27,16 @@
       "path": "../../../config/ts-config/tsconfig.build.json"
     },
     {
-      "path": "../i18n/tsconfig.build.json"
+      "path": "../../loop-base/account/tsconfig.build.json"
     },
     {
-      "path": "../stores/tsconfig.build.json"
+      "path": "../../loop-base/api-schema/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/i18n/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/stores/tsconfig.build.json"
     }
   ]
 }

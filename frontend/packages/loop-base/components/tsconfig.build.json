@@ -22,10 +22,10 @@
       "path": "../api-schema/tsconfig.build.json"
     },
     {
-      "path": "../../arch/bot-typings/tsconfig.build.json"
+      "path": "../base-hooks/tsconfig.build.json"
     },
     {
-      "path": "../base-hooks/tsconfig.build.json"
+      "path": "../bot-typings/tsconfig.build.json"
     },
     {
       "path": "../../../config/eslint-config/tsconfig.build.json"
@@ -34,7 +34,7 @@
       "path": "../../../config/ts-config/tsconfig.build.json"
     },
     {
-      "path": "../tailwind-config/tsconfig.build.json"
+      "path": "../../loop-config/tailwind-config/tsconfig.build.json"
     },
     {
       "path": "../toolkit/tsconfig.build.json"

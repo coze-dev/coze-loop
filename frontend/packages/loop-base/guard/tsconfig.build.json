@@ -15,10 +15,7 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../../arch/bot-typings/tsconfig.build.json"
-    },
-    {
-      "path": "../biz-hooks/tsconfig.build.json"
+      "path": "../bot-typings/tsconfig.build.json"
     },
     {
       "path": "../../../config/eslint-config/tsconfig.build.json"
@@ -34,6 +31,9 @@
     },
     {
       "path": "../i18n/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-components/biz-hooks/tsconfig.build.json"
     }
   ]
 }

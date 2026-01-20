@@ -13,9 +13,6 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../../arch/logger/tsconfig.build.json"
-    },
-    {
       "path": "../../../config/eslint-config/tsconfig.build.json"
     },
     {
@@ -29,6 +26,9 @@
     },
     {
       "path": "../../../infra/idl/idl2ts-runtime/tsconfig.build.json"
+    },
+    {
+      "path": "../logger/tsconfig.build.json"
     }
   ]
 }

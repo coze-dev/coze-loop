@@ -24,7 +24,7 @@
       "path": "../intl/tsconfig.build.json"
     },
     {
-      "path": "../resources/loop-lng/tsconfig.build.json"
+      "path": "../loop-lng/tsconfig.build.json"
     }
   ],
   "$schema": "https://json.schemastore.org/tsconfig"

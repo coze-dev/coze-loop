@@ -19,9 +19,6 @@
   "include": ["./src"],
   "references": [
     {
-      "path": "../../arch/bot-typings/tsconfig.build.json"
-    },
-    {
       "path": "../biz-hooks/tsconfig.build.json"
     },
     {
@@ -31,10 +28,13 @@
       "path": "../../../config/ts-config/tsconfig.build.json"
     },
     {
-      "path": "../i18n/tsconfig.build.json"
+      "path": "../../loop-base/bot-typings/tsconfig.build.json"
     },
     {
-      "path": "../tailwind-config/tsconfig.build.json"
+      "path": "../../loop-base/i18n/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-config/tailwind-config/tsconfig.build.json"
     }
   ],
   "$schema": "https://json.schemastore.org/tsconfig"

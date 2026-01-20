@@ -19,25 +19,7 @@
   "include": ["./src"],
   "references": [
     {
-      "path": "../api-schema/tsconfig.build.json"
-    },
-    {
-      "path": "../../arch/bot-md-box-adapter/tsconfig.build.json"
-    },
-    {
-      "path": "../../arch/bot-typings/tsconfig.build.json"
-    },
-    {
-      "path": "../../arch/fetch-stream/tsconfig.build.json"
-    },
-    {
-      "path": "../base-hooks/tsconfig.build.json"
-    },
-    {
       "path": "../biz-hooks/tsconfig.build.json"
-    },
-    {
-      "path": "../components/tsconfig.build.json"
     },
     {
       "path": "../../../config/eslint-config/tsconfig.build.json"
@@ -46,13 +28,31 @@
       "path": "../../../config/ts-config/tsconfig.build.json"
     },
     {
-      "path": "../i18n/tsconfig.build.json"
+      "path": "../../loop-base/api-schema/tsconfig.build.json"
     },
     {
-      "path": "../tailwind-config/tsconfig.build.json"
+      "path": "../../loop-base/base-hooks/tsconfig.build.json"
     },
     {
-      "path": "../tea/tsconfig.build.json"
+      "path": "../../loop-base/bot-md-box-adapter/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/bot-typings/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/components/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/fetch-stream/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/i18n/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/tea/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-config/tailwind-config/tsconfig.build.json"
     }
   ],
   "$schema": "https://json.schemastore.org/tsconfig"
