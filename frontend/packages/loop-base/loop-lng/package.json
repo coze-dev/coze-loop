@@ -5,7 +5,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "exit 0",
-    "lint": "eslint ./ --cache",
+    "lint": "eslint ./ --cache --quiet",
     "test": "exit 0",
     "test:cov": "exit 0"
   },
@@ -17,4 +17,3 @@
     "@types/react": "18.2.37"
   }
 }
-
