@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gorm.io/gorm/utils"
 	"strconv"
 	"time"
 
@@ -314,6 +315,8 @@ func (h *TraceHubServiceImpl) fetchSpans(ctx context.Context, listParam *repo.Li
 		return nil, "", err
 	}
 	logs.CtxInfo(ctx, "Fetch %d spans", len(result.Spans))
+	// todo remove log
+	logs.CtxInfo(ctx, "Span Just After ListSpan: %v", utils.ToString(result))
 	spans := result.Spans
 	if len(spans) == 0 {
 		return nil, "", nil
@@ -339,7 +342,8 @@ func (h *TraceHubServiceImpl) fetchSpans(ctx context.Context, listParam *repo.Li
 		logs.CtxInfo(ctx, "Completed listing spans, task_id=%d", sub.t.ID)
 		return spans, "", nil
 	}
-
+	// todo remove log
+	logs.CtxInfo(ctx, "Span Just After Transform: %v", utils.ToString(spans))
 	return spans, result.PageToken, nil
 }
 
@@ -430,6 +434,8 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 // processBatchSpans processes a batch of span data
 func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
 	for _, span := range spans {
+		// todo remove log
+		logs.CtxInfo(ctx, "start processing batch span, input=%d", span.Input)
 		// Execute processing logic according to the task type
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		sampler := sub.t.Sampler
